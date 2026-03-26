@@ -1,0 +1,30 @@
+{
+  "name": "@ez-kit/docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Documentation site for ez-kit packages (Fumadocs + Next.js).",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "size": "echo \"size check skipped for docs app\"",
+    "clean": "rimraf .next"
+  },
+  "dependencies": {
+    "fumadocs-core": "^15.8.5",
+    "fumadocs-ui": "^15.8.5",
+    "next": "^15.5.14",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3"
+  }
+}

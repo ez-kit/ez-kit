@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+**/node_modules
+/.pnpm-store
 /.pnp
 .pnp.js
 
@@ -11,9 +13,14 @@
 # next.js
 /.next/
 /out/
+.next
 
 # production
 /build
+**/dist
+
+# task runner cache
+.turbo
 
 # misc
 .DS_Store

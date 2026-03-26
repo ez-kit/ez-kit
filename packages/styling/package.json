@@ -1,0 +1,33 @@
+{
+  "name": "@ez-kit/styling",
+  "version": "0.0.0",
+  "description": "Styling helpers for class names and CSS custom properties.",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --sourcemap",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "vitest run",
+    "size": "size-limit",
+    "clean": "rimraf dist coverage"
+  },
+  "size-limit": [
+    {
+      "path": "dist/index.js",
+      "limit": "3 KB"
+    }
+  ]
+}
