@@ -21,11 +21,34 @@ Monorepo for UI-focused npm helper libraries.
 
 ```bash
 pnpm install
+pnpm new:pkg
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
 ```
+
+## Generate a package
+
+Use the repository generator:
+
+```bash
+pnpm new:pkg
+```
+
+It scaffolds packages in both supported locations:
+
+- `packages/<name>`
+- `packages/<group>/<name>`
+
+Generated packages follow current repository conventions:
+
+- package name format: `@ez-kit/<kebab-name>`
+- `tsconfig.json` with `@/*` alias to `src/*`
+- `vitest.config.ts` that extends root `vitest.shared.ts`
+- starter test at `src/index.test.ts` by default
+
+The generator includes a prompt `includeTests` (default: `true`) so tests can be skipped when needed.
 
 ## Docs
 
