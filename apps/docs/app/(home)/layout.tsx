@@ -1,12 +1,13 @@
-import { HomeLayout } from "fumadocs-ui/layouts/home"
-import type { ReactNode } from "react"
+import { HomeLayout } from 'fumadocs-ui/layouts/home'
 
-import { baseOptions } from "../../lib/layout.shared"
+import { baseOptions } from '../../lib/layout.shared'
 
-type HomeGroupLayoutProps = {
-  children: ReactNode
+import type { ReactNode } from 'react'
+
+interface HomeGroupLayoutProps {
+	children: ReactNode
 }
 
 export default function HomeGroupLayout({ children }: HomeGroupLayoutProps) {
-  return <HomeLayout {...baseOptions()}>{children}</HomeLayout>
+	return <HomeLayout {...baseOptions()}>{children}</HomeLayout>
 }

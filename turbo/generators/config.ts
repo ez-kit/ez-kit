@@ -1,28 +1,28 @@
-import { existsSync } from "node:fs"
+import { existsSync } from "node:fs";
 
 type GeneratorAnswers = {
-  packageName: string
-  packageDescription: string
-  locationType: "flat" | "grouped"
-  groupName?: string
-  includeTests: boolean
-  packageDir?: string
-  packageImportName?: string
-  rootRelativePrefix?: string
-}
+  packageName: string;
+  packageDescription: string;
+  locationType: "flat" | "grouped";
+  groupName?: string;
+  includeTests: boolean;
+  packageDir?: string;
+  packageImportName?: string;
+  rootRelativePrefix?: string;
+};
 
-const namePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const namePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function validateKebabName(value: string, fieldLabel: string): true | string {
   if (!value) {
-    return `${fieldLabel} is required`
+    return `${fieldLabel} is required`;
   }
 
   if (!namePattern.test(value)) {
-    return `${fieldLabel} must be kebab-case (lowercase letters, numbers, hyphens)`
+    return `${fieldLabel} must be kebab-case (lowercase letters, numbers, hyphens)`;
   }
 
-  return true
+  return true;
 }
 
 export default function generator(plop: any): void {
@@ -69,17 +69,18 @@ export default function generator(plop: any): void {
       const packageDir =
         answers.locationType === "grouped"
           ? `packages/${answers.groupName}/${answers.packageName}`
-          : `packages/${answers.packageName}`
+          : `packages/${answers.packageName}`;
 
       if (existsSync(packageDir)) {
-        throw new Error(`Package path already exists: ${packageDir}`)
+        throw new Error(`Package path already exists: ${packageDir}`);
       }
 
-      const rootRelativePrefix = answers.locationType === "grouped" ? "../../../" : "../../"
+      const rootRelativePrefix =
+        answers.locationType === "grouped" ? "../../../" : "../../";
 
-      answers.packageDir = packageDir
-      answers.packageImportName = `@ez-kit/${answers.packageName}`
-      answers.rootRelativePrefix = rootRelativePrefix
+      answers.packageDir = packageDir;
+      answers.packageImportName = `@ez-kit/${answers.packageName}`;
+      answers.rootRelativePrefix = rootRelativePrefix;
 
       const actions = [
         {
@@ -107,17 +108,17 @@ export default function generator(plop: any): void {
           path: "{{packageDir}}/README.md",
           templateFile: "templates/package/README.md.hbs",
         },
-      ]
+      ];
 
       if (answers.includeTests) {
         actions.push({
           type: "add",
           path: "{{packageDir}}/src/index.test.ts",
           templateFile: "templates/package/src/index.test.ts.hbs",
-        })
+        });
       }
 
-      return actions
+      return actions;
     },
-  })
+  });
 }

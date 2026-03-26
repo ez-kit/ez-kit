@@ -1,5 +1,5 @@
-import { fileURLToPath } from "node:url"
-import type { UserConfig } from "vitest/config"
+import { fileURLToPath } from "node:url";
+import type { UserConfig } from "vitest/config";
 
 export const vitestSharedConfig: UserConfig = {
   test: {
@@ -14,4 +14,4 @@ export const vitestSharedConfig: UserConfig = {
       include: ["src/**/*.ts"],
     },
   },
-}
+};

@@ -12,7 +12,7 @@ Monorepo for UI-focused npm helper libraries.
 - `pnpm` workspaces
 - `turborepo`
 - `TypeScript` (`strict`)
-- `Biome` (lint + format)
+- `ESlint + Prettier` (lint + format)
 - `Vitest`
 - `Changesets`
 - `Fumadocs` docs app (`apps/docs`)

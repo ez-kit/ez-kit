@@ -11,8 +11,8 @@ pnpm add @ez-kit/styling
 ## Usage
 
 ```ts
-import { cssVar, cx } from "@ez-kit/styling"
+import { cssVar, cx } from '@ez-kit/styling'
 
-const classes = cx("btn", { "btn-active": true })
-const style = cssVar("brand-color", "tomato")
+const classes = cx('btn', { 'btn-active': true })
+const style = cssVar('brand-color', 'tomato')
 ```

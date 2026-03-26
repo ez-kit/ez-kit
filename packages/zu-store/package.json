@@ -1,45 +1,45 @@
 {
-  "name": "@ez-kit/zu-store",
-  "version": "0.0.0",
-  "description": "A reusable utility package for ez-kit.",
-  "type": "module",
-  "sideEffects": false,
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --sourcemap",
-    "lint": "biome check .",
-    "format": "biome format --write .",
-    "typecheck": "tsc --project tsconfig.json --noEmit",
-    "test": "vitest run",
-    "size": "size-limit",
-    "clean": "rimraf dist coverage"
-  },
-  "size-limit": [
-    {
-      "path": "dist/index.js",
-      "limit": "3 KB"
-    }
-  ],
-  "dependencies": {
-    "zustand": "^5.0.12"
-  },
-  "devDependencies": {
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
-  },
-  "peerDependencies": {
-    "react": ">=18.0.0"
-  }
+	"name": "@ez-kit/zu-store",
+	"version": "0.0.0",
+	"description": "A reusable utility package for ez-kit.",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"lint": "eslint . --max-warnings=0",
+		"format": "prettier . --write",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "3 KB"
+		}
+	],
+	"dependencies": {
+		"zustand": "^5.0.12"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0"
+	}
 }

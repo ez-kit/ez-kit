@@ -1,140 +1,140 @@
 :root {
-  color-scheme: light;
+	color-scheme: light;
 }
 
 * {
-  box-sizing: border-box;
+	box-sizing: border-box;
 }
 
 body {
-  margin: 0;
+	margin: 0;
 }
 
 .landing,
 .docs {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 3.5rem 1.25rem;
+	max-width: 1040px;
+	margin: 0 auto;
+	padding: 3.5rem 1.25rem;
 }
 
 .hero {
-  border: 1px solid #e4e7ec;
-  border-radius: 1rem;
-  padding: 2rem;
-  background: linear-gradient(145deg, #f8faff 0%, #eef4ff 100%);
+	border: 1px solid #e4e7ec;
+	border-radius: 1rem;
+	padding: 2rem;
+	background: linear-gradient(145deg, #f8faff 0%, #eef4ff 100%);
 }
 
 .badge {
-  display: inline-block;
-  margin: 0 0 0.75rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 9999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: #dbe7ff;
-  color: #1d4ed8;
+	display: inline-block;
+	margin: 0 0 0.75rem;
+	padding: 0.25rem 0.6rem;
+	border-radius: 9999px;
+	font-size: 0.8rem;
+	font-weight: 600;
+	background: #dbe7ff;
+	color: #1d4ed8;
 }
 
 .hero h1 {
-  margin: 0;
-  font-size: clamp(2rem, 5vw, 3rem);
+	margin: 0;
+	font-size: clamp(2rem, 5vw, 3rem);
 }
 
 .lead {
-  max-width: 700px;
-  margin-top: 1rem;
-  color: #344054;
-  line-height: 1.6;
+	max-width: 700px;
+	margin-top: 1rem;
+	color: #344054;
+	line-height: 1.6;
 }
 
 .actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+	display: flex;
+	gap: 0.75rem;
+	margin-top: 1.5rem;
 }
 
 .button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.65rem 1rem;
-  border-radius: 0.7rem;
-  border: 1px solid transparent;
-  text-decoration: none;
-  font-weight: 600;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.65rem 1rem;
+	border-radius: 0.7rem;
+	border: 1px solid transparent;
+	text-decoration: none;
+	font-weight: 600;
 }
 
 .button.primary {
-  background: #111827;
-  color: #fff;
+	background: #111827;
+	color: #fff;
 }
 
 .button.ghost {
-  background: #fff;
-  border-color: #d0d5dd;
-  color: #1f2937;
+	background: #fff;
+	border-color: #d0d5dd;
+	color: #1f2937;
 }
 
 .highlights {
-  margin-top: 1.5rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.75rem;
+	margin-top: 1.5rem;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 0.75rem;
 }
 
 .card {
-  border: 1px solid #eaecf0;
-  border-radius: 0.9rem;
-  background: #fff;
-  padding: 1rem;
+	border: 1px solid #eaecf0;
+	border-radius: 0.9rem;
+	background: #fff;
+	padding: 1rem;
 }
 
 .card h2 {
-  margin: 0;
-  font-size: 1.05rem;
+	margin: 0;
+	font-size: 1.05rem;
 }
 
 .card p {
-  margin: 0.65rem 0 0;
-  color: #475467;
-  line-height: 1.6;
+	margin: 0.65rem 0 0;
+	color: #475467;
+	line-height: 1.6;
 }
 
 .docs h1 {
-  margin: 0;
+	margin: 0;
 }
 
 .docs p {
-  color: #475467;
-  line-height: 1.6;
+	color: #475467;
+	line-height: 1.6;
 }
 
 .docs section {
-  border: 1px solid #eaecf0;
-  border-radius: 0.9rem;
-  background: #fff;
-  padding: 1rem;
-  margin-top: 1rem;
+	border: 1px solid #eaecf0;
+	border-radius: 0.9rem;
+	background: #fff;
+	padding: 1rem;
+	margin-top: 1rem;
 }
 
 .docs pre {
-  overflow: auto;
-  border-radius: 0.6rem;
-  padding: 0.85rem;
-  background: #101828;
-  color: #f2f4f7;
+	overflow: auto;
+	border-radius: 0.6rem;
+	padding: 0.85rem;
+	background: #101828;
+	color: #f2f4f7;
 }
 
 .api-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 0.75rem;
+	margin-top: 1rem;
 }
 
 .api-card {
-  border: 1px solid #eaecf0;
-  border-radius: 0.9rem;
-  background: #fff;
-  padding: 1rem;
+	border: 1px solid #eaecf0;
+	border-radius: 0.9rem;
+	background: #fff;
+	padding: 1rem;
 }
