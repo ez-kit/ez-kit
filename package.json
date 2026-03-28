@@ -21,7 +21,7 @@
 		"docs:build": "pnpm --filter @ez-kit/docs build",
 		"docs:start": "pnpm --filter @ez-kit/docs start",
 		"ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm size",
-		"prepare": "husky"
+		"prepare": "husky || true"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.30.0",

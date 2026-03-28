@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+env:
+  HUSKY: 0
+
 jobs:
   checks:
     runs-on: ubuntu-latest
