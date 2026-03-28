@@ -20,7 +20,8 @@
 		"docs:dev": "pnpm --filter @ez-kit/docs dev",
 		"docs:build": "pnpm --filter @ez-kit/docs build",
 		"docs:start": "pnpm --filter @ez-kit/docs start",
-		"ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm size"
+		"ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm size",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.30.0",
@@ -38,6 +39,7 @@
 		"eslint-plugin-react": "^7.37.5",
 		"eslint-plugin-react-hooks": "^7.0.1",
 		"globals": "^17.4.0",
+		"husky": "^9.1.7",
 		"jsdom": "^29.0.1",
 		"prettier": "^3.8.1",
 		"rimraf": "^6.1.3",
