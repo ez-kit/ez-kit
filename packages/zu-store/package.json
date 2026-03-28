@@ -1,7 +1,8 @@
 {
 	"name": "@ez-kit/zu-store",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "A reusable utility package for ez-kit.",
+	"license": "MIT",
 	"type": "module",
 	"sideEffects": false,
 	"files": [
