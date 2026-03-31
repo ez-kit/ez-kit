@@ -1,3 +1,4 @@
-import { defineConfig } from "vitest/config" import { vitestSharedConfig } from
-"../../../vitest.shared" export default
-defineConfig(vitestSharedConfig)
+import { defineConfig } from 'vitest/config'
+import { vitestSharedConfig } from '../../../vitest.shared'
+
+export default defineConfig(vitestSharedConfig)
