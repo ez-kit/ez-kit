@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 'use client'
 
 import { defineColumns } from '@ez-kit/data-grid-react'
@@ -39,16 +42,16 @@ export default function DataGridSandboxPage() {
 		selection: true,
 		editing: {
 			mode: 'row',
-			onSave: async (rowId, values) => {
+			onSave: (rowId, values) => {
 				console.log('Saving edit', rowId, values)
 				return true
 			},
 		},
 		creating: {
 			mode: 'row',
-			onSave: async (values) => {
+			onSave: (values) => {
 				console.log('Saving new row', values)
-				setData((prev) => [...prev, values])
+				setData((prev) => [...prev, values as User])
 				return true
 			},
 		},
@@ -62,7 +65,7 @@ export default function DataGridSandboxPage() {
 	return (
 		<div
 			style={{ padding: '2rem' }}
-			className='[&_input]:border-1 '
+			className='[&_input]:border '
 		>
 			<h1>DataGrid Sandbox</h1>
 			<p style={{ marginBottom: '1rem', color: '#666' }}>
