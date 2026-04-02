@@ -1,9 +1,9 @@
-import * as React from "react"
-import { Dialog as DialogPrimitive } from "radix-ui"
-
-import { cn } from "@grid-shadcn/lib/utils"
-import { Button } from "@grid-shadcn/components/ui/button"
 import { XIcon } from "lucide-react"
+import { Dialog as DialogPrimitive } from "radix-ui"
+import * as React from "react"
+
+import { Button } from "@grid-shadcn/components/ui/button"
+import { cn } from "@grid-shadcn/lib/utils"
 
 function Dialog({
   ...props

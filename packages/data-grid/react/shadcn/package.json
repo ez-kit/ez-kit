@@ -21,6 +21,7 @@
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --sourcemap",
 		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"format": "prettier . --write",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",

@@ -1,10 +1,10 @@
 "use client"
 
-import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
+import * as React from "react"
 
-import { cn } from "@grid-shadcn/lib/utils"
 import { Button } from "@grid-shadcn/components/ui/button"
+import { cn } from "@grid-shadcn/lib/utils"
 
 function AlertDialog({
   ...props

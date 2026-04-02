@@ -2,10 +2,10 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { Checkbox } from './blocks/Checkbox'
 import { Pagination } from './blocks/pagination'
+import { Toolbar } from './blocks/Toolbar'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table'
-import { Toolbar } from './blocks/toolbar'
 
 export const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
 	// layout

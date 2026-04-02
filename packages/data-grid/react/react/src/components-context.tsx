@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 
 import type {
 	ButtonProps,
@@ -47,11 +47,11 @@ function DefaultButton(props: ButtonProps) {
 function DefaultInput(props: InputProps) {
 	return <input {...props} />
 }
-function DefaultCheckbox({ checked, indeterminate, onChange, ...rest }: CheckboxProps) {
+function DefaultCheckbox({ value, indeterminate, onChange, ...rest }: CheckboxProps) {
 	return (
 		<input
 			type='checkbox'
-			checked={checked}
+			checked={value}
 			ref={(el) => {
 				if (el) el.indeterminate = indeterminate ?? false
 			}}
@@ -155,11 +155,15 @@ export interface GridComponentsProviderProps {
 export function GridComponentsProvider({ components, children }: GridComponentsProviderProps) {
 	const parentComponents = useContext(GridComponentsContext)
 
-	const prevMerged = parentComponents ? { ...defaultComponents, ...parentComponents } : defaultComponents
+	const value = useMemo(() => {
+		const prevMerged = { ...defaultComponents, ...parentComponents }
 
-	const merged: Required<GridComponents> = components ? { ...prevMerged, ...components } : prevMerged
+		const merged: Required<GridComponents> = components ? { ...prevMerged, ...components } : prevMerged
 
-	return <GridComponentsContext value={merged}>{children}</GridComponentsContext>
+		return merged
+	}, [parentComponents, components])
+
+	return <GridComponentsContext value={value}>{children}</GridComponentsContext>
 }
 
 export function useGridComponents(): Required<GridComponents> {
