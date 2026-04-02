@@ -15,7 +15,8 @@
 		"esModuleInterop": true,
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"]
+			"@/*": ["src/*"],
+			"@grid-shadcn/*": ["../../packages/data-grid/react/shadcn/src/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

@@ -6,7 +6,7 @@ import { useTableContext } from './table-context'
 import type { ReactNode } from 'react'
 
 interface ToolbarProps {
-  children?: ReactNode
+	children?: ReactNode
 }
 
 /**
@@ -15,12 +15,12 @@ interface ToolbarProps {
  * renders a default "+ Add" create trigger.
  */
 export function Toolbar({ children }: ToolbarProps) {
-  const { Toolbar: ToolbarComponent } = useGridComponents()
-  const table = useTableContext()
-  const hasCreating = Boolean(table.options.creating)
+	const { Toolbar: ToolbarComponent } = useGridComponents()
+	const table = useTableContext()
+	const hasCreating = Boolean(table.options.creating)
 
-  const content = children ?? (hasCreating ? <CreateTrigger /> : null)
-  if (!content) return null
+	const content = children ?? (hasCreating ? <CreateTrigger /> : null)
+	if (!content) return null
 
-  return <ToolbarComponent>{content}</ToolbarComponent>
+	return <ToolbarComponent data-slot='toolbar'>{content}</ToolbarComponent>
 }

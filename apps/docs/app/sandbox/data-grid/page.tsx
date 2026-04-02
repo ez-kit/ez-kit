@@ -1,6 +1,7 @@
 'use client'
 
-import { DataGrid, useDataGrid, defineColumns } from '@ez-kit/data-grid-react'
+import { defineColumns } from '@ez-kit/data-grid-react'
+import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
 import { useState } from 'react'
 
 interface User {

@@ -1,5 +1,4 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import '@ez-kit/data-grid-shadcn/global.css';
 
 :root {
 	color-scheme: light;
