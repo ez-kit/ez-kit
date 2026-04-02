@@ -55,7 +55,10 @@ export default tseslint.config(
         version: "19.0",
       },
       "import/resolver": {
-        typescript: true,
+        typescript: {
+          noWarnOnMultipleProjects: true,
+          project: ["packages/**/tsconfig.json", "apps/**/tsconfig.json"],
+        },
         node: true,
       },
     },

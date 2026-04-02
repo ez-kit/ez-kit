@@ -2,7 +2,7 @@ import type { HomeLayoutProps } from 'fumadocs-ui/layouts/home'
 
 export function baseOptions(): Pick<HomeLayoutProps, 'githubUrl' | 'links' | 'nav'> {
 	return {
-		githubUrl: 'https://github.com/sergejolcev/ez-kit',
+		githubUrl: 'https://github.com/ez-kit/ez-kit',
 		nav: {
 			title: 'ez-kit docs',
 			transparentMode: 'top',

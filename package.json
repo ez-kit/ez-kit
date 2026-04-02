@@ -6,7 +6,7 @@
 	"description": "Monorepo for ez-kit npm UI helper libraries.",
 	"packageManager": "pnpm@10.18.0",
 	"scripts": {
-		"new:pkg": "turbo gen package",
+		"pkg:new": "turbo gen package",
 		"build": "turbo run build",
 		"lint": "turbo run lint",
 		"format": "turbo run format",
