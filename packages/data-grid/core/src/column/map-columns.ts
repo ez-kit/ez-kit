@@ -1,11 +1,11 @@
-import type { ColumnDef, TanStackColumnDef } from './types'
+import type { CellViewCtx, ColumnDef, TanStackColumnDef } from './types'
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
  *
  * - pin, filtering, editing, creating → column meta
- * - cell.type, cell.input → meta.cellType, meta.cellInput
- * - cell.view → TanStack cell renderer
+ * - cell.type → meta.cellType
+ * - cell.component → TanStack cell renderer + meta.cellView
  * - sorting: false → enableSorting: false
  * - header string preserved as-is (TanStack accepts string | function)
  */
@@ -48,7 +48,9 @@ function mapColumn<TRow extends object>(
   if (editing !== undefined) meta.editing = editing
   if (creating !== undefined) meta.creating = creating
   if (cell?.type !== undefined) meta.cellType = cell.type
-  if (cell?.input !== undefined) meta.cellInput = cell.input
+  const viewFn = cell?.component
+  if (viewFn !== undefined)
+    meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown
 
   // Build a plain object and cast — TanStack's ColumnDef is a discriminated union
   // so it can't be directly constructed via spread without type assertions.
@@ -72,14 +74,13 @@ function mapColumn<TRow extends object>(
   // sorting: false → disable sorting for this column
   if (sorting === false) result.enableSorting = false
 
-  // cell.view → TanStack cell renderer
-  if (cell?.view !== undefined) {
-    const view = cell.view
+  // cell.component (preferred) or cell.view → TanStack cell renderer
+  if (viewFn !== undefined) {
     result.cell = (ctx: {
       row: { original: TRow; index: number }
       getValue: () => unknown
     }) =>
-      view({
+      viewFn({
         row: ctx.row.original,
         value: ctx.getValue(),
         rowIndex: ctx.row.index,

@@ -1,5 +1,6 @@
 // React hook
 export { useDataGrid } from './use-data-grid'
+export type { UseDataGridConfig } from './use-data-grid'
 
 // Factory
 export { createDataGrid } from './create-data-grid'
@@ -14,6 +15,15 @@ export {
   defaultComponents,
   useGridComponents,
 } from './components-context'
+
+// Cell type registry
+export { CellTypesProvider, useCellTypes } from './cell-types-context'
+export type {
+  CellTypeDefinition,
+  CellTypeRegistry,
+  CellViewProps,
+  CellInputProps,
+} from './cell-types-context'
 
 // Utilities
 export { getCommonPinStyles } from './utils/pin-styles'

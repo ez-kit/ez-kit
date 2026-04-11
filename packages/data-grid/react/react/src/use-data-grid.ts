@@ -1,8 +1,16 @@
 import { createTable } from '@ez-kit/data-grid-core'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 
+import type { CellTypeRegistry } from './cell-types-context'
 import type { DataTable, TableConfig } from '@ez-kit/data-grid-core'
 
+/** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
+export const CELL_TYPES_KEY = Symbol('cellTypes')
+
+export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow> {
+  /** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
+  cellTypes?: CellTypeRegistry
+}
 
 /**
  * React hook that creates a data-grid instance and subscribes to its state.
@@ -13,10 +21,17 @@ import type { DataTable, TableConfig } from '@ez-kit/data-grid-core'
  * const table = useDataGrid({ data: users, columns, sorting: true })
  */
 export function useDataGrid<TRow extends object>(
-  config: TableConfig<TRow>,
+  config: UseDataGridConfig<TRow>,
 ): DataTable<TRow> {
+  const { cellTypes, ...tableConfig } = config
+
   const tableRef = useRef<DataTable<TRow> | null>(null)
-  tableRef.current ??= createTable(config)
+  tableRef.current ??= createTable(tableConfig as TableConfig<TRow>)
+
+  // Store cellTypes on the table instance so DataGrid can read without an extra prop
+  const cellTypesRef = useRef(cellTypes)
+  cellTypesRef.current = cellTypes
+  ;(tableRef.current as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] = cellTypesRef.current
 
   // Subscribe so React re-renders on any table state change
   useSyncExternalStore(

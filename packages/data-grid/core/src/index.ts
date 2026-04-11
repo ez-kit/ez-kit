@@ -21,6 +21,7 @@ export type {
   ColumnDef,
   ColumnEditingConfig,
   ColumnFilteringConfig,
+  InputComponentProps,
 } from './column/types'
 
 export type { CreatingConfig, CreatingState } from './features/creating'

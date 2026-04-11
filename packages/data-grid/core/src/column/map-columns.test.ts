@@ -27,10 +27,11 @@ describe('mapColumns', () => {
   })
 
   it('filtering goes into meta.filtering', () => {
+    const component = vi.fn()
     const result = mapColumns<Row>([
-      { accessorKey: 'name', filtering: { input: 'custom' } },
+      { accessorKey: 'name', filtering: { component } },
     ])
-    expect(result[0]?.meta?.filtering).toEqual({ input: 'custom' })
+    expect(result[0]?.meta?.filtering).toEqual({ component })
   })
 
   it('filtering: false goes into meta', () => {
@@ -45,15 +46,6 @@ describe('mapColumns', () => {
     expect(result[0]?.meta?.cellType).toBe('number')
   })
 
-  it('cell.view maps to TanStack cell renderer', () => {
-    const view = vi.fn().mockReturnValue('rendered')
-    const result = mapColumns<Row>([
-      { accessorKey: 'name', cell: { view } },
-    ])
-    const cellFn = result[0]?.cell
-    expect(cellFn).toBeTypeOf('function')
-  })
-
   it('maps nested column groups', () => {
     const defs: ColumnDef<Row>[] = [
       {
@@ -66,5 +58,40 @@ describe('mapColumns', () => {
     ]
     const result = mapColumns(defs)
     expect((result[0] as { columns?: unknown[] }).columns).toHaveLength(2)
+  })
+
+  it('cell.component maps to TanStack cell renderer and meta.cellView', () => {
+    const component = vi.fn().mockReturnValue('custom')
+    const result = mapColumns<Row>([{ accessorKey: 'name', cell: { component } }])
+    expect(result[0]?.cell).toBeTypeOf('function')
+    expect(result[0]?.meta?.cellView).toBeTypeOf('function')
+  })
+
+  it('cell.component invoked as TanStack cell renderer', () => {
+    const component = vi.fn().mockReturnValue('component-result')
+    const result = mapColumns<Row>([{ accessorKey: 'name', cell: { component } }])
+    interface CellCtx { row: { original: Row; index: number }; getValue: () => unknown }
+    const ctx: CellCtx = { row: { original: { id: 1, name: 'x', age: 0 }, index: 0 }, getValue: () => 'x' }
+    const cellFn = result[0]?.cell as ((c: CellCtx) => unknown) | undefined
+    cellFn?.(ctx)
+    expect(component).toHaveBeenCalled()
+  })
+
+  it('filtering.component stored in meta.filtering', () => {
+    const component = vi.fn()
+    const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { component } }])
+    expect((result[0]?.meta?.filtering as { component?: unknown } | undefined)?.component).toBe(component)
+  })
+
+  it('editing.component stored in meta.editing', () => {
+    const component = vi.fn()
+    const result = mapColumns<Row>([{ accessorKey: 'name', editing: { component } }])
+    expect((result[0]?.meta?.editing as { component?: unknown } | undefined)?.component).toBe(component)
+  })
+
+  it('creating.component stored in meta.creating', () => {
+    const component = vi.fn()
+    const result = mapColumns<Row>([{ accessorKey: 'name', creating: { component } }])
+    expect((result[0]?.meta?.creating as { component?: unknown } | undefined)?.component).toBe(component)
   })
 })

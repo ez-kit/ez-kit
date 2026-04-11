@@ -110,4 +110,74 @@ describe('<DataGrid>', () => {
     )
     expect(screen.getByRole('table')).toBeInTheDocument()
   })
+
+  it('renders custom cell.component output', () => {
+    const cols = defineColumns<User>([
+      { accessorKey: 'name', header: 'Name', cell: { component: ({ value }) => <span data-testid='custom-cell'>{String(value)}</span> } },
+      { accessorKey: 'age', header: 'Age' },
+    ])
+    const table = createTable<User>({ data: USERS, columns: cols })
+    render(<DataGrid table={table} />)
+    expect(screen.getAllByTestId('custom-cell')).toHaveLength(USERS.length)
+  })
+
+  it('renders ✓ for true and ✗ for false with boolean cell type', () => {
+    interface BoolRow { id: number; active: boolean }
+    const boolCols = defineColumns<BoolRow>([
+      { accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } },
+    ])
+    const boolData: BoolRow[] = [
+      { id: 1, active: true },
+      { id: 2, active: false },
+    ]
+    const table = createTable<BoolRow>({ data: boolData, columns: boolCols })
+    render(<DataGrid table={table} />)
+    expect(screen.getByText('✓')).toBeInTheDocument()
+    expect(screen.getByText('✗')).toBeInTheDocument()
+  })
+
+  it('uses registry view component for custom cell type', () => {
+    const cols = defineColumns<User>([
+      { accessorKey: 'age', header: 'Age', cell: { type: 'money' } },
+    ])
+    const table = createTable<User>({ data: USERS, columns: cols })
+    render(
+      <DataGrid
+        table={table}
+        cellTypes={{
+          money: {
+            view: ({ value }) => <span data-testid='money-cell'>€{String(value)}</span>,
+          },
+        }}
+      />,
+    )
+    expect(screen.getAllByTestId('money-cell')).toHaveLength(USERS.length)
+  })
+
+  it('registry creating falls back to edit component when creating not provided', () => {
+    const editFn = vi.fn(() => <input data-testid='registry-edit' />)
+    const cols = defineColumns<User>([
+      { accessorKey: 'name', header: 'Name', cell: { type: 'custom-type' } },
+      { accessorKey: 'age', header: 'Age' },
+    ])
+    const table = createTable<User>({
+      data: USERS,
+      columns: cols,
+      creating: { mode: 'row', onSave: () => true },
+    })
+    const { rerender } = render(
+      <DataGrid
+        table={table}
+        cellTypes={{ 'custom-type': { edit: editFn } }}
+      />,
+    )
+    act(() => { table.startCreating() })
+    rerender(
+      <DataGrid
+        table={table}
+        cellTypes={{ 'custom-type': { edit: editFn } }}
+      />,
+    )
+    expect(screen.getAllByTestId('registry-edit').length).toBeGreaterThan(0)
+  })
 })

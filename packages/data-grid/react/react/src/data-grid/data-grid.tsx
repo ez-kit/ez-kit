@@ -1,4 +1,6 @@
+import { CellTypesProvider } from '../cell-types-context'
 import { GridComponentsProvider } from '../components-context'
+import { CELL_TYPES_KEY } from '../use-data-grid'
 
 import { Body } from './body'
 import { DataGridCell } from './cell'
@@ -12,6 +14,7 @@ import { DataGridTable } from './table'
 import { TableContext } from './table-context'
 import { Toolbar } from './toolbar'
 
+import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../types'
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
@@ -20,6 +23,8 @@ export interface DataGridProps<TRow extends object> {
 	table: DataTable<TRow>
 	/** Local component overrides — merged with global GridComponentsProvider. */
 	components?: GridComponents
+	/** Custom cell type renderers. Merged with types from `useDataGrid`. */
+	cellTypes?: CellTypeRegistry
 	children?: ReactNode
 }
 
@@ -46,15 +51,21 @@ function DefaultLayout() {
  *   <DataGrid.Pagination />
  * </DataGrid>
  */
-function DataGridRoot<TRow extends object>({ table, components, children }: DataGridProps<TRow>) {
+function DataGridRoot<TRow extends object>({ table, components, cellTypes, children }: DataGridProps<TRow>) {
+	// Read cellTypes stored on the table instance by useDataGrid, merge with direct prop
+	const tableCellTypes = (table as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] as CellTypeRegistry | undefined
+	const resolvedCellTypes = { ...tableCellTypes, ...cellTypes }
+
 	return (
-		<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-			<TableContext value={table}>
-				{children ?? <DefaultLayout />}
-				{table.options.creating?.mode === 'modal' && <CreatingModal />}
-				{table.options.editing?.mode === 'modal' && <EditingModal />}
-			</TableContext>
-		</GridComponentsProvider>
+		<CellTypesProvider types={resolvedCellTypes}>
+			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
+				<TableContext value={table}>
+					{children ?? <DefaultLayout />}
+					{table.options.creating?.mode === 'modal' && <CreatingModal />}
+					{table.options.editing?.mode === 'modal' && <EditingModal />}
+				</TableContext>
+			</GridComponentsProvider>
+		</CellTypesProvider>
 	)
 }
 
