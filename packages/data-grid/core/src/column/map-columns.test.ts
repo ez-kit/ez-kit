@@ -79,7 +79,7 @@ describe('mapColumns', () => {
     const view = vi.fn().mockReturnValue('view-result')
     const component = vi.fn().mockReturnValue('component-result')
     const result = mapColumns<Row>([{ accessorKey: 'name', cell: { view, component } }])
-    type CellCtx = { row: { original: Row; index: number }; getValue: () => unknown }
+    interface CellCtx { row: { original: Row; index: number }; getValue: () => unknown }
     const ctx: CellCtx = { row: { original: { id: 1, name: 'x', age: 0 }, index: 0 }, getValue: () => 'x' }
     const cellFn = result[0]?.cell as ((c: CellCtx) => unknown) | undefined
     cellFn?.(ctx)
