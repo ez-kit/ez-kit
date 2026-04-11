@@ -27,10 +27,11 @@ describe('mapColumns', () => {
   })
 
   it('filtering goes into meta.filtering', () => {
+    const component = vi.fn()
     const result = mapColumns<Row>([
-      { accessorKey: 'name', filtering: { input: 'custom' } },
+      { accessorKey: 'name', filtering: { component } },
     ])
-    expect(result[0]?.meta?.filtering).toEqual({ input: 'custom' })
+    expect(result[0]?.meta?.filtering).toEqual({ component })
   })
 
   it('filtering: false goes into meta', () => {
@@ -43,15 +44,6 @@ describe('mapColumns', () => {
       { accessorKey: 'age', cell: { type: 'number' } },
     ])
     expect(result[0]?.meta?.cellType).toBe('number')
-  })
-
-  it('cell.view maps to TanStack cell renderer', () => {
-    const view = vi.fn().mockReturnValue('rendered')
-    const result = mapColumns<Row>([
-      { accessorKey: 'name', cell: { view } },
-    ])
-    const cellFn = result[0]?.cell
-    expect(cellFn).toBeTypeOf('function')
   })
 
   it('maps nested column groups', () => {
@@ -75,16 +67,14 @@ describe('mapColumns', () => {
     expect(result[0]?.meta?.cellView).toBeTypeOf('function')
   })
 
-  it('cell.component takes priority over cell.view', () => {
-    const view = vi.fn().mockReturnValue('view-result')
+  it('cell.component invoked as TanStack cell renderer', () => {
     const component = vi.fn().mockReturnValue('component-result')
-    const result = mapColumns<Row>([{ accessorKey: 'name', cell: { view, component } }])
+    const result = mapColumns<Row>([{ accessorKey: 'name', cell: { component } }])
     interface CellCtx { row: { original: Row; index: number }; getValue: () => unknown }
     const ctx: CellCtx = { row: { original: { id: 1, name: 'x', age: 0 }, index: 0 }, getValue: () => 'x' }
     const cellFn = result[0]?.cell as ((c: CellCtx) => unknown) | undefined
     cellFn?.(ctx)
     expect(component).toHaveBeenCalled()
-    expect(view).not.toHaveBeenCalled()
   })
 
   it('filtering.component stored in meta.filtering', () => {

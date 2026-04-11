@@ -106,14 +106,8 @@ function resolveColumnComponent(
   colDef: ColConfig,
 ): ((props: CellInputProps) => ReactNode) | undefined {
   if (!colDef) return undefined
-  // Prefer `component` (new API) over legacy `input`
   const comp = (colDef as ColumnEditingConfig).component
-  if (comp) return comp as (props: CellInputProps) => ReactNode
-  const legacyInput = (colDef as { input?: unknown }).input
-  if (typeof legacyInput === 'function') {
-    return legacyInput as (props: CellInputProps) => ReactNode
-  }
-  return undefined
+  return comp ? comp as (props: CellInputProps) => ReactNode : undefined
 }
 
 function resolveRegistryComponent(

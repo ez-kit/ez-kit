@@ -19,28 +19,21 @@ export interface InputComponentProps {
 
 export interface CellDef<TRow, TValue = unknown> {
   type?: CellType
-  /** @deprecated Use `component` instead. Kept for backward compat. */
-  view?: (ctx: CellViewCtx<TRow, TValue>) => unknown
-  /** Custom view-mode renderer for this cell. Takes priority over `view`. */
+  /** Custom view-mode renderer for this cell. */
   component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
-  /** @deprecated Use `editing.component` / `creating.component` instead. */
-  input?: unknown
 }
 
 export interface ColumnFilteringConfig {
-  input?: unknown
   /** Custom filter input component for this column. */
   component?: (props: InputComponentProps) => unknown
 }
 
 export interface ColumnEditingConfig {
-  input?: unknown
   /** Custom edit input component for this column. */
   component?: (props: InputComponentProps) => unknown
 }
 
 export interface ColumnCreatingConfig {
-  input?: unknown
   /** Custom create input component for this column. Falls back to `editing.component` when omitted. */
   component?: (props: InputComponentProps) => unknown
 }
@@ -89,8 +82,7 @@ declare module '@tanstack/table-core' {
   interface ColumnMeta<TData, TValue> {
     pin?: 'left' | 'right'
     cellType?: CellType
-    cellInput?: unknown
-    /** Resolved view renderer from `cell.component` or `cell.view`. */
+    /** Resolved view renderer from `cell.component`. */
     cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
     filtering?: false | ColumnFilteringConfig
     editing?: false | ColumnEditingConfig
