@@ -1,8 +1,12 @@
 
+import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
 import { useTableContext } from './table-context'
 
+import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
+import type { ColumnEditingConfig, ColumnCreatingConfig } from '@ez-kit/data-grid-core'
+import type { ColumnMeta } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 interface AutoFormProps {
@@ -12,10 +16,12 @@ interface AutoFormProps {
 /**
  * Renders an auto-generated form for creating or editing a row.
  * Iterates over columns, renders the configured input or a default <Input>.
+ * Supports `editing.component` / `creating.component` and `CellTypeRegistry` for DI.
  */
 export function AutoForm({ mode }: AutoFormProps): ReactNode {
   const table = useTableContext()
   const { Input } = useGridComponents()
+  const cellTypes = useCellTypes()
 
   const values: Record<string, unknown> =
     mode === 'creating'
@@ -39,24 +45,22 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
         const colDef = mode === 'creating' ? meta?.creating : meta?.editing
         if (colDef === false) return null
 
-        const customInput = colDef?.input as
-          | ((props: {
-              value: unknown
-              onChange: (v: unknown) => void
-            }) => ReactNode)
-          | undefined
-
         const value = values[col.id]
         const onChange = (v: unknown): void => { setValue(col.id, v) }
 
-        if (customInput) {
-          return (
-            <div key={col.id}>
-              {customInput({ value, onChange })}
-            </div>
-          )
+        // 1. column-level component (prefer `component` over legacy `input`)
+        const customComp = resolveColumnComponent(colDef)
+        if (customComp) {
+          return <div key={col.id}>{customComp({ value, onChange })}</div>
         }
 
+        // 2. registry by cellType
+        if (meta?.cellType) {
+          const regComp = resolveRegistryComponent(meta, mode, cellTypes)
+          if (regComp) return <div key={col.id}>{regComp({ value, onChange })}</div>
+        }
+
+        // 3. built-in type-aware Input
         const inputType =
           meta?.cellType === 'number'
             ? 'number'
@@ -92,4 +96,34 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
       })}
     </div>
   )
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────
+
+type ColConfig = false | ColumnEditingConfig | ColumnCreatingConfig | undefined
+
+function resolveColumnComponent(
+  colDef: ColConfig,
+): ((props: CellInputProps) => ReactNode) | undefined {
+  if (!colDef) return undefined
+  // Prefer `component` (new API) over legacy `input`
+  const comp = (colDef as ColumnEditingConfig).component
+  if (comp) return comp as (props: CellInputProps) => ReactNode
+  const legacyInput = (colDef as { input?: unknown }).input
+  if (typeof legacyInput === 'function') {
+    return legacyInput as (props: CellInputProps) => ReactNode
+  }
+  return undefined
+}
+
+function resolveRegistryComponent(
+  meta: ColumnMeta<unknown, unknown>,
+  mode: 'creating' | 'editing',
+  cellTypes: CellTypeRegistry,
+): ((props: CellInputProps) => ReactNode) | undefined {
+  if (!meta.cellType) return undefined
+  const def = cellTypes[meta.cellType]
+  if (!def) return undefined
+  const comp = mode === 'creating' ? (def.creating ?? def.edit) : def.edit
+  return comp
 }

@@ -2,7 +2,8 @@ import type { ColumnDef as TanStackColumnDef } from '@tanstack/table-core'
 
 export type { TanStackColumnDef }
 
-export type CellType = 'text' | 'number' | 'date' | 'boolean'
+/** Built-in cell types. The `string & {}` tail allows custom type strings while preserving autocomplete. */
+export type CellType = 'text' | 'number' | 'date' | 'boolean' | (string & {})
 
 export interface CellViewCtx<TRow, TValue> {
   row: TRow
@@ -10,22 +11,38 @@ export interface CellViewCtx<TRow, TValue> {
   rowIndex: number
 }
 
+/** Props passed to column-level input components (filtering, editing, creating). */
+export interface InputComponentProps {
+  value: unknown
+  onChange: (value: unknown) => void
+}
+
 export interface CellDef<TRow, TValue = unknown> {
   type?: CellType
+  /** @deprecated Use `component` instead. Kept for backward compat. */
   view?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  /** Custom view-mode renderer for this cell. Takes priority over `view`. */
+  component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  /** @deprecated Use `editing.component` / `creating.component` instead. */
   input?: unknown
 }
 
 export interface ColumnFilteringConfig {
   input?: unknown
+  /** Custom filter input component for this column. */
+  component?: (props: InputComponentProps) => unknown
 }
 
 export interface ColumnEditingConfig {
   input?: unknown
+  /** Custom edit input component for this column. */
+  component?: (props: InputComponentProps) => unknown
 }
 
 export interface ColumnCreatingConfig {
   input?: unknown
+  /** Custom create input component for this column. Falls back to `editing.component` when omitted. */
+  component?: (props: InputComponentProps) => unknown
 }
 
 /**
@@ -73,6 +90,8 @@ declare module '@tanstack/table-core' {
     pin?: 'left' | 'right'
     cellType?: CellType
     cellInput?: unknown
+    /** Resolved view renderer from `cell.component` or `cell.view`. */
+    cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
     filtering?: false | ColumnFilteringConfig
     editing?: false | ColumnEditingConfig
     creating?: false | ColumnCreatingConfig
