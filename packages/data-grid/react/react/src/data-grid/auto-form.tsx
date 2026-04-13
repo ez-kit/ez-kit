@@ -60,36 +60,13 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
           if (regComp) return <div key={col.id}>{regComp({ value, onChange })}</div>
         }
 
-        // 3. built-in type-aware Input
-        const inputType =
-          meta?.cellType === 'number'
-            ? 'number'
-            : meta?.cellType === 'date'
-              ? 'date'
-              : meta?.cellType === 'boolean'
-                ? 'checkbox'
-                : 'text'
-
+        // 3. plain text fallback
         return (
           <div key={col.id}>
             <label>{col.id}</label>
             <Input
-              type={inputType}
-              value={
-                inputType === 'checkbox'
-                  ? undefined
-                  : ((value ?? '') as string | number | readonly string[])
-              }
-              checked={inputType === 'checkbox' ? Boolean(value) : undefined}
-              onChange={(e) => {
-                onChange(
-                  inputType === 'checkbox'
-                    ? e.target.checked
-                    : inputType === 'number'
-                      ? e.target.valueAsNumber
-                      : e.target.value,
-                )
-              }}
+              value={(value ?? '') as string | number | readonly string[]}
+              onChange={(e) => { onChange(e.target.value) }}
             />
           </div>
         )

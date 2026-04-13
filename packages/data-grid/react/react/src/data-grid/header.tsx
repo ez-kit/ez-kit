@@ -1,13 +1,14 @@
+import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
 import { useTableContext } from './table-context'
 
-import type { CellInputProps } from '../cell-types-context'
+import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
 import type { InputProps } from '../types'
 import type { Header, ColumnMeta } from '@tanstack/table-core'
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
 
 /**
  * Renders the table `<thead>` with all header groups.
@@ -18,6 +19,7 @@ import type { ComponentType, ReactNode } from 'react'
 export function Header() {
 	const table = useTableContext()
 	const { Thead, Tr, Th, Input } = useGridComponents()
+	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 
 	return (
@@ -33,24 +35,42 @@ export function Header() {
 						const sortDir = header.column.getIsSorted()
 						const pinStyles = getCommonPinStyles(header.column)
 
+						const sortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
+						const onSortKeyDown = canSort
+							? (e: KeyboardEvent) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault()
+										sortHandler?.(e)
+									}
+								}
+							: undefined
+
 						return (
 							<Th
 								data-slot='th'
 								key={header.id}
 								colSpan={header.colSpan}
 								style={pinStyles}
-								onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
 							>
-								{header.isPlaceholder
-									? null
-									: flexRender(
-											header.column.columnDef.header,
-											header.getContext() as unknown as Record<string, unknown>,
-										)}
-								{canSort && <span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>}
+								<div
+									data-slot='sort-trigger'
+									role={canSort ? 'button' : undefined}
+									tabIndex={canSort ? 0 : undefined}
+									style={{ cursor: canSort ? 'pointer' : undefined }}
+									onClick={sortHandler}
+									onKeyDown={onSortKeyDown}
+								>
+									{header.isPlaceholder
+										? null
+										: flexRender(
+												header.column.columnDef.header,
+												header.getContext() as unknown as Record<string, unknown>,
+											)}
+									{canSort && <span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>}
+								</div>
 								{hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter() && (
-									<div>
-										{renderFilterInput({ header, meta, Input })}
+									<div data-slot='header-extras'>
+										{renderFilterInput({ header, meta, Input, cellTypes })}
 									</div>
 								)}
 							</Th>
@@ -69,10 +89,11 @@ interface FilterInputArgs {
 	header: Header<any, unknown>
 	meta: ColumnMeta<unknown, unknown> | undefined
 	Input: ComponentType<InputProps>
+	cellTypes: CellTypeRegistry
 }
 
-function renderFilterInput({ header, meta, Input }: FilterInputArgs): ReactNode {
-	const filterValue = header.column.getFilterValue() ?? ''
+function renderFilterInput({ header, meta, Input, cellTypes }: FilterInputArgs): ReactNode {
+	const filterValue = header.column.getFilterValue()
 	const onChange = (v: unknown) => { header.column.setFilterValue(v) }
 
 	// 1. column-level filtering.component
@@ -82,13 +103,19 @@ function renderFilterInput({ header, meta, Input }: FilterInputArgs): ReactNode 
 		if (comp) return comp({ value: filterValue, onChange })
 	}
 
-	// 2. default Input
+	// 2. registry by cellType (filter → edit fallback)
+	if (meta?.cellType) {
+		const def = cellTypes[meta.cellType]
+		const comp = def?.filter ?? def?.edit
+		if (comp) return comp({ value: filterValue, onChange })
+	}
+
+	// 3. default Input
 	return (
 		<Input
 			placeholder={`Filter ${header.column.id}…`}
-			value={filterValue as string}
+			value={(filterValue ?? '') as string}
 			onChange={(e) => { header.column.setFilterValue(e.target.value) }}
-			onClick={(e) => { e.stopPropagation() }}
 		/>
 	)
 }

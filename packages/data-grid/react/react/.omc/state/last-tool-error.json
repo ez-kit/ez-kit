@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"pnpm --filter @ez-kit/data-grid-react typecheck 2>&1 && pnpm --filter @ez-kit/data-grid-react lint 2>&1 && pnpm exec vitest run 2>&1\",\"timeout\":90000,\"description\":\"Typecheck, lint, and te...",
+  "error": "Exit code 2\n\n> @ez-kit/data-grid-react@0.0.0 typecheck /Users/sergejolcev/Desktop/npm-packages/ez-kit/ez-kit/packages/data-grid/react/react\n> tsc --project tsconfig.json --noEmit\n\nsrc/built-in-cell-types.tsx(14,4): error TS2769: No overload matches this call.\n  Overload 1 of 2, '(props: NumberInputProps, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | ... 4 more ... | undefined', gave the following error.\n    Type '{ value: number...",
+  "timestamp": "2026-04-13T06:36:56.375Z",
+  "retry_count": 1
+}

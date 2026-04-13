@@ -20,10 +20,21 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>
 export type InputProps = InputHTMLAttributes<HTMLInputElement>
 
 export interface CheckboxProps {
-	value?: boolean
+	value?: boolean | undefined
 	indeterminate?: boolean
 	onChange?: (checked: boolean) => void
 	'aria-label'?: string
+}
+
+export interface NumberInputProps {
+	value?: number | undefined
+	onChange?: (value: number | undefined) => void
+}
+
+export interface DateFieldProps {
+	/** ISO date string, e.g. `"2024-01-15"` */
+	value?: string | undefined
+	onChange?: (value: string) => void
 }
 
 export interface ModalProps {
@@ -69,6 +80,8 @@ export interface GridComponents {
 	Button?: ComponentType<ButtonProps>
 	Input?: ComponentType<InputProps>
 	Checkbox?: ComponentType<CheckboxProps>
+	NumberInput?: ComponentType<NumberInputProps>
+	DateField?: ComponentType<DateFieldProps>
 	Modal?: ComponentType<ModalProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>

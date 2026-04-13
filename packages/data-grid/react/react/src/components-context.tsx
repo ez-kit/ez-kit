@@ -3,9 +3,11 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type {
 	ButtonProps,
 	CheckboxProps,
+	DateFieldProps,
 	GridComponents,
 	InputProps,
 	ModalProps,
+	NumberInputProps,
 	PageSizerProps,
 	PaginationProps,
 	TbodyProps,
@@ -47,6 +49,27 @@ function DefaultButton(props: ButtonProps) {
 }
 function DefaultInput(props: InputProps) {
 	return <input {...props} />
+}
+function DefaultNumberInput({ value, onChange }: NumberInputProps) {
+	return (
+		<input
+			type='number'
+			value={typeof value === 'number' && !Number.isNaN(value) ? value : ''}
+			onChange={(e) => {
+				const n = e.target.valueAsNumber
+				onChange?.(Number.isNaN(n) ? undefined : n)
+			}}
+		/>
+	)
+}
+function DefaultDateField({ value, onChange }: DateFieldProps) {
+	return (
+		<input
+			type='date'
+			value={value ?? ''}
+			onChange={(e) => { onChange?.(e.target.value) }}
+		/>
+	)
 }
 function DefaultCheckbox({ value, indeterminate, onChange, ...rest }: CheckboxProps) {
 	return (
@@ -158,6 +181,8 @@ export const defaultComponents: Required<GridComponents> = {
 	Button: DefaultButton,
 	Input: DefaultInput,
 	Checkbox: DefaultCheckbox,
+	NumberInput: DefaultNumberInput,
+	DateField: DefaultDateField,
 	Modal: DefaultModal,
 	Toolbar: DefaultToolbar,
 	Pagination: DefaultPagination,

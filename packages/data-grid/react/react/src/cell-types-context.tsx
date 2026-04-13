@@ -1,5 +1,7 @@
 import { createContext, useContext, useMemo } from 'react'
 
+import { BUILT_IN_CELL_TYPES } from './built-in-cell-types'
+
 import type { ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
@@ -24,13 +26,15 @@ export interface CellTypeDefinition {
 	edit?: (props: CellInputProps) => ReactNode
 	/** Create-mode input. Falls back to `edit` when omitted. */
 	creating?: (props: CellInputProps) => ReactNode
+	/** Filter-mode input. Falls back to `edit` when omitted. */
+	filter?: (props: CellInputProps) => ReactNode
 }
 
 export type CellTypeRegistry = Record<string, CellTypeDefinition>
 
 // ── context ───────────────────────────────────────────────────────────────
 
-const CellTypesContext = createContext<CellTypeRegistry>({})
+const CellTypesContext = createContext(BUILT_IN_CELL_TYPES)
 
 export interface CellTypesProviderProps {
 	types: CellTypeRegistry

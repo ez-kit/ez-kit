@@ -33,8 +33,10 @@ export type { GridComponents } from './types'
 export type {
   ButtonProps,
   CheckboxProps,
+  DateFieldProps,
   InputProps,
   ModalProps,
+  NumberInputProps,
   PageSizerProps,
   PaginationProps,
   TbodyProps,

@@ -1,6 +1,8 @@
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { Checkbox } from './blocks/Checkbox'
+import { DateField } from './blocks/DateField'
+import { NumberInput } from './blocks/NumberInput'
 import { PageSizer } from './blocks/PageSizer'
 import { Pagination } from './blocks/pagination'
 import { Toolbar } from './blocks/Toolbar'
@@ -20,6 +22,8 @@ export const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid(
 	Button: Button,
 	Input: Input,
 	Checkbox: Checkbox,
+	NumberInput: NumberInput,
+	DateField: DateField,
 	Pagination: Pagination,
 	PageSizer: PageSizer,
 	Toolbar: Toolbar,
