@@ -1,6 +1,6 @@
-import type { PageSizerProps } from '@ez-kit/data-grid-react'
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
+
+import type { PageSizerProps } from '@ez-kit/data-grid-react'
 
 export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
 	return (
