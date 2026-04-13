@@ -7,9 +7,18 @@ import type { DataTable, TableConfig } from '@ez-kit/data-grid-core'
 /** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
 export const CELL_TYPES_KEY = Symbol('cellTypes')
 
+/** Symbol used to carry pageSizer config on the table instance for PageSizer to read. */
+export const PAGE_SIZER_KEY = Symbol('pageSizer')
+
+export interface PageSizerConfig {
+  items: number[]
+}
+
 export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow> {
   /** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
   cellTypes?: CellTypeRegistry
+  /** Page size selector config. When provided, renders a PageSizer control. */
+  pageSizer?: PageSizerConfig
 }
 
 /**
@@ -23,7 +32,7 @@ export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow
 export function useDataGrid<TRow extends object>(
   config: UseDataGridConfig<TRow>,
 ): DataTable<TRow> {
-  const { cellTypes, ...tableConfig } = config
+  const { cellTypes, pageSizer, ...tableConfig } = config
 
   const tableRef = useRef<DataTable<TRow> | null>(null)
   tableRef.current ??= createTable(tableConfig as TableConfig<TRow>)
@@ -32,6 +41,11 @@ export function useDataGrid<TRow extends object>(
   const cellTypesRef = useRef(cellTypes)
   cellTypesRef.current = cellTypes
   ;(tableRef.current as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] = cellTypesRef.current
+
+  // Store pageSizer config on the table instance so PageSizer can read without an extra prop
+  const pageSizerRef = useRef(pageSizer)
+  pageSizerRef.current = pageSizer
+  ;(tableRef.current as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] = pageSizerRef.current
 
   // Subscribe so React re-renders on any table state change
   useSyncExternalStore(

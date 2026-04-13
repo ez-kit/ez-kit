@@ -49,6 +49,12 @@ export interface PaginationProps {
 	onPageChange: (pageIndex: number) => void
 }
 
+export interface PageSizerProps {
+	pageSize: number
+	items: number[]
+	onPageSizeChange: (size: number) => void
+}
+
 // ── DI registry ──────────────────────────────────────────────────────────
 
 export interface GridComponents {
@@ -67,4 +73,5 @@ export interface GridComponents {
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>
 	Pagination?: ComponentType<PaginationProps>
+	PageSizer?: ComponentType<PageSizerProps>
 }

@@ -6,6 +6,7 @@ import type {
 	GridComponents,
 	InputProps,
 	ModalProps,
+	PageSizerProps,
 	PaginationProps,
 	TbodyProps,
 	TdProps,
@@ -69,6 +70,25 @@ function DefaultModal({ open, onClose, title, children }: ModalProps) {
 			{title ? <header>{title}</header> : null}
 			{children}
 		</dialog>
+	)
+}
+function DefaultPageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
+	return (
+		<select
+			value={pageSize}
+			onChange={(e) => {
+				onPageSizeChange(Number(e.target.value))
+			}}
+		>
+			{items.map((size) => (
+				<option
+					key={size}
+					value={size}
+				>
+					{size}
+				</option>
+			))}
+		</select>
 	)
 }
 function DefaultToolbar({ children, ...props }: ToolbarProps) {
@@ -141,6 +161,7 @@ export const defaultComponents: Required<GridComponents> = {
 	Modal: DefaultModal,
 	Toolbar: DefaultToolbar,
 	Pagination: DefaultPagination,
+	PageSizer: DefaultPageSizer,
 }
 
 // ── context ───────────────────────────────────────────────────────────────

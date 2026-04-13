@@ -9,6 +9,7 @@ import { CreatingModal } from './creating-modal'
 import { EditingModal } from './editing-modal'
 import { Header } from './header'
 import { Pagination } from './pagination'
+import { PageSizer } from './page-sizer'
 import { DataGridRow } from './row'
 import { DataGridTable } from './table'
 import { TableContext } from './table-context'
@@ -34,6 +35,7 @@ function DefaultLayout() {
 			<Toolbar />
 			<DataGridTable />
 			<Pagination />
+			<PageSizer />
 		</>
 	)
 }
@@ -79,6 +81,7 @@ type DataGridType = typeof DataGridRoot & {
 	Row: typeof DataGridRow
 	Cell: typeof DataGridCell
 	Pagination: typeof Pagination
+	PageSizer: typeof PageSizer
 	CreateTrigger: typeof CreateTrigger
 	CreatingModal: typeof CreatingModal
 	EditingModal: typeof EditingModal
@@ -92,6 +95,7 @@ DataGrid.Body = Body
 DataGrid.Row = DataGridRow
 DataGrid.Cell = DataGridCell
 DataGrid.Pagination = Pagination
+DataGrid.PageSizer = PageSizer
 DataGrid.CreateTrigger = CreateTrigger
 DataGrid.CreatingModal = CreatingModal
 DataGrid.EditingModal = EditingModal

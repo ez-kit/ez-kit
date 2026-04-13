@@ -39,6 +39,7 @@ export default function DataGridSandboxPage() {
 		sorting: true,
 		filtering: true,
 		pagination: { pageSize: 3 },
+		pageSizer: { items: [3, 5, 10] },
 		selection: true,
 		editing: {
 			mode: 'row',

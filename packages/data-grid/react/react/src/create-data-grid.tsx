@@ -39,6 +39,7 @@ export function createDataGrid(components: Partial<GridComponents>): {
 	BoundDataGrid.Row = DataGrid.Row
 	BoundDataGrid.Cell = DataGrid.Cell
 	BoundDataGrid.Pagination = DataGrid.Pagination
+	BoundDataGrid.PageSizer = DataGrid.PageSizer
 	BoundDataGrid.CreateTrigger = DataGrid.CreateTrigger
 	BoundDataGrid.CreatingModal = DataGrid.CreatingModal
 	BoundDataGrid.EditingModal = DataGrid.EditingModal

@@ -3,6 +3,8 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
+import { PAGE_SIZER_KEY } from '../use-data-grid'
+
 import { DataGrid } from './data-grid'
 
 interface User {
@@ -152,6 +154,23 @@ describe('<DataGrid>', () => {
       />,
     )
     expect(screen.getAllByTestId('money-cell')).toHaveLength(USERS.length)
+  })
+
+  it('does not render PageSizer when pageSizer config is not set', () => {
+    const table = makeTable({ pagination: { pageSize: 5 } })
+    render(<DataGrid table={table} />)
+    expect(screen.queryByRole('combobox')).toBeNull()
+  })
+
+  it('renders PageSizer select with items when pageSizer config is set', () => {
+    const table = makeTable({ pagination: { pageSize: 5 } })
+    ;(table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] = { items: [5, 10, 25] }
+    render(<DataGrid table={table} />)
+    const select = screen.getByRole('combobox')
+    expect(select).toBeInTheDocument()
+    expect(select).toHaveValue('5')
+    expect(screen.getByRole('option', { name: '10' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '25' })).toBeInTheDocument()
   })
 
   it('registry creating falls back to edit component when creating not provided', () => {

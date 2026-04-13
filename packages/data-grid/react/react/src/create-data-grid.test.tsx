@@ -16,6 +16,7 @@ describe('createDataGrid', () => {
     expect(BoundDataGrid.Toolbar).toBe(DataGrid.Toolbar)
     expect(BoundDataGrid.Table).toBe(DataGrid.Table)
     expect(BoundDataGrid.Pagination).toBe(DataGrid.Pagination)
+    expect(BoundDataGrid.PageSizer).toBe(DataGrid.PageSizer)
     expect(BoundDataGrid.CreateTrigger).toBe(DataGrid.CreateTrigger)
   })
 })

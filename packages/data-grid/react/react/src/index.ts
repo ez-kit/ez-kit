@@ -1,6 +1,6 @@
 // React hook
-export { useDataGrid } from './use-data-grid'
-export type { UseDataGridConfig } from './use-data-grid'
+export { useDataGrid, PAGE_SIZER_KEY } from './use-data-grid'
+export type { UseDataGridConfig, PageSizerConfig } from './use-data-grid'
 
 // Factory
 export { createDataGrid } from './create-data-grid'
@@ -35,6 +35,7 @@ export type {
   CheckboxProps,
   InputProps,
   ModalProps,
+  PageSizerProps,
   PaginationProps,
   TbodyProps,
   TdProps,
