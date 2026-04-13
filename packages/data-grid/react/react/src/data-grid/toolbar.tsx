@@ -17,7 +17,7 @@ interface ToolbarProps {
 export function Toolbar({ children }: ToolbarProps) {
 	const { Toolbar: ToolbarComponent } = useGridComponents()
 	const table = useTableContext()
-	const hasCreating = Boolean(table.options.creating)
+	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== 'pin-row'
 
 	const content = children ?? (hasCreating ? <CreateTrigger /> : null)
 	if (!content) return null

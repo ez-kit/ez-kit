@@ -59,6 +59,20 @@ describe('<DataGrid>', () => {
     expect(screen.getByText('+ Add')).toBeInTheDocument()
   })
 
+  it('does not render "+ Add" button when creating.mode is "pin-row"', () => {
+    const table = makeTable({ creating: { mode: 'pin-row', onSave: () => true } })
+    render(<DataGrid table={table} />)
+    expect(screen.queryByText('+ Add')).toBeNull()
+  })
+
+  it('renders creating row without "+ Add" button when mode is "pin-row"', () => {
+    const table = makeTable({ creating: { mode: 'pin-row', onSave: () => true } })
+    render(<DataGrid table={table} />)
+    expect(screen.queryByText('+ Add')).toBeNull()
+    // pin-row always renders creating row inputs
+    expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0)
+  })
+
   it('shows creating row inputs when startCreating is called', () => {
     const table = makeTable({ creating: { mode: 'row', onSave: () => true } })
     const { rerender } = render(<DataGrid table={table} />)
