@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 'use client'
 
 import { defineColumns } from '@ez-kit/data-grid-react'
@@ -49,7 +46,7 @@ export default function DataGridSandboxPage() {
 			},
 		},
 		creating: {
-			mode: 'row',
+			mode: 'pin-row',
 			onSave: (values) => {
 				console.log('Saving new row', values)
 				setData((prev) => [...prev, values as User])
