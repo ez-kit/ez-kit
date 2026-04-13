@@ -1,11 +1,11 @@
 import {
-  createTable as createTanStackTable,
-  getCoreRowModel,
-  getExpandedRowModel,
-  getFilteredRowModel,
-  getGroupedRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
+	createTable as createTanStackTable,
+	getCoreRowModel,
+	getExpandedRowModel,
+	getFilteredRowModel,
+	getGroupedRowModel,
+	getPaginationRowModel,
+	getSortedRowModel,
 } from '@tanstack/table-core'
 
 import { mapColumns } from './column/map-columns'
@@ -16,12 +16,7 @@ import { LoadingFeature } from './features/loading'
 import { buildColumnList, extractPinningState } from './system-columns'
 
 import type { DataTable, TableConfig } from './types'
-import type {
-  RowSelectionState,
-  TableOptionsResolved,
-  TableState,
-  Updater,
-} from '@tanstack/table-core'
+import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
 type AnyRow = Record<string, unknown>
 
@@ -36,144 +31,140 @@ type AnyRow = Record<string, unknown>
  * @example
  * const table = createTable({ data: users, columns, sorting: true })
  */
-export function createTable<TRow extends object>(
-  config: TableConfig<TRow>,
-): DataTable<TRow> {
-  const listeners = new Set<() => void>()
-  const notify = (): void => {
-    listeners.forEach((l) => { l(); })
-  }
+export function createTable<TRow extends object>(config: TableConfig<TRow>): DataTable<TRow> {
+	const listeners = new Set<() => void>()
+	const notify = (): void => {
+		listeners.forEach((l) => {
+			l()
+		})
+	}
 
-  // ── map user columns → TanStack columns ──────────────────────────────────
-  const mappedUserColumns = mapColumns(config.columns)
+	// ── row identity ─────────────────────────────────────────────────────────
+	const getRowId =
+		config.getRowId ??
+		((row: TRow, index: number): string => {
+			const id = (row as Record<string, unknown>).id
+			return id != null ? String(id) : String(index)
+		})
 
-  const hasEditing = Boolean(config.editing)
-  const hasDeleting = Boolean(config.deleting)
-  const hasSelection = Boolean(config.selection)
-  const hasExpanding = Boolean(config.expanding)
+	// ── map user columns → TanStack columns ──────────────────────────────────
+	const mappedUserColumns = mapColumns(config.columns)
 
-  const allColumns = buildColumnList(mappedUserColumns, {
-    selection: hasSelection,
-    expanding: hasExpanding,
-    editing: hasEditing,
-    deleting: hasDeleting,
-  })
+	const hasEditing = Boolean(config.editing)
+	const hasDeleting = Boolean(config.deleting)
+	const hasSelection = Boolean(config.selection)
+	const hasExpanding = Boolean(config.expanding)
 
-  const { left: pinnedLeft, right: pinnedRight } =
-    extractPinningState(allColumns)
+	const allColumns = buildColumnList(mappedUserColumns, {
+		selection: hasSelection,
+		expanding: hasExpanding,
+		editing: hasEditing,
+		deleting: hasDeleting,
+	})
 
-  // ── build TanStack options ────────────────────────────────────────────────
-  const defaultPageSize =
-    typeof config.pagination === 'object' && config.pagination.pageSize
-      ? config.pagination.pageSize
-      : 10
+	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)
 
-  const initialState: Partial<TableState> = {
-    columnPinning: { left: pinnedLeft, right: pinnedRight },
-    pagination: { pageIndex: 0, pageSize: defaultPageSize },
-  }
+	// ── build TanStack options ────────────────────────────────────────────────
+	const defaultPageSize =
+		typeof config.pagination === 'object' && config.pagination.pageSize ? config.pagination.pageSize : 10
 
-  // We need a stable reference for the callback closure.
-  // Using a wrapper object allows const + mutation inside the closure.
-  const ref: { table: ReturnType<typeof createTanStackTable<TRow>> | null } = {
-    table: null,
-  }
-  let currentState: TableState
+	const initialState: Partial<TableState> = {
+		columnPinning: { left: pinnedLeft, right: pinnedRight },
+		pagination: { pageIndex: 0, pageSize: defaultPageSize },
+	}
 
-  const onStateChange = (updater: Updater<TableState>): void => {
-    currentState =
-      typeof updater === 'function' ? updater(currentState) : updater
-    ref.table?.setOptions((prev) => ({ ...prev, state: currentState }))
-    notify()
-  }
+	// We need a stable reference for the callback closure.
+	// Using a wrapper object allows const + mutation inside the closure.
+	const ref: { table: ReturnType<typeof createTanStackTable<TRow>> | null } = {
+		table: null,
+	}
+	let currentState: TableState
 
-  // Build options without an explicit type annotation to avoid exactOptionalPropertyTypes
-  // conflicts — let TypeScript infer, then cast at the call site.
-  const onRowSelectionChange =
-    typeof config.selection === 'object' && config.selection.onChange
-      ? (updater: Updater<RowSelectionState>): void => {
-          const next =
-            typeof updater === 'function'
-              ? updater(currentState.rowSelection)
-              : updater
-          const selectedIds = Object.keys(next).filter((k) => next[k])
-          ;(config.selection as { onChange: (ids: string[]) => void }).onChange(selectedIds)
-        }
-      : undefined
+	const onStateChange = (updater: Updater<TableState>): void => {
+		currentState = typeof updater === 'function' ? updater(currentState) : updater
+		ref.table?.setOptions((prev) => ({ ...prev, state: currentState }))
+		notify()
+	}
 
-  const options = {
-    _features: [CreatingFeature, EditingFeature, DeletingFeature, LoadingFeature],
-    data: config.data,
-    columns: allColumns,
-    state: initialState as TableState, // will be replaced below
-    onStateChange,
-    getCoreRowModel: getCoreRowModel(),
-    initialState,
-    ...(config.sorting ? { getSortedRowModel: getSortedRowModel() } : {}),
-    ...(config.filtering ? { getFilteredRowModel: getFilteredRowModel() } : {}),
-    ...(config.pagination
-      ? { getPaginationRowModel: getPaginationRowModel() }
-      : {}),
-    ...(config.expanding
-      ? { getExpandedRowModel: getExpandedRowModel(), getGroupedRowModel: getGroupedRowModel() }
-      : {}),
-    // Row selection
-    enableRowSelection: hasSelection,
-    ...(onRowSelectionChange ? { onRowSelectionChange } : {}),
-    // Pagination manual
-    ...(typeof config.pagination === 'object' && config.pagination.manual
-      ? { manualPagination: true, pageCount: config.pagination.pageCount ?? -1 }
-      : {}),
-    // Filtering manual
-    ...(typeof config.filtering === 'object' && config.filtering.manual
-      ? { manualFiltering: true }
-      : {}),
-    // Sorting manual
-    ...(typeof config.sorting === 'object' && config.sorting.manual
-      ? { manualSorting: true }
-      : {}),
-    // Feature configs
-    ...(config.creating ? { creating: config.creating } : {}),
-    ...(config.editing ? { editing: config.editing } : {}),
-    ...(config.deleting ? { deleting: config.deleting } : {}),
-  }
+	// Build options without an explicit type annotation to avoid exactOptionalPropertyTypes
+	// conflicts — let TypeScript infer, then cast at the call site.
+	const onRowSelectionChange =
+		typeof config.selection === 'object' && config.selection.onChange
+			? (updater: Updater<RowSelectionState>): void => {
+					const next = typeof updater === 'function' ? updater(currentState.rowSelection) : updater
+					const selectedIds = Object.keys(next).filter((k) => next[k])
+					;(config.selection as { onChange: (ids: string[]) => void }).onChange(selectedIds)
+				}
+			: undefined
 
-  // Create the table. Features run getInitialState during this call.
-  ref.table = createTanStackTable(options as unknown as TableOptionsResolved<TRow>)
+	const options = {
+		_features: [CreatingFeature, EditingFeature, DeletingFeature, LoadingFeature],
+		data: config.data,
+		columns: allColumns,
+		getRowId,
+		state: initialState as TableState, // will be replaced below
+		onStateChange,
+		getCoreRowModel: getCoreRowModel(),
+		initialState,
+		...(config.sorting ? { getSortedRowModel: getSortedRowModel() } : {}),
+		...(config.filtering ? { getFilteredRowModel: getFilteredRowModel() } : {}),
+		...(config.pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+		...(config.expanding
+			? { getExpandedRowModel: getExpandedRowModel(), getGroupedRowModel: getGroupedRowModel() }
+			: {}),
+		// Row selection
+		enableRowSelection: hasSelection,
+		...(onRowSelectionChange ? { onRowSelectionChange } : {}),
+		// Pagination manual
+		...(typeof config.pagination === 'object' && config.pagination.manual
+			? { manualPagination: true, pageCount: config.pagination.pageCount ?? -1 }
+			: {}),
+		// Filtering manual
+		...(typeof config.filtering === 'object' && config.filtering.manual ? { manualFiltering: true } : {}),
+		// Sorting manual
+		...(typeof config.sorting === 'object' && config.sorting.manual ? { manualSorting: true } : {}),
+		// Feature configs
+		...(config.creating ? { creating: config.creating } : {}),
+		...(config.editing ? { editing: config.editing } : {}),
+		...(config.deleting ? { deleting: config.deleting } : {}),
+	}
 
-  // Capture the fully-merged initial state (includes feature states)
-  currentState = ref.table.initialState
+	// Create the table. Features run getInitialState during this call.
+	ref.table = createTanStackTable(options as unknown as TableOptionsResolved<TRow>)
 
-  // Switch to fully-controlled mode with the real initial state
-  ref.table.setOptions((prev) => ({ ...prev, state: currentState }))
+	// Capture the fully-merged initial state (includes feature states)
+	currentState = ref.table.initialState
 
-  // Set initial loading state if provided
-  if (config.loading === true) {
-    ref.table.setLoading(true)
-  }
+	// Switch to fully-controlled mode with the real initial state
+	ref.table.setOptions((prev) => ({ ...prev, state: currentState }))
 
-  // ── compose the DataTable ─────────────────────────────────────────────────
-  const dataTable = ref.table as DataTable<TRow>
+	// Set initial loading state if provided
+	if (config.loading === true) {
+		ref.table.setLoading(true)
+	}
 
-  dataTable.subscribe = (listener) => {
-    listeners.add(listener)
-    return () => {
-      listeners.delete(listener)
-    }
-  }
+	// ── compose the DataTable ─────────────────────────────────────────────────
+	const dataTable = ref.table as DataTable<TRow>
 
-  dataTable.getSnapshot = () => currentState
+	dataTable.subscribe = (listener) => {
+		listeners.add(listener)
+		return () => {
+			listeners.delete(listener)
+		}
+	}
 
-  dataTable.setData = (data) => {
-    ref.table?.setOptions((prev) => ({
-      ...prev,
-      data: data as AnyRow[] as TRow[],
-    }))
-    notify()
-  }
+	dataTable.getSnapshot = () => currentState
 
-  // Override setLoading to also call notify (it goes through setState → onStateChange)
-  // Feature's setLoading already calls table.setState which triggers onStateChange → notify ✓
+	dataTable.setData = (data) => {
+		ref.table?.setOptions((prev) => ({
+			...prev,
+			data: data as AnyRow[] as TRow[],
+		}))
+		notify()
+	}
 
-  return dataTable
+	// Override setLoading to also call notify (it goes through setState → onStateChange)
+	// Feature's setLoading already calls table.setState which triggers onStateChange → notify ✓
+
+	return dataTable
 }

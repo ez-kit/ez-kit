@@ -91,20 +91,23 @@ export function DataGridCell({ cell, row }: CellProps) {
 	if (isEditingThisCell) {
 		const editComp = resolveEditComponent(meta, cellTypes)
 		const value = editingState.editingValues[columnId]
-		const onChange = (v: unknown) => { table.setEditingValue(columnId, v) }
+		const onChange = (v: unknown) => {
+			table.setEditingValue(columnId, v)
+		}
 		return (
 			<Td style={pinStyles}>
-				{editComp
-					? editComp({ value, onChange })
-					: (
-						<Input
-							autoFocus
-							value={(value ?? '') as string | number | readonly string[]}
-							onChange={(e) => { table.setEditingValue(columnId, e.target.value) }}
-							onBlur={() => void table.commitCellEditing()}
-						/>
-					)
-				}
+				{editComp ? (
+					editComp({ value, onChange })
+				) : (
+					<Input
+						autoFocus
+						value={(value ?? '') as string | number | readonly string[]}
+						onChange={(e) => {
+							table.setEditingValue(columnId, e.target.value)
+						}}
+						onBlur={() => void table.commitCellEditing()}
+					/>
+				)}
 			</Td>
 		)
 	}
@@ -115,18 +118,21 @@ export function DataGridCell({ cell, row }: CellProps) {
 	if (isEditingRow && meta?.editing !== false) {
 		const editComp = resolveEditComponent(meta, cellTypes)
 		const value = editingState.editingValues[columnId]
-		const onChange = (v: unknown) => { table.setEditingValue(columnId, v) }
+		const onChange = (v: unknown) => {
+			table.setEditingValue(columnId, v)
+		}
 		return (
 			<Td style={pinStyles}>
-				{editComp
-					? editComp({ value, onChange })
-					: (
-						<Input
-							value={(value ?? '') as string | number | readonly string[]}
-							onChange={(e) => { table.setEditingValue(columnId, e.target.value) }}
-						/>
-					)
-				}
+				{editComp ? (
+					editComp({ value, onChange })
+				) : (
+					<Input
+						value={(value ?? '') as string | number | readonly string[]}
+						onChange={(e) => {
+							table.setEditingValue(columnId, e.target.value)
+						}}
+					/>
+				)}
 			</Td>
 		)
 	}
@@ -148,8 +154,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 		>
 			{viewComp
 				? viewComp({ value: cell.getValue(), row: cell.row.original, rowIndex: cell.row.index })
-				: flexRender(cell.column.columnDef.cell, cell.getContext() as unknown as Record<string, unknown>)
-			}
+				: flexRender(cell.column.columnDef.cell, cell.getContext() as unknown as Record<string, unknown>)}
 		</Td>
 	)
 }
@@ -163,7 +168,7 @@ function resolveEditComponent(
 	// 1. column-level editing.component
 	const editingConfig = meta?.editing
 	if (editingConfig !== false && editingConfig !== undefined) {
-		const comp = (editingConfig).component
+		const comp = editingConfig.component
 		if (comp) return comp as (props: CellInputProps) => ReactNode
 	}
 	// 2. registry by cellType
@@ -182,7 +187,10 @@ function resolveViewComponent(
 	if (meta?.cellView) {
 		const cellView = meta.cellView
 		return (props: CellViewProps) =>
-			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex } as CellViewCtx<unknown, unknown>) as ReactNode
+			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex } as CellViewCtx<
+				unknown,
+				unknown
+			>) as ReactNode
 	}
 	// 2. registry by cellType
 	if (meta?.cellType) {
@@ -199,14 +207,12 @@ function BooleanCell({ value }: CellViewProps) {
 }
 
 function NumberCell({ value }: CellViewProps) {
-	// eslint-disable-next-line @typescript-eslint/no-base-to-string
 	const display = typeof value === 'number' ? value.toLocaleString() : String(value ?? '')
 	return <>{display}</>
 }
 
 function DateCell({ value }: CellViewProps) {
 	if (value == null) return null
-	// eslint-disable-next-line @typescript-eslint/no-base-to-string
 	const str = String(value)
 	const d = value instanceof Date ? value : new Date(str)
 	return <>{isNaN(d.getTime()) ? str : d.toLocaleDateString()}</>

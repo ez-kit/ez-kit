@@ -35,13 +35,13 @@ export default function DataGridSandboxPage() {
 		columns,
 		sorting: true,
 		filtering: true,
-		pagination: { pageSize: 3 },
+		pagination: { pageSize: 10 },
 		pageSizer: { items: [3, 5, 10] },
 		selection: true,
 		editing: {
 			mode: 'row',
 			onSave: (rowId, values) => {
-				console.log('Saving edit', rowId, values)
+				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? ({ ...row, ...values } as User) : row)))
 				return true
 			},
 		},

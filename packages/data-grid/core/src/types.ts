@@ -46,6 +46,12 @@ export interface TableConfig<TRow extends object> {
   data: TRow[]
   columns: ColumnDef<TRow>[]
 
+  /**
+   * Returns a stable string ID for a row.
+   * Defaults to `row.id` when present, otherwise falls back to the array index.
+   */
+  getRowId?: (row: TRow, index: number) => string
+
   sorting?: boolean | SortingConfig
   filtering?: boolean | FilteringConfig
   pagination?: boolean | PaginationConfig

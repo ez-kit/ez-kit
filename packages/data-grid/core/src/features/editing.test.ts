@@ -96,6 +96,25 @@ describe('EditingFeature', () => {
     expect(table.getEditingState().editingRowId).toBe(rowId)
   })
 
+  it('commitEditing passes domain row id to onSave when using default getRowId', async () => {
+    const onSave = vi.fn().mockResolvedValue(true)
+    const table = createTable({
+      data: DATA,
+      columns: COLUMNS,
+      editing: { onSave },
+    })
+    // With default getRowId, row IDs are "1" and "2" (from row.id), not "0" and "1" (indices)
+    const rows = table.getRowModel().rows
+    expect(rows[0]?.id).toBe('1')
+    expect(rows[1]?.id).toBe('2')
+
+    table.startEditing('2') // Bob
+    table.setEditingValue('name', 'BobEdited')
+    await table.commitEditing()
+
+    expect(onSave).toHaveBeenCalledWith('2', expect.objectContaining({ name: 'BobEdited' }))
+  })
+
   it('cell mode: startCellEditing sets editingCellId', () => {
     const table = createTable({
       data: DATA,
