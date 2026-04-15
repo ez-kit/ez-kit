@@ -1,5 +1,11 @@
 # @ez-kit/zu-store
 
+## 0.2.1
+
+### Patch Changes
+
+- add git to package.json
+
 ## 0.2.0
 
 ### Minor Changes
