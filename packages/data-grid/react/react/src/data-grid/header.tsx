@@ -18,7 +18,7 @@ import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
  */
 export function Header() {
 	const table = useTableContext()
-	const { Thead, Tr, Th, Input } = useGridComponents()
+	const { Thead, Tr, Th, Input, Resizer } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 
@@ -45,12 +45,23 @@ export function Header() {
 								}
 							: undefined
 
+						const canResize = Boolean(table.options.enableColumnResizing) && header.column.getCanResize()
+						const thStyle = {
+							...pinStyles,
+							...(canResize
+								? {
+										width: `calc(var(--header-${header.column.id}-size) * 1px)`,
+										position: 'relative' as const,
+									}
+								: {}),
+						}
+
 						return (
 							<Th
 								data-slot='th'
 								key={header.id}
 								colSpan={header.colSpan}
-								style={pinStyles}
+								style={thStyle}
 							>
 								<div
 									data-slot='sort-trigger'
@@ -72,6 +83,14 @@ export function Header() {
 									<div data-slot='header-extras'>
 										{renderFilterInput({ header, meta, Input, cellTypes })}
 									</div>
+								)}
+								{canResize && (
+									<Resizer
+										onMouseDown={header.getResizeHandler()}
+										onTouchStart={header.getResizeHandler()}
+										onDoubleClick={() => { header.column.resetSize() }}
+										isResizing={header.column.getIsResizing()}
+									/>
 								)}
 							</Th>
 						)

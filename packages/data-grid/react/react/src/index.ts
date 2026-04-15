@@ -27,9 +27,10 @@ export type {
 
 // Utilities
 export { getCommonPinStyles } from './utils/pin-styles'
+export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Types
-export type { GridComponents } from './types'
+export type { GridComponents, ResizerProps } from './types'
 export type {
   ButtonProps,
   CheckboxProps,
@@ -51,10 +52,13 @@ export type {
 // Re-export core types for convenience
 export type {
   ColumnDef,
+  ColumnResizeDirection,
+  ColumnResizeMode,
   CreatingConfig,
   DataTable,
   DeletingConfig,
   EditingConfig,
+  SizingConfig,
   Table,
   TableConfig,
   TableSnapshot,

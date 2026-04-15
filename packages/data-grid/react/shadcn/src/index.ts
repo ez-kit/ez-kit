@@ -5,6 +5,7 @@ import { DateField } from './blocks/DateField'
 import { NumberInput } from './blocks/NumberInput'
 import { PageSizer } from './blocks/PageSizer'
 import { Pagination } from './blocks/pagination'
+import { Resizer } from './blocks/Resizer'
 import { Toolbar } from './blocks/Toolbar'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
@@ -27,4 +28,8 @@ export const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid(
 	Pagination: Pagination,
 	PageSizer: PageSizer,
 	Toolbar: Toolbar,
+	// data-grid specific
+	Resizer: Resizer,
 })
+
+export { Resizer } from './blocks/Resizer'

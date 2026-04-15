@@ -3,9 +3,11 @@ import type {
 	ComponentType,
 	HTMLAttributes,
 	InputHTMLAttributes,
+	MouseEventHandler,
 	ReactNode,
 	TdHTMLAttributes,
 	ThHTMLAttributes,
+	TouchEventHandler,
 } from 'react'
 
 // ── primitive component props ─────────────────────────────────────────────
@@ -66,6 +68,14 @@ export interface PageSizerProps {
 	onPageSizeChange: (size: number) => void
 }
 
+export interface ResizerProps {
+	onMouseDown: MouseEventHandler<HTMLDivElement>
+	onTouchStart: TouchEventHandler<HTMLDivElement>
+	onDoubleClick: MouseEventHandler<HTMLDivElement>
+	/** True while the user is actively dragging this column border. */
+	isResizing: boolean
+}
+
 // ── DI registry ──────────────────────────────────────────────────────────
 
 export interface GridComponents {
@@ -87,4 +97,6 @@ export interface GridComponents {
 	Toolbar?: ComponentType<ToolbarProps>
 	Pagination?: ComponentType<PaginationProps>
 	PageSizer?: ComponentType<PageSizerProps>
+	// data-grid specific
+	Resizer?: ComponentType<ResizerProps>
 }

@@ -27,7 +27,14 @@ const columns = defineColumns<User>([
 	{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } },
 ])
 
-export default function DataGridSandboxPage() {
+const resizableColumns = defineColumns<User>([
+	{ accessorKey: 'name', header: 'Name', size: 200, minSize: 80, maxSize: 400 },
+	{ accessorKey: 'email', header: 'Email', size: 250, minSize: 120 },
+	{ accessorKey: 'age', header: 'Age', size: 80, minSize: 50, maxSize: 150, cell: { type: 'number' } },
+	{ accessorKey: 'active', header: 'Active', size: 100, enableResizing: false, cell: { type: 'boolean' } },
+])
+
+const BaseExample = () => {
 	const [data, setData] = useState(INITIAL_DATA)
 
 	const table = useDataGrid({
@@ -61,15 +68,68 @@ export default function DataGridSandboxPage() {
 	})
 
 	return (
+		<div>
+			<p style={{ marginBottom: '1rem', color: '#666' }}>
+				Demonstrates sorting, filtering, pagination, selection, creating (row mode), editing (row mode), and deleting.
+			</p>
+			<DataGrid table={table} />
+		</div>
+	)
+}
+
+const ResizableOnChangeExample = () => {
+	const [data] = useState(INITIAL_DATA)
+
+	const resizableOnChange = useDataGrid({
+		data,
+		columns: resizableColumns,
+		sorting: true,
+		sizing: { mode: 'onChange' },
+	})
+
+	return (
+		<div>
+			<h2 style={{ marginTop: '3rem' }}>Column Resizing — onChange</h2>
+			<p style={{ marginBottom: '1rem', color: '#666' }}>
+				Drag column borders to resize. Double-click to reset. &quot;Active&quot; column has resizing disabled.
+			</p>
+			<DataGrid table={resizableOnChange} />
+		</div>
+	)
+}
+const ResizableOnEndExample = () => {
+	const [data] = useState(INITIAL_DATA)
+
+	const resizableOnEnd = useDataGrid({
+		data,
+		columns: resizableColumns,
+		sorting: true,
+		sizing: { mode: 'onEnd' },
+	})
+
+	return (
+		<div>
+			<h2 style={{ marginTop: '3rem' }}>Column Resizing — onEnd (performant)</h2>
+			<p style={{ marginBottom: '1rem', color: '#666' }}>
+				Width updates only after mouse release. No re-renders during drag.
+			</p>
+			<DataGrid table={resizableOnEnd} />
+		</div>
+	)
+}
+
+export default function DataGridSandboxPage() {
+	return (
 		<div
 			style={{ padding: '2rem' }}
 			className='[&_input]:border '
 		>
 			<h1>DataGrid Sandbox</h1>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Demonstrates sorting, filtering, pagination, selection, creating (row mode), editing (row mode), and deleting.
-			</p>
-			<DataGrid table={table} />
+			<BaseExample />
+
+			<ResizableOnChangeExample />
+
+			<ResizableOnEndExample />
 		</div>
 	)
 }

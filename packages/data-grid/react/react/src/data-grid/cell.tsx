@@ -12,7 +12,7 @@ import { useTableContext } from './table-context'
 import type { CellInputProps, CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { CellViewCtx } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 interface CellProps {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +35,10 @@ export function DataGridCell({ cell, row }: CellProps) {
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
 	const pinStyles = getCommonPinStyles(cell.column)
+	const isResizingEnabled = Boolean(table.options.enableColumnResizing) && cell.column.getCanResize()
+	const cellStyle: CSSProperties = isResizingEnabled
+		? { ...pinStyles, width: `calc(var(--col-${columnId}-size) * 1px)` }
+		: pinStyles
 
 	// ── system columns ────────────────────────────────────────────────────────
 	if (meta?.isSystemColumn) {
@@ -42,7 +46,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			const isSelected = row.getIsSelected()
 			const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 			return (
-				<Td style={pinStyles}>
+				<Td style={cellStyle}>
 					<Checkbox
 						value={isSelected}
 						{...(isIndeterminate !== undefined ? { indeterminate: isIndeterminate } : {})}
@@ -57,7 +61,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 		if (columnId === EXPAND_COLUMN_ID) {
 			return (
-				<Td style={pinStyles}>
+				<Td style={cellStyle}>
 					{row.getCanExpand() && (
 						<button
 							type='button'
@@ -75,7 +79,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 		if (columnId === ACTIONS_COLUMN_ID) {
 			return (
-				<Td style={pinStyles}>
+				<Td style={cellStyle}>
 					<ActionsCell row={row} />
 				</Td>
 			)
@@ -95,7 +99,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			table.setEditingValue(columnId, v)
 		}
 		return (
-			<Td style={pinStyles}>
+			<Td style={cellStyle}>
 				{editComp ? (
 					editComp({ value, onChange })
 				) : (
@@ -122,7 +126,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			table.setEditingValue(columnId, v)
 		}
 		return (
-			<Td style={pinStyles}>
+			<Td style={cellStyle}>
 				{editComp ? (
 					editComp({ value, onChange })
 				) : (

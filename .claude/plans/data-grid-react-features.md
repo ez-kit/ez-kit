@@ -80,7 +80,7 @@ When a column has `operators` enabled, a trigger appears next to the filter inpu
 | Per-column filter input (`inline` variant) | ✅ | |
 | Column pinning (sticky) | ✅ | |
 | `aria-sort` attribute on `<th>` | 🔲 | Accessibility |
-| Column resize handle | 🔲 | Drag handle on right edge of header cell |
+| Column resize handle | ✅ | `Resizer` DI component; CSS-variable widths; shadcn styled block (`w-[2px] bg-primary rounded-full`) |
 | Column visibility menu | 🔲 | Dropdown/popover listing columns with show/hide toggles |
 | Column reorder via drag | 🔲 | Drag header cell to reorder columns |
 

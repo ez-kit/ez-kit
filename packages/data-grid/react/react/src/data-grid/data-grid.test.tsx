@@ -3,9 +3,12 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
+import { GridComponentsProvider } from '../components-context'
 import { PAGE_SIZER_KEY } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
+
+import type { ResizerProps } from '../types'
 
 interface User {
   id: number
@@ -185,6 +188,75 @@ describe('<DataGrid>', () => {
     expect(select).toHaveValue('5')
     expect(screen.getByRole('option', { name: '10' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: '25' })).toBeInTheDocument()
+  })
+
+  describe('column sizing / resizing', () => {
+    it('does not render column-resizer when sizing is not set', () => {
+      const table = makeTable()
+      render(<DataGrid table={table} />)
+      expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(0)
+    })
+
+    it('renders column-resizer handles when sizing is enabled', () => {
+      const table = makeTable({ sizing: true })
+      render(<DataGrid table={table} />)
+      expect(document.querySelectorAll('[data-slot="column-resizer"]').length).toBeGreaterThan(0)
+    })
+
+    it('does not render column-resizer for column with enableResizing: false', () => {
+      const cols = defineColumns<User>([
+        { accessorKey: 'name', header: 'Name', enableResizing: false },
+        { accessorKey: 'age', header: 'Age' },
+      ])
+      const table = createTable<User>({ data: USERS, columns: cols, sizing: true })
+      render(<DataGrid table={table} />)
+      // only 'age' column should have a resizer (name has enableResizing: false)
+      expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(1)
+    })
+
+    it('sets CSS variables on <table> when sizing is enabled', () => {
+      const table = makeTable({ sizing: true })
+      render(<DataGrid table={table} />)
+      const tableEl = document.querySelector('table')
+      const style = tableEl?.getAttribute('style') ?? ''
+      expect(style).toContain('--header-name-size')
+      expect(style).toContain('--col-name-size')
+    })
+
+    it('renders custom Resizer injected via GridComponentsProvider', () => {
+      const CustomResizer = ({ isResizing }: ResizerProps) => (
+        <div data-testid='custom-resizer' data-is-resizing={String(isResizing)} />
+      )
+      const table = makeTable({ sizing: true })
+      render(
+        <GridComponentsProvider components={{ Resizer: CustomResizer }}>
+          <DataGrid table={table} />
+        </GridComponentsProvider>,
+      )
+      expect(screen.getAllByTestId('custom-resizer').length).toBeGreaterThan(0)
+    })
+
+    it('passes isResizing=false to Resizer when not actively dragging', () => {
+      const CustomResizer = ({ isResizing }: ResizerProps) => (
+        <div data-testid='custom-resizer' data-is-resizing={String(isResizing)} />
+      )
+      const table = makeTable({ sizing: true })
+      render(
+        <GridComponentsProvider components={{ Resizer: CustomResizer }}>
+          <DataGrid table={table} />
+        </GridComponentsProvider>,
+      )
+      const resizers = screen.getAllByTestId('custom-resizer')
+      expect(resizers[0]).toHaveAttribute('data-is-resizing', 'false')
+    })
+
+    it('does not set CSS size variables on <table> when sizing is not enabled', () => {
+      const table = makeTable()
+      render(<DataGrid table={table} />)
+      const tableEl = document.querySelector('table')
+      const style = tableEl?.getAttribute('style') ?? ''
+      expect(style).not.toContain('--header-name-size')
+    })
   })
 
   it('registry creating falls back to edit component when creating not provided', () => {

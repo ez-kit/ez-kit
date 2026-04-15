@@ -30,12 +30,15 @@ export type { EditingConfig, EditingState } from './features/editing'
 export type { LoadingState } from './features/loading'
 
 export type {
+  ColumnResizeDirection,
+  ColumnResizeMode,
   DataTable,
   ExpandingConfig,
   FilteringConfig,
   PaginationConfig,
   PinConfig,
   SelectionConfig,
+  SizingConfig,
   SortingConfig,
   Table,
   TableConfig,

@@ -127,6 +127,16 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(config.creating ? { creating: config.creating } : {}),
 		...(config.editing ? { editing: config.editing } : {}),
 		...(config.deleting ? { deleting: config.deleting } : {}),
+		// Column resizing
+		...(config.sizing
+			? {
+					enableColumnResizing: true,
+					columnResizeMode:
+						typeof config.sizing === 'object' && config.sizing.mode ? config.sizing.mode : 'onChange',
+					columnResizeDirection:
+						typeof config.sizing === 'object' && config.sizing.direction ? config.sizing.direction : 'ltr',
+				}
+			: {}),
 	}
 
 	// Create the table. Features run getInitialState during this call.

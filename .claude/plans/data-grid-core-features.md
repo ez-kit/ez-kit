@@ -69,7 +69,7 @@ All operator logic runs client-side by default; manual filtering passes raw stat
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Column visibility / hiding | 🔲 | User can show/hide columns |
-| Column resizing | 🔲 | Drag to resize column width |
+| Column resizing | ✅ | `sizing` config; CSS-variable performant pattern; `SizingConfig` type |
 | Column reordering | 🔲 | Drag to change column order |
 | Column grouping (multi-level headers) | ✅ | Via nested `columns` in `ColumnDef` |
 

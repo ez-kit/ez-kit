@@ -42,6 +42,16 @@ export interface VirtualConfig {
   rowHeight?: number
 }
 
+export type ColumnResizeMode = 'onChange' | 'onEnd'
+export type ColumnResizeDirection = 'ltr' | 'rtl'
+
+export interface SizingConfig {
+  /** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
+  mode?: ColumnResizeMode
+  /** Text direction for resize calculation. Default: 'ltr'. */
+  direction?: ColumnResizeDirection
+}
+
 export interface TableConfig<TRow extends object> {
   data: TRow[]
   columns: ColumnDef<TRow>[]
@@ -63,6 +73,7 @@ export interface TableConfig<TRow extends object> {
   editing?: EditingConfig<TRow>
   deleting?: DeletingConfig<TRow>
   loading?: boolean
+  sizing?: boolean | SizingConfig
 }
 
 /**

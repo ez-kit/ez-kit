@@ -10,6 +10,7 @@ import type {
 	NumberInputProps,
 	PageSizerProps,
 	PaginationProps,
+	ResizerProps,
 	TbodyProps,
 	TdProps,
 	ThProps,
@@ -114,6 +115,30 @@ function DefaultPageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps)
 		</select>
 	)
 }
+function DefaultResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerProps) {
+	return (
+		// eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+		<div
+			data-slot='column-resizer'
+			role='separator'
+			aria-label='Resize column'
+			aria-orientation='vertical'
+			onMouseDown={onMouseDown}
+			onTouchStart={onTouchStart}
+			onDoubleClick={onDoubleClick}
+			style={{
+				position: 'absolute',
+				top: 0,
+				right: 0,
+				width: '4px',
+				height: '100%',
+				cursor: 'col-resize',
+				userSelect: 'none',
+				touchAction: 'none',
+			}}
+		/>
+	)
+}
 function DefaultToolbar({ children, ...props }: ToolbarProps) {
 	return (
 		<div
@@ -187,6 +212,7 @@ export const defaultComponents: Required<GridComponents> = {
 	Toolbar: DefaultToolbar,
 	Pagination: DefaultPagination,
 	PageSizer: DefaultPageSizer,
+	Resizer: DefaultResizer,
 }
 
 // ── context ───────────────────────────────────────────────────────────────

@@ -94,4 +94,18 @@ describe('mapColumns', () => {
     const result = mapColumns<Row>([{ accessorKey: 'name', creating: { component } }])
     expect((result[0]?.meta?.creating as { component?: unknown } | undefined)?.component).toBe(component)
   })
+
+  it('passes size, minSize, maxSize to TanStack column', () => {
+    const result = mapColumns<Row>([
+      { accessorKey: 'name', size: 200, minSize: 50, maxSize: 500 },
+    ])
+    expect(result[0]?.size).toBe(200)
+    expect(result[0]?.minSize).toBe(50)
+    expect(result[0]?.maxSize).toBe(500)
+  })
+
+  it('passes enableResizing: false to TanStack column', () => {
+    const result = mapColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
+    expect(result[0]?.enableResizing).toBe(false)
+  })
 })
