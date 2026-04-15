@@ -17,6 +17,7 @@ interface ItemProps<TStore extends StoreApi<unknown>, TSelected> {
 
 interface CreateContextStoreResult<TStore extends StoreApi<unknown>, TInitProps extends object> {
 	Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+	useContextStore: () => TStore
 	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	Item: <TSelected>(props: ItemProps<TStore, TSelected>) => ReactElement
@@ -44,13 +45,18 @@ export function createContextStore<TStore extends StoreApi<unknown>, TInitProps 
 		return <StoreContext.Provider value={storeRef.current}>{children}</StoreContext.Provider>
 	}
 
-	function useStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+	function useContextStore(): TStore {
 		const store = getStoreFromContext(useContext(StoreContext))
+		return store
+	}
+
+	function useStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+		const store = useContextStore()
 		return useZustandStore(store, selector)
 	}
 
 	function useShallowStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
-		const store = getStoreFromContext(useContext(StoreContext))
+		const store = useContextStore()
 		return useZustandStore(store, useShallow(selector))
 	}
 
@@ -60,6 +66,7 @@ export function createContextStore<TStore extends StoreApi<unknown>, TInitProps 
 
 	return {
 		Provider,
+		useContextStore,
 		useStore,
 		useShallowStore,
 		Item,
