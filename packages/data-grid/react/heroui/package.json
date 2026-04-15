@@ -1,6 +1,7 @@
 {
 	"name": "@ez-kit/data-grid-heroui",
 	"version": "0.0.0",
+	"private": true,
 	"description": "HeroUI package for @ez-kit/data-grid/react.",
 	"license": "MIT",
 	"type": "module",
