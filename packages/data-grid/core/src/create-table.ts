@@ -54,12 +54,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasDeleting = Boolean(config.deleting)
 	const hasSelection = Boolean(config.selection)
 	const hasExpanding = Boolean(config.expanding)
+	const hasPinning = Boolean(config.pinning?.top ?? config.pinning?.bottom)
 
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
 		editing: hasEditing,
 		deleting: hasDeleting,
+		pinning: hasPinning,
 	})
 
 	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)
@@ -131,10 +133,17 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(config.sizing
 			? {
 					enableColumnResizing: true,
-					columnResizeMode:
-						typeof config.sizing === 'object' && config.sizing.mode ? config.sizing.mode : 'onChange',
+					columnResizeMode: typeof config.sizing === 'object' && config.sizing.mode ? config.sizing.mode : 'onChange',
 					columnResizeDirection:
 						typeof config.sizing === 'object' && config.sizing.direction ? config.sizing.direction : 'ltr',
+				}
+			: {}),
+		// Row pinning — built-in TanStack feature, no separate row model needed
+		...(hasPinning
+			? {
+					enableRowPinning: true,
+					keepPinnedRows: false,
+					pinning: config.pinning,
 				}
 			: {}),
 	}

@@ -6,6 +6,7 @@ import { NumberInput } from './blocks/NumberInput'
 import { PageSizer } from './blocks/PageSizer'
 import { Pagination } from './blocks/pagination'
 import { Resizer } from './blocks/Resizer'
+import { RowPinMenu } from './blocks/RowPinMenu'
 import { Toolbar } from './blocks/Toolbar'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
@@ -30,6 +31,8 @@ export const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid(
 	Toolbar: Toolbar,
 	// data-grid specific
 	Resizer: Resizer,
+	RowPinMenu: RowPinMenu,
 })
 
 export { Resizer } from './blocks/Resizer'
+export { RowPinMenu } from './blocks/RowPinMenu'

@@ -118,6 +118,26 @@ const ResizableOnEndExample = () => {
 	)
 }
 
+const PinningExample = () => {
+	const [data] = useState(INITIAL_DATA)
+
+	const table = useDataGrid({
+		data,
+		columns,
+		pinning: { top: true, bottom: true },
+	})
+
+	return (
+		<div>
+			<h2 style={{ marginTop: '3rem' }}>Row Pinning</h2>
+			<p style={{ marginBottom: '1rem', color: '#666' }}>
+				Click ··· on any row to pin it to the top or bottom. Click &quot;Unpin&quot; to release.
+			</p>
+			<DataGrid table={table} />
+		</div>
+	)
+}
+
 export default function DataGridSandboxPage() {
 	return (
 		<div
@@ -126,6 +146,8 @@ export default function DataGridSandboxPage() {
 		>
 			<h1>DataGrid Sandbox</h1>
 			<BaseExample />
+
+			<PinningExample />
 
 			<ResizableOnChangeExample />
 

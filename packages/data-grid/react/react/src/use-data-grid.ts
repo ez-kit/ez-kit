@@ -10,6 +10,9 @@ export const CELL_TYPES_KEY = Symbol('cellTypes')
 /** Symbol used to carry pageSizer config on the table instance for PageSizer to read. */
 export const PAGE_SIZER_KEY = Symbol('pageSizer')
 
+/** Symbol used to carry rowPinning config on the table instance for RowPinCell to read. */
+export const ROW_PINNING_KEY = Symbol('rowPinning')
+
 export interface PageSizerConfig {
   items: number[]
 }
@@ -46,6 +49,11 @@ export function useDataGrid<TRow extends object>(
   const pageSizerRef = useRef(pageSizer)
   pageSizerRef.current = pageSizer
   ;(tableRef.current as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] = pageSizerRef.current
+
+  // Store rowPinning config on the table instance so RowPinCell can read without an extra prop
+  const rowPinningRef = useRef(config.pinning)
+  rowPinningRef.current = config.pinning
+  ;(tableRef.current as unknown as Record<symbol, unknown>)[ROW_PINNING_KEY] = rowPinningRef.current
 
   // Subscribe so React re-renders on any table state change
   useSyncExternalStore(

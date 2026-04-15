@@ -88,6 +88,6 @@ declare module '@tanstack/table-core' {
     editing?: false | ColumnEditingConfig
     creating?: false | ColumnCreatingConfig
     isSystemColumn?: boolean
-    systemColumnType?: 'selection' | 'expand' | 'actions'
+    systemColumnType?: 'selection' | 'expand' | 'actions' | 'row_pin'
   }
 }

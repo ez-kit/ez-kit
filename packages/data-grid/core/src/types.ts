@@ -34,8 +34,9 @@ export interface ExpandingConfig {
   renderSubRow?: unknown
 }
 
-export interface PinConfig {
-  rows?: boolean
+export interface RowPinningConfig {
+  top?: boolean
+  bottom?: boolean
 }
 
 export interface VirtualConfig {
@@ -67,7 +68,7 @@ export interface TableConfig<TRow extends object> {
   pagination?: boolean | PaginationConfig
   selection?: boolean | SelectionConfig
   expanding?: boolean | ExpandingConfig
-  pin?: boolean | PinConfig
+  pinning?: RowPinningConfig
   virtualizing?: boolean | VirtualConfig
   creating?: CreatingConfig<TRow>
   editing?: EditingConfig<TRow>

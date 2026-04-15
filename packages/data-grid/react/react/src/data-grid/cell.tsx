@@ -1,11 +1,12 @@
 /* eslint-disable jsx-a11y/no-autofocus */
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
+import { RowPinCell } from './row-pin-cell'
 import { flexRender } from './flex-render'
 import { useTableContext } from './table-context'
 
@@ -81,6 +82,14 @@ export function DataGridCell({ cell, row }: CellProps) {
 			return (
 				<Td style={cellStyle}>
 					<ActionsCell row={row} />
+				</Td>
+			)
+		}
+
+		if (columnId === ROW_PIN_COLUMN_ID) {
+			return (
+				<Td style={cellStyle}>
+					<RowPinCell row={row} />
 				</Td>
 			)
 		}

@@ -1,5 +1,5 @@
 // React hook
-export { useDataGrid, PAGE_SIZER_KEY } from './use-data-grid'
+export { useDataGrid, PAGE_SIZER_KEY, ROW_PINNING_KEY } from './use-data-grid'
 export type { UseDataGridConfig, PageSizerConfig } from './use-data-grid'
 
 // Factory
@@ -30,7 +30,7 @@ export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Types
-export type { GridComponents, ResizerProps } from './types'
+export type { GridComponents, ResizerProps, RowPinMenuProps } from './types'
 export type {
   ButtonProps,
   CheckboxProps,
@@ -58,6 +58,7 @@ export type {
   DataTable,
   DeletingConfig,
   EditingConfig,
+  RowPinningConfig,
   SizingConfig,
   Table,
   TableConfig,

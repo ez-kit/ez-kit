@@ -9,6 +9,7 @@ export { mapColumns } from './column/map-columns'
 export {
   ACTIONS_COLUMN_ID,
   EXPAND_COLUMN_ID,
+  ROW_PIN_COLUMN_ID,
   SELECTION_COLUMN_ID,
 } from './system-columns'
 
@@ -36,7 +37,7 @@ export type {
   ExpandingConfig,
   FilteringConfig,
   PaginationConfig,
-  PinConfig,
+  RowPinningConfig,
   SelectionConfig,
   SizingConfig,
   SortingConfig,

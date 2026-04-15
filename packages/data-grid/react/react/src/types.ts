@@ -76,6 +76,15 @@ export interface ResizerProps {
 	isResizing: boolean
 }
 
+export interface RowPinMenuProps {
+	isPinned: 'top' | 'bottom' | false
+	canPinTop: boolean
+	canPinBottom: boolean
+	onPinTop: () => void
+	onPinBottom: () => void
+	onUnpin: () => void
+}
+
 // ── DI registry ──────────────────────────────────────────────────────────
 
 export interface GridComponents {
@@ -99,4 +108,5 @@ export interface GridComponents {
 	PageSizer?: ComponentType<PageSizerProps>
 	// data-grid specific
 	Resizer?: ComponentType<ResizerProps>
+	RowPinMenu?: ComponentType<RowPinMenuProps>
 }

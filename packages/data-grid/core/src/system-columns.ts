@@ -4,12 +4,14 @@ import type { TanStackColumnDef } from './column/types'
 export const SELECTION_COLUMN_ID = '__selection__'
 export const EXPAND_COLUMN_ID = '__expand__'
 export const ACTIONS_COLUMN_ID = '__actions__'
+export const ROW_PIN_COLUMN_ID = '__row_pin__'
 
 interface SystemColumnsOptions {
   selection: boolean
   expanding: boolean
   editing: boolean
   deleting: boolean
+  pinning: boolean
 }
 
 /**
@@ -67,6 +69,20 @@ export function buildColumnList<TRow extends object>(
         isSystemColumn: true,
         systemColumnType: 'actions',
         pin: 'right',
+      },
+    })
+  }
+
+  if (opts.pinning) {
+    result.push({
+      id: ROW_PIN_COLUMN_ID,
+      header: () => null,
+      cell: () => null,
+      enableSorting: false,
+      enableColumnFilter: false,
+      meta: {
+        isSystemColumn: true,
+        systemColumnType: 'row_pin',
       },
     })
   }
