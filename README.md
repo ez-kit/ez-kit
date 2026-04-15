@@ -59,10 +59,12 @@ pnpm docs:dev
 ## Release flow
 
 ```bash
-pnpm changeset
-pnpm version-packages
-pnpm release
+pnpm changeset        # Create a changeset for changed packages
+pnpm version-packages # Bump versions from changesets
+pnpm release          # Publish to npm
 ```
+
+See [docs/releasing.md](docs/releasing.md) for the full guide — including how to release a single package.
 
 ## Node support
 
