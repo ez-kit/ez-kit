@@ -1,5 +1,11 @@
 # @ez-kit/zu-store
 
+## 0.2.0
+
+### Minor Changes
+
+- New useStoreState hook, withHistory middleware
+
 ## 0.1.1
 
 ### Patch Changes
