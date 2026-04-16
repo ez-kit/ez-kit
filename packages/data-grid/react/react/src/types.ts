@@ -1,3 +1,4 @@
+import type { Column } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
 	ComponentType,
@@ -85,6 +86,25 @@ export interface RowPinMenuProps {
 	onUnpin: () => void
 }
 
+export interface ColPinSection {
+	isPinned: 'left' | 'right' | false
+	canPinLeft: boolean
+	canPinRight: boolean
+	onPinLeft: () => void
+	onPinRight: () => void
+	onUnpin: () => void
+}
+
+export interface ColumnMenuSections {
+	pin?: ColPinSection
+}
+
+export interface ColumnMenuProps {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	column: Column<any>
+	sections: ColumnMenuSections
+}
+
 // ── DI registry ──────────────────────────────────────────────────────────
 
 export interface GridComponents {
@@ -109,4 +129,5 @@ export interface GridComponents {
 	// data-grid specific
 	Resizer?: ComponentType<ResizerProps>
 	RowPinMenu?: ComponentType<RowPinMenuProps>
+	ColumnMenu?: ComponentType<ColumnMenuProps>
 }

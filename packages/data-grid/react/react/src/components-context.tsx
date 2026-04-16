@@ -1,8 +1,9 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 
 import type {
 	ButtonProps,
 	CheckboxProps,
+	ColumnMenuProps,
 	DateFieldProps,
 	GridComponents,
 	InputProps,
@@ -151,6 +152,60 @@ function DefaultRowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinB
 		</>
 	)
 }
+function DefaultColumnMenu({ sections }: ColumnMenuProps) {
+	const [open, setOpen] = useState(false)
+	const { pin } = sections
+
+	if (!pin) return null
+
+	return (
+		<div style={{ position: 'relative', display: 'inline-flex' }}>
+			<button
+				type='button'
+				onClick={() => { setOpen((p) => !p) }}
+			>
+				⋮
+			</button>
+			{open && (
+				<div
+					style={{
+						position: 'absolute',
+						top: '100%',
+						background: 'white',
+						border: '1px solid #ccc',
+						zIndex: 10,
+						minWidth: 120,
+					}}
+				>
+					{pin.canPinLeft && (
+						<button
+							type='button'
+							onClick={() => { pin.onPinLeft(); setOpen(false) }}
+						>
+							Pin Left
+						</button>
+					)}
+					{pin.canPinRight && (
+						<button
+							type='button'
+							onClick={() => { pin.onPinRight(); setOpen(false) }}
+						>
+							Pin Right
+						</button>
+					)}
+					{pin.isPinned && (
+						<button
+							type='button'
+							onClick={() => { pin.onUnpin(); setOpen(false) }}
+						>
+							Unpin
+						</button>
+					)}
+				</div>
+			)}
+		</div>
+	)
+}
 function DefaultToolbar({ children, ...props }: ToolbarProps) {
 	return (
 		<div
@@ -226,6 +281,7 @@ export const defaultComponents: Required<GridComponents> = {
 	PageSizer: DefaultPageSizer,
 	Resizer: DefaultResizer,
 	RowPinMenu: DefaultRowPinMenu,
+	ColumnMenu: DefaultColumnMenu,
 }
 
 // ── context ───────────────────────────────────────────────────────────────

@@ -36,7 +36,7 @@
 | Pagination — server-side (manual) | ✅ | |
 | Row expanding / sub-rows | ✅ | |
 | Row selection (single / multi) | ✅ | |
-| Column pinning (left / right sticky) | ✅ | |
+| Column pinning (left / right sticky) | ✅ | `ColumnPinningDef` (`pin` = static, `defaultPin` = dynamic start); `PinningConfig` unifies row + column pinning under one `pinning` prop |
 | Loading state | ✅ | |
 
 ---

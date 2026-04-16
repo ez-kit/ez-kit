@@ -68,7 +68,7 @@ export function buildColumnList<TRow extends object>(
       meta: {
         isSystemColumn: true,
         systemColumnType: 'actions',
-        pin: 'right',
+        columnPinning: { pin: 'right' },
       },
     })
   }
@@ -93,7 +93,8 @@ export function buildColumnList<TRow extends object>(
 /**
  * Extracts initial column pinning state from column defs.
  * Called before passing columns to TanStack so that
- * columns with `meta.pin` are registered in initial state.
+ * columns with `meta.columnPinning.pin` or `meta.columnPinning.defaultPin`
+ * are registered in initial state.
  */
 export function extractPinningState<TRow extends object>(
   columns: TanStackColumnDef<TRow>[],
@@ -102,13 +103,15 @@ export function extractPinningState<TRow extends object>(
   const right: string[] = []
 
   for (const col of columns) {
-    const pin = col.meta?.pin
+    const pinDef = col.meta?.columnPinning
+    if (!pinDef) continue
+    const position = pinDef.pin ?? pinDef.defaultPin
     const colId =
       col.id ??
       (col as { accessorKey?: string }).accessorKey ??
       undefined
-    if (!pin || !colId) continue
-    if (pin === 'left') left.push(colId)
+    if (!position || !colId) continue
+    if (position === 'left') left.push(colId)
     else right.push(colId)
   }
 

@@ -1,12 +1,13 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { COL_PINNING_KEY } from '../use-data-grid'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
 import { useTableContext } from './table-context'
 
 import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
-import type { InputProps } from '../types'
+import type { ColumnMenuSections, InputProps } from '../types'
 import type { Header, ColumnMeta } from '@tanstack/table-core'
 import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
 
@@ -18,9 +19,10 @@ import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
  */
 export function Header() {
 	const table = useTableContext()
-	const { Thead, Tr, Th, Input, Resizer } = useGridComponents()
+	const { Thead, Tr, Th, Input, Resizer, ColumnMenu } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
+	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
 
 	return (
 		<Thead data-slot='thead'>
@@ -56,6 +58,26 @@ export function Header() {
 								: {}),
 						}
 
+						// Build column menu sections
+						const sections: ColumnMenuSections = {}
+						const colPinDef = meta?.columnPinning
+						const isStaticPin = typeof colPinDef === 'object' && colPinDef.pin !== undefined
+						const isPinningDisabled = colPinDef === false
+
+						if (colPinEnabled && !meta?.isSystemColumn && !isPinningDisabled && !isStaticPin && !header.isPlaceholder) {
+							const isPinned = header.column.getIsPinned()
+							sections.pin = {
+								isPinned,
+								canPinLeft: isPinned !== 'left',
+								canPinRight: isPinned !== 'right',
+								onPinLeft: () => { header.column.pin('left') },
+								onPinRight: () => { header.column.pin('right') },
+								onUnpin: () => { header.column.pin(false) },
+							}
+						}
+
+						const hasSections = Object.keys(sections).length > 0
+
 						return (
 							<Th
 								data-slot='th'
@@ -63,21 +85,26 @@ export function Header() {
 								colSpan={header.colSpan}
 								style={thStyle}
 							>
-								<div
-									data-slot='sort-trigger'
-									role={canSort ? 'button' : undefined}
-									tabIndex={canSort ? 0 : undefined}
-									style={{ cursor: canSort ? 'pointer' : undefined }}
-									onClick={sortHandler}
-									onKeyDown={onSortKeyDown}
-								>
-									{header.isPlaceholder
-										? null
-										: flexRender(
-												header.column.columnDef.header,
-												header.getContext() as unknown as Record<string, unknown>,
-											)}
-									{canSort && <span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>}
+								<div data-slot='header-main' style={{ display: 'flex', alignItems: 'center' }}>
+									<div
+										data-slot='sort-trigger'
+										role={canSort ? 'button' : undefined}
+										tabIndex={canSort ? 0 : undefined}
+										style={{ cursor: canSort ? 'pointer' : undefined, flex: 1 }}
+										onClick={sortHandler}
+										onKeyDown={onSortKeyDown}
+									>
+										{header.isPlaceholder
+											? null
+											: flexRender(
+													header.column.columnDef.header,
+													header.getContext() as unknown as Record<string, unknown>,
+												)}
+										{canSort && <span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>}
+									</div>
+									{hasSections && (
+										<ColumnMenu column={header.column} sections={sections} />
+									)}
 								</div>
 								{hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter() && (
 									<div data-slot='header-extras'>

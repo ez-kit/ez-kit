@@ -21,9 +21,19 @@ describe('mapColumns', () => {
     expect(result[0]?.enableSorting).toBe(false)
   })
 
-  it('pin goes into meta.pin', () => {
-    const result = mapColumns<Row>([{ accessorKey: 'name', pin: 'left' }])
-    expect(result[0]?.meta?.pin).toBe('left')
+  it('pinning: { pin: left } goes into meta.columnPinning', () => {
+    const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { pin: 'left' } }])
+    expect(result[0]?.meta?.columnPinning).toEqual({ pin: 'left' })
+  })
+
+  it('pinning: { defaultPin: right } goes into meta.columnPinning', () => {
+    const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { defaultPin: 'right' } }])
+    expect(result[0]?.meta?.columnPinning).toEqual({ defaultPin: 'right' })
+  })
+
+  it('pinning: false goes into meta.columnPinning as false', () => {
+    const result = mapColumns<Row>([{ accessorKey: 'name', pinning: false }])
+    expect(result[0]?.meta?.columnPinning).toBe(false)
   })
 
   it('filtering goes into meta.filtering', () => {

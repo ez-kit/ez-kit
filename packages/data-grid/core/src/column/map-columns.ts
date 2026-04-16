@@ -3,7 +3,7 @@ import type { CellViewCtx, ColumnDef, TanStackColumnDef } from './types'
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
  *
- * - pin, filtering, editing, creating → column meta
+ * - pinning, filtering, editing, creating → column meta
  * - cell.type → meta.cellType
  * - cell.component → TanStack cell renderer + meta.cellView
  * - sorting: false → enableSorting: false
@@ -19,7 +19,7 @@ function mapColumn<TRow extends object>(
   def: ColumnDef<TRow>,
 ): TanStackColumnDef<TRow> {
   const {
-    pin,
+    pinning,
     sorting,
     cell,
     filtering,
@@ -43,7 +43,7 @@ function mapColumn<TRow extends object>(
 
   const meta: TanStackColumnDef<TRow>['meta'] = {}
 
-  if (pin !== undefined) meta.pin = pin
+  if (pinning !== undefined) meta.columnPinning = pinning
   if (filtering !== undefined) meta.filtering = filtering
   if (editing !== undefined) meta.editing = editing
   if (creating !== undefined) meta.creating = creating

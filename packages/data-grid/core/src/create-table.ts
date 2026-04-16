@@ -15,10 +15,23 @@ import { EditingFeature } from './features/editing'
 import { LoadingFeature } from './features/loading'
 import { buildColumnList, extractPinningState } from './system-columns'
 
-import type { DataTable, TableConfig } from './types'
+import type { DataTable, PinningConfig, RowPinningConfig, TableConfig } from './types'
 import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
 type AnyRow = Record<string, unknown>
+
+function normalizePinning(pinning: boolean | PinningConfig | undefined): {
+  column: boolean
+  row: RowPinningConfig | false
+} {
+  if (!pinning) return { column: false, row: false }
+  if (pinning === true) return { column: true, row: { top: true, bottom: true } }
+  const rowCfg = pinning.row
+  const row: RowPinningConfig | false = rowCfg === true
+    ? { top: true, bottom: true }
+    : (rowCfg ?? false)
+  return { column: Boolean(pinning.column), row }
+}
 
 /**
  * Creates a headless data-grid table instance wrapping TanStack Table v8.
@@ -54,7 +67,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasDeleting = Boolean(config.deleting)
 	const hasSelection = Boolean(config.selection)
 	const hasExpanding = Boolean(config.expanding)
-	const hasPinning = Boolean(config.pinning?.top ?? config.pinning?.bottom)
+	const { row: rowPinConfig } = normalizePinning(config.pinning)
+	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
 
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
@@ -143,7 +157,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			? {
 					enableRowPinning: true,
 					keepPinnedRows: false,
-					pinning: config.pinning,
+					pinning: rowPinConfig,
 				}
 			: {}),
 	}

@@ -44,7 +44,7 @@ export function Body() {
           data-pinned='top'
           style={{
             position: 'sticky',
-            top: `calc(${index} * ${ROW_HEIGHT_CSS})`,
+            top: `calc(${String(index)} * ${ROW_HEIGHT_CSS})`,
             zIndex: 2,
           }}
         />
@@ -59,7 +59,7 @@ export function Body() {
           data-pinned='bottom'
           style={{
             position: 'sticky',
-            bottom: `calc(${bottomRows.length - 1 - index} * ${ROW_HEIGHT_CSS})`,
+            bottom: `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
             zIndex: 2,
           }}
         />

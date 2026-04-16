@@ -6,8 +6,8 @@ import { useGridComponents } from '../components-context'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
-import { RowPinCell } from './row-pin-cell'
 import { flexRender } from './flex-render'
+import { RowPinCell } from './row-pin-cell'
 import { useTableContext } from './table-context'
 
 import type { CellInputProps, CellTypeRegistry, CellViewProps } from '../cell-types-context'

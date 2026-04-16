@@ -124,7 +124,7 @@ const PinningExample = () => {
 	const table = useDataGrid({
 		data,
 		columns,
-		pinning: { top: true, bottom: true },
+		pinning: { row: { top: true, bottom: true } },
 	})
 
 	return (
@@ -132,6 +132,35 @@ const PinningExample = () => {
 			<h2 style={{ marginTop: '3rem' }}>Row Pinning</h2>
 			<p style={{ marginBottom: '1rem', color: '#666' }}>
 				Click ··· on any row to pin it to the top or bottom. Click &quot;Unpin&quot; to release.
+			</p>
+			<DataGrid table={table} />
+		</div>
+	)
+}
+
+const colPinColumns = defineColumns<User>([
+	{ accessorKey: 'name', header: 'Name', pinning: { defaultPin: 'left' } },
+	{ accessorKey: 'email', header: 'Email' },
+	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
+	{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' }, pinning: false },
+])
+
+const ColumnPinningExample = () => {
+	const [data] = useState(INITIAL_DATA)
+
+	const table = useDataGrid({
+		data,
+		columns: colPinColumns,
+		sorting: true,
+		pinning: { column: true },
+	})
+
+	return (
+		<div>
+			<h2 style={{ marginTop: '3rem' }}>Column Pinning</h2>
+			<p style={{ marginBottom: '1rem', color: '#666' }}>
+				Click ⋮ next to a column header to pin left / right or unpin. &quot;Active&quot; column has pinning
+				disabled.
 			</p>
 			<DataGrid table={table} />
 		</div>
@@ -148,6 +177,8 @@ export default function DataGridSandboxPage() {
 			<BaseExample />
 
 			<PinningExample />
+
+			<ColumnPinningExample />
 
 			<ResizableOnChangeExample />
 

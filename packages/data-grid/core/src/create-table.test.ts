@@ -146,19 +146,34 @@ describe('createTable — expanding', () => {
 // ── row pinning ───────────────────────────────────────────────────────────────
 
 describe('createTable — pinning', () => {
-	it('pinning: { top: true } enables enableRowPinning', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { top: true } })
+	it('pinning: { row: { top: true } } enables enableRowPinning', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true } } })
 		expect(table.options.enableRowPinning).toBe(true)
 	})
 
-	it('pinning: { bottom: true } enables enableRowPinning', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { bottom: true } })
+	it('pinning: { row: { bottom: true } } enables enableRowPinning', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { bottom: true } } })
 		expect(table.options.enableRowPinning).toBe(true)
 	})
 
-	it('pinning: { top: true, bottom: true } sets keepPinnedRows to false', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { top: true, bottom: true } })
+	it('pinning: { row: { top: true, bottom: true } } sets keepPinnedRows to false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true, bottom: true } } })
 		expect(table.options.keepPinnedRows).toBe(false)
+	})
+
+	it('pinning: true enables enableRowPinning (top+bottom)', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: true })
+		expect(table.options.enableRowPinning).toBe(true)
+	})
+
+	it('pinning: { row: true } enables enableRowPinning (top+bottom)', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: true } })
+		expect(table.options.enableRowPinning).toBe(true)
+	})
+
+	it('pinning: { column: true } does NOT enable row pinning', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { column: true } })
+		expect(table.options.enableRowPinning).toBeFalsy()
 	})
 
 	it('pinning not set — enableRowPinning is falsy', () => {
@@ -166,7 +181,7 @@ describe('createTable — pinning', () => {
 		expect(table.options.enableRowPinning).toBeFalsy()
 	})
 
-	it('pinning: {} (neither top nor bottom) does not enable row pinning', () => {
+	it('pinning: {} (neither row nor column) does not enable row pinning', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, pinning: {} })
 		expect(table.options.enableRowPinning).toBeFalsy()
 	})
@@ -246,8 +261,8 @@ describe('createTable — system columns', () => {
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('pinning: { top: true } appends __row_pin__ column last', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { top: true } })
+	it('pinning: { row: { top: true } } appends __row_pin__ column last', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true } } })
 		const ids = columnIds(table)
 		expect(ids.at(-1)).toBe(ROW_PIN_COLUMN_ID)
 	})
@@ -257,7 +272,7 @@ describe('createTable — system columns', () => {
 			data: DATA,
 			columns: COLUMNS,
 			editing: { mode: 'row', onSave: () => true },
-			pinning: { top: true },
+			pinning: { row: { top: true } },
 		})
 		const ids = columnIds(table)
 		const actionsIdx = ids.indexOf(ACTIONS_COLUMN_ID)
@@ -273,7 +288,7 @@ describe('createTable — system columns', () => {
 			selection: true,
 			expanding: true,
 			editing: { mode: 'row', onSave: () => true },
-			pinning: { top: true },
+			pinning: { row: { top: true } },
 		})
 		expect(columnIds(table)).toEqual([
 			SELECTION_COLUMN_ID,
@@ -290,7 +305,7 @@ describe('createTable — system columns', () => {
 			data: DATA,
 			columns: COLUMNS,
 			selection: true,
-			pinning: { top: true },
+			pinning: { row: { top: true } },
 		})
 		const selCol = table.getColumn(SELECTION_COLUMN_ID)
 		const pinCol = table.getColumn(ROW_PIN_COLUMN_ID)
@@ -298,13 +313,13 @@ describe('createTable — system columns', () => {
 		expect(pinCol?.columnDef.meta?.isSystemColumn).toBe(true)
 	})
 
-	it('__actions__ column has pin: "right" in meta', () => {
+	it('__actions__ column has columnPinning: { pin: "right" } in meta', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			editing: { mode: 'row', onSave: () => true },
 		})
 		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
-		expect(actionsCol?.columnDef.meta?.pin).toBe('right')
+		expect(actionsCol?.columnDef.meta?.columnPinning).toEqual({ pin: 'right' })
 	})
 })

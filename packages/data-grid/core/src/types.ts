@@ -39,6 +39,13 @@ export interface RowPinningConfig {
   bottom?: boolean
 }
 
+export interface PinningConfig {
+  /** Enable column pin UI (ColumnMenu in headers). */
+  column?: boolean
+  /** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
+  row?: boolean | RowPinningConfig
+}
+
 export interface VirtualConfig {
   rowHeight?: number
 }
@@ -68,7 +75,14 @@ export interface TableConfig<TRow extends object> {
   pagination?: boolean | PaginationConfig
   selection?: boolean | SelectionConfig
   expanding?: boolean | ExpandingConfig
-  pinning?: RowPinningConfig
+  /**
+   * Pinning configuration.
+   * - `true` — enable column menu UI + row pin top+bottom
+   * - `{ column: true }` — column menu only
+   * - `{ row: { top: true } }` — row pin top only
+   * - `false` / omitted — no pinning
+   */
+  pinning?: boolean | PinningConfig
   virtualizing?: boolean | VirtualConfig
   creating?: CreatingConfig<TRow>
   editing?: EditingConfig<TRow>

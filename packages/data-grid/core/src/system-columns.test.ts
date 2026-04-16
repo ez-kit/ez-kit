@@ -15,6 +15,7 @@ describe('buildColumnList', () => {
       expanding: false,
       editing: false,
       deleting: false,
+      pinning: false,
     })
     expect(cols).toHaveLength(1)
     expect(cols[0]?.id).toBe('name')
@@ -26,6 +27,7 @@ describe('buildColumnList', () => {
       expanding: false,
       editing: false,
       deleting: false,
+      pinning: false,
     })
     expect(cols[0]?.id).toBe(SELECTION_COLUMN_ID)
     expect(cols[1]?.id).toBe('name')
@@ -37,6 +39,7 @@ describe('buildColumnList', () => {
       expanding: true,
       editing: false,
       deleting: false,
+      pinning: false,
     })
     expect(cols[0]?.id).toBe(SELECTION_COLUMN_ID)
     expect(cols[1]?.id).toBe(EXPAND_COLUMN_ID)
@@ -49,19 +52,21 @@ describe('buildColumnList', () => {
       expanding: false,
       editing: true,
       deleting: false,
+      pinning: false,
     })
     expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
   })
 
-  it('actions column has pin:right in meta', () => {
+  it('actions column has columnPinning: { pin: "right" } in meta', () => {
     const cols = buildColumnList([USER_COL], {
       selection: false,
       expanding: false,
       editing: false,
       deleting: true,
+      pinning: false,
     })
     const actions = cols.find((c) => c.id === ACTIONS_COLUMN_ID)
-    expect(actions?.meta?.pin).toBe('right')
+    expect(actions?.meta?.columnPinning).toEqual({ pin: 'right' })
   })
 
   it('full order: [selection, expand, user..., actions]', () => {
@@ -70,6 +75,7 @@ describe('buildColumnList', () => {
       expanding: true,
       editing: true,
       deleting: true,
+      pinning: false,
     })
     const ids = cols.map((c) => c.id)
     expect(ids).toEqual([SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, 'name', ACTIONS_COLUMN_ID])
@@ -77,15 +83,34 @@ describe('buildColumnList', () => {
 })
 
 describe('extractPinningState', () => {
-  it('extracts left and right pinned columns', () => {
+  it('extracts columns with static pin position', () => {
     const cols: TanStackColumnDef<Row>[] = [
-      { id: 'a', meta: { pin: 'left' } },
-      { id: 'b', meta: { pin: 'right' } },
+      { id: 'a', meta: { columnPinning: { pin: 'left' } } },
+      { id: 'b', meta: { columnPinning: { pin: 'right' } } },
       { id: 'c', meta: {} },
     ]
     const { left, right } = extractPinningState(cols)
     expect(left).toContain('a')
     expect(right).toContain('b')
     expect(left).not.toContain('c')
+  })
+
+  it('extracts columns with defaultPin position', () => {
+    const cols: TanStackColumnDef<Row>[] = [
+      { id: 'd', meta: { columnPinning: { defaultPin: 'left' } } },
+      { id: 'e', meta: { columnPinning: { defaultPin: 'right' } } },
+    ]
+    const { left, right } = extractPinningState(cols)
+    expect(left).toContain('d')
+    expect(right).toContain('e')
+  })
+
+  it('skips columns with columnPinning: false', () => {
+    const cols: TanStackColumnDef<Row>[] = [
+      { id: 'f', meta: { columnPinning: false } },
+    ]
+    const { left, right } = extractPinningState(cols)
+    expect(left).not.toContain('f')
+    expect(right).not.toContain('f')
   })
 })

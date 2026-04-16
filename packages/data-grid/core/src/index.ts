@@ -22,6 +22,7 @@ export type {
   ColumnDef,
   ColumnEditingConfig,
   ColumnFilteringConfig,
+  ColumnPinningDef,
   InputComponentProps,
 } from './column/types'
 
@@ -37,6 +38,7 @@ export type {
   ExpandingConfig,
   FilteringConfig,
   PaginationConfig,
+  PinningConfig,
   RowPinningConfig,
   SelectionConfig,
   SizingConfig,

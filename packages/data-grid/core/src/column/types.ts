@@ -38,6 +38,13 @@ export interface ColumnCreatingConfig {
   component?: (props: InputComponentProps) => unknown
 }
 
+export interface ColumnPinningDef {
+  /** Static pin — always pinned, no pin section in column menu. */
+  pin?: 'left' | 'right'
+  /** Dynamic default pin — starts pinned, user can change via column menu. */
+  defaultPin?: 'left' | 'right'
+}
+
 /**
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
@@ -50,8 +57,13 @@ export interface ColumnDef<TRow extends object> {
   footer?: string
   columns?: ColumnDef<TRow>[]
 
-  /** Pin column to left or right edge (sticky). */
-  pin?: 'left' | 'right'
+  /**
+   * Column pinning configuration.
+   * - `false` — pinning disabled, no pin section in column menu
+   * - `{ pin: 'left' }` — always pinned left (static), no menu section
+   * - `{ defaultPin: 'left' }` — starts pinned left, user can change via menu
+   */
+  pinning?: false | ColumnPinningDef
   /** Set to false to disable sorting for this column. */
   sorting?: false
 
@@ -80,7 +92,7 @@ export interface ColumnDef<TRow extends object> {
 declare module '@tanstack/table-core' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData, TValue> {
-    pin?: 'left' | 'right'
+    columnPinning?: false | ColumnPinningDef
     cellType?: CellType
     /** Resolved view renderer from `cell.component`. */
     cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
