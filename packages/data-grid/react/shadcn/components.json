@@ -1,21 +1,24 @@
 {
-	"$schema": "https://ui.shadcn.com/schema.json",
-	"style": "radix-nova",
-	"rsc": false,
-	"tsx": true,
-	"tailwind": {
-		"config": "",
-		"css": "src/styles/globals.css",
-		"baseColor": "neutral",
-		"cssVariables": true,
-		"prefix": ""
-	},
-	"aliases": {
-		"components": "@grid-shadcn/components",
-		"utils": "@grid-shadcn/lib/utils",
-		"ui": "@grid-shadcn/components/ui",
-		"lib": "@grid-shadcn/lib",
-		"hooks": "@grid-shadcn/hooks"
-	},
-	"iconLibrary": "lucide"
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "radix-nova",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@grid-shadcn/components",
+    "utils": "@grid-shadcn/lib/utils",
+    "ui": "@grid-shadcn/components/ui",
+    "lib": "@grid-shadcn/lib",
+    "hooks": "@grid-shadcn/hooks"
+  },
+  "registries": {
+    "@diceui": "https://diceui.com/r/{name}.json"
+  }
 }
