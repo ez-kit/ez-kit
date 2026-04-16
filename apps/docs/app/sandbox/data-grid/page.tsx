@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 interface User {
 	id: number
@@ -167,6 +167,40 @@ const ColumnPinningExample = () => {
 	)
 }
 
+const VIRTUAL_ROW_COUNT = 10_000
+
+function makeVirtualData(): User[] {
+	return Array.from({ length: VIRTUAL_ROW_COUNT }, (_, i) => ({
+		id: i + 1,
+		name: `User ${String(i + 1)}`,
+		email: `user${String(i + 1)}@example.com`,
+		age: 20 + (i % 50),
+		active: i % 3 !== 0,
+	}))
+}
+
+const VirtualizedExample = () => {
+	const data = useMemo(() => makeVirtualData(), [])
+
+	const table = useDataGrid({
+		data,
+		columns,
+		sorting: true,
+		virtualized: { row: { estimateSize: 49, overscan: 10 } },
+	})
+
+	return (
+		<div>
+			<h2 style={{ marginTop: '3rem' }}>Virtualized Rows (10 000 rows)</h2>
+			<p style={{ marginBottom: '1rem', color: '#666' }}>
+				Only visible rows are rendered. Scroll to see all {VIRTUAL_ROW_COUNT.toLocaleString()} rows.
+				Container height is controlled by <code>--dg-virtual-height</code> (default 600px).
+			</p>
+			<DataGrid table={table} />
+		</div>
+	)
+}
+
 export default function DataGridSandboxPage() {
 	return (
 		<div
@@ -179,6 +213,8 @@ export default function DataGridSandboxPage() {
 			<PinningExample />
 
 			<ColumnPinningExample />
+
+			<VirtualizedExample />
 
 			<ResizableOnChangeExample />
 

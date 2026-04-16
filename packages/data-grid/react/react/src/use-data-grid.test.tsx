@@ -2,7 +2,7 @@ import { defineColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { useDataGrid } from './use-data-grid'
+import { VIRTUALIZED_KEY, useDataGrid } from './use-data-grid'
 
 interface User {
   id: number
@@ -68,5 +68,45 @@ describe('useDataGrid', () => {
     expect(result.current.getIsLoading()).toBe(false)
     rerender({ loading: true })
     expect(result.current.getIsLoading()).toBe(true)
+  })
+})
+
+describe('useDataGrid — virtualized', () => {
+  it('VIRTUALIZED_KEY is undefined when virtualized not set', () => {
+    const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
+    const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+    expect(key).toBeUndefined()
+  })
+
+  it('VIRTUALIZED_KEY stores normalized config when virtualized: true', () => {
+    const { result } = renderHook(() =>
+      useDataGrid({ data: USERS, columns: COLUMNS, virtualized: true }),
+    )
+    const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+    expect(key).toEqual({ row: {} })
+  })
+
+  it('VIRTUALIZED_KEY stores normalized config when virtualized: { row: true }', () => {
+    const { result } = renderHook(() =>
+      useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: true } }),
+    )
+    const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+    expect(key).toEqual({ row: {} })
+  })
+
+  it('VIRTUALIZED_KEY stores RowVirtualOptions when provided', () => {
+    const { result } = renderHook(() =>
+      useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: { overscan: 8 } } }),
+    )
+    const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+    expect(key).toEqual({ row: { overscan: 8 } })
+  })
+
+  it('VIRTUALIZED_KEY is undefined when virtualized: false', () => {
+    const { result } = renderHook(() =>
+      useDataGrid({ data: USERS, columns: COLUMNS, virtualized: false }),
+    )
+    const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+    expect(key).toBeUndefined()
   })
 })

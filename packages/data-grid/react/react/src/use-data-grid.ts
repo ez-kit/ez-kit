@@ -2,7 +2,7 @@ import { createTable } from '@ez-kit/data-grid-core'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 import type { CellTypeRegistry } from './cell-types-context'
-import type { DataTable, TableConfig } from '@ez-kit/data-grid-core'
+import type { DataTable, RowVirtualOptions, TableConfig, VirtualizedConfig } from '@ez-kit/data-grid-core'
 
 /** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
 export const CELL_TYPES_KEY = Symbol('cellTypes')
@@ -15,6 +15,25 @@ export const ROW_PINNING_KEY = Symbol('rowPinning')
 
 /** Symbol used to carry colPinning enabled flag on the table instance for Header to read. */
 export const COL_PINNING_KEY = Symbol('colPinning')
+
+/** Symbol used to carry normalized virtualized config on the table instance for Body/Table to read. */
+export const VIRTUALIZED_KEY = Symbol('virtualized')
+
+/** Normalized virtualized config stored on the table instance. */
+export interface NormalizedVirtualizedConfig {
+  row: RowVirtualOptions
+}
+
+function normalizeVirtualized(
+  virtualized: boolean | VirtualizedConfig | undefined,
+): NormalizedVirtualizedConfig | undefined {
+  if (!virtualized) return undefined
+  if (virtualized === true) return { row: {} }
+  const row = virtualized.row
+  if (!row) return undefined
+  if (row === true) return { row: {} }
+  return { row }
+}
 
 export interface PageSizerConfig {
   items: number[]
@@ -63,6 +82,10 @@ export function useDataGrid<TRow extends object>(
     config.pinning === true ||
     (typeof config.pinning === 'object' && Boolean(config.pinning.column))
   ;(tableRef.current as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] = colPinEnabled
+
+  // Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
+  const virtualizedConfig = normalizeVirtualized(config.virtualized)
+  ;(tableRef.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] = virtualizedConfig
 
   // Subscribe so React re-renders on any table state change
   useSyncExternalStore(

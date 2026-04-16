@@ -1,6 +1,6 @@
 // React hook
-export { useDataGrid, COL_PINNING_KEY, PAGE_SIZER_KEY, ROW_PINNING_KEY } from './use-data-grid'
-export type { UseDataGridConfig, PageSizerConfig } from './use-data-grid'
+export { useDataGrid, COL_PINNING_KEY, PAGE_SIZER_KEY, ROW_PINNING_KEY, VIRTUALIZED_KEY } from './use-data-grid'
+export type { UseDataGridConfig, PageSizerConfig, NormalizedVirtualizedConfig } from './use-data-grid'
 
 // Factory
 export { createDataGrid } from './create-data-grid'
@@ -61,10 +61,12 @@ export type {
   EditingConfig,
   PinningConfig,
   RowPinningConfig,
+  RowVirtualOptions,
   SizingConfig,
   Table,
   TableConfig,
   TableSnapshot,
+  VirtualizedConfig,
 } from '@ez-kit/data-grid-core'
 
 export { defineColumns, createTable } from '@ez-kit/data-grid-core'

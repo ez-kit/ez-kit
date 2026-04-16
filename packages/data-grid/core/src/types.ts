@@ -46,8 +46,16 @@ export interface PinningConfig {
   row?: boolean | RowPinningConfig
 }
 
-export interface VirtualConfig {
-  rowHeight?: number
+export interface RowVirtualOptions {
+  /** Estimated row height in px used by the virtualizer. Default: 50. */
+  estimateSize?: number | ((index: number) => number)
+  /** Extra rows rendered outside the visible viewport. Default: 5. */
+  overscan?: number
+}
+
+export interface VirtualizedConfig {
+  row?: boolean | RowVirtualOptions
+  // column virtualization — reserved for future
 }
 
 export type ColumnResizeMode = 'onChange' | 'onEnd'
@@ -83,7 +91,7 @@ export interface TableConfig<TRow extends object> {
    * - `false` / omitted — no pinning
    */
   pinning?: boolean | PinningConfig
-  virtualizing?: boolean | VirtualConfig
+  virtualized?: boolean | VirtualizedConfig
   creating?: CreatingConfig<TRow>
   editing?: EditingConfig<TRow>
   deleting?: DeletingConfig<TRow>

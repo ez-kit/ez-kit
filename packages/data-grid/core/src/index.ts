@@ -46,5 +46,6 @@ export type {
   Table,
   TableConfig,
   TableSnapshot,
-  VirtualConfig,
+  RowVirtualOptions,
+  VirtualizedConfig,
 } from './types'

@@ -3,6 +3,8 @@ import { useGridComponents } from '../components-context'
 import { CreatingRow } from './creating-row'
 import { DataGridRow } from './row'
 import { useTableContext } from './table-context'
+import { VirtualBody } from './virtual-body'
+import { useVirtualContext } from './virtual-context'
 
 /**
  * CSS custom property used to compute sticky offsets for pinned rows.
@@ -19,6 +21,10 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  * with CSS sticky positioning.
  */
 export function Body() {
+  const { rowVirtualizer } = useVirtualContext()
+
+  if (rowVirtualizer) return <VirtualBody />
+
   const table = useTableContext()
   const { Tbody } = useGridComponents()
 

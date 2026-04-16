@@ -160,6 +160,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 					pinning: rowPinConfig,
 				}
 			: {}),
+		// Virtualization config — stored for React layer to read; no TanStack core effect
+		...(config.virtualized !== undefined ? { virtualized: config.virtualized } : {}),
 	}
 
 	// Create the table. Features run getInitialState during this call.

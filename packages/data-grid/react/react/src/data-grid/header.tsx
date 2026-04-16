@@ -9,7 +9,12 @@ import { useTableContext } from './table-context'
 import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
 import type { ColumnMenuSections, InputProps } from '../types'
 import type { Header, ColumnMeta } from '@tanstack/table-core'
-import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
+import type { ComponentType, CSSProperties, KeyboardEvent, ReactNode } from 'react'
+
+interface HeaderProps {
+	/** Extra styles applied to the `<thead>` element (e.g. for virtualized layout). */
+	theadStyle?: CSSProperties | undefined
+}
 
 /**
  * Renders the table `<thead>` with all header groups.
@@ -17,7 +22,7 @@ import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
  * - If filtering is enabled on a column, renders a filter input below the header.
  * - `filtering.component` injects a custom filter control per column.
  */
-export function Header() {
+export function Header({ theadStyle }: HeaderProps = {}) {
 	const table = useTableContext()
 	const { Thead, Tr, Th, Input, Resizer, ColumnMenu } = useGridComponents()
 	const cellTypes = useCellTypes()
@@ -25,7 +30,7 @@ export function Header() {
 	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
 
 	return (
-		<Thead data-slot='thead'>
+		<Thead data-slot='thead' style={theadStyle}>
 			{table.getHeaderGroups().map((headerGroup) => (
 				<Tr
 					data-slot='tr'
