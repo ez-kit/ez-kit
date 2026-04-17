@@ -195,6 +195,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			...prev,
 			data: data as AnyRow[] as TRow[],
 		}))
+		// Spread currentState so useSyncExternalStore sees a new snapshot reference
+		// and triggers a re-render even when only data (options) changed.
+		currentState = { ...currentState }
 		notify()
 	}
 

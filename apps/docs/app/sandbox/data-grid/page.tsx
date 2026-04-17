@@ -6,10 +6,12 @@ import { BaseExample } from './components/base'
 import { ColumnPinningExample } from './components/column-pinning'
 import { ResizingExample } from './components/resizing'
 import { RowPinningExample } from './components/row-pinning'
+import { SelectionBarExample } from './components/selection-bar'
 import { VirtualizedExample } from './components/virtualized'
 
 const TABS = [
 	{ id: 'base', label: 'Base', component: BaseExample },
+	{ id: 'selection-bar', label: 'Selection Bar', component: SelectionBarExample },
 	{ id: 'row-pinning', label: 'Row Pinning', component: RowPinningExample },
 	{ id: 'column-pinning', label: 'Column Pinning', component: ColumnPinningExample },
 	{ id: 'virtualized', label: 'Virtualized', component: VirtualizedExample },
@@ -21,7 +23,7 @@ type TabId = (typeof TABS)[number]['id']
 export default function DataGridSandboxPage() {
 	const [activeTab, setActiveTab] = useState<TabId>('base')
 
-	const ActiveComponent = TABS.find((t) => t.id === activeTab)!.component
+	const ActiveComponent = TABS.find((t) => t.id === activeTab)?.component ?? BaseExample
 
 	return (
 		<div style={{ padding: '2rem' }} className='[&_input]:border'>
@@ -38,7 +40,7 @@ export default function DataGridSandboxPage() {
 				{TABS.map((tab) => (
 					<button
 						key={tab.id}
-						onClick={() => setActiveTab(tab.id)}
+						onClick={() => { setActiveTab(tab.id) }}
 						style={{
 							padding: '0.5rem 1rem',
 							border: 'none',

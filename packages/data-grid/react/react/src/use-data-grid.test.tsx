@@ -1,8 +1,8 @@
 import { defineColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { VIRTUALIZED_KEY, useDataGrid } from './use-data-grid'
+import { SELECTION_BAR_KEY, VIRTUALIZED_KEY, useDataGrid } from './use-data-grid'
 
 interface User {
   id: number
@@ -108,5 +108,38 @@ describe('useDataGrid — virtualized', () => {
     )
     const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
     expect(key).toBeUndefined()
+  })
+})
+
+describe('useDataGrid — selectionBar', () => {
+  it('SELECTION_BAR_KEY is undefined when selectionBar not set', () => {
+    const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
+    const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+    expect(key).toBeUndefined()
+  })
+
+  it('SELECTION_BAR_KEY stores true when selectionBar: true', () => {
+    const { result } = renderHook(() =>
+      useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: true }),
+    )
+    const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+    expect(key).toBe(true)
+  })
+
+  it('SELECTION_BAR_KEY stores false when selectionBar: false', () => {
+    const { result } = renderHook(() =>
+      useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: false }),
+    )
+    const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+    expect(key).toBe(false)
+  })
+
+  it('SELECTION_BAR_KEY stores config object when selectionBar: { onDelete }', () => {
+    const onDelete = vi.fn()
+    const { result } = renderHook(() =>
+      useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: { onDelete } }),
+    )
+    const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+    expect(key).toEqual({ onDelete })
   })
 })

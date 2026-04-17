@@ -1,10 +1,11 @@
-import type { Column } from '@tanstack/table-core'
+import type { Column, Row } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
 	ComponentType,
 	HTMLAttributes,
 	InputHTMLAttributes,
 	MouseEventHandler,
+	ReactElement,
 	ReactNode,
 	TdHTMLAttributes,
 	ThHTMLAttributes,
@@ -105,6 +106,27 @@ export interface ColumnMenuProps {
 	sections: ColumnMenuSections
 }
 
+export interface SelectionBarProps {
+	/** False when 0 rows selected — component should hide/animate out. */
+	open: boolean
+	/** Number of currently selected rows. */
+	count: number
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	selectedRows: Row<any>[]
+	/**
+	 * Pre-bound delete handler. Only present when `onDelete` was configured.
+	 * When absent — Delete button must NOT be rendered.
+	 */
+	onDelete?: () => void
+	/**
+	 * Pre-bound clear handler.
+	 * If user did not provide `onClear`, this calls `table.resetRowSelection()`.
+	 */
+	onClear: () => void
+	/** Already-resolved actions slot (ReactElement | undefined). */
+	actions?: ReactElement
+}
+
 // ── DI registry ──────────────────────────────────────────────────────────
 
 export interface GridComponents {
@@ -130,4 +152,5 @@ export interface GridComponents {
 	Resizer?: ComponentType<ResizerProps>
 	RowPinMenu?: ComponentType<RowPinMenuProps>
 	ColumnMenu?: ComponentType<ColumnMenuProps>
+	SelectionBar?: ComponentType<SelectionBarProps>
 }

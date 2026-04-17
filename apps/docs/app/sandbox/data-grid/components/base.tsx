@@ -16,6 +16,12 @@ export function BaseExample() {
 		pagination: { pageSize: 10 },
 		pageSizer: { items: [3, 5, 10] },
 		selection: true,
+		selectionBar: {
+			onDelete: ({ selectedRows, clearSelection }) => {
+				setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
+				clearSelection()
+			},
+		},
 		editing: {
 			mode: 'row',
 			onSave: (rowId, values) => {

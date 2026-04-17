@@ -1,6 +1,6 @@
 // React hook
-export { useDataGrid, COL_PINNING_KEY, PAGE_SIZER_KEY, ROW_PINNING_KEY, VIRTUALIZED_KEY } from './use-data-grid'
-export type { UseDataGridConfig, PageSizerConfig, NormalizedVirtualizedConfig } from './use-data-grid'
+export { useDataGrid, COL_PINNING_KEY, PAGE_SIZER_KEY, ROW_PINNING_KEY, SELECTION_BAR_KEY, VIRTUALIZED_KEY } from './use-data-grid'
+export type { UseDataGridConfig, PageSizerConfig, NormalizedVirtualizedConfig, SelectionBarCallbackArgs, SelectionBarConfig } from './use-data-grid'
 
 // Factory
 export { createDataGrid } from './create-data-grid'
@@ -8,6 +8,9 @@ export { createDataGrid } from './create-data-grid'
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
 export type { DataGridProps } from './data-grid/data-grid'
+
+// Sub-components (also available as DataGrid.SelectionBar)
+export { SelectionBar } from './data-grid/selection-bar'
 
 // DI context
 export {
@@ -30,7 +33,7 @@ export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Types
-export type { ColPinSection, ColumnMenuProps, ColumnMenuSections, GridComponents, ResizerProps, RowPinMenuProps } from './types'
+export type { ColPinSection, ColumnMenuProps, ColumnMenuSections, GridComponents, ResizerProps, RowPinMenuProps, SelectionBarProps } from './types'
 export type {
   ButtonProps,
   CheckboxProps,

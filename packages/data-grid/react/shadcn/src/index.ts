@@ -8,6 +8,7 @@ import { PageSizer } from './blocks/PageSizer'
 import { Pagination } from './blocks/pagination'
 import { Resizer } from './blocks/Resizer'
 import { RowPinMenu } from './blocks/RowPinMenu'
+import { SelectionBar } from './blocks/SelectionBar'
 import { Toolbar } from './blocks/Toolbar'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
@@ -34,8 +35,10 @@ export const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid(
 	Resizer: Resizer,
 	RowPinMenu: RowPinMenu,
 	ColumnMenu: ColumnMenu,
+	SelectionBar: SelectionBar,
 })
 
 export { ColumnMenu } from './blocks/ColumnMenu'
 export { Resizer } from './blocks/Resizer'
 export { RowPinMenu } from './blocks/RowPinMenu'
+export { SelectionBar } from './blocks/SelectionBar'

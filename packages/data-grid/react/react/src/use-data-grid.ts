@@ -3,6 +3,8 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataTable, RowVirtualOptions, TableConfig, VirtualizedConfig } from '@ez-kit/data-grid-core'
+import type { Row, Table } from '@tanstack/table-core'
+import type { ReactElement } from 'react'
 
 /** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
 export const CELL_TYPES_KEY = Symbol('cellTypes')
@@ -18,6 +20,27 @@ export const COL_PINNING_KEY = Symbol('colPinning')
 
 /** Symbol used to carry normalized virtualized config on the table instance for Body/Table to read. */
 export const VIRTUALIZED_KEY = Symbol('virtualized')
+
+/** Symbol used to carry selectionBar config on the table instance for SelectionBar to read. */
+export const SELECTION_BAR_KEY = Symbol('selectionBar')
+
+export interface SelectionBarCallbackArgs<TRow extends object = object> {
+  table: Table<TRow>
+  clearSelection: () => void
+  selectedRows: Row<TRow>[]
+}
+
+export interface SelectionBarConfig<TRow extends object = object> {
+  /** If provided — Delete button appears in the bar. */
+  onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
+  /**
+   * Replaces default clear behaviour.
+   * `clearSelection` arg is the default reset — call it if needed.
+   */
+  onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
+  /** Rendered between Delete and Cancel. ReactElement or render-function. */
+  actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+}
 
 /** Normalized virtualized config stored on the table instance. */
 export interface NormalizedVirtualizedConfig {
@@ -44,6 +67,15 @@ export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow
   cellTypes?: CellTypeRegistry
   /** Page size selector config. When provided, renders a PageSizer control. */
   pageSizer?: PageSizerConfig
+  /**
+   * Selection info bar config.
+   * - `false` — bar never shown
+   * - `undefined` | `true` — bar shown when ≥1 row selected (no delete button)
+   * - `SelectionBarConfig` — bar shown with config
+   *
+   * Requires `selection: true` to have any effect.
+   */
+  selectionBar?: boolean | SelectionBarConfig<TRow>
 }
 
 /**
@@ -57,7 +89,7 @@ export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow
 export function useDataGrid<TRow extends object>(
   config: UseDataGridConfig<TRow>,
 ): DataTable<TRow> {
-  const { cellTypes, pageSizer, ...tableConfig } = config
+  const { cellTypes, pageSizer, selectionBar, ...tableConfig } = config
 
   const tableRef = useRef<DataTable<TRow> | null>(null)
   tableRef.current ??= createTable(tableConfig as TableConfig<TRow>)
@@ -82,6 +114,12 @@ export function useDataGrid<TRow extends object>(
     config.pinning === true ||
     (typeof config.pinning === 'object' && Boolean(config.pinning.column))
   ;(tableRef.current as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] = colPinEnabled
+
+  // Store selectionBar config on the table instance so SelectionBar can read without an extra prop
+  const selectionBarRef = useRef(selectionBar)
+  selectionBarRef.current = selectionBar
+  ;(tableRef.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] =
+    selectionBarRef.current
 
   // Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
   const virtualizedConfig = normalizeVirtualized(config.virtualized)

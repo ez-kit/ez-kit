@@ -13,6 +13,7 @@ import type {
 	PaginationProps,
 	ResizerProps,
 	RowPinMenuProps,
+	SelectionBarProps,
 	TbodyProps,
 	TdProps,
 	ThProps,
@@ -263,6 +264,28 @@ function DefaultPagination({
 	)
 }
 
+function DefaultSelectionBar({ open, count, onDelete, onClear, actions }: SelectionBarProps) {
+	if (!open) return null
+	return (
+		<div
+			role='toolbar'
+			data-slot='selection-bar'
+			style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}
+		>
+			<span>{count} selected</span>
+			{onDelete && (
+				<button type='button' onClick={onDelete}>
+					Delete
+				</button>
+			)}
+			{actions}
+			<button type='button' onClick={onClear}>
+				Cancel
+			</button>
+		</div>
+	)
+}
+
 export const defaultComponents: Required<GridComponents> = {
 	Table: DefaultTable,
 	Thead: DefaultThead,
@@ -282,6 +305,7 @@ export const defaultComponents: Required<GridComponents> = {
 	Resizer: DefaultResizer,
 	RowPinMenu: DefaultRowPinMenu,
 	ColumnMenu: DefaultColumnMenu,
+	SelectionBar: DefaultSelectionBar,
 }
 
 // ── context ───────────────────────────────────────────────────────────────

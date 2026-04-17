@@ -353,3 +353,49 @@ describe('createTable — virtualized', () => {
 		expect((table.options as Record<string, unknown>).virtualized).toEqual({ row: { estimateSize } })
 	})
 })
+
+// ── subscribe / setData ────────────────────────────────────────────────────────
+
+describe('createTable — subscribe / setData', () => {
+	it('subscribe listener fires when row selection changes', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: true })
+		const listener = vi.fn()
+		const unsub = table.subscribe(listener)
+		table.getRow('1').toggleSelected(true)
+		expect(listener).toHaveBeenCalled()
+		unsub()
+	})
+
+	it('setData fires subscribe listener', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		const listener = vi.fn()
+		const unsub = table.subscribe(listener)
+		table.setData([{ id: 3, name: 'Carol', age: 28 }])
+		expect(listener).toHaveBeenCalled()
+		unsub()
+	})
+
+	it('getSnapshot returns a new reference after setData', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		const snapshotBefore = table.getSnapshot()
+		table.setData([{ id: 3, name: 'Carol', age: 28 }])
+		const snapshotAfter = table.getSnapshot()
+		// Must be a different reference so useSyncExternalStore triggers re-render
+		expect(snapshotAfter).not.toBe(snapshotBefore)
+	})
+
+	it('getSnapshot returns a new reference after row selection changes', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: true })
+		const snapshotBefore = table.getSnapshot()
+		table.getRow('1').toggleSelected(true)
+		const snapshotAfter = table.getSnapshot()
+		expect(snapshotAfter).not.toBe(snapshotBefore)
+	})
+
+	it('table data updates after setData', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		table.setData([{ id: 3, name: 'Carol', age: 28 }])
+		expect(table.getRowModel().rows).toHaveLength(1)
+		expect(table.getRowModel().rows[0]?.getValue('name')).toBe('Carol')
+	})
+})
