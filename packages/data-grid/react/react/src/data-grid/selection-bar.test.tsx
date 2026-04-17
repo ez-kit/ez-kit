@@ -145,7 +145,6 @@ describe('<SelectionBar>', () => {
     expect(args).toHaveProperty('table')
     expect(args).toHaveProperty('clearSelection')
     expect(args).toHaveProperty('selectedRows')
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect((args as { selectedRows: unknown[] }).selectedRows).toHaveLength(1)
   })
 

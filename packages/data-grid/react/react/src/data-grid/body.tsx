@@ -22,11 +22,10 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  */
 export function Body() {
   const { rowVirtualizer } = useVirtualContext()
-
-  if (rowVirtualizer) return <VirtualBody />
-
   const table = useTableContext()
   const { Tbody } = useGridComponents()
+
+  if (rowVirtualizer) return <VirtualBody />
 
   const creatingConfig = table.options.creating
   const creatingMode = creatingConfig?.mode ?? 'row'

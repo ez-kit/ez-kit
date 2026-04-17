@@ -1,3 +1,5 @@
+import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { COL_PINNING_KEY } from '../use-data-grid'
@@ -24,7 +26,7 @@ interface HeaderProps {
  */
 export function Header({ theadStyle }: HeaderProps = {}) {
 	const table = useTableContext()
-	const { Thead, Tr, Th, Input, Resizer, ColumnMenu } = useGridComponents()
+	const { Thead, Tr, Th, Input, Resizer, ColumnMenu, Checkbox } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
@@ -82,6 +84,27 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 						}
 
 						const hasSections = Object.keys(sections).length > 0
+
+						// Selection column: render select-all checkbox
+						if (header.column.id === SELECTION_COLUMN_ID) {
+							const isAllSelected = table.getIsAllRowsSelected()
+							const isSomeSelected = table.getIsSomeRowsSelected()
+							return (
+								<Th
+									data-slot='th'
+									key={header.id}
+									colSpan={header.colSpan}
+									style={thStyle}
+								>
+									<Checkbox
+										value={isAllSelected}
+										indeterminate={isSomeSelected && !isAllSelected}
+										onChange={() => { table.toggleAllRowsSelected(!isAllSelected) }}
+										aria-label='Select all rows'
+									/>
+								</Th>
+							)
+						}
 
 						return (
 							<Th

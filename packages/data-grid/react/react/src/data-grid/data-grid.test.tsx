@@ -53,7 +53,66 @@ describe('<DataGrid>', () => {
   it('renders selection checkboxes when selection is enabled', () => {
     const table = makeTable({ selection: true })
     render(<DataGrid table={table} />)
-    expect(screen.getAllByRole('checkbox')).toHaveLength(USERS.length)
+    // 1 header checkbox + 1 per data row
+    expect(screen.getAllByRole('checkbox')).toHaveLength(USERS.length + 1)
+  })
+
+  it('renders select-all checkbox in header when selection is enabled', () => {
+    const table = makeTable({ selection: true })
+    render(<DataGrid table={table} />)
+    expect(screen.getByRole('checkbox', { name: 'Select all rows' })).toBeInTheDocument()
+  })
+
+  it('header checkbox is unchecked and not indeterminate when no rows are selected', () => {
+    const table = makeTable({ selection: true })
+    render(<DataGrid table={table} />)
+    const el = screen.getByRole('checkbox', { name: 'Select all rows' })
+    if (!(el instanceof HTMLInputElement)) throw new Error('expected HTMLInputElement')
+    expect(el.checked).toBe(false)
+    expect(el.indeterminate).toBe(false)
+  })
+
+  it('header checkbox is indeterminate when some rows are selected', () => {
+    const table = makeTable({ selection: true })
+    const { rerender } = render(<DataGrid table={table} />)
+    act(() => { table.setRowSelection({ 0: true }) })
+    rerender(<DataGrid table={table} />)
+    const el = screen.getByRole('checkbox', { name: 'Select all rows' })
+    if (!(el instanceof HTMLInputElement)) throw new Error('expected HTMLInputElement')
+    expect(el.indeterminate).toBe(true)
+    expect(el.checked).toBe(false)
+  })
+
+  it('header checkbox is checked when all rows are selected', () => {
+    const table = makeTable({ selection: true })
+    const { rerender } = render(<DataGrid table={table} />)
+    act(() => { table.toggleAllRowsSelected(true) })
+    rerender(<DataGrid table={table} />)
+    const el = screen.getByRole('checkbox', { name: 'Select all rows' })
+    if (!(el instanceof HTMLInputElement)) throw new Error('expected HTMLInputElement')
+    expect(el.checked).toBe(true)
+    expect(el.indeterminate).toBe(false)
+  })
+
+  it('clicking header checkbox selects all rows', async () => {
+    const table = makeTable({ selection: true })
+    const { rerender } = render(<DataGrid table={table} />)
+    const headerCheckbox = screen.getByRole('checkbox', { name: 'Select all rows' })
+    await userEvent.click(headerCheckbox)
+    rerender(<DataGrid table={table} />)
+    expect(table.getIsAllRowsSelected()).toBe(true)
+  })
+
+  it('clicking header checkbox when all rows selected deselects all', async () => {
+    const table = makeTable({ selection: true })
+    const { rerender } = render(<DataGrid table={table} />)
+    act(() => { table.toggleAllRowsSelected(true) })
+    rerender(<DataGrid table={table} />)
+    const headerCheckbox = screen.getByRole('checkbox', { name: 'Select all rows' })
+    await userEvent.click(headerCheckbox)
+    rerender(<DataGrid table={table} />)
+    expect(table.getIsAllRowsSelected()).toBe(false)
+    expect(table.getIsSomeRowsSelected()).toBe(false)
   })
 
   it('renders "+ Add" button when creating is enabled', () => {

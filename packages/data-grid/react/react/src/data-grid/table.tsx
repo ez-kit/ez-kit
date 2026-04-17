@@ -52,6 +52,7 @@ export function DataGridTable() {
     ? (table.options.enableRowPinning ? table.getCenterRows() : table.getRowModel().rows)
     : []
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: isVirtualized ? rows.length : 0,
     getScrollElement: () => containerRef.current,
