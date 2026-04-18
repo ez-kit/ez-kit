@@ -6,11 +6,12 @@ import {
 } from "radix-ui";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { useComposedRefs } from "@grid-shadcn/lib/compose-refs";
-import { cn } from "@grid-shadcn/lib/utils";
+
+import { Button } from "@grid-shadcn/components/ui/button";
 import { useAsRef } from "@grid-shadcn/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@grid-shadcn/hooks/use-isomorphic-layout-effect";
-import { Button } from "@grid-shadcn/components/ui/button";
+import { useComposedRefs } from "@grid-shadcn/lib/compose-refs";
+import { cn } from "@grid-shadcn/lib/utils";
 
 const ROOT_NAME = "ActionBar";
 const GROUP_NAME = "ActionBarGroup";
@@ -174,7 +175,7 @@ function ActionBar(props: ActionBarProps) {
     }
 
     ownerDocument.addEventListener("keydown", onKeyDown);
-    return () => ownerDocument.removeEventListener("keydown", onKeyDown);
+    return () => { ownerDocument.removeEventListener("keydown", onKeyDown); };
   }, [open, propsRef]);
 
   const contextValue = React.useMemo<ActionBarContextValue>(
@@ -188,7 +189,7 @@ function ActionBar(props: ActionBarProps) {
   );
 
   const portalContainer =
-    portalContainerProp ?? (mounted ? globalThis.document?.body : null);
+    portalContainerProp ?? (mounted ? globalThis.document.body : null);
 
   if (!portalContainer || !open) return null;
 
@@ -218,13 +219,13 @@ function ActionBar(props: ActionBarProps) {
             className,
           )}
           style={{
-            [side]: `${sideOffset}px`,
+            [side]: `${String(sideOffset)}px`,
             ...(align === "center" && {
               left: "50%",
               translate: "-50% 0",
             }),
-            ...(align === "start" && { left: `${alignOffset}px` }),
-            ...(align === "end" && { right: `${alignOffset}px` }),
+            ...(align === "start" && { left: `${String(alignOffset)}px` }),
+            ...(align === "end" && { right: `${String(alignOffset)}px` }),
             ...style,
           }}
         />,
@@ -269,7 +270,7 @@ function ActionBarGroup(props: DivProps) {
   const groupRef = React.useRef<HTMLDivElement>(null);
   const composedRef = useComposedRefs(ref, groupRef);
   const isClickFocusRef = React.useRef(false);
-  const itemsRef = React.useRef<Map<string, ItemData>>(new Map());
+  const itemsRef = React.useRef(new Map<string, ItemData>());
 
   const { dir, orientation } = useActionBarContext(GROUP_NAME);
 
@@ -549,7 +550,7 @@ function ActionBarItem(props: ActionBarItemProps) {
             : candidateRefs.slice(currentIndex + 1);
         }
 
-        queueMicrotask(() => focusFirst(candidateRefs));
+        queueMicrotask(() => { focusFirst(candidateRefs); });
       }
     },
     [onKeyDownProp, focusContext, dir, orientation, loop],

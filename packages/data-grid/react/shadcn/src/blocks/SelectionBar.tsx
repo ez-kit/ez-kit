@@ -2,8 +2,8 @@
 
 import { X } from 'lucide-react'
 
-import { cn } from '@grid-shadcn/lib/utils'
 import { Button } from '@grid-shadcn/components/ui/button'
+import { cn } from '@grid-shadcn/lib/utils'
 
 import type { SelectionBarProps } from '@ez-kit/data-grid-react'
 
