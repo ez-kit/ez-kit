@@ -33,7 +33,7 @@ export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Types
-export type { ColPinSection, ColumnMenuProps, ColumnMenuSections, GridComponents, ResizerProps, RowPinMenuProps, SelectionBarProps } from './types'
+export type { ColPinSection, ColumnMenuProps, ColumnMenuSections, ConfirmDialogProps, GridComponents, ResizerProps, RowPinMenuProps, SelectionBarProps } from './types'
 export type {
   ButtonProps,
   CheckboxProps,
@@ -63,6 +63,7 @@ export type {
   ColumnResizeMode,
   CreatingConfig,
   DataTable,
+  ConfirmationOptions,
   DeletingConfig,
   EditingConfig,
   ImageCellConfig,

@@ -34,7 +34,7 @@ export type {
 } from './column/types'
 
 export type { CreatingConfig, CreatingState } from './features/creating'
-export type { DeletingConfig } from './features/deleting'
+export type { ConfirmationOptions, DeletingConfig } from './features/deleting'
 export type { EditingConfig, EditingState } from './features/editing'
 export type { LoadingState } from './features/loading'
 

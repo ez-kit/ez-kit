@@ -4,6 +4,7 @@ import type {
 	ButtonProps,
 	CheckboxProps,
 	ColumnMenuProps,
+	ConfirmDialogProps,
 	DateFieldProps,
 	GridComponents,
 	InputProps,
@@ -264,6 +265,18 @@ function DefaultPagination({
 	)
 }
 
+function DefaultConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
+	if (!open) return null
+	return (
+		<dialog open>
+			<p><strong>{title}</strong></p>
+			<p>{description}</p>
+			<button type='button' onClick={onConfirm}>Confirm</button>
+			<button type='button' onClick={onCancel}>Cancel</button>
+		</dialog>
+	)
+}
+
 function DefaultSelectionBar({ open, count, onDelete, onClear, actions }: SelectionBarProps) {
 	if (!open) return null
 	return (
@@ -306,6 +319,7 @@ export const defaultComponents: Required<GridComponents> = {
 	RowPinMenu: DefaultRowPinMenu,
 	ColumnMenu: DefaultColumnMenu,
 	SelectionBar: DefaultSelectionBar,
+	ConfirmDialog: DefaultConfirmDialog,
 }
 
 // ── context ───────────────────────────────────────────────────────────────

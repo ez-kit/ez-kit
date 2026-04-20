@@ -37,7 +37,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
         <Button onClick={() => { table.startEditing(row.id) }}>Edit</Button>
       )}
       {hasDeleting && (
-        <Button onClick={() => void table.deleteRow(row.id)}>Delete</Button>
+        <Button onClick={() => { table.requestDeleteRow(row.id) }}>Delete</Button>
       )}
     </>
   )

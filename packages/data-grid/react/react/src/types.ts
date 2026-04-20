@@ -106,6 +106,14 @@ export interface ColumnMenuProps {
 	sections: ColumnMenuSections
 }
 
+export interface ConfirmDialogProps {
+	open: boolean
+	title: string
+	description: string
+	onConfirm: () => void
+	onCancel: () => void
+}
+
 export interface SelectionBarProps {
 	/** False when 0 rows selected — component should hide/animate out. */
 	open: boolean
@@ -153,4 +161,5 @@ export interface GridComponents {
 	RowPinMenu?: ComponentType<RowPinMenuProps>
 	ColumnMenu?: ComponentType<ColumnMenuProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
+	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 }

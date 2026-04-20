@@ -4,6 +4,7 @@ import { CellTypesProvider, createDataGrid } from '@ez-kit/data-grid-react'
 
 import { Checkbox } from './blocks/Checkbox'
 import { ColumnMenu } from './blocks/ColumnMenu'
+import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { DateField } from './blocks/DateField'
 import { NumberInput } from './blocks/NumberInput'
 import { PageSizer } from './blocks/PageSizer'
@@ -42,6 +43,7 @@ const {
 	RowPinMenu,
 	ColumnMenu,
 	SelectionBar,
+	ConfirmDialog,
 })
 
 function DataGrid<TRow extends object>(props: DataGridProps<TRow>) {

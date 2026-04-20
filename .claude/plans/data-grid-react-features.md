@@ -36,7 +36,7 @@
 | Pin-row creating | ✅ | |
 | Row delete button | ✅ | |
 | `AutoForm` label uses column `header` string | 🔲 | Currently falls back to `col.id` |
-| Delete confirmation dialog | 🔲 | Optional confirm step before `onDelete` fires |
+| Delete confirmation dialog | ✅ | Optional confirm step before `onDelete` fires; `confirmation: boolean \| ConfirmationOptions` in `deleting` config; state in core; shadcn `AlertDialog` via DI |
 | Bulk delete (multi-select) | 🔲 | Part of bulk actions bar — see Toolbar section |
 
 ---

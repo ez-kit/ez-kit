@@ -1,5 +1,5 @@
 import { CellTypesProvider } from '../cell-types-context'
-import { GridComponentsProvider } from '../components-context'
+import { GridComponentsProvider, useGridComponents } from '../components-context'
 import { CELL_TYPES_KEY } from '../use-data-grid'
 
 import { Body } from './body'
@@ -13,12 +13,13 @@ import { Pagination } from './pagination'
 import { DataGridRow } from './row'
 import { SelectionBar } from './selection-bar'
 import { DataGridTable } from './table'
-import { TableContext } from './table-context'
+import { TableContext, useTableContext } from './table-context'
 import { Toolbar } from './toolbar'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../types'
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
+import type { Row } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 export interface DataGridProps<TRow extends object> {
@@ -28,6 +29,48 @@ export interface DataGridProps<TRow extends object> {
 	/** Custom cell type renderers. Merged with types from `useDataGrid`. */
 	cellTypes?: CellTypeRegistry
 	children?: ReactNode
+}
+
+function resolveConfirmationText(
+	options: ConfirmationOptions,
+	row: Row<unknown> | undefined,
+): { title: string; description: string } {
+	const title = options.title ?? 'Are you sure?'
+	const desc = options.description
+	let description: string
+	if (typeof desc === 'function') {
+		description = row ? desc(row) : 'This action cannot be undone.'
+	} else {
+		description = desc ?? 'This action cannot be undone.'
+	}
+	return { title, description }
+}
+
+function ConfirmDialogRenderer() {
+	const table = useTableContext()
+	const { ConfirmDialog } = useGridComponents()
+	const pendingId = table.getState().pendingDeleteRowId
+	const confirmation = table.options.deleting?.confirmation
+
+	if (!confirmation) return null
+
+	const options: ConfirmationOptions = confirmation === true ? {} : confirmation
+	const pendingRow = pendingId !== null
+		? table.getRowModel().rows.find((r) => r.id === pendingId)
+		: undefined
+	const { title, description } = pendingId !== null
+		? resolveConfirmationText(options, pendingRow)
+		: { title: '', description: '' }
+
+	return (
+		<ConfirmDialog
+			open={pendingId !== null}
+			title={title}
+			description={description}
+			onConfirm={() => void table.confirmDeleteRow()}
+			onCancel={() => { table.cancelDeleteRow() }}
+		/>
+	)
 }
 
 function DefaultLayout() {
@@ -67,6 +110,7 @@ function DataGridRoot<TRow extends object>({ table, components, cellTypes, child
 					{children ?? <DefaultLayout />}
 					{table.options.creating?.mode === 'modal' && <CreatingModal />}
 					{table.options.editing?.mode === 'modal' && <EditingModal />}
+					{table.options.deleting?.confirmation && <ConfirmDialogRenderer />}
 				</TableContext>
 			</GridComponentsProvider>
 		</CellTypesProvider>
