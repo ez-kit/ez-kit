@@ -180,7 +180,7 @@ function ActionBar(props: ActionBarProps) {
 
   const contextValue = React.useMemo<ActionBarContextValue>(
     () => ({
-      onOpenChange,
+      ...(onOpenChange !== undefined ? { onOpenChange } : {}),
       dir,
       orientation,
       loop,

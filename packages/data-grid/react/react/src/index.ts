@@ -54,6 +54,9 @@ export type {
 
 // Re-export core types for convenience
 export type {
+  BadgeCellConfig,
+  BadgeItem,
+  BadgeVariant,
   ColumnDef,
   ColumnPinningDef,
   ColumnResizeDirection,
@@ -62,9 +65,13 @@ export type {
   DataTable,
   DeletingConfig,
   EditingConfig,
+  ImageCellConfig,
   PinningConfig,
+  ProgressCellConfig,
   RowPinningConfig,
   RowVirtualOptions,
+  SelectCellConfig,
+  SelectItem,
   SizingConfig,
   Table,
   TableConfig,

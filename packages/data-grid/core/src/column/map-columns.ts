@@ -48,6 +48,9 @@ function mapColumn<TRow extends object>(
   if (editing !== undefined) meta.editing = editing
   if (creating !== undefined) meta.creating = creating
   if (cell?.type !== undefined) meta.cellType = cell.type
+  if (cell !== undefined && 'config' in cell && cell.config !== undefined) {
+    meta.cellConfig = cell.config as Record<string, unknown>
+  }
   const viewFn = cell?.component
   if (viewFn !== undefined)
     meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown

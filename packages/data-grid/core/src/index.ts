@@ -15,6 +15,9 @@ export {
 
 // Types
 export type {
+  BadgeCellConfig,
+  BadgeItem,
+  BadgeVariant,
   CellDef,
   CellType,
   CellViewCtx,
@@ -23,7 +26,11 @@ export type {
   ColumnEditingConfig,
   ColumnFilteringConfig,
   ColumnPinningDef,
+  ImageCellConfig,
   InputComponentProps,
+  ProgressCellConfig,
+  SelectCellConfig,
+  SelectItem,
 } from './column/types'
 
 export type { CreatingConfig, CreatingState } from './features/creating'

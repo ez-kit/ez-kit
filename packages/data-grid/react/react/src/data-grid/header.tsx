@@ -174,14 +174,14 @@ function renderFilterInput({ header, meta, Input, cellTypes }: FilterInputArgs):
 	const filteringConfig = meta?.filtering
 	if (filteringConfig !== false && filteringConfig !== undefined) {
 		const comp = (filteringConfig as { component?: (props: CellInputProps) => ReactNode }).component
-		if (comp) return comp({ value: filterValue, onChange })
+		if (comp) return comp({ value: filterValue, onChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
 	}
 
 	// 2. registry by cellType (filter → edit fallback)
 	if (meta?.cellType) {
 		const def = cellTypes[meta.cellType]
 		const comp = def?.filter ?? def?.edit
-		if (comp) return comp({ value: filterValue, onChange })
+		if (comp) return comp({ value: filterValue, onChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
 	}
 
 	// 3. default Input

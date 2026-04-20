@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { BaseExample } from './components/base'
+import { CellTypesExample } from './components/cell-types'
 import { ColumnPinningExample } from './components/column-pinning'
 import { ResizingExample } from './components/resizing'
 import { RowPinningExample } from './components/row-pinning'
@@ -11,6 +12,7 @@ import { VirtualizedExample } from './components/virtualized'
 
 const TABS = [
 	{ id: 'base', label: 'Base', component: BaseExample },
+	{ id: 'cell-types', label: 'Cell Types', component: CellTypesExample },
 	{ id: 'selection-bar', label: 'Selection Bar', component: SelectionBarExample },
 	{ id: 'row-pinning', label: 'Row Pinning', component: RowPinningExample },
 	{ id: 'column-pinning', label: 'Column Pinning', component: ColumnPinningExample },

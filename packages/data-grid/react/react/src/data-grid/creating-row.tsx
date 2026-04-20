@@ -82,14 +82,14 @@ function renderCreatingInput({ meta, value, onChange, cellTypes, Input }: Creati
   const creatingConfig = meta?.creating
   if (creatingConfig !== false && creatingConfig !== undefined) {
     const comp = (creatingConfig).component
-    if (comp) return comp({ value, onChange } as CellInputProps) as ReactNode
+    if (comp) return comp({ value, onChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) } as CellInputProps) as ReactNode
   }
 
   // 2. registry creating → edit fallback by cellType
   if (meta?.cellType) {
     const def = cellTypes[meta.cellType]
     const comp = def?.creating ?? def?.edit
-    if (comp) return comp({ value, onChange })
+    if (comp) return comp({ value, onChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
   }
 
   // 3. default Input

@@ -10,11 +10,13 @@ export interface CellViewProps {
 	value: unknown
 	row: unknown
 	rowIndex: number
+	cellConfig?: Record<string, unknown>
 }
 
 export interface CellInputProps {
 	value: unknown
 	onChange: (value: unknown) => void
+	cellConfig?: Record<string, unknown>
 }
 
 // ── registry types ────────────────────────────────────────────────────────

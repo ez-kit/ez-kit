@@ -3,7 +3,17 @@ import type { ColumnDef as TanStackColumnDef } from '@tanstack/table-core'
 export type { TanStackColumnDef }
 
 /** Built-in cell types. The `string & {}` tail allows custom type strings while preserving autocomplete. */
-export type CellType = 'text' | 'number' | 'date' | 'boolean' | (string & {})
+export type CellType =
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'boolean'
+  | 'select'
+  | 'badge'
+  | 'image'
+  | 'link'
+  | 'progress'
+  | (string & {})
 
 export interface CellViewCtx<TRow, TValue> {
   row: TRow
@@ -17,11 +27,62 @@ export interface InputComponentProps {
   onChange: (value: unknown) => void
 }
 
-export interface CellDef<TRow, TValue = unknown> {
-  type?: CellType
-  /** Custom view-mode renderer for this cell. */
+// ── cell config types ─────────────────────────────────────────────────────
+
+export interface SelectItem { value: string; label: string }
+export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+export interface BadgeItem { value: string; label: string; variant?: BadgeVariant }
+
+export interface SelectCellConfig { items: SelectItem[] }
+export interface BadgeCellConfig { items: BadgeItem[] }
+export interface ImageCellConfig { alt?: string; width?: number; height?: number }
+export interface ProgressCellConfig { max?: number }
+
+// ── cell definition (discriminated union) ─────────────────────────────────
+
+type SimpleType = Exclude<CellType, 'select' | 'badge' | 'image' | 'link' | 'progress'>
+
+interface BasicCellDef<TRow, TValue = unknown> {
+  type?: SimpleType
   component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
+
+interface SelectCellDef<TRow, TValue = unknown> {
+  type: 'select'
+  config: SelectCellConfig
+  component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+}
+
+interface BadgeCellDef<TRow, TValue = unknown> {
+  type: 'badge'
+  config: BadgeCellConfig
+  component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+}
+
+interface ImageCellDef<TRow, TValue = unknown> {
+  type: 'image'
+  config?: ImageCellConfig
+  component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+}
+
+interface LinkCellDef<TRow, TValue = unknown> {
+  type: 'link'
+  component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+}
+
+interface ProgressCellDef<TRow, TValue = unknown> {
+  type: 'progress'
+  config?: ProgressCellConfig
+  component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+}
+
+export type CellDef<TRow extends object, TValue = unknown> =
+  | BasicCellDef<TRow, TValue>
+  | SelectCellDef<TRow, TValue>
+  | BadgeCellDef<TRow, TValue>
+  | ImageCellDef<TRow, TValue>
+  | LinkCellDef<TRow, TValue>
+  | ProgressCellDef<TRow, TValue>
 
 export interface ColumnFilteringConfig {
   /** Custom filter input component for this column. */
@@ -94,6 +155,7 @@ declare module '@tanstack/table-core' {
   interface ColumnMeta<TData, TValue> {
     columnPinning?: false | ColumnPinningDef
     cellType?: CellType
+    cellConfig?: Record<string, unknown>
     /** Resolved view renderer from `cell.component`. */
     cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
     filtering?: false | ColumnFilteringConfig

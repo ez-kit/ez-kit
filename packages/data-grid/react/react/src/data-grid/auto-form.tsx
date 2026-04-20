@@ -51,13 +51,13 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
         // 1. column-level component (prefer `component` over legacy `input`)
         const customComp = resolveColumnComponent(colDef)
         if (customComp) {
-          return <div key={col.id}>{customComp({ value, onChange })}</div>
+          return <div key={col.id}>{customComp({ value, onChange, ...(meta?.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })}</div>
         }
 
         // 2. registry by cellType
         if (meta?.cellType) {
           const regComp = resolveRegistryComponent(meta, mode, cellTypes)
-          if (regComp) return <div key={col.id}>{regComp({ value, onChange })}</div>
+          if (regComp) return <div key={col.id}>{regComp({ value, onChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })}</div>
         }
 
         // 3. plain text fallback

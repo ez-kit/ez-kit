@@ -110,7 +110,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 		return (
 			<Td style={cellStyle}>
 				{editComp ? (
-					editComp({ value, onChange })
+					editComp({ value, onChange, ...(meta?.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
 				) : (
 					<Input
 						autoFocus
@@ -137,7 +137,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 		return (
 			<Td style={cellStyle}>
 				{editComp ? (
-					editComp({ value, onChange })
+					editComp({ value, onChange, ...(meta?.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
 				) : (
 					<Input
 						value={(value ?? '') as string | number | readonly string[]}
@@ -166,7 +166,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp
-				? viewComp({ value: cell.getValue(), row: cell.row.original, rowIndex: cell.row.index })
+				? viewComp({ value: cell.getValue(), row: cell.row.original, rowIndex: cell.row.index, ...(meta?.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
 				: flexRender(cell.column.columnDef.cell, cell.getContext() as unknown as Record<string, unknown>)}
 		</Td>
 	)
