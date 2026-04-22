@@ -24,6 +24,9 @@ export const VIRTUALIZED_KEY = Symbol('virtualized')
 /** Symbol used to carry selectionBar config on the table instance for SelectionBar to read. */
 export const SELECTION_BAR_KEY = Symbol('selectionBar')
 
+/** Symbol used to carry columnVisibility UI config on the table instance for Toolbar to read. */
+export const COLUMN_VISIBILITY_KEY = Symbol('columnVisibility')
+
 export interface SelectionBarCallbackArgs<TRow extends object = object> {
   table: Table<TRow>
   clearSelection: () => void
@@ -62,6 +65,11 @@ export interface PageSizerConfig {
   items: number[]
 }
 
+export interface ColumnVisibilityUIConfig {
+  /** Show a column visibility toggle button in the toolbar. Default: false. */
+  toolbar?: boolean
+}
+
 export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow> {
   /** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
   cellTypes?: CellTypeRegistry
@@ -76,6 +84,12 @@ export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow
    * Requires `selection: true` to have any effect.
    */
   selectionBar?: boolean | SelectionBarConfig<TRow>
+  /**
+   * Column visibility UI config.
+   * - `true` — enables column visibility (toolbar button shown)
+   * - `{ toolbar: true }` — shows toggle button in toolbar
+   */
+  columnVisibility?: boolean | ColumnVisibilityUIConfig
 }
 
 /**
@@ -89,7 +103,7 @@ export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow
 export function useDataGrid<TRow extends object>(
   config: UseDataGridConfig<TRow>,
 ): DataTable<TRow> {
-  const { cellTypes, pageSizer, selectionBar, ...tableConfig } = config
+  const { cellTypes, pageSizer, selectionBar, columnVisibility, ...tableConfig } = config
 
   const tableRef = useRef<DataTable<TRow> | null>(null)
   tableRef.current ??= createTable(tableConfig as TableConfig<TRow>)
@@ -120,6 +134,12 @@ export function useDataGrid<TRow extends object>(
   selectionBarRef.current = selectionBar
   ;(tableRef.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] =
     selectionBarRef.current
+
+  // Store columnVisibility UI config on the table instance so Toolbar can read without an extra prop
+  const colVisibilityRef = useRef(columnVisibility)
+  colVisibilityRef.current = columnVisibility
+  ;(tableRef.current as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] =
+    colVisibilityRef.current
 
   // Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
   const virtualizedConfig = normalizeVirtualized(config.virtualized)

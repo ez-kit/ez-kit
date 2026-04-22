@@ -26,6 +26,7 @@ export type {
   ColumnEditingConfig,
   ColumnFilteringConfig,
   ColumnPinningDef,
+  ColumnVisibilityDef,
   ImageCellConfig,
   InputComponentProps,
   ProgressCellConfig,

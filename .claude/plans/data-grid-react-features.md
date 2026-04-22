@@ -81,7 +81,7 @@ When a column has `operators` enabled, a trigger appears next to the filter inpu
 | Column pinning (sticky) | ✅ | `ColumnMenu` DI component; pin left / right / unpin dropdown per header; `pinning: { column: true }` on config; shadcn styled block with `DropdownMenu` + `EllipsisVertical` trigger; header-main flex row keeps sort trigger + menu in one line |
 | `aria-sort` attribute on `<th>` | 🔲 | Accessibility |
 | Column resize handle | ✅ | `Resizer` DI component; CSS-variable widths; shadcn styled block (`w-[2px] bg-primary rounded-full`) |
-| Column visibility menu | 🔲 | Dropdown/popover listing columns with show/hide toggles |
+| Column visibility menu | ✅ | Toolbar `ColumnVisibilityMenu` popover + "Hide" in `ColumnMenu`; `visibility: false` locks column; `visibility: { defaultHidden: true }` starts hidden; enabled via `columnVisibility: { toolbar: true }` |
 | Column reorder via drag | 🔲 | Drag header cell to reorder columns |
 
 ---

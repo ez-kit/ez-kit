@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, EllipsisVertical, PinOff } from 'lucide-react'
+import { ArrowLeft, ArrowRight, EllipsisVertical, EyeOff, PinOff } from 'lucide-react'
 
 import { Button } from '../components/ui/button'
 import {
@@ -13,9 +13,9 @@ import {
 import type { ColumnMenuProps } from '@ez-kit/data-grid-react'
 
 export function ColumnMenu({ sections }: ColumnMenuProps) {
-	const { pin } = sections
+	const { pin, visibility } = sections
 
-	if (!pin) return null
+	if (!pin && !visibility) return null
 
 	return (
 		<DropdownMenu>
@@ -30,27 +30,38 @@ export function ColumnMenu({ sections }: ColumnMenuProps) {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align='start'>
-				<DropdownMenuLabel>Pin</DropdownMenuLabel>
-				{pin.canPinLeft && (
-					<DropdownMenuItem onClick={pin.onPinLeft}>
-						<ArrowLeft className='mr-2 h-4 w-4' />
-						Pin Left
-					</DropdownMenuItem>
-				)}
-				{pin.canPinRight && (
-					<DropdownMenuItem onClick={pin.onPinRight}>
-						<ArrowRight className='mr-2 h-4 w-4' />
-						Pin Right
-					</DropdownMenuItem>
-				)}
-				{pin.isPinned && (
+				{pin && (
 					<>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={pin.onUnpin}>
-							<PinOff className='mr-2 h-4 w-4' />
-							Unpin
-						</DropdownMenuItem>
+						<DropdownMenuLabel>Pin</DropdownMenuLabel>
+						{pin.canPinLeft && (
+							<DropdownMenuItem onClick={pin.onPinLeft}>
+								<ArrowLeft className='mr-2 h-4 w-4' />
+								Pin Left
+							</DropdownMenuItem>
+						)}
+						{pin.canPinRight && (
+							<DropdownMenuItem onClick={pin.onPinRight}>
+								<ArrowRight className='mr-2 h-4 w-4' />
+								Pin Right
+							</DropdownMenuItem>
+						)}
+						{pin.isPinned && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={pin.onUnpin}>
+									<PinOff className='mr-2 h-4 w-4' />
+									Unpin
+								</DropdownMenuItem>
+							</>
+						)}
 					</>
+				)}
+				{pin && visibility && <DropdownMenuSeparator />}
+				{visibility && (
+					<DropdownMenuItem onClick={visibility.onHide}>
+						<EyeOff className='mr-2 h-4 w-4' />
+						Hide
+					</DropdownMenuItem>
 				)}
 			</DropdownMenuContent>
 		</DropdownMenu>

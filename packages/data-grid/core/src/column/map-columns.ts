@@ -31,6 +31,7 @@ function mapColumn<TRow extends object>(
 ): TanStackColumnDef<TRow> {
   const {
     pinning,
+    visibility,
     sorting,
     cell,
     filtering,
@@ -55,6 +56,7 @@ function mapColumn<TRow extends object>(
   const meta: TanStackColumnDef<TRow>['meta'] = {}
 
   if (pinning !== undefined) meta.columnPinning = pinning
+  if (visibility !== undefined) meta.visibility = visibility
   if (filtering !== undefined) meta.filtering = filtering
   if (editing !== undefined) meta.editing = editing
   if (creating !== undefined) meta.creating = creating
@@ -87,6 +89,9 @@ function mapColumn<TRow extends object>(
 
   // sorting: false → disable sorting for this column
   if (sorting === false) result.enableSorting = false
+
+  // visibility: false → column cannot be hidden
+  if (visibility === false) result.enableHiding = false
 
   // cell.component (preferred) or cell.view → TanStack cell renderer
   if (viewFn !== undefined) {

@@ -84,6 +84,12 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 							}
 						}
 
+						if (!meta?.isSystemColumn && !header.isPlaceholder && header.column.getCanHide()) {
+							sections.visibility = {
+								onHide: () => { header.column.toggleVisibility(false) },
+							}
+						}
+
 						const hasSections = Object.keys(sections).length > 0
 
 						// Selection column: render select-all checkbox

@@ -16,10 +16,25 @@ import { LoadingFeature } from './features/loading'
 import { buildOperatorRegistry } from './features/operators'
 import { buildColumnList, extractPinningState } from './system-columns'
 
+import type { ColumnDef } from './column/types'
 import type { DataTable, PinningConfig, RowPinningConfig, TableConfig } from './types'
 import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
 type AnyRow = Record<string, unknown>
+
+function collectDefaultHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
+  const acc: Record<string, boolean> = {}
+  for (const def of defs) {
+    if (def.visibility && typeof def.visibility === 'object' && def.visibility.defaultHidden) {
+      const colId = def.id ?? def.accessorKey
+      if (colId !== undefined) acc[colId] = false
+    }
+    if (def.columns !== undefined) {
+      Object.assign(acc, collectDefaultHidden(def.columns))
+    }
+  }
+  return acc
+}
 
 function normalizePinning(pinning: boolean | PinningConfig | undefined): {
   column: boolean
@@ -90,9 +105,12 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const defaultPageSize =
 		typeof config.pagination === 'object' && config.pagination.pageSize ? config.pagination.pageSize : 10
 
+	const defaultHidden = collectDefaultHidden(config.columns)
+
 	const initialState: Partial<TableState> = {
 		columnPinning: { left: pinnedLeft, right: pinnedRight },
 		pagination: { pageIndex: 0, pageSize: defaultPageSize },
+		...(Object.keys(defaultHidden).length > 0 ? { columnVisibility: defaultHidden } : {}),
 	}
 
 	// We need a stable reference for the callback closure.

@@ -5,6 +5,7 @@ import { CellTypesProvider, createDataGrid } from '@ez-kit/data-grid-react'
 import { BetweenInput } from './blocks/BetweenInput'
 import { Checkbox } from './blocks/Checkbox'
 import { ColumnMenu } from './blocks/ColumnMenu'
+import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { DateField } from './blocks/DateField'
 import { NumberInput } from './blocks/NumberInput'
@@ -44,6 +45,7 @@ const {
 	Resizer,
 	RowPinMenu,
 	ColumnMenu,
+	ColumnVisibilityMenu,
 	SelectionBar,
 	ConfirmDialog,
 	OperatorSelect,

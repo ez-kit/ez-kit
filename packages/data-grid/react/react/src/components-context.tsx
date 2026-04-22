@@ -5,6 +5,7 @@ import type {
 	ButtonProps,
 	CheckboxProps,
 	ColumnMenuProps,
+	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	DateFieldProps,
 	GridComponents,
@@ -158,9 +159,9 @@ function DefaultRowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinB
 }
 function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 	const [open, setOpen] = useState(false)
-	const { pin } = sections
+	const { pin, visibility } = sections
 
-	if (!pin) return null
+	if (!pin && !visibility) return null
 
 	return (
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -181,7 +182,7 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 						minWidth: 120,
 					}}
 				>
-					{pin.canPinLeft && (
+					{pin?.canPinLeft && (
 						<button
 							type='button'
 							onClick={() => { pin.onPinLeft(); setOpen(false) }}
@@ -189,7 +190,7 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 							Pin Left
 						</button>
 					)}
-					{pin.canPinRight && (
+					{pin?.canPinRight && (
 						<button
 							type='button'
 							onClick={() => { pin.onPinRight(); setOpen(false) }}
@@ -197,7 +198,7 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 							Pin Right
 						</button>
 					)}
-					{pin.isPinned && (
+					{pin?.isPinned && (
 						<button
 							type='button'
 							onClick={() => { pin.onUnpin(); setOpen(false) }}
@@ -205,6 +206,56 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 							Unpin
 						</button>
 					)}
+					{visibility && (
+						<button
+							type='button'
+							onClick={() => { visibility.onHide(); setOpen(false) }}
+						>
+							Hide
+						</button>
+					)}
+				</div>
+			)}
+		</div>
+	)
+}
+
+function DefaultColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
+	const [open, setOpen] = useState(false)
+	return (
+		<div style={{ position: 'relative', display: 'inline-flex' }}>
+			<button
+				type='button'
+				onClick={() => { setOpen((p) => !p) }}
+			>
+				Columns
+			</button>
+			{open && (
+				<div
+					style={{
+						position: 'absolute',
+						top: '100%',
+						right: 0,
+						background: 'white',
+						border: '1px solid #ccc',
+						zIndex: 10,
+						minWidth: 160,
+						padding: '4px 0',
+					}}
+				>
+					{columns.map((col) => (
+						<label
+							key={col.id}
+							style={{ display: 'flex', gap: 8, padding: '4px 12px', cursor: 'pointer' }}
+						>
+							<input
+								type='checkbox'
+								checked={col.isVisible}
+								onChange={col.onToggle}
+							/>
+							{col.label}
+						</label>
+					))}
 				</div>
 			)}
 		</div>
@@ -369,6 +420,7 @@ export const defaultComponents: Required<GridComponents> = {
 	Resizer: DefaultResizer,
 	RowPinMenu: DefaultRowPinMenu,
 	ColumnMenu: DefaultColumnMenu,
+	ColumnVisibilityMenu: DefaultColumnVisibilityMenu,
 	SelectionBar: DefaultSelectionBar,
 	ConfirmDialog: DefaultConfirmDialog,
 	OperatorSelect: DefaultOperatorSelect,

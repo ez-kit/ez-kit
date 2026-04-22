@@ -97,14 +97,30 @@ export interface ColPinSection {
 	onUnpin: () => void
 }
 
+export interface ColVisibilitySection {
+	onHide: () => void
+}
+
 export interface ColumnMenuSections {
 	pin?: ColPinSection
+	visibility?: ColVisibilitySection
 }
 
 export interface ColumnMenuProps {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	column: Column<any>
 	sections: ColumnMenuSections
+}
+
+export interface VisibilityColumnItem {
+	id: string
+	label: string
+	isVisible: boolean
+	onToggle: () => void
+}
+
+export interface ColumnVisibilityMenuProps {
+	columns: VisibilityColumnItem[]
 }
 
 export interface OperatorSelectProps {
@@ -176,6 +192,7 @@ export interface GridComponents {
 	Resizer?: ComponentType<ResizerProps>
 	RowPinMenu?: ComponentType<RowPinMenuProps>
 	ColumnMenu?: ComponentType<ColumnMenuProps>
+	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>

@@ -4,6 +4,7 @@ import { CELL_TYPES_KEY } from '../use-data-grid'
 
 import { Body } from './body'
 import { DataGridCell } from './cell'
+import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
 import { EditingModal } from './editing-modal'
@@ -130,6 +131,7 @@ type DataGridType = typeof DataGridRoot & {
 	PageSizer: typeof PageSizer
 	SelectionBar: typeof SelectionBar
 	CreateTrigger: typeof CreateTrigger
+	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
 	CreatingModal: typeof CreatingModal
 	EditingModal: typeof EditingModal
 }
@@ -145,5 +147,6 @@ DataGrid.Pagination = Pagination
 DataGrid.PageSizer = PageSizer
 DataGrid.SelectionBar = SelectionBar
 DataGrid.CreateTrigger = CreateTrigger
+DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
 DataGrid.CreatingModal = CreatingModal
 DataGrid.EditingModal = EditingModal

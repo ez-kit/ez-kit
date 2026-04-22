@@ -111,6 +111,11 @@ export interface ColumnPinningDef {
   defaultPin?: 'left' | 'right'
 }
 
+export interface ColumnVisibilityDef {
+  /** Column starts hidden but can be toggled by the user. */
+  defaultHidden?: boolean
+}
+
 /**
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
@@ -135,6 +140,13 @@ export interface ColumnDef<TRow extends object> {
 
   /** Cell display and input configuration. */
   cell?: CellDef<TRow>
+
+  /**
+   * Column visibility configuration.
+   * - `false` — column cannot be hidden (always visible, no Hide option in menu)
+   * - `{ defaultHidden: true }` — starts hidden, user can toggle it on
+   */
+  visibility?: false | ColumnVisibilityDef
 
   /** Column-level filtering config. Set to false to disable. */
   filtering?: false | ColumnFilteringConfig
@@ -166,6 +178,7 @@ declare module '@tanstack/table-core' {
     filtering?: false | ColumnFilteringConfig
     editing?: false | ColumnEditingConfig
     creating?: false | ColumnCreatingConfig
+    visibility?: false | ColumnVisibilityDef
     isSystemColumn?: boolean
     systemColumnType?: 'selection' | 'expand' | 'actions' | 'row_pin'
     /** Pre-resolved operator list for this column (set when filtering.operators is configured). */
