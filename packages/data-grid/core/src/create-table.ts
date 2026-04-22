@@ -13,6 +13,7 @@ import { CreatingFeature } from './features/creating'
 import { DeletingFeature } from './features/deleting'
 import { EditingFeature } from './features/editing'
 import { LoadingFeature } from './features/loading'
+import { buildOperatorRegistry } from './features/operators'
 import { buildColumnList, extractPinningState } from './system-columns'
 
 import type { DataTable, PinningConfig, RowPinningConfig, TableConfig } from './types'
@@ -60,8 +61,13 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			return id != null ? String(id) : String(index)
 		})
 
+	// ── operator registry ────────────────────────────────────────────────────
+	const tableFilteringOperators =
+		typeof config.filtering === 'object' ? config.filtering.operators : undefined
+	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
+
 	// ── map user columns → TanStack columns ──────────────────────────────────
-	const mappedUserColumns = mapColumns(config.columns)
+	const mappedUserColumns = mapColumns(config.columns, operatorRegistry)
 
 	const hasEditing = Boolean(config.editing)
 	const hasDeleting = Boolean(config.deleting)

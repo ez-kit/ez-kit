@@ -2,6 +2,7 @@ import type { ColumnDef } from './column/types'
 import type { CreatingConfig } from './features/creating'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
+import type { FilterOperatorDef } from './features/operators'
 import type { Table as TanStackTable, TableState } from '@tanstack/table-core'
 
 export type { TableState as TableSnapshot }
@@ -14,6 +15,8 @@ export interface FilteringConfig {
   manual?: boolean
   /** Enable global (cross-column) filter. Default: true when filtering is enabled. */
   global?: boolean
+  /** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
+  operators?: FilterOperatorDef[]
 }
 
 export interface PaginationConfig {

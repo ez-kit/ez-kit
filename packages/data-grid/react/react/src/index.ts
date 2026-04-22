@@ -33,7 +33,7 @@ export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Types
-export type { ColPinSection, ColumnMenuProps, ColumnMenuSections, ConfirmDialogProps, GridComponents, ResizerProps, RowPinMenuProps, SelectionBarProps } from './types'
+export type { BetweenInputProps, ColPinSection, ColumnMenuProps, ColumnMenuSections, ConfirmDialogProps, GridComponents, OperatorSelectProps, ResizerProps, RowPinMenuProps, SelectionBarProps } from './types'
 export type {
   ButtonProps,
   CheckboxProps,
@@ -53,6 +53,15 @@ export type {
 } from './types'
 
 // Re-export core types for convenience
+export type {
+  BetweenOperatorConfig,
+  BetweenValue,
+  ColumnOperatorsConfig,
+  FilterOperatorDef,
+  OperatorRegistry,
+  StructuredFilterValue,
+} from '@ez-kit/data-grid-core'
+
 export type {
   BadgeCellConfig,
   BadgeItem,

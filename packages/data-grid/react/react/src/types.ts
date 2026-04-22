@@ -1,3 +1,4 @@
+import type { BetweenValue, FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column, Row } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
@@ -106,6 +107,21 @@ export interface ColumnMenuProps {
 	sections: ColumnMenuSections
 }
 
+export interface OperatorSelectProps {
+	operators: FilterOperatorDef[]
+	currentOperatorId: string
+	onChange: (operatorId: string) => void
+}
+
+export interface BetweenInputProps {
+	value: BetweenValue
+	onChange: (value: BetweenValue) => void
+	variant: 'inputs' | 'slider' | 'calendar'
+	type: 'number' | 'date'
+	min?: number
+	max?: number
+}
+
 export interface ConfirmDialogProps {
 	open: boolean
 	title: string
@@ -162,4 +178,6 @@ export interface GridComponents {
 	ColumnMenu?: ComponentType<ColumnMenuProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
+	OperatorSelect?: ComponentType<OperatorSelectProps>
+	BetweenInput?: ComponentType<BetweenInputProps>
 }

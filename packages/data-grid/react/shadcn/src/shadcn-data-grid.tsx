@@ -2,11 +2,13 @@
 
 import { CellTypesProvider, createDataGrid } from '@ez-kit/data-grid-react'
 
+import { BetweenInput } from './blocks/BetweenInput'
 import { Checkbox } from './blocks/Checkbox'
 import { ColumnMenu } from './blocks/ColumnMenu'
 import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { DateField } from './blocks/DateField'
 import { NumberInput } from './blocks/NumberInput'
+import { OperatorSelect } from './blocks/OperatorSelect'
 import { PageSizer } from './blocks/PageSizer'
 import { Pagination } from './blocks/pagination'
 import { Resizer } from './blocks/Resizer'
@@ -44,6 +46,8 @@ const {
 	ColumnMenu,
 	SelectionBar,
 	ConfirmDialog,
+	OperatorSelect,
+	BetweenInput,
 })
 
 function DataGrid<TRow extends object>(props: DataGridProps<TRow>) {

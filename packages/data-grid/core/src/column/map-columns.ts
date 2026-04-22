@@ -1,4 +1,12 @@
+import {
+  DEFAULT_OPERATOR_ID_BY_TYPE,
+  DEFAULT_OPERATORS_BY_TYPE,
+  createOperatorFilterFn,
+  resolveColumnOperators,
+} from '../features/operators'
+
 import type { CellViewCtx, ColumnDef, TanStackColumnDef } from './types'
+import type { OperatorRegistry } from '../features/operators'
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
@@ -8,15 +16,18 @@ import type { CellViewCtx, ColumnDef, TanStackColumnDef } from './types'
  * - cell.component → TanStack cell renderer + meta.cellView
  * - sorting: false → enableSorting: false
  * - header string preserved as-is (TanStack accepts string | function)
+ * - filtering.operators → resolves operator list, attaches filterFn dispatcher
  */
 export function mapColumns<TRow extends object>(
   defs: ColumnDef<TRow>[],
+  registry?: OperatorRegistry,
 ): TanStackColumnDef<TRow>[] {
-  return defs.map((def) => mapColumn(def))
+  return defs.map((def) => mapColumn(def, registry))
 }
 
 function mapColumn<TRow extends object>(
   def: ColumnDef<TRow>,
+  registry?: OperatorRegistry,
 ): TanStackColumnDef<TRow> {
   const {
     pinning,
@@ -97,9 +108,32 @@ function mapColumn<TRow extends object>(
     result.accessorFn = accessorFn
   }
 
+  // Operator-aware filtering
+  const filteringCfg = filtering !== undefined && filtering !== false ? filtering : undefined
+  if (filteringCfg?.operators && registry) {
+    const cellType = cell?.type
+    const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
+    const resolved = resolveColumnOperators(filteringCfg.operators, registry, cellTypeOperators)
+
+    if (resolved.length > 0) {
+      result.filterFn = createOperatorFilterFn(resolved)
+      meta.resolvedOperators = resolved
+
+      if (typeof filteringCfg.operators === 'object' && filteringCfg.operators.betweenOperator) {
+        meta.betweenOperatorConfig = filteringCfg.operators.betweenOperator
+      }
+
+      const defaultOpId =
+        filteringCfg.defaultOperator ??
+        (cellType ? DEFAULT_OPERATOR_ID_BY_TYPE[cellType] : undefined) ??
+        resolved[0]?.id
+      if (defaultOpId) meta.defaultOperatorId = defaultOpId
+    }
+  }
+
   // Nested columns (column groups)
   if (columns !== undefined) {
-    result.columns = mapColumns(columns)
+    result.columns = mapColumns(columns, registry)
   }
 
   return result as TanStackColumnDef<TRow>

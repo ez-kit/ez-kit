@@ -30,6 +30,10 @@ export interface CellTypeDefinition {
 	creating?: (props: CellInputProps) => ReactNode
 	/** Filter-mode input. Falls back to `edit` when omitted. */
 	filter?: (props: CellInputProps) => ReactNode
+	/** Default operator IDs for this cell type when `filtering.operators: true`. */
+	operators?: string[]
+	/** Default operator ID override for this cell type. */
+	defaultOperator?: string
 }
 
 export type CellTypeRegistry = Record<string, CellTypeDefinition>

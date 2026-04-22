@@ -1,10 +1,10 @@
 'use client'
 
+import { defineColumns } from '@ez-kit/data-grid-react'
 import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
 import { useState } from 'react'
 
 import { PRODUCT_DATA, type Product } from './_data'
-import { defineColumns } from '@ez-kit/data-grid-react'
 
 const columns = defineColumns<Product>([
 	{ accessorKey: 'name', header: 'Name' },

@@ -1,3 +1,4 @@
+import type { BetweenOperatorConfig, ColumnOperatorsConfig, FilterOperatorDef } from '../features/operators'
 import type { ColumnDef as TanStackColumnDef } from '@tanstack/table-core'
 
 export type { TanStackColumnDef }
@@ -87,6 +88,10 @@ export type CellDef<TRow extends object, TValue = unknown> =
 export interface ColumnFilteringConfig {
   /** Custom filter input component for this column. */
   component?: (props: InputComponentProps) => unknown
+  /** Operator configuration. `true` = default operators for the column's cell type. */
+  operators?: boolean | ColumnOperatorsConfig
+  /** Override the default selected operator for this column. */
+  defaultOperator?: string
 }
 
 export interface ColumnEditingConfig {
@@ -163,5 +168,11 @@ declare module '@tanstack/table-core' {
     creating?: false | ColumnCreatingConfig
     isSystemColumn?: boolean
     systemColumnType?: 'selection' | 'expand' | 'actions' | 'row_pin'
+    /** Pre-resolved operator list for this column (set when filtering.operators is configured). */
+    resolvedOperators?: FilterOperatorDef[]
+    /** Between operator UI config passed from filtering.operators.betweenOperator. */
+    betweenOperatorConfig?: BetweenOperatorConfig
+    /** Default operator ID for this column (derived from config or cell type default). */
+    defaultOperatorId?: string
   }
 }

@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 
 import type {
+	BetweenInputProps,
 	ButtonProps,
 	CheckboxProps,
 	ColumnMenuProps,
@@ -10,6 +11,7 @@ import type {
 	InputProps,
 	ModalProps,
 	NumberInputProps,
+	OperatorSelectProps,
 	PageSizerProps,
 	PaginationProps,
 	ResizerProps,
@@ -265,6 +267,55 @@ function DefaultPagination({
 	)
 }
 
+function DefaultOperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
+	return (
+		<select
+			value={currentOperatorId}
+			onChange={(e) => { onChange(e.target.value) }}
+			style={{ fontSize: '0.75rem', padding: '0 2px' }}
+		>
+			{operators.map((op) => (
+				<option key={op.id} value={op.id}>
+					{op.symbol ?? op.label}
+				</option>
+			))}
+		</select>
+	)
+}
+
+function DefaultBetweenInput({ value, onChange, type }: BetweenInputProps) {
+	const inputType = type === 'number' ? 'number' : 'date'
+	return (
+		<div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+			<input
+				type={inputType}
+				placeholder='From'
+				value={(value.from as string | number | undefined) ?? ''}
+				onChange={(e) => {
+					const v =
+						inputType === 'number'
+							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
+							: (e.target.value || undefined)
+					onChange({ ...value, from: v })
+				}}
+			/>
+			<span>–</span>
+			<input
+				type={inputType}
+				placeholder='To'
+				value={(value.to as string | number | undefined) ?? ''}
+				onChange={(e) => {
+					const v =
+						inputType === 'number'
+							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
+							: (e.target.value || undefined)
+					onChange({ ...value, to: v })
+				}}
+			/>
+		</div>
+	)
+}
+
 function DefaultConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
 	if (!open) return null
 	return (
@@ -320,6 +371,8 @@ export const defaultComponents: Required<GridComponents> = {
 	ColumnMenu: DefaultColumnMenu,
 	SelectionBar: DefaultSelectionBar,
 	ConfirmDialog: DefaultConfirmDialog,
+	OperatorSelect: DefaultOperatorSelect,
+	BetweenInput: DefaultBetweenInput,
 }
 
 // ── context ───────────────────────────────────────────────────────────────

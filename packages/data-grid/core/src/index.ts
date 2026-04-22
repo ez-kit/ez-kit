@@ -33,6 +33,24 @@ export type {
   SelectItem,
 } from './column/types'
 
+export type {
+  BetweenOperatorConfig,
+  BetweenValue,
+  ColumnOperatorsConfig,
+  FilterOperatorDef,
+  OperatorRegistry,
+  StructuredFilterValue,
+} from './features/operators'
+export {
+  DATE_OPERATORS,
+  DEFAULT_OPERATOR_ID_BY_TYPE,
+  DEFAULT_OPERATORS_BY_TYPE,
+  NUMBER_OPERATORS,
+  TEXT_OPERATORS,
+  buildOperatorRegistry,
+  resolveColumnOperators,
+} from './features/operators'
+
 export type { CreatingConfig, CreatingState } from './features/creating'
 export type { ConfirmationOptions, DeletingConfig } from './features/deleting'
 export type { EditingConfig, EditingState } from './features/editing'

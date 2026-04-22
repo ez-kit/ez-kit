@@ -4,8 +4,9 @@ import { useState } from 'react'
 
 import { BaseExample } from './components/base'
 import { CellTypesExample } from './components/cell-types'
-import { DeleteConfirmationExample } from './components/delete-confirmation'
 import { ColumnPinningExample } from './components/column-pinning'
+import { DeleteConfirmationExample } from './components/delete-confirmation'
+import { FilterOperatorsExample } from './components/filter-operators'
 import { ResizingExample } from './components/resizing'
 import { RowPinningExample } from './components/row-pinning'
 import { SelectionBarExample } from './components/selection-bar'
@@ -18,6 +19,7 @@ const TABS = [
 	{ id: 'selection-bar', label: 'Selection Bar', component: SelectionBarExample },
 	{ id: 'row-pinning', label: 'Row Pinning', component: RowPinningExample },
 	{ id: 'column-pinning', label: 'Column Pinning', component: ColumnPinningExample },
+	{ id: 'filter-operators', label: 'Filter Operators', component: FilterOperatorsExample },
 	{ id: 'virtualized', label: 'Virtualized', component: VirtualizedExample },
 	{ id: 'resizing', label: 'Resizing', component: ResizingExample },
 ] as const
