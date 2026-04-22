@@ -6,6 +6,7 @@ import { BetweenInput } from './blocks/BetweenInput'
 import { Checkbox } from './blocks/Checkbox'
 import { ColumnMenu } from './blocks/ColumnMenu'
 import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
+import { FilterPopover } from './blocks/FilterPopover'
 import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { DateField } from './blocks/DateField'
 import { NumberInput } from './blocks/NumberInput'
@@ -46,6 +47,7 @@ const {
 	RowPinMenu,
 	ColumnMenu,
 	ColumnVisibilityMenu,
+	FilterPopover,
 	SelectionBar,
 	ConfirmDialog,
 	OperatorSelect,

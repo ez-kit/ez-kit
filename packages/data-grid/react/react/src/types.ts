@@ -123,6 +123,11 @@ export interface ColumnVisibilityMenuProps {
 	columns: VisibilityColumnItem[]
 }
 
+export interface FilterPopoverProps {
+	children: ReactNode
+	hasActiveFilter: boolean
+}
+
 export interface OperatorSelectProps {
 	operators: FilterOperatorDef[]
 	currentOperatorId: string
@@ -193,6 +198,7 @@ export interface GridComponents {
 	RowPinMenu?: ComponentType<RowPinMenuProps>
 	ColumnMenu?: ComponentType<ColumnMenuProps>
 	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
+	FilterPopover?: ComponentType<FilterPopoverProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>

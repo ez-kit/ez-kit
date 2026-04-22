@@ -1,6 +1,6 @@
 // React hook
-export { useDataGrid, COL_PINNING_KEY, COLUMN_VISIBILITY_KEY, PAGE_SIZER_KEY, ROW_PINNING_KEY, SELECTION_BAR_KEY, VIRTUALIZED_KEY } from './use-data-grid'
-export type { UseDataGridConfig, ColumnVisibilityUIConfig, PageSizerConfig, NormalizedVirtualizedConfig, SelectionBarCallbackArgs, SelectionBarConfig } from './use-data-grid'
+export { useDataGrid, COL_PINNING_KEY, COLUMN_VISIBILITY_KEY, FILTERING_VARIANT_KEY, PAGE_SIZER_KEY, ROW_PINNING_KEY, SELECTION_BAR_KEY, VIRTUALIZED_KEY } from './use-data-grid'
+export type { UseDataGridConfig, ColumnVisibilityUIConfig, FilteringVariant, PageSizerConfig, NormalizedVirtualizedConfig, ReactFilteringConfig, SelectionBarCallbackArgs, SelectionBarConfig } from './use-data-grid'
 
 // Factory
 export { createDataGrid } from './create-data-grid'
@@ -33,7 +33,7 @@ export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Types
-export type { BetweenInputProps, ColPinSection, ColVisibilitySection, ColumnMenuProps, ColumnMenuSections, ColumnVisibilityMenuProps, ConfirmDialogProps, GridComponents, OperatorSelectProps, ResizerProps, RowPinMenuProps, SelectionBarProps, VisibilityColumnItem } from './types'
+export type { BetweenInputProps, ColPinSection, ColVisibilitySection, ColumnMenuProps, ColumnMenuSections, ColumnVisibilityMenuProps, ConfirmDialogProps, FilterPopoverProps, GridComponents, OperatorSelectProps, ResizerProps, RowPinMenuProps, SelectionBarProps, VisibilityColumnItem } from './types'
 export type {
   ButtonProps,
   CheckboxProps,

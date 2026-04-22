@@ -49,7 +49,7 @@ Controlled at `<DataGrid>` level via `filtering.variant`.
 | Variant | Status | Notes |
 |---------|--------|-------|
 | `inline` | ✅ | Input rendered directly below column header — current default |
-| `popover` | 🔲 | Filter icon appears in column header; click opens a popover with the filter input |
+| `popover` | ✅ | Filter icon in column header; click opens popover with filter input + operators; `filtering: { variant: 'popover' }` |
 | `panel` | 🔲 | All column filters rendered as a list above/below the table, outside the header row |
 
 ### Filter operators UI

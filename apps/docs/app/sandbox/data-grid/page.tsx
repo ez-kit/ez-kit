@@ -8,6 +8,7 @@ import { ColumnPinningExample } from './components/column-pinning'
 import { ColumnVisibilityExample } from './components/column-visibility'
 import { DeleteConfirmationExample } from './components/delete-confirmation'
 import { FilterOperatorsExample } from './components/filter-operators'
+import { FilterPopoverExample } from './components/filter-popover'
 import { ResizingExample } from './components/resizing'
 import { RowPinningExample } from './components/row-pinning'
 import { SelectionBarExample } from './components/selection-bar'
@@ -22,6 +23,7 @@ const TABS = [
 	{ id: 'column-pinning', label: 'Column Pinning', component: ColumnPinningExample },
 	{ id: 'column-visibility', label: 'Column Visibility', component: ColumnVisibilityExample },
 	{ id: 'filter-operators', label: 'Filter Operators', component: FilterOperatorsExample },
+	{ id: 'filter-popover', label: 'Filter Popover', component: FilterPopoverExample },
 	{ id: 'virtualized', label: 'Virtualized', component: VirtualizedExample },
 	{ id: 'resizing', label: 'Resizing', component: ResizingExample },
 ] as const

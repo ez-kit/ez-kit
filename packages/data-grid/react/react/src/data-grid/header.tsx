@@ -2,7 +2,7 @@ import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { COL_PINNING_KEY } from '../use-data-grid'
+import { COL_PINNING_KEY, FILTERING_VARIANT_KEY } from '../use-data-grid'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
@@ -27,10 +27,11 @@ interface HeaderProps {
  */
 export function Header({ theadStyle }: HeaderProps = {}) {
 	const table = useTableContext()
-	const { Thead, Tr, Th, Input, Resizer, ColumnMenu, Checkbox, OperatorSelect, BetweenInput } = useGridComponents()
+	const { Thead, Tr, Th, Input, Resizer, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
+	const filteringVariant = (table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] as 'inline' | 'popover' | undefined
 
 	return (
 		<Thead data-slot='thead' style={theadStyle}>
@@ -120,32 +121,47 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 								colSpan={header.colSpan}
 								style={thStyle}
 							>
-								<div data-slot='header-main' style={{ display: 'flex', alignItems: 'center' }}>
-									<div
-										data-slot='sort-trigger'
-										role={canSort ? 'button' : undefined}
-										tabIndex={canSort ? 0 : undefined}
-										style={{ cursor: canSort ? 'pointer' : undefined, flex: 1 }}
-										onClick={sortHandler}
-										onKeyDown={onSortKeyDown}
-									>
-										{header.isPlaceholder
-											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext() as unknown as Record<string, unknown>,
+								{(() => {
+									const canFilter = hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
+									const filterContent = canFilter
+										? renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, BetweenInput })
+										: null
+									return (
+										<>
+											<div data-slot='header-main' style={{ display: 'flex', alignItems: 'center' }}>
+												<div
+													data-slot='sort-trigger'
+													role={canSort ? 'button' : undefined}
+													tabIndex={canSort ? 0 : undefined}
+													style={{ cursor: canSort ? 'pointer' : undefined, flex: 1 }}
+													onClick={sortHandler}
+													onKeyDown={onSortKeyDown}
+												>
+													{header.isPlaceholder
+														? null
+														: flexRender(
+																header.column.columnDef.header,
+																header.getContext() as unknown as Record<string, unknown>,
+															)}
+													{canSort && <span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>}
+												</div>
+												{filteringVariant === 'popover' && canFilter && (
+													<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>
+														{filterContent}
+													</FilterPopover>
 												)}
-										{canSort && <span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>}
-									</div>
-									{hasSections && (
-										<ColumnMenu column={header.column} sections={sections} />
-									)}
-								</div>
-								{hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter() && (
-									<div data-slot='header-extras'>
-										{renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, BetweenInput })}
-									</div>
-								)}
+												{hasSections && (
+													<ColumnMenu column={header.column} sections={sections} />
+												)}
+											</div>
+											{filteringVariant !== 'popover' && canFilter && (
+												<div data-slot='header-extras'>
+													{filterContent}
+												</div>
+											)}
+										</>
+									)
+								})()}
 								{canResize && (
 									<Resizer
 										onMouseDown={header.getResizeHandler()}

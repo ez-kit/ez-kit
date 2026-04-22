@@ -8,6 +8,7 @@ import type {
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	DateFieldProps,
+	FilterPopoverProps,
 	GridComponents,
 	InputProps,
 	ModalProps,
@@ -367,6 +368,39 @@ function DefaultBetweenInput({ value, onChange, type }: BetweenInputProps) {
 	)
 }
 
+function DefaultFilterPopover({ children, hasActiveFilter }: FilterPopoverProps) {
+	const [open, setOpen] = useState(false)
+	return (
+		<div style={{ position: 'relative', display: 'inline-flex' }}>
+			<button
+				type='button'
+				aria-label='Filter'
+				aria-expanded={open}
+				onClick={() => { setOpen((p) => !p) }}
+				style={{ opacity: hasActiveFilter ? 1 : 0.5, cursor: 'pointer' }}
+			>
+				⊟
+			</button>
+			{open && (
+				<div
+					style={{
+						position: 'absolute',
+						top: '100%',
+						left: 0,
+						background: 'white',
+						border: '1px solid #ccc',
+						padding: '8px',
+						zIndex: 10,
+						minWidth: 200,
+					}}
+				>
+					{children}
+				</div>
+			)}
+		</div>
+	)
+}
+
 function DefaultConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
 	if (!open) return null
 	return (
@@ -421,6 +455,7 @@ export const defaultComponents: Required<GridComponents> = {
 	RowPinMenu: DefaultRowPinMenu,
 	ColumnMenu: DefaultColumnMenu,
 	ColumnVisibilityMenu: DefaultColumnVisibilityMenu,
+	FilterPopover: DefaultFilterPopover,
 	SelectionBar: DefaultSelectionBar,
 	ConfirmDialog: DefaultConfirmDialog,
 	OperatorSelect: DefaultOperatorSelect,

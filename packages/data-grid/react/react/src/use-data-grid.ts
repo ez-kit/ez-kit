@@ -2,7 +2,7 @@ import { createTable } from '@ez-kit/data-grid-core'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 
 import type { CellTypeRegistry } from './cell-types-context'
-import type { DataTable, RowVirtualOptions, TableConfig, VirtualizedConfig } from '@ez-kit/data-grid-core'
+import type { DataTable, FilteringConfig, RowVirtualOptions, TableConfig, VirtualizedConfig } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
@@ -26,6 +26,9 @@ export const SELECTION_BAR_KEY = Symbol('selectionBar')
 
 /** Symbol used to carry columnVisibility UI config on the table instance for Toolbar to read. */
 export const COLUMN_VISIBILITY_KEY = Symbol('columnVisibility')
+
+/** Symbol used to carry filtering variant on the table instance for Header to read. */
+export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
 
 export interface SelectionBarCallbackArgs<TRow extends object = object> {
   table: Table<TRow>
@@ -70,7 +73,21 @@ export interface ColumnVisibilityUIConfig {
   toolbar?: boolean
 }
 
-export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow> {
+export type FilteringVariant = 'inline' | 'popover'
+
+export interface ReactFilteringConfig extends FilteringConfig {
+  /** Display variant for column filter controls. Default: 'inline'. */
+  variant?: FilteringVariant
+}
+
+export interface UseDataGridConfig<TRow extends object> extends Omit<TableConfig<TRow>, 'filtering'> {
+  /**
+   * Enable filtering.
+   * - `true` — inline filter inputs below each column header
+   * - `{ variant: 'popover' }` — filter icon in header; click opens a popover with the filter input
+   * - `{ variant: 'inline', ...opts }` — same as `true` with extra FilteringConfig options
+   */
+  filtering?: boolean | ReactFilteringConfig
   /** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
   cellTypes?: CellTypeRegistry
   /** Page size selector config. When provided, renders a PageSizer control. */
@@ -103,10 +120,20 @@ export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow
 export function useDataGrid<TRow extends object>(
   config: UseDataGridConfig<TRow>,
 ): DataTable<TRow> {
-  const { cellTypes, pageSizer, selectionBar, columnVisibility, ...tableConfig } = config
+  const { cellTypes, pageSizer, selectionBar, columnVisibility, filtering: rawFiltering, ...restConfig } = config
+
+  const filteringVariant: FilteringVariant | undefined =
+    typeof rawFiltering === 'object' && rawFiltering !== null
+      ? rawFiltering.variant
+      : undefined
+
+  const coreFiltering: boolean | FilteringConfig | undefined =
+    typeof rawFiltering === 'object' && rawFiltering !== null
+      ? (({ variant: _, ...rest }) => rest)(rawFiltering)
+      : rawFiltering
 
   const tableRef = useRef<DataTable<TRow> | null>(null)
-  tableRef.current ??= createTable(tableConfig as TableConfig<TRow>)
+  tableRef.current ??= createTable({ ...restConfig, filtering: coreFiltering } as TableConfig<TRow>)
 
   // Store cellTypes on the table instance so DataGrid can read without an extra prop
   const cellTypesRef = useRef(cellTypes)
@@ -140,6 +167,9 @@ export function useDataGrid<TRow extends object>(
   colVisibilityRef.current = columnVisibility
   ;(tableRef.current as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] =
     colVisibilityRef.current
+
+  // Store filteringVariant on the table instance so Header can read without an extra prop
+  ;(tableRef.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] = filteringVariant
 
   // Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
   const virtualizedConfig = normalizeVirtualized(config.virtualized)
