@@ -1,3 +1,5 @@
+import { DataGridTypeProvider } from 'shared/DataGrid'
+
 export default function Layout({ children }: { children: React.ReactNode }) {
-	return <>{children}</>
+	return <DataGridTypeProvider type='shadcn'>{children}</DataGridTypeProvider>
 }

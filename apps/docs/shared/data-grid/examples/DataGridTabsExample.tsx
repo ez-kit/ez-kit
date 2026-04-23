@@ -2,18 +2,20 @@
 
 import { useState } from 'react'
 
-import { BaseExample } from '../../../shared/data-grid/examples/components/base'
-import { CellTypesExample } from '../../../shared/data-grid/examples/components/cell-types'
-import { ColumnPinningExample } from '../../../shared/data-grid/examples/components/column-pinning'
-import { ColumnVisibilityExample } from '../../../shared/data-grid/examples/components/column-visibility'
-import { CrudExample } from '../../../shared/data-grid/examples/components/crud/CrudExample'
-import { DeleteConfirmationExample } from '../../../shared/data-grid/examples/components/delete-confirmation'
-import { FilterOperatorsExample } from '../../../shared/data-grid/examples/components/filter-operators'
-import { FilterPopoverExample } from '../../../shared/data-grid/examples/components/filter-popover'
-import { ResizingExample } from '../../../shared/data-grid/examples/components/resizing'
-import { RowPinningExample } from '../../../shared/data-grid/examples/components/row-pinning'
-import { SelectionBarExample } from '../../../shared/data-grid/examples/components/selection-bar'
-import { VirtualizedExample } from '../../../shared/data-grid/examples/components/virtualized'
+import { useDataGridType } from 'shared/DataGrid'
+
+import { BaseExample } from './components/base'
+import { CellTypesExample } from './components/cell-types'
+import { ColumnPinningExample } from './components/column-pinning'
+import { ColumnVisibilityExample } from './components/column-visibility'
+import { CrudExample } from './components/crud/CrudExample'
+import { DeleteConfirmationExample } from './components/delete-confirmation'
+import { FilterOperatorsExample } from './components/filter-operators'
+import { FilterPopoverExample } from './components/filter-popover'
+import { ResizingExample } from './components/resizing'
+import { RowPinningExample } from './components/row-pinning'
+import { SelectionBarExample } from './components/selection-bar'
+import { VirtualizedExample } from './components/virtualized'
 
 const TABS = [
 	{ id: 'base', label: 'Base', component: BaseExample },
@@ -32,17 +34,19 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
-export default function DataGridSandboxPage() {
+export function DataGridTabsExample() {
 	const [activeTab, setActiveTab] = useState<TabId>('base')
 
 	const ActiveComponent = TABS.find((t) => t.id === activeTab)?.component ?? BaseExample
+
+	const { type } = useDataGridType()
 
 	return (
 		<div
 			style={{ padding: '2rem' }}
 			className='[&_input]:border'
 		>
-			<h1 style={{ marginBottom: '1.5rem' }}>DataGrid Sandbox</h1>
+			<h1 style={{ marginBottom: '1.5rem' }}>DataGrid Sandbox - {type}</h1>
 
 			<div
 				style={{

@@ -35,6 +35,7 @@
 		}
 	],
 	"dependencies": {
+		"@ez-kit/data-grid-react": "workspace:*",
 		"@heroui/react": "^3.0.3",
 		"@heroui/styles": "^3.0.3"
 	},
