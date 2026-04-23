@@ -32,11 +32,13 @@ export function buildColumnList<TRow extends object>(
       id: SELECTION_COLUMN_ID,
       header: () => null,
       cell: () => null,
+      size: 44,
       enableSorting: false,
       enableColumnFilter: false,
       meta: {
         isSystemColumn: true,
         systemColumnType: 'selection',
+        columnPinning: { pin: 'left' },
       },
     })
   }

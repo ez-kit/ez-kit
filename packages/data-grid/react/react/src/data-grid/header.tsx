@@ -59,12 +59,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 						const canResize = Boolean(table.options.enableColumnResizing) && header.column.getCanResize()
 						const thStyle = {
 							...pinStyles,
-							...(canResize
-								? {
-										width: `calc(var(--header-${header.column.id}-size) * 1px)`,
-										position: 'relative' as const,
-									}
-								: {}),
+							...(canResize ? { position: 'relative' as const } : {}),
 						}
 
 						// Build column menu sections

@@ -309,12 +309,14 @@ describe('<DataGrid>', () => {
       expect(resizers[0]).toHaveAttribute('data-is-resizing', 'false')
     })
 
-    it('does not set CSS size variables on <table> when sizing is not enabled', () => {
+    it('always sets CSS size variables and grid-template-columns on <table>', () => {
       const table = makeTable()
       render(<DataGrid table={table} />)
       const tableEl = document.querySelector('table')
       const style = tableEl?.getAttribute('style') ?? ''
-      expect(style).not.toContain('--header-name-size')
+      expect(style).toContain('--header-name-size')
+      expect(style).toContain('--col-name-size')
+      expect(style).toContain('--grid-template-columns')
     })
   })
 

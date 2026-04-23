@@ -30,7 +30,7 @@ export function CreatingRow() {
 
   return (
     <Tr data-creating-row>
-      {table.getAllLeafColumns().map((col) => {
+      {table.getVisibleLeafColumns().map((col) => {
         const meta = col.columnDef.meta
 
         if (meta?.isSystemColumn) {

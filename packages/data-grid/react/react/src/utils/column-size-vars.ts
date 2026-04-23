@@ -19,3 +19,20 @@ export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
 
   return vars as CSSProperties
 }
+
+/**
+ * Builds the `grid-template-columns` value from visible leaf columns.
+ * - Resizable tables: fixed pixel widths (drag handles need exact control).
+ * - Pinned columns: always fixed (sticky `left`/`right` offsets depend on exact widths).
+ * - Center columns without resizing: `minmax(size, 1fr)` so they fill available space.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getGridTemplateColumns(table: DataTable<any>): string {
+  const isResizing = Boolean(table.options.enableColumnResizing)
+  return table.getVisibleLeafColumns()
+    .map((col) => {
+      const fixed = `calc(var(--col-${col.id}-size) * 1px)`
+      return (isResizing || col.getIsPinned()) ? fixed : `minmax(${fixed}, 1fr)`
+    })
+    .join(' ')
+}

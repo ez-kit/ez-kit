@@ -15,5 +15,6 @@ export function getCommonPinStyles<TData extends RowData>(
     left: isPinned === 'left' ? `${String(column.getStart('left'))}px` : undefined,
     right: isPinned === 'right' ? `${String(column.getAfter('right'))}px` : undefined,
     zIndex: 1,
+    backgroundColor: 'var(--background)',
   }
 }

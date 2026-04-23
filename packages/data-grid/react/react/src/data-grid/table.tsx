@@ -1,9 +1,10 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useRef } from 'react'
+import type { CSSProperties } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { VIRTUALIZED_KEY } from '../use-data-grid'
-import { getColumnSizeVars } from '../utils/column-size-vars'
+import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
 import { Header } from './header'
@@ -37,7 +38,8 @@ export function DataGridTable() {
   const table = useTableContext()
 
   const isResizingEnabled = Boolean(table.options.enableColumnResizing)
-  const sizeVars = isResizingEnabled ? getColumnSizeVars(table) : undefined
+  const sizeVars = getColumnSizeVars(table)
+  const gridTemplateColumns = getGridTemplateColumns(table)
 
   const virtualizedConfig = (table as unknown as Record<symbol, unknown>)[
     VIRTUALIZED_KEY
@@ -65,9 +67,9 @@ export function DataGridTable() {
     <Table
       style={{
         ...sizeVars,
-        ...(isResizingEnabled ? { tableLayout: 'fixed' } : {}),
+        '--grid-template-columns': gridTemplateColumns,
         ...(isVirtualized ? { display: 'grid' } : {}),
-      }}
+      } as CSSProperties}
     >
       <Header theadStyle={isVirtualized ? { display: 'grid', position: 'sticky', top: 0, zIndex: 1 } : {}} />
       <Body />

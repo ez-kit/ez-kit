@@ -36,10 +36,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
 	const pinStyles = getCommonPinStyles(cell.column)
-	const isResizingEnabled = Boolean(table.options.enableColumnResizing) && cell.column.getCanResize()
-	const cellStyle: CSSProperties = isResizingEnabled
-		? { ...pinStyles, width: `calc(var(--col-${columnId}-size) * 1px)` }
-		: pinStyles
+	const cellStyle: CSSProperties = pinStyles
 
 	// ── system columns ────────────────────────────────────────────────────────
 	if (meta?.isSystemColumn) {
@@ -162,7 +159,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 	return (
 		<Td
-			style={pinStyles}
+			style={cellStyle}
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp
