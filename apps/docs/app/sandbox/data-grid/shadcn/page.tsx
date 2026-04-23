@@ -2,18 +2,18 @@
 
 import { useState } from 'react'
 
-import { BaseExample } from './shadcn/components/base'
-import { CellTypesExample } from './shadcn/components/cell-types'
-import { ColumnPinningExample } from './shadcn/components/column-pinning'
-import { ColumnVisibilityExample } from './shadcn/components/column-visibility'
-import { CrudExample } from './shadcn/components/crud/CrudExample'
-import { DeleteConfirmationExample } from './shadcn/components/delete-confirmation'
-import { FilterOperatorsExample } from './shadcn/components/filter-operators'
-import { FilterPopoverExample } from './shadcn/components/filter-popover'
-import { ResizingExample } from './shadcn/components/resizing'
-import { RowPinningExample } from './shadcn/components/row-pinning'
-import { SelectionBarExample } from './shadcn/components/selection-bar'
-import { VirtualizedExample } from './shadcn/components/virtualized'
+import { BaseExample } from './components/base'
+import { CellTypesExample } from './components/cell-types'
+import { ColumnPinningExample } from './components/column-pinning'
+import { ColumnVisibilityExample } from './components/column-visibility'
+import { CrudExample } from './components/crud/CrudExample'
+import { DeleteConfirmationExample } from './components/delete-confirmation'
+import { FilterOperatorsExample } from './components/filter-operators'
+import { FilterPopoverExample } from './components/filter-popover'
+import { ResizingExample } from './components/resizing'
+import { RowPinningExample } from './components/row-pinning'
+import { SelectionBarExample } from './components/selection-bar'
+import { VirtualizedExample } from './components/virtualized'
 
 const TABS = [
 	{ id: 'base', label: 'Base', component: BaseExample },

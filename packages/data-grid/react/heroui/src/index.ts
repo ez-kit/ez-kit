@@ -1,3 +1,1 @@
-export function noop() {
-	return null
-}
+export { Table } from '@heroui/react'
