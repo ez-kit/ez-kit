@@ -10,6 +10,13 @@
 # testing
 /coverage
 
+# playwright
+playwright-report/
+test-results/
+
+# playwright snapshots
+apps/docs/tests/**/*.png
+
 # next.js
 /.next/
 /out/
