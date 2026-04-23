@@ -1,7 +1,8 @@
 'use client'
 
-import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
 import { useState } from 'react'
+
+import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { PRODUCT_DATA, productColumns, type Product } from './_data'
 
@@ -17,9 +18,7 @@ export function CellTypesExample() {
 		editing: {
 			mode: 'row',
 			onSave: (rowId, values) => {
-				setData((prev) =>
-					prev.map((row) => (row.id.toString() === rowId ? ({ ...row, ...values } as Product) : row)),
-				)
+				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? ({ ...row, ...values } as Product) : row)))
 				return true
 			},
 		},

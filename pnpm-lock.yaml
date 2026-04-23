@@ -166,12 +166,18 @@ importers:
 
   packages/data-grid/react/heroui:
     dependencies:
+      '@ez-kit/data-grid-react':
+        specifier: workspace:*
+        version: link:../react
       '@heroui/react':
         specifier: ^3.0.3
         version: 3.0.3(@react-spectrum/provider@3.11.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
       '@heroui/styles':
         specifier: ^3.0.3
         version: 3.0.3(tailwind-merge@3.4.0)(tailwindcss@4.2.2)
+      lucide-react:
+        specifier: ^0.577.0
+        version: 0.577.0(react@19.2.4)
     devDependencies:
       '@types/react':
         specifier: ^19.2.14

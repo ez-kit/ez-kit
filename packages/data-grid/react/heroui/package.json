@@ -22,6 +22,7 @@
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --sourcemap",
 		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"format": "prettier . --write",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
@@ -37,7 +38,8 @@
 	"dependencies": {
 		"@ez-kit/data-grid-react": "workspace:*",
 		"@heroui/react": "^3.0.3",
-		"@heroui/styles": "^3.0.3"
+		"@heroui/styles": "^3.0.3",
+		"lucide-react": "^0.577.0"
 	},
 	"devDependencies": {
 		"@types/react": "^19.2.14",

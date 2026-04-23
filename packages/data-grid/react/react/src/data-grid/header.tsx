@@ -27,14 +27,21 @@ interface HeaderProps {
  */
 export function Header({ theadStyle }: HeaderProps = {}) {
 	const table = useTableContext()
-	const { Thead, Tr, Th, Input, Resizer, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } = useGridComponents()
+	const { Thead, Tr, Th, Input, Resizer, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } =
+		useGridComponents()
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
-	const filteringVariant = (table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] as 'inline' | 'popover' | undefined
+	const filteringVariant = (table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] as
+		| 'inline'
+		| 'popover'
+		| undefined
 
 	return (
-		<Thead data-slot='thead' style={theadStyle}>
+		<Thead
+			data-slot='thead'
+			style={theadStyle}
+		>
 			{table.getHeaderGroups().map((headerGroup) => (
 				<Tr
 					data-slot='tr'
@@ -74,15 +81,23 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 								isPinned,
 								canPinLeft: isPinned !== 'left',
 								canPinRight: isPinned !== 'right',
-								onPinLeft: () => { header.column.pin('left') },
-								onPinRight: () => { header.column.pin('right') },
-								onUnpin: () => { header.column.pin(false) },
+								onPinLeft: () => {
+									header.column.pin('left')
+								},
+								onPinRight: () => {
+									header.column.pin('right')
+								},
+								onUnpin: () => {
+									header.column.pin(false)
+								},
 							}
 						}
 
 						if (!meta?.isSystemColumn && !header.isPlaceholder && header.column.getCanHide()) {
 							sections.visibility = {
-								onHide: () => { header.column.toggleVisibility(false) },
+								onHide: () => {
+									header.column.toggleVisibility(false)
+								},
 							}
 						}
 
@@ -102,7 +117,9 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 									<Checkbox
 										value={isAllSelected}
 										indeterminate={isSomeSelected && !isAllSelected}
-										onChange={() => { table.toggleAllRowsSelected(!isAllSelected) }}
+										onChange={() => {
+											table.toggleAllRowsSelected(!isAllSelected)
+										}}
 										aria-label='Select all rows'
 									/>
 								</Th>
@@ -117,13 +134,17 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 								style={thStyle}
 							>
 								{(() => {
-									const canFilter = hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
+									const canFilter =
+										hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
 									const filterContent = canFilter
 										? renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, BetweenInput })
 										: null
 									return (
 										<>
-											<div data-slot='header-main' style={{ display: 'flex', alignItems: 'center' }}>
+											<div
+												data-slot='header-main'
+												style={{ display: 'flex', alignItems: 'center' }}
+											>
 												<div
 													data-slot='sort-trigger'
 													role={canSort ? 'button' : undefined}
@@ -138,7 +159,9 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 																header.column.columnDef.header,
 																header.getContext() as unknown as Record<string, unknown>,
 															)}
-													{canSort && <span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>}
+													{canSort && (
+														<span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>
+													)}
 												</div>
 												{filteringVariant === 'popover' && canFilter && (
 													<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>
@@ -146,13 +169,14 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 													</FilterPopover>
 												)}
 												{hasSections && (
-													<ColumnMenu column={header.column} sections={sections} />
+													<ColumnMenu
+														column={header.column}
+														sections={sections}
+													/>
 												)}
 											</div>
 											{filteringVariant !== 'popover' && canFilter && (
-												<div data-slot='header-extras'>
-													{filterContent}
-												</div>
+												<div data-slot='header-extras'>{filterContent}</div>
 											)}
 										</>
 									)
@@ -161,7 +185,9 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 									<Resizer
 										onMouseDown={header.getResizeHandler()}
 										onTouchStart={header.getResizeHandler()}
-										onDoubleClick={() => { header.column.resetSize() }}
+										onDoubleClick={() => {
+											header.column.resetSize()
+										}}
 										isResizing={header.column.getIsResizing()}
 									/>
 								)}
@@ -186,15 +212,21 @@ interface FilterInputArgs {
 	BetweenInput: ComponentType<BetweenInputProps>
 }
 
-function renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, BetweenInput }: FilterInputArgs): ReactNode {
+function renderFilterInput({
+	header,
+	meta,
+	Input,
+	cellTypes,
+	OperatorSelect,
+	BetweenInput,
+}: FilterInputArgs): ReactNode {
 	const resolvedOperators = meta?.resolvedOperators
 
 	// ── operator-aware path ────────────────────────────────────────────────
 	if (resolvedOperators && resolvedOperators.length > 0) {
 		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
-		const currentOperatorId = sv !== undefined
-			? sv.operator
-			: (meta.defaultOperatorId ?? resolvedOperators.at(0)?.id ?? '')
+		const currentOperatorId =
+			sv !== undefined ? sv.operator : (meta.defaultOperatorId ?? resolvedOperators.at(0)?.id ?? '')
 		const currentOperator = resolvedOperators.find((op) => op.id === currentOperatorId)
 		const inputValue = sv?.value
 
@@ -254,7 +286,11 @@ function renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, Bet
 			if (comp) {
 				return (
 					<>
-						{comp({ value: inputValue, onChange: onValueChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })}
+						{comp({
+							value: inputValue,
+							onChange: onValueChange,
+							...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+						})}
 						{operatorSelect}
 					</>
 				)
@@ -268,7 +304,11 @@ function renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, Bet
 			if (comp) {
 				return (
 					<>
-						{comp({ value: inputValue, onChange: onValueChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })}
+						{comp({
+							value: inputValue,
+							onChange: onValueChange,
+							...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+						})}
 						{operatorSelect}
 					</>
 				)
@@ -280,7 +320,9 @@ function renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, Bet
 				<Input
 					placeholder={`Filter ${header.column.id}…`}
 					value={(inputValue ?? '') as string}
-					onChange={(e) => { onValueChange(e.target.value) }}
+					onChange={(e) => {
+						onValueChange(e.target.value)
+					}}
 				/>
 				{operatorSelect}
 			</>
@@ -289,25 +331,39 @@ function renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, Bet
 
 	// ── plain filter path (no operators) ──────────────────────────────────
 	const filterValue = header.column.getFilterValue()
-	const onChange = (v: unknown) => { header.column.setFilterValue(v) }
+	const onChange = (v: unknown) => {
+		header.column.setFilterValue(v)
+	}
 
 	const filteringConfig = meta?.filtering
 	if (filteringConfig !== false && filteringConfig !== undefined) {
 		const comp = (filteringConfig as { component?: (props: CellInputProps) => ReactNode }).component
-		if (comp) return comp({ value: filterValue, onChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
+		if (comp)
+			return comp({
+				value: filterValue,
+				onChange,
+				...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+			})
 	}
 
 	if (meta?.cellType) {
 		const def = cellTypes[meta.cellType]
 		const comp = def?.filter ?? def?.edit
-		if (comp) return comp({ value: filterValue, onChange, ...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}) })
+		if (comp)
+			return comp({
+				value: filterValue,
+				onChange,
+				...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+			})
 	}
 
 	return (
 		<Input
 			placeholder={`Filter ${header.column.id}…`}
 			value={(filterValue ?? '') as string}
-			onChange={(e) => { header.column.setFilterValue(e.target.value) }}
+			onChange={(e) => {
+				header.column.setFilterValue(e.target.value)
+			}}
 		/>
 	)
 }

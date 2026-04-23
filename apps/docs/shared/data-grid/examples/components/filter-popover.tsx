@@ -1,8 +1,9 @@
 'use client'
 
 import { defineColumns } from '@ez-kit/data-grid-react'
-import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
 import { useState } from 'react'
+
+import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 interface Employee {
 	id: number
@@ -95,15 +96,25 @@ export function FilterPopoverExample() {
 	return (
 		<div>
 			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				A filter icon appears in each column header. Click it to open a popover with the filter input and operators.
-				The icon turns primary colour when a filter is active.
+				A filter icon appears in each column header. Click it to open a popover with the filter input and operators. The
+				icon turns primary colour when a filter is active.
 			</p>
 
-			<div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+			<div
+				style={{
+					display: 'flex',
+					gap: '0.25rem',
+					flexWrap: 'wrap',
+					borderBottom: '1px solid #e2e8f0',
+					marginBottom: '1.5rem',
+				}}
+			>
 				{SUB_TABS.map((t) => (
 					<button
 						key={t.id}
-						onClick={() => { setActive(t.id) }}
+						onClick={() => {
+							setActive(t.id)
+						}}
 						style={{
 							padding: '0.375rem 0.75rem',
 							border: 'none',

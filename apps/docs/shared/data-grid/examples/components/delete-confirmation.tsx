@@ -1,8 +1,9 @@
 'use client'
 
 import { defineColumns } from '@ez-kit/data-grid-react'
-import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
 import { useState } from 'react'
+
+import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { PRODUCT_DATA, type Product } from './_data'
 

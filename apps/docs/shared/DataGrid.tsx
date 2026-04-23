@@ -6,7 +6,7 @@ import type { DataGridProps } from '@ez-kit/data-grid-react'
 
 export { useDataGrid } from '@ez-kit/data-grid-react'
 
-const HeroUiDataGrid = lazy(() => import('@ez-kit/data-grid-heroui').then((module) => ({ default: module.Table })))
+const HeroUiDataGrid = lazy(() => import('@ez-kit/data-grid-heroui').then((module) => ({ default: module.DataGrid })))
 const ShadcnDataGrid = lazy(() => import('@ez-kit/data-grid-shadcn').then((module) => ({ default: module.DataGrid })))
 
 export const DataGridTypeContext = createContext<{ type: 'heroui' | 'shadcn' }>({ type: 'heroui' })

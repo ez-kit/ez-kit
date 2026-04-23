@@ -1,7 +1,8 @@
 'use client'
 
-import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
 import { useState } from 'react'
+
+import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { INITIAL_DATA, resizableColumns } from './_data'
 

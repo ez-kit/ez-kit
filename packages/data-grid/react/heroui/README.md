@@ -1,11 +1,31 @@
-#
+# @ez-kit/data-grid-heroui
 
-@ez-kit/data-grid/core
+HeroUI wrapper for `@ez-kit/data-grid-react`.
 
-A reusable utility package for ez-kit.
+## Install
 
-## Install `bash pnpm add @ez-kit/data-grid/core`
+```bash
+pnpm add @ez-kit/data-grid-heroui @ez-kit/data-grid-react @ez-kit/data-grid-core @heroui/react @heroui/styles
+```
 
 ## Usage
 
-`ts import { noop } from "@ez-kit/data-grid/core" noop() `
+```tsx
+import { createTable, defineColumns } from '@ez-kit/data-grid-react'
+import { DataGrid } from '@ez-kit/data-grid-heroui'
+import '@ez-kit/data-grid-heroui/global.css'
+
+const columns = defineColumns([
+	{ accessorKey: 'name', header: 'Name' },
+	{ accessorKey: 'role', header: 'Role' },
+])
+
+const table = createTable({
+	data: [{ name: 'Ada Lovelace', role: 'Engineer' }],
+	columns,
+})
+
+export function Example() {
+	return <DataGrid table={table} />
+}
+```

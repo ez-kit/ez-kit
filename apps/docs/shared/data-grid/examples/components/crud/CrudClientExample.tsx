@@ -1,6 +1,6 @@
 'use client'
 
-import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
+import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { crudColumns } from './columns'
 import { type Employee, useEmployeeStore } from './use-employee-store'
@@ -28,7 +28,9 @@ export function CrudClientExample() {
 			onSave: (rowId, values) => update(Number(rowId), values),
 		},
 		deleting: {
-			onDelete: (row) => { remove(row.original.id) },
+			onDelete: (row) => {
+				remove(row.original.id)
+			},
 			confirmation: {
 				title: 'Delete employee?',
 				description: (row) =>

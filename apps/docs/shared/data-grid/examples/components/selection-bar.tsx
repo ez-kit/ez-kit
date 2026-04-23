@@ -1,7 +1,8 @@
 'use client'
 
-import { DataGrid, useDataGrid } from '@ez-kit/data-grid-shadcn'
 import { useState } from 'react'
+
+import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA } from './_data'
 
@@ -33,7 +34,9 @@ export function SelectionBarExample() {
 			actions: (
 				<button
 					type='button'
-					onClick={() => { addLog('Export triggered') }}
+					onClick={() => {
+						addLog('Export triggered')
+					}}
 					style={{
 						padding: '0 10px',
 						height: 28,
