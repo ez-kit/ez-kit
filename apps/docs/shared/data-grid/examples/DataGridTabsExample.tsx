@@ -2,42 +2,19 @@
 
 import { useState } from 'react'
 
+import { DataGridSandpackExample } from 'shared/data-grid/sandpack/DataGridSandpackExample'
 import { useDataGridType } from 'shared/DataGrid'
 
-import { BaseExample } from './components/base'
-import { CellTypesExample } from './components/cell-types'
-import { ColumnPinningExample } from './components/column-pinning'
-import { ColumnVisibilityExample } from './components/column-visibility'
-import { CrudExample } from './components/crud/CrudExample'
-import { DeleteConfirmationExample } from './components/delete-confirmation'
-import { FilterOperatorsExample } from './components/filter-operators'
-import { FilterPopoverExample } from './components/filter-popover'
-import { ResizingExample } from './components/resizing'
-import { RowPinningExample } from './components/row-pinning'
-import { SelectionBarExample } from './components/selection-bar'
-import { VirtualizedExample } from './components/virtualized'
+import manifest from './manifest.json'
 
-const TABS = [
-	{ id: 'base', label: 'Base', component: BaseExample },
-	{ id: 'cell-types', label: 'Cell Types', component: CellTypesExample },
-	{ id: 'delete-confirmation', label: 'Delete Confirmation', component: DeleteConfirmationExample },
-	{ id: 'selection-bar', label: 'Selection Bar', component: SelectionBarExample },
-	{ id: 'row-pinning', label: 'Row Pinning', component: RowPinningExample },
-	{ id: 'column-pinning', label: 'Column Pinning', component: ColumnPinningExample },
-	{ id: 'column-visibility', label: 'Column Visibility', component: ColumnVisibilityExample },
-	{ id: 'filter-operators', label: 'Filter Operators', component: FilterOperatorsExample },
-	{ id: 'crud', label: 'CRUD', component: CrudExample },
-	{ id: 'filter-popover', label: 'Filter Popover', component: FilterPopoverExample },
-	{ id: 'virtualized', label: 'Virtualized', component: VirtualizedExample },
-	{ id: 'resizing', label: 'Resizing', component: ResizingExample },
-] as const
+import type { DataGridSandpackExampleId } from 'shared/data-grid/sandpack/DataGridSandpackExample'
 
-type TabId = (typeof TABS)[number]['id']
+const TABS = manifest.map(({ id, label }) => ({ id: id as DataGridSandpackExampleId, label }))
+
+type TabId = DataGridSandpackExampleId
 
 export function DataGridTabsExample() {
 	const [activeTab, setActiveTab] = useState<TabId>('base')
-
-	const ActiveComponent = TABS.find((t) => t.id === activeTab)?.component ?? BaseExample
 
 	const { type } = useDataGridType()
 
@@ -79,7 +56,10 @@ export function DataGridTabsExample() {
 				))}
 			</div>
 
-			<ActiveComponent />
+			<DataGridSandpackExample
+				exampleId={activeTab}
+				type={type}
+			/>
 		</div>
 	)
 }

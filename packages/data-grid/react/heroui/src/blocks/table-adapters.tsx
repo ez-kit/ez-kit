@@ -44,7 +44,8 @@ export function Tr({ children, ...props }: TrProps) {
 
 	const propsWithData = props as TrProps & { 'data-row-id'?: Key }
 	const maybeRowId = propsWithData.id ?? propsWithData['data-row-id']
-	const rowId = typeof maybeRowId === 'bigint' ? String(maybeRowId) : maybeRowId
+	const rowId =
+		typeof maybeRowId === 'symbol' ? undefined : typeof maybeRowId === 'bigint' ? String(maybeRowId) : maybeRowId
 	const { 'data-row-id': _dataRowId, ...rest } = propsWithData
 	const heroProps = rest as unknown as ComponentProps<typeof HeroTable.Row>
 
@@ -62,7 +63,7 @@ export function Th(props: ThProps) {
 	const { rowHeaderKey } = useContext(HeaderContext)
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
 	const isRowHeader = rowHeaderKey !== undefined && heroProps.id === rowHeaderKey
-	console.log('props', props)
+
 	return (
 		<HeroTable.Column
 			{...heroProps}

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, lazy, Suspense } from 'react'
+import { createContext, lazy, Suspense, useContext } from 'react'
 
 import type { DataGridProps } from '@ez-kit/data-grid-react'
 
@@ -21,9 +21,12 @@ export const DataGridTypeProvider = ({ type, children }: { type: 'heroui' | 'sha
 
 export function DataGrid<T extends object>(props: DataGridProps<T>) {
 	const { type } = useDataGridType()
+	const Component = type === 'heroui' ? HeroUiDataGrid : ShadcnDataGrid
+	const componentProps = props as unknown as DataGridProps<object>
+
 	return (
 		<Suspense fallback={<div>Loading...</div>}>
-			{type === 'heroui' ? <HeroUiDataGrid {...props} /> : <ShadcnDataGrid {...props} />}
+			<Component {...componentProps} />
 		</Suspense>
 	)
 }

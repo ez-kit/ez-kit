@@ -29,6 +29,10 @@ apps/docs/tests/**/*.png
 # task runner cache
 .turbo
 
+# generated Sandpack local package bundles
+apps/docs/.sandpack-tmp/
+apps/docs/shared/data-grid/sandpack/generated/
+
 # misc
 .DS_Store
 *.pem

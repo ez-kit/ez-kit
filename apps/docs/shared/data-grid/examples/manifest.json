@@ -1,0 +1,74 @@
+[
+	{
+		"id": "base",
+		"label": "Base",
+		"sourceFile": "components/base.tsx",
+		"exportName": "BaseExample"
+	},
+	{
+		"id": "cell-types",
+		"label": "Cell Types",
+		"sourceFile": "components/cell-types.tsx",
+		"exportName": "CellTypesExample"
+	},
+	{
+		"id": "delete-confirmation",
+		"label": "Delete Confirmation",
+		"sourceFile": "components/delete-confirmation.tsx",
+		"exportName": "DeleteConfirmationExample"
+	},
+	{
+		"id": "selection-bar",
+		"label": "Selection Bar",
+		"sourceFile": "components/selection-bar.tsx",
+		"exportName": "SelectionBarExample"
+	},
+	{
+		"id": "row-pinning",
+		"label": "Row Pinning",
+		"sourceFile": "components/row-pinning.tsx",
+		"exportName": "RowPinningExample"
+	},
+	{
+		"id": "column-pinning",
+		"label": "Column Pinning",
+		"sourceFile": "components/column-pinning.tsx",
+		"exportName": "ColumnPinningExample"
+	},
+	{
+		"id": "column-visibility",
+		"label": "Column Visibility",
+		"sourceFile": "components/column-visibility.tsx",
+		"exportName": "ColumnVisibilityExample"
+	},
+	{
+		"id": "filter-operators",
+		"label": "Filter Operators",
+		"sourceFile": "components/filter-operators.tsx",
+		"exportName": "FilterOperatorsExample"
+	},
+	{
+		"id": "crud",
+		"label": "CRUD",
+		"sourceFile": "components/crud/CrudExample.tsx",
+		"exportName": "CrudExample"
+	},
+	{
+		"id": "filter-popover",
+		"label": "Filter Popover",
+		"sourceFile": "components/filter-popover.tsx",
+		"exportName": "FilterPopoverExample"
+	},
+	{
+		"id": "virtualized",
+		"label": "Virtualized",
+		"sourceFile": "components/virtualized.tsx",
+		"exportName": "VirtualizedExample"
+	},
+	{
+		"id": "resizing",
+		"label": "Resizing",
+		"sourceFile": "components/resizing.tsx",
+		"exportName": "ResizingExample"
+	}
+]

@@ -33,7 +33,7 @@ const INITIAL_EMPLOYEES: Employee[] = [
 let nextId = INITIAL_EMPLOYEES.length + 1
 
 export function useEmployeeStore() {
-	const [data, setData] = useState<Employee[]>(INITIAL_EMPLOYEES)
+	const [data, setData] = useState(INITIAL_EMPLOYEES)
 
 	const add = useCallback((values: Partial<Employee>): boolean => {
 		const employee: Employee = {
