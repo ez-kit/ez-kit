@@ -30,6 +30,7 @@ Docs app:
 ```bash
 pnpm docs:dev         # Start Fumadocs dev server
 pnpm docs:build
+pnpm docs:sandpack    # Regenerate Sandpack bundles (run after any package change, required before docs:dev/build)
 ```
 
 Generate a new package:
@@ -52,7 +53,22 @@ This is a **pnpm + Turborepo monorepo** of ESM-only React utility libraries.
 
 ```
 apps/
-  docs/               # Fumadocs-based Next.js documentation site
+  docs/                         # Fumadocs-based Next.js documentation site
+    app/
+      sandbox/data-grid/
+        shadcn/layout.tsx       # Sets DataGridTypeProvider(type='shadcn')
+        heroui/page.tsx         # Sets DataGridTypeProvider(type='heroui')
+    shared/
+      DataGrid.tsx              # Runtime switcher — lazy-loads shadcn or heroui DataGrid based on context
+      data-grid/
+        examples/               # SHARED examples — one set of components used by BOTH shadcn and heroui
+          manifest.json         # List of all example slugs (add new examples here)
+          components/           # 12 example components, rendered via DataGridTypeProvider context
+        sandpack/
+          DataGridSandpackExample.tsx
+          generated/            # Auto-generated bundles — DO NOT edit manually, run docs:sandpack to regenerate
+    scripts/
+      build-sandpack.mjs        # Generates sandpack/generated/*.ts files (bundles each package with tsup)
 packages/
   zu-store/           # @ez-kit/zu-store — Zustand context store factory
   data-grid/
@@ -78,7 +94,15 @@ turbo/
 
 **`@ez-kit/zu-store`** — `createContextStore(factory)` wraps a Zustand vanilla store in React context, returning `{ Provider, useStore, useShallowStore, Item }`. The `Provider` initialises the store once via `useRef` so it survives re-renders without re-creating state.
 
-**`@ez-kit/data-grid-*`** — layered architecture: `data-grid-core` is a UI-framework-agnostic layer on top of TanStack Table core; `data-grid-react` adds React; the `shadcn` and `heroui` sub-packages layer UI-component-library-specific implementations on top.
+**`@ez-kit/data-grid-*`** — layered architecture: `data-grid-core` is a UI-framework-agnostic layer on top of TanStack Table core; `data-grid-react` adds React; the `shadcn` and `heroui` sub-packages layer UI-component-library-specific implementations on top. Each UI package uses `createDataGrid(components)` to inject its UI components into the shared render layer.
+
+### Docs app architecture
+
+**Runtime UI switching** — `apps/docs/shared/DataGrid.tsx` lazy-loads either `@ez-kit/data-grid-shadcn` or `@ez-kit/data-grid-heroui` based on `DataGridTypeProvider` context set by the route layout. Example components are written **once** and automatically work for both UI kits — there is no duplication.
+
+**Adding a new example** — add the component to `apps/docs/shared/data-grid/examples/components/` and register its slug in `apps/docs/shared/data-grid/examples/manifest.json`. It will appear for both shadcn and heroui automatically.
+
+**Sandpack build pipeline** — `scripts/build-sandpack.mjs` bundles each package with tsup and writes large pre-built files to `shared/data-grid/sandpack/generated/` (290 KB – 1.4 MB). Run `pnpm docs:sandpack` after any package change. Never edit the generated files manually.
 
 ### TypeScript
 
