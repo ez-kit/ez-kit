@@ -3,7 +3,7 @@ import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUM
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { getCommonPinStyles } from '../utils/pin-styles'
+import { getCommonPinStyles, isBoundaryPinnedColumn } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
 import { flexRender } from './flex-render'
@@ -35,7 +35,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
-	const pinStyles = getCommonPinStyles(cell.column)
+	const pinStyles = getCommonPinStyles(cell.column, isBoundaryPinnedColumn(cell.column, table))
 	const cellStyle: CSSProperties = pinStyles
 
 	// ── system columns ────────────────────────────────────────────────────────

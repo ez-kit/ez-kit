@@ -123,12 +123,12 @@ export function useDataGrid<TRow extends object>(
   const { cellTypes, pageSizer, selectionBar, columnVisibility, filtering: rawFiltering, ...restConfig } = config
 
   const filteringVariant: FilteringVariant | undefined =
-    typeof rawFiltering === 'object' && rawFiltering !== null
+    typeof rawFiltering === 'object'
       ? rawFiltering.variant
       : undefined
 
   const coreFiltering: boolean | FilteringConfig | undefined =
-    typeof rawFiltering === 'object' && rawFiltering !== null
+    typeof rawFiltering === 'object'
       ? (({ variant: _, ...rest }) => rest)(rawFiltering)
       : rawFiltering
 

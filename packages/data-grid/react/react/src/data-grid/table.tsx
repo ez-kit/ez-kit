@@ -1,6 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useRef } from 'react'
-import type { CSSProperties } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { VIRTUALIZED_KEY } from '../use-data-grid'
@@ -12,9 +11,32 @@ import { useTableContext } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
 import type { NormalizedVirtualizedConfig } from '../use-data-grid'
+import type { CSSProperties } from 'react'
 
 const DEFAULT_ESTIMATE_SIZE = 50
 const DEFAULT_OVERSCAN = 5
+
+const LEFT_SHADOW = '4px 0 8px -2px var(--dg-pin-shadow-color, rgba(0, 0, 0, 0.12))'
+const RIGHT_SHADOW = '-4px 0 8px -2px var(--dg-pin-shadow-color, rgba(0, 0, 0, 0.12))'
+
+function updateScrollShadows(el: HTMLElement): void {
+  const scrolledLeft = el.scrollLeft > 0
+  const maxScroll = el.scrollWidth - el.clientWidth
+  const scrolledRight = maxScroll > 1 && el.scrollLeft < maxScroll - 1
+  el.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? LEFT_SHADOW : 'none')
+  el.style.setProperty('--dg-pin-right-shadow', scrolledRight ? RIGHT_SHADOW : 'none')
+}
+
+function useScrollShadows(ref: { current: HTMLElement | null }): void {
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const handleScroll = (): void => { updateScrollShadows(el) }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    updateScrollShadows(el)
+    return () => { el.removeEventListener('scroll', handleScroll) }
+  }, [ref])
+}
 
 function resolveEstimateSize(
   estimateSize: NormalizedVirtualizedConfig['row']['estimateSize'],
@@ -37,7 +59,6 @@ export function DataGridTable() {
   const { Table } = useGridComponents()
   const table = useTableContext()
 
-  const isResizingEnabled = Boolean(table.options.enableColumnResizing)
   const sizeVars = getColumnSizeVars(table)
   const gridTemplateColumns = getGridTemplateColumns(table)
 
@@ -63,6 +84,8 @@ export function DataGridTable() {
     enabled: isVirtualized,
   })
 
+  useScrollShadows(containerRef)
+
   const tableEl = (
     <Table
       style={{
@@ -76,21 +99,31 @@ export function DataGridTable() {
     </Table>
   )
 
-  if (!isVirtualized) return tableEl
+  if (isVirtualized) {
+    return (
+      <VirtualProvider rowVirtualizer={rowVirtualizer}>
+        <div
+          ref={containerRef}
+          data-virtual='rows'
+          style={{
+            overflow: 'auto',
+            position: 'relative',
+            height: 'var(--dg-virtual-height, 600px)',
+          }}
+        >
+          {tableEl}
+        </div>
+      </VirtualProvider>
+    )
+  }
 
   return (
-    <VirtualProvider rowVirtualizer={rowVirtualizer}>
-      <div
-        ref={containerRef}
-        data-virtual='rows'
-        style={{
-          overflow: 'auto',
-          position: 'relative',
-          height: 'var(--dg-virtual-height, 600px)',
-        }}
-      >
-        {tableEl}
-      </div>
-    </VirtualProvider>
+    <div
+      ref={containerRef}
+      data-slot='table-scroll-container'
+      style={{ overflowX: 'auto', position: 'relative' }}
+    >
+      {tableEl}
+    </div>
   )
 }

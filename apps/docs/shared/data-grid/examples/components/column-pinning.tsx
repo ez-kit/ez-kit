@@ -5,17 +5,30 @@ import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
-import { INITIAL_DATA, type User } from './_data'
+import { PRODUCT_DATA, type Product } from './_data'
 
-const colPinColumns = defineColumns<User>([
-	{ accessorKey: 'name', header: 'Name', pinning: { defaultPin: 'left' } },
-	{ accessorKey: 'email', header: 'Email' },
-	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
-	{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' }, pinning: false },
+const colPinColumns = defineColumns<Product>([
+	{ accessorKey: 'name', header: 'Name', size: 180, pinning: { defaultPin: 'left' } },
+	{ accessorKey: 'status', header: 'Status', size: 120,
+		cell: {
+			type: 'badge',
+			config: {
+				items: [
+					{ value: 'active', label: 'Active', variant: 'default' },
+					{ value: 'inactive', label: 'Inactive', variant: 'secondary' },
+					{ value: 'discontinued', label: 'Discontinued', variant: 'destructive' },
+				],
+			},
+		},
+	},
+	{ accessorKey: 'category', header: 'Category', size: 140 },
+	{ accessorKey: 'image', header: 'Image', size: 80, cell: { type: 'image', config: { width: 40, height: 40, alt: 'Product' } } },
+	{ accessorKey: 'website', header: 'Website', size: 220, cell: { type: 'link' } },
+	{ accessorKey: 'stock', header: 'Stock %', size: 120, cell: { type: 'progress', config: { max: 100 } }, pinning: { defaultPin: 'right' } },
 ])
 
 export function ColumnPinningExample() {
-	const [data] = useState(INITIAL_DATA)
+	const [data] = useState(PRODUCT_DATA)
 
 	const table = useDataGrid({
 		data,
@@ -27,7 +40,7 @@ export function ColumnPinningExample() {
 	return (
 		<div>
 			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Click ⋮ next to a column header to pin left / right or unpin. &quot;Active&quot; column has pinning disabled.
+				Click ⋮ next to a column header to pin left / right or unpin. Scroll horizontally to see pin shadows.
 			</p>
 			<DataGrid table={table} />
 		</div>
