@@ -4,15 +4,15 @@ import { Checkbox as HeroUiCheckbox, Label } from '@heroui/react'
 
 import type { CheckboxProps } from '@ez-kit/data-grid-react'
 
-export function Checkbox({ value, indeterminate, onChange, 'aria-label': ariaLabel }: CheckboxProps) {
+export function Checkbox({ value, indeterminate, disabled, onChange, 'aria-label': ariaLabel }: CheckboxProps) {
 	return (
 		<HeroUiCheckbox
 			aria-label={ariaLabel ?? ''}
 			isIndeterminate={indeterminate ?? false}
 			isSelected={value ?? false}
+			isDisabled={disabled ?? false}
 			slot='selection'
 			onChange={(value) => {
-				console.log('value', value)
 				onChange?.(value)
 			}}
 		>

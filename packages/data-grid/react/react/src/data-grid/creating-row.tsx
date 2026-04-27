@@ -6,6 +6,7 @@ import {
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { getCommonPinStyles, isBoundaryPinnedColumn } from '../utils/pin-styles'
 
 import { useTableContext } from './table-context'
 
@@ -22,7 +23,7 @@ import type { ChangeEvent, ComponentType, ReactNode } from 'react'
  */
 export function CreatingRow() {
   const table = useTableContext()
-  const { Tr, Td, Input, Button } = useGridComponents()
+  const { Tr, Td, Input, Button, Checkbox } = useGridComponents()
   const cellTypes = useCellTypes()
   const values = table.getCreatingState().creatingValues
   const creatingConfig = table.options.creating
@@ -32,11 +33,12 @@ export function CreatingRow() {
     <Tr data-creating-row>
       {table.getVisibleLeafColumns().map((col) => {
         const meta = col.columnDef.meta
+        const pinStyles = getCommonPinStyles(col, isBoundaryPinnedColumn(col, table))
 
         if (meta?.isSystemColumn) {
           if (col.id === ACTIONS_COLUMN_ID) {
             return (
-              <Td key={col.id}>
+              <Td key={col.id} style={pinStyles}>
                 <Button onClick={() => void table.commitCreating()}>Save</Button>
                 {!isPinRow && (
                   <Button onClick={() => { table.cancelCreating() }}>Cancel</Button>
@@ -44,21 +46,25 @@ export function CreatingRow() {
               </Td>
             )
           }
-          if (col.id === SELECTION_COLUMN_ID || col.id === EXPAND_COLUMN_ID) {
-            return <Td key={col.id} />
+          if (col.id === SELECTION_COLUMN_ID) {
+            return (
+              <Td key={col.id} style={pinStyles}>
+                <Checkbox value={false} disabled aria-label='Select row' />
+              </Td>
+            )
           }
-          return <Td key={col.id} />
+          return <Td key={col.id} style={pinStyles} />
         }
 
         if (meta?.creating === false) {
-          return <Td key={col.id} />
+          return <Td key={col.id} style={pinStyles} />
         }
 
         const value = values[col.id] ?? ''
         const onChange = (v: unknown) => { table.setCreatingValue(col.id, v) }
 
         return (
-          <Td key={col.id}>
+          <Td key={col.id} style={pinStyles}>
             {renderCreatingInput({ meta, value, onChange, cellTypes, Input })}
           </Td>
         )

@@ -24,14 +24,7 @@ export function DataGridExamplesBrowser({ renderExample }: DataGridExamplesBrows
 		>
 			<h1 style={{ marginBottom: '1.5rem' }}>DataGrid Sandbox - {type}</h1>
 
-			<div
-				style={{
-					display: 'flex',
-					gap: '0.25rem',
-					borderBottom: '1px solid #e2e8f0',
-					marginBottom: '2rem',
-				}}
-			>
+			<div className='flex gap-0.5 border-b border-zinc-200 mb-4 overflow-x-auto'>
 				{TABS.map((tab) => (
 					<button
 						key={tab.id}

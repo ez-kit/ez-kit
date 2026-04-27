@@ -27,6 +27,7 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement>
 export interface CheckboxProps {
 	value?: boolean | undefined
 	indeterminate?: boolean
+	disabled?: boolean
 	onChange?: (checked: boolean) => void
 	'aria-label'?: string
 }
