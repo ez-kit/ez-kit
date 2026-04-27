@@ -6,37 +6,38 @@ import type { ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
 
-export interface CellViewProps {
+export interface CellViewProps<TConfig = unknown> {
 	value: unknown
 	row: unknown
 	rowIndex: number
-	cellConfig?: Record<string, unknown>
+	config?: TConfig
 }
 
-export interface CellInputProps {
+export interface CellInputProps<TConfig = unknown> {
 	value: unknown
 	onChange: (value: unknown) => void
-	cellConfig?: Record<string, unknown>
+	config?: TConfig
 }
 
 // ── registry types ────────────────────────────────────────────────────────
 
-export interface CellTypeDefinition {
+export interface CellTypeDefinition<TConfig = unknown> {
 	/** View-mode renderer. */
-	view?: (props: CellViewProps) => ReactNode
+	view?: (props: CellViewProps<TConfig>) => ReactNode
 	/** Edit-mode input. Falls back to `creating` when omitted. */
-	edit?: (props: CellInputProps) => ReactNode
+	edit?: (props: CellInputProps<TConfig>) => ReactNode
 	/** Create-mode input. Falls back to `edit` when omitted. */
-	creating?: (props: CellInputProps) => ReactNode
+	creating?: (props: CellInputProps<TConfig>) => ReactNode
 	/** Filter-mode input. Falls back to `edit` when omitted. */
-	filter?: (props: CellInputProps) => ReactNode
+	filter?: (props: CellInputProps<TConfig>) => ReactNode
 	/** Default operator IDs for this cell type when `filtering.operators: true`. */
 	operators?: string[]
 	/** Default operator ID override for this cell type. */
 	defaultOperator?: string
 }
 
-export type CellTypeRegistry = Record<string, CellTypeDefinition>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type CellTypeRegistry = Record<string, CellTypeDefinition<any>>
 
 // ── context ───────────────────────────────────────────────────────────────
 

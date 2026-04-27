@@ -1,4 +1,4 @@
-export { DataGrid, GridComponentsProvider, useDataGrid } from './shadcn-data-grid'
+export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from './shadcn-data-grid'
 
 export { ColumnMenu } from './blocks/ColumnMenu'
 export { Resizer } from './blocks/Resizer'

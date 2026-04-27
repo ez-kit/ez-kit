@@ -4,6 +4,7 @@ export type { UseDataGridConfig, ColumnVisibilityUIConfig, FilteringVariant, Pag
 
 // Factory
 export { createDataGrid } from './create-data-grid'
+export type { CreateDataGridOptions } from './create-data-grid'
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'

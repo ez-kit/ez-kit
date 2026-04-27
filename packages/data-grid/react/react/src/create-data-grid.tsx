@@ -1,34 +1,52 @@
+'use client'
+
+import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
 import { useDataGrid } from './use-data-grid'
 
+import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './types'
+import type { ColumnDef } from '@ez-kit/data-grid-core'
+
+export interface CreateDataGridOptions<TCellTypes extends CellTypeRegistry> {
+	components: Partial<GridComponents>
+	cellTypes?: TCellTypes
+}
 
 /**
- * Factory for creating a typed DataGrid bundle pre-configured with a set of
- * UI components. UI-kit packages (shadcn, heroui) use this to ship ready-to-use grids.
+ * Factory for creating a typed DataGrid bundle pre-configured with UI components
+ * and optional cell types. Returns a `defineColumns` helper typed to the registered
+ * custom cell type keys so `type: 'my-type'` on columns is type-safe.
  *
  * @example
- * // packages/data-grid/react/shadcn/src/index.ts
- * export const { DataGrid, useDataGrid } = createDataGrid({
- *   Button: ShadcnButton,
- *   Input: ShadcnInput,
- *   Checkbox: ShadcnCheckbox,
- *   Modal: ShadcnDialog,
+ * // With custom cell types
+ * export const { DataGrid, useDataGrid, defineColumns } = extendDataGrid({
+ *   rating: { view: RatingCellView, edit: RatingCellInput },
  * })
  */
-export function createDataGrid(components: Partial<GridComponents>): {
+export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeRegistry>({
+	components,
+	cellTypes,
+}: CreateDataGridOptions<TCellTypes>): {
 	DataGrid: typeof DataGrid
 	useDataGrid: typeof useDataGrid
 	GridComponentsProvider: typeof GridComponentsProvider
+	defineColumns: <TRow extends object>(
+		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],
+	) => ColumnDef<TRow, Extract<keyof TCellTypes, string>>[]
 } {
-	console.log('components', components)
-	// Wrap DataGrid so it always merges the factory-level components
 	type DataGridProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: DataGridProps) {
 		return (
 			<GridComponentsProvider components={components}>
-				<DataGrid {...props} />
+				{cellTypes != null ? (
+					<CellTypesProvider types={cellTypes}>
+						<DataGrid {...props} />
+					</CellTypesProvider>
+				) : (
+					<DataGrid {...props} />
+				)}
 			</GridComponentsProvider>
 		)
 	}
@@ -44,9 +62,16 @@ export function createDataGrid(components: Partial<GridComponents>): {
 	BoundDataGrid.CreatingModal = DataGrid.CreatingModal
 	BoundDataGrid.EditingModal = DataGrid.EditingModal
 
+	function boundDefineColumns<TRow extends object>(
+		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],
+	): ColumnDef<TRow, Extract<keyof TCellTypes, string>>[] {
+		return defs
+	}
+
 	return {
 		DataGrid: BoundDataGrid as typeof DataGrid,
 		useDataGrid,
 		GridComponentsProvider,
+		defineColumns: boundDefineColumns,
 	}
 }

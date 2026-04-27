@@ -1,4 +1,4 @@
-export { DataGrid, GridComponentsProvider, useDataGrid } from './heroui-data-grid'
+export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from './heroui-data-grid'
 
 export { BetweenInput } from './blocks/BetweenInput'
 export { Checkbox } from './blocks/Checkbox'

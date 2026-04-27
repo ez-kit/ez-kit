@@ -2,8 +2,7 @@
 
 import type { CellViewProps, ImageCellConfig } from '@ez-kit/data-grid-react'
 
-export function ImageCellView({ value, cellConfig }: CellViewProps) {
-	const config = cellConfig as ImageCellConfig | undefined
+export function ImageCellView({ value, config }: CellViewProps<ImageCellConfig>) {
 	const src = String(value ?? '')
 
 	if (!src) return null

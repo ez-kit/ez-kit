@@ -289,7 +289,7 @@ function renderFilterInput({
 						{comp({
 							value: inputValue,
 							onChange: onValueChange,
-							...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+							...(meta.config !== undefined ? { config: meta.config } : {}),
 						})}
 						{operatorSelect}
 					</>
@@ -307,7 +307,7 @@ function renderFilterInput({
 						{comp({
 							value: inputValue,
 							onChange: onValueChange,
-							...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+							...(meta.config !== undefined ? { config: meta.config } : {}),
 						})}
 						{operatorSelect}
 					</>
@@ -342,7 +342,7 @@ function renderFilterInput({
 			return comp({
 				value: filterValue,
 				onChange,
-				...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+				...(meta.config !== undefined ? { config: meta.config } : {}),
 			})
 	}
 
@@ -353,7 +353,7 @@ function renderFilterInput({
 			return comp({
 				value: filterValue,
 				onChange,
-				...(meta.cellConfig !== undefined ? { cellConfig: meta.cellConfig } : {}),
+				...(meta.config !== undefined ? { config: meta.config } : {}),
 			})
 	}
 

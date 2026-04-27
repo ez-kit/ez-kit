@@ -70,5 +70,11 @@
 		"label": "Resizing",
 		"sourceFile": "components/resizing.tsx",
 		"exportName": "ResizingExample"
+	},
+	{
+		"id": "custom-cell-types",
+		"label": "Custom Cell Types",
+		"sourceFile": "components/custom-cell-types.tsx",
+		"exportName": "CustomCellTypesExample"
 	}
 ]

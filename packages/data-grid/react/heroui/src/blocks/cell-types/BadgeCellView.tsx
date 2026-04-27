@@ -2,13 +2,7 @@
 
 import { Chip } from '@heroui/react'
 
-import type { BadgeVariant, CellViewProps } from '@ez-kit/data-grid-react'
-
-interface BadgeItemShape {
-	value: string
-	label: string
-	variant?: BadgeVariant
-}
+import type { BadgeCellConfig, BadgeVariant, CellViewProps } from '@ez-kit/data-grid-react'
 
 function mapBadgeVariant(variant: BadgeVariant | undefined): 'primary' | 'secondary' | 'soft' | undefined {
 	if (variant === 'outline') return 'soft'
@@ -16,8 +10,8 @@ function mapBadgeVariant(variant: BadgeVariant | undefined): 'primary' | 'second
 	return 'primary'
 }
 
-export function BadgeCellView({ value, cellConfig }: CellViewProps) {
-	const items = (cellConfig?.items as BadgeItemShape[] | undefined) ?? []
+export function BadgeCellView({ value, config }: CellViewProps<BadgeCellConfig>) {
+	const items = config?.items ?? []
 	const match = items.find((item) => item.value === String(value ?? ''))
 
 	return (

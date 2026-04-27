@@ -1,6 +1,6 @@
 'use client'
 
-import { CellTypesProvider, createDataGrid } from '@ez-kit/data-grid-react'
+import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { BetweenInput } from './blocks/BetweenInput'
 import { Button } from './blocks/Button'
@@ -22,13 +22,9 @@ import { SelectionBar } from './blocks/SelectionBar'
 import { Table, Tbody, Td, Th, Thead, Tr } from './blocks/table-adapters'
 import { Toolbar } from './blocks/Toolbar'
 
-import type { DataGridProps } from '@ez-kit/data-grid-react'
+import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
 
-const {
-	DataGrid: BaseDataGrid,
-	GridComponentsProvider,
-	useDataGrid,
-} = createDataGrid({
+const HEROUI_COMPONENTS = {
 	Table,
 	Thead,
 	Tbody,
@@ -52,14 +48,27 @@ const {
 	ConfirmDialog,
 	OperatorSelect,
 	BetweenInput,
+}
+
+const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
+	components: HEROUI_COMPONENTS,
+	cellTypes: HEROUI_CELL_TYPES,
 })
 
-function DataGrid<TRow extends object>(props: DataGridProps<TRow>) {
-	return (
-		<CellTypesProvider types={HEROUI_CELL_TYPES}>
-			<BaseDataGrid {...props} />
-		</CellTypesProvider>
-	)
+/**
+ * Extend the heroui DataGrid with additional custom cell types.
+ * Returns a fully typed `{ DataGrid, useDataGrid, GridComponentsProvider, defineColumns }` bundle.
+ *
+ * @example
+ * const { DataGrid, defineColumns } = extendDataGrid({
+ *   rating: { view: RatingCellView, edit: RatingCellInput },
+ * })
+ */
+export function extendDataGrid<TExtra extends CellTypeRegistry>(extraCellTypes: TExtra) {
+	return createDataGrid({
+		components: HEROUI_COMPONENTS,
+		cellTypes: { ...HEROUI_CELL_TYPES, ...extraCellTypes },
+	})
 }
 
 export { DataGrid, GridComponentsProvider, useDataGrid }

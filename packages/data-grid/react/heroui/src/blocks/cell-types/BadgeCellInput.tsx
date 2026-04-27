@@ -2,8 +2,8 @@
 
 import { SelectCellInput } from './SelectCellInput'
 
-import type { CellInputProps } from '@ez-kit/data-grid-react'
+import type { BadgeCellConfig, CellInputProps, SelectCellConfig } from '@ez-kit/data-grid-react'
 
-export function BadgeCellInput(props: CellInputProps) {
-	return <SelectCellInput {...props} />
+export function BadgeCellInput(props: CellInputProps<BadgeCellConfig>) {
+	return <SelectCellInput {...(props as CellInputProps<SelectCellConfig>)} />
 }

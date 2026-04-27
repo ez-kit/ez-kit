@@ -1,6 +1,6 @@
 'use client'
 
-import { CellTypesProvider, createDataGrid } from '@ez-kit/data-grid-react'
+import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { BetweenInput } from './blocks/BetweenInput'
 import { Checkbox } from './blocks/Checkbox'
@@ -22,13 +22,9 @@ import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table'
 
-import type { DataGridProps } from '@ez-kit/data-grid-react'
+import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
 
-const {
-	DataGrid: BaseDataGrid,
-	GridComponentsProvider,
-	useDataGrid,
-} = createDataGrid({
+const SHADCN_COMPONENTS = {
 	Table,
 	Thead: TableHeader,
 	Tbody: TableBody,
@@ -52,14 +48,27 @@ const {
 	ConfirmDialog,
 	OperatorSelect,
 	BetweenInput,
+}
+
+const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
+	components: SHADCN_COMPONENTS,
+	cellTypes: SHADCN_CELL_TYPES,
 })
 
-function DataGrid<TRow extends object>(props: DataGridProps<TRow>) {
-	return (
-		<CellTypesProvider types={SHADCN_CELL_TYPES}>
-			<BaseDataGrid {...props} />
-		</CellTypesProvider>
-	)
+/**
+ * Extend the shadcn DataGrid with additional custom cell types.
+ * Returns a fully typed `{ DataGrid, useDataGrid, GridComponentsProvider, defineColumns }` bundle.
+ *
+ * @example
+ * const { DataGrid, defineColumns } = extendDataGrid({
+ *   rating: { view: RatingCellView, edit: RatingCellInput },
+ * })
+ */
+export function extendDataGrid<TExtra extends CellTypeRegistry>(extraCellTypes: TExtra) {
+	return createDataGrid({
+		components: SHADCN_COMPONENTS,
+		cellTypes: { ...SHADCN_CELL_TYPES, ...extraCellTypes },
+	})
 }
 
 export { DataGrid, GridComponentsProvider, useDataGrid }

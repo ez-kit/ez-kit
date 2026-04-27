@@ -2,16 +2,10 @@
 
 import { Badge } from '@grid-shadcn/components/ui/badge'
 
-import type { BadgeVariant, CellViewProps } from '@ez-kit/data-grid-react'
+import type { BadgeCellConfig, CellViewProps } from '@ez-kit/data-grid-react'
 
-interface BadgeItemShape {
-	value: string
-	label: string
-	variant?: BadgeVariant
-}
-
-export function BadgeCellView({ value, cellConfig }: CellViewProps) {
-	const items = (cellConfig?.items as BadgeItemShape[] | undefined) ?? []
+export function BadgeCellView({ value, config }: CellViewProps<BadgeCellConfig>) {
+	const items = config?.items ?? []
 	const match = items.find((item) => item.value === String(value ?? ''))
 
 	if (!match) {

@@ -13,6 +13,7 @@ import { CrudExample as Example8 } from '../components/crud/CrudExample'
 import { FilterPopoverExample as Example9 } from '../components/filter-popover'
 import { VirtualizedExample as Example10 } from '../components/virtualized'
 import { ResizingExample as Example11 } from '../components/resizing'
+import { CustomCellTypesExample as Example12 } from '../components/custom-cell-types'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -87,6 +88,12 @@ export const dataGridExamplesManifest = [
     "label": "Resizing",
     "sourceFile": "components/resizing.tsx",
     "exportName": "ResizingExample"
+  },
+  {
+    "id": "custom-cell-types",
+    "label": "Custom Cell Types",
+    "sourceFile": "components/custom-cell-types.tsx",
+    "exportName": "CustomCellTypesExample"
   }
 ] as const
 
@@ -105,4 +112,5 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'filter-popover': Example9,
 	'virtualized': Example10,
 	'resizing': Example11,
+	'custom-cell-types': Example12,
 }

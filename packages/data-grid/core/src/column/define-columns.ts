@@ -8,8 +8,8 @@ import type { ColumnDef } from './types'
  *   { accessorKey: 'name', header: 'Name' },
  * ])
  */
-export function defineColumns<TRow extends object>(
-  defs: ColumnDef<TRow>[],
-): ColumnDef<TRow>[] {
+export function defineColumns<TRow extends object, TCustomCellTypes extends string = never>(
+  defs: ColumnDef<TRow, TCustomCellTypes>[],
+): ColumnDef<TRow, TCustomCellTypes>[] {
   return defs
 }

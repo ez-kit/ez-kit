@@ -77,13 +77,20 @@ interface ProgressCellDef<TRow, TValue = unknown> {
   component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
-export type CellDef<TRow extends object, TValue = unknown> =
+interface CustomCellDef<TRow, TValue, TCustom extends string> {
+  type: TCustom
+  config?: Record<string, unknown>
+  component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+}
+
+export type CellDef<TRow extends object, TValue = unknown, TCustom extends string = never> =
   | BasicCellDef<TRow, TValue>
   | SelectCellDef<TRow, TValue>
   | BadgeCellDef<TRow, TValue>
   | ImageCellDef<TRow, TValue>
   | LinkCellDef<TRow, TValue>
   | ProgressCellDef<TRow, TValue>
+  | ([TCustom] extends [never] ? never : CustomCellDef<TRow, TValue, TCustom>)
 
 export interface ColumnFilteringConfig {
   /** Custom filter input component for this column. */
@@ -120,13 +127,13 @@ export interface ColumnVisibilityDef {
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
  */
-export interface ColumnDef<TRow extends object> {
+export interface ColumnDef<TRow extends object, TCustomCellTypes extends string = never> {
   id?: string
   accessorKey?: keyof TRow & string
   accessorFn?: (row: TRow, index: number) => unknown
   header?: string
   footer?: string
-  columns?: ColumnDef<TRow>[]
+  columns?: ColumnDef<TRow, TCustomCellTypes>[]
 
   /**
    * Column pinning configuration.
@@ -139,7 +146,7 @@ export interface ColumnDef<TRow extends object> {
   sorting?: false
 
   /** Cell display and input configuration. */
-  cell?: CellDef<TRow>
+  cell?: CellDef<TRow, unknown, TCustomCellTypes>
 
   /**
    * Column visibility configuration.
@@ -172,7 +179,7 @@ declare module '@tanstack/table-core' {
   interface ColumnMeta<TData, TValue> {
     columnPinning?: false | ColumnPinningDef
     cellType?: CellType
-    cellConfig?: Record<string, unknown>
+    config?: Record<string, unknown>
     /** Resolved view renderer from `cell.component`. */
     cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
     filtering?: false | ColumnFilteringConfig
