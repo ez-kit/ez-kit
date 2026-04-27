@@ -1,6 +1,6 @@
 'use client'
 
-import { SandpackCodeEditor, SandpackLayout, SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react'
+import { SandpackLayout, SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import {
