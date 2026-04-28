@@ -76,5 +76,23 @@
 		"label": "Custom Cell Types",
 		"sourceFile": "components/custom-cell-types.tsx",
 		"exportName": "CustomCellTypesExample"
+	},
+	{
+		"id": "column-helper",
+		"label": "Column Helper",
+		"sourceFile": "components/column-helper.tsx",
+		"exportName": "ColumnHelperBaseExample"
+	},
+	{
+		"id": "column-helper-custom-view",
+		"label": "Column Helper: Custom View",
+		"sourceFile": "components/column-helper.tsx",
+		"exportName": "ColumnHelperCustomViewExample"
+	},
+	{
+		"id": "column-helper-registered",
+		"label": "Column Helper: Registered Types",
+		"sourceFile": "components/column-helper.tsx",
+		"exportName": "ColumnHelperRegisteredExample"
 	}
 ]

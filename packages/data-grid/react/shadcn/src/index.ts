@@ -1,4 +1,6 @@
 export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from './shadcn-data-grid'
+export { createColumnHelper } from '@ez-kit/data-grid-react'
+export type { ColumnHelper } from '@ez-kit/data-grid-react'
 
 export { ColumnMenu } from './blocks/ColumnMenu'
 export { Resizer } from './blocks/Resizer'

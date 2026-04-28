@@ -4,6 +4,8 @@ export { createTable } from './create-table'
 // Column helpers
 export { defineColumns } from './column/define-columns'
 export { mapColumns } from './column/map-columns'
+export { createColumnHelper } from './column/create-column-helper'
+export type { ColumnHelper } from './column/create-column-helper'
 
 // System column IDs
 export {

@@ -11,12 +11,60 @@ export interface Product {
 }
 
 export const PRODUCT_DATA: Product[] = [
-	{ id: 1, name: 'Wireless Headphones', status: 'active', category: 'electronics', image: 'https://placehold.co/40x40', website: 'https://example.com/headphones', stock: 82 },
-	{ id: 2, name: 'Cotton T-Shirt', status: 'inactive', category: 'clothing', image: 'https://placehold.co/40x40', website: 'https://example.com/tshirt', stock: 45 },
-	{ id: 3, name: 'Organic Coffee', status: 'active', category: 'food', image: 'https://placehold.co/40x40', website: 'https://example.com/coffee', stock: 67 },
-	{ id: 4, name: 'Bluetooth Speaker', status: 'discontinued', category: 'electronics', image: 'https://placehold.co/40x40', website: 'https://example.com/speaker', stock: 12 },
-	{ id: 5, name: 'Running Shoes', status: 'active', category: 'clothing', image: 'https://placehold.co/40x40', website: 'https://example.com/shoes', stock: 95 },
-	{ id: 6, name: 'Green Tea', status: 'inactive', category: 'food', image: 'https://placehold.co/40x40', website: 'https://example.com/tea', stock: 30 },
+	{
+		id: 1,
+		name: 'Wireless Headphones',
+		status: 'active',
+		category: 'electronics',
+		image: 'https://placehold.co/40x40',
+		website: 'https://example.com/headphones',
+		stock: 82,
+	},
+	{
+		id: 2,
+		name: 'Cotton T-Shirt',
+		status: 'inactive',
+		category: 'clothing',
+		image: 'https://placehold.co/40x40',
+		website: 'https://example.com/tshirt',
+		stock: 45,
+	},
+	{
+		id: 3,
+		name: 'Organic Coffee',
+		status: 'active',
+		category: 'food',
+		image: 'https://placehold.co/40x40',
+		website: 'https://example.com/coffee',
+		stock: 67,
+	},
+	{
+		id: 4,
+		name: 'Bluetooth Speaker',
+		status: 'discontinued',
+		category: 'electronics',
+		image: 'https://placehold.co/40x40',
+		website: 'https://example.com/speaker',
+		stock: 12,
+	},
+	{
+		id: 5,
+		name: 'Running Shoes',
+		status: 'active',
+		category: 'clothing',
+		image: 'https://placehold.co/40x40',
+		website: 'https://example.com/shoes',
+		stock: 95,
+	},
+	{
+		id: 6,
+		name: 'Green Tea',
+		status: 'inactive',
+		category: 'food',
+		image: 'https://placehold.co/40x40',
+		website: 'https://example.com/tea',
+		stock: 30,
+	},
 ]
 
 export const productColumns = defineColumns<Product>([

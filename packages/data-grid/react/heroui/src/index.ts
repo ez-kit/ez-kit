@@ -1,4 +1,6 @@
 export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from './heroui-data-grid'
+export { createColumnHelper } from '@ez-kit/data-grid-react'
+export type { ColumnHelper } from '@ez-kit/data-grid-react'
 
 export { BetweenInput } from './blocks/BetweenInput'
 export { Checkbox } from './blocks/Checkbox'

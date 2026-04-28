@@ -14,6 +14,9 @@ import { FilterPopoverExample as Example9 } from '../components/filter-popover'
 import { VirtualizedExample as Example10 } from '../components/virtualized'
 import { ResizingExample as Example11 } from '../components/resizing'
 import { CustomCellTypesExample as Example12 } from '../components/custom-cell-types'
+import { ColumnHelperBaseExample as Example13 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example14 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example15 } from '../components/column-helper'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -94,6 +97,24 @@ export const dataGridExamplesManifest = [
     "label": "Custom Cell Types",
     "sourceFile": "components/custom-cell-types.tsx",
     "exportName": "CustomCellTypesExample"
+  },
+  {
+    "id": "column-helper",
+    "label": "Column Helper",
+    "sourceFile": "components/column-helper.tsx",
+    "exportName": "ColumnHelperBaseExample"
+  },
+  {
+    "id": "column-helper-custom-view",
+    "label": "Column Helper: Custom View",
+    "sourceFile": "components/column-helper.tsx",
+    "exportName": "ColumnHelperCustomViewExample"
+  },
+  {
+    "id": "column-helper-registered",
+    "label": "Column Helper: Registered Types",
+    "sourceFile": "components/column-helper.tsx",
+    "exportName": "ColumnHelperRegisteredExample"
   }
 ] as const
 
@@ -113,4 +134,7 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'virtualized': Example10,
 	'resizing': Example11,
 	'custom-cell-types': Example12,
+	'column-helper': Example13,
+	'column-helper-custom-view': Example14,
+	'column-helper-registered': Example15,
 }

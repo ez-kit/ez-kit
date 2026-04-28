@@ -7,7 +7,8 @@ import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './types'
-import type { ColumnDef } from '@ez-kit/data-grid-core'
+import { createColumnHelper } from '@ez-kit/data-grid-core'
+import type { ColumnDef, ColumnHelper } from '@ez-kit/data-grid-core'
 
 export interface CreateDataGridOptions<TCellTypes extends CellTypeRegistry> {
 	components: Partial<GridComponents>
@@ -35,6 +36,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	defineColumns: <TRow extends object>(
 		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],
 	) => ColumnDef<TRow, Extract<keyof TCellTypes, string>>[]
+	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, Extract<keyof TCellTypes, string>>
 } {
 	type DataGridProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: DataGridProps) {
@@ -68,10 +70,20 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 		return defs
 	}
 
+	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, Extract<keyof TCellTypes, string>> {
+		const customTypeKeys = Object.keys(cellTypes ?? {}) as Extract<keyof TCellTypes, string>[]
+		return customTypeKeys.length > 0
+			? createColumnHelper<TRow, Extract<keyof TCellTypes, string>>(
+					customTypeKeys as [Extract<keyof TCellTypes, string>, ...Extract<keyof TCellTypes, string>[]],
+				)
+			: (createColumnHelper<TRow>() as ColumnHelper<TRow, Extract<keyof TCellTypes, string>>)
+	}
+
 	return {
 		DataGrid: BoundDataGrid as typeof DataGrid,
 		useDataGrid,
 		GridComponentsProvider,
 		defineColumns: boundDefineColumns,
+		createColumnHelper: boundCreateColumnHelper,
 	}
 }

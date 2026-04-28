@@ -91,4 +91,5 @@ export type {
   VirtualizedConfig,
 } from '@ez-kit/data-grid-core'
 
-export { defineColumns, createTable } from '@ez-kit/data-grid-core'
+export { defineColumns, createTable, createColumnHelper } from '@ez-kit/data-grid-core'
+export type { ColumnHelper } from '@ez-kit/data-grid-core'
