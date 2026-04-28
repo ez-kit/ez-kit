@@ -22,9 +22,9 @@ const EVENT_OPTIONS = { bubbles: false, cancelable: true }
 type Direction = 'ltr' | 'rtl'
 type Orientation = 'horizontal' | 'vertical'
 
-interface DivProps extends React.ComponentProps<'div'> {
+type DivProps = {
 	asChild?: boolean
-}
+} & React.ComponentProps<'div'>
 
 type RootElement = React.ComponentRef<typeof ActionBar>
 type ItemElement = React.ComponentRef<typeof ActionBarItem>
@@ -50,13 +50,13 @@ function getDirectionAwareKey(key: string, dir?: Direction) {
 	return key === 'ArrowLeft' ? 'ArrowRight' : key === 'ArrowRight' ? 'ArrowLeft' : key
 }
 
-interface ItemData {
+type ItemData = {
 	id: string
 	ref: React.RefObject<ItemElement | null>
 	disabled: boolean
 }
 
-interface ActionBarContextValue {
+type ActionBarContextValue = {
 	onOpenChange?: (open: boolean) => void
 	dir: Direction
 	orientation: Orientation
@@ -73,7 +73,7 @@ function useActionBarContext(consumerName: string) {
 	return context
 }
 
-interface FocusContextValue {
+type FocusContextValue = {
 	tabStopId: string | null
 	onItemFocus: (tabStopId: string) => void
 	onItemShiftTab: () => void
@@ -94,7 +94,7 @@ function useFocusContext(consumerName: string) {
 	return context
 }
 
-interface ActionBarProps extends DivProps {
+type ActionBarProps = {
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
 	onEscapeKeyDown?: (event: KeyboardEvent) => void
@@ -106,7 +106,7 @@ interface ActionBarProps extends DivProps {
 	dir?: Direction
 	orientation?: Orientation
 	loop?: boolean
-}
+} & DivProps
 
 function ActionBar(props: ActionBarProps) {
 	const {
@@ -390,9 +390,9 @@ function ActionBarGroup(props: DivProps) {
 	)
 }
 
-interface ActionBarItemProps extends Omit<React.ComponentProps<typeof Button>, 'onSelect'> {
+type ActionBarItemProps = {
 	onSelect?: (event: Event) => void
-}
+} & Omit<React.ComponentProps<typeof Button>, 'onSelect'>
 
 function ActionBarItem(props: ActionBarItemProps) {
 	const {
@@ -558,9 +558,9 @@ function ActionBarItem(props: ActionBarItemProps) {
 	)
 }
 
-interface ActionBarCloseProps extends React.ComponentProps<'button'> {
+type ActionBarCloseProps = {
 	asChild?: boolean
-}
+} & React.ComponentProps<'button'>
 
 function ActionBarClose(props: ActionBarCloseProps) {
 	const { asChild, className, onClick, ...closeProps } = props
@@ -593,9 +593,9 @@ function ActionBarClose(props: ActionBarCloseProps) {
 	)
 }
 
-interface ActionBarSeparatorProps extends DivProps {
+type ActionBarSeparatorProps = {
 	orientation?: Orientation
-}
+} & DivProps
 
 function ActionBarSeparator(props: ActionBarSeparatorProps) {
 	const { orientation: orientationProp, asChild, className, ...separatorProps } = props

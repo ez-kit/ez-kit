@@ -23,7 +23,7 @@ import type { ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-export interface DataGridProps<TRow extends object> {
+export type DataGridProps<TRow extends object> = {
 	table: DataTable<TRow>
 	/** Local component overrides — merged with global GridComponentsProvider. */
 	components?: GridComponents

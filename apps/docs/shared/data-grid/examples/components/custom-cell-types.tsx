@@ -1,11 +1,11 @@
 'use client'
 
+import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
 import { CustomDataGrid, useDataGrid } from 'shared/data-grid/CustomGrid'
 
-interface Employee {
+type Employee = {
 	id: number
 	name: string
 	department: string

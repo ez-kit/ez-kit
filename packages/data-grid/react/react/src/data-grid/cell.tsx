@@ -15,7 +15,7 @@ import type { CellViewCtx } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
 
-interface CellProps {
+type CellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	cell: Cell<any, unknown>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

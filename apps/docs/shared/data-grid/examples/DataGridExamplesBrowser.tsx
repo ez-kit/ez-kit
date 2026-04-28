@@ -6,7 +6,7 @@ import { useDataGridType } from 'shared/DataGrid'
 
 import { dataGridExamplesManifest, type DataGridExampleId } from './generated/data-grid-primitive'
 
-interface DataGridExamplesBrowserProps {
+type DataGridExamplesBrowserProps = {
 	renderExample: (exampleId: DataGridExampleId) => React.ReactNode
 }
 

@@ -10,7 +10,7 @@ import { DataGrid } from './data-grid'
 
 import type { ResizerProps } from '../types'
 
-interface User {
+type User = {
 	id: number
 	name: string
 	age: number
@@ -212,7 +212,7 @@ describe('<DataGrid>', () => {
 	})
 
 	it('renders ✓ for true and ✗ for false with boolean cell type', () => {
-		interface BoolRow {
+		type BoolRow = {
 			id: number
 			active: boolean
 		}

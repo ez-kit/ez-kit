@@ -1,4 +1,4 @@
-import type { RowData, Row, TableFeature, TableState } from '@tanstack/table-core'
+import type { InitialTableState, RowData, Row, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 export type EditingState = {
 	editingRowId: string | null
@@ -15,16 +15,18 @@ export type EditingConfig<TData> = {
 }
 
 declare module '@tanstack/table-core' {
-	type TableState = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface TableState {
 		editing: EditingState
 	}
 
-	type TableOptionsResolved<TData extends RowData> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface TableOptionsResolved<TData extends RowData> {
 		editing?: EditingConfig<TData>
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	type Table<TData extends RowData> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface Table<TData extends RowData> {
 		startEditing: (rowId: string) => void
 		cancelEditing: () => void
 		commitEditing: () => Promise<void>
@@ -36,14 +38,14 @@ declare module '@tanstack/table-core' {
 		commitCellEditing: () => Promise<void>
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	type Row<TData extends RowData> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface Row<TData extends RowData> {
 		getIsEditing: () => boolean
 	}
 }
 
-export const EditingFeature: TableFeature = {
-	getInitialState: (state) =>
+export const EditingFeature: TableFeature<RowData> = {
+	getInitialState: (state?: InitialTableState) =>
 		({
 			...state,
 			editing: {
@@ -53,10 +55,10 @@ export const EditingFeature: TableFeature = {
 			} satisfies EditingState,
 		}) as Partial<TableState>,
 
-	createTable: (table) => {
+	createTable: (table: Table<RowData>) => {
 		table.startEditing = (rowId) => {
 			// Snapshot current row values as initial editing values
-			const row = table.getRowModel().rows.find((r) => r.id === rowId) as Row<RowData> | undefined
+			const row = table.getRowModel().rows.find((r) => r.id === rowId)
 			const initialValues: Record<string, unknown> = {}
 			if (row) {
 				table.getAllColumns().forEach((col) => {
@@ -110,7 +112,7 @@ export const EditingFeature: TableFeature = {
 		table.getEditingState = () => table.getState().editing
 
 		table.startCellEditing = (rowId, columnId) => {
-			const row = table.getRowModel().rows.find((r) => r.id === rowId) as Row<RowData> | undefined
+			const row = table.getRowModel().rows.find((r) => r.id === rowId)
 			const cellId = `${rowId}_${columnId}`
 			const initialValue = row?.getValue(columnId)
 			table.setState((prev) => ({
@@ -138,7 +140,7 @@ export const EditingFeature: TableFeature = {
 		}
 	},
 
-	createRow: (row, table) => {
+	createRow: (row: Row<RowData>, table: Table<RowData>) => {
 		row.getIsEditing = () => table.getState().editing.editingRowId === row.id
 	},
 }

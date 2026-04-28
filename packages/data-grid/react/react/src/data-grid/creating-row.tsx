@@ -102,7 +102,7 @@ export function CreatingRow() {
 
 // ── helpers ───────────────────────────────────────────────────────────────
 
-interface CreatingInputArgs {
+type CreatingInputArgs = {
 	meta: ColumnMeta<unknown, unknown> | undefined
 	value: unknown
 	onChange: (v: unknown) => void

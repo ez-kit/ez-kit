@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 	description: 'Fumadocs-powered documentation for ez-kit packages.',
 }
 
-interface RootLayoutProps {
+type RootLayoutProps = {
 	children: ReactNode
 }
 

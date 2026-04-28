@@ -329,28 +329,28 @@ describe('createTable — system columns', () => {
 describe('createTable — virtualized', () => {
 	it('virtualized not set — options.virtualized is undefined', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
-		expect((table.options as Record<string, unknown>).virtualized).toBeUndefined()
+		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toBeUndefined()
 	})
 
 	it('virtualized: true — stored on options', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: true })
-		expect((table.options as Record<string, unknown>).virtualized).toBe(true)
+		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toBe(true)
 	})
 
 	it('virtualized: { row: true } — stored on options', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: true } })
-		expect((table.options as Record<string, unknown>).virtualized).toEqual({ row: true })
+		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: true })
 	})
 
 	it('virtualized: { row: { overscan: 10 } } — stored on options with custom options', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: { overscan: 10 } } })
-		expect((table.options as Record<string, unknown>).virtualized).toEqual({ row: { overscan: 10 } })
+		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: { overscan: 10 } })
 	})
 
 	it('virtualized: { row: { estimateSize: () => 64 } } — stored on options with custom estimateSize', () => {
 		const estimateSize = () => 64
 		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: { estimateSize } } })
-		expect((table.options as Record<string, unknown>).virtualized).toEqual({ row: { estimateSize } })
+		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: { estimateSize } })
 	})
 })
 

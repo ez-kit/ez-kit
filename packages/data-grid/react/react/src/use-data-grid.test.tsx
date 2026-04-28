@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { SELECTION_BAR_KEY, VIRTUALIZED_KEY, useDataGrid } from './use-data-grid'
 
-interface User {
+type User = {
 	id: number
 	name: string
 }

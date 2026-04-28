@@ -11,7 +11,7 @@ import { TableContext } from './table-context'
 
 import type { ReactNode } from 'react'
 
-interface User {
+type User = {
 	id: number
 	name: string
 }

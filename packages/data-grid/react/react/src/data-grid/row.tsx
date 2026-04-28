@@ -5,7 +5,7 @@ import { DataGridCell } from './cell'
 import type { Row } from '@tanstack/table-core'
 import type { CSSProperties } from 'react'
 
-interface RowProps {
+type RowProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
 	style?: CSSProperties

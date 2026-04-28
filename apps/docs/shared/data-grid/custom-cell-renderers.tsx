@@ -25,13 +25,21 @@ export function RatingCellInput({ value, onChange }: CellInputProps) {
 	return (
 		<span>
 			{Array.from({ length: 5 }, (_, i) => (
-				<span
+				<button
+					type='button'
 					key={i}
-					onClick={() => onChange(i + 1)}
-					style={{ color: i < n ? '#f59e0b' : '#d1d5db', fontSize: '1.25rem', cursor: 'pointer' }}
+					onClick={() => { onChange(i + 1); }}
+					style={{
+						color: i < n ? '#f59e0b' : '#d1d5db',
+						fontSize: '1.25rem',
+						cursor: 'pointer',
+						background: 'transparent',
+						border: 'none',
+						padding: 0,
+					}}
 				>
 					★
-				</span>
+				</button>
 			))}
 		</span>
 	)
@@ -63,7 +71,7 @@ export function ColorCellInput({ value, onChange }: CellInputProps) {
 		<input
 			type='color'
 			value={String(value ?? '#000000')}
-			onChange={(e) => onChange(e.target.value)}
+			onChange={(e) => { onChange(e.target.value); }}
 			style={{ width: '2.5rem', height: '2rem', cursor: 'pointer', border: 'none', padding: 0 }}
 		/>
 	)

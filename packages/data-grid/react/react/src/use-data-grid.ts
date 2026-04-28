@@ -36,13 +36,13 @@ export const COLUMN_VISIBILITY_KEY = Symbol('columnVisibility')
 /** Symbol used to carry filtering variant on the table instance for Header to read. */
 export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
 
-export interface SelectionBarCallbackArgs<TRow extends object = object> {
+export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
 	clearSelection: () => void
 	selectedRows: Row<TRow>[]
 }
 
-export interface SelectionBarConfig<TRow extends object = object> {
+export type SelectionBarConfig<TRow extends object = object> = {
 	/** If provided — Delete button appears in the bar. */
 	onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
 	/**
@@ -55,7 +55,7 @@ export interface SelectionBarConfig<TRow extends object = object> {
 }
 
 /** Normalized virtualized config stored on the table instance. */
-export interface NormalizedVirtualizedConfig {
+export type NormalizedVirtualizedConfig = {
 	row: RowVirtualOptions
 }
 
@@ -70,23 +70,23 @@ function normalizeVirtualized(
 	return { row }
 }
 
-export interface PageSizerConfig {
+export type PageSizerConfig = {
 	items: number[]
 }
 
-export interface ColumnVisibilityUIConfig {
+export type ColumnVisibilityUIConfig = {
 	/** Show a column visibility toggle button in the toolbar. Default: false. */
 	toolbar?: boolean
 }
 
 export type FilteringVariant = 'inline' | 'popover'
 
-export interface ReactFilteringConfig extends FilteringConfig {
+export type ReactFilteringConfig = {
 	/** Display variant for column filter controls. Default: 'inline'. */
 	variant?: FilteringVariant
-}
+} & FilteringConfig
 
-export interface UseDataGridConfig<TRow extends object> extends Omit<TableConfig<TRow>, 'filtering'> {
+export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Enable filtering.
 	 * - `true` — inline filter inputs below each column header
@@ -113,7 +113,7 @@ export interface UseDataGridConfig<TRow extends object> extends Omit<TableConfig
 	 * - `{ toolbar: true }` — shows toggle button in toolbar
 	 */
 	columnVisibility?: boolean | ColumnVisibilityUIConfig
-}
+} & Omit<TableConfig<TRow>, 'filtering'>
 
 /**
  * React hook that creates a data-grid instance and subscribes to its state.

@@ -534,7 +534,7 @@ export const defaultComponents: Required<GridComponents> = {
 
 const GridComponentsContext = createContext(defaultComponents)
 
-export interface GridComponentsProviderProps {
+export type GridComponentsProviderProps = {
 	components?: GridComponents
 	children: ReactNode
 }

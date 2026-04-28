@@ -4,7 +4,7 @@ import { useTableContext } from './table-context'
 
 import type { Row } from '@tanstack/table-core'
 
-interface ActionsCellProps {
+type ActionsCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
 }

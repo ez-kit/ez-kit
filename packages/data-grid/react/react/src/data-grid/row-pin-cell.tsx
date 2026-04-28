@@ -6,7 +6,7 @@ import { useTableContext } from './table-context'
 import type { PinningConfig, RowPinningConfig } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 
-interface RowPinCellProps {
+type RowPinCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
 }

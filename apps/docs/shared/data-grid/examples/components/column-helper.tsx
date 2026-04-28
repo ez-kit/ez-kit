@@ -9,7 +9,7 @@ import type { ColumnDef } from '@ez-kit/data-grid-react'
 
 // ── data ─────────────────────────────────────────────────────────────────────
 
-interface Employee {
+type Employee = {
 	id: number
 	name: string
 	department: string

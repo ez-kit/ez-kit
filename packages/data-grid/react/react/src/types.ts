@@ -24,7 +24,7 @@ export type TdProps = TdHTMLAttributes<HTMLTableCellElement>
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>
 export type InputProps = InputHTMLAttributes<HTMLInputElement>
 
-export interface CheckboxProps {
+export type CheckboxProps = {
 	value?: boolean | undefined
 	indeterminate?: boolean
 	disabled?: boolean
@@ -32,29 +32,29 @@ export interface CheckboxProps {
 	'aria-label'?: string
 }
 
-export interface NumberInputProps {
+export type NumberInputProps = {
 	value?: number | undefined
 	onChange?: (value: number | undefined) => void
 }
 
-export interface DateFieldProps {
+export type DateFieldProps = {
 	/** ISO date string, e.g. `"2024-01-15"` */
 	value?: string | undefined
 	onChange?: (value: string) => void
 }
 
-export interface ModalProps {
+export type ModalProps = {
 	open: boolean
 	onClose: () => void
 	title?: string
 	children?: ReactNode
 }
 
-export interface ToolbarProps {
+export type ToolbarProps = {
 	children?: ReactNode
 }
 
-export interface PaginationProps {
+export type PaginationProps = {
 	pageIndex: number
 	pageCount: number
 	canPreviousPage: boolean
@@ -66,13 +66,13 @@ export interface PaginationProps {
 	onPageChange: (pageIndex: number) => void
 }
 
-export interface PageSizerProps {
+export type PageSizerProps = {
 	pageSize: number
 	items: number[]
 	onPageSizeChange: (size: number) => void
 }
 
-export interface ResizerProps {
+export type ResizerProps = {
 	onMouseDown: MouseEventHandler<HTMLDivElement>
 	onTouchStart: TouchEventHandler<HTMLDivElement>
 	onDoubleClick: MouseEventHandler<HTMLDivElement>
@@ -80,7 +80,7 @@ export interface ResizerProps {
 	isResizing: boolean
 }
 
-export interface RowPinMenuProps {
+export type RowPinMenuProps = {
 	isPinned: 'top' | 'bottom' | false
 	canPinTop: boolean
 	canPinBottom: boolean
@@ -89,7 +89,7 @@ export interface RowPinMenuProps {
 	onUnpin: () => void
 }
 
-export interface ColPinSection {
+export type ColPinSection = {
 	isPinned: 'left' | 'right' | false
 	canPinLeft: boolean
 	canPinRight: boolean
@@ -98,44 +98,44 @@ export interface ColPinSection {
 	onUnpin: () => void
 }
 
-export interface ColVisibilitySection {
+export type ColVisibilitySection = {
 	onHide: () => void
 }
 
-export interface ColumnMenuSections {
+export type ColumnMenuSections = {
 	pin?: ColPinSection
 	visibility?: ColVisibilitySection
 }
 
-export interface ColumnMenuProps {
+export type ColumnMenuProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	column: Column<any>
 	sections: ColumnMenuSections
 }
 
-export interface VisibilityColumnItem {
+export type VisibilityColumnItem = {
 	id: string
 	label: string
 	isVisible: boolean
 	onToggle: () => void
 }
 
-export interface ColumnVisibilityMenuProps {
+export type ColumnVisibilityMenuProps = {
 	columns: VisibilityColumnItem[]
 }
 
-export interface FilterPopoverProps {
+export type FilterPopoverProps = {
 	children: ReactNode
 	hasActiveFilter: boolean
 }
 
-export interface OperatorSelectProps {
+export type OperatorSelectProps = {
 	operators: FilterOperatorDef[]
 	currentOperatorId: string
 	onChange: (operatorId: string) => void
 }
 
-export interface BetweenInputProps {
+export type BetweenInputProps = {
 	value: BetweenValue
 	onChange: (value: BetweenValue) => void
 	variant: 'inputs' | 'slider' | 'calendar'
@@ -144,7 +144,7 @@ export interface BetweenInputProps {
 	max?: number
 }
 
-export interface ConfirmDialogProps {
+export type ConfirmDialogProps = {
 	open: boolean
 	title: string
 	description: string
@@ -152,7 +152,7 @@ export interface ConfirmDialogProps {
 	onCancel: () => void
 }
 
-export interface SelectionBarProps {
+export type SelectionBarProps = {
 	/** False when 0 rows selected — component should hide/animate out. */
 	open: boolean
 	/** Number of currently selected rows. */
@@ -175,7 +175,7 @@ export interface SelectionBarProps {
 
 // ── DI registry ──────────────────────────────────────────────────────────
 
-export interface GridComponents {
+export type GridComponents = {
 	// layout
 	Table?: ComponentType<TableProps>
 	Thead?: ComponentType<TheadProps>

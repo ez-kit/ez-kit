@@ -8,7 +8,7 @@ import { useTableContext } from './table-context'
 import type { ColumnVisibilityUIConfig } from '../use-data-grid'
 import type { ReactNode } from 'react'
 
-interface ToolbarProps {
+type ToolbarProps = {
 	children?: ReactNode
 }
 

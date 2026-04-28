@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 
-export interface Employee {
+export type Employee = {
 	id: number
 	name: string
 	department: string

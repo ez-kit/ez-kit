@@ -8,7 +8,7 @@ import type { ColumnEditingConfig, ColumnCreatingConfig } from '@ez-kit/data-gri
 import type { ColumnMeta } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-interface AutoFormProps {
+type AutoFormProps = {
 	mode: 'creating' | 'editing'
 }
 

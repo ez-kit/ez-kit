@@ -1,4 +1,4 @@
-import type { Row, RowData, TableFeature, TableState } from '@tanstack/table-core'
+import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 export type ConfirmationOptions = {
 	title?: string
@@ -11,16 +11,18 @@ export type DeletingConfig<TData> = {
 }
 
 declare module '@tanstack/table-core' {
-	type TableOptionsResolved<TData extends RowData> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface TableOptionsResolved<TData extends RowData> {
 		deleting?: DeletingConfig<TData>
 	}
 
-	type TableState = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface TableState {
 		pendingDeleteRowId: string | null
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	type Table<TData extends RowData> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface Table<TData extends RowData> {
 		deleteRow: (rowId: string) => Promise<void>
 		requestDeleteRow: (rowId: string) => void
 		confirmDeleteRow: () => Promise<void>
@@ -28,20 +30,20 @@ declare module '@tanstack/table-core' {
 	}
 }
 
-export const DeletingFeature: TableFeature = {
-	getInitialState: (state) =>
+export const DeletingFeature: TableFeature<RowData> = {
+	getInitialState: (state?: InitialTableState) =>
 		({
 			...state,
 			pendingDeleteRowId: null,
 		}) as Partial<TableState>,
 
-	createTable: (table) => {
+	createTable: (table: Table<RowData>) => {
 		table.deleteRow = async (rowId) => {
 			const config = table.options.deleting
 			if (!config) return
-			const row = table.getRowModel().rows.find((r) => r.id === rowId) as Row<RowData> | undefined
+			const row = table.getRowModel().rows.find((r) => r.id === rowId)
 			if (!row) return
-			await config.onDelete(row as Row<(typeof table)['options']['data'][number]>)
+			await config.onDelete(row)
 		}
 
 		table.requestDeleteRow = (rowId) => {

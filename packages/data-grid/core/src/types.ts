@@ -1,9 +1,19 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { ColumnDef } from './column/types'
 import type { CreatingConfig } from './features/creating'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
 import type { FilterOperatorDef } from './features/operators'
-import type { Table as TanStackTable, TableState } from '@tanstack/table-core'
+import type {
+	Column,
+	Row,
+	RowData,
+	RowModel,
+	Table as TanStackTable,
+	TableOptionsResolved,
+	TableState,
+	Updater,
+} from '@tanstack/table-core'
 
 export type { TableState as TableSnapshot }
 
@@ -106,14 +116,24 @@ export type TableConfig<TRow extends object> = {
  * Extended TanStack table instance returned by createTable().
  * Adds subscribe/getSnapshot for useSyncExternalStore and setData/setLoading.
  */
-export type DataTable<TRow extends object> = {
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
+	options: TableOptionsResolved<TRow>
+	getState: () => TableState
+	getRowModel: () => RowModel<TRow>
+	getAllColumns: () => Column<TRow, unknown>[]
+	getColumn: (columnId: string) => Column<TRow, unknown> | undefined
+	getRow: (id: string, searchAll?: boolean) => Row<TRow>
+	initialState: TableState
+	setOptions: (newOptions: Updater<TableOptionsResolved<TRow>>) => void
+	setState: (updater: Updater<TableState>) => void
 	/** Subscribe to all state changes. Returns an unsubscribe function. */
 	subscribe: (listener: () => void) => () => void
 	/** Returns a stable snapshot of current state for useSyncExternalStore. */
 	getSnapshot: () => TableState
 	/** Reactively replace the data array. */
 	setData: (data: TRow[]) => void
-} & TanStackTable<TRow>
+}
 
 /** Public alias. */
 export type Table<TRow extends object> = DataTable<TRow>

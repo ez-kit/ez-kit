@@ -1,5 +1,7 @@
 'use client'
 
+import { createColumnHelper } from '@ez-kit/data-grid-core'
+
 import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
@@ -7,10 +9,9 @@ import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './types'
-import { createColumnHelper } from '@ez-kit/data-grid-core'
 import type { ColumnDef, ColumnHelper } from '@ez-kit/data-grid-core'
 
-export interface CreateDataGridOptions<TCellTypes extends CellTypeRegistry> {
+export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 	components: Partial<GridComponents>
 	cellTypes?: TCellTypes
 }

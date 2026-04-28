@@ -6,14 +6,14 @@ import type { ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
 
-export interface CellViewProps<TConfig = unknown> {
+export type CellViewProps<TConfig = unknown> = {
 	value: unknown
 	row: unknown
 	rowIndex: number
 	config?: TConfig
 }
 
-export interface CellInputProps<TConfig = unknown> {
+export type CellInputProps<TConfig = unknown> = {
 	value: unknown
 	onChange: (value: unknown) => void
 	config?: TConfig
@@ -21,7 +21,7 @@ export interface CellInputProps<TConfig = unknown> {
 
 // ── registry types ────────────────────────────────────────────────────────
 
-export interface CellTypeDefinition<TConfig = unknown> {
+export type CellTypeDefinition<TConfig = unknown> = {
 	/** View-mode renderer. */
 	view?: (props: CellViewProps<TConfig>) => ReactNode
 	/** Edit-mode input. Falls back to `creating` when omitted. */
@@ -43,7 +43,7 @@ export type CellTypeRegistry = Record<string, CellTypeDefinition<any>>
 
 const CellTypesContext = createContext(BUILT_IN_CELL_TYPES)
 
-export interface CellTypesProviderProps {
+export type CellTypesProviderProps = {
 	types: CellTypeRegistry
 	children: ReactNode
 }

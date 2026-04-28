@@ -4,7 +4,7 @@ import type { Virtualizer } from '@tanstack/react-virtual'
 
 type RowVirtualizer = Virtualizer<HTMLDivElement, Element>
 
-interface VirtualContextValue {
+type VirtualContextValue = {
 	rowVirtualizer: RowVirtualizer | null
 }
 

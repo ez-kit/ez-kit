@@ -2,7 +2,7 @@
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
-interface Employee {
+type Employee = {
 	id: number
 	name: string
 	email: string

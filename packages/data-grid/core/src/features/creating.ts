@@ -1,4 +1,4 @@
-import type { RowData, TableFeature, TableState } from '@tanstack/table-core'
+import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 export type CreatingState = {
 	isCreating: boolean
@@ -13,16 +13,18 @@ export type CreatingConfig<TData> = {
 }
 
 declare module '@tanstack/table-core' {
-	type TableState = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface TableState {
 		creating: CreatingState
 	}
 
-	type TableOptionsResolved<TData extends RowData> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+	interface TableOptionsResolved<TData extends RowData> {
 		creating?: CreatingConfig<TData>
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	type Table<TData extends RowData> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface Table<TData extends RowData> {
 		startCreating: () => void
 		cancelCreating: () => void
 		commitCreating: () => Promise<void>
@@ -31,8 +33,8 @@ declare module '@tanstack/table-core' {
 	}
 }
 
-export const CreatingFeature: TableFeature = {
-	getInitialState: (state) =>
+export const CreatingFeature: TableFeature<RowData> = {
+	getInitialState: (state?: InitialTableState) =>
 		({
 			...state,
 			creating: {
@@ -41,7 +43,7 @@ export const CreatingFeature: TableFeature = {
 			} satisfies CreatingState,
 		}) as Partial<TableState>,
 
-	createTable: (table) => {
+	createTable: (table: Table<RowData>) => {
 		table.startCreating = () => {
 			table.setState((prev) => ({
 				...prev,

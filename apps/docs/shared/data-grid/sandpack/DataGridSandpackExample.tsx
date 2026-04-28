@@ -16,7 +16,7 @@ export type { DataGridSandpackExampleId } from './generated/data-grid'
 
 type DataGridType = 'heroui' | 'shadcn'
 
-interface DataGridSandpackExampleProps {
+type DataGridSandpackExampleProps = {
 	exampleId: DataGridSandpackExampleId
 	type: DataGridType
 }

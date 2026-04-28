@@ -1,7 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { BetweenOperatorConfig, ColumnOperatorsConfig, FilterOperatorDef } from '../features/operators'
-import type { ColumnDef as TanStackColumnDef } from '@tanstack/table-core'
+import type { ColumnDef as TableCoreColumnDef, ColumnMeta as TableCoreColumnMeta, RowData } from '@tanstack/table-core'
 
-export type { TanStackColumnDef }
+export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCoreColumnDef<TRow, TValue> & {
+	accessorKey?: string
+	columns?: TanStackColumnDef<TRow, unknown>[]
+	meta?: TableCoreColumnMeta<TRow, TValue>
+}
 
 /** Built-in cell types. The `string & {}` tail allows custom type strings while preserving autocomplete. */
 export type CellType =
@@ -192,8 +197,8 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 
 /** Augment TanStack's ColumnMeta with our custom fields. */
 declare module '@tanstack/table-core' {
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	type ColumnMeta<TData, TValue> = {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface ColumnMeta<TData, TValue> {
 		columnPinning?: false | ColumnPinningDef
 		cellType?: CellType
 		config?: Record<string, unknown>

@@ -14,7 +14,7 @@ import type { BetweenValue, StructuredFilterValue } from '@ez-kit/data-grid-core
 import type { Header, ColumnMeta } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, KeyboardEvent, ReactNode } from 'react'
 
-interface HeaderProps {
+type HeaderProps = {
 	/** Extra styles applied to the `<thead>` element (e.g. for virtualized layout). */
 	theadStyle?: CSSProperties | undefined
 }
@@ -202,7 +202,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 
 // ── helpers ───────────────────────────────────────────────────────────────
 
-interface FilterInputArgs {
+type FilterInputArgs = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	header: Header<any, unknown>
 	meta: ColumnMeta<unknown, unknown> | undefined

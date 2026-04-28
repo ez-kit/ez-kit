@@ -12,7 +12,7 @@ import {
 	useDataGrid,
 } from './index'
 
-interface User {
+type User = {
 	id: number
 	name: string
 }

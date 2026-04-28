@@ -20,108 +20,108 @@ import { ColumnHelperRegisteredExample as Example15 } from '../components/column
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
-	{
-		id: 'base',
-		label: 'Base',
-		sourceFile: 'components/base.tsx',
-		exportName: 'BaseExample',
-	},
-	{
-		id: 'cell-types',
-		label: 'Cell Types',
-		sourceFile: 'components/cell-types.tsx',
-		exportName: 'CellTypesExample',
-	},
-	{
-		id: 'delete-confirmation',
-		label: 'Delete Confirmation',
-		sourceFile: 'components/delete-confirmation.tsx',
-		exportName: 'DeleteConfirmationExample',
-	},
-	{
-		id: 'selection-bar',
-		label: 'Selection Bar',
-		sourceFile: 'components/selection-bar.tsx',
-		exportName: 'SelectionBarExample',
-	},
-	{
-		id: 'row-pinning',
-		label: 'Row Pinning',
-		sourceFile: 'components/row-pinning.tsx',
-		exportName: 'RowPinningExample',
-	},
-	{
-		id: 'column-pinning',
-		label: 'Column Pinning',
-		sourceFile: 'components/column-pinning.tsx',
-		exportName: 'ColumnPinningExample',
-	},
-	{
-		id: 'column-visibility',
-		label: 'Column Visibility',
-		sourceFile: 'components/column-visibility.tsx',
-		exportName: 'ColumnVisibilityExample',
-	},
-	{
-		id: 'filter-operators',
-		label: 'Filter Operators',
-		sourceFile: 'components/filter-operators.tsx',
-		exportName: 'FilterOperatorsExample',
-	},
-	{
-		id: 'crud',
-		label: 'CRUD',
-		sourceFile: 'components/crud/CrudExample.tsx',
-		exportName: 'CrudExample',
-	},
-	{
-		id: 'filter-popover',
-		label: 'Filter Popover',
-		sourceFile: 'components/filter-popover.tsx',
-		exportName: 'FilterPopoverExample',
-	},
-	{
-		id: 'virtualized',
-		label: 'Virtualized',
-		sourceFile: 'components/virtualized.tsx',
-		exportName: 'VirtualizedExample',
-	},
-	{
-		id: 'resizing',
-		label: 'Resizing',
-		sourceFile: 'components/resizing.tsx',
-		exportName: 'ResizingExample',
-	},
-	{
-		id: 'custom-cell-types',
-		label: 'Custom Cell Types',
-		sourceFile: 'components/custom-cell-types.tsx',
-		exportName: 'CustomCellTypesExample',
-	},
-	{
-		id: 'column-helper',
-		label: 'Column Helper',
-		sourceFile: 'components/column-helper.tsx',
-		exportName: 'ColumnHelperBaseExample',
-	},
-	{
-		id: 'column-helper-custom-view',
-		label: 'Column Helper: Custom View',
-		sourceFile: 'components/column-helper.tsx',
-		exportName: 'ColumnHelperCustomViewExample',
-	},
-	{
-		id: 'column-helper-registered',
-		label: 'Column Helper: Registered Types',
-		sourceFile: 'components/column-helper.tsx',
-		exportName: 'ColumnHelperRegisteredExample',
-	},
+  {
+    "id": "base",
+    "label": "Base",
+    "sourceFile": "components/base.tsx",
+    "exportName": "BaseExample"
+  },
+  {
+    "id": "cell-types",
+    "label": "Cell Types",
+    "sourceFile": "components/cell-types.tsx",
+    "exportName": "CellTypesExample"
+  },
+  {
+    "id": "delete-confirmation",
+    "label": "Delete Confirmation",
+    "sourceFile": "components/delete-confirmation.tsx",
+    "exportName": "DeleteConfirmationExample"
+  },
+  {
+    "id": "selection-bar",
+    "label": "Selection Bar",
+    "sourceFile": "components/selection-bar.tsx",
+    "exportName": "SelectionBarExample"
+  },
+  {
+    "id": "row-pinning",
+    "label": "Row Pinning",
+    "sourceFile": "components/row-pinning.tsx",
+    "exportName": "RowPinningExample"
+  },
+  {
+    "id": "column-pinning",
+    "label": "Column Pinning",
+    "sourceFile": "components/column-pinning.tsx",
+    "exportName": "ColumnPinningExample"
+  },
+  {
+    "id": "column-visibility",
+    "label": "Column Visibility",
+    "sourceFile": "components/column-visibility.tsx",
+    "exportName": "ColumnVisibilityExample"
+  },
+  {
+    "id": "filter-operators",
+    "label": "Filter Operators",
+    "sourceFile": "components/filter-operators.tsx",
+    "exportName": "FilterOperatorsExample"
+  },
+  {
+    "id": "crud",
+    "label": "CRUD",
+    "sourceFile": "components/crud/CrudExample.tsx",
+    "exportName": "CrudExample"
+  },
+  {
+    "id": "filter-popover",
+    "label": "Filter Popover",
+    "sourceFile": "components/filter-popover.tsx",
+    "exportName": "FilterPopoverExample"
+  },
+  {
+    "id": "virtualized",
+    "label": "Virtualized",
+    "sourceFile": "components/virtualized.tsx",
+    "exportName": "VirtualizedExample"
+  },
+  {
+    "id": "resizing",
+    "label": "Resizing",
+    "sourceFile": "components/resizing.tsx",
+    "exportName": "ResizingExample"
+  },
+  {
+    "id": "custom-cell-types",
+    "label": "Custom Cell Types",
+    "sourceFile": "components/custom-cell-types.tsx",
+    "exportName": "CustomCellTypesExample"
+  },
+  {
+    "id": "column-helper",
+    "label": "Column Helper",
+    "sourceFile": "components/column-helper.tsx",
+    "exportName": "ColumnHelperBaseExample"
+  },
+  {
+    "id": "column-helper-custom-view",
+    "label": "Column Helper: Custom View",
+    "sourceFile": "components/column-helper.tsx",
+    "exportName": "ColumnHelperCustomViewExample"
+  },
+  {
+    "id": "column-helper-registered",
+    "label": "Column Helper: Registered Types",
+    "sourceFile": "components/column-helper.tsx",
+    "exportName": "ColumnHelperRegisteredExample"
+  }
 ] as const
 
 export type DataGridExampleId = (typeof dataGridExamplesManifest)[number]['id']
 
 export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType> = {
-	base: Example0,
+	'base': Example0,
 	'cell-types': Example1,
 	'delete-confirmation': Example2,
 	'selection-bar': Example3,
@@ -129,10 +129,10 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'column-pinning': Example5,
 	'column-visibility': Example6,
 	'filter-operators': Example7,
-	crud: Example8,
+	'crud': Example8,
 	'filter-popover': Example9,
-	virtualized: Example10,
-	resizing: Example11,
+	'virtualized': Example10,
+	'resizing': Example11,
 	'custom-cell-types': Example12,
 	'column-helper': Example13,
 	'column-helper-custom-view': Example14,

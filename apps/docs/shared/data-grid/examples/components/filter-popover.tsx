@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
-interface Employee {
+type Employee = {
 	id: number
 	name: string
 	department: string

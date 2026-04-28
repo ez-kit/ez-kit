@@ -4,7 +4,7 @@ import { baseOptions } from '../../lib/layout.shared'
 
 import type { ReactNode } from 'react'
 
-interface HomeGroupLayoutProps {
+type HomeGroupLayoutProps = {
 	children: ReactNode
 }
 

@@ -1,6 +1,6 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-export interface Product {
+export type Product = {
 	id: number
 	name: string
 	status: string
@@ -102,7 +102,7 @@ export const productColumns = defineColumns<Product>([
 	{ accessorKey: 'stock', header: 'Stock %', cell: { type: 'progress', config: { max: 100 } } },
 ])
 
-export interface User {
+export type User = {
 	id: number
 	name: string
 	email: string

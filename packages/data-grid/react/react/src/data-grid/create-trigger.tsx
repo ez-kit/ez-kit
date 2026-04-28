@@ -4,7 +4,7 @@ import { useGridComponents } from '../components-context'
 
 import { useTableContext } from './table-context'
 
-interface CreateTriggerProps {
+type CreateTriggerProps = {
 	children?: ReactNode
 }
 
