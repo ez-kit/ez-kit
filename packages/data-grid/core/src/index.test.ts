@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createTable, defineColumns } from './index'
 
-interface User {
+type User = {
 	id: number
 	name: string
 	age: number
@@ -51,7 +51,7 @@ describe('@ez-kit/data-grid-core', () => {
 	})
 
 	it('default getRowId falls back to array index when row has no id field', () => {
-		interface NoIdRow {
+		type NoIdRow = {
 			name: string
 		}
 		const data: NoIdRow[] = [{ name: 'Alice' }, { name: 'Bob' }]

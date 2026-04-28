@@ -4,7 +4,7 @@ import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUM
 
 import { createTable, defineColumns } from './index'
 
-interface Row {
+type Row = {
 	id: number
 	name: string
 	age: number

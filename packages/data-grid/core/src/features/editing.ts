@@ -1,13 +1,13 @@
 import type { RowData, Row, TableFeature, TableState } from '@tanstack/table-core'
 
-export interface EditingState {
+export type EditingState = {
 	editingRowId: string | null
 	editingValues: Record<string, unknown>
 	/** Populated only in cell mode. */
 	editingCellId: string | null
 }
 
-export interface EditingConfig<TData> {
+export type EditingConfig<TData> = {
 	/** How the edit form is presented. Default: 'row'. */
 	mode?: 'row' | 'modal' | 'cell'
 	/** Called on save. Return false (or Promise<false>) to keep the form open. */
@@ -15,16 +15,16 @@ export interface EditingConfig<TData> {
 }
 
 declare module '@tanstack/table-core' {
-	interface TableState {
+	type TableState = {
 		editing: EditingState
 	}
 
-	interface TableOptionsResolved<TData extends RowData> {
+	type TableOptionsResolved<TData extends RowData> = {
 		editing?: EditingConfig<TData>
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	interface Table<TData extends RowData> {
+	type Table<TData extends RowData> = {
 		startEditing: (rowId: string) => void
 		cancelEditing: () => void
 		commitEditing: () => Promise<void>
@@ -37,7 +37,7 @@ declare module '@tanstack/table-core' {
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	interface Row<TData extends RowData> {
+	type Row<TData extends RowData> = {
 		getIsEditing: () => boolean
 	}
 }

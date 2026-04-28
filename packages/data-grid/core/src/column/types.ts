@@ -16,43 +16,43 @@ export type CellType =
 	| 'progress'
 	| (string & {})
 
-export interface CellViewCtx<TRow, TValue> {
+export type CellViewCtx<TRow, TValue> = {
 	row: TRow
 	value: TValue
 	rowIndex: number
 }
 
 /** Props passed to column-level input components (filtering, editing, creating). */
-export interface InputComponentProps {
+export type InputComponentProps = {
 	value: unknown
 	onChange: (value: unknown) => void
 }
 
 // ── cell config types ─────────────────────────────────────────────────────
 
-export interface SelectItem {
+export type SelectItem = {
 	value: string
 	label: string
 }
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
-export interface BadgeItem {
+export type BadgeItem = {
 	value: string
 	label: string
 	variant?: BadgeVariant
 }
 
-export interface SelectCellConfig {
+export type SelectCellConfig = {
 	items: SelectItem[]
 }
-export interface BadgeCellConfig {
+export type BadgeCellConfig = {
 	items: BadgeItem[]
 }
-export interface ImageCellConfig {
+export type ImageCellConfig = {
 	alt?: string
 	width?: number
 	height?: number
 }
-export interface ProgressCellConfig {
+export type ProgressCellConfig = {
 	max?: number
 }
 
@@ -60,41 +60,41 @@ export interface ProgressCellConfig {
 
 type SimpleType = Exclude<CellType, 'select' | 'badge' | 'image' | 'link' | 'progress'>
 
-interface BasicCellDef<TRow, TValue = unknown> {
+type BasicCellDef<TRow, TValue = unknown> = {
 	type?: SimpleType
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
-interface SelectCellDef<TRow, TValue = unknown> {
+type SelectCellDef<TRow, TValue = unknown> = {
 	type: 'select'
 	config: SelectCellConfig
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
-interface BadgeCellDef<TRow, TValue = unknown> {
+type BadgeCellDef<TRow, TValue = unknown> = {
 	type: 'badge'
 	config: BadgeCellConfig
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
-interface ImageCellDef<TRow, TValue = unknown> {
+type ImageCellDef<TRow, TValue = unknown> = {
 	type: 'image'
 	config?: ImageCellConfig
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
-interface LinkCellDef<TRow, TValue = unknown> {
+type LinkCellDef<TRow, TValue = unknown> = {
 	type: 'link'
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
-interface ProgressCellDef<TRow, TValue = unknown> {
+type ProgressCellDef<TRow, TValue = unknown> = {
 	type: 'progress'
 	config?: ProgressCellConfig
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
-interface CustomCellDef<TRow, TValue, TCustom extends string> {
+type CustomCellDef<TRow, TValue, TCustom extends string> = {
 	type: TCustom
 	config?: Record<string, unknown>
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
@@ -109,7 +109,7 @@ export type CellDef<TRow extends object, TValue = unknown, TCustom extends strin
 	| ProgressCellDef<TRow, TValue>
 	| ([TCustom] extends [never] ? never : CustomCellDef<TRow, TValue, TCustom>)
 
-export interface ColumnFilteringConfig {
+export type ColumnFilteringConfig = {
 	/** Custom filter input component for this column. */
 	component?: (props: InputComponentProps) => unknown
 	/** Operator configuration. `true` = default operators for the column's cell type. */
@@ -118,24 +118,24 @@ export interface ColumnFilteringConfig {
 	defaultOperator?: string
 }
 
-export interface ColumnEditingConfig {
+export type ColumnEditingConfig = {
 	/** Custom edit input component for this column. */
 	component?: (props: InputComponentProps) => unknown
 }
 
-export interface ColumnCreatingConfig {
+export type ColumnCreatingConfig = {
 	/** Custom create input component for this column. Falls back to `editing.component` when omitted. */
 	component?: (props: InputComponentProps) => unknown
 }
 
-export interface ColumnPinningDef {
+export type ColumnPinningDef = {
 	/** Static pin — always pinned, no pin section in column menu. */
 	pin?: 'left' | 'right'
 	/** Dynamic default pin — starts pinned, user can change via column menu. */
 	defaultPin?: 'left' | 'right'
 }
 
-export interface ColumnVisibilityDef {
+export type ColumnVisibilityDef = {
 	/** Column starts hidden but can be toggled by the user. */
 	defaultHidden?: boolean
 }
@@ -144,7 +144,7 @@ export interface ColumnVisibilityDef {
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
  */
-export interface ColumnDef<TRow extends object, TCustomCellTypes extends string = never> {
+export type ColumnDef<TRow extends object, TCustomCellTypes extends string = never> = {
 	id?: string
 	accessorKey?: keyof TRow & string
 	accessorFn?: (row: TRow, index: number) => unknown
@@ -193,7 +193,7 @@ export interface ColumnDef<TRow extends object, TCustomCellTypes extends string 
 /** Augment TanStack's ColumnMeta with our custom fields. */
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	interface ColumnMeta<TData, TValue> {
+	type ColumnMeta<TData, TValue> = {
 		columnPinning?: false | ColumnPinningDef
 		cellType?: CellType
 		config?: Record<string, unknown>

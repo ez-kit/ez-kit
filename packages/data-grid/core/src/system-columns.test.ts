@@ -10,7 +10,7 @@ import {
 
 import type { TanStackColumnDef } from './column/types'
 
-interface Row {
+type Row = {
 	id: number
 	name: string
 }

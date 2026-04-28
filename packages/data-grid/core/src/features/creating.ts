@@ -1,11 +1,11 @@
 import type { RowData, TableFeature, TableState } from '@tanstack/table-core'
 
-export interface CreatingState {
+export type CreatingState = {
 	isCreating: boolean
 	creatingValues: Record<string, unknown>
 }
 
-export interface CreatingConfig<TData> {
+export type CreatingConfig<TData> = {
 	/** How the create form is presented. Default: 'row'. */
 	mode?: 'row' | 'modal' | 'pin-row'
 	/** Called on save. Return false (or Promise<false>) to keep the form open. */
@@ -13,16 +13,16 @@ export interface CreatingConfig<TData> {
 }
 
 declare module '@tanstack/table-core' {
-	interface TableState {
+	type TableState = {
 		creating: CreatingState
 	}
 
-	interface TableOptionsResolved<TData extends RowData> {
+	type TableOptionsResolved<TData extends RowData> = {
 		creating?: CreatingConfig<TData>
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	interface Table<TData extends RowData> {
+	type Table<TData extends RowData> = {
 		startCreating: () => void
 		cancelCreating: () => void
 		commitCreating: () => Promise<void>

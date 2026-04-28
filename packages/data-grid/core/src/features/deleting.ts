@@ -1,26 +1,26 @@
 import type { Row, RowData, TableFeature, TableState } from '@tanstack/table-core'
 
-export interface ConfirmationOptions {
+export type ConfirmationOptions = {
 	title?: string
 	description?: string | ((row: Row<unknown>) => string)
 }
 
-export interface DeletingConfig<TData> {
+export type DeletingConfig<TData> = {
 	onDelete: (row: Row<TData>) => void | Promise<void>
 	confirmation?: boolean | ConfirmationOptions
 }
 
 declare module '@tanstack/table-core' {
-	interface TableOptionsResolved<TData extends RowData> {
+	type TableOptionsResolved<TData extends RowData> = {
 		deleting?: DeletingConfig<TData>
 	}
 
-	interface TableState {
+	type TableState = {
 		pendingDeleteRowId: string | null
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	interface Table<TData extends RowData> {
+	type Table<TData extends RowData> = {
 		deleteRow: (rowId: string) => Promise<void>
 		requestDeleteRow: (rowId: string) => void
 		confirmDeleteRow: () => Promise<void>

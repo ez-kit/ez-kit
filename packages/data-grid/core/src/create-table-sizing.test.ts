@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createTable, defineColumns } from './index'
 
-interface Row {
+type Row = {
 	id: number
 	name: string
 }

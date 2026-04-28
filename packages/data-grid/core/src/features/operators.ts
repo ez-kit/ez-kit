@@ -1,5 +1,5 @@
 /** Defines a filter operator with its filtering logic. */
-export interface FilterOperatorDef<TValue = unknown> {
+export type FilterOperatorDef<TValue = unknown> = {
 	id: string
 	label: string
 	/** Short symbol shown in the trigger button (e.g. '=', '>', '⊇'). */
@@ -10,19 +10,19 @@ export interface FilterOperatorDef<TValue = unknown> {
 }
 
 /** Structured filter value stored in TanStack columnFilters[n].value. */
-export interface StructuredFilterValue {
+export type StructuredFilterValue = {
 	operator: string
 	value: unknown
 }
 
 /** Value shape for the between operator. */
-export interface BetweenValue<T = unknown> {
+export type BetweenValue<T = unknown> = {
 	from?: T
 	to?: T
 }
 
 /** UI configuration for the between operator. */
-export interface BetweenOperatorConfig {
+export type BetweenOperatorConfig = {
 	variant?: 'inputs' | 'slider' | 'calendar'
 	/** Minimum value for slider variant. */
 	min?: number
@@ -31,7 +31,7 @@ export interface BetweenOperatorConfig {
 }
 
 /** Column-level operator configuration when not using the simple `true` shorthand. */
-export interface ColumnOperatorsConfig {
+export type ColumnOperatorsConfig = {
 	/** Operator IDs referencing the registry, or inline operator definitions. */
 	items: (string | FilterOperatorDef)[]
 	betweenOperator?: BetweenOperatorConfig

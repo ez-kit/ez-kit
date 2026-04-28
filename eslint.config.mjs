@@ -88,6 +88,8 @@ export default tseslint.config(
 			],
 			'no-empty-function': 'off',
 			'@typescript-eslint/no-empty-function': 'off',
+			'@typescript-eslint/consistent-indexed-object-style': 'off',
+			'@typescript-eslint/consistent-type-definitions': ['error', 'type'],
 			'@typescript-eslint/consistent-type-imports': [
 				'error',
 				{

@@ -7,11 +7,11 @@ import type { Table as TanStackTable, TableState } from '@tanstack/table-core'
 
 export type { TableState as TableSnapshot }
 
-export interface SortingConfig {
+export type SortingConfig = {
 	manual?: boolean
 }
 
-export interface FilteringConfig {
+export type FilteringConfig = {
 	manual?: boolean
 	/** Enable global (cross-column) filter. Default: true when filtering is enabled. */
 	global?: boolean
@@ -19,44 +19,44 @@ export interface FilteringConfig {
 	operators?: FilterOperatorDef[]
 }
 
-export interface PaginationConfig {
+export type PaginationConfig = {
 	manual?: boolean
 	pageCount?: number
 	pageSize?: number
 }
 
-export interface SelectionConfig {
+export type SelectionConfig = {
 	/** Called when row selection changes. */
 	onChange?: (rowIds: string[]) => void
 	/** Allow selecting multiple rows. Default: true. */
 	multiple?: boolean
 }
 
-export interface ExpandingConfig {
+export type ExpandingConfig = {
 	/** React component / render fn for sub-row (provided by React layer). */
 	renderSubRow?: unknown
 }
 
-export interface RowPinningConfig {
+export type RowPinningConfig = {
 	top?: boolean
 	bottom?: boolean
 }
 
-export interface PinningConfig {
+export type PinningConfig = {
 	/** Enable column pin UI (ColumnMenu in headers). */
 	column?: boolean
 	/** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
 	row?: boolean | RowPinningConfig
 }
 
-export interface RowVirtualOptions {
+export type RowVirtualOptions = {
 	/** Estimated row height in px used by the virtualizer. Default: 50. */
 	estimateSize?: number | ((index: number) => number)
 	/** Extra rows rendered outside the visible viewport. Default: 5. */
 	overscan?: number
 }
 
-export interface VirtualizedConfig {
+export type VirtualizedConfig = {
 	row?: boolean | RowVirtualOptions
 	// column virtualization — reserved for future
 }
@@ -64,14 +64,14 @@ export interface VirtualizedConfig {
 export type ColumnResizeMode = 'onChange' | 'onEnd'
 export type ColumnResizeDirection = 'ltr' | 'rtl'
 
-export interface SizingConfig {
+export type SizingConfig = {
 	/** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
 	mode?: ColumnResizeMode
 	/** Text direction for resize calculation. Default: 'ltr'. */
 	direction?: ColumnResizeDirection
 }
 
-export interface TableConfig<TRow extends object> {
+export type TableConfig<TRow extends object> = {
 	data: TRow[]
 	columns: ColumnDef<TRow>[]
 
@@ -106,14 +106,14 @@ export interface TableConfig<TRow extends object> {
  * Extended TanStack table instance returned by createTable().
  * Adds subscribe/getSnapshot for useSyncExternalStore and setData/setLoading.
  */
-export interface DataTable<TRow extends object> extends TanStackTable<TRow> {
+export type DataTable<TRow extends object> = {
 	/** Subscribe to all state changes. Returns an unsubscribe function. */
 	subscribe: (listener: () => void) => () => void
 	/** Returns a stable snapshot of current state for useSyncExternalStore. */
 	getSnapshot: () => TableState
 	/** Reactively replace the data array. */
 	setData: (data: TRow[]) => void
-}
+} & TanStackTable<TRow>
 
 /** Public alias. */
 export type Table<TRow extends object> = DataTable<TRow>

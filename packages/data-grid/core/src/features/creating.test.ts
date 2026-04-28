@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { defineColumns } from '../column/define-columns'
 import { createTable } from '../create-table'
 
-interface Row {
+type Row = {
 	id: number
 	name: string
 }

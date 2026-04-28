@@ -4,7 +4,7 @@ import { mapColumns } from './map-columns'
 
 import type { ColumnDef } from './types'
 
-interface Row {
+type Row = {
 	id: number
 	name: string
 	age: number
@@ -77,7 +77,7 @@ describe('mapColumns', () => {
 	it('cell.component invoked as TanStack cell renderer', () => {
 		const component = vi.fn().mockReturnValue('component-result')
 		const result = mapColumns<Row>([{ accessorKey: 'name', cell: { component } }])
-		interface CellCtx {
+		type CellCtx = {
 			row: { original: Row; index: number }
 			getValue: () => unknown
 		}

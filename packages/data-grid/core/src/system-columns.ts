@@ -6,7 +6,7 @@ export const EXPAND_COLUMN_ID = '__expand__'
 export const ACTIONS_COLUMN_ID = '__actions__'
 export const ROW_PIN_COLUMN_ID = '__row_pin__'
 
-interface SystemColumnsOptions {
+type SystemColumnsOptions = {
 	selection: boolean
 	expanding: boolean
 	editing: boolean

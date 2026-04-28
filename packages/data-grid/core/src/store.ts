@@ -1,6 +1,6 @@
 type Listener = () => void
 
-export interface Store<S> {
+export type Store<S> = {
 	getState: () => S
 	setState: (next: S | ((prev: S) => S)) => void
 	subscribe: (listener: Listener) => () => void
