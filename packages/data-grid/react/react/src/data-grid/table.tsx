@@ -20,30 +20,34 @@ const LEFT_SHADOW = '4px 0 8px -2px var(--dg-pin-shadow-color, rgba(0, 0, 0, 0.1
 const RIGHT_SHADOW = '-4px 0 8px -2px var(--dg-pin-shadow-color, rgba(0, 0, 0, 0.12))'
 
 function updateScrollShadows(el: HTMLElement): void {
-  const scrolledLeft = el.scrollLeft > 0
-  const maxScroll = el.scrollWidth - el.clientWidth
-  const scrolledRight = maxScroll > 1 && el.scrollLeft < maxScroll - 1
-  el.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? LEFT_SHADOW : 'none')
-  el.style.setProperty('--dg-pin-right-shadow', scrolledRight ? RIGHT_SHADOW : 'none')
+	const scrolledLeft = el.scrollLeft > 0
+	const maxScroll = el.scrollWidth - el.clientWidth
+	const scrolledRight = maxScroll > 1 && el.scrollLeft < maxScroll - 1
+	el.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? LEFT_SHADOW : 'none')
+	el.style.setProperty('--dg-pin-right-shadow', scrolledRight ? RIGHT_SHADOW : 'none')
 }
 
 function useScrollShadows(ref: { current: HTMLElement | null }): void {
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const handleScroll = (): void => { updateScrollShadows(el) }
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    updateScrollShadows(el)
-    return () => { el.removeEventListener('scroll', handleScroll) }
-  }, [ref])
+	useEffect(() => {
+		const el = ref.current
+		if (!el) return
+		const handleScroll = (): void => {
+			updateScrollShadows(el)
+		}
+		el.addEventListener('scroll', handleScroll, { passive: true })
+		updateScrollShadows(el)
+		return () => {
+			el.removeEventListener('scroll', handleScroll)
+		}
+	}, [ref])
 }
 
 function resolveEstimateSize(
-  estimateSize: NormalizedVirtualizedConfig['row']['estimateSize'],
+	estimateSize: NormalizedVirtualizedConfig['row']['estimateSize'],
 ): (index: number) => number {
-  if (typeof estimateSize === 'function') return estimateSize
-  const size = estimateSize ?? DEFAULT_ESTIMATE_SIZE
-  return () => size
+	if (typeof estimateSize === 'function') return estimateSize
+	const size = estimateSize ?? DEFAULT_ESTIMATE_SIZE
+	return () => size
 }
 
 /**
@@ -56,74 +60,74 @@ function resolveEstimateSize(
  * applies `display: grid` layout, and provides a RowVirtualizer via context.
  */
 export function DataGridTable() {
-  const { Table } = useGridComponents()
-  const table = useTableContext()
+	const { Table } = useGridComponents()
+	const table = useTableContext()
 
-  const sizeVars = getColumnSizeVars(table)
-  const gridTemplateColumns = getGridTemplateColumns(table)
+	const sizeVars = getColumnSizeVars(table)
+	const gridTemplateColumns = getGridTemplateColumns(table)
 
-  const virtualizedConfig = (table as unknown as Record<symbol, unknown>)[
-    VIRTUALIZED_KEY
-  ] as NormalizedVirtualizedConfig | undefined
+	const virtualizedConfig = (table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] as
+		| NormalizedVirtualizedConfig
+		| undefined
 
-  const isVirtualized = Boolean(virtualizedConfig)
+	const isVirtualized = Boolean(virtualizedConfig)
 
-  // Scroll container ref — used by useVirtualizer to measure the viewport
-  const containerRef = useRef<HTMLDivElement>(null)
+	// Scroll container ref — used by useVirtualizer to measure the viewport
+	const containerRef = useRef<HTMLDivElement>(null)
 
-  const rows = isVirtualized
-    ? (table.options.enableRowPinning ? table.getCenterRows() : table.getRowModel().rows)
-    : []
+	const rows = isVirtualized ? (table.options.enableRowPinning ? table.getCenterRows() : table.getRowModel().rows) : []
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const rowVirtualizer = useVirtualizer({
-    count: isVirtualized ? rows.length : 0,
-    getScrollElement: () => containerRef.current,
-    estimateSize: resolveEstimateSize(virtualizedConfig?.row.estimateSize),
-    overscan: virtualizedConfig?.row.overscan ?? DEFAULT_OVERSCAN,
-    enabled: isVirtualized,
-  })
+	// eslint-disable-next-line react-hooks/incompatible-library
+	const rowVirtualizer = useVirtualizer({
+		count: isVirtualized ? rows.length : 0,
+		getScrollElement: () => containerRef.current,
+		estimateSize: resolveEstimateSize(virtualizedConfig?.row.estimateSize),
+		overscan: virtualizedConfig?.row.overscan ?? DEFAULT_OVERSCAN,
+		enabled: isVirtualized,
+	})
 
-  useScrollShadows(containerRef)
+	useScrollShadows(containerRef)
 
-  const tableEl = (
-    <Table
-      style={{
-        ...sizeVars,
-        '--grid-template-columns': gridTemplateColumns,
-        ...(isVirtualized ? { display: 'grid' } : {}),
-      } as CSSProperties}
-    >
-      <Header theadStyle={isVirtualized ? { display: 'grid', position: 'sticky', top: 0, zIndex: 1 } : {}} />
-      <Body />
-    </Table>
-  )
+	const tableEl = (
+		<Table
+			style={
+				{
+					...sizeVars,
+					'--grid-template-columns': gridTemplateColumns,
+					...(isVirtualized ? { display: 'grid' } : {}),
+				} as CSSProperties
+			}
+		>
+			<Header theadStyle={isVirtualized ? { display: 'grid', position: 'sticky', top: 0, zIndex: 1 } : {}} />
+			<Body />
+		</Table>
+	)
 
-  if (isVirtualized) {
-    return (
-      <VirtualProvider rowVirtualizer={rowVirtualizer}>
-        <div
-          ref={containerRef}
-          data-virtual='rows'
-          style={{
-            overflow: 'auto',
-            position: 'relative',
-            height: 'var(--dg-virtual-height, 600px)',
-          }}
-        >
-          {tableEl}
-        </div>
-      </VirtualProvider>
-    )
-  }
+	if (isVirtualized) {
+		return (
+			<VirtualProvider rowVirtualizer={rowVirtualizer}>
+				<div
+					ref={containerRef}
+					data-virtual='rows'
+					style={{
+						overflow: 'auto',
+						position: 'relative',
+						height: 'var(--dg-virtual-height, 600px)',
+					}}
+				>
+					{tableEl}
+				</div>
+			</VirtualProvider>
+		)
+	}
 
-  return (
-    <div
-      ref={containerRef}
-      data-slot='table-scroll-container'
-      style={{ overflowX: 'auto', position: 'relative' }}
-    >
-      {tableEl}
-    </div>
-  )
+	return (
+		<div
+			ref={containerRef}
+			data-slot='table-scroll-container'
+			style={{ overflowX: 'auto', position: 'relative' }}
+		>
+			{tableEl}
+		</div>
+	)
 }

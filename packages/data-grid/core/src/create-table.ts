@@ -23,30 +23,28 @@ import type { RowSelectionState, TableOptionsResolved, TableState, Updater } fro
 type AnyRow = Record<string, unknown>
 
 function collectDefaultHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
-  const acc: Record<string, boolean> = {}
-  for (const def of defs) {
-    if (def.visibility && typeof def.visibility === 'object' && def.visibility.defaultHidden) {
-      const colId = def.id ?? def.accessorKey
-      if (colId !== undefined) acc[colId] = false
-    }
-    if (def.columns !== undefined) {
-      Object.assign(acc, collectDefaultHidden(def.columns))
-    }
-  }
-  return acc
+	const acc: Record<string, boolean> = {}
+	for (const def of defs) {
+		if (def.visibility && typeof def.visibility === 'object' && def.visibility.defaultHidden) {
+			const colId = def.id ?? def.accessorKey
+			if (colId !== undefined) acc[colId] = false
+		}
+		if (def.columns !== undefined) {
+			Object.assign(acc, collectDefaultHidden(def.columns))
+		}
+	}
+	return acc
 }
 
 function normalizePinning(pinning: boolean | PinningConfig | undefined): {
-  column: boolean
-  row: RowPinningConfig | false
+	column: boolean
+	row: RowPinningConfig | false
 } {
-  if (!pinning) return { column: false, row: false }
-  if (pinning === true) return { column: true, row: { top: true, bottom: true } }
-  const rowCfg = pinning.row
-  const row: RowPinningConfig | false = rowCfg === true
-    ? { top: true, bottom: true }
-    : (rowCfg ?? false)
-  return { column: Boolean(pinning.column), row }
+	if (!pinning) return { column: false, row: false }
+	if (pinning === true) return { column: true, row: { top: true, bottom: true } }
+	const rowCfg = pinning.row
+	const row: RowPinningConfig | false = rowCfg === true ? { top: true, bottom: true } : (rowCfg ?? false)
+	return { column: Boolean(pinning.column), row }
 }
 
 /**
@@ -77,8 +75,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		})
 
 	// ── operator registry ────────────────────────────────────────────────────
-	const tableFilteringOperators =
-		typeof config.filtering === 'object' ? config.filtering.operators : undefined
+	const tableFilteringOperators = typeof config.filtering === 'object' ? config.filtering.operators : undefined
 	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
 
 	// ── map user columns → TanStack columns ──────────────────────────────────

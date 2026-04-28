@@ -19,7 +19,9 @@ export function ColumnVisibilityTrigger() {
 			id: col.id,
 			label: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
 			isVisible: col.getIsVisible(),
-			onToggle: () => { col.toggleVisibility() },
+			onToggle: () => {
+				col.toggleVisibility()
+			},
 		}))
 
 	return <ColumnVisibilityMenu columns={columns} />

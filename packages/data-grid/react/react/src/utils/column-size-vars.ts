@@ -8,16 +8,16 @@ import type { CSSProperties } from 'react'
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
-  const headers = table.getFlatHeaders()
-  const vars: Record<string, string> = {}
+	const headers = table.getFlatHeaders()
+	const vars: Record<string, string> = {}
 
-  for (const header of headers) {
-    const colId = header.column.id
-    vars[`--header-${colId}-size`] = String(header.getSize())
-    vars[`--col-${colId}-size`] = String(header.column.getSize())
-  }
+	for (const header of headers) {
+		const colId = header.column.id
+		vars[`--header-${colId}-size`] = String(header.getSize())
+		vars[`--col-${colId}-size`] = String(header.column.getSize())
+	}
 
-  return vars as CSSProperties
+	return vars as CSSProperties
 }
 
 /**
@@ -28,11 +28,12 @@ export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getGridTemplateColumns(table: DataTable<any>): string {
-  const isResizing = Boolean(table.options.enableColumnResizing)
-  return table.getVisibleLeafColumns()
-    .map((col) => {
-      const fixed = `calc(var(--col-${col.id}-size) * 1px)`
-      return (isResizing || col.getIsPinned()) ? fixed : `minmax(${fixed}, 1fr)`
-    })
-    .join(' ')
+	const isResizing = Boolean(table.options.enableColumnResizing)
+	return table
+		.getVisibleLeafColumns()
+		.map((col) => {
+			const fixed = `calc(var(--col-${col.id}-size) * 1px)`
+			return isResizing || col.getIsPinned() ? fixed : `minmax(${fixed}, 1fr)`
+		})
+		.join(' ')
 }

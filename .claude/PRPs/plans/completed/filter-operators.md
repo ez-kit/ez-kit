@@ -86,12 +86,12 @@ interface CellTypeDefinition {
 
 ## Default Operators by Cell Type
 
-| Type | Operators | Default |
-|------|-----------|---------|
-| **text** | `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty` | `contains` |
-| **number** | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between` | `eq` |
-| **date** | `eq`, `after`, `onOrAfter`, `before`, `onOrBefore`, `between` | `eq` |
-| **boolean** | — | trigger hidden |
+| Type        | Operators                                                               | Default        |
+| ----------- | ----------------------------------------------------------------------- | -------------- |
+| **text**    | `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty` | `contains`     |
+| **number**  | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between`                        | `eq`           |
+| **date**    | `eq`, `after`, `onOrAfter`, `before`, `onOrBefore`, `between`           | `eq`           |
+| **boolean** | —                                                                       | trigger hidden |
 
 ---
 
@@ -165,7 +165,7 @@ useDataGrid({
 
 ### Phase 1 — Core: Types
 
-**File:** `packages/data-grid/core/src/features/operators.ts` *(new)*
+**File:** `packages/data-grid/core/src/features/operators.ts` _(new)_
 
 - Types: `FilterOperatorDef`, `StructuredFilterValue`, `BetweenValue`, `BetweenOperatorConfig`, `ColumnOperatorsConfig`
 - Extend `ColumnFilteringConfig` in `column/types.ts`
@@ -176,7 +176,7 @@ useDataGrid({
 
 ### Phase 2 — Core: Built-in Operators & Registry
 
-**File:** `packages/data-grid/core/src/features/operators.ts` *(continued)*
+**File:** `packages/data-grid/core/src/features/operators.ts` _(continued)_
 
 - `TEXT_OPERATORS`: `contains`, `equals`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty` — each with `filterFn`
 - `NUMBER_OPERATORS`: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between` — each with `filterFn`
@@ -189,11 +189,11 @@ useDataGrid({
 
 ```typescript
 // filterFn dispatcher pattern
-(row, columnId, filterValue: StructuredFilterValue) => {
-  const op = registry.get(filterValue.operator)
-  if (!op) return true
-  if (!op.requiresInput) return op.filterFn(row.getValue(columnId), undefined)
-  return op.filterFn(row.getValue(columnId), filterValue.value)
+;(row, columnId, filterValue: StructuredFilterValue) => {
+	const op = registry.get(filterValue.operator)
+	if (!op) return true
+	if (!op.requiresInput) return op.filterFn(row.getValue(columnId), undefined)
+	return op.filterFn(row.getValue(columnId), filterValue.value)
 }
 ```
 
@@ -238,22 +238,24 @@ Export: `FilterOperatorDef`, `StructuredFilterValue`, `BetweenValue`, `BetweenOp
 **File:** `packages/data-grid/react/react/src/components-context.tsx`
 
 Add to `GridComponents`:
+
 - `OperatorSelect?: (props: OperatorSelectProps) => ReactNode`
 - `BetweenInput?: (props: BetweenInputProps) => ReactNode`
 
 New prop types:
+
 ```typescript
 interface OperatorSelectProps {
-  operators: FilterOperatorDef[]
-  currentOperatorId: string
-  onChange: (operatorId: string) => void
+	operators: FilterOperatorDef[]
+	currentOperatorId: string
+	onChange: (operatorId: string) => void
 }
 
 interface BetweenInputProps {
-  value: BetweenValue
-  onChange: (value: BetweenValue) => void
-  variant: 'inputs' | 'slider' | 'calendar'
-  type: 'number' | 'date'
+	value: BetweenValue
+	onChange: (value: BetweenValue) => void
+	variant: 'inputs' | 'slider' | 'calendar'
+	type: 'number' | 'date'
 }
 ```
 
@@ -286,7 +288,7 @@ Clearing filter:
 
 ### Phase 8 — Shadcn: OperatorSelect Component
 
-**File:** `packages/data-grid/react/shadcn/src/blocks/OperatorSelect.tsx` *(new)*
+**File:** `packages/data-grid/react/shadcn/src/blocks/OperatorSelect.tsx` _(new)_
 
 - Compact trigger button (~28px) showing current operator's `symbol`
 - `DropdownMenu` with full operators list
@@ -298,7 +300,7 @@ Clearing filter:
 
 ### Phase 9 — Shadcn: BetweenInput Component
 
-**File:** `packages/data-grid/react/shadcn/src/blocks/BetweenInput.tsx` *(new)*
+**File:** `packages/data-grid/react/shadcn/src/blocks/BetweenInput.tsx` _(new)_
 
 - **number** + `variant: 'inputs'` → two number inputs (from / to), default
 - **number** + `variant: 'slider'` → shadcn `Slider` in range mode
@@ -317,18 +319,18 @@ Clearing filter:
 
 ### Phase 11 — Sandbox: Filter Operators Examples
 
-**File:** `apps/docs/app/sandbox/data-grid/components/filter-operators.tsx` *(new)*
+**File:** `apps/docs/app/sandbox/data-grid/components/filter-operators.tsx` _(new)_
 
 Internal sub-tabs:
 
-| Sub-tab | What it demonstrates |
-|---------|----------------------|
-| `basic` | `operators: true` on text/number/date columns, default operators |
-| `subset` | Subset of operators `{ items: ['eq', 'gt', 'lt'] }` |
-| `between-slider` | Number between with `variant: 'slider'` |
-| `between-calendar` | Date between with `variant: 'calendar'` |
-| `custom` | Custom operator registered at table-level, used in column by ID |
-| `mixed` | Different configurations on different columns simultaneously |
+| Sub-tab            | What it demonstrates                                             |
+| ------------------ | ---------------------------------------------------------------- |
+| `basic`            | `operators: true` on text/number/date columns, default operators |
+| `subset`           | Subset of operators `{ items: ['eq', 'gt', 'lt'] }`              |
+| `between-slider`   | Number between with `variant: 'slider'`                          |
+| `between-calendar` | Date between with `variant: 'calendar'`                          |
+| `custom`           | Custom operator registered at table-level, used in column by ID  |
+| `mixed`            | Different configurations on different columns simultaneously     |
 
 **File:** `apps/docs/app/sandbox/data-grid/page.tsx`
 
@@ -346,24 +348,24 @@ Export: `OperatorSelectProps`, `BetweenInputProps`, extended `ColumnFilteringCon
 
 ## Files Touched
 
-| File | Action |
-|------|--------|
-| `core/src/features/operators.ts` | **New** — types, built-ins, registry, resolver, filterFn factory |
-| `core/src/column/types.ts` | Extend `ColumnFilteringConfig` |
-| `core/src/types.ts` | Extend `FilteringConfig` |
-| `core/src/column/map-columns.ts` | Attach filterFn dispatcher, pass betweenOperator via meta |
-| `core/src/create-table.ts` | Build and pass operator registry |
-| `core/src/index.ts` | New exports |
-| `react/react/src/cell-types-context.tsx` | Extend `CellTypeDefinition` with operators |
-| `react/react/src/built-in-cell-types.tsx` | Declare operators for number/date types |
-| `react/react/src/components-context.tsx` | Add `OperatorSelect`, `BetweenInput` to `GridComponents` |
-| `react/react/src/data-grid/header.tsx` | Update `renderFilterInput` for operator-aware rendering |
-| `react/react/src/index.ts` | New exports |
-| `shadcn/src/blocks/OperatorSelect.tsx` | **New** — shadcn trigger + dropdown |
-| `shadcn/src/blocks/BetweenInput.tsx` | **New** — shadcn inputs/slider/calendar for between |
-| `shadcn/src/shadcn-data-grid.tsx` | Wire OperatorSelect and BetweenInput into DI |
-| `sandbox/data-grid/components/filter-operators.tsx` | **New** — 6 sub-tab examples |
-| `sandbox/data-grid/page.tsx` | Add Filter Operators tab |
+| File                                                | Action                                                           |
+| --------------------------------------------------- | ---------------------------------------------------------------- |
+| `core/src/features/operators.ts`                    | **New** — types, built-ins, registry, resolver, filterFn factory |
+| `core/src/column/types.ts`                          | Extend `ColumnFilteringConfig`                                   |
+| `core/src/types.ts`                                 | Extend `FilteringConfig`                                         |
+| `core/src/column/map-columns.ts`                    | Attach filterFn dispatcher, pass betweenOperator via meta        |
+| `core/src/create-table.ts`                          | Build and pass operator registry                                 |
+| `core/src/index.ts`                                 | New exports                                                      |
+| `react/react/src/cell-types-context.tsx`            | Extend `CellTypeDefinition` with operators                       |
+| `react/react/src/built-in-cell-types.tsx`           | Declare operators for number/date types                          |
+| `react/react/src/components-context.tsx`            | Add `OperatorSelect`, `BetweenInput` to `GridComponents`         |
+| `react/react/src/data-grid/header.tsx`              | Update `renderFilterInput` for operator-aware rendering          |
+| `react/react/src/index.ts`                          | New exports                                                      |
+| `shadcn/src/blocks/OperatorSelect.tsx`              | **New** — shadcn trigger + dropdown                              |
+| `shadcn/src/blocks/BetweenInput.tsx`                | **New** — shadcn inputs/slider/calendar for between              |
+| `shadcn/src/shadcn-data-grid.tsx`                   | Wire OperatorSelect and BetweenInput into DI                     |
+| `sandbox/data-grid/components/filter-operators.tsx` | **New** — 6 sub-tab examples                                     |
+| `sandbox/data-grid/page.tsx`                        | Add Filter Operators tab                                         |
 
 ---
 

@@ -7,7 +7,9 @@ export function DateField({ value, onChange }: DateFieldProps) {
 		<Input
 			type='date'
 			value={value ?? ''}
-			onChange={(e) => { onChange?.(e.target.value) }}
+			onChange={(e) => {
+				onChange?.(e.target.value)
+			}}
 		/>
 	)
 }

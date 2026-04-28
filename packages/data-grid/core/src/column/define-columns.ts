@@ -9,7 +9,7 @@ import type { ColumnDef } from './types'
  * ])
  */
 export function defineColumns<TRow extends object, TCustomCellTypes extends string = never>(
-  defs: ColumnDef<TRow, TCustomCellTypes>[],
+	defs: ColumnDef<TRow, TCustomCellTypes>[],
 ): ColumnDef<TRow, TCustomCellTypes>[] {
-  return defs
+	return defs
 }

@@ -1,6 +1,6 @@
 {
-  "enabledPlugins": {
-    "ecc@ecc": true,
-    "oh-my-claudecode@omc": true
-  }
+	"enabledPlugins": {
+		"ecc@ecc": true,
+		"oh-my-claudecode@omc": true
+	}
 }

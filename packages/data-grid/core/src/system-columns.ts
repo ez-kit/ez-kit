@@ -7,11 +7,11 @@ export const ACTIONS_COLUMN_ID = '__actions__'
 export const ROW_PIN_COLUMN_ID = '__row_pin__'
 
 interface SystemColumnsOptions {
-  selection: boolean
-  expanding: boolean
-  editing: boolean
-  deleting: boolean
-  pinning: boolean
+	selection: boolean
+	expanding: boolean
+	editing: boolean
+	deleting: boolean
+	pinning: boolean
 }
 
 /**
@@ -22,74 +22,74 @@ interface SystemColumnsOptions {
  * The React layer renders them based on meta.systemColumnType.
  */
 export function buildColumnList<TRow extends object>(
-  userColumns: TanStackColumnDef<TRow>[],
-  opts: SystemColumnsOptions,
+	userColumns: TanStackColumnDef<TRow>[],
+	opts: SystemColumnsOptions,
 ): TanStackColumnDef<TRow>[] {
-  const result: TanStackColumnDef<TRow>[] = []
+	const result: TanStackColumnDef<TRow>[] = []
 
-  if (opts.selection) {
-    result.push({
-      id: SELECTION_COLUMN_ID,
-      header: () => null,
-      cell: () => null,
-      size: 44,
-      enableSorting: false,
-      enableColumnFilter: false,
-      meta: {
-        isSystemColumn: true,
-        systemColumnType: 'selection',
-        columnPinning: { pin: 'left' },
-      },
-    })
-  }
+	if (opts.selection) {
+		result.push({
+			id: SELECTION_COLUMN_ID,
+			header: () => null,
+			cell: () => null,
+			size: 44,
+			enableSorting: false,
+			enableColumnFilter: false,
+			meta: {
+				isSystemColumn: true,
+				systemColumnType: 'selection',
+				columnPinning: { pin: 'left' },
+			},
+		})
+	}
 
-  if (opts.expanding) {
-    result.push({
-      id: EXPAND_COLUMN_ID,
-      header: () => null,
-      cell: () => null,
-      enableSorting: false,
-      enableColumnFilter: false,
-      meta: {
-        isSystemColumn: true,
-        systemColumnType: 'expand',
-      },
-    })
-  }
+	if (opts.expanding) {
+		result.push({
+			id: EXPAND_COLUMN_ID,
+			header: () => null,
+			cell: () => null,
+			enableSorting: false,
+			enableColumnFilter: false,
+			meta: {
+				isSystemColumn: true,
+				systemColumnType: 'expand',
+			},
+		})
+	}
 
-  result.push(...userColumns)
+	result.push(...userColumns)
 
-  const needsActions = opts.editing || opts.deleting
-  if (needsActions) {
-    result.push({
-      id: ACTIONS_COLUMN_ID,
-      header: () => null,
-      cell: () => null,
-      enableSorting: false,
-      enableColumnFilter: false,
-      meta: {
-        isSystemColumn: true,
-        systemColumnType: 'actions',
-        columnPinning: { pin: 'right' },
-      },
-    })
-  }
+	const needsActions = opts.editing || opts.deleting
+	if (needsActions) {
+		result.push({
+			id: ACTIONS_COLUMN_ID,
+			header: () => null,
+			cell: () => null,
+			enableSorting: false,
+			enableColumnFilter: false,
+			meta: {
+				isSystemColumn: true,
+				systemColumnType: 'actions',
+				columnPinning: { pin: 'right' },
+			},
+		})
+	}
 
-  if (opts.pinning) {
-    result.push({
-      id: ROW_PIN_COLUMN_ID,
-      header: () => null,
-      cell: () => null,
-      enableSorting: false,
-      enableColumnFilter: false,
-      meta: {
-        isSystemColumn: true,
-        systemColumnType: 'row_pin',
-      },
-    })
-  }
+	if (opts.pinning) {
+		result.push({
+			id: ROW_PIN_COLUMN_ID,
+			header: () => null,
+			cell: () => null,
+			enableSorting: false,
+			enableColumnFilter: false,
+			meta: {
+				isSystemColumn: true,
+				systemColumnType: 'row_pin',
+			},
+		})
+	}
 
-  return result
+	return result
 }
 
 /**
@@ -99,23 +99,20 @@ export function buildColumnList<TRow extends object>(
  * are registered in initial state.
  */
 export function extractPinningState<TRow extends object>(
-  columns: TanStackColumnDef<TRow>[],
+	columns: TanStackColumnDef<TRow>[],
 ): { left: string[]; right: string[] } {
-  const left: string[] = []
-  const right: string[] = []
+	const left: string[] = []
+	const right: string[] = []
 
-  for (const col of columns) {
-    const pinDef = col.meta?.columnPinning
-    if (!pinDef) continue
-    const position = pinDef.pin ?? pinDef.defaultPin
-    const colId =
-      col.id ??
-      (col as { accessorKey?: string }).accessorKey ??
-      undefined
-    if (!position || !colId) continue
-    if (position === 'left') left.push(colId)
-    else right.push(colId)
-  }
+	for (const col of columns) {
+		const pinDef = col.meta?.columnPinning
+		if (!pinDef) continue
+		const position = pinDef.pin ?? pinDef.defaultPin
+		const colId = col.id ?? (col as { accessorKey?: string }).accessorKey ?? undefined
+		if (!position || !colId) continue
+		if (position === 'left') left.push(colId)
+		else right.push(colId)
+	}
 
-  return { left, right }
+	return { left, right }
 }

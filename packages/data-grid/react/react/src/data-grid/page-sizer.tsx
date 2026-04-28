@@ -9,9 +9,7 @@ import { useTableContext } from './table-context'
 export function PageSizer() {
 	const table = useTableContext()
 	const { PageSizer: PageSizerComponent } = useGridComponents()
-	const config = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as
-		| PageSizerConfig
-		| undefined
+	const config = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as PageSizerConfig | undefined
 
 	if (!config) return null
 

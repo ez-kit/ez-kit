@@ -15,6 +15,7 @@ Add column resizing to `@ez-kit/data-grid` following TanStack Table's performant
 ## Architecture Approach
 
 TanStack Table's performant resize pattern:
+
 1. `<table>` element gets CSS variables `--header-{id}-size` and `--col-{id}-size` for every column
 2. Each `<th>` / `<td>` reads width from `calc(var(--header-{id}-size) * 1px)` instead of calling `header.getSize()` per cell
 3. During active drag, only the `<table style={...}>` CSS variables change — React does not re-render rows/cells
@@ -51,10 +52,10 @@ export type ColumnResizeMode = 'onChange' | 'onEnd'
 export type ColumnResizeDirection = 'ltr' | 'rtl'
 
 export interface SizingConfig {
-  /** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
-  mode?: ColumnResizeMode
-  /** Text direction for resize calculation. Default: 'ltr'. */
-  direction?: ColumnResizeDirection
+	/** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
+	mode?: ColumnResizeMode
+	/** Text direction for resize calculation. Default: 'ltr'. */
+	direction?: ColumnResizeDirection
 }
 ```
 
@@ -113,16 +114,16 @@ import type { CSSProperties } from 'react'
  * widths via `calc(var(--header-{id}-size) * 1px)` without per-cell re-renders.
  */
 export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
-  const headers = table.getFlatHeaders()
-  const vars: Record<string, string> = {}
+	const headers = table.getFlatHeaders()
+	const vars: Record<string, string> = {}
 
-  for (const header of headers) {
-    const colId = header.column.id
-    vars[`--header-${colId}-size`] = String(header.getSize())
-    vars[`--col-${colId}-size`] = String(header.column.getSize())
-  }
+	for (const header of headers) {
+		const colId = header.column.id
+		vars[`--header-${colId}-size`] = String(header.getSize())
+		vars[`--col-${colId}-size`] = String(header.column.getSize())
+	}
 
-  return vars as CSSProperties
+	return vars as CSSProperties
 }
 ```
 
@@ -138,27 +139,28 @@ import { Header } from './header'
 import { useTableContext } from './table-context'
 
 export function DataGridTable() {
-  const { Table } = useGridComponents()
-  const table = useTableContext()
+	const { Table } = useGridComponents()
+	const table = useTableContext()
 
-  const isResizingEnabled = Boolean(table.options.enableColumnResizing)
-  const sizeVars = isResizingEnabled ? getColumnSizeVars(table) : undefined
+	const isResizingEnabled = Boolean(table.options.enableColumnResizing)
+	const sizeVars = isResizingEnabled ? getColumnSizeVars(table) : undefined
 
-  return (
-    <Table
-      style={{
-        ...sizeVars,
-        ...(isResizingEnabled ? { tableLayout: 'fixed' } : {}),
-      }}
-    >
-      <Header />
-      <Body />
-    </Table>
-  )
+	return (
+		<Table
+			style={{
+				...sizeVars,
+				...(isResizingEnabled ? { tableLayout: 'fixed' } : {}),
+			}}
+		>
+			<Header />
+			<Body />
+		</Table>
+	)
 }
 ```
 
 Key points:
+
 - `tableLayout: 'fixed'` is required for CSS-variable widths to take effect
 - During active drag, only CSS variables on `<table>` update — child cells do NOT re-render
 
@@ -173,41 +175,46 @@ const resizeEnabled = header.column.getCanResize()
 
 // Merge pin styles with sizing styles
 const thStyle = {
-  ...pinStyles,
-  ...(resizeEnabled
-    ? {
-        width: `calc(var(--header-${header.column.id}-size) * 1px)`,
-        position: 'relative' as const,
-      }
-    : {}),
+	...pinStyles,
+	...(resizeEnabled
+		? {
+				width: `calc(var(--header-${header.column.id}-size) * 1px)`,
+				position: 'relative' as const,
+			}
+		: {}),
 }
 
 // ... existing render ...
 
-{resizeEnabled && (
-  <div
-    data-slot="column-resizer"
-    onMouseDown={header.getResizeHandler()}
-    onTouchStart={header.getResizeHandler()}
-    onDoubleClick={() => { header.column.resetSize() }}
-    style={{
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      width: '4px',
-      height: '100%',
-      cursor: 'col-resize',
-      userSelect: 'none',
-      touchAction: 'none',
-      ...(header.column.getIsResizing()
-        ? { background: 'var(--resizer-active-color, #2563eb)', opacity: 1 }
-        : { opacity: 0 }),
-    }}
-  />
-)}
+{
+	resizeEnabled && (
+		<div
+			data-slot='column-resizer'
+			onMouseDown={header.getResizeHandler()}
+			onTouchStart={header.getResizeHandler()}
+			onDoubleClick={() => {
+				header.column.resetSize()
+			}}
+			style={{
+				position: 'absolute',
+				top: 0,
+				right: 0,
+				width: '4px',
+				height: '100%',
+				cursor: 'col-resize',
+				userSelect: 'none',
+				touchAction: 'none',
+				...(header.column.getIsResizing()
+					? { background: 'var(--resizer-active-color, #2563eb)', opacity: 1 }
+					: { opacity: 0 }),
+			}}
+		/>
+	)
+}
 ```
 
 Design decisions:
+
 - `data-slot="column-resizer"` enables styling from UI-kit layers via CSS attribute selectors
 - Default invisible (`opacity: 0`), visible on active resize; UI kits add `:hover` visibility via `[data-slot="column-resizer"]:hover { opacity: 1 }`
 - `--resizer-active-color` CSS variable lets UI kits customize without code changes
@@ -222,8 +229,8 @@ Add helper function:
 
 ```ts
 function getCellSizeStyle(columnId: string, isResizable: boolean): CSSProperties {
-  if (!isResizable) return {}
-  return { width: `calc(var(--col-${columnId}-size) * 1px)` }
+	if (!isResizable) return {}
+	return { width: `calc(var(--col-${columnId}-size) * 1px)` }
 }
 ```
 
@@ -259,23 +266,23 @@ Add a second grid instance:
 ```tsx
 // Example 1: onChange mode (live resize)
 const resizableColumns = defineColumns<User>([
-  { accessorKey: 'name', header: 'Name', size: 200, minSize: 100, maxSize: 400 },
-  { accessorKey: 'email', header: 'Email', size: 250, minSize: 150 },
-  { accessorKey: 'age', header: 'Age', size: 80, minSize: 50, maxSize: 150 },
-  { accessorKey: 'active', header: 'Active', size: 100, enableResizing: false },
+	{ accessorKey: 'name', header: 'Name', size: 200, minSize: 100, maxSize: 400 },
+	{ accessorKey: 'email', header: 'Email', size: 250, minSize: 150 },
+	{ accessorKey: 'age', header: 'Age', size: 80, minSize: 50, maxSize: 150 },
+	{ accessorKey: 'active', header: 'Active', size: 100, enableResizing: false },
 ])
 
 const resizableOnChange = useDataGrid({
-  data,
-  columns: resizableColumns,
-  sizing: { mode: 'onChange' },
+	data,
+	columns: resizableColumns,
+	sizing: { mode: 'onChange' },
 })
 
 // Example 2: onEnd mode (performant, updates only after release)
 const resizableOnEnd = useDataGrid({
-  data,
-  columns: resizableColumns,
-  sizing: { mode: 'onEnd' },
+	data,
+	columns: resizableColumns,
+	sizing: { mode: 'onEnd' },
 })
 ```
 
@@ -304,6 +311,7 @@ Render:
 File (new): `packages/data-grid/core/src/create-table-sizing.test.ts`
 
 Test cases:
+
 - `sizing: true` enables `enableColumnResizing` on the table
 - `sizing: { mode: 'onEnd' }` sets `columnResizeMode` to `'onEnd'`
 - `sizing: { direction: 'rtl' }` sets `columnResizeDirection` to `'rtl'`
@@ -316,17 +324,15 @@ File: `packages/data-grid/core/src/column/map-columns.test.ts`
 
 ```ts
 it('passes size, minSize, maxSize to TanStack column', () => {
-  const result = mapColumns<Row>([
-    { accessorKey: 'name', size: 200, minSize: 50, maxSize: 500 },
-  ])
-  expect(result[0]?.size).toBe(200)
-  expect(result[0]?.minSize).toBe(50)
-  expect(result[0]?.maxSize).toBe(500)
+	const result = mapColumns<Row>([{ accessorKey: 'name', size: 200, minSize: 50, maxSize: 500 }])
+	expect(result[0]?.size).toBe(200)
+	expect(result[0]?.minSize).toBe(50)
+	expect(result[0]?.maxSize).toBe(500)
 })
 
 it('passes enableResizing to TanStack column', () => {
-  const result = mapColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
-  expect(result[0]?.enableResizing).toBe(false)
+	const result = mapColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
+	expect(result[0]?.enableResizing).toBe(false)
 })
 ```
 
@@ -341,6 +347,7 @@ Test that the function returns correct CSS variable names and values given a moc
 File: `packages/data-grid/react/react/src/data-grid/data-grid.test.tsx`
 
 Test cases:
+
 - When `sizing` is not set, no `[data-slot="column-resizer"]` elements are rendered
 - When `sizing: true`, resizer handles appear on resizable columns
 - When a column has `enableResizing: false`, that column has no resizer handle
@@ -350,21 +357,21 @@ Test cases:
 
 ## File Change Summary
 
-| File | Action | Description |
-|------|--------|-------------|
-| `packages/data-grid/core/src/types.ts` | Modify | Add `SizingConfig`, `ColumnResizeMode`, `ColumnResizeDirection`, add `sizing` to `TableConfig` |
-| `packages/data-grid/core/src/create-table.ts` | Modify | Map `sizing` config to TanStack `enableColumnResizing` / `columnResizeMode` / `columnResizeDirection` |
-| `packages/data-grid/core/src/index.ts` | Modify | Export new types |
-| `packages/data-grid/react/react/src/utils/column-size-vars.ts` | **New** | `getColumnSizeVars()` utility |
-| `packages/data-grid/react/react/src/data-grid/table.tsx` | Modify | Apply CSS variables and `tableLayout: fixed` to `<table>` |
-| `packages/data-grid/react/react/src/data-grid/header.tsx` | Modify | Add resize handle, CSS-variable width on `<Th>` |
-| `packages/data-grid/react/react/src/data-grid/cell.tsx` | Modify | Add CSS-variable width on `<Td>` |
-| `packages/data-grid/react/react/src/index.ts` | Modify | Export `getColumnSizeVars`, re-export core types |
-| `apps/docs/app/sandbox/data-grid/page.tsx` | Modify | Add two resizing examples |
-| `packages/data-grid/core/src/create-table-sizing.test.ts` | **New** | Core sizing config tests |
-| `packages/data-grid/core/src/column/map-columns.test.ts` | Modify | Add size pass-through tests |
-| `packages/data-grid/react/react/src/utils/column-size-vars.test.ts` | **New** | CSS variable utility tests |
-| `packages/data-grid/react/react/src/data-grid/data-grid.test.tsx` | Modify | Add resize handle rendering tests |
+| File                                                                | Action  | Description                                                                                           |
+| ------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| `packages/data-grid/core/src/types.ts`                              | Modify  | Add `SizingConfig`, `ColumnResizeMode`, `ColumnResizeDirection`, add `sizing` to `TableConfig`        |
+| `packages/data-grid/core/src/create-table.ts`                       | Modify  | Map `sizing` config to TanStack `enableColumnResizing` / `columnResizeMode` / `columnResizeDirection` |
+| `packages/data-grid/core/src/index.ts`                              | Modify  | Export new types                                                                                      |
+| `packages/data-grid/react/react/src/utils/column-size-vars.ts`      | **New** | `getColumnSizeVars()` utility                                                                         |
+| `packages/data-grid/react/react/src/data-grid/table.tsx`            | Modify  | Apply CSS variables and `tableLayout: fixed` to `<table>`                                             |
+| `packages/data-grid/react/react/src/data-grid/header.tsx`           | Modify  | Add resize handle, CSS-variable width on `<Th>`                                                       |
+| `packages/data-grid/react/react/src/data-grid/cell.tsx`             | Modify  | Add CSS-variable width on `<Td>`                                                                      |
+| `packages/data-grid/react/react/src/index.ts`                       | Modify  | Export `getColumnSizeVars`, re-export core types                                                      |
+| `apps/docs/app/sandbox/data-grid/page.tsx`                          | Modify  | Add two resizing examples                                                                             |
+| `packages/data-grid/core/src/create-table-sizing.test.ts`           | **New** | Core sizing config tests                                                                              |
+| `packages/data-grid/core/src/column/map-columns.test.ts`            | Modify  | Add size pass-through tests                                                                           |
+| `packages/data-grid/react/react/src/utils/column-size-vars.test.ts` | **New** | CSS variable utility tests                                                                            |
+| `packages/data-grid/react/react/src/data-grid/data-grid.test.tsx`   | Modify  | Add resize handle rendering tests                                                                     |
 
 ## Risks and Mitigations
 

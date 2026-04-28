@@ -1,10 +1,4 @@
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '../components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 
 import type { OperatorSelectProps } from '@ez-kit/data-grid-react'
 
@@ -24,11 +18,7 @@ export function OperatorSelect({ operators, currentOperatorId, onChange }: Opera
 						value={op.id}
 						className='text-xs'
 					>
-						{op.symbol ? (
-							<span className='font-mono'>{op.symbol}</span>
-						) : null}
-						{' '}
-						{op.label}
+						{op.symbol ? <span className='font-mono'>{op.symbol}</span> : null} {op.label}
 					</SelectItem>
 				))}
 			</SelectContent>

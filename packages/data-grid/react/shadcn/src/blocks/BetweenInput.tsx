@@ -39,8 +39,10 @@ export function BetweenInput({ value, onChange, variant, type, min, max }: Betwe
 				onChange={(e) => {
 					const v =
 						inputType === 'number'
-							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
-							: (e.target.value || undefined)
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, from: v })
 				}}
 			/>
@@ -53,8 +55,10 @@ export function BetweenInput({ value, onChange, variant, type, min, max }: Betwe
 				onChange={(e) => {
 					const v =
 						inputType === 'number'
-							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
-							: (e.target.value || undefined)
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, to: v })
 				}}
 			/>

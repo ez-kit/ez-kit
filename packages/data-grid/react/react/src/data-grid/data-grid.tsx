@@ -56,12 +56,9 @@ function ConfirmDialogRenderer() {
 	if (!confirmation) return null
 
 	const options: ConfirmationOptions = confirmation === true ? {} : confirmation
-	const pendingRow = pendingId !== null
-		? table.getRowModel().rows.find((r) => r.id === pendingId)
-		: undefined
-	const { title, description } = pendingId !== null
-		? resolveConfirmationText(options, pendingRow)
-		: { title: '', description: '' }
+	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
+	const { title, description } =
+		pendingId !== null ? resolveConfirmationText(options, pendingRow) : { title: '', description: '' }
 
 	return (
 		<ConfirmDialog
@@ -69,7 +66,9 @@ function ConfirmDialogRenderer() {
 			title={title}
 			description={description}
 			onConfirm={() => void table.confirmDeleteRow()}
-			onCancel={() => { table.cancelDeleteRow() }}
+			onCancel={() => {
+				table.cancelDeleteRow()
+			}}
 		/>
 	)
 }

@@ -12,14 +12,7 @@ import {
 
 import type { RowPinMenuProps } from '@ez-kit/data-grid-react'
 
-export function RowPinMenu({
-	isPinned,
-	canPinTop,
-	canPinBottom,
-	onPinTop,
-	onPinBottom,
-	onUnpin,
-}: RowPinMenuProps) {
+export function RowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinBottom, onUnpin }: RowPinMenuProps) {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>

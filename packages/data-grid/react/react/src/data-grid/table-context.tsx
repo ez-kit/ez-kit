@@ -9,11 +9,9 @@ export { TableContext }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useTableContext(): DataTable<any> {
-  const ctx = useContext(TableContext)
-  if (!ctx) {
-    throw new Error(
-      'This component must be rendered inside <DataGrid>.',
-    )
-  }
-  return ctx
+	const ctx = useContext(TableContext)
+	if (!ctx) {
+		throw new Error('This component must be rendered inside <DataGrid>.')
+	}
+	return ctx
 }

@@ -21,13 +21,13 @@ interface PinningConfig {
 }
 ```
 
-| Value | Result |
-|---|---|
-| `true` | column pin UI on + row pin top + bottom |
-| `{ column: true }` | column pin UI only |
-| `{ row: true }` | row pin top + bottom |
-| `{ row: { top: true } }` | row pin top only |
-| `false` / omitted | nothing |
+| Value                    | Result                                  |
+| ------------------------ | --------------------------------------- |
+| `true`                   | column pin UI on + row pin top + bottom |
+| `{ column: true }`       | column pin UI only                      |
+| `{ row: true }`          | row pin top + bottom                    |
+| `{ row: { top: true } }` | row pin top only                        |
+| `false` / omitted        | nothing                                 |
 
 ### `ColumnDef.pinning` (new — replaces `pin`)
 
@@ -42,33 +42,33 @@ interface ColumnPinningDef {
 }
 ```
 
-| Column config | Behaviour |
-|---|---|
-| omitted | pinnable if global column pinning is on |
-| `false` | no pinning, no pin section in menu |
-| `{ pin: 'left' }` | always left, no pin section (static) |
-| `{ defaultPin: 'left' }` | starts left, user can change/unpin |
+| Column config            | Behaviour                               |
+| ------------------------ | --------------------------------------- |
+| omitted                  | pinnable if global column pinning is on |
+| `false`                  | no pinning, no pin section in menu      |
+| `{ pin: 'left' }`        | always left, no pin section (static)    |
+| `{ defaultPin: 'left' }` | starts left, user can change/unpin      |
 
 ### `ColumnMenuProps` (new DI component)
 
 ```ts
 interface ColPinSection {
-  isPinned: 'left' | 'right' | false
-  canPinLeft: boolean   // false when already pinned left
-  canPinRight: boolean  // false when already pinned right
-  onPinLeft: () => void
-  onPinRight: () => void
-  onUnpin: () => void
+	isPinned: 'left' | 'right' | false
+	canPinLeft: boolean // false when already pinned left
+	canPinRight: boolean // false when already pinned right
+	onPinLeft: () => void
+	onPinRight: () => void
+	onUnpin: () => void
 }
 
 interface ColumnMenuSections {
-  pin?: ColPinSection
-  // future: sort?, hide?, filter?
+	pin?: ColPinSection
+	// future: sort?, hide?, filter?
 }
 
 interface ColumnMenuProps {
-  column: Column<any>
-  sections: ColumnMenuSections
+	column: Column<any>
+	sections: ColumnMenuSections
 }
 ```
 
@@ -164,12 +164,10 @@ Add `normalizePinning` helper (local to file):
 
 ```ts
 function normalizePinning(pinning: TableConfig<any>['pinning']) {
-  if (!pinning) return { column: false, row: false as RowPinningConfig | false }
-  if (pinning === true) return { column: true, row: { top: true, bottom: true } }
-  const row = pinning.row === true
-    ? { top: true, bottom: true }
-    : (pinning.row || false)
-  return { column: Boolean(pinning.column), row }
+	if (!pinning) return { column: false, row: false as RowPinningConfig | false }
+	if (pinning === true) return { column: true, row: { top: true, bottom: true } }
+	const row = pinning.row === true ? { top: true, bottom: true } : pinning.row || false
+	return { column: Boolean(pinning.column), row }
 }
 ```
 
@@ -198,22 +196,22 @@ Add:
 import type { Column } from '@tanstack/table-core'
 
 export interface ColPinSection {
-  isPinned: 'left' | 'right' | false
-  canPinLeft: boolean
-  canPinRight: boolean
-  onPinLeft: () => void
-  onPinRight: () => void
-  onUnpin: () => void
+	isPinned: 'left' | 'right' | false
+	canPinLeft: boolean
+	canPinRight: boolean
+	onPinLeft: () => void
+	onPinRight: () => void
+	onUnpin: () => void
 }
 
 export interface ColumnMenuSections {
-  pin?: ColPinSection
+	pin?: ColPinSection
 }
 
 export interface ColumnMenuProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  column: Column<any>
-  sections: ColumnMenuSections
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	column: Column<any>
+	sections: ColumnMenuSections
 }
 ```
 
@@ -241,31 +239,71 @@ Add `DefaultColumnMenu` (plain HTML fallback):
 
 ```tsx
 function DefaultColumnMenu({ sections }: ColumnMenuProps) {
-  const [open, setOpen] = useState(false)
-  const { pin } = sections
+	const [open, setOpen] = useState(false)
+	const { pin } = sections
 
-  return (
-    <div style={{ position: 'relative', display: 'inline-flex' }}>
-      <button type='button' onClick={() => { setOpen((p) => !p) }}>⋮</button>
-      {open && (
-        <div style={{ position: 'absolute', top: '100%', background: 'white', border: '1px solid #ccc', zIndex: 10, minWidth: 120 }}>
-          {pin && (
-            <>
-              {pin.canPinLeft && (
-                <button type='button' onClick={() => { pin.onPinLeft(); setOpen(false) }}>Pin Left</button>
-              )}
-              {pin.canPinRight && (
-                <button type='button' onClick={() => { pin.onPinRight(); setOpen(false) }}>Pin Right</button>
-              )}
-              {pin.isPinned && (
-                <button type='button' onClick={() => { pin.onUnpin(); setOpen(false) }}>Unpin</button>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
+	return (
+		<div style={{ position: 'relative', display: 'inline-flex' }}>
+			<button
+				type='button'
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
+			>
+				⋮
+			</button>
+			{open && (
+				<div
+					style={{
+						position: 'absolute',
+						top: '100%',
+						background: 'white',
+						border: '1px solid #ccc',
+						zIndex: 10,
+						minWidth: 120,
+					}}
+				>
+					{pin && (
+						<>
+							{pin.canPinLeft && (
+								<button
+									type='button'
+									onClick={() => {
+										pin.onPinLeft()
+										setOpen(false)
+									}}
+								>
+									Pin Left
+								</button>
+							)}
+							{pin.canPinRight && (
+								<button
+									type='button'
+									onClick={() => {
+										pin.onPinRight()
+										setOpen(false)
+									}}
+								>
+									Pin Right
+								</button>
+							)}
+							{pin.isPinned && (
+								<button
+									type='button'
+									onClick={() => {
+										pin.onUnpin()
+										setOpen(false)
+									}}
+								>
+									Unpin
+								</button>
+							)}
+						</>
+					)}
+				</div>
+			)}
+		</div>
+	)
 }
 ```
 
@@ -300,15 +338,21 @@ const isStaticPin = colPinDef !== false && typeof colPinDef === 'object' && colP
 const isPinningDisabled = colPinDef === false
 
 if (colPinEnabled && !meta?.isSystemColumn && !isPinningDisabled && !isStaticPin && !header.isPlaceholder) {
-  const isPinned = header.column.getIsPinned()
-  sections.pin = {
-    isPinned,
-    canPinLeft: isPinned !== 'left',
-    canPinRight: isPinned !== 'right',
-    onPinLeft: () => { header.column.pin('left') },
-    onPinRight: () => { header.column.pin('right') },
-    onUnpin: () => { header.column.pin(false) },
-  }
+	const isPinned = header.column.getIsPinned()
+	sections.pin = {
+		isPinned,
+		canPinLeft: isPinned !== 'left',
+		canPinRight: isPinned !== 'right',
+		onPinLeft: () => {
+			header.column.pin('left')
+		},
+		onPinRight: () => {
+			header.column.pin('right')
+		},
+		onUnpin: () => {
+			header.column.pin(false)
+		},
+	}
 }
 
 const hasSections = Object.keys(sections).length > 0
@@ -341,57 +385,61 @@ import { EllipsisVertical } from 'lucide-react'
 
 import { Button } from '../components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu'
 
 import type { ColumnMenuProps } from '@ez-kit/data-grid-react'
 
 export function ColumnMenu({ sections }: ColumnMenuProps) {
-  const { pin } = sections
+	const { pin } = sections
 
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant='ghost' size='icon' className='h-6 w-6'>
-          <EllipsisVertical className='h-3 w-3' />
-          <span className='sr-only'>Column options</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align='start'>
-        {pin && (
-          <>
-            <DropdownMenuLabel>Pin</DropdownMenuLabel>
-            {pin.canPinLeft && (
-              <DropdownMenuItem onClick={pin.onPinLeft}>
-                <ArrowLeft className='mr-2 h-4 w-4' />
-                Pin Left
-              </DropdownMenuItem>
-            )}
-            {pin.canPinRight && (
-              <DropdownMenuItem onClick={pin.onPinRight}>
-                <ArrowRight className='mr-2 h-4 w-4' />
-                Pin Right
-              </DropdownMenuItem>
-            )}
-            {pin.isPinned && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={pin.onUnpin}>
-                  <PinOff className='mr-2 h-4 w-4' />
-                  Unpin
-                </DropdownMenuItem>
-              </>
-            )}
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant='ghost'
+					size='icon'
+					className='h-6 w-6'
+				>
+					<EllipsisVertical className='h-3 w-3' />
+					<span className='sr-only'>Column options</span>
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align='start'>
+				{pin && (
+					<>
+						<DropdownMenuLabel>Pin</DropdownMenuLabel>
+						{pin.canPinLeft && (
+							<DropdownMenuItem onClick={pin.onPinLeft}>
+								<ArrowLeft className='mr-2 h-4 w-4' />
+								Pin Left
+							</DropdownMenuItem>
+						)}
+						{pin.canPinRight && (
+							<DropdownMenuItem onClick={pin.onPinRight}>
+								<ArrowRight className='mr-2 h-4 w-4' />
+								Pin Right
+							</DropdownMenuItem>
+						)}
+						{pin.isPinned && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={pin.onUnpin}>
+									<PinOff className='mr-2 h-4 w-4' />
+									Unpin
+								</DropdownMenuItem>
+							</>
+						)}
+					</>
+				)}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	)
 }
 ```
 
@@ -406,6 +454,7 @@ Export `ColumnMenu` and add to default component overrides.
 **Step 14. `apps/docs/app/sandbox/data-grid/page.tsx`**
 
 Update `PinningExample` (old API → new):
+
 ```ts
 // OLD:
 pinning: { top: true, bottom: true }
@@ -414,31 +463,32 @@ pinning: { row: { top: true, bottom: true } }
 ```
 
 Add `ColumnPinningExample`:
+
 ```tsx
 const ColumnPinningExample = () => {
-  const [data] = useState(INITIAL_DATA)
+	const [data] = useState(INITIAL_DATA)
 
-  const colPinColumns = defineColumns<User>([
-    { accessorKey: 'name', header: 'Name', pinning: { defaultPin: 'left' } },
-    { accessorKey: 'email', header: 'Email' },
-    { accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
-    { accessorKey: 'active', header: 'Active', cell: { type: 'boolean' }, pinning: false },
-  ])
+	const colPinColumns = defineColumns<User>([
+		{ accessorKey: 'name', header: 'Name', pinning: { defaultPin: 'left' } },
+		{ accessorKey: 'email', header: 'Email' },
+		{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
+		{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' }, pinning: false },
+	])
 
-  const table = useDataGrid({
-    data,
-    columns: colPinColumns,
-    sorting: true,
-    pinning: { column: true },
-  })
+	const table = useDataGrid({
+		data,
+		columns: colPinColumns,
+		sorting: true,
+		pinning: { column: true },
+	})
 
-  return (
-    <div>
-      <h2>Column Pinning</h2>
-      <p>Click ⋮ next to a column header to pin left / right or unpin. "Active" column has pinning disabled.</p>
-      <DataGrid table={table} />
-    </div>
-  )
+	return (
+		<div>
+			<h2>Column Pinning</h2>
+			<p>Click ⋮ next to a column header to pin left / right or unpin. "Active" column has pinning disabled.</p>
+			<DataGrid table={table} />
+		</div>
+	)
 }
 ```
 
@@ -470,24 +520,24 @@ const ColumnPinningExample = () => {
 
 ## File Change Summary
 
-| File | Action | Description |
-|---|---|---|
-| `core/src/column/types.ts` | Modify | Remove `pin`, add `pinning?: false\|ColumnPinningDef`; update `ColumnMeta` |
-| `core/src/types.ts` | Modify | Add `PinningConfig`; change `TableConfig.pinning` type |
-| `core/src/system-columns.ts` | Modify | `extractPinningState` reads `meta.columnPinning`; actions col meta updated |
-| `core/src/column/map-columns.ts` | Modify | Map `pinning` → `meta.columnPinning` instead of `pin` → `meta.pin` |
-| `core/src/create-table.ts` | Modify | Add `normalizePinning` helper; use normalized values |
-| `core/src/index.ts` | Modify | Export `ColumnPinningDef`, `PinningConfig` |
-| `react/react/src/types.ts` | Modify | Add `ColPinSection`, `ColumnMenuSections`, `ColumnMenuProps`; add `ColumnMenu` to `GridComponents` |
-| `react/react/src/use-data-grid.ts` | Modify | Add `COL_PINNING_KEY`; store colPinning flag on table instance |
-| `react/react/src/components-context.tsx` | Modify | Add `DefaultColumnMenu` |
-| `react/react/src/data-grid/header.tsx` | Modify | Compute `sections`, render `<ColumnMenu>` after sort-trigger |
-| `react/react/src/index.ts` | Modify | Export new types and symbol |
-| `react/shadcn/src/blocks/ColumnMenu.tsx` | **New** | Shadcn dropdown implementation |
-| `react/shadcn/src/index.ts` | Modify | Export `ColumnMenu`, add to shadcn component overrides |
-| `apps/docs/app/sandbox/data-grid/page.tsx` | Modify | Update `PinningExample` API; add `ColumnPinningExample` |
-| `core/src/create-table.test.ts` | Modify | Update pinning tests to new API |
-| `core/src/column/map-columns.test.ts` | Modify | Update pin field tests |
+| File                                       | Action  | Description                                                                                        |
+| ------------------------------------------ | ------- | -------------------------------------------------------------------------------------------------- |
+| `core/src/column/types.ts`                 | Modify  | Remove `pin`, add `pinning?: false\|ColumnPinningDef`; update `ColumnMeta`                         |
+| `core/src/types.ts`                        | Modify  | Add `PinningConfig`; change `TableConfig.pinning` type                                             |
+| `core/src/system-columns.ts`               | Modify  | `extractPinningState` reads `meta.columnPinning`; actions col meta updated                         |
+| `core/src/column/map-columns.ts`           | Modify  | Map `pinning` → `meta.columnPinning` instead of `pin` → `meta.pin`                                 |
+| `core/src/create-table.ts`                 | Modify  | Add `normalizePinning` helper; use normalized values                                               |
+| `core/src/index.ts`                        | Modify  | Export `ColumnPinningDef`, `PinningConfig`                                                         |
+| `react/react/src/types.ts`                 | Modify  | Add `ColPinSection`, `ColumnMenuSections`, `ColumnMenuProps`; add `ColumnMenu` to `GridComponents` |
+| `react/react/src/use-data-grid.ts`         | Modify  | Add `COL_PINNING_KEY`; store colPinning flag on table instance                                     |
+| `react/react/src/components-context.tsx`   | Modify  | Add `DefaultColumnMenu`                                                                            |
+| `react/react/src/data-grid/header.tsx`     | Modify  | Compute `sections`, render `<ColumnMenu>` after sort-trigger                                       |
+| `react/react/src/index.ts`                 | Modify  | Export new types and symbol                                                                        |
+| `react/shadcn/src/blocks/ColumnMenu.tsx`   | **New** | Shadcn dropdown implementation                                                                     |
+| `react/shadcn/src/index.ts`                | Modify  | Export `ColumnMenu`, add to shadcn component overrides                                             |
+| `apps/docs/app/sandbox/data-grid/page.tsx` | Modify  | Update `PinningExample` API; add `ColumnPinningExample`                                            |
+| `core/src/create-table.test.ts`            | Modify  | Update pinning tests to new API                                                                    |
+| `core/src/column/map-columns.test.ts`      | Modify  | Update pin field tests                                                                             |
 
 ---
 

@@ -18,8 +18,10 @@ export function BetweenInput({ value, onChange, type, min, max }: BetweenInputPr
 				onChange={(e) => {
 					const next =
 						inputType === 'number'
-							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
-							: (e.target.value || undefined)
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, from: next })
 				}}
 			/>
@@ -33,8 +35,10 @@ export function BetweenInput({ value, onChange, type, min, max }: BetweenInputPr
 				onChange={(e) => {
 					const next =
 						inputType === 'number'
-							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
-							: (e.target.value || undefined)
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, to: next })
 				}}
 			/>

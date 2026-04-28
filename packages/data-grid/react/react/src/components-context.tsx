@@ -76,7 +76,9 @@ function DefaultDateField({ value, onChange }: DateFieldProps) {
 		<input
 			type='date'
 			value={value ?? ''}
-			onChange={(e) => { onChange?.(e.target.value) }}
+			onChange={(e) => {
+				onChange?.(e.target.value)
+			}}
 		/>
 	)
 }
@@ -149,12 +151,33 @@ function DefaultResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerPro
 }
 function DefaultRowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinBottom, onUnpin }: RowPinMenuProps) {
 	if (isPinned) {
-		return <button type='button' onClick={onUnpin}>Unpin</button>
+		return (
+			<button
+				type='button'
+				onClick={onUnpin}
+			>
+				Unpin
+			</button>
+		)
 	}
 	return (
 		<>
-			{canPinTop && <button type='button' onClick={onPinTop}>Pin Top</button>}
-			{canPinBottom && <button type='button' onClick={onPinBottom}>Pin Bottom</button>}
+			{canPinTop && (
+				<button
+					type='button'
+					onClick={onPinTop}
+				>
+					Pin Top
+				</button>
+			)}
+			{canPinBottom && (
+				<button
+					type='button'
+					onClick={onPinBottom}
+				>
+					Pin Bottom
+				</button>
+			)}
 		</>
 	)
 }
@@ -168,7 +191,9 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
 			<button
 				type='button'
-				onClick={() => { setOpen((p) => !p) }}
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
 			>
 				⋮
 			</button>
@@ -186,7 +211,10 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 					{pin?.canPinLeft && (
 						<button
 							type='button'
-							onClick={() => { pin.onPinLeft(); setOpen(false) }}
+							onClick={() => {
+								pin.onPinLeft()
+								setOpen(false)
+							}}
 						>
 							Pin Left
 						</button>
@@ -194,7 +222,10 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 					{pin?.canPinRight && (
 						<button
 							type='button'
-							onClick={() => { pin.onPinRight(); setOpen(false) }}
+							onClick={() => {
+								pin.onPinRight()
+								setOpen(false)
+							}}
 						>
 							Pin Right
 						</button>
@@ -202,7 +233,10 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 					{pin?.isPinned && (
 						<button
 							type='button'
-							onClick={() => { pin.onUnpin(); setOpen(false) }}
+							onClick={() => {
+								pin.onUnpin()
+								setOpen(false)
+							}}
 						>
 							Unpin
 						</button>
@@ -210,7 +244,10 @@ function DefaultColumnMenu({ sections }: ColumnMenuProps) {
 					{visibility && (
 						<button
 							type='button'
-							onClick={() => { visibility.onHide(); setOpen(false) }}
+							onClick={() => {
+								visibility.onHide()
+								setOpen(false)
+							}}
 						>
 							Hide
 						</button>
@@ -227,7 +264,9 @@ function DefaultColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
 			<button
 				type='button'
-				onClick={() => { setOpen((p) => !p) }}
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
 			>
 				Columns
 			</button>
@@ -323,11 +362,16 @@ function DefaultOperatorSelect({ operators, currentOperatorId, onChange }: Opera
 	return (
 		<select
 			value={currentOperatorId}
-			onChange={(e) => { onChange(e.target.value) }}
+			onChange={(e) => {
+				onChange(e.target.value)
+			}}
 			style={{ fontSize: '0.75rem', padding: '0 2px' }}
 		>
 			{operators.map((op) => (
-				<option key={op.id} value={op.id}>
+				<option
+					key={op.id}
+					value={op.id}
+				>
 					{op.symbol ?? op.label}
 				</option>
 			))}
@@ -346,8 +390,10 @@ function DefaultBetweenInput({ value, onChange, type }: BetweenInputProps) {
 				onChange={(e) => {
 					const v =
 						inputType === 'number'
-							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
-							: (e.target.value || undefined)
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, from: v })
 				}}
 			/>
@@ -359,8 +405,10 @@ function DefaultBetweenInput({ value, onChange, type }: BetweenInputProps) {
 				onChange={(e) => {
 					const v =
 						inputType === 'number'
-							? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber)
-							: (e.target.value || undefined)
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, to: v })
 				}}
 			/>
@@ -376,7 +424,9 @@ function DefaultFilterPopover({ children, hasActiveFilter }: FilterPopoverProps)
 				type='button'
 				aria-label='Filter'
 				aria-expanded={open}
-				onClick={() => { setOpen((p) => !p) }}
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
 				style={{ opacity: hasActiveFilter ? 1 : 0.5, cursor: 'pointer' }}
 			>
 				⊟
@@ -405,10 +455,22 @@ function DefaultConfirmDialog({ open, title, description, onConfirm, onCancel }:
 	if (!open) return null
 	return (
 		<dialog open>
-			<p><strong>{title}</strong></p>
+			<p>
+				<strong>{title}</strong>
+			</p>
 			<p>{description}</p>
-			<button type='button' onClick={onConfirm}>Confirm</button>
-			<button type='button' onClick={onCancel}>Cancel</button>
+			<button
+				type='button'
+				onClick={onConfirm}
+			>
+				Confirm
+			</button>
+			<button
+				type='button'
+				onClick={onCancel}
+			>
+				Cancel
+			</button>
 		</dialog>
 	)
 }
@@ -423,12 +485,18 @@ function DefaultSelectionBar({ open, count, onDelete, onClear, actions }: Select
 		>
 			<span>{count} selected</span>
 			{onDelete && (
-				<button type='button' onClick={onDelete}>
+				<button
+					type='button'
+					onClick={onDelete}
+				>
 					Delete
 				</button>
 			)}
 			{actions}
-			<button type='button' onClick={onClear}>
+			<button
+				type='button'
+				onClick={onClear}
+			>
 				Cancel
 			</button>
 		</div>

@@ -21,54 +21,56 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  * with CSS sticky positioning.
  */
 export function Body() {
-  const { rowVirtualizer } = useVirtualContext()
-  const table = useTableContext()
-  const { Tbody } = useGridComponents()
+	const { rowVirtualizer } = useVirtualContext()
+	const table = useTableContext()
+	const { Tbody } = useGridComponents()
 
-  if (rowVirtualizer) return <VirtualBody />
+	if (rowVirtualizer) return <VirtualBody />
 
-  const creatingConfig = table.options.creating
-  const creatingMode = creatingConfig?.mode ?? 'row'
-  const isCreating = table.getCreatingState().isCreating
-  const showCreatingRow =
-    creatingConfig !== undefined &&
-    (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreating))
+	const creatingConfig = table.options.creating
+	const creatingMode = creatingConfig?.mode ?? 'row'
+	const isCreating = table.getCreatingState().isCreating
+	const showCreatingRow =
+		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreating))
 
-  const hasPinning = Boolean(table.options.enableRowPinning)
-  const topRows = hasPinning ? table.getTopRows() : []
-  const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
-  const bottomRows = hasPinning ? table.getBottomRows() : []
+	const hasPinning = Boolean(table.options.enableRowPinning)
+	const topRows = hasPinning ? table.getTopRows() : []
+	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
+	const bottomRows = hasPinning ? table.getBottomRows() : []
 
-  return (
-    <Tbody>
-      {showCreatingRow && <CreatingRow />}
-      {topRows.map((row, index) => (
-        <DataGridRow
-          key={row.id}
-          row={row}
-          data-pinned='top'
-          style={{
-            position: 'sticky',
-            top: `calc(${String(index)} * ${ROW_HEIGHT_CSS})`,
-            zIndex: 2,
-          }}
-        />
-      ))}
-      {centerRows.map((row) => (
-        <DataGridRow key={row.id} row={row} />
-      ))}
-      {bottomRows.map((row, index) => (
-        <DataGridRow
-          key={row.id}
-          row={row}
-          data-pinned='bottom'
-          style={{
-            position: 'sticky',
-            bottom: `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
-            zIndex: 2,
-          }}
-        />
-      ))}
-    </Tbody>
-  )
+	return (
+		<Tbody>
+			{showCreatingRow && <CreatingRow />}
+			{topRows.map((row, index) => (
+				<DataGridRow
+					key={row.id}
+					row={row}
+					data-pinned='top'
+					style={{
+						position: 'sticky',
+						top: `calc(${String(index)} * ${ROW_HEIGHT_CSS})`,
+						zIndex: 2,
+					}}
+				/>
+			))}
+			{centerRows.map((row) => (
+				<DataGridRow
+					key={row.id}
+					row={row}
+				/>
+			))}
+			{bottomRows.map((row, index) => (
+				<DataGridRow
+					key={row.id}
+					row={row}
+					data-pinned='bottom'
+					style={{
+						position: 'sticky',
+						bottom: `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
+						zIndex: 2,
+					}}
+				/>
+			))}
+		</Tbody>
+	)
 }

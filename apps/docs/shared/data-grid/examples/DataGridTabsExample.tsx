@@ -13,10 +13,10 @@ export function DataGridTabsExample() {
 	return (
 		<DataGridExamplesBrowser
 			renderExample={(exampleId: DataGridExampleId) => (
-			<DataGridSandpackExample
-				exampleId={exampleId}
-				type={type}
-			/>
+				<DataGridSandpackExample
+					exampleId={exampleId}
+					type={type}
+				/>
 			)}
 		/>
 	)

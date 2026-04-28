@@ -18,11 +18,11 @@ export const crudColumns = defineColumns<Employee>([
 			config: {
 				items: [
 					{ value: 'Engineering', label: 'Engineering' },
-					{ value: 'Marketing',   label: 'Marketing' },
-					{ value: 'Sales',       label: 'Sales' },
-					{ value: 'HR',          label: 'HR' },
-					{ value: 'Finance',     label: 'Finance' },
-					{ value: 'Design',      label: 'Design' },
+					{ value: 'Marketing', label: 'Marketing' },
+					{ value: 'Sales', label: 'Sales' },
+					{ value: 'HR', label: 'HR' },
+					{ value: 'Finance', label: 'Finance' },
+					{ value: 'Design', label: 'Design' },
 				],
 			},
 		},

@@ -9,7 +9,10 @@ import { PRODUCT_DATA, type Product } from './_data'
 
 const colPinColumns = defineColumns<Product>([
 	{ accessorKey: 'name', header: 'Name', size: 180, pinning: { defaultPin: 'left' } },
-	{ accessorKey: 'status', header: 'Status', size: 120,
+	{
+		accessorKey: 'status',
+		header: 'Status',
+		size: 120,
 		cell: {
 			type: 'badge',
 			config: {
@@ -22,9 +25,20 @@ const colPinColumns = defineColumns<Product>([
 		},
 	},
 	{ accessorKey: 'category', header: 'Category', size: 140 },
-	{ accessorKey: 'image', header: 'Image', size: 80, cell: { type: 'image', config: { width: 40, height: 40, alt: 'Product' } } },
+	{
+		accessorKey: 'image',
+		header: 'Image',
+		size: 80,
+		cell: { type: 'image', config: { width: 40, height: 40, alt: 'Product' } },
+	},
 	{ accessorKey: 'website', header: 'Website', size: 220, cell: { type: 'link' } },
-	{ accessorKey: 'stock', header: 'Stock %', size: 120, cell: { type: 'progress', config: { max: 100 } }, pinning: { defaultPin: 'right' } },
+	{
+		accessorKey: 'stock',
+		header: 'Stock %',
+		size: 120,
+		cell: { type: 'progress', config: { max: 100 } },
+		pinning: { defaultPin: 'right' },
+	},
 ])
 
 export function ColumnPinningExample() {

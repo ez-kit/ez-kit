@@ -41,24 +41,30 @@ Prefix: `oh-my-claudecode:`. See `agents/*.md` for full prompts.
 ## Tools Reference
 
 ### External AI / orchestration
+
 - `/team N:executor "task"`
 - `omc team N:codex|gemini "..."`
 - `omc ask <claude|codex|gemini>`
 - `/ccg`
 
 ### OMC state
+
 - `state_read`, `state_write`, `state_clear`, `state_list_active`, `state_get_status`
 
 ### Team runtime
+
 - `TeamCreate`, `TeamDelete`, `SendMessage`, `TaskCreate`, `TaskList`, `TaskGet`, `TaskUpdate`
 
 ### Notepad
+
 - `notepad_read`, `notepad_write_priority`, `notepad_write_working`, `notepad_write_manual`
 
 ### Project memory
+
 - `project_memory_read`, `project_memory_write`, `project_memory_add_note`, `project_memory_add_directive`
 
 ### Code intelligence
+
 - LSP: `lsp_hover`, `lsp_goto_definition`, `lsp_find_references`, `lsp_diagnostics`, and related helpers
 - AST: `ast_grep_search`, `ast_grep_replace`
 - Utility: `python_repl`
@@ -68,6 +74,7 @@ Prefix: `oh-my-claudecode:`. See `agents/*.md` for full prompts.
 Invoke built-in workflows via `/oh-my-claudecode:<name>`.
 
 ### Workflow skills
+
 - `autopilot` — full autonomous execution from idea to working code
 - `ralph` — persistence loop until completion with verification
 - `ultrawork` — high-throughput parallel execution
@@ -84,9 +91,11 @@ Invoke built-in workflows via `/oh-my-claudecode:<name>`.
 - `ai-slop-cleaner` — regression-safe cleanup workflow
 
 ### Utility skills
+
 - `ask`, `cancel`, `note`, `learner`, `omc-setup`, `mcp-setup`, `hud`, `omc-doctor`, `trace`, `release`, `project-session-manager`, `skill`, `writer-memory`, `configure-notifications`
 
 ### Keyword triggers kept compact in CLAUDE.md
+
 - `"autopilot"→autopilot`
 - `"ralph"→ralph`
 - `"ulw"→ultrawork`
@@ -114,11 +123,13 @@ Stages: `team-plan` → `team-prd` → `team-exec` → `team-verify` → `team-f
 Use git trailers to preserve decision context in every commit message.
 
 ### Format
+
 - Intent line first: why the change was made
 - Optional body with context and rationale
 - Structured trailers when applicable
 
 ### Common trailers
+
 - `Constraint:` active constraint shaping the decision
 - `Rejected:` alternative considered | reason for rejection
 - `Directive:` forward-looking warning or instruction
@@ -127,6 +138,7 @@ Use git trailers to preserve decision context in every commit message.
 - `Not-tested:` known verification gap
 
 ### Example
+
 ```text
 feat(docs): reduce always-loaded OMC instruction footprint
 

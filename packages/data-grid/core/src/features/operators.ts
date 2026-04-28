@@ -1,203 +1,206 @@
 /** Defines a filter operator with its filtering logic. */
 export interface FilterOperatorDef<TValue = unknown> {
-  id: string
-  label: string
-  /** Short symbol shown in the trigger button (e.g. '=', '>', '⊇'). */
-  symbol?: string
-  /** When false, no value input is rendered (e.g. isEmpty). Default: true. */
-  requiresInput?: boolean
-  filterFn: (rowValue: unknown, filterValue: TValue) => boolean
+	id: string
+	label: string
+	/** Short symbol shown in the trigger button (e.g. '=', '>', '⊇'). */
+	symbol?: string
+	/** When false, no value input is rendered (e.g. isEmpty). Default: true. */
+	requiresInput?: boolean
+	filterFn: (rowValue: unknown, filterValue: TValue) => boolean
 }
 
 /** Structured filter value stored in TanStack columnFilters[n].value. */
 export interface StructuredFilterValue {
-  operator: string
-  value: unknown
+	operator: string
+	value: unknown
 }
 
 /** Value shape for the between operator. */
 export interface BetweenValue<T = unknown> {
-  from?: T
-  to?: T
+	from?: T
+	to?: T
 }
 
 /** UI configuration for the between operator. */
 export interface BetweenOperatorConfig {
-  variant?: 'inputs' | 'slider' | 'calendar'
-  /** Minimum value for slider variant. */
-  min?: number
-  /** Maximum value for slider variant. */
-  max?: number
+	variant?: 'inputs' | 'slider' | 'calendar'
+	/** Minimum value for slider variant. */
+	min?: number
+	/** Maximum value for slider variant. */
+	max?: number
 }
 
 /** Column-level operator configuration when not using the simple `true` shorthand. */
 export interface ColumnOperatorsConfig {
-  /** Operator IDs referencing the registry, or inline operator definitions. */
-  items: (string | FilterOperatorDef)[]
-  betweenOperator?: BetweenOperatorConfig
+	/** Operator IDs referencing the registry, or inline operator definitions. */
+	items: (string | FilterOperatorDef)[]
+	betweenOperator?: BetweenOperatorConfig
 }
 
 // ── Built-in text operators ────────────────────────────────────────────────
 
 export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
-  {
-    id: 'contains',
-    label: 'Contains',
-    symbol: '⊇',
-    filterFn: (rowValue, filterValue) => {
-      if (rowValue == null) return false
-      return String(rowValue).toLowerCase().includes(filterValue.toLowerCase())
-    },
-  },
-  {
-    id: 'equals',
-    label: 'Equals',
-    symbol: '=',
-    filterFn: (rowValue, filterValue) =>
-      String(rowValue ?? '').toLowerCase() === filterValue.toLowerCase(),
-  },
-  {
-    id: 'startsWith',
-    label: 'Starts with',
-    symbol: 'a…',
-    filterFn: (rowValue, filterValue) =>
-      String(rowValue ?? '').toLowerCase().startsWith(filterValue.toLowerCase()),
-  },
-  {
-    id: 'endsWith',
-    label: 'Ends with',
-    symbol: '…a',
-    filterFn: (rowValue, filterValue) =>
-      String(rowValue ?? '').toLowerCase().endsWith(filterValue.toLowerCase()),
-  },
-  {
-    id: 'isEmpty',
-    label: 'Is empty',
-    symbol: '∅',
-    requiresInput: false,
-    filterFn: (rowValue) => rowValue == null || rowValue === '',
-  },
-  {
-    id: 'isNotEmpty',
-    label: 'Is not empty',
-    symbol: '≠∅',
-    requiresInput: false,
-    filterFn: (rowValue) => rowValue != null && rowValue !== '',
-  },
+	{
+		id: 'contains',
+		label: 'Contains',
+		symbol: '⊇',
+		filterFn: (rowValue, filterValue) => {
+			if (rowValue == null) return false
+			return String(rowValue).toLowerCase().includes(filterValue.toLowerCase())
+		},
+	},
+	{
+		id: 'equals',
+		label: 'Equals',
+		symbol: '=',
+		filterFn: (rowValue, filterValue) => String(rowValue ?? '').toLowerCase() === filterValue.toLowerCase(),
+	},
+	{
+		id: 'startsWith',
+		label: 'Starts with',
+		symbol: 'a…',
+		filterFn: (rowValue, filterValue) =>
+			String(rowValue ?? '')
+				.toLowerCase()
+				.startsWith(filterValue.toLowerCase()),
+	},
+	{
+		id: 'endsWith',
+		label: 'Ends with',
+		symbol: '…a',
+		filterFn: (rowValue, filterValue) =>
+			String(rowValue ?? '')
+				.toLowerCase()
+				.endsWith(filterValue.toLowerCase()),
+	},
+	{
+		id: 'isEmpty',
+		label: 'Is empty',
+		symbol: '∅',
+		requiresInput: false,
+		filterFn: (rowValue) => rowValue == null || rowValue === '',
+	},
+	{
+		id: 'isNotEmpty',
+		label: 'Is not empty',
+		symbol: '≠∅',
+		requiresInput: false,
+		filterFn: (rowValue) => rowValue != null && rowValue !== '',
+	},
 ]
 
 // ── Built-in number operators ──────────────────────────────────────────────
 
 export const NUMBER_OPERATORS: FilterOperatorDef<number>[] = [
-  {
-    id: 'eq',
-    label: 'Equals',
-    symbol: '=',
-    filterFn: (rowValue, filterValue) => Number(rowValue) === filterValue,
-  },
-  {
-    id: 'neq',
-    label: 'Not equals',
-    symbol: '≠',
-    filterFn: (rowValue, filterValue) => Number(rowValue) !== filterValue,
-  },
-  {
-    id: 'gt',
-    label: 'Greater than',
-    symbol: '>',
-    filterFn: (rowValue, filterValue) => Number(rowValue) > filterValue,
-  },
-  {
-    id: 'gte',
-    label: 'Greater than or equal',
-    symbol: '≥',
-    filterFn: (rowValue, filterValue) => Number(rowValue) >= filterValue,
-  },
-  {
-    id: 'lt',
-    label: 'Less than',
-    symbol: '<',
-    filterFn: (rowValue, filterValue) => Number(rowValue) < filterValue,
-  },
-  {
-    id: 'lte',
-    label: 'Less than or equal',
-    symbol: '≤',
-    filterFn: (rowValue, filterValue) => Number(rowValue) <= filterValue,
-  },
-  {
-    id: 'between',
-    label: 'Between',
-    symbol: '↔',
-    filterFn: (rowValue, filterValue) => {
-      const val = Number(rowValue)
-      const fv = filterValue as unknown as BetweenValue<number>
-      if (fv.from !== undefined && val < fv.from) return false
-      if (fv.to !== undefined && val > fv.to) return false
-      return true
-    },
-  },
+	{
+		id: 'eq',
+		label: 'Equals',
+		symbol: '=',
+		filterFn: (rowValue, filterValue) => Number(rowValue) === filterValue,
+	},
+	{
+		id: 'neq',
+		label: 'Not equals',
+		symbol: '≠',
+		filterFn: (rowValue, filterValue) => Number(rowValue) !== filterValue,
+	},
+	{
+		id: 'gt',
+		label: 'Greater than',
+		symbol: '>',
+		filterFn: (rowValue, filterValue) => Number(rowValue) > filterValue,
+	},
+	{
+		id: 'gte',
+		label: 'Greater than or equal',
+		symbol: '≥',
+		filterFn: (rowValue, filterValue) => Number(rowValue) >= filterValue,
+	},
+	{
+		id: 'lt',
+		label: 'Less than',
+		symbol: '<',
+		filterFn: (rowValue, filterValue) => Number(rowValue) < filterValue,
+	},
+	{
+		id: 'lte',
+		label: 'Less than or equal',
+		symbol: '≤',
+		filterFn: (rowValue, filterValue) => Number(rowValue) <= filterValue,
+	},
+	{
+		id: 'between',
+		label: 'Between',
+		symbol: '↔',
+		filterFn: (rowValue, filterValue) => {
+			const val = Number(rowValue)
+			const fv = filterValue as unknown as BetweenValue<number>
+			if (fv.from !== undefined && val < fv.from) return false
+			if (fv.to !== undefined && val > fv.to) return false
+			return true
+		},
+	},
 ]
 
 // ── Built-in date operators ────────────────────────────────────────────────
 
 export const DATE_OPERATORS: FilterOperatorDef<string>[] = [
-  {
-    id: 'eq',
-    label: 'Equals',
-    symbol: '=',
-    filterFn: (rowValue, filterValue) => String(rowValue ?? '') === filterValue,
-  },
-  {
-    id: 'after',
-    label: 'After',
-    symbol: '>',
-    filterFn: (rowValue, filterValue) => String(rowValue ?? '') > filterValue,
-  },
-  {
-    id: 'onOrAfter',
-    label: 'On or after',
-    symbol: '≥',
-    filterFn: (rowValue, filterValue) => String(rowValue ?? '') >= filterValue,
-  },
-  {
-    id: 'before',
-    label: 'Before',
-    symbol: '<',
-    filterFn: (rowValue, filterValue) => String(rowValue ?? '') < filterValue,
-  },
-  {
-    id: 'onOrBefore',
-    label: 'On or before',
-    symbol: '≤',
-    filterFn: (rowValue, filterValue) => String(rowValue ?? '') <= filterValue,
-  },
-  {
-    id: 'between',
-    label: 'Between',
-    symbol: '↔',
-    filterFn: (rowValue, filterValue) => {
-      const val = String(rowValue ?? '')
-      const fv = filterValue as unknown as BetweenValue<string>
-      if (fv.from !== undefined && fv.from !== '' && val < fv.from) return false
-      if (fv.to !== undefined && fv.to !== '' && val > fv.to) return false
-      return true
-    },
-  },
+	{
+		id: 'eq',
+		label: 'Equals',
+		symbol: '=',
+		filterFn: (rowValue, filterValue) => String(rowValue ?? '') === filterValue,
+	},
+	{
+		id: 'after',
+		label: 'After',
+		symbol: '>',
+		filterFn: (rowValue, filterValue) => String(rowValue ?? '') > filterValue,
+	},
+	{
+		id: 'onOrAfter',
+		label: 'On or after',
+		symbol: '≥',
+		filterFn: (rowValue, filterValue) => String(rowValue ?? '') >= filterValue,
+	},
+	{
+		id: 'before',
+		label: 'Before',
+		symbol: '<',
+		filterFn: (rowValue, filterValue) => String(rowValue ?? '') < filterValue,
+	},
+	{
+		id: 'onOrBefore',
+		label: 'On or before',
+		symbol: '≤',
+		filterFn: (rowValue, filterValue) => String(rowValue ?? '') <= filterValue,
+	},
+	{
+		id: 'between',
+		label: 'Between',
+		symbol: '↔',
+		filterFn: (rowValue, filterValue) => {
+			const val = String(rowValue ?? '')
+			const fv = filterValue as unknown as BetweenValue<string>
+			if (fv.from !== undefined && fv.from !== '' && val < fv.from) return false
+			if (fv.to !== undefined && fv.to !== '' && val > fv.to) return false
+			return true
+		},
+	},
 ]
 
 // ── Lookup tables ─────────────────────────────────────────────────────────
 
 export const DEFAULT_OPERATORS_BY_TYPE: Record<string, FilterOperatorDef[]> = {
-  text: TEXT_OPERATORS as FilterOperatorDef[],
-  number: NUMBER_OPERATORS as FilterOperatorDef[],
-  date: DATE_OPERATORS as FilterOperatorDef[],
+	text: TEXT_OPERATORS as FilterOperatorDef[],
+	number: NUMBER_OPERATORS as FilterOperatorDef[],
+	date: DATE_OPERATORS as FilterOperatorDef[],
 }
 
 export const DEFAULT_OPERATOR_ID_BY_TYPE: Record<string, string> = {
-  text: 'contains',
-  number: 'eq',
-  date: 'eq',
+	text: 'contains',
+	number: 'eq',
+	date: 'eq',
 }
 
 // ── Registry ──────────────────────────────────────────────────────────────
@@ -205,19 +208,19 @@ export const DEFAULT_OPERATOR_ID_BY_TYPE: Record<string, string> = {
 export type OperatorRegistry = Map<string, FilterOperatorDef>
 
 const ALL_BUILT_INS: FilterOperatorDef[] = [
-  ...(TEXT_OPERATORS as FilterOperatorDef[]),
-  ...(NUMBER_OPERATORS as FilterOperatorDef[]),
-  ...(DATE_OPERATORS as FilterOperatorDef[]),
+	...(TEXT_OPERATORS as FilterOperatorDef[]),
+	...(NUMBER_OPERATORS as FilterOperatorDef[]),
+	...(DATE_OPERATORS as FilterOperatorDef[]),
 ]
 
 /** Builds the global registry from built-ins + optional table-level custom operators. */
 export function buildOperatorRegistry(tableOperators?: FilterOperatorDef[]): OperatorRegistry {
-  const registry = new Map<string, FilterOperatorDef>()
-  for (const op of ALL_BUILT_INS) registry.set(op.id, op)
-  if (tableOperators) {
-    for (const op of tableOperators) registry.set(op.id, op)
-  }
-  return registry
+	const registry = new Map<string, FilterOperatorDef>()
+	for (const op of ALL_BUILT_INS) registry.set(op.id, op)
+	if (tableOperators) {
+		for (const op of tableOperators) registry.set(op.id, op)
+	}
+	return registry
 }
 
 /**
@@ -226,62 +229,54 @@ export function buildOperatorRegistry(tableOperators?: FilterOperatorDef[]): Ope
  * so number 'eq' uses number comparison and date 'eq' uses date comparison.
  */
 export function resolveColumnOperators(
-  operatorsConfig: true | ColumnOperatorsConfig,
-  registry: OperatorRegistry,
-  cellTypeOperators?: FilterOperatorDef[],
+	operatorsConfig: true | ColumnOperatorsConfig,
+	registry: OperatorRegistry,
+	cellTypeOperators?: FilterOperatorDef[],
 ): FilterOperatorDef[] {
-  if (operatorsConfig === true) {
-    return cellTypeOperators ?? []
-  }
+	if (operatorsConfig === true) {
+		return cellTypeOperators ?? []
+	}
 
-  const cellTypeById = cellTypeOperators
-    ? new Map(cellTypeOperators.map((op) => [op.id, op]))
-    : undefined
+	const cellTypeById = cellTypeOperators ? new Map(cellTypeOperators.map((op) => [op.id, op])) : undefined
 
-  return operatorsConfig.items.map((item): FilterOperatorDef => {
-    if (typeof item === 'string') {
-      return cellTypeById?.get(item) ?? registry.get(item) ?? { id: item, label: item, filterFn: () => true }
-    }
-    return item
-  })
+	return operatorsConfig.items.map((item): FilterOperatorDef => {
+		if (typeof item === 'string') {
+			return cellTypeById?.get(item) ?? registry.get(item) ?? { id: item, label: item, filterFn: () => true }
+		}
+		return item
+	})
 }
 
 /**
  * Creates a per-column TanStack filterFn that dispatches to the resolved operator's filterFn.
  * Returns true (all rows pass) when filter value is empty or operator is not found.
  */
-export function createOperatorFilterFn(
-  resolvedOperators: FilterOperatorDef[],
-): {
-  (row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown): boolean
-  autoRemove: (val: unknown) => boolean
+export function createOperatorFilterFn(resolvedOperators: FilterOperatorDef[]): {
+	(row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown): boolean
+	autoRemove: (val: unknown) => boolean
 } {
-  const opById = new Map(resolvedOperators.map((op) => [op.id, op]))
+	const opById = new Map(resolvedOperators.map((op) => [op.id, op]))
 
-  const fn = (
-    row: { getValue: (id: string) => unknown },
-    columnId: string,
-    filterValue: unknown,
-  ): boolean => {
-    if (filterValue == null || typeof filterValue !== 'object' || !('operator' in filterValue)) return true
-    const sv = filterValue as StructuredFilterValue
-    const op = opById.get(sv.operator)
-    if (!op) return true
-    if (op.requiresInput === false) return op.filterFn(row.getValue(columnId), undefined)
-    if (sv.value === undefined || sv.value === null || sv.value === '') return true
-    return op.filterFn(row.getValue(columnId), sv.value)
-  }
+	const fn = (row: { getValue: (id: string) => unknown }, columnId: string, filterValue: unknown): boolean => {
+		if (filterValue == null || typeof filterValue !== 'object' || !('operator' in filterValue)) return true
+		const sv = filterValue as StructuredFilterValue
+		const op = opById.get(sv.operator)
+		if (!op) return true
+		if (op.requiresInput === false) return op.filterFn(row.getValue(columnId), undefined)
+		if (sv.value === undefined || sv.value === null || sv.value === '') return true
+		return op.filterFn(row.getValue(columnId), sv.value)
+	}
 
-  fn.autoRemove = (val: unknown): boolean => {
-    if (val == null) return true
-    if (typeof val !== 'object') return true
-    const sv = val as StructuredFilterValue
-    if (!sv.operator) return true
-    const op = opById.get(sv.operator)
-    if (!op) return true
-    // Keep entry while operator is selected; filterFn returns true for empty value.
-    return false
-  }
+	fn.autoRemove = (val: unknown): boolean => {
+		if (val == null) return true
+		if (typeof val !== 'object') return true
+		const sv = val as StructuredFilterValue
+		if (!sv.operator) return true
+		const op = opById.get(sv.operator)
+		if (!op) return true
+		// Keep entry while operator is selected; filterFn returns true for empty value.
+		return false
+	}
 
-  return fn
+	return fn
 }

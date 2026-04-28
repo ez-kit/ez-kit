@@ -1,15 +1,15 @@
-import * as React from "react";
+import * as React from 'react'
 
-import { useIsomorphicLayoutEffect } from "@grid-shadcn/hooks/use-isomorphic-layout-effect";
+import { useIsomorphicLayoutEffect } from '@grid-shadcn/hooks/use-isomorphic-layout-effect'
 
 function useAsRef<T>(props: T) {
-  const ref = React.useRef(props);
+	const ref = React.useRef(props)
 
-  useIsomorphicLayoutEffect(() => {
-    ref.current = props;
-  });
+	useIsomorphicLayoutEffect(() => {
+		ref.current = props
+	})
 
-  return ref;
+	return ref
 }
 
-export { useAsRef };
+export { useAsRef }

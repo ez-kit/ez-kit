@@ -16,17 +16,20 @@ pnpm ci               # Full CI check: lint + typecheck + test + build + size
 ```
 
 Run a single package's tests directly (faster, no turbo overhead):
+
 ```bash
 pnpm --filter @ez-kit/zu-store test
 pnpm --filter @ez-kit/data-grid-core test
 ```
 
 Watch mode for a specific package:
+
 ```bash
 cd packages/zu-store && pnpm exec vitest
 ```
 
 Docs app:
+
 ```bash
 pnpm docs:dev         # Start Fumadocs dev server
 pnpm docs:build
@@ -34,11 +37,13 @@ pnpm docs:sandpack    # Regenerate Sandpack bundles (run after any package chang
 ```
 
 Generate a new package:
+
 ```bash
 pnpm pkg:new          # Runs turbo gen package — interactive prompts
 ```
 
 Release flow:
+
 ```bash
 pnpm changeset        # Create a changeset for changed public packages
 pnpm version-packages # Bump versions from changesets

@@ -12,11 +12,7 @@ const SUB_TABS = [
 type SubTabId = (typeof SUB_TABS)[number]['id']
 
 function ServerSidePlaceholder() {
-	return (
-		<p style={{ color: '#64748b', fontSize: '0.875rem' }}>
-			Server-side CRUD example coming soon.
-		</p>
-	)
+	return <p style={{ color: '#64748b', fontSize: '0.875rem' }}>Server-side CRUD example coming soon.</p>
 }
 
 export function CrudExample() {
@@ -26,8 +22,8 @@ export function CrudExample() {
 	return (
 		<div>
 			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Full CRUD demo: create, edit, delete rows — plus sorting, filtering (popover), column
-				visibility, column pinning, pagination, and bulk selection.
+				Full CRUD demo: create, edit, delete rows — plus sorting, filtering (popover), column visibility, column
+				pinning, pagination, and bulk selection.
 			</p>
 
 			<div
@@ -41,7 +37,9 @@ export function CrudExample() {
 				{SUB_TABS.map((t) => (
 					<button
 						key={t.id}
-						onClick={() => { setActive(t.id) }}
+						onClick={() => {
+							setActive(t.id)
+						}}
 						style={{
 							padding: '0.375rem 0.75rem',
 							border: 'none',

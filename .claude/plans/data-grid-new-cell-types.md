@@ -5,6 +5,7 @@
 Monorepo at `ez-kit/ez-kit/`. All edits are relative to that root.
 
 Architecture layers:
+
 - `packages/data-grid/core/` — headless, framework-agnostic types + TanStack mapping
 - `packages/data-grid/react/react/` — React adapter (cell registry, rendering)
 - `packages/data-grid/react/shadcn/` — Shadcn UI flavor (concrete components)
@@ -42,65 +43,87 @@ cell: { type: 'progress', config?: { max?: number } }  // max defaults to 100
 
 - Add `'select' | 'badge' | 'image' | 'link' | 'progress'` to the `CellType` union.
 - Add config interfaces:
-  ```ts
-  export interface SelectItem { value: string; label: string }
-  export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
-  export interface BadgeItem { value: string; label: string; variant?: BadgeVariant }
 
-  export interface SelectCellConfig { items: SelectItem[] }
-  export interface BadgeCellConfig  { items: BadgeItem[] }
-  export interface ImageCellConfig  { alt?: string; width?: number; height?: number }
-  export interface ProgressCellConfig { max?: number }
+  ```ts
+  export interface SelectItem {
+  	value: string
+  	label: string
+  }
+  export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+  export interface BadgeItem {
+  	value: string
+  	label: string
+  	variant?: BadgeVariant
+  }
+
+  export interface SelectCellConfig {
+  	items: SelectItem[]
+  }
+  export interface BadgeCellConfig {
+  	items: BadgeItem[]
+  }
+  export interface ImageCellConfig {
+  	alt?: string
+  	width?: number
+  	height?: number
+  }
+  export interface ProgressCellConfig {
+  	max?: number
+  }
   ```
+
 - Replace the current `CellDef<TRow, TValue>` interface with a discriminated union:
+
   ```ts
   type SimpleType = Exclude<CellType, 'select' | 'badge' | 'image' | 'link' | 'progress'>
 
   interface BasicCellDef<TRow, TValue = unknown> {
-    type?: SimpleType
-    component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  	type?: SimpleType
+  	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
   }
   interface SelectCellDef<TRow, TValue = unknown> {
-    type: 'select'
-    config: SelectCellConfig
-    component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  	type: 'select'
+  	config: SelectCellConfig
+  	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
   }
   interface BadgeCellDef<TRow, TValue = unknown> {
-    type: 'badge'
-    config: BadgeCellConfig
-    component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  	type: 'badge'
+  	config: BadgeCellConfig
+  	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
   }
   interface ImageCellDef<TRow, TValue = unknown> {
-    type: 'image'
-    config?: ImageCellConfig
-    component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  	type: 'image'
+  	config?: ImageCellConfig
+  	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
   }
   interface LinkCellDef<TRow, TValue = unknown> {
-    type: 'link'
-    component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  	type: 'link'
+  	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
   }
   interface ProgressCellDef<TRow, TValue = unknown> {
-    type: 'progress'
-    config?: ProgressCellConfig
-    component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+  	type: 'progress'
+  	config?: ProgressCellConfig
+  	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
   }
 
   export type CellDef<TRow extends object, TValue = unknown> =
-    | BasicCellDef<TRow, TValue>
-    | SelectCellDef<TRow, TValue>
-    | BadgeCellDef<TRow, TValue>
-    | ImageCellDef<TRow, TValue>
-    | LinkCellDef<TRow, TValue>
-    | ProgressCellDef<TRow, TValue>
+  	| BasicCellDef<TRow, TValue>
+  	| SelectCellDef<TRow, TValue>
+  	| BadgeCellDef<TRow, TValue>
+  	| ImageCellDef<TRow, TValue>
+  	| LinkCellDef<TRow, TValue>
+  	| ProgressCellDef<TRow, TValue>
   ```
+
 - Add `cellConfig?: Record<string, unknown>` to the TanStack `ColumnMeta` module augmentation block.
 
 ### 1.2 `packages/data-grid/core/src/column/map-columns.ts`
 
 In `mapColumn()`, after `if (cell?.type !== undefined) meta.cellType = cell.type`, add:
+
 ```ts
 if ('config' in cell && cell.config !== undefined) {
-  meta.cellConfig = cell.config as Record<string, unknown>
+	meta.cellConfig = cell.config as Record<string, unknown>
 }
 ```
 
@@ -128,48 +151,59 @@ Add `cellConfig?: Record<string, unknown>` to both `CellViewProps` and `CellInpu
 Create directory `packages/data-grid/react/shadcn/src/blocks/cell-types/`.
 
 ### 3.1 `SelectCellView.tsx`
+
 - Receives `{ value, cellConfig }`.
 - Finds the item in `cellConfig.items` where `item.value === value`.
 - Renders the item label (fallback: `String(value ?? '')`).
 
 ### 3.2 `SelectCellInput.tsx`
+
 - Receives `{ value, onChange, cellConfig }`.
 - Renders shadcn `<Select>` with `cellConfig.items` as options.
 - Filter variant: prepend an "All" option (`value: ''`, `label: 'All'`) and call `onChange(undefined)` when selected.
 - Reused for edit, creating, and filter.
 
 ### 3.3 `BadgeCellView.tsx`
+
 - Receives `{ value, cellConfig }`.
 - Finds item in `cellConfig.items`.
 - Renders shadcn `<Badge variant={item.variant ?? 'default'}>` with item label.
 - Fallback: `<Badge>{String(value ?? '')}</Badge>`.
 
 ### 3.4 `BadgeCellInput.tsx`
+
 - Same as `SelectCellInput.tsx` (shares the Select UI — badge edit/filter is just a select).
 
 ### 3.5 `ImageCellView.tsx`
+
 - Receives `{ value, cellConfig }`.
 - Renders `<img src={String(value)} alt={cellConfig?.alt ?? ''} width={cellConfig?.width} height={cellConfig?.height} />`.
 - Wraps in a `<span>` for alignment.
 
 ### 3.6 `ImageCellInput.tsx`
+
 - Plain `<Input type="url" value={String(value ?? '')} onChange={e => onChange(e.target.value)} />`.
 
 ### 3.7 `LinkCellView.tsx`
+
 - Renders shadcn `<Button variant="link" asChild><a href={String(value)} target="_blank" rel="noreferrer">{String(value ?? '')}</a></Button>`.
 
 ### 3.8 `LinkCellInput.tsx`
+
 - Plain `<Input type="url" value={String(value ?? '')} onChange={e => onChange(e.target.value)} />`.
 
 ### 3.9 `ProgressCellView.tsx`
+
 - Receives `{ value, cellConfig }`.
 - `max = cellConfig?.max ?? 100`, `pct = (Number(value) / max) * 100`.
 - Renders shadcn `<Progress value={pct} />` with a numeric label alongside.
 
 ### 3.10 `ProgressCellInput.tsx`
+
 - Renders shadcn `<NumberInput>` (uses the DI-injected component from `useGridComponents()`).
 
 ### 3.11 `packages/data-grid/react/shadcn/src/blocks/shadcn-cell-types.ts`
+
 - Assembles and exports `SHADCN_CELL_TYPES: CellTypeRegistry`:
   ```ts
   export const SHADCN_CELL_TYPES: CellTypeRegistry = {
@@ -198,40 +232,55 @@ Create directory `packages/data-grid/react/shadcn/src/blocks/cell-types/`.
 ### 5.1 `apps/docs/app/sandbox/data-grid/components/_data.ts`
 
 Add extended type and data:
+
 ```ts
 export interface Product {
-  id: number
-  name: string
-  status: string   // badge
-  category: string // select
-  image: string    // image (URL)
-  website: string  // link
-  stock: number    // progress (0–100)
+	id: number
+	name: string
+	status: string // badge
+	category: string // select
+	image: string // image (URL)
+	website: string // link
+	stock: number // progress (0–100)
 }
 
-export const PRODUCT_DATA: Product[] = [ /* 5–6 rows */ ]
+export const PRODUCT_DATA: Product[] = [
+	/* 5–6 rows */
+]
 
 export const productColumns = defineColumns<Product>([
-  { accessorKey: 'name', header: 'Name' },
-  {
-    accessorKey: 'status', header: 'Status',
-    cell: { type: 'badge', config: { items: [
-      { value: 'active',      label: 'Active',      variant: 'default' },
-      { value: 'inactive',    label: 'Inactive',    variant: 'secondary' },
-      { value: 'discontinued',label: 'Discontinued',variant: 'destructive' },
-    ]}},
-  },
-  {
-    accessorKey: 'category', header: 'Category',
-    cell: { type: 'select', config: { items: [
-      { value: 'electronics', label: 'Electronics' },
-      { value: 'clothing',    label: 'Clothing' },
-      { value: 'food',        label: 'Food' },
-    ]}},
-  },
-  { accessorKey: 'image',   header: 'Image',    cell: { type: 'image',    config: { width: 40, height: 40, alt: 'Product' } } },
-  { accessorKey: 'website', header: 'Website',  cell: { type: 'link' } },
-  { accessorKey: 'stock',   header: 'Stock %',  cell: { type: 'progress', config: { max: 100 } } },
+	{ accessorKey: 'name', header: 'Name' },
+	{
+		accessorKey: 'status',
+		header: 'Status',
+		cell: {
+			type: 'badge',
+			config: {
+				items: [
+					{ value: 'active', label: 'Active', variant: 'default' },
+					{ value: 'inactive', label: 'Inactive', variant: 'secondary' },
+					{ value: 'discontinued', label: 'Discontinued', variant: 'destructive' },
+				],
+			},
+		},
+	},
+	{
+		accessorKey: 'category',
+		header: 'Category',
+		cell: {
+			type: 'select',
+			config: {
+				items: [
+					{ value: 'electronics', label: 'Electronics' },
+					{ value: 'clothing', label: 'Clothing' },
+					{ value: 'food', label: 'Food' },
+				],
+			},
+		},
+	},
+	{ accessorKey: 'image', header: 'Image', cell: { type: 'image', config: { width: 40, height: 40, alt: 'Product' } } },
+	{ accessorKey: 'website', header: 'Website', cell: { type: 'link' } },
+	{ accessorKey: 'stock', header: 'Stock %', cell: { type: 'progress', config: { max: 100 } } },
 ])
 ```
 
@@ -250,28 +299,28 @@ export const productColumns = defineColumns<Product>([
 
 ## Files summary
 
-| Package | File | Action |
-|---------|------|--------|
-| core | `src/column/types.ts` | Edit |
-| core | `src/column/map-columns.ts` | Edit |
-| react | `src/cell-types-context.tsx` | Edit |
-| react | `src/data-grid/cell.tsx` | Edit |
-| react | `src/data-grid/auto-form.tsx` | Edit |
-| shadcn | `src/blocks/cell-types/SelectCellView.tsx` | New |
-| shadcn | `src/blocks/cell-types/SelectCellInput.tsx` | New |
-| shadcn | `src/blocks/cell-types/BadgeCellView.tsx` | New |
-| shadcn | `src/blocks/cell-types/BadgeCellInput.tsx` | New |
-| shadcn | `src/blocks/cell-types/ImageCellView.tsx` | New |
-| shadcn | `src/blocks/cell-types/ImageCellInput.tsx` | New |
-| shadcn | `src/blocks/cell-types/LinkCellView.tsx` | New |
-| shadcn | `src/blocks/cell-types/LinkCellInput.tsx` | New |
-| shadcn | `src/blocks/cell-types/ProgressCellView.tsx` | New |
-| shadcn | `src/blocks/cell-types/ProgressCellInput.tsx` | New |
-| shadcn | `src/blocks/shadcn-cell-types.ts` | New |
-| shadcn | `src/index.ts` | Edit |
-| docs | `components/_data.ts` | Edit |
-| docs | `components/cell-types.tsx` | New |
-| docs | `page.tsx` | Edit |
+| Package | File                                          | Action |
+| ------- | --------------------------------------------- | ------ |
+| core    | `src/column/types.ts`                         | Edit   |
+| core    | `src/column/map-columns.ts`                   | Edit   |
+| react   | `src/cell-types-context.tsx`                  | Edit   |
+| react   | `src/data-grid/cell.tsx`                      | Edit   |
+| react   | `src/data-grid/auto-form.tsx`                 | Edit   |
+| shadcn  | `src/blocks/cell-types/SelectCellView.tsx`    | New    |
+| shadcn  | `src/blocks/cell-types/SelectCellInput.tsx`   | New    |
+| shadcn  | `src/blocks/cell-types/BadgeCellView.tsx`     | New    |
+| shadcn  | `src/blocks/cell-types/BadgeCellInput.tsx`    | New    |
+| shadcn  | `src/blocks/cell-types/ImageCellView.tsx`     | New    |
+| shadcn  | `src/blocks/cell-types/ImageCellInput.tsx`    | New    |
+| shadcn  | `src/blocks/cell-types/LinkCellView.tsx`      | New    |
+| shadcn  | `src/blocks/cell-types/LinkCellInput.tsx`     | New    |
+| shadcn  | `src/blocks/cell-types/ProgressCellView.tsx`  | New    |
+| shadcn  | `src/blocks/cell-types/ProgressCellInput.tsx` | New    |
+| shadcn  | `src/blocks/shadcn-cell-types.ts`             | New    |
+| shadcn  | `src/index.ts`                                | Edit   |
+| docs    | `components/_data.ts`                         | Edit   |
+| docs    | `components/cell-types.tsx`                   | New    |
+| docs    | `page.tsx`                                    | Edit   |
 
 Total: **5 edits + 13 new files**
 

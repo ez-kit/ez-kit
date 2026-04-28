@@ -4,7 +4,15 @@ import { Pagination as HeroPagination } from '@heroui/react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
-export function Pagination({ pageIndex, pageCount, canPreviousPage, canNextPage, onPreviousPage, onNextPage, onPageChange }: PaginationProps) {
+export function Pagination({
+	pageIndex,
+	pageCount,
+	canPreviousPage,
+	canNextPage,
+	onPreviousPage,
+	onNextPage,
+	onPageChange,
+}: PaginationProps) {
 	return (
 		<HeroPagination aria-label='Pagination'>
 			<HeroPagination.Content>

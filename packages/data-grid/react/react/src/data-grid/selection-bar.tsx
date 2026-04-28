@@ -14,59 +14,65 @@ import { useTableContext } from './table-context'
  * - `selectionBar: { ... }`     → renders with config
  */
 export function SelectionBar() {
-  const table = useTableContext()
-  const { SelectionBar: SelectionBarComponent } = useGridComponents()
+	const table = useTableContext()
+	const { SelectionBar: SelectionBarComponent } = useGridComponents()
 
-  const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
-    | boolean
-    | SelectionBarConfig
-    | undefined
+	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
+		| boolean
+		| SelectionBarConfig
+		| undefined
 
-  const selectionEnabled = Boolean(table.options.enableRowSelection)
-  if (!selectionEnabled || rawConfig === false) return null
+	const selectionEnabled = Boolean(table.options.enableRowSelection)
+	if (!selectionEnabled || rawConfig === false) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const config: SelectionBarConfig<any> = typeof rawConfig === 'object' ? rawConfig : {}
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const config: SelectionBarConfig<any> = typeof rawConfig === 'object' ? rawConfig : {}
 
-  const selectedRows = table.getSelectedRowModel().rows
-  const count = selectedRows.length
-  const open = count > 0
+	const selectedRows = table.getSelectedRowModel().rows
+	const count = selectedRows.length
+	const open = count > 0
 
-  const clearSelection = () => { table.resetRowSelection() }
+	const clearSelection = () => {
+		table.resetRowSelection()
+	}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const callbackArgs: Parameters<NonNullable<SelectionBarConfig<any>['onDelete']>>[0] = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-    table: table as any,
-    clearSelection,
-    selectedRows,
-  }
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const callbackArgs: Parameters<NonNullable<SelectionBarConfig<any>['onDelete']>>[0] = {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+		table: table as any,
+		clearSelection,
+		selectedRows,
+	}
 
-  const { onDelete: onDeleteHandler, onClear: onClearHandler } = config
+	const { onDelete: onDeleteHandler, onClear: onClearHandler } = config
 
-  const onDelete = onDeleteHandler
-    ? () => { onDeleteHandler(callbackArgs) }
-    : undefined
+	const onDelete = onDeleteHandler
+		? () => {
+				onDeleteHandler(callbackArgs)
+			}
+		: undefined
 
-  const onClear = onClearHandler
-    ? () => { onClearHandler(callbackArgs) }
-    : clearSelection
+	const onClear = onClearHandler
+		? () => {
+				onClearHandler(callbackArgs)
+			}
+		: clearSelection
 
-  const actions =
-    config.actions == null
-      ? undefined
-      : typeof config.actions === 'function'
-        ? config.actions(callbackArgs)
-        : config.actions
+	const actions =
+		config.actions == null
+			? undefined
+			: typeof config.actions === 'function'
+				? config.actions(callbackArgs)
+				: config.actions
 
-  return (
-    <SelectionBarComponent
-      open={open}
-      count={count}
-      selectedRows={selectedRows}
-      onClear={onClear}
-      {...(onDelete !== undefined ? { onDelete } : {})}
-      {...(actions !== undefined ? { actions } : {})}
-    />
-  )
+	return (
+		<SelectionBarComponent
+			open={open}
+			count={count}
+			selectedRows={selectedRows}
+			onClear={onClear}
+			{...(onDelete !== undefined ? { onDelete } : {})}
+			{...(actions !== undefined ? { actions } : {})}
+		/>
+	)
 }

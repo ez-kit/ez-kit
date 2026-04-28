@@ -22,6 +22,7 @@ pnpm changeset
 ```
 
 In the interactive prompt:
+
 - Use arrow keys + **space** to select **only** the package you want to release
 - Leave all other packages unselected
 - Choose the bump type: `patch` / `minor` / `major`
@@ -65,7 +66,7 @@ Output shows which packages have unreleased changesets and what the next version
 ## Bump types
 
 | Type    | When to use                                      |
-|---------|--------------------------------------------------|
+| ------- | ------------------------------------------------ |
 | `patch` | Bug fixes, internal refactors, no API changes    |
 | `minor` | New features, backwards-compatible API additions |
 | `major` | Breaking changes                                 |

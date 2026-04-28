@@ -37,12 +37,12 @@
 ## E2E Shape
 
 ```ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
 
 test('landing hero loads', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.locator('h1')).toBeVisible();
-});
+	await page.goto('/')
+	await expect(page.locator('h1')).toBeVisible()
+})
 ```
 
 - Avoid flaky timeout-based assertions

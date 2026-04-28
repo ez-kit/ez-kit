@@ -26,21 +26,21 @@ selectionBar?: boolean | SelectionBarConfig<TRow>
 
 ```ts
 export interface SelectionBarCallbackArgs<TRow extends object = object> {
-  table: Table<TRow>
-  clearSelection: () => void
-  selectedRows: Row<TRow>[]
+	table: Table<TRow>
+	clearSelection: () => void
+	selectedRows: Row<TRow>[]
 }
 
 export interface SelectionBarConfig<TRow extends object = object> {
-  /** If provided — Delete button appears in the bar. */
-  onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
-  /**
-   * Replaces default clear behaviour.
-   * `clearSelection` arg is the default reset — call it if needed.
-   */
-  onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
-  /** Rendered between Delete and Cancel. ReactElement or render-function. */
-  actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+	/** If provided — Delete button appears in the bar. */
+	onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
+	/**
+	 * Replaces default clear behaviour.
+	 * `clearSelection` arg is the default reset — call it if needed.
+	 */
+	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	/** Rendered between Delete and Cancel. ReactElement or render-function. */
+	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
 }
 ```
 
@@ -51,25 +51,25 @@ component — the DI layer never needs to access the table directly.
 
 ```ts
 export interface SelectionBarProps {
-  /** False when 0 rows selected — DI component should hide/animate out. */
-  open: boolean
-  /** Number of currently selected rows. */
-  count: number
-  /** Selected Row objects (already resolved). */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  selectedRows: Row<any>[]
-  /**
-   * Pre-bound delete handler. Only present when `onDelete` was configured.
-   * When absent — Delete button must NOT be rendered.
-   */
-  onDelete?: () => void
-  /**
-   * Pre-bound clear handler.
-   * If user did not provide `onClear`, this calls `table.resetRowSelection()`.
-   */
-  onClear: () => void
-  /** Already-resolved actions slot (ReactElement | undefined). */
-  actions?: ReactElement
+	/** False when 0 rows selected — DI component should hide/animate out. */
+	open: boolean
+	/** Number of currently selected rows. */
+	count: number
+	/** Selected Row objects (already resolved). */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	selectedRows: Row<any>[]
+	/**
+	 * Pre-bound delete handler. Only present when `onDelete` was configured.
+	 * When absent — Delete button must NOT be rendered.
+	 */
+	onDelete?: () => void
+	/**
+	 * Pre-bound clear handler.
+	 * If user did not provide `onClear`, this calls `table.resetRowSelection()`.
+	 */
+	onClear: () => void
+	/** Already-resolved actions slot (ReactElement | undefined). */
+	actions?: ReactElement
 }
 ```
 
@@ -101,13 +101,13 @@ import type { Row } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
 export interface SelectionBarProps {
-  open: boolean
-  count: number
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  selectedRows: Row<any>[]
-  onDelete?: () => void
-  onClear: () => void
-  actions?: ReactElement
+	open: boolean
+	count: number
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	selectedRows: Row<any>[]
+	onDelete?: () => void
+	onClear: () => void
+	actions?: ReactElement
 }
 ```
 
@@ -133,15 +133,15 @@ import type { ReactElement } from 'react'
 export const SELECTION_BAR_KEY = Symbol('selectionBar')
 
 export interface SelectionBarCallbackArgs<TRow extends object = object> {
-  table: Table<TRow>
-  clearSelection: () => void
-  selectedRows: Row<TRow>[]
+	table: Table<TRow>
+	clearSelection: () => void
+	selectedRows: Row<TRow>[]
 }
 
 export interface SelectionBarConfig<TRow extends object = object> {
-  onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
-  onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
-  actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+	onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
+	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
 }
 ```
 
@@ -149,9 +149,9 @@ Extend `UseDataGridConfig<TRow>`:
 
 ```ts
 export interface UseDataGridConfig<TRow extends object> extends TableConfig<TRow> {
-  cellTypes?: CellTypeRegistry
-  pageSizer?: PageSizerConfig
-  selectionBar?: boolean | SelectionBarConfig<TRow>  // ← add this
+	cellTypes?: CellTypeRegistry
+	pageSizer?: PageSizerConfig
+	selectionBar?: boolean | SelectionBarConfig<TRow> // ← add this
 }
 ```
 
@@ -164,8 +164,7 @@ const { cellTypes, pageSizer, selectionBar, ...tableConfig } = config
 // after existing Symbol assignments:
 const selectionBarRef = useRef(selectionBar)
 selectionBarRef.current = selectionBar
-;(tableRef.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] =
-  selectionBarRef.current
+;(tableRef.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = selectionBarRef.current
 ```
 
 ---
@@ -179,32 +178,32 @@ Add import for `SelectionBarProps` to the existing import block.
 Add default implementation (plain HTML, no styling):
 
 ```tsx
-function DefaultSelectionBar({
-  open,
-  count,
-  onDelete,
-  onClear,
-  actions,
-}: SelectionBarProps) {
-  if (!open) return null
-  return (
-    <div
-      role='toolbar'
-      data-slot='selection-bar'
-      style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}
-    >
-      <span>{count} selected</span>
-      {onDelete && (
-        <button type='button' onClick={onDelete}>
-          Delete
-        </button>
-      )}
-      {actions}
-      <button type='button' onClick={onClear}>
-        Cancel
-      </button>
-    </div>
-  )
+function DefaultSelectionBar({ open, count, onDelete, onClear, actions }: SelectionBarProps) {
+	if (!open) return null
+	return (
+		<div
+			role='toolbar'
+			data-slot='selection-bar'
+			style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}
+		>
+			<span>{count} selected</span>
+			{onDelete && (
+				<button
+					type='button'
+					onClick={onDelete}
+				>
+					Delete
+				</button>
+			)}
+			{actions}
+			<button
+				type='button'
+				onClick={onClear}
+			>
+				Cancel
+			</button>
+		</div>
+	)
 }
 ```
 
@@ -212,8 +211,8 @@ Add to `defaultComponents`:
 
 ```ts
 export const defaultComponents: Required<GridComponents> = {
-  // ... existing ...
-  SelectionBar: DefaultSelectionBar,
+	// ... existing ...
+	SelectionBar: DefaultSelectionBar,
 }
 ```
 
@@ -242,58 +241,64 @@ import { useTableContext } from './table-context'
  * - `selectionBar: { ... }`      → renders with config
  */
 export function SelectionBar() {
-  const table = useTableContext()
-  const { SelectionBar: SelectionBarComponent } = useGridComponents()
+	const table = useTableContext()
+	const { SelectionBar: SelectionBarComponent } = useGridComponents()
 
-  // Read config stored by useDataGrid
-  const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
-    | boolean
-    | SelectionBarConfig
-    | undefined
+	// Read config stored by useDataGrid
+	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
+		| boolean
+		| SelectionBarConfig
+		| undefined
 
-  // Determine whether the bar is enabled at all
-  const selectionEnabled = Boolean(table.options.enableRowSelection)
-  if (!selectionEnabled || rawConfig === false) return null
+	// Determine whether the bar is enabled at all
+	const selectionEnabled = Boolean(table.options.enableRowSelection)
+	if (!selectionEnabled || rawConfig === false) return null
 
-  const config: SelectionBarConfig = typeof rawConfig === 'object' ? rawConfig : {}
+	const config: SelectionBarConfig = typeof rawConfig === 'object' ? rawConfig : {}
 
-  const selectedRows = table.getSelectedRowModel().rows
-  const count = selectedRows.length
-  const open = count > 0
+	const selectedRows = table.getSelectedRowModel().rows
+	const count = selectedRows.length
+	const open = count > 0
 
-  const clearSelection = () => { table.resetRowSelection() }
+	const clearSelection = () => {
+		table.resetRowSelection()
+	}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const callbackArgs = { table: table as any, clearSelection, selectedRows }
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const callbackArgs = { table: table as any, clearSelection, selectedRows }
 
-  // Pre-bind onDelete (only if configured)
-  const onDelete = config.onDelete
-    ? () => { config.onDelete!(callbackArgs) }
-    : undefined
+	// Pre-bind onDelete (only if configured)
+	const onDelete = config.onDelete
+		? () => {
+				config.onDelete!(callbackArgs)
+			}
+		: undefined
 
-  // Pre-bind onClear: user override → call with default; no override → default
-  const onClear = config.onClear
-    ? () => { config.onClear!(callbackArgs) }
-    : clearSelection
+	// Pre-bind onClear: user override → call with default; no override → default
+	const onClear = config.onClear
+		? () => {
+				config.onClear!(callbackArgs)
+			}
+		: clearSelection
 
-  // Resolve actions (function or element)
-  const actions =
-    config.actions == null
-      ? undefined
-      : typeof config.actions === 'function'
-        ? config.actions(callbackArgs)
-        : config.actions
+	// Resolve actions (function or element)
+	const actions =
+		config.actions == null
+			? undefined
+			: typeof config.actions === 'function'
+				? config.actions(callbackArgs)
+				: config.actions
 
-  return (
-    <SelectionBarComponent
-      open={open}
-      count={count}
-      selectedRows={selectedRows}
-      onDelete={onDelete}
-      onClear={onClear}
-      actions={actions}
-    />
-  )
+	return (
+		<SelectionBarComponent
+			open={open}
+			count={count}
+			selectedRows={selectedRows}
+			onDelete={onDelete}
+			onClear={onClear}
+			actions={actions}
+		/>
+	)
 }
 ```
 
@@ -313,15 +318,15 @@ Add to `DefaultLayout`:
 
 ```tsx
 function DefaultLayout() {
-  return (
-    <>
-      <Toolbar />
-      <DataGridTable />
-      <Pagination />
-      <PageSizer />
-      <SelectionBar />   {/* ← add */}
-    </>
-  )
+	return (
+		<>
+			<Toolbar />
+			<DataGridTable />
+			<Pagination />
+			<PageSizer />
+			<SelectionBar /> {/* ← add */}
+		</>
+	)
 }
 ```
 
@@ -329,11 +334,11 @@ Add `SelectionBar` to the compound type and attach as static property:
 
 ```ts
 type DataGridType = typeof DataGridRoot & {
-  // ... existing ...
-  SelectionBar: typeof SelectionBar  // ← add
+	// ... existing ...
+	SelectionBar: typeof SelectionBar // ← add
 }
 
-DataGrid.SelectionBar = SelectionBar  // ← add
+DataGrid.SelectionBar = SelectionBar // ← add
 ```
 
 ---
@@ -346,14 +351,8 @@ Add exports:
 
 ```ts
 export { SelectionBar } from './data-grid/selection-bar'
-export type {
-  SelectionBarProps,
-} from './types'
-export {
-  SELECTION_BAR_KEY,
-  type SelectionBarCallbackArgs,
-  type SelectionBarConfig,
-} from './use-data-grid'
+export type { SelectionBarProps } from './types'
+export { SELECTION_BAR_KEY, type SelectionBarCallbackArgs, type SelectionBarConfig } from './use-data-grid'
 ```
 
 ---
@@ -374,59 +373,51 @@ import { cn } from '../lib/utils'
 import { ActionBarItem, ActionBarSelection, ActionBarSeparator } from '../components/ui/action-bar'
 import type { SelectionBarProps } from '@ez-kit/data-grid-react'
 
-export function SelectionBar({
-  open,
-  count,
-  onDelete,
-  onClear,
-  actions,
-}: SelectionBarProps) {
-  return (
-    <div
-      role='toolbar'
-      aria-orientation='horizontal'
-      data-slot='selection-bar'
-      data-state={open ? 'open' : 'closed'}
-      className={cn(
-        'sticky bottom-2 z-10 mx-auto w-fit',
-        'flex flex-row items-center gap-2 rounded-lg border bg-card px-2 py-1.5 shadow-lg',
-        'transition-all duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]',
-        open
-          ? 'animate-in fade-in-0 slide-in-from-bottom-4'
-          : 'pointer-events-none translate-y-4 opacity-0',
-      )}
-    >
-      {/* Count badge */}
-      <ActionBarSelection>{count} rows selected</ActionBarSelection>
+export function SelectionBar({ open, count, onDelete, onClear, actions }: SelectionBarProps) {
+	return (
+		<div
+			role='toolbar'
+			aria-orientation='horizontal'
+			data-slot='selection-bar'
+			data-state={open ? 'open' : 'closed'}
+			className={cn(
+				'sticky bottom-2 z-10 mx-auto w-fit',
+				'flex flex-row items-center gap-2 rounded-lg border bg-card px-2 py-1.5 shadow-lg',
+				'transition-all duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]',
+				open ? 'animate-in fade-in-0 slide-in-from-bottom-4' : 'pointer-events-none translate-y-4 opacity-0',
+			)}
+		>
+			{/* Count badge */}
+			<ActionBarSelection>{count} rows selected</ActionBarSelection>
 
-      <ActionBarSeparator />
+			<ActionBarSeparator />
 
-      {/* Delete — only when handler provided */}
-      {onDelete && (
-        <ActionBarItem
-          variant='destructive'
-          onClick={onDelete}
-        >
-          Delete
-        </ActionBarItem>
-      )}
+			{/* Delete — only when handler provided */}
+			{onDelete && (
+				<ActionBarItem
+					variant='destructive'
+					onClick={onDelete}
+				>
+					Delete
+				</ActionBarItem>
+			)}
 
-      {/* Custom actions slot */}
-      {actions}
+			{/* Custom actions slot */}
+			{actions}
 
-      {/* Cancel / Clear */}
-      <ActionBarSeparator />
-      <button
-        type='button'
-        data-slot='selection-bar-close'
-        onClick={onClear}
-        className='rounded-xs opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 [&_svg]:size-3.5'
-        aria-label='Clear selection'
-      >
-        <X />
-      </button>
-    </div>
-  )
+			{/* Cancel / Clear */}
+			<ActionBarSeparator />
+			<button
+				type='button'
+				data-slot='selection-bar-close'
+				onClick={onClear}
+				className='rounded-xs opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 [&_svg]:size-3.5'
+				aria-label='Clear selection'
+			>
+				<X />
+			</button>
+		</div>
+	)
 }
 ```
 
@@ -434,9 +425,16 @@ export function SelectionBar({
 > `useActionBarContext`). Either wrap items in `ActionBarGroup` or use plain `Button`
 > with matching styles. Check during implementation — if `ActionBarItem` throws outside
 > `ActionBarGroup`, replace with:
+>
 > ```tsx
 > import { Button } from '../components/ui/button'
-> <Button variant='destructive' size='sm' onClick={onDelete}>Delete</Button>
+> ;<Button
+> 	variant='destructive'
+> 	size='sm'
+> 	onClick={onDelete}
+> >
+> 	Delete
+> </Button>
 > ```
 
 ---
@@ -451,11 +449,11 @@ Import and register:
 import { SelectionBar } from './blocks/SelectionBar'
 
 export const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
-  // ... existing ...
-  SelectionBar: SelectionBar,   // ← add
+	// ... existing ...
+	SelectionBar: SelectionBar, // ← add
 })
 
-export { SelectionBar } from './blocks/SelectionBar'  // ← add re-export
+export { SelectionBar } from './blocks/SelectionBar' // ← add re-export
 ```
 
 ---
@@ -467,30 +465,39 @@ export { SelectionBar } from './blocks/SelectionBar'  // ← add re-export
 Add `selectionBar` to the existing base demo that already uses `selection: true`.
 
 Simple case (no delete, just counter + cancel):
+
 ```tsx
 const table = useDataGrid({
-  data,
-  columns,
-  selection: true,
-  selectionBar: true,   // or just undefined — both work
-  // ...
+	data,
+	columns,
+	selection: true,
+	selectionBar: true, // or just undefined — both work
+	// ...
 })
 ```
 
 Full case with delete + custom actions:
+
 ```tsx
 const table = useDataGrid({
-  data,
-  columns,
-  selection: true,
-  selectionBar: {
-    onDelete: ({ selectedRows, clearSelection }) => {
-      setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
-      clearSelection()
-    },
-    actions: <Button variant='secondary' size='sm'>Export</Button>,
-  },
-  // ...
+	data,
+	columns,
+	selection: true,
+	selectionBar: {
+		onDelete: ({ selectedRows, clearSelection }) => {
+			setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
+			clearSelection()
+		},
+		actions: (
+			<Button
+				variant='secondary'
+				size='sm'
+			>
+				Export
+			</Button>
+		),
+	},
+	// ...
 })
 ```
 
@@ -498,17 +505,17 @@ const table = useDataGrid({
 
 ## File Change Summary
 
-| File | Action | Description |
-|---|---|---|
-| `react/react/src/types.ts` | Modify | Add `SelectionBarProps`; add `SelectionBar` to `GridComponents` |
-| `react/react/src/use-data-grid.ts` | Modify | Add `SELECTION_BAR_KEY`, `SelectionBarCallbackArgs`, `SelectionBarConfig`; add `selectionBar` to `UseDataGridConfig`; store on table instance |
-| `react/react/src/components-context.tsx` | Modify | Add `DefaultSelectionBar`; add to `defaultComponents` |
-| `react/react/src/data-grid/selection-bar.tsx` | **New** | Sub-component: reads context, resolves callbacks, delegates to DI |
-| `react/react/src/data-grid/data-grid.tsx` | Modify | Add `<SelectionBar />` to `DefaultLayout`; add to compound type |
-| `react/react/src/index.ts` | Modify | Export `SelectionBar`, `SelectionBarProps`, `SELECTION_BAR_KEY`, `SelectionBarCallbackArgs`, `SelectionBarConfig` |
-| `react/shadcn/src/blocks/SelectionBar.tsx` | **New** | Shadcn implementation: sticky bottom, ActionBar visuals, slide-in animation |
-| `react/shadcn/src/index.ts` | Modify | Import + register `SelectionBar` in `createDataGrid`; re-export |
-| `apps/docs/app/sandbox/data-grid/components/base.tsx` | Modify | Add `selectionBar` demo (simple + full with delete) |
+| File                                                  | Action  | Description                                                                                                                                   |
+| ----------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `react/react/src/types.ts`                            | Modify  | Add `SelectionBarProps`; add `SelectionBar` to `GridComponents`                                                                               |
+| `react/react/src/use-data-grid.ts`                    | Modify  | Add `SELECTION_BAR_KEY`, `SelectionBarCallbackArgs`, `SelectionBarConfig`; add `selectionBar` to `UseDataGridConfig`; store on table instance |
+| `react/react/src/components-context.tsx`              | Modify  | Add `DefaultSelectionBar`; add to `defaultComponents`                                                                                         |
+| `react/react/src/data-grid/selection-bar.tsx`         | **New** | Sub-component: reads context, resolves callbacks, delegates to DI                                                                             |
+| `react/react/src/data-grid/data-grid.tsx`             | Modify  | Add `<SelectionBar />` to `DefaultLayout`; add to compound type                                                                               |
+| `react/react/src/index.ts`                            | Modify  | Export `SelectionBar`, `SelectionBarProps`, `SELECTION_BAR_KEY`, `SelectionBarCallbackArgs`, `SelectionBarConfig`                             |
+| `react/shadcn/src/blocks/SelectionBar.tsx`            | **New** | Shadcn implementation: sticky bottom, ActionBar visuals, slide-in animation                                                                   |
+| `react/shadcn/src/index.ts`                           | Modify  | Import + register `SelectionBar` in `createDataGrid`; re-export                                                                               |
+| `apps/docs/app/sandbox/data-grid/components/base.tsx` | Modify  | Add `selectionBar` demo (simple + full with delete)                                                                                           |
 
 ---
 

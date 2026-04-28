@@ -8,12 +8,8 @@ import type { DataGridProps } from '@ez-kit/data-grid-react'
 
 export { useDataGrid } from '@ez-kit/data-grid-react'
 
-const ShadcnCustomDataGrid = lazy(() =>
-	import('./custom-grid-shadcn').then((m) => ({ default: m.DataGrid })),
-)
-const HerouiCustomDataGrid = lazy(() =>
-	import('./custom-grid-heroui').then((m) => ({ default: m.DataGrid })),
-)
+const ShadcnCustomDataGrid = lazy(() => import('./custom-grid-shadcn').then((m) => ({ default: m.DataGrid })))
+const HerouiCustomDataGrid = lazy(() => import('./custom-grid-heroui').then((m) => ({ default: m.DataGrid })))
 
 export function CustomDataGrid<T extends object>(props: DataGridProps<T>) {
 	const { type } = useContext(DataGridTypeContext)

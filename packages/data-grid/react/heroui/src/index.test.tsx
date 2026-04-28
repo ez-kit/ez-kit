@@ -78,11 +78,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('toggles column visibility items', () => {
 		const onToggle = vi.fn()
 
-		render(
-			<ColumnVisibilityMenu
-				columns={[{ id: 'name', label: 'Name', isVisible: true, onToggle }]}
-			/>,
-		)
+		render(<ColumnVisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, onToggle }]} />)
 
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')

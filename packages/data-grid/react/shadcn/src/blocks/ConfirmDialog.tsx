@@ -15,7 +15,12 @@ import type { ConfirmDialogProps } from '@ez-kit/data-grid-react'
 
 export function ConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
 	return (
-		<AlertDialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel() }}>
+		<AlertDialog
+			open={open}
+			onOpenChange={(isOpen) => {
+				if (!isOpen) onCancel()
+			}}
+		>
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>{title}</AlertDialogTitle>

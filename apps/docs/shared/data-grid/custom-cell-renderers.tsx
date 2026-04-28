@@ -9,7 +9,10 @@ export function RatingCellView({ value }: CellViewProps) {
 	return (
 		<span>
 			{Array.from({ length: 5 }, (_, i) => (
-				<span key={i} style={{ color: i < n ? '#f59e0b' : '#d1d5db', fontSize: '1rem' }}>
+				<span
+					key={i}
+					style={{ color: i < n ? '#f59e0b' : '#d1d5db', fontSize: '1rem' }}
+				>
 					★
 				</span>
 			))}

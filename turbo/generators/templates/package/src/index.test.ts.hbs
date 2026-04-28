@@ -1,3 +1,2 @@
-import { describe, expect, it } from "vitest" import { noop } from "./index"
-describe("{{packageImportName}}", () => { it("exports noop", () => {
-expect(noop).toBeTypeOf("function") }) })
+import { describe, expect, it } from "vitest" import { noop } from "./index" describe("{{packageImportName}}", () => {
+it("exports noop", () => { expect(noop).toBeTypeOf("function") }) })

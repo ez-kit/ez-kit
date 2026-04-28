@@ -35,7 +35,9 @@ export function ColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 							<Checkbox
 								id={`col-vis-${col.id}`}
 								checked={col.isVisible}
-								onCheckedChange={() => { col.onToggle() }}
+								onCheckedChange={() => {
+									col.onToggle()
+								}}
 							/>
 							{col.label}
 						</label>

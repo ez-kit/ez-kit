@@ -163,7 +163,12 @@ export function DataGridCell({ cell, row }: CellProps) {
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp
-				? viewComp({ value: cell.getValue(), row: cell.row.original, rowIndex: cell.row.index, ...(meta?.config !== undefined ? { config: meta.config } : {}) })
+				? viewComp({
+						value: cell.getValue(),
+						row: cell.row.original,
+						rowIndex: cell.row.index,
+						...(meta?.config !== undefined ? { config: meta.config } : {}),
+					})
 				: flexRender(cell.column.columnDef.cell, cell.getContext() as unknown as Record<string, unknown>)}
 		</Td>
 	)

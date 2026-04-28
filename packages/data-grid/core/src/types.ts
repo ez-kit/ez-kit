@@ -8,98 +8,98 @@ import type { Table as TanStackTable, TableState } from '@tanstack/table-core'
 export type { TableState as TableSnapshot }
 
 export interface SortingConfig {
-  manual?: boolean
+	manual?: boolean
 }
 
 export interface FilteringConfig {
-  manual?: boolean
-  /** Enable global (cross-column) filter. Default: true when filtering is enabled. */
-  global?: boolean
-  /** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
-  operators?: FilterOperatorDef[]
+	manual?: boolean
+	/** Enable global (cross-column) filter. Default: true when filtering is enabled. */
+	global?: boolean
+	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
+	operators?: FilterOperatorDef[]
 }
 
 export interface PaginationConfig {
-  manual?: boolean
-  pageCount?: number
-  pageSize?: number
+	manual?: boolean
+	pageCount?: number
+	pageSize?: number
 }
 
 export interface SelectionConfig {
-  /** Called when row selection changes. */
-  onChange?: (rowIds: string[]) => void
-  /** Allow selecting multiple rows. Default: true. */
-  multiple?: boolean
+	/** Called when row selection changes. */
+	onChange?: (rowIds: string[]) => void
+	/** Allow selecting multiple rows. Default: true. */
+	multiple?: boolean
 }
 
 export interface ExpandingConfig {
-  /** React component / render fn for sub-row (provided by React layer). */
-  renderSubRow?: unknown
+	/** React component / render fn for sub-row (provided by React layer). */
+	renderSubRow?: unknown
 }
 
 export interface RowPinningConfig {
-  top?: boolean
-  bottom?: boolean
+	top?: boolean
+	bottom?: boolean
 }
 
 export interface PinningConfig {
-  /** Enable column pin UI (ColumnMenu in headers). */
-  column?: boolean
-  /** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
-  row?: boolean | RowPinningConfig
+	/** Enable column pin UI (ColumnMenu in headers). */
+	column?: boolean
+	/** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
+	row?: boolean | RowPinningConfig
 }
 
 export interface RowVirtualOptions {
-  /** Estimated row height in px used by the virtualizer. Default: 50. */
-  estimateSize?: number | ((index: number) => number)
-  /** Extra rows rendered outside the visible viewport. Default: 5. */
-  overscan?: number
+	/** Estimated row height in px used by the virtualizer. Default: 50. */
+	estimateSize?: number | ((index: number) => number)
+	/** Extra rows rendered outside the visible viewport. Default: 5. */
+	overscan?: number
 }
 
 export interface VirtualizedConfig {
-  row?: boolean | RowVirtualOptions
-  // column virtualization — reserved for future
+	row?: boolean | RowVirtualOptions
+	// column virtualization — reserved for future
 }
 
 export type ColumnResizeMode = 'onChange' | 'onEnd'
 export type ColumnResizeDirection = 'ltr' | 'rtl'
 
 export interface SizingConfig {
-  /** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
-  mode?: ColumnResizeMode
-  /** Text direction for resize calculation. Default: 'ltr'. */
-  direction?: ColumnResizeDirection
+	/** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
+	mode?: ColumnResizeMode
+	/** Text direction for resize calculation. Default: 'ltr'. */
+	direction?: ColumnResizeDirection
 }
 
 export interface TableConfig<TRow extends object> {
-  data: TRow[]
-  columns: ColumnDef<TRow>[]
+	data: TRow[]
+	columns: ColumnDef<TRow>[]
 
-  /**
-   * Returns a stable string ID for a row.
-   * Defaults to `row.id` when present, otherwise falls back to the array index.
-   */
-  getRowId?: (row: TRow, index: number) => string
+	/**
+	 * Returns a stable string ID for a row.
+	 * Defaults to `row.id` when present, otherwise falls back to the array index.
+	 */
+	getRowId?: (row: TRow, index: number) => string
 
-  sorting?: boolean | SortingConfig
-  filtering?: boolean | FilteringConfig
-  pagination?: boolean | PaginationConfig
-  selection?: boolean | SelectionConfig
-  expanding?: boolean | ExpandingConfig
-  /**
-   * Pinning configuration.
-   * - `true` — enable column menu UI + row pin top+bottom
-   * - `{ column: true }` — column menu only
-   * - `{ row: { top: true } }` — row pin top only
-   * - `false` / omitted — no pinning
-   */
-  pinning?: boolean | PinningConfig
-  virtualized?: boolean | VirtualizedConfig
-  creating?: CreatingConfig<TRow>
-  editing?: EditingConfig<TRow>
-  deleting?: DeletingConfig<TRow>
-  loading?: boolean
-  sizing?: boolean | SizingConfig
+	sorting?: boolean | SortingConfig
+	filtering?: boolean | FilteringConfig
+	pagination?: boolean | PaginationConfig
+	selection?: boolean | SelectionConfig
+	expanding?: boolean | ExpandingConfig
+	/**
+	 * Pinning configuration.
+	 * - `true` — enable column menu UI + row pin top+bottom
+	 * - `{ column: true }` — column menu only
+	 * - `{ row: { top: true } }` — row pin top only
+	 * - `false` / omitted — no pinning
+	 */
+	pinning?: boolean | PinningConfig
+	virtualized?: boolean | VirtualizedConfig
+	creating?: CreatingConfig<TRow>
+	editing?: EditingConfig<TRow>
+	deleting?: DeletingConfig<TRow>
+	loading?: boolean
+	sizing?: boolean | SizingConfig
 }
 
 /**
@@ -107,12 +107,12 @@ export interface TableConfig<TRow extends object> {
  * Adds subscribe/getSnapshot for useSyncExternalStore and setData/setLoading.
  */
 export interface DataTable<TRow extends object> extends TanStackTable<TRow> {
-  /** Subscribe to all state changes. Returns an unsubscribe function. */
-  subscribe: (listener: () => void) => () => void
-  /** Returns a stable snapshot of current state for useSyncExternalStore. */
-  getSnapshot: () => TableState
-  /** Reactively replace the data array. */
-  setData: (data: TRow[]) => void
+	/** Subscribe to all state changes. Returns an unsubscribe function. */
+	subscribe: (listener: () => void) => () => void
+	/** Returns a stable snapshot of current state for useSyncExternalStore. */
+	getSnapshot: () => TableState
+	/** Reactively replace the data array. */
+	setData: (data: TRow[]) => void
 }
 
 /** Public alias. */
