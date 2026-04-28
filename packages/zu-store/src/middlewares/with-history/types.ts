@@ -1,6 +1,6 @@
 import type { StoreApi } from 'zustand/vanilla'
 
-export interface HistoryOptions<T> {
+export type HistoryOptions<T> = {
 	/** Maximum number of past states to keep. Defaults to 100. */
 	limit?: number
 	/** Start history recording paused. Defaults to false. */
@@ -16,12 +16,12 @@ export interface HistoryOptions<T> {
 	shouldPush?: (prev: T, next: T) => boolean
 }
 
-export interface SetOptions {
+export type SetOptions = {
 	/** When true the setState call is not recorded in history. */
 	skipHistory?: boolean
 }
 
-export interface HistoryState<T> {
+export type HistoryState<T> = {
 	readonly pasts: readonly T[]
 	readonly futures: readonly T[]
 	readonly limit: number

@@ -10,12 +10,12 @@ export type CreateContextStoreFactory<TStore extends StoreApi<unknown>, TInitPro
 	initProps: TInitProps,
 ) => TStore
 
-interface ItemProps<TStore extends StoreApi<unknown>, TSelected> {
+type ItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
 	children: (state: TSelected) => ReactElement
 }
 
-interface CreateContextStoreResult<TStore extends StoreApi<unknown>, TInitProps extends object> {
+type CreateContextStoreResult<TStore extends StoreApi<unknown>, TInitProps extends object> = {
 	Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
 	useContextStore: () => TStore
 	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected

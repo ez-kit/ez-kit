@@ -3,7 +3,7 @@ import { createStore } from 'zustand/vanilla'
 
 import { withHistory } from './index'
 
-interface PaintState {
+type PaintState = {
 	color: string
 	size: number
 }

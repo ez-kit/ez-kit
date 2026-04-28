@@ -4,7 +4,7 @@ import { createStore } from 'zustand'
 
 import { useStoreState } from './index'
 
-interface CounterState {
+type CounterState = {
 	count: number
 	label: string
 	active: boolean

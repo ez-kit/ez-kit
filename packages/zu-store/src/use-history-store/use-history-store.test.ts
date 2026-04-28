@@ -6,7 +6,7 @@ import { withHistory } from '../middlewares/with-history'
 
 import { useHistoryStore } from './index'
 
-interface PaintState {
+type PaintState = {
 	color: string
 }
 

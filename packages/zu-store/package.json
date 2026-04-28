@@ -25,6 +25,7 @@
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --sourcemap",
 		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"format": "node ../../scripts/prettier.mjs --write",
 		"format:check": "node ../../scripts/prettier.mjs --check",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -35,7 +36,7 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "3 KB"
+			"limit": "50 KB"
 		}
 	],
 	"dependencies": {

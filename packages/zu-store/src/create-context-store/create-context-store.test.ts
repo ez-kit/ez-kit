@@ -5,14 +5,14 @@ import { createStore } from 'zustand'
 
 import { createContextStore } from './index'
 
-interface CounterState {
+type CounterState = {
 	count: number
 	label: string
 	increment: () => void
 	setLabel: (label: string) => void
 }
 
-interface CounterInitProps {
+type CounterInitProps = {
 	count?: number
 	label?: string
 }
