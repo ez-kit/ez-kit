@@ -34,11 +34,7 @@ export interface HistoryState<T> {
 }
 
 export type HistoryStore<T extends object> = Omit<StoreApi<T>, 'setState'> & {
-	setState: (
-		partial: T | Partial<T> | ((state: T) => T | Partial<T>),
-		replace?: boolean,
-		options?: SetOptions,
-	) => void
+	setState: (partial: T | Partial<T> | ((state: T) => T | Partial<T>), replace?: boolean, options?: SetOptions) => void
 	set: (partial: Partial<T> | ((state: T) => Partial<T>), options?: SetOptions) => void
 	history: StoreApi<HistoryState<T>>
 }

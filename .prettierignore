@@ -7,4 +7,5 @@ dist
 coverage
 build
 out
+.omc
 *.tsbuildinfo

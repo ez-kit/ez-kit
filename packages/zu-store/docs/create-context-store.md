@@ -23,31 +23,31 @@ import { createContextStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand'
 
 interface CounterState {
-  count: number
-  increment: () => void
+	count: number
+	increment: () => void
 }
 
 const counterStore = createContextStore(({ count = 0 }: { count?: number }) =>
-  createStore<CounterState>()((set) => ({
-    count,
-    increment: () => set((s) => ({ count: s.count + 1 })),
-  })),
+	createStore<CounterState>()((set) => ({
+		count,
+		increment: () => set((s) => ({ count: s.count + 1 })),
+	})),
 )
 
 // Wrap a subtree
 function App() {
-  return (
-    <counterStore.Provider count={10}>
-      <Counter />
-    </counterStore.Provider>
-  )
+	return (
+		<counterStore.Provider count={10}>
+			<Counter />
+		</counterStore.Provider>
+	)
 }
 
 // Consume inside the tree
 function Counter() {
-  const count = counterStore.useStore((s) => s.count)
-  const increment = counterStore.useStore((s) => s.increment)
-  return <button onClick={increment}>{count}</button>
+	const count = counterStore.useStore((s) => s.count)
+	const increment = counterStore.useStore((s) => s.increment)
+	return <button onClick={increment}>{count}</button>
 }
 ```
 
@@ -67,8 +67,8 @@ Same as `useStore` but uses shallow equality — useful when the selector return
 
 ```tsx
 const { count, label } = counterStore.useShallowStore((s) => ({
-  count: s.count,
-  label: s.label,
+	count: s.count,
+	label: s.label,
 }))
 ```
 
@@ -81,9 +81,7 @@ Returns the raw `StoreApi` instance. Use when you need full store access (e.g. t
 Render-prop alternative to `useStore`. Useful in JSX-heavy code or when the consuming component should stay unaware of the store.
 
 ```tsx
-<counterStore.Item selector={(s) => s.count}>
-  {(count) => <span>{count}</span>}
-</counterStore.Item>
+<counterStore.Item selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Item>
 ```
 
 ## Multiple Independent Instances

@@ -8,8 +8,8 @@ Works with any `StoreApi` instance, not just stores created by `createContextSto
 
 ```ts
 function useStoreState<TState, K extends keyof TState>(
-  store: StoreApi<TState>,
-  key: K,
+	store: StoreApi<TState>,
+	key: K,
 ): [TState[K], (value: TState[K]) => void]
 ```
 
@@ -20,15 +20,20 @@ import { useStoreState } from '@ez-kit/zu-store'
 import { createStore } from 'zustand'
 
 interface FormState {
-  name: string
-  age: number
+	name: string
+	age: number
 }
 
 const formStore = createStore<FormState>()(() => ({ name: '', age: 0 }))
 
 function NameField() {
-  const [name, setName] = useStoreState(formStore, 'name')
-  return <input value={name} onChange={(e) => setName(e.target.value)} />
+	const [name, setName] = useStoreState(formStore, 'name')
+	return (
+		<input
+			value={name}
+			onChange={(e) => setName(e.target.value)}
+		/>
+	)
 }
 ```
 

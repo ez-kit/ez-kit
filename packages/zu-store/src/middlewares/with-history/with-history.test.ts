@@ -35,7 +35,10 @@ describe('withHistory', () => {
 		})
 
 		it('respects custom limit option', () => {
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), { limit: 5 })
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{ limit: 5 },
+			)
 			expect(store.history.getState().limit).toBe(5)
 		})
 
@@ -45,25 +48,34 @@ describe('withHistory', () => {
 		})
 
 		it('respects defaultPaused: true option', () => {
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				defaultPaused: true,
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					defaultPaused: true,
+				},
+			)
 			expect(store.history.getState().isPaused).toBe(true)
 		})
 
 		it('initialises pasts from defaultPasts', () => {
 			const past: PaintState = { color: 'blue', size: 5 }
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				defaultPasts: [past],
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					defaultPasts: [past],
+				},
+			)
 			expect(store.history.getState().pasts).toEqual([past])
 		})
 
 		it('initialises futures from defaultFutures', () => {
 			const future: PaintState = { color: 'green', size: 20 }
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				defaultFutures: [future],
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					defaultFutures: [future],
+				},
+			)
 			expect(store.history.getState().futures).toEqual([future])
 		})
 
@@ -73,28 +85,40 @@ describe('withHistory', () => {
 				{ color: 'b', size: 2 },
 				{ color: 'c', size: 3 },
 			]
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				defaultPasts: pasts,
-				limit: 2,
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					defaultPasts: pasts,
+					limit: 2,
+				},
+			)
 			expect(store.history.getState().pasts).toHaveLength(2)
-			expect(store.history.getState().pasts).toEqual([{ color: 'b', size: 2 }, { color: 'c', size: 3 }])
+			expect(store.history.getState().pasts).toEqual([
+				{ color: 'b', size: 2 },
+				{ color: 'c', size: 3 },
+			])
 		})
 
 		it('undo works with defaultPasts pre-populated', () => {
 			const past: PaintState = { color: 'blue', size: 5 }
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				defaultPasts: [past],
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					defaultPasts: [past],
+				},
+			)
 			store.history.getState().undo()
 			expect(store.getState()).toEqual(past)
 		})
 
 		it('redo works with defaultFutures pre-populated', () => {
 			const future: PaintState = { color: 'green', size: 20 }
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				defaultFutures: [future],
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					defaultFutures: [future],
+				},
+			)
 			store.history.getState().redo()
 			expect(store.getState()).toEqual(future)
 		})
@@ -117,7 +141,10 @@ describe('withHistory', () => {
 		})
 
 		it('caps pasts at the configured limit', () => {
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), { limit: 2 })
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{ limit: 2 },
+			)
 			store.setState({ color: 'blue' })
 			store.setState({ color: 'green' })
 			store.setState({ color: 'purple' })
@@ -303,17 +330,23 @@ describe('withHistory', () => {
 
 	describe('shouldPush option', () => {
 		it('skips recording when shouldPush returns false', () => {
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				shouldPush: (_prev, next) => next.color !== 'red',
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					shouldPush: (_prev, next) => next.color !== 'red',
+				},
+			)
 			store.setState({ size: 20 })
 			expect(store.history.getState().pasts).toHaveLength(0)
 		})
 
 		it('records when shouldPush returns true', () => {
-			const store = withHistory(createStore<PaintState>()(() => ({ color: 'red', size: 10 })), {
-				shouldPush: (_prev, next) => next.color !== 'red',
-			})
+			const store = withHistory(
+				createStore<PaintState>()(() => ({ color: 'red', size: 10 })),
+				{
+					shouldPush: (_prev, next) => next.color !== 'red',
+				},
+			)
 			store.setState({ color: 'blue' })
 			expect(store.history.getState().pasts).toHaveLength(1)
 		})

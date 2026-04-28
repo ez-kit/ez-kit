@@ -12,6 +12,9 @@
     "format": {
       "outputs": []
     },
+    "format:check": {
+      "outputs": []
+    },
     "typecheck": {
       "dependsOn": ["^typecheck"],
       "outputs": []

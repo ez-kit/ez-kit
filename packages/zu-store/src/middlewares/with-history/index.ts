@@ -71,8 +71,7 @@ export function withHistory<T extends object>(store: StoreApi<T>, options: Histo
 	): void {
 		if (!setOptions?.skipHistory) {
 			const current = store.getState()
-			const nextPartial =
-				typeof partial === 'function' ? (partial as (s: T) => T | Partial<T>)(current) : partial
+			const nextPartial = typeof partial === 'function' ? (partial as (s: T) => T | Partial<T>)(current) : partial
 			const next = { ...current, ...nextPartial } as T
 			recordState(current, next)
 		}
