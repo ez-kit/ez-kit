@@ -8,6 +8,10 @@
 
 :root {
 	color-scheme: light;
+	--mint: #00e5c3;
+	--mint-dim: rgba(0, 229, 195, 0.08);
+	--mint-glow: rgba(0, 229, 195, 0.18);
+	--mint-border: rgba(0, 229, 195, 0.3);
 }
 
 * {

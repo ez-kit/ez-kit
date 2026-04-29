@@ -5,7 +5,6 @@ export function baseOptions(): BaseLayoutProps {
 		githubUrl: 'https://github.com/ez-kit/ez-kit',
 		nav: {
 			title: 'ez-kit docs',
-			transparentMode: 'top',
 		},
 		links: [
 			{
