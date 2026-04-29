@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
+import { testComponents } from '../test-utils'
 import { SELECTION_BAR_KEY } from '../use-data-grid'
 
 import { SelectionBar } from './selection-bar'
@@ -32,7 +33,7 @@ function setSelectionBarKey(table: ReturnType<typeof makeTable>, value: unknown)
 
 function Wrapper({ table, children }: { table: ReturnType<typeof makeTable>; children: ReactNode }) {
 	return (
-		<GridComponentsProvider>
+		<GridComponentsProvider components={testComponents}>
 			<TableContext value={table}>{children}</TableContext>
 		</GridComponentsProvider>
 	)
