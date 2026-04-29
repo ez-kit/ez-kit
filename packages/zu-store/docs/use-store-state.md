@@ -4,6 +4,12 @@ A standalone hook that binds a single field of a Zustand store to a `[value, set
 
 Works with any `StoreApi` instance, not just stores created by `createContextStore`.
 
+## Install
+
+```bash
+pnpm add @ez-kit/zu-store zustand
+```
+
 ## Signature
 
 ```ts

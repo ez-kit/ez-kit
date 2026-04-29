@@ -2,6 +2,12 @@
 
 Wraps a Zustand vanilla store in React context. Returns a `Provider`, hooks, and a render-prop `Item` component so multiple independent instances of the same store can coexist in a tree.
 
+## Install
+
+```bash
+pnpm add @ez-kit/zu-store zustand
+```
+
 ## Signature
 
 ```ts

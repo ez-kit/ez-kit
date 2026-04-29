@@ -1,7 +1,7 @@
 import { loader } from 'fumadocs-core/source'
 import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons'
 
-import { docs } from 'collections/server';
+import { docs as generatedDocs } from 'collections/server'
 
 import { docsContentRoute, docsImageRoute, docsRoute } from './shared'
 
@@ -18,7 +18,7 @@ type PageWithText = (typeof source)['$inferPage'] & {
 	}
 }
 
-const docsCollection = docs as DocsCollection
+const docsCollection = generatedDocs as unknown as DocsCollection
 
 export const source = loader({
 	baseUrl: docsRoute,

@@ -5,7 +5,7 @@ Zustand utilities for React — context-scoped stores and ergonomic field bindin
 ## Install
 
 ```bash
-pnpm add @ez-kit/zu-store
+pnpm add @ez-kit/zu-store zustand
 ```
 
 ## API
