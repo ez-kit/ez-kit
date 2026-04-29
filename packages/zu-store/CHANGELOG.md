@@ -1,5 +1,11 @@
 # @ez-kit/zu-store
 
+## 0.3.0
+
+### Minor Changes
+
+- Move zustand to peerDependencies and document installing it alongside @ez-kit/zu-store.
+
 ## 0.2.1
 
 ### Patch Changes
