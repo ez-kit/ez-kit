@@ -1,6 +1,6 @@
-import type { HomeLayoutProps } from 'fumadocs-ui/layouts/home'
+import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
 
-export function baseOptions(): Pick<HomeLayoutProps, 'githubUrl' | 'links' | 'nav'> {
+export function baseOptions(): BaseLayoutProps {
 	return {
 		githubUrl: 'https://github.com/ez-kit/ez-kit',
 		nav: {

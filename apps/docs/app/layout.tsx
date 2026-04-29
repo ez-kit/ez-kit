@@ -1,10 +1,14 @@
-import { RootProvider } from 'fumadocs-ui/provider'
+import { RootProvider } from 'fumadocs-ui/provider/next'
+import { Inter } from 'next/font/google'
 
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
-import '../app/globals.css'
-import 'fumadocs-ui/style.css'
+import './globals.css'
+
+const inter = Inter({
+	subsets: ['latin'],
+})
 
 export const metadata: Metadata = {
 	title: 'ez-kit docs',
@@ -17,7 +21,11 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
 	return (
-		<html lang='en'>
+		<html
+			lang='en'
+			className={inter.className}
+			suppressHydrationWarning
+		>
 			<body>
 				<RootProvider>{children}</RootProvider>
 			</body>

@@ -1,3 +1,5 @@
+import { createMDX } from 'fumadocs-mdx/next'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
@@ -7,6 +9,16 @@ const nextConfig = {
 		'@ez-kit/data-grid-heroui',
 		'@ez-kit/data-grid-shadcn',
 	],
+	async rewrites() {
+		return [
+			{
+				source: '/docs/:path*.mdx',
+				destination: '/llms.mdx/docs/:path*',
+			},
+		]
+	},
 }
 
-export default nextConfig
+const withMDX = createMDX()
+
+export default withMDX(nextConfig)

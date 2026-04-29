@@ -2,9 +2,14 @@
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"allowJs": false,
+		"target": "ESNext",
 		"jsx": "preserve",
 		"incremental": true,
 		"isolatedModules": true,
+		"strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
 		"plugins": [
 			{
 				"name": "next"
@@ -16,10 +21,11 @@
 		"resolveJsonModule": true,
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"],
+			"@/*": ["./*"],
+			"collections/*": ["./.source/*"],
 			"@grid-shadcn/*": ["../../packages/data-grid/react/shadcn/src/*"]
 		}
 	},
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.d.ts", "**/*.tsx", "**/*.mdx", ".next/types/**/*.ts"],
 	"exclude": ["node_modules"]
 }
