@@ -20,6 +20,7 @@ export default tseslint.config(
 			'**/.next/**',
 			'**/coverage/**',
 			'**/.turbo/**',
+			'apps/docs/.source/**',
 			'apps/docs/.sandpack-tmp/**',
 			'apps/docs/scripts/**',
 			'apps/docs/shared/data-grid/sandpack/generated/**',

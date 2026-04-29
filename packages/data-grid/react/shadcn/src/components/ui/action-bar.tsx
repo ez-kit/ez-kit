@@ -108,6 +108,18 @@ type ActionBarProps = {
 	loop?: boolean
 } & DivProps
 
+function subscribeToMountedStore() {
+	return () => {}
+}
+
+function getClientMountedSnapshot() {
+	return true
+}
+
+function getServerMountedSnapshot() {
+	return false
+}
+
 function ActionBar(props: ActionBarProps) {
 	const {
 		open = false,
@@ -128,7 +140,11 @@ function ActionBar(props: ActionBarProps) {
 		...rootProps
 	} = props
 
-	const [mounted, setMounted] = React.useState(false)
+	const mounted = React.useSyncExternalStore(
+		subscribeToMountedStore,
+		getClientMountedSnapshot,
+		getServerMountedSnapshot,
+	)
 
 	const rootRef = React.useRef<RootElement>(null)
 	const composedRef = useComposedRefs(ref, rootRef)
@@ -139,10 +155,6 @@ function ActionBar(props: ActionBarProps) {
 	})
 
 	const dir = DirectionPrimitive.useDirection(dirProp)
-
-	React.useLayoutEffect(() => {
-		setMounted(true)
-	}, [])
 
 	React.useEffect(() => {
 		if (!open) return

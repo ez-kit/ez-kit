@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-interface GlowCardProps {
+type GlowCardProps = {
 	children: ReactNode
 	className?: string
 }

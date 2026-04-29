@@ -4,10 +4,12 @@
 /* eslint-disable react/no-unknown-property */
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { forwardRef, useLayoutEffect, useMemo, useRef } from 'react'
-import { Color, type Mesh, type ShaderMaterial } from 'three'
+import { useLayoutEffect, useMemo, useRef } from 'react'
+import { Color, ShaderMaterial, type Mesh } from 'three'
 
-interface SilkProps {
+import type { RefObject } from 'react'
+
+type SilkProps = {
 	speed?: number
 	scale?: number
 	color?: string
@@ -16,7 +18,7 @@ interface SilkProps {
 	className?: string
 }
 
-interface SilkUniforms {
+type SilkUniforms = {
 	uSpeed: { value: number }
 	uScale: { value: number }
 	uNoiseIntensity: { value: number }
@@ -91,40 +93,41 @@ void main() {
 }
 `
 
-interface SilkPlaneProps {
+type SilkPlaneProps = {
 	uniforms: SilkUniforms
+	meshRef: RefObject<Mesh | null>
 }
 
-const SilkPlane = forwardRef<Mesh, SilkPlaneProps>(function SilkPlane({ uniforms }, ref) {
+function SilkPlane({ uniforms, meshRef }: SilkPlaneProps) {
 	const { viewport } = useThree()
 
 	useLayoutEffect(() => {
-		const mesh = (ref as React.RefObject<Mesh>).current
-		if (mesh) {
-			mesh.scale.set(viewport.width, viewport.height, 1)
-		}
-	}, [ref, viewport])
+		const mesh = meshRef.current
+		if (!mesh) return
+		mesh.scale.set(viewport.width, viewport.height, 1)
+	}, [meshRef, viewport])
 
 	useFrame((_, delta) => {
-		const mesh = (ref as React.RefObject<Mesh>).current
+		const mesh = meshRef.current
 		if (!mesh) return
 		const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
-		if (mat) {
-			;(mat as ShaderMaterial).uniforms['uTime']!.value += 0.1 * delta
-		}
+		if (!(mat instanceof ShaderMaterial)) return
+		const uTime = mat.uniforms.uTime
+		if (!uTime || typeof uTime.value !== 'number') return
+		uTime.value += 0.1 * delta
 	})
 
 	return (
-		<mesh ref={ref}>
+		<mesh ref={meshRef}>
 			<planeGeometry args={[1, 1, 1, 1]} />
 			<shaderMaterial
-				uniforms={uniforms as unknown as Record<string, { value: unknown }>}
+				uniforms={uniforms}
 				vertexShader={vertexShader}
 				fragmentShader={fragmentShader}
 			/>
 		</mesh>
 	)
-})
+}
 
 export function Silk({
 	speed = 5,
@@ -155,7 +158,7 @@ export function Silk({
 				frameloop='always'
 			>
 				<SilkPlane
-					ref={meshRef}
+					meshRef={meshRef}
 					uniforms={uniforms}
 				/>
 			</Canvas>

@@ -6,7 +6,7 @@ import { getCommonPinStyles, isBoundaryPinnedColumn } from '../utils/pin-styles'
 
 import { useTableContext } from './table-context'
 
-import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
+import type { CellTypeRegistry } from '../cell-types-context'
 import type { InputProps } from '../types'
 import type { ColumnMeta } from '@tanstack/table-core'
 import type { ChangeEvent, ComponentType, ReactNode } from 'react'
@@ -114,14 +114,14 @@ function renderCreatingInput({ meta, value, onChange, cellTypes, Input }: Creati
 	// 1. column-level creating.component
 	const creatingConfig = meta?.creating
 	if (creatingConfig !== false && creatingConfig !== undefined) {
-		const comp = creatingConfig.component
-		if (comp)
-			return comp({
-				value,
-				onChange,
-				...(meta.config !== undefined ? { config: meta.config } : {}),
-			} as CellInputProps) as ReactNode
-	}
+			const comp = creatingConfig.component
+			if (comp)
+				return comp({
+					value,
+					onChange,
+					...(meta.config !== undefined ? { config: meta.config } : {}),
+				}) as ReactNode
+		}
 
 	// 2. registry creating → edit fallback by cellType
 	if (meta?.cellType) {

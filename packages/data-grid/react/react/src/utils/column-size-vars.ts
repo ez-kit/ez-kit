@@ -17,7 +17,7 @@ export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
 		vars[`--col-${colId}-size`] = String(header.column.getSize())
 	}
 
-	return vars as CSSProperties
+	return vars
 }
 
 /**

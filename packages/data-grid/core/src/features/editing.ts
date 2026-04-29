@@ -89,10 +89,7 @@ export const EditingFeature: TableFeature<RowData> = {
 			if (!config) return
 			const { editingRowId, editingValues } = table.getEditingState()
 			if (!editingRowId) return
-			const result = await config.onSave(
-				editingRowId,
-				editingValues as Partial<(typeof table)['options']['data'][number]>,
-			)
+			const result = await config.onSave(editingRowId, editingValues)
 			if (result) {
 				table.cancelEditing()
 			}
@@ -131,9 +128,7 @@ export const EditingFeature: TableFeature<RowData> = {
 			const { editingRowId, editingCellId, editingValues } = table.getEditingState()
 			if (!editingRowId || !editingCellId) return
 			const columnId = editingCellId.replace(`${editingRowId}_`, '')
-			const result = await config.onSave(editingRowId, { [columnId]: editingValues[columnId] } as Partial<
-				(typeof table)['options']['data'][number]
-			>)
+			const result = await config.onSave(editingRowId, { [columnId]: editingValues[columnId] })
 			if (result) {
 				table.cancelEditing()
 			}

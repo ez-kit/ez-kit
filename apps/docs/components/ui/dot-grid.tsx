@@ -1,4 +1,4 @@
-interface DotGridProps {
+type DotGridProps = {
 	className?: string
 }
 

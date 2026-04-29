@@ -11,7 +11,6 @@ import { RowPinCell } from './row-pin-cell'
 import { useTableContext } from './table-context'
 
 import type { CellInputProps, CellTypeRegistry, CellViewProps } from '../cell-types-context'
-import type { CellViewCtx } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
 
@@ -202,10 +201,7 @@ function resolveViewComponent(
 	if (meta?.cellView) {
 		const cellView = meta.cellView
 		return (props: CellViewProps) =>
-			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex } as CellViewCtx<
-				unknown,
-				unknown
-			>) as ReactNode
+			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex }) as ReactNode
 	}
 	// 2. registry by cellType
 	if (meta?.cellType) {

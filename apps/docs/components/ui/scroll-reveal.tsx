@@ -3,7 +3,7 @@
 import { motion, useInView } from 'framer-motion'
 import { useRef, type ReactNode } from 'react'
 
-interface ScrollRevealProps {
+type ScrollRevealProps = {
 	children: ReactNode
 	className?: string
 	delay?: number

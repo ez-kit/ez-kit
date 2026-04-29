@@ -91,7 +91,7 @@ type ColConfig = false | ColumnEditingConfig | ColumnCreatingConfig | undefined
 
 function resolveColumnComponent(colDef: ColConfig): ((props: CellInputProps) => ReactNode) | undefined {
 	if (!colDef) return undefined
-	const comp = (colDef as ColumnEditingConfig).component
+	const comp = colDef.component
 	return comp ? (comp as (props: CellInputProps) => ReactNode) : undefined
 }
 

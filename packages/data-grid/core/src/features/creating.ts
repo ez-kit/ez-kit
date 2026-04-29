@@ -62,7 +62,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 			const config = table.options.creating
 			if (!config) return
 			const { creatingValues } = table.getCreatingState()
-			const result = await config.onSave(creatingValues as Partial<(typeof table)['options']['data'][number]>)
+			const result = await config.onSave(creatingValues)
 			if (result) {
 				table.cancelCreating()
 			}

@@ -68,7 +68,7 @@ function PackageCard({ name, full, desc }: { name: string; full: string; desc: s
 	function handleCopy() {
 		void navigator.clipboard.writeText(installCmd)
 		setCopied(true)
-		setTimeout(() => setCopied(false), 1500)
+		setTimeout(() => { setCopied(false); }, 1500)
 	}
 
 	return (

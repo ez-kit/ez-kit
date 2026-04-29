@@ -1,9 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
+
 import type { CSSProperties } from 'react'
 
-interface SplitTextProps {
+type SplitTextProps = {
 	text: string
 	className?: string
 	delay?: number
@@ -17,7 +18,7 @@ export function SplitText({ text, className, delay = 0, style }: SplitTextProps)
 		<span className={className} style={style} aria-label={text}>
 			{words.map((word, i) => (
 				<motion.span
-					key={`${word}-${i}`}
+					key={`${word}-${String(i)}`}
 					initial={{ opacity: 0, y: 16 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{

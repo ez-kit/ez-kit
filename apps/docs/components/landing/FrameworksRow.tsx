@@ -1,13 +1,13 @@
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 
-const FRAMEWORKS: Array<{ name: string; status: 'active' | 'soon' }> = [
+const FRAMEWORKS: { name: string; status: 'active' | 'soon' }[] = [
 	{ name: 'React', status: 'active' },
 	{ name: 'Vue', status: 'soon' },
 	{ name: 'Svelte', status: 'soon' },
 	{ name: 'Solid', status: 'soon' },
 ]
 
-const UI_KITS: Array<{ name: string; status: 'active' | 'soon' }> = [
+const UI_KITS: { name: string; status: 'active' | 'soon' }[] = [
 	{ name: 'shadcn/ui', status: 'active' },
 	{ name: 'HeroUI', status: 'active' },
 	{ name: 'more', status: 'soon' },

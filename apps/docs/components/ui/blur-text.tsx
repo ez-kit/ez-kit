@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 
-interface BlurTextProps {
+type BlurTextProps = {
 	text: string
 	className?: string
 	delay?: number

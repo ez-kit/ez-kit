@@ -21,6 +21,11 @@ type DataGridSandpackExampleProps = {
 	type: DataGridType
 }
 
+type TypePackageFilesState = {
+	type: DataGridType
+	files: Record<string, string>
+}
+
 const visibleFiles = ['/src/App.tsx']
 
 const packageByType = {
@@ -95,24 +100,31 @@ function createSandpackFiles(
 }
 
 export function DataGridSandpackExample({ exampleId, type }: DataGridSandpackExampleProps) {
-	const [typePackageFiles, setTypePackageFiles] = useState<Record<string, string> | null>(null)
+	const [typePackageFiles, setTypePackageFiles] = useState<TypePackageFilesState | null>(null)
 
 	useEffect(() => {
-		setTypePackageFiles(null)
+		let isCurrent = true
 		if (type === 'heroui') {
 			void import('./generated/data-grid-heroui').then((m) => {
-				setTypePackageFiles(m.dataGridSandpackHeroUIPackageFiles)
+				if (isCurrent) setTypePackageFiles({ type, files: m.dataGridSandpackHeroUIPackageFiles })
 			})
 		} else {
 			void import('./generated/data-grid-shadcn').then((m) => {
-				setTypePackageFiles(m.dataGridSandpackShadcnPackageFiles)
+				if (isCurrent) setTypePackageFiles({ type, files: m.dataGridSandpackShadcnPackageFiles })
 			})
+		}
+
+		return () => {
+			isCurrent = false
 		}
 	}, [type])
 
 	const allPackageFiles = useMemo(
-		() => (typePackageFiles ? { ...dataGridSandpackSharedPackageFiles, ...typePackageFiles } : null),
-		[typePackageFiles],
+		() =>
+			typePackageFiles?.type === type
+				? { ...dataGridSandpackSharedPackageFiles, ...typePackageFiles.files }
+				: null,
+		[type, typePackageFiles],
 	)
 
 	const files = useMemo(

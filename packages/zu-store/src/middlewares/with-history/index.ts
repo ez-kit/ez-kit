@@ -69,17 +69,18 @@ export function withHistory<T extends object>(store: StoreApi<T>, options: Histo
 		replace?: boolean,
 		setOptions?: SetOptions,
 	): void {
+		const current = store.getState()
+		const nextPartial = typeof partial === 'function' ? partial(current) : partial
+		const next = { ...current, ...nextPartial }
+
 		if (!setOptions?.skipHistory) {
-			const current = store.getState()
-			const nextPartial = typeof partial === 'function' ? (partial as (s: T) => T | Partial<T>)(current) : partial
-			const next = { ...current, ...nextPartial } as T
 			recordState(current, next)
 		}
 
 		if (replace === true) {
-			originalSetState(partial as T, true)
+			originalSetState(next, true)
 		} else {
-			originalSetState(partial as Partial<T> | ((state: T) => Partial<T>))
+			originalSetState(partial)
 		}
 	}
 

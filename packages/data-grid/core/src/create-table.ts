@@ -20,8 +20,6 @@ import type { ColumnDef } from './column/types'
 import type { DataTable, PinningConfig, RowPinningConfig, TableConfig } from './types'
 import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
-type AnyRow = Record<string, unknown>
-
 function collectDefaultHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
 	for (const def of defs) {
@@ -211,11 +209,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 
 	dataTable.getSnapshot = () => currentState
 
-	dataTable.setData = (data) => {
-		ref.table?.setOptions((prev) => ({
-			...prev,
-			data: data as AnyRow[] as TRow[],
-		}))
+		dataTable.setData = (data) => {
+			ref.table?.setOptions((prev) => ({
+				...prev,
+				data,
+			}))
 		// Spread currentState so useSyncExternalStore sees a new snapshot reference
 		// and triggers a re-render even when only data (options) changed.
 		currentState = { ...currentState }

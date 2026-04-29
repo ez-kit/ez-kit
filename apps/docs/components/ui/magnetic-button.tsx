@@ -3,7 +3,7 @@
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { useRef, type ReactNode } from 'react'
 
-interface MagneticButtonProps {
+type MagneticButtonProps = {
 	children: ReactNode
 	className?: string
 }

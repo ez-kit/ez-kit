@@ -72,13 +72,11 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	}
 
 	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, Extract<keyof TCellTypes, string>> {
-		const customTypeKeys = Object.keys(cellTypes ?? {}) as Extract<keyof TCellTypes, string>[]
-		return customTypeKeys.length > 0
-			? createColumnHelper<TRow, Extract<keyof TCellTypes, string>>(
-					customTypeKeys as [Extract<keyof TCellTypes, string>, ...Extract<keyof TCellTypes, string>[]],
-				)
-			: (createColumnHelper<TRow>() as ColumnHelper<TRow, Extract<keyof TCellTypes, string>>)
-	}
+			const customTypeKeys = Object.keys(cellTypes ?? {}) as Extract<keyof TCellTypes, string>[]
+			return customTypeKeys.length > 0
+				? createColumnHelper<TRow, Extract<keyof TCellTypes, string>>(customTypeKeys)
+				: (createColumnHelper<TRow>() as ColumnHelper<TRow, Extract<keyof TCellTypes, string>>)
+		}
 
 	return {
 		DataGrid: BoundDataGrid as typeof DataGrid,
