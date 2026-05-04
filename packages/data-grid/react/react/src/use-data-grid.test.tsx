@@ -124,3 +124,72 @@ describe('useDataGrid — selectionBar', () => {
 		expect(key).toEqual({ onDelete })
 	})
 })
+
+type Sort = { id: string; desc: boolean }
+
+describe('useDataGrid — controlled state', () => {
+	it('applies controlled sorting from state prop', () => {
+		const sorting: Sort[] = [{ id: 'name', desc: true }]
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, sorting: true, state: { sorting } }),
+		)
+		const rows = result.current.getRowModel().rows
+		expect(rows[0]?.getValue('name')).toBe('Bob')
+		expect(rows[1]?.getValue('name')).toBe('Alice')
+	})
+
+	it('updates table when controlled state changes', () => {
+		const { result, rerender } = renderHook(
+			({ sorting }: { sorting: Sort[] }) =>
+				useDataGrid({ data: USERS, columns: COLUMNS, sorting: true, state: { sorting } }),
+			{ initialProps: { sorting: [] as Sort[] } },
+		)
+		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Alice')
+
+		rerender({ sorting: [{ id: 'name', desc: true }] })
+		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Bob')
+	})
+
+	it('calls onStateChange when table state changes', () => {
+		const onStateChange = vi.fn()
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => true }, onStateChange }),
+		)
+		act(() => {
+			result.current.startCreating()
+		})
+		expect(onStateChange).toHaveBeenCalled()
+	})
+
+	it('always uses the latest onStateChange callback after re-render', () => {
+		const first = vi.fn()
+		const second = vi.fn()
+		const { result, rerender } = renderHook(
+			({ cb }: { cb: typeof first }) =>
+				useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => true }, onStateChange: cb }),
+			{ initialProps: { cb: first } },
+		)
+		rerender({ cb: second })
+		act(() => {
+			result.current.startCreating()
+		})
+		expect(first).not.toHaveBeenCalled()
+		expect(second).toHaveBeenCalled()
+	})
+
+	it('leaves uncontrolled state portions internally managed', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({
+				data: USERS,
+				columns: COLUMNS,
+				sorting: true,
+				pagination: true,
+				state: { sorting: [{ id: 'name', desc: true }] },
+			}),
+		)
+		// Pagination not controlled — internal default page index is 0
+		expect(result.current.getState().pagination.pageIndex).toBe(0)
+		// Sorting is controlled
+		expect(result.current.getState().sorting).toEqual([{ id: 'name', desc: true }])
+	})
+})

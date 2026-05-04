@@ -31,6 +31,8 @@ export type {
 	SelectItem,
 } from './column/types'
 
+export type { TableState } from '@tanstack/table-core'
+
 export type {
 	BetweenOperatorConfig,
 	BetweenValue,

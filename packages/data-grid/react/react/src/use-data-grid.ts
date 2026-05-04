@@ -9,7 +9,7 @@ import type {
 	TableConfig,
 	VirtualizedConfig,
 } from '@ez-kit/data-grid-core'
-import type { Row, Table } from '@tanstack/table-core'
+import type { Row, Table, TableState } from '@tanstack/table-core'
 import type { ComponentType, ReactElement } from 'react'
 
 /** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
@@ -161,6 +161,12 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * - `{ toolbar: true }` — shows toggle button in toolbar
 	 */
 	columnVisibility?: boolean | ColumnVisibilityUIConfig
+	/**
+	 * Controlled table state. Pass a partial `TableState` to control specific portions
+	 * (e.g. only sorting) while leaving the rest internally managed.
+	 * Must be used together with `onStateChange` to reflect state updates back.
+	 */
+	state?: Partial<TableState>
 } & Omit<TableConfig<TRow>, 'filtering'>
 
 /**
@@ -172,7 +178,17 @@ export type UseDataGridConfig<TRow extends object> = {
  * const table = useDataGrid({ data: users, columns, sorting: true })
  */
 export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>): DataTable<TRow> {
-	const { cellTypes, pageSizer, selectionBar, columnVisibility, fallbacks, filtering: rawFiltering, ...restConfig } = config
+	const {
+		cellTypes,
+		pageSizer,
+		selectionBar,
+		columnVisibility,
+		fallbacks,
+		filtering: rawFiltering,
+		state,
+		onStateChange,
+		...restConfig
+	} = config
 
 	const filteringVariant: FilteringVariant | undefined =
 		typeof rawFiltering === 'object' ? rawFiltering.variant : undefined
@@ -180,8 +196,24 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	const coreFiltering: boolean | FilteringConfig | undefined =
 		typeof rawFiltering === 'object' ? (({ variant: _, ...rest }) => rest)(rawFiltering) : rawFiltering
 
+	// Stable ref so the table closure always calls the latest onStateChange without re-creating the table
+	const onStateChangeRef = useRef(onStateChange)
+	onStateChangeRef.current = onStateChange
+
 	const tableRef = useRef<DataTable<TRow> | null>(null)
-	tableRef.current ??= createTable({ ...restConfig, filtering: coreFiltering } as TableConfig<TRow>)
+	tableRef.current ??= createTable({
+		...restConfig,
+		filtering: coreFiltering,
+		onStateChange: (updater) => onStateChangeRef.current?.(updater),
+	} as TableConfig<TRow>)
+
+	// Sync controlled state on every render — external state portions override internal state
+	if (state !== undefined) {
+		tableRef.current.setOptions((prev) => ({
+			...prev,
+			state: { ...prev.state, ...state },
+		}))
+	}
 
 	// Store cellTypes on the table instance so DataGrid can read without an extra prop
 	const cellTypesRef = useRef(cellTypes)

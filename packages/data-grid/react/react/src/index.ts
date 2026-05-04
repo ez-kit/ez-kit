@@ -93,6 +93,7 @@ export type {
 	FilterOperatorDef,
 	OperatorRegistry,
 	StructuredFilterValue,
+	TableState,
 } from '@ez-kit/data-grid-core'
 
 export type {

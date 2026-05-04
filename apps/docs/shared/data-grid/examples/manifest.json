@@ -100,5 +100,11 @@
 		"label": "Fallbacks (Loading / Empty / No Results)",
 		"sourceFile": "components/fallbacks.tsx",
 		"exportName": "FallbacksExample"
+	},
+	{
+		"id": "controlled-state",
+		"label": "Controlled State",
+		"sourceFile": "components/controlled-state.tsx",
+		"exportName": "ControlledStateExample"
 	}
 ]

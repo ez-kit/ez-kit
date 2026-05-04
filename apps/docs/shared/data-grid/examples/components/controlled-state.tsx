@@ -1,0 +1,67 @@
+'use client'
+
+import { useState } from 'react'
+
+import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import type { TableState } from '@ez-kit/data-grid-react'
+
+import { columns, INITIAL_DATA } from './_data'
+
+type ControlledState = Pick<TableState, 'sorting' | 'pagination'>
+
+export function ControlledStateExample() {
+	const [tableState, setTableState] = useState<Partial<ControlledState>>({
+		sorting: [{ id: 'name', desc: false }],
+		pagination: { pageIndex: 0, pageSize: 3 },
+	})
+
+	const table = useDataGrid({
+		data: INITIAL_DATA,
+		columns,
+		sorting: true,
+		pagination: true,
+		state: tableState,
+		onStateChange: (updater) => {
+			setTableState((prev) =>
+				typeof updater === 'function' ? updater(prev as TableState) : updater,
+			)
+		},
+	})
+
+	const resetSort = (): void => {
+		setTableState((prev) => ({ ...prev, sorting: [] }))
+	}
+
+	const sortLabel =
+		tableState.sorting && tableState.sorting.length > 0
+			? `${tableState.sorting[0]?.id} ${tableState.sorting[0]?.desc ? '↓' : '↑'}`
+			: 'none'
+
+	return (
+		<div>
+			<p style={{ marginBottom: '1rem', color: '#666' }}>
+				Sorting and pagination state are fully controlled by React state. Click a column header to
+				sort — state is owned by the parent and can be reset or preset programmatically.
+			</p>
+			<div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+				<span style={{ fontSize: '0.875rem', color: '#666' }}>
+					Active sort: <strong>{sortLabel}</strong>
+				</span>
+				<button
+					onClick={resetSort}
+					style={{
+						padding: '0.25rem 0.75rem',
+						fontSize: '0.875rem',
+						border: '1px solid #d1d5db',
+						borderRadius: '0.375rem',
+						background: 'white',
+						cursor: 'pointer',
+					}}
+				>
+					Reset sort
+				</button>
+			</div>
+			<DataGrid table={table} />
+		</div>
+	)
+}

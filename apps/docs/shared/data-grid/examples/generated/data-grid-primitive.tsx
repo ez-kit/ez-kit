@@ -18,6 +18,7 @@ import { ColumnHelperBaseExample as Example13 } from '../components/column-helpe
 import { ColumnHelperCustomViewExample as Example14 } from '../components/column-helper'
 import { ColumnHelperRegisteredExample as Example15 } from '../components/column-helper'
 import { FallbacksExample as Example16 } from '../components/fallbacks'
+import { ControlledStateExample as Example17 } from '../components/controlled-state'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -122,6 +123,12 @@ export const dataGridExamplesManifest = [
     "label": "Fallbacks (Loading / Empty / No Results)",
     "sourceFile": "components/fallbacks.tsx",
     "exportName": "FallbacksExample"
+  },
+  {
+    "id": "controlled-state",
+    "label": "Controlled State",
+    "sourceFile": "components/controlled-state.tsx",
+    "exportName": "ControlledStateExample"
   }
 ] as const
 
@@ -145,4 +152,5 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'column-helper-custom-view': Example14,
 	'column-helper-registered': Example15,
 	'fallbacks': Example16,
+	'controlled-state': Example17,
 }

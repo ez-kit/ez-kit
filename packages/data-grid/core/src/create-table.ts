@@ -8,6 +8,7 @@ import {
 	getSortedRowModel,
 } from '@tanstack/table-core'
 
+import { createStore } from './store'
 import { mapColumns } from './column/map-columns'
 import { CreatingFeature } from './features/creating'
 import { DeletingFeature } from './features/deleting'
@@ -57,12 +58,7 @@ function normalizePinning(pinning: boolean | PinningConfig | undefined): {
  * const table = createTable({ data: users, columns, sorting: true })
  */
 export function createTable<TRow extends object>(config: TableConfig<TRow>): DataTable<TRow> {
-	const listeners = new Set<() => void>()
-	const notify = (): void => {
-		listeners.forEach((l) => {
-			l()
-		})
-	}
+	let store = createStore<TableState>({} as TableState)
 
 	// ── row identity ─────────────────────────────────────────────────────────
 	const getRowId =
@@ -113,12 +109,13 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const ref: { table: ReturnType<typeof createTanStackTable<TRow>> | null } = {
 		table: null,
 	}
-	let currentState: TableState
 
 	const onStateChange = (updater: Updater<TableState>): void => {
-		currentState = typeof updater === 'function' ? updater(currentState) : updater
-		ref.table?.setOptions((prev) => ({ ...prev, state: currentState }))
-		notify()
+		const currentState = store.getState()
+		const next = typeof updater === 'function' ? updater(currentState) : updater
+		ref.table?.setOptions((prev) => ({ ...prev, state: next }))
+		store.setState(next)
+		config.onStateChange?.(updater)
 	}
 
 	// Build options without an explicit type annotation to avoid exactOptionalPropertyTypes
@@ -126,7 +123,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const onRowSelectionChange =
 		typeof config.selection === 'object' && config.selection.onChange
 			? (updater: Updater<RowSelectionState>): void => {
-					const next = typeof updater === 'function' ? updater(currentState.rowSelection) : updater
+					const next = typeof updater === 'function' ? updater(store.getState().rowSelection) : updater
 					const selectedIds = Object.keys(next).filter((k) => next[k])
 					;(config.selection as { onChange: (ids: string[]) => void }).onChange(selectedIds)
 				}
@@ -186,11 +183,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// Create the table. Features run getInitialState during this call.
 	ref.table = createTanStackTable(options as unknown as TableOptionsResolved<TRow>)
 
-	// Capture the fully-merged initial state (includes feature states)
-	currentState = ref.table.initialState
+	// Initialize store with the fully-merged initial state (includes feature states)
+	store = createStore(ref.table.initialState)
 
 	// Switch to fully-controlled mode with the real initial state
-	ref.table.setOptions((prev) => ({ ...prev, state: currentState }))
+	ref.table.setOptions((prev) => ({ ...prev, state: store.getState() }))
 
 	// Set initial loading state if provided
 	if (config.loading === true) {
@@ -200,24 +197,17 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// ── compose the DataTable ─────────────────────────────────────────────────
 	const dataTable = ref.table as DataTable<TRow>
 
-	dataTable.subscribe = (listener) => {
-		listeners.add(listener)
-		return () => {
-			listeners.delete(listener)
-		}
-	}
+	dataTable.subscribe = (listener) => store.subscribe(listener)
 
-	dataTable.getSnapshot = () => currentState
+	dataTable.getSnapshot = () => store.getState()
 
-		dataTable.setData = (data) => {
-			ref.table?.setOptions((prev) => ({
-				...prev,
-				data,
-			}))
-		// Spread currentState so useSyncExternalStore sees a new snapshot reference
-		// and triggers a re-render even when only data (options) changed.
-		currentState = { ...currentState }
-		notify()
+	dataTable.setData = (data) => {
+		ref.table?.setOptions((prev) => ({
+			...prev,
+			data,
+		}))
+		// Create a new snapshot reference so useSyncExternalStore detects the change
+		store.setState((prev) => ({ ...prev }))
 	}
 
 	// Override setLoading to also call notify (it goes through setState → onStateChange)

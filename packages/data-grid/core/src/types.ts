@@ -110,6 +110,14 @@ export type TableConfig<TRow extends object> = {
 	deleting?: DeletingConfig<TRow>
 	loading?: boolean
 	sizing?: boolean | SizingConfig
+	/**
+	 * Called whenever the table state changes (sorting, filtering, pagination, etc.).
+	 * Receives the raw TanStack updater — apply it to your own state to implement controlled mode.
+	 * @example
+	 * const [tableState, setTableState] = useState<Partial<TableState>>({})
+	 * useDataGrid({ ..., state: tableState, onStateChange: (updater) => setTableState(prev => typeof updater === 'function' ? updater(prev as TableState) : updater) })
+	 */
+	onStateChange?: (updater: Updater<TableState>) => void
 }
 
 /**
