@@ -39,57 +39,21 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 	)
 }
 
-function LoadingExample() {
-	const table = useDataGrid({
-		data: INITIAL_DATA,
-		columns,
-		loading: true,
-		sorting: true,
-		pagination: { pageSize: 5 },
-	})
-	return <DataGrid table={table} />
-}
+export function FallbacksExample() {
+	const [mode, setMode] = useState<Mode>('loading')
 
-function EmptyExample() {
 	const table = useDataGrid({
-		data: EMPTY_DATA,
-		columns,
-		sorting: true,
-		pagination: { pageSize: 5 },
-	})
-	return <DataGrid table={table} />
-}
-
-function NoResultsExample() {
-	const table = useDataGrid({
-		data: INITIAL_DATA,
+		data: mode === 'empty' ? EMPTY_DATA : INITIAL_DATA,
 		columns,
 		sorting: true,
 		filtering: true,
 		pagination: { pageSize: 5 },
+		state: {
+			loading: { isLoading: mode === 'loading' },
+			// Reset column filters when leaving 'no-results' mode
+			...(mode !== 'no-results' ? { columnFilters: [] } : {}),
+		},
 	})
-	return (
-		<div>
-			<p style={{ marginBottom: '0.75rem', fontSize: 13, color: '#64748b' }}>
-				Type something that matches no rows in the filter inputs below column headers.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
-}
-
-function NormalExample() {
-	const table = useDataGrid({
-		data: INITIAL_DATA,
-		columns,
-		sorting: true,
-		pagination: { pageSize: 5 },
-	})
-	return <DataGrid table={table} />
-}
-
-export function FallbacksExample() {
-	const [mode, setMode] = useState<Mode>('loading')
 
 	return (
 		<div>
@@ -112,10 +76,13 @@ export function FallbacksExample() {
 				))}
 			</div>
 
-			{mode === 'loading' && <LoadingExample />}
-			{mode === 'empty' && <EmptyExample />}
-			{mode === 'no-results' && <NoResultsExample />}
-			{mode === 'normal' && <NormalExample />}
+			{mode === 'no-results' && (
+				<p style={{ marginBottom: '0.75rem', fontSize: 13, color: '#64748b' }}>
+					Type something that matches no rows in the filter inputs below column headers.
+				</p>
+			)}
+
+			<DataGrid table={table} />
 		</div>
 	)
 }
