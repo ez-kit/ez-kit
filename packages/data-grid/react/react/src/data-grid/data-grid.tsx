@@ -3,6 +3,9 @@ import { GridComponentsProvider, useGridComponents } from '../components-context
 import { CELL_TYPES_KEY } from '../use-data-grid'
 
 import { Body } from './body'
+import { EmptyStateRow } from './empty-state-row'
+import { LoadingBody } from './loading-body'
+import { NoResultsRow } from './no-results-row'
 import { DataGridCell } from './cell'
 import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { CreateTrigger } from './create-trigger'
@@ -133,6 +136,9 @@ type DataGridType = typeof DataGridRoot & {
 	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
 	CreatingModal: typeof CreatingModal
 	EditingModal: typeof EditingModal
+	LoadingBody: typeof LoadingBody
+	EmptyStateRow: typeof EmptyStateRow
+	NoResultsRow: typeof NoResultsRow
 }
 
 export const DataGrid = DataGridRoot as DataGridType
@@ -149,3 +155,6 @@ DataGrid.CreateTrigger = CreateTrigger
 DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
 DataGrid.CreatingModal = CreatingModal
 DataGrid.EditingModal = EditingModal
+DataGrid.LoadingBody = LoadingBody
+DataGrid.EmptyStateRow = EmptyStateRow
+DataGrid.NoResultsRow = NoResultsRow

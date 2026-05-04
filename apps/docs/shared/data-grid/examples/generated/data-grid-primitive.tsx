@@ -17,6 +17,7 @@ import { CustomCellTypesExample as Example12 } from '../components/custom-cell-t
 import { ColumnHelperBaseExample as Example13 } from '../components/column-helper'
 import { ColumnHelperCustomViewExample as Example14 } from '../components/column-helper'
 import { ColumnHelperRegisteredExample as Example15 } from '../components/column-helper'
+import { FallbacksExample as Example16 } from '../components/fallbacks'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -115,6 +116,12 @@ export const dataGridExamplesManifest = [
     "label": "Column Helper: Registered Types",
     "sourceFile": "components/column-helper.tsx",
     "exportName": "ColumnHelperRegisteredExample"
+  },
+  {
+    "id": "fallbacks",
+    "label": "Fallbacks (Loading / Empty / No Results)",
+    "sourceFile": "components/fallbacks.tsx",
+    "exportName": "FallbacksExample"
   }
 ] as const
 
@@ -137,4 +144,5 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'column-helper': Example13,
 	'column-helper-custom-view': Example14,
 	'column-helper-registered': Example15,
+	'fallbacks': Example16,
 }

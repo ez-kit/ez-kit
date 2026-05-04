@@ -4,6 +4,9 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { BetweenInput } from './blocks/BetweenInput'
 import { Checkbox } from './blocks/Checkbox'
+import { EmptyState } from './blocks/EmptyState'
+import { LoadingRow } from './blocks/LoadingRow'
+import { NoResultsState } from './blocks/NoResultsState'
 import { ColumnMenu } from './blocks/ColumnMenu'
 import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { ConfirmDialog } from './blocks/ConfirmDialog'
@@ -48,6 +51,9 @@ const SHADCN_COMPONENTS = {
 	ConfirmDialog,
 	OperatorSelect,
 	BetweenInput,
+	LoadingRow,
+	EmptyState,
+	NoResultsState,
 }
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({

@@ -94,5 +94,11 @@
 		"label": "Column Helper: Registered Types",
 		"sourceFile": "components/column-helper.tsx",
 		"exportName": "ColumnHelperRegisteredExample"
+	},
+	{
+		"id": "fallbacks",
+		"label": "Fallbacks (Loading / Empty / No Results)",
+		"sourceFile": "components/fallbacks.tsx",
+		"exportName": "FallbacksExample"
 	}
 ]

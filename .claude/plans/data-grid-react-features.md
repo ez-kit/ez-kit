@@ -146,9 +146,9 @@ When a column has `operators` enabled, a trigger appears next to the filter inpu
 
 | Feature               | Status | Notes                                                            |
 | --------------------- | ------ | ---------------------------------------------------------------- |
-| Loading skeleton rows | 🔲     | Placeholder rows rendered while loading state is active          |
-| Empty state           | 🔲     | Shown when data is empty; overridable via DI or compound pattern |
-| "No results" state    | 🔲     | Distinct message when data exists but filters return nothing     |
+| Loading skeleton rows | ✅     | `fallbacks.loading`; `LoadingRow` DI slot; shadcn Skeleton + heroui Skeleton blocks |
+| Empty state           | ✅     | `fallbacks.empty`; `EmptyState` DI slot; shadcn + heroui blocks  |
+| "No results" state    | ✅     | `fallbacks.noResults`; `NoResultsState` DI slot; shadcn + heroui blocks             |
 
 ---
 

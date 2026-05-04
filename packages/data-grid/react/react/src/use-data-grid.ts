@@ -10,7 +10,7 @@ import type {
 	VirtualizedConfig,
 } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
-import type { ReactElement } from 'react'
+import type { ComponentType, ReactElement } from 'react'
 
 /** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
 export const CELL_TYPES_KEY = Symbol('cellTypes')
@@ -35,6 +35,9 @@ export const COLUMN_VISIBILITY_KEY = Symbol('columnVisibility')
 
 /** Symbol used to carry filtering variant on the table instance for Header to read. */
 export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
+
+/** Symbol used to carry fallbacks config on the table instance for Body to read. */
+export const FALLBACKS_KEY = Symbol('fallbacks')
 
 export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
@@ -79,6 +82,45 @@ export type ColumnVisibilityUIConfig = {
 	toolbar?: boolean
 }
 
+export type LoadingFallbackConfig = {
+	/** Override loading content. ReactElement rendered as-is; ComponentType called via flexRender. */
+	content?: ReactElement | ComponentType
+}
+
+export type EmptyFallbackConfig = {
+	/** Override empty content. ReactElement rendered as-is; ComponentType called via flexRender. */
+	content?: ReactElement | ComponentType
+}
+
+export type NoResultsFallbackConfig = {
+	/** Override no-results content. ReactElement rendered as-is; ComponentType called via flexRender. */
+	content?: ReactElement | ComponentType
+}
+
+export type FallbacksConfig = {
+	/**
+	 * Skeleton rows shown while `loading: true`.
+	 * - `true` / omitted — use DI `LoadingRow` component (default)
+	 * - `false` — disable
+	 * - `LoadingFallbackConfig` — custom content override
+	 */
+	loading?: LoadingFallbackConfig | boolean
+	/**
+	 * Shown when `data` is empty and not loading.
+	 * - `true` / omitted — use DI `EmptyState` component (default)
+	 * - `false` — disable
+	 * - `EmptyFallbackConfig` — custom content override
+	 */
+	empty?: EmptyFallbackConfig | boolean
+	/**
+	 * Shown when filters produce 0 rows but raw data is non-empty.
+	 * - `true` / omitted — use DI `NoResultsState` component (default)
+	 * - `false` — disable
+	 * - `NoResultsFallbackConfig` — custom content override
+	 */
+	noResults?: NoResultsFallbackConfig | boolean
+}
+
 export type FilteringVariant = 'inline' | 'popover'
 
 export type ReactFilteringConfig = {
@@ -87,6 +129,12 @@ export type ReactFilteringConfig = {
 } & FilteringConfig
 
 export type UseDataGridConfig<TRow extends object> = {
+	/**
+	 * Fallback states shown when the grid has no visible rows.
+	 * All three states are enabled by default when the corresponding DI component is registered.
+	 * Pass `false` to a specific state to disable it, or provide a config object for custom content.
+	 */
+	fallbacks?: FallbacksConfig
 	/**
 	 * Enable filtering.
 	 * - `true` — inline filter inputs below each column header
@@ -124,7 +172,7 @@ export type UseDataGridConfig<TRow extends object> = {
  * const table = useDataGrid({ data: users, columns, sorting: true })
  */
 export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>): DataTable<TRow> {
-	const { cellTypes, pageSizer, selectionBar, columnVisibility, filtering: rawFiltering, ...restConfig } = config
+	const { cellTypes, pageSizer, selectionBar, columnVisibility, fallbacks, filtering: rawFiltering, ...restConfig } = config
 
 	const filteringVariant: FilteringVariant | undefined =
 		typeof rawFiltering === 'object' ? rawFiltering.variant : undefined
@@ -167,6 +215,11 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 
 	// Store filteringVariant on the table instance so Header can read without an extra prop
 	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] = filteringVariant
+
+	// Store fallbacks config on the table instance so Body can read without an extra prop
+	const fallbacksRef = useRef(fallbacks)
+	fallbacksRef.current = fallbacks
+	;(tableRef.current as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] = fallbacksRef.current
 
 	// Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
 	const virtualizedConfig = normalizeVirtualized(config.virtualized)

@@ -64,6 +64,9 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	BoundDataGrid.CreateTrigger = DataGrid.CreateTrigger
 	BoundDataGrid.CreatingModal = DataGrid.CreatingModal
 	BoundDataGrid.EditingModal = DataGrid.EditingModal
+	BoundDataGrid.LoadingBody = DataGrid.LoadingBody
+	BoundDataGrid.EmptyStateRow = DataGrid.EmptyStateRow
+	BoundDataGrid.NoResultsRow = DataGrid.NoResultsRow
 
 	function boundDefineColumns<TRow extends object>(
 		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],

@@ -152,6 +152,18 @@ export type ConfirmDialogProps = {
 	onCancel: () => void
 }
 
+export type LoadingRowProps = {
+	columnCount: number
+}
+
+export type EmptyStateProps = {
+	columnCount: number
+}
+
+export type NoResultsStateProps = {
+	columnCount: number
+}
+
 export type SelectionBarProps = {
 	/** False when 0 rows selected — component should hide/animate out. */
 	open: boolean
@@ -204,4 +216,8 @@ export type GridComponents = {
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>
 	BetweenInput?: ComponentType<BetweenInputProps>
+	// fallback states
+	LoadingRow?: ComponentType<LoadingRowProps>
+	EmptyState?: ComponentType<EmptyStateProps>
+	NoResultsState?: ComponentType<NoResultsStateProps>
 }

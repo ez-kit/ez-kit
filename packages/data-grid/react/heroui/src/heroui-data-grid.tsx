@@ -4,6 +4,9 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { BetweenInput } from './blocks/BetweenInput'
 import { Button } from './blocks/Button'
+import { EmptyState } from './blocks/EmptyState'
+import { LoadingRow } from './blocks/LoadingRow'
+import { NoResultsState } from './blocks/NoResultsState'
 import { Checkbox } from './blocks/Checkbox'
 import { ColumnMenu } from './blocks/ColumnMenu'
 import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
@@ -48,6 +51,9 @@ const HEROUI_COMPONENTS = {
 	ConfirmDialog,
 	OperatorSelect,
 	BetweenInput,
+	LoadingRow,
+	EmptyState,
+	NoResultsState,
 }
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
