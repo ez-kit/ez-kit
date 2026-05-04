@@ -38,7 +38,7 @@
 | Row delete button                            | ✅     |                                                                                                                                                                |
 | `AutoForm` label uses column `header` string | 🔲     | Currently falls back to `col.id`                                                                                                                               |
 | Delete confirmation dialog                   | ✅     | Optional confirm step before `onDelete` fires; `confirmation: boolean \| ConfirmationOptions` in `deleting` config; state in core; shadcn `AlertDialog` via DI |
-| Bulk delete (multi-select)                   | 🔲     | Part of bulk actions bar — see Toolbar section                                                                                                                 |
+| Bulk delete (multi-select)                   | ✅     | Via `selectionBar.onDelete`; consumer receives selected rows and decides how to delete                                                                         |
 
 ---
 
@@ -58,11 +58,11 @@ Controlled at `<DataGrid>` level via `filtering.variant`.
 
 When a column has `operators` enabled, a trigger appears next to the filter input letting the user pick the active operator.
 
-| Feature                             | Status | Notes                                                 |
-| ----------------------------------- | ------ | ----------------------------------------------------- |
-| Operator selector UI per column     | 🔲     | Rendered in whatever filter display variant is active |
-| `between` operator — min/max inputs | 🔲     | Two separate inputs when operator is `between`        |
-| `between` operator — range slider   | 🔲     | Alternative to min/max inputs for numeric ranges      |
+| Feature                             | Status | Notes                                                                                    |
+| ----------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
+| Operator selector UI per column     | ✅     | `OperatorSelect` DI component rendered in inline and popover variants                    |
+| `between` operator — min/max inputs | ✅     | `BetweenInput` DI component receives `{ from, to }` when operator is `between`           |
+| `between` operator — range slider   | 🚧     | Supported by `BetweenInput` variant and shadcn block; HeroUI block currently uses inputs |
 
 ### Filter extras
 
@@ -91,54 +91,54 @@ When a column has `operators` enabled, a trigger appears next to the filter inpu
 
 ## Toolbar
 
-| Feature                            | Status | Notes                                                                             |
-| ---------------------------------- | ------ | --------------------------------------------------------------------------------- |
-| Default toolbar with Create button | ✅     |                                                                                   |
-| Global search input                | 🔲     | Search input wired to global filter; shown when `filtering.global` is enabled     |
-| Column visibility toggle button    | 🔲     | Opens column visibility menu                                                      |
-| Bulk actions bar                   | 🔲     | Replaces or extends toolbar when rows are selected; slot-based for custom actions |
-| Export button                      | 🔲     | Triggers CSV or JSON export                                                       |
-| Row density toggle                 | 🔲     | Switch between `compact` / `comfortable` / `spacious` row padding                 |
-| Fullscreen toggle                  | 🔲     | Expand grid to fill viewport                                                      |
+| Feature                            | Status | Notes                                                                                                       |
+| ---------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| Default toolbar with Create button | ✅     |                                                                                                             |
+| Global search input                | 🔲     | Search input wired to global filter; shown when `filtering.global` is enabled                               |
+| Column visibility toggle button    | ✅     | `DataGrid.ColumnVisibilityTrigger`; toolbar renders it when `columnVisibility: true` or `{ toolbar: true }` |
+| Bulk actions bar                   | ✅     | `DataGrid.SelectionBar`; shows selected count, optional delete, clear, and custom `actions` slot            |
+| Export button                      | 🔲     | Triggers CSV or JSON export                                                                                 |
+| Row density toggle                 | 🔲     | Switch between `compact` / `comfortable` / `spacious` row padding                                           |
+| Fullscreen toggle                  | 🔲     | Expand grid to fill viewport                                                                                |
 
 ---
 
 ## Rows
 
-| Feature                    | Status | Notes                                                            |
-| -------------------------- | ------ | ---------------------------------------------------------------- |
-| Row expand toggle          | ✅     |                                                                  |
-| Sub-row render slot        | ✅     |                                                                  |
-| Row selection checkbox     | ✅     |                                                                  |
-| Row detail / drawer        | 🔲     | Expand a row to reveal a full-width detail panel (not a sub-row) |
-| Row drag handle (reorder)  | 🔲     | Visual handle column; ties into core `moveRow`                   |
-| Row pinning (top / bottom) | 🔲     | Pinned rows rendered in separate sticky sections                 |
-| Virtualized rows           | 🔲     | Body renders only visible rows for large datasets                |
-| Conditional row styling    | 🔲     | `getRowClassName(row)` / `getRowStyle(row)` on DataGrid config   |
-| Row highlight by id        | 🔲     | Visually highlight a specific row (e.g. after create/navigate)   |
-| `onRowClick` handler       | 🔲     | Callback fired when a data row is clicked                        |
-| Row context menu           | 🔲     | Right-click on row opens a custom context menu                   |
-| Striped rows               | 🔲     | Alternating row background via config flag                       |
-| Selection info bar         | 🔲     | "N of M rows selected" summary; shown when selection is active   |
+| Feature                    | Status | Notes                                                                                         |
+| -------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| Row expand toggle          | ✅     |                                                                                               |
+| Sub-row render slot        | ✅     |                                                                                               |
+| Row selection checkbox     | ✅     |                                                                                               |
+| Row detail / drawer        | 🔲     | Expand a row to reveal a full-width detail panel (not a sub-row)                              |
+| Row drag handle (reorder)  | 🔲     | Visual handle column; ties into core `moveRow`                                                |
+| Row pinning (top / bottom) | ✅     | `RowPinMenu` DI component; top / bottom pinned rows render with sticky positioning            |
+| Virtualized rows           | ✅     | `virtualized` config uses `@tanstack/react-virtual`; default height via `--dg-virtual-height` |
+| Conditional row styling    | 🔲     | `getRowClassName(row)` / `getRowStyle(row)` on DataGrid config                                |
+| Row highlight by id        | 🔲     | Visually highlight a specific row (e.g. after create/navigate)                                |
+| `onRowClick` handler       | 🔲     | Callback fired when a data row is clicked                                                     |
+| Row context menu           | 🔲     | Right-click on row opens a custom context menu                                                |
+| Striped rows               | 🔲     | Alternating row background via config flag                                                    |
+| Selection info bar         | ✅     | `SelectionBar` DI component shown when row selection is active                                |
 
 ---
 
 ## Cells
 
-| Feature                                                                              | Status | Notes                                                |
-| ------------------------------------------------------------------------------------ | ------ | ---------------------------------------------------- |
-| Built-in type renderers (text, number, date, boolean)                                | ✅     |                                                      |
-| Custom `cell.component` per column                                                   | ✅     |                                                      |
-| Custom `editing.component` / `creating.component` / `filtering.component` per column | ✅     |                                                      |
-| `select` cell type (enum dropdown)                                                   | 🔲     | View + edit + filter rendering for enum values       |
-| `badge` / `tag` cell type                                                            | 🔲     | Colored pill; config maps values to label + color    |
-| `image` cell type                                                                    | 🔲     | Renders thumbnail                                    |
-| `link` cell type                                                                     | 🔲     | Renders anchor; `href` derived from row data         |
-| `currency` cell type                                                                 | 🔲     | Locale-formatted number with currency symbol         |
-| `progress` cell type                                                                 | 🔲     | Progress bar for 0–100 numeric values                |
-| Cell tooltip on text overflow                                                        | 🔲     | Show full value in tooltip when content is truncated |
-| Copy cell value to clipboard                                                         | 🔲     | Via click or keyboard shortcut                       |
-| Search highlight in cells                                                            | 🔲     | Highlight matching text when global search is active |
+| Feature                                                                              | Status | Notes                                                                    |
+| ------------------------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------ |
+| Built-in type renderers (text, number, date, boolean)                                | ✅     |                                                                          |
+| Custom `cell.component` per column                                                   | ✅     |                                                                          |
+| Custom `editing.component` / `creating.component` / `filtering.component` per column | ✅     |                                                                          |
+| `select` cell type (enum dropdown)                                                   | ✅     | View + edit + filter rendering in shadcn and HeroUI registries           |
+| `badge` / `tag` cell type                                                            | ✅     | Colored pill; config maps values to label + variant in shadcn and HeroUI |
+| `image` cell type                                                                    | ✅     | Thumbnail view + URL input in shadcn and HeroUI                          |
+| `link` cell type                                                                     | ✅     | Anchor/button-style view + URL input in shadcn and HeroUI                |
+| `currency` cell type                                                                 | 🔲     | Locale-formatted number with currency symbol                             |
+| `progress` cell type                                                                 | ✅     | Progress bar view + numeric input in shadcn and HeroUI                   |
+| Cell tooltip on text overflow                                                        | 🔲     | Show full value in tooltip when content is truncated                     |
+| Copy cell value to clipboard                                                         | 🔲     | Via click or keyboard shortcut                                           |
+| Search highlight in cells                                                            | 🔲     | Highlight matching text when global search is active                     |
 
 ---
 

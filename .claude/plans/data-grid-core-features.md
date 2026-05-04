@@ -68,24 +68,34 @@ All operator logic runs client-side by default; manual filtering passes raw stat
 
 ## Column Management
 
-| Feature                               | Status | Notes                                                                 |
-| ------------------------------------- | ------ | --------------------------------------------------------------------- |
-| Column visibility / hiding            | 🔲     | User can show/hide columns                                            |
-| Column resizing                       | ✅     | `sizing` config; CSS-variable performant pattern; `SizingConfig` type |
-| Column reordering                     | 🔲     | Drag to change column order                                           |
-| Column grouping (multi-level headers) | ✅     | Via nested `columns` in `ColumnDef`                                   |
+| Feature                               | Status | Notes                                                                                                     |
+| ------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- |
+| Column visibility / hiding            | ✅     | `visibility: false` locks a column; `visibility: { defaultHidden: true }` seeds TanStack visibility state |
+| Column resizing                       | ✅     | `sizing` config; CSS-variable performant pattern; `SizingConfig` type                                     |
+| Column reordering                     | 🔲     | Drag to change column order                                                                               |
+| Column grouping (multi-level headers) | ✅     | Via nested `columns` in `ColumnDef`                                                                       |
 
 ---
 
 ## Advanced Data Features
 
-| Feature                                            | Status | Notes                                            |
-| -------------------------------------------------- | ------ | ------------------------------------------------ |
-| Row grouping (group-by column)                     | 🔲     | Group rows by one or more column values          |
-| Aggregation (sum / avg / count / min / max)        | 🔲     | Per-column aggregate values for grouped rows     |
-| Row drag-and-drop reorder                          | 🔲     | User drags rows to reorder; `onReorder` callback |
-| Row pinning (freeze specific rows to top / bottom) | 🔲     |                                                  |
-| Row virtualization                                 | 🔲     | Efficient rendering for large datasets           |
+| Feature                                            | Status | Notes                                                                        |
+| -------------------------------------------------- | ------ | ---------------------------------------------------------------------------- |
+| Row grouping (group-by column)                     | 🔲     | Group rows by one or more column values                                      |
+| Aggregation (sum / avg / count / min / max)        | 🔲     | Per-column aggregate values for grouped rows                                 |
+| Row drag-and-drop reorder                          | 🔲     | User drags rows to reorder; `onReorder` callback                             |
+| Row pinning (freeze specific rows to top / bottom) | ✅     | `pinning: true` or `pinning: { row: ... }`; adds `__row_pin__` system column |
+| Row virtualization                                 | ✅     | `virtualized` config stored for adapters; React layer renders virtual rows   |
+
+---
+
+## Cell Type Metadata
+
+| Feature                        | Status | Notes                                                                               |
+| ------------------------------ | ------ | ----------------------------------------------------------------------------------- |
+| Built-in cell type definitions | ✅     | `text`, `number`, `date`, `boolean`, `select`, `badge`, `image`, `link`, `progress` |
+| Config types for rich cells    | ✅     | `SelectCellConfig`, `BadgeCellConfig`, `ImageCellConfig`, `ProgressCellConfig`      |
+| Custom cell type extension     | ✅     | `ColumnDef<TRow, TCustomCellTypes>` preserves autocomplete plus custom type strings |
 
 ---
 
