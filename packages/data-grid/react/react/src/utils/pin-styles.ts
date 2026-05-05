@@ -10,6 +10,7 @@ import type { CSSProperties } from 'react'
  * set by the scroll container (`--dg-pin-left-shadow` / `--dg-pin-right-shadow`).
  *
  * Customise shadow colour via `--dg-pin-shadow-color` on any ancestor element.
+ * Customise pinned-cell background via `--dg-pin-cell-background` on the table container.
  */
 export function getCommonPinStyles<TData extends RowData>(
 	column: Column<TData>,
@@ -22,7 +23,7 @@ export function getCommonPinStyles<TData extends RowData>(
 		left: isPinned === 'left' ? `${String(column.getStart('left'))}px` : undefined,
 		right: isPinned === 'right' ? `${String(column.getAfter('right'))}px` : undefined,
 		zIndex: 1,
-		backgroundColor: 'var(--background)',
+		backgroundColor: 'var(--dg-pin-cell-background)',
 		...(isBoundaryColumn && {
 			boxShadow: isPinned === 'left' ? 'var(--dg-pin-left-shadow, none)' : 'var(--dg-pin-right-shadow, none)',
 		}),

@@ -11,10 +11,13 @@ import type {
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	DateFieldProps,
+	EmptyStateProps,
 	FilterPopoverProps,
 	GridComponents,
 	InputProps,
+	LoadingRowProps,
 	ModalProps,
+	NoResultsStateProps,
 	NumberInputProps,
 	OperatorSelectProps,
 	PageSizerProps,
@@ -228,6 +231,15 @@ function TestSelectionBar({ open, count, onDelete, onClear, actions }: Selection
 		</div>
 	)
 }
+function TestLoadingRow({ columnCount }: LoadingRowProps) {
+	return <tr><td colSpan={columnCount}>Loading…</td></tr>
+}
+function TestEmptyState({ columnCount }: EmptyStateProps) {
+	return <tr><td colSpan={columnCount}>No data</td></tr>
+}
+function TestNoResultsState({ columnCount }: NoResultsStateProps) {
+	return <tr><td colSpan={columnCount}>No results</td></tr>
+}
 
 export const testComponents: Required<GridComponents> = {
 	Table: TestTable,
@@ -254,12 +266,15 @@ export const testComponents: Required<GridComponents> = {
 	ConfirmDialog: TestConfirmDialog,
 	OperatorSelect: TestOperatorSelect,
 	BetweenInput: TestBetweenInput,
+	LoadingRow: TestLoadingRow,
+	EmptyState: TestEmptyState,
+	NoResultsState: TestNoResultsState,
 }
 
 function TestWrapper({ children }: { children: ReactNode }) {
 	return <GridComponentsProvider components={testComponents}>{children}</GridComponentsProvider>
 }
 
-export function renderWithComponents(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+export function renderWithComponents(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>): ReturnType<typeof render> {
 	return render(ui, { wrapper: TestWrapper, ...options })
 }

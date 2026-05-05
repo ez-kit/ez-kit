@@ -16,15 +16,12 @@ import type { CSSProperties } from 'react'
 const DEFAULT_ESTIMATE_SIZE = 50
 const DEFAULT_OVERSCAN = 5
 
-const LEFT_SHADOW = '4px 0 8px -2px var(--dg-pin-shadow-color, rgba(0, 0, 0, 0.12))'
-const RIGHT_SHADOW = '-4px 0 8px -2px var(--dg-pin-shadow-color, rgba(0, 0, 0, 0.12))'
-
 function updateScrollShadows(el: HTMLElement): void {
 	const scrolledLeft = el.scrollLeft > 0
 	const maxScroll = el.scrollWidth - el.clientWidth
 	const scrolledRight = maxScroll > 1 && el.scrollLeft < maxScroll - 1
-	el.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? LEFT_SHADOW : 'none')
-	el.style.setProperty('--dg-pin-right-shadow', scrolledRight ? RIGHT_SHADOW : 'none')
+	el.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? 'var(--dg-pin-left-shadow-value)' : 'none')
+	el.style.setProperty('--dg-pin-right-shadow', scrolledRight ? 'var(--dg-pin-right-shadow-value)' : 'none')
 }
 
 function useScrollShadows(ref: { current: HTMLElement | null }): void {

@@ -79,6 +79,10 @@
 	--sidebar-accent-foreground: oklch(0.205 0 0);
 	--sidebar-border: oklch(0.922 0 0);
 	--sidebar-ring: oklch(0.708 0 0);
+
+	--dg-pin-cell-background: var(--background);
+	--dg-pin-left-shadow-value: 4px 0 8px -2px var(--dg-pin-shadow-color);
+	--dg-pin-right-shadow-value: -4px 0 8px -2px var(--dg-pin-shadow-color);
 }
 
 .dark {

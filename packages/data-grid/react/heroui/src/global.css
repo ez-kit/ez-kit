@@ -1,1 +1,8 @@
 @import '@heroui/styles';
+
+:root {
+	--dg-pin-shadow-color: var(--surface-foreground);
+	--dg-pin-cell-background: var(--surface);
+	--dg-pin-left-shadow-value: 4px 0 8px -2px var(--dg-pin-shadow-color);
+	--dg-pin-right-shadow-value: -4px 0 8px -2px var(--dg-pin-shadow-color);
+}
