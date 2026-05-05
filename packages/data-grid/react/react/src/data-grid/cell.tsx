@@ -36,6 +36,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 	const meta = cell.column.columnDef.meta
 	const pinStyles = getCommonPinStyles(cell.column, isBoundaryPinnedColumn(cell.column, table))
 	const cellStyle: CSSProperties = pinStyles
+	const pinned = cell.column.getIsPinned()
 
 	// ── system columns ────────────────────────────────────────────────────────
 	if (meta?.isSystemColumn) {
@@ -43,7 +44,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			const isSelected = row.getIsSelected()
 			const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 			return (
-				<Td style={cellStyle}>
+				<Td style={cellStyle} pinned={pinned}>
 					<Checkbox
 						value={isSelected}
 						{...(isIndeterminate !== undefined ? { indeterminate: isIndeterminate } : {})}
@@ -58,7 +59,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 		if (columnId === EXPAND_COLUMN_ID) {
 			return (
-				<Td style={cellStyle}>
+				<Td style={cellStyle} pinned={pinned}>
 					{row.getCanExpand() && (
 						<button
 							type='button'
@@ -76,7 +77,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 		if (columnId === ACTIONS_COLUMN_ID) {
 			return (
-				<Td style={cellStyle}>
+				<Td style={cellStyle} pinned={pinned}>
 					<ActionsCell row={row} />
 				</Td>
 			)
@@ -84,7 +85,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 		if (columnId === ROW_PIN_COLUMN_ID) {
 			return (
-				<Td style={cellStyle}>
+				<Td style={cellStyle} pinned={pinned}>
 					<RowPinCell row={row} />
 				</Td>
 			)
@@ -104,7 +105,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			table.setEditingValue(columnId, v)
 		}
 		return (
-			<Td style={cellStyle}>
+			<Td style={cellStyle} pinned={pinned}>
 				{editComp ? (
 					editComp({ value, onChange, ...(meta?.config !== undefined ? { config: meta.config } : {}) })
 				) : (
@@ -131,7 +132,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			table.setEditingValue(columnId, v)
 		}
 		return (
-			<Td style={cellStyle}>
+			<Td style={cellStyle} pinned={pinned}>
 				{editComp ? (
 					editComp({ value, onChange, ...(meta?.config !== undefined ? { config: meta.config } : {}) })
 				) : (
@@ -159,6 +160,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 	return (
 		<Td
 			style={cellStyle}
+			pinned={pinned}
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp

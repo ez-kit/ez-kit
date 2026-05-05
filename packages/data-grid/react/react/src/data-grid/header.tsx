@@ -113,6 +113,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 									key={header.id}
 									colSpan={header.colSpan}
 									style={thStyle}
+									pinned={header.column.getIsPinned()}
 								>
 									<Checkbox
 										value={isAllSelected}
@@ -132,6 +133,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 								key={header.id}
 								colSpan={header.colSpan}
 								style={thStyle}
+								pinned={header.column.getIsPinned()}
 							>
 								{(() => {
 									const canFilter =

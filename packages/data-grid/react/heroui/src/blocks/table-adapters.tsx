@@ -1,6 +1,6 @@
 'use client'
 
-import { Table as HeroTable } from '@heroui/react'
+import { Table as HeroTable, cn } from '@heroui/react'
 import { Children, createContext, isValidElement, useContext, useMemo } from 'react'
 
 import type { TableProps, TbodyProps, TdProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
@@ -59,21 +59,30 @@ export function Tr({ children, ...props }: TrProps) {
 	)
 }
 
-export function Th(props: ThProps) {
+export function Th({ pinned, className, ...props }: ThProps) {
 	const { rowHeaderKey } = useContext(HeaderContext)
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
 	const isRowHeader = rowHeaderKey !== undefined && heroProps.id === rowHeaderKey
+	const mergedClassName = cn(className, pinned ? 'bg-surface-secondary' : undefined) ?? ''
 
 	return (
 		<HeroTable.Column
 			{...heroProps}
+			className={mergedClassName}
 			{...(isRowHeader ? { isRowHeader: true } : {})}
 		/>
 	)
 }
 
-export function Td(props: TdProps) {
-	return <HeroTable.Cell {...(props as unknown as ComponentProps<typeof HeroTable.Cell>)} />
+export function Td({ pinned, className, ...props }: TdProps) {
+	const mergedClassName = cn(className, pinned ? 'bg-surface' : undefined) ?? ''
+
+	return (
+		<HeroTable.Cell
+			{...(props as unknown as ComponentProps<typeof HeroTable.Cell>)}
+			className={mergedClassName}
+		/>
+	)
 }
 
 function findRowHeaderKey(children: React.ReactNode): Key | undefined {

@@ -1,5 +1,10 @@
 @import '@heroui/styles';
 
+@theme inline {
+	--color-surface: var(--surface);
+	--color-surface-secondary: var(--surface-secondary);
+}
+
 :root {
 	--dg-pin-shadow-color: var(--surface-foreground);
 	--dg-pin-cell-background: var(--surface);

@@ -70,12 +70,13 @@ function TableRow({ className, style, ...props }: React.ComponentProps<'tr'>) {
 	)
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
+function TableHead({ className, pinned, ...props }: React.ComponentProps<'th'> & { pinned?: 'left' | 'right' | false }) {
 	return (
 		<th
 			data-slot='table-head'
 			className={cn(
 				'min-h-10 px-2 text-left font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0',
+				pinned && 'bg-background',
 				className,
 			)}
 			{...props}
@@ -83,11 +84,11 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
 	)
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
+function TableCell({ className, pinned, ...props }: React.ComponentProps<'td'> & { pinned?: 'left' | 'right' | false }) {
 	return (
 		<td
 			data-slot='table-cell'
-			className={cn('p-2 flex items-center overflow-hidden [&:has([role=checkbox])]:pr-0', className)}
+			className={cn('p-2 flex items-center overflow-hidden [&:has([role=checkbox])]:pr-0', pinned && 'bg-background', className)}
 			{...props}
 		/>
 	)

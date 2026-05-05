@@ -19,8 +19,8 @@ export type TableProps = HTMLAttributes<HTMLTableElement>
 export type TheadProps = HTMLAttributes<HTMLTableSectionElement>
 export type TbodyProps = HTMLAttributes<HTMLTableSectionElement>
 export type TrProps = HTMLAttributes<HTMLTableRowElement>
-export type ThProps = ThHTMLAttributes<HTMLTableCellElement>
-export type TdProps = TdHTMLAttributes<HTMLTableCellElement>
+export type ThProps = ThHTMLAttributes<HTMLTableCellElement> & { pinned?: 'left' | 'right' | false }
+export type TdProps = TdHTMLAttributes<HTMLTableCellElement> & { pinned?: 'left' | 'right' | false }
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>
 export type InputProps = InputHTMLAttributes<HTMLInputElement>
 

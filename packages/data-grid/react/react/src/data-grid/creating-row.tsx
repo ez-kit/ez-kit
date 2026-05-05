@@ -30,6 +30,7 @@ export function CreatingRow() {
 			{table.getVisibleLeafColumns().map((col) => {
 				const meta = col.columnDef.meta
 				const pinStyles = getCommonPinStyles(col, isBoundaryPinnedColumn(col, table))
+				const pinned = col.getIsPinned()
 
 				if (meta?.isSystemColumn) {
 					if (col.id === ACTIONS_COLUMN_ID) {
@@ -37,6 +38,7 @@ export function CreatingRow() {
 							<Td
 								key={col.id}
 								style={pinStyles}
+								pinned={pinned}
 							>
 								<Button onClick={() => void table.commitCreating()}>Save</Button>
 								{!isPinRow && (
@@ -56,6 +58,7 @@ export function CreatingRow() {
 							<Td
 								key={col.id}
 								style={pinStyles}
+								pinned={pinned}
 							>
 								<Checkbox
 									value={false}
@@ -69,6 +72,7 @@ export function CreatingRow() {
 						<Td
 							key={col.id}
 							style={pinStyles}
+							pinned={pinned}
 						/>
 					)
 				}
@@ -78,6 +82,7 @@ export function CreatingRow() {
 						<Td
 							key={col.id}
 							style={pinStyles}
+							pinned={pinned}
 						/>
 					)
 				}
@@ -91,6 +96,7 @@ export function CreatingRow() {
 					<Td
 						key={col.id}
 						style={pinStyles}
+						pinned={pinned}
 					>
 						{renderCreatingInput({ meta, value, onChange, cellTypes, Input })}
 					</Td>

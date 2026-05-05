@@ -102,13 +102,37 @@ const validateResolvedCss = (packageName, css) => {
 	}
 }
 
-const buildHeroUiSandpackCss = () => {
-	const css = readFileSync(findPnpmModuleFile('@heroui+styles@', '@heroui/styles/dist/heroui.min.css'), 'utf8')
+const buildHeroUiSandpackCss = async () => {
+	const entryPath = path.join(tmpDir, 'heroui-sandpack.css')
+	const heroUiGlobalCssPath = path.join(repoDir, 'packages/data-grid/react/heroui/src/global.css')
+	const heroUiSourceGlob = toImportPath(tmpDir, path.join(repoDir, 'packages/data-grid/react/heroui/src'))
+	const examplesSourceGlob = toImportPath(tmpDir, path.join(repoDir, 'apps/docs/shared/data-grid/examples/components'))
+
+	const syntheticEntry = [
+		"@import 'tailwindcss';",
+		`@import '${toImportPath(tmpDir, heroUiGlobalCssPath)}';`,
+		`@source '${heroUiSourceGlob}/**/*.{ts,tsx}';`,
+		`@source '${examplesSourceGlob}/**/*.{ts,tsx}';`,
+		'',
+	].join('\n')
+
+	writeFileSync(entryPath, syntheticEntry)
+
+	const source = readFileSync(entryPath, 'utf8')
+	const compiler = await compile(source, { base: tmpDir, onDependency() {} })
+	const scanner = new Scanner({ sources: compiler.sources })
+	const css = compiler.build(scanner.scan())
 
 	validateResolvedCss('@ez-kit/data-grid-heroui', css)
 
 	if (css.length < 100_000) {
 		throw new Error('HeroUI Sandpack CSS is unexpectedly small')
+	}
+
+	for (const selector of ['.bg-surface', '.bg-surface-secondary']) {
+		if (!css.includes(selector)) {
+			throw new Error(`HeroUI Sandpack CSS is missing expected selector: ${selector}`)
+		}
 	}
 
 	return css
@@ -204,7 +228,7 @@ for (const config of packageConfigs) {
 	)
 
 	if (config.sandpackCss === 'heroui') {
-		herouiPackageFiles[`/node_modules/${config.name}/sandpack.css`] = buildHeroUiSandpackCss()
+		herouiPackageFiles[`/node_modules/${config.name}/sandpack.css`] = await buildHeroUiSandpackCss()
 	}
 
 	if (config.sandpackCss === 'shadcn') {
