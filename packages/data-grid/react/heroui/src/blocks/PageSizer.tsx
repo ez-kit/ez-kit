@@ -7,11 +7,9 @@ import type { PageSizerProps } from '@ez-kit/data-grid-react'
 export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
 	return (
 		<Select
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			selectedKey={String(pageSize)}
+			value={String(pageSize)}
 			aria-label='Rows per page'
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			onSelectionChange={(key) => {
+			onChange={(key) => {
 				if (key != null) onPageSizeChange(Number(key))
 			}}
 		>
