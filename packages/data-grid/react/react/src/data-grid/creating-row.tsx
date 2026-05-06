@@ -2,7 +2,7 @@ import { ACTIONS_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { getCommonPinStyles, isBoundaryPinnedColumn } from '../utils/pin-styles'
+import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { useTableContext } from './table-context'
 
@@ -29,7 +29,7 @@ export function CreatingRow() {
 		<Tr data-creating-row>
 			{table.getVisibleLeafColumns().map((col) => {
 				const meta = col.columnDef.meta
-				const pinStyles = getCommonPinStyles(col, isBoundaryPinnedColumn(col, table))
+				const pinStyles = getCommonPinStyles(col)
 				const pinned = col.getIsPinned()
 
 				if (meta?.isSystemColumn) {

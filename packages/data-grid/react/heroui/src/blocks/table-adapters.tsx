@@ -13,7 +13,7 @@ export function Table({ children, ...props }: TableProps) {
 
 	return (
 		<HeroTable {...heroProps}>
-			<HeroTable.ScrollContainer>
+			<HeroTable.ScrollContainer data-slot='table-scroll-container'>
 				<HeroTable.Content aria-label='Data grid'>{children}</HeroTable.Content>
 			</HeroTable.ScrollContainer>
 		</HeroTable>

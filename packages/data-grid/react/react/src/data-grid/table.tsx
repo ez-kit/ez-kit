@@ -7,6 +7,7 @@ import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-
 
 import { Body } from './body'
 import { Header } from './header'
+import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useTableContext } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
@@ -16,27 +17,46 @@ import type { CSSProperties } from 'react'
 const DEFAULT_ESTIMATE_SIZE = 50
 const DEFAULT_OVERSCAN = 5
 
-function updateScrollShadows(el: HTMLElement): void {
-	const scrolledLeft = el.scrollLeft > 0
-	const maxScroll = el.scrollWidth - el.clientWidth
-	const scrolledRight = maxScroll > 1 && el.scrollLeft < maxScroll - 1
-	el.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? 'var(--dg-pin-left-shadow-value)' : 'none')
-	el.style.setProperty('--dg-pin-right-shadow', scrolledRight ? 'var(--dg-pin-right-shadow-value)' : 'none')
+function resolveScrollElement(wrapper: HTMLElement): HTMLElement {
+	const tagged = wrapper.querySelector("[data-slot='table-scroll-container']")
+	if (tagged instanceof HTMLElement) return tagged
+
+	for (const el of wrapper.querySelectorAll('*')) {
+		if (el instanceof HTMLElement) {
+			const { overflowX } = getComputedStyle(el)
+			if (overflowX === 'auto' || overflowX === 'scroll') return el
+		}
+	}
+
+	return wrapper
 }
 
-function useScrollShadows(ref: { current: HTMLElement | null }): void {
+function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): void {
+	const scrolledLeft = scrollEl.scrollLeft > 0
+	const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth
+	const scrolledRight = maxScroll > 1 && scrollEl.scrollLeft < maxScroll - 1
+	wrapperEl.style.setProperty('--dg-pin-left-shadow', scrolledLeft ? '1' : '0')
+	wrapperEl.style.setProperty('--dg-pin-right-shadow', scrolledRight ? '1' : '0')
+}
+
+function useScrollShadows(
+	wrapperRef: { current: HTMLElement | null },
+	scrollRef?: { current: HTMLElement | null },
+): void {
 	useEffect(() => {
-		const el = ref.current
-		if (!el) return
-		const handleScroll = (): void => {
-			updateScrollShadows(el)
-		}
-		el.addEventListener('scroll', handleScroll, { passive: true })
-		updateScrollShadows(el)
+		const wrapper = wrapperRef.current
+		if (!wrapper) return
+		const scrollEl = scrollRef?.current ?? resolveScrollElement(wrapper)
+		const update = () => { updateScrollShadows(scrollEl, wrapper) }
+		scrollEl.addEventListener('scroll', update, { passive: true })
+		update()
+		const ro = new ResizeObserver(update)
+		ro.observe(scrollEl)
 		return () => {
-			el.removeEventListener('scroll', handleScroll)
+			scrollEl.removeEventListener('scroll', update)
+			ro.disconnect()
 		}
-	}, [ref])
+	}, [wrapperRef, scrollRef])
 }
 
 function resolveEstimateSize(
@@ -55,6 +75,11 @@ function resolveEstimateSize(
  *
  * When virtualized rows are enabled, wraps the table in a scroll container,
  * applies `display: grid` layout, and provides a RowVirtualizer via context.
+ *
+ * Pin shadows are rendered via a single absolutely-positioned overlay div that
+ * sits outside the scroll container and never scrolls with the table content.
+ * CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow` (0 or 1) on the
+ * wrapper control the opacity of the shadow divs inside the overlay.
  */
 export function DataGridTable() {
 	const { Table } = useGridComponents()
@@ -69,7 +94,9 @@ export function DataGridTable() {
 
 	const isVirtualized = Boolean(virtualizedConfig)
 
-	// Scroll container ref — used by useVirtualizer to measure the viewport
+	// wrapperRef — outer div; CSS pin-shadow vars are written here so the overlay reads them
+	const wrapperRef = useRef<HTMLDivElement>(null)
+	// containerRef — inner scroll div used by useVirtualizer (virtualized mode only)
 	const containerRef = useRef<HTMLDivElement>(null)
 
 	const rows = isVirtualized ? (table.options.enableRowPinning ? table.getCenterRows() : table.getRowModel().rows) : []
@@ -83,7 +110,22 @@ export function DataGridTable() {
 		enabled: isVirtualized,
 	})
 
-	useScrollShadows(containerRef)
+	// Virtualized: containerRef IS the scroll element; pass it directly to skip DOM traversal.
+	// Non-virtualized: resolveScrollElement finds the real scroll element inside wrapperRef
+	// (handles both shadcn's inner overflow div and HeroUI's inner ScrollContainer).
+	useScrollShadows(wrapperRef, isVirtualized ? containerRef : undefined)
+
+	// Re-evaluate shadow state immediately when column layout changes (pin/unpin, resize)
+	// so shadows update without requiring a scroll event.
+	useEffect(() => {
+		const wrapper = wrapperRef.current
+		if (!wrapper) return
+		const scrollEl = isVirtualized ? containerRef.current : resolveScrollElement(wrapper)
+		if (!scrollEl) return
+		updateScrollShadows(scrollEl, wrapper)
+		// wrapperRef and containerRef are stable refs; isVirtualized never changes after mount
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [gridTemplateColumns])
 
 	const tableEl = (
 		<Table
@@ -104,15 +146,23 @@ export function DataGridTable() {
 		return (
 			<VirtualProvider rowVirtualizer={rowVirtualizer}>
 				<div
-					ref={containerRef}
-					data-virtual='rows'
+					ref={wrapperRef}
 					style={{
-						overflow: 'auto',
 						position: 'relative',
 						height: 'var(--dg-virtual-height, 600px)',
 					}}
 				>
-					{tableEl}
+					<div
+						ref={containerRef}
+						data-virtual='rows'
+						style={{
+							overflow: 'auto',
+							height: '100%',
+						}}
+					>
+						{tableEl}
+					</div>
+					<PinShadowOverlay />
 				</div>
 			</VirtualProvider>
 		)
@@ -120,11 +170,15 @@ export function DataGridTable() {
 
 	return (
 		<div
-			ref={containerRef}
-			data-slot='table-scroll-container'
-			style={{ overflowX: 'auto', position: 'relative' }}
+			ref={wrapperRef}
+			style={{ position: 'relative' }}
 		>
-			{tableEl}
+			<div
+				style={{ overflowX: 'auto' }}
+			>
+				{tableEl}
+			</div>
+			<PinShadowOverlay />
 		</div>
 	)
 }

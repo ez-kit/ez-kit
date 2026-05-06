@@ -81,8 +81,6 @@
 	--sidebar-ring: oklch(0.708 0 0);
 
 	--dg-pin-cell-background: var(--background);
-	--dg-pin-left-shadow-value: 4px 0 8px -2px var(--dg-pin-shadow-color);
-	--dg-pin-right-shadow-value: -4px 0 8px -2px var(--dg-pin-shadow-color);
 }
 
 .dark {
@@ -127,4 +125,28 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+}
+
+.dg-shadow-left {
+	position: absolute;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	width: 12px;
+	box-shadow: inset 4px 0 8px -2px var(--dg-pin-shadow-color);
+	opacity: var(--dg-pin-left-shadow, 0);
+	transition: opacity 150ms;
+	pointer-events: none;
+}
+
+.dg-shadow-right {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	width: 12px;
+	box-shadow: inset -4px 0 8px -2px var(--dg-pin-shadow-color);
+	opacity: var(--dg-pin-right-shadow, 0);
+	transition: opacity 150ms;
+	pointer-events: none;
 }

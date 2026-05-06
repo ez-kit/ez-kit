@@ -3,7 +3,7 @@ import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { COL_PINNING_KEY, FILTERING_VARIANT_KEY } from '../use-data-grid'
-import { getCommonPinStyles, isBoundaryPinnedColumn } from '../utils/pin-styles'
+import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
 import { useTableContext } from './table-context'
@@ -51,7 +51,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 						const meta = header.column.columnDef.meta
 						const canSort = header.column.getCanSort()
 						const sortDir = header.column.getIsSorted()
-						const pinStyles = getCommonPinStyles(header.column, isBoundaryPinnedColumn(header.column, table))
+						const pinStyles = getCommonPinStyles(header.column)
 
 						const sortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
 						const onSortKeyDown = canSort
