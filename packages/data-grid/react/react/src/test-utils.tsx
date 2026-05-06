@@ -269,6 +269,8 @@ export const testComponents: Required<GridComponents> = {
 	LoadingRow: TestLoadingRow,
 	EmptyState: TestEmptyState,
 	NoResultsState: TestNoResultsState,
+	ActionsCell: () => null,
+	CreatingActionsCell: () => null,
 }
 
 function TestWrapper({ children }: { children: ReactNode }) {

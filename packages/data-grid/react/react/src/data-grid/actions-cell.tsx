@@ -9,53 +9,30 @@ type ActionsCellProps = {
 	row: Row<any>
 }
 
-/**
- * Renders edit / delete / save / cancel buttons in the __actions__ column.
- * Behavior depends on the current editing state of the row.
- */
 export function ActionsCell({ row }: ActionsCellProps) {
 	const table = useTableContext()
-	const { Button } = useGridComponents()
-	const editingState = table.getEditingState()
-	const isEditing = editingState.editingRowId === row.id
-	const hasEditing = Boolean(table.options.editing)
-	const hasDeleting = Boolean(table.options.deleting)
+	const { ActionsCell: Renderer } = useGridComponents()
 
-	if (isEditing) {
-		return (
-			<>
-				<Button onClick={() => void table.commitEditing()}>Save</Button>
-				<Button
-					onClick={() => {
-						table.cancelEditing()
-					}}
-				>
-					Cancel
-				</Button>
-			</>
-		)
-	}
+	if (!Renderer) return null
+
+	const editingState = table.getEditingState()
 
 	return (
-		<>
-			{hasEditing && (
-				<Button
-					onClick={() => {
-						table.startEditing(row.id)
-					}}
-				>
-					Edit
-				</Button>
-			)}
-			{hasDeleting && (
-				<Button
-					onClick={() => {
-						table.requestDeleteRow(row.id)
-					}}
-				>
-					Delete
-				</Button>
-			)}
-		</>
+		<Renderer
+			row={row}
+			isEditing={editingState.editingRowId === row.id}
+			hasEditing={Boolean(table.options.editing)}
+			hasDeleting={Boolean(table.options.deleting)}
+			onEdit={() => {
+				table.startEditing(row.id)
+			}}
+			onDelete={() => {
+				table.requestDeleteRow(row.id)
+			}}
+			onSave={() => table.commitEditing()}
+			onCancel={() => {
+				table.cancelEditing()
+			}}
+		/>
 	)
 }

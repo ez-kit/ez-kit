@@ -1,5 +1,23 @@
 import type { BetweenValue, FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column, Row } from '@tanstack/table-core'
+
+export type CreatingActionsCellProps = {
+	onSave: () => Promise<void>
+	onCancel: () => void
+	isPinRow: boolean
+}
+
+export type ActionsCellProps = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	row: Row<any>
+	isEditing: boolean
+	hasEditing: boolean
+	hasDeleting: boolean
+	onEdit: () => void
+	onDelete: () => void
+	onSave: () => Promise<void>
+	onCancel: () => void
+}
 import type {
 	ButtonHTMLAttributes,
 	ComponentType,
@@ -222,4 +240,7 @@ export type GridComponents = {
 	LoadingRow?: ComponentType<LoadingRowProps>
 	EmptyState?: ComponentType<EmptyStateProps>
 	NoResultsState?: ComponentType<NoResultsStateProps>
+	// row actions
+	ActionsCell?: ComponentType<ActionsCellProps>
+	CreatingActionsCell?: ComponentType<CreatingActionsCellProps>
 }

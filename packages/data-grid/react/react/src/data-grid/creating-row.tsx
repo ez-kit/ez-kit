@@ -19,7 +19,7 @@ import type { ChangeEvent, ComponentType, ReactNode } from 'react'
  */
 export function CreatingRow() {
 	const table = useTableContext()
-	const { Tr, Td, Input, Button, Checkbox } = useGridComponents()
+	const { Tr, Td, Input, Checkbox, CreatingActionsCell } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const values = table.getCreatingState().creatingValues
 	const creatingConfig = table.options.creating
@@ -40,16 +40,15 @@ export function CreatingRow() {
 								style={pinStyles}
 								pinned={pinned}
 							>
-								<Button onClick={() => void table.commitCreating()}>Save</Button>
-								{!isPinRow && (
-									<Button
-										onClick={() => {
+								{CreatingActionsCell ? (
+									<CreatingActionsCell
+										onSave={() => table.commitCreating()}
+										onCancel={() => {
 											table.cancelCreating()
 										}}
-									>
-										Cancel
-									</Button>
-								)}
+										isPinRow={isPinRow}
+									/>
+								) : null}
 							</Td>
 						)
 					}

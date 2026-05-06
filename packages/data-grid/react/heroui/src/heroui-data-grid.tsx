@@ -2,7 +2,9 @@
 
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
+import { ActionsCell } from './blocks/ActionsCell'
 import { BetweenInput } from './blocks/BetweenInput'
+import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { Button } from './blocks/Button'
 import { EmptyState } from './blocks/EmptyState'
 import { LoadingRow } from './blocks/LoadingRow'
@@ -54,6 +56,8 @@ const HEROUI_COMPONENTS = {
 	LoadingRow,
 	EmptyState,
 	NoResultsState,
+	ActionsCell,
+	CreatingActionsCell,
 }
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({

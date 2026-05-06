@@ -17,6 +17,7 @@ export function BaseExample() {
 		pagination: { pageSize: 10 },
 		pageSizer: { items: [3, 5, 10] },
 		selection: true,
+		columnVisibility: true,
 		selectionBar: {
 			onDelete: ({ selectedRows, clearSelection }) => {
 				setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
@@ -26,7 +27,7 @@ export function BaseExample() {
 		editing: {
 			mode: 'row',
 			onSave: (rowId, values) => {
-				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? ({ ...row, ...values }) : row)))
+				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				return true
 			},
 		},

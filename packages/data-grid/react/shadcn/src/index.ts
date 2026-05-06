@@ -2,6 +2,8 @@ export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from '.
 export { createColumnHelper } from '@ez-kit/data-grid-react'
 export type { ColumnHelper } from '@ez-kit/data-grid-react'
 
+export { ActionsCell } from './blocks/ActionsCell'
+export { CreatingActionsCell } from './blocks/CreatingActionsCell'
 export { ColumnMenu } from './blocks/ColumnMenu'
 export { Resizer } from './blocks/Resizer'
 export { RowPinMenu } from './blocks/RowPinMenu'

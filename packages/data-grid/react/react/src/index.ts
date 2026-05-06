@@ -49,6 +49,8 @@ export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Types
 export type {
+	ActionsCellProps,
+	CreatingActionsCellProps,
 	BetweenInputProps,
 	ColPinSection,
 	ColVisibilitySection,
