@@ -52,6 +52,8 @@ export type ModalProps = {
 
 export type ToolbarProps = {
 	children?: ReactNode
+	left?: ReactNode
+	right?: ReactNode
 }
 
 export type PaginationProps = {

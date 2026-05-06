@@ -82,7 +82,6 @@ function DefaultLayout() {
 			<Toolbar />
 			<DataGridTable />
 			<Pagination />
-			<PageSizer />
 			<SelectionBar />
 		</>
 	)

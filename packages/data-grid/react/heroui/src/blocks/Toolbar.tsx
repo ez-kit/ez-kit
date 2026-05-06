@@ -1,12 +1,24 @@
 import type { ToolbarProps } from '@ez-kit/data-grid-react'
 
-export function Toolbar({ children }: ToolbarProps) {
+export function Toolbar({ children, left, right }: ToolbarProps) {
+	if (children) {
+		return (
+			<div
+				role='toolbar'
+				className='flex items-center gap-2'
+			>
+				{children}
+			</div>
+		)
+	}
+
 	return (
 		<div
 			role='toolbar'
-			style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}
+			className='flex items-center justify-between gap-2'
 		>
-			{children}
+			<div className='flex items-center gap-2'>{left}</div>
+			<div className='flex items-center gap-2'>{right}</div>
 		</div>
 	)
 }
