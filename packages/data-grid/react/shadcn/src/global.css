@@ -133,7 +133,7 @@
 	left: 0;
 	bottom: 0;
 	width: 12px;
-	box-shadow: inset 4px 0 8px -2px var(--dg-pin-shadow-color);
+	box-shadow: inset 8px 0 5px -5px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-left-shadow, 0);
 	transition: opacity 150ms;
 	pointer-events: none;
@@ -145,7 +145,7 @@
 	right: 0;
 	bottom: 0;
 	width: 12px;
-	box-shadow: inset -4px 0 8px -2px var(--dg-pin-shadow-color);
+	box-shadow: inset -8px 0 5px -5px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-right-shadow, 0);
 	transition: opacity 150ms;
 	pointer-events: none;
