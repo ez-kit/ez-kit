@@ -17,6 +17,8 @@ import type { ComponentType, CSSProperties, KeyboardEvent, ReactNode } from 'rea
 type HeaderProps = {
 	/** Extra styles applied to the `<thead>` element (e.g. for virtualized layout). */
 	theadStyle?: CSSProperties | undefined
+	/** When true, adds `data-sticky="true"` to the thead for CSS targeting. */
+	stickyHeader?: boolean
 }
 
 /**
@@ -25,7 +27,7 @@ type HeaderProps = {
  * - If filtering is enabled on a column, renders a filter input below the header.
  * - `filtering.component` injects a custom filter control per column.
  */
-export function Header({ theadStyle }: HeaderProps = {}) {
+export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 	const table = useTableContext()
 	const { Thead, Tr, Th, Input, Resizer, SortIndicator, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } =
 		useGridComponents()
@@ -41,6 +43,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 		<Thead
 			data-slot='thead'
 			style={theadStyle}
+			{...(stickyHeader ? { 'data-sticky': 'true' } : {})}
 		>
 			{table.getHeaderGroups().map((headerGroup) => (
 				<Tr

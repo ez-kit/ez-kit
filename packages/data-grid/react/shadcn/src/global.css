@@ -95,6 +95,11 @@
 	@apply bg-background;
 }
 
+[data-slot='table-header'][data-sticky='true'] {
+	@apply bg-background;
+	z-index: 2;
+}
+
 [data-slot='table-row']:hover,
 [data-slot='tr']:hover,
 [data-slot='table-row']:has([aria-expanded='true']),

@@ -2,7 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
-import { VIRTUALIZED_KEY } from '../use-data-grid'
+import { STICKY_HEADER_KEY, VIRTUALIZED_KEY } from '../use-data-grid'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
@@ -93,6 +93,7 @@ export function DataGridTable() {
 		| undefined
 
 	const isVirtualized = Boolean(virtualizedConfig)
+	const isStickyHeader = Boolean((table as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY])
 
 	// wrapperRef — outer div; CSS pin-shadow vars are written here so the overlay reads them
 	const wrapperRef = useRef<HTMLDivElement>(null)
@@ -127,6 +128,11 @@ export function DataGridTable() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [gridTemplateColumns])
 
+	const theadStyle: CSSProperties = {
+		...(isVirtualized ? { display: 'grid' } : {}),
+		...(isStickyHeader ? { position: 'sticky', top: 0, zIndex: 1 } : {}),
+	}
+
 	const tableEl = (
 		<Table
 			style={
@@ -137,7 +143,7 @@ export function DataGridTable() {
 				} as CSSProperties
 			}
 		>
-			<Header theadStyle={isVirtualized ? { display: 'grid', position: 'sticky', top: 0, zIndex: 1 } : {}} />
+			<Header theadStyle={theadStyle} stickyHeader={isStickyHeader} />
 			<Body />
 		</Table>
 	)
@@ -174,7 +180,10 @@ export function DataGridTable() {
 			style={{ position: 'relative' }}
 		>
 			<div
-				style={{ overflowX: 'auto' }}
+				style={{
+					overflowX: 'auto',
+					...(isStickyHeader ? { overflowY: 'auto', maxHeight: 'var(--dg-table-max-height, 400px)' } : {}),
+				}}
 			>
 				{tableEl}
 			</div>

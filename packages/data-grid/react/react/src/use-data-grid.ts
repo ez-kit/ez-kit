@@ -39,6 +39,9 @@ export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
 /** Symbol used to carry fallbacks config on the table instance for Body to read. */
 export const FALLBACKS_KEY = Symbol('fallbacks')
 
+/** Symbol used to carry stickyHeader flag on the table instance for DataGridTable to read. */
+export const STICKY_HEADER_KEY = Symbol('stickyHeader')
+
 export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
 	clearSelection: () => void
@@ -167,6 +170,12 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * Must be used together with `onStateChange` to reflect state updates back.
 	 */
 	state?: Partial<TableState>
+	/**
+	 * Make the table header stick to the top when the table scrolls vertically.
+	 * The scroll container height defaults to `400px`; override via the
+	 * `--dg-table-max-height` CSS variable on a parent element.
+	 */
+	stickyHeader?: boolean
 } & Omit<TableConfig<TRow>, 'filtering'>
 
 /**
@@ -187,6 +196,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		filtering: rawFiltering,
 		state,
 		onStateChange,
+		stickyHeader,
 		...restConfig
 	} = config
 
@@ -256,6 +266,9 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	// Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
 	const virtualizedConfig = normalizeVirtualized(config.virtualized)
 	;(tableRef.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] = virtualizedConfig
+
+	// Store stickyHeader flag on the table instance so DataGridTable can read without an extra prop
+	;(tableRef.current as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY] = stickyHeader ?? false
 
 	// Subscribe so React re-renders on any table state change
 	useSyncExternalStore(tableRef.current.subscribe, tableRef.current.getSnapshot, tableRef.current.getSnapshot)

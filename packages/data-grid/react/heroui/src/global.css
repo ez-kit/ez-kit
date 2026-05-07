@@ -10,6 +10,11 @@
 	--dg-pin-cell-background: var(--surface);
 }
 
+[data-sticky='true'] {
+	background-color: var(--surface);
+	z-index: 2;
+}
+
 .table__row:hover,
 .table__row[data-hovered='true'] {
 	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--background));
