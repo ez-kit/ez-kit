@@ -49,7 +49,6 @@ const withOperatorsColumns = defineColumns<Employee>([
 		cell: { type: 'number' },
 		filtering: {
 			operators: {
-				items: ['eq', 'between'],
 				betweenOperator: { variant: 'slider', min: 50000, max: 130000 },
 			},
 		},

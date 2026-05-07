@@ -32,8 +32,8 @@ export type BetweenOperatorConfig = {
 
 /** Column-level operator configuration when not using the simple `true` shorthand. */
 export type ColumnOperatorsConfig = {
-	/** Operator IDs referencing the registry, or inline operator definitions. */
-	items: (string | FilterOperatorDef)[]
+	/** Operator IDs referencing the registry, or inline operator definitions. Omit to use all default operators for the column's cell type. */
+	items?: (string | FilterOperatorDef)[]
 	betweenOperator?: BetweenOperatorConfig
 }
 
@@ -233,7 +233,7 @@ export function resolveColumnOperators(
 	registry: OperatorRegistry,
 	cellTypeOperators?: FilterOperatorDef[],
 ): FilterOperatorDef[] {
-	if (operatorsConfig === true) {
+	if (operatorsConfig === true || !operatorsConfig.items) {
 		return cellTypeOperators ?? []
 	}
 
