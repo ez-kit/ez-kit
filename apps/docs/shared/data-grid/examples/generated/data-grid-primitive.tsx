@@ -12,14 +12,15 @@ import { FilterOperatorsExample as Example7 } from '../components/filter-operato
 import { CrudExample as Example8 } from '../components/crud/CrudExample'
 import { CreatingExample as Example9 } from '../components/creating/CreatingExample'
 import { FilterPopoverExample as Example10 } from '../components/filter-popover'
-import { VirtualizedExample as Example11 } from '../components/virtualized'
-import { ResizingExample as Example12 } from '../components/resizing'
-import { CustomCellTypesExample as Example13 } from '../components/custom-cell-types'
-import { ColumnHelperBaseExample as Example14 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example15 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example16 } from '../components/column-helper'
-import { FallbacksExample as Example17 } from '../components/fallbacks'
-import { ControlledStateExample as Example18 } from '../components/controlled-state'
+import { StickyHeaderExample as Example11 } from '../components/sticky-header'
+import { VirtualizedExample as Example12 } from '../components/virtualized'
+import { ResizingExample as Example13 } from '../components/resizing'
+import { CustomCellTypesExample as Example14 } from '../components/custom-cell-types'
+import { ColumnHelperBaseExample as Example15 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example16 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example17 } from '../components/column-helper'
+import { FallbacksExample as Example18 } from '../components/fallbacks'
+import { ControlledStateExample as Example19 } from '../components/controlled-state'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -90,6 +91,12 @@ export const dataGridExamplesManifest = [
     "exportName": "FilterPopoverExample"
   },
   {
+    "id": "sticky-header",
+    "label": "Sticky Header",
+    "sourceFile": "components/sticky-header.tsx",
+    "exportName": "StickyHeaderExample"
+  },
+  {
     "id": "virtualized",
     "label": "Virtualized",
     "sourceFile": "components/virtualized.tsx",
@@ -153,12 +160,13 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'crud': Example8,
 	'creating': Example9,
 	'filter-popover': Example10,
-	'virtualized': Example11,
-	'resizing': Example12,
-	'custom-cell-types': Example13,
-	'column-helper': Example14,
-	'column-helper-custom-view': Example15,
-	'column-helper-registered': Example16,
-	'fallbacks': Example17,
-	'controlled-state': Example18,
+	'sticky-header': Example11,
+	'virtualized': Example12,
+	'resizing': Example13,
+	'custom-cell-types': Example14,
+	'column-helper': Example15,
+	'column-helper-custom-view': Example16,
+	'column-helper-registered': Example17,
+	'fallbacks': Example18,
+	'controlled-state': Example19,
 }

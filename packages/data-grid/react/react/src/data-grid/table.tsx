@@ -160,6 +160,7 @@ export function DataGridTable() {
 				>
 					<div
 						ref={containerRef}
+						data-slot='table-scroll'
 						data-virtual='rows'
 						style={{
 							overflow: 'auto',
@@ -180,6 +181,7 @@ export function DataGridTable() {
 			style={{ position: 'relative' }}
 		>
 			<div
+				data-slot='table-scroll'
 				style={{
 					overflowX: 'auto',
 					...(isStickyHeader ? { overflowY: 'auto', maxHeight: 'var(--dg-table-max-height, 400px)' } : {}),

@@ -83,8 +83,8 @@
 	--dg-pin-cell-background: var(--background);
 }
 
-[data-slot='table-container'] {
-	@apply rounded-sm border border-border overflow-hidden;
+[data-slot='table-scroll'] {
+	@apply rounded-sm border border-border;
 }
 
 [data-slot='table-head'] {
@@ -95,7 +95,7 @@
 	@apply bg-background;
 }
 
-[data-slot='table-header'][data-sticky='true'] {
+[data-sticky='true'] {
 	@apply bg-background;
 	z-index: 2;
 }
