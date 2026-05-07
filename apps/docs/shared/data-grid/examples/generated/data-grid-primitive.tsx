@@ -21,6 +21,9 @@ import { ColumnHelperCustomViewExample as Example16 } from '../components/column
 import { ColumnHelperRegisteredExample as Example17 } from '../components/column-helper'
 import { FallbacksExample as Example18 } from '../components/fallbacks'
 import { ControlledStateExample as Example19 } from '../components/controlled-state'
+import { ExpandingSubContentExample as Example20 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example21 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example22 } from '../components/expanding/controlled'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -143,6 +146,30 @@ export const dataGridExamplesManifest = [
     "label": "Controlled State",
     "sourceFile": "components/controlled-state.tsx",
     "exportName": "ControlledStateExample"
+  },
+  {
+    "id": "expanding-sub-content",
+    "label": "Sub-content",
+    "group": "expanding",
+    "groupLabel": "Expanding",
+    "sourceFile": "components/expanding/sub-content.tsx",
+    "exportName": "ExpandingSubContentExample"
+  },
+  {
+    "id": "expanding-tree",
+    "label": "Tree",
+    "group": "expanding",
+    "groupLabel": "Expanding",
+    "sourceFile": "components/expanding/tree.tsx",
+    "exportName": "ExpandingTreeExample"
+  },
+  {
+    "id": "expanding-controlled",
+    "label": "Controlled",
+    "group": "expanding",
+    "groupLabel": "Expanding",
+    "sourceFile": "components/expanding/controlled.tsx",
+    "exportName": "ExpandingControlledExample"
   }
 ] as const
 
@@ -169,4 +196,7 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'column-helper-registered': Example17,
 	'fallbacks': Example18,
 	'controlled-state': Example19,
+	'expanding-sub-content': Example20,
+	'expanding-tree': Example21,
+	'expanding-controlled': Example22,
 }

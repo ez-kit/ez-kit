@@ -3,6 +3,7 @@
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { ActionsCell } from './blocks/ActionsCell'
+import { Chevron } from './blocks/Chevron'
 import { BetweenInput } from './blocks/BetweenInput'
 import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { Checkbox } from './blocks/Checkbox'
@@ -62,6 +63,7 @@ const SHADCN_COMPONENTS = {
 	NoResultsState,
 	ActionsCell,
 	CreatingActionsCell,
+	Chevron,
 }
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({

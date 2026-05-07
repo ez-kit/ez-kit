@@ -30,7 +30,7 @@ type CellProps = {
  */
 export function DataGridCell({ cell, row }: CellProps) {
 	const table = useTableContext()
-	const { Td, Input, Checkbox } = useGridComponents()
+	const { Td, Input, Checkbox, Chevron } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
@@ -58,18 +58,35 @@ export function DataGridCell({ cell, row }: CellProps) {
 		}
 
 		if (columnId === EXPAND_COLUMN_ID) {
+			const canExpand = row.getCanExpand()
+			const isExpanded = row.getIsExpanded()
 			return (
-				<Td style={cellStyle} pinned={pinned}>
-					{row.getCanExpand() && (
-						<button
-							type='button'
+				<Td
+					style={cellStyle}
+					pinned={pinned}
+					data-system-column='expand'
+					data-depth={row.depth}
+				>
+					{Chevron ? (
+						<Chevron
+							expanded={isExpanded}
 							onClick={() => {
 								row.toggleExpanded()
 							}}
-							aria-label={row.getIsExpanded() ? 'Collapse' : 'Expand'}
-						>
-							{row.getIsExpanded() ? '▼' : '▶'}
-						</button>
+							disabled={!canExpand}
+						/>
+					) : (
+						canExpand && (
+							<button
+								type='button'
+								onClick={() => {
+									row.toggleExpanded()
+								}}
+								aria-label={isExpanded ? 'Collapse' : 'Expand'}
+							>
+								{isExpanded ? '▼' : '▶'}
+							</button>
+						)
 					)}
 				</Td>
 			)

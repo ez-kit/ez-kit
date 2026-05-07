@@ -224,6 +224,12 @@ export type SelectionBarProps = {
 	actions?: ReactElement
 }
 
+export type ChevronProps = {
+	expanded: boolean
+	onClick: () => void
+	disabled?: boolean
+}
+
 // ── DI registry ──────────────────────────────────────────────────────────
 
 export type GridComponents = {
@@ -263,4 +269,6 @@ export type GridComponents = {
 	// row actions
 	ActionsCell?: ComponentType<ActionsCellProps>
 	CreatingActionsCell?: ComponentType<CreatingActionsCellProps>
+	// expand
+	Chevron?: ComponentType<ChevronProps>
 }

@@ -42,9 +42,19 @@ export type SelectionConfig = {
 	multiple?: boolean
 }
 
+export type ExpandingVariant = 'sub-content' | 'tree'
+
 export type ExpandingConfig = {
-	/** React component / render fn for sub-row (provided by React layer). */
-	renderSubRow?: unknown
+	/** Mode switch. Default: 'sub-content'. */
+	variant?: ExpandingVariant
+	/** Tree mode: sub-row extractor. Auto-detects row.children when omitted. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	getSubRows?: (row: any, index: number) => any[] | undefined
+	/** Sub-content mode: per-row expandability callback. Provided by React layer. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	getRowCanExpand?: (row: any) => boolean
+	/** Sub-content mode: React component for detail panel. Provided by React layer. */
+	renderExpanded?: unknown
 }
 
 export type RowPinningConfig = {

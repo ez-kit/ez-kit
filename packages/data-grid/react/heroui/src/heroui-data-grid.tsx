@@ -4,6 +4,7 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { ActionsCell } from './blocks/ActionsCell'
 import { BetweenInput } from './blocks/BetweenInput'
+import { Chevron } from './blocks/Chevron'
 import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { Button } from './blocks/Button'
 import { EmptyState } from './blocks/EmptyState'
@@ -61,6 +62,7 @@ const HEROUI_COMPONENTS = {
 	EmptyState,
 	NoResultsState,
 	ActionsCell,
+	Chevron,
 	CreatingActionsCell,
 }
 

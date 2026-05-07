@@ -20,6 +20,7 @@ export function DataGridRow({ row, style, 'data-pinned': dataPinned }: RowProps)
 	return (
 		<Tr
 			data-row-id={row.id}
+			data-depth={row.depth > 0 ? row.depth : undefined}
 			style={style}
 			data-pinned={dataPinned}
 		>

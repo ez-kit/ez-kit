@@ -118,5 +118,29 @@
 		"label": "Controlled State",
 		"sourceFile": "components/controlled-state.tsx",
 		"exportName": "ControlledStateExample"
+	},
+	{
+		"id": "expanding-sub-content",
+		"label": "Sub-content",
+		"group": "expanding",
+		"groupLabel": "Expanding",
+		"sourceFile": "components/expanding/sub-content.tsx",
+		"exportName": "ExpandingSubContentExample"
+	},
+	{
+		"id": "expanding-tree",
+		"label": "Tree",
+		"group": "expanding",
+		"groupLabel": "Expanding",
+		"sourceFile": "components/expanding/tree.tsx",
+		"exportName": "ExpandingTreeExample"
+	},
+	{
+		"id": "expanding-controlled",
+		"label": "Controlled",
+		"group": "expanding",
+		"groupLabel": "Expanding",
+		"sourceFile": "components/expanding/controlled.tsx",
+		"exportName": "ExpandingControlledExample"
 	}
 ]

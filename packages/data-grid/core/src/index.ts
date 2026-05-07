@@ -61,6 +61,7 @@ export type {
 	ColumnResizeMode,
 	DataTable,
 	ExpandingConfig,
+	ExpandingVariant,
 	FilteringConfig,
 	PaginationConfig,
 	PinningConfig,

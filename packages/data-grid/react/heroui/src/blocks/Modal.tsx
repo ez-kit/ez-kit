@@ -33,7 +33,7 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 							) : null}
 							{onSave ? (
 								<Button
-									variant='solid'
+									variant='primary'
 									onPress={onSave}
 								>
 									Save

@@ -43,3 +43,50 @@
 	transition: opacity 150ms;
 	pointer-events: none;
 }
+
+tr[data-expanded] {
+	display: block !important;
+	grid-template-columns: none !important;
+}
+tr[data-expanded] > td {
+	display: block;
+	width: 100%;
+	background-color: color-mix(in oklab, var(--surface) 60%, var(--background));
+	padding: 1rem 1.25rem;
+}
+
+[data-system-column='expand'] {
+	padding-inline: 0.25rem;
+	justify-content: center;
+}
+
+tr[data-depth='1'] [data-system-column='expand'] {
+	padding-left: 1rem;
+}
+tr[data-depth='1'] [data-system-column='expand'] + td {
+	padding-left: 1rem;
+}
+tr[data-depth='2'] [data-system-column='expand'] {
+	padding-left: 2rem;
+}
+tr[data-depth='2'] [data-system-column='expand'] + td {
+	padding-left: 2rem;
+}
+tr[data-depth='3'] [data-system-column='expand'] {
+	padding-left: 3rem;
+}
+tr[data-depth='3'] [data-system-column='expand'] + td {
+	padding-left: 3rem;
+}
+tr[data-depth='4'] [data-system-column='expand'] {
+	padding-left: 4rem;
+}
+tr[data-depth='4'] [data-system-column='expand'] + td {
+	padding-left: 4rem;
+}
+tr[data-depth='5'] [data-system-column='expand'] {
+	padding-left: 5rem;
+}
+tr[data-depth='5'] [data-system-column='expand'] + td {
+	padding-left: 5rem;
+}

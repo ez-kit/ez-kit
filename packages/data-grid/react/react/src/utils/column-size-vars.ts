@@ -33,7 +33,8 @@ export function getGridTemplateColumns(table: DataTable<any>): string {
 		.getVisibleLeafColumns()
 		.map((col) => {
 			const fixed = `calc(var(--col-${col.id}-size) * 1px)`
-			return isResizing || col.getIsPinned() ? fixed : `minmax(${fixed}, 1fr)`
+			const isSystem = Boolean(col.columnDef.meta?.isSystemColumn)
+			return isResizing || col.getIsPinned() || isSystem ? fixed : `minmax(${fixed}, 1fr)`
 		})
 		.join(' ')
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 import type { CellTypeRegistry } from './cell-types-context'
 import type {
 	DataTable,
+	ExpandingConfig,
 	FilteringConfig,
 	RowVirtualOptions,
 	TableConfig,
@@ -41,6 +42,28 @@ export const FALLBACKS_KEY = Symbol('fallbacks')
 
 /** Symbol used to carry stickyHeader flag on the table instance for DataGridTable to read. */
 export const STICKY_HEADER_KEY = Symbol('stickyHeader')
+
+/** Symbol used to carry expanding config on the table instance for Body/ExpandedRow to read. */
+export const EXPAND_KEY = Symbol('expanding')
+
+export type ExpandedRowProps<TRow extends object> = {
+	row: Row<TRow>
+	table: Table<TRow>
+}
+
+export type ReactExpandingConfig<TRow extends object> = {
+	/** Mode switch. Default: 'sub-content'. */
+	variant?: 'sub-content' | 'tree'
+	/** Sub-content: component rendered in a full-width row below expanded rows. */
+	renderExpanded?: ComponentType<ExpandedRowProps<TRow>>
+	/**
+	 * Sub-content: controls per-row expandability.
+	 * When omitted and renderExpanded is provided, all rows are expandable.
+	 */
+	getRowCanExpand?: (row: Row<TRow>) => boolean
+	/** Tree: sub-row extractor. Auto-detects row.children when omitted. */
+	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
+}
 
 export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
@@ -176,7 +199,9 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * `--dg-table-max-height` CSS variable on a parent element.
 	 */
 	stickyHeader?: boolean
-} & Omit<TableConfig<TRow>, 'filtering'>
+} & Omit<TableConfig<TRow>, 'filtering' | 'expanding'> & {
+	expanding?: boolean | ReactExpandingConfig<TRow>
+}
 
 /**
  * React hook that creates a data-grid instance and subscribes to its state.
@@ -194,11 +219,30 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		columnVisibility,
 		fallbacks,
 		filtering: rawFiltering,
+		expanding: rawExpanding,
 		state,
 		onStateChange,
 		stickyHeader,
 		...restConfig
 	} = config
+
+	// Build core-compatible expanding config (strip React-only fields)
+	const reactExpandingCfg = typeof rawExpanding === 'object' ? rawExpanding : undefined
+	const coreGetRowCanExpand =
+		reactExpandingCfg?.getRowCanExpand ??
+		(reactExpandingCfg?.renderExpanded !== undefined ? () => true : undefined)
+	const coreExpanding: boolean | ExpandingConfig | undefined =
+		rawExpanding === undefined
+			? undefined
+			: typeof rawExpanding === 'boolean'
+				? rawExpanding
+				: ({
+						...(rawExpanding.variant !== undefined ? { variant: rawExpanding.variant } : {}),
+						...(rawExpanding.getSubRows !== undefined
+							? { getSubRows: rawExpanding.getSubRows as ExpandingConfig['getSubRows'] }
+							: {}),
+						...(coreGetRowCanExpand !== undefined ? { getRowCanExpand: coreGetRowCanExpand } : {}),
+					} as ExpandingConfig)
 
 	const filteringVariant: FilteringVariant | undefined =
 		typeof rawFiltering === 'object' ? rawFiltering.variant : undefined
@@ -214,6 +258,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	tableRef.current ??= createTable({
 		...restConfig,
 		filtering: coreFiltering,
+		expanding: coreExpanding,
 		onStateChange: (updater) => onStateChangeRef.current?.(updater),
 	} as TableConfig<TRow>)
 
@@ -269,6 +314,13 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 
 	// Store stickyHeader flag on the table instance so DataGridTable can read without an extra prop
 	;(tableRef.current as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY] = stickyHeader ?? false
+
+	// Store renderExpanded on the table instance so Body/ExpandedRow can read without an extra prop
+	const expandRef = useRef(rawExpanding)
+	expandRef.current = rawExpanding
+	;(tableRef.current as unknown as Record<symbol, unknown>)[EXPAND_KEY] = {
+		renderExpanded: typeof expandRef.current === 'object' ? expandRef.current.renderExpanded : undefined,
+	}
 
 	// Subscribe so React re-renders on any table state change
 	useSyncExternalStore(tableRef.current.subscribe, tableRef.current.getSnapshot, tableRef.current.getSnapshot)

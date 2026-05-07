@@ -272,6 +272,7 @@ export const testComponents: Required<GridComponents> = {
 	SortIndicator: () => null,
 	ActionsCell: () => null,
 	CreatingActionsCell: () => null,
+	Chevron: () => null,
 }
 
 function TestWrapper({ children }: { children: ReactNode }) {

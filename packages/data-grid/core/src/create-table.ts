@@ -3,7 +3,6 @@ import {
 	getCoreRowModel,
 	getExpandedRowModel,
 	getFilteredRowModel,
-	getGroupedRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
 } from '@tanstack/table-core'
@@ -79,6 +78,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasDeleting = Boolean(config.deleting)
 	const hasSelection = Boolean(config.selection)
 	const hasExpanding = Boolean(config.expanding)
+
+	const expandingCfg = typeof config.expanding === 'object' ? config.expanding : undefined
+	const expandVariant = expandingCfg?.variant ?? 'sub-content'
 	const { row: rowPinConfig } = normalizePinning(config.pinning)
 	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
 
@@ -141,8 +143,16 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(config.sorting ? { getSortedRowModel: getSortedRowModel() } : {}),
 		...(config.filtering ? { getFilteredRowModel: getFilteredRowModel() } : {}),
 		...(config.pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
-		...(config.expanding
-			? { getExpandedRowModel: getExpandedRowModel(), getGroupedRowModel: getGroupedRowModel() }
+		...(config.expanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
+		...(config.expanding && expandVariant === 'tree'
+			? {
+					getSubRows:
+						expandingCfg?.getSubRows ??
+						((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
+				}
+			: {}),
+		...(config.expanding && expandVariant === 'sub-content' && expandingCfg?.getRowCanExpand
+			? { getRowCanExpand: expandingCfg.getRowCanExpand }
 			: {}),
 		// Row selection
 		enableRowSelection: hasSelection,

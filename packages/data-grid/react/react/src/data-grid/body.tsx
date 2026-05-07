@@ -1,8 +1,11 @@
+import { Fragment } from 'react'
+
 import { useGridComponents } from '../components-context'
-import { FALLBACKS_KEY } from '../use-data-grid'
+import { EXPAND_KEY, FALLBACKS_KEY } from '../use-data-grid'
 
 import { CreatingRow } from './creating-row'
 import { EmptyStateRow } from './empty-state-row'
+import { ExpandedRow } from './expanded-row'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { DataGridRow } from './row'
@@ -10,7 +13,9 @@ import { useTableContext } from './table-context'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
+import type { ExpandedRowProps } from '../use-data-grid'
 import type { FallbacksConfig } from '../use-data-grid'
+import type { ComponentType } from 'react'
 
 /**
  * CSS custom property used to compute sticky offsets for pinned rows.
@@ -36,6 +41,10 @@ export function Body() {
 	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = (table as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] as FallbacksConfig | undefined
+	const expandConfig = (table as unknown as Record<symbol, unknown>)[EXPAND_KEY] as
+		| { renderExpanded?: ComponentType<ExpandedRowProps<object>> }
+		| undefined
+	const renderExpanded = expandConfig?.renderExpanded
 
 	if (table.getIsLoading() && fallbacks?.loading !== false) {
 		return <LoadingBody />
@@ -67,34 +76,38 @@ export function Body() {
 		<Tbody>
 			{showCreatingRow && <CreatingRow />}
 			{topRows.map((row, index) => (
-				<DataGridRow
-					key={row.id}
-					row={row}
-					data-pinned='top'
-					style={{
-						position: 'sticky',
-						top: `calc(${String(index)} * ${ROW_HEIGHT_CSS})`,
-						zIndex: 2,
-					}}
-				/>
+				<Fragment key={row.id}>
+					<DataGridRow
+						row={row}
+						data-pinned='top'
+						style={{
+							position: 'sticky',
+							top: `calc(${String(index)} * ${ROW_HEIGHT_CSS})`,
+							zIndex: 2,
+						}}
+					/>
+					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+				</Fragment>
 			))}
 			{centerRows.map((row) => (
-				<DataGridRow
-					key={row.id}
-					row={row}
-				/>
+				<Fragment key={row.id}>
+					<DataGridRow row={row} />
+					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+				</Fragment>
 			))}
 			{bottomRows.map((row, index) => (
-				<DataGridRow
-					key={row.id}
-					row={row}
-					data-pinned='bottom'
-					style={{
-						position: 'sticky',
-						bottom: `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
-						zIndex: 2,
-					}}
-				/>
+				<Fragment key={row.id}>
+					<DataGridRow
+						row={row}
+						data-pinned='bottom'
+						style={{
+							position: 'sticky',
+							bottom: `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
+							zIndex: 2,
+						}}
+					/>
+					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+				</Fragment>
 			))}
 		</Tbody>
 	)

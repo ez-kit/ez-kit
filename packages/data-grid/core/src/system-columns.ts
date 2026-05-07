@@ -48,6 +48,7 @@ export function buildColumnList<TRow extends object>(
 			id: EXPAND_COLUMN_ID,
 			header: () => null,
 			cell: () => null,
+			size: 44,
 			enableSorting: false,
 			enableColumnFilter: false,
 			meta: {

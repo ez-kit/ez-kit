@@ -1,17 +1,23 @@
 import { useState } from 'react'
 
 import type {
+	ActionsCellProps,
 	BetweenInputProps,
 	ButtonProps,
 	CheckboxProps,
+	ChevronProps,
 	ColumnMenuProps,
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
+	CreatingActionsCellProps,
 	DateFieldProps,
+	EmptyStateProps,
 	FilterPopoverProps,
 	GridComponents,
 	InputProps,
+	LoadingRowProps,
 	ModalProps,
+	NoResultsStateProps,
 	NumberInputProps,
 	OperatorSelectProps,
 	PageSizerProps,
@@ -19,6 +25,7 @@ import type {
 	ResizerProps,
 	RowPinMenuProps,
 	SelectionBarProps,
+	SortIndicatorProps,
 	TbodyProps,
 	TdProps,
 	ThProps,
@@ -508,6 +515,69 @@ function NativeSelectionBar({ open, count, onDelete, onClear, actions }: Selecti
 	)
 }
 
+function NativeSortIndicator({ sortDir }: SortIndicatorProps) {
+	if (!sortDir) return null
+	return <span aria-hidden='true'>{sortDir === 'asc' ? '↑' : '↓'}</span>
+}
+
+function NativeLoadingRow({ columnCount }: LoadingRowProps) {
+	return (
+		<tr>
+			<td colSpan={columnCount}>Loading…</td>
+		</tr>
+	)
+}
+
+function NativeEmptyState({ columnCount }: EmptyStateProps) {
+	return (
+		<tr>
+			<td colSpan={columnCount}>No data</td>
+		</tr>
+	)
+}
+
+function NativeNoResultsState({ columnCount }: NoResultsStateProps) {
+	return (
+		<tr>
+			<td colSpan={columnCount}>No results</td>
+		</tr>
+	)
+}
+
+function NativeActionsCell({ isEditing, hasEditing, hasDeleting, onEdit, onDelete, onSave, onCancel }: ActionsCellProps) {
+	if (isEditing) {
+		return (
+			<>
+				<button type='button' onClick={() => void onSave()}>Save</button>
+				<button type='button' onClick={onCancel}>Cancel</button>
+			</>
+		)
+	}
+	return (
+		<>
+			{hasEditing && <button type='button' onClick={onEdit}>Edit</button>}
+			{hasDeleting && <button type='button' onClick={onDelete}>Delete</button>}
+		</>
+	)
+}
+
+function NativeCreatingActionsCell({ onSave, onCancel }: CreatingActionsCellProps) {
+	return (
+		<>
+			<button type='button' onClick={() => void onSave()}>Save</button>
+			<button type='button' onClick={onCancel}>Cancel</button>
+		</>
+	)
+}
+
+function NativeChevron({ expanded, onClick, disabled }: ChevronProps) {
+	return (
+		<button type='button' onClick={onClick} disabled={disabled} aria-label={expanded ? 'Collapse row' : 'Expand row'}>
+			{expanded ? '▼' : '▶'}
+		</button>
+	)
+}
+
 export const nativeComponents: Required<GridComponents> = {
 	Table: NativeTable,
 	Thead: NativeThead,
@@ -533,4 +603,11 @@ export const nativeComponents: Required<GridComponents> = {
 	ConfirmDialog: NativeConfirmDialog,
 	OperatorSelect: NativeOperatorSelect,
 	BetweenInput: NativeBetweenInput,
+	SortIndicator: NativeSortIndicator,
+	LoadingRow: NativeLoadingRow,
+	EmptyState: NativeEmptyState,
+	NoResultsState: NativeNoResultsState,
+	ActionsCell: NativeActionsCell,
+	CreatingActionsCell: NativeCreatingActionsCell,
+	Chevron: NativeChevron,
 }
