@@ -22,7 +22,7 @@ export function CreatingModalExample() {
 			},
 		},
 		editing: {
-			mode: 'row',
+			mode: 'modal',
 			onSave: (rowId, values) => {
 				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				return true

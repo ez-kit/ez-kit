@@ -23,6 +23,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 			isEditing={editingState.editingRowId === row.id}
 			hasEditing={Boolean(table.options.editing)}
 			hasDeleting={Boolean(table.options.deleting)}
+			editingMode={table.options.editing?.mode}
 			onEdit={() => {
 				table.startEditing(row.id)
 			}}

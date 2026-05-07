@@ -123,7 +123,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 	}
 
 	// ── row editing mode ──────────────────────────────────────────────────────
-	const isEditingRow = (editMode === 'row' || editMode === 'modal') && editingState.editingRowId === row.id
+	const isEditingRow = editMode === 'row' && editingState.editingRowId === row.id
 
 	if (isEditingRow && meta?.editing !== false) {
 		const editComp = resolveEditComponent(meta, cellTypes)

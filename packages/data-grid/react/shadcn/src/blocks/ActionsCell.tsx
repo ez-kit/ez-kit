@@ -6,8 +6,8 @@ import { Button } from '@grid-shadcn/components/ui/button'
 
 import type { ActionsCellProps } from '@ez-kit/data-grid-react'
 
-export function ActionsCell({ isEditing, hasEditing, hasDeleting, onEdit, onDelete, onSave, onCancel }: ActionsCellProps) {
-	if (isEditing) {
+export function ActionsCell({ isEditing, editingMode, hasEditing, hasDeleting, onEdit, onDelete, onSave, onCancel }: ActionsCellProps) {
+	if (isEditing && editingMode !== 'modal') {
 		return (
 			<>
 				<Button
