@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { render } from '@testing-library/react'
+import { useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 
@@ -33,8 +33,8 @@ import type {
 	TrProps,
 	ToolbarProps,
 } from './types'
-import type { ReactElement, ReactNode } from 'react'
 import type { RenderOptions } from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
 
 // ── minimal HTML components for use in tests ─────────────────────────────
 

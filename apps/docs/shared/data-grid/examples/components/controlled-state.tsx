@@ -3,9 +3,10 @@
 import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
-import type { TableState } from '@ez-kit/data-grid-react'
 
 import { columns, INITIAL_DATA } from './_data'
+
+import type { TableState } from '@ez-kit/data-grid-react'
 
 type ControlledState = Pick<TableState, 'sorting' | 'pagination'>
 
@@ -32,10 +33,8 @@ export function ControlledStateExample() {
 		setTableState((prev) => ({ ...prev, sorting: [] }))
 	}
 
-	const sortLabel =
-		tableState.sorting && tableState.sorting.length > 0
-			? `${tableState.sorting[0]?.id} ${tableState.sorting[0]?.desc ? '↓' : '↑'}`
-			: 'none'
+	const firstSort = tableState.sorting?.[0]
+	const sortLabel = firstSort ? `${firstSort.id} ${firstSort.desc ? '↓' : '↑'}` : 'none'
 
 	return (
 		<div>

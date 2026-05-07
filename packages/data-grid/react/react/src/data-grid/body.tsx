@@ -13,8 +13,7 @@ import { useTableContext } from './table-context'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
-import type { ExpandedRowProps } from '../use-data-grid'
-import type { FallbacksConfig } from '../use-data-grid'
+import type { ExpandedRowProps , FallbacksConfig } from '../use-data-grid'
 import type { ComponentType } from 'react'
 
 /**

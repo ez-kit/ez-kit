@@ -1,7 +1,7 @@
 'use client'
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@grid-shadcn/components/ui/dialog'
 import { Button } from '@grid-shadcn/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@grid-shadcn/components/ui/dialog'
 
 import type { ModalProps } from '@ez-kit/data-grid-react'
 

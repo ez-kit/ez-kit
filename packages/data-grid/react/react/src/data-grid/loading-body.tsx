@@ -30,8 +30,6 @@ export function LoadingBody() {
 		)
 	}
 
-	if (!LoadingRow) return null
-
 	return (
 		<Tbody>
 			{Array.from({ length: DEFAULT_LOADING_ROWS }, (_, i) => (

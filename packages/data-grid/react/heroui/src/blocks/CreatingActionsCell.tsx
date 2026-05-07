@@ -1,7 +1,7 @@
 'use client'
 
-import { Check, X } from 'lucide-react'
 import { Button } from '@heroui/react'
+import { Check, X } from 'lucide-react'
 
 import type { CreatingActionsCellProps } from '@ez-kit/data-grid-react'
 

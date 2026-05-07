@@ -1,11 +1,11 @@
 'use client'
 
+import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
-import type { TableState } from '@ez-kit/data-grid-react'
-
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
+
+import type { TableState } from '@ez-kit/data-grid-react'
 
 type Employee = {
 	id: number
@@ -80,19 +80,21 @@ export function ExpandingControlledExample() {
 			<div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem' }}>
 				<button
 					type='button'
-					onClick={() =>
+					onClick={() => {
 						setTableState((prev) => ({
 							...prev,
 							expanded: Object.fromEntries(allIds.map((id) => [id, true])),
 						}))
-					}
+					}}
 					disabled={allExpanded}
 				>
 					Expand all
 				</button>
 				<button
 					type='button'
-					onClick={() => setTableState((prev) => ({ ...prev, expanded: {} }))}
+					onClick={() => {
+						setTableState((prev) => ({ ...prev, expanded: {} }))
+					}}
 					disabled={Object.keys(expanded).length === 0}
 				>
 					Collapse all

@@ -1,7 +1,7 @@
 'use client'
 
-import { Check, Pencil, Trash2, X } from 'lucide-react'
 import { Button } from '@heroui/react'
+import { Check, Pencil, Trash2, X } from 'lucide-react'
 
 import type { ActionsCellProps } from '@ez-kit/data-grid-react'
 

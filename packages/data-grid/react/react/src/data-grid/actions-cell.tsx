@@ -13,8 +13,6 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const table = useTableContext()
 	const { ActionsCell: Renderer } = useGridComponents()
 
-	if (!Renderer) return null
-
 	const editingState = table.getEditingState()
 
 	return (

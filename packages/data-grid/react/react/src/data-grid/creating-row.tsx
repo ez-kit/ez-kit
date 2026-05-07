@@ -40,15 +40,13 @@ export function CreatingRow() {
 								style={pinStyles}
 								pinned={pinned}
 							>
-								{CreatingActionsCell ? (
-									<CreatingActionsCell
-										onSave={() => table.commitCreating()}
-										onCancel={() => {
-											table.cancelCreating()
-										}}
-										isPinRow={isPinRow}
-									/>
-								) : null}
+								<CreatingActionsCell
+									onSave={() => table.commitCreating()}
+									onCancel={() => {
+										table.cancelCreating()
+									}}
+									isPinRow={isPinRow}
+								/>
 							</Td>
 						)
 					}

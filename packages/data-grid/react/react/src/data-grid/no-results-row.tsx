@@ -28,8 +28,6 @@ export function NoResultsRow() {
 		)
 	}
 
-	if (!NoResultsState) return null
-
 	return (
 		<Tbody>
 			<Tr>

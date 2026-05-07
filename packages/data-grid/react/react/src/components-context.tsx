@@ -18,7 +18,7 @@ export function GridComponentsProvider({ components, children }: GridComponentsP
 	const parentComponents = useContext(GridComponentsContext)
 
 	const value = useMemo(
-		() => (components ? ({ ...parentComponents, ...components } as Required<GridComponents>) : parentComponents),
+		() => (components ? ({ ...parentComponents, ...components }) : parentComponents),
 		[parentComponents, components],
 	)
 

@@ -67,27 +67,13 @@ export function DataGridCell({ cell, row }: CellProps) {
 					data-system-column='expand'
 					data-depth={row.depth}
 				>
-					{Chevron ? (
-						<Chevron
-							expanded={isExpanded}
-							onClick={() => {
-								row.toggleExpanded()
-							}}
-							disabled={!canExpand}
-						/>
-					) : (
-						canExpand && (
-							<button
-								type='button'
-								onClick={() => {
-									row.toggleExpanded()
-								}}
-								aria-label={isExpanded ? 'Collapse' : 'Expand'}
-							>
-								{isExpanded ? '▼' : '▶'}
-							</button>
-						)
-					)}
+					<Chevron
+						expanded={isExpanded}
+						onClick={() => {
+							row.toggleExpanded()
+						}}
+						disabled={!canExpand}
+					/>
 				</Td>
 			)
 		}

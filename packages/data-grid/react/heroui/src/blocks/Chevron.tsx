@@ -14,7 +14,7 @@ export function Chevron({ expanded, onClick, disabled }: ChevronProps) {
 			size='sm'
 			isIconOnly
 			{...(disabled !== undefined ? { isDisabled: disabled } : {})}
-			onPress={() => onClick()}
+			onPress={() => { onClick(); }}
 			aria-label={expanded ? 'Collapse row' : 'Expand row'}
 		>
 			<Icon className='size-4' />

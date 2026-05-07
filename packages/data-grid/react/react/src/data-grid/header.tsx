@@ -109,9 +109,9 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 								currentSort: sortDir,
 								canAsc: sortDir !== 'asc',
 								canDesc: sortDir !== 'desc',
-								onSortAsc: () => header.column.toggleSorting(false),
-								onSortDesc: () => header.column.toggleSorting(true),
-								onClearSort: () => header.column.clearSorting(),
+								onSortAsc: () => { header.column.toggleSorting(false); },
+								onSortDesc: () => { header.column.toggleSorting(true); },
+								onClearSort: () => { header.column.clearSorting(); },
 							}
 						}
 

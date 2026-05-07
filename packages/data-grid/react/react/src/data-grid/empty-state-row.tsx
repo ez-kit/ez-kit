@@ -28,8 +28,6 @@ export function EmptyStateRow() {
 		)
 	}
 
-	if (!EmptyState) return null
-
 	return (
 		<Tbody>
 			<Tr>

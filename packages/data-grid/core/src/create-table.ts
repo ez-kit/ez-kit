@@ -7,13 +7,13 @@ import {
 	getSortedRowModel,
 } from '@tanstack/table-core'
 
-import { createStore } from './store'
 import { mapColumns } from './column/map-columns'
 import { CreatingFeature } from './features/creating'
 import { DeletingFeature } from './features/deleting'
 import { EditingFeature } from './features/editing'
 import { LoadingFeature } from './features/loading'
 import { buildOperatorRegistry } from './features/operators'
+import { createStore } from './store'
 import { buildColumnList, extractPinningState } from './system-columns'
 
 import type { ColumnDef } from './column/types'

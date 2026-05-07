@@ -80,7 +80,7 @@ export function ColumnMenu({ sections }: ColumnMenuProps) {
 						)}
 					</>
 				)}
-				{(sorting || pin) && visibility && <DropdownMenuSeparator />}
+				{(sorting ?? pin) && visibility && <DropdownMenuSeparator />}
 				{visibility && (
 					<DropdownMenuItem onClick={visibility.onHide}>
 						<EyeOff className='mr-2 h-4 w-4' />

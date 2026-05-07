@@ -37,7 +37,7 @@ export function ExpandedRow({ row }: ExpandedRowComponentProps) {
 				colSpan={colSpan}
 				pinned={false}
 			>
-				{flexRender(renderExpanded, { row, table } as unknown as Record<string, unknown>)}
+				{flexRender(renderExpanded, { row, table })}
 			</Td>
 		</Tr>
 	)
