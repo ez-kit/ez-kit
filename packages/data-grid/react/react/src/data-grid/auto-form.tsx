@@ -47,11 +47,14 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 					setValue(col.id, v)
 				}
 
+				const label = resolveLabel(col.columnDef.header, col.id)
+
 				// 1. column-level component (prefer `component` over legacy `input`)
 				const customComp = resolveColumnComponent(colDef)
 				if (customComp) {
 					return (
 						<div key={col.id}>
+							<label>{label}</label>
 							{customComp({ value, onChange, ...(meta?.config !== undefined ? { config: meta.config } : {}) })}
 						</div>
 					)
@@ -63,6 +66,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 					if (regComp)
 						return (
 							<div key={col.id}>
+								<label>{label}</label>
 								{regComp({ value, onChange, ...(meta.config !== undefined ? { config: meta.config } : {}) })}
 							</div>
 						)
@@ -71,7 +75,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				// 3. plain text fallback
 				return (
 					<div key={col.id}>
-						<label>{col.id}</label>
+						<label>{label}</label>
 						<Input
 							value={(value ?? '') as string | number | readonly string[]}
 							onChange={(e) => {
@@ -88,6 +92,10 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 // ── helpers ───────────────────────────────────────────────────────────────
 
 type ColConfig = false | ColumnEditingConfig | ColumnCreatingConfig | undefined
+
+function resolveLabel(header: unknown, fallback: string): string {
+	return typeof header === 'string' ? header : fallback
+}
 
 function resolveColumnComponent(colDef: ColConfig): ((props: CellInputProps) => ReactNode) | undefined {
 	if (!colDef) return undefined

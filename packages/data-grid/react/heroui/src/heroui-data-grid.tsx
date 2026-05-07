@@ -17,6 +17,7 @@ import { DateField } from './blocks/DateField'
 import { FilterPopover } from './blocks/FilterPopover'
 import { HEROUI_CELL_TYPES } from './blocks/heroui-cell-types'
 import { Input } from './blocks/Input'
+import { Modal } from './blocks/Modal'
 import { NumberInput } from './blocks/NumberInput'
 import { OperatorSelect } from './blocks/OperatorSelect'
 import { PageSizer } from './blocks/PageSizer'
@@ -41,6 +42,7 @@ const HEROUI_COMPONENTS = {
 	Checkbox,
 	NumberInput,
 	DateField,
+	Modal,
 	Pagination,
 	PageSizer,
 	Toolbar,

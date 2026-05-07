@@ -54,6 +54,12 @@
 		"exportName": "CrudExample"
 	},
 	{
+		"id": "creating",
+		"label": "Creating",
+		"sourceFile": "components/creating/CreatingExample.tsx",
+		"exportName": "CreatingExample"
+	},
+	{
 		"id": "filter-popover",
 		"label": "Filter Popover",
 		"sourceFile": "components/filter-popover.tsx",

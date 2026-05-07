@@ -14,6 +14,7 @@ import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { DateField } from './blocks/DateField'
 import { FilterPopover } from './blocks/FilterPopover'
+import { Modal } from './blocks/Modal'
 import { NumberInput } from './blocks/NumberInput'
 import { OperatorSelect } from './blocks/OperatorSelect'
 import { PageSizer } from './blocks/PageSizer'
@@ -41,6 +42,7 @@ const SHADCN_COMPONENTS = {
 	Checkbox,
 	NumberInput,
 	DateField,
+	Modal,
 	Pagination,
 	PageSizer,
 	Toolbar,

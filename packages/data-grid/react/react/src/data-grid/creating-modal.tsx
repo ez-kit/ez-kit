@@ -29,23 +29,13 @@ export function CreatingModal() {
 			onClose={() => {
 				table.cancelCreating()
 			}}
+			onSave={() => void table.commitCreating()}
+			onCancel={() => {
+				table.cancelCreating()
+			}}
 			title='Create'
 		>
 			<AutoForm mode='creating' />
-			<button
-				type='button'
-				onClick={() => void table.commitCreating()}
-			>
-				Save
-			</button>
-			<button
-				type='button'
-				onClick={() => {
-					table.cancelCreating()
-				}}
-			>
-				Cancel
-			</button>
 		</ModalComponent>
 	)
 }

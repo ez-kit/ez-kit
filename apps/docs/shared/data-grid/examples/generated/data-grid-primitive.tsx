@@ -10,15 +10,16 @@ import { ColumnPinningExample as Example5 } from '../components/column-pinning'
 import { ColumnVisibilityExample as Example6 } from '../components/column-visibility'
 import { FilterOperatorsExample as Example7 } from '../components/filter-operators'
 import { CrudExample as Example8 } from '../components/crud/CrudExample'
-import { FilterPopoverExample as Example9 } from '../components/filter-popover'
-import { VirtualizedExample as Example10 } from '../components/virtualized'
-import { ResizingExample as Example11 } from '../components/resizing'
-import { CustomCellTypesExample as Example12 } from '../components/custom-cell-types'
-import { ColumnHelperBaseExample as Example13 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example14 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example15 } from '../components/column-helper'
-import { FallbacksExample as Example16 } from '../components/fallbacks'
-import { ControlledStateExample as Example17 } from '../components/controlled-state'
+import { CreatingExample as Example9 } from '../components/creating/CreatingExample'
+import { FilterPopoverExample as Example10 } from '../components/filter-popover'
+import { VirtualizedExample as Example11 } from '../components/virtualized'
+import { ResizingExample as Example12 } from '../components/resizing'
+import { CustomCellTypesExample as Example13 } from '../components/custom-cell-types'
+import { ColumnHelperBaseExample as Example14 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example15 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example16 } from '../components/column-helper'
+import { FallbacksExample as Example17 } from '../components/fallbacks'
+import { ControlledStateExample as Example18 } from '../components/controlled-state'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -75,6 +76,12 @@ export const dataGridExamplesManifest = [
     "label": "CRUD",
     "sourceFile": "components/crud/CrudExample.tsx",
     "exportName": "CrudExample"
+  },
+  {
+    "id": "creating",
+    "label": "Creating",
+    "sourceFile": "components/creating/CreatingExample.tsx",
+    "exportName": "CreatingExample"
   },
   {
     "id": "filter-popover",
@@ -144,13 +151,14 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'column-visibility': Example6,
 	'filter-operators': Example7,
 	'crud': Example8,
-	'filter-popover': Example9,
-	'virtualized': Example10,
-	'resizing': Example11,
-	'custom-cell-types': Example12,
-	'column-helper': Example13,
-	'column-helper-custom-view': Example14,
-	'column-helper-registered': Example15,
-	'fallbacks': Example16,
-	'controlled-state': Example17,
+	'creating': Example9,
+	'filter-popover': Example10,
+	'virtualized': Example11,
+	'resizing': Example12,
+	'custom-cell-types': Example13,
+	'column-helper': Example14,
+	'column-helper-custom-view': Example15,
+	'column-helper-registered': Example16,
+	'fallbacks': Example17,
+	'controlled-state': Example18,
 }

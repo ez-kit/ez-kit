@@ -29,23 +29,13 @@ export function EditingModal() {
 			onClose={() => {
 				table.cancelEditing()
 			}}
+			onSave={() => void table.commitEditing()}
+			onCancel={() => {
+				table.cancelEditing()
+			}}
 			title='Edit'
 		>
 			<AutoForm mode='editing' />
-			<button
-				type='button'
-				onClick={() => void table.commitEditing()}
-			>
-				Save
-			</button>
-			<button
-				type='button'
-				onClick={() => {
-					table.cancelEditing()
-				}}
-			>
-				Cancel
-			</button>
 		</ModalComponent>
 	)
 }

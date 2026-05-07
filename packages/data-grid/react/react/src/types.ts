@@ -66,6 +66,8 @@ export type ModalProps = {
 	onClose: () => void
 	title?: string
 	children?: ReactNode
+	onSave?: () => void
+	onCancel?: () => void
 }
 
 export type ToolbarProps = {
