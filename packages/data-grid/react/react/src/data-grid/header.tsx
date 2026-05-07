@@ -101,6 +101,17 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 							}
 						}
 
+						if (canSort && !header.isPlaceholder) {
+							sections.sorting = {
+								currentSort: sortDir,
+								canAsc: sortDir !== 'asc',
+								canDesc: sortDir !== 'desc',
+								onSortAsc: () => header.column.toggleSorting(false),
+								onSortDesc: () => header.column.toggleSorting(true),
+								onClearSort: () => header.column.clearSorting(),
+							}
+						}
+
 						const hasSections = Object.keys(sections).length > 0
 
 						// Selection column: render select-all checkbox

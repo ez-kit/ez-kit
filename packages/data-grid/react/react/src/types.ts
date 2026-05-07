@@ -126,9 +126,19 @@ export type ColVisibilitySection = {
 	onHide: () => void
 }
 
+export type ColSortSection = {
+	currentSort: 'asc' | 'desc' | false
+	canAsc: boolean
+	canDesc: boolean
+	onSortAsc: () => void
+	onSortDesc: () => void
+	onClearSort: () => void
+}
+
 export type ColumnMenuSections = {
 	pin?: ColPinSection
 	visibility?: ColVisibilitySection
+	sorting?: ColSortSection
 }
 
 export type ColumnMenuProps = {

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, EllipsisVertical, EyeOff, PinOff } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, EllipsisVertical, EyeOff, PinOff, X } from 'lucide-react'
 
 import { Button } from '../components/ui/button'
 import {
@@ -13,9 +13,9 @@ import {
 import type { ColumnMenuProps } from '@ez-kit/data-grid-react'
 
 export function ColumnMenu({ sections }: ColumnMenuProps) {
-	const { pin, visibility } = sections
+	const { pin, visibility, sorting } = sections
 
-	if (!pin && !visibility) return null
+	if (!pin && !visibility && !sorting) return null
 
 	return (
 		<DropdownMenu>
@@ -30,6 +30,30 @@ export function ColumnMenu({ sections }: ColumnMenuProps) {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align='start'>
+				{sorting && (
+					<>
+						<DropdownMenuLabel>Sorting</DropdownMenuLabel>
+						{sorting.canAsc && (
+							<DropdownMenuItem onClick={sorting.onSortAsc}>
+								<ArrowUp className='mr-2 h-4 w-4' />
+								Asc
+							</DropdownMenuItem>
+						)}
+						{sorting.canDesc && (
+							<DropdownMenuItem onClick={sorting.onSortDesc}>
+								<ArrowDown className='mr-2 h-4 w-4' />
+								Desc
+							</DropdownMenuItem>
+						)}
+						{sorting.currentSort && (
+							<DropdownMenuItem onClick={sorting.onClearSort}>
+								<X className='mr-2 h-4 w-4' />
+								Clear sort
+							</DropdownMenuItem>
+						)}
+					</>
+				)}
+				{sorting && pin && <DropdownMenuSeparator />}
 				{pin && (
 					<>
 						<DropdownMenuLabel>Pin</DropdownMenuLabel>
@@ -56,7 +80,7 @@ export function ColumnMenu({ sections }: ColumnMenuProps) {
 						)}
 					</>
 				)}
-				{pin && visibility && <DropdownMenuSeparator />}
+				{(sorting || pin) && visibility && <DropdownMenuSeparator />}
 				{visibility && (
 					<DropdownMenuItem onClick={visibility.onHide}>
 						<EyeOff className='mr-2 h-4 w-4' />
