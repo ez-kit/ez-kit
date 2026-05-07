@@ -12,16 +12,7 @@ export function Resizer({ onMouseDown, onTouchStart, onDoubleClick, isResizing }
 			onMouseDown={onMouseDown}
 			onTouchStart={onTouchStart}
 			onDoubleClick={onDoubleClick}
-			style={{
-				position: 'absolute',
-				top: 0,
-				right: 0,
-				width: '4px',
-				height: '100%',
-				cursor: 'col-resize',
-				userSelect: 'none',
-				touchAction: 'none',
-			}}
+			className='absolute top-0 right-0 w-4 h-full cursor-col-resize select-none touch-action-none py-2'
 		/>
 	)
 }

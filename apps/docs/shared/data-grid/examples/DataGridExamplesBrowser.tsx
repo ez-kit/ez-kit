@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { useDataGridType } from 'shared/DataGrid'
 
@@ -12,17 +12,29 @@ type DataGridExamplesBrowserProps = {
 
 const TABS = dataGridExamplesManifest.map(({ id, label }) => ({ id, label }))
 
-export function DataGridExamplesBrowser({ renderExample }: DataGridExamplesBrowserProps) {
-	const [activeTab, setActiveTab] = useState<DataGridExampleId>('base')
+const useActiveTab = () => {
+	const searchParams = useSearchParams()
+	const activeTab = (searchParams.get('tab') ?? 'base') as DataGridExampleId
+	const router = useRouter()
+	const pathname = usePathname()
 
+	const setActiveTab = (tab: DataGridExampleId) => {
+		const params = new URLSearchParams(searchParams.toString())
+		params.set('tab', tab)
+		router.push(`${pathname}?${params.toString()}`)
+	}
+
+	return { activeTab, setActiveTab }
+}
+
+export function DataGridExamplesBrowser({ renderExample }: DataGridExamplesBrowserProps) {
+	const { activeTab, setActiveTab } = useActiveTab()
+	console.log('activeTab', activeTab)
 	const { type } = useDataGridType()
 
 	return (
-		<div
-			style={{ padding: '2rem' }}
-			className='[&_input]:border'
-		>
-			<h1 style={{ marginBottom: '1.5rem' }}>DataGrid Sandbox - {type}</h1>
+		<div className='[&_input]:border p-8'>
+			<h1 className='mb-6'>DataGrid Sandbox - {type}</h1>
 
 			<div className='flex gap-0.5 border-b border-zinc-200 mb-4 overflow-x-auto'>
 				{TABS.map((tab) => (
@@ -31,17 +43,8 @@ export function DataGridExamplesBrowser({ renderExample }: DataGridExamplesBrows
 						onClick={() => {
 							setActiveTab(tab.id)
 						}}
-						style={{
-							padding: '0.5rem 1rem',
-							border: 'none',
-							borderBottom: activeTab === tab.id ? '2px solid #0f172a' : '2px solid transparent',
-							background: 'none',
-							cursor: 'pointer',
-							fontWeight: activeTab === tab.id ? 600 : 400,
-							color: activeTab === tab.id ? '#0f172a' : '#64748b',
-							marginBottom: '-1px',
-							transition: 'color 150ms, border-color 150ms',
-						}}
+						className='p-2 border-b-2 border-transparent bg-none cursor-pointer font-semibold text-zinc-900 text-zinc-500 mb-[-1px] transition-colors duration-150'
+						style={activeTab === tab.id ? { borderColor: '#0f172a' } : {}}
 					>
 						{tab.label}
 					</button>
