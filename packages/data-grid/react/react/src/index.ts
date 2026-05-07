@@ -9,6 +9,7 @@ export {
 	PAGE_SIZER_KEY,
 	ROW_PINNING_KEY,
 	SELECTION_BAR_KEY,
+	SORTING_KEY,
 	VIRTUALIZED_KEY,
 } from './use-data-grid'
 export type {
@@ -73,6 +74,10 @@ export type {
 	ResizerProps,
 	RowPinMenuProps,
 	SelectionBarProps,
+	SortColumnOption,
+	SortDirection,
+	SortMenuItem,
+	SortMenuProps,
 	VisibilityColumnItem,
 } from './types'
 export type {

@@ -42,6 +42,12 @@
 		"exportName": "ColumnVisibilityExample"
 	},
 	{
+		"id": "sort-toolbar",
+		"label": "Sort Toolbar",
+		"sourceFile": "components/sort-toolbar.tsx",
+		"exportName": "SortToolbarExample"
+	},
+	{
 		"id": "filter-operators",
 		"label": "Filter Operators",
 		"sourceFile": "components/filter-operators.tsx",

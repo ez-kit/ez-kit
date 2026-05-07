@@ -270,6 +270,7 @@ export const testComponents: Required<GridComponents> = {
 	EmptyState: TestEmptyState,
 	NoResultsState: TestNoResultsState,
 	SortIndicator: () => null,
+	SortMenu: () => null,
 	ActionsCell: () => null,
 	CreatingActionsCell: () => null,
 	Chevron: () => null,

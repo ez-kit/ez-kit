@@ -34,6 +34,9 @@ export const SELECTION_BAR_KEY = Symbol('selectionBar')
 /** Symbol used to carry columnVisibility UI config on the table instance for Toolbar to read. */
 export const COLUMN_VISIBILITY_KEY = Symbol('columnVisibility')
 
+/** Symbol used to carry sorting UI config on the table instance for Toolbar to read. */
+export const SORTING_KEY = Symbol('sorting')
+
 /** Symbol used to carry filtering variant on the table instance for Header to read. */
 export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
 
@@ -299,6 +302,11 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	const colVisibilityRef = useRef(columnVisibility)
 	colVisibilityRef.current = columnVisibility
 	;(tableRef.current as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] = colVisibilityRef.current
+
+	// Store sorting config on the table instance so Toolbar can read without an extra prop
+	const sortingRef = useRef(config.sorting)
+	sortingRef.current = config.sorting
+	;(tableRef.current as unknown as Record<symbol, unknown>)[SORTING_KEY] = sortingRef.current
 
 	// Store filteringVariant on the table instance so Header can read without an extra prop
 	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] = filteringVariant

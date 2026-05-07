@@ -19,6 +19,8 @@ export type { TableState as TableSnapshot }
 
 export type SortingConfig = {
 	manual?: boolean
+	/** Show a multi-sort builder button in the toolbar. Default: false. UI-only flag, ignored by core. */
+	toolbar?: boolean
 }
 
 export type FilteringConfig = {

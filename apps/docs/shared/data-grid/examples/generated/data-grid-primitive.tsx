@@ -8,22 +8,23 @@ import { SelectionBarExample as Example3 } from '../components/selection-bar'
 import { RowPinningExample as Example4 } from '../components/row-pinning'
 import { ColumnPinningExample as Example5 } from '../components/column-pinning'
 import { ColumnVisibilityExample as Example6 } from '../components/column-visibility'
-import { FilterOperatorsExample as Example7 } from '../components/filter-operators'
-import { CrudExample as Example8 } from '../components/crud/CrudExample'
-import { CreatingExample as Example9 } from '../components/creating/CreatingExample'
-import { FilterPopoverExample as Example10 } from '../components/filter-popover'
-import { StickyHeaderExample as Example11 } from '../components/sticky-header'
-import { VirtualizedExample as Example12 } from '../components/virtualized'
-import { ResizingExample as Example13 } from '../components/resizing'
-import { CustomCellTypesExample as Example14 } from '../components/custom-cell-types'
-import { ColumnHelperBaseExample as Example15 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example16 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example17 } from '../components/column-helper'
-import { FallbacksExample as Example18 } from '../components/fallbacks'
-import { ControlledStateExample as Example19 } from '../components/controlled-state'
-import { ExpandingSubContentExample as Example20 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example21 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example22 } from '../components/expanding/controlled'
+import { SortToolbarExample as Example7 } from '../components/sort-toolbar'
+import { FilterOperatorsExample as Example8 } from '../components/filter-operators'
+import { CrudExample as Example9 } from '../components/crud/CrudExample'
+import { CreatingExample as Example10 } from '../components/creating/CreatingExample'
+import { FilterPopoverExample as Example11 } from '../components/filter-popover'
+import { StickyHeaderExample as Example12 } from '../components/sticky-header'
+import { VirtualizedExample as Example13 } from '../components/virtualized'
+import { ResizingExample as Example14 } from '../components/resizing'
+import { CustomCellTypesExample as Example15 } from '../components/custom-cell-types'
+import { ColumnHelperBaseExample as Example16 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example17 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example18 } from '../components/column-helper'
+import { FallbacksExample as Example19 } from '../components/fallbacks'
+import { ControlledStateExample as Example20 } from '../components/controlled-state'
+import { ExpandingSubContentExample as Example21 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example22 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example23 } from '../components/expanding/controlled'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -68,6 +69,12 @@ export const dataGridExamplesManifest = [
     "label": "Column Visibility",
     "sourceFile": "components/column-visibility.tsx",
     "exportName": "ColumnVisibilityExample"
+  },
+  {
+    "id": "sort-toolbar",
+    "label": "Sort Toolbar",
+    "sourceFile": "components/sort-toolbar.tsx",
+    "exportName": "SortToolbarExample"
   },
   {
     "id": "filter-operators",
@@ -183,20 +190,21 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'row-pinning': Example4,
 	'column-pinning': Example5,
 	'column-visibility': Example6,
-	'filter-operators': Example7,
-	'crud': Example8,
-	'creating': Example9,
-	'filter-popover': Example10,
-	'sticky-header': Example11,
-	'virtualized': Example12,
-	'resizing': Example13,
-	'custom-cell-types': Example14,
-	'column-helper': Example15,
-	'column-helper-custom-view': Example16,
-	'column-helper-registered': Example17,
-	'fallbacks': Example18,
-	'controlled-state': Example19,
-	'expanding-sub-content': Example20,
-	'expanding-tree': Example21,
-	'expanding-controlled': Example22,
+	'sort-toolbar': Example7,
+	'filter-operators': Example8,
+	'crud': Example9,
+	'creating': Example10,
+	'filter-popover': Example11,
+	'sticky-header': Example12,
+	'virtualized': Example13,
+	'resizing': Example14,
+	'custom-cell-types': Example15,
+	'column-helper': Example16,
+	'column-helper-custom-view': Example17,
+	'column-helper-registered': Example18,
+	'fallbacks': Example19,
+	'controlled-state': Example20,
+	'expanding-sub-content': Example21,
+	'expanding-tree': Example22,
+	'expanding-controlled': Example23,
 }

@@ -16,6 +16,7 @@ import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
 import { SelectionBar } from './selection-bar'
+import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useTableContext } from './table-context'
 import { Toolbar } from './toolbar'
@@ -133,6 +134,7 @@ type DataGridType = typeof DataGridRoot & {
 	SelectionBar: typeof SelectionBar
 	CreateTrigger: typeof CreateTrigger
 	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
+	SortTrigger: typeof SortTrigger
 	CreatingModal: typeof CreatingModal
 	EditingModal: typeof EditingModal
 	LoadingBody: typeof LoadingBody
@@ -152,6 +154,7 @@ DataGrid.PageSizer = PageSizer
 DataGrid.SelectionBar = SelectionBar
 DataGrid.CreateTrigger = CreateTrigger
 DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
+DataGrid.SortTrigger = SortTrigger
 DataGrid.CreatingModal = CreatingModal
 DataGrid.EditingModal = EditingModal
 DataGrid.LoadingBody = LoadingBody

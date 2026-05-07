@@ -163,6 +163,30 @@ export type ColumnVisibilityMenuProps = {
 	columns: VisibilityColumnItem[]
 }
 
+export type SortDirection = 'asc' | 'desc'
+
+export type SortColumnOption = {
+	id: string
+	label: string
+}
+
+export type SortMenuItem = {
+	columnId: string
+	direction: SortDirection
+	/** Columns the user may pick for this row — already excludes columns used by other rows. */
+	availableColumns: SortColumnOption[]
+	onChangeColumn: (columnId: string) => void
+	onChangeDirection: (direction: SortDirection) => void
+	onRemove: () => void
+}
+
+export type SortMenuProps = {
+	items: SortMenuItem[]
+	canAddSort: boolean
+	onAddSort: () => void
+	onResetSorting: () => void
+}
+
 export type FilterPopoverProps = {
 	children: ReactNode
 	hasActiveFilter: boolean
@@ -257,6 +281,7 @@ export type GridComponents = {
 	RowPinMenu?: ComponentType<RowPinMenuProps>
 	ColumnMenu?: ComponentType<ColumnMenuProps>
 	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
+	SortMenu?: ComponentType<SortMenuProps>
 	FilterPopover?: ComponentType<FilterPopoverProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>

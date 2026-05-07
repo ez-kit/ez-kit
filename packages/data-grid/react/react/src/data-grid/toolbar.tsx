@@ -1,12 +1,14 @@
 import { useGridComponents } from '../components-context'
-import { COLUMN_VISIBILITY_KEY, PAGE_SIZER_KEY } from '../use-data-grid'
+import { COLUMN_VISIBILITY_KEY, PAGE_SIZER_KEY, SORTING_KEY } from '../use-data-grid'
 
 import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { CreateTrigger } from './create-trigger'
 import { PageSizer } from './page-sizer'
+import { SortTrigger } from './sort-trigger'
 import { useTableContext } from './table-context'
 
 import type { ColumnVisibilityUIConfig, PageSizerConfig } from '../use-data-grid'
+import type { SortingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type ToolbarProps = {
@@ -31,6 +33,12 @@ export function Toolbar({ children }: ToolbarProps) {
 	const hasVisibilityToolbar =
 		colVisConfig === true || (typeof colVisConfig === 'object' && Boolean(colVisConfig.toolbar))
 
+	const sortConfig = (table as unknown as Record<symbol, unknown>)[SORTING_KEY] as
+		| boolean
+		| SortingConfig
+		| undefined
+	const hasSortingToolbar = typeof sortConfig === 'object' && Boolean(sortConfig.toolbar)
+
 	const pageSizerConfig = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as
 		| PageSizerConfig
 		| undefined
@@ -41,9 +49,10 @@ export function Toolbar({ children }: ToolbarProps) {
 
 	const left = pageSizerConfig ? <PageSizer /> : null
 	const right =
-		hasCreating || hasVisibilityToolbar ? (
+		hasCreating || hasSortingToolbar || hasVisibilityToolbar ? (
 			<>
 				{hasCreating && <CreateTrigger />}
+				{hasSortingToolbar && <SortTrigger />}
 				{hasVisibilityToolbar && <ColumnVisibilityTrigger />}
 			</>
 		) : null
