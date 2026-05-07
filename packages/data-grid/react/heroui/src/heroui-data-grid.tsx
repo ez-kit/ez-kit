@@ -23,6 +23,7 @@ import { OperatorSelect } from './blocks/OperatorSelect'
 import { PageSizer } from './blocks/PageSizer'
 import { Pagination } from './blocks/Pagination'
 import { Resizer } from './blocks/Resizer'
+import { SortIndicator } from './blocks/SortIndicator'
 import { RowPinMenu } from './blocks/RowPinMenu'
 import { SelectionBar } from './blocks/SelectionBar'
 import { Table, Tbody, Td, Th, Thead, Tr } from './blocks/table-adapters'
@@ -47,6 +48,7 @@ const HEROUI_COMPONENTS = {
 	PageSizer,
 	Toolbar,
 	Resizer,
+	SortIndicator,
 	RowPinMenu,
 	ColumnMenu,
 	ColumnVisibilityMenu,

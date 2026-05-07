@@ -10,6 +10,11 @@
 	--dg-pin-cell-background: var(--surface);
 }
 
+.table__row:hover,
+.table__row[data-hovered='true'] {
+	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--background));
+}
+
 .dg-shadow-left {
 	position: absolute;
 	top: 0;

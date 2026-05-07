@@ -70,25 +70,26 @@ function TableRow({ className, style, ...props }: React.ComponentProps<'tr'>) {
 	)
 }
 
-function TableHead({ className, pinned, ...props }: React.ComponentProps<'th'> & { pinned?: 'left' | 'right' | false }) {
+function TableHead({ className, pinned, style, ...props }: React.ComponentProps<'th'> & { pinned?: 'left' | 'right' | false }) {
 	return (
 		<th
 			data-slot='table-head'
 			className={cn(
 				'min-h-10 px-2 text-left font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0',
-				pinned && 'bg-background',
 				className,
 			)}
+			style={pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style}
 			{...props}
 		/>
 	)
 }
 
-function TableCell({ className, pinned, ...props }: React.ComponentProps<'td'> & { pinned?: 'left' | 'right' | false }) {
+function TableCell({ className, pinned, style, ...props }: React.ComponentProps<'td'> & { pinned?: 'left' | 'right' | false }) {
 	return (
 		<td
 			data-slot='table-cell'
-			className={cn('p-2 flex items-center overflow-hidden [&:has([role=checkbox])]:pr-0', pinned && 'bg-background', className)}
+			className={cn('p-2 flex items-center overflow-hidden [&:has([role=checkbox])]:pr-0', className)}
+			style={pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style}
 			{...props}
 		/>
 	)

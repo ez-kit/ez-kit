@@ -27,7 +27,7 @@ type HeaderProps = {
  */
 export function Header({ theadStyle }: HeaderProps = {}) {
 	const table = useTableContext()
-	const { Thead, Tr, Th, Input, Resizer, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } =
+	const { Thead, Tr, Th, Input, Resizer, SortIndicator, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } =
 		useGridComponents()
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
@@ -162,7 +162,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 													data-slot='sort-trigger'
 													role={canSort ? 'button' : undefined}
 													tabIndex={canSort ? 0 : undefined}
-													style={{ cursor: canSort ? 'pointer' : undefined, flex: 1 }}
+													style={{ cursor: canSort ? 'pointer' : undefined, flex: 1, display: 'flex', alignItems: 'center' }}
 													onClick={sortHandler}
 													onKeyDown={onSortKeyDown}
 												>
@@ -172,9 +172,7 @@ export function Header({ theadStyle }: HeaderProps = {}) {
 																header.column.columnDef.header,
 																header.getContext() as unknown as Record<string, unknown>,
 															)}
-													{canSort && (
-														<span aria-hidden>{sortDir === 'asc' ? ' ▲' : sortDir === 'desc' ? ' ▼' : ' ⇅'}</span>
-													)}
+													<SortIndicator sortDir={sortDir} canSort={canSort} />
 												</div>
 												{filteringVariant === 'popover' && canFilter && (
 													<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>

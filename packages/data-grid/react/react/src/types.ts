@@ -122,6 +122,11 @@ export type ColPinSection = {
 	onUnpin: () => void
 }
 
+export type SortIndicatorProps = {
+	sortDir: 'asc' | 'desc' | false
+	canSort: boolean
+}
+
 export type ColVisibilitySection = {
 	onHide: () => void
 }
@@ -242,6 +247,7 @@ export type GridComponents = {
 	PageSizer?: ComponentType<PageSizerProps>
 	// data-grid specific
 	Resizer?: ComponentType<ResizerProps>
+	SortIndicator?: ComponentType<SortIndicatorProps>
 	RowPinMenu?: ComponentType<RowPinMenuProps>
 	ColumnMenu?: ComponentType<ColumnMenuProps>
 	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>

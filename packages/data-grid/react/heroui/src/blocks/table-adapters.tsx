@@ -74,13 +74,12 @@ export function Th({ pinned, className, ...props }: ThProps) {
 	)
 }
 
-export function Td({ pinned, className, ...props }: TdProps) {
-	const mergedClassName = cn(className, pinned ? 'bg-surface' : undefined) ?? ''
-
+export function Td({ pinned, className, style, ...props }: TdProps) {
 	return (
 		<HeroTable.Cell
 			{...(props as unknown as ComponentProps<typeof HeroTable.Cell>)}
-			className={mergedClassName}
+			className={cn(className) ?? ''}
+			style={pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style}
 		/>
 	)
 }

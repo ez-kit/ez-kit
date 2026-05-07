@@ -83,6 +83,23 @@
 	--dg-pin-cell-background: var(--background);
 }
 
+[data-slot='table-row']:hover,
+[data-slot='tr']:hover,
+[data-slot='table-row']:has([aria-expanded='true']),
+[data-slot='tr']:has([aria-expanded='true']) {
+	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 50%, var(--background));
+}
+
+[data-slot='table-row'][data-state='selected'],
+[data-slot='tr'][data-state='selected'] {
+	--dg-pin-cell-background: var(--muted);
+}
+
+[data-slot='table-row'][data-pinned],
+[data-slot='tr'][data-pinned] {
+	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 40%, var(--background));
+}
+
 .dark {
 	--background: oklch(0.145 0 0);
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
