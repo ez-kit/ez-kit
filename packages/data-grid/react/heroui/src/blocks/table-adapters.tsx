@@ -75,11 +75,14 @@ export function Th({ pinned, className, ...props }: ThProps) {
 }
 
 export function Td({ pinned, className, style, ...props }: TdProps) {
+	const resolvedStyle = pinned
+		? { backgroundColor: 'var(--dg-pin-cell-background)', ...style }
+		: style
 	return (
 		<HeroTable.Cell
 			{...(props as unknown as ComponentProps<typeof HeroTable.Cell>)}
 			className={cn(className) ?? ''}
-			style={pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style}
+			{...(resolvedStyle ? { style: resolvedStyle } : {})}
 		/>
 	)
 }

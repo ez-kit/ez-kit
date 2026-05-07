@@ -26,7 +26,7 @@ export type ActionsCellProps = {
 	hasEditing: boolean
 	hasDeleting: boolean
 	/** The editing mode configured on the table. Undefined when editing is not configured. */
-	editingMode?: 'row' | 'modal' | 'cell'
+	editingMode?: 'row' | 'modal' | 'cell' | undefined
 	onEdit: () => void
 	onDelete: () => void
 	onSave: () => Promise<void>
