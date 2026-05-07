@@ -1,10 +1,27 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 
+import { Button } from '@grid-shadcn/components/ui/button'
+
 import type { SortIndicatorProps } from '@ez-kit/data-grid-react'
 
 export function SortIndicator({ sortDir, canSort }: SortIndicatorProps) {
 	if (!canSort) return null
-	if (sortDir === 'asc') return <ArrowUp className='ml-1 h-3 w-3' aria-hidden />
-	if (sortDir === 'desc') return <ArrowDown className='ml-1 h-3 w-3' aria-hidden />
-	return <ArrowUpDown className='ml-1 h-3 w-3 opacity-40' aria-hidden />
+	const icon =
+		sortDir === 'asc' ? (
+			<ArrowUp className='h-3 w-3' aria-hidden />
+		) : sortDir === 'desc' ? (
+			<ArrowDown className='h-3 w-3' aria-hidden />
+		) : (
+			<ArrowUpDown className='h-3 w-3 opacity-40' aria-hidden />
+		)
+	return (
+		<Button
+			variant='ghost'
+			size='icon'
+			className='ml-1 h-6 w-6 shrink-0'
+			tabIndex={-1}
+		>
+			{icon}
+		</Button>
+	)
 }

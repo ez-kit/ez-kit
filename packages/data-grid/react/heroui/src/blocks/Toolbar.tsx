@@ -5,7 +5,7 @@ export function Toolbar({ children, left, right }: ToolbarProps) {
 		return (
 			<div
 				role='toolbar'
-				className='flex items-center gap-2'
+				className='flex items-center gap-2 mb-2'
 			>
 				{children}
 			</div>
@@ -15,7 +15,7 @@ export function Toolbar({ children, left, right }: ToolbarProps) {
 	return (
 		<div
 			role='toolbar'
-			className='flex items-center justify-between gap-2'
+			className='flex items-center justify-between gap-2 mb-2'
 		>
 			<div className='flex items-center gap-2'>{left}</div>
 			<div className='flex items-center gap-2'>{right}</div>

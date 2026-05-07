@@ -83,6 +83,18 @@
 	--dg-pin-cell-background: var(--background);
 }
 
+[data-slot='table-container'] {
+	@apply rounded-sm border border-border overflow-hidden;
+}
+
+[data-slot='table-head'] {
+	@apply px-3 py-1.5;
+}
+
+[data-slot='table-header'] {
+	@apply bg-background;
+}
+
 [data-slot='table-row']:hover,
 [data-slot='tr']:hover,
 [data-slot='table-row']:has([aria-expanded='true']),

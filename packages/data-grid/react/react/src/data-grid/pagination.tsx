@@ -9,6 +9,7 @@ export function Pagination() {
 	const table = useTableContext()
 	const { Pagination: PaginationComponent } = useGridComponents()
 
+	if (table.getIsLoading()) return null
 	if (!table.options.getPaginationRowModel) return null
 
 	const { pageIndex } = table.getState().pagination

@@ -10,6 +10,7 @@ export function EmptyState(_props: EmptyStateProps) {
 				justifyContent: 'center',
 				gap: '0.5rem',
 				padding: '3rem 1rem',
+				minHeight: '300px',
 				color: 'var(--heroui-default-400, #a1a1aa)',
 			}}
 		>

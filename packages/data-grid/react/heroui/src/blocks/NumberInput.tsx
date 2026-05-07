@@ -15,7 +15,7 @@ export function NumberInput({ value, onChange }: NumberInputProps) {
 			}}
 		>
 			<NumberField.Group>
-				<NumberField.Input />
+				<NumberField.Input placeholder='0' />
 			</NumberField.Group>
 		</NumberField>
 	)

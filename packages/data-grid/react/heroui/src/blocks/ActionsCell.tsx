@@ -40,7 +40,7 @@ export function ActionsCell({ isEditing, editingMode, hasEditing, hasDeleting, o
 			)}
 			{hasDeleting && (
 				<Button
-					variant='ghost'
+					variant='danger-soft'
 					isIconOnly
 					onPress={onDelete}
 				>

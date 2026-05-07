@@ -97,7 +97,14 @@ export function CreatingRow() {
 						style={pinStyles}
 						pinned={pinned}
 					>
-						{renderCreatingInput({ meta, value, onChange, cellTypes, Input })}
+						{renderCreatingInput({
+							meta,
+							value,
+							onChange,
+							cellTypes,
+							Input,
+							placeholder: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
+						})}
 					</Td>
 				)
 			})}
@@ -113,9 +120,10 @@ type CreatingInputArgs = {
 	onChange: (v: unknown) => void
 	cellTypes: CellTypeRegistry
 	Input: ComponentType<InputProps>
+	placeholder?: string
 }
 
-function renderCreatingInput({ meta, value, onChange, cellTypes, Input }: CreatingInputArgs): ReactNode {
+function renderCreatingInput({ meta, value, onChange, cellTypes, Input, placeholder }: CreatingInputArgs): ReactNode {
 	// 1. column-level creating.component
 	const creatingConfig = meta?.creating
 	if (creatingConfig !== false && creatingConfig !== undefined) {
@@ -139,6 +147,7 @@ function renderCreatingInput({ meta, value, onChange, cellTypes, Input }: Creati
 	return (
 		<Input
 			value={value as string | number | readonly string[]}
+			placeholder={placeholder}
 			onChange={(e: ChangeEvent<HTMLInputElement>) => {
 				onChange(e.target.value)
 			}}
