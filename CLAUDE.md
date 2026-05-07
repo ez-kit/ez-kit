@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Architecture Constraints
+
+### No styles in `packages/data-grid/react/react`
+
+The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may only add semantic `data-*` attributes to elements so that UI kit CSS can target them.
+
 ## Commands
 
 ```bash

@@ -11,7 +11,7 @@ import type { PaginationProps } from '@ez-kit/data-grid-react'
 
 export function Pagination({ pageIndex, pageCount, onPreviousPage, onNextPage, onPageChange }: PaginationProps) {
 	return (
-		<ShadcnPagination>
+		<ShadcnPagination className='mt-3'>
 			<PaginationContent>
 				<PaginationItem>
 					<PaginationPrevious onClick={onPreviousPage} />

@@ -91,6 +91,11 @@
 	@apply px-3 py-1.5;
 }
 
+[data-slot-selection-th='true'] {
+	display: flex;
+	align-items: center;
+}
+
 [data-slot='table-header'] {
 	@apply bg-background;
 }

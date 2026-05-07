@@ -124,6 +124,7 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 							return (
 								<Th
 									data-slot='th'
+									data-slot-selection-th='true'
 									key={header.id}
 									colSpan={header.colSpan}
 									style={thStyle}
