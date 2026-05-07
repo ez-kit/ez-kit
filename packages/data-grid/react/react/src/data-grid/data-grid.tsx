@@ -1,6 +1,6 @@
 import { CellTypesProvider } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import { CELL_TYPES_KEY } from '../use-data-grid'
+import { CELL_TYPES_KEY, SELECTION_BAR_KEY, type SelectionBarConfig } from '../use-data-grid'
 
 import { Body } from './body'
 import { DataGridCell } from './cell'
@@ -78,6 +78,24 @@ function ConfirmDialogRenderer() {
 }
 
 function DefaultLayout() {
+	const table = useTableContext()
+	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
+		| boolean
+		| SelectionBarConfig
+		| undefined
+	const variant = (typeof rawConfig === 'object' ? rawConfig.variant : undefined) ?? 'floating'
+
+	if (variant === 'inline') {
+		return (
+			<>
+				<Toolbar />
+				<SelectionBar />
+				<DataGridTable />
+				<Pagination />
+			</>
+		)
+	}
+
 	return (
 		<>
 			<Toolbar />

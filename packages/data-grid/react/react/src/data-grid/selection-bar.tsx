@@ -65,11 +65,14 @@ export function SelectionBar() {
 				? config.actions(callbackArgs)
 				: config.actions
 
+	const variant = config.variant ?? 'floating'
+
 	return (
 		<SelectionBarComponent
 			open={open}
 			count={count}
 			selectedRows={selectedRows}
+			variant={variant}
 			onClear={onClear}
 			{...(onDelete !== undefined ? { onDelete } : {})}
 			{...(actions !== undefined ? { actions } : {})}

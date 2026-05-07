@@ -74,7 +74,15 @@ export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	selectedRows: Row<TRow>[]
 }
 
+export type SelectionBarVariant = 'floating' | 'inline'
+
 export type SelectionBarConfig<TRow extends object = object> = {
+	/**
+	 * Render mode.
+	 * - `'floating'` (default) — rendered as a positioned/sticky bar, typically overlaying the table area.
+	 * - `'inline'` — rendered as a normal block in the document flow, between Toolbar and Table.
+	 */
+	variant?: SelectionBarVariant
 	/** If provided — Delete button appears in the bar. */
 	onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
 	/**

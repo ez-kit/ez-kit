@@ -27,6 +27,7 @@ export type {
 	ReactFilteringConfig,
 	SelectionBarCallbackArgs,
 	SelectionBarConfig,
+	SelectionBarVariant,
 } from './use-data-grid'
 
 // Factory

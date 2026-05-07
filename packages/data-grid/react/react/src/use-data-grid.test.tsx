@@ -123,6 +123,14 @@ describe('useDataGrid — selectionBar', () => {
 		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
 		expect(key).toEqual({ onDelete })
 	})
+
+	it('SELECTION_BAR_KEY stores variant: "inline" when configured', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: { variant: 'inline' } }),
+		)
+		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+		expect(key).toEqual({ variant: 'inline' })
+	})
 })
 
 type Sort = { id: string; desc: boolean }

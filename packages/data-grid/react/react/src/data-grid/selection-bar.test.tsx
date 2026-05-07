@@ -206,4 +206,30 @@ describe('<SelectionBar>', () => {
 		)
 		expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument()
 	})
+
+	it('passes variant="floating" by default to DI component', () => {
+		const table = makeTable({ selection: true })
+		setSelectionBarKey(table, true)
+		table.setRowSelection({ '1': true })
+
+		render(
+			<Wrapper table={table}>
+				<SelectionBar />
+			</Wrapper>,
+		)
+		expect(screen.getByRole('toolbar')).toHaveAttribute('data-variant', 'floating')
+	})
+
+	it('passes variant="inline" when configured', () => {
+		const table = makeTable({ selection: true })
+		setSelectionBarKey(table, { variant: 'inline' })
+		table.setRowSelection({ '1': true })
+
+		render(
+			<Wrapper table={table}>
+				<SelectionBar />
+			</Wrapper>,
+		)
+		expect(screen.getByRole('toolbar')).toHaveAttribute('data-variant', 'inline')
+	})
 })

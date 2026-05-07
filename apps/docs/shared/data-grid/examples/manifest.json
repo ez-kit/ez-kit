@@ -24,6 +24,12 @@
 		"exportName": "SelectionBarExample"
 	},
 	{
+		"id": "selection-bar-inline",
+		"label": "Selection Bar (Inline)",
+		"sourceFile": "components/selection-bar-inline.tsx",
+		"exportName": "SelectionBarInlineExample"
+	},
+	{
 		"id": "row-pinning",
 		"label": "Row Pinning",
 		"sourceFile": "components/row-pinning.tsx",

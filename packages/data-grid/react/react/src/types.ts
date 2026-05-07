@@ -235,6 +235,12 @@ export type SelectionBarProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	selectedRows: Row<any>[]
 	/**
+	 * Render mode the consumer requested.
+	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
+	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
+	 */
+	variant: 'floating' | 'inline'
+	/**
 	 * Pre-bound delete handler. Only present when `onDelete` was configured.
 	 * When absent — Delete button must NOT be rendered.
 	 */

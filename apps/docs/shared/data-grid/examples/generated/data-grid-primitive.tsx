@@ -5,26 +5,27 @@ import { BaseExample as Example0 } from '../components/base'
 import { CellTypesExample as Example1 } from '../components/cell-types'
 import { DeleteConfirmationExample as Example2 } from '../components/delete-confirmation'
 import { SelectionBarExample as Example3 } from '../components/selection-bar'
-import { RowPinningExample as Example4 } from '../components/row-pinning'
-import { ColumnPinningExample as Example5 } from '../components/column-pinning'
-import { ColumnVisibilityExample as Example6 } from '../components/column-visibility'
-import { SortToolbarExample as Example7 } from '../components/sort-toolbar'
-import { FilterOperatorsExample as Example8 } from '../components/filter-operators'
-import { CrudExample as Example9 } from '../components/crud/CrudExample'
-import { CreatingExample as Example10 } from '../components/creating/CreatingExample'
-import { FilterPopoverExample as Example11 } from '../components/filter-popover'
-import { StickyHeaderExample as Example12 } from '../components/sticky-header'
-import { VirtualizedExample as Example13 } from '../components/virtualized'
-import { ResizingExample as Example14 } from '../components/resizing'
-import { CustomCellTypesExample as Example15 } from '../components/custom-cell-types'
-import { ColumnHelperBaseExample as Example16 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example17 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example18 } from '../components/column-helper'
-import { FallbacksExample as Example19 } from '../components/fallbacks'
-import { ControlledStateExample as Example20 } from '../components/controlled-state'
-import { ExpandingSubContentExample as Example21 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example22 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example23 } from '../components/expanding/controlled'
+import { SelectionBarInlineExample as Example4 } from '../components/selection-bar-inline'
+import { RowPinningExample as Example5 } from '../components/row-pinning'
+import { ColumnPinningExample as Example6 } from '../components/column-pinning'
+import { ColumnVisibilityExample as Example7 } from '../components/column-visibility'
+import { SortToolbarExample as Example8 } from '../components/sort-toolbar'
+import { FilterOperatorsExample as Example9 } from '../components/filter-operators'
+import { CrudExample as Example10 } from '../components/crud/CrudExample'
+import { CreatingExample as Example11 } from '../components/creating/CreatingExample'
+import { FilterPopoverExample as Example12 } from '../components/filter-popover'
+import { StickyHeaderExample as Example13 } from '../components/sticky-header'
+import { VirtualizedExample as Example14 } from '../components/virtualized'
+import { ResizingExample as Example15 } from '../components/resizing'
+import { CustomCellTypesExample as Example16 } from '../components/custom-cell-types'
+import { ColumnHelperBaseExample as Example17 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example18 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example19 } from '../components/column-helper'
+import { FallbacksExample as Example20 } from '../components/fallbacks'
+import { ControlledStateExample as Example21 } from '../components/controlled-state'
+import { ExpandingSubContentExample as Example22 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example23 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example24 } from '../components/expanding/controlled'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -51,6 +52,12 @@ export const dataGridExamplesManifest = [
     "label": "Selection Bar",
     "sourceFile": "components/selection-bar.tsx",
     "exportName": "SelectionBarExample"
+  },
+  {
+    "id": "selection-bar-inline",
+    "label": "Selection Bar (Inline)",
+    "sourceFile": "components/selection-bar-inline.tsx",
+    "exportName": "SelectionBarInlineExample"
   },
   {
     "id": "row-pinning",
@@ -187,24 +194,25 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'cell-types': Example1,
 	'delete-confirmation': Example2,
 	'selection-bar': Example3,
-	'row-pinning': Example4,
-	'column-pinning': Example5,
-	'column-visibility': Example6,
-	'sort-toolbar': Example7,
-	'filter-operators': Example8,
-	'crud': Example9,
-	'creating': Example10,
-	'filter-popover': Example11,
-	'sticky-header': Example12,
-	'virtualized': Example13,
-	'resizing': Example14,
-	'custom-cell-types': Example15,
-	'column-helper': Example16,
-	'column-helper-custom-view': Example17,
-	'column-helper-registered': Example18,
-	'fallbacks': Example19,
-	'controlled-state': Example20,
-	'expanding-sub-content': Example21,
-	'expanding-tree': Example22,
-	'expanding-controlled': Example23,
+	'selection-bar-inline': Example4,
+	'row-pinning': Example5,
+	'column-pinning': Example6,
+	'column-visibility': Example7,
+	'sort-toolbar': Example8,
+	'filter-operators': Example9,
+	'crud': Example10,
+	'creating': Example11,
+	'filter-popover': Example12,
+	'sticky-header': Example13,
+	'virtualized': Example14,
+	'resizing': Example15,
+	'custom-cell-types': Example16,
+	'column-helper': Example17,
+	'column-helper-custom-view': Example18,
+	'column-helper-registered': Example19,
+	'fallbacks': Example20,
+	'controlled-state': Example21,
+	'expanding-sub-content': Example22,
+	'expanding-tree': Example23,
+	'expanding-controlled': Example24,
 }
