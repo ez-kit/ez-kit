@@ -15,6 +15,7 @@ import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
  * - cell.type → meta.cellType
  * - cell.component → TanStack cell renderer + meta.cellView
  * - sorting: false → enableSorting: false
+ * - sorting: object → sortDescFirst / sortingFn / sortUndefined / invertSorting / enableMultiSort
  * - header string preserved as-is (TanStack accepts string | function)
  * - filtering.operators → resolves operator list, attaches filterFn dispatcher
  */
@@ -40,7 +41,6 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 		accessorFn,
 		id,
 		footer,
-		enableSorting,
 		enableColumnFilter,
 		enableGlobalFilter,
 		enableHiding,
@@ -79,7 +79,6 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 	if (id !== undefined) result.id = id
 	if (header !== undefined) result.header = header
 	if (footer !== undefined) result.footer = footer
-	if (enableSorting !== undefined) result.enableSorting = enableSorting
 	if (enableColumnFilter !== undefined) result.enableColumnFilter = enableColumnFilter
 	if (enableGlobalFilter !== undefined) result.enableGlobalFilter = enableGlobalFilter
 	if (enableHiding !== undefined) result.enableHiding = enableHiding
@@ -89,7 +88,15 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 	if (maxSize !== undefined) result.maxSize = maxSize
 
 	// sorting: false → disable sorting for this column
-	if (sorting === false) result.enableSorting = false
+	if (sorting === false) {
+		result.enableSorting = false
+	} else if (sorting !== undefined) {
+		if (sorting.descFirst !== undefined) result.sortDescFirst = sorting.descFirst
+		if (sorting.fn !== undefined) result.sortingFn = sorting.fn
+		if (sorting.undefined !== undefined) result.sortUndefined = sorting.undefined
+		if (sorting.invert !== undefined) result.invertSorting = sorting.invert
+		if (sorting.multi === false) result.enableMultiSort = false
+	}
 
 	// visibility: false → column cannot be hidden
 	if (visibility === false) result.enableHiding = false

@@ -17,8 +17,27 @@ import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
 
 import type { ColumnDef } from '../column/types'
-import type { DataTable, PinningConfig, RowPinningConfig, TableConfig } from '../types'
+import type { DataTable, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
 import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
+
+/** Translate our `sorting.multi` shape into TanStack option flags. */
+function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string, unknown> {
+	if (multi === false) return { enableMultiSort: false }
+	if (multi === true) return { enableMultiSort: true }
+	const opts: Record<string, unknown> = { enableMultiSort: true }
+	if (multi.max !== undefined) opts.maxMultiSortColCount = multi.max
+	if (multi.removable === false) opts.enableMultiRemove = false
+	if (multi.event === 'always') {
+		opts.isMultiSortEvent = () => true
+	} else if (multi.event === 'ctrl') {
+		opts.isMultiSortEvent = (e: unknown) => {
+			const event = e as { ctrlKey?: boolean; metaKey?: boolean } | null | undefined
+			return Boolean(event?.ctrlKey) || Boolean(event?.metaKey)
+		}
+	}
+	// 'shift' (default) → omit; TanStack's built-in handler already requires shift.
+	return opts
+}
 
 function collectDefaultHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
@@ -84,6 +103,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const { row: rowPinConfig } = normalizePinning(config.pinning)
 	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
 
+	const sortingCfg = typeof config.sorting === 'object' ? config.sorting : undefined
+	const sortingOnChange = sortingCfg?.onChange
+
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
@@ -104,6 +126,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		columnPinning: { left: pinnedLeft, right: pinnedRight },
 		pagination: { pageIndex: 0, pageSize: defaultPageSize },
 		...(Object.keys(defaultHidden).length > 0 ? { columnVisibility: defaultHidden } : {}),
+		...(sortingCfg?.initial ? { sorting: sortingCfg.initial } : {}),
 	}
 
 	// We need a stable reference for the callback closure.
@@ -118,6 +141,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		ref.table?.setOptions((prev) => ({ ...prev, state: next }))
 		store.setState(next)
 		config.onStateChange?.(updater)
+
+		// sorting.onChange — fires only when the sorting sub-state reference actually changed
+		if (sortingOnChange && currentState.sorting !== next.sorting) {
+			sortingOnChange(next.sorting)
+		}
 	}
 
 	// Build options without an explicit type annotation to avoid exactOptionalPropertyTypes
@@ -164,7 +192,15 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Filtering manual
 		...(typeof config.filtering === 'object' && config.filtering.manual ? { manualFiltering: true } : {}),
 		// Sorting manual
-		...(typeof config.sorting === 'object' && config.sorting.manual ? { manualSorting: true } : {}),
+		...(sortingCfg?.manual ? { manualSorting: true } : {}),
+		// Sorting: per-direction default
+		...(sortingCfg?.descFirst !== undefined ? { sortDescFirst: sortingCfg.descFirst } : {}),
+		// Sorting: third-click removal
+		...(sortingCfg?.removable === false ? { enableSortingRemoval: false } : {}),
+		// Sorting: multi-column
+		...(sortingCfg?.multi !== undefined ? buildMultiSortOptions(sortingCfg.multi) : {}),
+		// Sorting: named comparator registry, addressable from `column.sorting.fn`
+		...(sortingCfg?.fns ? { sortingFns: sortingCfg.fns } : {}),
 		// Feature configs
 		...(config.creating ? { creating: config.creating } : {}),
 		...(config.editing ? { editing: config.editing } : {}),

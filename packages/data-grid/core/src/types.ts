@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
-import type { ColumnDef } from './column/types'
+import type { ColumnDef, SortingFn } from './column/types'
 import type { CreatingConfig } from './features/creating'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
@@ -15,12 +15,134 @@ import type {
 	Updater,
 } from '@tanstack/table-core'
 
+export type { SortingFn } from './column/types'
 export type { TableState as TableSnapshot }
 
+/** Single sort entry: column id + direction. Order in the array = sort priority for multi-sort. */
+export type SortingStateEntry = { id: string; desc: boolean }
+/** Ordered list of sorts. Maps 1:1 to TanStack `state.sorting`. */
+export type SortingState = SortingStateEntry[]
+
+/**
+ * Gesture that engages multi-column sort.
+ * - `'shift'` — shift+click adds the column (TanStack default)
+ * - `'ctrl'`  — ctrl+click (or ⌘+click on macOS) adds the column
+ * - `'always'` — every click extends the multi-sort set
+ */
+export type MultiSortEvent = 'shift' | 'ctrl' | 'always'
+
+export type MultiSortConfig = {
+	/** Cap on simultaneously sorted columns. Unlimited by default. */
+	max?: number
+	/** Gesture that engages multi-sort. Default: `'shift'`. */
+	event?: MultiSortEvent
+	/** Allow removing a single column from the multi-sort set. Default: true. */
+	removable?: boolean
+}
+
+/**
+ * Table-level sorting config.
+ *
+ * @example Multi-sort with toolbar builder, capped at 3 columns, ctrl-click
+ * ```ts
+ * createTable({
+ *   data, columns,
+ *   sorting: { multi: { max: 3, event: 'ctrl' }, toolbar: true },
+ * })
+ * ```
+ *
+ * @example Server-side sorting
+ * ```ts
+ * createTable({
+ *   data, columns,
+ *   sorting: { manual: true, onChange: (sort) => fetchPage({ sort }) },
+ * })
+ * ```
+ *
+ * @example Named sort functions, referenced from `column.sorting.fn`
+ * ```ts
+ * createTable({
+ *   data,
+ *   columns: [{ accessorKey: 'priority', sorting: { fn: 'priorityOrder' } }],
+ *   sorting: {
+ *     fns: { priorityOrder: (a, b, id) => RANK[a.getValue(id)] - RANK[b.getValue(id)] },
+ *   },
+ * })
+ * ```
+ */
 export type SortingConfig = {
+	/**
+	 * Server-side mode: skip TanStack's sorted row model and rely on externally sorted `data`.
+	 *
+	 * @example
+	 * ```ts
+	 * sorting: {
+	 *   manual: true,
+	 *   onChange: (sort) => fetchUsers({ sort }),
+	 * }
+	 * ```
+	 */
 	manual?: boolean
+	/**
+	 * Initial multi-column sort. Order in the array = sort priority.
+	 *
+	 * @example Single-column default sort
+	 * ```ts
+	 * sorting: { initial: [{ id: 'createdAt', desc: true }] }
+	 * ```
+	 *
+	 * @example Multi-column default — sort by status asc, then by updatedAt desc
+	 * ```ts
+	 * createTable({
+	 *   data, columns,
+	 *   sorting: {
+	 *     initial: [
+	 *       { id: 'status', desc: false },
+	 *       { id: 'updatedAt', desc: true },
+	 *     ],
+	 *     multi: true,
+	 *   },
+	 * })
+	 * ```
+	 */
+	initial?: SortingState
+	/** First click sorts descending. Default: false. */
+	descFirst?: boolean
+	/** Allow a third click to clear the sort. Default: true. */
+	removable?: boolean
+	/**
+	 * Multi-column sort. `false` (default) = single-column only. `true` = enabled with defaults.
+	 *
+	 * @example Cap at 2 columns, hold ⌘/Ctrl to extend
+	 * ```ts
+	 * sorting: { multi: { max: 2, event: 'ctrl' } }
+	 * ```
+	 */
+	multi?: boolean | MultiSortConfig
 	/** Show a multi-sort builder button in the toolbar. Default: false. UI-only flag, ignored by core. */
 	toolbar?: boolean
+	/**
+	 * Named sort functions, addressable from `column.sorting.fn` by id.
+	 *
+	 * @example
+	 * ```ts
+	 * sorting: {
+	 *   fns: {
+	 *     priorityRank: (a, b, id) => RANK[a.getValue(id)] - RANK[b.getValue(id)],
+	 *   },
+	 * }
+	 * ```
+	 */
+	fns?: Record<string, SortingFn>
+	/**
+	 * Called whenever sort state changes. Receives the resolved {@link SortingState}.
+	 *
+	 * @example
+	 * ```ts
+	 * sorting: { onChange: (sort) => router.push({ query: { sort } }) }
+	 * ```
+	 */
+	onChange?: (sorting: SortingState) => void
 }
 
 export type FilteringConfig = {

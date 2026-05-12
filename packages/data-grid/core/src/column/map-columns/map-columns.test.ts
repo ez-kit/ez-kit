@@ -25,6 +25,42 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableSorting).toBe(false)
 	})
 
+	it('sorting: { descFirst: true } → sortDescFirst on the column', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { descFirst: true } }])
+		expect(result[0]?.sortDescFirst).toBe(true)
+	})
+
+	it('sorting: { fn: "datetime" } → sortingFn passed through as a built-in name', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { fn: 'datetime' } }])
+		expect(result[0]?.sortingFn).toBe('datetime')
+	})
+
+	it('sorting: { fn: <inline> } → sortingFn passed through as a function', () => {
+		const fn = (_a: unknown, _b: unknown) => 0
+		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { fn } }])
+		expect(result[0]?.sortingFn).toBe(fn)
+	})
+
+	it("sorting: { undefined: 'last' } → sortUndefined: 'last'", () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { undefined: 'last' } }])
+		expect(result[0]?.sortUndefined).toBe('last')
+	})
+
+	it('sorting: { invert: true } → invertSorting: true', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { invert: true } }])
+		expect(result[0]?.invertSorting).toBe(true)
+	})
+
+	it('sorting: { multi: false } → enableMultiSort: false on the column', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { multi: false } }])
+		expect(result[0]?.enableMultiSort).toBe(false)
+	})
+
+	it('sorting object does not set enableSorting (column stays sortable)', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', sorting: { descFirst: true } }])
+		expect(result[0]?.enableSorting).toBeUndefined()
+	})
+
 	it('pinning: { pin: left } goes into meta.columnPinning', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { pin: 'left' } }])
 		expect(result[0]?.meta?.columnPinning).toEqual({ pin: 'left' })

@@ -10,24 +10,25 @@ import { RowPinningExample as Example5 } from '../components/row-pinning'
 import { ColumnPinningExample as Example6 } from '../components/column-pinning'
 import { ColumnVisibilityExample as Example7 } from '../components/column-visibility'
 import { SortToolbarExample as Example8 } from '../components/sort-toolbar'
-import { FilterOperatorsExample as Example9 } from '../components/filter-operators'
-import { CrudExample as Example10 } from '../components/crud/CrudExample'
-import { CreatingExample as Example11 } from '../components/creating/CreatingExample'
-import { CreatingValidationExample as Example12 } from '../components/creating/CreatingValidationExample'
-import { EditingValidationExample as Example13 } from '../components/editing/EditingValidationExample'
-import { FilterPopoverExample as Example14 } from '../components/filter-popover'
-import { StickyHeaderExample as Example15 } from '../components/sticky-header'
-import { VirtualizedExample as Example16 } from '../components/virtualized'
-import { ResizingExample as Example17 } from '../components/resizing'
-import { CustomCellTypesExample as Example18 } from '../components/custom-cell-types'
-import { ColumnHelperBaseExample as Example19 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example20 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example21 } from '../components/column-helper'
-import { FallbacksExample as Example22 } from '../components/fallbacks'
-import { ControlledStateExample as Example23 } from '../components/controlled-state'
-import { ExpandingSubContentExample as Example24 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example25 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example26 } from '../components/expanding/controlled'
+import { SortingExample as Example9 } from '../components/sorting'
+import { FilterOperatorsExample as Example10 } from '../components/filter-operators'
+import { CrudExample as Example11 } from '../components/crud/CrudExample'
+import { CreatingExample as Example12 } from '../components/creating/CreatingExample'
+import { CreatingValidationExample as Example13 } from '../components/creating/CreatingValidationExample'
+import { EditingValidationExample as Example14 } from '../components/editing/EditingValidationExample'
+import { FilterPopoverExample as Example15 } from '../components/filter-popover'
+import { StickyHeaderExample as Example16 } from '../components/sticky-header'
+import { VirtualizedExample as Example17 } from '../components/virtualized'
+import { ResizingExample as Example18 } from '../components/resizing'
+import { CustomCellTypesExample as Example19 } from '../components/custom-cell-types'
+import { ColumnHelperBaseExample as Example20 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example21 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example22 } from '../components/column-helper'
+import { FallbacksExample as Example23 } from '../components/fallbacks'
+import { ControlledStateExample as Example24 } from '../components/controlled-state'
+import { ExpandingSubContentExample as Example25 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example26 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example27 } from '../components/expanding/controlled'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -84,6 +85,12 @@ export const dataGridExamplesManifest = [
     "label": "Sort Toolbar",
     "sourceFile": "components/sort-toolbar.tsx",
     "exportName": "SortToolbarExample"
+  },
+  {
+    "id": "sorting",
+    "label": "Sorting (initial + multi + custom fn)",
+    "sourceFile": "components/sorting.tsx",
+    "exportName": "SortingExample"
   },
   {
     "id": "filter-operators",
@@ -217,22 +224,23 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'column-pinning': Example6,
 	'column-visibility': Example7,
 	'sort-toolbar': Example8,
-	'filter-operators': Example9,
-	'crud': Example10,
-	'creating': Example11,
-	'creating-validation': Example12,
-	'editing-validation': Example13,
-	'filter-popover': Example14,
-	'sticky-header': Example15,
-	'virtualized': Example16,
-	'resizing': Example17,
-	'custom-cell-types': Example18,
-	'column-helper': Example19,
-	'column-helper-custom-view': Example20,
-	'column-helper-registered': Example21,
-	'fallbacks': Example22,
-	'controlled-state': Example23,
-	'expanding-sub-content': Example24,
-	'expanding-tree': Example25,
-	'expanding-controlled': Example26,
+	'sorting': Example9,
+	'filter-operators': Example10,
+	'crud': Example11,
+	'creating': Example12,
+	'creating-validation': Example13,
+	'editing-validation': Example14,
+	'filter-popover': Example15,
+	'sticky-header': Example16,
+	'virtualized': Example17,
+	'resizing': Example18,
+	'custom-cell-types': Example19,
+	'column-helper': Example20,
+	'column-helper-custom-view': Example21,
+	'column-helper-registered': Example22,
+	'fallbacks': Example23,
+	'controlled-state': Example24,
+	'expanding-sub-content': Example25,
+	'expanding-tree': Example26,
+	'expanding-controlled': Example27,
 }

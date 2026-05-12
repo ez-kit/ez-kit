@@ -54,6 +54,12 @@
 		"exportName": "SortToolbarExample"
 	},
 	{
+		"id": "sorting",
+		"label": "Sorting (initial + multi + custom fn)",
+		"sourceFile": "components/sorting.tsx",
+		"exportName": "SortingExample"
+	},
+	{
 		"id": "filter-operators",
 		"label": "Filter Operators",
 		"sourceFile": "components/filter-operators.tsx",

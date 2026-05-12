@@ -3,6 +3,9 @@ import type { BetweenOperatorConfig, ColumnOperatorsConfig, FilterOperatorDef } 
 import type { FieldState, ValidateOn } from '../features/validation'
 import type { ColumnDef as TableCoreColumnDef, ColumnMeta as TableCoreColumnMeta, RowData } from '@tanstack/table-core'
 
+/** Comparator signature for custom sort functions. Compatible with TanStack `SortingFn`. */
+export type SortingFn = (rowA: unknown, rowB: unknown, columnId: string) => number
+
 export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCoreColumnDef<TRow, TValue> & {
 	accessorKey?: string
 	columns?: TanStackColumnDef<TRow, unknown>[]
@@ -163,6 +166,83 @@ export type ColumnVisibilityDef = {
 	defaultHidden?: boolean
 }
 
+/** Built-in TanStack sort functions. The `string & {}` tail keeps custom registry IDs valid. */
+export type BuiltInSortingFn =
+	| 'alphanumeric'
+	| 'alphanumericCaseSensitive'
+	| 'text'
+	| 'textCaseSensitive'
+	| 'datetime'
+	| 'basic'
+
+/**
+ * How undefined values are positioned during sort.
+ * `false` (default) treats undefined as 0. Numeric variants directly forward to TanStack.
+ */
+export type ColumnSortUndefined = 'first' | 'last' | -1 | 1 | false
+
+/**
+ * Column-level sorting config.
+ *
+ * @example Disable sorting on a column
+ * ```ts
+ * { accessorKey: 'avatar', sorting: false }
+ * ```
+ *
+ * @example Custom sort function (built-in name)
+ * ```ts
+ * { accessorKey: 'createdAt', sorting: { fn: 'datetime' } }
+ * ```
+ *
+ * @example Inverted score column where lower = better
+ * ```ts
+ * { accessorKey: 'rank', sorting: { invert: true, undefined: 'last' } }
+ * ```
+ */
+export type ColumnSortingConfig = {
+	/** First click sorts descending. Overrides table-level `sorting.descFirst`. */
+	descFirst?: boolean
+	/**
+	 * Built-in name, registry id (matches `sorting.fns`), or inline comparator.
+	 *
+	 * @example Built-in name (TanStack-provided)
+	 * ```ts
+	 * { accessorKey: 'updatedAt', sorting: { fn: 'datetime' } }
+	 * ```
+	 *
+	 * @example Registry id resolved from `sorting.fns` on the table
+	 * ```ts
+	 * { accessorKey: 'priority', sorting: { fn: 'priorityRank' } }
+	 * ```
+	 *
+	 * @example Inline comparator
+	 * ```ts
+	 * { accessorKey: 'tag', sorting: { fn: (a, b, id) => weight[a.getValue(id)] - weight[b.getValue(id)] } }
+	 * ```
+	 */
+	fn?: BuiltInSortingFn | (string & {}) | SortingFn
+	/**
+	 * Where `undefined` values land. Default: false → treated as 0.
+	 *
+	 * @example Push missing values to the bottom regardless of direction
+	 * ```ts
+	 * { accessorKey: 'lastSeen', sorting: { undefined: 'last' } }
+	 * ```
+	 */
+	undefined?: ColumnSortUndefined
+	/**
+	 * Invert direction (useful for ranking columns where lower = "better").
+	 *
+	 * @example Lower rank wins, but the header still shows the natural ↑/↓ arrow
+	 * ```ts
+	 * { accessorKey: 'rank', sorting: { invert: true } }
+	 * ```
+	 */
+	invert?: boolean
+	/** Allow this column to participate in multi-sort. Default: true (when multi enabled). */
+	multi?: boolean
+}
+
 /**
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
@@ -182,8 +262,12 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 * - `{ defaultPin: 'left' }` — starts pinned left, user can change via menu
 	 */
 	pinning?: false | ColumnPinningDef
-	/** Set to false to disable sorting for this column. */
-	sorting?: false
+	/**
+	 * Column-level sorting config.
+	 * - `false` — disable sorting for this column
+	 * - {@link ColumnSortingConfig} — fine-grained control (descFirst, fn, undefined, invert, multi)
+	 */
+	sorting?: false | ColumnSortingConfig
 
 	/** Cell display and input configuration. */
 	cell?: CellDef<TRow, unknown, TCustomCellTypes>
@@ -214,7 +298,6 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	validateDebounceMs?: number
 
 	// Pass-through TanStack options
-	enableSorting?: boolean
 	enableColumnFilter?: boolean
 	enableGlobalFilter?: boolean
 	enableHiding?: boolean

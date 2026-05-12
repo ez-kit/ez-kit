@@ -46,6 +46,112 @@ describe('createTable — sorting', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, sorting: true })
 		expect(table.options.manualSorting).toBeFalsy()
 	})
+
+	it('sorting.initial seeds initialState.sorting and current state', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			sorting: { initial: [{ id: 'name', desc: true }] },
+		})
+		expect(table.initialState.sorting).toEqual([{ id: 'name', desc: true }])
+		expect(table.getState().sorting).toEqual([{ id: 'name', desc: true }])
+	})
+
+	it('sorting.descFirst → sortDescFirst', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { descFirst: true } })
+		expect(table.options.sortDescFirst).toBe(true)
+	})
+
+	it('sorting.removable: false → enableSortingRemoval: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { removable: false } })
+		expect(table.options.enableSortingRemoval).toBe(false)
+	})
+
+	it('sorting.removable not set — enableSortingRemoval untouched', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: true })
+		expect(table.options.enableSortingRemoval).toBeUndefined()
+	})
+
+	it('sorting.multi: true → enableMultiSort: true', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { multi: true } })
+		expect(table.options.enableMultiSort).toBe(true)
+	})
+
+	it('sorting.multi: false → enableMultiSort: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { multi: false } })
+		expect(table.options.enableMultiSort).toBe(false)
+	})
+
+	it('sorting.multi: { max: 3 } → enableMultiSort + maxMultiSortColCount', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { multi: { max: 3 } } })
+		expect(table.options.enableMultiSort).toBe(true)
+		expect(table.options.maxMultiSortColCount).toBe(3)
+	})
+
+	it('sorting.multi: { removable: false } → enableMultiRemove: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { multi: { removable: false } } })
+		expect(table.options.enableMultiRemove).toBe(false)
+	})
+
+	it("sorting.multi: { event: 'always' } → isMultiSortEvent always true", () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { multi: { event: 'always' } } })
+		const fn = table.options.isMultiSortEvent
+		expect(fn).toBeTypeOf('function')
+		expect(fn?.({})).toBe(true)
+	})
+
+	it("sorting.multi: { event: 'ctrl' } → isMultiSortEvent fires for ctrlKey/metaKey", () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { multi: { event: 'ctrl' } } })
+		const fn = table.options.isMultiSortEvent
+		expect(fn).toBeTypeOf('function')
+		expect(fn?.({ ctrlKey: true })).toBe(true)
+		expect(fn?.({ metaKey: true })).toBe(true)
+		expect(fn?.({ shiftKey: true })).toBe(false)
+	})
+
+	it("sorting.multi: { event: 'shift' } → uses TanStack default (shift-key gated)", () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { multi: { event: 'shift' } } })
+		const fn = table.options.isMultiSortEvent
+		expect(fn).toBeTypeOf('function')
+		expect(fn?.({ shiftKey: true })).toBe(true)
+		expect(fn?.({ ctrlKey: true })).toBeFalsy()
+	})
+
+	it('sorting.fns → sortingFns registry', () => {
+		const fns = { byLength: (a: unknown, b: unknown, id: string) => {
+			const av = String((a as { getValue: (k: string) => unknown }).getValue(id) ?? '')
+			const bv = String((b as { getValue: (k: string) => unknown }).getValue(id) ?? '')
+			return av.length - bv.length
+		} }
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { fns } })
+		expect((table.options as unknown as { sortingFns?: typeof fns }).sortingFns).toBe(fns)
+	})
+
+	it('sorting.onChange fires when sort changes via setSorting', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { onChange } })
+		table.setSorting([{ id: 'name', desc: false }])
+		expect(onChange).toHaveBeenCalledWith([{ id: 'name', desc: false }])
+	})
+
+	it('sorting.onChange not fired when other state mutates', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			sorting: { onChange },
+			selection: true,
+		})
+		table.getRow('1').toggleSelected(true)
+		expect(onChange).not.toHaveBeenCalled()
+	})
+
+	it('sorting.toolbar is a UI-only flag, no TanStack option leaks', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { toolbar: true } })
+		// Just verify it doesn't crash and getSortedRowModel is enabled.
+		expect(table.options.getSortedRowModel).toBeDefined()
+		expect((table.options as unknown as { toolbar?: unknown }).toolbar).toBeUndefined()
+	})
 })
 
 // ── filtering ─────────────────────────────────────────────────────────────────
