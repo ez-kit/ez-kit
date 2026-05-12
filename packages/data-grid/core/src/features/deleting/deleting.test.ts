@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { defineColumns } from '../column/define-columns'
-import { createTable } from '../create-table'
+import { defineColumns } from '../../column/define-columns'
+import { createTable } from '../../create-table'
 
 type Row = {
 	id: number

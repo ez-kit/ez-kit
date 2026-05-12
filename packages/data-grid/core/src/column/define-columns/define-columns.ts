@@ -1,4 +1,4 @@
-import type { ColumnDef } from './types'
+import type { ColumnDef } from '../types'
 
 /**
  * Typed identity helper — infers TRow from the array, returns the same array unchanged.

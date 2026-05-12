@@ -61,7 +61,7 @@ export {
 	ValidationError,
 	isValidationError,
 	zodResolver,
-} from './features/validation-types'
+} from './features/validation'
 
 export type {
 	CommitStatus,
@@ -73,7 +73,7 @@ export type {
 	ValidationErrors,
 	ValidationProblems,
 	ValidationResult,
-} from './features/validation-types'
+} from './features/validation'
 
 export type {
 	ColumnResizeDirection,

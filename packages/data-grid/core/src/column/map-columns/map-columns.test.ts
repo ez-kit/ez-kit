@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { mapColumns } from './map-columns'
 
-import type { ColumnDef } from './types'
+import type { ColumnDef } from '../types'
 
 type Row = {
 	id: number

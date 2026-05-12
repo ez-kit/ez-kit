@@ -3,10 +3,10 @@ import {
 	DEFAULT_OPERATORS_BY_TYPE,
 	createOperatorFilterFn,
 	resolveColumnOperators,
-} from '../features/operators'
+} from '../../features/operators'
 
-import type { CellViewCtx, ColumnDef, TanStackColumnDef } from './types'
-import type { OperatorRegistry } from '../features/operators'
+import type { OperatorRegistry } from '../../features/operators'
+import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].

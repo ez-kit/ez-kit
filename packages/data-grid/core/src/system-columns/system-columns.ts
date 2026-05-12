@@ -1,4 +1,4 @@
-import type { TanStackColumnDef } from './column/types'
+import type { TanStackColumnDef } from '../column/types'
 
 /** Identifier constants for auto-injected system columns. */
 export const SELECTION_COLUMN_ID = '__selection__'

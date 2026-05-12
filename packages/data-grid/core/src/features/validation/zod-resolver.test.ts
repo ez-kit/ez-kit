@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
-import { zodResolver } from './validation-types'
+import { zodResolver } from './zod-resolver'
 
 describe('zodResolver', () => {
 	it('returns null on valid input (flat schema)', () => {

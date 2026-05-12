@@ -8,7 +8,7 @@ import {
 	SELECTION_COLUMN_ID,
 } from './system-columns'
 
-import type { TanStackColumnDef } from './column/types'
+import type { TanStackColumnDef } from '../column/types'
 
 type Row = {
 	id: number

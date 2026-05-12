@@ -8,7 +8,7 @@ import type {
 	InputComponentProps,
 	ProgressCellConfig,
 	SelectCellConfig,
-} from './types'
+} from '../types'
 
 type FlexRenderable<TProps> = ((props: TProps) => unknown) | (new (props: TProps) => unknown)
 

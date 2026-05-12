@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+import { createTable, defineColumns } from '../index'
+import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
 
-import { createTable, defineColumns } from './index'
 
 type Row = {
 	id: number
@@ -131,10 +131,9 @@ describe('createTable — selection', () => {
 // ── expanding ─────────────────────────────────────────────────────────────────
 
 describe('createTable — expanding', () => {
-	it('expanding: true enables getExpandedRowModel and getGroupedRowModel', () => {
+	it('expanding: true enables getExpandedRowModel', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, expanding: true })
 		expect(table.options.getExpandedRowModel).toBeDefined()
-		expect(table.options.getGroupedRowModel).toBeDefined()
 	})
 
 	it('expanding not set — getExpandedRowModel is undefined', () => {

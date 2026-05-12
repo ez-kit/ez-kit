@@ -1,4 +1,4 @@
-import { isValidationError, zodSafeParseToResult } from './validation-types'
+import { isValidationError, zodSafeParseToResult } from '../validation'
 
 import type {
 	CommitStatus,
@@ -8,39 +8,43 @@ import type {
 	ValidateOn,
 	ValidationErrors,
 	ValidationResult,
-} from './validation-types'
-import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
+} from '../validation'
+import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 const DEFAULT_VALIDATE_ON: ValidateOn = 'submit'
 const DEFAULT_DEBOUNCE_MS = 200
 const GENERIC_FORM_ERROR = 'Unexpected error'
 
-export type CreatingState = {
-	isOpen: boolean
+export type EditingState = {
+	rowId: string | null
+	/** Populated only in cell mode (`<rowId>_<columnId>`). */
+	cellId: string | null
 	values: Record<string, unknown>
 	errors: ValidationErrors
 	formError: string | null
 	commitStatus: CommitStatus
 }
 
-export type CreatingConfig<TData> = {
-	mode?: 'row' | 'modal' | 'pin-row'
+export type EditingConfig<TData> = {
+	mode?: 'row' | 'modal' | 'cell'
 	validate?: ValidateConfig<TData>
 	validateOn?: ValidateOn
 	validateDebounceMs?: number
 	/**
-	 * Called when the user commits the create form. Return nothing for
+	 * Called when the user commits the edit form (or cell). Return nothing for
 	 * synchronous handlers, a `Promise` for async work. Throw
 	 * {@link ValidationError} from inside to surface server-side validation
 	 * errors back into the form state.
 	 */
-	onSave: (values: Partial<TData>, ctx: SaveContext) => void | Promise<void>
+	onSave: (rowId: string, values: Partial<TData>, ctx: SaveContext) => void | Promise<void>
 }
 
-export type CreatingApi<TData = unknown> = {
-	start: () => void
+export type EditingApi<TData = unknown> = {
+	start: (rowId: string) => void
+	startCell: (rowId: string, columnId: string) => void
 	cancel: () => void
 	commit: () => Promise<void>
+	commitCell: () => Promise<void>
 	setValue: (key: string, value: unknown) => void
 	setValues: (patch: Partial<TData>) => void
 	setErrors: (errors: ValidationErrors | null) => void
@@ -48,28 +52,34 @@ export type CreatingApi<TData = unknown> = {
 	validate: () => Promise<ValidationResult>
 	/** Internal — called by FieldState.onBlur in the react adapter. */
 	validateField: (columnId: string) => Promise<void>
-	getState: () => CreatingState
+	getState: () => EditingState
 }
 
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface TableState {
-		creating: CreatingState
+		editing: EditingState
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface TableOptionsResolved<TData extends RowData> {
-		creating?: CreatingConfig<TData>
+		editing?: EditingConfig<TData>
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface Table<TData extends RowData> {
-		creating: CreatingApi<TData>
+		editing: EditingApi<TData>
+	}
+
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface Row<TData extends RowData> {
+		getIsEditing: () => boolean
 	}
 }
 
-const INITIAL_STATE: CreatingState = {
-	isOpen: false,
+const INITIAL_STATE: EditingState = {
+	rowId: null,
+	cellId: null,
 	values: {},
 	errors: {},
 	formError: null,
@@ -99,25 +109,28 @@ function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
 	})
 }
 
-export const CreatingFeature: TableFeature<RowData> = {
+function extractColumnId(rowId: string, cellId: string): string {
+	return cellId.startsWith(`${rowId}_`) ? cellId.slice(rowId.length + 1) : cellId
+}
+
+export const EditingFeature: TableFeature<RowData> = {
 	getInitialState: (state?: InitialTableState) =>
 		({
 			...state,
-			creating: { ...INITIAL_STATE },
+			editing: { ...INITIAL_STATE },
 		}) as Partial<TableState>,
 
 	createTable: (table: Table<RowData>) => {
-		// Single AbortController per table instance.
-		// Aborted on: new commit, new validate, new validateField, cancel, start.
+		// Single AbortController per table instance. Shared between commit / validate / blur / change.
 		let controller: AbortController | undefined
 
-		const getConfig = (): CreatingConfig<RowData> | undefined => table.options.creating
-		const getState = (): CreatingState => table.getState().creating
+		const getConfig = (): EditingConfig<RowData> | undefined => table.options.editing
+		const getState = (): EditingState => table.getState().editing
 
-		const writeState = (patch: Partial<CreatingState>): void => {
+		const writeState = (patch: Partial<EditingState>): void => {
 			table.setState((prev) => ({
 				...prev,
-				creating: { ...prev.creating, ...patch },
+				editing: { ...prev.editing, ...patch },
 			}))
 		}
 
@@ -184,13 +197,12 @@ export const CreatingFeature: TableFeature<RowData> = {
 			if (signal.aborted) return
 
 			table.setState((prev) => {
-				// Drop previous error for this column, then re-apply if present in result.
-				const { [columnId]: _removed, ...rest } = prev.creating.errors
+				const { [columnId]: _removed, ...rest } = prev.editing.errors
 				const fieldErrs = result?.errors?.[columnId]
 				const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
 				return {
 					...prev,
-					creating: { ...prev.creating, errors: nextErrors, commitStatus: 'idle' },
+					editing: { ...prev.editing, errors: nextErrors, commitStatus: 'idle' },
 				}
 			})
 		}
@@ -210,12 +222,39 @@ export const CreatingFeature: TableFeature<RowData> = {
 			})()
 		}
 
-		const api: CreatingApi = {
-			start: () => {
+		const snapshotRow = (rowId: string): Record<string, unknown> => {
+			const row = table.getRowModel().rows.find((r) => r.id === rowId)
+			const initial: Record<string, unknown> = {}
+			if (!row) return initial
+			for (const col of table.getAllColumns()) {
+				if (col.id && !col.columnDef.meta?.isSystemColumn) {
+					initial[col.id] = row.getValue(col.id)
+				}
+			}
+			return initial
+		}
+
+		const api: EditingApi = {
+			start: (rowId) => {
 				resetController()
 				writeState({
-					isOpen: true,
-					values: {},
+					rowId,
+					cellId: null,
+					values: snapshotRow(rowId),
+					errors: {},
+					formError: null,
+					commitStatus: 'idle',
+				})
+			},
+
+			startCell: (rowId, columnId) => {
+				resetController()
+				const row = table.getRowModel().rows.find((r) => r.id === rowId)
+				const initialValue = row?.getValue(columnId)
+				writeState({
+					rowId,
+					cellId: `${rowId}_${columnId}`,
+					values: { [columnId]: initialValue },
 					errors: {},
 					formError: null,
 					commitStatus: 'idle',
@@ -225,19 +264,15 @@ export const CreatingFeature: TableFeature<RowData> = {
 			cancel: () => {
 				controller?.abort()
 				controller = undefined
-				writeState({
-					isOpen: false,
-					values: {},
-					errors: {},
-					formError: null,
-					commitStatus: 'idle',
-				})
+				writeState({ ...INITIAL_STATE })
 			},
 
 			commit: async () => {
 				const config = getConfig()
 				if (!config) return
-				if (getState().commitStatus !== 'idle') return // UI invariant — second click is no-op
+				const { rowId, commitStatus, values } = getState()
+				if (!rowId) return
+				if (commitStatus !== 'idle') return // UI invariant
 
 				const c = resetController()
 
@@ -247,9 +282,6 @@ export const CreatingFeature: TableFeature<RowData> = {
 					commitStatus: 'validating',
 				})
 
-				const values = getState().values
-
-				// ── validate phase ───────────────────────────────────────────
 				if (config.validate) {
 					let result: ValidationResult
 					try {
@@ -270,19 +302,75 @@ export const CreatingFeature: TableFeature<RowData> = {
 					}
 				}
 
-				// ── save phase ───────────────────────────────────────────────
 				writeState({ commitStatus: 'saving' })
 				try {
-					await config.onSave(values, { signal: c.signal })
+					await config.onSave(rowId, values, { signal: c.signal })
 					if (c.signal.aborted) return
-					// Reset to closed/empty state on success
+					writeState({ ...INITIAL_STATE })
+				} catch (e) {
+					if (c.signal.aborted) return
+					if (isValidationError(e)) {
+						writeState({
+							errors: e.errors,
+							formError: e.formError ?? null,
+							commitStatus: 'idle',
+						})
+						return
+					}
 					writeState({
-						isOpen: false,
-						values: {},
-						errors: {},
-						formError: null,
+						formError: GENERIC_FORM_ERROR,
 						commitStatus: 'idle',
 					})
+					throw e
+				}
+			},
+
+			commitCell: async () => {
+				const config = getConfig()
+				if (!config) return
+				const { rowId, cellId, commitStatus, values } = getState()
+				if (!rowId || !cellId) return
+				if (commitStatus !== 'idle') return
+
+				const columnId = extractColumnId(rowId, cellId)
+				const cellValues: Record<string, unknown> = { [columnId]: values[columnId] }
+
+				const c = resetController()
+
+				writeState({
+					errors: {},
+					formError: null,
+					commitStatus: 'validating',
+				})
+
+				if (config.validate) {
+					let result: ValidationResult
+					try {
+						result = await runValidate(cellValues, { signal: c.signal, cell: { columnId } })
+					} catch (e) {
+						if (c.signal.aborted) return
+						writeState({ commitStatus: 'idle' })
+						throw e
+					}
+					if (c.signal.aborted) return
+					if (result !== null) {
+						const fieldErrs = result.errors?.[columnId]
+						writeState({
+							// In cell mode only the edited column's error is surfaced;
+							// cross-field refine errors land in `formError`-free zone (ignored).
+							errors: fieldErrs && fieldErrs.length > 0 ? { [columnId]: fieldErrs } : {},
+							formError: null,
+							commitStatus: 'idle',
+						})
+						return
+					}
+				}
+
+				writeState({ commitStatus: 'saving' })
+				try {
+					await config.onSave(rowId, cellValues, { signal: c.signal })
+					if (c.signal.aborted) return
+					writeState({ ...INITIAL_STATE })
 				} catch (e) {
 					if (c.signal.aborted) return
 					if (isValidationError(e)) {
@@ -303,14 +391,13 @@ export const CreatingFeature: TableFeature<RowData> = {
 
 			setValue: (key, value) => {
 				table.setState((prev) => {
-					const { [key]: _removed, ...remainingErrors } = prev.creating.errors
+					const { [key]: _removed, ...remainingErrors } = prev.editing.errors
 					return {
 						...prev,
-						creating: {
-							...prev.creating,
-							values: { ...prev.creating.values, [key]: value },
+						editing: {
+							...prev.editing,
+							values: { ...prev.editing.values, [key]: value },
 							errors: remainingErrors,
-							// formError intentionally untouched
 						},
 					}
 				})
@@ -322,9 +409,9 @@ export const CreatingFeature: TableFeature<RowData> = {
 			setValues: (patch) => {
 				table.setState((prev) => ({
 					...prev,
-					creating: {
-						...prev.creating,
-						values: { ...prev.creating.values, ...(patch as Record<string, unknown>) },
+					editing: {
+						...prev.editing,
+						values: { ...prev.editing.values, ...(patch as Record<string, unknown>) },
 					},
 				}))
 			},
@@ -373,6 +460,10 @@ export const CreatingFeature: TableFeature<RowData> = {
 			getState,
 		}
 
-		table.creating = api
+		table.editing = api
+	},
+
+	createRow: (row: Row<RowData>, table: Table<RowData>) => {
+		row.getIsEditing = () => table.getState().editing.rowId === row.id
 	},
 }

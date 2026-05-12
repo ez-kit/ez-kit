@@ -1,12 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { defineColumns } from '../column/define-columns'
-import { createTable } from '../create-table'
+import { defineColumns } from '../../column/define-columns'
+import { createTable } from '../../create-table'
+import { ValidationError } from '../validation'
 
-import { ValidationError } from './validation-types'
-
-import type { ValidateContext } from './validation-types'
+import type { ValidateContext } from '../validation'
 
 type Row = {
 	id: number

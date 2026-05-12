@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createTable, defineColumns } from './index'
+import { createTable, defineColumns } from '../index'
 
 type Row = {
 	id: number
