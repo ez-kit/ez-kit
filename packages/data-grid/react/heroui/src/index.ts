@@ -20,3 +20,13 @@ export { RowPinMenu } from './blocks/RowPinMenu'
 export { SelectionBar } from './blocks/SelectionBar'
 export { HEROUI_CELL_TYPES } from './blocks/heroui-cell-types'
 export { CellTypesProvider } from '@ez-kit/data-grid-react'
+
+export {
+	ActionBar,
+	ActionBarClose,
+	ActionBarGroup,
+	ActionBarItem,
+	type ActionBarProps,
+	ActionBarSelection,
+	ActionBarSeparator,
+} from './components/ui/action-bar'

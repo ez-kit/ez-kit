@@ -1,32 +1,38 @@
 'use client'
 
-import { Checkbox, Popover } from '@heroui/react'
+import { ListBox, Popover } from '@heroui/react'
 import { Columns2 } from 'lucide-react'
 
 import type { ColumnVisibilityMenuProps } from '@ez-kit/data-grid-react'
 
 export function ColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
+	const selectedColumns = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
+
 	return (
 		<Popover>
 			<Popover.Trigger>
-				<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}>
+				<span className='inline-flex items-center gap-1.5 cursor-pointer'>
 					<Columns2 size={16} />
 					Columns
 				</span>
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog aria-label='Column visibility'>
-					<div style={{ display: 'grid', gap: '0.25rem', minWidth: 160, padding: '0.5rem' }}>
+					<ListBox selectedKeys={selectedColumns}>
 						{columns.map((col) => (
-							<Checkbox
+							<ListBox.Item
 								key={col.id}
-								isSelected={col.isVisible}
-								onChange={col.onToggle}
+								id={col.id}
+								textValue={col.label}
+								onPress={() => {
+									col.onToggle()
+								}}
 							>
 								{col.label}
-							</Checkbox>
+								<ListBox.ItemIndicator />
+							</ListBox.Item>
 						))}
-					</div>
+					</ListBox>
 				</Popover.Dialog>
 			</Popover.Content>
 		</Popover>

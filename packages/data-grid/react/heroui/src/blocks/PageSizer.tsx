@@ -16,12 +16,14 @@ export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps)
 			<Select
 				value={String(pageSize)}
 				aria-label='Rows per page'
+				className='w-20'
 				onChange={(key) => {
 					if (key != null) onPageSizeChange(Number(key))
 				}}
 			>
 				<Select.Trigger>
 					<Select.Value />
+					<Select.Indicator />
 				</Select.Trigger>
 				<Select.Popover>
 					<ListBox>
@@ -32,6 +34,7 @@ export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps)
 								textValue={String(size)}
 							>
 								{size}
+								<ListBox.ItemIndicator />
 							</ListBox.Item>
 						))}
 					</ListBox>
