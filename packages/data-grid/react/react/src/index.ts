@@ -57,17 +57,11 @@ export {
 	ValidationError,
 	isValidationError,
 	zodResolver,
-	createTypedDataGrid,
 } from '@ez-kit/data-grid-core'
 export type {
 	CommitStatus,
 	FieldState,
 	SaveContext,
-	TypedCreatingApi,
-	TypedCreatingState,
-	TypedDataTable,
-	TypedEditingApi,
-	TypedEditingState,
 	ValidateConfig,
 	ValidateContext,
 	ValidateOn,

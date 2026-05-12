@@ -88,14 +88,6 @@
 		"exportName": "EditingValidationExample"
 	},
 	{
-		"id": "creating-typed",
-		"label": "Creating: Typed",
-		"group": "validation",
-		"groupLabel": "Validation",
-		"sourceFile": "components/creating/CreatingTypedExample.tsx",
-		"exportName": "CreatingTypedExample"
-	},
-	{
 		"id": "filter-popover",
 		"label": "Filter Popover",
 		"sourceFile": "components/filter-popover.tsx",
