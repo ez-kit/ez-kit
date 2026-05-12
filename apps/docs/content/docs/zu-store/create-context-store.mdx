@@ -1,0 +1,96 @@
+---
+title: createContextStore
+description: Wrap a Zustand vanilla store in React context so every Provider gets its own isolated instance.
+---
+
+# `createContextStore`
+
+Wraps a Zustand vanilla store in React context. Each `<Provider>` creates its own store instance (via `useRef`), so the same store factory can power multiple isolated subtrees.
+
+## Signature
+
+```ts
+function createContextStore<TStore extends StoreApi<unknown>, TInitProps extends object = Record<string, never>>(
+	factory: (initProps: TInitProps) => TStore,
+): {
+	Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+	useContextStore: () => TStore
+	useStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
+	useShallowStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
+	Item: <T>(props: {
+		selector: (state: ExtractState<TStore>) => T
+		children: (value: T) => ReactElement
+	}) => ReactElement
+}
+```
+
+## Basic usage
+
+<LivePreview path='zu-store/counter' title='Counter' />
+
+## API
+
+### `Provider`
+
+Creates and provides the store. The factory runs **once per mount** (held in a `useRef`), so reading `initProps` after the first render won't recreate the store. Accept whatever init props your factory needs.
+
+```tsx
+<counterStore.Provider initialCount={10}>
+	<App />
+</counterStore.Provider>
+```
+
+### `useStore(selector)`
+
+Subscribes to a slice of state with strict equality. Re-renders only when the selected value changes.
+
+```tsx
+const count = counterStore.useStore((s) => s.count)
+```
+
+### `useShallowStore(selector)`
+
+Same as `useStore`, but compares with shallow equality. Use when the selector returns an object or array so you don't re-render on every state update.
+
+```tsx
+const { count, label } = counterStore.useShallowStore((s) => ({
+	count: s.count,
+	label: s.label,
+}))
+```
+
+### `useContextStore()`
+
+Returns the raw `StoreApi` instance. Use when you need direct access — for example, to read state outside of render or to feed the store into another hook (such as [`useStoreState`](./use-store-state)).
+
+```tsx
+const store = counterStore.useContextStore()
+
+const handleSubmit = () => {
+	console.log(store.getState().count)
+}
+```
+
+### `Item`
+
+Render-prop alternative to `useStore`. Handy in JSX-heavy code, or to keep a consuming component oblivious to the store.
+
+```tsx
+<counterStore.Item selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Item>
+```
+
+## Multiple independent instances
+
+Each `Provider` creates its own store — state is never shared between siblings.
+
+<LivePreview path='zu-store/multiple-instances' title='Two isolated counters' />
+
+## Errors
+
+Using `useStore`, `useShallowStore`, `useContextStore`, or `Item` outside a `Provider` throws:
+
+```
+Error: Missing Provider for createContextStore
+```
+
+This is deliberate — there is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. Wrap the consuming subtree in a `Provider`.

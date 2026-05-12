@@ -1,0 +1,70 @@
+---
+title: useStoreState
+description: Bind a single Zustand store field to a [value, setValue] tuple — the useState experience, backed by a store.
+---
+
+# `useStoreState`
+
+Standalone hook that binds **one field** of a Zustand store to a `[value, setValue]` tuple. Same ergonomics as `useState`, but the state lives in a store you control — so multiple components stay in sync, and unmounting doesn't wipe it.
+
+Works with **any `StoreApi`**, not just stores created through `createContextStore`.
+
+## Signature
+
+```ts
+function useStoreState<TState, K extends keyof TState>(
+	store: StoreApi<TState>,
+	key: K,
+): [TState[K], (value: TState[K]) => void]
+```
+
+The return type is inferred from the key, so passing an unknown key is a compile-time error.
+
+## Basic usage
+
+<LivePreview path='zu-store/form' title='Form with two fields' />
+
+## Behaviour
+
+- **Subscribes** to `state[key]` only. Other fields can change without re-rendering this component.
+- **`setValue`** merges `{ [key]: newValue }` via `store.setState((prev) => ({ ...prev, [key]: newValue }))`, leaving every other field untouched.
+- **Stable across unmounts.** When the component remounts, it re-reads the current value from the store — no `useEffect` round-trip.
+
+## Combining with `createContextStore`
+
+`useStoreState` accepts any `StoreApi`, so the natural pairing is `useContextStore()` followed by `useStoreState`:
+
+```tsx
+import { createContextStore, useStoreState } from '@ez-kit/zu-store'
+import { createStore } from 'zustand/vanilla'
+
+interface FormState {
+	name: string
+	age: number
+}
+
+const formStore = createContextStore(() => createStore<FormState>()(() => ({ name: '', age: 0 })))
+
+function NameField() {
+	const store = formStore.useContextStore()
+	const [name, setName] = useStoreState(store, 'name')
+	return <input value={name} onChange={(e) => setName(e.target.value)} />
+}
+```
+
+Each `formStore.Provider` now scopes its form to a subtree, while each field component still consumes one key only.
+
+## Type safety
+
+```ts
+const [count, setCount] = useStoreState(store, 'count')
+// count:    number
+// setCount: (value: number) => void
+
+const [name, setName] = useStoreState(store, 'name')
+// name:    string
+// setName: (value: string) => void
+
+useStoreState(store, 'unknown')
+// Type error: Argument of type '"unknown"' is not assignable to parameter of type 'keyof TState'.
+```

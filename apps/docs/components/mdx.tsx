@@ -1,10 +1,13 @@
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 
+import { LivePreview } from './live-preview';
+
 import type { MDXComponents } from 'mdx/types';
 
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
+    LivePreview,
     ...components,
   } as MDXComponents;
 }

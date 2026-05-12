@@ -1,0 +1,5 @@
+{
+	"title": "zu-store",
+	"description": "Zustand-powered React context stores",
+	"pages": ["index", "create-context-store", "use-store-state", "with-history"]
+}

@@ -1,0 +1,39 @@
+---
+title: '@ez-kit/zu-store'
+description: Zustand vanilla stores wrapped in React context — multiple isolated instances, field-binding hooks, and optional undo/redo middleware.
+---
+
+# `@ez-kit/zu-store`
+
+A tiny layer on top of [Zustand](https://github.com/pmndrs/zustand) that:
+
+- wraps a vanilla store in **React context**, so multiple isolated instances can coexist in the same tree;
+- exposes a [`useState`](https://react.dev/reference/react/useState)-style hook for binding a **single store field**;
+- ships a **`withHistory`** middleware for undo / redo with pause, limits, and predicate filtering.
+
+It exists because plain Zustand stores are module-level singletons by default — fine for app-wide state, awkward when you want a counter, modal, or form scoped to a subtree.
+
+## Install
+
+```bash
+pnpm add @ez-kit/zu-store zustand
+```
+
+`zustand` is a peer dependency — pin whatever 5.x version your app already uses.
+
+## A minimal example
+
+<LivePreview path='zu-store/counter' title='Counter' />
+
+## What's in the box
+
+| Export                                                       | Purpose                                                                           |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| [`createContextStore`](./zu-store/create-context-store)      | Factory: wraps a Zustand store in React context. Returns `Provider` + hooks.      |
+| [`useStoreState`](./zu-store/use-store-state)                | Binds one store field to a `[value, setValue]` tuple, like `useState`.            |
+| [`withHistory`](./zu-store/with-history)                     | Middleware: adds undo / redo to any Zustand store, plus a separate history store. |
+| [`useHistoryStore`](./zu-store/with-history#usehistorystore) | Subscribes to the history state (pasts, futures, isPaused, undo, redo).           |
+
+## Why not plain Zustand?
+
+Plain Zustand stores live at module scope. Two `<Modal>` instances or two `<DataGrid>` instances would share one store and stomp on each other. `createContextStore` defers store creation to the `Provider`, so each mount gets its own instance — without forcing you to drill props through the tree.

@@ -101,6 +101,9 @@ importers:
       '@ez-kit/data-grid-shadcn':
         specifier: workspace:*
         version: link:../../packages/data-grid/react/shadcn
+      '@ez-kit/zu-store':
+        specifier: workspace:*
+        version: link:../../packages/zu-store
       '@react-three/fiber':
         specifier: ^9.6.1
         version: 9.6.1(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(three@0.184.0)
@@ -140,6 +143,9 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.3.6
+      zustand:
+        specifier: ^5.0.12
+        version: 5.0.12(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
     devDependencies:
       '@playwright/test':
         specifier: ^1.59.1
