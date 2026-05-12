@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { GridComponentsProvider } from './components-context'
 
 import type {
+	ActionsCellProps,
 	BetweenInputProps,
 	ButtonProps,
 	CheckboxProps,
 	ColumnMenuProps,
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
+	CreatingActionsCellProps,
 	DateFieldProps,
 	EmptyStateProps,
 	FilterPopoverProps,
@@ -153,8 +155,38 @@ function TestColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 		</div>
 	)
 }
-function TestToolbar({ children, ...props }: ToolbarProps) {
-	return <div role='toolbar' {...props}>{children}</div>
+function TestToolbar({ children, left, right }: ToolbarProps) {
+	return (
+		<div role='toolbar'>
+			{left}
+			{children}
+			{right}
+		</div>
+	)
+}
+function TestActionsCell({ row, isEditing, hasEditing, hasDeleting, onEdit, onDelete, onSave, onCancel }: ActionsCellProps) {
+	if (isEditing) {
+		return (
+			<>
+				<button type='button' onClick={() => void onSave()}>Save</button>
+				<button type='button' onClick={onCancel}>Cancel</button>
+			</>
+		)
+	}
+	return (
+		<>
+			{hasEditing && <button type='button' onClick={onEdit} data-row-id={row.id}>Edit</button>}
+			{hasDeleting && <button type='button' onClick={onDelete} data-row-id={row.id}>Delete</button>}
+		</>
+	)
+}
+function TestCreatingActionsCell({ onSave, onCancel }: CreatingActionsCellProps) {
+	return (
+		<>
+			<button type='button' onClick={() => void onSave()}>Save</button>
+			<button type='button' onClick={onCancel}>Cancel</button>
+		</>
+	)
 }
 function TestPagination({ pageIndex, pageCount, canPreviousPage, canNextPage, onPreviousPage, onNextPage, onFirstPage, onLastPage }: PaginationProps) {
 	return (
@@ -277,8 +309,8 @@ export const testComponents: Required<GridComponents> = {
 	NoResultsState: TestNoResultsState,
 	SortIndicator: () => null,
 	SortMenu: () => null,
-	ActionsCell: () => null,
-	CreatingActionsCell: () => null,
+	ActionsCell: TestActionsCell,
+	CreatingActionsCell: TestCreatingActionsCell,
 	Chevron: () => null,
 }
 
