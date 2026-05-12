@@ -15,6 +15,7 @@ import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
+import { setIfDefined } from '../utils/set-if-defined'
 
 import type { ColumnDef } from '../column/types'
 import type { DataTable, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
@@ -25,7 +26,7 @@ function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string,
 	if (multi === false) return { enableMultiSort: false }
 	if (multi === true) return { enableMultiSort: true }
 	const opts: Record<string, unknown> = { enableMultiSort: true }
-	if (multi.max !== undefined) opts.maxMultiSortColCount = multi.max
+	setIfDefined(opts, 'maxMultiSortColCount', multi.max)
 	if (multi.removable === false) opts.enableMultiRemove = false
 	if (multi.event === 'always') {
 		opts.isMultiSortEvent = () => true

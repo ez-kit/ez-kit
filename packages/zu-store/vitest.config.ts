@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
-import { vitestSharedConfig } from '../../vitest.shared'
 
-export default defineConfig(vitestSharedConfig)
+import { vitestPackageConfig } from '../../vitest.shared'
+
+export default defineConfig(vitestPackageConfig(import.meta.url))

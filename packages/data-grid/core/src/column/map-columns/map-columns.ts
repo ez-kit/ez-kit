@@ -4,9 +4,10 @@ import {
 	createOperatorFilterFn,
 	resolveColumnOperators,
 } from '../../features/operators'
+import { setIfDefined } from '../../utils/set-if-defined'
 
-import type { OperatorRegistry } from '../../features/operators'
 import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
+import type { OperatorRegistry } from '../../features/operators'
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
@@ -54,13 +55,13 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
 
-	if (pinning !== undefined) meta.columnPinning = pinning
-	if (visibility !== undefined) meta.visibility = visibility
-	if (filtering !== undefined) meta.filtering = filtering
-	if (editing !== undefined) meta.editing = editing
-	if (creating !== undefined) meta.creating = creating
-	if (validateOn !== undefined) meta.validateOn = validateOn
-	if (validateDebounceMs !== undefined) meta.validateDebounceMs = validateDebounceMs
+	setIfDefined(meta, 'columnPinning', pinning)
+	setIfDefined(meta, 'visibility', visibility)
+	setIfDefined(meta, 'filtering', filtering)
+	setIfDefined(meta, 'editing', editing)
+	setIfDefined(meta, 'creating', creating)
+	setIfDefined(meta, 'validateOn', validateOn)
+	setIfDefined(meta, 'validateDebounceMs', validateDebounceMs)
 	// Implicit cellType='text' when not provided so registry-driven form rendering
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.
@@ -76,25 +77,25 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const result: Record<string, any> = { meta }
 
-	if (id !== undefined) result.id = id
-	if (header !== undefined) result.header = header
-	if (footer !== undefined) result.footer = footer
-	if (enableColumnFilter !== undefined) result.enableColumnFilter = enableColumnFilter
-	if (enableGlobalFilter !== undefined) result.enableGlobalFilter = enableGlobalFilter
-	if (enableHiding !== undefined) result.enableHiding = enableHiding
-	if (enableResizing !== undefined) result.enableResizing = enableResizing
-	if (size !== undefined) result.size = size
-	if (minSize !== undefined) result.minSize = minSize
-	if (maxSize !== undefined) result.maxSize = maxSize
+	setIfDefined(result, 'id', id)
+	setIfDefined(result, 'header', header)
+	setIfDefined(result, 'footer', footer)
+	setIfDefined(result, 'enableColumnFilter', enableColumnFilter)
+	setIfDefined(result, 'enableGlobalFilter', enableGlobalFilter)
+	setIfDefined(result, 'enableHiding', enableHiding)
+	setIfDefined(result, 'enableResizing', enableResizing)
+	setIfDefined(result, 'size', size)
+	setIfDefined(result, 'minSize', minSize)
+	setIfDefined(result, 'maxSize', maxSize)
 
 	// sorting: false → disable sorting for this column
 	if (sorting === false) {
 		result.enableSorting = false
 	} else if (sorting !== undefined) {
-		if (sorting.descFirst !== undefined) result.sortDescFirst = sorting.descFirst
-		if (sorting.fn !== undefined) result.sortingFn = sorting.fn
-		if (sorting.undefined !== undefined) result.sortUndefined = sorting.undefined
-		if (sorting.invert !== undefined) result.invertSorting = sorting.invert
+		setIfDefined(result, 'sortDescFirst', sorting.descFirst)
+		setIfDefined(result, 'sortingFn', sorting.fn)
+		setIfDefined(result, 'sortUndefined', sorting.undefined)
+		setIfDefined(result, 'invertSorting', sorting.invert)
 		if (sorting.multi === false) result.enableMultiSort = false
 	}
 

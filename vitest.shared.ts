@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url'
-import type { UserConfig } from 'vitest/config'
 
-export const vitestSharedConfig: UserConfig = {
+import type { ViteUserConfig } from 'vitest/config'
+
+export const vitestSharedConfig: ViteUserConfig = {
 	test: {
 		include: ['src/**/*.{test,spec}.{ts,tsx}', 'test/**/*.{test,spec}.{ts,tsx}'],
 		setupFiles: [fileURLToPath(new URL('./vitest.setup.ts', import.meta.url))],
@@ -11,4 +12,28 @@ export const vitestSharedConfig: UserConfig = {
 			include: ['src/**/*.ts'],
 		},
 	},
+}
+
+/**
+ * Vitest config for packages that use the `@/*` → `src/*` path alias.
+ *
+ * Pass `import.meta.url` from the package's `vitest.config.ts` so the alias
+ * resolves to that package's own `src/` directory:
+ *
+ * ```ts
+ * import { defineConfig } from 'vitest/config'
+ * import { vitestPackageConfig } from '../../../vitest.shared'
+ *
+ * export default defineConfig(vitestPackageConfig(import.meta.url))
+ * ```
+ */
+export function vitestPackageConfig(packageMetaUrl: string): ViteUserConfig {
+	return {
+		...vitestSharedConfig,
+		resolve: {
+			alias: {
+				'@': fileURLToPath(new URL('./src', packageMetaUrl)),
+			},
+		},
+	}
 }

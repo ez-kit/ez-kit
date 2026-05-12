@@ -1,11 +1,13 @@
 import { defineConfig } from 'vitest/config'
 
-import { vitestSharedConfig } from '../../vitest.shared'
+import { vitestPackageConfig } from '../../vitest.shared'
+
+const base = vitestPackageConfig(import.meta.url)
 
 export default defineConfig({
-	...vitestSharedConfig,
+	...base,
 	test: {
-		...vitestSharedConfig.test,
+		...base.test,
 		exclude: ['tests/**/*.visual.spec.ts'],
 	},
 })
