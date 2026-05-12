@@ -14,7 +14,7 @@ import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
 import type { ExpandedRowProps , FallbacksConfig } from '../use-data-grid'
-import type { ComponentType } from 'react'
+import type { ComponentType, CSSProperties } from 'react'
 
 /**
  * CSS custom property used to compute sticky offsets for pinned rows.
@@ -25,12 +25,11 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
 
 /**
  * Renders the table `<tbody>`.
- * When `loading: true` and `fallbacks.loading` is not false, renders skeleton rows.
- * When data is empty, renders empty state or no-results state based on filter context.
- * When `creating.mode` is `'row'` and creating is active, prepends a creating row.
- * When `creating.mode` is `'pin-row'`, always shows the creating row at the top.
- * When `pinning` is enabled, renders top-pinned / center / bottom-pinned row sections
- * with CSS sticky positioning.
+ *
+ * Pinned rows (top / bottom) get `data-pinned="top" | "bottom"` plus a
+ * `--dg-row-pin-offset` CSS variable carrying the computed offset; the
+ * structural stylesheet shipped with this package applies the actual
+ * `position: sticky` + offset.
  */
 export function Body() {
 	const { rowVirtualizer } = useVirtualContext()
@@ -72,18 +71,14 @@ export function Body() {
 	}
 
 	return (
-		<Tbody>
+		<Tbody data-slot='tbody'>
 			{showCreatingRow && <CreatingRow />}
 			{topRows.map((row, index) => (
 				<Fragment key={row.id}>
 					<DataGridRow
 						row={row}
 						data-pinned='top'
-						style={{
-							position: 'sticky',
-							top: `calc(${String(index)} * ${ROW_HEIGHT_CSS})`,
-							zIndex: 2,
-						}}
+						style={{ '--dg-row-pin-offset': `calc(${String(index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
 					/>
 					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
@@ -99,11 +94,7 @@ export function Body() {
 					<DataGridRow
 						row={row}
 						data-pinned='bottom'
-						style={{
-							position: 'sticky',
-							bottom: `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
-							zIndex: 2,
-						}}
+						style={{ '--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
 					/>
 					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>

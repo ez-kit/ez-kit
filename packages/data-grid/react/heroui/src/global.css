@@ -1,4 +1,5 @@
 @import '@heroui/styles';
+@import '@ez-kit/data-grid-react/styles.css';
 
 @theme inline {
 	--color-surface: var(--surface);
@@ -20,28 +21,18 @@
 	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--background));
 }
 
-.dg-shadow-left {
-	position: absolute;
-	top: 0;
-	left: 0;
-	bottom: 0;
+[data-pin-shadow='left'] {
 	width: 12px;
 	box-shadow: inset 4px 0 8px -2px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-left-shadow, 0);
 	transition: opacity 150ms;
-	pointer-events: none;
 }
 
-.dg-shadow-right {
-	position: absolute;
-	top: 0;
-	right: 0;
-	bottom: 0;
+[data-pin-shadow='right'] {
 	width: 12px;
 	box-shadow: inset -4px 0 8px -2px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-right-shadow, 0);
 	transition: opacity 150ms;
-	pointer-events: none;
 }
 
 tr[data-expanded] {

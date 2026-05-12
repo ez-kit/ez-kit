@@ -20,9 +20,9 @@ export function LoadingBody() {
 
 	if (customContent !== undefined) {
 		return (
-			<Tbody>
-				<Tr>
-					<Td colSpan={columnCount} style={{ padding: 0 }}>
+			<Tbody data-slot='tbody'>
+				<Tr data-slot='tr'>
+					<Td data-slot='loading-body-cell' colSpan={columnCount}>
 						{flexRender(customContent, { columnCount })}
 					</Td>
 				</Tr>
@@ -31,7 +31,7 @@ export function LoadingBody() {
 	}
 
 	return (
-		<Tbody>
+		<Tbody data-slot='tbody'>
 			{Array.from({ length: DEFAULT_LOADING_ROWS }, (_, i) => (
 				<LoadingRow
 					key={i}

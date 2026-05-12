@@ -13,7 +13,7 @@ import { useTableContext } from './table-context'
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 type CellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,10 +24,17 @@ type CellProps = {
 
 /**
  * Renders a single table body cell.
- * - System cells (selection / expand / actions) have dedicated renderers.
+ *
+ * Emits `data-slot="td"` plus `data-pinned="left" | "right"` for pinned columns;
+ * pin offsets are written as CSS custom properties via {@link getCommonPinStyles}.
+ * The structural stylesheet shipped with this package applies the actual
+ * `position: sticky` + offsets.
+ *
+ * - System cells (selection / expand / actions / row-pin) have dedicated renderers.
  * - In `editing.mode = 'cell'`: double-click enters edit mode, blur commits the cell.
  * - Editing row (row/modal mode): renders an input instead of static value.
  * - Edit/creating renderers receive a {@link FieldState} with `error` / `errors` / `onBlur` / `isValidating`.
+ * - View renderers receive `config` (from `column.config` / `meta.config`).
  */
 export function DataGridCell({ cell, row }: CellProps) {
 	const table = useTableContext()
@@ -35,9 +42,9 @@ export function DataGridCell({ cell, row }: CellProps) {
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
-	const pinStyles = getCommonPinStyles(cell.column)
-	const cellStyle: CSSProperties = pinStyles
+	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
+	const pinnedAttrs = pinned ? { 'data-pinned': pinned } : {}
 
 	// ── system columns ────────────────────────────────────────────────────────
 	if (meta?.isSystemColumn) {
@@ -45,7 +52,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 			const isSelected = row.getIsSelected()
 			const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 			return (
-				<Td style={cellStyle} pinned={pinned}>
+				<Td data-slot='td' style={pinVars} pinned={pinned} {...pinnedAttrs}>
 					<Checkbox
 						value={isSelected}
 						{...(isIndeterminate !== undefined ? { indeterminate: isIndeterminate } : {})}
@@ -63,8 +70,10 @@ export function DataGridCell({ cell, row }: CellProps) {
 			const isExpanded = row.getIsExpanded()
 			return (
 				<Td
-					style={cellStyle}
+					data-slot='td'
+					style={pinVars}
 					pinned={pinned}
+					{...pinnedAttrs}
 					data-system-column='expand'
 					data-depth={row.depth}
 				>
@@ -81,7 +90,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 		if (columnId === ACTIONS_COLUMN_ID) {
 			return (
-				<Td style={cellStyle} pinned={pinned}>
+				<Td data-slot='td' style={pinVars} pinned={pinned} {...pinnedAttrs}>
 					<ActionsCell row={row} />
 				</Td>
 			)
@@ -89,7 +98,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 		if (columnId === ROW_PIN_COLUMN_ID) {
 			return (
-				<Td style={cellStyle} pinned={pinned}>
+				<Td data-slot='td' style={pinVars} pinned={pinned} {...pinnedAttrs}>
 					<RowPinCell row={row} />
 				</Td>
 			)
@@ -124,8 +133,10 @@ export function DataGridCell({ cell, row }: CellProps) {
 		}
 		return (
 			<Td
-				style={cellStyle}
+				data-slot='td'
+				style={pinVars}
 				pinned={pinned}
+				{...pinnedAttrs}
 				{...(fieldError ? { 'data-error': true } : {})}
 			>
 				{editComp ? (
@@ -165,8 +176,10 @@ export function DataGridCell({ cell, row }: CellProps) {
 		}
 		return (
 			<Td
-				style={cellStyle}
+				data-slot='td'
+				style={pinVars}
 				pinned={pinned}
+				{...pinnedAttrs}
 				{...(fieldError ? { 'data-error': true } : {})}
 			>
 				{editComp ? (
@@ -196,8 +209,10 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 	return (
 		<Td
-			style={cellStyle}
+			data-slot='td'
+			style={pinVars}
 			pinned={pinned}
+			{...pinnedAttrs}
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp
@@ -232,32 +247,29 @@ function resolveEditComponent(
 	return undefined
 }
 
+/**
+ * Resolves the view renderer for a column.
+ * - `meta.cellView` (set from `cell.component` in mapColumns) takes precedence.
+ * - Otherwise, looks up `meta.cellType` in the cell-type registry.
+ *
+ * Returns `undefined` when no renderer is found — the caller falls back to
+ * TanStack's default cell rendering (raw value).
+ *
+ * The headless package ships **no** built-in cell types. Consumers/UI kits
+ * register them via `CellTypesProvider` or `createDataGrid({ cellTypes })`.
+ */
 function resolveViewComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
 ): ((props: CellViewProps) => ReactNode) | undefined {
-	// 1. meta.cellView set from cell.component / cell.view in mapColumns
 	if (meta?.cellView) {
 		const cellView = meta.cellView
 		return (props: CellViewProps) =>
 			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex }) as ReactNode
 	}
-	// 2. registry by cellType
 	if (meta?.cellType) {
 		const def = registry[meta.cellType]
 		if (def?.view) return def.view
-		// 3. built-in type rendering
-		return builtInView(meta.cellType)
 	}
-	return undefined
-}
-
-function NumberCell({ value }: CellViewProps) {
-	const display = typeof value === 'number' ? value.toLocaleString() : String(value ?? '')
-	return <>{display}</>
-}
-
-function builtInView(cellType: string): ((props: CellViewProps) => ReactNode) | undefined {
-	if (cellType === 'number') return NumberCell
 	return undefined
 }

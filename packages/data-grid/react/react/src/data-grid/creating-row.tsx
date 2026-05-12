@@ -31,19 +31,22 @@ export function CreatingRow() {
 	const isPinRow = creatingConfig?.mode === 'pin-row'
 
 	return (
-		<Tr data-creating-row>
+		<Tr data-slot='tr' data-creating-row>
 			{table.getVisibleLeafColumns().map((col) => {
 				const meta = col.columnDef.meta
-				const pinStyles = getCommonPinStyles(col)
+				const pinVars = getCommonPinStyles(col)
 				const pinned = col.getIsPinned()
+				const pinnedAttrs = pinned ? { 'data-pinned': pinned } : {}
 
 				if (meta?.isSystemColumn) {
 					if (col.id === ACTIONS_COLUMN_ID) {
 						return (
 							<Td
 								key={col.id}
-								style={pinStyles}
+								data-slot='td'
+								style={pinVars}
 								pinned={pinned}
+								{...pinnedAttrs}
 							>
 								<CreatingActionsCell
 									onSave={() => table.creating.commit()}
@@ -60,8 +63,10 @@ export function CreatingRow() {
 						return (
 							<Td
 								key={col.id}
-								style={pinStyles}
+								data-slot='td'
+								style={pinVars}
 								pinned={pinned}
+								{...pinnedAttrs}
 							>
 								<Checkbox
 									value={false}
@@ -74,8 +79,10 @@ export function CreatingRow() {
 					return (
 						<Td
 							key={col.id}
-							style={pinStyles}
+							data-slot='td'
+							style={pinVars}
 							pinned={pinned}
+							{...pinnedAttrs}
 						/>
 					)
 				}
@@ -84,8 +91,10 @@ export function CreatingRow() {
 					return (
 						<Td
 							key={col.id}
-							style={pinStyles}
+							data-slot='td'
+							style={pinVars}
 							pinned={pinned}
+							{...pinnedAttrs}
 						/>
 					)
 				}
@@ -113,8 +122,10 @@ export function CreatingRow() {
 				return (
 					<Td
 						key={col.id}
-						style={pinStyles}
+						data-slot='td'
+						style={pinVars}
 						pinned={pinned}
+						{...pinnedAttrs}
 						{...(fieldError ? { 'data-error': true } : {})}
 					>
 						{renderCreatingInput({

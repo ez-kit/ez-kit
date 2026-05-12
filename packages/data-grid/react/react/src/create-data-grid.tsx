@@ -21,6 +21,11 @@ export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
  * and optional cell types. Returns a `defineColumns` helper typed to the registered
  * custom cell type keys so `type: 'my-type'` on columns is type-safe.
  *
+ * This package contains **zero visual styling** — every visible primitive is
+ * supplied via `components`. Pair with `import '@ez-kit/data-grid-react/styles.css'`
+ * once at the kit / app root to apply the shared structural CSS
+ * (positioning, layout, overflow, z-index, cursor). Visuals stay in the kit.
+ *
  * @example
  * // With custom cell types
  * export const { DataGrid, useDataGrid, defineColumns } = extendDataGrid({

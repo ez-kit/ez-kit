@@ -1,22 +1,21 @@
+import { booleanCellType, numberCellType, textCellType } from '@ez-kit/data-grid-react/cell-types'
+
 import { BadgeCellInput, BadgeCellView } from './cell-types/BadgeCell'
-import { BooleanCellInput, BooleanCellView, BooleanFilterInput } from './cell-types/BooleanCell'
+import { BooleanCellView, BooleanFilterInput } from './cell-types/BooleanCell'
 import { DateCellInput, DateCellView } from './cell-types/DateCell'
 import { ImageCellInput, ImageCellView } from './cell-types/ImageCell'
 import { LinkCellInput, LinkCellView } from './cell-types/LinkCell'
-import { NumberCellInput } from './cell-types/NumberCell'
 import { ProgressCellInput, ProgressCellView } from './cell-types/ProgressCell'
 import { SelectCellInput, SelectCellView } from './cell-types/SelectCell'
-import { TextCellInput } from './cell-types/TextCell'
 
 import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
 
 export const SHADCN_CELL_TYPES: CellTypeRegistry = {
-	text: { edit: TextCellInput, creating: TextCellInput, filter: TextCellInput },
-	number: { edit: NumberCellInput, creating: NumberCellInput, filter: NumberCellInput },
+	text: textCellType,
+	number: numberCellType,
 	boolean: {
+		...booleanCellType,
 		view: BooleanCellView,
-		edit: BooleanCellInput,
-		creating: BooleanCellInput,
 		filter: BooleanFilterInput,
 	},
 	date: {

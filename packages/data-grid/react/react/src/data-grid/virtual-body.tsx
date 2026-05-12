@@ -5,6 +5,7 @@ import { useTableContext } from './table-context'
 import { useVirtualContext } from './virtual-context'
 
 import type { VirtualItem } from '@tanstack/react-virtual'
+import type { CSSProperties } from 'react'
 
 /**
  * CSS custom property used to compute sticky offsets for pinned rows.
@@ -15,12 +16,18 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
 /**
  * Virtualized tbody — renders only the rows currently in the viewport.
  *
- * The tbody is given `position: relative` and a fixed pixel height equal to
- * the virtualizer's total size so the scroll container knows the full extent.
- * Each row is absolutely positioned via `transform: translateY(start)`.
+ * The tbody emits `data-slot="tbody" data-virtualized="true"` and a single
+ * runtime-computed `height` inline style (the virtualizer's total size). The
+ * `display: grid` / `position: relative` shape comes from the structural
+ * stylesheet shipped with this package.
  *
- * Pinned rows (top/bottom) are rendered outside the virtual set as sticky rows,
- * identical to the non-virtual Body behaviour.
+ * Each virtual row receives a runtime `transform: translateY(start)` inline
+ * style — values change every scroll frame and cannot move to CSS — plus a
+ * `data-slot="virtual-row"` for the structural CSS that sets
+ * `position: absolute; left: 0; top: 0; width: 100%`.
+ *
+ * Pinned rows (top / bottom) use the same data-attr + `--dg-row-pin-offset`
+ * pattern as the non-virtual Body.
  */
 export function VirtualBody() {
 	const table = useTableContext()
@@ -39,22 +46,16 @@ export function VirtualBody() {
 
 	return (
 		<Tbody
-			style={{
-				display: 'grid',
-				height: `${String(totalSize)}px`,
-				position: 'relative',
-			}}
+			data-slot='tbody'
+			data-virtualized='true'
+			style={{ height: `${String(totalSize)}px` }}
 		>
 			{topRows.map((row, index) => (
 				<DataGridRow
 					key={row.id}
 					row={row}
 					data-pinned='top'
-					style={{
-						position: 'sticky',
-						top: `calc(${String(index)} * ${ROW_HEIGHT_CSS})`,
-						zIndex: 2,
-					}}
+					style={{ '--dg-row-pin-offset': `calc(${String(index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
 				/>
 			))}
 
@@ -65,13 +66,8 @@ export function VirtualBody() {
 					<DataGridRow
 						key={row.id}
 						row={row}
-						style={{
-							position: 'absolute',
-							top: 0,
-							left: 0,
-							width: '100%',
-							transform: `translateY(${String(virtualRow.start)}px)`,
-						}}
+						data-virtual='row'
+						style={{ transform: `translateY(${String(virtualRow.start)}px)` }}
 					/>
 				)
 			})}
@@ -81,11 +77,7 @@ export function VirtualBody() {
 					key={row.id}
 					row={row}
 					data-pinned='bottom'
-					style={{
-						position: 'sticky',
-						bottom: `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
-						zIndex: 2,
-					}}
+					style={{ '--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
 				/>
 			))}
 		</Tbody>

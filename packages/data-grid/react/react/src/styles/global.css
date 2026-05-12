@@ -1,0 +1,86 @@
+/*
+ * Structural stylesheet for `@ez-kit/data-grid-react`.
+ *
+ * This file is SHARED structural CSS — positioning, layout, overflow, z-index,
+ * cursor. NO visual rules (colors, fonts, borders, radius, shadows, hover/focus,
+ * transitions, padding-for-look). Visual styling is the UI kit's responsibility.
+ *
+ * Authored with Tailwind v4 `@apply`. Must be imported via `@import` from a
+ * kit / app stylesheet that has Tailwind v4 set up; the consumer's Tailwind
+ * pipeline resolves the utilities at build time.
+ *
+ * Targets `data-slot` (identity) and `data-*` (state) attributes emitted by
+ * the headless data-grid components.
+ */
+
+/* ── table layout ─────────────────────────────────────────────────────── */
+
+[data-slot='table'][data-virtualized='true'] { @apply grid; }
+[data-slot='table'][data-virtualized='true'] [data-slot='thead'] { @apply grid; }
+
+[data-slot='table-wrapper'] { @apply relative; }
+[data-slot='table-wrapper'][data-virtualized='true'] {
+	height: var(--dg-virtual-height, 600px);
+}
+
+[data-slot='table-scroll'] { @apply overflow-x-auto; }
+[data-slot='table-scroll'][data-sticky-header='true'] {
+	@apply overflow-y-auto;
+	max-height: var(--dg-table-max-height, 400px);
+}
+[data-slot='table-scroll'][data-virtualized='true'] { @apply overflow-auto h-full; }
+
+/* ── sticky thead ─────────────────────────────────────────────────────── */
+
+[data-slot='thead'][data-sticky='true'] { @apply sticky top-0 z-10; }
+
+/* ── pinned columns ───────────────────────────────────────────────────── */
+
+[data-slot='th'][data-pinned],
+[data-slot='td'][data-pinned] {
+	@apply sticky z-[1];
+}
+[data-slot='th'][data-pinned='left'],
+[data-slot='td'][data-pinned='left'] {
+	left: var(--dg-pin-left);
+}
+[data-slot='th'][data-pinned='right'],
+[data-slot='td'][data-pinned='right'] {
+	right: var(--dg-pin-right);
+}
+
+/* ── resizable th — resizer is absolutely positioned inside ──────────── */
+
+[data-slot='th'][data-resizable='true'] { @apply relative; }
+
+/* ── header inner layout ──────────────────────────────────────────────── */
+
+[data-slot='header-main'] { @apply flex items-center; }
+[data-slot='sort-trigger'] { @apply flex items-center flex-1; }
+[data-slot='sort-trigger'][data-sortable='true'] { @apply cursor-pointer; }
+
+/* ── loading body ─────────────────────────────────────────────────────── */
+
+[data-slot='loading-body-cell'] { @apply p-0; }
+
+/* ── virtual body & rows ──────────────────────────────────────────────── */
+
+[data-slot='tbody'][data-virtualized='true'] { @apply relative grid; }
+[data-slot='tr'][data-virtual='row'] { @apply absolute top-0 left-0 w-full; }
+
+/* ── pinned body rows ─────────────────────────────────────────────────── */
+
+[data-slot='tr'][data-pinned] { @apply sticky z-[2]; }
+[data-slot='tr'][data-pinned='top']    { top: var(--dg-row-pin-offset, 0); }
+[data-slot='tr'][data-pinned='bottom'] { bottom: var(--dg-row-pin-offset, 0); }
+
+/* ── pin-shadow overlay ───────────────────────────────────────────────── */
+
+[data-slot='pin-shadow-overlay'] {
+	@apply absolute top-0 bottom-0 pointer-events-none overflow-hidden;
+}
+[data-pin-shadow] {
+	@apply absolute top-0 bottom-0 pointer-events-none;
+}
+[data-pin-shadow='left']  { left: 0; }
+[data-pin-shadow='right'] { right: 0; }

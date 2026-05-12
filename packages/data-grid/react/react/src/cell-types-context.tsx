@@ -1,7 +1,5 @@
 import { createContext, useContext, useMemo } from 'react'
 
-import { BUILT_IN_CELL_TYPES } from './built-in-cell-types'
-
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -54,13 +52,32 @@ export type CellTypeRegistry = Record<string, CellTypeDefinition<any>>
 
 // ── context ───────────────────────────────────────────────────────────────
 
-const CellTypesContext = createContext(BUILT_IN_CELL_TYPES)
+/**
+ * Default registry is **empty**. This package ships zero built-in cell types —
+ * consumers/UI kits register renderers via {@link CellTypesProvider} or via
+ * `createDataGrid({ cellTypes })`. Common cell types live under the
+ * `@ez-kit/data-grid-react/cell-types` sub-export.
+ */
+const CellTypesContext = createContext<CellTypeRegistry>({})
 
 export type CellTypesProviderProps = {
 	types: CellTypeRegistry
 	children: ReactNode
 }
 
+/**
+ * Registers cell-type renderers (`view` / `edit` / `creating` / `filter`) for
+ * the columns of every descendant `<DataGrid>`.
+ *
+ * The headless package ships **no built-in cell types**. Common ones —
+ * `numberCellType`, `textCellType`, `booleanCellType` — are available under
+ * `@ez-kit/data-grid-react/cell-types` and compose with the DI primitives from
+ * {@link GridComponentsProvider} (`NumberInput`, `Input`, `Checkbox`).
+ *
+ * Providers nest: children's registry is merged on top of the parent's, so
+ * apps can override a kit-provided cell type for a specific subtree without
+ * forking the kit.
+ */
 export function CellTypesProvider({ types, children }: CellTypesProviderProps) {
 	const parent = useContext(CellTypesContext)
 	const merged = useMemo(() => ({ ...parent, ...types }), [parent, types])

@@ -12,22 +12,26 @@ import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
 import type { BetweenInputProps, ColumnMenuSections, InputProps, OperatorSelectProps } from '../types'
 import type { BetweenValue, FieldState, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Header, ColumnMeta } from '@tanstack/table-core'
-import type { ComponentType, CSSProperties, KeyboardEvent, ReactNode } from 'react'
+import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
 
 type HeaderProps = {
-	/** Extra styles applied to the `<thead>` element (e.g. for virtualized layout). */
-	theadStyle?: CSSProperties | undefined
-	/** When true, adds `data-sticky="true"` to the thead for CSS targeting. */
+	/** When true, adds `data-sticky="true"` to the thead for structural CSS targeting. */
 	stickyHeader?: boolean
 }
 
 /**
  * Renders the table `<thead>` with all header groups.
- * - Clicking a sortable header toggles sort.
- * - If filtering is enabled on a column, renders a filter input below the header.
- * - `filtering.component` injects a custom filter control per column.
+ *
+ * Emits data attributes consumed by the structural stylesheet
+ * (`@ez-kit/data-grid-react/styles.css`):
+ * - `data-slot="thead" | "tr" | "th" | "header-main" | "sort-trigger" | "header-extras"`
+ * - `data-sticky="true"` on the thead when sticky header is on
+ * - `data-sortable="true"` and `data-sort-direction="asc | desc | none"` on sortable headers
+ *
+ * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
+ * structural CSS reads them on `[data-pinned]` elements.
  */
-export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
+export function Header({ stickyHeader }: HeaderProps = {}) {
 	const table = useTableContext()
 	const { Thead, Tr, Th, Input, Resizer, SortIndicator, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } =
 		useGridComponents()
@@ -42,7 +46,6 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 	return (
 		<Thead
 			data-slot='thead'
-			style={theadStyle}
 			{...(stickyHeader ? { 'data-sticky': 'true' } : {})}
 		>
 			{table.getHeaderGroups().map((headerGroup) => (
@@ -54,7 +57,8 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 						const meta = header.column.columnDef.meta
 						const canSort = header.column.getCanSort()
 						const sortDir = header.column.getIsSorted()
-						const pinStyles = getCommonPinStyles(header.column)
+						const pinVars = getCommonPinStyles(header.column)
+						const pinned = header.column.getIsPinned()
 
 						const sortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
 						const onSortKeyDown = canSort
@@ -67,10 +71,6 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 							: undefined
 
 						const canResize = Boolean(table.options.enableColumnResizing) && header.column.getCanResize()
-						const thStyle = {
-							...pinStyles,
-							...(canResize ? { position: 'relative' as const } : {}),
-						}
 
 						// Build column menu sections
 						const sections: ColumnMenuSections = {}
@@ -127,8 +127,9 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 									data-slot-selection-th='true'
 									key={header.id}
 									colSpan={header.colSpan}
-									style={thStyle}
-									pinned={header.column.getIsPinned()}
+									style={pinVars}
+									pinned={pinned}
+									{...(pinned ? { 'data-pinned': pinned } : {})}
 								>
 									<Checkbox
 										value={isAllSelected}
@@ -147,8 +148,10 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 								data-slot='th'
 								key={header.id}
 								colSpan={header.colSpan}
-								style={thStyle}
-								pinned={header.column.getIsPinned()}
+								style={pinVars}
+								pinned={pinned}
+								{...(pinned ? { 'data-pinned': pinned } : {})}
+								{...(canResize ? { 'data-resizable': 'true' } : {})}
 							>
 								{(() => {
 									const canFilter =
@@ -156,17 +159,15 @@ export function Header({ theadStyle, stickyHeader }: HeaderProps = {}) {
 									const filterContent = canFilter
 										? renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, BetweenInput })
 										: null
+									const sortDirAttr: 'asc' | 'desc' | 'none' = sortDir === 'asc' || sortDir === 'desc' ? sortDir : 'none'
 									return (
 										<>
-											<div
-												data-slot='header-main'
-												style={{ display: 'flex', alignItems: 'center' }}
-											>
+											<div data-slot='header-main'>
 												<div
 													data-slot='sort-trigger'
+													{...(canSort ? { 'data-sortable': 'true', 'data-sort-direction': sortDirAttr } : {})}
 													role={canSort ? 'button' : undefined}
 													tabIndex={canSort ? 0 : undefined}
-													style={{ cursor: canSort ? 'pointer' : undefined, flex: 1, display: 'flex', alignItems: 'center' }}
 													onClick={sortHandler}
 													onKeyDown={onSortKeyDown}
 												>

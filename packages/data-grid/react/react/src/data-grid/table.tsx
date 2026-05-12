@@ -70,16 +70,14 @@ function resolveEstimateSize(
 /**
  * Renders the full `<table>` with header and body.
  *
- * When column resizing is enabled, sets CSS custom properties for column widths
- * on the table element so cells can read widths without per-cell re-renders.
+ * All layout, overflow, and positioning rules are emitted as `data-*` attributes
+ * and consumed by the structural stylesheet shipped with this package
+ * (`@ez-kit/data-grid-react/styles.css`). The only inline styles set here are
+ * CSS custom properties (column widths, grid-template-columns).
  *
- * When virtualized rows are enabled, wraps the table in a scroll container,
- * applies `display: grid` layout, and provides a RowVirtualizer via context.
- *
- * Pin shadows are rendered via a single absolutely-positioned overlay div that
- * sits outside the scroll container and never scrolls with the table content.
- * CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow` (0 or 1) on the
- * wrapper control the opacity of the shadow divs inside the overlay.
+ * Pin shadows: a single absolutely-positioned overlay div sits outside the
+ * scroll container. CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow`
+ * on the wrapper drive their opacity.
  */
 export function DataGridTable() {
 	const { Table } = useGridComponents()
@@ -128,22 +126,18 @@ export function DataGridTable() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [gridTemplateColumns])
 
-	const theadStyle: CSSProperties = {
-		...(isVirtualized ? { display: 'grid' } : {}),
-		...(isStickyHeader ? { position: 'sticky', top: 0, zIndex: 1 } : {}),
-	}
-
 	const tableEl = (
 		<Table
+			data-slot='table'
+			{...(isVirtualized ? { 'data-virtualized': 'true' } : {})}
 			style={
 				{
 					...sizeVars,
 					'--grid-template-columns': gridTemplateColumns,
-					...(isVirtualized ? { display: 'grid' } : {}),
 				} as CSSProperties
 			}
 		>
-			<Header theadStyle={theadStyle} stickyHeader={isStickyHeader} />
+			<Header stickyHeader={isStickyHeader} />
 			<Body />
 		</Table>
 	)
@@ -153,19 +147,13 @@ export function DataGridTable() {
 			<VirtualProvider rowVirtualizer={rowVirtualizer}>
 				<div
 					ref={wrapperRef}
-					style={{
-						position: 'relative',
-						height: 'var(--dg-virtual-height, 600px)',
-					}}
+					data-slot='table-wrapper'
+					data-virtualized='true'
 				>
 					<div
 						ref={containerRef}
 						data-slot='table-scroll'
-						data-virtual='rows'
-						style={{
-							overflow: 'auto',
-							height: '100%',
-						}}
+						data-virtualized='true'
 					>
 						{tableEl}
 					</div>
@@ -178,14 +166,11 @@ export function DataGridTable() {
 	return (
 		<div
 			ref={wrapperRef}
-			style={{ position: 'relative' }}
+			data-slot='table-wrapper'
 		>
 			<div
 				data-slot='table-scroll'
-				style={{
-					overflowX: 'auto',
-					...(isStickyHeader ? { overflowY: 'auto', maxHeight: 'var(--dg-table-max-height, 400px)' } : {}),
-				}}
+				{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
 			>
 				{tableEl}
 			</div>

@@ -1,4 +1,5 @@
 @import 'shadcn/tailwind.css';
+@import '@ez-kit/data-grid-react/styles.css';
 
 @custom-variant dark (&:is(.dark *));
 @source "../../**/*.{ts,tsx}";
@@ -166,28 +167,18 @@
 	}
 }
 
-.dg-shadow-left {
-	position: absolute;
-	top: 0;
-	left: 0;
-	bottom: 0;
+[data-pin-shadow='left'] {
 	width: 12px;
 	box-shadow: inset 8px 0 5px -5px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-left-shadow, 0);
 	transition: opacity 150ms;
-	pointer-events: none;
 }
 
-.dg-shadow-right {
-	position: absolute;
-	top: 0;
-	right: 0;
-	bottom: 0;
+[data-pin-shadow='right'] {
 	width: 12px;
 	box-shadow: inset -8px 0 5px -5px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-right-shadow, 0);
 	transition: opacity 150ms;
-	pointer-events: none;
 }
 
 tr[data-expanded] {
