@@ -13,25 +13,27 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const table = useTableContext()
 	const { ActionsCell: Renderer } = useGridComponents()
 
-	const editingState = table.getEditingState()
+	const editingState = table.editing.getState()
+	const isPending = editingState.commitStatus !== 'idle'
 
 	return (
 		<Renderer
 			row={row}
-			isEditing={editingState.editingRowId === row.id}
+			isEditing={editingState.rowId === row.id}
 			hasEditing={Boolean(table.options.editing)}
 			hasDeleting={Boolean(table.options.deleting)}
 			editingMode={table.options.editing?.mode}
 			onEdit={() => {
-				table.startEditing(row.id)
+				table.editing.start(row.id)
 			}}
 			onDelete={() => {
 				table.requestDeleteRow(row.id)
 			}}
-			onSave={() => table.commitEditing()}
+			onSave={() => table.editing.commit()}
 			onCancel={() => {
-				table.cancelEditing()
+				table.editing.cancel()
 			}}
+			isPending={isPending}
 		/>
 	)
 }

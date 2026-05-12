@@ -1,142 +1,368 @@
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 
 import { defineColumns } from '../column/define-columns'
 import { createTable } from '../create-table'
 
+import { ValidationError } from './validation-types'
+
+import type { ValidateContext } from './validation-types'
+
 type Row = {
 	id: number
 	name: string
+	password: string
+	confirmPassword: string
 }
 
 const DATA: Row[] = [
-	{ id: 1, name: 'Alice' },
-	{ id: 2, name: 'Bob' },
+	{ id: 1, name: 'Alice', password: 'old-pw', confirmPassword: 'old-pw' },
+	{ id: 2, name: 'Bob', password: 'old-pw', confirmPassword: 'old-pw' },
 ]
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'id' }, { accessorKey: 'name' }])
+const COLUMNS = defineColumns<Row>([
+	{ accessorKey: 'name' },
+	{ accessorKey: 'password' },
+	{ accessorKey: 'confirmPassword' },
+])
 
-describe('EditingFeature', () => {
-	it('initial state: not editing', () => {
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { onSave: () => true },
-		})
-		const state = table.getEditingState()
-		expect(state.editingRowId).toBeNull()
-		expect(state.editingValues).toEqual({})
-		expect(state.editingCellId).toBeNull()
+const noopSave = (): Promise<void> => Promise.resolve()
+
+describe('EditingFeature — basic flow', () => {
+	it('initial state', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		const s = table.editing.getState()
+		expect(s.rowId).toBe(null)
+		expect(s.cellId).toBe(null)
+		expect(s.values).toEqual({})
+		expect(s.errors).toEqual({})
+		expect(s.formError).toBe(null)
+		expect(s.commitStatus).toBe('idle')
 	})
 
-	it('startEditing sets editingRowId and snapshots row values', () => {
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { onSave: () => true },
-		})
-		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.startEditing(rowId)
-		const state = table.getEditingState()
-		expect(state.editingRowId).toBe(rowId)
-		expect(state.editingValues.name).toBe('Alice')
+	it('start(rowId) snapshots row values into editing state', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		table.editing.start('1')
+		const s = table.editing.getState()
+		expect(s.rowId).toBe('1')
+		expect(s.values.name).toBe('Alice')
+		expect(s.values.password).toBe('old-pw')
 	})
 
-	it('row.getIsEditing() returns true only for the editing row', () => {
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { onSave: () => true },
-		})
-		const rows = table.getRowModel().rows
-		const firstId = rows[0]?.id ?? '0'
-		table.startEditing(firstId)
-		expect(rows[0]?.getIsEditing()).toBe(true)
-		expect(rows[1]?.getIsEditing()).toBe(false)
+	it('startCell snapshots only the requested column', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		table.editing.startCell('1', 'name')
+		const s = table.editing.getState()
+		expect(s.rowId).toBe('1')
+		expect(s.cellId).toBe('1_name')
+		expect(s.values).toEqual({ name: 'Alice' })
 	})
 
-	it('cancelEditing resets state', () => {
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { onSave: () => true },
-		})
-		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.startEditing(rowId)
-		table.cancelEditing()
-		expect(table.getEditingState().editingRowId).toBeNull()
+	it('cancel resets state', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		table.editing.start('1')
+		table.editing.setValue('name', 'changed')
+		table.editing.setFormError('boom')
+		table.editing.cancel()
+		const s = table.editing.getState()
+		expect(s.rowId).toBe(null)
+		expect(s.values).toEqual({})
+		expect(s.formError).toBe(null)
 	})
 
-	it('commitEditing calls onSave and resets on true', async () => {
-		const onSave = vi.fn().mockResolvedValue(true)
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { onSave },
-		})
-		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.startEditing(rowId)
-		table.setEditingValue('name', 'AliceEdited')
-		await table.commitEditing()
-		expect(onSave).toHaveBeenCalledWith(rowId, expect.objectContaining({ name: 'AliceEdited' }))
-		expect(table.getEditingState().editingRowId).toBeNull()
+	it('setValue updates immutably and clears that field error', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		table.editing.start('1')
+		table.editing.setErrors({ name: ['too short'], password: ['weak'] })
+		table.editing.setValue('name', 'Carol')
+		const s = table.editing.getState()
+		expect(s.values.name).toBe('Carol')
+		expect(s.errors.name).toBeUndefined()
+		expect(s.errors.password).toEqual(['weak'])
 	})
 
-	it('commitEditing keeps form open when onSave returns false', async () => {
-		const onSave = vi.fn().mockResolvedValue(false)
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { onSave },
-		})
-		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.startEditing(rowId)
-		await table.commitEditing()
-		expect(table.getEditingState().editingRowId).toBe(rowId)
+	it('row.getIsEditing reflects current rowId', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave: noopSave } })
+		const row = table.getRowModel().rows[0]
+		if (!row) throw new Error('expected row')
+		expect(row.getIsEditing()).toBe(false)
+		table.editing.start(row.id)
+		expect(row.getIsEditing()).toBe(true)
+	})
+})
+
+describe('EditingFeature — commit pipeline (row mode)', () => {
+	it('commit() success: validates, saves, resets state', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave } })
+		table.editing.start('1')
+		table.editing.setValue('name', 'Alice 2')
+		await table.editing.commit()
+
+		expect(onSave).toHaveBeenCalledTimes(1)
+		const [rowId, values, ctx] = onSave.mock.calls[0] as [string, Partial<Row>, { signal: AbortSignal }]
+		expect(rowId).toBe('1')
+		expect(values.name).toBe('Alice 2')
+		expect(ctx.signal).toBeInstanceOf(AbortSignal)
+
+		const s = table.editing.getState()
+		expect(s.rowId).toBe(null)
+		expect(s.commitStatus).toBe('idle')
 	})
 
-	it('commitEditing passes domain row id to onSave when using default getRowId', async () => {
-		const onSave = vi.fn().mockResolvedValue(true)
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { onSave },
-		})
-		// With default getRowId, row IDs are "1" and "2" (from row.id), not "0" and "1" (indices)
-		const rows = table.getRowModel().rows
-		expect(rows[0]?.id).toBe('1')
-		expect(rows[1]?.id).toBe('2')
+	it('commit() with sync validate fail: errors set, form stays open', async () => {
+		const validate = vi.fn().mockReturnValue({ errors: { name: ['too short'] } })
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { validate, onSave } })
+		table.editing.start('1')
+		await table.editing.commit()
 
-		table.startEditing('2') // Bob
-		table.setEditingValue('name', 'BobEdited')
-		await table.commitEditing()
-
-		expect(onSave).toHaveBeenCalledWith('2', expect.objectContaining({ name: 'BobEdited' }))
+		expect(onSave).not.toHaveBeenCalled()
+		const s = table.editing.getState()
+		expect(s.rowId).toBe('1')
+		expect(s.errors.name).toEqual(['too short'])
+		expect(s.commitStatus).toBe('idle')
 	})
 
-	it('cell mode: startCellEditing sets editingCellId', () => {
-		const table = createTable({
-			data: DATA,
-			columns: COLUMNS,
-			editing: { mode: 'cell', onSave: () => true },
-		})
-		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.startCellEditing(rowId, 'name')
-		const state = table.getEditingState()
-		expect(state.editingRowId).toBe(rowId)
-		expect(state.editingCellId).toBe(`${rowId}_name`)
+	it('commit() onSave throws ValidationError: errors + formError set', async () => {
+		const onSave = vi.fn(() =>
+			Promise.reject(
+				new ValidationError({
+					errors: { name: ['Already taken'] },
+					formError: 'Could not save',
+				}),
+			),
+		)
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave } })
+		table.editing.start('1')
+		await table.editing.commit()
+
+		const s = table.editing.getState()
+		expect(s.rowId).toBe('1')
+		expect(s.errors.name).toEqual(['Already taken'])
+		expect(s.formError).toBe('Could not save')
 	})
 
-	it('cell mode: commitCellEditing saves only the cell column', async () => {
-		const onSave = vi.fn().mockResolvedValue(true)
+	it('commit() onSave throws non-validation Error: formError = generic, error rethrown', async () => {
+		const boom = new Error('network')
+		const onSave = vi.fn(() => Promise.reject(boom))
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave } })
+		table.editing.start('1')
+		await expect(table.editing.commit()).rejects.toBe(boom)
+
+		const s = table.editing.getState()
+		expect(s.formError).toBe('Unexpected error')
+		expect(s.commitStatus).toBe('idle')
+	})
+
+	it('cancel during async onSave aborts: late onSave does not write to state', async () => {
+		const onSave = vi.fn(
+			(_id: string, _v: Partial<Row>, ctx: { signal: AbortSignal }) =>
+				new Promise<void>((resolve) => {
+					ctx.signal.addEventListener('abort', () => {
+						resolve()
+					})
+				}),
+		)
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { onSave } })
+		table.editing.start('1')
+		const p = table.editing.commit()
+		await Promise.resolve()
+		await Promise.resolve()
+		table.editing.cancel()
+		await p
+		expect(table.editing.getState().rowId).toBe(null)
+	})
+})
+
+describe('EditingFeature — cell mode', () => {
+	it('startCell + commitCell: onSave receives only edited column', async () => {
+		const onSave = vi.fn().mockResolvedValue(undefined)
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			editing: { mode: 'cell', onSave },
 		})
-		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.startCellEditing(rowId, 'name')
-		table.setEditingValue('name', 'AliceCell')
-		await table.commitCellEditing()
-		expect(onSave).toHaveBeenCalledWith(rowId, { name: 'AliceCell' })
-		expect(table.getEditingState().editingRowId).toBeNull()
+		table.editing.startCell('1', 'name')
+		table.editing.setValue('name', 'Alice 2')
+		await table.editing.commitCell()
+
+		expect(onSave).toHaveBeenCalledTimes(1)
+		const [rowId, values] = onSave.mock.calls[0] as [string, Partial<Row>]
+		expect(rowId).toBe('1')
+		expect(values).toEqual({ name: 'Alice 2' })
+	})
+
+	it('commitCell passes ctx.cell.columnId to validate', async () => {
+		const seen: ValidateContext[] = []
+		const validate = vi.fn((_v: Partial<Row>, ctx: ValidateContext) => {
+			seen.push(ctx)
+			return null
+		})
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', validate, onSave },
+		})
+		table.editing.startCell('1', 'password')
+		table.editing.setValue('password', 'new-pw')
+		await table.editing.commitCell()
+
+		expect(seen).toHaveLength(1)
+		expect(seen[0]?.cell).toEqual({ columnId: 'password' })
+	})
+
+	it('commitCell applies only the edited column error; ignores cross-field errors', async () => {
+		const validate = vi.fn().mockReturnValue({
+			errors: { password: ['weak'], confirmPassword: ['mismatch'] },
+		})
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', validate, onSave },
+		})
+		table.editing.startCell('1', 'password')
+		table.editing.setValue('password', 'abc')
+		await table.editing.commitCell()
+
+		const s = table.editing.getState()
+		expect(s.errors.password).toEqual(['weak'])
+		// other field errors must NOT leak into cell-mode UI
+		expect(s.errors.confirmPassword).toBeUndefined()
+		expect(onSave).not.toHaveBeenCalled()
+	})
+
+	it('commitCell: validate ctx.cell allows user to skip cross-field refine', async () => {
+		// Simulates user-controlled refine: when ctx.cell is set, return ok unconditionally.
+		const validate = vi.fn((values: Partial<Row>, ctx: ValidateContext) => {
+			if (ctx.cell) return null // skip cross-field
+			if (values.password !== values.confirmPassword) {
+				return { errors: { confirmPassword: ['mismatch'] } }
+			}
+			return null
+		})
+		const onSave = vi.fn().mockResolvedValue(undefined)
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', validate, onSave },
+		})
+		table.editing.startCell('1', 'password')
+		table.editing.setValue('password', 'changed-only-here')
+		await table.editing.commitCell()
+
+		expect(onSave).toHaveBeenCalledTimes(1)
+		expect(table.editing.getState().rowId).toBe(null)
+	})
+
+	it('cancel during async cell commit aborts the controller', async () => {
+		let observedAbort = false
+		const onSave = vi.fn(
+			(_id: string, _v: Partial<Row>, ctx: { signal: AbortSignal }) =>
+				new Promise<void>((resolve) => {
+					ctx.signal.addEventListener('abort', () => {
+						observedAbort = true
+						resolve()
+					})
+				}),
+		)
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', onSave },
+		})
+		table.editing.startCell('1', 'name')
+		table.editing.setValue('name', 'Alice 2')
+		const p = table.editing.commitCell()
+		await Promise.resolve()
+		await Promise.resolve()
+		table.editing.cancel()
+		await p
+		expect(observedAbort).toBe(true)
+	})
+})
+
+describe('EditingFeature — validate config variants', () => {
+	it('schema-shorthand', async () => {
+		const schema = z.object({
+			name: z.string().min(2, 'too short'),
+		})
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { validate: { schema }, onSave: noopSave },
+		})
+		table.editing.start('1')
+		table.editing.setValue('name', 'a')
+		await table.editing.commit()
+		expect(table.editing.getState().errors.name).toEqual(['too short'])
+	})
+
+	it('multi-message preserved', async () => {
+		const schema = z.object({
+			password: z
+				.string()
+				.min(8, 'too short')
+				.regex(/[A-Z]/, 'needs uppercase'),
+		})
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { validate: { schema }, onSave: noopSave },
+		})
+		table.editing.start('1')
+		table.editing.setValue('password', 'abc')
+		await table.editing.commit()
+		const errs = table.editing.getState().errors.password ?? []
+		expect(errs).toContain('too short')
+		expect(errs).toContain('needs uppercase')
+	})
+})
+
+describe('EditingFeature — per-column validateOn', () => {
+	it("validateOn: 'change' triggers field-level validate after debounce", async () => {
+		const validate = vi.fn(
+			(values: Partial<Row>, _ctx: ValidateContext) =>
+				values.name === 'taken' ? { errors: { name: ['Already taken'] } } : null,
+		)
+		const table = createTable({
+			data: DATA,
+			columns: defineColumns<Row>([
+				{ accessorKey: 'name', validateOn: 'change', validateDebounceMs: 20 },
+				{ accessorKey: 'password' },
+				{ accessorKey: 'confirmPassword' },
+			]),
+			editing: { validate, onSave: noopSave },
+		})
+		table.editing.start('1')
+		table.editing.setValue('name', 't')
+		table.editing.setValue('name', 'ta')
+		table.editing.setValue('name', 'taken')
+		await new Promise<void>((r) => {
+			setTimeout(r, 60)
+		})
+		const calls = validate.mock.calls.filter((c) => c[1].cell?.columnId === 'name')
+		expect(calls.length).toBe(1)
+		expect(table.editing.getState().errors.name).toEqual(['Already taken'])
+	})
+
+	it("validateOn: 'blur' does NOT auto-trigger on setValue", async () => {
+		const validate = vi.fn().mockReturnValue(null)
+		const table = createTable({
+			data: DATA,
+			columns: defineColumns<Row>([
+				{ accessorKey: 'name', validateOn: 'blur' },
+				{ accessorKey: 'password' },
+				{ accessorKey: 'confirmPassword' },
+			]),
+			editing: { validate, onSave: noopSave },
+		})
+		table.editing.start('1')
+		table.editing.setValue('name', 'X')
+		await new Promise<void>((r) => {
+			setTimeout(r, 30)
+		})
+		expect(validate).not.toHaveBeenCalled()
 	})
 })

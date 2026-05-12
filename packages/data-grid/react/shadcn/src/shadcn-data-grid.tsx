@@ -13,6 +13,7 @@ import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { DateField } from './blocks/DateField'
 import { EmptyState } from './blocks/EmptyState'
 import { FilterPopover } from './blocks/FilterPopover'
+import { FormShell } from './blocks/FormShell'
 import { LoadingRow } from './blocks/LoadingRow'
 import { Modal } from './blocks/Modal'
 import { NoResultsState } from './blocks/NoResultsState'
@@ -65,6 +66,7 @@ const SHADCN_COMPONENTS = {
 	NoResultsState,
 	ActionsCell,
 	CreatingActionsCell,
+	FormShell,
 	Chevron,
 }
 

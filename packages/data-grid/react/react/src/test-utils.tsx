@@ -241,7 +241,13 @@ function TestNoResultsState({ columnCount }: NoResultsStateProps) {
 	return <tr><td colSpan={columnCount}>No results</td></tr>
 }
 
+// Minimal FormShell stub (no chrome) — UI kits provide real implementations.
+function TestFormShell({ children }: { children?: ReactNode }) {
+	return <>{children}</>
+}
+
 export const testComponents: Required<GridComponents> = {
+	FormShell: TestFormShell,
 	Table: TestTable,
 	Thead: TestThead,
 	Tbody: TestTbody,

@@ -2,8 +2,9 @@
 
 import { SelectCellInput } from './SelectCellInput'
 
-import type { BadgeCellConfig, CellInputProps } from '@ez-kit/data-grid-react'
+import type { BadgeCellConfig, FieldState } from '@ez-kit/data-grid-react'
 
-export function BadgeCellInput(props: CellInputProps<BadgeCellConfig>) {
+/** Badge cell input on HeroUI v3 — same Select compound as SelectCellInput. */
+export function BadgeCellInput(props: FieldState<BadgeCellConfig>) {
 	return <SelectCellInput {...props} />
 }

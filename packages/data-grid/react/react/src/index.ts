@@ -52,10 +52,35 @@ export type { CellTypeDefinition, CellTypeRegistry, CellViewProps, CellInputProp
 export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
+// Validation API (re-export from core for convenience)
+export {
+	ValidationError,
+	isValidationError,
+	zodResolver,
+	createTypedDataGrid,
+} from '@ez-kit/data-grid-core'
+export type {
+	CommitStatus,
+	FieldState,
+	SaveContext,
+	TypedCreatingApi,
+	TypedCreatingState,
+	TypedDataTable,
+	TypedEditingApi,
+	TypedEditingState,
+	ValidateConfig,
+	ValidateContext,
+	ValidateOn,
+	ValidationErrors,
+	ValidationProblems,
+	ValidationResult,
+} from '@ez-kit/data-grid-core'
+
 // Types
 export type {
 	ActionsCellProps,
 	CreatingActionsCellProps,
+	FormShellProps,
 	BetweenInputProps,
 	ChevronProps,
 	ColPinSection,

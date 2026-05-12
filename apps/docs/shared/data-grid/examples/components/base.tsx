@@ -28,14 +28,12 @@ export function BaseExample() {
 			mode: 'row',
 			onSave: (rowId, values) => {
 				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
-				return true
 			},
 		},
 		creating: {
 			mode: 'pin-row',
 			onSave: (values) => {
 				setData((prev) => [...prev, values as User])
-				return true
 			},
 		},
 		deleting: {

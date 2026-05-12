@@ -48,6 +48,8 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 		size,
 		minSize,
 		maxSize,
+		validateOn,
+		validateDebounceMs,
 	} = def
 
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
@@ -57,9 +59,14 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 	if (filtering !== undefined) meta.filtering = filtering
 	if (editing !== undefined) meta.editing = editing
 	if (creating !== undefined) meta.creating = creating
-	if (cell?.type !== undefined) meta.cellType = cell.type
-	if (cell !== undefined && 'config' in cell && cell.config !== undefined) {
-		meta.config = cell.config as Record<string, unknown>
+	if (validateOn !== undefined) meta.validateOn = validateOn
+	if (validateDebounceMs !== undefined) meta.validateDebounceMs = validateDebounceMs
+	// Implicit cellType='text' when not provided so registry-driven form rendering
+	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
+	// 'text' as the no-op default, so this does not change view output.
+	meta.cellType = cell?.type ?? 'text'
+	if (cell !== undefined && 'config' in cell) {
+		meta.config = cell.config
 	}
 	const viewFn = cell?.component
 	if (viewFn !== undefined) meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown

@@ -5,34 +5,53 @@ import { useTableContext } from './table-context'
 
 /**
  * Modal for editing a row (editing.mode = 'modal').
- * Throws at render time if no Modal component is provided.
+ * Prefers <FormShell> (renders form-level error banner + pending Save) when
+ * registered; falls back to generic <Modal>. Throws if neither is provided.
  */
 export function EditingModal() {
 	const table = useTableContext()
-	const { Modal } = useGridComponents()
-	const isOpen = Boolean(table.getEditingState().editingRowId)
+	const { Modal, FormShell } = useGridComponents()
+	const state = table.editing.getState()
+	const isOpen = Boolean(state.rowId)
 
 	if (!isOpen) return null
 
-	// Modal may be overridden to undefined/null via components prop at runtime
+	const onSave = (): Promise<void> => table.editing.commit()
+	const onCancel = (): void => {
+		table.editing.cancel()
+	}
+
+	// FormShell may be overridden to undefined/null via components prop at runtime
+	const ShellComponent = FormShell as typeof FormShell | undefined
+	if (ShellComponent) {
+		return (
+			<ShellComponent
+				open={isOpen}
+				title='Edit'
+				formError={state.formError}
+				isPending={state.commitStatus !== 'idle'}
+				onSave={onSave}
+				onCancel={onCancel}
+			>
+				<AutoForm mode='editing' />
+			</ShellComponent>
+		)
+	}
+
 	const ModalComponent = Modal as typeof Modal | undefined
 	if (!ModalComponent) {
 		throw new Error(
-			'[@ez-kit/data-grid] editing.mode is "modal" but no Modal component was provided. ' +
-				'Pass a Modal component via <DataGrid components={{ Modal }}>.',
+			'[@ez-kit/data-grid] editing.mode is "modal" but no Modal or FormShell component was provided. ' +
+				'Pass a FormShell (preferred) or Modal via <DataGrid components={{ FormShell }}>.',
 		)
 	}
 
 	return (
 		<ModalComponent
 			open={isOpen}
-			onClose={() => {
-				table.cancelEditing()
-			}}
-			onSave={() => void table.commitEditing()}
-			onCancel={() => {
-				table.cancelEditing()
-			}}
+			onClose={onCancel}
+			onSave={() => void onSave()}
+			onCancel={onCancel}
 			title='Edit'
 		>
 			<AutoForm mode='editing' />

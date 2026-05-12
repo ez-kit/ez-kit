@@ -72,6 +72,30 @@
 		"exportName": "CreatingExample"
 	},
 	{
+		"id": "creating-validation",
+		"label": "Creating: Validation",
+		"group": "validation",
+		"groupLabel": "Validation",
+		"sourceFile": "components/creating/CreatingValidationExample.tsx",
+		"exportName": "CreatingValidationExample"
+	},
+	{
+		"id": "editing-validation",
+		"label": "Editing: Validation",
+		"group": "validation",
+		"groupLabel": "Validation",
+		"sourceFile": "components/editing/EditingValidationExample.tsx",
+		"exportName": "EditingValidationExample"
+	},
+	{
+		"id": "creating-typed",
+		"label": "Creating: Typed",
+		"group": "validation",
+		"groupLabel": "Validation",
+		"sourceFile": "components/creating/CreatingTypedExample.tsx",
+		"exportName": "CreatingTypedExample"
+	},
+	{
 		"id": "filter-popover",
 		"label": "Filter Popover",
 		"sourceFile": "components/filter-popover.tsx",

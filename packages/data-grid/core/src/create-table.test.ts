@@ -191,13 +191,13 @@ describe('createTable — pinning', () => {
 
 describe('createTable — creating / editing / deleting', () => {
 	it('creating config is stored in table options', () => {
-		const cfg = { onSave: () => true as const }
+		const cfg = { onSave: () => Promise.resolve() }
 		const table = createTable({ data: DATA, columns: COLUMNS, creating: cfg })
 		expect(table.options.creating).toBe(cfg)
 	})
 
 	it('editing config is stored in table options', () => {
-		const cfg = { mode: 'row' as const, onSave: () => true as const }
+		const cfg = { mode: 'row' as const, onSave: () => Promise.resolve() }
 		const table = createTable({ data: DATA, columns: COLUMNS, editing: cfg })
 		expect(table.options.editing).toBe(cfg)
 	})
@@ -250,7 +250,7 @@ describe('createTable — system columns', () => {
 	})
 
 	it('editing: true appends __actions__ column after user columns', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, editing: { mode: 'row', onSave: () => true } })
+		const table = createTable({ data: DATA, columns: COLUMNS, editing: { mode: 'row', onSave: () => Promise.resolve() } })
 		const ids = columnIds(table)
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
@@ -271,7 +271,7 @@ describe('createTable — system columns', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { mode: 'row', onSave: () => true },
+			editing: { mode: 'row', onSave: () => Promise.resolve() },
 			pinning: { row: { top: true } },
 		})
 		const ids = columnIds(table)
@@ -287,7 +287,7 @@ describe('createTable — system columns', () => {
 			columns: COLUMNS,
 			selection: true,
 			expanding: true,
-			editing: { mode: 'row', onSave: () => true },
+			editing: { mode: 'row', onSave: () => Promise.resolve() },
 			pinning: { row: { top: true } },
 		})
 		expect(columnIds(table)).toEqual([
@@ -317,7 +317,7 @@ describe('createTable — system columns', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { mode: 'row', onSave: () => true },
+			editing: { mode: 'row', onSave: () => Promise.resolve() },
 		})
 		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
 		expect(actionsCol?.columnDef.meta?.columnPinning).toEqual({ pin: 'right' })

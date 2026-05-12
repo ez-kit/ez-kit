@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo } from 'react'
 
 import { BUILT_IN_CELL_TYPES } from './built-in-cell-types'
 
+import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
@@ -13,6 +14,10 @@ export type CellViewProps<TConfig = unknown> = {
 	config?: TConfig
 }
 
+/**
+ * Loose input props for filter-mode renderers (no validation surface).
+ * For `edit` / `creating` modes, renderers receive the richer {@link FieldState}.
+ */
 export type CellInputProps<TConfig = unknown> = {
 	value: unknown
 	onChange: (value: unknown) => void
@@ -24,12 +29,20 @@ export type CellInputProps<TConfig = unknown> = {
 export type CellTypeDefinition<TConfig = unknown> = {
 	/** View-mode renderer. */
 	view?: (props: CellViewProps<TConfig>) => ReactNode
-	/** Edit-mode input. Falls back to `creating` when omitted. */
-	edit?: (props: CellInputProps<TConfig>) => ReactNode
-	/** Create-mode input. Falls back to `edit` when omitted. */
-	creating?: (props: CellInputProps<TConfig>) => ReactNode
-	/** Filter-mode input. Falls back to `edit` when omitted. */
-	filter?: (props: CellInputProps<TConfig>) => ReactNode
+	/**
+	 * Edit-mode input. Receives a {@link FieldState} with id/label/description/error/onBlur.
+	 * In inline contexts (cell-mode, creating-row, filter) `label`/`description` are
+	 * omitted so the composite can skip the corresponding chrome.
+	 * Falls back to `creating` when omitted.
+	 */
+	edit?: (props: FieldState<TConfig>) => ReactNode
+	/** Create-mode input. Same shape as `edit`. Falls back to `edit` when omitted. */
+	creating?: (props: FieldState<TConfig>) => ReactNode
+	/**
+	 * Filter-mode input. Receives a {@link FieldState} with `label`/`description`/`errors`
+	 * left empty (filters do not surface validation). Falls back to `edit` when omitted.
+	 */
+	filter?: (props: FieldState<TConfig>) => ReactNode
 	/** Default operator IDs for this cell type when `filtering.operators: true`. */
 	operators?: string[]
 	/** Default operator ID override for this cell type. */

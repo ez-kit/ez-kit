@@ -5,13 +5,24 @@ import { Check, Pencil, Trash2, X } from 'lucide-react'
 
 import type { ActionsCellProps } from '@ez-kit/data-grid-react'
 
-export function ActionsCell({ isEditing, editingMode, hasEditing, hasDeleting, onEdit, onDelete, onSave, onCancel }: ActionsCellProps) {
+export function ActionsCell({
+	isEditing,
+	editingMode,
+	hasEditing,
+	hasDeleting,
+	onEdit,
+	onDelete,
+	onSave,
+	onCancel,
+	isPending,
+}: ActionsCellProps) {
 	if (isEditing && editingMode !== 'modal') {
 		return (
 			<>
 				<Button
 					variant='ghost'
 					isIconOnly
+					isPending={isPending}
 					onPress={() => void onSave()}
 				>
 					<Check size={16} />

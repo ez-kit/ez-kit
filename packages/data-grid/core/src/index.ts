@@ -56,6 +56,36 @@ export type { ConfirmationOptions, DeletingConfig } from './features/deleting'
 export type { EditingConfig, EditingState } from './features/editing'
 export type { LoadingState } from './features/loading'
 
+// Validation API
+export {
+	ValidationError,
+	isValidationError,
+	zodResolver,
+} from './features/validation-types'
+
+// Typed wrapper for fully-typed creating/editing namespaces
+export {
+	createTypedDataGrid,
+} from './typed-data-grid'
+export type {
+	TypedCreatingApi,
+	TypedCreatingState,
+	TypedDataTable,
+	TypedEditingApi,
+	TypedEditingState,
+} from './typed-data-grid'
+export type {
+	CommitStatus,
+	FieldState,
+	SaveContext,
+	ValidateConfig,
+	ValidateContext,
+	ValidateOn,
+	ValidationErrors,
+	ValidationProblems,
+	ValidationResult,
+} from './features/validation-types'
+
 export type {
 	ColumnResizeDirection,
 	ColumnResizeMode,

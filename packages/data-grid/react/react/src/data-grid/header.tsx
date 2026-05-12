@@ -10,7 +10,7 @@ import { useTableContext } from './table-context'
 
 import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
 import type { BetweenInputProps, ColumnMenuSections, InputProps, OperatorSelectProps } from '../types'
-import type { BetweenValue, StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { BetweenValue, FieldState, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Header, ColumnMeta } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, KeyboardEvent, ReactNode } from 'react'
 
@@ -317,13 +317,19 @@ function renderFilterInput({
 			const def = cellTypes[meta.cellType]
 			const comp = def?.filter ?? def?.edit
 			if (comp) {
+				const field: FieldState = {
+					id: `filter-${header.column.id}`,
+					value: inputValue,
+					onChange: onValueChange,
+					onBlur: () => {},
+					...(meta.config !== undefined ? { config: meta.config } : {}),
+					error: undefined,
+					errors: [],
+					isValidating: false,
+				}
 				return (
 					<>
-						{comp({
-							value: inputValue,
-							onChange: onValueChange,
-							...(meta.config !== undefined ? { config: meta.config } : {}),
-						})}
+						{(comp as (p: FieldState) => ReactNode)(field)}
 						{operatorSelect}
 					</>
 				)
@@ -364,12 +370,19 @@ function renderFilterInput({
 	if (meta?.cellType) {
 		const def = cellTypes[meta.cellType]
 		const comp = def?.filter ?? def?.edit
-		if (comp)
-			return comp({
+		if (comp) {
+			const field: FieldState = {
+				id: `filter-${header.column.id}`,
 				value: filterValue,
 				onChange,
+				onBlur: () => {},
 				...(meta.config !== undefined ? { config: meta.config } : {}),
-			})
+				error: undefined,
+				errors: [],
+				isValidating: false,
+			}
+			return (comp as (p: FieldState) => ReactNode)(field)
+		}
 	}
 
 	return (

@@ -10,7 +10,8 @@ import { flexRender } from './flex-render'
 import { RowPinCell } from './row-pin-cell'
 import { useTableContext } from './table-context'
 
-import type { CellInputProps, CellTypeRegistry, CellViewProps } from '../cell-types-context'
+import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
+import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
 
@@ -24,9 +25,9 @@ type CellProps = {
 /**
  * Renders a single table body cell.
  * - System cells (selection / expand / actions) have dedicated renderers.
- * - In `editing.mode = 'cell'`: double-click enters edit mode, blur commits.
+ * - In `editing.mode = 'cell'`: double-click enters edit mode, blur commits the cell.
  * - Editing row (row/modal mode): renders an input instead of static value.
- * - Supports `cell.component`, `editing.component`, and `CellTypeRegistry` for DI.
+ * - Edit/creating renderers receive a {@link FieldState} with `error` / `errors` / `onBlur` / `isValidating`.
  */
 export function DataGridCell({ cell, row }: CellProps) {
 	const table = useTableContext()
@@ -96,29 +97,47 @@ export function DataGridCell({ cell, row }: CellProps) {
 	}
 
 	// ── cell editing mode ─────────────────────────────────────────────────────
-	const editingState = table.getEditingState()
+	const editingState = table.editing.getState()
 	const editMode = table.options.editing?.mode ?? 'row'
 	const cellId = `${row.id}_${columnId}`
-	const isEditingThisCell = editMode === 'cell' && editingState.editingCellId === cellId
+	const isEditingThisCell = editMode === 'cell' && editingState.cellId === cellId
+
+	const fieldErrors = editingState.errors[columnId] ?? []
+	const fieldError = fieldErrors[0]
+	const isValidating = editingState.commitStatus === 'validating'
 
 	if (isEditingThisCell) {
 		const editComp = resolveEditComponent(meta, cellTypes)
-		const value = editingState.editingValues[columnId]
-		const onChange = (v: unknown) => {
-			table.setEditingValue(columnId, v)
+		const value = editingState.values[columnId]
+		const onChange = (v: unknown): void => {
+			table.editing.setValue(columnId, v)
+		}
+		const fieldState: FieldState = {
+			id: cellId,
+			value,
+			onChange,
+			onBlur: () => void table.editing.commitCell(),
+			...(meta?.config !== undefined ? { config: meta.config } : {}),
+			error: fieldError,
+			errors: fieldErrors,
+			isValidating,
 		}
 		return (
-			<Td style={cellStyle} pinned={pinned}>
+			<Td
+				style={cellStyle}
+				pinned={pinned}
+				{...(fieldError ? { 'data-error': true } : {})}
+			>
 				{editComp ? (
-					editComp({ value, onChange, ...(meta?.config !== undefined ? { config: meta.config } : {}) })
+					editComp(fieldState)
 				) : (
 					<Input
 						autoFocus
 						value={(value ?? '') as string | number | readonly string[]}
 						onChange={(e) => {
-							table.setEditingValue(columnId, e.target.value)
+							table.editing.setValue(columnId, e.target.value)
 						}}
-						onBlur={() => void table.commitCellEditing()}
+						onBlur={fieldState.onBlur}
 					/>
 				)}
 			</Td>
@@ -126,24 +145,39 @@ export function DataGridCell({ cell, row }: CellProps) {
 	}
 
 	// ── row editing mode ──────────────────────────────────────────────────────
-	const isEditingRow = editMode === 'row' && editingState.editingRowId === row.id
+	const isEditingRow = editMode === 'row' && editingState.rowId === row.id
 
 	if (isEditingRow && meta?.editing !== false) {
 		const editComp = resolveEditComponent(meta, cellTypes)
-		const value = editingState.editingValues[columnId]
-		const onChange = (v: unknown) => {
-			table.setEditingValue(columnId, v)
+		const value = editingState.values[columnId]
+		const onChange = (v: unknown): void => {
+			table.editing.setValue(columnId, v)
+		}
+		const fieldState: FieldState = {
+			id: cellId,
+			value,
+			onChange,
+			onBlur: () => void table.editing.validateField(columnId),
+			...(meta?.config !== undefined ? { config: meta.config } : {}),
+			error: fieldError,
+			errors: fieldErrors,
+			isValidating,
 		}
 		return (
-			<Td style={cellStyle} pinned={pinned}>
+			<Td
+				style={cellStyle}
+				pinned={pinned}
+				{...(fieldError ? { 'data-error': true } : {})}
+			>
 				{editComp ? (
-					editComp({ value, onChange, ...(meta?.config !== undefined ? { config: meta.config } : {}) })
+					editComp(fieldState)
 				) : (
 					<Input
 						value={(value ?? '') as string | number | readonly string[]}
 						onChange={(e) => {
-							table.setEditingValue(columnId, e.target.value)
+							table.editing.setValue(columnId, e.target.value)
 						}}
+						onBlur={fieldState.onBlur}
 					/>
 				)}
 			</Td>
@@ -154,7 +188,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 	const handleDoubleClick =
 		editMode === 'cell'
 			? () => {
-					table.startCellEditing(row.id, columnId)
+					table.editing.startCell(row.id, columnId)
 				}
 			: undefined
 
@@ -183,12 +217,12 @@ export function DataGridCell({ cell, row }: CellProps) {
 function resolveEditComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
-): ((props: CellInputProps) => ReactNode) | undefined {
+): ((props: FieldState) => ReactNode) | undefined {
 	// 1. column-level editing.component
 	const editingConfig = meta?.editing
 	if (editingConfig !== false && editingConfig !== undefined) {
 		const comp = editingConfig.component
-		if (comp) return comp as (props: CellInputProps) => ReactNode
+		if (comp) return comp as (props: FieldState) => ReactNode
 	}
 	// 2. registry by cellType
 	if (meta?.cellType) {

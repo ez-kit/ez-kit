@@ -13,19 +13,22 @@ import { SortToolbarExample as Example8 } from '../components/sort-toolbar'
 import { FilterOperatorsExample as Example9 } from '../components/filter-operators'
 import { CrudExample as Example10 } from '../components/crud/CrudExample'
 import { CreatingExample as Example11 } from '../components/creating/CreatingExample'
-import { FilterPopoverExample as Example12 } from '../components/filter-popover'
-import { StickyHeaderExample as Example13 } from '../components/sticky-header'
-import { VirtualizedExample as Example14 } from '../components/virtualized'
-import { ResizingExample as Example15 } from '../components/resizing'
-import { CustomCellTypesExample as Example16 } from '../components/custom-cell-types'
-import { ColumnHelperBaseExample as Example17 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example18 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example19 } from '../components/column-helper'
-import { FallbacksExample as Example20 } from '../components/fallbacks'
-import { ControlledStateExample as Example21 } from '../components/controlled-state'
-import { ExpandingSubContentExample as Example22 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example23 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example24 } from '../components/expanding/controlled'
+import { CreatingValidationExample as Example12 } from '../components/creating/CreatingValidationExample'
+import { EditingValidationExample as Example13 } from '../components/editing/EditingValidationExample'
+import { CreatingTypedExample as Example14 } from '../components/creating/CreatingTypedExample'
+import { FilterPopoverExample as Example15 } from '../components/filter-popover'
+import { StickyHeaderExample as Example16 } from '../components/sticky-header'
+import { VirtualizedExample as Example17 } from '../components/virtualized'
+import { ResizingExample as Example18 } from '../components/resizing'
+import { CustomCellTypesExample as Example19 } from '../components/custom-cell-types'
+import { ColumnHelperBaseExample as Example20 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example21 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example22 } from '../components/column-helper'
+import { FallbacksExample as Example23 } from '../components/fallbacks'
+import { ControlledStateExample as Example24 } from '../components/controlled-state'
+import { ExpandingSubContentExample as Example25 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example26 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example27 } from '../components/expanding/controlled'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -100,6 +103,30 @@ export const dataGridExamplesManifest = [
     "label": "Creating",
     "sourceFile": "components/creating/CreatingExample.tsx",
     "exportName": "CreatingExample"
+  },
+  {
+    "id": "creating-validation",
+    "label": "Creating: Validation",
+    "group": "validation",
+    "groupLabel": "Validation",
+    "sourceFile": "components/creating/CreatingValidationExample.tsx",
+    "exportName": "CreatingValidationExample"
+  },
+  {
+    "id": "editing-validation",
+    "label": "Editing: Validation",
+    "group": "validation",
+    "groupLabel": "Validation",
+    "sourceFile": "components/editing/EditingValidationExample.tsx",
+    "exportName": "EditingValidationExample"
+  },
+  {
+    "id": "creating-typed",
+    "label": "Creating: Typed",
+    "group": "validation",
+    "groupLabel": "Validation",
+    "sourceFile": "components/creating/CreatingTypedExample.tsx",
+    "exportName": "CreatingTypedExample"
   },
   {
     "id": "filter-popover",
@@ -202,17 +229,20 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'filter-operators': Example9,
 	'crud': Example10,
 	'creating': Example11,
-	'filter-popover': Example12,
-	'sticky-header': Example13,
-	'virtualized': Example14,
-	'resizing': Example15,
-	'custom-cell-types': Example16,
-	'column-helper': Example17,
-	'column-helper-custom-view': Example18,
-	'column-helper-registered': Example19,
-	'fallbacks': Example20,
-	'controlled-state': Example21,
-	'expanding-sub-content': Example22,
-	'expanding-tree': Example23,
-	'expanding-controlled': Example24,
+	'creating-validation': Example12,
+	'editing-validation': Example13,
+	'creating-typed': Example14,
+	'filter-popover': Example15,
+	'sticky-header': Example16,
+	'virtualized': Example17,
+	'resizing': Example18,
+	'custom-cell-types': Example19,
+	'column-helper': Example20,
+	'column-helper-custom-view': Example21,
+	'column-helper-registered': Example22,
+	'fallbacks': Example23,
+	'controlled-state': Example24,
+	'expanding-sub-content': Example25,
+	'expanding-tree': Example26,
+	'expanding-controlled': Example27,
 }

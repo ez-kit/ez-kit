@@ -13,6 +13,7 @@ import type {
 	DateFieldProps,
 	EmptyStateProps,
 	FilterPopoverProps,
+	FormShellProps,
 	GridComponents,
 	InputProps,
 	LoadingRowProps,
@@ -529,7 +530,9 @@ function NativeSortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortMe
 				<div key={item.columnId}>
 					<select
 						value={item.columnId}
-						onChange={(event) => item.onChangeColumn(event.target.value)}
+						onChange={(event) => {
+							item.onChangeColumn(event.target.value)
+						}}
 					>
 						{item.availableColumns.map((column) => (
 							<option key={column.id} value={column.id}>
@@ -539,7 +542,9 @@ function NativeSortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortMe
 					</select>
 					<select
 						value={item.direction}
-						onChange={(event) => item.onChangeDirection(event.target.value as 'asc' | 'desc')}
+						onChange={(event) => {
+							item.onChangeDirection(event.target.value as 'asc' | 'desc')
+						}}
 					>
 						<option value='asc'>Ascending</option>
 						<option value='desc'>Descending</option>
@@ -583,11 +588,22 @@ function NativeNoResultsState({ columnCount }: NoResultsStateProps) {
 	)
 }
 
-function NativeActionsCell({ isEditing, hasEditing, hasDeleting, onEdit, onDelete, onSave, onCancel }: ActionsCellProps) {
+function NativeActionsCell({
+	isEditing,
+	hasEditing,
+	hasDeleting,
+	onEdit,
+	onDelete,
+	onSave,
+	onCancel,
+	isPending,
+}: ActionsCellProps) {
 	if (isEditing) {
 		return (
 			<>
-				<button type='button' onClick={() => void onSave()}>Save</button>
+				<button type='button' onClick={() => void onSave()} disabled={isPending}>
+					{isPending ? 'Saving…' : 'Save'}
+				</button>
 				<button type='button' onClick={onCancel}>Cancel</button>
 			</>
 		)
@@ -600,12 +616,35 @@ function NativeActionsCell({ isEditing, hasEditing, hasDeleting, onEdit, onDelet
 	)
 }
 
-function NativeCreatingActionsCell({ onSave, onCancel }: CreatingActionsCellProps) {
+function NativeCreatingActionsCell({ onSave, onCancel, isPending }: CreatingActionsCellProps) {
 	return (
 		<>
-			<button type='button' onClick={() => void onSave()}>Save</button>
+			<button type='button' onClick={() => void onSave()} disabled={isPending}>
+				{isPending ? 'Saving…' : 'Save'}
+			</button>
 			<button type='button' onClick={onCancel}>Cancel</button>
 		</>
+	)
+}
+
+function NativeFormShell({ open, title, formError, isPending, onSave, onCancel, children }: FormShellProps) {
+	if (!open) return null
+	return (
+		<dialog open>
+			<header>{title}</header>
+			{formError ? (
+				<p role='alert' style={{ color: 'crimson' }}>
+					{formError}
+				</p>
+			) : null}
+			{children}
+			<footer>
+				<button type='button' onClick={onCancel}>Cancel</button>
+				<button type='button' onClick={() => void onSave()} disabled={isPending}>
+					{isPending ? 'Saving…' : 'Save'}
+				</button>
+			</footer>
+		</dialog>
 	)
 }
 
@@ -649,5 +688,6 @@ export const nativeComponents: Required<GridComponents> = {
 	NoResultsState: NativeNoResultsState,
 	ActionsCell: NativeActionsCell,
 	CreatingActionsCell: NativeCreatingActionsCell,
+	FormShell: NativeFormShell,
 	Chevron: NativeChevron,
 }

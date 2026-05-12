@@ -18,14 +18,12 @@ export function CreatingPinRowExample() {
 			mode: 'pin-row',
 			onSave: (values) => {
 				setData((prev) => [...prev, { id: Date.now(), ...values } as User])
-				return true
 			},
 		},
 		editing: {
 			mode: 'row',
 			onSave: (rowId, values) => {
 				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
-				return true
 			},
 		},
 		deleting: {

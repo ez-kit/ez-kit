@@ -14,6 +14,7 @@ import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { DateField } from './blocks/DateField'
 import { EmptyState } from './blocks/EmptyState'
 import { FilterPopover } from './blocks/FilterPopover'
+import { FormShell } from './blocks/FormShell'
 import { HEROUI_CELL_TYPES } from './blocks/heroui-cell-types'
 import { Input } from './blocks/Input'
 import { LoadingRow } from './blocks/LoadingRow'
@@ -66,6 +67,7 @@ const HEROUI_COMPONENTS = {
 	ActionsCell,
 	Chevron,
 	CreatingActionsCell,
+	FormShell,
 }
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({

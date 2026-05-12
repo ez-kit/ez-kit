@@ -21,11 +21,15 @@ export function CrudClientExample() {
 		selection: true,
 		creating: {
 			mode: 'row',
-			onSave: (values) => add(values),
+			onSave: (values) => {
+				add(values)
+			},
 		},
 		editing: {
 			mode: 'row',
-			onSave: (rowId, values) => update(Number(rowId), values),
+			onSave: (rowId, values) => {
+				update(Number(rowId), values)
+			},
 		},
 		deleting: {
 			onDelete: (row) => {

@@ -43,14 +43,14 @@ describe('useDataGrid', () => {
 			useDataGrid({
 				data: USERS,
 				columns: COLUMNS,
-				creating: { onSave: () => true },
+				creating: { onSave: () => Promise.resolve() },
 			}),
 		)
-		expect(result.current.getCreatingState().isCreating).toBe(false)
+		expect(result.current.creating.getState().isOpen).toBe(false)
 		act(() => {
-			result.current.startCreating()
+			result.current.creating.start()
 		})
-		expect(result.current.getCreatingState().isCreating).toBe(true)
+		expect(result.current.creating.getState().isOpen).toBe(true)
 	})
 
 	it('syncs loading state', () => {
@@ -161,10 +161,10 @@ describe('useDataGrid — controlled state', () => {
 	it('calls onStateChange when table state changes', () => {
 		const onStateChange = vi.fn()
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => true }, onStateChange }),
+			useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => Promise.resolve() }, onStateChange }),
 		)
 		act(() => {
-			result.current.startCreating()
+			result.current.creating.start()
 		})
 		expect(onStateChange).toHaveBeenCalled()
 	})
@@ -174,12 +174,12 @@ describe('useDataGrid — controlled state', () => {
 		const second = vi.fn()
 		const { result, rerender } = renderHook(
 			({ cb }: { cb: typeof first }) =>
-				useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => true }, onStateChange: cb }),
+				useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => Promise.resolve() }, onStateChange: cb }),
 			{ initialProps: { cb: first } },
 		)
 		rerender({ cb: second })
 		act(() => {
-			result.current.startCreating()
+			result.current.creating.start()
 		})
 		expect(first).not.toHaveBeenCalled()
 		expect(second).toHaveBeenCalled()

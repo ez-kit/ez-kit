@@ -51,7 +51,7 @@ export function Body() {
 
 	const creatingConfig = table.options.creating
 	const creatingMode = creatingConfig?.mode ?? 'row'
-	const isCreating = table.getCreatingState().isCreating
+	const isCreating = table.creating.getState().isOpen
 	const showCreatingRow =
 		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreating))
 

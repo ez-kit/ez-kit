@@ -17,6 +17,8 @@ export type CreatingActionsCellProps = {
 	onSave: () => Promise<void>
 	onCancel: () => void
 	isPinRow: boolean
+	/** True while a commit is in flight (`commitStatus !== 'idle'`). */
+	isPending: boolean
 }
 
 export type ActionsCellProps = {
@@ -31,6 +33,8 @@ export type ActionsCellProps = {
 	onDelete: () => void
 	onSave: () => Promise<void>
 	onCancel: () => void
+	/** True while an editing commit is in flight (`commitStatus !== 'idle'`). */
+	isPending: boolean
 }
 
 // ── primitive component props ─────────────────────────────────────────────
@@ -55,6 +59,7 @@ export type CheckboxProps = {
 export type NumberInputProps = {
 	value?: number | undefined
 	onChange?: (value: number | undefined) => void
+	onBlur?: () => void
 }
 
 export type DateFieldProps = {
@@ -215,6 +220,22 @@ export type ConfirmDialogProps = {
 	onCancel: () => void
 }
 
+/**
+ * Form shell — unified slot for `creating` / `editing` modal forms.
+ * Owns the modal chrome, form-level error banner, action buttons, and pending state.
+ * Body content (`children`) is the `<AutoForm>`-style field list rendered by the data-grid layer.
+ */
+export type FormShellProps = {
+	open: boolean
+	title: string
+	formError: string | null
+	/** True while validate or onSave is in flight (`commitStatus !== 'idle'`). */
+	isPending: boolean
+	onSave: () => Promise<void>
+	onCancel: () => void
+	children: ReactNode
+}
+
 export type LoadingRowProps = {
 	columnCount: number
 }
@@ -300,6 +321,8 @@ export type GridComponents = {
 	// row actions
 	ActionsCell?: ComponentType<ActionsCellProps>
 	CreatingActionsCell?: ComponentType<CreatingActionsCellProps>
+	// form shell (creating / editing modal)
+	FormShell?: ComponentType<FormShellProps>
 	// expand
 	Chevron?: ComponentType<ChevronProps>
 }

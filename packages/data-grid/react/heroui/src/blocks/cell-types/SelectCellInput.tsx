@@ -1,26 +1,42 @@
 'use client'
 
-import { ListBox, Select } from '@heroui/react'
+import { Description, FieldError, Label, ListBox, Select } from '@heroui/react'
 
-import type { CellInputProps, SelectCellConfig } from '@ez-kit/data-grid-react'
+import type { FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
 
 const ALL_SENTINEL = '__all__'
 
-export function SelectCellInput({ value, onChange, config }: CellInputProps<SelectCellConfig>) {
+/**
+ * Select / Badge cell input on HeroUI v3. Wraps `<Select>` (always rendered);
+ * Label/Description/FieldError appear only when their data is set.
+ */
+export function SelectCellInput({
+	id,
+	value,
+	onChange,
+	onBlur,
+	config,
+	label,
+	description,
+	errors,
+}: FieldState<SelectCellConfig>) {
+	const hasError = errors.length > 0
 	const items = config?.items ?? []
 	const selectValue = value != null && value !== '' ? String(value) : ALL_SENTINEL
-
 	return (
 		<Select
 			// eslint-disable-next-line @typescript-eslint/no-deprecated
 			selectedKey={selectValue}
-			aria-label='Select value'
+			isInvalid={hasError}
+			aria-label={label ?? 'Select value'}
 			// eslint-disable-next-line @typescript-eslint/no-deprecated
 			onSelectionChange={(key) => {
 				if (key != null) onChange(String(key) === ALL_SENTINEL ? undefined : String(key))
 			}}
+			onBlur={onBlur}
 		>
-			<Select.Trigger>
+			{label !== undefined && <Label htmlFor={id}>{label}</Label>}
+			<Select.Trigger id={id}>
 				<Select.Value />
 			</Select.Trigger>
 			<Select.Popover>
@@ -42,6 +58,8 @@ export function SelectCellInput({ value, onChange, config }: CellInputProps<Sele
 					))}
 				</ListBox>
 			</Select.Popover>
+			{description !== undefined && <Description>{description}</Description>}
+			{hasError && <FieldError>{errors[0]}</FieldError>}
 		</Select>
 	)
 }

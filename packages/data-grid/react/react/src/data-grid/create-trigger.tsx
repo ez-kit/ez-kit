@@ -16,7 +16,7 @@ export function CreateTrigger({ children }: CreateTriggerProps) {
 	const table = useTableContext()
 	const { Button } = useGridComponents()
 	const handleClick = (): void => {
-		table.startCreating()
+		table.creating.start()
 	}
 
 	return (

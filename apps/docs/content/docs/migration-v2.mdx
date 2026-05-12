@@ -1,0 +1,287 @@
+---
+title: Migration to v2
+description: Upgrade guide for @ez-kit/data-grid v2 — validation, namespaced API, FieldState
+---
+
+v2 introduces first-class validation and a redesigned `creating` / `editing` surface.
+This guide covers the breaking changes and the minimum work needed to upgrade.
+
+## TL;DR
+
+- `onSave` returns `Promise<void>`, no longer `boolean | Promise<boolean>`.
+- `table.startCreating()` / `table.commitEditing()` / etc. are now grouped
+  under `table.creating.*` / `table.editing.*`.
+- Custom cell renderers receive `FieldState` (not `CellInputProps`).
+- Validate config is new: `validate?: ValidateConfig<TData>`.
+- Errors / form-level errors / pending state are first-class on the namespace.
+
+## API renames
+
+| v1 | v2 |
+| --- | --- |
+| `table.startCreating()` | `table.creating.start()` |
+| `table.cancelCreating()` | `table.creating.cancel()` |
+| `table.commitCreating()` | `table.creating.commit()` |
+| `table.setCreatingValue(k, v)` | `table.creating.setValue(k, v)` |
+| `table.getCreatingState().isCreating` | `table.creating.getState().isOpen` |
+| `table.getCreatingState().creatingValues` | `table.creating.getState().values` |
+| `table.startEditing(rowId)` | `table.editing.start(rowId)` |
+| `table.cancelEditing()` | `table.editing.cancel()` |
+| `table.commitEditing()` | `table.editing.commit()` |
+| `table.setEditingValue(k, v)` | `table.editing.setValue(k, v)` |
+| `table.getEditingState().editingRowId` | `table.editing.getState().rowId` |
+| `table.getEditingState().editingValues` | `table.editing.getState().values` |
+| `table.getEditingState().editingCellId` | `table.editing.getState().cellId` |
+| `table.startCellEditing(rowId, columnId)` | `table.editing.startCell(rowId, columnId)` |
+| `table.commitCellEditing()` | `table.editing.commitCell()` |
+
+## `onSave` signature
+
+v1:
+
+```ts
+creating: {
+  onSave: (values) => {
+    // ... mutate state ...
+    return true // or Promise<boolean>
+  },
+},
+```
+
+v2 — return nothing for the success path. Boolean return is gone; throw
+`ValidationError` to surface failures, throw any other `Error` for unexpected
+failures (the form shows a generic banner and re-throws).
+
+Sync handler — return nothing:
+
+```ts
+creating: {
+  onSave: (values) => {
+    setData((prev) => [...prev, values])
+  },
+},
+```
+
+Async handler — return a `Promise<void>` (or use `async`):
+
+```ts
+creating: {
+  onSave: async (values, { signal }) => {
+    await api.create(values, { signal })
+    if (emailIsTaken(values.email)) {
+      throw new ValidationError({ errors: { email: ['already taken'] } })
+    }
+  },
+},
+```
+
+The `ctx.signal` is aborted when the user cancels or starts a new commit.
+Forward it to `fetch`, TanStack Query, or any async work that should be cancellable.
+
+## Validation
+
+`validate` accepts either a function or a zod-shorthand:
+
+```ts
+import { z } from 'zod'
+
+const schema = z.object({
+  email: z.email('must be a valid email'),
+  age: z.number().int().min(18, 'must be 18 or older'),
+})
+
+creating: {
+  validate: { schema },                 // shorthand
+  // or:
+  validate: (values, ctx) => ({ errors: { ... } }) | null | Promise<...>,
+  validateOn: 'submit',                 // default
+  onSave: async (values) => { ... },
+}
+```
+
+Per-column overrides:
+
+```ts
+defineColumns<User>([
+  { accessorKey: 'email', validateOn: 'change', validateDebounceMs: 300 },
+  { accessorKey: 'name' },
+])
+```
+
+## State machine
+
+The boolean `isCreating` flag and ad-hoc pending state are replaced by:
+
+```ts
+type CommitStatus = 'idle' | 'validating' | 'saving'
+```
+
+Save / Cancel UI components should disable interactions while `commitStatus !== 'idle'`.
+
+State shape:
+
+```ts
+type CreatingState = {
+  isOpen: boolean
+  values: Partial<TData>
+  errors: Record<string, string[]>      // keyed by columnId, multi-message
+  formError: string | null
+  commitStatus: CommitStatus
+}
+```
+
+`EditingState` is symmetric and adds `rowId` / `cellId`.
+
+## `FieldState` (replaces `CellInputProps`)
+
+Custom `edit` / `creating` / `filter` renderers now receive:
+
+```ts
+type FieldState<TConfig = unknown> = {
+  id: string                            // stable id for htmlFor / aria
+  value: unknown
+  onChange: (v: unknown) => void
+  onBlur: () => void                    // triggers blur-mode validation
+  config?: TConfig
+  label?: string                        // form-context only (modal/row)
+  description?: string                  // form-context only — column.creating/editing.description
+  error: string | undefined             // first message
+  errors: string[]                      // all messages
+  isValidating: boolean
+}
+```
+
+`label` and `description` are populated only in form contexts (creating modal,
+editing modal). Inline contexts (cell-mode editing, creating-row, filter
+header) leave them `undefined` so composite renderers can omit the
+corresponding chrome.
+
+`CellInputProps` is still exported but is now structurally a subset of
+`FieldState`; existing filter renderers continue to work without changes.
+
+## Custom cell types: composite mode
+
+Built-in cell types (text / number / boolean / select / badge / image / link /
+progress) are now **composite Field shells** — they wrap the input in the
+kit's idiomatic Field primitives and consume `field.label` / `field.description`
+/ `field.errors` directly.
+
+shadcn:
+
+```tsx
+import { Field, FieldLabel, FieldDescription, FieldError } from '@grid-shadcn/components/ui/field'
+import { Input } from '@grid-shadcn/components/ui/input'
+
+export function MyTextCellInput({ id, value, onChange, onBlur, label, description, errors }) {
+  const hasError = errors.length > 0
+  return (
+    <Field data-error={hasError || undefined}>
+      {label !== undefined && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
+      <Input id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} />
+      {description !== undefined && <FieldDescription>{description}</FieldDescription>}
+      {hasError && <FieldError errors={errors.map((m) => ({ message: m }))} />}
+    </Field>
+  )
+}
+```
+
+HeroUI:
+
+```tsx
+import { Description, FieldError, Input, Label, TextField } from '@heroui/react'
+
+export function MyTextCellInput({ id, value, onChange, onBlur, label, description, errors }) {
+  const hasError = errors.length > 0
+  return (
+    <TextField isInvalid={hasError}>
+      {label !== undefined && <Label htmlFor={id}>{label}</Label>}
+      <Input id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} />
+      {description !== undefined && <Description>{description}</Description>}
+      {hasError && <FieldError>{errors[0]}</FieldError>}
+    </TextField>
+  )
+}
+```
+
+The same component is used for cell-mode editing, creating-row, and filter:
+those contexts pass `label === undefined`, so the wrapper still renders but
+the `<FieldLabel>` / `<Description>` / `<FieldError>` slots stay empty.
+
+Existing user-defined cell types that just render a bare input keep working
+unchanged — they simply will not show a label automatically. Opt in by
+reading `field.label` / `field.description` / `field.errors` as above.
+
+## `column.creating.description` / `column.editing.description`
+
+Add help text under inputs in form contexts. Description is **mode-scoped** —
+creating and editing forms can show different copy:
+
+```ts
+defineColumns<User>([
+  {
+    accessorKey: 'email',
+    header: 'Email',
+    creating: { description: 'Used for login and notifications' },
+    editing: { description: 'Email change requires re-verification' },
+  },
+])
+```
+
+Inline contexts (cell-mode editing, creating-row, filter header) ignore it.
+
+## Modal — replaced by `<FormShell>`
+
+v1 had `creating-modal.tsx` / `editing-modal.tsx` rendering a generic `<Modal>`.
+v2 introduces `<FormShell>` as a registered UI component (shadcn / heroui /
+native ship implementations). `FormShell` owns the modal chrome, the form-error
+banner, and the pending Save button.
+
+If you customise `<Modal>` directly, add a `FormShell` entry to your
+`createDataGrid({ components })` call. The base `Modal` continues to work for
+non-form modals.
+
+## Typed wrapper
+
+For projects that want fully-typed `creating` / `editing` namespaces:
+
+```ts
+import { createTypedDataGrid } from '@ez-kit/data-grid-react'
+
+const grid = createTypedDataGrid<User>().create({
+  data,
+  columns,
+  creating: { onSave: async (values) => { ... } },
+})
+
+grid.creating.setValue('name', 'Alice')           // ok
+grid.creating.setValue('emial', 'a@b.co')         // type error
+grid.creating.getState().values.email             // typed string | undefined
+```
+
+## Removed
+
+- `getCreatingState()` / `getEditingState()` top-level methods (replaced by
+  `creating.getState()` / `editing.getState()`).
+- `CellInputProps` for `edit` / `creating` registry slots — replaced by
+  `FieldState`. The type alias is still exported for filter-mode renderers.
+
+## Smallest possible upgrade
+
+```diff
+ creating: {
+   onSave: (values) => {
+     setData((prev) => [...prev, { id: Date.now(), ...values }])
+-    return true
+   },
+ },
+```
+
+```diff
+-table.startCreating()
++table.creating.start()
+```
+
+```diff
+-table.getCreatingState().isCreating
++table.creating.getState().isOpen
+```

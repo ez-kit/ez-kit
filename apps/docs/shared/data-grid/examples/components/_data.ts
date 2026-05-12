@@ -120,7 +120,12 @@ export const INITIAL_DATA: User[] = [
 
 export const columns = defineColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
-	{ accessorKey: 'email', header: 'Email' },
+	{
+		accessorKey: 'email',
+		header: 'Email',
+		creating: { description: 'Used for login and notifications' },
+		editing: { description: 'Email change requires re-verification' },
+	},
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
 	{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } },
 ])

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { BetweenOperatorConfig, ColumnOperatorsConfig, FilterOperatorDef } from '../features/operators'
+import type { FieldState, ValidateOn } from '../features/validation-types'
 import type { ColumnDef as TableCoreColumnDef, ColumnMeta as TableCoreColumnMeta, RowData } from '@tanstack/table-core'
 
 export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCoreColumnDef<TRow, TValue> & {
@@ -124,13 +125,30 @@ export type ColumnFilteringConfig = {
 }
 
 export type ColumnEditingConfig = {
-	/** Custom edit input component for this column. */
-	component?: (props: InputComponentProps) => unknown
+	/**
+	 * Custom edit input component for this column.
+	 * Receives a {@link FieldState} with `value`, `onChange`, `onBlur`, `error`, `errors`, `isValidating`, `config`.
+	 */
+	component?: (props: FieldState) => unknown
+	/**
+	 * Help text rendered under the input in the edit form.
+	 * Forwarded to `FieldState.description` so composite cell types can show it
+	 * via the kit's `<FieldDescription>` / `<Description>` slot.
+	 */
+	description?: string
 }
 
 export type ColumnCreatingConfig = {
-	/** Custom create input component for this column. Falls back to `editing.component` when omitted. */
-	component?: (props: InputComponentProps) => unknown
+	/**
+	 * Custom create input component for this column. Falls back to `editing.component` when omitted.
+	 * Receives a {@link FieldState} with the same shape as {@link ColumnEditingConfig.component}.
+	 */
+	component?: (props: FieldState) => unknown
+	/**
+	 * Help text rendered under the input in the create form.
+	 * Forwarded to `FieldState.description`.
+	 */
+	description?: string
 }
 
 export type ColumnPinningDef = {
@@ -184,6 +202,17 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	/** Column-level creating config. Set to false to disable. */
 	creating?: false | ColumnCreatingConfig
 
+	/**
+	 * Override the global `creating.validateOn` / `editing.validateOn` for this column.
+	 * Useful for per-field UX (e.g. email validates onBlur, password onChange for live strength meter).
+	 */
+	validateOn?: ValidateOn
+	/**
+	 * Override the global `creating.validateDebounceMs` / `editing.validateDebounceMs` for this column.
+	 * Applies only when the resolved `validateOn` is `'change'`.
+	 */
+	validateDebounceMs?: number
+
 	// Pass-through TanStack options
 	enableSorting?: boolean
 	enableColumnFilter?: boolean
@@ -216,5 +245,9 @@ declare module '@tanstack/table-core' {
 		betweenOperatorConfig?: BetweenOperatorConfig
 		/** Default operator ID for this column (derived from config or cell type default). */
 		defaultOperatorId?: string
+		/** Per-column override for the global creating/editing `validateOn`. */
+		validateOn?: ValidateOn
+		/** Per-column override for the global creating/editing `validateDebounceMs`. */
+		validateDebounceMs?: number
 	}
 }

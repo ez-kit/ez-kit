@@ -281,6 +281,15 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		}))
 	}
 
+	// Re-sync feature configs every render so callbacks (e.g. creating.onSave)
+	// see the latest captured props/state instead of the closure from first mount.
+	tableRef.current.setOptions((prev) => ({
+		...prev,
+		...(config.creating !== undefined ? { creating: config.creating } : {}),
+		...(config.editing !== undefined ? { editing: config.editing } : {}),
+		...(config.deleting !== undefined ? { deleting: config.deleting } : {}),
+	}))
+
 	// Store cellTypes on the table instance so DataGrid can read without an extra prop
 	const cellTypesRef = useRef(cellTypes)
 	cellTypesRef.current = cellTypes

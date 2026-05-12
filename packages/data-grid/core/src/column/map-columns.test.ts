@@ -56,6 +56,29 @@ describe('mapColumns', () => {
 		expect(result[0]?.meta?.cellType).toBe('number')
 	})
 
+	it('defaults meta.cellType to "text" when cell.type is omitted', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name' }])
+		expect(result[0]?.meta?.cellType).toBe('text')
+	})
+
+	it('forwards creating.description to meta.creating.description', () => {
+		const result = mapColumns<Row>([
+			{ accessorKey: 'name', creating: { description: 'Choose a unique name' } },
+		])
+		const created = result[0]?.meta?.creating
+		const description = created !== false ? created?.description : undefined
+		expect(description).toBe('Choose a unique name')
+	})
+
+	it('forwards editing.description to meta.editing.description', () => {
+		const result = mapColumns<Row>([
+			{ accessorKey: 'name', editing: { description: 'Cannot be changed once saved' } },
+		])
+		const edited = result[0]?.meta?.editing
+		const description = edited !== false ? edited?.description : undefined
+		expect(description).toBe('Cannot be changed once saved')
+	})
+
 	it('maps nested column groups', () => {
 		const defs: ColumnDef<Row>[] = [
 			{

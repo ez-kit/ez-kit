@@ -123,40 +123,40 @@ describe('<DataGrid>', () => {
 	})
 
 	it('renders "+ Add" button when creating is enabled', () => {
-		const table = makeTable({ creating: { onSave: () => true } })
+		const table = makeTable({ creating: { onSave: () => Promise.resolve() } })
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getByText('+ Add')).toBeInTheDocument()
 	})
 
 	it('does not render "+ Add" button when creating.mode is "pin-row"', () => {
-		const table = makeTable({ creating: { mode: 'pin-row', onSave: () => true } })
+		const table = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.queryByText('+ Add')).toBeNull()
 	})
 
 	it('renders creating row without "+ Add" button when mode is "pin-row"', () => {
-		const table = makeTable({ creating: { mode: 'pin-row', onSave: () => true } })
+		const table = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.queryByText('+ Add')).toBeNull()
 		// pin-row always renders creating row inputs
 		expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0)
 	})
 
-	it('shows creating row inputs when startCreating is called', () => {
-		const table = makeTable({ creating: { mode: 'row', onSave: () => true } })
+	it('shows creating row inputs when creating.start() is called', () => {
+		const table = makeTable({ creating: { mode: 'row', onSave: () => Promise.resolve() } })
 		const { rerender } = renderWithComponents(<DataGrid table={table} />)
-		// Before startCreating there should be no inputs
+		// Before creating.start() there should be no inputs
 		expect(screen.queryAllByRole('textbox')).toHaveLength(0)
 		act(() => {
-			table.startCreating()
+			table.creating.start()
 		})
 		rerender(<DataGrid table={table} />)
-		// After startCreating, input cells should appear for each non-system column
+		// After creating.start(), input cells should appear for each non-system column
 		expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0)
 	})
 
 	it('renders Edit button in row editing mode', () => {
-		const table = makeTable({ editing: { mode: 'row', onSave: () => true } })
+		const table = makeTable({ editing: { mode: 'row', onSave: () => Promise.resolve() } })
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getAllByText('Edit')).toHaveLength(USERS.length)
 	})
@@ -347,7 +347,7 @@ describe('<DataGrid>', () => {
 		const table = createTable<User>({
 			data: USERS,
 			columns: cols,
-			creating: { mode: 'row', onSave: () => true },
+			creating: { mode: 'row', onSave: () => Promise.resolve() },
 		})
 		const { rerender } = renderWithComponents(
 			<DataGrid
@@ -356,7 +356,7 @@ describe('<DataGrid>', () => {
 			/>,
 		)
 		act(() => {
-			table.startCreating()
+			table.creating.start()
 		})
 		rerender(
 			<DataGrid

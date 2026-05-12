@@ -155,7 +155,7 @@ let nextId = INITIAL_EMPLOYEES.length + 1
 export function useEmployeeStore() {
 	const [data, setData] = useState(INITIAL_EMPLOYEES)
 
-	const add = useCallback((values: Partial<Employee>): boolean => {
+	const add = useCallback((values: Partial<Employee>): void => {
 		const employee: Employee = {
 			id: nextId++,
 			name: values.name ?? '',
@@ -166,12 +166,10 @@ export function useEmployeeStore() {
 			active: values.active ?? true,
 		}
 		setData((prev) => [...prev, employee])
-		return true
 	}, [])
 
-	const update = useCallback((id: number, values: Partial<Employee>): boolean => {
+	const update = useCallback((id: number, values: Partial<Employee>): void => {
 		setData((prev) => prev.map((emp) => (emp.id === id ? { ...emp, ...values } : emp)))
-		return true
 	}, [])
 
 	const remove = useCallback((id: number) => {

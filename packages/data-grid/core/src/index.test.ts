@@ -79,14 +79,14 @@ describe('@ez-kit/data-grid-core', () => {
 		const table = createTable({
 			data: USERS,
 			columns: defineColumns<User>([{ accessorKey: 'name' }]),
-			creating: { onSave: () => true },
+			creating: { onSave: () => Promise.resolve() },
 		})
 		const snap1 = table.getSnapshot()
 		let fired = false
 		table.subscribe(() => {
 			fired = true
 		})
-		table.startCreating()
+		table.creating.start()
 		expect(fired).toBe(true)
 		expect(table.getSnapshot()).not.toBe(snap1)
 	})
