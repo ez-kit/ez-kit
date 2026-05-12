@@ -187,20 +187,24 @@ function ActionBar(props: ActionBarProps) {
 
 	const isHorizontal = orientation === 'horizontal'
 
+	const rootClassName = [
+		'fixed',
+		'z-50',
+		'flex',
+		isHorizontal ? 'flex-row items-center gap-2 py-1.5 px-2' : 'flex-col items-start gap-2 px-1.5 py-2',
+		'rounded-[var(--heroui-radius-large,12px)]',
+		'text-[hsl(var(--heroui-foreground))]',
+		'border',
+		'border-solid',
+		'border-[hsl(var(--heroui-divider))]',
+		'shadow-[0_10px_15px_-3px_rgb(0_0_0_/_0.1),0_4px_6px_-4px_rgb(0_0_0_/_0.1)]',
+		'outline-none',
+		rootProps?.className,
+	]
+		.filter(Boolean)
+		.join(' ')
+
 	const rootStyle: React.CSSProperties = {
-		position: 'fixed',
-		zIndex: 50,
-		display: 'flex',
-		flexDirection: isHorizontal ? 'row' : 'column',
-		alignItems: isHorizontal ? 'center' : 'flex-start',
-		gap: '0.5rem',
-		padding: isHorizontal ? '0.375rem 0.5rem' : '0.5rem 0.375rem',
-		borderRadius: 'var(--heroui-radius-large, 12px)',
-		background: 'hsl(var(--heroui-content1))',
-		color: 'hsl(var(--heroui-foreground))',
-		border: '1px solid hsl(var(--heroui-divider))',
-		boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-		outline: 'none',
 		[side]: `${String(sideOffset)}px`,
 		...(align === 'center' && {
 			left: '50%',
@@ -225,6 +229,7 @@ function ActionBar(props: ActionBarProps) {
 					dir={dir}
 					{...rootProps}
 					ref={composedRef}
+					className={rootClassName}
 					style={rootStyle}
 				/>,
 				portalContainer,
@@ -257,14 +262,7 @@ function ActionBarSelection(props: DivProps) {
 }
 
 function ActionBarGroup(props: DivProps) {
-	const {
-		onBlur: onBlurProp,
-		onFocus: onFocusProp,
-		onMouseDown: onMouseDownProp,
-		style,
-		ref,
-		...groupProps
-	} = props
+	const { onBlur: onBlurProp, onFocus: onFocusProp, onMouseDown: onMouseDownProp, style, ref, ...groupProps } = props
 
 	const [tabStopId, setTabStopId] = React.useState<string | null>(null)
 	const [isTabbingBackOut, setIsTabbingBackOut] = React.useState(false)

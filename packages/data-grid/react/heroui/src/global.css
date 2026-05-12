@@ -115,6 +115,10 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	}
 }
 
+[data-slot='action-bar'] {
+	@apply bg-background;
+}
+
 [data-slot='action-bar'][data-state='open'][data-side='bottom'] {
 	animation: ez-action-bar-slide-from-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
