@@ -4,6 +4,7 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { ActionsCell } from './blocks/ActionsCell'
 import { BetweenInput } from './blocks/BetweenInput'
+import { cellTypes } from './blocks/cell-types'
 import { Checkbox } from './blocks/Checkbox'
 import { Chevron } from './blocks/Chevron'
 import { ColumnMenu } from './blocks/ColumnMenu'
@@ -19,11 +20,10 @@ import { NoResultsState } from './blocks/NoResultsState'
 import { NumberInput } from './blocks/NumberInput'
 import { OperatorSelect } from './blocks/OperatorSelect'
 import { PageSizer } from './blocks/PageSizer'
-import { Pagination } from './blocks/pagination'
+import { Pagination } from './blocks/Pagination'
 import { Resizer } from './blocks/Resizer'
 import { RowPinMenu } from './blocks/RowPinMenu'
 import { SelectionBar } from './blocks/SelectionBar'
-import { SHADCN_CELL_TYPES } from './blocks/shadcn-cell-types'
 import { SortIndicator } from './blocks/SortIndicator'
 import { SortMenu } from './blocks/SortMenu'
 import { Toolbar } from './blocks/Toolbar'
@@ -31,9 +31,9 @@ import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table'
 
-import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
+import type { CellTypeRegistry, GridComponents } from '@ez-kit/data-grid-react'
 
-const SHADCN_COMPONENTS = {
+const components = {
 	Table,
 	Thead: TableHeader,
 	Tbody: TableBody,
@@ -66,15 +66,15 @@ const SHADCN_COMPONENTS = {
 	CreatingActionsCell,
 	FormShell,
 	Chevron,
-}
+} satisfies GridComponents
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
-	components: SHADCN_COMPONENTS,
-	cellTypes: SHADCN_CELL_TYPES,
+	components,
+	cellTypes,
 })
 
 /**
- * Extend the shadcn DataGrid with additional custom cell types.
+ * Extend the DataGrid with additional custom cell types.
  * Returns a fully typed `{ DataGrid, useDataGrid, GridComponentsProvider, defineColumns }` bundle.
  *
  * @example
@@ -84,8 +84,8 @@ const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
  */
 export function extendDataGrid<TExtra extends CellTypeRegistry>(extraCellTypes: TExtra) {
 	return createDataGrid({
-		components: SHADCN_COMPONENTS,
-		cellTypes: { ...SHADCN_CELL_TYPES, ...extraCellTypes },
+		components,
+		cellTypes: { ...cellTypes, ...extraCellTypes },
 	})
 }
 

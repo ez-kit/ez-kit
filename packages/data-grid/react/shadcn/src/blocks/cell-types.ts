@@ -10,7 +10,7 @@ import { SelectCellInput, SelectCellView } from './cell-types/SelectCell'
 
 import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
 
-export const SHADCN_CELL_TYPES: CellTypeRegistry = {
+export const cellTypes: CellTypeRegistry = {
 	text: textCellType,
 	number: numberCellType,
 	boolean: {

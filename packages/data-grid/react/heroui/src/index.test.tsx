@@ -2,12 +2,13 @@ import { createTable, defineColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
+import { PageSizer } from './blocks/PageSizer'
+
 import {
 	CellTypesProvider,
-	ColumnVisibilityMenu,
+	cellTypes,
 	DataGrid,
-	HEROUI_CELL_TYPES,
-	PageSizer,
 	GridComponentsProvider,
 	useDataGrid,
 } from './index'
@@ -23,11 +24,11 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(GridComponentsProvider).toBeTypeOf('function')
 		expect(useDataGrid).toBeTypeOf('function')
 		expect(CellTypesProvider).toBeTypeOf('function')
-		expect(HEROUI_CELL_TYPES.select).toBeDefined()
-		expect(HEROUI_CELL_TYPES.badge).toBeDefined()
-		expect(HEROUI_CELL_TYPES.image).toBeDefined()
-		expect(HEROUI_CELL_TYPES.link).toBeDefined()
-		expect(HEROUI_CELL_TYPES.progress).toBeDefined()
+		expect(cellTypes.select).toBeDefined()
+		expect(cellTypes.badge).toBeDefined()
+		expect(cellTypes.image).toBeDefined()
+		expect(cellTypes.link).toBeDefined()
+		expect(cellTypes.progress).toBeDefined()
 	})
 
 	it('renders a simple DataGrid', () => {
@@ -83,7 +84,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')
 		fireEvent.click(columnsButton)
-		fireEvent.click(screen.getByRole('checkbox', { name: 'Name' }))
+		fireEvent.click(screen.getByRole('option', { name: 'Name' }))
 
 		expect(onToggle).toHaveBeenCalledTimes(1)
 	})

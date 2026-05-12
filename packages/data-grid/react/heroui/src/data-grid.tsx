@@ -5,6 +5,7 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 import { ActionsCell } from './blocks/ActionsCell'
 import { BetweenInput } from './blocks/BetweenInput'
 import { Button } from './blocks/Button'
+import { cellTypes } from './blocks/cell-types'
 import { Checkbox } from './blocks/Checkbox'
 import { Chevron } from './blocks/Chevron'
 import { ColumnMenu } from './blocks/ColumnMenu'
@@ -14,7 +15,6 @@ import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { EmptyState } from './blocks/EmptyState'
 import { FilterPopover } from './blocks/FilterPopover'
 import { FormShell } from './blocks/FormShell'
-import { HEROUI_CELL_TYPES } from './blocks/heroui-cell-types'
 import { Input } from './blocks/Input'
 import { LoadingRow } from './blocks/LoadingRow'
 import { Modal } from './blocks/Modal'
@@ -31,9 +31,9 @@ import { SortMenu } from './blocks/SortMenu'
 import { Table, Tbody, Td, Th, Thead, Tr } from './blocks/table-adapters'
 import { Toolbar } from './blocks/Toolbar'
 
-import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
+import type { CellTypeRegistry, GridComponents } from '@ez-kit/data-grid-react'
 
-const HEROUI_COMPONENTS = {
+const components = {
 	Table,
 	Thead,
 	Tbody,
@@ -66,15 +66,15 @@ const HEROUI_COMPONENTS = {
 	Chevron,
 	CreatingActionsCell,
 	FormShell,
-}
+} satisfies GridComponents
 
 const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
-	components: HEROUI_COMPONENTS,
-	cellTypes: HEROUI_CELL_TYPES,
+	components,
+	cellTypes,
 })
 
 /**
- * Extend the heroui DataGrid with additional custom cell types.
+ * Extend the DataGrid with additional custom cell types.
  * Returns a fully typed `{ DataGrid, useDataGrid, GridComponentsProvider, defineColumns }` bundle.
  *
  * @example
@@ -84,8 +84,8 @@ const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
  */
 export function extendDataGrid<TExtra extends CellTypeRegistry>(extraCellTypes: TExtra) {
 	return createDataGrid({
-		components: HEROUI_COMPONENTS,
-		cellTypes: { ...HEROUI_CELL_TYPES, ...extraCellTypes },
+		components,
+		cellTypes: { ...cellTypes, ...extraCellTypes },
 	})
 }
 
