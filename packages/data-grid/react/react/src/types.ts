@@ -62,12 +62,6 @@ export type NumberInputProps = {
 	onBlur?: () => void
 }
 
-export type DateFieldProps = {
-	/** ISO date string, e.g. `"2024-01-15"` */
-	value?: string | undefined
-	onChange?: (value: string) => void
-}
-
 export type ModalProps = {
 	open: boolean
 	onClose: () => void
@@ -296,7 +290,6 @@ export type GridComponents = {
 	Input?: ComponentType<InputProps>
 	Checkbox?: ComponentType<CheckboxProps>
 	NumberInput?: ComponentType<NumberInputProps>
-	DateField?: ComponentType<DateFieldProps>
 	Modal?: ComponentType<ModalProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>

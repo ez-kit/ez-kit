@@ -27,6 +27,7 @@ export type {
 	ColumnSortUndefined,
 	ColumnSortingConfig,
 	ColumnVisibilityDef,
+	DateCellConfig,
 	ImageCellConfig,
 	InputComponentProps,
 	ProgressCellConfig,

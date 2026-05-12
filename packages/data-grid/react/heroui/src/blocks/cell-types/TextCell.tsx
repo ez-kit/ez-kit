@@ -7,8 +7,11 @@ import type { FieldState } from '@ez-kit/data-grid-react'
 /**
  * Default text cell input on HeroUI v3. Wraps `<TextField>` (always rendered);
  * `<Label>`, `<Description>`, `<FieldError>` appear only when their data is set.
+ *
+ * View rendering for `text` falls back to TanStack `flexRender` — no UI-kit
+ * specific component is needed.
  */
-export function TextCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function TextCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
 	const hasError = errors.length > 0
 	return (
 		<TextField isInvalid={hasError}>
@@ -26,3 +29,5 @@ export function TextCellInput({ id, value, onChange, onBlur, label, description,
 		</TextField>
 	)
 }
+
+export { TextCellInput }

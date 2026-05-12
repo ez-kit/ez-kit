@@ -4,6 +4,7 @@ import type {
 	CellType,
 	CellViewCtx,
 	ColumnDef,
+	DateCellConfig,
 	ImageCellConfig,
 	InputComponentProps,
 	ProgressCellConfig,
@@ -28,7 +29,7 @@ type CustomOptions<TRow extends object, TCustom extends string> = Omit<
 type BaseColumnHelper<TRow extends object, TCustom extends string> = {
 	text(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
 	number(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
-	date(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
+	date(opts: BaseOptions<TRow, TCustom> & { config?: DateCellConfig }): ColumnDef<TRow, TCustom>
 	boolean(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
 	link(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
 	select(opts: BaseOptions<TRow, TCustom> & { config: SelectCellConfig }): ColumnDef<TRow, TCustom>
@@ -53,7 +54,7 @@ export function createColumnHelper<TRow extends object, TCustom extends string =
 	const base: BaseColumnHelper<TRow, TCustom> = {
 		text: (opts) => ({ ...opts, cell: { type: 'text' } }),
 		number: (opts) => ({ ...opts, cell: { type: 'number' } }),
-		date: (opts) => ({ ...opts, cell: { type: 'date' } }),
+		date: ({ config, ...opts }) => ({ ...opts, cell: { type: 'date', config } }),
 		boolean: (opts) => ({ ...opts, cell: { type: 'boolean' } }),
 		link: (opts) => ({ ...opts, cell: { type: 'link' } }),
 		select: ({ config, ...opts }) => ({ ...opts, cell: { type: 'select', config } }),

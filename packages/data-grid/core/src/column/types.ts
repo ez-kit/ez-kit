@@ -64,10 +64,18 @@ export type ImageCellConfig = {
 export type ProgressCellConfig = {
 	max?: number
 }
+export type DateCellConfig = {
+	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard minimum. */
+	minValue?: string
+	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard maximum. */
+	maxValue?: string
+	/** Forwarded to `Intl.DateTimeFormat` by the view renderer. */
+	format?: Intl.DateTimeFormatOptions
+}
 
 // ── cell definition (discriminated union) ─────────────────────────────────
 
-type SimpleType = Exclude<CellType, 'select' | 'badge' | 'image' | 'link' | 'progress'>
+type SimpleType = Exclude<CellType, 'select' | 'badge' | 'image' | 'link' | 'progress' | 'date'>
 
 type BasicCellDef<TRow, TValue = unknown> = {
 	type?: SimpleType
@@ -103,6 +111,12 @@ type ProgressCellDef<TRow, TValue = unknown> = {
 	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
 }
 
+type DateCellDef<TRow, TValue = unknown> = {
+	type: 'date'
+	config?: DateCellConfig
+	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+}
+
 type CustomCellDef<TRow, TValue, TCustom extends string> = {
 	type: TCustom
 	config?: Record<string, unknown>
@@ -116,6 +130,7 @@ export type CellDef<TRow extends object, TValue = unknown, TCustom extends strin
 	| ImageCellDef<TRow, TValue>
 	| LinkCellDef<TRow, TValue>
 	| ProgressCellDef<TRow, TValue>
+	| DateCellDef<TRow, TValue>
 	| ([TCustom] extends [never] ? never : CustomCellDef<TRow, TValue, TCustom>)
 
 export type ColumnFilteringConfig = {

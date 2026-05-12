@@ -199,6 +199,9 @@ importers:
       '@heroui/styles':
         specifier: ^3.0.3
         version: 3.0.3(tailwind-merge@3.4.0)(tailwindcss@4.2.4)
+      '@internationalized/date':
+        specifier: ^3.5.0
+        version: 3.12.1
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.5)

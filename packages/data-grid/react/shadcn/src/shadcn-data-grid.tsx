@@ -10,7 +10,6 @@ import { ColumnMenu } from './blocks/ColumnMenu'
 import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { CreatingActionsCell } from './blocks/CreatingActionsCell'
-import { DateField } from './blocks/DateField'
 import { EmptyState } from './blocks/EmptyState'
 import { FilterPopover } from './blocks/FilterPopover'
 import { FormShell } from './blocks/FormShell'
@@ -45,7 +44,6 @@ const SHADCN_COMPONENTS = {
 	Input,
 	Checkbox,
 	NumberInput,
-	DateField,
 	Modal,
 	Pagination,
 	PageSizer,

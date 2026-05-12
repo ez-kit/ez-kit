@@ -6,22 +6,24 @@ import { Input } from '@grid-shadcn/components/ui/input'
 import type { FieldState } from '@ez-kit/data-grid-react'
 
 /**
- * Number cell input. Wraps shadcn Field/Input(type='number')/FieldError;
- * renders `<FieldLabel>` only when `field.label` is provided.
+ * Default text cell input. Wraps shadcn Field/Input/FieldError; renders
+ * `<FieldLabel>` only when `field.label` is provided (form-context).
+ * In inline contexts (cell-mode editing, creating-row, filter) the wrapper
+ * still renders, but contains only the bare `<Input>`.
+ *
+ * View rendering for `text` falls back to TanStack `flexRender` — no UI-kit
+ * specific component is needed.
  */
-export function NumberCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function TextCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
 	const hasError = errors.length > 0
-	const numericValue = typeof value === 'number' && !Number.isNaN(value) ? value : ''
 	return (
 		<Field data-error={hasError || undefined}>
 			{label !== undefined && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
 			<Input
 				id={id}
-				type='number'
-				value={numericValue}
+				value={(value ?? '') as string}
 				onChange={(e) => {
-					const n = e.target.valueAsNumber
-					onChange(Number.isNaN(n) ? undefined : n)
+					onChange(e.target.value)
 				}}
 				onBlur={onBlur}
 				aria-invalid={hasError || undefined}
@@ -31,3 +33,5 @@ export function NumberCellInput({ id, value, onChange, onBlur, label, descriptio
 		</Field>
 	)
 }
+
+export { TextCellInput }

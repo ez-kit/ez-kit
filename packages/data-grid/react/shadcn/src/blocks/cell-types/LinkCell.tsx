@@ -1,24 +1,42 @@
 'use client'
 
+import { Button } from '@grid-shadcn/components/ui/button'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Input } from '@grid-shadcn/components/ui/input'
 
-import type { FieldState } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
-/**
- * Default text cell input. Wraps shadcn Field/Input/FieldError; renders
- * `<FieldLabel>` only when `field.label` is provided (form-context).
- * In inline contexts (cell-mode editing, creating-row, filter) the wrapper
- * still renders, but contains only the bare `<Input>`.
- */
-export function TextCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function LinkCellView({ value }: CellViewProps) {
+	const href = String(value ?? '')
+
+	if (!href) return null
+
+	return (
+		<Button
+			variant='link'
+			asChild
+		>
+			<a
+				href={href}
+				target='_blank'
+				rel='noreferrer'
+			>
+				{href}
+			</a>
+		</Button>
+	)
+}
+
+/** Link (URL) cell input. Wraps shadcn Field/Input(type='url'). */
+function LinkCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
 	const hasError = errors.length > 0
 	return (
 		<Field data-error={hasError || undefined}>
 			{label !== undefined && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
 			<Input
 				id={id}
-				value={(value ?? '') as string}
+				type='url'
+				value={String(value ?? '')}
 				onChange={(e) => {
 					onChange(e.target.value)
 				}}
@@ -30,3 +48,5 @@ export function TextCellInput({ id, value, onChange, onBlur, label, description,
 		</Field>
 	)
 }
+
+export { LinkCellInput, LinkCellView }

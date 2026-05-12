@@ -1,6 +1,8 @@
 import { Input } from '../components/ui/input'
 import { Slider } from '../components/ui/slider'
 
+import { DateCellInput } from './cell-types/DateCell'
+
 import type { BetweenInputProps } from '@ez-kit/data-grid-react'
 
 export function BetweenInput({ value, onChange, variant, type, min, max }: BetweenInputProps) {
@@ -27,38 +29,56 @@ export function BetweenInput({ value, onChange, variant, type, min, max }: Betwe
 		)
 	}
 
-	const inputType = type === 'date' ? 'date' : 'number'
+	if (type === 'date') {
+		return (
+			<div className='flex items-center gap-1'>
+				<DateCellInput
+					id='between-from'
+					value={value.from}
+					onChange={(v) => {
+						onChange({ ...value, from: v })
+					}}
+					onBlur={() => {}}
+					error={undefined}
+					errors={[]}
+					isValidating={false}
+				/>
+				<span className='text-muted-foreground text-xs'>–</span>
+				<DateCellInput
+					id='between-to'
+					value={value.to}
+					onChange={(v) => {
+						onChange({ ...value, to: v })
+					}}
+					onBlur={() => {}}
+					error={undefined}
+					errors={[]}
+					isValidating={false}
+				/>
+			</div>
+		)
+	}
 
 	return (
 		<div className='flex items-center gap-1'>
 			<Input
-				type={inputType}
+				type='number'
 				placeholder='From'
 				className='h-7 w-24 text-xs'
-				value={(value.from as string | number | undefined) ?? ''}
+				value={(value.from as number | undefined) ?? ''}
 				onChange={(e) => {
-					const v =
-						inputType === 'number'
-							? Number.isNaN(e.target.valueAsNumber)
-								? undefined
-								: e.target.valueAsNumber
-							: e.target.value || undefined
+					const v = Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber
 					onChange({ ...value, from: v })
 				}}
 			/>
 			<span className='text-muted-foreground text-xs'>–</span>
 			<Input
-				type={inputType}
+				type='number'
 				placeholder='To'
 				className='h-7 w-24 text-xs'
-				value={(value.to as string | number | undefined) ?? ''}
+				value={(value.to as number | undefined) ?? ''}
 				onChange={(e) => {
-					const v =
-						inputType === 'number'
-							? Number.isNaN(e.target.valueAsNumber)
-								? undefined
-								: e.target.valueAsNumber
-							: e.target.value || undefined
+					const v = Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber
 					onChange({ ...value, to: v })
 				}}
 			/>

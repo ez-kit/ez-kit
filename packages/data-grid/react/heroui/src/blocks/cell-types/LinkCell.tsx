@@ -1,11 +1,25 @@
 'use client'
 
-import { Description, FieldError, Input, Label, TextField } from '@heroui/react'
+import { Description, FieldError, Input, Label, Link, TextField } from '@heroui/react'
 
-import type { FieldState } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+
+function LinkCellView({ value }: CellViewProps) {
+	const href = String(value ?? '')
+	if (!href) return null
+	return (
+		<Link
+			href={href}
+			target='_blank'
+			rel='noreferrer'
+		>
+			{href}
+		</Link>
+	)
+}
 
 /** Link (URL) cell input on HeroUI v3. */
-export function LinkCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function LinkCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
 	const hasError = errors.length > 0
 	return (
 		<TextField isInvalid={hasError}>
@@ -24,3 +38,5 @@ export function LinkCellInput({ id, value, onChange, onBlur, label, description,
 		</TextField>
 	)
 }
+
+export { LinkCellInput, LinkCellView }

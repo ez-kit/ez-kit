@@ -10,7 +10,6 @@ import type {
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	CreatingActionsCellProps,
-	DateFieldProps,
 	EmptyStateProps,
 	FilterPopoverProps,
 	FormShellProps,
@@ -74,17 +73,6 @@ function NativeNumberInput({ value, onChange }: NumberInputProps) {
 			onChange={(e) => {
 				const n = e.target.valueAsNumber
 				onChange?.(Number.isNaN(n) ? undefined : n)
-			}}
-		/>
-	)
-}
-function NativeDateField({ value, onChange }: DateFieldProps) {
-	return (
-		<input
-			type='date'
-			value={value ?? ''}
-			onChange={(e) => {
-				onChange?.(e.target.value)
 			}}
 		/>
 	)
@@ -667,7 +655,6 @@ export const nativeComponents: Required<GridComponents> = {
 	Input: NativeInput,
 	Checkbox: NativeCheckbox,
 	NumberInput: NativeNumberInput,
-	DateField: NativeDateField,
 	Modal: NativeModal,
 	Toolbar: NativeToolbar,
 	Pagination: NativePagination,

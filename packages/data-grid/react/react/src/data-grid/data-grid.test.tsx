@@ -212,7 +212,7 @@ describe('<DataGrid>', () => {
 		expect(screen.getAllByTestId('custom-cell')).toHaveLength(USERS.length)
 	})
 
-	it('renders ✓ for true and ✗ for false with boolean cell type', () => {
+	it('renders boolean cell view supplied by the UI-kit registry', () => {
 		type BoolRow = {
 			id: number
 			active: boolean
@@ -223,7 +223,14 @@ describe('<DataGrid>', () => {
 			{ id: 2, active: false },
 		]
 		const table = createTable<BoolRow>({ data: boolData, columns: boolCols })
-		renderWithComponents(<DataGrid table={table} />)
+		renderWithComponents(
+			<DataGrid
+				table={table}
+				cellTypes={{
+					boolean: { view: ({ value }) => <>{value ? '✓' : '✗'}</> },
+				}}
+			/>,
+		)
 		expect(screen.getByText('✓')).toBeInTheDocument()
 		expect(screen.getByText('✗')).toBeInTheDocument()
 	})

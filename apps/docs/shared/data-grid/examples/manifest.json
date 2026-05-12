@@ -12,6 +12,12 @@
 		"exportName": "CellTypesExample"
 	},
 	{
+		"id": "date-cell",
+		"label": "Date Cell",
+		"sourceFile": "components/date-cell.tsx",
+		"exportName": "DateCellExample"
+	},
+	{
 		"id": "delete-confirmation",
 		"label": "Delete Confirmation",
 		"sourceFile": "components/delete-confirmation.tsx",

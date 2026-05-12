@@ -1,12 +1,16 @@
 'use client'
 
+import { Suspense } from 'react'
+
 import { DataGridTabsExample } from 'shared/data-grid/examples/DataGridTabsExample'
 import { DataGridTypeProvider } from 'shared/DataGrid'
 
 export default function DataGridHeroUIPage() {
 	return (
-		<DataGridTypeProvider type='heroui'>
-			<DataGridTabsExample />
-		</DataGridTypeProvider>
+		<Suspense fallback={null}>
+			<DataGridTypeProvider type='heroui'>
+				<DataGridTabsExample />
+			</DataGridTypeProvider>
+		</Suspense>
 	)
 }

@@ -3,10 +3,27 @@
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Input } from '@grid-shadcn/components/ui/input'
 
-import type { FieldState } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState, ImageCellConfig } from '@ez-kit/data-grid-react'
+
+function ImageCellView({ value, config }: CellViewProps<ImageCellConfig>) {
+	const src = String(value ?? '')
+
+	if (!src) return null
+
+	return (
+		<span style={{ display: 'inline-flex', alignItems: 'center' }}>
+			<img
+				src={src}
+				alt={config?.alt ?? ''}
+				width={config?.width}
+				height={config?.height}
+			/>
+		</span>
+	)
+}
 
 /** Image (URL) cell input. Wraps shadcn Field/Input(type='url'). */
-export function ImageCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function ImageCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
 	const hasError = errors.length > 0
 	return (
 		<Field data-error={hasError || undefined}>
@@ -26,3 +43,5 @@ export function ImageCellInput({ id, value, onChange, onBlur, label, description
 		</Field>
 	)
 }
+
+export { ImageCellInput, ImageCellView }

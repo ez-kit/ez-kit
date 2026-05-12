@@ -199,7 +199,7 @@ function ActionBar(props: ActionBarProps) {
 		'border-[hsl(var(--heroui-divider))]',
 		'shadow-[0_10px_15px_-3px_rgb(0_0_0_/_0.1),0_4px_6px_-4px_rgb(0_0_0_/_0.1)]',
 		'outline-none',
-		rootProps?.className,
+		rootProps.className,
 	]
 		.filter(Boolean)
 		.join(' ')

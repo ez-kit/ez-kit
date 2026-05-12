@@ -252,25 +252,12 @@ function resolveViewComponent(
 	return undefined
 }
 
-function BooleanCell({ value }: CellViewProps) {
-	return <>{value ? '✓' : '✗'}</>
-}
-
 function NumberCell({ value }: CellViewProps) {
 	const display = typeof value === 'number' ? value.toLocaleString() : String(value ?? '')
 	return <>{display}</>
 }
 
-function DateCell({ value }: CellViewProps) {
-	if (value == null) return null
-	const str = String(value)
-	const d = value instanceof Date ? value : new Date(str)
-	return <>{isNaN(d.getTime()) ? str : d.toLocaleDateString()}</>
-}
-
 function builtInView(cellType: string): ((props: CellViewProps) => ReactNode) | undefined {
-	if (cellType === 'boolean') return BooleanCell
 	if (cellType === 'number') return NumberCell
-	if (cellType === 'date') return DateCell
 	return undefined
 }

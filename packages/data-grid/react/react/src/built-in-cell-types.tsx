@@ -5,8 +5,9 @@ import type { ReactNode } from 'react'
 
 // ── per-type input components ─────────────────────────────────────────────
 // Proper React components so they call useGridComponents() during render and
-// automatically pick up whatever NumberInput/DateField/Checkbox the consumer
-// provides via GridComponentsProvider.
+// automatically pick up whatever NumberInput the consumer provides via
+// GridComponentsProvider. `boolean` and `date` cell types live in UI-kit
+// packages — see @ez-kit/data-grid-heroui / -shadcn registries.
 
 function NumberCellInput({ value, onChange }: CellInputProps): ReactNode {
 	const { NumberInput } = useGridComponents()
@@ -15,54 +16,6 @@ function NumberCellInput({ value, onChange }: CellInputProps): ReactNode {
 			value={typeof value === 'number' ? value : undefined}
 			onChange={(n) => {
 				onChange(n)
-			}}
-		/>
-	)
-}
-
-function BooleanCellInput({ value, onChange }: CellInputProps): ReactNode {
-	const { Checkbox } = useGridComponents()
-	return (
-		<Checkbox
-			value={Boolean(value)}
-			onChange={(checked) => {
-				onChange(checked)
-			}}
-		/>
-	)
-}
-
-// Filter cycles: indeterminate (no filter) → true → false → indeterminate
-// indeterminate = value is undefined/null (filter is off)
-function BooleanFilterInput({ value, onChange }: CellInputProps): ReactNode {
-	const { Checkbox } = useGridComponents()
-	const isIndeterminate = value === undefined || value === null
-
-	const handleChange = () => {
-		if (isIndeterminate) {
-			onChange(true)
-		} else if (value === true) {
-			onChange(false)
-		} else {
-			onChange(undefined)
-		}
-	}
-	return (
-		<Checkbox
-			value={isIndeterminate ? undefined : Boolean(value)}
-			indeterminate={isIndeterminate}
-			onChange={handleChange}
-		/>
-	)
-}
-
-function DateCellInput({ value, onChange }: CellInputProps): ReactNode {
-	const { DateField } = useGridComponents()
-	return (
-		<DateField
-			value={typeof value === 'string' ? value : undefined}
-			onChange={(s) => {
-				onChange(s)
 			}}
 		/>
 	)
@@ -78,13 +31,5 @@ export const BUILT_IN_CELL_TYPES: CellTypeRegistry = {
 	number: {
 		edit: (props) => <NumberCellInput {...props} />,
 		filter: (props) => <NumberCellInput {...props} />,
-	},
-	boolean: {
-		edit: (props) => <BooleanCellInput {...props} />,
-		filter: (props) => <BooleanFilterInput {...props} />,
-	},
-	date: {
-		edit: (props) => <DateCellInput {...props} />,
-		filter: (props) => <DateCellInput {...props} />,
 	},
 }

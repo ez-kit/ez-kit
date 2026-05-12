@@ -12,7 +12,6 @@ import type {
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	CreatingActionsCellProps,
-	DateFieldProps,
 	EmptyStateProps,
 	FilterPopoverProps,
 	GridComponents,
@@ -57,15 +56,6 @@ function TestNumberInput({ value, onChange }: NumberInputProps) {
 				const n = e.target.valueAsNumber
 				onChange?.(Number.isNaN(n) ? undefined : n)
 			}}
-		/>
-	)
-}
-function TestDateField({ value, onChange }: DateFieldProps) {
-	return (
-		<input
-			type='date'
-			value={value ?? ''}
-			onChange={(e) => { onChange?.(e.target.value) }}
 		/>
 	)
 }
@@ -290,7 +280,6 @@ export const testComponents: Required<GridComponents> = {
 	Input: TestInput,
 	Checkbox: TestCheckbox,
 	NumberInput: TestNumberInput,
-	DateField: TestDateField,
 	Modal: TestModal,
 	Toolbar: TestToolbar,
 	Pagination: TestPagination,

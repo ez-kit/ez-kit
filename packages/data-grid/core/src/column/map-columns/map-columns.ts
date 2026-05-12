@@ -6,8 +6,8 @@ import {
 } from '../../features/operators'
 import { setIfDefined } from '../../utils/set-if-defined'
 
-import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
 import type { OperatorRegistry } from '../../features/operators'
+import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].

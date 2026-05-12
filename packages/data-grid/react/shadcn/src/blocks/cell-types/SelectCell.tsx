@@ -3,15 +3,21 @@
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 
-import type { FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
 
 const ALL_SENTINEL = '__all__'
+
+function SelectCellView({ value, config }: CellViewProps<SelectCellConfig>) {
+	const items = config?.items ?? []
+	const match = items.find((item) => item.value === String(value ?? ''))
+	return <>{match ? match.label : String(value ?? '')}</>
+}
 
 /**
  * Select cell input. Wraps shadcn Field/Select; renders `<FieldLabel>` only
  * when `field.label` is provided.
  */
-export function SelectCellInput({
+function SelectCellInput({
 	id,
 	value,
 	onChange,
@@ -57,3 +63,5 @@ export function SelectCellInput({
 		</Field>
 	)
 }
+
+export { SelectCellInput, SelectCellView }

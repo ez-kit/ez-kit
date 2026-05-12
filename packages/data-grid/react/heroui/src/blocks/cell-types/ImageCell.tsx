@@ -2,10 +2,25 @@
 
 import { Description, FieldError, Input, Label, TextField } from '@heroui/react'
 
-import type { FieldState } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState, ImageCellConfig } from '@ez-kit/data-grid-react'
+
+function ImageCellView({ value, config }: CellViewProps<ImageCellConfig>) {
+	const src = String(value ?? '')
+	if (!src) return null
+	return (
+		<span style={{ display: 'inline-flex', alignItems: 'center' }}>
+			<img
+				src={src}
+				alt={config?.alt ?? ''}
+				width={config?.width}
+				height={config?.height}
+			/>
+		</span>
+	)
+}
 
 /** Image (URL) cell input on HeroUI v3. */
-export function ImageCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+function ImageCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
 	const hasError = errors.length > 0
 	return (
 		<TextField isInvalid={hasError}>
@@ -24,3 +39,5 @@ export function ImageCellInput({ id, value, onChange, onBlur, label, description
 		</TextField>
 	)
 }
+
+export { ImageCellInput, ImageCellView }

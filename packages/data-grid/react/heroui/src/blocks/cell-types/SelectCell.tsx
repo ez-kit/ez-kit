@@ -2,15 +2,21 @@
 
 import { Description, FieldError, Label, ListBox, Select } from '@heroui/react'
 
-import type { FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
 
 const ALL_SENTINEL = '__all__'
+
+function SelectCellView({ value, config }: CellViewProps<SelectCellConfig>) {
+	const items = config?.items ?? []
+	const match = items.find((item) => item.value === String(value ?? ''))
+	return <>{match ? match.label : String(value ?? '')}</>
+}
 
 /**
  * Select / Badge cell input on HeroUI v3. Wraps `<Select>` (always rendered);
  * Label/Description/FieldError appear only when their data is set.
  */
-export function SelectCellInput({
+function SelectCellInput({
 	id,
 	value,
 	onChange,
@@ -25,13 +31,12 @@ export function SelectCellInput({
 	const selectValue = value != null && value !== '' ? String(value) : ALL_SENTINEL
 	return (
 		<Select
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			selectedKey={selectValue}
+			value={selectValue}
 			isInvalid={hasError}
 			aria-label={label ?? 'Select value'}
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			onSelectionChange={(key) => {
-				if (key != null) onChange(String(key) === ALL_SENTINEL ? undefined : String(key))
+			onChange={(key) => {
+				if (key == null || Array.isArray(key)) return
+				onChange(String(key) === ALL_SENTINEL ? undefined : String(key))
 			}}
 			onBlur={onBlur}
 		>
@@ -63,3 +68,5 @@ export function SelectCellInput({
 		</Select>
 	)
 }
+
+export { SelectCellInput, SelectCellView }

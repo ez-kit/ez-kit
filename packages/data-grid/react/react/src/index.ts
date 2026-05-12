@@ -103,7 +103,6 @@ export type {
 export type {
 	ButtonProps,
 	CheckboxProps,
-	DateFieldProps,
 	InputProps,
 	ModalProps,
 	NumberInputProps,
@@ -141,6 +140,7 @@ export type {
 	CreatingConfig,
 	DataTable,
 	ConfirmationOptions,
+	DateCellConfig,
 	DeletingConfig,
 	EditingConfig,
 	ImageCellConfig,
