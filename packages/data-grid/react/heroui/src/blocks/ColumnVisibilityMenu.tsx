@@ -4,6 +4,7 @@ import { ListBox, Popover } from '@heroui/react'
 import { Columns2 } from 'lucide-react'
 
 import type { ColumnVisibilityMenuProps } from '@ez-kit/data-grid-react'
+import type { Selection } from '@heroui/react'
 
 export function ColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 	const selectedColumns = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
@@ -18,7 +19,11 @@ export function ColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog aria-label='Column visibility'>
-					<ListBox selectedKeys={selectedColumns}>
+					<ListBox
+						aria-label='Column visibility'
+						selectionMode='multiple'
+						selectedKeys={selectedColumns}
+					>
 						{columns.map((col) => (
 							<ListBox.Item
 								key={col.id}
