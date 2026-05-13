@@ -6,6 +6,7 @@ import type {
 	DataTable,
 	ExpandingConfig,
 	FilteringConfig,
+	GlobalFilteringConfig,
 	RowVirtualOptions,
 	TableConfig,
 	VirtualizedConfig,
@@ -39,6 +40,9 @@ export const SORTING_KEY = Symbol('sorting')
 
 /** Symbol used to carry filtering variant on the table instance for Header to read. */
 export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
+
+/** Symbol used to carry normalized globalFiltering UI config on the table instance for Toolbar / GlobalFilterInput to read. */
+export const GLOBAL_FILTERING_KEY = Symbol('globalFiltering')
 
 /** Symbol used to carry fallbacks config on the table instance for Body to read. */
 export const FALLBACKS_KEY = Symbol('fallbacks')
@@ -165,6 +169,35 @@ export type ReactFilteringConfig = {
 	variant?: FilteringVariant
 } & FilteringConfig
 
+/**
+ * React-layer config for global search.
+ *
+ * Adds UI-facing fields (`placeholder`, `debounce`, `toolbar`) on top of the
+ * headless {@link GlobalFilteringConfig}.
+ */
+export type ReactGlobalFilteringConfig = {
+	/** Placeholder for the search input. Default: 'Search…'. */
+	placeholder?: string
+	/**
+	 * Commit debounce in milliseconds for the auto-mounted input.
+	 * `0` disables debouncing. Default: 250.
+	 */
+	debounce?: number
+	/**
+	 * Auto-mount control for the search input in the Toolbar.
+	 * - `true` / omitted — input is auto-mounted in `Toolbar.right`
+	 * - `false` — no auto-mount; place `<DataGrid.GlobalFilterInput />` yourself
+	 */
+	toolbar?: boolean
+} & GlobalFilteringConfig
+
+/** Normalized shape stored on the table instance for child components to read. */
+export type NormalizedGlobalFilteringConfig = {
+	placeholder: string
+	debounce: number
+	toolbar: boolean
+}
+
 export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
@@ -179,6 +212,14 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * - `{ variant: 'inline', ...opts }` — same as `true` with extra FilteringConfig options
 	 */
 	filtering?: boolean | ReactFilteringConfig
+	/**
+	 * Enable cross-column global search.
+	 * - `true` — auto-mounts a search input in Toolbar.right with defaults
+	 *   (`placeholder: 'Search…'`, `debounce: 250`, `includesString` match)
+	 * - {@link ReactGlobalFilteringConfig} — fine-grained control over placeholder,
+	 *   debounce, filter function, registry, and auto-mount
+	 */
+	globalFiltering?: boolean | ReactGlobalFilteringConfig
 	/** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
 	cellTypes?: CellTypeRegistry
 	/** Page size selector config. When provided, renders a PageSizer control. */
@@ -210,7 +251,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * `--dg-table-max-height` CSS variable on a parent element.
 	 */
 	stickyHeader?: boolean
-} & Omit<TableConfig<TRow>, 'filtering' | 'expanding' | 'columnVisibility'> & {
+} & Omit<TableConfig<TRow>, 'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility'> & {
 	expanding?: boolean | ReactExpandingConfig<TRow>
 }
 
@@ -230,6 +271,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		columnVisibility,
 		fallbacks,
 		filtering: rawFiltering,
+		globalFiltering: rawGlobalFiltering,
 		expanding: rawExpanding,
 		state,
 		onStateChange,
@@ -261,6 +303,34 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	const coreFiltering: boolean | FilteringConfig | undefined =
 		typeof rawFiltering === 'object' ? (({ variant: _, ...rest }) => rest)(rawFiltering) : rawFiltering
 
+	// Split `globalFiltering` into:
+	// - core part (fn, fns) — passed through to createTable
+	// - UI part (placeholder, debounce, toolbar) — stored on the table instance
+	//   via GLOBAL_FILTERING_KEY so Toolbar / GlobalFilterInput can read it
+	const normalizedGlobalFiltering: NormalizedGlobalFilteringConfig | undefined = (() => {
+		if (!rawGlobalFiltering) return undefined
+		if (rawGlobalFiltering === true) {
+			return { placeholder: 'Search…', debounce: 250, toolbar: true }
+		}
+		return {
+			placeholder: rawGlobalFiltering.placeholder ?? 'Search…',
+			debounce: rawGlobalFiltering.debounce ?? 250,
+			toolbar: rawGlobalFiltering.toolbar !== false,
+		}
+	})()
+
+	const coreGlobalFiltering: boolean | GlobalFilteringConfig | undefined = (() => {
+		if (rawGlobalFiltering === undefined || rawGlobalFiltering === false) return rawGlobalFiltering
+		if (rawGlobalFiltering === true) return true
+		const fn = rawGlobalFiltering.fn
+		const fns = rawGlobalFiltering.fns
+		if (fn === undefined && fns === undefined) return true
+		const cfg: GlobalFilteringConfig = {}
+		if (fn !== undefined) cfg.fn = fn
+		if (fns !== undefined) cfg.fns = fns
+		return cfg
+	})()
+
 	// Stable ref so the table closure always calls the latest onStateChange without re-creating the table
 	const onStateChangeRef = useRef(onStateChange)
 	onStateChangeRef.current = onStateChange
@@ -269,6 +339,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	tableRef.current ??= createTable({
 		...restConfig,
 		filtering: coreFiltering,
+		globalFiltering: coreGlobalFiltering,
 		expanding: coreExpanding,
 		// Pass columnVisibility presence to core so it can table-level-gate enableHiding.
 		// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
@@ -331,6 +402,10 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 
 	// Store filteringVariant on the table instance so Header can read without an extra prop
 	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] = filteringVariant
+
+	// Store normalized globalFiltering UI config (placeholder, debounce, toolbar) on the
+	// table instance so Toolbar / GlobalFilterInput can read it without prop drilling.
+	;(tableRef.current as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] = normalizedGlobalFiltering
 
 	// Store fallbacks config on the table instance so Body can read without an extra prop
 	const fallbacksRef = useRef(fallbacks)

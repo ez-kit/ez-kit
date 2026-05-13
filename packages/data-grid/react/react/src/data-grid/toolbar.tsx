@@ -1,13 +1,14 @@
 import { useGridComponents } from '../components-context'
-import { COLUMN_VISIBILITY_KEY, PAGE_SIZER_KEY, SORTING_KEY } from '../use-data-grid'
+import { COLUMN_VISIBILITY_KEY, GLOBAL_FILTERING_KEY, PAGE_SIZER_KEY, SORTING_KEY } from '../use-data-grid'
 
 import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { CreateTrigger } from './create-trigger'
+import { GlobalFilterInput } from './global-filter-input'
 import { PageSizer } from './page-sizer'
 import { SortTrigger } from './sort-trigger'
 import { useTableContext } from './table-context'
 
-import type { ColumnVisibilityUIConfig, PageSizerConfig } from '../use-data-grid'
+import type { ColumnVisibilityUIConfig, NormalizedGlobalFilteringConfig, PageSizerConfig } from '../use-data-grid'
 import type { SortingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -43,14 +44,20 @@ export function Toolbar({ children }: ToolbarProps) {
 		| PageSizerConfig
 		| undefined
 
+	const globalFilteringConfig = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as
+		| NormalizedGlobalFilteringConfig
+		| undefined
+	const hasGlobalFilterToolbar = Boolean(globalFilteringConfig?.toolbar)
+
 	if (children) {
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
 	}
 
 	const left = pageSizerConfig ? <PageSizer /> : null
 	const right =
-		hasCreating || hasSortingToolbar || hasVisibilityToolbar ? (
+		hasGlobalFilterToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar ? (
 			<>
+				{hasGlobalFilterToolbar && <GlobalFilterInput />}
 				{hasCreating && <CreateTrigger />}
 				{hasSortingToolbar && <SortTrigger />}
 				{hasVisibilityToolbar && <ColumnVisibilityTrigger />}

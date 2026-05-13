@@ -15,6 +15,7 @@ import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { EmptyState } from './blocks/EmptyState'
 import { FilterPopover } from './blocks/FilterPopover'
 import { FormShell } from './blocks/FormShell'
+import { GlobalFilterInput } from './blocks/GlobalFilterInput'
 import { Input } from './blocks/Input'
 import { LoadingRow } from './blocks/LoadingRow'
 import { Modal } from './blocks/Modal'
@@ -55,6 +56,7 @@ const components = {
 	ColumnMenu,
 	ColumnVisibilityMenu,
 	FilterPopover,
+	GlobalFilterInput,
 	SelectionBar,
 	ConfirmDialog,
 	OperatorSelect,

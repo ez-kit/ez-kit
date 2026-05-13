@@ -9,6 +9,7 @@ import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
+import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
@@ -153,6 +154,7 @@ type DataGridType = typeof DataGridRoot & {
 	CreateTrigger: typeof CreateTrigger
 	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
 	SortTrigger: typeof SortTrigger
+	GlobalFilterInput: typeof GlobalFilterInput
 	CreatingModal: typeof CreatingModal
 	EditingModal: typeof EditingModal
 	LoadingBody: typeof LoadingBody
@@ -173,6 +175,7 @@ DataGrid.SelectionBar = SelectionBar
 DataGrid.CreateTrigger = CreateTrigger
 DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
 DataGrid.SortTrigger = SortTrigger
+DataGrid.GlobalFilterInput = GlobalFilterInput
 DataGrid.CreatingModal = CreatingModal
 DataGrid.EditingModal = EditingModal
 DataGrid.LoadingBody = LoadingBody

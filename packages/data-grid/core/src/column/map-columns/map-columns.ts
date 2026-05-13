@@ -44,6 +44,7 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 		footer,
 		enableColumnFilter,
 		enableGlobalFilter,
+		globalFilter,
 		enableHiding,
 		enableResizing,
 		size,
@@ -82,6 +83,9 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 	setIfDefined(result, 'footer', footer)
 	setIfDefined(result, 'enableColumnFilter', enableColumnFilter)
 	setIfDefined(result, 'enableGlobalFilter', enableGlobalFilter)
+	// Ez-kit friendlier alias: `globalFilter: false` excludes the column from global search.
+	// Wins over the raw `enableGlobalFilter` pass-through when both are provided.
+	if (globalFilter === false) result.enableGlobalFilter = false
 	setIfDefined(result, 'enableHiding', enableHiding)
 	setIfDefined(result, 'enableResizing', enableResizing)
 	setIfDefined(result, 'size', size)

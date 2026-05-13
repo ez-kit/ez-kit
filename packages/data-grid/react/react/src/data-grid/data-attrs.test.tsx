@@ -86,7 +86,7 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'name', header: 'Name', pinning: { pin: 'left' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, columnPinning: true })
+		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, pinning: { column: true } })
 		const { container } = renderWithComponents(<DataGrid table={table} />)
 		expect(container.querySelector("[data-slot='th'][data-pinned='left']")).not.toBeNull()
 	})
@@ -96,7 +96,7 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'name', header: 'Name', pinning: { pin: 'left' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, columnPinning: true })
+		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, pinning: { column: true } })
 		const { container } = renderWithComponents(<DataGrid table={table} />)
 		expect(container.querySelector("[data-pin-shadow='left']")).not.toBeNull()
 		expect(container.querySelector("[data-slot='pin-shadow-overlay']")).not.toBeNull()

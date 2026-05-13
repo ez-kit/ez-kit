@@ -87,6 +87,8 @@ export type {
 	ExpandingConfig,
 	ExpandingVariant,
 	FilteringConfig,
+	GlobalFilterFn,
+	GlobalFilteringConfig,
 	MultiSortConfig,
 	MultiSortEvent,
 	PaginationConfig,

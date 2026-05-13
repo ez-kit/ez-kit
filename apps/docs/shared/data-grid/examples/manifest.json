@@ -96,6 +96,14 @@
 		"exportName": "FilterPopoverExample"
 	},
 	{
+		"id": "global-filtering",
+		"label": "Global search",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/global-filtering.tsx",
+		"exportName": "GlobalFilteringExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",

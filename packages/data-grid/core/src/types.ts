@@ -6,6 +6,7 @@ import type { EditingConfig } from './features/editing'
 import type { FilterOperatorDef } from './features/operators'
 import type {
 	Column,
+	FilterFn,
 	Row,
 	RowData,
 	RowModel,
@@ -147,10 +148,61 @@ export type SortingConfig = {
 
 export type FilteringConfig = {
 	manual?: boolean
-	/** Enable global (cross-column) filter. Default: true when filtering is enabled. */
-	global?: boolean
 	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
 	operators?: FilterOperatorDef[]
+}
+
+/**
+ * Global filter function signature. Compatible with TanStack `FilterFn`.
+ * Receives the row, the column id being inspected, the user-entered value, and
+ * an `addMeta` callback for stashing match metadata (e.g. for highlighting).
+ */
+export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
+
+/**
+ * Table-level global search (cross-column) config.
+ *
+ * @example Enable with default `includesString` substring match
+ * ```ts
+ * createTable({ data, columns, globalFiltering: true })
+ * ```
+ *
+ * @example Provide a custom inline filter function
+ * ```ts
+ * createTable({
+ *   data, columns,
+ *   globalFiltering: {
+ *     fn: (row, columnId, value) =>
+ *       String(row.getValue(columnId)).toLowerCase().includes(String(value).toLowerCase()),
+ *   },
+ * })
+ * ```
+ *
+ * @example Reference a function from the registry by id
+ * ```ts
+ * createTable({
+ *   data, columns,
+ *   globalFiltering: {
+ *     fns: { fuzzy: rankItem },
+ *     fn: 'fuzzy',
+ *   },
+ * })
+ * ```
+ */
+export type GlobalFilteringConfig = {
+	/**
+	 * Function applied during global search.
+	 * - `string` — resolved against {@link GlobalFilteringConfig.fns} registry first,
+	 *   then against TanStack's built-in filter fns (`'includesString'`, etc.).
+	 * - {@link GlobalFilterFn} — used inline.
+	 *
+	 * Default: `'includesString'` (case-insensitive substring).
+	 */
+	fn?: string | GlobalFilterFn
+	/**
+	 * Named global filter functions, addressable from {@link GlobalFilteringConfig.fn} by id.
+	 */
+	fns?: Record<string, GlobalFilterFn>
 }
 
 export type PaginationConfig = {
@@ -233,10 +285,21 @@ export type TableConfig<TRow extends object> = {
 	 */
 	sorting?: boolean | SortingConfig
 	/**
-	 * Filtering configuration. Falsy fully disables filtering for all columns;
-	 * truthy enables it.
+	 * Column-level filtering configuration. Falsy fully disables column filters
+	 * (per-column inputs / operator popovers); truthy enables them. Independent
+	 * from {@link TableConfig.globalFiltering} — global search is configured separately.
 	 */
 	filtering?: boolean | FilteringConfig
+	/**
+	 * Global search configuration — cross-column text search backed by a single
+	 * filter function. Independent from {@link TableConfig.filtering}: you can
+	 * enable global search without column filters, or vice versa, or both.
+	 *
+	 * - `true` — enable with defaults (`includesString` substring match)
+	 * - {@link GlobalFilteringConfig} — fine-grained control
+	 * - `false` / omitted — disabled
+	 */
+	globalFiltering?: boolean | GlobalFilteringConfig
 	pagination?: boolean | PaginationConfig
 	selection?: boolean | SelectionConfig
 	expanding?: boolean | ExpandingConfig

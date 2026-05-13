@@ -296,6 +296,16 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 
 	/** Column-level filtering config. Set to false to disable. */
 	filtering?: false | ColumnFilteringConfig
+	/**
+	 * Whether this column participates in table-level global search.
+	 * - `false` — column is excluded from global search results
+	 * - omitted / `true` — column participates (default)
+	 *
+	 * Independent from {@link ColumnDef.filtering}: a column can have its own
+	 * filter popover disabled but still be searchable via global filter, or
+	 * vice versa.
+	 */
+	globalFilter?: boolean
 	/** Column-level editing config. Set to false to disable. */
 	editing?: false | ColumnEditingConfig
 	/** Column-level creating config. Set to false to disable. */

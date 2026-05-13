@@ -2,7 +2,9 @@ import { defineColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { SELECTION_BAR_KEY, VIRTUALIZED_KEY, useDataGrid } from './use-data-grid'
+import { GLOBAL_FILTERING_KEY, SELECTION_BAR_KEY, VIRTUALIZED_KEY, useDataGrid } from './use-data-grid'
+
+import type { NormalizedGlobalFilteringConfig } from './use-data-grid'
 
 type User = {
 	id: number
@@ -199,5 +201,51 @@ describe('useDataGrid — controlled state', () => {
 		expect(result.current.getState().pagination.pageIndex).toBe(0)
 		// Sorting is controlled
 		expect(result.current.getState().sorting).toEqual([{ id: 'name', desc: true }])
+	})
+})
+
+// ── globalFiltering normalization ─────────────────────────────────────────────
+
+function getNormalizedGlobalFiltering(table: object): NormalizedGlobalFilteringConfig | undefined {
+	return (table as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as NormalizedGlobalFilteringConfig | undefined
+}
+
+describe('useDataGrid — globalFiltering normalization', () => {
+	it('globalFiltering omitted — nothing stored on instance', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
+		expect(getNormalizedGlobalFiltering(result.current)).toBeUndefined()
+	})
+
+	it('globalFiltering: true → defaults (placeholder, debounce: 250, toolbar: true)', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
+		const cfg = getNormalizedGlobalFiltering(result.current)
+		expect(cfg).toEqual({ placeholder: 'Search…', debounce: 250, toolbar: true })
+	})
+
+	it('globalFiltering: { placeholder, debounce, toolbar: false } — overrides merge into defaults', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({
+				data: USERS,
+				columns: COLUMNS,
+				globalFiltering: { placeholder: 'Find users', debounce: 0, toolbar: false },
+			}),
+		)
+		const cfg = getNormalizedGlobalFiltering(result.current)
+		expect(cfg).toEqual({ placeholder: 'Find users', debounce: 0, toolbar: false })
+	})
+
+	it('globalFiltering enables getFilteredRowModel even without column filtering', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
+		expect(result.current.options.getFilteredRowModel).toBeDefined()
+		expect(result.current.options.enableColumnFilters).toBe(false)
+	})
+
+	it('setGlobalFilter actually filters rows', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
+		act(() => {
+			result.current.setGlobalFilter('alice')
+		})
+		expect(result.current.getFilteredRowModel().rows).toHaveLength(1)
+		expect(result.current.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
 	})
 })

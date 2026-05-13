@@ -77,6 +77,23 @@ export type ToolbarProps = {
 	right?: ReactNode
 }
 
+/**
+ * Props for the UI-kit Global Filter input (search field).
+ * - `value` / `onChange` are wired by the headless wrapper to the table's
+ *   `state.globalFilter`. When the user types, the wrapper applies the optional
+ *   debounce before calling `onChange`.
+ * - `placeholder` is forwarded from `globalFiltering.placeholder`.
+ * - `debounce` is informational — the wrapper has already applied debounce; the
+ *   UI-kit input does not need to debounce again. Exposed so kits can show
+ *   pending state if desired.
+ */
+export type GlobalFilterInputProps = {
+	value: string
+	onChange: (value: string) => void
+	placeholder?: string
+	debounce?: number
+}
+
 export type PaginationProps = {
 	pageIndex: number
 	pageCount: number
@@ -293,6 +310,7 @@ export type GridComponents = {
 	Modal?: ComponentType<ModalProps>
 	// composite
 	Toolbar?: ComponentType<ToolbarProps>
+	GlobalFilterInput?: ComponentType<GlobalFilterInputProps>
 	Pagination?: ComponentType<PaginationProps>
 	PageSizer?: ComponentType<PageSizerProps>
 	// data-grid specific

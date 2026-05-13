@@ -18,7 +18,14 @@ import { buildColumnList, extractPinningState } from '../system-columns'
 import { setIfDefined } from '../utils/set-if-defined'
 
 import type { ColumnDef } from '../column/types'
-import type { DataTable, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
+import type {
+	DataTable,
+	GlobalFilterFn,
+	MultiSortConfig,
+	PinningConfig,
+	RowPinningConfig,
+	TableConfig,
+} from '../types'
 import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
 /** Translate our `sorting.multi` shape into TanStack option flags. */
@@ -108,6 +115,28 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const sortingCfg = typeof config.sorting === 'object' ? config.sorting : undefined
 	const sortingOnChange = sortingCfg?.onChange
 
+	// ── filtering / global filter gating ─────────────────────────────────────
+	const hasColumnFiltering = Boolean(config.filtering)
+	const hasGlobalFiltering = Boolean(config.globalFiltering)
+	const hasAnyFiltering = hasColumnFiltering || hasGlobalFiltering
+
+	const globalFilteringCfg = typeof config.globalFiltering === 'object' ? config.globalFiltering : undefined
+
+	// Resolve `globalFilterFn`:
+	// - inline function → used as-is
+	// - string id → look up in user `fns` registry first; otherwise pass through
+	//   so TanStack resolves built-in names like 'includesString' itself
+	// - omitted → 'includesString' (overrides TanStack's 'auto' default so global
+	//   search behaves as a predictable cross-column substring match)
+	const resolvedGlobalFilterFn: GlobalFilterFn | string | undefined = ((): GlobalFilterFn | string | undefined => {
+		if (!hasGlobalFiltering) return undefined
+		const fn = globalFilteringCfg?.fn
+		if (fn === undefined) return 'includesString'
+		if (typeof fn === 'function') return fn
+		const fromRegistry = globalFilteringCfg?.fns?.[fn]
+		return fromRegistry ?? fn
+	})()
+
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
@@ -179,9 +208,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(config.sorting
 			? { getSortedRowModel: getSortedRowModel() }
 			: { enableSorting: false }),
-		...(config.filtering
-			? { getFilteredRowModel: getFilteredRowModel() }
-			: { enableColumnFilters: false }),
+		// Filtering: `getFilteredRowModel` is attached when either column filters
+		// or global search is enabled. Each axis is gated independently:
+		// - `filtering` falsy → enableColumnFilters: false (per-column UI disabled)
+		// - `globalFiltering` falsy → enableGlobalFilter: false (search disabled)
+		...(hasAnyFiltering ? { getFilteredRowModel: getFilteredRowModel() } : {}),
+		...(hasColumnFiltering ? {} : { enableColumnFilters: false }),
+		...(hasGlobalFiltering ? {} : { enableGlobalFilter: false }),
+		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
 		...(config.columnVisibility ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
 		...(config.pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),

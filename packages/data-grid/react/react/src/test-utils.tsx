@@ -282,6 +282,16 @@ export const testComponents: Required<GridComponents> = {
 	NumberInput: TestNumberInput,
 	Modal: TestModal,
 	Toolbar: TestToolbar,
+	GlobalFilterInput: ({ value, onChange, placeholder }) => (
+		<input
+			data-slot='global-filter-input'
+			value={value}
+			onChange={(e) => {
+				onChange(e.target.value)
+			}}
+			placeholder={placeholder}
+		/>
+	),
 	Pagination: TestPagination,
 	PageSizer: TestPageSizer,
 	Resizer: TestResizer,

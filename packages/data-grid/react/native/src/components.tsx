@@ -13,6 +13,7 @@ import type {
 	EmptyStateProps,
 	FilterPopoverProps,
 	FormShellProps,
+	GlobalFilterInputProps,
 	GridComponents,
 	InputProps,
 	LoadingRowProps,
@@ -316,6 +317,20 @@ function NativeToolbar({ children, left, right, ...props }: ToolbarProps) {
 			<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>{left}</div>
 			<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>{right}</div>
 		</div>
+	)
+}
+function NativeGlobalFilterInput({ value, onChange, placeholder }: GlobalFilterInputProps) {
+	return (
+		<input
+			type='search'
+			role='searchbox'
+			aria-label={placeholder ?? 'Search'}
+			placeholder={placeholder}
+			value={value}
+			onChange={(event) => {
+				onChange(event.target.value)
+			}}
+		/>
 	)
 }
 function NativePagination({
@@ -657,6 +672,7 @@ export const nativeComponents: Required<GridComponents> = {
 	NumberInput: NativeNumberInput,
 	Modal: NativeModal,
 	Toolbar: NativeToolbar,
+	GlobalFilterInput: NativeGlobalFilterInput,
 	Pagination: NativePagination,
 	PageSizer: NativePageSizer,
 	Resizer: NativeResizer,

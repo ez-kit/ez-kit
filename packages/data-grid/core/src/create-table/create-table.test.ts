@@ -171,6 +171,89 @@ describe('createTable — filtering', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, filtering: { manual: true } })
 		expect(table.options.manualFiltering).toBe(true)
 	})
+
+	it('filtering: true without globalFiltering disables global filter', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: true })
+		expect(table.options.enableGlobalFilter).toBe(false)
+	})
+})
+
+// ── global filtering ──────────────────────────────────────────────────────────
+
+describe('createTable — globalFiltering', () => {
+	it('globalFiltering: true enables getFilteredRowModel and leaves enableGlobalFilter on', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: true })
+		expect(table.options.getFilteredRowModel).toBeDefined()
+		expect(table.options.enableGlobalFilter).toBeUndefined()
+	})
+
+	it('globalFiltering: true without filtering disables column filters', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: true })
+		expect(table.options.enableColumnFilters).toBe(false)
+	})
+
+	it('globalFiltering not set — getFilteredRowModel undefined and enableGlobalFilter: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		expect(table.options.getFilteredRowModel).toBeUndefined()
+		expect(table.options.enableGlobalFilter).toBe(false)
+	})
+
+	it('filtering + globalFiltering both truthy — both axes enabled', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: true, globalFiltering: true })
+		expect(table.options.getFilteredRowModel).toBeDefined()
+		expect(table.options.enableColumnFilters).toBeUndefined()
+		expect(table.options.enableGlobalFilter).toBeUndefined()
+	})
+
+	it('globalFiltering with inline fn passes function to globalFilterFn', () => {
+		const fn = vi.fn(() => true)
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: { fn } })
+		expect(table.options.globalFilterFn).toBe(fn)
+	})
+
+	it('globalFiltering with string fn that matches registry passes registry fn', () => {
+		const fuzzy = vi.fn(() => true)
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			globalFiltering: { fn: 'fuzzy', fns: { fuzzy } },
+		})
+		expect(table.options.globalFilterFn).toBe(fuzzy)
+	})
+
+	it('globalFiltering with string fn that has no registry match passes string through to TanStack', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			globalFiltering: { fn: 'includesString' },
+		})
+		expect(table.options.globalFilterFn).toBe('includesString')
+	})
+
+	it("globalFiltering: true with no fn — defaults to 'includesString'", () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: true })
+		expect(table.options.globalFilterFn).toBe('includesString')
+	})
+
+	it('column.globalFilter: false disables the column for global search', () => {
+		const table = createTable({
+			data: DATA,
+			columns: [
+				{ accessorKey: 'name', header: 'Name' },
+				{ accessorKey: 'age', header: 'Age', globalFilter: false },
+			],
+			globalFiltering: true,
+		})
+		const ageCol = table.getColumn('age')
+		expect(ageCol?.columnDef.enableGlobalFilter).toBe(false)
+	})
+
+	it('global search actually filters rows when enabled', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: true })
+		table.setGlobalFilter('alice')
+		expect(table.getFilteredRowModel().rows).toHaveLength(1)
+		expect(table.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
+	})
 })
 
 // ── pagination ────────────────────────────────────────────────────────────────
