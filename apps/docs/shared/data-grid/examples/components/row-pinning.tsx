@@ -4,10 +4,10 @@ import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
-import { columns, INITIAL_DATA } from './_data'
+import { columns, makeUsers } from './_data'
 
 export function RowPinningExample() {
-	const [data] = useState(INITIAL_DATA)
+	const [data] = useState(makeUsers(100))
 
 	const table = useDataGrid({
 		data,

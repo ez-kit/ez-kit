@@ -18,7 +18,7 @@ export function SortIndicator({ sortDir, canSort }: SortIndicatorProps) {
 		<Button
 			variant='ghost'
 			size='icon'
-			className='ml-1 h-6 w-6 shrink-0'
+			className='ml-1 h-5 w-5 shrink-0'
 			tabIndex={-1}
 		>
 			{icon}

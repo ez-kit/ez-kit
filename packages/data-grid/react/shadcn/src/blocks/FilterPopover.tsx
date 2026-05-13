@@ -14,7 +14,7 @@ export function FilterPopover({ children, hasActiveFilter }: FilterPopoverProps)
 				<Button
 					variant='ghost'
 					size='icon'
-					className={`h-6 w-6${hasActiveFilter ? '' : ' opacity-40'}`}
+					className={`h-5 w-5${hasActiveFilter ? '' : ' opacity-40'}`}
 				>
 					<ListFilter className={`h-3 w-3${hasActiveFilter ? ' text-primary' : ''}`} />
 					<span className='sr-only'>Filter</span>

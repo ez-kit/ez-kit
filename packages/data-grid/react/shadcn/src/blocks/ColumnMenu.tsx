@@ -23,7 +23,7 @@ export function ColumnMenu({ sections }: ColumnMenuProps) {
 				<Button
 					variant='ghost'
 					size='icon'
-					className='h-6 w-6'
+					className='h-5 w-5'
 				>
 					<EllipsisVertical className='h-3 w-3' />
 					<span className='sr-only'>Column options</span>
