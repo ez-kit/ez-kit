@@ -57,7 +57,7 @@ export function SelectionBarInlineExample() {
 	return (
 		<div>
 			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Inline variant — selection bar renders as a normal row between Toolbar and Table, without overlay or
+				Inline variant — selection bar renders as a normal block above the Toolbar, without overlay or
 				positioning. No animation, instant show/hide.
 			</p>
 

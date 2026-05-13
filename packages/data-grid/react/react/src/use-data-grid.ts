@@ -80,7 +80,7 @@ export type SelectionBarConfig<TRow extends object = object> = {
 	/**
 	 * Render mode.
 	 * - `'floating'` (default) — rendered as a positioned/sticky bar, typically overlaying the table area.
-	 * - `'inline'` — rendered as a normal block in the document flow, between Toolbar and Table.
+	 * - `'inline'` — rendered as a normal block in the document flow, above the Toolbar.
 	 */
 	variant?: SelectionBarVariant
 	/** If provided — Delete button appears in the bar. */

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { renderWithComponents } from '../test-utils'
-import { PAGE_SIZER_KEY } from '../use-data-grid'
+import { PAGE_SIZER_KEY, SELECTION_BAR_KEY } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
@@ -342,6 +342,42 @@ describe('<DataGrid>', () => {
 			expect(style).toContain('--header-name-size')
 			expect(style).toContain('--col-name-size')
 			expect(style).toContain('--grid-template-columns')
+		})
+	})
+
+	describe('selection bar layout', () => {
+		// Both <Toolbar> and <SelectionBar> share role="toolbar"; SelectionBar additionally
+		// carries data-slot="selection-bar", so we compare DOM order between the SelectionBar
+		// (by data-slot) and the *other* role="toolbar" element (the real Toolbar).
+		function getBarAndToolbar(): { selectionBar: HTMLElement; toolbar: HTMLElement } {
+			const selectionBar = document.querySelector('[data-slot="selection-bar"]')
+			if (!(selectionBar instanceof HTMLElement)) throw new Error('expected [data-slot="selection-bar"]')
+			const toolbars = Array.from(document.querySelectorAll('[role="toolbar"]'))
+			const toolbar = toolbars.find((el) => el.getAttribute('data-slot') !== 'selection-bar')
+			if (!(toolbar instanceof HTMLElement)) throw new Error('expected the non-selection-bar [role="toolbar"]')
+			return { selectionBar, toolbar }
+		}
+
+		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
+			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
+			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
+			;(table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = { variant: 'inline' }
+			table.setRowSelection({ '1': true })
+			renderWithComponents(<DataGrid table={table} />)
+
+			const { selectionBar, toolbar } = getBarAndToolbar()
+			expect(selectionBar.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+		})
+
+		it('renders floating SelectionBar after Table/Pagination by default', () => {
+			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() }, pagination: true })
+			;(table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = true
+			table.setRowSelection({ '1': true })
+			renderWithComponents(<DataGrid table={table} />)
+
+			const { selectionBar, toolbar } = getBarAndToolbar()
+			// floating: toolbar precedes selectionBar
+			expect(toolbar.compareDocumentPosition(selectionBar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 		})
 	})
 

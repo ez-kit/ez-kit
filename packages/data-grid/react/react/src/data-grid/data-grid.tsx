@@ -88,8 +88,8 @@ function DefaultLayout() {
 	if (variant === 'inline') {
 		return (
 			<>
-				<Toolbar />
 				<SelectionBar />
+				<Toolbar />
 				<DataGridTable />
 				<Pagination />
 			</>
