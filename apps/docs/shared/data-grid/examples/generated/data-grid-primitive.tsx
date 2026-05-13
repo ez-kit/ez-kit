@@ -32,13 +32,14 @@ import { EditingValidationExample as Example27 } from '../components/editing/Edi
 import { ExpandingSubContentExample as Example28 } from '../components/expanding/sub-content'
 import { ExpandingTreeExample as Example29 } from '../components/expanding/tree'
 import { ExpandingControlledExample as Example30 } from '../components/expanding/controlled'
-import { RowPinningExample as Example31 } from '../components/row-pinning'
-import { StickyHeaderExample as Example32 } from '../components/sticky-header'
-import { VirtualizedExample as Example33 } from '../components/virtualized'
-import { CrudExample as Example34 } from '../components/crud/CrudExample'
-import { CrudClientExample as Example35 } from '../components/crud/CrudClientExample'
-import { ControlledStateExample as Example36 } from '../components/controlled-state'
-import { FallbacksExample as Example37 } from '../components/fallbacks'
+import { RowPinningPlainExample as Example31 } from '../components/row-pinning/plain'
+import { RowPinningStickyHeaderExample as Example32 } from '../components/row-pinning/sticky-header'
+import { StickyHeaderExample as Example33 } from '../components/sticky-header'
+import { VirtualizedExample as Example34 } from '../components/virtualized'
+import { CrudExample as Example35 } from '../components/crud/CrudExample'
+import { CrudClientExample as Example36 } from '../components/crud/CrudClientExample'
+import { ControlledStateExample as Example37 } from '../components/controlled-state'
+import { FallbacksExample as Example38 } from '../components/fallbacks'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -289,10 +290,20 @@ export const dataGridExamplesManifest = [
     "exportName": "ExpandingControlledExample"
   },
   {
-    "id": "row-pinning",
-    "label": "Row Pinning",
-    "sourceFile": "components/row-pinning.tsx",
-    "exportName": "RowPinningExample"
+    "id": "row-pinning-plain",
+    "label": "Plain",
+    "group": "row-pinning",
+    "groupLabel": "Row Pinning",
+    "sourceFile": "components/row-pinning/plain.tsx",
+    "exportName": "RowPinningPlainExample"
+  },
+  {
+    "id": "row-pinning-sticky-header",
+    "label": "Sticky Header",
+    "group": "row-pinning",
+    "groupLabel": "Row Pinning",
+    "sourceFile": "components/row-pinning/sticky-header.tsx",
+    "exportName": "RowPinningStickyHeaderExample"
   },
   {
     "id": "sticky-header",
@@ -370,11 +381,12 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'expanding-sub-content': Example28,
 	'expanding-tree': Example29,
 	'expanding-controlled': Example30,
-	'row-pinning': Example31,
-	'sticky-header': Example32,
-	'virtualized': Example33,
-	'crud-server': Example34,
-	'crud-client': Example35,
-	'controlled-state': Example36,
-	'fallbacks': Example37,
+	'row-pinning-plain': Example31,
+	'row-pinning-sticky-header': Example32,
+	'sticky-header': Example33,
+	'virtualized': Example34,
+	'crud-server': Example35,
+	'crud-client': Example36,
+	'controlled-state': Example37,
+	'fallbacks': Example38,
 }

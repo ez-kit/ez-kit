@@ -57,12 +57,34 @@ const findTabForExample = (exampleId: DataGridExampleId): TopLevelTab | undefine
 		tab.kind === 'single' ? tab.id === exampleId : tab.children.some((c) => c.id === exampleId),
 	)
 
+const KNOWN_EXAMPLE_IDS = new Set<string>(dataGridExamplesManifest.map((entry) => entry.id))
+
+const DEFAULT_TAB = (TOP_LEVEL_TABS[0]?.kind === 'group'
+	? TOP_LEVEL_TABS[0].children[0]?.id
+	: TOP_LEVEL_TABS[0]?.id) as DataGridExampleId
+
+const resolveTab = (raw: string | null): DataGridExampleId => {
+	if (raw && KNOWN_EXAMPLE_IDS.has(raw)) {
+		return raw as DataGridExampleId
+	}
+
+	if (raw) {
+		const groupTab = TOP_LEVEL_TABS.find((tab) => tab.kind === 'group' && tab.id === raw)
+		if (groupTab?.kind === 'group') {
+			const first = groupTab.children[0]
+			if (first) return first.id
+		}
+	}
+
+	return DEFAULT_TAB
+}
+
 const topLevelValueFor = (tab: TopLevelTab): string =>
 	tab.kind === 'single' ? tab.id : `${GROUP_VALUE_PREFIX}${tab.id}`
 
 const useActiveTab = () => {
 	const searchParams = useSearchParams()
-	const activeTab = (searchParams.get('tab') ?? 'base') as DataGridExampleId
+	const activeTab = resolveTab(searchParams.get('tab'))
 	const router = useRouter()
 	const pathname = usePathname()
 

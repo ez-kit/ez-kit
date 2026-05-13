@@ -246,10 +246,20 @@
 		"exportName": "ExpandingControlledExample"
 	},
 	{
-		"id": "row-pinning",
-		"label": "Row Pinning",
-		"sourceFile": "components/row-pinning.tsx",
-		"exportName": "RowPinningExample"
+		"id": "row-pinning-plain",
+		"label": "Plain",
+		"group": "row-pinning",
+		"groupLabel": "Row Pinning",
+		"sourceFile": "components/row-pinning/plain.tsx",
+		"exportName": "RowPinningPlainExample"
+	},
+	{
+		"id": "row-pinning-sticky-header",
+		"label": "Sticky Header",
+		"group": "row-pinning",
+		"groupLabel": "Row Pinning",
+		"sourceFile": "components/row-pinning/sticky-header.tsx",
+		"exportName": "RowPinningStickyHeaderExample"
 	},
 	{
 		"id": "sticky-header",

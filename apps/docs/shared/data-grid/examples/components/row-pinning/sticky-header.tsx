@@ -4,21 +4,24 @@ import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
-import { columns, makeUsers } from './_data'
+import { columns, makeUsers } from '../_data'
 
-export function RowPinningExample() {
+export function RowPinningStickyHeaderExample() {
 	const [data] = useState(makeUsers(100))
 
 	const table = useDataGrid({
 		data,
 		columns,
 		pinning: { row: { top: true, bottom: true } },
+		stickyHeader: true,
 	})
 
 	return (
 		<div>
 			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Click ··· on any row to pin it to the top or bottom. Click &quot;Unpin&quot; to release.
+				Pinned rows stay locked to the top and bottom while the header sticks to the top of the
+				scroll container. Container height is controlled by <code>--dg-table-max-height</code>{' '}
+				(default 400px).
 			</p>
 			<DataGrid table={table} />
 		</div>
