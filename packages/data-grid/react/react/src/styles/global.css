@@ -74,6 +74,12 @@
 [data-slot='tr'][data-pinned='top']    { top: var(--dg-row-pin-offset, 0); }
 [data-slot='tr'][data-pinned='bottom'] { bottom: var(--dg-row-pin-offset, 0); }
 
+/* Under a sticky header, pinned-top rows stack below it. */
+[data-slot='table-scroll'][data-sticky-header='true']
+	[data-slot='tr'][data-pinned='top'] {
+	top: calc(var(--dg-row-pin-offset, 0px) + var(--dg-header-height, 0px));
+}
+
 /* ── pin-shadow overlay ───────────────────────────────────────────────── */
 
 [data-slot='pin-shadow-overlay'] {

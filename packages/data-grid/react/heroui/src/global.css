@@ -35,6 +35,27 @@
 	transition: opacity 150ms;
 }
 
+[data-slot='tr'][data-pinned] {
+	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+}
+
+/* Pinned rows must be opaque while body content scrolls underneath. */
+[data-slot='tr'][data-pinned] > [data-slot='td'],
+[data-slot='tr'][data-pinned] > [data-slot='th'] {
+	background-color: var(--dg-pin-cell-background);
+}
+
+/* Soft edge shadow matching the column-pin overlay style.
+   Targets only the last pinned-top row and the first pinned-bottom row in a stack. */
+[data-slot='tr'][data-pinned='top']:not(:has(+ [data-slot='tr'][data-pinned='top'])) {
+	box-shadow: 0 4px 8px -2px var(--dg-pin-shadow-color);
+	clip-path: inset(0 0 -12px 0);
+}
+[data-slot='tr']:not([data-pinned='bottom']) + [data-slot='tr'][data-pinned='bottom'] {
+	box-shadow: 0 -4px 8px -2px var(--dg-pin-shadow-color);
+	clip-path: inset(-12px 0 0 0);
+}
+
 tr[data-expanded] {
 	display: block !important;
 	grid-template-columns: none !important;

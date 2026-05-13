@@ -22,6 +22,7 @@ apps/docs/tests/**/*.png
 /out/
 .next
 
+
 # production
 /build
 **/dist
@@ -36,6 +37,8 @@ apps/docs/shared/data-grid/sandpack/generated/
 # misc
 .DS_Store
 *.pem
+
+.omc
 
 # debug
 npm-debug.log*
