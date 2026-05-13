@@ -1,81 +1,203 @@
 [
 	{
-		"id": "base",
-		"label": "Base",
-		"sourceFile": "components/base.tsx",
-		"exportName": "BaseExample"
+		"id": "base-plain",
+		"label": "Plain",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/plain.tsx",
+		"exportName": "BasePlainExample"
 	},
 	{
-		"id": "cell-types",
-		"label": "Cell Types",
-		"sourceFile": "components/cell-types.tsx",
-		"exportName": "CellTypesExample"
+		"id": "base-sorting",
+		"label": "Sorting",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/sorting.tsx",
+		"exportName": "BaseSortingExample"
 	},
 	{
-		"id": "date-cell",
-		"label": "Date Cell",
-		"sourceFile": "components/date-cell.tsx",
-		"exportName": "DateCellExample"
+		"id": "base-filtering",
+		"label": "Filtering",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/filtering.tsx",
+		"exportName": "BaseFilteringExample"
 	},
 	{
-		"id": "delete-confirmation",
-		"label": "Delete Confirmation",
-		"sourceFile": "components/delete-confirmation.tsx",
-		"exportName": "DeleteConfirmationExample"
+		"id": "base-selection",
+		"label": "Selection",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/selection.tsx",
+		"exportName": "BaseSelectionExample"
+	},
+	{
+		"id": "base-sticky",
+		"label": "Sticky Header",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/sticky.tsx",
+		"exportName": "BaseStickyExample"
+	},
+	{
+		"id": "base-editing",
+		"label": "Editing",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/editing.tsx",
+		"exportName": "BaseEditingExample"
+	},
+	{
+		"id": "base-column-visibility",
+		"label": "Column Visibility",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/column-visibility.tsx",
+		"exportName": "BaseColumnVisibilityExample"
+	},
+	{
+		"id": "base-full",
+		"label": "Full",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/full.tsx",
+		"exportName": "BaseFullExample"
+	},
+	{
+		"id": "sorting",
+		"label": "Initial + Multi + Custom Fn",
+		"group": "sorting",
+		"groupLabel": "Sorting",
+		"sourceFile": "components/sorting.tsx",
+		"exportName": "SortingExample"
+	},
+	{
+		"id": "sort-toolbar",
+		"label": "Toolbar",
+		"group": "sorting",
+		"groupLabel": "Sorting",
+		"sourceFile": "components/sort-toolbar.tsx",
+		"exportName": "SortToolbarExample"
+	},
+	{
+		"id": "filter-operators",
+		"label": "Operators",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators.tsx",
+		"exportName": "FilterOperatorsExample"
+	},
+	{
+		"id": "filter-popover",
+		"label": "Popover",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-popover.tsx",
+		"exportName": "FilterPopoverExample"
 	},
 	{
 		"id": "selection-bar",
-		"label": "Selection Bar",
+		"label": "Floating",
+		"group": "selection",
+		"groupLabel": "Selection",
 		"sourceFile": "components/selection-bar.tsx",
 		"exportName": "SelectionBarExample"
 	},
 	{
 		"id": "selection-bar-inline",
-		"label": "Selection Bar (Inline)",
+		"label": "Inline",
+		"group": "selection",
+		"groupLabel": "Selection",
 		"sourceFile": "components/selection-bar-inline.tsx",
 		"exportName": "SelectionBarInlineExample"
 	},
 	{
-		"id": "row-pinning",
-		"label": "Row Pinning",
-		"sourceFile": "components/row-pinning.tsx",
-		"exportName": "RowPinningExample"
-	},
-	{
-		"id": "column-pinning",
-		"label": "Column Pinning",
-		"sourceFile": "components/column-pinning.tsx",
-		"exportName": "ColumnPinningExample"
+		"id": "delete-confirmation",
+		"label": "Delete Confirmation",
+		"group": "selection",
+		"groupLabel": "Selection",
+		"sourceFile": "components/delete-confirmation.tsx",
+		"exportName": "DeleteConfirmationExample"
 	},
 	{
 		"id": "column-visibility",
-		"label": "Column Visibility",
+		"label": "Visibility",
+		"group": "columns",
+		"groupLabel": "Columns",
 		"sourceFile": "components/column-visibility.tsx",
 		"exportName": "ColumnVisibilityExample"
 	},
 	{
-		"id": "sort-toolbar",
-		"label": "Sort Toolbar",
-		"sourceFile": "components/sort-toolbar.tsx",
-		"exportName": "SortToolbarExample"
+		"id": "column-pinning",
+		"label": "Pinning",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-pinning.tsx",
+		"exportName": "ColumnPinningExample"
 	},
 	{
-		"id": "sorting",
-		"label": "Sorting (initial + multi + custom fn)",
-		"sourceFile": "components/sorting.tsx",
-		"exportName": "SortingExample"
+		"id": "resizing",
+		"label": "Resizing",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/resizing.tsx",
+		"exportName": "ResizingExample"
 	},
 	{
-		"id": "filter-operators",
-		"label": "Filter Operators",
-		"sourceFile": "components/filter-operators.tsx",
-		"exportName": "FilterOperatorsExample"
+		"id": "columns-combined",
+		"label": "Combined",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/columns/combined.tsx",
+		"exportName": "ColumnsCombinedExample"
 	},
 	{
-		"id": "crud",
-		"label": "CRUD",
-		"sourceFile": "components/crud/CrudExample.tsx",
-		"exportName": "CrudExample"
+		"id": "column-helper",
+		"label": "Helper · Base",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-helper.tsx",
+		"exportName": "ColumnHelperBaseExample"
+	},
+	{
+		"id": "column-helper-custom-view",
+		"label": "Helper · Custom View",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-helper.tsx",
+		"exportName": "ColumnHelperCustomViewExample"
+	},
+	{
+		"id": "column-helper-registered",
+		"label": "Helper · Registered",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-helper.tsx",
+		"exportName": "ColumnHelperRegisteredExample"
+	},
+	{
+		"id": "cell-types",
+		"label": "Cell Types",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/cell-types.tsx",
+		"exportName": "CellTypesExample"
+	},
+	{
+		"id": "custom-cell-types",
+		"label": "Custom Cell Types",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/custom-cell-types.tsx",
+		"exportName": "CustomCellTypesExample"
+	},
+	{
+		"id": "date-cell",
+		"label": "Date Cell",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/date-cell.tsx",
+		"exportName": "DateCellExample"
 	},
 	{
 		"id": "creating",
@@ -85,7 +207,7 @@
 	},
 	{
 		"id": "creating-validation",
-		"label": "Creating: Validation",
+		"label": "Creating",
 		"group": "validation",
 		"groupLabel": "Validation",
 		"sourceFile": "components/creating/CreatingValidationExample.tsx",
@@ -93,71 +215,11 @@
 	},
 	{
 		"id": "editing-validation",
-		"label": "Editing: Validation",
+		"label": "Editing",
 		"group": "validation",
 		"groupLabel": "Validation",
 		"sourceFile": "components/editing/EditingValidationExample.tsx",
 		"exportName": "EditingValidationExample"
-	},
-	{
-		"id": "filter-popover",
-		"label": "Filter Popover",
-		"sourceFile": "components/filter-popover.tsx",
-		"exportName": "FilterPopoverExample"
-	},
-	{
-		"id": "sticky-header",
-		"label": "Sticky Header",
-		"sourceFile": "components/sticky-header.tsx",
-		"exportName": "StickyHeaderExample"
-	},
-	{
-		"id": "virtualized",
-		"label": "Virtualized",
-		"sourceFile": "components/virtualized.tsx",
-		"exportName": "VirtualizedExample"
-	},
-	{
-		"id": "resizing",
-		"label": "Resizing",
-		"sourceFile": "components/resizing.tsx",
-		"exportName": "ResizingExample"
-	},
-	{
-		"id": "custom-cell-types",
-		"label": "Custom Cell Types",
-		"sourceFile": "components/custom-cell-types.tsx",
-		"exportName": "CustomCellTypesExample"
-	},
-	{
-		"id": "column-helper",
-		"label": "Column Helper",
-		"sourceFile": "components/column-helper.tsx",
-		"exportName": "ColumnHelperBaseExample"
-	},
-	{
-		"id": "column-helper-custom-view",
-		"label": "Column Helper: Custom View",
-		"sourceFile": "components/column-helper.tsx",
-		"exportName": "ColumnHelperCustomViewExample"
-	},
-	{
-		"id": "column-helper-registered",
-		"label": "Column Helper: Registered Types",
-		"sourceFile": "components/column-helper.tsx",
-		"exportName": "ColumnHelperRegisteredExample"
-	},
-	{
-		"id": "fallbacks",
-		"label": "Fallbacks (Loading / Empty / No Results)",
-		"sourceFile": "components/fallbacks.tsx",
-		"exportName": "FallbacksExample"
-	},
-	{
-		"id": "controlled-state",
-		"label": "Controlled State",
-		"sourceFile": "components/controlled-state.tsx",
-		"exportName": "ControlledStateExample"
 	},
 	{
 		"id": "expanding-sub-content",
@@ -182,5 +244,51 @@
 		"groupLabel": "Expanding",
 		"sourceFile": "components/expanding/controlled.tsx",
 		"exportName": "ExpandingControlledExample"
+	},
+	{
+		"id": "row-pinning",
+		"label": "Row Pinning",
+		"sourceFile": "components/row-pinning.tsx",
+		"exportName": "RowPinningExample"
+	},
+	{
+		"id": "sticky-header",
+		"label": "Sticky Header",
+		"sourceFile": "components/sticky-header.tsx",
+		"exportName": "StickyHeaderExample"
+	},
+	{
+		"id": "virtualized",
+		"label": "Virtualized",
+		"sourceFile": "components/virtualized.tsx",
+		"exportName": "VirtualizedExample"
+	},
+	{
+		"id": "crud-server",
+		"label": "Server",
+		"group": "crud",
+		"groupLabel": "CRUD",
+		"sourceFile": "components/crud/CrudExample.tsx",
+		"exportName": "CrudExample"
+	},
+	{
+		"id": "crud-client",
+		"label": "Client",
+		"group": "crud",
+		"groupLabel": "CRUD",
+		"sourceFile": "components/crud/CrudClientExample.tsx",
+		"exportName": "CrudClientExample"
+	},
+	{
+		"id": "controlled-state",
+		"label": "Controlled State",
+		"sourceFile": "components/controlled-state.tsx",
+		"exportName": "ControlledStateExample"
+	},
+	{
+		"id": "fallbacks",
+		"label": "Fallbacks",
+		"sourceFile": "components/fallbacks.tsx",
+		"exportName": "FallbacksExample"
 	}
 ]

@@ -4,9 +4,9 @@ import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
-import { columns, INITIAL_DATA, type User } from './_data'
+import { columns, INITIAL_DATA, type User } from '../_data'
 
-export function BaseExample() {
+export function BaseFullExample() {
 	const [data, setData] = useState(INITIAL_DATA)
 
 	const table = useDataGrid({

@@ -118,6 +118,16 @@ export const INITIAL_DATA: User[] = [
 	{ id: 5, name: 'Eve Davis', email: 'eve@example.com', age: 32, active: false },
 ]
 
+export function makeUsers(count: number): User[] {
+	return Array.from({ length: count }, (_, i) => ({
+		id: i + 1,
+		name: `User ${String(i + 1)}`,
+		email: `user${String(i + 1)}@example.com`,
+		age: 20 + (i % 50),
+		active: i % 3 !== 0,
+	}))
+}
+
 export const columns = defineColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{

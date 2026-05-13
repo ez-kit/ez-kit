@@ -210,7 +210,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * `--dg-table-max-height` CSS variable on a parent element.
 	 */
 	stickyHeader?: boolean
-} & Omit<TableConfig<TRow>, 'filtering' | 'expanding'> & {
+} & Omit<TableConfig<TRow>, 'filtering' | 'expanding' | 'columnVisibility'> & {
 	expanding?: boolean | ReactExpandingConfig<TRow>
 }
 
@@ -270,6 +270,10 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		...restConfig,
 		filtering: coreFiltering,
 		expanding: coreExpanding,
+		// Pass columnVisibility presence to core so it can table-level-gate enableHiding.
+		// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
+		// is layered separately via the COLUMN_VISIBILITY_KEY symbol.
+		columnVisibility,
 		onStateChange: (updater) => onStateChangeRef.current?.(updater),
 	} as TableConfig<TRow>)
 

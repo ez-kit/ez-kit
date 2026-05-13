@@ -504,3 +504,93 @@ describe('createTable — subscribe / setData', () => {
 		expect(table.getRowModel().rows[0]?.getValue('name')).toBe('Carol')
 	})
 })
+
+// ── table-level off semantics ─────────────────────────────────────────────────
+// Falsy table-level config (undefined or false) must fully disable a feature for
+// every user column, overriding TanStack's per-column defaults. Truthy config
+// (true or object) restores the default and lets per-column overrides apply.
+
+const userColumns = (table: ReturnType<typeof createTable<Row>>) =>
+	table.getAllColumns().filter((c) => !c.columnDef.meta?.isSystemColumn)
+
+describe('createTable — table-level off: sorting', () => {
+	it('sorting undefined → enableSorting: false, all user columns getCanSort() = false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		expect(table.options.enableSorting).toBe(false)
+		expect(userColumns(table).every((c) => !c.getCanSort())).toBe(true)
+	})
+
+	it('sorting: false → enableSorting: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: false })
+		expect(table.options.enableSorting).toBe(false)
+		expect(userColumns(table).every((c) => !c.getCanSort())).toBe(true)
+	})
+
+	it('sorting: true → enableSorting untouched, user columns can sort', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: true })
+		expect(table.options.enableSorting).toBeUndefined()
+		expect(userColumns(table).every((c) => c.getCanSort())).toBe(true)
+	})
+})
+
+describe('createTable — table-level off: filtering', () => {
+	it('filtering undefined → enableColumnFilters: false, all user columns getCanFilter() = false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		expect(table.options.enableColumnFilters).toBe(false)
+		expect(userColumns(table).every((c) => !c.getCanFilter())).toBe(true)
+	})
+
+	it('filtering: false → enableColumnFilters: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: false })
+		expect(table.options.enableColumnFilters).toBe(false)
+	})
+
+	it('filtering: true → enableColumnFilters untouched, user columns can filter', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: true })
+		expect(table.options.enableColumnFilters).toBeUndefined()
+		expect(userColumns(table).every((c) => c.getCanFilter())).toBe(true)
+	})
+})
+
+describe('createTable — table-level off: columnVisibility', () => {
+	it('columnVisibility undefined → enableHiding: false, all user columns getCanHide() = false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		expect(table.options.enableHiding).toBe(false)
+		expect(userColumns(table).every((c) => !c.getCanHide())).toBe(true)
+	})
+
+	it('columnVisibility: false → enableHiding: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: false })
+		expect(table.options.enableHiding).toBe(false)
+	})
+
+	it('columnVisibility: true → enableHiding untouched, user columns can hide', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: true })
+		expect(table.options.enableHiding).toBeUndefined()
+		expect(userColumns(table).every((c) => c.getCanHide())).toBe(true)
+	})
+})
+
+describe('createTable — table-level off: column pinning', () => {
+	it('pinning undefined → enableColumnPinning: false, user columns getCanPin() = false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		expect(table.options.enableColumnPinning).toBe(false)
+		expect(userColumns(table).every((c) => !c.getCanPin())).toBe(true)
+	})
+
+	it('pinning: false → enableColumnPinning: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: false })
+		expect(table.options.enableColumnPinning).toBe(false)
+	})
+
+	it('pinning: { column: true } → enableColumnPinning untouched, user columns can pin', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { column: true } })
+		expect(table.options.enableColumnPinning).toBeUndefined()
+		expect(userColumns(table).every((c) => c.getCanPin())).toBe(true)
+	})
+
+	it('pinning: { row: { top: true } } → column pinning stays disabled', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true } } })
+		expect(table.options.enableColumnPinning).toBe(false)
+	})
+})

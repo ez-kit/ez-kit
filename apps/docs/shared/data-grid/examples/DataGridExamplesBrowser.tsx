@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDataGridType } from 'shared/DataGrid'
 
 import { dataGridExamplesManifest, type DataGridExampleId } from './generated/data-grid-primitive'
@@ -19,6 +20,8 @@ const isGrouped = (entry: ManifestEntry): entry is GroupedEntry =>
 type TopLevelTab =
 	| { kind: 'single'; id: DataGridExampleId; label: string }
 	| { kind: 'group'; id: string; label: string; children: { id: DataGridExampleId; label: string }[] }
+
+const GROUP_VALUE_PREFIX = 'group:'
 
 const TOP_LEVEL_TABS: TopLevelTab[] = (() => {
 	const tabs: TopLevelTab[] = []
@@ -54,6 +57,9 @@ const findTabForExample = (exampleId: DataGridExampleId): TopLevelTab | undefine
 		tab.kind === 'single' ? tab.id === exampleId : tab.children.some((c) => c.id === exampleId),
 	)
 
+const topLevelValueFor = (tab: TopLevelTab): string =>
+	tab.kind === 'single' ? tab.id : `${GROUP_VALUE_PREFIX}${tab.id}`
+
 const useActiveTab = () => {
 	const searchParams = useSearchParams()
 	const activeTab = (searchParams.get('tab') ?? 'base') as DataGridExampleId
@@ -74,56 +80,65 @@ export function DataGridExamplesBrowser({ renderExample }: DataGridExamplesBrows
 	const { type } = useDataGridType()
 
 	const activeTopLevel = findTabForExample(activeTab)
+	const activeTopLevelValue = activeTopLevel ? topLevelValueFor(activeTopLevel) : ''
+
+	const handleTopLevelChange = (value: string) => {
+		if (value.startsWith(GROUP_VALUE_PREFIX)) {
+			const groupId = value.slice(GROUP_VALUE_PREFIX.length)
+			const groupTab = TOP_LEVEL_TABS.find((tab) => tab.kind === 'group' && tab.id === groupId)
+			if (groupTab?.kind === 'group') {
+				const first = groupTab.children[0]
+				if (first) setActiveTab(first.id)
+			}
+			return
+		}
+
+		setActiveTab(value as DataGridExampleId)
+	}
+
+	const handleSubTabChange = (value: string) => {
+		setActiveTab(value as DataGridExampleId)
+	}
 
 	return (
 		<div className='[&_input]:border p-8'>
 			<h1 className='mb-6'>DataGrid Sandbox - {type}</h1>
 
-			<div className='flex gap-0.5 border-b border-zinc-200 mb-4 overflow-x-auto'>
-				{TOP_LEVEL_TABS.map((tab) => {
-					const isActive =
-						tab.kind === 'single'
-							? activeTab === tab.id
-							: activeTopLevel?.kind === 'group' && activeTopLevel.id === tab.id
-
-					return (
-						<button
-							key={tab.kind === 'single' ? tab.id : `group:${tab.id}`}
-							onClick={() => {
-								if (tab.kind === 'single') {
-									setActiveTab(tab.id)
-								} else {
-									const first = tab.children[0]
-									if (first) setActiveTab(first.id)
-								}
-							}}
-							className='p-2 border-b-2 border-transparent bg-none cursor-pointer font-semibold text-zinc-900 text-zinc-500 mb-[-1px] transition-colors duration-150'
-							style={isActive ? { borderColor: '#0f172a' } : {}}
-						>
-							{tab.label}
-						</button>
-					)
-				})}
+			<div className='mb-4 overflow-x-auto'>
+				<Tabs
+					value={activeTopLevelValue}
+					onValueChange={handleTopLevelChange}
+				>
+					<TabsList variant='line'>
+						{TOP_LEVEL_TABS.map((tab) => (
+							<TabsTrigger
+								key={topLevelValueFor(tab)}
+								value={topLevelValueFor(tab)}
+							>
+								{tab.label}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</Tabs>
 			</div>
 
 			{activeTopLevel?.kind === 'group' && (
-				<div className='flex gap-0.5 mb-4 overflow-x-auto'>
-					{activeTopLevel.children.map((child) => (
-						<button
-							key={child.id}
-							onClick={() => {
-								setActiveTab(child.id)
-							}}
-							className='px-3 py-1 rounded-full text-sm cursor-pointer transition-colors duration-150 border'
-							style={
-								activeTab === child.id
-									? { background: '#0f172a', color: 'white', borderColor: '#0f172a' }
-									: { background: 'transparent', color: '#475569', borderColor: '#e4e4e7' }
-							}
-						>
-							{child.label}
-						</button>
-					))}
+				<div className='mb-4 overflow-x-auto'>
+					<Tabs
+						value={activeTab}
+						onValueChange={handleSubTabChange}
+					>
+						<TabsList>
+							{activeTopLevel.children.map((child) => (
+								<TabsTrigger
+									key={child.id}
+									value={child.id}
+								>
+									{child.label}
+								</TabsTrigger>
+							))}
+						</TabsList>
+					</Tabs>
 				</div>
 			)}
 

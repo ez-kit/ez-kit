@@ -4,20 +4,10 @@ import { useMemo } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
-import { columns, type User } from './_data'
-
-function makeData(count: number): User[] {
-	return Array.from({ length: count }, (_, i) => ({
-		id: i + 1,
-		name: `User ${String(i + 1)}`,
-		email: `user${String(i + 1)}@example.com`,
-		age: 20 + (i % 50),
-		active: i % 3 !== 0,
-	}))
-}
+import { columns, makeUsers } from './_data'
 
 export function StickyHeaderExample() {
-	const data = useMemo(() => makeData(50), [])
+	const data = useMemo(() => makeUsers(50), [])
 
 	const table = useDataGrid({
 		data,

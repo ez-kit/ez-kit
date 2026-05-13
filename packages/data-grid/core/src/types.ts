@@ -225,17 +225,34 @@ export type TableConfig<TRow extends object> = {
 	 */
 	getRowId?: (row: TRow, index: number) => string
 
+	/**
+	 * Sorting configuration. Falsy (`undefined` or `false`) fully disables sorting:
+	 * UI affordances are not rendered and `getSortedRowModel` is not attached,
+	 * regardless of per-column sorting config. Truthy (`true` or object) enables it
+	 * and per-column overrides apply.
+	 */
 	sorting?: boolean | SortingConfig
+	/**
+	 * Filtering configuration. Falsy fully disables filtering for all columns;
+	 * truthy enables it.
+	 */
 	filtering?: boolean | FilteringConfig
 	pagination?: boolean | PaginationConfig
 	selection?: boolean | SelectionConfig
 	expanding?: boolean | ExpandingConfig
 	/**
-	 * Pinning configuration.
+	 * Column visibility (hide/show columns). Falsy fully disables hiding for all
+	 * columns; truthy enables it (per-column `visibility` controls remain).
+	 * The detailed UI config (e.g. toolbar button) is layered on top in the
+	 * React package.
+	 */
+	columnVisibility?: boolean | object
+	/**
+	 * Pinning configuration. Column pinning and row pinning are gated independently:
 	 * - `true` — enable column menu UI + row pin top+bottom
 	 * - `{ column: true }` — column menu only
 	 * - `{ row: { top: true } }` — row pin top only
-	 * - `false` / omitted — no pinning
+	 * - `false` / omitted — no pinning at all
 	 */
 	pinning?: boolean | PinningConfig
 	virtualized?: boolean | VirtualizedConfig

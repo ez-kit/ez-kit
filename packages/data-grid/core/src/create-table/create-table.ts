@@ -101,7 +101,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 
 	const expandingCfg = typeof config.expanding === 'object' ? config.expanding : undefined
 	const expandVariant = expandingCfg?.variant ?? 'sub-content'
-	const { row: rowPinConfig } = normalizePinning(config.pinning)
+	const normalizedPinning = normalizePinning(config.pinning)
+	const rowPinConfig = normalizedPinning.row
 	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
 
 	const sortingCfg = typeof config.sorting === 'object' ? config.sorting : undefined
@@ -169,8 +170,20 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		onStateChange,
 		getCoreRowModel: getCoreRowModel(),
 		initialState,
-		...(config.sorting ? { getSortedRowModel: getSortedRowModel() } : {}),
-		...(config.filtering ? { getFilteredRowModel: getFilteredRowModel() } : {}),
+		// Sorting / Filtering / ColumnVisibility / ColumnPinning are gated at the
+		// table level: when the corresponding config field is falsy (undefined or false),
+		// the feature is fully OFF — TanStack's enableX:false makes column.getCanX()
+		// return false for all columns regardless of per-column config, and the matching
+		// getXRowModel is not attached. Truthy config (true or object) leaves the
+		// TanStack default in place so per-column overrides keep working.
+		...(config.sorting
+			? { getSortedRowModel: getSortedRowModel() }
+			: { enableSorting: false }),
+		...(config.filtering
+			? { getFilteredRowModel: getFilteredRowModel() }
+			: { enableColumnFilters: false }),
+		...(config.columnVisibility ? {} : { enableHiding: false }),
+		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
 		...(config.pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
 		...(config.expanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
 		...(config.expanding && expandVariant === 'tree'
