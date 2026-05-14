@@ -44,6 +44,12 @@ export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
 /** Symbol used to carry normalized globalFiltering UI config on the table instance for Toolbar / GlobalFilterInput to read. */
 export const GLOBAL_FILTERING_KEY = Symbol('globalFiltering')
 
+/** Symbol used to carry normalized active filter chips config on the table instance. */
+export const FILTER_CHIPS_KEY = Symbol('filterChips')
+
+/** Symbol used to carry normalized Clear-all filters button config on the table instance. */
+export const FILTER_CLEAR_BUTTON_KEY = Symbol('filterClearButton')
+
 /** Symbol used to carry fallbacks config on the table instance for Body to read. */
 export const FALLBACKS_KEY = Symbol('fallbacks')
 
@@ -164,10 +170,47 @@ export type FallbacksConfig = {
 
 export type FilteringVariant = 'inline' | 'popover'
 
+export type FilterChipsPosition = 'above' | 'below'
+
+export type FilterChipsConfig = {
+	/** Where to render the auto-mounted chips strip relative to the table. Default: 'above'. */
+	position?: FilterChipsPosition
+}
+
+export type FilterClearButtonConfig = {
+	/** When true the Clear-all button is rendered (disabled) even with no active filters. Default: false. */
+	alwaysShow?: boolean
+}
+
 export type ReactFilteringConfig = {
 	/** Display variant for column filter controls. Default: 'inline'. */
 	variant?: FilteringVariant
+	/**
+	 * Auto-mount a strip of removable chips for active filters.
+	 * - `false` / omitted — no auto-mount. `<DataGrid.ActiveFiltersBar />` still works manually.
+	 * - `true` — auto-mount with `position: 'above'`.
+	 * - `FilterChipsConfig` — fine-grained.
+	 */
+	chips?: boolean | FilterChipsConfig
+	/**
+	 * Auto-mount a Clear-all button into `Toolbar.right` after `GlobalFilterInput`.
+	 * Hidden when no active filter unless `alwaysShow: true`.
+	 * - `false` / omitted — no auto-mount. `<DataGrid.ClearFiltersButton />` still works manually.
+	 * - `true` — auto-mount with default behaviour.
+	 * - `FilterClearButtonConfig` — fine-grained.
+	 */
+	clearButton?: boolean | FilterClearButtonConfig
 } & FilteringConfig
+
+/** Normalized shape stored on the table instance for `DataGrid` root to read. */
+export type NormalizedFilterChipsConfig = {
+	position: FilterChipsPosition
+}
+
+/** Normalized shape stored on the table instance for `Toolbar` / `ClearFiltersButton` to read. */
+export type NormalizedClearButtonConfig = {
+	alwaysShow: boolean
+}
 
 /**
  * React-layer config for global search.
@@ -300,8 +343,30 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	const filteringVariant: FilteringVariant | undefined =
 		typeof rawFiltering === 'object' ? rawFiltering.variant : undefined
 
+	const normalizedChips: NormalizedFilterChipsConfig | undefined = (() => {
+		if (typeof rawFiltering !== 'object' || rawFiltering.chips === undefined || rawFiltering.chips === false) {
+			return undefined
+		}
+		if (rawFiltering.chips === true) return { position: 'above' }
+		return { position: rawFiltering.chips.position ?? 'above' }
+	})()
+
+	const normalizedClearButton: NormalizedClearButtonConfig | undefined = (() => {
+		if (
+			typeof rawFiltering !== 'object' ||
+			rawFiltering.clearButton === undefined ||
+			rawFiltering.clearButton === false
+		) {
+			return undefined
+		}
+		if (rawFiltering.clearButton === true) return { alwaysShow: false }
+		return { alwaysShow: Boolean(rawFiltering.clearButton.alwaysShow) }
+	})()
+
 	const coreFiltering: boolean | FilteringConfig | undefined =
-		typeof rawFiltering === 'object' ? (({ variant: _, ...rest }) => rest)(rawFiltering) : rawFiltering
+		typeof rawFiltering === 'object'
+			? (({ variant: _v, chips: _c, clearButton: _cb, ...rest }) => rest)(rawFiltering)
+			: rawFiltering
 
 	// Split `globalFiltering` into:
 	// - core part (fn, fns) — passed through to createTable
@@ -406,6 +471,11 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	// Store normalized globalFiltering UI config (placeholder, debounce, toolbar) on the
 	// table instance so Toolbar / GlobalFilterInput can read it without prop drilling.
 	;(tableRef.current as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] = normalizedGlobalFiltering
+
+	// Store normalized filter chips/clear-button UI configs so DataGrid root and Toolbar
+	// can decide whether to auto-mount the corresponding compound components.
+	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] = normalizedChips
+	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] = normalizedClearButton
 
 	// Store fallbacks config on the table instance so Body can read without an extra prop
 	const fallbacksRef = useRef(fallbacks)

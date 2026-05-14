@@ -12,7 +12,9 @@ import type {
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	CreatingActionsCellProps,
+	ClearFiltersButtonComponentProps,
 	EmptyStateProps,
+	FilterChipProps,
 	FilterPopoverProps,
 	GridComponents,
 	InputProps,
@@ -231,6 +233,22 @@ function TestFilterPopover({ children, hasActiveFilter }: FilterPopoverProps) {
 		</div>
 	)
 }
+function TestFilterChip({ label, value, onRemove, kind }: FilterChipProps) {
+	return (
+		<span data-slot='filter-chip' data-chip-kind={kind} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', border: '1px solid #ccc' }}>
+			<strong>{label}</strong>
+			<span>{value}</span>
+			<button type='button' aria-label={`Remove ${label} filter`} onClick={onRemove}>×</button>
+		</span>
+	)
+}
+function TestClearFiltersButton({ disabled, onPress, children, ariaLabel }: ClearFiltersButtonComponentProps) {
+	return (
+		<button type='button' data-slot='clear-filters-button' aria-label={ariaLabel} disabled={disabled} onClick={onPress}>
+			{children ?? '⌫'}
+		</button>
+	)
+}
 function TestConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
 	if (!open) return null
 	return (
@@ -299,6 +317,8 @@ export const testComponents: Required<GridComponents> = {
 	ColumnMenu: TestColumnMenu,
 	ColumnVisibilityMenu: TestColumnVisibilityMenu,
 	FilterPopover: TestFilterPopover,
+	FilterChip: TestFilterChip,
+	ClearFiltersButton: TestClearFiltersButton,
 	SelectionBar: TestSelectionBar,
 	ConfirmDialog: TestConfirmDialog,
 	OperatorSelect: TestOperatorSelect,

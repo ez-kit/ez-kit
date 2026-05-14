@@ -1,9 +1,17 @@
 import { CellTypesProvider } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import { CELL_TYPES_KEY, SELECTION_BAR_KEY, type SelectionBarConfig } from '../use-data-grid'
+import {
+	CELL_TYPES_KEY,
+	FILTER_CHIPS_KEY,
+	SELECTION_BAR_KEY,
+	type NormalizedFilterChipsConfig,
+	type SelectionBarConfig,
+} from '../use-data-grid'
 
+import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { DataGridCell } from './cell'
+import { ClearFiltersButton } from './clear-filters-button'
 import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
@@ -86,12 +94,20 @@ function DefaultLayout() {
 		| undefined
 	const variant = (typeof rawConfig === 'object' ? rawConfig.variant : undefined) ?? 'floating'
 
+	const chipsConfig = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as
+		| NormalizedFilterChipsConfig
+		| undefined
+	const chipsAbove = chipsConfig?.position === 'above' ? <ActiveFiltersBar /> : null
+	const chipsBelow = chipsConfig?.position === 'below' ? <ActiveFiltersBar /> : null
+
 	if (variant === 'inline') {
 		return (
 			<>
 				<SelectionBar />
 				<Toolbar />
+				{chipsAbove}
 				<DataGridTable />
+				{chipsBelow}
 				<Pagination />
 			</>
 		)
@@ -100,7 +116,9 @@ function DefaultLayout() {
 	return (
 		<>
 			<Toolbar />
+			{chipsAbove}
 			<DataGridTable />
+			{chipsBelow}
 			<Pagination />
 			<SelectionBar />
 		</>
@@ -155,6 +173,8 @@ type DataGridType = typeof DataGridRoot & {
 	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
 	SortTrigger: typeof SortTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
+	ActiveFiltersBar: typeof ActiveFiltersBar
+	ClearFiltersButton: typeof ClearFiltersButton
 	CreatingModal: typeof CreatingModal
 	EditingModal: typeof EditingModal
 	LoadingBody: typeof LoadingBody
@@ -176,6 +196,8 @@ DataGrid.CreateTrigger = CreateTrigger
 DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
 DataGrid.SortTrigger = SortTrigger
 DataGrid.GlobalFilterInput = GlobalFilterInput
+DataGrid.ActiveFiltersBar = ActiveFiltersBar
+DataGrid.ClearFiltersButton = ClearFiltersButton
 DataGrid.CreatingModal = CreatingModal
 DataGrid.EditingModal = EditingModal
 DataGrid.LoadingBody = LoadingBody

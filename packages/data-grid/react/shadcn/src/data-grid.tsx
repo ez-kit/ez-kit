@@ -7,11 +7,13 @@ import { BetweenInput } from './blocks/BetweenInput'
 import { cellTypes } from './blocks/cell-types'
 import { Checkbox } from './blocks/Checkbox'
 import { Chevron } from './blocks/Chevron'
+import { ClearFiltersButton } from './blocks/ClearFiltersButton'
 import { ColumnMenu } from './blocks/ColumnMenu'
 import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { EmptyState } from './blocks/EmptyState'
+import { FilterChip } from './blocks/FilterChip'
 import { FilterPopover } from './blocks/FilterPopover'
 import { FormShell } from './blocks/FormShell'
 import { GlobalFilterInput } from './blocks/GlobalFilterInput'
@@ -56,6 +58,8 @@ const components = {
 	ColumnMenu,
 	ColumnVisibilityMenu,
 	FilterPopover,
+	FilterChip,
+	ClearFiltersButton,
 	GlobalFilterInput,
 	SelectionBar,
 	ConfirmDialog,

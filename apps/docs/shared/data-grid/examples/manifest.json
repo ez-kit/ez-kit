@@ -104,6 +104,14 @@
 		"exportName": "GlobalFilteringExample"
 	},
 	{
+		"id": "filter-chips",
+		"label": "Active chips & clear",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-chips.tsx",
+		"exportName": "FilterChipsExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",

@@ -208,6 +208,30 @@ export type FilterPopoverProps = {
 	hasActiveFilter: boolean
 }
 
+export type FilterChipKind = 'column' | 'global'
+
+export type FilterChipProps = {
+	/** Human label for the chip — column header for `kind: 'column'`, "Search" for `kind: 'global'`. */
+	label: string
+	/** Pre-rendered display of the filter value (operator + value, between range, list, etc.). */
+	value: ReactNode
+	/** Remove this filter. Adapter wires it to `column.setFilterValue(undefined)` or `table.setGlobalFilter(undefined)`. */
+	onRemove: () => void
+	/** Where the filter comes from. Kits may style column vs. global chips differently. */
+	kind: FilterChipKind
+}
+
+export type ClearFiltersButtonComponentProps = {
+	/** True when no filter is active; kit can render the button in a disabled state. */
+	disabled: boolean
+	/** Clear every column filter and the global filter. */
+	onPress: () => void
+	/** Optional custom contents. When absent the kit renders its default (icon-only). */
+	children?: ReactNode
+	/** Accessibility label. Defaults to "Clear filters" when omitted. */
+	ariaLabel?: string
+}
+
 export type OperatorSelectProps = {
 	operators: FilterOperatorDef[]
 	currentOperatorId: string
@@ -321,6 +345,8 @@ export type GridComponents = {
 	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
 	SortMenu?: ComponentType<SortMenuProps>
 	FilterPopover?: ComponentType<FilterPopoverProps>
+	FilterChip?: ComponentType<FilterChipProps>
+	ClearFiltersButton?: ComponentType<ClearFiltersButtonComponentProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>

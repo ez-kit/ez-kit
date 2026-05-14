@@ -1,6 +1,19 @@
 @import '@heroui/styles';
 @import '@ez-kit/data-grid-react/styles.css';
 
+[data-slot='active-filters-bar'] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	align-items: center;
+}
+[data-slot='active-filters-bar'][data-chip-position='above'] {
+	margin-bottom: 0.75rem;
+}
+[data-slot='active-filters-bar'][data-chip-position='below'] {
+	margin-top: 0.75rem;
+}
+
 @theme inline {
 	--color-surface: var(--surface);
 	--color-surface-secondary: var(--surface-secondary);

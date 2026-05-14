@@ -1,6 +1,13 @@
 import { useGridComponents } from '../components-context'
-import { COLUMN_VISIBILITY_KEY, GLOBAL_FILTERING_KEY, PAGE_SIZER_KEY, SORTING_KEY } from '../use-data-grid'
+import {
+	COLUMN_VISIBILITY_KEY,
+	FILTER_CLEAR_BUTTON_KEY,
+	GLOBAL_FILTERING_KEY,
+	PAGE_SIZER_KEY,
+	SORTING_KEY,
+} from '../use-data-grid'
 
+import { ClearFiltersButton } from './clear-filters-button'
 import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { CreateTrigger } from './create-trigger'
 import { GlobalFilterInput } from './global-filter-input'
@@ -8,7 +15,12 @@ import { PageSizer } from './page-sizer'
 import { SortTrigger } from './sort-trigger'
 import { useTableContext } from './table-context'
 
-import type { ColumnVisibilityUIConfig, NormalizedGlobalFilteringConfig, PageSizerConfig } from '../use-data-grid'
+import type {
+	ColumnVisibilityUIConfig,
+	NormalizedClearButtonConfig,
+	NormalizedGlobalFilteringConfig,
+	PageSizerConfig,
+} from '../use-data-grid'
 import type { SortingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -49,15 +61,21 @@ export function Toolbar({ children }: ToolbarProps) {
 		| undefined
 	const hasGlobalFilterToolbar = Boolean(globalFilteringConfig?.toolbar)
 
+	const clearButtonConfig = (table as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] as
+		| NormalizedClearButtonConfig
+		| undefined
+	const hasClearButtonToolbar = clearButtonConfig !== undefined
+
 	if (children) {
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
 	}
 
 	const left = pageSizerConfig ? <PageSizer /> : null
 	const right =
-		hasGlobalFilterToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar ? (
+		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar ? (
 			<>
 				{hasGlobalFilterToolbar && <GlobalFilterInput />}
+				{hasClearButtonToolbar && <ClearFiltersButton />}
 				{hasCreating && <CreateTrigger />}
 				{hasSortingToolbar && <SortTrigger />}
 				{hasVisibilityToolbar && <ColumnVisibilityTrigger />}

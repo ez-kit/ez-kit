@@ -10,7 +10,9 @@ import type {
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	CreatingActionsCellProps,
+	ClearFiltersButtonComponentProps,
 	EmptyStateProps,
+	FilterChipProps,
 	FilterPopoverProps,
 	FormShellProps,
 	GlobalFilterInputProps,
@@ -469,6 +471,54 @@ function NativeFilterPopover({ children, hasActiveFilter }: FilterPopoverProps) 
 		</div>
 	)
 }
+function NativeFilterChip({ label, value, onRemove, kind }: FilterChipProps) {
+	return (
+		<span
+			data-slot='filter-chip'
+			data-chip-kind={kind}
+			style={{
+				display: 'inline-flex',
+				alignItems: 'center',
+				gap: 4,
+				padding: '2px 6px',
+				border: '1px solid #ccc',
+				borderRadius: 4,
+				fontSize: '0.875rem',
+			}}
+		>
+			<strong>{label}</strong>
+			<span>{value}</span>
+			<button
+				type='button'
+				aria-label={`Remove ${label} filter`}
+				onClick={onRemove}
+				style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
+			>
+				×
+			</button>
+		</span>
+	)
+}
+function NativeClearFiltersButton({ disabled, onPress, children, ariaLabel }: ClearFiltersButtonComponentProps) {
+	return (
+		<button
+			type='button'
+			data-slot='clear-filters-button'
+			aria-label={ariaLabel}
+			disabled={disabled}
+			onClick={onPress}
+			style={{
+				border: 'none',
+				background: 'transparent',
+				cursor: disabled ? 'not-allowed' : 'pointer',
+				opacity: disabled ? 0.5 : 1,
+				padding: '0.25rem 0.5rem',
+			}}
+		>
+			{children ?? '×'}
+		</button>
+	)
+}
 function NativeConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
 	if (!open) return null
 	return (
@@ -680,6 +730,8 @@ export const nativeComponents: Required<GridComponents> = {
 	ColumnMenu: NativeColumnMenu,
 	ColumnVisibilityMenu: NativeColumnVisibilityMenu,
 	FilterPopover: NativeFilterPopover,
+	FilterChip: NativeFilterChip,
+	ClearFiltersButton: NativeClearFiltersButton,
 	SelectionBar: NativeSelectionBar,
 	ConfirmDialog: NativeConfirmDialog,
 	OperatorSelect: NativeOperatorSelect,

@@ -5,6 +5,8 @@ export {
 	COLUMN_VISIBILITY_KEY,
 	EXPAND_KEY,
 	FALLBACKS_KEY,
+	FILTER_CHIPS_KEY,
+	FILTER_CLEAR_BUTTON_KEY,
 	FILTERING_VARIANT_KEY,
 	GLOBAL_FILTERING_KEY,
 	PAGE_SIZER_KEY,
@@ -19,9 +21,14 @@ export type {
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
+	FilterChipsConfig,
+	FilterChipsPosition,
+	FilterClearButtonConfig,
 	FilteringVariant,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
+	NormalizedClearButtonConfig,
+	NormalizedFilterChipsConfig,
 	NormalizedGlobalFilteringConfig,
 	PageSizerConfig,
 	NormalizedVirtualizedConfig,
@@ -43,6 +50,8 @@ export type { DataGridProps } from './data-grid/data-grid'
 
 // Sub-components (also available as DataGrid.SelectionBar)
 export { SelectionBar } from './data-grid/selection-bar'
+export { ActiveFiltersBar } from './data-grid/active-filters-bar'
+export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
 // DI context
 export { GridComponentsProvider, defaultComponents, useGridComponents } from './components-context'
@@ -87,8 +96,11 @@ export type {
 	ColumnMenuProps,
 	ColumnMenuSections,
 	ColumnVisibilityMenuProps,
+	ClearFiltersButtonComponentProps,
 	ConfirmDialogProps,
 	EmptyStateProps,
+	FilterChipKind,
+	FilterChipProps,
 	FilterPopoverProps,
 	GlobalFilterInputProps,
 	GridComponents,

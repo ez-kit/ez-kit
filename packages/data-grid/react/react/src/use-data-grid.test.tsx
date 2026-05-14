@@ -2,9 +2,20 @@ import { defineColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { GLOBAL_FILTERING_KEY, SELECTION_BAR_KEY, VIRTUALIZED_KEY, useDataGrid } from './use-data-grid'
+import {
+	FILTER_CHIPS_KEY,
+	FILTER_CLEAR_BUTTON_KEY,
+	GLOBAL_FILTERING_KEY,
+	SELECTION_BAR_KEY,
+	VIRTUALIZED_KEY,
+	useDataGrid,
+} from './use-data-grid'
 
-import type { NormalizedGlobalFilteringConfig } from './use-data-grid'
+import type {
+	NormalizedClearButtonConfig,
+	NormalizedFilterChipsConfig,
+	NormalizedGlobalFilteringConfig,
+} from './use-data-grid'
 
 type User = {
 	id: number
@@ -247,5 +258,73 @@ describe('useDataGrid — globalFiltering normalization', () => {
 		})
 		expect(result.current.getFilteredRowModel().rows).toHaveLength(1)
 		expect(result.current.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
+	})
+})
+
+// ── filtering.chips normalization ─────────────────────────────────────────────
+
+function getChipsConfig(table: object): NormalizedFilterChipsConfig | undefined {
+	return (table as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig | undefined
+}
+
+describe('useDataGrid — filtering.chips normalization', () => {
+	it('omitted → FILTER_CHIPS_KEY is undefined', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
+		expect(getChipsConfig(result.current)).toBeUndefined()
+	})
+
+	it('chips: true → defaults to position "above"', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }),
+		)
+		expect(getChipsConfig(result.current)).toEqual({ position: 'above' })
+	})
+
+	it('chips: { position: "below" } → preserved', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: { position: 'below' } } }),
+		)
+		expect(getChipsConfig(result.current)).toEqual({ position: 'below' })
+	})
+
+	it('chips: false → FILTER_CHIPS_KEY is undefined', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: false } }),
+		)
+		expect(getChipsConfig(result.current)).toBeUndefined()
+	})
+})
+
+// ── filtering.clearButton normalization ───────────────────────────────────────
+
+function getClearButtonConfig(table: object): NormalizedClearButtonConfig | undefined {
+	return (table as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] as NormalizedClearButtonConfig | undefined
+}
+
+describe('useDataGrid — filtering.clearButton normalization', () => {
+	it('omitted → FILTER_CLEAR_BUTTON_KEY is undefined', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
+		expect(getClearButtonConfig(result.current)).toBeUndefined()
+	})
+
+	it('clearButton: true → alwaysShow defaults to false', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: true } }),
+		)
+		expect(getClearButtonConfig(result.current)).toEqual({ alwaysShow: false })
+	})
+
+	it('clearButton: { alwaysShow: true } → preserved', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: { alwaysShow: true } } }),
+		)
+		expect(getClearButtonConfig(result.current)).toEqual({ alwaysShow: true })
+	})
+
+	it('clearButton: false → FILTER_CLEAR_BUTTON_KEY is undefined', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: false } }),
+		)
+		expect(getClearButtonConfig(result.current)).toBeUndefined()
 	})
 })
