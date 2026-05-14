@@ -88,6 +88,7 @@ export type {
 	CreatingActionsCellProps,
 	FormShellProps,
 	BetweenInputProps,
+	DateRangePreset,
 	ChevronProps,
 	ColPinSection,
 	ColSortSection,

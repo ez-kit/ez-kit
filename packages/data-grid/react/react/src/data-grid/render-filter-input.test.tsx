@@ -86,3 +86,59 @@ describe('renderFilterInput — multi-value (in / notIn) branch', () => {
 		expect(counts).toContain('2')
 	})
 })
+
+type DateRow = { id: number; joinedAt: string }
+
+const DATE_DATA: DateRow[] = [
+	{ id: 1, joinedAt: '2026-05-10' },
+	{ id: 2, joinedAt: '2026-05-12' },
+]
+
+const DATE_COLUMNS_WITH_PRESETS = defineColumns<DateRow>([
+	{
+		accessorKey: 'joinedAt',
+		header: 'Joined',
+		cell: { type: 'date' },
+		filtering: {
+			operators: {
+				items: ['eq', 'between'],
+				betweenOperator: { variant: 'inputs', presets: true },
+			},
+			defaultOperator: 'between',
+		},
+	},
+])
+
+function setupDate(): ReturnType<typeof createTable<DateRow>> {
+	const table = createTable<DateRow>({ data: DATE_DATA, columns: DATE_COLUMNS_WITH_PRESETS, filtering: true })
+	render(
+		<GridComponentsProvider>
+			<DataGrid table={table} />
+		</GridComponentsProvider>,
+	)
+	return table
+}
+
+describe('renderFilterInput — between preset row (date)', () => {
+	it('renders built-in preset buttons when betweenOperator.presets: true on a date column', () => {
+		setupDate()
+		// Built-in DATE_RANGE_PRESETS includes "Today" and "This month".
+		expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument()
+		expect(screen.getByRole('button', { name: 'This month' })).toBeInTheDocument()
+	})
+
+	it('clicking a preset dispatches setFilterValue with the resolved range', () => {
+		const table = setupDate()
+		const todayBtn = screen.getByRole('button', { name: 'Today' })
+		fireEvent.click(todayBtn)
+
+		const filterValue = table.getColumn('joinedAt')?.getFilterValue() as StructuredFilterValue | undefined
+		expect(filterValue?.operator).toBe('between')
+		const range = filterValue?.value as { from?: string; to?: string } | undefined
+		expect(typeof range?.from).toBe('string')
+		expect(typeof range?.to).toBe('string')
+		expect(range?.from).toBe(range?.to)
+		// `today` preset returns ISO date-only string (YYYY-MM-DD, length 10).
+		expect(range?.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+	})
+})

@@ -1,18 +1,95 @@
+'use client'
+
+import { format, isValid, parseISO } from 'date-fns'
+
+import { Button } from '../components/ui/button'
+import { Calendar } from '../components/ui/calendar'
 import { Input } from '../components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover'
 import { Slider } from '../components/ui/slider'
 
 import { DateCellInput } from './cell-types/DateCell'
 
-import type { BetweenInputProps } from '@ez-kit/data-grid-react'
+import type { BetweenInputProps, DateRangePreset } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
+import type { DateRange } from 'react-day-picker'
 
-export function BetweenInput({ value, onChange, variant, type, min, max }: BetweenInputProps) {
+const ISO_DATE_FORMAT = 'yyyy-MM-dd'
+const DISPLAY_FORMAT = 'PP'
+
+function toDate(value: unknown): Date | undefined {
+	if (value instanceof Date) return isValid(value) ? value : undefined
+	if (typeof value !== 'string' || !value) return undefined
+	const d = parseISO(value)
+	return isValid(d) ? d : undefined
+}
+
+function PresetRow({
+	presets,
+	onPresetSelect,
+}: {
+	presets: DateRangePreset[]
+	onPresetSelect: (preset: DateRangePreset) => void
+}) {
+	return (
+		<div
+			data-slot='between-presets'
+			className='flex flex-wrap gap-1'
+		>
+			{presets.map((p) => (
+				<Button
+					key={p.id}
+					type='button'
+					variant='secondary'
+					size='sm'
+					className='h-6 px-2 text-xs'
+					onClick={() => {
+						onPresetSelect(p)
+					}}
+				>
+					{p.label}
+				</Button>
+			))}
+		</div>
+	)
+}
+
+function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode {
+	if (!presetRow) return content
+	return (
+		<div className='flex flex-col gap-2'>
+			{presetRow}
+			{content}
+		</div>
+	)
+}
+
+export function BetweenInput({
+	value,
+	onChange,
+	variant,
+	type,
+	min,
+	max,
+	presets,
+	onPresetSelect,
+}: BetweenInputProps) {
+	const presetRow =
+		presets && presets.length > 0 && onPresetSelect ? (
+			<PresetRow
+				presets={presets}
+				onPresetSelect={onPresetSelect}
+			/>
+		) : null
+
 	if (variant === 'slider') {
 		const sliderMin = min ?? 0
 		const sliderMax = max ?? 100
 		const fromVal = typeof value.from === 'number' ? value.from : sliderMin
 		const toVal = typeof value.to === 'number' ? value.to : sliderMax
 
-		return (
+		return withPresets(
+			presetRow,
 			<div className='flex items-center gap-2 px-1'>
 				<span className='min-w-[2ch] text-right text-xs tabular-nums'>{fromVal}</span>
 				<Slider
@@ -25,12 +102,61 @@ export function BetweenInput({ value, onChange, variant, type, min, max }: Betwe
 					className='w-24'
 				/>
 				<span className='min-w-[2ch] text-xs tabular-nums'>{toVal}</span>
-			</div>
+			</div>,
+		)
+	}
+
+	if (variant === 'calendar' && type === 'date') {
+		const fromDate = toDate(value.from)
+		const toDateVal = toDate(value.to)
+		const selected: DateRange | undefined =
+			fromDate || toDateVal ? { from: fromDate, to: toDateVal } : undefined
+		const displayLabel =
+			fromDate && toDateVal
+				? `${format(fromDate, DISPLAY_FORMAT)} – ${format(toDateVal, DISPLAY_FORMAT)}`
+				: fromDate
+					? `${format(fromDate, DISPLAY_FORMAT)} – …`
+					: toDateVal
+						? `… – ${format(toDateVal, DISPLAY_FORMAT)}`
+						: 'Pick a range'
+
+		return withPresets(
+			presetRow,
+			<Popover>
+				<PopoverTrigger asChild>
+					<Button
+						type='button'
+						variant='outline'
+						size='sm'
+						className='h-7 justify-start gap-2 px-2 text-xs font-normal'
+						data-empty={!selected || undefined}
+					>
+						{displayLabel}
+					</Button>
+				</PopoverTrigger>
+				<PopoverContent
+					className='w-auto p-0'
+					align='start'
+				>
+					<Calendar
+						mode='range'
+						selected={selected}
+						onSelect={(range) => {
+							onChange({
+								from: range?.from ? format(range.from, ISO_DATE_FORMAT) : undefined,
+								to: range?.to ? format(range.to, ISO_DATE_FORMAT) : undefined,
+							})
+						}}
+						numberOfMonths={2}
+					/>
+				</PopoverContent>
+			</Popover>,
 		)
 	}
 
 	if (type === 'date') {
-		return (
+		return withPresets(
+			presetRow,
 			<div className='flex items-center gap-1'>
 				<DateCellInput
 					id='between-from'
@@ -55,11 +181,12 @@ export function BetweenInput({ value, onChange, variant, type, min, max }: Betwe
 					errors={[]}
 					isValidating={false}
 				/>
-			</div>
+			</div>,
 		)
 	}
 
-	return (
+	return withPresets(
+		presetRow,
 		<div className='flex items-center gap-1'>
 			<Input
 				type='number'
@@ -82,6 +209,6 @@ export function BetweenInput({ value, onChange, variant, type, min, max }: Betwe
 					onChange({ ...value, to: v })
 				}}
 			/>
-		</div>
+		</div>,
 	)
 }

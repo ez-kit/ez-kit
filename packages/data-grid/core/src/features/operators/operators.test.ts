@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	DATE_RANGE_PRESETS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
 	DEFAULT_OPERATORS_BY_TYPE,
 	IN_OPERATORS,
@@ -98,5 +99,56 @@ describe('createOperatorFilterFn — empty-array guard', () => {
 		const row = { getValue: () => 'a' }
 		expect(fn(row, 'col', { operator: 'in', value: ['a'] })).toBe(true)
 		expect(fn(row, 'col', { operator: 'in', value: ['b'] })).toBe(false)
+	})
+})
+
+describe('DATE_RANGE_PRESETS', () => {
+	// Anchor: 2026-05-14 UTC (a Thursday in mid-month — exercises month/week edges).
+	const NOW = new Date('2026-05-14T00:00:00Z')
+
+	const findPreset = (id: string) => {
+		const p = DATE_RANGE_PRESETS.find((x) => x.id === id)
+		if (!p) throw new Error(`expected preset ${id}`)
+		return p
+	}
+
+	it('today → { from: today, to: today }', () => {
+		expect(findPreset('today').getRange(NOW)).toEqual({ from: '2026-05-14', to: '2026-05-14' })
+	})
+
+	it('yesterday → { from: yesterday, to: yesterday }', () => {
+		expect(findPreset('yesterday').getRange(NOW)).toEqual({ from: '2026-05-13', to: '2026-05-13' })
+	})
+
+	it('last7 → from = 6 days back, to = today (inclusive 7-day window)', () => {
+		expect(findPreset('last7').getRange(NOW)).toEqual({ from: '2026-05-08', to: '2026-05-14' })
+	})
+
+	it('last30 → from = 29 days back, to = today (inclusive 30-day window)', () => {
+		expect(findPreset('last30').getRange(NOW)).toEqual({ from: '2026-04-15', to: '2026-05-14' })
+	})
+
+	it('thisMonth → from = first of month, to = last day of month', () => {
+		expect(findPreset('thisMonth').getRange(NOW)).toEqual({ from: '2026-05-01', to: '2026-05-31' })
+	})
+
+	it('lastMonth → from = first of previous month, to = last day of previous month', () => {
+		expect(findPreset('lastMonth').getRange(NOW)).toEqual({ from: '2026-04-01', to: '2026-04-30' })
+	})
+
+	it('lastMonth across year boundary (January)', () => {
+		const jan = new Date('2026-01-15T00:00:00Z')
+		expect(findPreset('lastMonth').getRange(jan)).toEqual({ from: '2025-12-01', to: '2025-12-31' })
+	})
+
+	it('built-in preset list has stable id + label per spec', () => {
+		expect(DATE_RANGE_PRESETS.map((p) => p.id)).toEqual([
+			'today',
+			'yesterday',
+			'last7',
+			'last30',
+			'thisMonth',
+			'lastMonth',
+		])
 	})
 })

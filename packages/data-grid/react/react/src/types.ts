@@ -1,4 +1,4 @@
-import type { BetweenValue, FilterOperatorDef, MultiSelectOption } from '@ez-kit/data-grid-core'
+import type { BetweenValue, DateRangePreset, FilterOperatorDef, MultiSelectOption } from '@ez-kit/data-grid-core'
 import type { Column, Row } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
@@ -245,9 +245,13 @@ export type BetweenInputProps = {
 	type: 'number' | 'date'
 	min?: number
 	max?: number
+	/** Preset list to render above the inputs/slider/calendar. Already resolved by the adapter. */
+	presets?: DateRangePreset[]
+	/** Called when the user clicks a preset chip. Adapter wires it to setFilterValue with the preset's range. */
+	onPresetSelect?: (preset: DateRangePreset) => void
 }
 
-export type { MultiSelectOption }
+export type { DateRangePreset, MultiSelectOption }
 
 export type MultiSelectFilterProps = {
 	/** Available options. Counts (when present) come from faceted unique values. */

@@ -42,6 +42,7 @@ export type {
 	BetweenOperatorConfig,
 	BetweenValue,
 	ColumnOperatorsConfig,
+	DateRangePreset,
 	FilterOperatorDef,
 	MultiSelectOption,
 	OperatorRegistry,
@@ -49,6 +50,7 @@ export type {
 } from './features/operators'
 export {
 	DATE_OPERATORS,
+	DATE_RANGE_PRESETS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
 	DEFAULT_OPERATORS_BY_TYPE,
 	IN_OPERATORS,

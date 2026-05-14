@@ -199,9 +199,9 @@ function TestOperatorSelect({ operators, currentOperatorId, onChange }: Operator
 		</select>
 	)
 }
-function TestBetweenInput({ value, onChange, type }: BetweenInputProps) {
+function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: BetweenInputProps) {
 	const inputType = type === 'number' ? 'number' : 'date'
-	return (
+	const inputs = (
 		<div style={{ display: 'flex', gap: '4px' }}>
 			<input
 				type={inputType}
@@ -222,6 +222,25 @@ function TestBetweenInput({ value, onChange, type }: BetweenInputProps) {
 					onChange({ ...value, to: v })
 				}}
 			/>
+		</div>
+	)
+	if (!presets || presets.length === 0 || !onPresetSelect) return inputs
+	return (
+		<div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+			<div data-slot='between-presets' style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+				{presets.map((p) => (
+					<button
+						key={p.id}
+						type='button'
+						onClick={() => {
+							onPresetSelect(p)
+						}}
+					>
+						{p.label}
+					</button>
+				))}
+			</div>
+			{inputs}
 		</div>
 	)
 }

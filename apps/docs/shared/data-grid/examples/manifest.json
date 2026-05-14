@@ -120,6 +120,14 @@
 		"exportName": "FilterMultiValueExample"
 	},
 	{
+		"id": "filter-date-range",
+		"label": "Date range & presets",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-date-range.tsx",
+		"exportName": "FilterDateRangeExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",

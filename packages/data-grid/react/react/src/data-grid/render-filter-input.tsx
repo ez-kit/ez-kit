@@ -1,8 +1,11 @@
+import { DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
+
 import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
 import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSelectProps } from '../types'
 import type {
 	BadgeItem,
 	BetweenValue,
+	DateRangePreset,
 	FieldState,
 	MultiSelectOption,
 	SelectItem,
@@ -81,6 +84,23 @@ function resolveMultiSelectOptions(
 }
 
 /**
+ * Resolves the preset list for a `between` operator config.
+ * - Only applies to date-typed columns; number columns ignore presets.
+ * - `true` → built-in {@link DATE_RANGE_PRESETS}
+ * - array → custom list as-is
+ * - `false` / undefined → `undefined` (no preset row)
+ */
+function resolveBetweenPresets(
+	configPresets: boolean | DateRangePreset[] | undefined,
+	betweenType: 'number' | 'date',
+): DateRangePreset[] | undefined {
+	if (betweenType !== 'date') return undefined
+	if (configPresets === true) return DATE_RANGE_PRESETS
+	if (Array.isArray(configPresets) && configPresets.length > 0) return configPresets
+	return undefined
+}
+
+/**
  * Renders the input(s) for a column filter. Handles three layers, in order:
  *
  * 1. Operator-aware path — when `meta.resolvedOperators` is set, dispatches based
@@ -142,6 +162,12 @@ export function renderFilterInput({
 		if (currentOperatorId === 'between') {
 			const betweenCfg = meta.betweenOperatorConfig
 			const betweenType = meta.cellType === 'date' ? 'date' : 'number'
+			const resolvedPresets = resolveBetweenPresets(betweenCfg?.presets, betweenType)
+			const onPresetSelect = resolvedPresets
+				? (preset: DateRangePreset) => {
+						header.column.setFilterValue({ operator: 'between', value: preset.getRange() })
+					}
+				: undefined
 			return (
 				<>
 					<BetweenInput
@@ -151,6 +177,8 @@ export function renderFilterInput({
 						type={betweenType}
 						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
 						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
+						{...(resolvedPresets ? { presets: resolvedPresets } : {})}
+						{...(onPresetSelect ? { onPresetSelect } : {})}
 					/>
 					{operatorSelect}
 				</>

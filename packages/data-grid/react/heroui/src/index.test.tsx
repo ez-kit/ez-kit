@@ -162,6 +162,46 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(screen.getByPlaceholderText('To')).toHaveValue(25)
 	})
 
+	it('BetweenInput renders preset chips when presets[] is provided for a date column', () => {
+		const onChange = vi.fn()
+		const onPresetSelect = vi.fn()
+		const presets = [
+			{ id: 'today', label: 'Today', getRange: () => ({ from: '2026-05-14', to: '2026-05-14' }) },
+			{ id: 'last7', label: 'Last 7 days', getRange: () => ({ from: '2026-05-08', to: '2026-05-14' }) },
+		]
+		render(
+			<BetweenInput
+				value={{}}
+				onChange={onChange}
+				variant='inputs'
+				type='date'
+				presets={presets}
+				onPresetSelect={onPresetSelect}
+			/>,
+		)
+
+		const todayBtn = screen.getByRole('button', { name: 'Today' })
+		expect(todayBtn).toBeInTheDocument()
+		expect(screen.getByRole('button', { name: 'Last 7 days' })).toBeInTheDocument()
+
+		fireEvent.click(todayBtn)
+		expect(onPresetSelect).toHaveBeenCalledWith(presets[0])
+	})
+
+	it('BetweenInput renders RangeCalendar trigger when variant="calendar" and type="date"', () => {
+		const onChange = vi.fn()
+		render(
+			<BetweenInput
+				value={{ from: '2026-05-10', to: '2026-05-12' }}
+				onChange={onChange}
+				variant='calendar'
+				type='date'
+			/>,
+		)
+		// Trigger button shows the range label.
+		expect(screen.getByText('2026-05-10 – 2026-05-12')).toBeInTheDocument()
+	})
+
 	it('toggles column visibility items', () => {
 		const onToggle = vi.fn()
 

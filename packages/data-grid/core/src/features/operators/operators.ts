@@ -28,7 +28,106 @@ export type BetweenOperatorConfig = {
 	min?: number
 	/** Maximum value for slider variant. */
 	max?: number
+	/**
+	 * Show preset chips above the between input(s). Only meaningful when the
+	 * column's `cell.type === 'date'`.
+	 * - `true` — render the built-in {@link DATE_RANGE_PRESETS}
+	 * - {@link DateRangePreset}[] — render a custom subset (or extra presets)
+	 * - `false` / omitted — no preset row
+	 */
+	presets?: boolean | DateRangePreset[]
 }
+
+/**
+ * Date range preset for the `between` operator's date variants.
+ *
+ * `getRange(now)` returns ISO-8601 date-only strings (`'YYYY-MM-DD'`) so the
+ * value is timezone-stable and round-trips through the existing
+ * date-as-string fast path in {@link DATE_OPERATORS} (`between`).
+ */
+export type DateRangePreset = {
+	id: string
+	label: string
+	getRange: (now?: Date) => BetweenValue<string>
+}
+
+/** UTC midnight floor for a given `Date`. Keeps arithmetic timezone-stable. */
+function toUtcMidnight(d: Date): Date {
+	return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+}
+
+/** ISO-8601 date-only string (`YYYY-MM-DD`) for a UTC-midnight `Date`. */
+function isoDate(d: Date): string {
+	return d.toISOString().slice(0, 10)
+}
+
+function addDaysUtc(d: Date, days: number): Date {
+	const next = new Date(d)
+	next.setUTCDate(next.getUTCDate() + days)
+	return next
+}
+
+function startOfMonthUtc(d: Date): Date {
+	return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))
+}
+
+function endOfMonthUtc(d: Date): Date {
+	// Day 0 of next month = last day of current month (UTC).
+	return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0))
+}
+
+/** Built-in date range presets (today / yesterday / last 7d / last 30d / this month / last month). */
+export const DATE_RANGE_PRESETS: DateRangePreset[] = [
+	{
+		id: 'today',
+		label: 'Today',
+		getRange: (now = new Date()) => {
+			const today = toUtcMidnight(now)
+			return { from: isoDate(today), to: isoDate(today) }
+		},
+	},
+	{
+		id: 'yesterday',
+		label: 'Yesterday',
+		getRange: (now = new Date()) => {
+			const y = addDaysUtc(toUtcMidnight(now), -1)
+			return { from: isoDate(y), to: isoDate(y) }
+		},
+	},
+	{
+		id: 'last7',
+		label: 'Last 7 days',
+		getRange: (now = new Date()) => {
+			const today = toUtcMidnight(now)
+			return { from: isoDate(addDaysUtc(today, -6)), to: isoDate(today) }
+		},
+	},
+	{
+		id: 'last30',
+		label: 'Last 30 days',
+		getRange: (now = new Date()) => {
+			const today = toUtcMidnight(now)
+			return { from: isoDate(addDaysUtc(today, -29)), to: isoDate(today) }
+		},
+	},
+	{
+		id: 'thisMonth',
+		label: 'This month',
+		getRange: (now = new Date()) => {
+			const today = toUtcMidnight(now)
+			return { from: isoDate(startOfMonthUtc(today)), to: isoDate(endOfMonthUtc(today)) }
+		},
+	},
+	{
+		id: 'lastMonth',
+		label: 'Last month',
+		getRange: (now = new Date()) => {
+			const today = toUtcMidnight(now)
+			const lastMonthAnchor = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1))
+			return { from: isoDate(startOfMonthUtc(lastMonthAnchor)), to: isoDate(endOfMonthUtc(lastMonthAnchor)) }
+		},
+	},
+]
 
 /** Column-level operator configuration when not using the simple `true` shorthand. */
 export type ColumnOperatorsConfig = {
