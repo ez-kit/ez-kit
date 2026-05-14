@@ -1,0 +1,276 @@
+import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
+import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSelectProps } from '../types'
+import type {
+	BadgeItem,
+	BetweenValue,
+	FieldState,
+	MultiSelectOption,
+	SelectItem,
+	StructuredFilterValue,
+} from '@ez-kit/data-grid-core'
+import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
+import type { ComponentType, ReactNode } from 'react'
+
+export type RenderFilterInputArgs = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	header: Header<any, unknown>
+	meta: ColumnMeta<unknown, unknown> | undefined
+	Input: ComponentType<InputProps>
+	cellTypes: CellTypeRegistry
+	OperatorSelect: ComponentType<OperatorSelectProps>
+	BetweenInput: ComponentType<BetweenInputProps>
+	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
+}
+
+/**
+ * Resolves the option list for multi-value (`in` / `notIn`) filters.
+ *
+ * Priority:
+ * 1. `column.filtering.options` (explicit, wins over both other sources).
+ * 2. `cell.config.items` for `select` / `badge` cell types.
+ * 3. `column.getFacetedUniqueValues()` when faceted is enabled and no explicit options.
+ *
+ * Counts from `getFacetedUniqueValues()` are always merged onto whichever option set
+ * is returned when faceted is enabled.
+ */
+function resolveMultiSelectOptions(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	column: Column<any>,
+	meta: ColumnMeta<unknown, unknown>,
+): MultiSelectOption[] {
+	const facetedEnabled = meta.facetedEnabled === true
+	const facetMap = facetedEnabled ? (column.getFacetedUniqueValues() as Map<unknown, number> | undefined) : undefined
+
+	const explicit = meta.filteringOptions
+	if (explicit && explicit.length > 0) {
+		return facetMap
+			? explicit.map((opt): MultiSelectOption => {
+					const count = facetMap.get(opt.value)
+					return count !== undefined ? { ...opt, count } : opt
+				})
+			: explicit
+	}
+
+	if (meta.cellType === 'select' || meta.cellType === 'badge') {
+		const items = (meta.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
+		if (items && items.length > 0) {
+			return facetMap
+				? items.map((item): MultiSelectOption => {
+						const count = facetMap.get(item.value)
+						return count !== undefined
+							? { value: item.value, label: item.label, count }
+							: { value: item.value, label: item.label }
+					})
+				: items.map((item): MultiSelectOption => ({ value: item.value, label: item.label }))
+		}
+	}
+
+	if (facetMap) {
+		const out: MultiSelectOption[] = []
+		facetMap.forEach((count, raw) => {
+			if (raw == null || raw === '') return
+			const value = String(raw)
+			out.push({ value, label: value, count })
+		})
+		// Stable order: highest count first, then label asc.
+		out.sort((a, b) => (b.count ?? 0) - (a.count ?? 0) || a.label.localeCompare(b.label))
+		return out
+	}
+
+	return []
+}
+
+/**
+ * Renders the input(s) for a column filter. Handles three layers, in order:
+ *
+ * 1. Operator-aware path — when `meta.resolvedOperators` is set, dispatches based
+ *    on the current operator id (between → BetweenInput, no-input operators →
+ *    only the OperatorSelect, otherwise the column / cell-type / fallback input).
+ * 2. Plain path — when there are no operators, uses `column.filtering.component`,
+ *    then the cell-type registry, then a plain text Input.
+ */
+export function renderFilterInput({
+	header,
+	meta,
+	Input,
+	cellTypes,
+	OperatorSelect,
+	BetweenInput,
+	MultiSelectFilter,
+}: RenderFilterInputArgs): ReactNode {
+	const resolvedOperators = meta?.resolvedOperators
+
+	// ── operator-aware path ────────────────────────────────────────────────
+	if (resolvedOperators && resolvedOperators.length > 0) {
+		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
+		const currentOperatorId =
+			sv !== undefined ? sv.operator : (meta.defaultOperatorId ?? resolvedOperators.at(0)?.id ?? '')
+		const currentOperator = resolvedOperators.find((op) => op.id === currentOperatorId)
+		const inputValue = sv?.value
+
+		const onOperatorChange = (newOpId: string): void => {
+			const newOp = resolvedOperators.find((op) => op.id === newOpId)
+			let newValue: unknown
+			if (newOp?.requiresInput === false) {
+				newValue = undefined
+			} else if (newOpId === 'between') {
+				newValue = {}
+			} else if (currentOperatorId === 'between') {
+				newValue = undefined
+			} else {
+				newValue = inputValue
+			}
+			header.column.setFilterValue({ operator: newOpId, value: newValue })
+		}
+
+		const onValueChange = (v: unknown): void => {
+			header.column.setFilterValue({ operator: currentOperatorId, value: v })
+		}
+
+		const operatorSelect = (
+			<OperatorSelect
+				operators={resolvedOperators}
+				currentOperatorId={currentOperatorId}
+				onChange={onOperatorChange}
+			/>
+		)
+
+		if (currentOperator?.requiresInput === false) {
+			return operatorSelect
+		}
+
+		if (currentOperatorId === 'between') {
+			const betweenCfg = meta.betweenOperatorConfig
+			const betweenType = meta.cellType === 'date' ? 'date' : 'number'
+			return (
+				<>
+					<BetweenInput
+						value={(inputValue as BetweenValue | undefined) ?? {}}
+						onChange={onValueChange}
+						variant={betweenCfg?.variant ?? 'inputs'}
+						type={betweenType}
+						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
+						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
+					/>
+					{operatorSelect}
+				</>
+			)
+		}
+
+		if ((currentOperatorId === 'in' || currentOperatorId === 'notIn') && MultiSelectFilter) {
+			const options = resolveMultiSelectOptions(header.column, meta)
+			const selectedValues = Array.isArray(inputValue) ? (inputValue as string[]) : []
+			return (
+				<>
+					<MultiSelectFilter
+						options={options}
+						selectedValues={selectedValues}
+						onChange={onValueChange}
+						placeholder={`Filter ${header.column.id}…`}
+					/>
+					{operatorSelect}
+				</>
+			)
+		}
+
+		// column-level filtering.component
+		const filteringCfg = meta.filtering
+		if (filteringCfg !== false && filteringCfg !== undefined) {
+			const comp = (filteringCfg as { component?: (props: CellInputProps) => ReactNode }).component
+			if (comp) {
+				return (
+					<>
+						{comp({
+							value: inputValue,
+							onChange: onValueChange,
+							...(meta.config !== undefined ? { config: meta.config } : {}),
+						})}
+						{operatorSelect}
+					</>
+				)
+			}
+		}
+
+		// registry by cellType
+		if (meta.cellType) {
+			const def = cellTypes[meta.cellType]
+			const comp = def?.filter ?? def?.edit
+			if (comp) {
+				const field: FieldState = {
+					id: `filter-${header.column.id}`,
+					value: inputValue,
+					onChange: onValueChange,
+					onBlur: () => {},
+					...(meta.config !== undefined ? { config: meta.config } : {}),
+					error: undefined,
+					errors: [],
+					isValidating: false,
+				}
+				return (
+					<>
+						{(comp as (p: FieldState) => ReactNode)(field)}
+						{operatorSelect}
+					</>
+				)
+			}
+		}
+
+		return (
+			<>
+				<Input
+					placeholder={`Filter ${header.column.id}…`}
+					value={(inputValue ?? '') as string}
+					onChange={(e) => {
+						onValueChange(e.target.value)
+					}}
+				/>
+				{operatorSelect}
+			</>
+		)
+	}
+
+	// ── plain filter path (no operators) ──────────────────────────────────
+	const filterValue = header.column.getFilterValue()
+	const onChange = (v: unknown) => {
+		header.column.setFilterValue(v)
+	}
+
+	const filteringConfig = meta?.filtering
+	if (filteringConfig !== false && filteringConfig !== undefined) {
+		const comp = (filteringConfig as { component?: (props: CellInputProps) => ReactNode }).component
+		if (comp)
+			return comp({
+				value: filterValue,
+				onChange,
+				...(meta.config !== undefined ? { config: meta.config } : {}),
+			})
+	}
+
+	if (meta?.cellType) {
+		const def = cellTypes[meta.cellType]
+		const comp = def?.filter ?? def?.edit
+		if (comp) {
+			const field: FieldState = {
+				id: `filter-${header.column.id}`,
+				value: filterValue,
+				onChange,
+				onBlur: () => {},
+				...(meta.config !== undefined ? { config: meta.config } : {}),
+				error: undefined,
+				errors: [],
+				isValidating: false,
+			}
+			return (comp as (p: FieldState) => ReactNode)(field)
+		}
+	}
+
+	return (
+		<Input
+			placeholder={`Filter ${header.column.id}…`}
+			value={(filterValue ?? '') as string}
+			onChange={(e) => {
+				header.column.setFilterValue(e.target.value)
+			}}
+		/>
+	)
+}

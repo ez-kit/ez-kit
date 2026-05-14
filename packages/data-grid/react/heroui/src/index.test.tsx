@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { BetweenInput } from './blocks/BetweenInput'
 import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
+import { MultiSelectFilter } from './blocks/MultiSelectFilter'
 import { PageSizer } from './blocks/PageSizer'
 
 import {
@@ -96,6 +97,53 @@ describe('@ez-kit/data-grid-heroui', () => {
 		// Range labels mirror the current value on each side of the track.
 		expect(screen.getByText('10')).toBeInTheDocument()
 		expect(screen.getByText('90')).toBeInTheDocument()
+	})
+
+	it('MultiSelectFilter renders trigger label based on selectedValues', () => {
+		const onChange = vi.fn()
+		const { rerender } = render(
+			<MultiSelectFilter
+				options={[
+					{ value: 'a', label: 'Apple' },
+					{ value: 'b', label: 'Banana' },
+				]}
+				selectedValues={[]}
+				onChange={onChange}
+				placeholder='Pick fruit'
+			/>,
+		)
+		const getValueSlot = (): HTMLElement => {
+			const el = document.querySelector('[data-slot="select-value"]')
+			if (!el) throw new Error('expected select-value slot')
+			return el as HTMLElement
+		}
+		expect(getValueSlot().textContent).toContain('Pick fruit')
+
+		rerender(
+			<MultiSelectFilter
+				options={[
+					{ value: 'a', label: 'Apple' },
+					{ value: 'b', label: 'Banana' },
+				]}
+				selectedValues={['a']}
+				onChange={onChange}
+				placeholder='Pick fruit'
+			/>,
+		)
+		expect(getValueSlot().textContent).toBe('Apple')
+
+		rerender(
+			<MultiSelectFilter
+				options={[
+					{ value: 'a', label: 'Apple' },
+					{ value: 'b', label: 'Banana' },
+				]}
+				selectedValues={['a', 'b']}
+				onChange={onChange}
+				placeholder='Pick fruit'
+			/>,
+		)
+		expect(getValueSlot().textContent).toBe('2 selected')
 	})
 
 	it('renders BetweenInput as numeric inputs when variant="inputs"', () => {

@@ -112,6 +112,14 @@
 		"exportName": "FilterChipsExample"
 	},
 	{
+		"id": "filter-multi-value",
+		"label": "Multi-value & faceted",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-multi-value.tsx",
+		"exportName": "FilterMultiValueExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",

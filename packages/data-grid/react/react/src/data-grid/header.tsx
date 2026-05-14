@@ -6,13 +6,11 @@ import { COL_PINNING_KEY, FILTERING_VARIANT_KEY } from '../use-data-grid'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
+import { renderFilterInput } from './render-filter-input'
 import { useTableContext } from './table-context'
 
-import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
-import type { BetweenInputProps, ColumnMenuSections, InputProps, OperatorSelectProps } from '../types'
-import type { BetweenValue, FieldState, StructuredFilterValue } from '@ez-kit/data-grid-core'
-import type { Header, ColumnMeta } from '@tanstack/table-core'
-import type { ComponentType, KeyboardEvent, ReactNode } from 'react'
+import type { ColumnMenuSections } from '../types'
+import type { KeyboardEvent } from 'react'
 
 type HeaderProps = {
 	/** When true, adds `data-sticky="true"` to the thead for structural CSS targeting. */
@@ -33,8 +31,20 @@ type HeaderProps = {
  */
 export function Header({ stickyHeader }: HeaderProps = {}) {
 	const table = useTableContext()
-	const { Thead, Tr, Th, Input, Resizer, SortIndicator, ColumnMenu, Checkbox, OperatorSelect, BetweenInput, FilterPopover } =
-		useGridComponents()
+	const {
+		Thead,
+		Tr,
+		Th,
+		Input,
+		Resizer,
+		SortIndicator,
+		ColumnMenu,
+		Checkbox,
+		OperatorSelect,
+		BetweenInput,
+		FilterPopover,
+		MultiSelectFilter,
+	} = useGridComponents()
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
@@ -157,7 +167,15 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 									const canFilter =
 										hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
 									const filterContent = canFilter
-										? renderFilterInput({ header, meta, Input, cellTypes, OperatorSelect, BetweenInput })
+										? renderFilterInput({
+												header,
+												meta,
+												Input,
+												cellTypes,
+												OperatorSelect,
+												BetweenInput,
+												MultiSelectFilter,
+											})
 										: null
 									const sortDirAttr: 'asc' | 'desc' | 'none' = sortDir === 'asc' || sortDir === 'desc' ? sortDir : 'none'
 									return (
@@ -216,183 +234,3 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 	)
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────
-
-type FilterInputArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>
-	meta: ColumnMeta<unknown, unknown> | undefined
-	Input: ComponentType<InputProps>
-	cellTypes: CellTypeRegistry
-	OperatorSelect: ComponentType<OperatorSelectProps>
-	BetweenInput: ComponentType<BetweenInputProps>
-}
-
-function renderFilterInput({
-	header,
-	meta,
-	Input,
-	cellTypes,
-	OperatorSelect,
-	BetweenInput,
-}: FilterInputArgs): ReactNode {
-	const resolvedOperators = meta?.resolvedOperators
-
-	// ── operator-aware path ────────────────────────────────────────────────
-	if (resolvedOperators && resolvedOperators.length > 0) {
-		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
-		const currentOperatorId =
-			sv !== undefined ? sv.operator : (meta.defaultOperatorId ?? resolvedOperators.at(0)?.id ?? '')
-		const currentOperator = resolvedOperators.find((op) => op.id === currentOperatorId)
-		const inputValue = sv?.value
-
-		const onOperatorChange = (newOpId: string): void => {
-			const newOp = resolvedOperators.find((op) => op.id === newOpId)
-			let newValue: unknown
-			if (newOp?.requiresInput === false) {
-				newValue = undefined
-			} else if (newOpId === 'between') {
-				newValue = {}
-			} else if (currentOperatorId === 'between') {
-				newValue = undefined
-			} else {
-				newValue = inputValue
-			}
-			header.column.setFilterValue({ operator: newOpId, value: newValue })
-		}
-
-		const onValueChange = (v: unknown): void => {
-			header.column.setFilterValue({ operator: currentOperatorId, value: v })
-		}
-
-		const operatorSelect = (
-			<OperatorSelect
-				operators={resolvedOperators}
-				currentOperatorId={currentOperatorId}
-				onChange={onOperatorChange}
-			/>
-		)
-
-		if (currentOperator?.requiresInput === false) {
-			return operatorSelect
-		}
-
-		if (currentOperatorId === 'between') {
-			const betweenCfg = meta.betweenOperatorConfig
-			const betweenType = meta.cellType === 'date' ? 'date' : 'number'
-			return (
-				<>
-					<BetweenInput
-						value={(inputValue as BetweenValue | undefined) ?? {}}
-						onChange={onValueChange}
-						variant={betweenCfg?.variant ?? 'inputs'}
-						type={betweenType}
-						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
-						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
-					/>
-					{operatorSelect}
-				</>
-			)
-		}
-
-		// column-level filtering.component
-		const filteringCfg = meta.filtering
-		if (filteringCfg !== false && filteringCfg !== undefined) {
-			const comp = (filteringCfg as { component?: (props: CellInputProps) => ReactNode }).component
-			if (comp) {
-				return (
-					<>
-						{comp({
-							value: inputValue,
-							onChange: onValueChange,
-							...(meta.config !== undefined ? { config: meta.config } : {}),
-						})}
-						{operatorSelect}
-					</>
-				)
-			}
-		}
-
-		// registry by cellType
-		if (meta.cellType) {
-			const def = cellTypes[meta.cellType]
-			const comp = def?.filter ?? def?.edit
-			if (comp) {
-				const field: FieldState = {
-					id: `filter-${header.column.id}`,
-					value: inputValue,
-					onChange: onValueChange,
-					onBlur: () => {},
-					...(meta.config !== undefined ? { config: meta.config } : {}),
-					error: undefined,
-					errors: [],
-					isValidating: false,
-				}
-				return (
-					<>
-						{(comp as (p: FieldState) => ReactNode)(field)}
-						{operatorSelect}
-					</>
-				)
-			}
-		}
-
-		return (
-			<>
-				<Input
-					placeholder={`Filter ${header.column.id}…`}
-					value={(inputValue ?? '') as string}
-					onChange={(e) => {
-						onValueChange(e.target.value)
-					}}
-				/>
-				{operatorSelect}
-			</>
-		)
-	}
-
-	// ── plain filter path (no operators) ──────────────────────────────────
-	const filterValue = header.column.getFilterValue()
-	const onChange = (v: unknown) => {
-		header.column.setFilterValue(v)
-	}
-
-	const filteringConfig = meta?.filtering
-	if (filteringConfig !== false && filteringConfig !== undefined) {
-		const comp = (filteringConfig as { component?: (props: CellInputProps) => ReactNode }).component
-		if (comp)
-			return comp({
-				value: filterValue,
-				onChange,
-				...(meta.config !== undefined ? { config: meta.config } : {}),
-			})
-	}
-
-	if (meta?.cellType) {
-		const def = cellTypes[meta.cellType]
-		const comp = def?.filter ?? def?.edit
-		if (comp) {
-			const field: FieldState = {
-				id: `filter-${header.column.id}`,
-				value: filterValue,
-				onChange,
-				onBlur: () => {},
-				...(meta.config !== undefined ? { config: meta.config } : {}),
-				error: undefined,
-				errors: [],
-				isValidating: false,
-			}
-			return (comp as (p: FieldState) => ReactNode)(field)
-		}
-	}
-
-	return (
-		<Input
-			placeholder={`Filter ${header.column.id}…`}
-			value={(filterValue ?? '') as string}
-			onChange={(e) => {
-				header.column.setFilterValue(e.target.value)
-			}}
-		/>
-	)
-}

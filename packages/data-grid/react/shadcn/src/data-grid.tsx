@@ -19,6 +19,7 @@ import { FormShell } from './blocks/FormShell'
 import { GlobalFilterInput } from './blocks/GlobalFilterInput'
 import { LoadingRow } from './blocks/LoadingRow'
 import { Modal } from './blocks/Modal'
+import { MultiSelectFilter } from './blocks/MultiSelectFilter'
 import { NoResultsState } from './blocks/NoResultsState'
 import { NumberInput } from './blocks/NumberInput'
 import { OperatorSelect } from './blocks/OperatorSelect'
@@ -65,6 +66,7 @@ const components = {
 	ConfirmDialog,
 	OperatorSelect,
 	BetweenInput,
+	MultiSelectFilter,
 	LoadingRow,
 	EmptyState,
 	NoResultsState,

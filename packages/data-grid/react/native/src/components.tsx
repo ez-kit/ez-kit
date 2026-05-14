@@ -20,6 +20,7 @@ import type {
 	InputProps,
 	LoadingRowProps,
 	ModalProps,
+	MultiSelectFilterProps,
 	NoResultsStateProps,
 	NumberInputProps,
 	OperatorSelectProps,
@@ -437,6 +438,36 @@ function NativeBetweenInput({ value, onChange, type }: BetweenInputProps) {
 		</div>
 	)
 }
+function NativeMultiSelectFilter({ options, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+	const toggle = (value: string): void => {
+		const next = selectedValues.includes(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
+		onChange(next)
+	}
+	return (
+		<div
+			role='group'
+			aria-label={placeholder ?? 'Filter'}
+			style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
+		>
+			{options.map((opt) => (
+				<label
+					key={opt.value}
+					style={{ display: 'flex', gap: '4px', alignItems: 'center' }}
+				>
+					<input
+						type='checkbox'
+						checked={selectedValues.includes(opt.value)}
+						onChange={() => {
+							toggle(opt.value)
+						}}
+					/>
+					<span>{opt.label}</span>
+					{opt.count !== undefined && <span data-slot='count'>{opt.count}</span>}
+				</label>
+			))}
+		</div>
+	)
+}
 function NativeFilterPopover({ children, hasActiveFilter }: FilterPopoverProps) {
 	const [open, setOpen] = useState(false)
 	return (
@@ -736,6 +767,7 @@ export const nativeComponents: Required<GridComponents> = {
 	ConfirmDialog: NativeConfirmDialog,
 	OperatorSelect: NativeOperatorSelect,
 	BetweenInput: NativeBetweenInput,
+	MultiSelectFilter: NativeMultiSelectFilter,
 	SortIndicator: NativeSortIndicator,
 	SortMenu: NativeSortMenu,
 	LoadingRow: NativeLoadingRow,

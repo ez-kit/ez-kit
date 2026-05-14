@@ -43,6 +43,7 @@ export type {
 	BetweenValue,
 	ColumnOperatorsConfig,
 	FilterOperatorDef,
+	MultiSelectOption,
 	OperatorRegistry,
 	StructuredFilterValue,
 } from './features/operators'
@@ -50,6 +51,7 @@ export {
 	DATE_OPERATORS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
 	DEFAULT_OPERATORS_BY_TYPE,
+	IN_OPERATORS,
 	NUMBER_OPERATORS,
 	TEXT_OPERATORS,
 	buildOperatorRegistry,

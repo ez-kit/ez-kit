@@ -150,6 +150,13 @@ export type FilteringConfig = {
 	manual?: boolean
 	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
 	operators?: FilterOperatorDef[]
+	/**
+	 * Enable faceted row models (unique values + counts) for columns that opt in via
+	 * `column.filtering.faceted` or for all filterable columns when `true`. Used by
+	 * multi-select filters to display per-option counts. Default: false (no faceted
+	 * row models attached — keeps `@tanstack/table-core` tree-shakable).
+	 */
+	faceted?: boolean
 }
 
 /**

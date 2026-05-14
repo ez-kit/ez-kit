@@ -677,3 +677,42 @@ describe('createTable — table-level off: column pinning', () => {
 		expect(table.options.enableColumnPinning).toBe(false)
 	})
 })
+
+describe('createTable — faceted', () => {
+	it('without filtering.faceted, column.getFacetedUniqueValues returns an empty map', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: true })
+		const nameCol = table.getColumn('name')
+		if (!nameCol) throw new Error('expected name column')
+		const facets = nameCol.getFacetedUniqueValues()
+		expect(facets instanceof Map).toBe(true)
+		expect(facets.size).toBe(0)
+	})
+
+	it('filtering: { faceted: true } populates facets with unique values + counts', () => {
+		const table = createTable({
+			data: [...DATA, { id: 3, name: 'Alice', age: 28 }],
+			columns: COLUMNS,
+			filtering: { faceted: true },
+		})
+		const nameCol = table.getColumn('name')
+		if (!nameCol) throw new Error('expected name column')
+		const facets = nameCol.getFacetedUniqueValues()
+		expect(facets.get('Alice')).toBe(2)
+		expect(facets.get('Bob')).toBe(1)
+	})
+
+	it('column-level faceted opt-in works even when table-level flag is off', () => {
+		const COLUMNS_WITH_FACET = defineColumns<Row>([
+			{ accessorKey: 'name', header: 'Name', filtering: { faceted: true } },
+			{ accessorKey: 'age', header: 'Age' },
+		])
+		const table = createTable({
+			data: [...DATA, { id: 3, name: 'Alice', age: 28 }],
+			columns: COLUMNS_WITH_FACET,
+			filtering: true,
+		})
+		const nameCol = table.getColumn('name')
+		if (!nameCol) throw new Error('expected name column')
+		expect(nameCol.getFacetedUniqueValues().get('Alice')).toBe(2)
+	})
+})

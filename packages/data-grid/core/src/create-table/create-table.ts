@@ -2,6 +2,8 @@ import {
 	createTable as createTanStackTable,
 	getCoreRowModel,
 	getExpandedRowModel,
+	getFacetedRowModel,
+	getFacetedUniqueValues,
 	getFilteredRowModel,
 	getPaginationRowModel,
 	getSortedRowModel,
@@ -98,8 +100,22 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const tableFilteringOperators = typeof config.filtering === 'object' ? config.filtering.operators : undefined
 	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
 
+	// ── faceted opt-in (table-level) ─────────────────────────────────────────
+	const tableFaceted =
+		typeof config.filtering === 'object' && config.filtering.faceted === true
+
+	// Column-level opt-in: detect even when table-level flag is off so the row
+	// models still attach when any single column requests faceted data.
+	const hasColumnFaceted = config.columns.some(function check(c): boolean {
+		const f = c.filtering
+		if (f && typeof f === 'object' && f.faceted === true) return true
+		if (c.columns) return c.columns.some(check)
+		return false
+	})
+	const facetedNeeded = tableFaceted || hasColumnFaceted
+
 	// ── map user columns → TanStack columns ──────────────────────────────────
-	const mappedUserColumns = mapColumns(config.columns, operatorRegistry)
+	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, { tableFaceted })
 
 	const hasEditing = Boolean(config.editing)
 	const hasDeleting = Boolean(config.deleting)
@@ -215,6 +231,15 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(hasAnyFiltering ? { getFilteredRowModel: getFilteredRowModel() } : {}),
 		...(hasColumnFiltering ? {} : { enableColumnFilters: false }),
 		...(hasGlobalFiltering ? {} : { enableGlobalFilter: false }),
+		// Faceted row models — only attached when at least one column or the table
+		// opts in. Keeps the TanStack helpers tree-shakable when no multi-select
+		// filter is in use.
+		...(facetedNeeded
+			? {
+					getFacetedRowModel: getFacetedRowModel(),
+					getFacetedUniqueValues: getFacetedUniqueValues(),
+				}
+			: {}),
 		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
 		...(config.columnVisibility ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),

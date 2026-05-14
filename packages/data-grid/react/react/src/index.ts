@@ -105,6 +105,8 @@ export type {
 	GlobalFilterInputProps,
 	GridComponents,
 	LoadingRowProps,
+	MultiSelectFilterProps,
+	MultiSelectOption,
 	NoResultsStateProps,
 	OperatorSelectProps,
 	ResizerProps,

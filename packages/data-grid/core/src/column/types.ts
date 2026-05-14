@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
-import type { BetweenOperatorConfig, ColumnOperatorsConfig, FilterOperatorDef } from '../features/operators'
+import type {
+	BetweenOperatorConfig,
+	ColumnOperatorsConfig,
+	FilterOperatorDef,
+	MultiSelectOption,
+} from '../features/operators'
 import type { FieldState, ValidateOn } from '../features/validation'
 import type { ColumnDef as TableCoreColumnDef, ColumnMeta as TableCoreColumnMeta, RowData } from '@tanstack/table-core'
 
@@ -140,6 +145,18 @@ export type ColumnFilteringConfig = {
 	operators?: boolean | ColumnOperatorsConfig
 	/** Override the default selected operator for this column. */
 	defaultOperator?: string
+	/**
+	 * Explicit option list for multi-value (`in` / `notIn`) filters. Wins over both
+	 * `cell.config.items` (for `select` / `badge` cell types) and faceted values.
+	 */
+	options?: MultiSelectOption[]
+	/**
+	 * Per-column override for faceted unique values / counts. When `true`, this
+	 * column reads `column.getFacetedUniqueValues()` regardless of the table-level
+	 * `filtering.faceted` flag. When `false`, this column never uses faceted data
+	 * even if the table-level flag is on.
+	 */
+	faceted?: boolean
 }
 
 export type ColumnEditingConfig = {
@@ -353,6 +370,13 @@ declare module '@tanstack/table-core' {
 		betweenOperatorConfig?: BetweenOperatorConfig
 		/** Default operator ID for this column (derived from config or cell type default). */
 		defaultOperatorId?: string
+		/** Explicit multi-select option list from `column.filtering.options`. */
+		filteringOptions?: MultiSelectOption[]
+		/**
+		 * Effective faceted flag for this column. Set to true when the resolved config
+		 * (table-level `filtering.faceted` or column-level `filtering.faceted`) opts in.
+		 */
+		facetedEnabled?: boolean
 		/** Per-column override for the global creating/editing `validateOn`. */
 		validateOn?: ValidateOn
 		/** Per-column override for the global creating/editing `validateDebounceMs`. */

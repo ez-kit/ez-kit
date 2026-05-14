@@ -20,6 +20,7 @@ import type {
 	InputProps,
 	LoadingRowProps,
 	ModalProps,
+	MultiSelectFilterProps,
 	NoResultsStateProps,
 	NumberInputProps,
 	OperatorSelectProps,
@@ -224,6 +225,27 @@ function TestBetweenInput({ value, onChange, type }: BetweenInputProps) {
 		</div>
 	)
 }
+function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+	const toggle = (value: string): void => {
+		const next = selectedValues.includes(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
+		onChange(next)
+	}
+	return (
+		<div role='group' aria-label={placeholder ?? 'Filter'}>
+			{options.map((opt) => (
+				<label key={opt.value} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+					<input
+						type='checkbox'
+						checked={selectedValues.includes(opt.value)}
+						onChange={() => { toggle(opt.value) }}
+					/>
+					<span>{opt.label}</span>
+					{opt.count !== undefined && <span data-slot='count'>{opt.count}</span>}
+				</label>
+			))}
+		</div>
+	)
+}
 function TestFilterPopover({ children, hasActiveFilter }: FilterPopoverProps) {
 	const [open, setOpen] = useState(false)
 	return (
@@ -323,6 +345,7 @@ export const testComponents: Required<GridComponents> = {
 	ConfirmDialog: TestConfirmDialog,
 	OperatorSelect: TestOperatorSelect,
 	BetweenInput: TestBetweenInput,
+	MultiSelectFilter: TestMultiSelectFilter,
 	LoadingRow: TestLoadingRow,
 	EmptyState: TestEmptyState,
 	NoResultsState: TestNoResultsState,

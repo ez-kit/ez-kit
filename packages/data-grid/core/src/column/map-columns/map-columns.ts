@@ -20,14 +20,24 @@ import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
  * - header string preserved as-is (TanStack accepts string | function)
  * - filtering.operators → resolves operator list, attaches filterFn dispatcher
  */
+export type MapColumnsOptions = {
+	/** Table-level faceted flag — used as default when column has no `filtering.faceted` override. */
+	tableFaceted?: boolean
+}
+
 export function mapColumns<TRow extends object>(
 	defs: ColumnDef<TRow>[],
 	registry?: OperatorRegistry,
+	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow>[] {
-	return defs.map((def) => mapColumn(def, registry))
+	return defs.map((def) => mapColumn(def, registry, options))
 }
 
-function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: OperatorRegistry): TanStackColumnDef<TRow> {
+function mapColumn<TRow extends object>(
+	def: ColumnDef<TRow>,
+	registry?: OperatorRegistry,
+	options?: MapColumnsOptions,
+): TanStackColumnDef<TRow> {
 	const {
 		pinning,
 		visibility,
@@ -125,6 +135,15 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 
 	// Operator-aware filtering
 	const filteringCfg = filtering !== undefined && filtering !== false ? filtering : undefined
+	if (filteringCfg?.options) {
+		meta.filteringOptions = filteringCfg.options
+	}
+	const colFaceted = filteringCfg?.faceted
+	const tableFaceted = options?.tableFaceted ?? false
+	const facetedEnabled = colFaceted === true || (colFaceted !== false && tableFaceted)
+	if (facetedEnabled) {
+		meta.facetedEnabled = true
+	}
 	if (filteringCfg?.operators && registry) {
 		const cellType = cell?.type
 		const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
@@ -148,7 +167,7 @@ function mapColumn<TRow extends object>(def: ColumnDef<TRow>, registry?: Operato
 
 	// Nested columns (column groups)
 	if (columns !== undefined) {
-		result.columns = mapColumns(columns, registry)
+		result.columns = mapColumns(columns, registry, options)
 	}
 
 	return result as TanStackColumnDef<TRow>

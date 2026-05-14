@@ -142,6 +142,39 @@ export const NUMBER_OPERATORS: FilterOperatorDef<number>[] = [
 	},
 ]
 
+// ── Built-in multi-value operators (in / notIn) ────────────────────────────
+
+/** Option shape used by multi-value (`in` / `notIn`) filter inputs. */
+export type MultiSelectOption = {
+	value: string
+	label: string
+	/** Optional faceted count — number of rows matching this value in current data. */
+	count?: number
+}
+
+export const IN_OPERATORS: FilterOperatorDef<string[]>[] = [
+	{
+		id: 'in',
+		label: 'Is any of',
+		symbol: '∈',
+		filterFn: (rowValue, filterValue) => {
+			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
+			const v = rowValue == null ? '' : String(rowValue)
+			return filterValue.includes(v)
+		},
+	},
+	{
+		id: 'notIn',
+		label: 'Is none of',
+		symbol: '∉',
+		filterFn: (rowValue, filterValue) => {
+			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
+			const v = rowValue == null ? '' : String(rowValue)
+			return !filterValue.includes(v)
+		},
+	},
+]
+
 // ── Built-in date operators ────────────────────────────────────────────────
 
 export const DATE_OPERATORS: FilterOperatorDef<string>[] = [
@@ -191,16 +224,27 @@ export const DATE_OPERATORS: FilterOperatorDef<string>[] = [
 
 // ── Lookup tables ─────────────────────────────────────────────────────────
 
+const TEXT_EMPTY_OPERATORS = TEXT_OPERATORS.filter((op) => op.id === 'isEmpty' || op.id === 'isNotEmpty')
+
+const SELECT_BADGE_OPERATORS: FilterOperatorDef[] = [
+	...(IN_OPERATORS as FilterOperatorDef[]),
+	...(TEXT_EMPTY_OPERATORS as FilterOperatorDef[]),
+]
+
 export const DEFAULT_OPERATORS_BY_TYPE: Record<string, FilterOperatorDef[]> = {
 	text: TEXT_OPERATORS as FilterOperatorDef[],
 	number: NUMBER_OPERATORS as FilterOperatorDef[],
 	date: DATE_OPERATORS as FilterOperatorDef[],
+	select: SELECT_BADGE_OPERATORS,
+	badge: SELECT_BADGE_OPERATORS,
 }
 
 export const DEFAULT_OPERATOR_ID_BY_TYPE: Record<string, string> = {
 	text: 'contains',
 	number: 'eq',
 	date: 'eq',
+	select: 'in',
+	badge: 'in',
 }
 
 // ── Registry ──────────────────────────────────────────────────────────────
@@ -211,6 +255,7 @@ const ALL_BUILT_INS: FilterOperatorDef[] = [
 	...(TEXT_OPERATORS as FilterOperatorDef[]),
 	...(NUMBER_OPERATORS as FilterOperatorDef[]),
 	...(DATE_OPERATORS as FilterOperatorDef[]),
+	...(IN_OPERATORS as FilterOperatorDef[]),
 ]
 
 /** Builds the global registry from built-ins + optional table-level custom operators. */
@@ -264,6 +309,7 @@ export function createOperatorFilterFn(resolvedOperators: FilterOperatorDef[]): 
 		if (!op) return true
 		if (op.requiresInput === false) return op.filterFn(row.getValue(columnId), undefined)
 		if (sv.value === undefined || sv.value === null || sv.value === '') return true
+		if (Array.isArray(sv.value) && sv.value.length === 0) return true
 		return op.filterFn(row.getValue(columnId), sv.value)
 	}
 

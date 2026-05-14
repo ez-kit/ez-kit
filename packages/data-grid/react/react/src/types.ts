@@ -1,4 +1,4 @@
-import type { BetweenValue, FilterOperatorDef } from '@ez-kit/data-grid-core'
+import type { BetweenValue, FilterOperatorDef, MultiSelectOption } from '@ez-kit/data-grid-core'
 import type { Column, Row } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
@@ -247,6 +247,19 @@ export type BetweenInputProps = {
 	max?: number
 }
 
+export type { MultiSelectOption }
+
+export type MultiSelectFilterProps = {
+	/** Available options. Counts (when present) come from faceted unique values. */
+	options: MultiSelectOption[]
+	/** Currently selected option values. Empty array = no filter. */
+	selectedValues: string[]
+	/** Called with the next array of selected values. */
+	onChange: (next: string[]) => void
+	/** Optional trigger placeholder (e.g. "Filter status"). */
+	placeholder?: string
+}
+
 export type ConfirmDialogProps = {
 	open: boolean
 	title: string
@@ -351,6 +364,7 @@ export type GridComponents = {
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>
 	BetweenInput?: ComponentType<BetweenInputProps>
+	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
 	// fallback states
 	LoadingRow?: ComponentType<LoadingRowProps>
 	EmptyState?: ComponentType<EmptyStateProps>

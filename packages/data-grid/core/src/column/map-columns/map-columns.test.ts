@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { buildOperatorRegistry } from '../../features/operators'
+
 import { mapColumns } from './map-columns'
 
 import type { ColumnDef } from '../types'
@@ -174,5 +176,51 @@ describe('mapColumns', () => {
 	it('passes enableResizing: false to TanStack column', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
 		expect(result[0]?.enableResizing).toBe(false)
+	})
+
+	it('filtering.options is forwarded to meta.filteringOptions', () => {
+		const options = [
+			{ value: 'a', label: 'A' },
+			{ value: 'b', label: 'B' },
+		]
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { options } }])
+		expect(result[0]?.meta?.filteringOptions).toEqual(options)
+	})
+
+	it('column.filtering.faceted: true → meta.facetedEnabled = true (overrides table flag)', () => {
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'name', filtering: { faceted: true } }],
+			undefined,
+			{ tableFaceted: false },
+		)
+		expect(result[0]?.meta?.facetedEnabled).toBe(true)
+	})
+
+	it('column.filtering.faceted: false → meta.facetedEnabled is not set even when table-level is on', () => {
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'name', filtering: { faceted: false } }],
+			undefined,
+			{ tableFaceted: true },
+		)
+		expect(result[0]?.meta?.facetedEnabled).toBeUndefined()
+	})
+
+	it('table-level tableFaceted: true inherits to column meta when column does not override', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: {} }], undefined, { tableFaceted: true })
+		expect(result[0]?.meta?.facetedEnabled).toBe(true)
+	})
+
+	it('select cell with operators: true resolves to in/notIn defaults', () => {
+		const registry = buildOperatorRegistry()
+		const result = mapColumns<Row>([
+			{
+				accessorKey: 'name',
+				cell: { type: 'select', config: { items: [{ value: 'a', label: 'A' }] } },
+				filtering: { operators: true },
+			},
+		], registry)
+		const resolved = result[0]?.meta?.resolvedOperators
+		expect(resolved?.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
+		expect(result[0]?.meta?.defaultOperatorId).toBe('in')
 	})
 })
