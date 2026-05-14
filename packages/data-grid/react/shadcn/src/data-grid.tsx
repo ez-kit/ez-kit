@@ -14,6 +14,8 @@ import { ConfirmDialog } from './blocks/ConfirmDialog'
 import { CreatingActionsCell } from './blocks/CreatingActionsCell'
 import { EmptyState } from './blocks/EmptyState'
 import { FilterChip } from './blocks/FilterChip'
+import { FilterPanel } from './blocks/FilterPanel'
+import { FilterPanelChip } from './blocks/FilterPanelChip'
 import { FilterPopover } from './blocks/FilterPopover'
 import { FormShell } from './blocks/FormShell'
 import { GlobalFilterInput } from './blocks/GlobalFilterInput'
@@ -59,6 +61,8 @@ const components = {
 	ColumnMenu,
 	ColumnVisibilityMenu,
 	FilterPopover,
+	FilterPanel,
+	FilterPanelChip,
 	FilterChip,
 	ClearFiltersButton,
 	GlobalFilterInput,

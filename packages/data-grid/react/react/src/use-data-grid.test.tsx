@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+	FILTERING_VARIANT_KEY,
 	FILTER_CHIPS_KEY,
 	FILTER_CLEAR_BUTTON_KEY,
 	GLOBAL_FILTERING_KEY,
@@ -143,6 +144,21 @@ describe('useDataGrid — selectionBar', () => {
 		)
 		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
 		expect(key).toEqual({ variant: 'inline' })
+	})
+
+	it('FILTERING_VARIANT_KEY accepts "panel" and writes it through to the table', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }),
+		)
+		const key = (result.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]
+		expect(key).toBe('panel')
+	})
+
+	it('FILTERING_VARIANT_KEY accepts "inline" and "popover" as before', () => {
+		const inline = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'inline' } }))
+		const popover = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }))
+		expect((inline.result.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('inline')
+		expect((popover.result.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('popover')
 	})
 })
 

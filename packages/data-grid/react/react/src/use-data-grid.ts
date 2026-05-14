@@ -168,7 +168,7 @@ export type FallbacksConfig = {
 	noResults?: NoResultsFallbackConfig | boolean
 }
 
-export type FilteringVariant = 'inline' | 'popover'
+export type FilteringVariant = 'inline' | 'popover' | 'panel'
 
 export type FilterChipsPosition = 'above' | 'below'
 

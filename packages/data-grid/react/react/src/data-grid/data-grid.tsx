@@ -17,6 +17,7 @@ import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
+import { FilterPanel } from './filter-panel'
 import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
 import { LoadingBody } from './loading-body'
@@ -175,6 +176,7 @@ type DataGridType = typeof DataGridRoot & {
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
 	ClearFiltersButton: typeof ClearFiltersButton
+	FilterPanel: typeof FilterPanel
 	CreatingModal: typeof CreatingModal
 	EditingModal: typeof EditingModal
 	LoadingBody: typeof LoadingBody
@@ -198,6 +200,7 @@ DataGrid.SortTrigger = SortTrigger
 DataGrid.GlobalFilterInput = GlobalFilterInput
 DataGrid.ActiveFiltersBar = ActiveFiltersBar
 DataGrid.ClearFiltersButton = ClearFiltersButton
+DataGrid.FilterPanel = FilterPanel
 DataGrid.CreatingModal = CreatingModal
 DataGrid.EditingModal = EditingModal
 DataGrid.LoadingBody = LoadingBody

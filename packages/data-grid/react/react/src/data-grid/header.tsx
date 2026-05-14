@@ -51,6 +51,7 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 	const filteringVariant = (table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] as
 		| 'inline'
 		| 'popover'
+		| 'panel'
 		| undefined
 
 	return (
@@ -165,7 +166,11 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 							>
 								{(() => {
 									const canFilter =
-										hasFiltering && meta?.filtering !== false && !meta?.isSystemColumn && header.column.getCanFilter()
+										hasFiltering &&
+										meta?.filtering !== false &&
+										!meta?.isSystemColumn &&
+										header.column.getCanFilter() &&
+										filteringVariant !== 'panel'
 									const filterContent = canFilter
 										? renderFilterInput({
 												header,

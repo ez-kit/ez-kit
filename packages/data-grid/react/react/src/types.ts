@@ -208,6 +208,26 @@ export type FilterPopoverProps = {
 	hasActiveFilter: boolean
 }
 
+export type FilterPanelProps = {
+	/** Already-rendered list of per-column filter rows produced by `<DataGrid.FilterPanel />`. */
+	children: ReactNode
+	/** True when at least one column has an active filter. Kits may surface a count badge. */
+	hasActiveFilter: boolean
+}
+
+export type FilterPanelChipProps = {
+	/** Column header label (e.g. "Status", "Total"). */
+	label: string
+	/** Pre-rendered value display ("Open, Done", "100 – 500", or "Any" when no value). */
+	valueDisplay: ReactNode
+	/** True when the column has an active filter. Kits typically render an X clear control only when true. */
+	hasValue: boolean
+	/** Clear handler. Called when the user clicks the inline X. Adapter wires it to `column.setFilterValue(undefined)`. */
+	onClear: () => void
+	/** Popover content — the actual filter input produced by `renderFilterInput`. */
+	children: ReactNode
+}
+
 export type FilterChipKind = 'column' | 'global'
 
 export type FilterChipProps = {
@@ -362,6 +382,8 @@ export type GridComponents = {
 	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
 	SortMenu?: ComponentType<SortMenuProps>
 	FilterPopover?: ComponentType<FilterPopoverProps>
+	FilterPanel?: ComponentType<FilterPanelProps>
+	FilterPanelChip?: ComponentType<FilterPanelChipProps>
 	FilterChip?: ComponentType<FilterChipProps>
 	ClearFiltersButton?: ComponentType<ClearFiltersButtonComponentProps>
 	SelectionBar?: ComponentType<SelectionBarProps>

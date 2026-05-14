@@ -17,33 +17,34 @@ import { GlobalFilteringExample as Example12 } from '../components/global-filter
 import { FilterChipsExample as Example13 } from '../components/filter-chips'
 import { FilterMultiValueExample as Example14 } from '../components/filter-multi-value'
 import { FilterDateRangeExample as Example15 } from '../components/filter-date-range'
-import { SelectionBarExample as Example16 } from '../components/selection-bar'
-import { SelectionBarInlineExample as Example17 } from '../components/selection-bar-inline'
-import { DeleteConfirmationExample as Example18 } from '../components/delete-confirmation'
-import { ColumnVisibilityExample as Example19 } from '../components/column-visibility'
-import { ColumnPinningExample as Example20 } from '../components/column-pinning'
-import { ResizingExample as Example21 } from '../components/resizing'
-import { ColumnsCombinedExample as Example22 } from '../components/columns/combined'
-import { ColumnHelperBaseExample as Example23 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example24 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example25 } from '../components/column-helper'
-import { CellTypesExample as Example26 } from '../components/cell-types'
-import { CustomCellTypesExample as Example27 } from '../components/custom-cell-types'
-import { DateCellExample as Example28 } from '../components/date-cell'
-import { CreatingExample as Example29 } from '../components/creating/CreatingExample'
-import { CreatingValidationExample as Example30 } from '../components/creating/CreatingValidationExample'
-import { EditingValidationExample as Example31 } from '../components/editing/EditingValidationExample'
-import { ExpandingSubContentExample as Example32 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example33 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example34 } from '../components/expanding/controlled'
-import { RowPinningPlainExample as Example35 } from '../components/row-pinning/plain'
-import { RowPinningStickyHeaderExample as Example36 } from '../components/row-pinning/sticky-header'
-import { StickyHeaderExample as Example37 } from '../components/sticky-header'
-import { VirtualizedExample as Example38 } from '../components/virtualized'
-import { CrudExample as Example39 } from '../components/crud/CrudExample'
-import { CrudClientExample as Example40 } from '../components/crud/CrudClientExample'
-import { ControlledStateExample as Example41 } from '../components/controlled-state'
-import { FallbacksExample as Example42 } from '../components/fallbacks'
+import { FilterPanelExample as Example16 } from '../components/filter-panel'
+import { SelectionBarExample as Example17 } from '../components/selection-bar'
+import { SelectionBarInlineExample as Example18 } from '../components/selection-bar-inline'
+import { DeleteConfirmationExample as Example19 } from '../components/delete-confirmation'
+import { ColumnVisibilityExample as Example20 } from '../components/column-visibility'
+import { ColumnPinningExample as Example21 } from '../components/column-pinning'
+import { ResizingExample as Example22 } from '../components/resizing'
+import { ColumnsCombinedExample as Example23 } from '../components/columns/combined'
+import { ColumnHelperBaseExample as Example24 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example25 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example26 } from '../components/column-helper'
+import { CellTypesExample as Example27 } from '../components/cell-types'
+import { CustomCellTypesExample as Example28 } from '../components/custom-cell-types'
+import { DateCellExample as Example29 } from '../components/date-cell'
+import { CreatingExample as Example30 } from '../components/creating/CreatingExample'
+import { CreatingValidationExample as Example31 } from '../components/creating/CreatingValidationExample'
+import { EditingValidationExample as Example32 } from '../components/editing/EditingValidationExample'
+import { ExpandingSubContentExample as Example33 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example34 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example35 } from '../components/expanding/controlled'
+import { RowPinningPlainExample as Example36 } from '../components/row-pinning/plain'
+import { RowPinningStickyHeaderExample as Example37 } from '../components/row-pinning/sticky-header'
+import { StickyHeaderExample as Example38 } from '../components/sticky-header'
+import { VirtualizedExample as Example39 } from '../components/virtualized'
+import { CrudExample as Example40 } from '../components/crud/CrudExample'
+import { CrudClientExample as Example41 } from '../components/crud/CrudClientExample'
+import { ControlledStateExample as Example42 } from '../components/controlled-state'
+import { FallbacksExample as Example43 } from '../components/fallbacks'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -174,6 +175,14 @@ export const dataGridExamplesManifest = [
     "groupLabel": "Filtering",
     "sourceFile": "components/filter-date-range.tsx",
     "exportName": "FilterDateRangeExample"
+  },
+  {
+    "id": "filter-panel",
+    "label": "Panel variant",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-panel.tsx",
+    "exportName": "FilterPanelExample"
   },
   {
     "id": "selection-bar",
@@ -402,31 +411,32 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'filter-chips': Example13,
 	'filter-multi-value': Example14,
 	'filter-date-range': Example15,
-	'selection-bar': Example16,
-	'selection-bar-inline': Example17,
-	'delete-confirmation': Example18,
-	'column-visibility': Example19,
-	'column-pinning': Example20,
-	'resizing': Example21,
-	'columns-combined': Example22,
-	'column-helper': Example23,
-	'column-helper-custom-view': Example24,
-	'column-helper-registered': Example25,
-	'cell-types': Example26,
-	'custom-cell-types': Example27,
-	'date-cell': Example28,
-	'creating': Example29,
-	'creating-validation': Example30,
-	'editing-validation': Example31,
-	'expanding-sub-content': Example32,
-	'expanding-tree': Example33,
-	'expanding-controlled': Example34,
-	'row-pinning-plain': Example35,
-	'row-pinning-sticky-header': Example36,
-	'sticky-header': Example37,
-	'virtualized': Example38,
-	'crud-server': Example39,
-	'crud-client': Example40,
-	'controlled-state': Example41,
-	'fallbacks': Example42,
+	'filter-panel': Example16,
+	'selection-bar': Example17,
+	'selection-bar-inline': Example18,
+	'delete-confirmation': Example19,
+	'column-visibility': Example20,
+	'column-pinning': Example21,
+	'resizing': Example22,
+	'columns-combined': Example23,
+	'column-helper': Example24,
+	'column-helper-custom-view': Example25,
+	'column-helper-registered': Example26,
+	'cell-types': Example27,
+	'custom-cell-types': Example28,
+	'date-cell': Example29,
+	'creating': Example30,
+	'creating-validation': Example31,
+	'editing-validation': Example32,
+	'expanding-sub-content': Example33,
+	'expanding-tree': Example34,
+	'expanding-controlled': Example35,
+	'row-pinning-plain': Example36,
+	'row-pinning-sticky-header': Example37,
+	'sticky-header': Example38,
+	'virtualized': Example39,
+	'crud-server': Example40,
+	'crud-client': Example41,
+	'controlled-state': Example42,
+	'fallbacks': Example43,
 }

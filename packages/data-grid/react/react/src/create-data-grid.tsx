@@ -69,6 +69,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	BoundDataGrid.CreateTrigger = DataGrid.CreateTrigger
 	BoundDataGrid.ActiveFiltersBar = DataGrid.ActiveFiltersBar
 	BoundDataGrid.ClearFiltersButton = DataGrid.ClearFiltersButton
+	BoundDataGrid.FilterPanel = DataGrid.FilterPanel
 	BoundDataGrid.CreatingModal = DataGrid.CreatingModal
 	BoundDataGrid.EditingModal = DataGrid.EditingModal
 	BoundDataGrid.LoadingBody = DataGrid.LoadingBody

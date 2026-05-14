@@ -102,6 +102,8 @@ export type {
 	EmptyStateProps,
 	FilterChipKind,
 	FilterChipProps,
+	FilterPanelChipProps,
+	FilterPanelProps,
 	FilterPopoverProps,
 	GlobalFilterInputProps,
 	GridComponents,

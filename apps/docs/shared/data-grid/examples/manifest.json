@@ -128,6 +128,14 @@
 		"exportName": "FilterDateRangeExample"
 	},
 	{
+		"id": "filter-panel",
+		"label": "Panel variant",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-panel.tsx",
+		"exportName": "FilterPanelExample"
+	},
+	{
 		"id": "selection-bar",
 		"label": "Floating",
 		"group": "selection",

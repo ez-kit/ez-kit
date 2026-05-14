@@ -15,6 +15,8 @@ import type {
 	ClearFiltersButtonComponentProps,
 	EmptyStateProps,
 	FilterChipProps,
+	FilterPanelChipProps,
+	FilterPanelProps,
 	FilterPopoverProps,
 	GridComponents,
 	InputProps,
@@ -274,6 +276,31 @@ function TestFilterPopover({ children, hasActiveFilter }: FilterPopoverProps) {
 		</div>
 	)
 }
+function TestFilterPanel({ children, hasActiveFilter }: FilterPanelProps) {
+	return (
+		<section data-slot='filter-panel-chrome' data-has-active={hasActiveFilter ? 'true' : 'false'} style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 4 }}>
+			{children}
+		</section>
+	)
+}
+function TestFilterPanelChip({ label, valueDisplay, hasValue, onClear, children }: FilterPanelChipProps) {
+	const [open, setOpen] = useState(false)
+	return (
+		<span data-slot='filter-panel-chip' data-has-value={hasValue ? 'true' : 'false'} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+			<button
+				type='button'
+				onClick={() => { setOpen((p) => !p) }}
+				style={{ border: '1px solid #ccc', borderRadius: 4, padding: '2px 6px', background: hasValue ? '#eef' : 'transparent', cursor: 'pointer' }}
+			>
+				<strong>{label}:</strong> <span data-slot='filter-panel-chip-value'>{valueDisplay}</span>
+			</button>
+			{hasValue && (
+				<button type='button' aria-label={`Clear ${label} filter`} onClick={onClear} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>×</button>
+			)}
+			{open && <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: '#fff', border: '1px solid #ccc', padding: 6 }}>{children}</div>}
+		</span>
+	)
+}
 function TestFilterChip({ label, value, onRemove, kind }: FilterChipProps) {
 	return (
 		<span data-slot='filter-chip' data-chip-kind={kind} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', border: '1px solid #ccc' }}>
@@ -358,6 +385,8 @@ export const testComponents: Required<GridComponents> = {
 	ColumnMenu: TestColumnMenu,
 	ColumnVisibilityMenu: TestColumnVisibilityMenu,
 	FilterPopover: TestFilterPopover,
+	FilterPanel: TestFilterPanel,
+	FilterPanelChip: TestFilterPanelChip,
 	FilterChip: TestFilterChip,
 	ClearFiltersButton: TestClearFiltersButton,
 	SelectionBar: TestSelectionBar,
