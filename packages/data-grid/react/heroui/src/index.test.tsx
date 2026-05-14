@@ -2,6 +2,7 @@ import { createTable, defineColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { BetweenInput } from './blocks/BetweenInput'
 import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { PageSizer } from './blocks/PageSizer'
 
@@ -74,6 +75,43 @@ describe('@ez-kit/data-grid-heroui', () => {
 		fireEvent.click(screen.getByRole('option', { name: '25' }))
 
 		expect(onPageSizeChange).toHaveBeenCalledWith(25)
+	})
+
+	it('renders BetweenInput as slider with two thumbs when variant="slider"', () => {
+		const onChange = vi.fn()
+		render(
+			<BetweenInput
+				value={{ from: 10, to: 90 }}
+				onChange={onChange}
+				variant='slider'
+				type='number'
+				min={0}
+				max={100}
+			/>,
+		)
+
+		// React Aria emits one hidden `<input role="slider">` per thumb.
+		const sliders = screen.getAllByRole('slider')
+		expect(sliders).toHaveLength(2)
+		// Range labels mirror the current value on each side of the track.
+		expect(screen.getByText('10')).toBeInTheDocument()
+		expect(screen.getByText('90')).toBeInTheDocument()
+	})
+
+	it('renders BetweenInput as numeric inputs when variant="inputs"', () => {
+		const onChange = vi.fn()
+		render(
+			<BetweenInput
+				value={{ from: 5, to: 25 }}
+				onChange={onChange}
+				variant='inputs'
+				type='number'
+			/>,
+		)
+
+		expect(screen.queryByRole('slider')).not.toBeInTheDocument()
+		expect(screen.getByPlaceholderText('From')).toHaveValue(5)
+		expect(screen.getByPlaceholderText('To')).toHaveValue(25)
 	})
 
 	it('toggles column visibility items', () => {
