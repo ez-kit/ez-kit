@@ -28,7 +28,7 @@ import { DataGridRow } from './row'
 import { SelectionBar } from './selection-bar'
 import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
-import { TableContext, useTable } from './table-context'
+import { TableContext, useDataGridInstance, useDataGridStore } from './table-context'
 import { Toolbar } from './toolbar'
 
 import type { CellTypeRegistry } from '../cell-types-context'
@@ -64,9 +64,12 @@ function resolveConfirmationText(
 }
 
 function ConfirmDialogRenderer() {
-	const table = useTable()
+	const instance = useDataGridInstance()
+	const table = instance.table
 	const { ConfirmDialog } = useGridComponents()
-	const pendingId = table.getState().pendingDeleteRowId
+	// Narrow: re-render only when the pending delete target changes. Other
+	// state mutations (editing, sorting, etc.) leave this stable.
+	const pendingId = useDataGridStore((s) => s.pendingDeleteRowId)
 	const confirmation = table.options.deleting?.confirmation
 
 	if (!confirmation) return null
@@ -90,7 +93,11 @@ function ConfirmDialogRenderer() {
 }
 
 function DefaultLayout() {
-	const table = useTable()
+	// Reads only symbol-keyed config refs, no state — so we use the instance
+	// without subscribing. Avoids cascading re-renders to Body / Table on
+	// state mutations the layout doesn't actually depend on.
+	const instance = useDataGridInstance()
+	const table = instance.table
 	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
 		| boolean
 		| SelectionBarConfig

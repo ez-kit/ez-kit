@@ -9,7 +9,7 @@ import { ExpandedRow } from './expanded-row'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { DataGridRow } from './row'
-import { useTable } from './table-context'
+import { useDataGridInstance, useDataGridStore } from './table-context'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
@@ -26,6 +26,12 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
 /**
  * Renders the table `<tbody>`.
  *
+ * Subscribes only to the slices that actually change row composition or
+ * top-level branching (loading skeleton, creating row, pinned rows). Editing,
+ * column visibility, column sizing, row selection mutations do NOT re-render
+ * Body — those are handled by leaf components with their own narrow
+ * subscriptions.
+ *
  * Pinned rows (top / bottom) get `data-pinned="top" | "bottom"` plus a
  * `--dg-row-pin-offset` CSS variable carrying the computed offset; the
  * structural stylesheet shipped with this package applies the actual
@@ -33,8 +39,23 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  */
 export function Body() {
 	const { rowVirtualizer } = useVirtualContext()
-	const table = useTable()
+	const instance = useDataGridInstance()
+	const table = instance.table
 	const { Tbody } = useGridComponents()
+
+	// Narrow subscriptions: each returns a referentially stable slice. Body
+	// re-renders only when one of these slices actually changes. Editing,
+	// columnVisibility, columnSizing, columnPinning, rowSelection updates do
+	// NOT touch any of these → no Body re-render.
+	const isLoading = useDataGridStore((s) => s.loading.isLoading)
+	const isCreatingOpen = useDataGridStore((s) => s.creating.isOpen)
+	// Slices that affect getRowModel() / getTopRows() / getBottomRows() output:
+	useDataGridStore((s) => s.sorting)
+	useDataGridStore((s) => s.columnFilters)
+	useDataGridStore<unknown>((s) => s.globalFilter)
+	useDataGridStore((s) => s.pagination)
+	useDataGridStore((s) => s.expanded)
+	useDataGridStore((s) => s.rowPinning)
 
 	if (rowVirtualizer) return <VirtualBody />
 
@@ -44,15 +65,14 @@ export function Body() {
 		| undefined
 	const renderExpanded = expandConfig?.renderExpanded
 
-	if (table.getIsLoading() && fallbacks?.loading !== false) {
+	if (isLoading && fallbacks?.loading !== false) {
 		return <LoadingBody />
 	}
 
 	const creatingConfig = table.options.creating
 	const creatingMode = creatingConfig?.mode ?? 'row'
-	const isCreating = table.creating.getState().isOpen
 	const showCreatingRow =
-		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreating))
+		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
 
 	const hasPinning = Boolean(table.options.enableRowPinning)
 	const topRows = hasPinning ? table.getTopRows() : []

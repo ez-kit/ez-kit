@@ -8,7 +8,7 @@ import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-
 import { Body } from './body'
 import { Header } from './header'
 import { PinShadowOverlay } from './pin-shadow-overlay'
-import { useTable } from './table-context'
+import { useDataGridInstance, useDataGridStore } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
 import type { NormalizedVirtualizedConfig } from '../use-data-grid'
@@ -110,7 +110,23 @@ function resolveEstimateSize(
  */
 export function DataGridTable() {
 	const { Table } = useGridComponents()
-	const table = useTable()
+	const instance = useDataGridInstance()
+	const table = instance.table
+
+	// Narrow subscriptions: re-render only when slices that actually affect
+	// the table layout or row composition change. Editing / rowSelection /
+	// per-row state changes do NOT touch any of these.
+	useDataGridStore((s) => s.columnSizing)
+	useDataGridStore((s) => s.columnSizingInfo)
+	useDataGridStore((s) => s.columnVisibility)
+	useDataGridStore((s) => s.columnPinning)
+	// Row-model affecting slices (used when virtualized to size the virtualizer).
+	useDataGridStore((s) => s.sorting)
+	useDataGridStore((s) => s.columnFilters)
+	useDataGridStore<unknown>((s) => s.globalFilter)
+	useDataGridStore((s) => s.pagination)
+	useDataGridStore((s) => s.expanded)
+	useDataGridStore((s) => s.rowPinning)
 
 	const sizeVars = getColumnSizeVars(table)
 	const gridTemplateColumns = getGridTemplateColumns(table)

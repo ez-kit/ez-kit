@@ -29,6 +29,14 @@ export function useDataGridInstance(): DataGridInstance<any> {
  * Subscribe to a slice of the table state from context. Re-renders only when
  * the selected slice changes. Selector must return a referentially stable
  * value — see {@link useDataGridSelector} for the full contract.
+ *
+ * @example Subscribe to a slice
+ *   const sorting = useDataGridStore((s) => s.sorting)
+ *
+ * @example Row-targeted boolean (no re-render for unrelated rows)
+ *   // Stably `false` while the user edits a different row; flips exactly
+ *   // when this row enters / leaves edit mode.
+ *   const isEditingThisRow = useDataGridStore((s) => s.editing.rowId === row.id)
  */
 export function useDataGridStore<TSelected>(selector: (state: TableState) => TSelected): TSelected {
 	const instance = useDataGridInstance()

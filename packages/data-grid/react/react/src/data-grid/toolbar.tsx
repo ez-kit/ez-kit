@@ -13,7 +13,7 @@ import { CreateTrigger } from './create-trigger'
 import { GlobalFilterInput } from './global-filter-input'
 import { PageSizer } from './page-sizer'
 import { SortTrigger } from './sort-trigger'
-import { useTable } from './table-context'
+import { useDataGridInstance } from './table-context'
 
 import type {
 	ColumnVisibilityUIConfig,
@@ -36,7 +36,12 @@ type ToolbarProps = {
  */
 export function Toolbar({ children }: ToolbarProps) {
 	const { Toolbar: ToolbarComponent } = useGridComponents()
-	const table = useTable()
+	// Toolbar reads only symbol-keyed UI configs and `table.options.*` (refs,
+	// not state). No state subscription — editing / sorting / filtering
+	// mutations do NOT re-render this component (sub-controls manage their
+	// own narrow subscriptions).
+	const instance = useDataGridInstance()
+	const table = instance.table
 	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== 'pin-row'
 
 	const colVisConfig = (table as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] as

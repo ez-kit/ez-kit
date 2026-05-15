@@ -1,4 +1,4 @@
-import { useTable } from './table-context'
+import { useDataGridInstance, useDataGridStore } from './table-context'
 
 /**
  * Renders the overlay that shows scroll shadows alongside pinned columns.
@@ -14,9 +14,19 @@ import { useTable } from './table-context'
  *
  * CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow` (0 or 1) on the
  * table wrapper drive the shadow opacity.
+ *
+ * Subscribes only to the layout slices it actually reflects — left/right column
+ * sets (from `columnPinning` + `columnVisibility`) and their widths
+ * (`columnSizing`). Editing / sorting / pagination etc. don't touch these.
  */
 export function PinShadowOverlay() {
-	const table = useTable()
+	const instance = useDataGridInstance()
+	const table = instance.table
+
+	useDataGridStore((s) => s.columnPinning)
+	useDataGridStore((s) => s.columnVisibility)
+	useDataGridStore((s) => s.columnSizing)
+
 	const leftCols = table.getLeftLeafColumns()
 	const rightCols = table.getRightLeafColumns()
 

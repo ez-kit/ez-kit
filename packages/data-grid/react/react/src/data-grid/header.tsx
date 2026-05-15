@@ -7,7 +7,7 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
-import { useTable } from './table-context'
+import { useDataGridInstance, useDataGridStore } from './table-context'
 
 import type { ColumnMenuSections } from '../types'
 import type { KeyboardEvent } from 'react'
@@ -30,7 +30,21 @@ type HeaderProps = {
  * structural CSS reads them on `[data-pinned]` elements.
  */
 export function Header({ stickyHeader }: HeaderProps = {}) {
-	const table = useTable()
+	const instance = useDataGridInstance()
+	const table = instance.table
+
+	// Narrow subscriptions: re-render only when slices the header actually
+	// reflects change. Editing, expanded, pagination, rowPinning do NOT
+	// touch any of these, so clicking Edit on a row leaves the header
+	// untouched.
+	useDataGridStore((s) => s.sorting)
+	useDataGridStore((s) => s.columnFilters)
+	useDataGridStore((s) => s.columnVisibility)
+	useDataGridStore((s) => s.columnPinning)
+	useDataGridStore((s) => s.columnSizing)
+	useDataGridStore((s) => s.columnSizingInfo)
+	useDataGridStore((s) => s.rowSelection)
+
 	const {
 		Thead,
 		Tr,
