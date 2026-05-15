@@ -325,7 +325,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			...prev,
 			data,
 		}))
-		// Create a new snapshot reference so useSyncExternalStore detects the change
+		// Create a new snapshot reference so broad useSyncExternalStore subscribers
+		// detect the change. Narrow per-slice subscribers do NOT re-render on this
+		// (none of the slice references change). The main React adapter syncs
+		// `data` via `setOptions` directly in render body; this path remains for
+		// programmatic / non-React-driven updates.
 		store.setState((prev) => ({ ...prev }))
 	}
 

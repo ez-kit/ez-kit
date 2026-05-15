@@ -1,5 +1,6 @@
 import { defineColumns } from '@ez-kit/data-grid-core'
-import { act, render } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
+import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
@@ -241,6 +242,40 @@ describe('rerender isolation', () => {
 		})
 
 		expect(counters.tbody).toBeGreaterThan(tbodyBefore)
+	})
+
+	it('changing the controlled `data` prop immediately reflects in view cells', () => {
+		// Reproduces the real-world flow: parent state holds `data`, an event
+		// updates that state, and the new value must appear in the rendered DOM
+		// on the same React commit — not lag by one cycle.
+		let updateData: (rows: Row[]) => void = () => {}
+		function Harness(): ReactElement {
+			const [rows, setRows] = useState<Row[]>(DATA)
+			updateData = setRows
+			const t = useDataGrid<Row>({
+				data: rows,
+				columns: COLUMNS,
+				editing: { onSave: () => Promise.resolve() },
+			})
+			return <DataGrid<Row> table={t} />
+		}
+		render(
+			<GridComponentsProvider components={testComponents}>
+				<Harness />
+			</GridComponentsProvider>,
+		)
+		expect(screen.getByText('Bob')).toBeInTheDocument()
+
+		act(() => {
+			updateData([
+				{ id: 1, name: 'Alice', email: 'a@x' },
+				{ id: 2, name: 'Bob-Renamed', email: 'b2@x' },
+				{ id: 3, name: 'Carol', email: 'c@x' },
+			])
+		})
+
+		expect(screen.queryByText('Bob')).not.toBeInTheDocument()
+		expect(screen.getByText('Bob-Renamed')).toBeInTheDocument()
 	})
 
 	it('pagination still re-renders the Body (regression)', () => {

@@ -511,14 +511,16 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	// need to re-render on state changes subscribe themselves via
 	// `useDataGridStore` (selective) or `useTable()` (broad, back-compat).
 
-	// Sync data on change (every render, skipping if same reference)
+	// Sync data synchronously during render — symmetrically with the other
+	// option-sync blocks above. Doing this in `useEffect` would update
+	// `options.data` AFTER child components (Body / Cell) had already
+	// rendered with the previous data, leaving the UI one step behind until
+	// another unrelated state change forced a re-render.
 	const dataRef = useRef(config.data)
-	useEffect(() => {
-		if (config.data !== dataRef.current) {
-			dataRef.current = config.data
-			instanceRef.current?.table.setData(config.data)
-		}
-	})
+	if (config.data !== dataRef.current) {
+		dataRef.current = config.data
+		instanceRef.current.table.setOptions((prev) => ({ ...prev, data: config.data }))
+	}
 
 	// Sync loading on change
 	useEffect(() => {
