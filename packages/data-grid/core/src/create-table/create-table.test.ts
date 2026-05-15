@@ -47,11 +47,11 @@ describe('createTable — sorting', () => {
 		expect(table.options.manualSorting).toBeFalsy()
 	})
 
-	it('sorting.initial seeds initialState.sorting and current state', () => {
+	it('sorting.defaultSorting seeds initialState.sorting and current state', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			sorting: { initial: [{ id: 'name', desc: true }] },
+			sorting: { defaultSorting: [{ id: 'name', desc: true }] },
 		})
 		expect(table.initialState.sorting).toEqual([{ id: 'name', desc: true }])
 		expect(table.getState().sorting).toEqual([{ id: 'name', desc: true }])

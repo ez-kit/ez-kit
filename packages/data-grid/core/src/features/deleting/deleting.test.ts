@@ -25,8 +25,10 @@ describe('DeletingFeature', () => {
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
 		await table.deleteRow(rowId)
 		expect(onDelete).toHaveBeenCalledTimes(1)
-		const passedName = (onDelete.mock.calls[0]?.[0] as { original: Row }).original.name
-		expect(passedName).toBe('Alice')
+		const ctx = onDelete.mock.calls[0]?.[0] as { rowId: string; row: { original: Row }; signal: AbortSignal }
+		expect(ctx.rowId).toBe(rowId)
+		expect(ctx.row.original.name).toBe('Alice')
+		expect(ctx.signal).toBeInstanceOf(AbortSignal)
 	})
 
 	it('deleteRow does nothing when deleting config is absent', async () => {

@@ -117,8 +117,8 @@ describe('CreatingFeature — commit pipeline', () => {
 		await table.creating.commit()
 
 		expect(onSave).toHaveBeenCalledTimes(1)
-		const [values, ctx] = onSave.mock.calls[0] as [Partial<Row>, { signal: AbortSignal }]
-		expect(values).toEqual({ name: 'Dave' })
+		const [ctx] = onSave.mock.calls[0] as [{ values: Partial<Row>; signal: AbortSignal }]
+		expect(ctx.values).toEqual({ name: 'Dave' })
 		expect(ctx.signal).toBeInstanceOf(AbortSignal)
 
 		// final state: isOpen = false, status idle, values cleared
@@ -250,7 +250,7 @@ describe('CreatingFeature — commit pipeline', () => {
 	it('cancel() during async onSave aborts: late onSave does not write to state', async () => {
 		let observedAbort = false
 		const onSave = vi.fn(
-			(_v: Partial<Row>, ctx: { signal: AbortSignal }) =>
+			(ctx: { values: Partial<Row>; signal: AbortSignal }) =>
 				new Promise<void>((resolve) => {
 					ctx.signal.addEventListener('abort', () => {
 						observedAbort = true

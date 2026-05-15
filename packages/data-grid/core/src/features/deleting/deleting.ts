@@ -5,8 +5,22 @@ export type ConfirmationOptions = {
 	description?: string | ((row: Row<unknown>) => string)
 }
 
+/**
+ * Context passed to {@link DeletingConfig.onDelete}.
+ *
+ * @typeParam TData - row data type
+ */
+export type DeletingContext<TData> = {
+	/** ID of the row being deleted (TanStack row.id). */
+	rowId: string
+	/** Full TanStack row instance — access `row.original`, `row.getValue()`, etc. */
+	row: Row<TData>
+	/** Aborted when the user cancels deletion via cancelDeleteRow() or the table unmounts. */
+	signal: AbortSignal
+}
+
 export type DeletingConfig<TData> = {
-	onDelete: (row: Row<TData>) => void | Promise<void>
+	onDelete: (ctx: DeletingContext<TData>) => void | Promise<void>
 	confirmation?: boolean | ConfirmationOptions
 }
 
@@ -38,12 +52,24 @@ export const DeletingFeature: TableFeature<RowData> = {
 		}) as Partial<TableState>,
 
 	createTable: (table: Table<RowData>) => {
+		// Single AbortController per table instance.
+		// Aborted on: new deleteRow, cancelDeleteRow.
+		let controller: AbortController | undefined
+
+		const resetController = (): AbortController => {
+			controller?.abort()
+			const c = new AbortController()
+			controller = c
+			return c
+		}
+
 		table.deleteRow = async (rowId) => {
 			const config = table.options.deleting
 			if (!config) return
 			const row = table.getRowModel().rows.find((r) => r.id === rowId)
 			if (!row) return
-			await config.onDelete(row)
+			const c = resetController()
+			await config.onDelete({ rowId, row, signal: c.signal })
 		}
 
 		table.requestDeleteRow = (rowId) => {
@@ -64,6 +90,8 @@ export const DeletingFeature: TableFeature<RowData> = {
 		}
 
 		table.cancelDeleteRow = () => {
+			controller?.abort()
+			controller = undefined
 			table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
 		}
 	},

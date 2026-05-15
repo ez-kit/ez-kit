@@ -8,7 +8,7 @@ function ImageCellView({ value, config }: CellViewProps<ImageCellConfig>) {
 	const src = String(value ?? '')
 	if (!src) return null
 	return (
-		<span style={{ display: 'inline-flex', alignItems: 'center' }}>
+		<span className='inline-flex items-center'>
 			<img
 				src={src}
 				alt={config?.alt ?? ''}

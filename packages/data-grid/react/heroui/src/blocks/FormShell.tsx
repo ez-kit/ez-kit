@@ -27,14 +27,7 @@ export function FormShell({ open, title, formError, isPending, onSave, onCancel,
 						{formError ? (
 							<div
 								role='alert'
-								style={{
-									padding: '0.5rem 0.75rem',
-									borderRadius: '0.375rem',
-									background: 'color-mix(in oklab, var(--color-danger) 12%, transparent)',
-									color: 'var(--color-danger)',
-									border: '1px solid color-mix(in oklab, var(--color-danger) 40%, transparent)',
-									marginBottom: '0.75rem',
-								}}
+								className='dg-form-error py-2 px-3 rounded-md mb-3'
 							>
 								{formError}
 							</div>

@@ -80,8 +80,9 @@ export {
 } from '@ez-kit/data-grid-core'
 export type {
 	CommitStatus,
+	CreatingSaveContext,
+	EditingSaveContext,
 	FieldState,
-	SaveContext,
 	ValidateConfig,
 	ValidateContext,
 	ValidateOn,
@@ -173,6 +174,7 @@ export type {
 	ConfirmationOptions,
 	DateCellConfig,
 	DeletingConfig,
+	DeletingContext,
 	EditingConfig,
 	ImageCellConfig,
 	PinningConfig,

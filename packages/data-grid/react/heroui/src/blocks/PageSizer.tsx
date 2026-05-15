@@ -7,10 +7,7 @@ import type { PageSizerProps } from '@ez-kit/data-grid-react'
 export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
 	return (
 		<div className='flex items-center gap-2'>
-			<span
-				className='text-sm whitespace-nowrap'
-				style={{ color: 'var(--heroui-default-500, #71717a)' }}
-			>
+			<span className='dg-page-sizer-label text-sm whitespace-nowrap'>
 				Rows per page
 			</span>
 			<Select

@@ -26,7 +26,7 @@ export function ColumnMenu({ sections }: ColumnMenuProps) {
 			<Dropdown.Trigger>
 				<span
 					aria-label='Column options'
-					style={{ display: 'inline-flex', alignItems: 'center' }}
+					className='inline-flex items-center'
 				>
 					<EllipsisVertical size={14} />
 				</span>

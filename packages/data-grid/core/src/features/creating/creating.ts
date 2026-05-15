@@ -2,7 +2,6 @@ import { isValidationError, zodSafeParseToResult } from '../validation'
 
 import type {
 	CommitStatus,
-	SaveContext,
 	ValidateConfig,
 	ValidateContext,
 	ValidateOn,
@@ -10,6 +9,18 @@ import type {
 	ValidationResult,
 } from '../validation'
 import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
+
+/**
+ * Context passed to {@link CreatingConfig.onSave}.
+ *
+ * @typeParam TData - row data type
+ */
+export type CreatingSaveContext<TData> = {
+	/** Field values currently in the create form. */
+	values: Partial<TData>
+	/** Aborted when the user cancels create, calls cancel(), or the table unmounts. */
+	signal: AbortSignal
+}
 
 const DEFAULT_VALIDATE_ON: ValidateOn = 'submit'
 const DEFAULT_DEBOUNCE_MS = 200
@@ -34,7 +45,7 @@ export type CreatingConfig<TData> = {
 	 * {@link ValidationError} from inside to surface server-side validation
 	 * errors back into the form state.
 	 */
-	onSave: (values: Partial<TData>, ctx: SaveContext) => void | Promise<void>
+	onSave: (ctx: CreatingSaveContext<TData>) => void | Promise<void>
 }
 
 export type CreatingApi<TData = unknown> = {
@@ -131,7 +142,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 			if (fromColumn) return fromColumn
 			const config = getConfig()
 			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.on) return validate.on
+			if (validate && typeof validate === 'object' && validate.validateOn) return validate.validateOn
 			return config?.validateOn ?? DEFAULT_VALIDATE_ON
 		}
 
@@ -140,7 +151,8 @@ export const CreatingFeature: TableFeature<RowData> = {
 			if (fromColumn !== undefined) return fromColumn
 			const config = getConfig()
 			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.debounceMs !== undefined) return validate.debounceMs
+			if (validate && typeof validate === 'object' && validate.validateDebounceMs !== undefined)
+				return validate.validateDebounceMs
 			return config?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
 		}
 
@@ -273,7 +285,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 				// ── save phase ───────────────────────────────────────────────
 				writeState({ commitStatus: 'saving' })
 				try {
-					await config.onSave(values, { signal: c.signal })
+					await config.onSave({ values, signal: c.signal })
 					if (c.signal.aborted) return
 					// Reset to closed/empty state on success
 					writeState({

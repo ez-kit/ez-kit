@@ -7,12 +7,10 @@ import type { OperatorSelectProps } from '@ez-kit/data-grid-react'
 export function OperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
 	return (
 		<Select
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			selectedKey={currentOperatorId}
+			value={currentOperatorId}
 			aria-label='Filter operator'
-			// eslint-disable-next-line @typescript-eslint/no-deprecated
-			onSelectionChange={(key) => {
-				if (key != null) onChange(String(key))
+			onChange={(value) => {
+				if (value != null) onChange(String(value))
 			}}
 		>
 			<Select.Trigger>

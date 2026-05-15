@@ -28,7 +28,7 @@ export function CreatingValidationExample() {
 		creating: {
 			mode: 'modal',
 			validate: { schema: userSchema },
-			onSave: async (values) => {
+			onSave: async ({ values }) => {
 				// Simulate latency so the spinner is visible.
 				await new Promise<void>((r) => {
 					setTimeout(r, 400)

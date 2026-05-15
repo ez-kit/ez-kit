@@ -62,7 +62,7 @@ function InlineEditDemo() {
 		filtering: true,
 		editing: {
 			mode: 'cell',
-			onSave: (rowId, values) => {
+			onSave: ({ rowId, values }) => {
 				setRows((prev) => prev.map((row) => (String(row.id) === rowId ? { ...row, ...values } : row)))
 			},
 		},
@@ -85,7 +85,7 @@ function CreatingDemo() {
 		getRowId: (row) => String(row.id),
 		creating: {
 			mode: 'row',
-			onSave: (values) => {
+			onSave: ({ values }) => {
 				const next = values as Partial<Omit<Milestone, 'id'>>
 				setRows((prev) => [
 					...prev,

@@ -6,7 +6,7 @@ export function LoadingRow({ columnCount }: LoadingRowProps) {
 	return (
 		<tr>
 			{Array.from({ length: columnCount }, (_, i) => (
-				<td key={i} style={{ padding: '0.75rem 1rem' }}>
+				<td key={i} className='py-3 px-4'>
 					<Skeleton className='h-4 w-full rounded' />
 				</td>
 			))}

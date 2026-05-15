@@ -16,18 +16,18 @@ export function CreatingPinRowExample() {
 		pagination: { pageSize: 10 },
 		creating: {
 			mode: 'pin-row',
-			onSave: (values) => {
+			onSave: ({ values }) => {
 				setData((prev) => [...prev, { id: Date.now(), ...values } as User])
 			},
 		},
 		editing: {
 			mode: 'row',
-			onSave: (rowId, values) => {
+			onSave: ({ rowId, values }) => {
 				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 			},
 		},
 		deleting: {
-			onDelete: (row) => {
+			onDelete: ({ row }) => {
 				setData((prev) => prev.filter((r) => r.id !== row.original.id))
 			},
 		},

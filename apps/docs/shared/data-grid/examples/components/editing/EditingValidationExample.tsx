@@ -25,7 +25,7 @@ export function EditingValidationExample() {
 		editing: {
 			mode: 'row',
 			validate: { schema: userSchema },
-			onSave: async (rowId, values) => {
+			onSave: async ({ rowId, values }) => {
 				await new Promise<void>((r) => {
 					setTimeout(r, 350)
 				})

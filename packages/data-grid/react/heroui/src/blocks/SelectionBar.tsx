@@ -23,26 +23,15 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 				role='toolbar'
 				data-slot='selection-bar'
 				data-variant='inline'
-				style={{
-					display: 'flex',
-					alignItems: 'center',
-					gap: '0.5rem',
-					padding: '0.5rem 0.75rem',
-					marginBottom: '0.5rem',
-					width: '100%',
-					borderRadius: 'var(--heroui-radius-medium, 8px)',
-					background: 'hsl(var(--heroui-default-100))',
-					color: 'hsl(var(--heroui-foreground))',
-					fontSize: '0.875rem',
-				}}
+				className='dg-selection-bar flex items-center gap-2 px-3 py-2 mb-2 w-full text-sm'
 			>
 				<span
 					data-slot='action-bar-selection'
-					style={{ fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}
+					className='font-medium tabular-nums'
 				>
 					{count} selected
 				</span>
-				<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+				<div className='ml-auto flex items-center gap-2'>
 					{onDelete && (
 						<Button
 							size='sm'

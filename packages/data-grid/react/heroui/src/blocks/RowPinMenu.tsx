@@ -18,7 +18,7 @@ export function RowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinB
 			<Dropdown.Trigger>
 				<span
 					aria-label='Row pinning'
-					style={{ display: 'inline-flex', alignItems: 'center' }}
+					className='inline-flex items-center'
 				>
 					{isPinned ? <PinOff size={14} /> : <ArrowUpToLine size={14} />}
 				</span>

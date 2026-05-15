@@ -156,3 +156,48 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 		animation: none !important;
 	}
 }
+
+/* ---- Data-grid HeroUI theme-driven classes ----
+   These wrap the small set of inline styles that must reference HeroUI runtime
+   theme tokens (`var(--heroui-*)`, `color-mix(... var(--color-danger) ...)`).
+   They cannot be expressed via plain Tailwind utilities because the values are
+   resolved at runtime by the HeroUI provider.
+   Layout/spacing/typography for the same elements stay as Tailwind classes on
+   the JSX side; these CSS rules only own the theme-dependent properties. */
+
+.dg-form-error {
+	background: color-mix(in oklab, var(--color-danger) 12%, transparent);
+	color: var(--color-danger);
+	border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent);
+}
+
+.dg-page-sizer-label {
+	color: var(--heroui-default-500, #71717a);
+}
+
+.dg-empty-state,
+.dg-no-results-state {
+	color: var(--heroui-default-400, #a1a1aa);
+}
+
+.dg-selection-bar {
+	border-radius: var(--heroui-radius-medium, 8px);
+	background: hsl(var(--heroui-default-100));
+	color: hsl(var(--heroui-foreground));
+}
+
+.dg-sort-count-badge {
+	margin-left: 0.125rem;
+	border-radius: 9999px;
+	padding: 0 0.375rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	background: currentColor;
+	color: transparent;
+	background-clip: padding-box;
+	opacity: 0.85;
+}
+
+.dg-sort-menu-footer {
+	border-top: 1px solid hsl(var(--heroui-default-200));
+}

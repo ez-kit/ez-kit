@@ -63,8 +63,8 @@ export function SortingExample() {
 			},
 		],
 		sorting: {
-			// Two-column initial sort: critical first, then earliest due date.
-			initial: [
+			// Two-column default sort: critical first, then earliest due date.
+			defaultSorting: [
 				{ id: 'priority', desc: false },
 				{ id: 'dueDate', desc: false },
 			],

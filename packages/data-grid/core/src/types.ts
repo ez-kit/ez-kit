@@ -6,7 +6,9 @@ import type { EditingConfig } from './features/editing'
 import type { FilterOperatorDef } from './features/operators'
 import type {
 	Column,
+	ColumnFiltersState,
 	FilterFn,
+	PaginationState,
 	Row,
 	RowData,
 	RowModel,
@@ -85,11 +87,11 @@ export type SortingConfig = {
 	 */
 	manual?: boolean
 	/**
-	 * Initial multi-column sort. Order in the array = sort priority.
+	 * Default multi-column sort applied in uncontrolled mode. Order in the array = sort priority.
 	 *
 	 * @example Single-column default sort
 	 * ```ts
-	 * sorting: { initial: [{ id: 'createdAt', desc: true }] }
+	 * sorting: { defaultSorting: [{ id: 'createdAt', desc: true }] }
 	 * ```
 	 *
 	 * @example Multi-column default — sort by status asc, then by updatedAt desc
@@ -97,7 +99,7 @@ export type SortingConfig = {
 	 * createTable({
 	 *   data, columns,
 	 *   sorting: {
-	 *     initial: [
+	 *     defaultSorting: [
 	 *       { id: 'status', desc: false },
 	 *       { id: 'updatedAt', desc: true },
 	 *     ],
@@ -106,7 +108,7 @@ export type SortingConfig = {
 	 * })
 	 * ```
 	 */
-	initial?: SortingState
+	defaultSorting?: SortingState
 	/** First click sorts descending. Default: false. */
 	descFirst?: boolean
 	/** Allow a third click to clear the sort. Default: true. */
@@ -157,6 +159,17 @@ export type FilteringConfig = {
 	 * row models attached — keeps `@tanstack/table-core` tree-shakable).
 	 */
 	faceted?: boolean
+	/**
+	 * Called whenever the column-filters state changes. Receives the resolved
+	 * {@link ColumnFiltersState}. Use this to mirror filter state into the URL
+	 * or fetch server-side filtered data.
+	 *
+	 * @example
+	 * ```ts
+	 * filtering: { onChange: (filters) => router.push({ query: { filters } }) }
+	 * ```
+	 */
+	onChange?: (columnFilters: ColumnFiltersState) => void
 }
 
 /**
@@ -210,12 +223,37 @@ export type GlobalFilteringConfig = {
 	 * Named global filter functions, addressable from {@link GlobalFilteringConfig.fn} by id.
 	 */
 	fns?: Record<string, GlobalFilterFn>
+	/**
+	 * Called whenever the global-search value changes. Receives the current
+	 * global filter (typically a string). Use this to mirror search state into
+	 * the URL or fetch server-side data.
+	 *
+	 * @example
+	 * ```ts
+	 * globalFiltering: { onChange: (q) => router.push({ query: { q } }) }
+	 * ```
+	 */
+	onChange?: (globalFilter: unknown) => void
 }
 
 export type PaginationConfig = {
 	manual?: boolean
 	pageCount?: number
 	pageSize?: number
+	/**
+	 * Called whenever the pagination state changes (page index or size). Receives
+	 * the resolved {@link PaginationState}. Use this to mirror state into the URL
+	 * or fetch the next page from the server.
+	 *
+	 * @example
+	 * ```ts
+	 * pagination: {
+	 *   manual: true,
+	 *   onChange: ({ pageIndex, pageSize }) => fetchPage({ pageIndex, pageSize }),
+	 * }
+	 * ```
+	 */
+	onChange?: (pagination: PaginationState) => void
 }
 
 export type SelectionConfig = {

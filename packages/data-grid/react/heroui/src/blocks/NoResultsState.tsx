@@ -2,18 +2,7 @@ import type { NoResultsStateProps } from '@ez-kit/data-grid-react'
 
 export function NoResultsState(_props: NoResultsStateProps) {
 	return (
-		<div
-			style={{
-				display: 'flex',
-				flexDirection: 'column',
-				alignItems: 'center',
-				justifyContent: 'center',
-				gap: '0.5rem',
-				padding: '3rem 1rem',
-				minHeight: '300px',
-				color: 'var(--heroui-default-400, #a1a1aa)',
-			}}
-		>
+		<div className='dg-no-results-state flex flex-col items-center justify-center gap-2 py-12 px-4 min-h-[300px]'>
 			<svg
 				xmlns='http://www.w3.org/2000/svg'
 				width='32'
@@ -30,8 +19,8 @@ export function NoResultsState(_props: NoResultsStateProps) {
 				<path d='m21 21-4.35-4.35' />
 				<path d='M8 11h6' />
 			</svg>
-			<p style={{ fontSize: '0.875rem', fontWeight: 500 }}>No results</p>
-			<p style={{ fontSize: '0.75rem' }}>Try adjusting your filters.</p>
+			<p className='text-sm font-medium'>No results</p>
+			<p className='text-xs'>Try adjusting your filters.</p>
 		</div>
 	)
 }

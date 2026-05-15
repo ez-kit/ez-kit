@@ -98,9 +98,9 @@ describe('EditingFeature — commit pipeline (row mode)', () => {
 		await table.editing.commit()
 
 		expect(onSave).toHaveBeenCalledTimes(1)
-		const [rowId, values, ctx] = onSave.mock.calls[0] as [string, Partial<Row>, { signal: AbortSignal }]
-		expect(rowId).toBe('1')
-		expect(values.name).toBe('Alice 2')
+		const [ctx] = onSave.mock.calls[0] as [{ rowId: string; values: Partial<Row>; signal: AbortSignal }]
+		expect(ctx.rowId).toBe('1')
+		expect(ctx.values.name).toBe('Alice 2')
 		expect(ctx.signal).toBeInstanceOf(AbortSignal)
 
 		const s = table.editing.getState()
@@ -155,7 +155,7 @@ describe('EditingFeature — commit pipeline (row mode)', () => {
 
 	it('cancel during async onSave aborts: late onSave does not write to state', async () => {
 		const onSave = vi.fn(
-			(_id: string, _v: Partial<Row>, ctx: { signal: AbortSignal }) =>
+			(ctx: { rowId: string; values: Partial<Row>; signal: AbortSignal }) =>
 				new Promise<void>((resolve) => {
 					ctx.signal.addEventListener('abort', () => {
 						resolve()
@@ -186,9 +186,9 @@ describe('EditingFeature — cell mode', () => {
 		await table.editing.commitCell()
 
 		expect(onSave).toHaveBeenCalledTimes(1)
-		const [rowId, values] = onSave.mock.calls[0] as [string, Partial<Row>]
-		expect(rowId).toBe('1')
-		expect(values).toEqual({ name: 'Alice 2' })
+		const [ctx] = onSave.mock.calls[0] as [{ rowId: string; values: Partial<Row> }]
+		expect(ctx.rowId).toBe('1')
+		expect(ctx.values).toEqual({ name: 'Alice 2' })
 	})
 
 	it('commitCell passes ctx.cell.columnId to validate', async () => {
@@ -258,7 +258,7 @@ describe('EditingFeature — cell mode', () => {
 	it('cancel during async cell commit aborts the controller', async () => {
 		let observedAbort = false
 		const onSave = vi.fn(
-			(_id: string, _v: Partial<Row>, ctx: { signal: AbortSignal }) =>
+			(ctx: { rowId: string; values: Partial<Row>; signal: AbortSignal }) =>
 				new Promise<void>((resolve) => {
 					ctx.signal.addEventListener('abort', () => {
 						observedAbort = true

@@ -9,20 +9,18 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 	return (
 		<div
 			data-slot='sort-row'
-			style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+			className='flex items-center gap-2'
 		>
-			<span style={{ width: '3.5rem', flexShrink: 0, fontSize: '0.75rem', opacity: 0.7 }}>
+			<span className='w-14 shrink-0 text-xs opacity-70'>
 				{index === 0 ? 'sort by' : 'then by'}
 			</span>
 
-			<div style={{ flex: 1, minWidth: 0 }}>
+			<div className='flex-1 min-w-0'>
 				<Select
-					// eslint-disable-next-line @typescript-eslint/no-deprecated
-					selectedKey={item.columnId}
+					value={item.columnId}
 					aria-label='Sort column'
-					// eslint-disable-next-line @typescript-eslint/no-deprecated
-					onSelectionChange={(key) => {
-						if (key != null) item.onChangeColumn(String(key))
+					onChange={(value) => {
+						if (value != null) item.onChangeColumn(String(value))
 					}}
 				>
 					<Select.Trigger>
@@ -44,14 +42,12 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 				</Select>
 			</div>
 
-			<div style={{ width: '7.5rem', flexShrink: 0 }}>
+			<div className='w-[7.5rem] shrink-0'>
 				<Select
-					// eslint-disable-next-line @typescript-eslint/no-deprecated
-					selectedKey={item.direction}
+					value={item.direction}
 					aria-label='Sort direction'
-					// eslint-disable-next-line @typescript-eslint/no-deprecated
-					onSelectionChange={(key) => {
-						if (key === 'asc' || key === 'desc') item.onChangeDirection(key)
+					onChange={(value) => {
+						if (value === 'asc' || value === 'desc') item.onChangeDirection(value)
 					}}
 				>
 					<Select.Trigger>
@@ -97,26 +93,12 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 			<Popover.Trigger>
 				<span
 					data-slot='sort-trigger'
-					style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+					className='inline-flex items-center gap-1.5'
 				>
 					<ArrowUpDown size={16} />
 					Sort
 					{activeCount > 0 ? (
-						<span
-							style={{
-								marginLeft: '0.125rem',
-								borderRadius: '9999px',
-								padding: '0 0.375rem',
-								fontSize: '0.75rem',
-								fontWeight: 500,
-								background: 'currentColor',
-								color: 'transparent',
-								backgroundClip: 'padding-box',
-								opacity: 0.85,
-							}}
-						>
-							{activeCount}
-						</span>
+						<span className='dg-sort-count-badge'>{activeCount}</span>
 					) : null}
 				</span>
 			</Popover.Trigger>
@@ -125,13 +107,13 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 					aria-label='Sort'
 					data-slot='sort-menu'
 				>
-					<div style={{ minWidth: '26rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem' }}>
+					<div className='min-w-[26rem] flex flex-col gap-3 p-3'>
 						{activeCount === 0 ? (
-							<p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7 }}>
+							<p className='m-0 text-xs opacity-70'>
 								No sorts applied. Add one to start sorting.
 							</p>
 						) : (
-							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+							<div className='flex flex-col gap-2'>
 								{items.map((item, index) => (
 									<SortRow
 										key={`${String(index)}-${item.columnId}`}
@@ -142,16 +124,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 							</div>
 						)}
 
-						<div
-							style={{
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'space-between',
-								gap: '0.5rem',
-								borderTop: '1px solid hsl(var(--heroui-default-200))',
-								paddingTop: '0.75rem',
-							}}
-						>
+						<div className='dg-sort-menu-footer flex items-center justify-between gap-2 pt-3'>
 							<Button
 								variant='ghost'
 								size='sm'

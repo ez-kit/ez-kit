@@ -9,16 +9,16 @@ function ProgressCellView({ value, config }: CellViewProps<ProgressCellConfig>) 
 	const num = Number(value)
 	const pct = Number.isFinite(num) ? (num / max) * 100 : 0
 	return (
-		<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+		<span className='inline-flex items-center gap-2 w-full'>
 			<ProgressBar
 				value={pct}
-				style={{ flex: 1 }}
+				className='flex-1'
 			>
 				<ProgressBar.Track>
 					<ProgressBar.Fill />
 				</ProgressBar.Track>
 			</ProgressBar>
-			<span style={{ fontSize: '0.75rem', fontVariantNumeric: 'tabular-nums' }}>{num}</span>
+			<span className='text-xs tabular-nums'>{num}</span>
 		</span>
 	)
 }

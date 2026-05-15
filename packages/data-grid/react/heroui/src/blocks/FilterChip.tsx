@@ -19,25 +19,15 @@ export function FilterChip({ label, value, onRemove, kind }: FilterChipProps) {
 			size='sm'
 		>
 			<Chip.Label>
-				<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}>
-					<span style={{ fontWeight: 500, opacity: 0.75 }}>{label}</span>
+				<span className='inline-flex items-center gap-1.5'>
+					<span className='font-medium opacity-75'>{label}</span>
 					<span>{value}</span>
 					<button
 						type='button'
 						onClick={onRemove}
 						aria-label={`Remove ${label} filter`}
 						data-slot='filter-chip-remove'
-						style={{
-							display: 'inline-flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							marginLeft: '0.125rem',
-							padding: 0,
-							border: 'none',
-							background: 'transparent',
-							cursor: 'pointer',
-							opacity: 0.7,
-						}}
+						className='inline-flex items-center justify-center ml-0.5 p-0 border-none bg-transparent cursor-pointer opacity-70'
 					>
 						<X size={12} />
 					</button>

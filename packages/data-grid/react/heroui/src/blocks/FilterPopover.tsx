@@ -1,6 +1,6 @@
 'use client'
 
-import { Popover } from '@heroui/react'
+import { Popover, cn } from '@heroui/react'
 import { ListFilter } from 'lucide-react'
 
 import type { FilterPopoverProps } from '@ez-kit/data-grid-react'
@@ -11,7 +11,7 @@ export function FilterPopover({ children, hasActiveFilter }: FilterPopoverProps)
 			<Popover.Trigger>
 				<span
 					aria-label='Filter'
-					style={{ opacity: hasActiveFilter ? 1 : 0.45 }}
+					className={cn(hasActiveFilter ? 'opacity-100' : 'opacity-45')}
 				>
 					<ListFilter
 						size={14}
@@ -21,7 +21,7 @@ export function FilterPopover({ children, hasActiveFilter }: FilterPopoverProps)
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog aria-label='Filter'>
-					<div style={{ display: 'grid', gap: '0.5rem', minWidth: 256, padding: '0.75rem' }}>{children}</div>
+					<div className='grid gap-2 p-3 min-w-64'>{children}</div>
 				</Popover.Dialog>
 			</Popover.Content>
 		</Popover>

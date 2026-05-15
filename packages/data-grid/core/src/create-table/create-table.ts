@@ -136,7 +136,13 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasGlobalFiltering = Boolean(config.globalFiltering)
 	const hasAnyFiltering = hasColumnFiltering || hasGlobalFiltering
 
+	const filteringCfg = typeof config.filtering === 'object' ? config.filtering : undefined
+	const filteringOnChange = filteringCfg?.onChange
 	const globalFilteringCfg = typeof config.globalFiltering === 'object' ? config.globalFiltering : undefined
+	const globalFilteringOnChange = globalFilteringCfg?.onChange
+
+	const paginationCfg = typeof config.pagination === 'object' ? config.pagination : undefined
+	const paginationOnChange = paginationCfg?.onChange
 
 	// Resolve `globalFilterFn`:
 	// - inline function → used as-is
@@ -173,7 +179,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		columnPinning: { left: pinnedLeft, right: pinnedRight },
 		pagination: { pageIndex: 0, pageSize: defaultPageSize },
 		...(Object.keys(defaultHidden).length > 0 ? { columnVisibility: defaultHidden } : {}),
-		...(sortingCfg?.initial ? { sorting: sortingCfg.initial } : {}),
+		...(sortingCfg?.defaultSorting ? { sorting: sortingCfg.defaultSorting } : {}),
 	}
 
 	// We need a stable reference for the callback closure.
@@ -189,9 +195,18 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		store.setState(next)
 		config.onStateChange?.(updater)
 
-		// sorting.onChange — fires only when the sorting sub-state reference actually changed
+		// Per-feature onChange — fire only when the relevant sub-state reference actually changed
 		if (sortingOnChange && currentState.sorting !== next.sorting) {
 			sortingOnChange(next.sorting)
+		}
+		if (filteringOnChange && currentState.columnFilters !== next.columnFilters) {
+			filteringOnChange(next.columnFilters)
+		}
+		if (globalFilteringOnChange && currentState.globalFilter !== next.globalFilter) {
+			globalFilteringOnChange(next.globalFilter)
+		}
+		if (paginationOnChange && currentState.pagination !== next.pagination) {
+			paginationOnChange(next.pagination)
 		}
 	}
 

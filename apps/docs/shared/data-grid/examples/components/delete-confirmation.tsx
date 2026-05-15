@@ -23,7 +23,7 @@ export function DeleteConfirmationExample() {
 		sorting: true,
 		pagination: { pageSize: 10 },
 		deleting: {
-			onDelete: (row) => {
+			onDelete: ({ row }) => {
 				setData((prev) => prev.filter((item) => item.id !== row.original.id))
 			},
 			confirmation: {

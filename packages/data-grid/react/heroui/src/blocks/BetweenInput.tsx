@@ -9,34 +9,11 @@ import type { BetweenInputProps, DateRangePreset } from '@ez-kit/data-grid-react
 import type { CalendarDate } from '@internationalized/date'
 import type { ReactNode } from 'react'
 
-const LABEL_STYLE = {
-	fontSize: '0.75rem',
-	fontVariantNumeric: 'tabular-nums' as const,
-	minWidth: '2ch',
-}
-
-const ROW_STYLE = {
-	display: 'flex',
-	gap: '0.5rem',
-	alignItems: 'center',
-} as const
-
-const COLUMN_STYLE = {
-	display: 'flex',
-	flexDirection: 'column' as const,
-	gap: '0.5rem',
-}
-
-const PRESET_ROW_STYLE = {
-	display: 'flex',
-	flexWrap: 'wrap' as const,
-	gap: '0.25rem',
-}
-
-const TRIGGER_STYLE = {
-	minWidth: '12rem',
-	fontSize: '0.75rem',
-} as const
+const LABEL_CLASS = 'text-xs tabular-nums min-w-[2ch]'
+const ROW_CLASS = 'flex gap-2 items-center'
+const COLUMN_CLASS = 'flex flex-col gap-2'
+const PRESET_ROW_CLASS = 'flex flex-wrap gap-1'
+const TRIGGER_CLASS = 'min-w-[12rem] text-xs'
 
 function toCalendarDate(value: unknown): CalendarDate | null {
 	if (typeof value !== 'string' || !value) return null
@@ -57,7 +34,7 @@ function PresetRow({
 	return (
 		<div
 			data-slot='between-presets'
-			style={PRESET_ROW_STYLE}
+			className={PRESET_ROW_CLASS}
 		>
 			{presets.map((p) => (
 				<Button
@@ -78,7 +55,7 @@ function PresetRow({
 function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode {
 	if (!presetRow) return content
 	return (
-		<div style={COLUMN_STYLE}>
+		<div className={COLUMN_CLASS}>
 			{presetRow}
 			{content}
 		</div>
@@ -114,9 +91,9 @@ export function BetweenInput({
 			<div
 				role='group'
 				aria-label='Range filter'
-				style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 220 }}
+				className='flex items-center gap-2 min-w-[220px]'
 			>
-				<span style={{ ...LABEL_STYLE, textAlign: 'right' }}>{fromVal}</span>
+				<span className={`${LABEL_CLASS} text-right`}>{fromVal}</span>
 				<Slider
 					aria-label='Range'
 					minValue={sliderMin}
@@ -127,7 +104,7 @@ export function BetweenInput({
 						const [nextFrom, nextTo] = vals
 						onChange({ from: nextFrom, to: nextTo })
 					}}
-					style={{ flex: 1 }}
+					className='flex-1'
 				>
 					<Slider.Track>
 						{({ state }) => (
@@ -143,7 +120,7 @@ export function BetweenInput({
 						)}
 					</Slider.Track>
 				</Slider>
-				<span style={LABEL_STYLE}>{toVal}</span>
+				<span className={LABEL_CLASS}>{toVal}</span>
 			</div>,
 		)
 	}
@@ -168,7 +145,7 @@ export function BetweenInput({
 					<Button
 						variant='tertiary'
 						size='sm'
-						style={TRIGGER_STYLE}
+						className={TRIGGER_CLASS}
 					>
 						<span>{displayLabel}</span>
 					</Button>
@@ -205,7 +182,7 @@ export function BetweenInput({
 	if (type === 'date') {
 		return withPresets(
 			presetRow,
-			<div style={ROW_STYLE}>
+			<div className={ROW_CLASS}>
 				<DateCellInput
 					id='between-from'
 					value={value.from}
@@ -235,7 +212,7 @@ export function BetweenInput({
 
 	return withPresets(
 		presetRow,
-		<div style={ROW_STYLE}>
+		<div className={ROW_CLASS}>
 			<Input
 				type='number'
 				placeholder='From'

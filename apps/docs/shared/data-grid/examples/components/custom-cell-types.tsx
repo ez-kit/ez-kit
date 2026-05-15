@@ -37,7 +37,7 @@ export function CustomCellTypesExample() {
 		sorting: true,
 		editing: {
 			mode: 'row',
-			onSave: (rowId, values) => {
+			onSave: ({ rowId, values }) => {
 				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 			},
 		},

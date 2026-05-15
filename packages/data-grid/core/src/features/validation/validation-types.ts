@@ -19,8 +19,6 @@ export type ValidateContext = {
 	cell?: { columnId: string }
 }
 
-export type SaveContext = { signal: AbortSignal }
-
 export type ValidateOn = 'submit' | 'blur' | 'change'
 
 /**
@@ -79,12 +77,12 @@ export type FieldState<TConfig = unknown> = {
 
 /**
  * `validate` config — function form OR `{ schema }` shorthand for zod.
- * `on` and `debounceMs` on the shorthand override the global creating/editing
+ * `validateOn` and `validateDebounceMs` on the shorthand override the global creating/editing
  * `validateOn` / `validateDebounceMs` for that specific call.
  */
 export type ValidateConfig<TData> =
 	| ((values: Partial<TData>, ctx: ValidateContext) => ValidationResult | Promise<ValidationResult>)
-	| { schema: ZodType; on?: ValidateOn; debounceMs?: number }
+	| { schema: ZodType; validateOn?: ValidateOn; validateDebounceMs?: number }
 
 const VALIDATION_ERROR_BRAND = Symbol.for('@ez-kit/validation-error')
 

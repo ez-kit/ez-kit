@@ -2,7 +2,6 @@ import { isValidationError, zodSafeParseToResult } from '../validation'
 
 import type {
 	CommitStatus,
-	SaveContext,
 	ValidateConfig,
 	ValidateContext,
 	ValidateOn,
@@ -10,6 +9,20 @@ import type {
 	ValidationResult,
 } from '../validation'
 import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
+
+/**
+ * Context passed to {@link EditingConfig.onSave}.
+ *
+ * @typeParam TData - row data type
+ */
+export type EditingSaveContext<TData> = {
+	/** ID of the row being edited (TanStack row.id). */
+	rowId: string
+	/** Field values currently in the form. In cell mode contains only the edited column. */
+	values: Partial<TData>
+	/** Aborted when the user cancels edit, calls cancel(), or the table unmounts. */
+	signal: AbortSignal
+}
 
 const DEFAULT_VALIDATE_ON: ValidateOn = 'submit'
 const DEFAULT_DEBOUNCE_MS = 200
@@ -36,7 +49,7 @@ export type EditingConfig<TData> = {
 	 * {@link ValidationError} from inside to surface server-side validation
 	 * errors back into the form state.
 	 */
-	onSave: (rowId: string, values: Partial<TData>, ctx: SaveContext) => void | Promise<void>
+	onSave: (ctx: EditingSaveContext<TData>) => void | Promise<void>
 }
 
 export type EditingApi<TData = unknown> = {
@@ -144,7 +157,7 @@ export const EditingFeature: TableFeature<RowData> = {
 			if (fromColumn) return fromColumn
 			const config = getConfig()
 			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.on) return validate.on
+			if (validate && typeof validate === 'object' && validate.validateOn) return validate.validateOn
 			return config?.validateOn ?? DEFAULT_VALIDATE_ON
 		}
 
@@ -153,7 +166,8 @@ export const EditingFeature: TableFeature<RowData> = {
 			if (fromColumn !== undefined) return fromColumn
 			const config = getConfig()
 			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.debounceMs !== undefined) return validate.debounceMs
+			if (validate && typeof validate === 'object' && validate.validateDebounceMs !== undefined)
+				return validate.validateDebounceMs
 			return config?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
 		}
 
@@ -304,7 +318,7 @@ export const EditingFeature: TableFeature<RowData> = {
 
 				writeState({ commitStatus: 'saving' })
 				try {
-					await config.onSave(rowId, values, { signal: c.signal })
+					await config.onSave({ rowId, values, signal: c.signal })
 					if (c.signal.aborted) return
 					writeState({ ...INITIAL_STATE })
 				} catch (e) {
@@ -368,7 +382,7 @@ export const EditingFeature: TableFeature<RowData> = {
 
 				writeState({ commitStatus: 'saving' })
 				try {
-					await config.onSave(rowId, cellValues, { signal: c.signal })
+					await config.onSave({ rowId, values: cellValues, signal: c.signal })
 					if (c.signal.aborted) return
 					writeState({ ...INITIAL_STATE })
 				} catch (e) {
