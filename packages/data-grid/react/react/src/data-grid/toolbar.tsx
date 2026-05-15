@@ -13,7 +13,7 @@ import { CreateTrigger } from './create-trigger'
 import { GlobalFilterInput } from './global-filter-input'
 import { PageSizer } from './page-sizer'
 import { SortTrigger } from './sort-trigger'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type {
 	ColumnVisibilityUIConfig,
@@ -36,7 +36,7 @@ type ToolbarProps = {
  */
 export function Toolbar({ children }: ToolbarProps) {
 	const { Toolbar: ToolbarComponent } = useGridComponents()
-	const table = useTableContext()
+	const table = useTable()
 	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== 'pin-row'
 
 	const colVisConfig = (table as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] as

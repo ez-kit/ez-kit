@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { AutoForm } from './auto-form'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 /**
  * Modal for editing a row (editing.mode = 'modal').
@@ -9,7 +9,7 @@ import { useTableContext } from './table-context'
  * registered; falls back to generic <Modal>. Throws if neither is provided.
  */
 export function EditingModal() {
-	const table = useTableContext()
+	const table = useTable()
 	const { Modal, FormShell } = useGridComponents()
 	const state = table.editing.getState()
 	const isOpen = Boolean(state.rowId)

@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 
 import { useGridComponents } from '../components-context'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 type CreateTriggerProps = {
 	children?: ReactNode
@@ -13,7 +13,7 @@ type CreateTriggerProps = {
  * With `asChild`, injects onClick into the child element (Radix-style).
  */
 export function CreateTrigger({ children }: CreateTriggerProps) {
-	const table = useTableContext()
+	const table = useTable()
 	const { Button } = useGridComponents()
 	const handleClick = (): void => {
 		table.creating.start()

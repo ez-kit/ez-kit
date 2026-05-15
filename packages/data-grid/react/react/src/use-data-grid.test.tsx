@@ -32,7 +32,7 @@ const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
 describe('useDataGrid', () => {
 	it('creates a table instance with initial data', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		expect(result.current.getRowModel().rows).toHaveLength(2)
+		expect(result.current.table.getRowModel().rows).toHaveLength(2)
 	})
 
 	it('instance is stable across re-renders', () => {
@@ -48,8 +48,8 @@ describe('useDataGrid', () => {
 			initialProps: { data: USERS },
 		})
 		rerender({ data: newData })
-		expect(result.current.getRowModel().rows).toHaveLength(1)
-		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Carol')
+		expect(result.current.table.getRowModel().rows).toHaveLength(1)
+		expect(result.current.table.getRowModel().rows[0]?.getValue('name')).toBe('Carol')
 	})
 
 	it('re-renders when table state changes', () => {
@@ -60,11 +60,11 @@ describe('useDataGrid', () => {
 				creating: { onSave: () => Promise.resolve() },
 			}),
 		)
-		expect(result.current.creating.getState().isOpen).toBe(false)
+		expect(result.current.table.creating.getState().isOpen).toBe(false)
 		act(() => {
-			result.current.creating.start()
+			result.current.table.creating.start()
 		})
-		expect(result.current.creating.getState().isOpen).toBe(true)
+		expect(result.current.table.creating.getState().isOpen).toBe(true)
 	})
 
 	it('syncs loading state', () => {
@@ -72,28 +72,28 @@ describe('useDataGrid', () => {
 			({ loading }: { loading: boolean }) => useDataGrid({ data: USERS, columns: COLUMNS, loading }),
 			{ initialProps: { loading: false } },
 		)
-		expect(result.current.getIsLoading()).toBe(false)
+		expect(result.current.table.getIsLoading()).toBe(false)
 		rerender({ loading: true })
-		expect(result.current.getIsLoading()).toBe(true)
+		expect(result.current.table.getIsLoading()).toBe(true)
 	})
 })
 
 describe('useDataGrid — virtualized', () => {
 	it('VIRTUALIZED_KEY is undefined when virtualized not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
 		expect(key).toBeUndefined()
 	})
 
 	it('VIRTUALIZED_KEY stores normalized config when virtualized: true', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: true }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
 		expect(key).toEqual({ row: {} })
 	})
 
 	it('VIRTUALIZED_KEY stores normalized config when virtualized: { row: true }', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: true } }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
 		expect(key).toEqual({ row: {} })
 	})
 
@@ -101,13 +101,13 @@ describe('useDataGrid — virtualized', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: { overscan: 8 } } }),
 		)
-		const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
 		expect(key).toEqual({ row: { overscan: 8 } })
 	})
 
 	it('VIRTUALIZED_KEY is undefined when virtualized: false', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: false }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
 		expect(key).toBeUndefined()
 	})
 })
@@ -115,26 +115,26 @@ describe('useDataGrid — virtualized', () => {
 describe('useDataGrid — selectionBar', () => {
 	it('SELECTION_BAR_KEY is undefined when selectionBar not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
 		expect(key).toBeUndefined()
 	})
 
 	it('SELECTION_BAR_KEY stores true when selectionBar: true', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: true }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
 		expect(key).toBe(true)
 	})
 
 	it('SELECTION_BAR_KEY stores false when selectionBar: false', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: false }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
 		expect(key).toBe(false)
 	})
 
 	it('SELECTION_BAR_KEY stores config object when selectionBar: { onDelete }', () => {
 		const onDelete = vi.fn()
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: { onDelete } }))
-		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
 		expect(key).toEqual({ onDelete })
 	})
 
@@ -142,7 +142,7 @@ describe('useDataGrid — selectionBar', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, selectionBar: { variant: 'inline' } }),
 		)
-		const key = (result.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
@@ -150,15 +150,15 @@ describe('useDataGrid — selectionBar', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }),
 		)
-		const key = (result.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]
 		expect(key).toBe('panel')
 	})
 
 	it('FILTERING_VARIANT_KEY accepts "inline" and "popover" as before', () => {
 		const inline = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'inline' } }))
 		const popover = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }))
-		expect((inline.result.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('inline')
-		expect((popover.result.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('popover')
+		expect((inline.result.current.table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('inline')
+		expect((popover.result.current.table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('popover')
 	})
 })
 
@@ -170,7 +170,7 @@ describe('useDataGrid — controlled state', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, sorting: true, state: { sorting } }),
 		)
-		const rows = result.current.getRowModel().rows
+		const rows = result.current.table.getRowModel().rows
 		expect(rows[0]?.getValue('name')).toBe('Bob')
 		expect(rows[1]?.getValue('name')).toBe('Alice')
 	})
@@ -181,10 +181,10 @@ describe('useDataGrid — controlled state', () => {
 				useDataGrid({ data: USERS, columns: COLUMNS, sorting: true, state: { sorting } }),
 			{ initialProps: { sorting: [] as Sort[] } },
 		)
-		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Alice')
+		expect(result.current.table.getRowModel().rows[0]?.getValue('name')).toBe('Alice')
 
 		rerender({ sorting: [{ id: 'name', desc: true }] })
-		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Bob')
+		expect(result.current.table.getRowModel().rows[0]?.getValue('name')).toBe('Bob')
 	})
 
 	it('calls onStateChange when table state changes', () => {
@@ -193,7 +193,7 @@ describe('useDataGrid — controlled state', () => {
 			useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => Promise.resolve() }, onStateChange }),
 		)
 		act(() => {
-			result.current.creating.start()
+			result.current.table.creating.start()
 		})
 		expect(onStateChange).toHaveBeenCalled()
 	})
@@ -208,7 +208,7 @@ describe('useDataGrid — controlled state', () => {
 		)
 		rerender({ cb: second })
 		act(() => {
-			result.current.creating.start()
+			result.current.table.creating.start()
 		})
 		expect(first).not.toHaveBeenCalled()
 		expect(second).toHaveBeenCalled()
@@ -225,9 +225,9 @@ describe('useDataGrid — controlled state', () => {
 			}),
 		)
 		// Pagination not controlled — internal default page index is 0
-		expect(result.current.getState().pagination.pageIndex).toBe(0)
+		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
 		// Sorting is controlled
-		expect(result.current.getState().sorting).toEqual([{ id: 'name', desc: true }])
+		expect(result.current.table.getState().sorting).toEqual([{ id: 'name', desc: true }])
 	})
 })
 
@@ -240,12 +240,12 @@ function getNormalizedGlobalFiltering(table: object): NormalizedGlobalFilteringC
 describe('useDataGrid — globalFiltering normalization', () => {
 	it('globalFiltering omitted — nothing stored on instance', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		expect(getNormalizedGlobalFiltering(result.current)).toBeUndefined()
+		expect(getNormalizedGlobalFiltering(result.current.table)).toBeUndefined()
 	})
 
 	it('globalFiltering: true → defaults (placeholder, debounce: 250, toolbar: true)', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
-		const cfg = getNormalizedGlobalFiltering(result.current)
+		const cfg = getNormalizedGlobalFiltering(result.current.table)
 		expect(cfg).toEqual({ placeholder: 'Search…', debounce: 250, toolbar: true })
 	})
 
@@ -257,23 +257,23 @@ describe('useDataGrid — globalFiltering normalization', () => {
 				globalFiltering: { placeholder: 'Find users', debounce: 0, toolbar: false },
 			}),
 		)
-		const cfg = getNormalizedGlobalFiltering(result.current)
+		const cfg = getNormalizedGlobalFiltering(result.current.table)
 		expect(cfg).toEqual({ placeholder: 'Find users', debounce: 0, toolbar: false })
 	})
 
 	it('globalFiltering enables getFilteredRowModel even without column filtering', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
-		expect(result.current.options.getFilteredRowModel).toBeDefined()
-		expect(result.current.options.enableColumnFilters).toBe(false)
+		expect(result.current.table.options.getFilteredRowModel).toBeDefined()
+		expect(result.current.table.options.enableColumnFilters).toBe(false)
 	})
 
 	it('setGlobalFilter actually filters rows', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
 		act(() => {
-			result.current.setGlobalFilter('alice')
+			result.current.table.setGlobalFilter('alice')
 		})
-		expect(result.current.getFilteredRowModel().rows).toHaveLength(1)
-		expect(result.current.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
+		expect(result.current.table.getFilteredRowModel().rows).toHaveLength(1)
+		expect(result.current.table.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
 	})
 })
 
@@ -286,28 +286,28 @@ function getChipsConfig(table: object): NormalizedFilterChipsConfig | undefined 
 describe('useDataGrid — filtering.chips normalization', () => {
 	it('omitted → FILTER_CHIPS_KEY is undefined', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
-		expect(getChipsConfig(result.current)).toBeUndefined()
+		expect(getChipsConfig(result.current.table)).toBeUndefined()
 	})
 
 	it('chips: true → defaults to position "above"', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }),
 		)
-		expect(getChipsConfig(result.current)).toEqual({ position: 'above' })
+		expect(getChipsConfig(result.current.table)).toEqual({ position: 'above' })
 	})
 
 	it('chips: { position: "below" } → preserved', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: { position: 'below' } } }),
 		)
-		expect(getChipsConfig(result.current)).toEqual({ position: 'below' })
+		expect(getChipsConfig(result.current.table)).toEqual({ position: 'below' })
 	})
 
 	it('chips: false → FILTER_CHIPS_KEY is undefined', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: false } }),
 		)
-		expect(getChipsConfig(result.current)).toBeUndefined()
+		expect(getChipsConfig(result.current.table)).toBeUndefined()
 	})
 })
 
@@ -320,27 +320,27 @@ function getClearButtonConfig(table: object): NormalizedClearButtonConfig | unde
 describe('useDataGrid — filtering.clearButton normalization', () => {
 	it('omitted → FILTER_CLEAR_BUTTON_KEY is undefined', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
-		expect(getClearButtonConfig(result.current)).toBeUndefined()
+		expect(getClearButtonConfig(result.current.table)).toBeUndefined()
 	})
 
 	it('clearButton: true → alwaysShow defaults to false', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: true } }),
 		)
-		expect(getClearButtonConfig(result.current)).toEqual({ alwaysShow: false })
+		expect(getClearButtonConfig(result.current.table)).toEqual({ alwaysShow: false })
 	})
 
 	it('clearButton: { alwaysShow: true } → preserved', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: { alwaysShow: true } } }),
 		)
-		expect(getClearButtonConfig(result.current)).toEqual({ alwaysShow: true })
+		expect(getClearButtonConfig(result.current.table)).toEqual({ alwaysShow: true })
 	})
 
 	it('clearButton: false → FILTER_CLEAR_BUTTON_KEY is undefined', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: false } }),
 		)
-		expect(getClearButtonConfig(result.current)).toBeUndefined()
+		expect(getClearButtonConfig(result.current.table)).toBeUndefined()
 	})
 })

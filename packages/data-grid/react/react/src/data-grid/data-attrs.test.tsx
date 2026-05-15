@@ -1,10 +1,13 @@
 import { createTable, defineColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
+import { createDataGridInstance } from '../data-grid-instance'
 import { renderWithComponents } from '../test-utils'
 import { STICKY_HEADER_KEY, VIRTUALIZED_KEY } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
+
+import type { DataTable } from '@ez-kit/data-grid-core'
 
 type User = { id: number; name: string; age: number }
 
@@ -26,17 +29,17 @@ function makeTable() {
  * corresponding feature flag is on. Tests that don't go through `useDataGrid`
  * still need the table-level state for `<DataGridTable>` to read.
  */
-function setSticky(table: ReturnType<typeof makeTable>) {
+function setSticky(table: DataTable<User>) {
 	;(table as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY] = true
 }
-function setVirtualized(table: ReturnType<typeof makeTable>) {
+function setVirtualized(table: DataTable<User>) {
 	;(table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] = { row: { estimateSize: 40, overscan: 5 } }
 }
 
 describe('headless data-* contract', () => {
 	it('table emits data-slot="table" without data-virtualized by default', () => {
 		const table = makeTable()
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		const tableEl = container.querySelector("[data-slot='table']")
 		expect(tableEl).not.toBeNull()
 		expect(tableEl?.getAttribute('data-virtualized')).toBeNull()
@@ -45,7 +48,7 @@ describe('headless data-* contract', () => {
 	it('table + tbody emit data-virtualized="true" when virtualization is on', () => {
 		const table = makeTable()
 		setVirtualized(table)
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		expect(container.querySelector("[data-slot='table'][data-virtualized='true']")).not.toBeNull()
 		expect(container.querySelector("[data-slot='tbody'][data-virtualized='true']")).not.toBeNull()
 	})
@@ -53,13 +56,13 @@ describe('headless data-* contract', () => {
 	it('thead emits data-sticky="true" when stickyHeader is enabled', () => {
 		const table = makeTable()
 		setSticky(table)
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		expect(container.querySelector("[data-slot='thead'][data-sticky='true']")).not.toBeNull()
 	})
 
 	it('thead has no data-sticky when stickyHeader is disabled', () => {
 		const table = makeTable()
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		const thead = container.querySelector("[data-slot='thead']")
 		expect(thead?.getAttribute('data-sticky')).toBeNull()
 	})
@@ -67,13 +70,13 @@ describe('headless data-* contract', () => {
 	it('table-scroll emits data-sticky-header="true" when stickyHeader is enabled', () => {
 		const table = makeTable()
 		setSticky(table)
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		expect(container.querySelector("[data-slot='table-scroll'][data-sticky-header='true']")).not.toBeNull()
 	})
 
 	it('sortable headers emit data-sortable + data-sort-direction', () => {
 		const table = createTable<User>({ data: USERS, columns: COLUMNS, sorting: true })
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		const triggers = container.querySelectorAll("[data-slot='sort-trigger'][data-sortable='true']")
 		expect(triggers.length).toBeGreaterThan(0)
 		for (const trigger of triggers) {
@@ -87,7 +90,7 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'age', header: 'Age' },
 		])
 		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, pinning: { column: true } })
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		expect(container.querySelector("[data-slot='th'][data-pinned='left']")).not.toBeNull()
 	})
 
@@ -97,7 +100,7 @@ describe('headless data-* contract', () => {
 			{ accessorKey: 'age', header: 'Age' },
 		])
 		const table = createTable<User>({ data: USERS, columns: COLS_PINNED, pinning: { column: true } })
-		const { container } = renderWithComponents(<DataGrid table={table} />)
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
 		expect(container.querySelector("[data-pin-shadow='left']")).not.toBeNull()
 		expect(container.querySelector("[data-slot='pin-shadow-overlay']")).not.toBeNull()
 	})

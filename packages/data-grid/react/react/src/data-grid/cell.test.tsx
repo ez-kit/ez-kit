@@ -68,8 +68,8 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		if (!table) throw new Error('table not initialised')
 
 		act(() => {
-			table.creating.start()
-			table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
+			table.table.creating.start()
+			table.table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
 		})
 		view.rerender(<DataGrid<Row> table={table} cellTypes={cellTypes} />)
 
@@ -103,7 +103,7 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		if (!table) throw new Error('table not initialised')
 
 		act(() => {
-			table.creating.start()
+			table.table.creating.start()
 		})
 		view.rerender(<DataGrid<Row> table={table} cellTypes={cellTypes} />)
 

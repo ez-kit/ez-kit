@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 import { ROW_PINNING_KEY } from '../use-data-grid'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { PinningConfig, RowPinningConfig } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
@@ -25,7 +25,7 @@ function resolveRowPinConfig(pinning: boolean | PinningConfig | undefined): RowP
  * Reads the pinning config stored on the table instance via ROW_PINNING_KEY.
  */
 export function RowPinCell({ row }: RowPinCellProps) {
-	const table = useTableContext()
+	const table = useTable()
 	const { RowPinMenu } = useGridComponents()
 
 	const rawPinning = (table as unknown as Record<symbol, unknown>)[ROW_PINNING_KEY] as

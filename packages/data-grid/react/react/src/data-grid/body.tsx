@@ -9,7 +9,7 @@ import { ExpandedRow } from './expanded-row'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { DataGridRow } from './row'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
@@ -33,7 +33,7 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  */
 export function Body() {
 	const { rowVirtualizer } = useVirtualContext()
-	const table = useTableContext()
+	const table = useTable()
 	const { Tbody } = useGridComponents()
 
 	if (rowVirtualizer) return <VirtualBody />

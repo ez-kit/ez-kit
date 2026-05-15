@@ -2,7 +2,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
 import { renderFilterInput } from './render-filter-input'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type {
 	BadgeItem,
@@ -94,7 +94,7 @@ function formatFilterValue(
  * Pair with `filtering.variant: 'panel'` so the header skips inline filter rendering.
  */
 export function FilterPanel() {
-	const table = useTableContext()
+	const table = useTable()
 	const {
 		Input,
 		OperatorSelect,

@@ -4,7 +4,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { InputProps } from '../types'
@@ -19,7 +19,7 @@ import type { ChangeEvent, ComponentType, ReactNode } from 'react'
  * Edit-mode renderers receive a {@link FieldState} with `error` / `errors` / `onBlur`.
  */
 export function CreatingRow() {
-	const table = useTableContext()
+	const table = useTable()
 	const { Tr, Td, Input, Checkbox, CreatingActionsCell } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const state = table.creating.getState()

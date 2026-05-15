@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 import { SELECTION_BAR_KEY, type SelectionBarConfig } from '../use-data-grid'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 /**
  * Selection info bar. Automatically visible when `selection` is enabled
@@ -14,7 +14,7 @@ import { useTableContext } from './table-context'
  * - `selectionBar: { ... }`     → renders with config
  */
 export function SelectionBar() {
-	const table = useTableContext()
+	const table = useTable()
 	const { SelectionBar: SelectionBarComponent } = useGridComponents()
 
 	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as

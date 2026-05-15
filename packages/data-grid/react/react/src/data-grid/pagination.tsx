@@ -1,12 +1,12 @@
 import { useGridComponents } from '../components-context'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 /**
  * Pagination controls. Rendered only when `pagination` is enabled in config.
  */
 export function Pagination() {
-	const table = useTableContext()
+	const table = useTable()
 	const { Pagination: PaginationComponent } = useGridComponents()
 
 	if (table.getIsLoading()) return null

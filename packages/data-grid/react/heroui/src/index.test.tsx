@@ -1,4 +1,4 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-react'
+import { createDataGridInstance, createTable, defineColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -39,7 +39,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 			columns: defineColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 		})
 
-		render(<DataGrid table={table} />)
+		render(<DataGrid table={createDataGridInstance(table)} />)
 
 		expect(screen.getByRole('grid', { name: 'Data grid' })).toBeInTheDocument()
 		expect(screen.getByText('Name')).toBeInTheDocument()
@@ -53,7 +53,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 			selection: true,
 		})
 
-		render(<DataGrid table={table} />)
+		render(<DataGrid table={createDataGridInstance(table)} />)
 
 		const checkbox = screen.getByRole('checkbox', { name: 'Select row' })
 		fireEvent.click(checkbox)

@@ -8,7 +8,7 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 import { ActionsCell } from './actions-cell'
 import { flexRender } from './flex-render'
 import { RowPinCell } from './row-pin-cell'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { FieldState } from '@ez-kit/data-grid-core'
@@ -37,7 +37,7 @@ type CellProps = {
  * - View renderers receive `config` (from `column.config` / `meta.config`).
  */
 export function DataGridCell({ cell, row }: CellProps) {
-	const table = useTableContext()
+	const table = useTable()
 	const { Td, Input, Checkbox, Chevron } = useGridComponents()
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id

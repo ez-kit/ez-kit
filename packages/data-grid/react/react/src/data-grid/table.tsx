@@ -8,7 +8,7 @@ import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-
 import { Body } from './body'
 import { Header } from './header'
 import { PinShadowOverlay } from './pin-shadow-overlay'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
 import type { NormalizedVirtualizedConfig } from '../use-data-grid'
@@ -110,7 +110,7 @@ function resolveEstimateSize(
  */
 export function DataGridTable() {
 	const { Table } = useGridComponents()
-	const table = useTableContext()
+	const table = useTable()
 
 	const sizeVars = getColumnSizeVars(table)
 	const gridTemplateColumns = getGridTemplateColumns(table)

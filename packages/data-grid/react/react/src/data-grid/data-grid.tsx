@@ -28,17 +28,19 @@ import { DataGridRow } from './row'
 import { SelectionBar } from './selection-bar'
 import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
-import { TableContext, useTableContext } from './table-context'
+import { TableContext, useTable } from './table-context'
 import { Toolbar } from './toolbar'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { DataGridInstance } from '../data-grid-instance'
 import type { GridComponents } from '../types'
-import type { ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
+import type { ConfirmationOptions } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 export type DataGridProps<TRow extends object> = {
-	table: DataTable<TRow>
+	/** Instance returned by `useDataGrid`. */
+	table: DataGridInstance<TRow>
 	/** Local component overrides — merged with global GridComponentsProvider. */
 	components?: GridComponents
 	/** Custom cell type renderers. Merged with types from `useDataGrid`. */
@@ -62,7 +64,7 @@ function resolveConfirmationText(
 }
 
 function ConfirmDialogRenderer() {
-	const table = useTableContext()
+	const table = useTable()
 	const { ConfirmDialog } = useGridComponents()
 	const pendingId = table.getState().pendingDeleteRowId
 	const confirmation = table.options.deleting?.confirmation
@@ -88,7 +90,7 @@ function ConfirmDialogRenderer() {
 }
 
 function DefaultLayout() {
-	const table = useTableContext()
+	const table = useTable()
 	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
 		| boolean
 		| SelectionBarConfig
@@ -139,7 +141,13 @@ function DefaultLayout() {
  *   <DataGrid.Pagination />
  * </DataGrid>
  */
-function DataGridRoot<TRow extends object>({ table, components, cellTypes, children }: DataGridProps<TRow>) {
+function DataGridRoot<TRow extends object>({
+	table: instance,
+	components,
+	cellTypes,
+	children,
+}: DataGridProps<TRow>) {
+	const table = instance.table
 	// Read cellTypes stored on the table instance by useDataGrid, merge with direct prop
 	const tableCellTypes = (table as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] as CellTypeRegistry | undefined
 	const resolvedCellTypes = { ...tableCellTypes, ...cellTypes }
@@ -147,7 +155,7 @@ function DataGridRoot<TRow extends object>({ table, components, cellTypes, child
 	return (
 		<CellTypesProvider types={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-				<TableContext value={table}>
+				<TableContext value={instance}>
 					{children ?? <DefaultLayout />}
 					{table.options.creating?.mode === 'modal' && <CreatingModal />}
 					{table.options.editing?.mode === 'modal' && <EditingModal />}

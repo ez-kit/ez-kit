@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { Row } from '@tanstack/table-core'
 
@@ -10,7 +10,7 @@ type ActionsCellProps = {
 }
 
 export function ActionsCell({ row }: ActionsCellProps) {
-	const table = useTableContext()
+	const table = useTable()
 	const { ActionsCell: Renderer } = useGridComponents()
 
 	const editingState = table.editing.getState()

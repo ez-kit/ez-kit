@@ -7,7 +7,7 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { ColumnMenuSections } from '../types'
 import type { KeyboardEvent } from 'react'
@@ -30,7 +30,7 @@ type HeaderProps = {
  * structural CSS reads them on `[data-pinned]` elements.
  */
 export function Header({ stickyHeader }: HeaderProps = {}) {
-	const table = useTableContext()
+	const table = useTable()
 	const {
 		Thead,
 		Tr,

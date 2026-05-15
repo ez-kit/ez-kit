@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 import { FILTER_CLEAR_BUTTON_KEY } from '../use-data-grid'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { NormalizedClearButtonConfig } from '../use-data-grid'
 import type { ReactNode } from 'react'
@@ -37,7 +37,7 @@ export function ClearFiltersButton({
 	alwaysShow: alwaysShowProp,
 	ariaLabel,
 }: ClearFiltersButtonProps = {}) {
-	const table = useTableContext()
+	const table = useTable()
 	const { ClearFiltersButton: Component } = useGridComponents()
 
 	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] as

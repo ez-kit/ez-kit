@@ -2,7 +2,7 @@ import { useGridComponents } from '../components-context'
 import { EXPAND_KEY } from '../use-data-grid'
 
 import { flexRender } from './flex-render'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
@@ -22,7 +22,7 @@ type ExpandConfig = {
  * Reads `renderExpanded` from the EXPAND_KEY stored on the table instance.
  */
 export function ExpandedRow({ row }: ExpandedRowComponentProps) {
-	const table = useTableContext()
+	const table = useTable()
 	const { Tr, Td } = useGridComponents()
 
 	const expandConfig = (table as unknown as Record<symbol, unknown>)[EXPAND_KEY] as ExpandConfig | undefined

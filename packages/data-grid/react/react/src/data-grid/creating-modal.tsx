@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { AutoForm } from './auto-form'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 /**
  * Modal for creating a new row (creating.mode = 'modal').
@@ -9,7 +9,7 @@ import { useTableContext } from './table-context'
  * registered; falls back to generic <Modal>. Throws if neither is provided.
  */
 export function CreatingModal() {
-	const table = useTableContext()
+	const table = useTable()
 	const { Modal, FormShell } = useGridComponents()
 	const state = table.creating.getState()
 	const isOpen = state.isOpen

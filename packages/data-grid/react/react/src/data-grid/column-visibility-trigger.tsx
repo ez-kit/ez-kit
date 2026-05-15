@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { VisibilityColumnItem } from '../types'
 
@@ -9,7 +9,7 @@ import type { VisibilityColumnItem } from '../types'
  * hideable (non-system, enableHiding !== false) leaf columns.
  */
 export function ColumnVisibilityTrigger() {
-	const table = useTableContext()
+	const table = useTable()
 	const { ColumnVisibilityMenu } = useGridComponents()
 
 	const columns: VisibilityColumnItem[] = table

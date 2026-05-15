@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { SortColumnOption, SortMenuItem } from '../types'
 import type { ColumnSort } from '@tanstack/table-core'
@@ -12,7 +12,7 @@ import type { ColumnSort } from '@tanstack/table-core'
  * - Wires Add Sort, Reset Sorting, change column/direction, and remove handlers
  */
 export function SortTrigger() {
-	const table = useTableContext()
+	const table = useTable()
 	const { SortMenu } = useGridComponents()
 
 	const sortableColumns: SortColumnOption[] = table

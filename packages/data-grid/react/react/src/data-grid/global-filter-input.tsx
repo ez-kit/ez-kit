@@ -4,7 +4,7 @@ import { useGridComponents } from '../components-context'
 import { GLOBAL_FILTERING_KEY } from '../use-data-grid'
 import { useDebouncedValue } from '../utils/use-debounced-value'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { NormalizedGlobalFilteringConfig } from '../use-data-grid'
 
@@ -26,7 +26,7 @@ type GlobalFilterInputCompoundProps = {
  * reset, controlled mode).
  */
 export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilterInputCompoundProps = {}) {
-	const table = useTableContext()
+	const table = useTable()
 	const { GlobalFilterInput: Component } = useGridComponents()
 
 	const cfg = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as

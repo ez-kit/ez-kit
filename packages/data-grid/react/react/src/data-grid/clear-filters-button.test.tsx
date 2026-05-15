@@ -4,13 +4,16 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
+import { createDataGridInstance } from '../data-grid-instance'
 import { testComponents } from '../test-utils'
 import { FILTER_CLEAR_BUTTON_KEY } from '../use-data-grid'
 
 import { ClearFiltersButton } from './clear-filters-button'
 import { TableContext } from './table-context'
 
+import type { DataGridInstance } from '../data-grid-instance'
 import type { NormalizedClearButtonConfig } from '../use-data-grid'
+import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = { id: number; name: string }
@@ -23,26 +26,27 @@ const USERS: User[] = [
 const COLUMNS = defineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 function makeTable() {
-	return createTable<User>({ data: USERS, columns: COLUMNS, filtering: true, globalFiltering: true })
+	const table = createTable<User>({ data: USERS, columns: COLUMNS, filtering: true, globalFiltering: true })
+	return { table, instance: createDataGridInstance(table) }
 }
 
-function setClearCfg(table: ReturnType<typeof makeTable>, value: NormalizedClearButtonConfig | undefined) {
+function setClearCfg(table: DataTable<User>, value: NormalizedClearButtonConfig | undefined) {
 	;(table as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] = value
 }
 
-function Wrapper({ table, children }: { table: ReturnType<typeof makeTable>; children: ReactNode }) {
+function Wrapper({ instance, children }: { instance: DataGridInstance<User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext value={table}>{children}</TableContext>
+			<TableContext value={instance}>{children}</TableContext>
 		</GridComponentsProvider>
 	)
 }
 
 describe('<ClearFiltersButton>', () => {
 	it('renders nothing when no filter is active (default)', () => {
-		const table = makeTable()
+		const { instance } = makeTable()
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<ClearFiltersButton />
 			</Wrapper>,
 		)
@@ -50,11 +54,11 @@ describe('<ClearFiltersButton>', () => {
 	})
 
 	it('renders when a column filter is active', () => {
-		const table = makeTable()
-		table.setColumnFilters([{ id: 'name', value: 'al' }])
+		const { instance } = makeTable()
+		instance.table.setColumnFilters([{ id: 'name', value: 'al' }])
 
 		render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<ClearFiltersButton />
 			</Wrapper>,
 		)
@@ -62,11 +66,11 @@ describe('<ClearFiltersButton>', () => {
 	})
 
 	it('renders when the global filter is set', () => {
-		const table = makeTable()
-		table.setGlobalFilter('al')
+		const { instance } = makeTable()
+		instance.table.setGlobalFilter('al')
 
 		render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<ClearFiltersButton />
 			</Wrapper>,
 		)
@@ -74,10 +78,10 @@ describe('<ClearFiltersButton>', () => {
 	})
 
 	it('alwaysShow via prop renders a disabled button when no filter', () => {
-		const table = makeTable()
+		const { instance } = makeTable()
 
 		render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<ClearFiltersButton alwaysShow />
 			</Wrapper>,
 		)
@@ -86,11 +90,11 @@ describe('<ClearFiltersButton>', () => {
 	})
 
 	it('alwaysShow via FILTER_CLEAR_BUTTON_KEY config renders a disabled button when no filter', () => {
-		const table = makeTable()
-		setClearCfg(table, { alwaysShow: true })
+		const { instance } = makeTable()
+		setClearCfg(instance.table, { alwaysShow: true })
 
 		render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<ClearFiltersButton />
 			</Wrapper>,
 		)
@@ -99,26 +103,26 @@ describe('<ClearFiltersButton>', () => {
 
 	it('click clears column filters and global filter', async () => {
 		const user = userEvent.setup()
-		const table = makeTable()
-		table.setColumnFilters([{ id: 'name', value: 'al' }])
-		table.setGlobalFilter('hello')
+		const { instance } = makeTable()
+		instance.table.setColumnFilters([{ id: 'name', value: 'al' }])
+		instance.table.setGlobalFilter('hello')
 
 		render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<ClearFiltersButton />
 			</Wrapper>,
 		)
 		await user.click(screen.getByRole('button', { name: /clear filters/i }))
-		expect(table.getState().columnFilters).toEqual([])
-		expect(table.getState().globalFilter).toBeUndefined()
+		expect(instance.table.getState().columnFilters).toEqual([])
+		expect(instance.table.getState().globalFilter).toBeUndefined()
 	})
 
 	it('renders custom children when provided', () => {
-		const table = makeTable()
-		table.setGlobalFilter('al')
+		const { instance } = makeTable()
+		instance.table.setGlobalFilter('al')
 
 		render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<ClearFiltersButton>Reset filters</ClearFiltersButton>
 			</Wrapper>,
 		)

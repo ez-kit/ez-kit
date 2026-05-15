@@ -3,11 +3,13 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
+import { createDataGridInstance } from '../data-grid-instance'
 import { testComponents } from '../test-utils'
 
 import { FilterPanel } from './filter-panel'
 import { TableContext } from './table-context'
 
+import type { DataGridInstance } from '../data-grid-instance'
 import type { ReactNode } from 'react'
 
 type Row = {
@@ -42,22 +44,23 @@ const COLUMNS = defineColumns<Row>([
 ])
 
 function makeTable(config?: Partial<Parameters<typeof createTable<Row>>[0]>) {
-	return createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config })
+	const table = createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config })
+	return { table, instance: createDataGridInstance(table) }
 }
 
-function Wrapper({ table, children }: { table: ReturnType<typeof makeTable>; children: ReactNode }) {
+function Wrapper({ instance, children }: { instance: DataGridInstance<Row>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext value={table}>{children}</TableContext>
+			<TableContext value={instance}>{children}</TableContext>
 		</GridComponentsProvider>
 	)
 }
 
 describe('<FilterPanel>', () => {
 	it('renders one chip per filterable column with column header as label', () => {
-		const table = makeTable()
+		const { instance } = makeTable()
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -71,9 +74,9 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('shows "Any" for the value when the filter is empty', () => {
-		const table = makeTable()
+		const { instance } = makeTable()
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -85,10 +88,10 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('shows the typed value for an active text contains filter', () => {
-		const table = makeTable()
-		table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'al' })
+		const { instance } = makeTable()
+		instance.table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'al' })
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -97,10 +100,10 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('formats a between value as "from – to"', () => {
-		const table = makeTable()
-		table.getColumn('age')?.setFilterValue({ operator: 'between', value: { from: 18, to: 30 } })
+		const { instance } = makeTable()
+		instance.table.getColumn('age')?.setFilterValue({ operator: 'between', value: { from: 18, to: 30 } })
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -109,10 +112,10 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('formats one-sided between as "≥ from" or "≤ to"', () => {
-		const table = makeTable()
-		table.getColumn('age')?.setFilterValue({ operator: 'between', value: { from: 21, to: undefined } })
+		const { instance } = makeTable()
+		instance.table.getColumn('age')?.setFilterValue({ operator: 'between', value: { from: 21, to: undefined } })
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -121,10 +124,10 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('formats multi-value (in) filter using option labels', () => {
-		const table = makeTable()
-		table.getColumn('role')?.setFilterValue({ operator: 'in', value: ['admin', 'member'] })
+		const { instance } = makeTable()
+		instance.table.getColumn('role')?.setFilterValue({ operator: 'in', value: ['admin', 'member'] })
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -152,10 +155,11 @@ describe('<FilterPanel>', () => {
 			},
 		])
 		const table = createTable<Row>({ data: DATA, columns: COLUMNS_WITH_MANY, filtering: true })
-		table.getColumn('role')?.setFilterValue({ operator: 'in', value: ['a', 'b', 'c', 'd'] })
+		const instance = createDataGridInstance(table)
+		instance.table.getColumn('role')?.setFilterValue({ operator: 'in', value: ['a', 'b', 'c', 'd'] })
 
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -164,11 +168,11 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('formats requiresInput=false operators using the operator label', () => {
-		const table = makeTable()
-		table.getColumn('name')?.setFilterValue({ operator: 'isEmpty', value: undefined })
+		const { instance } = makeTable()
+		instance.table.getColumn('name')?.setFilterValue({ operator: 'isEmpty', value: undefined })
 
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -177,26 +181,26 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('passes onClear that resets the filter on the column', () => {
-		const table = makeTable()
-		table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'al' })
+		const { instance } = makeTable()
+		instance.table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'al' })
 
 		render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
 		const clearBtn = screen.getByRole('button', { name: 'Clear Name filter' })
 		fireEvent.click(clearBtn)
 
-		expect(table.getColumn('name')?.getFilterValue()).toBeUndefined()
+		expect(instance.table.getColumn('name')?.getFilterValue()).toBeUndefined()
 	})
 
 	it('passes hasActiveFilter=true to the chrome when at least one filter is active', () => {
-		const table = makeTable()
-		table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'a' })
+		const { instance } = makeTable()
+		instance.table.getColumn('name')?.setFilterValue({ operator: 'contains', value: 'a' })
 
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)
@@ -206,8 +210,9 @@ describe('<FilterPanel>', () => {
 
 	it('returns null when filtering is disabled at the table level', () => {
 		const table = createTable<Row>({ data: DATA, columns: COLUMNS })
+		const instance = createDataGridInstance(table)
 		const { container } = render(
-			<Wrapper table={table}>
+			<Wrapper instance={instance}>
 				<FilterPanel />
 			</Wrapper>,
 		)

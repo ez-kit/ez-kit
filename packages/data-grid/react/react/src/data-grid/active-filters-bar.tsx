@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 import { FILTER_CHIPS_KEY } from '../use-data-grid'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 import type { FilterChipsPosition, NormalizedFilterChipsConfig } from '../use-data-grid'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
@@ -70,7 +70,7 @@ function columnLabel(column: Column<any>): string {
  * {@link FILTER_CHIPS_KEY} unless overridden via the `position` prop.
  */
 export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarProps = {}) {
-	const table = useTableContext()
+	const table = useTable()
 	const { FilterChip } = useGridComponents()
 
 	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as

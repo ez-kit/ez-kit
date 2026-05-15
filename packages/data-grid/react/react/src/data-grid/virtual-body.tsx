@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { DataGridRow } from './row'
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 import { useVirtualContext } from './virtual-context'
 
 import type { VirtualItem } from '@tanstack/react-virtual'
@@ -30,7 +30,7 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  * pattern as the non-virtual Body.
  */
 export function VirtualBody() {
-	const table = useTableContext()
+	const table = useTable()
 	const { Tbody } = useGridComponents()
 	const { rowVirtualizer } = useVirtualContext()
 

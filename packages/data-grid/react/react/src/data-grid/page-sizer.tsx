@@ -1,13 +1,13 @@
 import { useGridComponents } from '../components-context'
 import { PAGE_SIZER_KEY, type PageSizerConfig } from '../use-data-grid'
 
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 /**
  * Page size selector. Rendered only when `pageSizer` is configured in `useDataGrid`.
  */
 export function PageSizer() {
-	const table = useTableContext()
+	const table = useTable()
 	const { PageSizer: PageSizerComponent } = useGridComponents()
 	const config = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as PageSizerConfig | undefined
 

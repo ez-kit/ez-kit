@@ -40,6 +40,14 @@ export type {
 	SelectionBarVariant,
 } from './use-data-grid'
 
+// Selector hook + store primitives
+export { useDataGridSelector } from './use-data-grid-selector'
+export { useDataGridInstance, useDataGridStore, useTable } from './data-grid/table-context'
+export { createDataGridInstance } from './data-grid-instance'
+export type { DataGridInstance } from './data-grid-instance'
+export type { TableStore } from './store/table-store'
+export { shallow } from './utils/shallow-equal'
+
 // Factory
 export { createDataGrid } from './create-data-grid'
 export type { CreateDataGridOptions } from './create-data-grid'

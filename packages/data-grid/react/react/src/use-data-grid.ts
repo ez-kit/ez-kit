@@ -1,9 +1,11 @@
 import { createTable } from '@ez-kit/data-grid-core'
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useRef } from 'react'
+
+import { createDataGridInstance } from './data-grid-instance'
 
 import type { CellTypeRegistry } from './cell-types-context'
+import type { DataGridInstance } from './data-grid-instance'
 import type {
-	DataTable,
 	ExpandingConfig,
 	FilteringConfig,
 	GlobalFilteringConfig,
@@ -299,14 +301,19 @@ export type UseDataGridConfig<TRow extends object> = {
 }
 
 /**
- * React hook that creates a data-grid instance and subscribes to its state.
- * The instance is created once and survives re-renders.
- * `config.data` and `config.loading` are synced on every render.
+ * React hook that constructs a {@link DataGridInstance} once and returns it on
+ * every render. The instance is stable across renders — the underlying table
+ * is created exactly once.
+ *
+ * `useDataGrid` itself does NOT subscribe to state changes. Components that
+ * need to re-render on table state updates should call `useDataGridStore`
+ * (or `useTable()`, which subscribes broadly for back-compat).
  *
  * @example
- * const table = useDataGrid({ data: users, columns, sorting: true })
+ * const instance = useDataGrid({ data: users, columns, sorting: true })
+ * return <DataGrid table={instance} />
  */
-export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>): DataTable<TRow> {
+export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>): DataGridInstance<TRow> {
 	const {
 		cellTypes,
 		pageSizer,
@@ -400,22 +407,26 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	const onStateChangeRef = useRef(onStateChange)
 	onStateChangeRef.current = onStateChange
 
-	const tableRef = useRef<DataTable<TRow> | null>(null)
-	tableRef.current ??= createTable({
-		...restConfig,
-		filtering: coreFiltering,
-		globalFiltering: coreGlobalFiltering,
-		expanding: coreExpanding,
-		// Pass columnVisibility presence to core so it can table-level-gate enableHiding.
-		// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
-		// is layered separately via the COLUMN_VISIBILITY_KEY symbol.
-		columnVisibility,
-		onStateChange: (updater) => onStateChangeRef.current?.(updater),
-	} as TableConfig<TRow>)
+	const instanceRef = useRef<DataGridInstance<TRow> | null>(null)
+	instanceRef.current ??= createDataGridInstance(
+		createTable({
+			...restConfig,
+			filtering: coreFiltering,
+			globalFiltering: coreGlobalFiltering,
+			expanding: coreExpanding,
+			// Pass columnVisibility presence to core so it can table-level-gate enableHiding.
+			// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
+			// is layered separately via the COLUMN_VISIBILITY_KEY symbol.
+			columnVisibility,
+			onStateChange: (updater) => onStateChangeRef.current?.(updater),
+		} as TableConfig<TRow>),
+	)
+	const table = instanceRef.current.table
+	const tableAsSymbolMap = table as unknown as Record<symbol, unknown>
 
 	// Sync controlled state on every render — external state portions override internal state
 	if (state !== undefined) {
-		tableRef.current.setOptions((prev) => ({
+		table.setOptions((prev) => ({
 			...prev,
 			state: { ...prev.state, ...state },
 		}))
@@ -423,7 +434,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 
 	// Re-sync feature configs every render so callbacks (e.g. creating.onSave)
 	// see the latest captured props/state instead of the closure from first mount.
-	tableRef.current.setOptions((prev) => ({
+	table.setOptions((prev) => ({
 		...prev,
 		...(config.creating !== undefined ? { creating: config.creating } : {}),
 		...(config.editing !== undefined ? { editing: config.editing } : {}),
@@ -433,87 +444,88 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	// Store cellTypes on the table instance so DataGrid can read without an extra prop
 	const cellTypesRef = useRef(cellTypes)
 	cellTypesRef.current = cellTypes
-	;(tableRef.current as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] = cellTypesRef.current
+	tableAsSymbolMap[CELL_TYPES_KEY] = cellTypesRef.current
 
 	// Store pageSizer config on the table instance so PageSizer can read without an extra prop
 	const pageSizerRef = useRef(pageSizer)
 	pageSizerRef.current = pageSizer
-	;(tableRef.current as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] = pageSizerRef.current
+	tableAsSymbolMap[PAGE_SIZER_KEY] = pageSizerRef.current
 
 	// Store rowPinning config on the table instance so RowPinCell can read without an extra prop
 	const rowPinningRef = useRef(config.pinning)
 	rowPinningRef.current = config.pinning
-	;(tableRef.current as unknown as Record<symbol, unknown>)[ROW_PINNING_KEY] = rowPinningRef.current
+	tableAsSymbolMap[ROW_PINNING_KEY] = rowPinningRef.current
 
 	// Store colPinning enabled flag on the table instance so Header can read without an extra prop
 	const colPinEnabled =
 		config.pinning === true || (typeof config.pinning === 'object' && Boolean(config.pinning.column))
-	;(tableRef.current as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] = colPinEnabled
+	tableAsSymbolMap[COL_PINNING_KEY] = colPinEnabled
 
 	// Store selectionBar config on the table instance so SelectionBar can read without an extra prop
 	const selectionBarRef = useRef(selectionBar)
 	selectionBarRef.current = selectionBar
-	;(tableRef.current as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = selectionBarRef.current
+	tableAsSymbolMap[SELECTION_BAR_KEY] = selectionBarRef.current
 
 	// Store columnVisibility UI config on the table instance so Toolbar can read without an extra prop
 	const colVisibilityRef = useRef(columnVisibility)
 	colVisibilityRef.current = columnVisibility
-	;(tableRef.current as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] = colVisibilityRef.current
+	tableAsSymbolMap[COLUMN_VISIBILITY_KEY] = colVisibilityRef.current
 
 	// Store sorting config on the table instance so Toolbar can read without an extra prop
 	const sortingRef = useRef(config.sorting)
 	sortingRef.current = config.sorting
-	;(tableRef.current as unknown as Record<symbol, unknown>)[SORTING_KEY] = sortingRef.current
+	tableAsSymbolMap[SORTING_KEY] = sortingRef.current
 
 	// Store filteringVariant on the table instance so Header can read without an extra prop
-	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] = filteringVariant
+	tableAsSymbolMap[FILTERING_VARIANT_KEY] = filteringVariant
 
 	// Store normalized globalFiltering UI config (placeholder, debounce, toolbar) on the
 	// table instance so Toolbar / GlobalFilterInput can read it without prop drilling.
-	;(tableRef.current as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] = normalizedGlobalFiltering
+	tableAsSymbolMap[GLOBAL_FILTERING_KEY] = normalizedGlobalFiltering
 
 	// Store normalized filter chips/clear-button UI configs so DataGrid root and Toolbar
 	// can decide whether to auto-mount the corresponding compound components.
-	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] = normalizedChips
-	;(tableRef.current as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] = normalizedClearButton
+	tableAsSymbolMap[FILTER_CHIPS_KEY] = normalizedChips
+	tableAsSymbolMap[FILTER_CLEAR_BUTTON_KEY] = normalizedClearButton
 
 	// Store fallbacks config on the table instance so Body can read without an extra prop
 	const fallbacksRef = useRef(fallbacks)
 	fallbacksRef.current = fallbacks
-	;(tableRef.current as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] = fallbacksRef.current
+	tableAsSymbolMap[FALLBACKS_KEY] = fallbacksRef.current
 
 	// Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
 	const virtualizedConfig = normalizeVirtualized(config.virtualized)
-	;(tableRef.current as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] = virtualizedConfig
+	tableAsSymbolMap[VIRTUALIZED_KEY] = virtualizedConfig
 
 	// Store stickyHeader flag on the table instance so DataGridTable can read without an extra prop
-	;(tableRef.current as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY] = stickyHeader ?? false
+	tableAsSymbolMap[STICKY_HEADER_KEY] = stickyHeader ?? false
 
 	// Store renderExpanded on the table instance so Body/ExpandedRow can read without an extra prop
 	const expandRef = useRef(rawExpanding)
 	expandRef.current = rawExpanding
-	;(tableRef.current as unknown as Record<symbol, unknown>)[EXPAND_KEY] = {
+	tableAsSymbolMap[EXPAND_KEY] = {
 		renderExpanded: typeof expandRef.current === 'object' ? expandRef.current.renderExpanded : undefined,
 	}
 
-	// Subscribe so React re-renders on any table state change
-	useSyncExternalStore(tableRef.current.subscribe, tableRef.current.getSnapshot, tableRef.current.getSnapshot)
+	// NOTE: useDataGrid no longer calls useSyncExternalStore. Components that
+	// need to re-render on state changes subscribe themselves via
+	// `useDataGridStore` (selective) or `useTable()` (broad, back-compat).
 
 	// Sync data on change (every render, skipping if same reference)
 	const dataRef = useRef(config.data)
 	useEffect(() => {
 		if (config.data !== dataRef.current) {
 			dataRef.current = config.data
-			tableRef.current?.setData(config.data)
+			instanceRef.current?.table.setData(config.data)
 		}
 	})
 
 	// Sync loading on change
 	useEffect(() => {
 		if (config.loading !== undefined) {
-			tableRef.current?.setLoading(config.loading)
+			instanceRef.current?.table.setLoading(config.loading)
 		}
 	}, [config.loading])
 
-	return tableRef.current
+	return instanceRef.current
 }

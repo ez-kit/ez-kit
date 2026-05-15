@@ -5,6 +5,7 @@ import { createColumnHelper } from '@ez-kit/data-grid-core'
 import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
+import { useDataGridStore } from './data-grid/table-context'
 import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
@@ -38,6 +39,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 }: CreateDataGridOptions<TCellTypes>): {
 	DataGrid: typeof DataGrid
 	useDataGrid: typeof useDataGrid
+	useDataGridStore: typeof useDataGridStore
 	GridComponentsProvider: typeof GridComponentsProvider
 	defineColumns: <TRow extends object>(
 		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],
@@ -92,6 +94,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	return {
 		DataGrid: BoundDataGrid as typeof DataGrid,
 		useDataGrid,
+		useDataGridStore,
 		GridComponentsProvider,
 		defineColumns: boundDefineColumns,
 		createColumnHelper: boundCreateColumnHelper,

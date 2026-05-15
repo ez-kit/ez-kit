@@ -1,4 +1,4 @@
-import { useTableContext } from './table-context'
+import { useTable } from './table-context'
 
 /**
  * Renders the overlay that shows scroll shadows alongside pinned columns.
@@ -16,7 +16,7 @@ import { useTableContext } from './table-context'
  * table wrapper drive the shadow opacity.
  */
 export function PinShadowOverlay() {
-	const table = useTableContext()
+	const table = useTable()
 	const leftCols = table.getLeftLeafColumns()
 	const rightCols = table.getRightLeafColumns()
 
