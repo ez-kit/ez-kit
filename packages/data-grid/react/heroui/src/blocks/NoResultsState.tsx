@@ -2,7 +2,7 @@ import type { NoResultsStateProps } from '@ez-kit/data-grid-react'
 
 export function NoResultsState(_props: NoResultsStateProps) {
 	return (
-		<div className='dg-no-results-state flex flex-col items-center justify-center gap-2 py-12 px-4 min-h-[300px]'>
+		<div className='dg-no-results-state flex flex-col items-center justify-center gap-2 py-12 px-4 min-h-[300px] w-full text-center'>
 			<svg
 				xmlns='http://www.w3.org/2000/svg'
 				width='32'

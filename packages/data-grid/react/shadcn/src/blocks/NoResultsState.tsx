@@ -11,6 +11,8 @@ export function NoResultsState(_props: NoResultsStateProps) {
 				gap: '0.5rem',
 				padding: '3rem 1rem',
 				minHeight: '300px',
+				width: '100%',
+				textAlign: 'center',
 				color: 'var(--muted-foreground)',
 			}}
 		>

@@ -32,10 +32,11 @@ import { RowPinMenu } from './blocks/RowPinMenu'
 import { SelectionBar } from './blocks/SelectionBar'
 import { SortIndicator } from './blocks/SortIndicator'
 import { SortMenu } from './blocks/SortMenu'
+import { Td } from './blocks/Td'
 import { Toolbar } from './blocks/Toolbar'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from './components/ui/table'
 
 import type { CellTypeRegistry, GridComponents } from '@ez-kit/data-grid-react'
 
@@ -45,7 +46,7 @@ const components = {
 	Tbody: TableBody,
 	Tr: TableRow,
 	Th: TableHead,
-	Td: TableCell,
+	Td,
 	Button,
 	Input,
 	Checkbox,
