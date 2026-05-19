@@ -14,7 +14,11 @@
 playwright-report/
 test-results/
 
+.agents/skills/
+.claude/skills/
+
 openspec
+.specify
 
 # playwright snapshots
 apps/docs/tests/**/*.png

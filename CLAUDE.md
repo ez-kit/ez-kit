@@ -126,3 +126,8 @@ Root `tsconfig.base.json` uses `strict`, `noUncheckedIndexedAccess`, `exactOptio
 ### Linting
 
 ESLint flat config (`eslint.config.mjs`) with `typescript-eslint` strict + stylistic rules. `import/order` is enforced (alphabetical, grouped by type). Type imports must use `import type`. `--max-warnings=0` is enforced in every package's lint script.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
