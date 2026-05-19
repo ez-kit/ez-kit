@@ -400,6 +400,16 @@ export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
 	getSnapshot: () => TableState
 	/** Reactively replace the data array. */
 	setData: (data: TRow[]) => void
+	/**
+	 * Push a partial controlled-state slice into both TanStack's `options.state`
+	 * and the external snapshot store, **without** firing `onStateChange`.
+	 *
+	 * Use this when the caller is the source of truth (`state` prop on the
+	 * React `useDataGrid` hook). Calling `setState` instead would loop back
+	 * through `config.onStateChange` and risk an infinite update when the
+	 * consumer mirrors that callback into React state.
+	 */
+	syncControlledState: (partial: Partial<TableState>) => void
 }
 
 /** Public alias. */

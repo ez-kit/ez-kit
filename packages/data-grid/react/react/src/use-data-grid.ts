@@ -424,12 +424,24 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	const table = instanceRef.current.table
 	const tableAsSymbolMap = table as unknown as Record<symbol, unknown>
 
-	// Sync controlled state on every render — external state portions override internal state
+	// Sync controlled state on every render — external state portions override internal state.
+	//
+	// We must push the update into BOTH TanStack's `options.state` AND the external
+	// snapshot store the React layer subscribes to (`useDataGridStore`), otherwise
+	// components like Body never see the change. `syncControlledState` does both in
+	// one shot and skips `onStateChange` — the prop is the source of truth, so firing
+	// the callback would loop back through a consumer that mirrors it into React state.
+	//
+	// Skip the call when every supplied slice is referentially equal to the current
+	// snapshot — avoids redundant `store.setState` notifications on every render.
 	if (state !== undefined) {
-		table.setOptions((prev) => ({
-			...prev,
-			state: { ...prev.state, ...state },
-		}))
+		const snapshot = instanceRef.current.table.getSnapshot()
+		const hasChanges = (Object.keys(state) as (keyof TableState)[]).some(
+			(key) => snapshot[key] !== state[key],
+		)
+		if (hasChanges) {
+			instanceRef.current.table.syncControlledState(state)
+		}
 	}
 
 	// Re-sync feature configs every render so callbacks (e.g. creating.onSave)

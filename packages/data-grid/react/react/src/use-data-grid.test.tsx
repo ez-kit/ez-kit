@@ -76,6 +76,86 @@ describe('useDataGrid', () => {
 		rerender({ loading: true })
 		expect(result.current.table.getIsLoading()).toBe(true)
 	})
+
+	it('propagates state.loading into the external snapshot so subscribers see it', () => {
+		const { result, rerender } = renderHook(
+			({ isLoading }: { isLoading: boolean }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					state: { loading: { isLoading } },
+				}),
+			{ initialProps: { isLoading: false } },
+		)
+		// Baseline: snapshot reflects initial state
+		expect(result.current.table.getSnapshot().loading.isLoading).toBe(false)
+		expect(result.current.table.getIsLoading()).toBe(false)
+
+		// Flip via the controlled `state` prop — both options.state AND the external
+		// store must update so useSyncExternalStore subscribers (e.g. Body) re-read.
+		rerender({ isLoading: true })
+		expect(result.current.table.getSnapshot().loading.isLoading).toBe(true)
+		expect(result.current.table.getIsLoading()).toBe(true)
+	})
+
+	it('propagates state.columnFilters into the external snapshot', () => {
+		const filtersA: { id: string; value: unknown }[] = []
+		const filtersB = [{ id: 'name', value: 'Alice' }]
+		const { result, rerender } = renderHook(
+			({ filters }: { filters: { id: string; value: unknown }[] }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					filtering: true,
+					state: { columnFilters: filters },
+				}),
+			{ initialProps: { filters: filtersA } },
+		)
+		expect(result.current.table.getSnapshot().columnFilters).toBe(filtersA)
+
+		rerender({ filters: filtersB })
+		expect(result.current.table.getSnapshot().columnFilters).toBe(filtersB)
+		expect(result.current.table.getState().columnFilters).toBe(filtersB)
+	})
+
+	it('does not invoke onStateChange when state prop is the source of the change', () => {
+		const onStateChange = vi.fn()
+		const { rerender } = renderHook(
+			({ isLoading }: { isLoading: boolean }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					state: { loading: { isLoading } },
+					onStateChange,
+				}),
+			{ initialProps: { isLoading: false } },
+		)
+		onStateChange.mockClear()
+		rerender({ isLoading: true })
+		// Prop-driven sync goes through syncControlledState, which intentionally skips
+		// onStateChange — otherwise consumers that mirror the callback back into React
+		// state would loop indefinitely.
+		expect(onStateChange).not.toHaveBeenCalled()
+	})
+
+	it('skips the snapshot push when supplied slices are referentially equal', () => {
+		const stableLoading = { isLoading: false }
+		const { result, rerender } = renderHook(
+			({ tag: _tag }: { tag: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					state: { loading: stableLoading },
+				}),
+			{ initialProps: { tag: 0 } },
+		)
+		const snapshotBefore = result.current.table.getSnapshot()
+		// Force a re-render where `state` still points at the same slice references.
+		rerender({ tag: 1 })
+		const snapshotAfter = result.current.table.getSnapshot()
+		// No work was done → snapshot identity is preserved.
+		expect(snapshotAfter).toBe(snapshotBefore)
+	})
 })
 
 describe('useDataGrid — virtualized', () => {

@@ -348,6 +348,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		store.setState((prev) => ({ ...prev }))
 	}
 
+	dataTable.syncControlledState = (partial) => {
+		ref.table?.setOptions((prev) => ({
+			...prev,
+			state: { ...prev.state, ...partial },
+		}))
+		store.setState((prev) => ({ ...prev, ...partial }))
+	}
+
 	// Override setLoading to also call notify (it goes through setState → onStateChange)
 	// Feature's setLoading already calls table.setState which triggers onStateChange → notify ✓
 
