@@ -36,7 +36,7 @@ function DataGridBase<T extends object>(props: DataGridProps<T>) {
 // that the kit-specific bound DataGrid sets up internally. Re-attaching the adapter's
 // versions here so docs examples can use `<DataGrid.Toolbar>`, `<DataGrid.FilterPanel>`,
 // etc. without each docs route having to import them from a specific kit.
-export const DataGrid = Object.assign(DataGridBase, {
+export const DataGrid: typeof DataGridBase & typeof AdapterDataGrid = Object.assign(DataGridBase, {
 	Toolbar: AdapterDataGrid.Toolbar,
 	Table: AdapterDataGrid.Table,
 	Header: AdapterDataGrid.Header,
