@@ -2,6 +2,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { DataGridDocsExample } from '../components/data-grid-docs-example'
+
 import type { ComponentProps } from 'react'
 
 vi.mock('../shared/data-grid/sandpack/DataGridSandpackExample', () => ({
@@ -29,8 +31,6 @@ vi.mock('../components/data-grid-source-panel', () => ({
 		<div data-testid='mock-source-panel' data-example-id={exampleId} />
 	),
 }))
-
-import { DataGridDocsExample } from '../components/data-grid-docs-example'
 
 type ToggleProps = ComponentProps<typeof DataGridDocsExample>
 

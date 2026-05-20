@@ -119,7 +119,7 @@ export function FilterDateRangeExample() {
 		<div>
 			<p style={{ marginBottom: '1rem', color: '#666' }}>
 				Date range filters: built-in presets (Today, Yesterday, Last 7/30 days, This/Last month), a true range
-				calendar via <code>variant: 'calendar'</code>, and custom presets — quarterly ranges, year-long windows, or
+				calendar via <code>variant: &apos;calendar&apos;</code>, and custom presets — quarterly ranges, year-long windows, or
 				anything else that fits your domain.
 			</p>
 

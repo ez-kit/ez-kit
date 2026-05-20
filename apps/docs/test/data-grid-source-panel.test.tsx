@@ -53,7 +53,7 @@ class MockResizeObserver {
 
 	trigger() {
 		if (this.observed) {
-			this.callback([], this as unknown as ResizeObserver)
+			this.callback([], this)
 		}
 	}
 }
@@ -62,7 +62,7 @@ const originalResizeObserver = globalThis.ResizeObserver
 
 beforeEach(() => {
 	MockResizeObserver.instances = []
-	globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
+	globalThis.ResizeObserver = MockResizeObserver
 })
 
 afterEach(() => {
@@ -73,7 +73,11 @@ afterEach(() => {
 
 const findMeasuredNode = () => {
 	const codeBlock = screen.getByTestId('mock-dyncode')
-	return codeBlock.parentElement as HTMLElement
+	const parent = codeBlock.parentElement
+	if (!parent) {
+		throw new Error('mock-dyncode has no parent element')
+	}
+	return parent
 }
 
 describe('<DataGridSourcePanel />', () => {

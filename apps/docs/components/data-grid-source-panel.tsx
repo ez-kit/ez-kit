@@ -11,7 +11,7 @@ const COLLAPSED_HEIGHT_PX = 100
 const COPY_FEEDBACK_MS = 2000
 const FALLBACK_EXPANDED_PX = 4000
 
-export interface DataGridSourcePanelProps {
+export type DataGridSourcePanelProps = {
 	exampleId: DataGridSourceExampleId
 	language?: string
 }
@@ -73,9 +73,9 @@ export function DataGridSourcePanel({ exampleId, language = 'tsx' }: DataGridSou
 	const collapsedNow = showControls && !expanded
 	const maxHeight = expanded
 		? fullHeight !== null
-			? `${fullHeight}px`
-			: `${FALLBACK_EXPANDED_PX}px`
-		: `${COLLAPSED_HEIGHT_PX}px`
+			? `${String(fullHeight)}px`
+			: `${String(FALLBACK_EXPANDED_PX)}px`
+		: `${String(COLLAPSED_HEIGHT_PX)}px`
 
 	const handleCopy = useCallback(async () => {
 		try {
@@ -94,7 +94,9 @@ export function DataGridSourcePanel({ exampleId, language = 'tsx' }: DataGridSou
 		<div className='not-prose relative overflow-hidden rounded-md border border-fd-border bg-fd-card text-sm'>
 			<button
 				type='button'
-				onClick={handleCopy}
+				onClick={() => {
+					void handleCopy()
+				}}
 				aria-live='polite'
 				className='absolute right-2 top-2 z-20 rounded-md border border-fd-border bg-fd-card/90 px-2 py-1 text-xs font-medium text-fd-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-fd-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-fd-ring'
 			>

@@ -3,21 +3,22 @@
 import { Suspense, useState } from 'react'
 
 import { dataGridPrimitiveExamples } from '../shared/data-grid/examples/generated/data-grid-primitive'
-import { DataGridTypeProvider } from '../shared/DataGrid'
 import { DataGridSandpackExample } from '../shared/data-grid/sandpack/DataGridSandpackExample'
+import { DataGridTypeProvider } from '../shared/DataGrid'
+
 import { DataGridSourcePanel } from './data-grid-source-panel'
 
 import type { DataGridSandpackExampleId } from '../shared/data-grid/sandpack/DataGridSandpackExample'
 
 export type DataGridDocsExampleFlavor = 'shadcn' | 'heroui' | 'shadcn-native'
 
-export interface DataGridDocsExampleProps {
+export type DataGridDocsExampleProps = {
 	exampleId: DataGridSandpackExampleId
 	defaultType?: DataGridDocsExampleFlavor
 	lockFlavor?: boolean
 }
 
-const FLAVORS: ReadonlyArray<{ value: DataGridDocsExampleFlavor; label: string }> = [
+const FLAVORS: readonly { value: DataGridDocsExampleFlavor; label: string }[] = [
 	{ value: 'shadcn', label: 'shadcn' },
 	{ value: 'heroui', label: 'HeroUI' },
 	{ value: 'shadcn-native', label: 'shadcn-native' },
@@ -48,7 +49,7 @@ export function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: Data
 								type='button'
 								role='tab'
 								aria-selected={isActive}
-								onClick={() => setFlavor(value)}
+								onClick={() => { setFlavor(value); }}
 								className={
 									isActive
 										? 'rounded bg-white px-3 py-1 font-semibold underline underline-offset-4 shadow-sm dark:bg-zinc-800'
