@@ -1,0 +1,41 @@
+---
+title: Date Range Filter
+description: Filter rows by a date range — between two dates, before a date, after a date, or by named presets.
+---
+
+# Date Range Filter
+
+For date columns, prefer the date-range filter variant. It renders a calendar picker and supports named presets (today, last 7 days, last 30 days, this month).
+
+## Usage
+
+<DataGridDocsExample exampleId='filter-date-range' />
+
+```ts
+const columns = defineColumns<Order>([
+	{
+		id: 'createdAt',
+		accessorKey: 'createdAt',
+		meta: {
+			filterVariant: 'dateRange',
+			presets: ['today', 'last7days', 'last30days', 'thisMonth'],
+		},
+	},
+])
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `meta.filterVariant` | `'date' \| 'dateRange'` | Pick the picker shape. |
+| `meta.presets` | `string[]` | Built-in preset ids. The order shown matches array order. |
+| `meta.dateFormat` | `string` | Display format for the picker (passed to your locale lib). |
+
+## Notes
+
+The accessor value MUST be a `Date` or an ISO string. If it's something else, supply `accessorFn` to coerce.
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)

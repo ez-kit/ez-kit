@@ -1,0 +1,62 @@
+---
+title: Editing Validation
+description: Field-level and form-level validation for editing and creating — sync, async, or schema-derived.
+---
+
+# Editing Validation
+
+Validation runs on commit. Block the commit, show an error near the input, and don't close the modal.
+
+## Usage
+
+Editing with per-field validation:
+
+<DataGridDocsExample exampleId='editing-validation' />
+
+Pair with [Creating with validation](./data-grid/editing/creating#with-per-field-validation) for the new-row case.
+
+## Patterns
+
+### Synchronous
+
+```ts
+meta: {
+	validate: (value) => (value.length < 3 ? 'Too short' : null),
+}
+```
+
+### Async
+
+```ts
+meta: {
+	validate: async (value) => {
+		const taken = await api.isUsernameTaken(value)
+		return taken ? 'Already taken' : null
+	},
+}
+```
+
+### Schema-derived (Zod)
+
+```ts
+const emailSchema = z.string().email()
+
+meta: {
+	validate: (value) => emailSchema.safeParse(value).error?.issues[0]?.message ?? null,
+}
+```
+
+## Form-level validation
+
+For cross-field rules (e.g., "end date must be after start date"), use the `CreatingModal`/`EditingModal` `onSubmit` to return a `{ errors }` object:
+
+```ts
+onSubmit={(draft) => {
+	if (draft.end < draft.start) return { errors: { end: 'Must be after start' } }
+	return api.create(draft)
+}}
+```
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/editing-modal.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/editing-modal.tsx)

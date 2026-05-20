@@ -1,0 +1,44 @@
+---
+title: Theming
+description: How the data grid styling contract works — CSS tokens, data attributes the flavors target, and how to override them.
+---
+
+# Theming
+
+The data grid does **not** prescribe a theme. Each UI-kit flavor exposes a styling contract — CSS tokens + the `data-*` attribute surface — and you override it from your own design system.
+
+> This page is reference prose only. There is no embedded example because theming is something you apply at your app's CSS layer, not inside a sandbox. See [Architecture](./data-grid/architecture) for why styling lives in the flavor packages.
+
+## The contract
+
+The shared React package (`@ez-kit/data-grid-react`) emits a stable set of `data-*` attributes on its semantic elements. Flavors target those attributes in CSS. Your app overrides flavor tokens in its own CSS.
+
+```css
+/* in your app's CSS, after importing the flavor's global.css */
+:root {
+	--dg-row-hover: oklch(98% 0 0);
+	--dg-header-text: var(--color-foreground);
+}
+```
+
+## Where to look
+
+| Flavor | Token source | Selectors |
+| --- | --- | --- |
+| shadcn | [`packages/data-grid/react/shadcn/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/global.css) | `[data-slot="table"]`, `[data-slot="row"]`, `[data-pinned]`, `[data-sticky]`, etc. |
+| HeroUI | [`packages/data-grid/react/heroui/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/global.css) | Same `data-*` attributes; HeroUI tokens. |
+
+## Rules
+
+- The shared React package contains **zero styling** (constitution Principle II). Don't add CSS there — it would force every flavor to fight defaults.
+- The shadcn flavor's vendored `components/ui/**` files are **immutable** (constitution Principle III). All visual overrides live in `blocks/` adapters.
+- Avoid `!important` on flavor tokens unless your design system requires it.
+
+## See also
+
+- [Architecture](./data-grid/architecture) — the three-layer model that makes this contract possible
+
+## Source
+
+- shadcn — [`packages/data-grid/react/shadcn/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/global.css)
+- HeroUI — [`packages/data-grid/react/heroui/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/global.css)

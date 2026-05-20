@@ -1,0 +1,54 @@
+---
+title: Columns
+description: Define the columns that drive a data grid — accessor, header, cell renderers, sort/filter behavior, and meta options.
+---
+
+# Columns
+
+Columns are the backbone of the grid. They tell the engine what data to read from each row, how to render it, and which behaviors (sorting, filtering, pinning, etc.) to enable.
+
+## Usage
+
+<DataGridDocsExample exampleId='columns-combined' />
+
+You define columns once and pass them to `useDataGrid`. Most columns are accessor columns — they read a row property by key and render a value.
+
+```ts
+import { defineColumns } from '@ez-kit/data-grid-react'
+
+const columns = defineColumns<User>([
+	{ id: 'name', header: 'Name', accessorKey: 'name' },
+	{ id: 'email', header: 'Email', accessorKey: 'email' },
+	{ id: 'status', header: 'Status', accessorKey: 'status' },
+])
+```
+
+For typed accessors, custom rendering, and registered cell types, prefer the [column helper](./data-grid/columns/column-helper).
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | Stable column identifier. Required when no `accessorKey` is given. |
+| `accessorKey` | `keyof TRow` | Reads a row property by name. |
+| `accessorFn` | `(row: TRow) => unknown` | Computed accessor; takes the whole row. |
+| `header` | `string \| ReactNode \| (ctx) => ReactNode` | Header label or render fn. |
+| `cell` | `(ctx) => ReactNode` | Custom cell renderer. |
+| `enableSorting` | `boolean` | Default `true`. |
+| `enableColumnFilter` | `boolean` | Default `true`. |
+| `enableHiding` | `boolean` | Default `true`. |
+| `enablePinning` | `boolean` | Default `false`. |
+| `size` / `minSize` / `maxSize` | `number` | Column-width constraints when resizing is enabled. |
+| `meta` | `unknown` | Free-form per-column data; commonly used for alignment, formatter hints, or cell-type registration. |
+
+## See also
+
+- [Column Helper](./data-grid/columns/column-helper) — typed column builder
+- [Column Visibility](./data-grid/columns/column-visibility) — show/hide columns at runtime
+- [Column Pinning](./data-grid/columns/column-pinning) — pin to left/right
+- [Resizing](./data-grid/columns/resizing) — drag to resize column widths
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts)

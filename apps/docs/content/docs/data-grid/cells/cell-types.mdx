@@ -1,0 +1,42 @@
+---
+title: Cell Types
+description: Built-in cell renderers — text, number, badge, link, image, date, currency, boolean — picked by column meta.
+---
+
+# Cell Types
+
+A "cell type" is a named renderer the engine uses when a column declares `meta.cellType`. Pick a built-in or register your own.
+
+## Usage
+
+<DataGridDocsExample exampleId='cell-types' />
+
+```ts
+const columns = defineColumns<Order>([
+	{ id: 'price', accessorKey: 'price', meta: { cellType: 'currency', currency: 'USD' } },
+	{ id: 'status', accessorKey: 'status', meta: { cellType: 'badge', tone: 'auto' } },
+	{ id: 'createdAt', accessorKey: 'createdAt', meta: { cellType: 'date' } },
+])
+```
+
+## Built-in cell types
+
+| `meta.cellType` | Expected accessor | Notes |
+| --- | --- | --- |
+| `'text'` | `string` | Default for accessor columns. |
+| `'number'` | `number` | Formatted by locale. |
+| `'currency'` | `number` | Needs `meta.currency`. |
+| `'date'` | `Date \| string` | See also [Date cell](./data-grid/cells/date-cell). |
+| `'badge'` | `string` | Picks tone by value or `meta.tones`. |
+| `'link'` | `{ href, label }` or `string` | `meta.target`, `meta.rel`. |
+| `'image'` | `string` | Avatar / thumbnail. |
+| `'boolean'` | `boolean` | Renders a check/cross icon. |
+
+## See also
+
+- [Custom Cell Types](./data-grid/cells/custom-cell-types) — register your own
+- [Date Cell](./data-grid/cells/date-cell)
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cells/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/cells/)

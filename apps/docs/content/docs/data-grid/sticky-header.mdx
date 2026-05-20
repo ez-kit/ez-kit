@@ -1,0 +1,33 @@
+---
+title: Sticky Header
+description: Keep the table header visible while the body scrolls — single header or per-group.
+---
+
+# Sticky Header
+
+For tall tables, keep the header row pinned to the top of the scroll container while the body scrolls.
+
+## Usage
+
+Base sticky header:
+
+<DataGridDocsExample exampleId='base-sticky' />
+
+Sticky header inside a scrollable wrapper:
+
+<DataGridDocsExample exampleId='sticky-header' />
+
+```tsx
+<DataGrid.Table stickyHeader>{/* … */}</DataGrid.Table>
+```
+
+## Notes
+
+- The "stickiness" is CSS — `position: sticky` on the `<thead>`. The grid sets `data-sticky="true"` on the header; flavor CSS handles the rest.
+- Combine with [Row pinning](./data-grid/row-pinning) for sticky top rows beneath the header.
+- Inside a virtualized body, sticky header still works — the scroll container is the same.
+
+## Source
+
+- shadcn flavor — [`packages/data-grid/react/shadcn/src/blocks/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/blocks/)
+- HeroUI flavor — [`packages/data-grid/react/heroui/src/blocks/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/blocks/)

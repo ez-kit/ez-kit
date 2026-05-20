@@ -1,0 +1,47 @@
+---
+title: Column Visibility
+description: Show and hide columns at runtime — toggle via a menu, persist visibility state, or hide columns by default.
+---
+
+# Column Visibility
+
+Let users toggle which columns are visible. Hidden columns retain their filter and sort state — re-showing a column doesn't reset it.
+
+## Usage
+
+<DataGridDocsExample exampleId='column-visibility' />
+
+The grid exposes a `column-visibility-trigger` slot that renders the kit's menu component. Hidden columns are computed from the engine's visibility state.
+
+```ts
+const grid = useDataGrid({ data, columns })
+grid.setColumnVisibility({ email: false })
+```
+
+For a minimal toggle without the menu, use the same control directly via column id:
+
+```ts
+columns.find((c) => c.id === 'email')?.toggleVisibility(false)
+```
+
+A simpler base example is also available:
+
+<DataGridDocsExample exampleId='base-column-visibility' />
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `enableHiding` | `boolean` | Per-column. Default `true`. Set to `false` on columns that must always remain visible (e.g., a row-id column). |
+| `state.columnVisibility` | `Record<string, boolean>` | Controlled visibility state (passes through to `useDataGrid`). |
+| `initialState.columnVisibility` | `Record<string, boolean>` | Default hidden columns at mount. |
+| `onColumnVisibilityChange` | `(updater) => void` | Subscribe to visibility changes for persistence (e.g., to localStorage). |
+
+## See also
+
+- [Columns](./data-grid/columns) — base definitions
+- [Controlled state](./data-grid/controlled-state) — controlling visibility from outside
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx)

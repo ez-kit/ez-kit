@@ -1,0 +1,40 @@
+---
+title: CRUD (Server)
+description: Full create, read, update, delete workflow against a real backend — optimistic updates with rollback on failure.
+---
+
+# CRUD against a server
+
+A full create/read/update/delete loop with optimistic updates and rollback on failure.
+
+## Usage
+
+<DataGridDocsExample exampleId='crud-server' />
+
+The example demonstrates:
+
+- New-row creation via `<DataGrid.CreateTrigger />` and `<DataGrid.CreatingModal />`
+- Inline editing with debounced server commits
+- Bulk delete with confirmation (see [Delete Confirmation](./data-grid/selection/delete-confirmation))
+- Optimistic UI with rollback on API failure
+
+## Server contract
+
+The example assumes a REST shape but the pattern is transport-agnostic:
+
+```ts
+type Api = {
+	list: (params: { sort, filters, page }) => Promise<{ rows, total }>
+	create: (row) => Promise<TRow>
+	update: (id, patch) => Promise<TRow>
+	delete: (ids: string[]) => Promise<void>
+}
+```
+
+## Notes
+
+Pair this with [Controlled State](./data-grid/controlled-state) so the grid's sort/filter/pagination round-trip through your query.
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/)

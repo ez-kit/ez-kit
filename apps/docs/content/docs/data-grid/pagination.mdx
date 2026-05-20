@@ -1,0 +1,62 @@
+---
+title: Pagination
+description: Paginate grid rows — client-side by default, with controlled state for server-side fetching.
+---
+
+# Pagination
+
+Pagination caps how many rows render at once. Client-side is the default and works out of the box; server-side pagination just means controlling the state and supplying the right slice of rows.
+
+## Usage
+
+The "full" example below demonstrates pagination alongside sort and filter:
+
+<DataGridDocsExample exampleId='base-full' />
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	initialState: {
+		pagination: { pageIndex: 0, pageSize: 10 },
+	},
+})
+```
+
+```tsx
+<DataGrid.Pagination />
+<DataGrid.PageSizer options={[10, 25, 50, 100]} />
+```
+
+## Server-side pagination
+
+Pass controlled pagination state, set `manualPagination: true`, and supply `rowCount`:
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	manualPagination: true,
+	rowCount: total,
+	state: { pagination: { pageIndex, pageSize } },
+	onPaginationChange: (updater) => {
+		const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater
+		setPagination(next)
+		fetchPage(next.pageIndex, next.pageSize)
+	},
+})
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `initialState.pagination` | `{ pageIndex, pageSize }` | Defaults at mount. |
+| `state.pagination` | same | Controlled state. |
+| `onPaginationChange` | `(updater) => void` | Subscribe to changes. |
+| `manualPagination` | `boolean` | Default `false`. Set `true` when paginating server-side. |
+| `rowCount` | `number` | Required when `manualPagination` is `true`. |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/pagination.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/pagination.tsx)

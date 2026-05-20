@@ -1,0 +1,48 @@
+---
+title: Selection Bar
+description: Floating or inline action bar that appears when rows are selected — bulk delete, export, edit, custom actions.
+---
+
+# Selection Bar
+
+When at least one row is selected, render an action bar that operates on the selection set.
+
+## Floating
+
+A bar floats at the bottom of the table while a selection is active:
+
+<DataGridDocsExample exampleId='selection-bar' />
+
+```tsx
+<DataGrid.SelectionBar>
+	{({ selectedRows }) => (
+		<>
+			<span>{selectedRows.length} selected</span>
+			<button onClick={() => bulkDelete(selectedRows)}>Delete</button>
+		</>
+	)}
+</DataGrid.SelectionBar>
+```
+
+## Inline
+
+The same content can be rendered inline above the table — no portal, no z-index gymnastics:
+
+<DataGridDocsExample exampleId='selection-bar-inline' />
+
+```tsx
+<DataGrid.SelectionBar variant='inline'>
+	{/* same content */}
+</DataGrid.SelectionBar>
+```
+
+## Options
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `variant` | `'floating' \| 'inline'` | Default `'floating'`. |
+| `children` | `({ selectedRows, clearSelection }) => ReactNode` | Render-prop access to the selection state. |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/selection-bar.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/selection-bar.tsx)

@@ -1,0 +1,50 @@
+---
+title: Fallbacks
+description: Loading, empty, and no-results states — three slots the grid renders when there's nothing else to show.
+---
+
+# Fallbacks
+
+The grid distinguishes three "nothing to show" states and gives each its own slot:
+
+- **Loading** — initial fetch, refresh, or while controlled `state.isLoading` is `true`.
+- **Empty** — the data set is genuinely empty (no rows at all).
+- **No results** — the data set has rows, but filters/search excluded them all.
+
+## Usage
+
+<DataGridDocsExample exampleId='fallbacks' />
+
+```tsx
+<DataGrid.LoadingBody />
+<DataGrid.EmptyStateRow>
+	No orders yet. <button>Create one</button>
+</DataGrid.EmptyStateRow>
+<DataGrid.NoResultsRow>
+	No matching rows. <DataGrid.ClearFiltersButton />
+</DataGrid.NoResultsRow>
+```
+
+## Loading
+
+Pass `state.isLoading` (see [Controlled State](./data-grid/controlled-state)) — the grid renders `<LoadingBody />` instead of rows.
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	state: { isLoading: query.isFetching },
+})
+```
+
+The loading fallback is **centered** in the body area — the constitution's "fallbacks pos now in center" rule (commit `189811c`) and the recent controlled-loading work (commit `11609ef`) both apply here.
+
+## Empty vs No results
+
+The grid auto-picks which one to render based on whether filters are active. You can override the discrimination with `state.isEmpty` if you have a domain definition of "empty" different from "zero rows".
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/loading-body.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/loading-body.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/empty-state-row.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/empty-state-row.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/no-results-row.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/no-results-row.tsx)

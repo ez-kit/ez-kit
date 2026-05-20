@@ -1,0 +1,5 @@
+{
+	"title": "Filtering",
+	"description": "Per-column and global filtering",
+	"pages": ["index", "operators", "panel", "date-range", "multi-value", "global"]
+}

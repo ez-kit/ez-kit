@@ -1,0 +1,32 @@
+---
+title: Expanding · Tree
+description: Render hierarchical data as expandable parent/child rows that share the column set.
+---
+
+# Tree
+
+When your data is hierarchical (folders, org charts, BOMs), render it as a tree. Parent and child rows share the column set.
+
+## Usage
+
+<DataGridDocsExample exampleId='expanding-tree' />
+
+```ts
+const grid = useDataGrid({
+	data, // each row has optional `children: TRow[]`
+	columns,
+	enableExpanding: true,
+	getSubRows: (row) => row.children,
+})
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `getSubRows` | `(row) => TRow[] \| undefined` | How to find child rows. |
+| `enableSubRowSelection` | `boolean` | Selecting a parent selects its children. |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)

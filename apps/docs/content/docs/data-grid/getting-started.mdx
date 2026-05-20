@@ -1,0 +1,41 @@
+---
+title: Getting Started
+description: Install a data grid flavor and render your first sortable, filterable grid in under 10 minutes.
+---
+
+# Getting Started
+
+This page walks you from zero to a working data grid. Pick the flavor that matches your app, install three packages, and copy the minimal example below.
+
+## 1. Pick a flavor
+
+| Flavor | Install guide |
+| --- | --- |
+| **shadcn** — Tailwind + Radix UI primitives. | [Install for shadcn](./data-grid/installation/shadcn) |
+| **HeroUI** — HeroUI design system. | [Install for HeroUI](./data-grid/installation/heroui) |
+
+The behavior layer is identical between flavors. You can switch at any time by swapping one package import.
+
+## 2. Render the minimal example
+
+Below is the same grid running in both flavors. Use the toggle to flip between them.
+
+<DataGridDocsExample exampleId='base-plain' />
+
+The example renders against the real published package surface — what you copy is what you ship.
+
+## 3. Next steps
+
+Once you have a grid rendering, branch out into the per-capability pages:
+
+- [Columns](./data-grid/columns) — define columns, helper, visibility, pinning, resizing
+- [Sorting](./data-grid/sorting) — initial sort, multi-sort, custom sort fns
+- [Filtering](./data-grid/filtering) — operators, panel, date range, multi-value, global search
+- [Pagination](./data-grid/pagination)
+- [Selection](./data-grid/selection) — checkboxes, selection bar, delete confirmation
+- [Row pinning](./data-grid/row-pinning) · [Virtualization](./data-grid/virtualization) · [Cells](./data-grid/cells)
+- [Controlled state](./data-grid/controlled-state) · [Editing](./data-grid/editing) · [Fallbacks](./data-grid/fallbacks)
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/use-data-grid.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/use-data-grid.ts)

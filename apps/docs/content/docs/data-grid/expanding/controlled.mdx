@@ -1,0 +1,32 @@
+---
+title: Expanding · Controlled
+description: Drive the expand state from outside the grid — open all, sync with URL, persist between sessions.
+---
+
+# Controlled Expanding
+
+Pass an external `expanded` state into the grid to drive expansion from outside — keyboard shortcuts, URL params, persisted across sessions.
+
+## Usage
+
+<DataGridDocsExample exampleId='expanding-controlled' />
+
+```ts
+const [expanded, setExpanded] = useState<ExpandedState>({})
+
+const grid = useDataGrid({
+	data,
+	columns,
+	enableExpanding: true,
+	state: { expanded },
+	onExpandedChange: setExpanded,
+})
+```
+
+## See also
+
+- [Controlled state](./data-grid/controlled-state) — pattern overview for any controllable surface
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)

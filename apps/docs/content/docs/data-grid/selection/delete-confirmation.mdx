@@ -1,0 +1,40 @@
+---
+title: Delete Confirmation
+description: A bulk-delete pattern that prompts the user before removing rows, with cancel + retry.
+---
+
+# Delete Confirmation
+
+Bulk-delete is destructive. Confirm before applying, and roll back on failure.
+
+## Usage
+
+<DataGridDocsExample exampleId='delete-confirmation' />
+
+The pattern:
+
+1. User selects rows.
+2. Bulk-delete button opens a confirmation dialog.
+3. On confirm, the example optimistically removes rows, calls the API, and re-inserts on failure.
+
+```tsx
+const onConfirm = async () => {
+	const ids = selectedRows.map((r) => r.original.id)
+	const snapshot = data
+	setData((d) => d.filter((r) => !ids.includes(r.id)))
+	try {
+		await api.bulkDelete(ids)
+	} catch {
+		setData(snapshot)
+		toast.error('Delete failed')
+	}
+}
+```
+
+## Notes
+
+The dialog component comes from the active UI flavor (shadcn AlertDialog or HeroUI Modal). The data grid itself doesn't ship a dialog — toggle the flavor above to see both renderings.
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/selection-bar.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/selection-bar.tsx)

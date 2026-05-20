@@ -1,0 +1,49 @@
+---
+title: Creating Rows
+description: New-row workflow — a creating modal/inline row driven by the grid's typed column definitions.
+---
+
+# Creating Rows
+
+The grid ships a "creating" flow: a trigger renders a button; clicking it opens a modal (or inline row) prepared with inputs derived from the columns' edit types.
+
+## Usage
+
+<DataGridDocsExample exampleId='creating' />
+
+With per-field validation:
+
+<DataGridDocsExample exampleId='creating-validation' />
+
+```tsx
+<DataGrid.CreateTrigger>New order</DataGrid.CreateTrigger>
+<DataGrid.CreatingModal
+	onSubmit={(draft) => api.create(draft)}
+	defaultValues={{ status: 'pending' }}
+/>
+```
+
+## Validation
+
+Validators run before submit. Show inline errors next to the offending field; the modal will not close until validation passes.
+
+```ts
+{
+	id: 'email',
+	accessorKey: 'email',
+	meta: {
+		editable: true,
+		editType: 'email',
+		validate: (value) => emailSchema.safeParse(value).error?.issues[0]?.message,
+	},
+}
+```
+
+## See also
+
+- [Validation](./data-grid/editing/validation) — full validation patterns
+- [Inline editing](./data-grid/editing) — once a row exists
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/creating-modal.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/creating-modal.tsx)

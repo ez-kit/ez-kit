@@ -1,0 +1,53 @@
+---
+title: Controlled State
+description: Pass any grid state in from outside — sort, filter, pagination, selection, expansion, loading — and subscribe to changes.
+---
+
+# Controlled State
+
+Every interactive surface (sort, filter, pagination, selection, visibility, pinning, expansion, **loading**) supports controlled state. Pass `state.*` to drive it; pass `on*Change` to subscribe.
+
+## Usage
+
+<DataGridDocsExample exampleId='controlled-state' />
+
+```ts
+const [sorting, setSorting] = useState<SortingState>([])
+const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
+
+const grid = useDataGrid({
+	data,
+	columns,
+	state: { sorting, pagination, isLoading: query.isFetching },
+	onSortingChange: setSorting,
+	onPaginationChange: setPagination,
+})
+```
+
+## Why this matters
+
+- Server-side anything (sort, filter, pagination) needs controlled state so you can translate the user's input into your query.
+- URL state — keep sort/filter/page in `?` params so reload preserves view and links are shareable.
+- Cross-component coordination — e.g., a "clear all" button outside the grid that resets every controllable surface at once.
+- **Loading state** — `state.isLoading: true` lets the grid render its loading fallback while your data is fetching. Pass it from any data source — TanStack Query's `isFetching`, SWR's `isValidating`, or your own hook.
+
+## Every controllable slot
+
+| Slot | State key | Change handler |
+| --- | --- | --- |
+| Sort | `sorting` | `onSortingChange` |
+| Column filters | `columnFilters` | `onColumnFiltersChange` |
+| Global filter | `globalFilter` | `onGlobalFilterChange` |
+| Pagination | `pagination` | `onPaginationChange` |
+| Row selection | `rowSelection` | `onRowSelectionChange` |
+| Column visibility | `columnVisibility` | `onColumnVisibilityChange` |
+| Column pinning | `columnPinning` | `onColumnPinningChange` |
+| Row pinning | `rowPinning` | `onRowPinningChange` |
+| Expanded | `expanded` | `onExpandedChange` |
+| Column sizing | `columnSizing` | `onColumnSizingChange` |
+| Loading | `isLoading` | (read-only — set via `state.isLoading`) |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/use-data-grid.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/use-data-grid.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/types.ts)

@@ -1,0 +1,42 @@
+---
+title: Virtualization
+description: Render thousands of rows smoothly by only mounting the rows currently in the viewport.
+---
+
+# Virtualization
+
+For grids with thousands of rows, render only the rows currently in view. Memory usage stays flat; scroll stays buttery.
+
+## Usage
+
+<DataGridDocsExample exampleId='virtualized' />
+
+```ts
+const grid = useDataGrid({
+	data, // 10_000+ rows
+	columns,
+	enableVirtualization: true,
+	estimateRowHeight: 44,
+})
+```
+
+```tsx
+<DataGrid.Body virtualized />
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `enableVirtualization` | `boolean` | Master switch. Default `false`. |
+| `estimateRowHeight` | `number \| (index) => number` | Required when virtualization is on. Use a function when rows have variable heights. |
+| `overscan` | `number` | Extra rows rendered above/below the viewport. Default `5`. |
+
+## Notes
+
+- Virtualization is **not free**: layout-dependent features (column resizing on first paint, certain accessibility patterns) may need extra care. If your data set is small (≤ 200 rows), leave virtualization off.
+- The shadcn and HeroUI flavors both honor `virtualized` — toggle the flavor above to see equivalent behavior.
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/body.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/body.tsx)
