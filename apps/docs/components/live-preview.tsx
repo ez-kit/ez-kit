@@ -1,6 +1,7 @@
-import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+
+import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 
 import { LiveTabs } from './live-tabs'
 

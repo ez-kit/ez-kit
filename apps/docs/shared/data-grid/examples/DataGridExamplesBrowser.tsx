@@ -59,9 +59,18 @@ const findTabForExample = (exampleId: DataGridExampleId): TopLevelTab | undefine
 
 const KNOWN_EXAMPLE_IDS = new Set<string>(dataGridExamplesManifest.map((entry) => entry.id))
 
-const DEFAULT_TAB = (TOP_LEVEL_TABS[0]?.kind === 'group'
-	? TOP_LEVEL_TABS[0].children[0]?.id
-	: TOP_LEVEL_TABS[0]?.id) as DataGridExampleId
+const resolveDefaultTab = (): DataGridExampleId => {
+	const first = TOP_LEVEL_TABS[0]
+	if (!first) throw new Error('TOP_LEVEL_TABS must not be empty')
+	if (first.kind === 'group') {
+		const child = first.children[0]
+		if (!child) throw new Error('Top-level group must have at least one child')
+		return child.id
+	}
+	return first.id
+}
+
+const DEFAULT_TAB: DataGridExampleId = resolveDefaultTab()
 
 const resolveTab = (raw: string | null): DataGridExampleId => {
 	if (raw && KNOWN_EXAMPLE_IDS.has(raw)) {

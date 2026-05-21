@@ -1,11 +1,12 @@
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import { Inter, Figtree } from 'next/font/google'
 
+import { cn } from '@/lib/utils'
+
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
 import './globals.css'
-import { cn } from "@/lib/utils";
 
 const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
 
