@@ -1,0 +1,38 @@
+---
+title: Date Cell
+description: A built-in cell renderer for date values — locale-aware, configurable format, tooltip with the full timestamp.
+---
+
+# Date Cell
+
+For date columns, the `'date'` cell type renders a locale-aware string and shows the full ISO timestamp on hover.
+
+## Usage
+
+<DataGridDocsExample exampleId='date-cell' />
+
+```ts
+{
+	id: 'createdAt',
+	accessorKey: 'createdAt',
+	meta: {
+		cellType: 'date',
+		format: 'PPp',          // e.g., "Apr 29, 2026, 11:00 AM"
+		locale: 'en-US',
+		tooltipFormat: 'PPPPpp', // long ISO-ish; shown on hover
+	},
+}
+```
+
+## Options
+
+| `meta.*` | Type | Description |
+| --- | --- | --- |
+| `format` | string | Display format. Default depends on the active flavor's locale lib (`date-fns`-compatible by default). |
+| `locale` | string | BCP-47 tag. Default reads from the browser. |
+| `tooltipFormat` | string | Hover format. Default is the full ISO timestamp. |
+| `relative` | `boolean` | When `true`, shows "2 days ago" instead of an absolute date. |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cells/date-cell.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/cells/date-cell.tsx)

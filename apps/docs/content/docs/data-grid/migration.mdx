@@ -1,0 +1,65 @@
+---
+title: Migration
+description: Breaking changes and migration notes for the data-grid packages. Pre-1.0 — expect breakage at MINOR bumps.
+---
+
+# Migration notes
+
+`@ez-kit/data-grid-*` is pre-stable. Per the [constitution](https://github.com/easylimeyep/ez-kit/blob/main/.specify/memory/constitution.md), breaking changes are allowed at any version below 1.0.0 and ship with a changeset on each affected package. This page collects the user-facing migration steps.
+
+## Custom cell types — typed contract
+
+The custom-cell-types surface was refactored to use a typed `CellTypeDefinition` contract. If you were registering cell types via plain objects before, switch to `defineCellType`.
+
+**Before:**
+
+```ts
+const grid = useDataGrid({
+	cellTypes: {
+		status: ({ value }) => <span>{value}</span>,
+	},
+})
+```
+
+**After:**
+
+```ts
+import { defineCellType } from '@ez-kit/data-grid-react'
+
+const statusCell = defineCellType({
+	id: 'status',
+	render: ({ value }) => <span>{String(value)}</span>,
+})
+
+const grid = useDataGrid({
+	cellTypes: [statusCell],
+})
+```
+
+See [Custom Cell Types](./data-grid/cells/custom-cell-types) for the full pattern.
+
+## Controlled state — `isLoading` lives in `state`
+
+The loading flag is part of the controlled-state contract — pass it as `state.isLoading` rather than via a custom prop. This is also the only way to drive the `<LoadingBody />` fallback from outside the grid.
+
+**Before:**
+
+```tsx
+<DataGrid loading={query.isFetching} … />
+```
+
+**After:**
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	state: { isLoading: query.isFetching },
+})
+```
+
+See [Controlled State](./data-grid/controlled-state) for the full list of controllable slots.
+
+## How migration is tracked
+
+Every break ships with a changeset. To inspect what changed at a given version, read the affected package's `CHANGELOG.md` (`packages/data-grid/{core,react/react,react/shadcn,react/heroui}/CHANGELOG.md`) or the GitHub release notes.

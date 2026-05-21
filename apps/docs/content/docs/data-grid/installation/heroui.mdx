@@ -1,0 +1,36 @@
+---
+title: HeroUI install
+description: Install the data grid for a HeroUI-based React app — packages, CSS import, and a working minimal example.
+---
+
+# Install for HeroUI
+
+## 1. Install packages
+
+```bash
+pnpm add @ez-kit/data-grid-heroui @ez-kit/data-grid-react @ez-kit/data-grid-core
+```
+
+The flavor (`@ez-kit/data-grid-heroui`) re-exports everything you need at the call site; you import `data-grid-react` and `data-grid-core` only when you reach for hooks/types directly.
+
+## 2. Import the stylesheet
+
+Pull in the prebuilt CSS once at your app entry:
+
+```ts
+import '@ez-kit/data-grid-heroui/global.css'
+```
+
+This stylesheet defines the CSS tokens and `data-*` selectors the HeroUI flavor's components rely on. You can override any of them from your own design tokens — see [Theming](./data-grid/theming).
+
+## 3. Render a grid
+
+The example below is the published surface, locked to HeroUI.
+
+<DataGridDocsExample exampleId='base-plain' defaultType='heroui' lockFlavor />
+
+That's it — sort, filter, paginate, and select all work out of the box. Branch out from [Getting Started → Next steps](./data-grid/getting-started#3-next-steps) for the per-capability deep dive.
+
+## Source
+
+- `@ez-kit/data-grid-heroui` — [`packages/data-grid/react/heroui/README.md`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/README.md)

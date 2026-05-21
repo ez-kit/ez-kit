@@ -1,0 +1,41 @@
+---
+title: Core (advanced)
+description: The headless engine — what @ez-kit/data-grid-core exposes, what it doesn't, and when to import it directly.
+---
+
+# `@ez-kit/data-grid-core`
+
+`@ez-kit/data-grid-core` is the **headless** layer. No React. No JSX. No UI library. It composes TanStack Table primitives into a configured table engine.
+
+> This page is contributor-level. Most app authors should not import this package directly — install a flavor instead (see [Getting Started](./data-grid/getting-started)).
+
+## When to import it directly
+
+- You're writing a non-React UI flavor (Vue, Svelte, vanilla) on top of the same engine.
+- You're writing tooling that needs headless table behavior (snapshot a sorted/filtered view to CSV, simulate a paginated query in tests, etc.).
+- You're writing tests for column meta or filter functions in isolation from any React render.
+
+## Public surface (overview)
+
+| Export | What it is |
+| --- | --- |
+| `createTable<TRow>(options)` | Build a headless table from data + columns + state. Returns a fully wired model. |
+| Column types | `ColumnDef`, `CellTypeDefinition`, `FilterFn`, `SortingFn`. |
+| Filter / sort built-ins | Reusable predicate functions for `includesString`, `equals`, `inNumberRange`, `between`, etc. |
+| State types | `SortingState`, `ColumnFiltersState`, `PaginationState`, `RowSelectionState`, `ExpandedState`, `ColumnPinningState`, `RowPinningState`, `ColumnSizingState`. |
+
+## Rules
+
+- This package MUST NOT import React, JSX, or any UI library (constitution Principle I).
+- All updates return new objects (constitution: Additional Constraints — Immutability).
+- Public API is exported exclusively from `src/index.ts`.
+
+## See also
+
+- [Architecture](./data-grid/architecture)
+- [React adapter](./data-grid/advanced/react)
+
+## Source
+
+- [`packages/data-grid/core/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/index.ts)
+- [`packages/data-grid/core/README.md`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/README.md)

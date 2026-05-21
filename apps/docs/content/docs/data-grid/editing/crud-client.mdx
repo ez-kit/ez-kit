@@ -1,0 +1,24 @@
+---
+title: CRUD (Client)
+description: The same CRUD workflow against an in-memory store — useful for demos, prototypes, and offline-first apps.
+---
+
+# CRUD in-memory
+
+The same UX as [CRUD (Server)](./data-grid/editing/crud-server) but with an in-memory store. Useful for prototypes, offline-first apps, and Storybook-style demos.
+
+## Usage
+
+<DataGridDocsExample exampleId='crud-client' />
+
+## When to choose this over the server variant
+
+- You're prototyping.
+- You don't have a backend yet (or you have one and don't want to round-trip every keystroke).
+- You're offline-first and persist later via a sync engine (PowerSync, Replicache, etc.).
+
+The grid doesn't care which one you use — the API surface is identical.
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/)

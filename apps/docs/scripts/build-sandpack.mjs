@@ -26,6 +26,9 @@ const packageConfigs = [
 		key: 'data-grid-react',
 		dir: 'packages/data-grid/react/react',
 		entry: 'src/index.ts',
+		subEntries: {
+			'cell-types': 'src/cell-types/index.ts',
+		},
 	},
 	{
 		name: '@ez-kit/data-grid-heroui',
@@ -173,6 +176,10 @@ const buildShadcnSandpackCss = async () => {
 
 for (const config of packageConfigs) {
 	const packageDir = path.join(repoDir, config.dir)
+	const subEntries = config.subEntries ?? {}
+	const subEntryArgs = Object.entries(subEntries).flatMap(([subKey, subPath]) => [
+		`--entry.${subKey}=${path.join(packageDir, subPath)}`,
+	])
 
 	execFileSync(
 		'pnpm',
@@ -180,6 +187,7 @@ for (const config of packageConfigs) {
 			'exec',
 			'tsup',
 			`--entry.${config.key}=${path.join(packageDir, config.entry)}`,
+			...subEntryArgs,
 			'--format',
 			'esm',
 			'--platform',
@@ -212,6 +220,16 @@ for (const config of packageConfigs) {
 			: shadcnPackageFiles
 
 	targetFiles[`/node_modules/${config.name}/index.js`] = readFileSync(builtFile, 'utf8')
+
+	const subEntryExports = {}
+
+	for (const subKey of Object.keys(subEntries)) {
+		const subBuiltFile = path.join(tmpDir, `${subKey}.mjs`)
+
+		targetFiles[`/node_modules/${config.name}/${subKey}.js`] = readFileSync(subBuiltFile, 'utf8')
+		subEntryExports[`./${subKey}`] = `./${subKey}.js`
+	}
+
 	targetFiles[`/node_modules/${config.name}/package.json`] = JSON.stringify(
 		{
 			name: config.name,
@@ -220,6 +238,7 @@ for (const config of packageConfigs) {
 			module: './index.js',
 			exports: {
 				'.': './index.js',
+				...subEntryExports,
 				...(config.sandpackCss ? { './sandpack.css': './sandpack.css' } : {}),
 			},
 		},
@@ -333,6 +352,20 @@ writeFileSync(
 		`export const dataGridExamplesManifest = ${JSON.stringify(manifest, null, 2)} as const\n\n` +
 		`export type DataGridExampleId = (typeof dataGridExamplesManifest)[number]['id']\n\n` +
 		`export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType> = {\n${primitiveRegistryEntries}\n}\n`,
+)
+
+const rawSourceEntries = {}
+
+for (const entry of manifest) {
+	const sourcePath = path.join(examplesDir, entry.sourceFile)
+	rawSourceEntries[entry.id] = readFileSync(sourcePath, 'utf8').replace(/\s+$/u, '\n')
+}
+
+writeFileSync(
+	path.join(examplesGeneratedDir, 'data-grid-source.ts'),
+	header +
+		`export const dataGridExampleSources = ${JSON.stringify(rawSourceEntries, null, 2)} as const\n\n` +
+		`export type DataGridSourceExampleId = keyof typeof dataGridExampleSources\n`,
 )
 
 writeFileSync(

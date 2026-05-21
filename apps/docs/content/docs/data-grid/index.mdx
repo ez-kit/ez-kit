@@ -1,0 +1,34 @@
+---
+title: Data Grid
+description: Headless data grid for shadcn and HeroUI — composable columns, sorting, filtering, selection, pinning, virtualization, and inline editing.
+---
+
+# Data Grid
+
+ez-kit's data grid is a **headless engine** with two pre-built UI flavors. You pick the flavor that matches your design system; the behavior layer is shared.
+
+## Packages
+
+| Package | What it is | Who imports it |
+| --- | --- | --- |
+| `@ez-kit/data-grid-core` | UI-agnostic engine on top of TanStack Table. No React. | Internal & advanced consumers building a custom flavor. |
+| `@ez-kit/data-grid-react` | React adapter — hooks, context, semantic render slots. No styling. | Internal & advanced consumers building a custom flavor. |
+| `@ez-kit/data-grid-shadcn` | shadcn-flavored Data Grid component. | App authors using shadcn. |
+| `@ez-kit/data-grid-heroui` | HeroUI-flavored Data Grid component. | App authors using HeroUI. |
+
+The dependency direction is one-way: `core` → `react` → flavor. UI-kit specifics never leak down.
+
+## Where to go next
+
+- [Getting Started](./data-grid/getting-started) — install + minimum example
+- [Architecture](./data-grid/architecture) — the three-layer model explained
+- Installation: [shadcn](./data-grid/installation/shadcn) · [HeroUI](./data-grid/installation/heroui)
+
+Once you have a grid rendering, jump into the per-capability pages from the sidebar — columns, sorting, filtering, selection, pinning, virtualization, cells, controlled state, editing, fallbacks.
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/index.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/index.ts)
+- `@ez-kit/data-grid-shadcn` — [`packages/data-grid/react/shadcn/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/index.ts)
+- `@ez-kit/data-grid-heroui` — [`packages/data-grid/react/heroui/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/index.ts)

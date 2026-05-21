@@ -1,0 +1,43 @@
+---
+title: Editing
+description: Inline cell editing — double-click to edit, blur to commit, escape to cancel, validation on commit.
+---
+
+# Inline Editing
+
+Inline editing lets users update cells in place. Double-click a cell to enter edit mode, blur or Enter to commit, Escape to cancel.
+
+## Usage
+
+<DataGridDocsExample exampleId='base-editing' />
+
+```ts
+const columns = defineColumns<User>([
+	{
+		id: 'email',
+		accessorKey: 'email',
+		meta: { editable: true, editType: 'email' },
+	},
+])
+
+const grid = useDataGrid({
+	data,
+	columns,
+	onCellEdit: ({ rowId, columnId, value }) => updateRow(rowId, { [columnId]: value }),
+})
+```
+
+## Edit types
+
+`meta.editType` picks the input rendered while editing: `'text'`, `'number'`, `'email'`, `'select'`, `'date'`, `'boolean'`. Custom edit types follow the same pattern as [Custom Cell Types](./data-grid/cells/custom-cell-types).
+
+## See also
+
+- [CRUD (server)](./data-grid/editing/crud-server) — full create/update/delete with a real backend
+- [CRUD (client)](./data-grid/editing/crud-client) — same UX, in-memory store
+- [Creating](./data-grid/editing/creating) — new-row workflow
+- [Validation](./data-grid/editing/validation) — async + sync validation patterns
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/editing-modal.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/editing-modal.tsx)

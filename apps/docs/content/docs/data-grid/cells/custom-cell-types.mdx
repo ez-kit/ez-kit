@@ -1,0 +1,55 @@
+---
+title: Custom Cell Types
+description: Define and register your own cell types — typed renderer, typed meta, reused across many columns and grids.
+---
+
+# Custom Cell Types
+
+When the built-in cell types don't cover your needs, register your own. A custom cell type is a typed renderer + a typed meta shape. You write it once, then opt columns in via `meta.cellType`.
+
+## Usage
+
+<DataGridDocsExample exampleId='custom-cell-types' />
+
+```ts
+import { defineCellType } from '@ez-kit/data-grid-react'
+
+export const statusCell = defineCellType({
+	id: 'status',
+	meta: {
+		toneMap: {} as Record<string, 'positive' | 'warning' | 'critical' | 'neutral'>,
+	},
+	render: ({ value, meta }) => (
+		<span data-tone={meta.toneMap[value as string] ?? 'neutral'}>{value as string}</span>
+	),
+})
+```
+
+Then extend the grid with it:
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns: defineColumns<Order>([
+		{
+			id: 'status',
+			accessorKey: 'status',
+			meta: { cellType: 'status', toneMap: { active: 'positive', cancelled: 'critical' } },
+		},
+	]),
+	cellTypes: [statusCell],
+})
+```
+
+## Type-safety
+
+`defineCellType` infers the meta shape so columns using your cell type get autocomplete on the extra `meta` fields. Mismatched meta is a TS error at the column site, not a runtime surprise.
+
+## See also
+
+- [Column helper](./data-grid/columns/column-helper) — typed column builder
+- [Cell types](./data-grid/cells/cell-types) — built-ins
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/define-cell-type.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/define-cell-type.ts)

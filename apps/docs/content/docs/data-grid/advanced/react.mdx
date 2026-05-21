@@ -1,0 +1,61 @@
+---
+title: React adapter (advanced)
+description: The React layer of the data grid — useDataGrid, defineColumns, createDataGrid, and how to build your own UI flavor.
+---
+
+# `@ez-kit/data-grid-react`
+
+The React adapter sits between [core](./data-grid/advanced/core) and the UI-kit flavors. It exposes hooks, context, and **semantic render slots** — no styling.
+
+> This page is contributor-level. Most app authors should install a flavor instead (see [Getting Started](./data-grid/getting-started)).
+
+## Public surface (overview)
+
+| Export | What it is |
+| --- | --- |
+| `useDataGrid(options)` | The single React entry point. Wires `createTable` from core into a memoized React model + context. |
+| `defineColumns<TRow>(defs)` | Typed column array helper. |
+| `createColumnHelper<TRow>()` | Typed column **builder** (see [Column Helper](./data-grid/columns/column-helper)). |
+| `defineCellType(def)` | Typed cell-type registration (see [Custom Cell Types](./data-grid/cells/custom-cell-types)). |
+| `createDataGrid(components)` | **Inject a UI-kit's components.** Flavor packages call this exactly once at module scope. |
+| `DataGrid.*` | Compound render slots — `Toolbar`, `Table`, `Header`, `Body`, `Row`, `Cell`, `Pagination`, `PageSizer`, `SelectionBar`, `CreateTrigger`, `ColumnVisibilityTrigger`, `SortTrigger`, `GlobalFilterInput`, `ActiveFiltersBar`, `ClearFiltersButton`, `FilterPanel`, `CreatingModal`, `EditingModal`, `LoadingBody`, `EmptyStateRow`, `NoResultsRow`. |
+
+## Build your own UI flavor
+
+The shadcn and HeroUI flavors are reference implementations of one pattern. To add a third flavor (Mantine, MUI, custom, …):
+
+```ts
+// my-flavor/src/index.ts
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+import { MyTable, MyTr, MyTh, MyTd, MyPagination /* … */ } from './components'
+
+export const DataGrid = createDataGrid({
+	Table: MyTable,
+	Row: MyTr,
+	HeaderCell: MyTh,
+	Cell: MyTd,
+	Pagination: MyPagination,
+	// …all the components the shared layer needs
+})
+```
+
+The shared React layer renders to your components via `data-*` attributes. Your CSS targets those attributes. The constitution's Principle II keeps the contract clean: **no styling in the shared layer**.
+
+## Rules
+
+- This package MUST NOT import any UI kit (constitution Principle I).
+- This package MUST NOT add styling (`style={{}}`, `className`, Tailwind) to elements; only **semantic `data-*` attributes** (constitution Principle II).
+- Public API is exported exclusively from `src/index.ts`.
+
+## See also
+
+- [Architecture](./data-grid/architecture)
+- [Core (advanced)](./data-grid/advanced/core)
+- [Theming](./data-grid/theming) — what flavors actually style
+
+## Source
+
+- [`packages/data-grid/react/react/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/index.ts)
+- shadcn reference flavor — [`packages/data-grid/react/shadcn/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/index.ts)
+- HeroUI reference flavor — [`packages/data-grid/react/heroui/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/index.ts)

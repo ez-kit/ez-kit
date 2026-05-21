@@ -1,0 +1,41 @@
+---
+title: Filter Panel
+description: Render a side-panel filter UI with all filterable columns visible at once, plus chip-based active filter display.
+---
+
+# Filter Panel
+
+When per-column popovers feel cramped, switch to a side panel that lists every filterable column in one place.
+
+## Usage
+
+<DataGridDocsExample exampleId='filter-panel' />
+
+The panel is a `<DataGrid.FilterPanel />` slot. Each row corresponds to a filterable column; the engine reads `meta.filterVariant` and `meta.operators` to pick controls.
+
+A complementary surface is the active-filters chip strip:
+
+<DataGridDocsExample exampleId='filter-chips' />
+
+```tsx
+<DataGrid.ActiveFiltersBar />
+<DataGrid.ClearFiltersButton />
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `meta.filterVariant` | `'text' \| 'number' \| 'select' \| 'multiselect' \| 'date' \| 'dateRange'` | Drives the input rendered in the panel. |
+| `meta.options` | `Array<{ label, value }>` | Required when variant is `'select'` or `'multiselect'`. |
+| `meta.operators` | `Operator[]` | See [Operators](./data-grid/filtering/operators). |
+
+## See also
+
+- [Operators](./data-grid/filtering/operators)
+- [Date range](./data-grid/filtering/date-range)
+- [Multi-value](./data-grid/filtering/multi-value)
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/filter-panel.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/filter-panel.tsx)

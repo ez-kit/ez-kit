@@ -1,0 +1,5 @@
+{
+	"title": "Columns",
+	"description": "Defining and configuring columns",
+	"pages": ["index", "column-helper", "column-visibility", "column-pinning", "resizing"]
+}

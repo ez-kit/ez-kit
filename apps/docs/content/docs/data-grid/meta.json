@@ -1,0 +1,26 @@
+{
+	"title": "Data Grid",
+	"description": "Headless data grid with shadcn and HeroUI flavors",
+	"pages": [
+		"index",
+		"getting-started",
+		"architecture",
+		"installation",
+		"columns",
+		"sorting",
+		"filtering",
+		"pagination",
+		"selection",
+		"row-pinning",
+		"virtualization",
+		"cells",
+		"expanding",
+		"controlled-state",
+		"editing",
+		"fallbacks",
+		"sticky-header",
+		"theming",
+		"advanced",
+		"migration"
+	]
+}

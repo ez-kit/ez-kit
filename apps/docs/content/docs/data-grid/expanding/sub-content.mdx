@@ -1,0 +1,39 @@
+---
+title: Expanding · Sub-content
+description: Reveal an extra row of content beneath any row — order details, JSON payloads, child grids.
+---
+
+# Sub-content
+
+Click a row to reveal a sub-row of arbitrary content beneath it. Common uses: order line items, JSON detail panels, error stack traces.
+
+## Usage
+
+<DataGridDocsExample exampleId='expanding-sub-content' />
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	enableExpanding: true,
+	renderSubRow: (row) => <OrderDetails order={row.original} />,
+})
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `enableExpanding` | `boolean` | Master switch. Default `false`. |
+| `renderSubRow` | `(row) => ReactNode` | Renders the expanded content. Required when expanding is on. |
+| `state.expanded` | `ExpandedState` | Controlled expand state. |
+| `onExpandedChange` | `(updater) => void` | Subscribe. |
+
+## See also
+
+- [Tree](./data-grid/expanding/tree) — nested rows with their own columns
+- [Controlled](./data-grid/expanding/controlled) — drive expand state from outside
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)

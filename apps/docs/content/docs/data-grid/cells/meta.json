@@ -1,0 +1,5 @@
+{
+	"title": "Cells",
+	"description": "Cell rendering and custom cell types",
+	"pages": ["cell-types", "custom-cell-types", "date-cell"]
+}

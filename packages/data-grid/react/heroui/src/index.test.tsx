@@ -7,13 +7,7 @@ import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { MultiSelectFilter } from './blocks/MultiSelectFilter'
 import { PageSizer } from './blocks/PageSizer'
 
-import {
-	CellTypesProvider,
-	cellTypes,
-	DataGrid,
-	GridComponentsProvider,
-	useDataGrid,
-} from './index'
+import { CellTypesProvider, cellTypes, DataGrid, GridComponentsProvider, useDataGrid } from './index'
 
 type User = {
 	id: number
@@ -55,7 +49,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 		render(<DataGrid table={createDataGridInstance(table)} />)
 
-		const checkbox = screen.getByRole('checkbox', { name: /^Select row/ })
+		const checkbox = screen.getByRole('checkbox', { name: /Select row/i })
 		fireEvent.click(checkbox)
 
 		expect(table.getIsAllRowsSelected()).toBe(true)

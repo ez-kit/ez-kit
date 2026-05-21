@@ -1,0 +1,39 @@
+---
+title: Global Filtering
+description: A single search box that filters rows across every searchable column at once.
+---
+
+# Global Filtering
+
+Sometimes a user just wants one search box, not per-column filters. Global filtering runs a single string match across every column that opts in.
+
+## Usage
+
+<DataGridDocsExample exampleId='global-filtering' />
+
+```tsx
+<DataGrid.GlobalFilterInput placeholder='Search…' />
+```
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	enableGlobalFilter: true,
+	globalFilterFn: 'includesString', // default
+})
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `enableGlobalFilter` | `boolean` | Master switch. Default `false`. |
+| `globalFilterFn` | name \| `(row, value) => boolean` | Default `'includesString'`. Built-ins also include `'equals'`, `'fuzzy'`. |
+| `state.globalFilter` | `string` | Controlled global filter value. |
+| `onGlobalFilterChange` | `(updater) => void` | Subscribe to changes. |
+| Per-column `enableGlobalFilter` | `boolean` | Default `true`. Set `false` to exclude a column from global matching. |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/global-filter-input.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/global-filter-input.tsx)

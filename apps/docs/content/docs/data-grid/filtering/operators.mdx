@@ -1,0 +1,52 @@
+---
+title: Filter Operators
+description: Switch the matching strategy per filter — equals, contains, starts with, between, before, after, and custom predicates.
+---
+
+# Filter Operators
+
+Each column can expose a list of operators the user picks from when filtering — `=`, `≠`, `contains`, `starts with`, `>`, `<`, `between`, and more. Operators are configured per column via `meta`.
+
+## Usage
+
+<DataGridDocsExample exampleId='filter-operators' />
+
+```ts
+const columns = defineColumns<User>([
+	{
+		id: 'name',
+		accessorKey: 'name',
+		meta: {
+			filterVariant: 'text',
+			operators: ['contains', 'equals', 'startsWith'],
+			defaultOperator: 'contains',
+		},
+	},
+])
+```
+
+## Built-in operators
+
+| Operator | Applies to | Behavior |
+| --- | --- | --- |
+| `equals` | any | strict equality |
+| `notEquals` | any | strict inequality |
+| `contains` | string | substring match (case-insensitive by default) |
+| `startsWith` / `endsWith` | string | prefix / suffix |
+| `gt` / `gte` / `lt` / `lte` | number, date | comparison |
+| `between` | number, date | inclusive range |
+| `in` | any | row value is one of a set (see [Multi-value](./data-grid/filtering/multi-value)) |
+| `notIn` | any | inverse of `in` |
+| `isEmpty` / `isNotEmpty` | any | null / undefined / empty string |
+
+## Custom operators
+
+```ts
+meta: {
+	operators: ['contains', { id: 'fuzzy', label: 'Fuzzy match', fn: fuzzyMatch }],
+}
+```
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts)

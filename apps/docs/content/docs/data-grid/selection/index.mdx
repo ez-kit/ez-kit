@@ -1,0 +1,41 @@
+---
+title: Selection
+description: Row selection via checkboxes — single or multi, with controlled state and bulk-action surfaces.
+---
+
+# Selection
+
+Render a checkbox column to let users select rows, then act on them with a bulk-action bar.
+
+## Usage
+
+<DataGridDocsExample exampleId='base-selection' />
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	enableRowSelection: true,
+	enableMultiRowSelection: true,
+})
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `enableRowSelection` | `boolean \| (row) => boolean` | Master switch. Pass a fn to enable per-row. Default `false`. |
+| `enableMultiRowSelection` | `boolean` | Default `true`. Set `false` to allow only one selected row. |
+| `enableSubRowSelection` | `boolean` | Selecting a parent also selects its sub-rows. |
+| `state.rowSelection` | `Record<string, boolean>` | Controlled selection state. |
+| `onRowSelectionChange` | `(updater) => void` | Subscribe. |
+| `getRowId` | `(row) => string` | REQUIRED if you want stable selection across data refreshes; default uses row index. |
+
+## See also
+
+- [Selection bar](./data-grid/selection/selection-bar) — floating + inline bulk-action UIs
+- [Delete confirmation](./data-grid/selection/delete-confirmation) — destructive bulk-action pattern
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/selection-bar.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/selection-bar.tsx)

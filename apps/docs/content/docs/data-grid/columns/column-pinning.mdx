@@ -1,0 +1,47 @@
+---
+title: Column Pinning
+description: Pin columns to the left or right of the grid so they stay visible while the rest of the table scrolls horizontally.
+---
+
+# Column Pinning
+
+Pinned columns stick to the table edge during horizontal scroll. Useful for keeping an id, name, or row-actions column in view.
+
+## Usage
+
+<DataGridDocsExample exampleId='column-pinning' />
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	initialState: {
+		columnPinning: { left: ['id'], right: ['actions'] },
+	},
+})
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `enablePinning` | `boolean` | Per-column. Default `false`. Set to `true` to allow a column to be pinned. |
+| `initialState.columnPinning` | `{ left?: string[], right?: string[] }` | Initial pinned columns. |
+| `state.columnPinning` | same | Controlled pinning state. |
+| `onColumnPinningChange` | `(updater) => void` | Subscribe to changes for persistence. |
+
+## Notes
+
+The shadcn flavor renders pinned columns by reading `data-pinned` attributes on `<th>`/`<td>` and applying sticky positioning in CSS — this avoids touching the vendored shadcn primitives. The HeroUI flavor does the same against the HeroUI table primitives.
+
+Per [Architecture](./data-grid/architecture) Principle III, pinning overrides live in the flavor's `blocks/` adapters; the vendored shadcn `components/ui/**` files are never modified.
+
+## See also
+
+- [Row pinning](./data-grid/row-pinning)
+- [Columns](./data-grid/columns)
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- shadcn pinning blocks — [`packages/data-grid/react/shadcn/src/blocks/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/blocks/)

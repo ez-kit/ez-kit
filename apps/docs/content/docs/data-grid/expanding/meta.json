@@ -1,0 +1,5 @@
+{
+	"title": "Expanding",
+	"description": "Expand rows into sub-content or tree children",
+	"pages": ["sub-content", "tree", "controlled"]
+}

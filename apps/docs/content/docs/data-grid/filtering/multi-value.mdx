@@ -1,0 +1,46 @@
+---
+title: Multi-value Filter
+description: Filter rows by selecting one or many values from a faceted list — checkbox or multi-select UI.
+---
+
+# Multi-value Filter
+
+For columns with a bounded set of values (status, category, tag), let users pick multiple values at once.
+
+## Usage
+
+<DataGridDocsExample exampleId='filter-multi-value' />
+
+```ts
+const columns = defineColumns<Order>([
+	{
+		id: 'status',
+		accessorKey: 'status',
+		meta: {
+			filterVariant: 'multiselect',
+			options: [
+				{ label: 'Pending', value: 'pending' },
+				{ label: 'Shipped', value: 'shipped' },
+				{ label: 'Delivered', value: 'delivered' },
+				{ label: 'Cancelled', value: 'cancelled' },
+			],
+		},
+	},
+])
+```
+
+## Faceted counts
+
+When `meta.faceted` is `true`, each option shows the count of rows currently matching it (post-other-filters). Useful for analytics-shaped grids.
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `meta.filterVariant` | `'select' \| 'multiselect'` | `'select'` allows one value; `'multiselect'` allows many. |
+| `meta.options` | `Array<{ label, value }>` | Required. |
+| `meta.faceted` | `boolean` | Default `false`. When `true`, options show live counts. |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)

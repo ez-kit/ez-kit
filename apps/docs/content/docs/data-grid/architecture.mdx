@@ -1,0 +1,46 @@
+---
+title: Architecture
+description: The three-layer architecture behind the data grid — headless core, framework adapter, and UI-kit flavor.
+---
+
+# Architecture
+
+The data grid is built in three layers with strictly one-way dependencies.
+
+```text
+┌────────────────────────────────────────────────────┐
+│ Flavor   @ez-kit/data-grid-shadcn / -heroui        │ ← what your app imports
+│          createDataGrid(components)                │
+└──────────────────────▲─────────────────────────────┘
+                       │ depends on
+┌──────────────────────┴─────────────────────────────┐
+│ React    @ez-kit/data-grid-react                   │ ← no UI library, no styling
+│          useDataGrid, defineColumns, semantic slots│
+└──────────────────────▲─────────────────────────────┘
+                       │ depends on
+┌──────────────────────┴─────────────────────────────┐
+│ Core     @ez-kit/data-grid-core                    │ ← no React
+│          headless table on TanStack Table          │
+└────────────────────────────────────────────────────┘
+```
+
+## The rules
+
+1. **`core`** is UI-framework-agnostic. It MUST NOT import React, JSX, or any UI library. It composes TanStack Table primitives into a configured headless engine.
+2. **`react`** adapts `core` for React. It MUST NOT import any UI kit. It exposes hooks, context, and semantic render slots only — no styling, no `className`, no inline `style`. The only element-shape contract it exposes to flavors is **semantic `data-*` attributes** that flavor CSS targets.
+3. **Flavors** (`shadcn`, `heroui`) inject UI components into `react` via `createDataGrid(components)`. They own all visual styling and component composition; they MUST NOT replicate logic that belongs in `core` or `react`.
+
+The rationale: one headless engine, many skins. Mixing layers turns the kit into a fork factory and makes future UI kits a rewrite instead of a wiring exercise.
+
+## When to use which package directly
+
+- You're building an app with shadcn or HeroUI → install the matching flavor. Don't reach below it.
+- You're building a custom UI flavor (a third skin) → import `@ez-kit/data-grid-react` and call `createDataGrid` with your own components. See [Advanced: React](./data-grid/advanced/react).
+- You're building tooling that needs headless table behavior without React → import `@ez-kit/data-grid-core`. See [Advanced: Core](./data-grid/advanced/core).
+
+## Source
+
+- Core — [`packages/data-grid/core/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/index.ts)
+- React — [`packages/data-grid/react/react/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/index.ts)
+- shadcn flavor — [`packages/data-grid/react/shadcn/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/index.ts)
+- HeroUI flavor — [`packages/data-grid/react/heroui/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/index.ts)

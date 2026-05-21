@@ -1,0 +1,47 @@
+---
+title: Row Pinning
+description: Pin rows to the top or bottom of the grid so they stay visible while the rest of the table scrolls.
+---
+
+# Row Pinning
+
+Pinned rows stay anchored to the top or bottom of the table. Useful for summary rows, "you are here" markers, or recently-edited rows.
+
+## Usage
+
+Plain row pinning:
+
+<DataGridDocsExample exampleId='row-pinning-plain' />
+
+Row pinning combined with a sticky header:
+
+<DataGridDocsExample exampleId='row-pinning-sticky-header' />
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	enableRowPinning: true,
+	initialState: {
+		rowPinning: { top: ['row-1'], bottom: ['row-99'] },
+	},
+})
+```
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `enableRowPinning` | `boolean` | Master switch. Default `false`. |
+| `state.rowPinning` | `{ top?: string[], bottom?: string[] }` | Controlled pinning. |
+| `onRowPinningChange` | `(updater) => void` | Subscribe. |
+| `getRowId` | `(row) => string` | REQUIRED for stable pinning across data refreshes. |
+
+## See also
+
+- [Column pinning](./data-grid/columns/column-pinning)
+- [Sticky header](./data-grid/sticky-header)
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)

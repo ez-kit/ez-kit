@@ -61,15 +61,15 @@ export function Tr({ children, ...props }: TrProps) {
 
 export function Th({ pinned, className, ...props }: ThProps) {
 	const { rowHeaderId } = useContext(HeaderContext)
-	const propsWithDataAttrs = props as ThProps & { 'data-column-id'?: string }
-	const columnId = propsWithDataAttrs['data-column-id']
-	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
-	const isRowHeader = rowHeaderId !== undefined && columnId === rowHeaderId
+	const propsWithData = props as ThProps & { 'data-column-id'?: string }
+	const columnId = propsWithData['data-column-id']
+	const baseHeroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
+	const isRowHeader = rowHeaderId !== undefined && columnId !== undefined && columnId === rowHeaderId
 	const mergedClassName = cn(className, pinned ? 'bg-surface-secondary' : undefined) ?? ''
 
 	return (
 		<HeroTable.Column
-			{...heroProps}
+			{...baseHeroProps}
 			{...(columnId !== undefined ? { id: columnId } : {})}
 			className={mergedClassName}
 			{...(isRowHeader ? { isRowHeader: true } : {})}
@@ -78,9 +78,7 @@ export function Th({ pinned, className, ...props }: ThProps) {
 }
 
 export function Td({ pinned, className, style, ...props }: TdProps) {
-	const resolvedStyle = pinned
-		? { backgroundColor: 'var(--dg-pin-cell-background)', ...style }
-		: style
+	const resolvedStyle = pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style
 	return (
 		<HeroTable.Cell
 			{...(props as unknown as ComponentProps<typeof HeroTable.Cell>)}
@@ -97,10 +95,10 @@ function findRowHeaderId(children: React.ReactNode): string | undefined {
 
 		for (const column of Children.toArray(rowChildren)) {
 			if (!isValidElement(column)) continue
-			const columnProps = column.props as { 'data-column-id'?: string; 'data-slot-selection-th'?: string }
-			if (columnProps['data-slot-selection-th'] === 'true') continue
+			const columnProps = column.props as { 'data-column-id'?: string }
 			const columnId = columnProps['data-column-id']
 			if (columnId === undefined) continue
+			if (columnId.includes('__selection__')) continue
 			return columnId
 		}
 	}
