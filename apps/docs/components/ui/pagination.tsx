@@ -52,6 +52,7 @@ function PaginationLink({
       size={size}
       className={cn(className)}
     >
+      {/* eslint-disable-next-line jsx-a11y/anchor-has-content -- children injected via Button asChild + ...props */}
       <a
         aria-current={isActive ? "page" : undefined}
         data-slot="pagination-link"

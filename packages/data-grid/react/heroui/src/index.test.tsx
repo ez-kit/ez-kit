@@ -7,13 +7,7 @@ import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
 import { MultiSelectFilter } from './blocks/MultiSelectFilter'
 import { PageSizer } from './blocks/PageSizer'
 
-import {
-	CellTypesProvider,
-	cellTypes,
-	DataGrid,
-	GridComponentsProvider,
-	useDataGrid,
-} from './index'
+import { CellTypesProvider, cellTypes, DataGrid, GridComponentsProvider, useDataGrid } from './index'
 
 type User = {
 	id: number

@@ -6,7 +6,7 @@ import { Children, createContext, isValidElement, useContext, useMemo } from 're
 import type { TableProps, TbodyProps, TdProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
 import type { ComponentProps, Key } from 'react'
 
-const HeaderContext = createContext<{ inHeader: boolean; rowHeaderKey?: Key }>({ inHeader: false })
+const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>({ inHeader: false })
 
 export function Table({ children, ...props }: TableProps) {
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable>
@@ -22,11 +22,11 @@ export function Table({ children, ...props }: TableProps) {
 
 export function Thead({ children, ...props }: TheadProps) {
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Header>
-	const rowHeaderKey = useMemo(() => findRowHeaderKey(children), [children])
+	const rowHeaderId = useMemo(() => findRowHeaderId(children), [children])
 
 	return (
 		<HeroTable.Header {...heroProps}>
-			<HeaderContext value={{ inHeader: true, ...(rowHeaderKey === undefined ? {} : { rowHeaderKey }) }}>
+			<HeaderContext value={{ inHeader: true, ...(rowHeaderId === undefined ? {} : { rowHeaderId }) }}>
 				{children}
 			</HeaderContext>
 		</HeroTable.Header>
@@ -78,9 +78,7 @@ export function Th({ pinned, className, ...props }: ThProps) {
 }
 
 export function Td({ pinned, className, style, ...props }: TdProps) {
-	const resolvedStyle = pinned
-		? { backgroundColor: 'var(--dg-pin-cell-background)', ...style }
-		: style
+	const resolvedStyle = pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style
 	return (
 		<HeroTable.Cell
 			{...(props as unknown as ComponentProps<typeof HeroTable.Cell>)}
@@ -90,7 +88,7 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
 	)
 }
 
-function findRowHeaderKey(children: React.ReactNode): Key | undefined {
+function findRowHeaderId(children: React.ReactNode): string | undefined {
 	for (const row of Children.toArray(children)) {
 		if (!isValidElement(row)) continue
 		const rowChildren = (row.props as { children?: React.ReactNode }).children
