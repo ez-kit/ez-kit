@@ -6,10 +6,7 @@ import * as React from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import * as React from 'react'
 
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -97,7 +94,7 @@ function Carousel({
 
 	React.useEffect(() => {
 		if (!api) return
-		// eslint-disable-next-line react-hooks/set-state-in-effect -- syncing embla state with React on mount
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		onSelect(api)
 		api.on('reInit', onSelect)
 		api.on('select', onSelect)

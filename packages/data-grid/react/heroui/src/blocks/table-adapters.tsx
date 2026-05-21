@@ -60,11 +60,11 @@ export function Tr({ children, ...props }: TrProps) {
 }
 
 export function Th({ pinned, className, ...props }: ThProps) {
-	const { rowHeaderKey } = useContext(HeaderContext)
+	const { rowHeaderId } = useContext(HeaderContext)
 	const propsWithData = props as ThProps & { 'data-column-id'?: string }
 	const columnId = propsWithData['data-column-id']
 	const baseHeroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
-	const isRowHeader = rowHeaderKey !== undefined && columnId !== undefined && columnId === rowHeaderKey
+	const isRowHeader = rowHeaderId !== undefined && columnId !== undefined && columnId === rowHeaderId
 	const mergedClassName = cn(className, pinned ? 'bg-surface-secondary' : undefined) ?? ''
 
 	return (
