@@ -55,7 +55,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 		render(<DataGrid table={createDataGridInstance(table)} />)
 
-		const checkbox = screen.getByRole('checkbox', { name: 'Select row' })
+		const checkbox = screen.getByRole('checkbox', { name: /Select row/i })
 		fireEvent.click(checkbox)
 
 		expect(table.getIsAllRowsSelected()).toBe(true)

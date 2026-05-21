@@ -150,6 +150,7 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 								<Th
 									data-slot='th'
 									data-slot-selection-th='true'
+									data-column-id={header.column.id}
 									key={header.id}
 									colSpan={header.colSpan}
 									style={pinVars}
@@ -171,6 +172,7 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 						return (
 							<Th
 								data-slot='th'
+								data-column-id={header.column.id}
 								key={header.id}
 								colSpan={header.colSpan}
 								style={pinVars}

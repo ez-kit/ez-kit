@@ -61,13 +61,16 @@ export function Tr({ children, ...props }: TrProps) {
 
 export function Th({ pinned, className, ...props }: ThProps) {
 	const { rowHeaderKey } = useContext(HeaderContext)
-	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
-	const isRowHeader = rowHeaderKey !== undefined && heroProps.id === rowHeaderKey
+	const propsWithData = props as ThProps & { 'data-column-id'?: string }
+	const columnId = propsWithData['data-column-id']
+	const baseHeroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
+	const isRowHeader = rowHeaderKey !== undefined && columnId !== undefined && columnId === rowHeaderKey
 	const mergedClassName = cn(className, pinned ? 'bg-surface-secondary' : undefined) ?? ''
 
 	return (
 		<HeroTable.Column
-			{...heroProps}
+			{...baseHeroProps}
+			{...(columnId !== undefined ? { id: columnId } : {})}
 			className={mergedClassName}
 			{...(isRowHeader ? { isRowHeader: true } : {})}
 		/>
@@ -94,18 +97,12 @@ function findRowHeaderKey(children: React.ReactNode): Key | undefined {
 
 		for (const column of Children.toArray(rowChildren)) {
 			if (!isValidElement(column)) continue
-			const columnKey = column.key
-			if (columnKey == null) continue
-			const normalizedKey = normalizeKey(columnKey)
-			if (String(normalizedKey).includes('__selection__')) continue
-			return normalizedKey
+			const columnProps = column.props as { 'data-column-id'?: string }
+			const columnId = columnProps['data-column-id']
+			if (columnId === undefined) continue
+			if (columnId.includes('__selection__')) continue
+			return columnId
 		}
 	}
 	return undefined
-}
-
-function normalizeKey(key: string | number | bigint): Key {
-	const normalized = typeof key === 'bigint' ? String(key) : key
-	if (typeof normalized === 'string' && normalized.startsWith('.$')) return normalized.slice(2)
-	return normalized
 }
