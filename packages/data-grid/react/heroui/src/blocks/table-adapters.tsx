@@ -6,7 +6,7 @@ import { Children, createContext, isValidElement, useContext, useMemo } from 're
 import type { TableProps, TbodyProps, TdProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
 import type { ComponentProps, Key } from 'react'
 
-const HeaderContext = createContext<{ inHeader: boolean; rowHeaderKey?: Key }>({ inHeader: false })
+const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>({ inHeader: false })
 
 export function Table({ children, ...props }: TableProps) {
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable>
@@ -22,11 +22,11 @@ export function Table({ children, ...props }: TableProps) {
 
 export function Thead({ children, ...props }: TheadProps) {
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Header>
-	const rowHeaderKey = useMemo(() => findRowHeaderKey(children), [children])
+	const rowHeaderId = useMemo(() => findRowHeaderId(children), [children])
 
 	return (
 		<HeroTable.Header {...heroProps}>
-			<HeaderContext value={{ inHeader: true, ...(rowHeaderKey === undefined ? {} : { rowHeaderKey }) }}>
+			<HeaderContext value={{ inHeader: true, ...(rowHeaderId === undefined ? {} : { rowHeaderId }) }}>
 				{children}
 			</HeaderContext>
 		</HeroTable.Header>
@@ -60,14 +60,17 @@ export function Tr({ children, ...props }: TrProps) {
 }
 
 export function Th({ pinned, className, ...props }: ThProps) {
-	const { rowHeaderKey } = useContext(HeaderContext)
+	const { rowHeaderId } = useContext(HeaderContext)
+	const propsWithDataAttrs = props as ThProps & { 'data-column-id'?: string }
+	const columnId = propsWithDataAttrs['data-column-id']
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Column>
-	const isRowHeader = rowHeaderKey !== undefined && heroProps.id === rowHeaderKey
+	const isRowHeader = rowHeaderId !== undefined && columnId === rowHeaderId
 	const mergedClassName = cn(className, pinned ? 'bg-surface-secondary' : undefined) ?? ''
 
 	return (
 		<HeroTable.Column
 			{...heroProps}
+			{...(columnId !== undefined ? { id: columnId } : {})}
 			className={mergedClassName}
 			{...(isRowHeader ? { isRowHeader: true } : {})}
 		/>
@@ -87,25 +90,19 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
 	)
 }
 
-function findRowHeaderKey(children: React.ReactNode): Key | undefined {
+function findRowHeaderId(children: React.ReactNode): string | undefined {
 	for (const row of Children.toArray(children)) {
 		if (!isValidElement(row)) continue
 		const rowChildren = (row.props as { children?: React.ReactNode }).children
 
 		for (const column of Children.toArray(rowChildren)) {
 			if (!isValidElement(column)) continue
-			const columnKey = column.key
-			if (columnKey == null) continue
-			const normalizedKey = normalizeKey(columnKey)
-			if (String(normalizedKey).includes('__selection__')) continue
-			return normalizedKey
+			const columnProps = column.props as { 'data-column-id'?: string; 'data-slot-selection-th'?: string }
+			if (columnProps['data-slot-selection-th'] === 'true') continue
+			const columnId = columnProps['data-column-id']
+			if (columnId === undefined) continue
+			return columnId
 		}
 	}
 	return undefined
-}
-
-function normalizeKey(key: string | number | bigint): Key {
-	const normalized = typeof key === 'bigint' ? String(key) : key
-	if (typeof normalized === 'string' && normalized.startsWith('.$')) return normalized.slice(2)
-	return normalized
 }
