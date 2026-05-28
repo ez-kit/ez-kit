@@ -1,5 +1,7 @@
 {
 	"title": "zu-store",
 	"description": "Zustand-powered React context stores",
+	"icon": "Boxes",
+	"root": true,
 	"pages": ["index", "create-context-store", "use-store-state", "with-history"]
 }

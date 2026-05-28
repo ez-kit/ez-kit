@@ -1,6 +1,8 @@
 {
 	"title": "Data Grid",
 	"description": "Headless data grid with shadcn and HeroUI flavors",
+	"icon": "Table",
+	"root": true,
 	"pages": [
 		"index",
 		"getting-started",
