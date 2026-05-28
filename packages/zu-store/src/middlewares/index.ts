@@ -1,2 +1,2 @@
 export { withHistory } from './with-history'
-export type { HistoryOptions, HistoryState, HistoryStore, SetOptions } from './with-history'
+export type { HistoryActionTag, HistoryOptions, HistoryState } from './with-history'

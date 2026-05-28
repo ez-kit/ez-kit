@@ -1,111 +1,65 @@
 ---
-title: withHistory & useHistoryStore
-description: Add undo / redo to any Zustand store. Pause recording, filter changes with a predicate, cap the history depth, and subscribe to history state from React.
+title: withHistory
+description: A real Zustand middleware that adds undo / redo / goto to any store. Records actions automatically, composes with persist and subscribeWithSelector, filters writes by action tag.
 ---
 
-# `withHistory` and `useHistoryStore`
+# `withHistory`
 
-`withHistory` wraps a Zustand store and adds **undo / redo** plus a separate history store. Every call to `setState` (or the returned `set`) is recorded by default; you can pause, predicate-filter, or opt-out of individual writes.
+`withHistory` is a real Zustand `StateCreator` middleware. It wraps an initializer (not a store), so it sees every write — including those issued from inside actions via the inner `set`. It exposes a separate `history` sub-store on the resulting `StoreApi<T>`, with `undo`, `redo`, `goto`, `clear`, `pause`, `resume`, and `skip`.
 
-`useHistoryStore` is the React hook for subscribing to that history store.
+Because it follows the canonical middleware shape and registers a `StoreMutators` entry under `'ez-kit/history'`, it composes cleanly with `persist`, `devtools`, `subscribeWithSelector`, and `immer`.
 
-## `withHistory`
+## Basic usage
 
-### Signature
+<LivePreview path='zu-store/history' title='Counter with undo / redo / goto' />
+
+```tsx
+import { withHistory } from '@ez-kit/zu-store'
+import { useStore } from 'zustand'
+import { createStore } from 'zustand/vanilla'
+
+type State = {
+	count: number
+	increment: () => void
+}
+
+const store = createStore<State>()(
+	withHistory((set) => ({
+		count: 0,
+		increment: () => set((s) => ({ count: s.count + 1 })),
+	})),
+)
+
+store.getState().increment()
+store.history.getState().undo()
+```
+
+## Signature
 
 ```ts
-function withHistory<T extends object>(store: StoreApi<T>, options?: HistoryOptions<T>): HistoryStore<T>
+function withHistory<T>(
+	initializer: StateCreator<T, [...Mps, ['ez-kit/history', unknown]], Mcs>,
+	options?: HistoryOptions<T>,
+): StateCreator<T, Mps, [['ez-kit/history', unknown], ...Mcs]>
 
 type HistoryOptions<T> = {
 	/** Maximum number of past states to keep. Defaults to 100. */
 	limit?: number
 	/** Start history recording paused. Defaults to false. */
 	defaultPaused?: boolean
-	/** Pre-populate the pasts stack. Entries exceeding limit are trimmed from the front. */
+	/** Pre-populate the pasts stack. Trimmed from the front to `limit`. */
 	defaultPasts?: T[]
-	/** Pre-populate the futures stack. */
+	/** Pre-populate the futures stack. Trimmed from the front to `limit`. */
 	defaultFutures?: T[]
-	/** Return false to skip recording this particular change. */
-	shouldPush?: (prev: T, next: T) => boolean
+	/**
+	 * Return false to skip recording this write — the state still updates,
+	 * only the history entry is suppressed.
+	 *
+	 * `action` is the optional third positional arg of `set(partial, replace, action)`,
+	 * the same convention used by Zustand's `devtools` middleware.
+	 */
+	shouldRecord?: (prev: T, next: T, action?: string | { type: string }) => boolean
 }
-
-type HistoryStore<T extends object> = Omit<StoreApi<T>, 'setState'> & {
-	setState: {
-		(partial: T | ((state: T) => T), replace: true, options?: SetOptions): void
-		(partial: T | Partial<T> | ((state: T) => T | Partial<T>), replace?: false, options?: SetOptions): void
-	}
-	set: (partial: Partial<T> | ((state: T) => Partial<T>), options?: SetOptions) => void
-	history: StoreApi<HistoryState<T>>
-}
-
-type SetOptions = {
-	/** When true the setState call is not recorded in history. */
-	skipHistory?: boolean
-}
-```
-
-### Basic usage
-
-<LivePreview path='zu-store/history' title='Counter with undo / redo' />
-
-### Options
-
-#### `limit`
-
-Caps the number of past states. When a new entry would exceed the limit, the oldest entry is dropped (FIFO). Defaults to `100`. Excess entries from `defaultPasts` are trimmed from the **front**.
-
-```ts
-withHistory(store, { limit: 25 })
-```
-
-#### `shouldPush`
-
-A predicate run before each recording. Return `false` to keep the state change but skip the history entry. Useful for collapsing high-frequency updates (typing, drag deltas) into a single undo step.
-
-```ts
-withHistory(store, {
-	shouldPush: (prev, next) => prev.kind !== next.kind, // record only on shape change
-})
-```
-
-#### `defaultPaused`
-
-Start the history paused. Combine with `history.resume()` once your initial bootstrap finishes:
-
-```ts
-const store = withHistory(rawStore, { defaultPaused: true })
-hydrateFromServer()
-store.history.getState().resume()
-```
-
-#### `defaultPasts` / `defaultFutures`
-
-Pre-populate the stacks. Handy when restoring a session.
-
-```ts
-withHistory(store, {
-	defaultPasts: [{ count: 0 }, { count: 1 }],
-})
-```
-
-### `SetOptions.skipHistory`
-
-Both `setState` and `set` accept an options object as the **last** argument. `skipHistory: true` writes to the store without producing a history entry — for example, when applying server-pushed updates that the user shouldn't be able to undo.
-
-```ts
-counterStore.set({ count: 0 }, { skipHistory: true })
-counterStore.setState({ count: 0 }, false, { skipHistory: true })
-```
-
-## `useHistoryStore`
-
-React hook that subscribes to the embedded `history` store. Read the full state or a selected slice.
-
-### Signature
-
-```ts
-function useHistoryStore<T extends object>(store: HistoryStore<T>): HistoryState<T>
-function useHistoryStore<T extends object, S>(store: HistoryStore<T>, selector: (state: HistoryState<T>) => S): S
 
 type HistoryState<T> = {
 	readonly pasts: readonly T[]
@@ -114,28 +68,223 @@ type HistoryState<T> = {
 	readonly isPaused: boolean
 	undo: () => void
 	redo: () => void
+	goto: (index: number) => void
 	clear: () => void
 	pause: () => void
 	resume: () => void
+	skip: (fn: () => void) => void
 }
 ```
 
-### Usage
+The store returned by `createStore<T>()(withHistory(initializer))` is a full `StoreApi<T>` plus a `history: StoreApi<HistoryState<T>>` property.
+
+## Reading history
+
+There are three idiomatic patterns. **Pick the one that matches what your code is doing**, not the first one you remember.
+
+### Imperative one-shot read
+
+For actions like `undo` / `redo` / `clear` / `goto`, where you just need to **trigger** the call. References are stable, so reading them with `getState()` does not subscribe and never causes a re-render.
 
 ```tsx
-// Whole history state — re-renders on any history change.
-const history = useHistoryStore(counterStore)
-
-// Slice — re-renders only when the slice changes.
-const canUndo = useHistoryStore(counterStore, (h) => h.pasts.length > 0)
-const undo = useHistoryStore(counterStore, (h) => h.undo)
+function ToolbarUndoButton() {
+	return (
+		<button onClick={() => store.history.getState().undo()}>
+			Undo
+		</button>
+	)
+}
 ```
 
-`undo`, `redo`, `clear`, `pause`, and `resume` are stable references on the history store, so you can pass them to event handlers without worrying about stale closures.
+### Reactive subscription in React
+
+When the UI needs to **render** based on history state — for example, disabling a button when there is nothing to undo, or rendering a history slider — use `useStore` with a selector.
+
+```tsx
+import { useStore } from 'zustand'
+
+function UndoButton() {
+	const canUndo = useStore(store.history, (h) => h.pasts.length > 0)
+	const undo = useStore(store.history, (h) => h.undo)
+	return (
+		<button onClick={undo} disabled={!canUndo}>
+			Undo
+		</button>
+	)
+}
+```
+
+### Reactive subscription outside React
+
+For keyboard shortcuts, telemetry, autosave, or any non-React code.
+
+```ts
+const unsubscribe = store.history.subscribe((state, prev) => {
+	if (state.pasts.length > prev.pasts.length) {
+		scheduleAutosave(store.getState())
+	}
+})
+```
+
+### Anti-pattern: subscribing to the whole history sub-store
+
+```tsx
+// ❌ Don't do this — re-renders on EVERY recorded write
+function Toolbar() {
+	const history = useStore(store.history)
+	return <button onClick={history.undo}>Undo</button>
+}
+```
+
+Without a selector, the component re-renders every time `pasts` or `futures` changes. If you only need to call an action, read it once with `getState()`. If you need to render based on a slice, select that slice.
+
+## Options
+
+### `limit`
+
+Caps the number of past states. When a new entry would exceed the limit, the oldest entry is dropped from the front. Defaults to `100`.
+
+```ts
+withHistory(initializer, { limit: 25 })
+```
+
+### `shouldRecord`
+
+A predicate run before each recording. Return `false` to keep the state change but skip the history entry. Useful for collapsing high-frequency updates (typing, drag deltas) into nothing.
+
+```ts
+withHistory(initializer, {
+	shouldRecord: (prev, next) => prev.kind !== next.kind,
+})
+```
+
+It also receives the optional third positional arg of `set(partial, replace, action)`, the same convention used by `devtools`:
+
+```ts
+withHistory(
+	(set) => ({
+		count: 0,
+		moveCursor: (pos: number) =>
+			(set as (p: { cursorPos: number }, r?: false, a?: string) => void)(
+				{ cursorPos: pos },
+				false,
+				'cursor/move',
+			),
+	}),
+	{
+		shouldRecord: (_prev, _next, action) => action !== 'cursor/move',
+	},
+)
+```
+
+### `defaultPaused`
+
+Start the history paused. Combine with `history.getState().resume()` once your initial bootstrap finishes:
+
+```ts
+const store = createStore<T>()(
+	withHistory(initializer, { defaultPaused: true }),
+)
+hydrateFromServer()
+store.history.getState().resume()
+```
+
+### `defaultPasts` / `defaultFutures`
+
+Pre-populate the stacks. Handy when restoring a session. Both arrays are trimmed from the front to `limit` symmetrically.
+
+```ts
+withHistory(initializer, {
+	defaultPasts: [{ count: 0 }, { count: 1 }],
+})
+```
+
+## Per-call skip
+
+For a one-off write that should not enter history, use `skip(fn)`. It scopes recording suppression for the duration of `fn` and is fully re-entrant.
+
+External callers:
+
+```ts
+store.history.getState().skip(() => {
+	store.setState({ cursorPos: 5 })
+})
+```
+
+Inside actions, reach the API through the `api` argument:
+
+```ts
+withHistory((set, _get, api) => ({
+	cursorPos: 0,
+	moveCursor: (pos: number) =>
+		api.history.getState().skip(() => set({ cursorPos: pos })),
+}))
+```
+
+## `goto(index)`
+
+`goto` jumps to any position on the linear timeline in a single atomic operation. Position `pasts.length` is the current state. Out-of-range indices are clamped.
+
+```tsx
+function HistorySlider() {
+	const pastsLength = useStore(store.history, (h) => h.pasts.length)
+	const futuresLength = useStore(store.history, (h) => h.futures.length)
+	const goto = useStore(store.history, (h) => h.goto)
+	const total = pastsLength + 1 + futuresLength
+
+	return (
+		<input
+			type='range'
+			min={0}
+			max={total - 1}
+			value={pastsLength}
+			onChange={(e) => goto(Number(e.target.value))}
+		/>
+	)
+}
+```
+
+Each store (the main store and the `history` sub-store) is notified exactly once per `goto`. In React 18+, both updates collapse into a single render thanks to automatic batching.
+
+## Composition with other middlewares
+
+`withHistory` is a real Zustand middleware, so it composes through the standard `StoreMutators` mechanism.
+
+```ts
+import { devtools, persist, subscribeWithSelector } from 'zustand/middleware'
+
+const store = createStore<T>()(
+	devtools(
+		subscribeWithSelector(
+			withHistory(initializer, { defaultPaused: true }),
+		),
+	),
+)
+```
+
+Recommended order: keep `withHistory` close to the initializer (innermost), then `subscribeWithSelector` / `persist` / `devtools` on top.
+
+### `persist` + rehydration
+
+Persist rehydration triggers a `setState` after the store is constructed. That write **will** be recorded as a history entry by default. If you don't want it in the timeline, call `clear()` (or `skip`) from `onRehydrateStorage`:
+
+```ts
+persist(
+	withHistory(initializer),
+	{
+		name: 'my-store',
+		onRehydrateStorage: () => (_state) => {
+			store.history.getState().clear()
+		},
+	},
+)
+```
+
+Alternatively, pass `defaultPaused: true` and call `resume()` after hydration.
 
 ## Combining with `createContextStore`
 
-`withHistory` returns a Zustand-compatible store, so it composes naturally with `createContextStore`:
+`withHistory` is a `StateCreator`, so it composes naturally inside `createContextStore`:
 
 ```ts
 import { createContextStore, withHistory } from '@ez-kit/zu-store'
@@ -143,17 +292,77 @@ import { createStore } from 'zustand/vanilla'
 
 interface DraftState {
 	title: string
+	setTitle: (title: string) => void
 }
 
 const draftStore = createContextStore(({ initialTitle = '' }: { initialTitle?: string }) =>
-	withHistory(createStore<DraftState>()(() => ({ title: initialTitle })), { limit: 50 }),
+	createStore<DraftState>()(
+		withHistory(
+			(set) => ({
+				title: initialTitle,
+				setTitle: (title) => set({ title }),
+			}),
+			{ limit: 50 },
+		),
+	),
 )
-
-function TitleField() {
-	const store = draftStore.useContextStore()
-	const title = draftStore.useStore((s) => s.title)
-	return <input value={title} onChange={(e) => store.set({ title: e.target.value })} />
-}
 ```
 
-Each `<draftStore.Provider>` now has its own history stack — undoing in one panel does not affect another.
+Each `<draftStore.Provider>` then has its own independent history stack.
+
+## Migrating from the wrapper API
+
+In versions before `0.4.0`, `withHistory` was a store wrapper: it took an already-instantiated store and returned an extended one. The new version is a real `StateCreator` middleware. The migration is mechanical.
+
+### Initialization site
+
+```diff
+- const store = withHistory(
+-   createStore<T>()((set) => ({ /* … */ })),
+-   { limit: 50 },
+- )
++ const store = createStore<T>()(
++   withHistory(
++     (set) => ({ /* … */ }),
++     { limit: 50 },
++   ),
++ )
+```
+
+### Per-call skip
+
+```diff
+- store.setState(partial, false, { skipHistory: true })
+- store.set(partial, { skipHistory: true })
++ store.history.getState().skip(() => store.setState(partial))
+```
+
+### `store.set(...)` is removed
+
+`store.set` no longer exists. Use the standard `store.setState(...)` everywhere.
+
+### `useHistoryStore` is removed
+
+```diff
+- import { useHistoryStore } from '@ez-kit/zu-store'
+- const undo = useHistoryStore(store, (h) => h.undo)
++ import { useStore } from 'zustand'
++ const undo = useStore(store.history, (h) => h.undo)
+```
+
+### `shouldPush` is renamed to `shouldRecord`
+
+```diff
+- withHistory(store, { shouldPush: (prev, next) => prev.kind !== next.kind })
++ withHistory(initializer, { shouldRecord: (prev, next) => prev.kind !== next.kind })
+```
+
+`shouldRecord` also gains a third optional `action` argument, mirroring the `devtools` convention.
+
+### `HistoryStore<T>` and `SetOptions` types are removed
+
+The returned store is a plain `StoreApi<T>` extended via the `'ez-kit/history'` mutator. No bespoke wrapper type. Type inference handles the `.history` property automatically.
+
+### Actions now record history automatically
+
+Any action that mutates state through the inner `set` (e.g. `(set) => ({ inc: () => set(...) })`) **will** appear in `pasts`. If a particular action should not be recorded — UI-only mutations, cursor or hover updates — wrap its write in `api.history.getState().skip(...)`.

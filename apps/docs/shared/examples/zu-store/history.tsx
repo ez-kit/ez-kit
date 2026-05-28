@@ -1,40 +1,59 @@
 'use client'
 
-import { useHistoryStore, withHistory } from '@ez-kit/zu-store'
+import { withHistory } from '@ez-kit/zu-store'
 import { useMemo } from 'react'
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
 type CounterState = {
 	count: number
+	increment: () => void
+	decrement: () => void
 }
 
 function createHistoricalStore() {
-	return withHistory(createStore<CounterState>()(() => ({ count: 0 })))
+	return createStore<CounterState>()(
+		withHistory((set) => ({
+			count: 0,
+			increment: () => {
+				set((s) => ({ count: s.count + 1 }))
+			},
+			decrement: () => {
+				set((s) => ({ count: s.count - 1 }))
+			},
+		})),
+	)
 }
 
 export default function HistoryExample() {
 	const store = useMemo(() => createHistoricalStore(), [])
+
 	const count = useStore(store, (s) => s.count)
-	const pastsCount = useHistoryStore(store, (h) => h.pasts.length)
-	const futuresCount = useHistoryStore(store, (h) => h.futures.length)
-	const undo = useHistoryStore(store, (h) => h.undo)
-	const redo = useHistoryStore(store, (h) => h.redo)
-	const clear = useHistoryStore(store, (h) => h.clear)
+	const increment = useStore(store, (s) => s.increment)
+	const decrement = useStore(store, (s) => s.decrement)
+
+	const pastsCount = useStore(store.history, (h) => h.pasts.length)
+	const futuresCount = useStore(store.history, (h) => h.futures.length)
+	const undo = useStore(store.history, (h) => h.undo)
+	const redo = useStore(store.history, (h) => h.redo)
+	const clear = useStore(store.history, (h) => h.clear)
+	const goto = useStore(store.history, (h) => h.goto)
+
+	const timelineLength = pastsCount + 1 + futuresCount
 
 	return (
 		<div className='flex flex-col gap-3'>
 			<div className='flex items-center gap-3'>
 				<button
 					type='button'
-					onClick={() => { store.set({ count: count + 1 }); }}
+					onClick={increment}
 					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 				>
 					+1
 				</button>
 				<button
 					type='button'
-					onClick={() => { store.set({ count: count - 1 }); }}
+					onClick={decrement}
 					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 				>
 					−1
@@ -71,6 +90,25 @@ export default function HistoryExample() {
 					<span className='font-mono'>{futuresCount}</span>
 				</span>
 			</div>
+
+			{timelineLength > 1 && (
+				<div className='flex items-center gap-3'>
+					<span className='text-xs text-fd-muted-foreground'>Jump:</span>
+					<input
+						type='range'
+						min={0}
+						max={timelineLength - 1}
+						value={pastsCount}
+						onChange={(e) => {
+							goto(Number(e.target.value))
+						}}
+						className='flex-1 accent-fd-primary'
+					/>
+					<span className='font-mono text-xs tabular-nums text-fd-muted-foreground'>
+						{pastsCount} / {timelineLength - 1}
+					</span>
+				</div>
+			)}
 		</div>
 	)
 }

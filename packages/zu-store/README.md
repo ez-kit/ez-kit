@@ -43,3 +43,37 @@ const [name, setName] = useStoreState(formStore, 'name')
 ```
 
 → [Full docs](docs/use-store-state.md)
+
+---
+
+### `withHistory(initializer, options?)`
+
+Real Zustand `StateCreator` middleware that adds undo / redo / goto / skip to any store. Records every write — including those performed from inside actions via the inner `set`. Composes idiomatically with `persist`, `devtools`, `subscribeWithSelector`, and `immer`.
+
+```tsx
+import { withHistory } from '@ez-kit/zu-store'
+import { useStore } from 'zustand'
+import { createStore } from 'zustand/vanilla'
+
+const store = createStore<{ count: number; inc: () => void }>()(
+  withHistory((set) => ({
+    count: 0,
+    inc: () => set((s) => ({ count: s.count + 1 })),
+  })),
+)
+
+store.getState().inc()
+store.history.getState().undo()
+```
+
+Three idiomatic ways to read history — pick the one that matches what your code is doing:
+
+- `store.history.getState()` for imperative reads (actions like `undo`/`redo`/`goto` are stable references — no subscription needed).
+- `useStore(store.history, sel)` for reactive UI that renders based on history (disabled state, slider position, indicators).
+- `store.history.subscribe(cb)` for keyboard shortcuts, autosave, devtools bridges, or any non-React code.
+
+Avoid `useStore(store.history)` without a selector — it re-renders on every recorded write.
+
+For per-call history suppression — both from external `setState` and from inside actions — use `store.history.getState().skip(fn)`.
+
+→ [Full docs](https://ez-kit.dev/docs/zu-store/with-history)

@@ -16,6 +16,7 @@ test-results/
 
 .agents/skills/
 .claude/skills/
+.claude/commands
 
 openspec
 .specify
