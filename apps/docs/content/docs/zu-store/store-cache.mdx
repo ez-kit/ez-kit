@@ -1,0 +1,219 @@
+---
+title: createStoreCache
+description: Keep context-store instances alive across Provider unmount/remount — in memory, keyed by name — so table filters, pagination, and scroll position survive navigation without localStorage.
+---
+
+# `createStoreCache`
+
+`createContextStore` creates a fresh store on `Provider` mount and throws it away on unmount. That is exactly what you want for a modal or a one-off form — but not for a table whose filters and pagination should still be there when the user navigates away and back.
+
+`createStoreCache` is a **separate, opt-in** primitive that keeps the whole live store instance alive in an in-memory cache, keyed by a name you choose. `createContextStore` is unchanged.
+
+## Keep-alive in action
+
+Switch to **Away** (the table unmounts) and back — the filter and page are preserved. The badge reads the same store from outside the table via `useFromCache`.
+
+<LivePreview
+	path='zu-store/store-cache'
+	title='State survives unmount/remount'
+/>
+
+## Quick start
+
+Three steps: create a cache, define a store group, mount the cache boundary once.
+
+```tsx
+import { createStoreCache } from '@ez-kit/zu-store'
+import { createStore } from 'zustand/vanilla'
+
+type TableState = {
+	filter: string
+	page: number
+	setFilter: (filter: string) => void
+}
+
+// 1. Create the cache (usually one per app).
+const cache = createStoreCache({ gcTime: 5 * 60_000 })
+
+// 2. Define a named store group against it.
+const usersTable = cache.defineStore('users-table', (defaultProps: { filter?: string }) =>
+	createStore<TableState>((set) => ({
+		filter: defaultProps.filter ?? 'all',
+		page: 1,
+		setFilter: (filter) => set({ filter }),
+	})),
+)
+
+// 3. Mount the cache boundary once, high in the tree.
+function App({ children }: { children: React.ReactNode }) {
+	return <cache.Provider>{children}</cache.Provider>
+}
+```
+
+Then mount the keyed `Provider` wherever the table lives. It survives unmount and is reused on remount:
+
+```tsx
+function UsersPage() {
+	return (
+		<usersTable.Provider
+			cacheKey='users'
+			defaultProps={{ filter: 'active' }}
+		>
+			<UsersTable />
+		</usersTable.Provider>
+	)
+}
+
+function UsersTable() {
+	const filter = usersTable.useStore((s) => s.filter)
+	const setFilter = usersTable.useStore((s) => s.setFilter)
+	// reads/writes survive navigating away from UsersPage and back
+	return (
+		<FilterDropdown
+			value={filter}
+			onChange={setFilter}
+		/>
+	)
+}
+```
+
+The read hooks (`useStore`, `useShallowStore`, `useContextStore`, `Item`) behave exactly like [`createContextStore`](./create-context-store).
+
+## How it stays alive
+
+Each `<Provider>` is counted as an observer. When the **last** one unmounts, the store is kept for `gcTime`, then evicted. Remount within that window and you get the same instance back.
+
+```tsx
+// gcTime resolution (first match wins):
+<usersTable.Provider cacheKey='users' />              // cache default (5 min here)
+<usersTable.Provider cacheKey='users' gcTime={30_000} /> // this entry: 30s after last unmount
+<usersTable.Provider cacheKey='users' alwaysCache />  // never auto-evict
+```
+
+`gcTime` and `alwaysCache` are **birth-config**: they are fixed by the first mount that creates the entry. Later mounts attach to the existing store and ignore them.
+
+## `defaultProps` seed once
+
+`defaultProps` seeds the store **only when the key is first created**. On remount of a live entry it is ignored — that is the whole point of keep-alive.
+
+```tsx
+// First visit → store created as { filter: 'active' }
+<usersTable.Provider cacheKey='users' defaultProps={{ filter: 'active' }} />
+
+// User changes filter to 'archived', navigates away, comes back:
+<usersTable.Provider cacheKey='users' defaultProps={{ filter: 'active' }} />
+// → still 'archived'. The new defaultProps do nothing.
+```
+
+To open a page with pre-set state, drive it from the URL and seed from there, rather than mutating a cold store:
+
+```tsx
+<usersTable.Provider
+	cacheKey='users'
+	defaultProps={{ filter: searchParams.get('filter') ?? 'all' }}
+/>
+```
+
+## Reading a store from anywhere
+
+### `fromCache(key)` — imperative
+
+Returns the live `StoreApi` or `undefined`. Never creates an entry. Use it in event handlers, actions, or non-React code:
+
+```tsx
+// A global "reset filters" button, even outside the table's subtree:
+function ResetButton() {
+	return <button onClick={() => usersTable.fromCache('users')?.setState({ filter: 'all', page: 1 })}>Reset</button>
+}
+
+// A WebSocket pushing rows into the live store:
+socket.on('row', (row) => usersTable.fromCache('users')?.getState().addRow(row))
+```
+
+### `useFromCache(key, selector)` — reactive
+
+Reactively read a cached store from **anywhere** — even a sidebar that is not inside the table's `Provider`. The selector receives the state, or `undefined` when no entry exists:
+
+```tsx
+function ActiveFiltersBadge() {
+	const count = usersTable.useFromCache('users', (s) => s?.activeFilters.length ?? 0)
+	return <span>{count} filters</span>
+}
+```
+
+`useFromCache` is **passive** — it reflects the cache but does not keep the store alive. Once the owning `Provider` unmounts and `gcTime` elapses, the entry is evicted and the reader sees `undefined`. Use `alwaysCache` if a reader must keep it alive.
+
+## Multiple keys and groups
+
+One group, many keys — each `cacheKey` is an independent store:
+
+```tsx
+<usersTable.Provider cacheKey='active-users' />
+<usersTable.Provider cacheKey='archived-users' /> // separate filters/pagination
+```
+
+Different groups never collide, even on the same key — the group `name` is the namespace:
+
+```tsx
+const usersTable = cache.defineStore('users', usersFactory)
+const ordersTable = cache.defineStore('orders', ordersFactory)
+
+usersTable.fromCache('main') // ≠ ordersTable.fromCache('main')
+```
+
+## Inspecting and clearing
+
+`useCache()` exposes the active cache for inspection and bulk clearing; each group has a per-key `remove`:
+
+```tsx
+function CacheTools() {
+	const { keys, clear } = cache.useCache()
+	// keys() → Map { 'users' => ['main'], 'orders' => ['list'] }
+	return <button onClick={clear}>Clear all cached tables</button>
+}
+
+usersTable.remove('main') // drop a single entry (overrides alwaysCache)
+```
+
+## API
+
+### `createStoreCache(options?)`
+
+```ts
+createStoreCache(options?: { gcTime?: number }): {
+	Provider // mount once; owns the cache storage for its React tree
+	useCache: () => { keys(): Map<string, string[]>; clear(): void }
+	defineStore: (name, factory, options?) => StoreGroup
+}
+```
+
+`gcTime` (default 5 minutes) is the delay before an unobserved entry is evicted.
+
+### `cache.Provider`
+
+Owns the real storage, created per React tree — so SSR requests and tests are isolated by construction. Mount it once above your store groups; unmounting it drops the whole cache. Using a group hook/provider without a `cache.Provider` ancestor throws `Missing StoreCacheProvider for createStoreCache`.
+
+### `cache.defineStore(name, factory, options?)`
+
+Returns a store group. `name` is the group's namespace (visible in `useCache().keys()`) and must be unique within a cache. `options.gcTime` overrides the cache default for this group.
+
+The returned group exposes:
+
+| Member                                                      | Purpose                                                                           |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `Provider`                                                  | Keyed observer: `cacheKey` (required), `defaultProps`, `gcTime?`, `alwaysCache?`. |
+| `useStore` / `useShallowStore` / `useContextStore` / `Item` | Read the store under the `Provider` — same as `createContextStore`.               |
+| `fromCache(key)`                                            | Imperative get-if-alive → `StoreApi` or `undefined`.                              |
+| `useFromCache(key, selector)`                               | Reactive, passive cross-tree read.                                                |
+| `remove(key)`                                               | Drop one entry immediately.                                                       |
+
+## Server-side rendering
+
+The feature is client-only. On the server the group `Provider` behaves like `createContextStore` — a fresh store per request, seeded from `defaultProps` — and `fromCache` returns `undefined`. Because storage lives inside `cache.Provider` (per render tree), there is no cross-request leakage.
+
+## Gotchas
+
+- **`alwaysCache` + dynamic keys leaks.** Pinned entries with unbounded keys (`order-${id}`) never evict. Use `alwaysCache` only for a small, fixed set of keys; rely on `gcTime` for dynamic ones.
+- **`useFromCache` is passive.** It will not keep a store alive on its own.
+- **Imperative access needs a mounted `cache.Provider`.** With multiple `cache.Provider`s, the active one is ambiguous — prefer `useCache()` inside the tree.
+- **Group names must be unique within a cache.** Two groups sharing a name under the same `cache.Provider` collide on one keyspace.

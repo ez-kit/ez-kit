@@ -9,7 +9,8 @@ A tiny layer on top of [Zustand](https://github.com/pmndrs/zustand) that:
 
 - wraps a vanilla store in **React context**, so multiple isolated instances can coexist in the same tree;
 - exposes a [`useState`](https://react.dev/reference/react/useState)-style hook for binding a **single store field**;
-- ships a real **`withHistory`** Zustand middleware for undo / redo / goto, records actions automatically, composes with `persist` / `devtools` / `subscribeWithSelector`.
+- ships a real **`withHistory`** Zustand middleware for undo / redo / goto, records actions automatically, composes with `persist` / `devtools` / `subscribeWithSelector`;
+- can **keep stores alive** across `Provider` unmount/remount with `createStoreCache`, so navigation state (filters, pagination) survives without `localStorage`.
 
 It exists because plain Zustand stores are module-level singletons by default — fine for app-wide state, awkward when you want a counter, modal, or form scoped to a subtree.
 
@@ -23,13 +24,17 @@ pnpm add @ez-kit/zu-store zustand
 
 ## A minimal example
 
-<LivePreview path='zu-store/counter' title='Counter' />
+<LivePreview
+	path='zu-store/counter'
+	title='Counter'
+/>
 
 ## What's in the box
 
 | Export                                                  | Purpose                                                                                                          |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | [`createContextStore`](./zu-store/create-context-store) | Factory: wraps a Zustand store in React context. Returns `Provider` + hooks.                                     |
+| [`createStoreCache`](./zu-store/store-cache)            | Keep context-store instances alive across `Provider` unmount/remount, keyed by name (table filters, pagination). |
 | [`useStoreState`](./zu-store/use-store-state)           | Binds one store field to a `[value, setValue]` tuple, like `useState`.                                           |
 | [`withHistory`](./zu-store/with-history)                | Zustand middleware: adds undo / redo / goto to any store, records actions automatically, composes idiomatically. |
 
