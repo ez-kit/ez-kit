@@ -1,15 +1,18 @@
-import { createContext, useContext, useEffect, useRef, type PropsWithChildren, type ReactElement } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, type PropsWithChildren, type ReactElement } from 'react'
 
 import { createCacheInstance, DEFAULT_GC_TIME, type CacheInstance } from './cache'
 import { createDefineStore, type ActiveCacheRef } from './define-store'
 
-import type { StoreCache, StoreCacheController, StoreCacheOptions } from './types'
+import type { ScopeProps, StoreCache, StoreCacheController, StoreCacheOptions } from './types'
 
 export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider for createStoreCache'
+
+const EMPTY_SCOPE: readonly string[] = []
 
 export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 	const cacheGcTime = options.gcTime ?? DEFAULT_GC_TIME
 	const CacheContext = createContext<CacheInstance | null>(null)
+	const ScopeContext = createContext<readonly string[]>(EMPTY_SCOPE)
 	const activeCache: ActiveCacheRef = { current: null }
 
 	function Provider({ children }: PropsWithChildren): ReactElement {
@@ -29,6 +32,18 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 		return <CacheContext.Provider value={cache}>{children}</CacheContext.Provider>
 	}
 
+	function Scope({ path, children }: ScopeProps): ReactElement {
+		const inherited = useContext(ScopeContext)
+		// Serialized path keeps the memo stable across inline-array prop churn and constant deps-array size.
+		const pathKey = JSON.stringify(path)
+		const value = useMemo(
+			() => [...inherited, ...path],
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			[inherited, pathKey],
+		)
+		return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>
+	}
+
 	function useCache(): StoreCacheController {
 		const cache = useContext(CacheContext)
 		if (!cache) throw new Error(MISSING_CACHE_PROVIDER)
@@ -37,10 +52,11 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 
 	const defineStore = createDefineStore({
 		CacheContext,
+		ScopeContext,
 		activeCache,
 		cacheGcTime,
 		missingProviderError: MISSING_CACHE_PROVIDER,
 	})
 
-	return { Provider, useCache, defineStore }
+	return { Provider, Scope, useCache, defineStore }
 }

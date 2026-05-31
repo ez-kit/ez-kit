@@ -6,7 +6,7 @@ export { useStoreState } from './use-store-state'
 export { withHistory } from './middlewares'
 export type { HistoryActionTag, HistoryOptions, HistoryState } from './middlewares'
 
-export { createStoreCache } from './store-cache'
+export { createStoreCache, toTree } from './store-cache'
 export type {
 	StoreCache,
 	StoreCacheOptions,
@@ -16,4 +16,8 @@ export type {
 	CachedStoreGroup,
 	CachedProviderProps,
 	CachedItemProps,
+	CacheTarget,
+	CacheCoordinate,
+	CacheTree,
+	ScopeProps,
 } from './store-cache'

@@ -4,7 +4,10 @@ import { renderToString } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
+import { toTree } from './cache'
 import { createStoreCache } from './create-store-cache'
+
+import type { StoreCacheController } from './types'
 
 type TableState = {
 	filter: string
@@ -94,7 +97,7 @@ describe('createStoreCache — provider & context', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('table', tableFactory)
 		function Badge() {
-			table.useFromCache('x', (s) => s?.filter)
+			table.useFromCache({ key: 'x' }, (s) => s?.filter)
 			return null
 		}
 		expect(() => render(<Badge />)).toThrowError('Missing StoreCacheProvider')
@@ -118,9 +121,9 @@ describe('createStoreCache — namespacing & seeding', () => {
 			</cache.Provider>,
 		)
 
-		expect(users.fromCache('main')).toBeDefined()
-		expect(orders.fromCache('main')).toBeDefined()
-		expect(users.fromCache('main')).not.toBe(orders.fromCache('main'))
+		expect(users.fromCache({ key: 'main' })).toBeDefined()
+		expect(orders.fromCache({ key: 'main' })).toBeDefined()
+		expect(users.fromCache({ key: 'main' })).not.toBe(orders.fromCache({ key: 'main' }))
 	})
 
 	it('seeds the store from defaultProps on first mount', () => {
@@ -142,6 +145,164 @@ describe('createStoreCache — namespacing & seeding', () => {
 		)
 
 		expect(screen.getByTestId('r')).toHaveTextContent('active')
+	})
+})
+
+describe('createStoreCache — path namespacing via Scope', () => {
+	it('concatenates nested Scope paths into the resolved identity', () => {
+		const cache = createStoreCache()
+		const table = cache.defineStore('table', tableFactory)
+		const controllers: StoreCacheController[] = []
+		function Probe() {
+			controllers.push(cache.useCache())
+			return null
+		}
+
+		render(
+			<cache.Provider>
+				<cache.Scope path={['page-1']}>
+					<cache.Scope path={['section-1']}>
+						<table.Provider cacheKey='user-42'>
+							<span />
+						</table.Provider>
+					</cache.Scope>
+				</cache.Scope>
+				<Probe />
+			</cache.Provider>,
+		)
+
+		// Read at assertion time (after effects publish the entry), via the captured controller.
+		const controller = controllers.at(-1)
+		expect(controller?.keys()).toContainEqual({ path: ['page-1', 'section-1'], group: 'table', key: 'user-42' })
+		expect(toTree(controller?.keys() ?? [])).toEqual({ 'page-1': { 'section-1': { table: ['user-42'] } } })
+		expect(table.fromCache({ path: ['page-1', 'section-1'], key: 'user-42' })).toBeDefined()
+	})
+
+	it('defaults to the root path when no Scope encloses the Provider', () => {
+		const cache = createStoreCache()
+		const table = cache.defineStore('table', tableFactory)
+
+		render(
+			<cache.Provider>
+				<table.Provider cacheKey='user-42'>
+					<span />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(table.fromCache({ path: [], key: 'user-42' })).toBeDefined()
+		expect(table.fromCache({ key: 'user-42' })).toBeDefined()
+	})
+
+	it('does not collide when the same group + cacheKey mounts under different paths', () => {
+		const cache = createStoreCache()
+		const table = cache.defineStore('table', tableFactory)
+
+		function UserTable({ id }: { id: string }) {
+			const filter = table.useStore((s) => s.filter)
+			const setFilter = table.useStore((s) => s.setFilter)
+			return (
+				<button
+					type='button'
+					data-testid={id}
+					onClick={() => {
+						setFilter('archived')
+					}}
+				>
+					{filter}
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<cache.Scope path={['page-1']}>
+					<table.Provider cacheKey='user-42'>
+						<UserTable id='one' />
+					</table.Provider>
+				</cache.Scope>
+				<cache.Scope path={['page-2']}>
+					<table.Provider cacheKey='user-42'>
+						<UserTable id='two' />
+					</table.Provider>
+				</cache.Scope>
+			</cache.Provider>,
+		)
+
+		fireEvent.click(screen.getByTestId('one'))
+
+		expect(screen.getByTestId('one')).toHaveTextContent('archived')
+		expect(screen.getByTestId('two')).toHaveTextContent('all')
+		expect(table.fromCache({ path: ['page-1'], key: 'user-42' })).not.toBe(
+			table.fromCache({ path: ['page-2'], key: 'user-42' }),
+		)
+	})
+
+	it('appends the Provider path prop after the inherited scope', () => {
+		const cache = createStoreCache()
+		const table = cache.defineStore('table', tableFactory)
+
+		render(
+			<cache.Provider>
+				<cache.Scope path={['page-1']}>
+					<table.Provider
+						cacheKey='row-1'
+						path={['detail']}
+					>
+						<span />
+					</table.Provider>
+				</cache.Scope>
+			</cache.Provider>,
+		)
+
+		expect(table.fromCache({ path: ['page-1', 'detail'], key: 'row-1' })).toBeDefined()
+		expect(table.fromCache({ path: ['page-1'], key: 'row-1' })).toBeUndefined()
+	})
+
+	it('re-resolves the store when the enclosing scope path changes', () => {
+		const cache = createStoreCache()
+		const table = cache.defineStore('table', tableFactory)
+		function FilterView() {
+			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
+		}
+		function ArchiveButton() {
+			const setFilter = table.useStore((s) => s.setFilter)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setFilter('archived')
+					}}
+				>
+					archive
+				</button>
+			)
+		}
+		function App({ page }: { page: string }) {
+			return (
+				<cache.Provider>
+					<cache.Scope path={[page]}>
+						<table.Provider
+							cacheKey='main'
+							defaultProps={{ filter: page }}
+						>
+							<FilterView />
+							<ArchiveButton />
+						</table.Provider>
+					</cache.Scope>
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(<App page='page-1' />)
+		fireEvent.click(screen.getByRole('button', { name: 'archive' }))
+		expect(screen.getByTestId('r')).toHaveTextContent('archived')
+
+		rerender(<App page='page-2' />)
+		expect(screen.getByTestId('r')).toHaveTextContent('page-2')
+
+		rerender(<App page='page-1' />)
+		expect(screen.getByTestId('r')).toHaveTextContent('archived')
 	})
 })
 
@@ -211,7 +372,7 @@ describe('createStoreCache — keep-alive', () => {
 		expect(screen.getByTestId('r')).toHaveTextContent('archived')
 	})
 
-	it('shares one store between concurrent Providers with the same key', () => {
+	it('shares one store between concurrent Providers with the same identity', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('table', tableFactory)
 		function FilterView({ id }: { id: string }) {
@@ -315,13 +476,13 @@ describe('createStoreCache — gc lifecycle', () => {
 		}
 
 		const { rerender } = render(<App show />)
-		expect(table.fromCache('main')).toBeDefined()
+		expect(table.fromCache({ key: 'main' })).toBeDefined()
 
 		rerender(<App show={false} />)
 		act(() => {
 			vi.advanceTimersByTime(1001)
 		})
-		expect(table.fromCache('main')).toBeUndefined()
+		expect(table.fromCache({ key: 'main' })).toBeUndefined()
 	})
 
 	it('fixes gcTime birth-config from the first mounting Provider', () => {
@@ -373,7 +534,7 @@ describe('createStoreCache — gc lifecycle', () => {
 		act(() => {
 			vi.advanceTimersByTime(1001)
 		})
-		expect(table.fromCache('main')).toBeUndefined()
+		expect(table.fromCache({ key: 'main' })).toBeUndefined()
 	})
 
 	it('keeps an alwaysCache entry alive after all Providers unmount', () => {
@@ -400,7 +561,7 @@ describe('createStoreCache — gc lifecycle', () => {
 		act(() => {
 			vi.advanceTimersByTime(100_000)
 		})
-		expect(table.fromCache('main')).toBeDefined()
+		expect(table.fromCache({ key: 'main' })).toBeDefined()
 	})
 })
 
@@ -409,7 +570,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 		vi.useRealTimers()
 	})
 
-	it('fromCache imperatively updates a live store and re-renders subscribers', () => {
+	it('fromCache imperatively updates a live store at a path and re-renders subscribers', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('table', tableFactory)
 		function PageView() {
@@ -418,17 +579,21 @@ describe('createStoreCache — imperative & reactive access', () => {
 
 		render(
 			<cache.Provider>
-				<table.Provider cacheKey='main'>
-					<PageView />
-				</table.Provider>
+				<cache.Scope path={['page-1']}>
+					<table.Provider cacheKey='main'>
+						<PageView />
+					</table.Provider>
+				</cache.Scope>
 			</cache.Provider>,
 		)
 
 		expect(screen.getByTestId('p')).toHaveTextContent('1')
 		act(() => {
-			table.fromCache('main')?.setState({ page: 2 })
+			table.fromCache({ path: ['page-1'], key: 'main' })?.setState({ page: 2 })
 		})
 		expect(screen.getByTestId('p')).toHaveTextContent('2')
+		// Root address misses the page-1 entry.
+		expect(table.fromCache({ key: 'main' })).toBeUndefined()
 	})
 
 	it('fromCache returns undefined for a missing key without creating it', () => {
@@ -439,16 +604,16 @@ describe('createStoreCache — imperative & reactive access', () => {
 				<span />
 			</cache.Provider>,
 		)
-		expect(table.fromCache('ghost')).toBeUndefined()
+		expect(table.fromCache({ key: 'ghost' })).toBeUndefined()
 	})
 
-	it('useFromCache passively reflects creation, updates, and eviction', () => {
+	it('useFromCache passively reflects creation, updates, and eviction at a path', () => {
 		vi.useFakeTimers()
 		const cache = createStoreCache({ gcTime: 1000 })
 		const table = cache.defineStore('table', tableFactory)
 
 		function Badge() {
-			const filter = table.useFromCache('main', (s) => s?.filter ?? 'none')
+			const filter = table.useFromCache({ path: ['page-1'], key: 'main' }, (s) => s?.filter ?? 'none')
 			return <span data-testid='badge'>{filter}</span>
 		}
 		function ArchiveButton() {
@@ -469,12 +634,14 @@ describe('createStoreCache — imperative & reactive access', () => {
 				<cache.Provider>
 					<Badge />
 					{show ? (
-						<table.Provider
-							cacheKey='main'
-							defaultProps={{ filter: 'active' }}
-						>
-							<ArchiveButton />
-						</table.Provider>
+						<cache.Scope path={['page-1']}>
+							<table.Provider
+								cacheKey='main'
+								defaultProps={{ filter: 'active' }}
+							>
+								<ArchiveButton />
+							</table.Provider>
+						</cache.Scope>
 					) : null}
 				</cache.Provider>
 			)
@@ -496,42 +663,53 @@ describe('createStoreCache — imperative & reactive access', () => {
 		expect(screen.getByTestId('badge')).toHaveTextContent('none')
 	})
 
-	it('remove deletes a single store-group entry and clear removes everything', () => {
+	it('remove deletes a single entry and clear(prefix) removes a subtree across groups', () => {
 		const cache = createStoreCache()
 		const users = cache.defineStore('users', tableFactory)
 		const orders = cache.defineStore('orders', tableFactory)
-		function ClearButton() {
+		function ClearPage1() {
 			const { clear } = cache.useCache()
 			return (
 				<button
 					type='button'
-					onClick={clear}
+					onClick={() => {
+						clear(['page-1'])
+					}}
 				>
-					clear
+					clear-page-1
 				</button>
 			)
 		}
 
 		render(
 			<cache.Provider>
-				<users.Provider cacheKey='main'>
-					<span />
-				</users.Provider>
-				<orders.Provider cacheKey='main'>
-					<span />
-				</orders.Provider>
-				<ClearButton />
+				<cache.Scope path={['page-1']}>
+					<users.Provider cacheKey='main'>
+						<span />
+					</users.Provider>
+					<orders.Provider cacheKey='main'>
+						<span />
+					</orders.Provider>
+				</cache.Scope>
+				<cache.Scope path={['page-2']}>
+					<users.Provider cacheKey='main'>
+						<span />
+					</users.Provider>
+				</cache.Scope>
+				<ClearPage1 />
 			</cache.Provider>,
 		)
 
 		act(() => {
-			users.remove('main')
+			users.remove({ path: ['page-1'], key: 'main' })
 		})
-		expect(users.fromCache('main')).toBeUndefined()
-		expect(orders.fromCache('main')).toBeDefined()
+		expect(users.fromCache({ path: ['page-1'], key: 'main' })).toBeUndefined()
+		expect(orders.fromCache({ path: ['page-1'], key: 'main' })).toBeDefined()
+		expect(users.fromCache({ path: ['page-2'], key: 'main' })).toBeDefined()
 
-		fireEvent.click(screen.getByRole('button', { name: 'clear' }))
-		expect(orders.fromCache('main')).toBeUndefined()
+		fireEvent.click(screen.getByRole('button', { name: 'clear-page-1' }))
+		expect(orders.fromCache({ path: ['page-1'], key: 'main' })).toBeUndefined()
+		expect(users.fromCache({ path: ['page-2'], key: 'main' })).toBeDefined()
 	})
 })
 
@@ -582,7 +760,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		expect(screen.getByTestId('r')).toHaveTextContent('archived')
 	})
 
-	it('renders seeded state on the server and exposes no live cache', () => {
+	it('renders seeded state on the server under a Scope and exposes no live cache', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('table', tableFactory)
 		function Reader() {
@@ -591,18 +769,20 @@ describe('createStoreCache — StrictMode & SSR', () => {
 
 		const html = renderToString(
 			<cache.Provider>
-				<table.Provider
-					cacheKey='main'
-					defaultProps={{ filter: 'active' }}
-				>
-					<Reader />
-				</table.Provider>
+				<cache.Scope path={['page-1']}>
+					<table.Provider
+						cacheKey='main'
+						defaultProps={{ filter: 'active' }}
+					>
+						<Reader />
+					</table.Provider>
+				</cache.Scope>
 			</cache.Provider>,
 		)
 
 		expect(html).toContain('active')
 		// No effects run during SSR → nothing is published or marked active.
-		expect(table.fromCache('main')).toBeUndefined()
+		expect(table.fromCache({ path: ['page-1'], key: 'main' })).toBeUndefined()
 	})
 
 	it('does not share state across separate server renders', () => {

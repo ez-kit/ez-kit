@@ -5,8 +5,9 @@ import { createStore } from 'zustand/vanilla'
 
 import { createContextStore } from '../create-context-store'
 
-import type { CacheInstance } from './cache'
-import type { CachedProviderProps, CachedStoreFactory, CachedStoreGroup, DefineStoreOptions } from './types'
+import { serializeEntryId, type CacheInstance, type EntryId } from './cache'
+
+import type { CacheTarget, CachedProviderProps, CachedStoreFactory, CachedStoreGroup, DefineStoreOptions } from './types'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
 /** Mutable handle to the cache owned by the currently-mounted `cache.Provider` (client-only). */
@@ -14,6 +15,7 @@ export type ActiveCacheRef = { current: CacheInstance | null }
 
 type DefineStoreDeps = {
 	CacheContext: Context<CacheInstance | null>
+	ScopeContext: Context<readonly string[]>
 	activeCache: ActiveCacheRef
 	cacheGcTime: number
 	missingProviderError: string
@@ -34,7 +36,7 @@ function resolveGcTime(
 }
 
 export function createDefineStore(deps: DefineStoreDeps) {
-	const { CacheContext, activeCache, cacheGcTime, missingProviderError } = deps
+	const { CacheContext, ScopeContext, activeCache, cacheGcTime, missingProviderError } = deps
 
 	return function defineStore<TStore extends StoreApi<unknown>, TDefaultProps extends object = Record<string, never>>(
 		name: string,
@@ -42,41 +44,49 @@ export function createDefineStore(deps: DefineStoreDeps) {
 		options: DefineStoreOptions = {},
 	): CachedStoreGroup<TStore, TDefaultProps> {
 		// The caller-provided `name` is the group's namespace — readable in `useCache().keys()`.
-		const groupId = name
+		const group = name
 		const groupGcTime = options.gcTime
 		// Reuse createContextStore unchanged: its factory just returns the store we inject.
 		const contextStore = createContextStore<TStore, { __injectedStore: TStore }>((props) => props.__injectedStore)
 
-		function useGroupStore(cacheKey: string, defaultProps: TDefaultProps, gcTime: number): TStore {
+		function useGroupStore(cacheKey: string, resolvedPath: readonly string[], defaultProps: TDefaultProps, gcTime: number): TStore {
 			const cache = useContext(CacheContext)
 			if (!cache) throw new Error(missingProviderError)
 
+			// Stable string identity: re-resolves on cacheKey OR resolved-path change, ignores array ref churn.
+			const entryKey = serializeEntryId({ path: resolvedPath, group, key: cacheKey })
+
 			const store = useMemo(
-				() => cache.getOrCreate(groupId, cacheKey, () => factory(defaultProps), gcTime) as TStore,
+				() => cache.getOrCreate({ path: resolvedPath, group, key: cacheKey }, () => factory(defaultProps), gcTime) as TStore,
 				// defaultProps/gcTime are birth-config — ignored when reusing a live entry, so intentionally excluded.
 				// eslint-disable-next-line react-hooks/exhaustive-deps
-				[cache, cacheKey],
+				[cache, entryKey],
 			)
 
 			useEffect(() => {
-				cache.addObserver(groupId, cacheKey)
+				const id: EntryId = { path: resolvedPath, group, key: cacheKey }
+				cache.addObserver(id)
 				return () => {
-					cache.removeObserver(groupId, cacheKey)
+					cache.removeObserver(id)
 				}
-			}, [cache, cacheKey])
+				// eslint-disable-next-line react-hooks/exhaustive-deps
+			}, [cache, entryKey])
 
 			return store
 		}
 
 		function Provider(props: CachedProviderProps<TDefaultProps>): ReactElement {
-			const { cacheKey, defaultProps, gcTime, alwaysCache, children } = props
+			const { cacheKey, path, defaultProps, gcTime, alwaysCache, children } = props
+			const inheritedScope = useContext(ScopeContext)
+			const resolvedPath = path && path.length > 0 ? [...inheritedScope, ...path] : inheritedScope
 			const resolvedGcTime = resolveGcTime(alwaysCache, gcTime, groupGcTime, cacheGcTime)
 			const resolvedDefaultProps = defaultProps ?? ({} as TDefaultProps)
-			const store = useGroupStore(cacheKey, resolvedDefaultProps, resolvedGcTime)
-			// `key` forces a fresh inner Provider (and its ref) when the cacheKey changes.
+			const store = useGroupStore(cacheKey, resolvedPath, resolvedDefaultProps, resolvedGcTime)
+			// `key` forces a fresh inner Provider (and its ref) when the full resolved identity changes.
+			const remountKey = serializeEntryId({ path: resolvedPath, group, key: cacheKey })
 			return (
 				<contextStore.Provider
-					key={cacheKey}
+					key={remountKey}
 					__injectedStore={store}
 				>
 					{children}
@@ -84,20 +94,22 @@ export function createDefineStore(deps: DefineStoreDeps) {
 			)
 		}
 
-		function fromCache(cacheKey: string): TStore | undefined {
-			return activeCache.current?.getCachedStore(groupId, cacheKey) as TStore | undefined
+		function fromCache(target: CacheTarget): TStore | undefined {
+			return activeCache.current?.getCachedStore({ path: target.path ?? [], group, key: target.key }) as TStore | undefined
 		}
 
 		function useFromCache<TSelected>(
-			cacheKey: string,
+			target: CacheTarget,
 			selector: (state: ExtractState<TStore> | undefined) => TSelected,
 		): TSelected {
 			const cache = useContext(CacheContext)
 			if (!cache) throw new Error(missingProviderError)
 
+			const entryKey = serializeEntryId({ path: target.path ?? [], group, key: target.key })
+
 			const store = useZustandStore(
 				cache.cachedStores,
-				(state) => state.storesByGroup.get(groupId)?.get(cacheKey) as TStore | undefined,
+				(state) => state.stores.get(entryKey)?.store as TStore | undefined,
 			)
 
 			return useZustandStore(
@@ -106,8 +118,8 @@ export function createDefineStore(deps: DefineStoreDeps) {
 			)
 		}
 
-		function remove(cacheKey: string): void {
-			activeCache.current?.remove(groupId, cacheKey)
+		function remove(target: CacheTarget): void {
+			activeCache.current?.remove({ path: target.path ?? [], group, key: target.key })
 		}
 
 		return {

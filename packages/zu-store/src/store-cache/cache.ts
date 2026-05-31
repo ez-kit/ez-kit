@@ -1,20 +1,30 @@
 import { createStore } from 'zustand/vanilla'
 
+import type { CacheCoordinate, CacheTree } from './types'
 import type { StoreApi } from 'zustand/vanilla'
 
 export const DEFAULT_GC_TIME = 5 * 60 * 1000
 
 type AnyStore = StoreApi<unknown>
 
-/** group id → (cacheKey → live store). Only mounted (published) stores appear here. */
-type GroupedStores = ReadonlyMap<string, ReadonlyMap<string, AnyStore>>
+/** Structural identity of a cache entry: where (`path`), what (`group`), which (`key`). */
+export type EntryId = {
+	path: readonly string[]
+	group: string
+	key: string
+}
 
+/** A published (mounted) store together with its structural coordinate. */
+type PublishedEntry = { store: AnyStore; coord: CacheCoordinate }
+
+/** Reactive view of published stores, keyed by canonical entry id. Only mounted stores appear here. */
 export type CachedStoresState = {
-	storesByGroup: GroupedStores
+	stores: ReadonlyMap<string, PublishedEntry>
 }
 
 type CachedStoreMeta = {
 	store: AnyStore
+	coord: CacheCoordinate
 	observerCount: number
 	gcTime: number
 	wasEverObserved: boolean
@@ -23,45 +33,72 @@ type CachedStoreMeta = {
 	evictionTimer: ReturnType<typeof setTimeout> | undefined
 }
 
-type MetaByGroup = Map<string, Map<string, CachedStoreMeta>>
+type MetaByKey = Map<string, CachedStoreMeta>
 
 export type CacheInstance = {
-	/** Reactive view of the published (mounted) store instances, keyed by `(groupId, cacheKey)`. */
+	/** Reactive view of the published (mounted) store instances, keyed by canonical entry id. */
 	cachedStores: StoreApi<CachedStoresState>
-	/** Return the store for `(groupId, cacheKey)`, creating and seeding it on first access. */
-	getOrCreate: (groupId: string, cacheKey: string, create: () => AnyStore, gcTime: number) => AnyStore
+	/** Return the store for `id`, creating and seeding it on first access. */
+	getOrCreate: (id: EntryId, create: () => AnyStore, gcTime: number) => AnyStore
 	/** Register a mounted Provider; keeps the store alive and cancels any pending eviction. */
-	addObserver: (groupId: string, cacheKey: string) => void
+	addObserver: (id: EntryId) => void
 	/** Unregister a Provider; when the last one leaves, schedule eviction after `gcTime`. */
-	removeObserver: (groupId: string, cacheKey: string) => void
+	removeObserver: (id: EntryId) => void
 	/** Return the live store if present and not expired, without affecting its lifecycle. */
-	getCachedStore: (groupId: string, cacheKey: string) => AnyStore | undefined
+	getCachedStore: (id: EntryId) => AnyStore | undefined
 	/** Remove the store immediately, regardless of observers or `alwaysCache`. */
-	remove: (groupId: string, cacheKey: string) => void
-	/** Snapshot of published cacheKeys grouped by group id. */
-	keys: () => Map<string, string[]>
-	/** Remove every cached store across all groups. */
-	clear: () => void
+	remove: (id: EntryId) => void
+	/** Flat coordinates of published entries, optionally filtered to a path subtree. */
+	keys: (prefix?: readonly string[]) => CacheCoordinate[]
+	/** Remove every entry, or — with `prefix` — every entry under that path subtree, across groups. */
+	clear: (prefix?: readonly string[]) => void
 }
 
 // ---------------------------------------------------------------------------
 // Pure helpers — no closure state, fully determined by their arguments.
 // ---------------------------------------------------------------------------
 
-function getStoreMeta(metaByGroup: MetaByGroup, groupId: string, cacheKey: string): CachedStoreMeta | undefined {
-	return metaByGroup.get(groupId)?.get(cacheKey)
+/** Canonical map identity for an entry. JSON-encoded so no delimiter can collide across segments. */
+export function serializeEntryId(id: EntryId): string {
+	return JSON.stringify([id.path, id.group, id.key])
 }
 
-function setStoreMeta(metaByGroup: MetaByGroup, groupId: string, cacheKey: string, meta: CachedStoreMeta): void {
-	const groupMeta = metaByGroup.get(groupId) ?? new Map<string, CachedStoreMeta>()
-	groupMeta.set(cacheKey, meta)
-	metaByGroup.set(groupId, groupMeta)
+function toCoord(id: EntryId): CacheCoordinate {
+	return { path: [...id.path], group: id.group, key: id.key }
 }
 
-function deleteStoreMeta(metaByGroup: MetaByGroup, groupId: string, cacheKey: string): void {
-	const groupMeta = metaByGroup.get(groupId)
-	groupMeta?.delete(cacheKey)
-	if (groupMeta?.size === 0) metaByGroup.delete(groupId)
+/** Segment-wise prefix test on the structural path — never a string `startsWith`. */
+function hasPathPrefix(path: readonly string[], prefix: readonly string[]): boolean {
+	if (prefix.length > path.length) return false
+	for (let i = 0; i < prefix.length; i += 1) {
+		if (path[i] !== prefix[i]) return false
+	}
+	return true
+}
+
+/** Build the nested object view from flat coordinates. Pure: returns a fresh tree each call. */
+export function toTree(coords: readonly CacheCoordinate[]): CacheTree {
+	const root: CacheTree = {}
+	for (const { path, group, key } of coords) {
+		let node = root
+		for (const segment of path) {
+			const existing = node[segment]
+			if (existing !== undefined && !Array.isArray(existing)) {
+				node = existing
+			} else {
+				const created: CacheTree = {}
+				node[segment] = created
+				node = created
+			}
+		}
+		const leaf = node[group]
+		if (Array.isArray(leaf)) {
+			leaf.push(key)
+		} else {
+			node[group] = [key]
+		}
+	}
+	return root
 }
 
 /** Grace window for a store that has never been observed (orphan from a discarded render). */
@@ -76,33 +113,22 @@ function isExpired(meta: CachedStoreMeta, at: number, defaultGcTime: number): bo
 	return gcTime !== Infinity && at - meta.idleSince >= gcTime
 }
 
-/** Immutable nested-map update. Returns the same map reference when nothing changes. */
+/** Immutable flat-map update. Returns the same map reference when nothing changes. */
 function withPublishedStore(
-	storesByGroup: GroupedStores,
-	groupId: string,
-	cacheKey: string,
+	stores: ReadonlyMap<string, PublishedEntry>,
+	id: EntryId,
 	store: AnyStore | undefined,
-): GroupedStores {
-	const group = storesByGroup.get(groupId)
+): ReadonlyMap<string, PublishedEntry> {
+	const canonical = serializeEntryId(id)
 	if (store === undefined) {
-		if (!group?.has(cacheKey)) return storesByGroup
-	} else if (group?.get(cacheKey) === store) {
-		return storesByGroup
+		if (!stores.has(canonical)) return stores
+		const next = new Map(stores)
+		next.delete(canonical)
+		return next
 	}
-
-	const nextGroup = new Map(group ?? [])
-	if (store === undefined) {
-		nextGroup.delete(cacheKey)
-	} else {
-		nextGroup.set(cacheKey, store)
-	}
-
-	const next = new Map(storesByGroup)
-	if (nextGroup.size === 0) {
-		next.delete(groupId)
-	} else {
-		next.set(groupId, nextGroup)
-	}
+	if (stores.get(canonical)?.store === store) return stores
+	const next = new Map(stores)
+	next.set(canonical, { store, coord: toCoord(id) })
 	return next
 }
 
@@ -111,35 +137,33 @@ function withPublishedStore(
 // ---------------------------------------------------------------------------
 
 export function createCacheInstance(defaultGcTime: number): CacheInstance {
-	// Source of truth (non-reactive): store instances + lifecycle bookkeeping, per group.
-	const metaByGroup: MetaByGroup = new Map()
+	// Source of truth (non-reactive): store instances + lifecycle bookkeeping, flat by canonical id.
+	const metaByKey: MetaByKey = new Map()
 	// Reactive published view, mutated only outside render (addObserver / sweep / remove / clear).
-	const cachedStores = createStore<CachedStoresState>(() => ({ storesByGroup: new Map() }))
+	const cachedStores = createStore<CachedStoresState>(() => ({ stores: new Map() }))
 
-	function publish(groupId: string, cacheKey: string, store: AnyStore | undefined): void {
-		const current = cachedStores.getState().storesByGroup
-		const next = withPublishedStore(current, groupId, cacheKey, store)
-		if (next !== current) cachedStores.setState({ storesByGroup: next })
+	function publish(id: EntryId, store: AnyStore | undefined): void {
+		const current = cachedStores.getState().stores
+		const next = withPublishedStore(current, id, store)
+		if (next !== current) cachedStores.setState({ stores: next })
 	}
 
-	function remove(groupId: string, cacheKey: string): void {
-		const meta = getStoreMeta(metaByGroup, groupId, cacheKey)
+	function remove(id: EntryId): void {
+		const meta = metaByKey.get(serializeEntryId(id))
 		if (meta?.evictionTimer) clearTimeout(meta.evictionTimer)
-		deleteStoreMeta(metaByGroup, groupId, cacheKey)
-		publish(groupId, cacheKey, undefined)
+		metaByKey.delete(serializeEntryId(id))
+		publish(id, undefined)
 	}
 
 	function sweepExpired(): void {
 		const at = Date.now()
-		for (const [groupId, groupMeta] of metaByGroup) {
-			for (const [cacheKey, meta] of groupMeta) {
-				if (isExpired(meta, at, defaultGcTime)) remove(groupId, cacheKey)
-			}
+		for (const meta of [...metaByKey.values()]) {
+			if (isExpired(meta, at, defaultGcTime)) remove(meta.coord)
 		}
 	}
 
-	function scheduleEviction(groupId: string, cacheKey: string): void {
-		const meta = getStoreMeta(metaByGroup, groupId, cacheKey)
+	function scheduleEviction(id: EntryId): void {
+		const meta = metaByKey.get(serializeEntryId(id))
 		if (!meta) return
 		if (meta.evictionTimer) {
 			clearTimeout(meta.evictionTimer)
@@ -150,14 +174,15 @@ export function createCacheInstance(defaultGcTime: number): CacheInstance {
 		meta.evictionTimer = setTimeout(sweepExpired, gcTime)
 	}
 
-	function getOrCreate(groupId: string, cacheKey: string, create: () => AnyStore, gcTime: number): AnyStore {
-		const existing = getStoreMeta(metaByGroup, groupId, cacheKey)
+	function getOrCreate(id: EntryId, create: () => AnyStore, gcTime: number): AnyStore {
+		const existing = metaByKey.get(serializeEntryId(id))
 		if (existing) return existing.store
 
 		const store = create()
-		// Only `metaByGroup` (non-reactive) is touched here, so creation is safe during render.
-		setStoreMeta(metaByGroup, groupId, cacheKey, {
+		// Only `metaByKey` (non-reactive) is touched here, so creation is safe during render.
+		metaByKey.set(serializeEntryId(id), {
 			store,
+			coord: toCoord(id),
 			observerCount: 0,
 			gcTime,
 			wasEverObserved: false,
@@ -165,12 +190,12 @@ export function createCacheInstance(defaultGcTime: number): CacheInstance {
 			evictionTimer: undefined,
 		})
 		// Idle from birth: a discarded render that never observes is reclaimed by this orphan eviction.
-		scheduleEviction(groupId, cacheKey)
+		scheduleEviction(id)
 		return store
 	}
 
-	function addObserver(groupId: string, cacheKey: string): void {
-		const meta = getStoreMeta(metaByGroup, groupId, cacheKey)
+	function addObserver(id: EntryId): void {
+		const meta = metaByKey.get(serializeEntryId(id))
 		if (!meta) return
 		meta.observerCount += 1
 		meta.wasEverObserved = true
@@ -180,41 +205,47 @@ export function createCacheInstance(defaultGcTime: number): CacheInstance {
 			meta.evictionTimer = undefined
 		}
 		// Publish to the reactive view on commit (effect), never during render.
-		publish(groupId, cacheKey, meta.store)
+		publish(id, meta.store)
 	}
 
-	function removeObserver(groupId: string, cacheKey: string): void {
-		const meta = getStoreMeta(metaByGroup, groupId, cacheKey)
+	function removeObserver(id: EntryId): void {
+		const meta = metaByKey.get(serializeEntryId(id))
 		if (!meta) return
 		meta.observerCount = Math.max(0, meta.observerCount - 1)
 		if (meta.observerCount === 0) {
 			meta.idleSince = Date.now()
-			scheduleEviction(groupId, cacheKey)
+			scheduleEviction(id)
 		}
 	}
 
-	function getCachedStore(groupId: string, cacheKey: string): AnyStore | undefined {
-		const meta = getStoreMeta(metaByGroup, groupId, cacheKey)
+	function getCachedStore(id: EntryId): AnyStore | undefined {
+		const meta = metaByKey.get(serializeEntryId(id))
 		if (!meta || isExpired(meta, Date.now(), defaultGcTime)) return undefined
-		return cachedStores.getState().storesByGroup.get(groupId)?.get(cacheKey)
+		return cachedStores.getState().stores.get(serializeEntryId(id))?.store
 	}
 
-	function keys(): Map<string, string[]> {
-		const out = new Map<string, string[]>()
-		for (const [groupId, group] of cachedStores.getState().storesByGroup) {
-			out.set(groupId, [...group.keys()])
+	function keys(prefix?: readonly string[]): CacheCoordinate[] {
+		const out: CacheCoordinate[] = []
+		for (const { coord } of cachedStores.getState().stores.values()) {
+			if (!prefix || hasPathPrefix(coord.path, prefix)) {
+				out.push({ path: [...coord.path], group: coord.group, key: coord.key })
+			}
 		}
 		return out
 	}
 
-	function clear(): void {
-		for (const groupMeta of metaByGroup.values()) {
-			for (const meta of groupMeta.values()) {
+	function clear(prefix?: readonly string[]): void {
+		if (!prefix) {
+			for (const meta of metaByKey.values()) {
 				if (meta.evictionTimer) clearTimeout(meta.evictionTimer)
 			}
+			metaByKey.clear()
+			cachedStores.setState({ stores: new Map() })
+			return
 		}
-		metaByGroup.clear()
-		cachedStores.setState({ storesByGroup: new Map() })
+		for (const meta of [...metaByKey.values()]) {
+			if (hasPathPrefix(meta.coord.path, prefix)) remove(meta.coord)
+		}
 	}
 
 	return { cachedStores, getOrCreate, addObserver, removeObserver, getCachedStore, remove, keys, clear }
