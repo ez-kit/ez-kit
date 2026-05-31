@@ -16,22 +16,22 @@ export type CachedStoreFactory<TStore extends StoreApi<unknown>, TDefaultProps e
 	defaultProps: TDefaultProps,
 ) => TStore
 
-/** Absolute address of a cache entry within a store group: a tree `path` plus the entry `cacheKey`. */
+/** Absolute address of a cache entry within a store group: a tree `path` plus the entry `id`. */
 export type CacheAddress = {
 	/** Resolved tree location of the entry. Defaults to `[]` (root) when omitted. */
 	path?: string[]
 	/** Identity of the entry within its store group at `path`. */
-	cacheKey: string
+	id: string
 }
 
 /** Structural coordinate of one live entry, as surfaced by `keys()` / `useKeys()`. */
 export type CacheRecord = {
 	path: string[]
-	group: string
-	cacheKey: string
+	name: string
+	id: string
 }
 
-/** Nested view of live entries: path segments nest as objects; each leaf maps group → `cacheKey[]`. */
+/** Nested view of live entries: path segments nest as objects; each leaf maps store `name` → `id[]`. */
 export type CacheTree = {
 	[segment: string]: CacheTree | string[]
 }
@@ -43,7 +43,7 @@ export type ScopeProps = PropsWithChildren<{
 
 type ProviderBaseProps = {
 	/** Identity of the cache entry within this store group at the resolved path. Required. */
-	cacheKey: string
+	id: string
 	/** Path segments appended after the inherited `Scope` path: `[...scope, ...path]`. */
 	path?: string[]
 	/** Birth-config: eviction delay for this entry. Fixed by the first mount of the identity. */
@@ -66,21 +66,21 @@ export type CachedItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 	children: (state: TSelected) => ReactElement
 }
 
-/** Handle returned by `defineStore` — a group of keep-alive stores keyed by `(path, cacheKey)`. */
+/** Handle returned by `defineStore` — a group of keep-alive stores keyed by `(path, id)`. */
 export type CachedStoreGroup<TStore extends StoreApi<unknown>, TDefaultProps extends object> = {
 	Provider: (props: CachedProviderProps<TDefaultProps>) => ReactElement
 	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	useContextStore: () => TStore
 	Item: <TSelected>(props: CachedItemProps<TStore, TSelected>) => ReactElement
-	/** Imperative get-if-alive at `(path, cacheKey)`. Returns the live store or `undefined`. Never creates. */
+	/** Imperative get-if-alive at `(path, id)`. Returns the live store or `undefined`. Never creates. */
 	fromCache: (target: CacheAddress) => TStore | undefined
-	/** Reactive, passive cross-tree read at `(path, cacheKey)`. Does not keep the store alive. */
+	/** Reactive, passive cross-tree read at `(path, id)`. Does not keep the store alive. */
 	useFromCache: <TSelected>(
 		target: CacheAddress,
 		selector: (state: ExtractState<TStore> | undefined) => TSelected,
 	) => TSelected
-	/** Remove this group's entry at `(path, cacheKey)` immediately. */
+	/** Remove this group's entry at `(path, id)` immediately. */
 	remove: (target: CacheAddress) => void
 }
 

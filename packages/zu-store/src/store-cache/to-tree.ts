@@ -6,7 +6,7 @@ import type { CacheRecord, CacheTree } from './types'
  */
 export function toTree(records: readonly CacheRecord[]): CacheTree {
 	const root: CacheTree = {}
-	for (const { path, group, cacheKey } of records) {
+	for (const { path, name, id } of records) {
 		let node = root
 		for (const segment of path) {
 			const existing = node[segment]
@@ -18,11 +18,11 @@ export function toTree(records: readonly CacheRecord[]): CacheTree {
 				node = created
 			}
 		}
-		const leaf = node[group]
+		const leaf = node[name]
 		if (Array.isArray(leaf)) {
-			leaf.push(cacheKey)
+			leaf.push(id)
 		} else {
-			node[group] = [cacheKey]
+			node[name] = [id]
 		}
 	}
 	return root

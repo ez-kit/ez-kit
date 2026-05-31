@@ -23,7 +23,7 @@ const userTable = cache.defineStore('user-table', (defaultProps: { filter?: stri
 
 const FILTERS = ['all', 'active', 'archived']
 
-// Reusable table: it knows ONLY its own cacheKey, nothing about where it is mounted.
+// Reusable table: it knows ONLY its own id, nothing about where it is mounted.
 // The enclosing <cache.Scope> decides its namespace, so two mounts never collide.
 function UserTable({ userId }: { userId: string }) {
 	const filter = userTable.useStore((s) => s.filter)
@@ -57,7 +57,7 @@ function Page({ name }: { name: string }) {
 		<cache.Scope path={[name]}>
 			<div className='flex flex-col gap-2 rounded-lg border border-fd-border bg-fd-card p-4'>
 				<span className='text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground'>{name}</span>
-				<userTable.Provider cacheKey='user-42'>
+				<userTable.Provider id='user-42'>
 					<UserTable userId='42' />
 				</userTable.Provider>
 			</div>

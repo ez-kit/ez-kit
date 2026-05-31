@@ -1,19 +1,11 @@
-import {
-	createContext,
-	useContext,
-	useEffect,
-	useState,
-	type Context,
-	type ReactElement,
-	type ReactNode,
-} from 'react'
+import { createContext, useContext, useEffect, useState, type Context, type ReactElement, type ReactNode } from 'react'
 import { useStore as useZustandStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { createStore } from 'zustand/vanilla'
 
-import { serializeEntryId, toEntryId } from './cache-utils'
+import { serializeStoreId, toStoreId } from './cache-utils'
 
-import type { CacheInstance, EntryId } from './cache-types'
+import type { CacheInstance, StoreId } from './cache-types'
 import type {
 	CacheAddress,
 	CachedItemProps,
@@ -98,7 +90,7 @@ export function createDefineStore(deps: DefineStoreDeps) {
 		)
 
 		type ProviderInnerProps = {
-			id: EntryId
+			storeId: StoreId
 			defaultProps: TDefaultProps
 			gcTime: number
 			children: ReactNode
@@ -113,7 +105,7 @@ export function createDefineStore(deps: DefineStoreDeps) {
 		 * `setCanonical`. Because `StoreContext.Provider` propagates the new value reactively (rather than capturing
 		 * it via `useRef`), descendants re-subscribe to the canonical store without remounting.
 		 */
-		function ProviderInner({ id, defaultProps, gcTime, children }: ProviderInnerProps): ReactElement {
+		function ProviderInner({ storeId, defaultProps, gcTime, children }: ProviderInnerProps): ReactElement {
 			const cache = useContext(CacheContext)
 			if (!cache) throw new Error(missingProviderError)
 
@@ -123,13 +115,13 @@ export function createDefineStore(deps: DefineStoreDeps) {
 			const [canonical, setCanonical] = useState<TStore>(provisional)
 
 			useEffect(() => {
-				const registered = cache.register(id, provisional, gcTime) as TStore
+				const registered = cache.register(storeId, provisional, gcTime) as TStore
 				if (registered !== canonical) setCanonical(registered)
-				cache.addObserver(id)
+				cache.addObserver(storeId)
 				return () => {
-					cache.removeObserver(id)
+					cache.removeObserver(storeId)
 				}
-				// `id` is stable for this keyed mount; intentionally exclude `canonical` to run register exactly once.
+				// `storeId` is stable for this keyed mount; intentionally exclude `canonical` to run register exactly once.
 				// eslint-disable-next-line react-hooks/exhaustive-deps
 			}, [cache])
 
@@ -137,7 +129,7 @@ export function createDefineStore(deps: DefineStoreDeps) {
 		}
 
 		function Provider(props: CachedProviderProps<TDefaultProps>): ReactElement {
-			const { cacheKey, path, gcTime, alwaysCache, children } = props
+			const { id, path, gcTime, alwaysCache, children } = props
 			// `defaultProps` lives on one of two conditional branches of `CachedProviderProps`; access via index cast.
 			// Safe by the conditional type: when `TDefaultProps` has required fields, the type requires
 			// `defaultProps` so it is defined here. When `TDefaultProps` admits `{}`, omission is allowed and the
@@ -147,12 +139,12 @@ export function createDefineStore(deps: DefineStoreDeps) {
 			const resolvedPath = resolvePath(inheritedScope, path)
 			const resolvedGcTime = resolveGcTime(alwaysCache, gcTime, groupGcTime, cacheGcTime)
 			const seedDefaultProps: TDefaultProps = providedDefaults ?? ({} as TDefaultProps)
-			const id: EntryId = { path: resolvedPath, group: name, cacheKey }
-			const remountKey = serializeEntryId(id)
+			const storeId: StoreId = { path: resolvedPath, name, id }
+			const remountKey = serializeStoreId(storeId)
 			return (
 				<ProviderInner
 					key={remountKey}
-					id={id}
+					storeId={storeId}
 					defaultProps={seedDefaultProps}
 					gcTime={resolvedGcTime}
 				>
@@ -162,7 +154,7 @@ export function createDefineStore(deps: DefineStoreDeps) {
 		}
 
 		function fromCache(target: CacheAddress): TStore | undefined {
-			return activeCache.current?.getCachedStore(toEntryId(target, name)) as TStore | undefined
+			return activeCache.current?.getCachedStore(toStoreId(target, name)) as TStore | undefined
 		}
 
 		function useFromCache<TSelected>(
@@ -172,11 +164,11 @@ export function createDefineStore(deps: DefineStoreDeps) {
 			const cache = useContext(CacheContext)
 			if (!cache) throw new Error(missingProviderError)
 
-			const entryKey = serializeEntryId(toEntryId(target, name))
+			const storeKey = serializeStoreId(toStoreId(target, name))
 
 			const liveStore = useZustandStore(
-				cache.publishedStores,
-				(state) => state.published.get(entryKey)?.store as StoreApi<ExtractState<TStore>> | undefined,
+				cache.cachedStores,
+				(state) => state.stores.get(storeKey)?.store as StoreApi<ExtractState<TStore>> | undefined,
 			)
 
 			const subscribed: StoreApi<ExtractState<TStore>> = liveStore ?? fallbackStore
@@ -187,7 +179,7 @@ export function createDefineStore(deps: DefineStoreDeps) {
 		}
 
 		function remove(target: CacheAddress): void {
-			activeCache.current?.remove(toEntryId(target, name))
+			activeCache.current?.remove(toStoreId(target, name))
 		}
 
 		return {

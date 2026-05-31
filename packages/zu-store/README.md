@@ -48,7 +48,7 @@ const [name, setName] = useStoreState(formStore, 'name')
 
 ### `createStoreCache(options?)`
 
-Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by `(path, group, cacheKey)`, in memory (no `localStorage`). Useful for preserving table filters, pagination, etc. between page navigations. Returns `{ Provider, Scope, useCache, defineStore }`; `defineStore(factory)` returns a namespaced store group with `Provider`, the usual read hooks, plus `fromCache`, `useFromCache`, and `remove`. The `path` is inherited from `<cache.Scope>`, so reusable components stay collision-free across mount locations. `createContextStore` is left untouched — this is a separate, opt-in primitive.
+Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by `(path, name, id)`, in memory (no `localStorage`). Useful for preserving table filters, pagination, etc. between page navigations. Returns `{ Provider, Scope, useCache, defineStore }`; `defineStore(factory)` returns a namespaced store group with `Provider`, the usual read hooks, plus `fromCache`, `useFromCache`, and `remove`. The `path` is inherited from `<cache.Scope>`, so reusable components stay collision-free across mount locations. `createContextStore` is left untouched — this is a separate, opt-in primitive.
 
 ```tsx
 import { createStoreCache } from '@ez-kit/zu-store'
@@ -62,16 +62,16 @@ const usersTable = cache.defineStore('users', (defaultProps: { filter?: string }
 // once, high in the tree
 <cache.Provider>
   {/* survives unmount; reused on remount within gcTime */}
-  {/* <Scope> namespaces by location so two pages never collide on the same cacheKey */}
+  {/* <Scope> namespaces by location so two pages never collide on the same id */}
   <cache.Scope path={['page-1']}>
-    <usersTable.Provider cacheKey="users" defaultProps={{ filter: 'active' }}>
+    <usersTable.Provider id="users" defaultProps={{ filter: 'active' }}>
       <UsersTable />
     </usersTable.Provider>
   </cache.Scope>
 </cache.Provider>
 
-// imperatively, from anywhere — address the absolute { path, cacheKey }
-usersTable.fromCache({ path: ['page-1'], cacheKey: 'users' })?.setState({ filter: 'archived' })
+// imperatively, from anywhere — address the absolute { path, id }
+usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'archived' })
 ```
 
 → [Full docs](docs/store-cache.md)

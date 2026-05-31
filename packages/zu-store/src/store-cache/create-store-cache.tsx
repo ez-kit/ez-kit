@@ -1,12 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type PropsWithChildren, type ReactElement } from 'react'
-import { useStore as useZustandStore } from 'zustand'
-import { useShallow } from 'zustand/react/shallow'
 
 import { createCacheInstance, DEFAULT_GC_TIME } from './cache-instance'
 import { createDefineStore, type ActiveCacheRef } from './define-store'
+import { createUseKeys } from './use-keys'
 
-import type { CacheInstance, PublishedStoresState } from './cache-types'
-import type { CacheRecord, ScopeProps, StoreCache, StoreCacheController, StoreCacheOptions } from './types'
+import type { CacheInstance } from './cache-types'
+import type { ScopeProps, StoreCache, StoreCacheController, StoreCacheOptions } from './types'
 
 export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider for createStoreCache'
 
@@ -67,24 +66,7 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 		return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>
 	}
 
-	function useKeys(prefix?: readonly string[]): CacheRecord[] {
-		const cache = useContext(CacheContext)
-		if (!cache) throw new Error(MISSING_CACHE_PROVIDER)
-		// Subscribe to the membership signature — a stable, shallow-comparable string list.
-		// Internal state changes inside individual entries do NOT update publishedStores, so they cannot trigger here.
-		const signature = useZustandStore(
-			cache.publishedStores,
-			useShallow((state: PublishedStoresState): readonly string[] => [...state.published.keys()]),
-		)
-		const prefixKey = prefix ? JSON.stringify(prefix) : ''
-		const computeKeys = (): CacheRecord[] => cache.keys(prefix)
-		return useMemo<CacheRecord[]>(
-			computeKeys,
-			// `signature` change ⇒ membership change; `prefixKey` change ⇒ filter change.
-			// eslint-disable-next-line react-hooks/exhaustive-deps
-			[cache, signature, prefixKey],
-		)
-	}
+	const useKeys = createUseKeys({ CacheContext, missingProviderError: MISSING_CACHE_PROVIDER })
 
 	function useCache(): StoreCacheController {
 		const cache = useContext(CacheContext)

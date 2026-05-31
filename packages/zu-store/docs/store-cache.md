@@ -13,7 +13,7 @@ pnpm add @ez-kit/zu-store zustand
 ## Signature
 
 ```ts
-type CacheRecord = { path: string[]; group: string; cacheKey: string }
+type CacheRecord = { path: string[]; name: string; id: string }
 
 function createStoreCache(options?: { gcTime?: number }): {
 	Provider: (props: PropsWithChildren) => ReactElement
@@ -38,26 +38,26 @@ A store-group handle from `defineStore` exposes:
 
 ```ts
 {
-	Provider // keyed observer: cacheKey + path? + defaultProps (+ gcTime / alwaysCache)
+	Provider // keyed observer: id + path? + defaultProps (+ gcTime / alwaysCache)
 	useStore // \
 	useShallowStore //  } same semantics as createContextStore, under the store-group Provider
 	useContextStore //  }
 	Item // /
-	fromCache({ path?, cacheKey }) // imperative get-if-alive → StoreApi | undefined (never creates)
-	useFromCache({ path?, cacheKey }, sel) // reactive, passive cross-tree read
-	remove({ path?, cacheKey }) // remove this group's entry
+	fromCache({ path?, id }) // imperative get-if-alive → StoreApi | undefined (never creates)
+	useFromCache({ path?, id }, sel) // reactive, passive cross-tree read
+	remove({ path?, id }) // remove this group's entry
 }
 ```
 
 ## Namespacing with `Scope`
 
-Entry identity is `(path, group, cacheKey)`. The `path` is inherited from the enclosing `<cache.Scope path={[...]}>` (nested scopes concatenate, outermost first); the optional `path` prop on a `Provider` is appended after it. This lets a reusable component set only its `cacheKey` and still be namespaced by where it is mounted — two mounts of the same `(group, cacheKey)` under different scopes never collide. With no `Scope`, the path is `[]` (root).
+Entry identity is `(path, name, id)`. The `path` is inherited from the enclosing `<cache.Scope path={[...]}>` (nested scopes concatenate, outermost first); the optional `path` prop on a `Provider` is appended after it. This lets a reusable component set only its `id` and still be namespaced by where it is mounted — two mounts of the same `(name, id)` under different scopes never collide. With no `Scope`, the path is `[]` (root).
 
 ```tsx
 function UserTable({ userId }: { userId: string }) {
-	// knows only its own cacheKey, nothing about the page it sits on
+	// knows only its own id, nothing about the page it sits on
 	return (
-		<usersTable.Provider cacheKey={`user-${userId}`}>
+		<usersTable.Provider id={`user-${userId}`}>
 			<Grid />
 		</usersTable.Provider>
 	)
@@ -108,7 +108,7 @@ function Root() {
 function UsersPage() {
 	return (
 		<usersTable.Provider
-			cacheKey='users'
+			id='users'
 			defaultProps={{ filter: 'active' }}
 		>
 			<UsersTable />
@@ -135,38 +135,38 @@ Owns the real cache storage, created per React tree (so SSR renders and tests ar
 
 | Prop           |          | Description                                                                                     |
 | -------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `cacheKey`     | required | Identity of the entry within the store group.                                                   |
+| `id`     | required | Identity of the entry within the store group.                                                   |
 | `defaultProps` | optional | Seed passed to the factory **only** when the key is first created.                              |
 | `gcTime`       | optional | Eviction delay (ms) once observers reach 0. Birth-config — fixed by the first mount of the key. |
 | `alwaysCache`  | optional | Pin the entry against automatic eviction (≡ `gcTime: Infinity`).                                |
 
-Multiple `Provider`s with the same `cacheKey` share one store (live-sync). The `Provider` is the unit of reference counting.
+Multiple `Provider`s with the same `id` share one store (live-sync). The `Provider` is the unit of reference counting.
 
-Reads address the **absolute** `{ path, cacheKey }` (`path` defaults to `[]` root). Writes inherit their path from `Scope`; reads state it explicitly.
+Reads address the **absolute** `{ path, id }` (`path` defaults to `[]` root). Writes inherit their path from `Scope`; reads state it explicitly.
 
-### `fromCache({ path, cacheKey })`
+### `fromCache({ path, id })`
 
 Imperative, returns the live `StoreApi` or `undefined`. Never creates an entry and never affects lifecycle. Use it in event handlers, actions, or non-React code:
 
 ```ts
-usersTable.fromCache({ path: ['page-1'], cacheKey: 'users' })?.setState({ page: 2 })
+usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ page: 2 })
 ```
 
-### `useFromCache({ path, cacheKey }, selector)`
+### `useFromCache({ path, id }, selector)`
 
 Reactively reads a cached store from anywhere — even outside the store-group `Provider`. The selector receives the state or `undefined` when no entry exists. It is **passive**: it reflects the cache but does not keep the store alive.
 
 ```tsx
-const activeFilters = usersTable.useFromCache({ path: ['page-1'], cacheKey: 'users' }, (s) => s?.filters.length ?? 0)
+const activeFilters = usersTable.useFromCache({ path: ['page-1'], id: 'users' }, (s) => s?.filters.length ?? 0)
 ```
 
-### `remove({ path, cacheKey })` / `useCache().clear(prefix?)`
+### `remove({ path, id })` / `useCache().clear(prefix?)`
 
 `remove` deletes one entry. `clear()` removes every entry in the active cache; `clear(prefix)` removes every entry whose path is prefixed by `prefix`, across all groups (the "leave a page, drop its stores" lever). All override `alwaysCache`.
 
 ### `useCache().keys(prefix?)`
 
-Returns a flat `CacheRecord[]` of live entries — `{ path, group, cacheKey }` per entry. Non-reactive snapshot, assertion- and iteration-friendly. Pass an optional path `prefix` to scope the result to a subtree.
+Returns a flat `CacheRecord[]` of live entries — `{ path, name, id }` per entry. Non-reactive snapshot, assertion- and iteration-friendly. Pass an optional path `prefix` to scope the result to a subtree.
 
 ### `cache.useKeys(prefix?)` — reactive hook
 
@@ -208,7 +208,7 @@ function CachePanel({ customerId }: { customerId: string }) {
 - **`defineStore` names must be unique within a cache.** The `name` is the group's namespace and shows up in `useCache().keys()`; two groups sharing a name under the same `cache.Provider` would collide on one keyspace. In development, the library emits a `console.warn` on the second call — a frequent symptom of calling `defineStore` inside a render.
 - **Don't mount two `<cache.Provider>` for the same cache.** Imperative access via `fromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. In development, the library emits a `console.warn` when this happens.
 - **`alwaysCache` + dynamic keys or paths leaks.** Pinned entries under unbounded keys (`order-${id}`) or paths never evict. Use `alwaysCache` only for a small, fixed set; rely on `gcTime` for dynamic ones, and `clear(path)` to drop a subtree on navigation.
-- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` take `{ path, cacheKey }` and default `path` to `[]`. A read with the wrong path silently misses.
+- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` take `{ path, id }` and default `path` to `[]`. A read with the wrong path silently misses.
 - **`useFromCache` is passive.** After the owning `Provider` unmounts and `gcTime` elapses, the store is evicted and the reader sees `undefined`. Use `alwaysCache`/`gcTime` if a reader must keep it alive.
 - **Imperative access needs a mounted `cache.Provider`.** `fromCache`/`remove` target the active client cache; with multiple `cache.Provider`s, prefer `useCache()` inside the tree.
 - **Prefer the URL for "prepare then navigate".** To open a page with pre-set state, carry intent in the URL/route and seed via `defaultProps` rather than setting a cold store before it mounts.

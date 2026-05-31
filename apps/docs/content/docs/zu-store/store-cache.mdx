@@ -56,7 +56,7 @@ Then mount the keyed `Provider` wherever the table lives. It survives unmount an
 function UsersPage() {
 	return (
 		<usersTable.Provider
-			cacheKey='users'
+			id='users'
 			defaultProps={{ filter: 'active' }}
 		>
 			<UsersTable />
@@ -85,9 +85,9 @@ Each `<Provider>` is counted as an observer. When the **last** one unmounts, the
 
 ```tsx
 // gcTime resolution (first match wins):
-<usersTable.Provider cacheKey='users' />              // cache default (5 min here)
-<usersTable.Provider cacheKey='users' gcTime={30_000} /> // this entry: 30s after last unmount
-<usersTable.Provider cacheKey='users' alwaysCache />  // never auto-evict
+<usersTable.Provider id='users' />              // cache default (5 min here)
+<usersTable.Provider id='users' gcTime={30_000} /> // this entry: 30s after last unmount
+<usersTable.Provider id='users' alwaysCache />  // never auto-evict
 ```
 
 `gcTime` and `alwaysCache` are **birth-config**: they are fixed by the first mount that creates the entry. Later mounts attach to the existing store and ignore them.
@@ -98,10 +98,10 @@ Each `<Provider>` is counted as an observer. When the **last** one unmounts, the
 
 ```tsx
 // First visit → store created as { filter: 'active' }
-<usersTable.Provider cacheKey='users' defaultProps={{ filter: 'active' }} />
+<usersTable.Provider id='users' defaultProps={{ filter: 'active' }} />
 
 // User changes filter to 'archived', navigates away, comes back:
-<usersTable.Provider cacheKey='users' defaultProps={{ filter: 'active' }} />
+<usersTable.Provider id='users' defaultProps={{ filter: 'active' }} />
 // → still 'archived'. The new defaultProps do nothing.
 ```
 
@@ -109,16 +109,16 @@ To open a page with pre-set state, drive it from the URL and seed from there, ra
 
 ```tsx
 <usersTable.Provider
-	cacheKey='users'
+	id='users'
 	defaultProps={{ filter: searchParams.get('filter') ?? 'all' }}
 />
 ```
 
 ## Reading a store from anywhere
 
-Reads are addressed by the **absolute** `{ path, cacheKey }` — `path` defaults to `[]` (root) when omitted. Writes inherit their path from `Scope`; reads, being "from elsewhere", state it explicitly.
+Reads are addressed by the **absolute** `{ path, id }` — `path` defaults to `[]` (root) when omitted. Writes inherit their path from `Scope`; reads, being "from elsewhere", state it explicitly.
 
-### `fromCache({ path, cacheKey })` — imperative
+### `fromCache({ path, id })` — imperative
 
 Returns the live `StoreApi` or `undefined`. Never creates an entry. Use it in event handlers, actions, or non-React code:
 
@@ -126,23 +126,23 @@ Returns the live `StoreApi` or `undefined`. Never creates an entry. Use it in ev
 // A global "reset filters" button, even outside the table's subtree:
 function ResetButton() {
 	return (
-		<button onClick={() => usersTable.fromCache({ path: ['page-1'], cacheKey: 'users' })?.setState({ filter: 'all', page: 1 })}>
+		<button onClick={() => usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'all', page: 1 })}>
 			Reset
 		</button>
 	)
 }
 
 // A WebSocket pushing rows into the live store:
-socket.on('row', (row) => usersTable.fromCache({ path: ['page-1'], cacheKey: 'users' })?.getState().addRow(row))
+socket.on('row', (row) => usersTable.fromCache({ path: ['page-1'], id: 'users' })?.getState().addRow(row))
 ```
 
-### `useFromCache({ path, cacheKey }, selector)` — reactive
+### `useFromCache({ path, id }, selector)` — reactive
 
 Reactively read a cached store from **anywhere** — even a sidebar that is not inside the table's `Provider`. The selector receives the state, or `undefined` when no entry exists:
 
 ```tsx
 function ActiveFiltersBadge() {
-	const count = usersTable.useFromCache({ path: ['page-1'], cacheKey: 'users' }, (s) => s?.activeFilters.length ?? 0)
+	const count = usersTable.useFromCache({ path: ['page-1'], id: 'users' }, (s) => s?.activeFilters.length ?? 0)
 	return <span>{count} filters</span>
 }
 ```
@@ -151,11 +151,11 @@ function ActiveFiltersBadge() {
 
 ## Multiple keys and groups
 
-One group, many keys — each `cacheKey` is an independent store:
+One group, many keys — each `id` is an independent store:
 
 ```tsx
-<usersTable.Provider cacheKey='active-users' />
-<usersTable.Provider cacheKey='archived-users' /> // separate filters/pagination
+<usersTable.Provider id='active-users' />
+<usersTable.Provider id='archived-users' /> // separate filters/pagination
 ```
 
 Different groups never collide, even on the same key — the group `name` is the namespace:
@@ -164,14 +164,14 @@ Different groups never collide, even on the same key — the group `name` is the
 const usersTable = cache.defineStore('users', usersFactory)
 const ordersTable = cache.defineStore('orders', ordersFactory)
 
-usersTable.fromCache({ cacheKey: 'main' }) // ≠ ordersTable.fromCache({ cacheKey: 'main' })
+usersTable.fromCache({ id: 'main' }) // ≠ ordersTable.fromCache({ id: 'main' })
 ```
 
 ## Namespacing with `Scope`
 
-A cache entry's identity has three axes: a **`path`** (where in the app it lives), the **group** (the `defineStore` name), and the **`cacheKey`** (which instance). The `path` is the outer axis and it is _inherited_ from the surrounding `<cache.Scope>`.
+A cache entry's identity has three axes: a **`path`** (where in the app it lives), the **`name`** (the `defineStore` name of its store group), and the **`id`** (which instance). The `path` is the outer axis and it is _inherited_ from the surrounding `<cache.Scope>`.
 
-This matters for **reusable** components. A `<UserTable userId>` mounted on two different pages computes the same `cacheKey` (`user-42`) under the same group — so without a path, the two mounts would share one store and leak filters between pages. Wrap each location in a `Scope` and the collision is gone, with no change to the leaf component:
+This matters for **reusable** components. A `<UserTable userId>` mounted on two different pages computes the same `id` (`user-42`) under the same group — so without a path, the two mounts would share one store and leak filters between pages. Wrap each location in a `Scope` and the collision is gone, with no change to the leaf component:
 
 <LivePreview
 	path='zu-store/store-cache-scope'
@@ -179,10 +179,10 @@ This matters for **reusable** components. A `<UserTable userId>` mounted on two 
 />
 
 ```tsx
-// Reusable — knows only its own cacheKey, nothing about where it is mounted:
+// Reusable — knows only its own id, nothing about where it is mounted:
 function UserTable({ userId }: { userId: string }) {
 	return (
-		<usersTable.Provider cacheKey={`user-${userId}`}>
+		<usersTable.Provider id={`user-${userId}`}>
 			<Grid />
 		</usersTable.Provider>
 	)
@@ -202,8 +202,8 @@ Nested `Scope`s **concatenate** (outermost first), so `resolvedPath = [...inheri
 ```tsx
 <cache.Scope path={['page-1']}>
 	<cache.Scope path={['section-1']}>
-		<usersTable.Provider cacheKey='user-42' /> {/* path: ['page-1', 'section-1'] */}
-		<usersTable.Provider cacheKey='user-42' path={['detail']} /> {/* ['page-1','section-1','detail'] */}
+		<usersTable.Provider id='user-42' /> {/* path: ['page-1', 'section-1'] */}
+		<usersTable.Provider id='user-42' path={['detail']} /> {/* ['page-1','section-1','detail'] */}
 	</cache.Scope>
 </cache.Scope>
 ```
@@ -218,12 +218,12 @@ When you don't want to lift a `Scope` boundary but still need to disambiguate tw
 function CompanyView({ companyId }: { companyId: string }) {
 	return (
 		<>
-			<usersTable.Provider cacheKey={`company-${companyId}`} path={['main']}>
+			<usersTable.Provider id={`company-${companyId}`} path={['main']}>
 				<UsersTable />
 			</usersTable.Provider>
 
 			<Modal title='Edit users'>
-				<usersTable.Provider cacheKey={`company-${companyId}`} path={['modal']}>
+				<usersTable.Provider id={`company-${companyId}`} path={['modal']}>
 					<UsersTable />
 				</usersTable.Provider>
 			</Modal>
@@ -232,7 +232,7 @@ function CompanyView({ companyId }: { companyId: string }) {
 }
 ```
 
-Both Providers share the same `cacheKey`, but their resolved paths are `['main']` and `['modal']` — two independent stores, two independent filters.
+Both Providers share the same `id`, but their resolved paths are `['main']` and `['modal']` — two independent stores, two independent filters.
 
 ### One `Scope`, many groups
 
@@ -246,9 +246,9 @@ const invoicesTable = cache.defineStore('invoices', invoicesFactory)
 function CustomerDetailPage({ customerId }: { customerId: string }) {
 	return (
 		<cache.Scope path={['customer', customerId]}>
-			<usersTable.Provider cacheKey='list' />     {/* path: ['customer', '42'] */}
-			<ordersTable.Provider cacheKey='list' />    {/* path: ['customer', '42'] */}
-			<invoicesTable.Provider cacheKey='list' />  {/* path: ['customer', '42'] */}
+			<usersTable.Provider id='list' />     {/* path: ['customer', '42'] */}
+			<ordersTable.Provider id='list' />    {/* path: ['customer', '42'] */}
+			<invoicesTable.Provider id='list' />  {/* path: ['customer', '42'] */}
 		</cache.Scope>
 	)
 }
@@ -266,7 +266,7 @@ import { toTree } from '@ez-kit/zu-store'
 function CacheTools() {
 	const { keys, clear } = cache.useCache()
 
-	// keys() → [{ path: ['page-1'], group: 'users', cacheKey: 'main' }, { path: ['page-2'], group: 'orders', cacheKey: 'list' }]
+	// keys() → [{ path: ['page-1'], name: 'users', id: 'main' }, { path: ['page-2'], name: 'orders', id: 'list' }]
 	// toTree(keys()) → { 'page-1': { users: ['main'] }, 'page-2': { orders: ['list'] } }
 
 	return (
@@ -278,7 +278,7 @@ function CacheTools() {
 	)
 }
 
-usersTable.remove({ path: ['page-1'], cacheKey: 'main' }) // drop a single entry (overrides alwaysCache)
+usersTable.remove({ path: ['page-1'], id: 'main' }) // drop a single entry (overrides alwaysCache)
 ```
 
 `clear(path)` removes every entry whose resolved path is prefixed by `path`, **across all groups** — the natural "leave a page, drop its stores" lever. Both `remove` and `clear` override `alwaysCache`.
@@ -289,7 +289,7 @@ usersTable.remove({ path: ['page-1'], cacheKey: 'main' }) // drop a single entry
 
 ```tsx
 function CacheBadge() {
-	const records = cache.useKeys() // [{ path, group, cacheKey }, ...]
+	const records = cache.useKeys() // [{ path, name, id }, ...]
 	return <span>{records.length} cached</span>
 }
 ```
@@ -359,14 +359,14 @@ function CustomerDetailPage({ customerId }: { customerId: string }) {
 
 	return (
 		<cache.Scope path={['customer', customerId]}>
-			<usersTable.Provider cacheKey='list' />
-			<ordersTable.Provider cacheKey='list' />
+			<usersTable.Provider id='list' />
+			<ordersTable.Provider id='list' />
 		</cache.Scope>
 	)
 }
 ```
 
-For a single entry rather than a subtree, use the group's `remove({ path, key })`.
+For a single entry rather than a subtree, use the group's `remove({ path, id })`.
 
 ## API
 
@@ -387,7 +387,7 @@ createStoreCache(options?: { gcTime?: number }): {
 // Pure utility, exported alongside createStoreCache:
 toTree(records: CacheRecord[]): CacheTree
 
-type CacheRecord = { path: string[]; group: string; cacheKey: string }
+type CacheRecord = { path: string[]; name: string; id: string }
 ```
 
 `gcTime` (default 5 minutes) is the delay before an unobserved entry is evicted. `toTree` is a standalone pure function — it takes any coordinate list (e.g. the output of `keys()` or `useKeys()`, or an array you assembled by hand for a test) and returns the nested view. For a reactive nested view, compose `toTree(useKeys(prefix?))` at the call site.
@@ -408,11 +408,11 @@ The returned group exposes:
 
 | Member                                                      | Purpose                                                                                          |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `Provider`                                                  | Keyed observer: `cacheKey` (required), `path?`, `defaultProps`, `gcTime?`, `alwaysCache?`.       |
+| `Provider`                                                  | Keyed observer: `id` (required), `path?`, `defaultProps`, `gcTime?`, `alwaysCache?`.       |
 | `useStore` / `useShallowStore` / `useContextStore` / `Item` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`.   |
-| `fromCache({ path?, cacheKey })`                            | Imperative get-if-alive → `StoreApi` or `undefined`.                                             |
-| `useFromCache({ path?, cacheKey }, selector)`               | Reactive, passive cross-tree read.                                                               |
-| `remove({ path?, cacheKey })`                               | Drop one entry immediately.                                                                       |
+| `fromCache({ path?, id })`                            | Imperative get-if-alive → `StoreApi` or `undefined`.                                             |
+| `useFromCache({ path?, id }, selector)`               | Reactive, passive cross-tree read.                                                               |
+| `remove({ path?, id })`                               | Drop one entry immediately.                                                                       |
 
 ## Server-side rendering
 
@@ -420,7 +420,7 @@ The feature is client-only. On the server the group `Provider` behaves like `cre
 
 ## Gotchas
 
-- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` address `{ path, cacheKey }` from outside, so pass the full resolved path (it defaults to `[]` root). A read with the wrong path silently misses.
+- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` address `{ path, id }` from outside, so pass the full resolved path (it defaults to `[]` root). A read with the wrong path silently misses.
 - **`alwaysCache` + dynamic keys or paths leaks.** Pinned entries under unbounded keys (`order-${id}`) or unbounded paths never evict. Use `alwaysCache` only for a small, fixed set; rely on `gcTime` for dynamic ones, and `clear(path)` to drop a subtree on navigation.
 - **`useFromCache` is passive.** It will not keep a store alive on its own.
 - **Imperative access needs a mounted `cache.Provider`.** With multiple `cache.Provider`s, the active one is ambiguous — prefer `useCache()` inside the tree.

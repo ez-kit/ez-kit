@@ -55,7 +55,7 @@ describe('createStoreCache — provider & context', () => {
 			<>
 				<cache.Provider>
 					<table.Provider
-						cacheKey='main'
+						id='main'
 						defaultProps={{ filter: 'seed' }}
 					>
 						<Reader id='one' />
@@ -64,7 +64,7 @@ describe('createStoreCache — provider & context', () => {
 				</cache.Provider>
 				<cache.Provider>
 					<table.Provider
-						cacheKey='main'
+						id='main'
 						defaultProps={{ filter: 'seed' }}
 					>
 						<Reader id='two' />
@@ -86,7 +86,7 @@ describe('createStoreCache — provider & context', () => {
 			table.useStore((s) => s.filter)
 			return null
 		}
-		expect(() => render(<table.Provider cacheKey='x'>{<Consumer />}</table.Provider>)).toThrowError(
+		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrowError(
 			'Missing StoreCacheProvider',
 		)
 	})
@@ -95,7 +95,7 @@ describe('createStoreCache — provider & context', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('isolate-3', tableFactory)
 		function Badge() {
-			table.useFromCache({ cacheKey: 'x' }, (s) => s?.filter)
+			table.useFromCache({ id: 'x' }, (s) => s?.filter)
 			return null
 		}
 		expect(() => render(<Badge />)).toThrowError('Missing StoreCacheProvider')
@@ -103,25 +103,25 @@ describe('createStoreCache — provider & context', () => {
 })
 
 describe('createStoreCache — namespacing & seeding', () => {
-	it('keeps the same cacheKey independent across families', () => {
+	it('keeps the same id independent across families', () => {
 		const cache = createStoreCache()
 		const users = cache.defineStore('ns-users', tableFactory)
 		const orders = cache.defineStore('ns-orders', tableFactory)
 
 		render(
 			<cache.Provider>
-				<users.Provider cacheKey='main'>
+				<users.Provider id='main'>
 					<span />
 				</users.Provider>
-				<orders.Provider cacheKey='main'>
+				<orders.Provider id='main'>
 					<span />
 				</orders.Provider>
 			</cache.Provider>,
 		)
 
-		expect(users.fromCache({ cacheKey: 'main' })).toBeDefined()
-		expect(orders.fromCache({ cacheKey: 'main' })).toBeDefined()
-		expect(users.fromCache({ cacheKey: 'main' })).not.toBe(orders.fromCache({ cacheKey: 'main' }))
+		expect(users.fromCache({ id: 'main' })).toBeDefined()
+		expect(orders.fromCache({ id: 'main' })).toBeDefined()
+		expect(users.fromCache({ id: 'main' })).not.toBe(orders.fromCache({ id: 'main' }))
 	})
 
 	it('seeds the store from defaultProps on first mount', () => {
@@ -134,7 +134,7 @@ describe('createStoreCache — namespacing & seeding', () => {
 		render(
 			<cache.Provider>
 				<table.Provider
-					cacheKey='main'
+					id='main'
 					defaultProps={{ filter: 'active' }}
 				>
 					<Reader />
@@ -160,7 +160,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 			<cache.Provider>
 				<cache.Scope path={['page-1']}>
 					<cache.Scope path={['section-1']}>
-						<table.Provider cacheKey='user-42'>
+						<table.Provider id='user-42'>
 							<span />
 						</table.Provider>
 					</cache.Scope>
@@ -172,13 +172,13 @@ describe('createStoreCache — path namespacing via Scope', () => {
 		const controller = controllers.at(-1)
 		expect(controller?.keys()).toContainEqual({
 			path: ['page-1', 'section-1'],
-			group: 'scope-nested',
-			cacheKey: 'user-42',
+			name: 'scope-nested',
+			id: 'user-42',
 		})
 		expect(toTree(controller?.keys() ?? [])).toEqual({
 			'page-1': { 'section-1': { 'scope-nested': ['user-42'] } },
 		})
-		expect(table.fromCache({ path: ['page-1', 'section-1'], cacheKey: 'user-42' })).toBeDefined()
+		expect(table.fromCache({ path: ['page-1', 'section-1'], id: 'user-42' })).toBeDefined()
 	})
 
 	it('defaults to the root path when no Scope encloses the Provider', () => {
@@ -187,17 +187,17 @@ describe('createStoreCache — path namespacing via Scope', () => {
 
 		render(
 			<cache.Provider>
-				<table.Provider cacheKey='user-42'>
+				<table.Provider id='user-42'>
 					<span />
 				</table.Provider>
 			</cache.Provider>,
 		)
 
-		expect(table.fromCache({ path: [], cacheKey: 'user-42' })).toBeDefined()
-		expect(table.fromCache({ cacheKey: 'user-42' })).toBeDefined()
+		expect(table.fromCache({ path: [], id: 'user-42' })).toBeDefined()
+		expect(table.fromCache({ id: 'user-42' })).toBeDefined()
 	})
 
-	it('does not collide when the same group + cacheKey mounts under different paths', () => {
+	it('does not collide when the same group + id mounts under different paths', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('scope-collide', tableFactory)
 
@@ -220,12 +220,12 @@ describe('createStoreCache — path namespacing via Scope', () => {
 		render(
 			<cache.Provider>
 				<cache.Scope path={['page-1']}>
-					<table.Provider cacheKey='user-42'>
+					<table.Provider id='user-42'>
 						<UserTable id='one' />
 					</table.Provider>
 				</cache.Scope>
 				<cache.Scope path={['page-2']}>
-					<table.Provider cacheKey='user-42'>
+					<table.Provider id='user-42'>
 						<UserTable id='two' />
 					</table.Provider>
 				</cache.Scope>
@@ -236,8 +236,8 @@ describe('createStoreCache — path namespacing via Scope', () => {
 
 		expect(screen.getByTestId('one')).toHaveTextContent('archived')
 		expect(screen.getByTestId('two')).toHaveTextContent('all')
-		expect(table.fromCache({ path: ['page-1'], cacheKey: 'user-42' })).not.toBe(
-			table.fromCache({ path: ['page-2'], cacheKey: 'user-42' }),
+		expect(table.fromCache({ path: ['page-1'], id: 'user-42' })).not.toBe(
+			table.fromCache({ path: ['page-2'], id: 'user-42' }),
 		)
 	})
 
@@ -249,7 +249,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 			<cache.Provider>
 				<cache.Scope path={['page-1']}>
 					<table.Provider
-						cacheKey='row-1'
+						id='row-1'
 						path={['detail']}
 					>
 						<span />
@@ -258,8 +258,8 @@ describe('createStoreCache — path namespacing via Scope', () => {
 			</cache.Provider>,
 		)
 
-		expect(table.fromCache({ path: ['page-1', 'detail'], cacheKey: 'row-1' })).toBeDefined()
-		expect(table.fromCache({ path: ['page-1'], cacheKey: 'row-1' })).toBeUndefined()
+		expect(table.fromCache({ path: ['page-1', 'detail'], id: 'row-1' })).toBeDefined()
+		expect(table.fromCache({ path: ['page-1'], id: 'row-1' })).toBeUndefined()
 	})
 
 	it('re-resolves the store when the enclosing scope path changes', () => {
@@ -286,7 +286,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 				<cache.Provider>
 					<cache.Scope path={[page]}>
 						<table.Provider
-							cacheKey='main'
+							id='main'
 							defaultProps={{ filter: page }}
 						>
 							<FilterView />
@@ -335,7 +335,7 @@ describe('createStoreCache — keep-alive', () => {
 				<cache.Provider>
 					{show ? (
 						<table.Provider
-							cacheKey='main'
+							id='main'
 							defaultProps={{ filter: seed }}
 						>
 							<FilterView />
@@ -348,14 +348,29 @@ describe('createStoreCache — keep-alive', () => {
 			)
 		}
 
-		const { rerender } = render(<App show seed='active' />)
+		const { rerender } = render(
+			<App
+				show
+				seed='active'
+			/>,
+		)
 		expect(screen.getByTestId('r')).toHaveTextContent('active')
 
 		fireEvent.click(screen.getByRole('button', { name: 'archive' }))
 		expect(screen.getByTestId('r')).toHaveTextContent('archived')
 
-		rerender(<App show={false} seed='active' />)
-		rerender(<App show seed='ignored-on-reuse' />)
+		rerender(
+			<App
+				show={false}
+				seed='active'
+			/>,
+		)
+		rerender(
+			<App
+				show
+				seed='ignored-on-reuse'
+			/>,
+		)
 
 		expect(screen.getByTestId('r')).toHaveTextContent('archived')
 	})
@@ -382,10 +397,10 @@ describe('createStoreCache — keep-alive', () => {
 
 		render(
 			<cache.Provider>
-				<table.Provider cacheKey='main'>
+				<table.Provider id='main'>
 					<FilterView id='one' />
 				</table.Provider>
-				<table.Provider cacheKey='main'>
+				<table.Provider id='main'>
 					<FilterView id='two' />
 					<ArchiveButton />
 				</table.Provider>
@@ -397,7 +412,7 @@ describe('createStoreCache — keep-alive', () => {
 		expect(screen.getByTestId('two')).toHaveTextContent('archived')
 	})
 
-	it('re-resolves the store when cacheKey changes and reuses prior keys', () => {
+	it('re-resolves the store when id changes and reuses prior keys', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('keepalive-3', tableFactory)
 		function FilterView() {
@@ -419,7 +434,10 @@ describe('createStoreCache — keep-alive', () => {
 		function App({ k }: { k: string }) {
 			return (
 				<cache.Provider>
-					<table.Provider cacheKey={k} defaultProps={{ filter: k }}>
+					<table.Provider
+						id={k}
+						defaultProps={{ filter: k }}
+					>
 						<FilterView />
 						<ArchiveButton />
 					</table.Provider>
@@ -452,7 +470,7 @@ describe('createStoreCache — gc lifecycle', () => {
 			return (
 				<cache.Provider>
 					{show ? (
-						<table.Provider cacheKey='main'>
+						<table.Provider id='main'>
 							<span />
 						</table.Provider>
 					) : null}
@@ -461,13 +479,13 @@ describe('createStoreCache — gc lifecycle', () => {
 		}
 
 		const { rerender } = render(<App show />)
-		expect(table.fromCache({ cacheKey: 'main' })).toBeDefined()
+		expect(table.fromCache({ id: 'main' })).toBeDefined()
 
 		rerender(<App show={false} />)
 		act(() => {
 			vi.advanceTimersByTime(1001)
 		})
-		expect(table.fromCache({ cacheKey: 'main' })).toBeUndefined()
+		expect(table.fromCache({ id: 'main' })).toBeUndefined()
 	})
 
 	it('fixes gcTime birth-config from the first mounting Provider', () => {
@@ -478,12 +496,18 @@ describe('createStoreCache — gc lifecycle', () => {
 			return (
 				<cache.Provider>
 					{a ? (
-						<table.Provider cacheKey='main' gcTime={1000}>
+						<table.Provider
+							id='main'
+							gcTime={1000}
+						>
 							<span />
 						</table.Provider>
 					) : null}
 					{b ? (
-						<table.Provider cacheKey='main' gcTime={60_000}>
+						<table.Provider
+							id='main'
+							gcTime={60_000}
+						>
 							<span />
 						</table.Provider>
 					) : null}
@@ -491,14 +515,29 @@ describe('createStoreCache — gc lifecycle', () => {
 			)
 		}
 
-		const { rerender } = render(<App a b />)
-		rerender(<App a={false} b />)
-		rerender(<App a={false} b={false} />)
+		const { rerender } = render(
+			<App
+				a
+				b
+			/>,
+		)
+		rerender(
+			<App
+				a={false}
+				b
+			/>,
+		)
+		rerender(
+			<App
+				a={false}
+				b={false}
+			/>,
+		)
 
 		act(() => {
 			vi.advanceTimersByTime(1001)
 		})
-		expect(table.fromCache({ cacheKey: 'main' })).toBeUndefined()
+		expect(table.fromCache({ id: 'main' })).toBeUndefined()
 	})
 
 	it('keeps an alwaysCache entry alive after all Providers unmount', () => {
@@ -509,7 +548,10 @@ describe('createStoreCache — gc lifecycle', () => {
 			return (
 				<cache.Provider>
 					{show ? (
-						<table.Provider cacheKey='main' alwaysCache>
+						<table.Provider
+							id='main'
+							alwaysCache
+						>
 							<span />
 						</table.Provider>
 					) : null}
@@ -522,7 +564,7 @@ describe('createStoreCache — gc lifecycle', () => {
 		act(() => {
 			vi.advanceTimersByTime(100_000)
 		})
-		expect(table.fromCache({ cacheKey: 'main' })).toBeDefined()
+		expect(table.fromCache({ id: 'main' })).toBeDefined()
 	})
 })
 
@@ -541,7 +583,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 		render(
 			<cache.Provider>
 				<cache.Scope path={['page-1']}>
-					<table.Provider cacheKey='main'>
+					<table.Provider id='main'>
 						<PageView />
 					</table.Provider>
 				</cache.Scope>
@@ -550,14 +592,14 @@ describe('createStoreCache — imperative & reactive access', () => {
 
 		expect(screen.getByTestId('p')).toHaveTextContent('1')
 		act(() => {
-			table.fromCache({ path: ['page-1'], cacheKey: 'main' })?.setState({ page: 2 })
+			table.fromCache({ path: ['page-1'], id: 'main' })?.setState({ page: 2 })
 		})
 		expect(screen.getByTestId('p')).toHaveTextContent('2')
 		// Root address misses the page-1 entry.
-		expect(table.fromCache({ cacheKey: 'main' })).toBeUndefined()
+		expect(table.fromCache({ id: 'main' })).toBeUndefined()
 	})
 
-	it('fromCache returns undefined for a missing cacheKey without creating it', () => {
+	it('fromCache returns undefined for a missing id without creating it', () => {
 		const cache = createStoreCache()
 		const table = cache.defineStore('imp-2', tableFactory)
 		render(
@@ -565,7 +607,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 				<span />
 			</cache.Provider>,
 		)
-		expect(table.fromCache({ cacheKey: 'ghost' })).toBeUndefined()
+		expect(table.fromCache({ id: 'ghost' })).toBeUndefined()
 	})
 
 	it('useFromCache passively reflects creation, updates, and eviction at a path', () => {
@@ -574,7 +616,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 		const table = cache.defineStore('imp-3', tableFactory)
 
 		function Badge() {
-			const filter = table.useFromCache({ path: ['page-1'], cacheKey: 'main' }, (s) => s?.filter ?? 'none')
+			const filter = table.useFromCache({ path: ['page-1'], id: 'main' }, (s) => s?.filter ?? 'none')
 			return <span data-testid='badge'>{filter}</span>
 		}
 		function ArchiveButton() {
@@ -596,7 +638,10 @@ describe('createStoreCache — imperative & reactive access', () => {
 					<Badge />
 					{show ? (
 						<cache.Scope path={['page-1']}>
-							<table.Provider cacheKey='main' defaultProps={{ filter: 'active' }}>
+							<table.Provider
+								id='main'
+								defaultProps={{ filter: 'active' }}
+							>
 								<ArchiveButton />
 							</table.Provider>
 						</cache.Scope>
@@ -642,15 +687,15 @@ describe('createStoreCache — imperative & reactive access', () => {
 		render(
 			<cache.Provider>
 				<cache.Scope path={['page-1']}>
-					<users.Provider cacheKey='main'>
+					<users.Provider id='main'>
 						<span />
 					</users.Provider>
-					<orders.Provider cacheKey='main'>
+					<orders.Provider id='main'>
 						<span />
 					</orders.Provider>
 				</cache.Scope>
 				<cache.Scope path={['page-2']}>
-					<users.Provider cacheKey='main'>
+					<users.Provider id='main'>
 						<span />
 					</users.Provider>
 				</cache.Scope>
@@ -659,15 +704,15 @@ describe('createStoreCache — imperative & reactive access', () => {
 		)
 
 		act(() => {
-			users.remove({ path: ['page-1'], cacheKey: 'main' })
+			users.remove({ path: ['page-1'], id: 'main' })
 		})
-		expect(users.fromCache({ path: ['page-1'], cacheKey: 'main' })).toBeUndefined()
-		expect(orders.fromCache({ path: ['page-1'], cacheKey: 'main' })).toBeDefined()
-		expect(users.fromCache({ path: ['page-2'], cacheKey: 'main' })).toBeDefined()
+		expect(users.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(orders.fromCache({ path: ['page-1'], id: 'main' })).toBeDefined()
+		expect(users.fromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
 
 		fireEvent.click(screen.getByRole('button', { name: 'clear-page-1' }))
-		expect(orders.fromCache({ path: ['page-1'], cacheKey: 'main' })).toBeUndefined()
-		expect(users.fromCache({ path: ['page-2'], cacheKey: 'main' })).toBeDefined()
+		expect(orders.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(users.fromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
 	})
 })
 
@@ -700,7 +745,7 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 					<Watcher />
 					<ClearButton />
 					{show ? (
-						<table.Provider cacheKey='main'>
+						<table.Provider id='main'>
 							<span />
 						</table.Provider>
 					) : null}
@@ -747,7 +792,7 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 		render(
 			<cache.Provider>
 				<Watcher />
-				<table.Provider cacheKey='main'>
+				<table.Provider id='main'>
 					<FilterButton />
 				</table.Provider>
 			</cache.Provider>,
@@ -774,7 +819,7 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 					<TreeView />
 					{show ? (
 						<cache.Scope path={['page-1']}>
-							<table.Provider cacheKey='u1'>
+							<table.Provider id='u1'>
 								<span />
 							</table.Provider>
 						</cache.Scope>
@@ -802,12 +847,12 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 		render(
 			<cache.Provider>
 				<cache.Scope path={['page-1']}>
-					<table.Provider cacheKey='u1'>
+					<table.Provider id='u1'>
 						<span />
 					</table.Provider>
 				</cache.Scope>
 				<cache.Scope path={['page-2']}>
-					<table.Provider cacheKey='u1'>
+					<table.Provider id='u1'>
 						<span />
 					</table.Provider>
 				</cache.Scope>
@@ -844,12 +889,12 @@ describe('createStoreCache — dev-mode warnings', () => {
 		render(
 			<>
 				<cache.Provider>
-					<table.Provider cacheKey='main'>
+					<table.Provider id='main'>
 						<span />
 					</table.Provider>
 				</cache.Provider>
 				<cache.Provider>
-					<table.Provider cacheKey='main'>
+					<table.Provider id='main'>
 						<span />
 					</table.Provider>
 				</cache.Provider>
@@ -885,7 +930,10 @@ describe('createStoreCache — StrictMode & SSR', () => {
 				<StrictMode>
 					<cache.Provider>
 						{show ? (
-							<table.Provider cacheKey='main' defaultProps={{ filter: 'active' }}>
+							<table.Provider
+								id='main'
+								defaultProps={{ filter: 'active' }}
+							>
 								<FilterView />
 								<ArchiveButton />
 							</table.Provider>
@@ -914,7 +962,10 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		const html = renderToString(
 			<cache.Provider>
 				<cache.Scope path={['page-1']}>
-					<table.Provider cacheKey='main' defaultProps={{ filter: 'active' }}>
+					<table.Provider
+						id='main'
+						defaultProps={{ filter: 'active' }}
+					>
 						<Reader />
 					</table.Provider>
 				</cache.Scope>
@@ -922,7 +973,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		)
 
 		expect(html).toContain('active')
-		expect(table.fromCache({ path: ['page-1'], cacheKey: 'main' })).toBeUndefined()
+		expect(table.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
 	})
 
 	it('does not share state across separate server renders', () => {
@@ -933,14 +984,20 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		}
 		const one = renderToString(
 			<cache.Provider>
-				<table.Provider cacheKey='main' defaultProps={{ filter: 'first' }}>
+				<table.Provider
+					id='main'
+					defaultProps={{ filter: 'first' }}
+				>
 					<Reader />
 				</table.Provider>
 			</cache.Provider>,
 		)
 		const two = renderToString(
 			<cache.Provider>
-				<table.Provider cacheKey='main' defaultProps={{ filter: 'second' }}>
+				<table.Provider
+					id='main'
+					defaultProps={{ filter: 'second' }}
+				>
 					<Reader />
 				</table.Provider>
 			</cache.Provider>,
