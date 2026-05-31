@@ -13,13 +13,16 @@ pnpm add @ez-kit/zu-store zustand
 ## Signature
 
 ```ts
+type CacheRecord = { path: string[]; group: string; cacheKey: string }
+
 function createStoreCache(options?: { gcTime?: number }): {
 	Provider: (props: PropsWithChildren) => ReactElement
 	Scope: (props: { path: string[]; children: ReactNode }) => ReactElement
 	useCache: () => {
-		keys: (prefix?: string[]) => { path: string[]; group: string; key: string }[]
-		clear: (prefix?: string[]) => void
+		keys: (prefix?: string[]) => CacheRecord[]           // non-reactive snapshot
+		clear: (prefix?: string[]) => void                   // optional subtree clear
 	}
+	useKeys: (prefix?: string[]) => CacheRecord[]          // reactive: re-renders on membership change
 	defineStore: <TStore, TDefaultProps>(
 		name: string,
 		factory: (defaultProps: TDefaultProps) => TStore,
@@ -28,7 +31,7 @@ function createStoreCache(options?: { gcTime?: number }): {
 }
 
 // Pure utility, exported from the same module:
-function toTree(coords: { path: string[]; group: string; key: string }[]): CacheTree
+function toTree(records: CacheRecord[]): CacheTree
 ```
 
 A store-group handle from `defineStore` exposes:
@@ -40,9 +43,9 @@ A store-group handle from `defineStore` exposes:
 	useShallowStore //  } same semantics as createContextStore, under the store-group Provider
 	useContextStore //  }
 	Item // /
-	fromCache({ path?, key }) // imperative get-if-alive → StoreApi | undefined (never creates)
-	useFromCache({ path?, key }, sel) // reactive, passive cross-tree read
-	remove({ path?, key }) // remove this group's entry
+	fromCache({ path?, cacheKey }) // imperative get-if-alive → StoreApi | undefined (never creates)
+	useFromCache({ path?, cacheKey }, sel) // reactive, passive cross-tree read
+	remove({ path?, cacheKey }) // remove this group's entry
 }
 ```
 
@@ -139,41 +142,59 @@ Owns the real cache storage, created per React tree (so SSR renders and tests ar
 
 Multiple `Provider`s with the same `cacheKey` share one store (live-sync). The `Provider` is the unit of reference counting.
 
-Reads address the **absolute** `{ path, key }` (`path` defaults to `[]` root). Writes inherit their path from `Scope`; reads state it explicitly.
+Reads address the **absolute** `{ path, cacheKey }` (`path` defaults to `[]` root). Writes inherit their path from `Scope`; reads state it explicitly.
 
-### `fromCache({ path, key })`
+### `fromCache({ path, cacheKey })`
 
 Imperative, returns the live `StoreApi` or `undefined`. Never creates an entry and never affects lifecycle. Use it in event handlers, actions, or non-React code:
 
 ```ts
-usersTable.fromCache({ path: ['page-1'], key: 'users' })?.setState({ page: 2 })
+usersTable.fromCache({ path: ['page-1'], cacheKey: 'users' })?.setState({ page: 2 })
 ```
 
-### `useFromCache({ path, key }, selector)`
+### `useFromCache({ path, cacheKey }, selector)`
 
 Reactively reads a cached store from anywhere — even outside the store-group `Provider`. The selector receives the state or `undefined` when no entry exists. It is **passive**: it reflects the cache but does not keep the store alive.
 
 ```tsx
-const activeFilters = usersTable.useFromCache({ path: ['page-1'], key: 'users' }, (s) => s?.filters.length ?? 0)
+const activeFilters = usersTable.useFromCache({ path: ['page-1'], cacheKey: 'users' }, (s) => s?.filters.length ?? 0)
 ```
 
-### `remove({ path, key })` / `useCache().clear(prefix?)`
+### `remove({ path, cacheKey })` / `useCache().clear(prefix?)`
 
 `remove` deletes one entry. `clear()` removes every entry in the active cache; `clear(prefix)` removes every entry whose path is prefixed by `prefix`, across all groups (the "leave a page, drop its stores" lever). All override `alwaysCache`.
 
 ### `useCache().keys(prefix?)`
 
-Returns a flat `{ path, group, key }[]` of live entries (assertion- and iteration-friendly). Pass an optional path `prefix` to scope the result to a subtree.
+Returns a flat `CacheRecord[]` of live entries — `{ path, group, cacheKey }` per entry. Non-reactive snapshot, assertion- and iteration-friendly. Pass an optional path `prefix` to scope the result to a subtree.
 
-### `toTree(coords)` — standalone utility
+### `cache.useKeys(prefix?)` — reactive hook
 
-Pure function exported alongside `createStoreCache`. Takes any coordinate list and returns a nested object view (log- and devtools-friendly). It is **not** a method on the cache instance — pass `keys()` (or any filtered subset) explicitly:
+Live equivalent of `useCache().keys()`, exposed at the top level of the cache bundle. Re-renders only when the cache **membership** changes (entries added or removed); internal state changes inside individual entries do not trigger it, so devtools panels and badges built on `useKeys` stay cheap.
 
-```ts
+```tsx
+function CacheBadge() {
+	const records = cache.useKeys()
+	return <span>{records.length} cached</span>
+}
+```
+
+### `toTree(records)` — standalone utility
+
+Pure function exported alongside `createStoreCache`. Takes any coordinate list and returns a nested object view (log- and devtools-friendly). Compose with `useCache().keys()` for a one-off snapshot or with `cache.useKeys()` for a reactive nested view:
+
+```tsx
 import { toTree } from '@ez-kit/zu-store'
 
-const tree = toTree(cache.useCache().keys()) // { 'page-1': { users: ['main'] }, ... }
+// one-off snapshot
+const tree = toTree(cache.useCache().keys())
 const subtree = toTree(cache.useCache().keys(['page-1']))
+
+// reactive (inside a component)
+function CachePanel({ customerId }: { customerId: string }) {
+	const tree = toTree(cache.useKeys(['customer', customerId]))
+	return <pre>{JSON.stringify(tree, null, 2)}</pre>
+}
 ```
 
 ## Lifecycle
@@ -184,9 +205,10 @@ const subtree = toTree(cache.useCache().keys(['page-1']))
 
 ## Gotchas
 
-- **`defineStore` names must be unique within a cache.** The `name` is the group's namespace and shows up in `useCache().keys()`; two groups sharing a name under the same `cache.Provider` would collide on one keyspace.
+- **`defineStore` names must be unique within a cache.** The `name` is the group's namespace and shows up in `useCache().keys()`; two groups sharing a name under the same `cache.Provider` would collide on one keyspace. In development, the library emits a `console.warn` on the second call — a frequent symptom of calling `defineStore` inside a render.
+- **Don't mount two `<cache.Provider>` for the same cache.** Imperative access via `fromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. In development, the library emits a `console.warn` when this happens.
 - **`alwaysCache` + dynamic keys or paths leaks.** Pinned entries under unbounded keys (`order-${id}`) or paths never evict. Use `alwaysCache` only for a small, fixed set; rely on `gcTime` for dynamic ones, and `clear(path)` to drop a subtree on navigation.
-- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` take `{ path, key }` and default `path` to `[]`. A read with the wrong path silently misses.
+- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` take `{ path, cacheKey }` and default `path` to `[]`. A read with the wrong path silently misses.
 - **`useFromCache` is passive.** After the owning `Provider` unmounts and `gcTime` elapses, the store is evicted and the reader sees `undefined`. Use `alwaysCache`/`gcTime` if a reader must keep it alive.
 - **Imperative access needs a mounted `cache.Provider`.** `fromCache`/`remove` target the active client cache; with multiple `cache.Provider`s, prefer `useCache()` inside the tree.
 - **Prefer the URL for "prepare then navigate".** To open a page with pre-set state, carry intent in the URL/route and seed via `defaultProps` rather than setting a cold store before it mounts.

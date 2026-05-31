@@ -89,7 +89,7 @@ function TablePanel() {
 function Demo() {
 	const [tab, setTab] = useState<'table' | 'away'>('table')
 	// Passive cross-tree read: reflects the kept-alive store even while the table is unmounted.
-	const keptFilter = tableStore.useFromCache({ key: 'main' }, (s) => s?.filter ?? '—')
+	const keptFilter = tableStore.useFromCache({ cacheKey: 'main' }, (s) => s?.filter ?? '—')
 
 	return (
 		<div className='flex flex-col gap-4'>

@@ -16,8 +16,8 @@ export type {
 	CachedStoreGroup,
 	CachedProviderProps,
 	CachedItemProps,
-	CacheTarget,
-	CacheCoordinate,
+	CacheAddress,
+	CacheRecord,
 	CacheTree,
 	ScopeProps,
 } from './store-cache'

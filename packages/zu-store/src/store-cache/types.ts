@@ -16,22 +16,22 @@ export type CachedStoreFactory<TStore extends StoreApi<unknown>, TDefaultProps e
 	defaultProps: TDefaultProps,
 ) => TStore
 
-/** Absolute address of a cache entry within a store group: a tree `path` plus the entry `key`. */
-export type CacheTarget = {
+/** Absolute address of a cache entry within a store group: a tree `path` plus the entry `cacheKey`. */
+export type CacheAddress = {
 	/** Resolved tree location of the entry. Defaults to `[]` (root) when omitted. */
 	path?: string[]
 	/** Identity of the entry within its store group at `path`. */
-	key: string
+	cacheKey: string
 }
 
-/** Structural coordinate of one live entry, as surfaced by `keys()`. */
-export type CacheCoordinate = {
+/** Structural coordinate of one live entry, as surfaced by `keys()` / `useKeys()`. */
+export type CacheRecord = {
 	path: string[]
 	group: string
-	key: string
+	cacheKey: string
 }
 
-/** Nested view of live entries: path segments nest as objects; each leaf maps group → cacheKeys. */
+/** Nested view of live entries: path segments nest as objects; each leaf maps group → `cacheKey[]`. */
 export type CacheTree = {
 	[segment: string]: CacheTree | string[]
 }
@@ -41,18 +41,25 @@ export type ScopeProps = PropsWithChildren<{
 	path: string[]
 }>
 
-export type CachedProviderProps<TDefaultProps extends object> = PropsWithChildren<{
+type ProviderBaseProps = {
 	/** Identity of the cache entry within this store group at the resolved path. Required. */
 	cacheKey: string
 	/** Path segments appended after the inherited `Scope` path: `[...scope, ...path]`. */
 	path?: string[]
-	/** Seed values applied only when this entry is first created. Ignored on reuse. */
-	defaultProps?: TDefaultProps
 	/** Birth-config: eviction delay for this entry. Fixed by the first mount of the identity. */
 	gcTime?: number
 	/** Birth-config: pin the entry against automatic eviction (equivalent to `gcTime: Infinity`). */
 	alwaysCache?: boolean
-}>
+}
+
+/**
+ * `defaultProps` is required when `TDefaultProps` has required fields, optional when it doesn't.
+ * The conditional ensures consumers cannot silently omit a seed that the factory relies on.
+ */
+export type CachedProviderProps<TDefaultProps extends object> = PropsWithChildren<
+	ProviderBaseProps &
+		(Record<string, never> extends TDefaultProps ? { defaultProps?: TDefaultProps } : { defaultProps: TDefaultProps })
+>
 
 export type CachedItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
@@ -66,20 +73,21 @@ export type CachedStoreGroup<TStore extends StoreApi<unknown>, TDefaultProps ext
 	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	useContextStore: () => TStore
 	Item: <TSelected>(props: CachedItemProps<TStore, TSelected>) => ReactElement
-	/** Imperative get-if-alive at `(path, key)`. Returns the live store or `undefined`. Never creates. */
-	fromCache: (target: CacheTarget) => TStore | undefined
-	/** Reactive, passive cross-tree read at `(path, key)`. Does not keep the store alive. */
+	/** Imperative get-if-alive at `(path, cacheKey)`. Returns the live store or `undefined`. Never creates. */
+	fromCache: (target: CacheAddress) => TStore | undefined
+	/** Reactive, passive cross-tree read at `(path, cacheKey)`. Does not keep the store alive. */
 	useFromCache: <TSelected>(
-		target: CacheTarget,
+		target: CacheAddress,
 		selector: (state: ExtractState<TStore> | undefined) => TSelected,
 	) => TSelected
-	/** Remove this group's entry at `(path, key)` immediately. */
-	remove: (target: CacheTarget) => void
+	/** Remove this group's entry at `(path, cacheKey)` immediately. */
+	remove: (target: CacheAddress) => void
 }
 
 export type StoreCacheController = {
-	/** Flat coordinates of live entries, optionally filtered to a path subtree. */
-	keys: (prefix?: string[]) => CacheCoordinate[]
+	/** Flat coordinates of live entries, optionally filtered to a path subtree. Non-reactive snapshot. */
+	keys: (prefix?: string[]) => CacheRecord[]
+
 	/** Remove all entries, or — with a `prefix` — every entry under that path subtree, across groups. */
 	clear: (prefix?: string[]) => void
 }
@@ -89,6 +97,8 @@ export type StoreCache = {
 	/** Contributes inherited path segments to descendant store-group `Provider`s. */
 	Scope: (props: ScopeProps) => ReactElement
 	useCache: () => StoreCacheController
+	/** Reactive: re-renders when entries are added or removed under the optional prefix. */
+	useKeys: (prefix?: readonly string[]) => CacheRecord[]
 	defineStore: <TStore extends StoreApi<unknown>, TDefaultProps extends object = Record<string, never>>(
 		name: string,
 		factory: CachedStoreFactory<TStore, TDefaultProps>,

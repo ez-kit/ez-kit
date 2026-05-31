@@ -66,7 +66,9 @@ function Page({ name }: { name: string }) {
 }
 
 function Demo() {
-	const { keys, clear } = cache.useCache()
+	const { clear } = cache.useCache()
+	// Pure utility composed with the top-level reactive `useKeys` — re-renders only on membership changes.
+	const tree = toTree(cache.useKeys())
 	const [showA, setShowA] = useState(true)
 
 	return (
@@ -103,7 +105,7 @@ function Demo() {
 						{showA ? `leave page-a → clear(['page-a'])` : `restore page-a`}
 					</button>
 				</div>
-				<pre className='overflow-x-auto text-xs text-fd-foreground'>{JSON.stringify(toTree(keys()), null, 2)}</pre>
+				<pre className='overflow-x-auto text-xs text-fd-foreground'>{JSON.stringify(tree, null, 2)}</pre>
 			</div>
 		</div>
 	)

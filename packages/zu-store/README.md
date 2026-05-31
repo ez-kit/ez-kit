@@ -70,8 +70,8 @@ const usersTable = cache.defineStore('users', (defaultProps: { filter?: string }
   </cache.Scope>
 </cache.Provider>
 
-// imperatively, from anywhere — address the absolute { path, key }
-usersTable.fromCache({ path: ['page-1'], key: 'users' })?.setState({ filter: 'archived' })
+// imperatively, from anywhere — address the absolute { path, cacheKey }
+usersTable.fromCache({ path: ['page-1'], cacheKey: 'users' })?.setState({ filter: 'archived' })
 ```
 
 → [Full docs](docs/store-cache.md)

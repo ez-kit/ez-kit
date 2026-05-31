@@ -1,52 +1,47 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
-import { createCacheInstance, toTree, type EntryId } from './cache'
+import { createCacheInstance } from './cache-instance'
+import { toTree } from './to-tree'
+
+import type { EntryId } from './cache-types'
 
 const makeStore = (n = 0) => createStore<{ n: number }>(() => ({ n }))
 
-const id = (path: string[], group: string, key: string): EntryId => ({ path, group, key })
+const id = (path: string[], group: string, cacheKey: string): EntryId => ({ path, group, cacheKey })
+
+/** Helper to register + observe in one step (the React Provider flow). */
+function mount(cache: ReturnType<typeof createCacheInstance>, entry: EntryId, gcTime = 1000) {
+	const store = cache.register(entry, makeStore(), gcTime)
+	cache.addObserver(entry)
+	return store
+}
 
 describe('cache instance — core operations', () => {
-	it('getOrCreate creates once and is idempotent per identity', () => {
+	it('register creates once and is idempotent per identity', () => {
 		const cache = createCacheInstance(1000)
-		let calls = 0
+		const entry = id([], 'group', 'k')
 
-		const a = cache.getOrCreate(
-			id([], 'group', 'k'),
-			() => {
-				calls += 1
-				return makeStore(1)
-			},
-			1000,
-		)
-		const b = cache.getOrCreate(
-			id([], 'group', 'k'),
-			() => {
-				calls += 1
-				return makeStore(2)
-			},
-			1000,
-		)
+		const a = cache.register(entry, makeStore(1), 1000)
+		const b = cache.register(entry, makeStore(2), 1000)
 
 		expect(a).toBe(b)
-		expect(calls).toBe(1)
 	})
 
-	it('isolates entries by group for the same path and key', () => {
+	it('isolates entries by group for the same path and cacheKey', () => {
 		const cache = createCacheInstance(1000)
 
-		const a = cache.getOrCreate(id([], 'group-a', 'k'), () => makeStore(1), 1000)
-		const b = cache.getOrCreate(id([], 'group-b', 'k'), () => makeStore(2), 1000)
+		const a = cache.register(id([], 'group-a', 'k'), makeStore(1), 1000)
+		const b = cache.register(id([], 'group-b', 'k'), makeStore(2), 1000)
 
 		expect(a).not.toBe(b)
 	})
 
-	it('isolates entries by path for the same group and key', () => {
+	it('isolates entries by path for the same group and cacheKey', () => {
 		const cache = createCacheInstance(1000)
 
-		const a = cache.getOrCreate(id(['page-1'], 'group', 'k'), () => makeStore(1), 1000)
-		const b = cache.getOrCreate(id(['page-2'], 'group', 'k'), () => makeStore(2), 1000)
+		const a = cache.register(id(['page-1'], 'group', 'k'), makeStore(1), 1000)
+		const b = cache.register(id(['page-2'], 'group', 'k'), makeStore(2), 1000)
 
 		expect(a).not.toBe(b)
 	})
@@ -57,7 +52,7 @@ describe('cache instance — core operations', () => {
 
 		expect(cache.getCachedStore(id(['page-1'], 'group', 'missing'))).toBeUndefined()
 
-		const store = cache.getOrCreate(entry, () => makeStore(), 1000)
+		const store = cache.register(entry, makeStore(), 1000)
 		// Not observed yet → not published → not visible.
 		expect(cache.getCachedStore(entry)).toBeUndefined()
 
@@ -68,8 +63,7 @@ describe('cache instance — core operations', () => {
 	it('remove deletes a store', () => {
 		const cache = createCacheInstance(1000)
 		const entry = id(['page-1'], 'group', 'k')
-		cache.getOrCreate(entry, () => makeStore(), 1000)
-		cache.addObserver(entry)
+		mount(cache, entry)
 
 		cache.remove(entry)
 
@@ -77,43 +71,36 @@ describe('cache instance — core operations', () => {
 	})
 })
 
-describe('cache instance — keys, tree, prefix', () => {
+describe('cache instance — keys, toTree, prefix', () => {
 	it('keys returns flat structural coordinates of published entries', () => {
 		const cache = createCacheInstance(1000)
 		const a = id(['page-1'], 'users', 'u1')
 		const b = id(['page-1'], 'orders', 'o1')
 		const c = id(['page-2'], 'users', 'u1')
-		for (const entry of [a, b, c]) {
-			cache.getOrCreate(entry, () => makeStore(), 1000)
-			cache.addObserver(entry)
-		}
+		for (const entry of [a, b, c]) mount(cache, entry)
 
-		expect(cache.keys()).toContainEqual({ path: ['page-1'], group: 'users', key: 'u1' })
-		expect(cache.keys()).toContainEqual({ path: ['page-1'], group: 'orders', key: 'o1' })
-		expect(cache.keys()).toContainEqual({ path: ['page-2'], group: 'users', key: 'u1' })
+		expect(cache.keys()).toContainEqual({ path: ['page-1'], group: 'users', cacheKey: 'u1' })
+		expect(cache.keys()).toContainEqual({ path: ['page-1'], group: 'orders', cacheKey: 'o1' })
+		expect(cache.keys()).toContainEqual({ path: ['page-2'], group: 'users', cacheKey: 'u1' })
 		expect(cache.keys()).toHaveLength(3)
 	})
 
 	it('keys(prefix) matches by path segment, not substring', () => {
 		const cache = createCacheInstance(1000)
-		const a = id(['page-1'], 'g', 'k')
-		const b = id(['page-12'], 'g', 'k')
-		for (const entry of [a, b]) {
-			cache.getOrCreate(entry, () => makeStore(), 1000)
-			cache.addObserver(entry)
-		}
+		mount(cache, id(['page-1'], 'g', 'k'))
+		mount(cache, id(['page-12'], 'g', 'k'))
 
-		const matched = cache.keys(['page-1'])
-		expect(matched).toEqual([{ path: ['page-1'], group: 'g', key: 'k' }])
+		expect(cache.keys(['page-1'])).toEqual([{ path: ['page-1'], group: 'g', cacheKey: 'k' }])
 	})
 
-	it('toTree(keys) nests path segments and maps group → keys at the leaf', () => {
+	it('toTree(keys) nests path segments and maps group → cacheKeys at the leaf', () => {
 		const cache = createCacheInstance(1000)
-		const entries = [id(['page-1'], 'users', 'u1'), id(['page-1'], 'orders', 'o1'), id(['page-2'], 'users', 'u1')]
-		for (const entry of entries) {
-			cache.getOrCreate(entry, () => makeStore(), 1000)
-			cache.addObserver(entry)
-		}
+		const entries = [
+			id(['page-1'], 'users', 'u1'),
+			id(['page-1'], 'orders', 'o1'),
+			id(['page-2'], 'users', 'u1'),
+		]
+		for (const entry of entries) mount(cache, entry)
 
 		expect(toTree(cache.keys())).toEqual({
 			'page-1': { users: ['u1'], orders: ['o1'] },
@@ -123,11 +110,8 @@ describe('cache instance — keys, tree, prefix', () => {
 
 	it('toTree composes with keys(prefix) to view a subtree', () => {
 		const cache = createCacheInstance(1000)
-		const entries = [id(['page-1'], 'users', 'u1'), id(['page-2'], 'users', 'u1')]
-		for (const entry of entries) {
-			cache.getOrCreate(entry, () => makeStore(), 1000)
-			cache.addObserver(entry)
-		}
+		mount(cache, id(['page-1'], 'users', 'u1'))
+		mount(cache, id(['page-2'], 'users', 'u1'))
 
 		expect(toTree(cache.keys(['page-1']))).toEqual({ 'page-1': { users: ['u1'] } })
 	})
@@ -135,22 +119,18 @@ describe('cache instance — keys, tree, prefix', () => {
 	it('toTree is a pure function of its coords (works with hand-built input)', () => {
 		expect(
 			toTree([
-				{ path: ['a'], group: 'g', key: 'k1' },
-				{ path: ['a'], group: 'g', key: 'k2' },
+				{ path: ['a'], group: 'g', cacheKey: 'k1' },
+				{ path: ['a'], group: 'g', cacheKey: 'k2' },
 			]),
 		).toEqual({ a: { g: ['k1', 'k2'] } })
 	})
 })
 
 describe('cache instance — clear', () => {
-	it('clear() removes everything', () => {
+	it('clearAll (no prefix) removes everything', () => {
 		const cache = createCacheInstance(1000)
-		const a = id(['page-1'], 'users', 'u1')
-		const b = id(['page-2'], 'orders', 'o1')
-		for (const entry of [a, b]) {
-			cache.getOrCreate(entry, () => makeStore(), 1000)
-			cache.addObserver(entry)
-		}
+		mount(cache, id(['page-1'], 'users', 'u1'))
+		mount(cache, id(['page-2'], 'orders', 'o1'))
 
 		cache.clear()
 		expect(cache.keys()).toHaveLength(0)
@@ -161,17 +141,45 @@ describe('cache instance — clear', () => {
 		const p1Users = id(['page-1'], 'users', 'u1')
 		const p1Orders = id(['page-1'], 'orders', 'o1')
 		const p2Users = id(['page-2'], 'users', 'u1')
-		for (const entry of [p1Users, p1Orders, p2Users]) {
-			cache.getOrCreate(entry, () => makeStore(), 1000)
-			cache.addObserver(entry)
-		}
+		for (const entry of [p1Users, p1Orders, p2Users]) mount(cache, entry)
 
 		cache.clear(['page-1'])
 
 		expect(cache.getCachedStore(p1Users)).toBeUndefined()
 		expect(cache.getCachedStore(p1Orders)).toBeUndefined()
 		expect(cache.getCachedStore(p2Users)).toBeDefined()
-		expect(cache.keys()).toEqual([{ path: ['page-2'], group: 'users', key: 'u1' }])
+		expect(cache.keys()).toEqual([{ path: ['page-2'], group: 'users', cacheKey: 'u1' }])
+	})
+
+	it('clear(prefix) emits a single notification regardless of subtree size', () => {
+		const cache = createCacheInstance(1000)
+		for (let i = 0; i < 10; i += 1) mount(cache, id(['page-1'], 'users', `u${String(i)}`))
+
+		let notifications = 0
+		const unsub = cache.publishedStores.subscribe(() => {
+			notifications += 1
+		})
+
+		cache.clear(['page-1'])
+		unsub()
+
+		expect(notifications).toBe(1)
+		expect(cache.keys()).toHaveLength(0)
+	})
+
+	it('clear(prefix) with no matches emits no notification', () => {
+		const cache = createCacheInstance(1000)
+		mount(cache, id(['page-1'], 'users', 'u1'))
+
+		let notifications = 0
+		const unsub = cache.publishedStores.subscribe(() => {
+			notifications += 1
+		})
+
+		cache.clear(['nonexistent'])
+		unsub()
+
+		expect(notifications).toBe(0)
 	})
 })
 
@@ -186,8 +194,7 @@ describe('cache instance — lazy sweep / gc', () => {
 	it('evicts after gcTime once observers reach zero', () => {
 		const cache = createCacheInstance(1000)
 		const entry = id(['page-1'], 'group', 'k')
-		cache.getOrCreate(entry, () => makeStore(), 1000)
-		cache.addObserver(entry)
+		mount(cache, entry, 1000)
 		cache.removeObserver(entry)
 
 		expect(cache.getCachedStore(entry)).not.toBeUndefined()
@@ -198,8 +205,7 @@ describe('cache instance — lazy sweep / gc', () => {
 	it('keeps the store if re-observed before gcTime', () => {
 		const cache = createCacheInstance(1000)
 		const entry = id(['page-1'], 'group', 'k')
-		const store = cache.getOrCreate(entry, () => makeStore(), 1000)
-		cache.addObserver(entry)
+		const store = mount(cache, entry, 1000)
 		cache.removeObserver(entry)
 
 		vi.advanceTimersByTime(500)
@@ -209,11 +215,10 @@ describe('cache instance — lazy sweep / gc', () => {
 		expect(cache.getCachedStore(entry)).toBe(store)
 	})
 
-	it('never auto-evicts an alwaysCache (Infinity) entry that is observed at least once', () => {
+	it('never auto-evicts an alwaysCache (Infinity) entry', () => {
 		const cache = createCacheInstance(1000)
 		const entry = id(['page-1'], 'group', 'k')
-		const store = cache.getOrCreate(entry, () => makeStore(), Infinity)
-		cache.addObserver(entry)
+		const store = mount(cache, entry, Infinity)
 		cache.removeObserver(entry)
 
 		vi.advanceTimersByTime(10_000_000)
@@ -223,8 +228,7 @@ describe('cache instance — lazy sweep / gc', () => {
 	it('manual remove overrides alwaysCache', () => {
 		const cache = createCacheInstance(1000)
 		const entry = id(['page-1'], 'group', 'k')
-		cache.getOrCreate(entry, () => makeStore(), Infinity)
-		cache.addObserver(entry)
+		mount(cache, entry, Infinity)
 		cache.removeObserver(entry)
 
 		cache.remove(entry)
@@ -234,22 +238,10 @@ describe('cache instance — lazy sweep / gc', () => {
 	it('clear(prefix) overrides alwaysCache within the subtree', () => {
 		const cache = createCacheInstance(1000)
 		const entry = id(['page-1'], 'group', 'k')
-		cache.getOrCreate(entry, () => makeStore(), Infinity)
-		cache.addObserver(entry)
+		mount(cache, entry, Infinity)
 		cache.removeObserver(entry)
 
 		cache.clear(['page-1'])
-		expect(cache.getCachedStore(entry)).toBeUndefined()
-	})
-
-	it('reaps an orphan (never observed) after the default grace, even with Infinity gcTime', () => {
-		const cache = createCacheInstance(2000)
-		const entry = id(['page-1'], 'group', 'k')
-		cache.getOrCreate(entry, () => makeStore(), Infinity)
-		// Never observed (simulates a discarded render).
-		vi.advanceTimersByTime(2001)
-		cache.addObserver(entry)
-		// addObserver on a removed store is a no-op; it is gone.
 		expect(cache.getCachedStore(entry)).toBeUndefined()
 	})
 })

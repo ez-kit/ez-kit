@@ -1,5 +1,5 @@
 export { createStoreCache } from './create-store-cache'
-export { toTree } from './cache'
+export { toTree } from './to-tree'
 export type {
 	StoreCache,
 	StoreCacheOptions,
@@ -9,8 +9,8 @@ export type {
 	CachedStoreGroup,
 	CachedProviderProps,
 	CachedItemProps,
-	CacheTarget,
-	CacheCoordinate,
+	CacheAddress,
+	CacheRecord,
 	CacheTree,
 	ScopeProps,
 } from './types'
