@@ -46,6 +46,43 @@ const [name, setName] = useStoreState(formStore, 'name')
 
 ---
 
+### `createCachedStore(factory, options)` / `createStoreCache(options?)`
+
+Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by `(path, name, id)`, in memory (no `localStorage`). Useful for preserving table filters, pagination, etc. between page navigations. `createContextStore` is left untouched — this is a separate, opt-in primitive.
+
+The package ships a **ready-made default cache**: import `CacheProvider` and `createCachedStore` directly — no instance to create. `createCachedStore(factory, { name })` returns a namespaced store group with `Provider`, the usual read hooks, plus `fromCache`, `useFromCache`, and `remove`. The `path` is inherited from `<CacheScope>`, so reusable components stay collision-free across mount locations.
+
+```tsx
+import { CacheProvider, CacheScope, createCachedStore } from '@ez-kit/zu-store'
+import { createStore } from 'zustand/vanilla'
+
+const usersTable = createCachedStore(
+  (defaultProps: { filter?: string }) =>
+    createStore<{ filter: string }>(() => ({ filter: defaultProps.filter ?? 'all' })),
+  { name: 'users' },
+)
+
+// once, high in the tree
+<CacheProvider>
+  {/* survives unmount; reused on remount within gcTime */}
+  {/* <CacheScope> namespaces by location so two pages never collide on the same id */}
+  <CacheScope path={['page-1']}>
+    <usersTable.Provider id="users" defaultProps={{ filter: 'active' }}>
+      <UsersTable />
+    </usersTable.Provider>
+  </CacheScope>
+</CacheProvider>
+
+// imperatively, from anywhere — address the absolute { path, id }
+usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'archived' })
+```
+
+Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useKeys`, `cache.createCachedStore`).
+
+→ [Full docs](docs/store-cache.md)
+
+---
+
 ### `withHistory(initializer, options?)`
 
 Real Zustand `StateCreator` middleware that adds undo / redo / goto / skip to any store. Records every write — including those performed from inside actions via the inner `set`. Composes idiomatically with `persist`, `devtools`, `subscribeWithSelector`, and `immer`.
@@ -56,10 +93,10 @@ import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
 const store = createStore<{ count: number; inc: () => void }>()(
-  withHistory((set) => ({
-    count: 0,
-    inc: () => set((s) => ({ count: s.count + 1 })),
-  })),
+	withHistory((set) => ({
+		count: 0,
+		inc: () => set((s) => ({ count: s.count + 1 })),
+	})),
 )
 
 store.getState().inc()
