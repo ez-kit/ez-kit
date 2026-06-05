@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type PropsWithChildren, type ReactElement } from 'react'
 
 import { createCacheInstance, DEFAULT_GC_TIME } from './cache-instance'
-import { createDefineStore, type ActiveCacheRef } from './define-store'
+import { createCachedStoreFactory, type ActiveCacheRef } from './create-cached-store'
 import { createUseKeys } from './use-keys'
 
 import type { CacheInstance } from './cache-types'
@@ -23,8 +23,8 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 		if (!IS_DEV) return
 		if (registeredGroupNames.has(name)) {
 			console.warn(
-				`[zu-store] defineStore('${name}') was called more than once on the same cache. ` +
-					'If you intended a single group, call defineStore at module top-level (not inside render). ' +
+				`[zu-store] createCachedStore({ name: '${name}' }) was called more than once on the same cache. ` +
+					'If you intended a single group, call createCachedStore at module top-level (not inside render). ' +
 					'If you intended distinct groups, give each a unique name.',
 			)
 		}
@@ -74,7 +74,7 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 		return { keys: cache.keys, clear: cache.clear }
 	}
 
-	const defineStore = createDefineStore({
+	const createCachedStore = createCachedStoreFactory({
 		CacheContext,
 		ScopeContext,
 		activeCache,
@@ -83,5 +83,5 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 		registerGroupName,
 	})
 
-	return { Provider, Scope, useCache, defineStore, useKeys }
+	return { Provider, Scope, useCache, createCachedStore, useKeys }
 }

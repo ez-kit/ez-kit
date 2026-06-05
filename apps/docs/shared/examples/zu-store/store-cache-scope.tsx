@@ -12,13 +12,15 @@ type TableState = {
 const cache = createStoreCache()
 
 // One store group, defined once.
-const userTable = cache.defineStore('user-table', (defaultProps: { filter?: string }) =>
-	createStore<TableState>((set) => ({
-		filter: defaultProps.filter ?? 'all',
-		setFilter: (filter) => {
-			set({ filter })
-		},
-	})),
+const userTable = cache.createCachedStore(
+	(defaultProps: { filter?: string }) =>
+		createStore<TableState>((set) => ({
+			filter: defaultProps.filter ?? 'all',
+			setFilter: (filter) => {
+				set({ filter })
+			},
+		})),
+	{ name: 'user-table' },
 )
 
 const FILTERS = ['all', 'active', 'archived']

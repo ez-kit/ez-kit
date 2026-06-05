@@ -31,7 +31,7 @@ const tableFactory = (defaultProps: TableDefaultProps) =>
 describe('createStoreCache — provider & context', () => {
 	it('isolates state between two separate cache.Provider trees', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('isolate-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'isolate-1' })
 
 		function Reader({ id }: { id: string }) {
 			const filter = table.useStore((s) => s.filter)
@@ -81,7 +81,7 @@ describe('createStoreCache — provider & context', () => {
 
 	it('throws when a family Provider is used without a cache Provider', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('isolate-2', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'isolate-2' })
 		function Consumer() {
 			table.useStore((s) => s.filter)
 			return null
@@ -93,7 +93,7 @@ describe('createStoreCache — provider & context', () => {
 
 	it('throws when useFromCache is used without a cache Provider', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('isolate-3', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'isolate-3' })
 		function Badge() {
 			table.useFromCache({ id: 'x' }, (s) => s?.filter)
 			return null
@@ -105,8 +105,8 @@ describe('createStoreCache — provider & context', () => {
 describe('createStoreCache — namespacing & seeding', () => {
 	it('keeps the same id independent across families', () => {
 		const cache = createStoreCache()
-		const users = cache.defineStore('ns-users', tableFactory)
-		const orders = cache.defineStore('ns-orders', tableFactory)
+		const users = cache.createCachedStore(tableFactory, { name: 'ns-users' })
+		const orders = cache.createCachedStore(tableFactory, { name: 'ns-orders' })
 
 		render(
 			<cache.Provider>
@@ -126,7 +126,7 @@ describe('createStoreCache — namespacing & seeding', () => {
 
 	it('seeds the store from defaultProps on first mount', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('seed-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'seed-1' })
 		function Reader() {
 			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
 		}
@@ -149,7 +149,7 @@ describe('createStoreCache — namespacing & seeding', () => {
 describe('createStoreCache — path namespacing via Scope', () => {
 	it('concatenates nested Scope paths into the resolved identity', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('scope-nested', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'scope-nested' })
 		const controllers: ReturnType<typeof cache.useCache>[] = []
 		function Probe() {
 			controllers.push(cache.useCache())
@@ -183,7 +183,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 
 	it('defaults to the root path when no Scope encloses the Provider', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('scope-root', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'scope-root' })
 
 		render(
 			<cache.Provider>
@@ -199,7 +199,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 
 	it('does not collide when the same group + id mounts under different paths', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('scope-collide', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'scope-collide' })
 
 		function UserTable({ id }: { id: string }) {
 			const filter = table.useStore((s) => s.filter)
@@ -243,7 +243,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 
 	it('appends the Provider path prop after the inherited scope', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('scope-prop', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'scope-prop' })
 
 		render(
 			<cache.Provider>
@@ -264,7 +264,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 
 	it('re-resolves the store when the enclosing scope path changes', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('scope-reresolve', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'scope-reresolve' })
 		function FilterView() {
 			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
 		}
@@ -312,7 +312,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 describe('createStoreCache — keep-alive', () => {
 	it('preserves state across Provider unmount/remount and ignores defaultProps on reuse', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('keepalive-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'keepalive-1' })
 
 		function FilterView() {
 			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
@@ -377,7 +377,7 @@ describe('createStoreCache — keep-alive', () => {
 
 	it('shares one store between concurrent Providers with the same identity', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('keepalive-2', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'keepalive-2' })
 		function FilterView({ id }: { id: string }) {
 			return <span data-testid={id}>{table.useStore((s) => s.filter)}</span>
 		}
@@ -414,7 +414,7 @@ describe('createStoreCache — keep-alive', () => {
 
 	it('re-resolves the store when id changes and reuses prior keys', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('keepalive-3', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'keepalive-3' })
 		function FilterView() {
 			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
 		}
@@ -465,7 +465,7 @@ describe('createStoreCache — gc lifecycle', () => {
 	it('evicts after gcTime once the last Provider unmounts', () => {
 		vi.useFakeTimers()
 		const cache = createStoreCache({ gcTime: 1000 })
-		const table = cache.defineStore('gc-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'gc-1' })
 		function App({ show }: { show: boolean }) {
 			return (
 				<cache.Provider>
@@ -491,7 +491,7 @@ describe('createStoreCache — gc lifecycle', () => {
 	it('fixes gcTime birth-config from the first mounting Provider', () => {
 		vi.useFakeTimers()
 		const cache = createStoreCache({ gcTime: 50_000 })
-		const table = cache.defineStore('gc-2', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'gc-2' })
 		function App({ a, b }: { a: boolean; b: boolean }) {
 			return (
 				<cache.Provider>
@@ -543,7 +543,7 @@ describe('createStoreCache — gc lifecycle', () => {
 	it('keeps an alwaysCache entry alive after all Providers unmount', () => {
 		vi.useFakeTimers()
 		const cache = createStoreCache({ gcTime: 1000 })
-		const table = cache.defineStore('gc-3', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'gc-3' })
 		function App({ show }: { show: boolean }) {
 			return (
 				<cache.Provider>
@@ -575,7 +575,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 
 	it('fromCache imperatively updates a live store at a path and re-renders subscribers', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('imp-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'imp-1' })
 		function PageView() {
 			return <span data-testid='p'>{table.useStore((s) => s.page)}</span>
 		}
@@ -601,7 +601,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 
 	it('fromCache returns undefined for a missing id without creating it', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('imp-2', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'imp-2' })
 		render(
 			<cache.Provider>
 				<span />
@@ -613,7 +613,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 	it('useFromCache passively reflects creation, updates, and eviction at a path', () => {
 		vi.useFakeTimers()
 		const cache = createStoreCache({ gcTime: 1000 })
-		const table = cache.defineStore('imp-3', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'imp-3' })
 
 		function Badge() {
 			const filter = table.useFromCache({ path: ['page-1'], id: 'main' }, (s) => s?.filter ?? 'none')
@@ -668,8 +668,8 @@ describe('createStoreCache — imperative & reactive access', () => {
 
 	it('remove deletes a single entry and clear(prefix) removes a subtree across groups', () => {
 		const cache = createStoreCache()
-		const users = cache.defineStore('imp-users', tableFactory)
-		const orders = cache.defineStore('imp-orders', tableFactory)
+		const users = cache.createCachedStore(tableFactory, { name: 'imp-users' })
+		const orders = cache.createCachedStore(tableFactory, { name: 'imp-orders' })
 		function ClearPage1() {
 			const { clear } = cache.useCache()
 			return (
@@ -719,7 +719,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 	it('useKeys re-renders on membership change (add and explicit removal)', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('react-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'react-1' })
 
 		function Watcher() {
 			const keys = cache.useKeys()
@@ -767,7 +767,7 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 
 	it('useKeys does NOT re-render on internal store state changes', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('react-2', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'react-2' })
 		let watcherRenders = 0
 
 		function Watcher() {
@@ -806,7 +806,7 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 
 	it('toTree(useKeys()) gives a reactive nested view', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('react-3', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'react-3' })
 
 		function TreeView() {
 			const tree = toTree(cache.useKeys())
@@ -837,7 +837,7 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 
 	it('useKeys(prefix) filters to a subtree', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('react-4', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'react-4' })
 
 		function PrefixView({ prefix }: { prefix?: string[] }) {
 			const keys = cache.useKeys(prefix)
@@ -874,10 +874,10 @@ describe('createStoreCache — dev-mode warnings', () => {
 		warnSpy.mockRestore()
 	})
 
-	it('warns when defineStore is called twice with the same name on the same cache', () => {
+	it('warns when createCachedStore is called twice with the same name on the same cache', () => {
 		const cache = createStoreCache()
-		cache.defineStore('dup-name', tableFactory)
-		cache.defineStore('dup-name', tableFactory)
+		cache.createCachedStore(tableFactory, { name: 'dup-name' })
+		cache.createCachedStore(tableFactory, { name: 'dup-name' })
 		expect(warnSpy).toHaveBeenCalled()
 		const messages = warnSpy.mock.calls.map((args) => String(args[0]))
 		expect(messages.some((m) => m.includes('dup-name'))).toBe(true)
@@ -885,7 +885,7 @@ describe('createStoreCache — dev-mode warnings', () => {
 
 	it('warns when two cache.Provider trees mount concurrently for the same cache', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('concurrent-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'concurrent-1' })
 		render(
 			<>
 				<cache.Provider>
@@ -908,7 +908,7 @@ describe('createStoreCache — dev-mode warnings', () => {
 describe('createStoreCache — StrictMode & SSR', () => {
 	it('preserves keep-alive under StrictMode double-invocation', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('strict-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'strict-1' })
 		function FilterView() {
 			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
 		}
@@ -954,7 +954,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 
 	it('renders seeded state on the server under a Scope and exposes no live cache', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('ssr-1', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'ssr-1' })
 		function Reader() {
 			return <span>{table.useStore((s) => s.filter)}</span>
 		}
@@ -978,7 +978,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 
 	it('does not share state across separate server renders', () => {
 		const cache = createStoreCache()
-		const table = cache.defineStore('ssr-2', tableFactory)
+		const table = cache.createCachedStore(tableFactory, { name: 'ssr-2' })
 		function Reader() {
 			return <span>{table.useStore((s) => s.filter)}</span>
 		}

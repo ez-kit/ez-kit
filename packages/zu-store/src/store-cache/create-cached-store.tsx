@@ -12,14 +12,14 @@ import type {
 	CachedProviderProps,
 	CachedStoreFactory,
 	CachedStoreGroup,
-	DefineStoreOptions,
+	CachedStoreOptions,
 } from './types'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
 /** Mutable handle to the cache owned by the currently-mounted `cache.Provider` (client-only). */
 export type ActiveCacheRef = { current: CacheInstance | null }
 
-type DefineStoreDeps = {
+type CreateCachedStoreDeps = {
 	CacheContext: Context<CacheInstance | null>
 	ScopeContext: Context<readonly string[]>
 	activeCache: ActiveCacheRef
@@ -45,14 +45,17 @@ function resolvePath(scope: readonly string[], providerPath: readonly string[] |
 	return [...scope, ...providerPath]
 }
 
-export function createDefineStore(deps: DefineStoreDeps) {
+export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 	const { CacheContext, ScopeContext, activeCache, cacheGcTime, missingProviderError, registerGroupName } = deps
 
-	return function defineStore<TStore extends StoreApi<unknown>, TDefaultProps extends object = Record<string, never>>(
-		name: string,
+	return function createCachedStore<
+		TStore extends StoreApi<unknown>,
+		TDefaultProps extends object = Record<string, never>,
+	>(
 		factory: CachedStoreFactory<TStore, TDefaultProps>,
-		options: DefineStoreOptions = {},
+		options: CachedStoreOptions,
 	): CachedStoreGroup<TStore, TDefaultProps> {
+		const { name } = options
 		registerGroupName(name)
 
 		const groupGcTime = options.gcTime

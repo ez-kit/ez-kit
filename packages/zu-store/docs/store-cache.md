@@ -2,7 +2,9 @@
 
 Keeps `createContextStore`-style stores **alive across `Provider` unmount/remount**, keyed by an identity, entirely in memory (no `localStorage`). Use it to preserve table filters, pagination, scroll position, etc. when navigating between pages — and to reach a live store imperatively from anywhere.
 
-`createContextStore` is unchanged and remains the primitive for stores that should die with their `Provider`. `createStoreCache` is a separate, opt-in primitive for the keep-alive case.
+`createContextStore` is unchanged and remains the primitive for stores that should die with their `Provider`. `createCachedStore` is a separate, opt-in primitive for the keep-alive case.
+
+The package ships a **ready-made default cache** — import `CacheProvider`, `CacheScope`, `useCache`, `useCacheKeys`, and `createCachedStore` directly, with no instance to create. Build your own with `createStoreCache` only when you need an isolated cache or a custom default `gcTime`; it returns the same surface as instance members.
 
 ## Install
 
@@ -23,18 +25,20 @@ function createStoreCache(options?: { gcTime?: number }): {
 		clear: (prefix?: string[]) => void                   // optional subtree clear
 	}
 	useKeys: (prefix?: string[]) => CacheRecord[]          // reactive: re-renders on membership change
-	defineStore: <TStore, TDefaultProps>(
-		name: string,
+	createCachedStore: <TStore, TDefaultProps>(
 		factory: (defaultProps: TDefaultProps) => TStore,
-		options?: { gcTime?: number },
+		options: { name: string; gcTime?: number },
 	) => CachedStoreGroup<TStore, TDefaultProps>
 }
+
+// Default cache, exported at the top level (one ready-made instance):
+//   CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore
 
 // Pure utility, exported from the same module:
 function toTree(records: CacheRecord[]): CacheTree
 ```
 
-A store-group handle from `defineStore` exposes:
+A store-group handle from `createCachedStore` exposes:
 
 ```ts
 {
@@ -63,18 +67,18 @@ function UserTable({ userId }: { userId: string }) {
 	)
 }
 
-<cache.Scope path={['page-1']}>
+<CacheScope path={['page-1']}>
 	<UserTable userId='42' /> {/* identity: (['page-1'], 'users', 'user-42') */}
-</cache.Scope>
-<cache.Scope path={['page-2']}>
+</CacheScope>
+<CacheScope path={['page-2']}>
 	<UserTable userId='42' /> {/* identity: (['page-2'], 'users', 'user-42') — independent */}
-</cache.Scope>
+</CacheScope>
 ```
 
 ## Basic Usage
 
 ```tsx
-import { createStoreCache } from '@ez-kit/zu-store'
+import { CacheProvider, createCachedStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand'
 
 interface TableState {
@@ -83,28 +87,27 @@ interface TableState {
 	setFilter: (filter: string) => void
 }
 
-// 1. Create the cache system (one per app / scope).
-const cache = createStoreCache({ gcTime: 5 * 60_000 })
-
-// 2. Define a store group against it (the name is its inspectable namespace).
-const usersTable = cache.defineStore('users', (defaultProps: { filter?: string }) =>
-	createStore<TableState>((set) => ({
-		filter: defaultProps.filter ?? 'all',
-		page: 1,
-		setFilter: (filter) => set({ filter }),
-	})),
+// 1. Define a store group against the default cache (the name is its inspectable namespace).
+const usersTable = createCachedStore(
+	(defaultProps: { filter?: string }) =>
+		createStore<TableState>((set) => ({
+			filter: defaultProps.filter ?? 'all',
+			page: 1,
+			setFilter: (filter) => set({ filter }),
+		})),
+	{ name: 'users' },
 )
 
-// 3. Mount the cache boundary once, high in the tree.
+// 2. Mount the cache boundary once, high in the tree.
 function Root() {
 	return (
-		<cache.Provider>
+		<CacheProvider>
 			<App />
-		</cache.Provider>
+		</CacheProvider>
 	)
 }
 
-// 4. Mount the keyed Provider where the table lives. It survives unmount.
+// 3. Mount the keyed Provider where the table lives. It survives unmount.
 function UsersPage() {
 	return (
 		<usersTable.Provider
@@ -116,7 +119,7 @@ function UsersPage() {
 	)
 }
 
-// 5. Read like a normal context store.
+// 4. Read like a normal context store.
 function UsersTable() {
 	const filter = usersTable.useStore((s) => s.filter)
 	return <span>{filter}</span>
@@ -205,7 +208,7 @@ function CachePanel({ customerId }: { customerId: string }) {
 
 ## Gotchas
 
-- **`defineStore` names must be unique within a cache.** The `name` is the group's namespace and shows up in `useCache().keys()`; two groups sharing a name under the same `cache.Provider` would collide on one keyspace. In development, the library emits a `console.warn` on the second call — a frequent symptom of calling `defineStore` inside a render.
+- **`createCachedStore` names must be unique within a cache.** The `name` is the group's namespace and shows up in `useCache().keys()`; two groups sharing a name under the same `CacheProvider` would collide on one keyspace. In development, the library emits a `console.warn` on the second call — a frequent symptom of calling `createCachedStore` inside a render.
 - **Don't mount two `<cache.Provider>` for the same cache.** Imperative access via `fromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. In development, the library emits a `console.warn` when this happens.
 - **`alwaysCache` + dynamic keys or paths leaks.** Pinned entries under unbounded keys (`order-${id}`) or paths never evict. Use `alwaysCache` only for a small, fixed set; rely on `gcTime` for dynamic ones, and `clear(path)` to drop a subtree on navigation.
 - **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` take `{ path, id }` and default `path` to `[]`. A read with the wrong path silently misses.

@@ -6,7 +6,9 @@ export type StoreCacheOptions = {
 	gcTime?: number
 }
 
-export type DefineStoreOptions = {
+export type CachedStoreOptions = {
+	/** Group namespace; must be unique within a cache. Visible in `keys()` / `useCacheKeys()`. */
+	name: string
 	/** Store-group default `gcTime`, overriding the cache default. */
 	gcTime?: number
 }
@@ -66,7 +68,7 @@ export type CachedItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 	children: (state: TSelected) => ReactElement
 }
 
-/** Handle returned by `defineStore` — a group of keep-alive stores keyed by `(path, id)`. */
+/** Handle returned by `createCachedStore` — a group of keep-alive stores keyed by `(path, id)`. */
 export type CachedStoreGroup<TStore extends StoreApi<unknown>, TDefaultProps extends object> = {
 	Provider: (props: CachedProviderProps<TDefaultProps>) => ReactElement
 	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
@@ -99,9 +101,8 @@ export type StoreCache = {
 	useCache: () => StoreCacheController
 	/** Reactive: re-renders when entries are added or removed under the optional prefix. */
 	useKeys: (prefix?: readonly string[]) => CacheRecord[]
-	defineStore: <TStore extends StoreApi<unknown>, TDefaultProps extends object = Record<string, never>>(
-		name: string,
+	createCachedStore: <TStore extends StoreApi<unknown>, TDefaultProps extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TStore, TDefaultProps>,
-		options?: DefineStoreOptions,
+		options: CachedStoreOptions,
 	) => CachedStoreGroup<TStore, TDefaultProps>
 }

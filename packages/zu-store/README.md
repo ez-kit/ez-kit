@@ -46,33 +46,38 @@ const [name, setName] = useStoreState(formStore, 'name')
 
 ---
 
-### `createStoreCache(options?)`
+### `createCachedStore(factory, options)` / `createStoreCache(options?)`
 
-Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by `(path, name, id)`, in memory (no `localStorage`). Useful for preserving table filters, pagination, etc. between page navigations. Returns `{ Provider, Scope, useCache, defineStore }`; `defineStore(factory)` returns a namespaced store group with `Provider`, the usual read hooks, plus `fromCache`, `useFromCache`, and `remove`. The `path` is inherited from `<cache.Scope>`, so reusable components stay collision-free across mount locations. `createContextStore` is left untouched — this is a separate, opt-in primitive.
+Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by `(path, name, id)`, in memory (no `localStorage`). Useful for preserving table filters, pagination, etc. between page navigations. `createContextStore` is left untouched — this is a separate, opt-in primitive.
+
+The package ships a **ready-made default cache**: import `CacheProvider` and `createCachedStore` directly — no instance to create. `createCachedStore(factory, { name })` returns a namespaced store group with `Provider`, the usual read hooks, plus `fromCache`, `useFromCache`, and `remove`. The `path` is inherited from `<CacheScope>`, so reusable components stay collision-free across mount locations.
 
 ```tsx
-import { createStoreCache } from '@ez-kit/zu-store'
+import { CacheProvider, CacheScope, createCachedStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand/vanilla'
 
-const cache = createStoreCache({ gcTime: 5 * 60_000 })
-const usersTable = cache.defineStore('users', (defaultProps: { filter?: string }) =>
-  createStore<{ filter: string }>(() => ({ filter: defaultProps.filter ?? 'all' })),
+const usersTable = createCachedStore(
+  (defaultProps: { filter?: string }) =>
+    createStore<{ filter: string }>(() => ({ filter: defaultProps.filter ?? 'all' })),
+  { name: 'users' },
 )
 
 // once, high in the tree
-<cache.Provider>
+<CacheProvider>
   {/* survives unmount; reused on remount within gcTime */}
-  {/* <Scope> namespaces by location so two pages never collide on the same id */}
-  <cache.Scope path={['page-1']}>
+  {/* <CacheScope> namespaces by location so two pages never collide on the same id */}
+  <CacheScope path={['page-1']}>
     <usersTable.Provider id="users" defaultProps={{ filter: 'active' }}>
       <UsersTable />
     </usersTable.Provider>
-  </cache.Scope>
-</cache.Provider>
+  </CacheScope>
+</CacheProvider>
 
 // imperatively, from anywhere — address the absolute { path, id }
 usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'archived' })
 ```
+
+Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useKeys`, `cache.createCachedStore`).
 
 → [Full docs](docs/store-cache.md)
 
