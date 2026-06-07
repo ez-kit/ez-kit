@@ -340,5 +340,37 @@
 		"label": "Fallbacks",
 		"sourceFile": "components/fallbacks.tsx",
 		"exportName": "FallbacksExample"
+	},
+	{
+		"id": "infinite-scroll-auto",
+		"label": "Auto",
+		"group": "infinite-scroll",
+		"groupLabel": "Infinite Scroll",
+		"sourceFile": "components/infinite-scroll/auto.tsx",
+		"exportName": "InfiniteScrollAutoExample"
+	},
+	{
+		"id": "infinite-scroll-manual",
+		"label": "Manual (Load more)",
+		"group": "infinite-scroll",
+		"groupLabel": "Infinite Scroll",
+		"sourceFile": "components/infinite-scroll/manual.tsx",
+		"exportName": "InfiniteScrollManualExample"
+	},
+	{
+		"id": "infinite-scroll-virtualized",
+		"label": "Virtualized",
+		"group": "infinite-scroll",
+		"groupLabel": "Infinite Scroll",
+		"sourceFile": "components/infinite-scroll/virtualized.tsx",
+		"exportName": "InfiniteScrollVirtualizedExample"
+	},
+	{
+		"id": "infinite-scroll-reset",
+		"label": "Reset on query change",
+		"group": "infinite-scroll",
+		"groupLabel": "Infinite Scroll",
+		"sourceFile": "components/infinite-scroll/reset-on-query.tsx",
+		"exportName": "InfiniteScrollResetExample"
 	}
 ]

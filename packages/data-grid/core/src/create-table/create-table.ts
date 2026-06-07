@@ -13,6 +13,7 @@ import { mapColumns } from '../column/map-columns'
 import { CreatingFeature } from '../features/creating'
 import { DeletingFeature } from '../features/deleting'
 import { EditingFeature } from '../features/editing'
+import { InfiniteFeature } from '../features/infinite'
 import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
 import { createStore } from '../store'
@@ -180,6 +181,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		pagination: { pageIndex: 0, pageSize: defaultPageSize },
 		...(Object.keys(defaultHidden).length > 0 ? { columnVisibility: defaultHidden } : {}),
 		...(sortingCfg?.defaultSorting ? { sorting: sortingCfg.defaultSorting } : {}),
+		// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
+		...config.initialState,
 	}
 
 	// We need a stable reference for the callback closure.
@@ -222,7 +225,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			: undefined
 
 	const options = {
-		_features: [CreatingFeature, EditingFeature, DeletingFeature, LoadingFeature],
+		_features: [CreatingFeature, EditingFeature, DeletingFeature, LoadingFeature, InfiniteFeature],
 		data: config.data,
 		columns: allColumns,
 		getRowId,
@@ -258,7 +261,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
 		...(config.columnVisibility ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
-		...(config.pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+		// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer.
+		...(config.pagination && paginationCfg?.mode !== 'infinite'
+			? { getPaginationRowModel: getPaginationRowModel() }
+			: {}),
 		...(config.expanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
 		...(config.expanding && expandVariant === 'tree'
 			? {
@@ -323,11 +329,6 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// Switch to fully-controlled mode with the real initial state
 	ref.table.setOptions((prev) => ({ ...prev, state: store.getState() }))
 
-	// Set initial loading state if provided
-	if (config.loading === true) {
-		ref.table.setLoading(true)
-	}
-
 	// ── compose the DataTable ─────────────────────────────────────────────────
 	const dataTable = ref.table as DataTable<TRow>
 
@@ -356,8 +357,18 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		store.setState((prev) => ({ ...prev, ...partial }))
 	}
 
-	// Override setLoading to also call notify (it goes through setState → onStateChange)
-	// Feature's setLoading already calls table.setState which triggers onStateChange → notify ✓
+	// Forward infinite scroll: append rows after current data. Immutable — builds a
+	// fresh array so broad snapshot subscribers re-render; the previous array is untouched.
+	dataTable.appendData = (rows) => {
+		const prev = ref.table?.options.data ?? []
+		dataTable.setData([...prev, ...rows])
+	}
+
+	// Reserved v2 (backward/prepend). No scroll-anchoring in v1.
+	dataTable.prependData = (rows) => {
+		const prev = ref.table?.options.data ?? []
+		dataTable.setData([...rows, ...prev])
+	}
 
 	return dataTable
 }

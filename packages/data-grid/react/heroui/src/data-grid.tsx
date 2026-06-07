@@ -22,6 +22,7 @@ import { FormShell } from './blocks/FormShell'
 import { GlobalFilterInput } from './blocks/GlobalFilterInput'
 import { Input } from './blocks/Input'
 import { LoadingRow } from './blocks/LoadingRow'
+import { LoadMoreRow } from './blocks/LoadMoreRow'
 import { Modal } from './blocks/Modal'
 import { MultiSelectFilter } from './blocks/MultiSelectFilter'
 import { NoResultsState } from './blocks/NoResultsState'
@@ -72,6 +73,7 @@ const components = {
 	BetweenInput,
 	MultiSelectFilter,
 	LoadingRow,
+	LoadMoreRow,
 	EmptyState,
 	NoResultsState,
 	ActionsCell,

@@ -1,5 +1,5 @@
 import { createTable } from '@ez-kit/data-grid-core'
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 
 import { createDataGridInstance } from './data-grid-instance'
 
@@ -9,6 +9,8 @@ import type {
 	ExpandingConfig,
 	FilteringConfig,
 	GlobalFilteringConfig,
+	LoadMoreDirection,
+	PaginationConfig,
 	RowVirtualOptions,
 	TableConfig,
 	VirtualizedConfig,
@@ -60,6 +62,9 @@ export const STICKY_HEADER_KEY = Symbol('stickyHeader')
 
 /** Symbol used to carry expanding config on the table instance for Body/ExpandedRow to read. */
 export const EXPAND_KEY = Symbol('expanding')
+
+/** Symbol used to carry normalized infinite-scroll config on the table instance for the infinite hook to read. */
+export const INFINITE_KEY = Symbol('infinite')
 
 export type ExpandedRowProps<TRow extends object> = {
 	row: Row<TRow>
@@ -120,6 +125,53 @@ function normalizeVirtualized(
 	if (!row) return undefined
 	if (row === true) return { row: {} }
 	return { row }
+}
+
+/**
+ * React-layer pagination config. Adds infinite-scroll **detection tuning**
+ * (`trigger`, `threshold`) on top of the headless {@link PaginationConfig}
+ * (`mode`, `hasNextPage`, `onLoadMore`). Mirrors the `ReactFilteringConfig`
+ * pattern: data semantics in core, DOM detection here.
+ */
+export type ReactPaginationConfig = PaginationConfig & {
+	/**
+	 * Infinite mode only. `'auto'` (default) loads when the edge enters view;
+	 * `'manual'` suppresses auto detection and renders a "Load more" control.
+	 */
+	trigger?: 'auto' | 'manual'
+	/**
+	 * Infinite mode only. How close to the edge triggers a load.
+	 * `{ rows }` (default 5) drives the virtualized index path; `{ px }` (default 200)
+	 * is the IntersectionObserver `rootMargin` for the non-virtualized path.
+	 */
+	threshold?: { rows?: number } | { px?: number }
+}
+
+/**
+ * Normalized infinite-scroll config stored on the table instance for the hook to read.
+ * Carries the user-owned `hasNextPage` descriptor (read reactively each render) alongside
+ * detection tuning — `state.infinite` stays 100% grid-owned.
+ */
+export type NormalizedInfiniteConfig = {
+	trigger: 'auto' | 'manual'
+	threshold: { rows?: number; px?: number }
+	hasNextPage: boolean
+	hasPreviousPage: boolean
+	onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
+}
+
+function normalizeInfinite(
+	pagination: boolean | ReactPaginationConfig | undefined,
+): NormalizedInfiniteConfig | undefined {
+	if (typeof pagination !== 'object' || pagination.mode !== 'infinite') return undefined
+	const threshold = pagination.threshold ?? { rows: 5 }
+	return {
+		trigger: pagination.trigger ?? 'auto',
+		threshold,
+		hasNextPage: pagination.hasNextPage ?? false,
+		hasPreviousPage: pagination.hasPreviousPage ?? false,
+		...(pagination.onLoadMore !== undefined ? { onLoadMore: pagination.onLoadMore } : {}),
+	}
 }
 
 export type PageSizerConfig = {
@@ -296,7 +348,13 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * `--dg-table-max-height` CSS variable on a parent element.
 	 */
 	stickyHeader?: boolean
-} & Omit<TableConfig<TRow>, 'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility'> & {
+	/**
+	 * Pagination config. Page-based by default; set `mode: 'infinite'` for infinite
+	 * scroll. The React layer adds `trigger` / `threshold` detection tuning on top of
+	 * the headless {@link PaginationConfig}.
+	 */
+	pagination?: boolean | ReactPaginationConfig
+} & Omit<TableConfig<TRow>, 'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination'> & {
 	expanding?: boolean | ReactExpandingConfig<TRow>
 }
 
@@ -323,11 +381,20 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		filtering: rawFiltering,
 		globalFiltering: rawGlobalFiltering,
 		expanding: rawExpanding,
+		pagination: rawPagination,
 		state,
 		onStateChange,
 		stickyHeader,
 		...restConfig
 	} = config
+
+	// Split pagination into the headless core part (strip React-only detection tuning)
+	// and the normalized infinite config stored on the instance for the infinite hook.
+	const corePagination: boolean | PaginationConfig | undefined =
+		typeof rawPagination === 'object'
+			? (({ trigger: _trigger, threshold: _threshold, ...rest }) => rest)(rawPagination)
+			: rawPagination
+	const normalizedInfinite = normalizeInfinite(rawPagination)
 
 	// Build core-compatible expanding config (strip React-only fields)
 	const reactExpandingCfg = typeof rawExpanding === 'object' ? rawExpanding : undefined
@@ -414,6 +481,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 			filtering: coreFiltering,
 			globalFiltering: coreGlobalFiltering,
 			expanding: coreExpanding,
+			pagination: corePagination,
 			// Pass columnVisibility presence to core so it can table-level-gate enableHiding.
 			// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
 			// is layered separately via the COLUMN_VISIBILITY_KEY symbol.
@@ -512,6 +580,11 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	// Store stickyHeader flag on the table instance so DataGridTable can read without an extra prop
 	tableAsSymbolMap[STICKY_HEADER_KEY] = stickyHeader ?? false
 
+	// Store normalized infinite-scroll config (trigger, threshold, latest onLoadMore) so
+	// useInfiniteScroll can read it without prop drilling. Reassigned every render so the
+	// hook always invokes the freshest onLoadMore closure.
+	tableAsSymbolMap[INFINITE_KEY] = normalizedInfinite
+
 	// Store renderExpanded on the table instance so Body/ExpandedRow can read without an extra prop
 	const expandRef = useRef(rawExpanding)
 	expandRef.current = rawExpanding
@@ -534,12 +607,9 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		instanceRef.current.table.setOptions((prev) => ({ ...prev, data: config.data }))
 	}
 
-	// Sync loading on change
-	useEffect(() => {
-		if (config.loading !== undefined) {
-			instanceRef.current?.table.setLoading(config.loading)
-		}
-	}, [config.loading])
+	// loading is plain controlled state — handled by the generic `state` sync block
+	// above (`state.loading`). hasNextPage is a pagination option read reactively from
+	// INFINITE_KEY by useInfiniteScroll. Neither needs a bespoke projection here.
 
 	return instanceRef.current
 }

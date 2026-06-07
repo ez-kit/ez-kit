@@ -6,6 +6,7 @@ import { EXPAND_KEY, FALLBACKS_KEY } from '../use-data-grid'
 import { CreatingRow } from './creating-row'
 import { EmptyStateRow } from './empty-state-row'
 import { ExpandedRow } from './expanded-row'
+import { LoadMoreFooter } from './load-more-footer'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { DataGridRow } from './row'
@@ -119,6 +120,7 @@ export function Body() {
 					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
+			<LoadMoreFooter />
 		</Tbody>
 	)
 }

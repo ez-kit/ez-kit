@@ -1,0 +1,127 @@
+---
+title: Infinite Scroll
+description: Load more rows as the user scrolls — event-only, works with or without virtualization, auto or manual trigger.
+---
+
+# Infinite Scroll
+
+Infinite scroll loads more rows as the user approaches the bottom. It is a **mode of
+pagination** (`pagination.mode: 'infinite'`), mutually exclusive with the classic page
+footer.
+
+The grid is **event-only**: it owns edge detection and request status, _you_ own the data.
+When an edge is reached the grid calls `onLoadMore`; you fetch the page and append the rows
+to your own state, and you declare `hasNextPage` from the API response.
+
+## Auto
+
+<DataGridDocsExample exampleId='infinite-scroll-auto' />
+
+```tsx
+const [data, setData] = useState<User[]>([])
+const [cursor, setCursor] = useState(0)
+const [hasNextPage, setHasNextPage] = useState(true)
+
+const table = useDataGrid({
+	data,
+	columns,
+	pagination: {
+		mode: 'infinite',
+		hasNextPage, // controlled — only your API knows this
+		onLoadMore: async () => {
+			const page = await fetchUsersPage(cursor)
+			setData((prev) => [...prev, ...page.rows]) // you own the data
+			setCursor((c) => c + page.rows.length)
+			setHasNextPage(page.nextCursor !== null)
+		},
+	},
+})
+```
+
+## Manual (Load more)
+
+Set `trigger: 'manual'` to suppress auto detection and render a **Load more** button (the
+injected `LoadMoreRow`) that drives the same `onLoadMore`.
+
+<DataGridDocsExample exampleId='infinite-scroll-manual' />
+
+```tsx
+pagination: { mode: 'infinite', trigger: 'manual', hasNextPage, onLoadMore }
+```
+
+## With virtualization
+
+Infinite scroll works with row virtualization too. Detection switches to the virtualizer's
+last rendered index, so only visible rows mount while pages keep loading.
+
+<DataGridDocsExample exampleId='infinite-scroll-virtualized' />
+
+```tsx
+useDataGrid({
+	data,
+	columns,
+	virtualized: { row: true },
+	pagination: { mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } },
+})
+```
+
+## Reset on query change
+
+In infinite mode the accumulated rows belong to the **current** query. When sorting,
+filtering, global search, or page size change, the grid handles its own side (clears the
+error, re-arms detection, scrolls to top) — but it does **not** clear your data. Drop the
+accumulator and refetch page 1 from your existing `onChange` callback:
+
+<DataGridDocsExample exampleId='infinite-scroll-reset' />
+
+```tsx
+sorting: {
+	manual: true,
+	onChange: (sorting) => {
+		// reset your accumulator + cursor, then refetch page 1 with the new sort
+		resetAndRefetch(sorting[0])
+	},
+},
+pagination: { mode: 'infinite', hasNextPage, onLoadMore },
+```
+
+## Status, errors & retry
+
+The grid tracks request status around the `onLoadMore` promise in the **grid-owned**
+`state.infinite` slice. `hasNextPage` is **not** here — it is a user-owned pagination
+option (like `pageCount`/`rowCount`), kept separate so the slice never mixes ownership.
+
+| Field | Where | Owner | Meaning |
+| --- | --- | --- | --- |
+| `isFetchingNextPage` | `state.infinite` | grid | A forward page request is in flight. |
+| `error` | `state.infinite` | grid | `{ direction, error }` when the last load failed. |
+| `hasNextPage` | `pagination` option | you | Whether more rows are available forward. |
+
+If `onLoadMore` rejects, the injected `LoadMoreRow` shows a **Retry** affordance that
+re-invokes the load and clears the error. Duplicate requests are guarded automatically
+while a fetch is in flight.
+
+## API
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `pagination.mode` | `'pages' \| 'infinite'` | `'infinite'` enables infinite scroll. Default `'pages'`. |
+| `pagination.hasNextPage` | `boolean` | Controlled flag: are more rows available forward? |
+| `pagination.onLoadMore` | `(ctx: { direction }) => Promise<void> \| void` | Called at the edge / on "Load more". Fetch + append. |
+| `pagination.trigger` | `'auto' \| 'manual'` | `'auto'` (default) loads on scroll; `'manual'` shows a button. |
+| `pagination.threshold` | `{ rows?: number } \| { px?: number }` | How close to the edge triggers a load. Defaults: `{ rows: 5 }` / `{ px: 200 }`. |
+| `table.appendData(rows)` | method | Immutable append helper for non-React-state consumers. |
+
+> **Note:** Backward / upward loading (prepend) is reserved in the API
+> (`direction: 'backward'`, `hasPreviousPage`) but not implemented yet — v1 loads forward only.
+
+## Notes
+
+- The `@ez-kit/data-grid-react` package ships **zero styling** for the loader — it emits
+  `data-slot="load-more-row" | "load-more-sentinel"` and renders the injected `LoadMoreRow`.
+  The shadcn and HeroUI flavors provide the styled spinner / button / retry.
+- Infinite mode replaces the page footer — see [Pagination](/docs/data-grid/pagination).
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/use-infinite-scroll.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/use-infinite-scroll.ts)

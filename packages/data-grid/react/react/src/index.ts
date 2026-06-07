@@ -9,6 +9,7 @@ export {
 	FILTER_CLEAR_BUTTON_KEY,
 	FILTERING_VARIANT_KEY,
 	GLOBAL_FILTERING_KEY,
+	INFINITE_KEY,
 	PAGE_SIZER_KEY,
 	ROW_PINNING_KEY,
 	SELECTION_BAR_KEY,
@@ -30,15 +31,21 @@ export type {
 	NormalizedClearButtonConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedGlobalFilteringConfig,
+	NormalizedInfiniteConfig,
 	PageSizerConfig,
 	NormalizedVirtualizedConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
 	ReactGlobalFilteringConfig,
+	ReactPaginationConfig,
 	SelectionBarCallbackArgs,
 	SelectionBarConfig,
 	SelectionBarVariant,
 } from './use-data-grid'
+
+// Infinite scroll
+export { useInfiniteScroll } from './data-grid/use-infinite-scroll'
+export type { InfiniteController } from './data-grid/use-infinite-scroll'
 
 // Selector hook + store primitives
 export { useDataGridSelector } from './use-data-grid-selector'
@@ -117,6 +124,7 @@ export type {
 	GlobalFilterInputProps,
 	GridComponents,
 	LoadingRowProps,
+	LoadMoreRowProps,
 	MultiSelectFilterProps,
 	MultiSelectOption,
 	NoResultsStateProps,

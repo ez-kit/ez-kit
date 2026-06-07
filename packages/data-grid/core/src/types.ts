@@ -236,6 +236,30 @@ export type GlobalFilteringConfig = {
 	onChange?: (globalFilter: unknown) => void
 }
 
+/**
+ * Direction of an infinite-scroll load.
+ * - `'forward'` — load the next page (scroll down / append). Implemented.
+ * - `'backward'` — load the previous page (scroll up / prepend). **Reserved for v2**:
+ *   the type exists so the API can grow without a breaking change; v1 only ever emits
+ *   `'forward'` and performs no scroll-anchoring.
+ */
+export type LoadMoreDirection = 'forward' | 'backward'
+
+/**
+ * Infinite-scroll request status, held in `state.infinite`. **100% grid-owned** —
+ * every field is written only by the grid (the React layer via `setInfiniteStatus`
+ * around the `onLoadMore` promise). The user-owned descriptor `hasNextPage` lives in
+ * {@link PaginationConfig} (it describes server data, like `pageCount`/`rowCount`), not
+ * here — so this slice never mixes ownership.
+ *
+ * `*Previous*` fields are reserved for v2 (backward / prepend); inert in v1.
+ */
+export type InfiniteState = {
+	isFetchingNextPage: boolean
+	isFetchingPreviousPage: boolean
+	error: { direction: LoadMoreDirection; error: unknown } | null
+}
+
 export type PaginationConfig = {
 	manual?: boolean
 	pageCount?: number
@@ -254,6 +278,36 @@ export type PaginationConfig = {
 	 * ```
 	 */
 	onChange?: (pagination: PaginationState) => void
+	/**
+	 * Pagination mode. `'pages'` (default) renders a classic page footer. `'infinite'`
+	 * enables infinite scroll — mutually exclusive with the page footer. In infinite
+	 * mode the grid is **event-only**: it calls {@link PaginationConfig.onLoadMore} when a
+	 * load edge is reached, and the consumer appends rows via `table.appendData(rows)`.
+	 */
+	mode?: 'pages' | 'infinite'
+	/**
+	 * Infinite mode only. Controlled flag declaring whether more rows can be loaded
+	 * forward (scroll down). A **server-data descriptor** (like `pageCount`/`rowCount`),
+	 * so it is an option, not table state — only the consumer's API knows it. The React
+	 * layer reads it reactively to drive the loader / load-more control.
+	 */
+	hasNextPage?: boolean
+	/**
+	 * Infinite mode only. **Reserved for v2** (backward / prepend). Inert in v1.
+	 */
+	hasPreviousPage?: boolean
+	/**
+	 * Infinite mode only. Called when a load edge is reached (auto trigger) or the
+	 * "Load more" control is activated (manual trigger). Fetch the page and append rows
+	 * with `table.appendData(rows)`. The returned promise drives `isFetchingNextPage`;
+	 * a rejection surfaces `state.infinite.error` with a retry affordance. v1 always
+	 * passes `direction: 'forward'`.
+	 *
+	 * Prefer returning a promise so the loading indicator tracks the real request.
+	 * A `void` return still flips `isFetchingNextPage` on, then off on the next
+	 * microtask — so a synchronous handler shows a brief spinner flash.
+	 */
+	onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
 }
 
 export type SelectionConfig = {
@@ -367,8 +421,13 @@ export type TableConfig<TRow extends object> = {
 	creating?: CreatingConfig<TRow>
 	editing?: EditingConfig<TRow>
 	deleting?: DeletingConfig<TRow>
-	loading?: boolean
 	sizing?: boolean | SizingConfig
+	/**
+	 * Seed values for table state at construction (TanStack-style). Merged over the
+	 * grid's computed defaults; consumer values win. Use for uncontrolled initial
+	 * state, e.g. `initialState: { loading: { isLoading: true } }` or a default sort.
+	 */
+	initialState?: Partial<TableState>
 	/**
 	 * Called whenever the table state changes (sorting, filtering, pagination, etc.).
 	 * Receives the raw TanStack updater — apply it to your own state to implement controlled mode.
@@ -381,7 +440,8 @@ export type TableConfig<TRow extends object> = {
 
 /**
  * Extended TanStack table instance returned by createTable().
- * Adds subscribe/getSnapshot for useSyncExternalStore and setData/setLoading.
+ * Adds subscribe/getSnapshot for useSyncExternalStore, setData/appendData, and
+ * the infinite-scroll status setters (see {@link InfiniteState}).
  */
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
@@ -400,6 +460,17 @@ export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
 	getSnapshot: () => TableState
 	/** Reactively replace the data array. */
 	setData: (data: TRow[]) => void
+	/**
+	 * Reactively append rows after the current data (immutable — builds a new array,
+	 * leaves the previous one untouched). Primary helper for forward infinite scroll.
+	 */
+	appendData: (rows: TRow[]) => void
+	/**
+	 * Reactively prepend rows before the current data (immutable). Exists for the
+	 * **reserved** v2 backward/prepend direction; usable now, but the grid performs no
+	 * scroll-anchoring in v1, so the scroll position is not compensated.
+	 */
+	prependData: (rows: TRow[]) => void
 	/**
 	 * Push a partial controlled-state slice into both TanStack's `options.state`
 	 * and the external snapshot store, **without** firing `onStateChange`.

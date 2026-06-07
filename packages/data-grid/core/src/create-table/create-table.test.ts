@@ -405,8 +405,8 @@ describe('createTable — creating / editing / deleting', () => {
 // ── loading ───────────────────────────────────────────────────────────────────
 
 describe('createTable — loading', () => {
-	it('loading: true sets initial isLoading to true', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, loading: true })
+	it('initialState.loading sets initial isLoading to true', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, initialState: { loading: { isLoading: true } } })
 		expect(table.getIsLoading()).toBe(true)
 	})
 

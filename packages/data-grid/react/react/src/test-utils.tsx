@@ -21,6 +21,7 @@ import type {
 	GridComponents,
 	InputProps,
 	LoadingRowProps,
+	LoadMoreRowProps,
 	ModalProps,
 	MultiSelectFilterProps,
 	NoResultsStateProps,
@@ -348,6 +349,20 @@ function TestEmptyState({ columnCount }: EmptyStateProps) {
 function TestNoResultsState({ columnCount }: NoResultsStateProps) {
 	return <tr><td colSpan={columnCount}>No results</td></tr>
 }
+function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
+	if (error != null) {
+		return (
+			<div data-slot='load-more-error'>
+				<button type='button' onClick={onRetry}>Retry</button>
+			</div>
+		)
+	}
+	if (isFetching) return <div data-slot='load-more-spinner'>Loading more…</div>
+	if (trigger === 'manual' && hasMore) {
+		return <button type='button' data-slot='load-more-button' onClick={onTrigger}>Load more</button>
+	}
+	return null
+}
 
 // Minimal FormShell stub (no chrome) — UI kits provide real implementations.
 function TestFormShell({ children }: { children?: ReactNode }) {
@@ -397,6 +412,7 @@ export const testComponents: Required<GridComponents> = {
 	LoadingRow: TestLoadingRow,
 	EmptyState: TestEmptyState,
 	NoResultsState: TestNoResultsState,
+	LoadMoreRow: TestLoadMoreRow,
 	SortIndicator: () => null,
 	SortMenu: () => null,
 	ActionsCell: TestActionsCell,

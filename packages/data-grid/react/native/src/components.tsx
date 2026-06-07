@@ -21,6 +21,7 @@ import type {
 	GridComponents,
 	InputProps,
 	LoadingRowProps,
+	LoadMoreRowProps,
 	ModalProps,
 	MultiSelectFilterProps,
 	NoResultsStateProps,
@@ -783,6 +784,25 @@ function NativeEmptyState({ columnCount }: EmptyStateProps) {
 	)
 }
 
+function NativeLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
+	if (error != null) {
+		return (
+			<button type='button' onClick={onRetry}>
+				Retry
+			</button>
+		)
+	}
+	if (isFetching) return <span>Loading more…</span>
+	if (trigger === 'manual' && hasMore) {
+		return (
+			<button type='button' onClick={onTrigger}>
+				Load more
+			</button>
+		)
+	}
+	return null
+}
+
 function NativeNoResultsState({ columnCount }: NoResultsStateProps) {
 	return (
 		<tr>
@@ -892,6 +912,7 @@ export const nativeComponents: Required<GridComponents> = {
 	SortIndicator: NativeSortIndicator,
 	SortMenu: NativeSortMenu,
 	LoadingRow: NativeLoadingRow,
+	LoadMoreRow: NativeLoadMoreRow,
 	EmptyState: NativeEmptyState,
 	NoResultsState: NativeNoResultsState,
 	ActionsCell: NativeActionsCell,

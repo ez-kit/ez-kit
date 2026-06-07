@@ -45,6 +45,10 @@ import { CrudExample as Example40 } from '../components/crud/CrudExample'
 import { CrudClientExample as Example41 } from '../components/crud/CrudClientExample'
 import { ControlledStateExample as Example42 } from '../components/controlled-state'
 import { FallbacksExample as Example43 } from '../components/fallbacks'
+import { InfiniteScrollAutoExample as Example44 } from '../components/infinite-scroll/auto'
+import { InfiniteScrollManualExample as Example45 } from '../components/infinite-scroll/manual'
+import { InfiniteScrollVirtualizedExample as Example46 } from '../components/infinite-scroll/virtualized'
+import { InfiniteScrollResetExample as Example47 } from '../components/infinite-scroll/reset-on-query'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -389,6 +393,38 @@ export const dataGridExamplesManifest = [
     "label": "Fallbacks",
     "sourceFile": "components/fallbacks.tsx",
     "exportName": "FallbacksExample"
+  },
+  {
+    "id": "infinite-scroll-auto",
+    "label": "Auto",
+    "group": "infinite-scroll",
+    "groupLabel": "Infinite Scroll",
+    "sourceFile": "components/infinite-scroll/auto.tsx",
+    "exportName": "InfiniteScrollAutoExample"
+  },
+  {
+    "id": "infinite-scroll-manual",
+    "label": "Manual (Load more)",
+    "group": "infinite-scroll",
+    "groupLabel": "Infinite Scroll",
+    "sourceFile": "components/infinite-scroll/manual.tsx",
+    "exportName": "InfiniteScrollManualExample"
+  },
+  {
+    "id": "infinite-scroll-virtualized",
+    "label": "Virtualized",
+    "group": "infinite-scroll",
+    "groupLabel": "Infinite Scroll",
+    "sourceFile": "components/infinite-scroll/virtualized.tsx",
+    "exportName": "InfiniteScrollVirtualizedExample"
+  },
+  {
+    "id": "infinite-scroll-reset",
+    "label": "Reset on query change",
+    "group": "infinite-scroll",
+    "groupLabel": "Infinite Scroll",
+    "sourceFile": "components/infinite-scroll/reset-on-query.tsx",
+    "exportName": "InfiniteScrollResetExample"
   }
 ] as const
 
@@ -439,4 +475,8 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'crud-client': Example41,
 	'controlled-state': Example42,
 	'fallbacks': Example43,
+	'infinite-scroll-auto': Example44,
+	'infinite-scroll-manual': Example45,
+	'infinite-scroll-virtualized': Example46,
+	'infinite-scroll-reset': Example47,
 }

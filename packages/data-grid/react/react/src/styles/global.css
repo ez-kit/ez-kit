@@ -68,6 +68,15 @@
 [data-slot='tbody'][data-virtualized='true'] { @apply relative grid; }
 [data-slot='tr'][data-virtual='row'] { @apply absolute top-0 left-0 w-full; }
 
+/* ── infinite scroll ──────────────────────────────────────────────────── */
+
+/* Detection sentinel is structurally invisible (zero height). */
+[data-slot='load-more-sentinel'] { @apply h-0; }
+/* Virtualized loader row is absolutely positioned below the spacer via inline translateY. */
+[data-slot='tbody'][data-virtualized='true'] [data-slot='load-more-row'][data-virtual='load-more'] {
+	@apply absolute top-0 left-0 w-full;
+}
+
 /* ── pinned body rows ─────────────────────────────────────────────────── */
 
 [data-slot='tr'][data-pinned] { @apply sticky z-[2]; }

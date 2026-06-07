@@ -92,6 +92,8 @@ export type {
 	FilteringConfig,
 	GlobalFilterFn,
 	GlobalFilteringConfig,
+	InfiniteState,
+	LoadMoreDirection,
 	MultiSortConfig,
 	MultiSortEvent,
 	PaginationConfig,

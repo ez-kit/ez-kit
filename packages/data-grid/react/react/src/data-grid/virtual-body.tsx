@@ -1,7 +1,10 @@
+import { useEffect } from 'react'
+
 import { useGridComponents } from '../components-context'
 
 import { DataGridRow } from './row'
-import { useTable } from './table-context'
+import { useDataGridInstance, useTable } from './table-context'
+import { useInfiniteScroll } from './use-infinite-scroll'
 import { useVirtualContext } from './virtual-context'
 
 import type { VirtualItem } from '@tanstack/react-virtual'
@@ -12,6 +15,16 @@ import type { CSSProperties } from 'react'
  * Same variable as Body — override with `--dg-row-height` to match your row height.
  */
 const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
+
+/**
+ * Vertical space reserved below the virtual rows for the load-more loader (px).
+ * Fixed allowance: kits must keep their `LoadMoreRow` within this height in
+ * virtualized mode, or a tall/wrapping loader (e.g. a long error message) can
+ * overflow the reserved area. Generous enough for the shipped shadcn/heroui kits.
+ */
+const LOAD_MORE_ALLOWANCE_PX = 56
+
+const DEFAULT_THRESHOLD_ROWS = 5
 
 /**
  * Virtualized tbody — renders only the rows currently in the viewport.
@@ -28,27 +41,55 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  *
  * Pinned rows (top / bottom) use the same data-attr + `--dg-row-pin-offset`
  * pattern as the non-virtual Body.
+ *
+ * Infinite scroll: detection here is virtualizer-index based (the last rendered
+ * index nearing the row count), and the loader row is absolutely positioned just
+ * below the spacer with extra height reserved.
  */
 export function VirtualBody() {
-	const table = useTable()
-	const { Tbody } = useGridComponents()
+	const instance = useDataGridInstance()
+	const table = instance.table
+	const { Tbody, Tr, Td, LoadMoreRow } = useGridComponents()
 	const { rowVirtualizer } = useVirtualContext()
+	const controller = useInfiniteScroll()
+	// Subscribe to infinite slice so the loader row re-renders on status change.
+	useTable((s) => s.infinite)
 
-	if (!rowVirtualizer) return null
+	const virtualItems = rowVirtualizer?.getVirtualItems() ?? []
+	const lastIndex = virtualItems.length > 0 ? (virtualItems[virtualItems.length - 1]?.index ?? -1) : -1
 
 	const hasPinning = Boolean(table.options.enableRowPinning)
 	const topRows = hasPinning ? table.getTopRows() : []
 	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
 	const bottomRows = hasPinning ? table.getBottomRows() : []
 
-	const virtualItems = rowVirtualizer.getVirtualItems()
+	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
+	const thresholdRows = controller.threshold.rows ?? DEFAULT_THRESHOLD_ROWS
+	const rowCount = centerRows.length
+
+	// Index-based detection: load when the last rendered row nears the end.
+	// Skip while a fetch is in flight so we don't re-invoke the guarded no-op on
+	// every scroll frame; the effect re-runs once `isFetching` clears.
+	useEffect(() => {
+		if (!enabled || trigger !== 'auto' || !hasMore || isFetching) return
+		if (lastIndex < 0) return
+		if (lastIndex >= rowCount - thresholdRows) {
+			loadMore('forward')
+		}
+	}, [enabled, trigger, hasMore, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
+
+	if (!rowVirtualizer) return null
+
 	const totalSize = rowVirtualizer.getTotalSize()
+	const showLoadMore = enabled && (hasMore || controller.isFetching || controller.error != null)
+	const tbodyHeight = totalSize + (showLoadMore ? LOAD_MORE_ALLOWANCE_PX : 0)
+	const columnCount = table.getVisibleLeafColumns().length
 
 	return (
 		<Tbody
 			data-slot='tbody'
 			data-virtualized='true'
-			style={{ height: `${String(totalSize)}px` }}
+			style={{ height: `${String(tbodyHeight)}px` }}
 		>
 			{topRows.map((row, index) => (
 				<DataGridRow
@@ -80,6 +121,30 @@ export function VirtualBody() {
 					style={{ '--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
 				/>
 			))}
+
+			{showLoadMore && (
+				<Tr
+					data-slot='load-more-row'
+					data-direction='forward'
+					data-virtual='load-more'
+					style={{ transform: `translateY(${String(totalSize)}px)` }}
+				>
+					<Td colSpan={columnCount}>
+						<LoadMoreRow
+							columnCount={columnCount}
+							direction='forward'
+							isFetching={controller.isFetching}
+							hasMore={controller.hasMore}
+							error={controller.error}
+							trigger={controller.trigger}
+							onTrigger={() => {
+								controller.loadMore('forward')
+							}}
+							onRetry={controller.retry}
+						/>
+					</Td>
+				</Tr>
+			)}
 		</Tbody>
 	)
 }

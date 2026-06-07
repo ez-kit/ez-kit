@@ -57,6 +57,12 @@ const grid = useDataGrid({
 | `manualPagination` | `boolean` | Default `false`. Set `true` when paginating server-side. |
 | `rowCount` | `number` | Required when `manualPagination` is `true`. |
 
+## Infinite scroll
+
+For append-on-scroll instead of a page footer, set `pagination.mode: 'infinite'` — see
+[Infinite Scroll](/docs/data-grid/infinite-scroll). It is mutually exclusive with the
+page-based footer.
+
 ## Source
 
 - `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/pagination.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/pagination.tsx)

@@ -1,12 +1,13 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
-import { STICKY_HEADER_KEY, VIRTUALIZED_KEY } from '../use-data-grid'
+import { INFINITE_KEY, STICKY_HEADER_KEY, VIRTUALIZED_KEY } from '../use-data-grid'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
 import { Header } from './header'
+import { InfiniteProvider } from './infinite-context'
 import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useDataGridInstance, useDataGridStore } from './table-context'
 import { VirtualProvider } from './virtual-context'
@@ -121,10 +122,10 @@ export function DataGridTable() {
 	useDataGridStore((s) => s.columnVisibility)
 	useDataGridStore((s) => s.columnPinning)
 	// Row-model affecting slices (used when virtualized to size the virtualizer).
-	useDataGridStore((s) => s.sorting)
-	useDataGridStore((s) => s.columnFilters)
-	useDataGridStore<unknown>((s) => s.globalFilter)
-	useDataGridStore((s) => s.pagination)
+	const sorting = useDataGridStore((s) => s.sorting)
+	const columnFilters = useDataGridStore((s) => s.columnFilters)
+	const globalFilter = useDataGridStore<unknown>((s) => s.globalFilter)
+	const pagination = useDataGridStore((s) => s.pagination)
 	useDataGridStore((s) => s.expanded)
 	useDataGridStore((s) => s.rowPinning)
 
@@ -172,6 +173,37 @@ export function DataGridTable() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [gridTemplateColumns])
 
+	// ── infinite scroll ───────────────────────────────────────────────────────
+	// Shared scroll-element resolver for the IntersectionObserver root and reset-to-top.
+	const getScrollElement = useCallback((): HTMLElement | null => {
+		if (isVirtualized) return containerRef.current
+		const wrapper = wrapperRef.current
+		return wrapper ? resolveScrollElement(wrapper) : null
+		// isVirtualized never changes after mount; refs are stable.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [])
+
+	const infiniteEnabled = Boolean((table as unknown as Record<symbol, unknown>)[INFINITE_KEY])
+
+	// Reset on query change: when sorting / column filters / global search / page size
+	// change in infinite mode, clear any error, re-arm detection (handled by the loader
+	// re-mounting at the top) and scroll back to top so the observer doesn't immediately
+	// refire at the stale bottom. The consumer drops accumulated rows in its own onChange.
+	const querySignature = JSON.stringify([sorting, columnFilters, globalFilter, pagination.pageSize])
+	const prevQuerySignature = useRef<string | null>(null)
+	useEffect(() => {
+		if (!infiniteEnabled) return
+		if (prevQuerySignature.current === null) {
+			prevQuerySignature.current = querySignature
+			return
+		}
+		if (prevQuerySignature.current === querySignature) return
+		prevQuerySignature.current = querySignature
+		table.setInfiniteStatus({ error: null })
+		const scrollEl = getScrollElement()
+		if (scrollEl) scrollEl.scrollTop = 0
+	}, [querySignature, infiniteEnabled, getScrollElement, table])
+
 	const tableEl = (
 		<Table
 			data-slot='table'
@@ -190,37 +222,41 @@ export function DataGridTable() {
 
 	if (isVirtualized) {
 		return (
-			<VirtualProvider rowVirtualizer={rowVirtualizer}>
-				<div
-					ref={wrapperRef}
-					data-slot='table-wrapper'
-					data-virtualized='true'
-				>
+			<InfiniteProvider getScrollElement={getScrollElement}>
+				<VirtualProvider rowVirtualizer={rowVirtualizer}>
 					<div
-						ref={containerRef}
-						data-slot='table-scroll'
+						ref={wrapperRef}
+						data-slot='table-wrapper'
 						data-virtualized='true'
 					>
-						{tableEl}
+						<div
+							ref={containerRef}
+							data-slot='table-scroll'
+							data-virtualized='true'
+						>
+							{tableEl}
+						</div>
+						<PinShadowOverlay />
 					</div>
-					<PinShadowOverlay />
-				</div>
-			</VirtualProvider>
+				</VirtualProvider>
+			</InfiniteProvider>
 		)
 	}
 
 	return (
-		<div
-			ref={wrapperRef}
-			data-slot='table-wrapper'
-		>
+		<InfiniteProvider getScrollElement={getScrollElement}>
 			<div
-				data-slot='table-scroll'
-				{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
+				ref={wrapperRef}
+				data-slot='table-wrapper'
 			>
-				{tableEl}
+				<div
+					data-slot='table-scroll'
+					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
+				>
+					{tableEl}
+				</div>
+				<PinShadowOverlay />
 			</div>
-			<PinShadowOverlay />
-		</div>
+		</InfiniteProvider>
 	)
 }

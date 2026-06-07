@@ -1,4 +1,4 @@
-import type { BetweenValue, DateRangePreset, FilterOperatorDef, MultiSelectOption } from '@ez-kit/data-grid-core'
+import type { BetweenValue, DateRangePreset, FilterOperatorDef, LoadMoreDirection, MultiSelectOption } from '@ez-kit/data-grid-core'
 import type { Column, Row } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
@@ -320,6 +320,33 @@ export type NoResultsStateProps = {
 	columnCount: number
 }
 
+/**
+ * Props for the injectable infinite-scroll loader row. All visual styling lives in
+ * the UI kit (`shadcn` / `heroui`); the react package only positions it inside a
+ * full-width cell. The component should render:
+ * - a spinner when `isFetching`
+ * - a "Load more" button when `trigger === 'manual'` and `hasMore` (calls `onTrigger`)
+ * - a "Retry" affordance when `error` is non-null (calls `onRetry`)
+ */
+export type LoadMoreRowProps = {
+	/** Visible leaf column count — for the host `<td colSpan>`, if the kit needs it. */
+	columnCount: number
+	/** Load direction. v1 is always `'forward'`. */
+	direction: LoadMoreDirection
+	/** A page request is in flight in this direction. */
+	isFetching: boolean
+	/** More rows can be loaded in this direction (controlled `hasNextPage`). */
+	hasMore: boolean
+	/** Last load error for this direction, or `null`. */
+	error: unknown
+	/** Active trigger mode. */
+	trigger: 'auto' | 'manual'
+	/** Invoke a load (used by the manual "Load more" control). */
+	onTrigger: () => void
+	/** Re-invoke the failed load and clear the error. */
+	onRetry: () => void
+}
+
 export type SelectionBarProps = {
 	/** False when 0 rows selected — component should hide/animate out. */
 	open: boolean
@@ -395,6 +422,8 @@ export type GridComponents = {
 	LoadingRow?: ComponentType<LoadingRowProps>
 	EmptyState?: ComponentType<EmptyStateProps>
 	NoResultsState?: ComponentType<NoResultsStateProps>
+	// infinite scroll
+	LoadMoreRow?: ComponentType<LoadMoreRowProps>
 	// row actions
 	ActionsCell?: ComponentType<ActionsCellProps>
 	CreatingActionsCell?: ComponentType<CreatingActionsCellProps>

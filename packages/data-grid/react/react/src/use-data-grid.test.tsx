@@ -67,13 +67,10 @@ describe('useDataGrid', () => {
 		expect(result.current.table.creating.getState().isOpen).toBe(true)
 	})
 
-	it('syncs loading state', () => {
-		const { result, rerender } = renderHook(
-			({ loading }: { loading: boolean }) => useDataGrid({ data: USERS, columns: COLUMNS, loading }),
-			{ initialProps: { loading: false } },
+	it('seeds loading from initialState (uncontrolled default)', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, initialState: { loading: { isLoading: true } } }),
 		)
-		expect(result.current.table.getIsLoading()).toBe(false)
-		rerender({ loading: true })
 		expect(result.current.table.getIsLoading()).toBe(true)
 	})
 
