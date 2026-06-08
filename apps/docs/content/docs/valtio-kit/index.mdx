@@ -1,0 +1,45 @@
+---
+title: '@ez-kit/valtio-kit'
+description: Valtio proxies wrapped in React context — multiple isolated instances with the same factory, no selectors needed.
+---
+
+# `@ez-kit/valtio-kit`
+
+A tiny layer on top of [Valtio](https://github.com/pmndrs/valtio) that wraps a proxy in **React context**, so multiple isolated instances of the same state can coexist in one tree — scoped by `Provider`.
+
+Valtio already optimises re-renders per accessed property through `useSnapshot`, so unlike [`@ez-kit/zu-store`](./zu-store) there are **no selectors**. You read from snapshots and mutate the proxy.
+
+It exists because a plain `proxy()` is a module-level singleton — fine for app-wide state, awkward when you want a counter, modal, or form scoped to a subtree.
+
+## Install
+
+```bash
+pnpm add @ez-kit/valtio-kit valtio
+```
+
+`valtio` is a peer dependency — pin whatever 2.x version your app already uses.
+
+## A minimal example
+
+<LivePreview path='valtio-kit/counter' title='Counter' />
+
+## What's in the box
+
+| Export                                                       | Purpose                                                                            |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| [`createContextStore`](./valtio-kit/create-context-store)    | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Item`. |
+
+## Why not a plain Valtio proxy?
+
+A `proxy()` lives at module scope. Two `<Modal>` instances or two `<DataGrid>` instances would share one proxy and stomp on each other. `createContextStore` defers proxy creation to the `Provider`, so each mount gets its own instance — without drilling props through the tree.
+
+## Coming from `@ez-kit/zu-store`?
+
+Both kits expose `createContextStore` for cross-kit familiarity, but the read/write model differs:
+
+| | `zu-store` (Zustand) | `valtio-kit` (Valtio) |
+| --- | --- | --- |
+| Read | `useStore(selector)` → slice | `useSnapshot()` → tracked snapshot |
+| Write | actions call `set(...)` | mutate the proxy: `state.count++` |
+| `useStore()` | raw `StoreApi` | **the raw mutable proxy** |
+| Selectors | yes (`useStore`, `useShallowStore`) | none — tracking is automatic |

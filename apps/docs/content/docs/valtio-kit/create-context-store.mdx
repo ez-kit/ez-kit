@@ -1,0 +1,114 @@
+---
+title: createContextStore
+description: Wrap a Valtio proxy in React context so every Provider gets its own isolated instance — read from snapshots, mutate the proxy.
+---
+
+# `createContextStore`
+
+Wraps a Valtio proxy in React context. Each `<Provider>` creates its own proxy instance (via `useRef`), so the same factory can power multiple isolated subtrees. There are no selectors — `useSnapshot` tracks the properties you actually read.
+
+## Signature
+
+```ts
+function createContextStore<TState extends object, TInitProps extends object = Record<string, never>>(
+	factory: (initProps: TInitProps) => TState,
+): {
+	Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+	useStore: () => TState
+	useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
+	Item: (props: { children: (snapshot: Snapshot<TState>) => ReactElement }) => ReactElement
+}
+```
+
+> **Rule of thumb:** read from snapshots (`useSnapshot`), mutate the source proxy (`useStore`).
+
+## Basic usage
+
+<LivePreview path='valtio-kit/counter' title='Counter' />
+
+The example above keeps its actions on the proxy (the idiomatic Valtio pattern), so components only ever read from `useSnapshot()`. You can also mutate the proxy directly — see [`useStore`](#usestore) below.
+
+## API
+
+### `Provider`
+
+Creates and provides the proxy. The factory runs **once per mount** (held in a `useRef`), so reading `initProps` after the first render won't recreate it. Accept whatever init props your factory needs.
+
+```tsx
+<counterStore.Provider initialCount={10}>
+	<App />
+</counterStore.Provider>
+```
+
+### `useSnapshot(options?)`
+
+Returns Valtio's readonly snapshot. The component re-renders only when the properties it actually reads change — no selector required.
+
+```tsx
+const snap = counterStore.useSnapshot()
+return <span>{snap.count}</span>
+```
+
+Valtio's options pass straight through. Use `{ sync: true }` for synchronous re-renders (e.g. text inputs that must stay in lockstep):
+
+```tsx
+const snap = counterStore.useSnapshot({ sync: true })
+```
+
+### `useStore()`
+
+Returns the raw, **mutable** proxy. Mutate it directly to update state:
+
+```tsx
+const state = counterStore.useStore()
+
+const onClick = () => {
+	state.count += 1
+}
+```
+
+<Callout type='info'>
+	This differs from [`@ez-kit/zu-store`](../zu-store/create-context-store), where `useStore(selector)` returns a
+	_slice_. Here `useStore()` is the **write path** — the proxy itself. Mutate it in event handlers and effects, not
+	during render.
+</Callout>
+
+You can also feed it to Valtio's vanilla utilities:
+
+```tsx
+import { subscribe } from 'valtio'
+
+const state = counterStore.useStore()
+
+useEffect(() => subscribe(state, () => console.log('changed')), [state])
+```
+
+<Callout type='warn'>
+	The React Compiler ESLint ruleset (`react-hooks/immutability`) flags mutating any value returned from a hook, so it
+	warns on `state.count += 1`. Either keep actions on the proxy (as in the live example) or disable the rule at the
+	mutation site with `// eslint-disable-next-line react-hooks/immutability`.
+</Callout>
+
+### `Item`
+
+Render-prop alternative to `useSnapshot`. Handy in JSX-heavy code, or to keep a consuming component oblivious to the store.
+
+```tsx
+<counterStore.Item>{(snap) => <span>{snap.count}</span>}</counterStore.Item>
+```
+
+## Multiple independent instances
+
+Each `Provider` creates its own proxy — state is never shared between siblings.
+
+<LivePreview path='valtio-kit/multiple-instances' title='Two isolated counters' />
+
+## Errors
+
+Using `useStore`, `useSnapshot`, or `Item` outside a `Provider` throws:
+
+```
+Error: Missing Provider for createContextStore
+```
+
+This is deliberate — there is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. Wrap the consuming subtree in a `Provider`.

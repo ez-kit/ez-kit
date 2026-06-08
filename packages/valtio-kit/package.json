@@ -1,0 +1,53 @@
+{
+	"name": "@ez-kit/valtio-kit",
+	"version": "0.0.0",
+	"description": "A Valtio kit for ez-kit.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/valtio-kit"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/valtio-kit#readme",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"format": "node ../../scripts/prettier.mjs --write",
+		"format:check": "node ../../scripts/prettier.mjs --check",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "50 KB"
+		}
+	],
+	"devDependencies": {
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4",
+		"valtio": "^2.3.2"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0",
+		"valtio": ">=2.0.0"
+	}
+}
