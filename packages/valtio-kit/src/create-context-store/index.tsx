@@ -3,20 +3,36 @@ import { useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 
 const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
 
-export type CreateContextStoreFactory<TState extends object, TInitProps extends object> = (
-	initProps: TInitProps,
+/** Seed envelope passed to a `createContextStore` factory. Reserves room for a future controlled `value`. */
+export type ContextStoreInit<TDefaultValue> = {
+	defaultValue: TDefaultValue
+}
+
+export type CreateContextStoreFactory<TState extends object, TDefaultValue> = (
+	init: ContextStoreInit<TDefaultValue>,
 ) => TState
 
 export type UseSnapshotOptions = {
 	sync?: boolean
 }
 
-type ItemProps<TState extends object> = {
-	children: (snapshot: Snapshot<TState>) => ReactElement
+/** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
+type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
+	? { defaultValue?: TDefaultValue }
+	: { defaultValue: TDefaultValue }
+
+/** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy) for writes. */
+export type ItemRenderArg<TState extends object> = {
+	snap: Snapshot<TState>
+	store: TState
 }
 
-export type CreateContextStoreResult<TState extends object, TInitProps extends object> = {
-	Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+type ItemProps<TState extends object> = {
+	children: (arg: ItemRenderArg<TState>) => ReactElement
+}
+
+export type CreateContextStoreResult<TState extends object, TDefaultValue> = {
+	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
 	/** Returns the raw, mutable Valtio proxy. Mutate it directly (e.g. `state.count++`). */
 	useStore: () => TState
 	/** Returns the readonly, auto-tracked snapshot. Forwards Valtio's `useSnapshot` options. */
@@ -32,17 +48,16 @@ function getStoreFromContext<TState extends object>(store: TState | null): TStat
 	return store
 }
 
-export function createContextStore<
-	TState extends object,
-	TInitProps extends object = Record<string, never>,
->(createStore: CreateContextStoreFactory<TState, TInitProps>): CreateContextStoreResult<TState, TInitProps> {
+export function createContextStore<TState extends object, TDefaultValue = undefined>(
+	createStore: CreateContextStoreFactory<TState, TDefaultValue>,
+): CreateContextStoreResult<TState, TDefaultValue> {
 	const StoreContext = createContext<TState | null>(null)
 
-	function Provider(props: PropsWithChildren<TInitProps>): ReactElement {
-		const { children, ...initProps } = props
+	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue>>): ReactElement {
+		const { children, defaultValue } = props as PropsWithChildren<{ defaultValue: TDefaultValue }>
 		const storeRef = useRef<TState | null>(null)
 
-		storeRef.current ??= createStore(initProps as TInitProps)
+		storeRef.current ??= createStore({ defaultValue })
 
 		return <StoreContext.Provider value={storeRef.current}>{children}</StoreContext.Provider>
 	}
@@ -61,7 +76,7 @@ export function createContextStore<
 	}
 
 	function Item({ children }: ItemProps<TState>): ReactElement {
-		return children(useSnapshot())
+		return children({ snap: useSnapshot(), store: useStore() })
 	}
 
 	return {

@@ -3,22 +3,22 @@ import { useEffect } from 'react'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
-import { createContextStore } from './index'
+import { type ContextStoreInit, createContextStore } from './index'
 
 type CounterState = {
 	count: number
 	label: string
 }
 
-type CounterInitProps = {
+type CounterDefaultValue = {
 	count?: number
 	label?: string
 }
 
-const createCounterStore = (initProps: CounterInitProps) =>
+const createCounterStore = ({ defaultValue }: ContextStoreInit<CounterDefaultValue>) =>
 	proxy<CounterState>({
-		count: initProps.count ?? 0,
-		label: initProps.label ?? 'initial',
+		count: defaultValue.count ?? 0,
+		label: defaultValue.label ?? 'initial',
 	})
 
 const counter = createContextStore(createCounterStore)
@@ -47,7 +47,7 @@ function IncrementButton() {
 describe('@ez-kit/valtio-kit createContextStore', () => {
 	it('reads seeded state via useSnapshot inside a Provider', () => {
 		render(
-			<counter.Provider count={3} label='boot'>
+			<counter.Provider defaultValue={{ count: 3, label: 'boot' }}>
 				<CountView />
 			</counter.Provider>,
 		)
@@ -57,7 +57,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 
 	it('re-renders snapshot consumers when the proxy is mutated via useStore', async () => {
 		render(
-			<counter.Provider count={1} label='boot'>
+			<counter.Provider defaultValue={{ count: 1, label: 'boot' }}>
 				<CountView />
 				<IncrementButton />
 			</counter.Provider>,
@@ -98,7 +98,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		}
 
 		render(
-			<counter.Provider count={1} label='boot'>
+			<counter.Provider defaultValue={{ count: 1, label: 'boot' }}>
 				<TrackedCount />
 				<ChangeLabelButton />
 				<IncrementButton />
@@ -119,26 +119,55 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		expect(screen.getByTestId('tracked-count')).toHaveTextContent('2')
 	})
 
-	it('supports the Item render-prop receiving the snapshot', () => {
+	it('supports the Item render-prop receiving { snap, store }', () => {
 		render(
-			<counter.Provider count={5} label='boot'>
-				<counter.Item>{(snap) => <span data-testid='item-count'>{snap.count}</span>}</counter.Item>
+			<counter.Provider defaultValue={{ count: 5, label: 'boot' }}>
+				<counter.Item>{({ snap }) => <span data-testid='item-count'>{snap.count}</span>}</counter.Item>
 			</counter.Provider>,
 		)
 
 		expect(screen.getByTestId('item-count')).toHaveTextContent('5')
 	})
 
+	it('Item exposes the raw store so it can both read and write', async () => {
+		render(
+			<counter.Provider defaultValue={{ count: 0, label: 'boot' }}>
+				<counter.Item>
+					{({ snap, store }) => (
+						<button
+							type='button'
+							onClick={() => {
+								// Mutating the proxy is the intended Valtio write path; `store` here is the raw proxy.
+								store.count += 1
+							}}
+						>
+							{snap.count}
+						</button>
+					)}
+				</counter.Item>
+			</counter.Provider>,
+		)
+
+		const button = screen.getByRole('button')
+		expect(button).toHaveTextContent('0')
+
+		fireEvent.click(button)
+
+		await waitFor(() => {
+			expect(button).toHaveTextContent('1')
+		})
+	})
+
 	it('keeps sibling Providers isolated', async () => {
 		render(
 			<>
-				<counter.Provider count={1} label='a'>
+				<counter.Provider defaultValue={{ count: 1, label: 'a' }}>
 					<div data-testid='tree-a'>
 						<CountView />
 						<IncrementButton />
 					</div>
 				</counter.Provider>
-				<counter.Provider count={99} label='b'>
+				<counter.Provider defaultValue={{ count: 99, label: 'b' }}>
 					<div data-testid='tree-b'>
 						<CountView />
 					</div>
@@ -177,7 +206,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		}
 
 		render(
-			<counter.Provider count={0} label='boot'>
+			<counter.Provider defaultValue={{ count: 0, label: 'boot' }}>
 				<SyncCountView />
 				<IncrementButton />
 			</counter.Provider>,
@@ -190,5 +219,38 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		await waitFor(() => {
 			expect(screen.getByTestId('sync-count')).toHaveTextContent('1')
 		})
+	})
+
+	it('infers the seed type from ContextStoreInit and from a bare envelope', () => {
+		// `defaultValue.value` only type-checks if TDefaultValue is correctly inferred (not `undefined`).
+		const helperStore = createContextStore(({ defaultValue }: ContextStoreInit<{ value: number }>) =>
+			proxy({ value: defaultValue.value }),
+		)
+		const bareStore = createContextStore(({ defaultValue }: { defaultValue: { value: number } }) =>
+			proxy({ value: defaultValue.value }),
+		)
+
+		function HelperView() {
+			const snap = helperStore.useSnapshot()
+			return <span data-testid='helper'>{snap.value}</span>
+		}
+		function BareView() {
+			const snap = bareStore.useSnapshot()
+			return <span data-testid='bare'>{snap.value}</span>
+		}
+
+		render(
+			<>
+				<helperStore.Provider defaultValue={{ value: 7 }}>
+					<HelperView />
+				</helperStore.Provider>
+				<bareStore.Provider defaultValue={{ value: 9 }}>
+					<BareView />
+				</bareStore.Provider>
+			</>,
+		)
+
+		expect(screen.getByTestId('helper')).toHaveTextContent('7')
+		expect(screen.getByTestId('bare')).toHaveTextContent('9')
 	})
 })

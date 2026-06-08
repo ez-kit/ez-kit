@@ -1,6 +1,6 @@
 'use client'
 
-import { createStoreCache, toTree } from '@ez-kit/zu-store'
+import { type ContextStoreInit, createStoreCache, toTree } from '@ez-kit/zu-store'
 import { useState } from 'react'
 import { createStore } from 'zustand/vanilla'
 
@@ -13,9 +13,9 @@ const cache = createStoreCache()
 
 // One store group, defined once.
 const userTable = cache.createCachedStore(
-	(defaultProps: { filter?: string }) =>
+	({ defaultValue }: ContextStoreInit<{ filter?: string }>) =>
 		createStore<TableState>((set) => ({
-			filter: defaultProps.filter ?? 'all',
+			filter: defaultValue.filter ?? 'all',
 			setFilter: (filter) => {
 				set({ filter })
 			},

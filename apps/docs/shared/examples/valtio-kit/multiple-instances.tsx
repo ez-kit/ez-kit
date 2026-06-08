@@ -1,6 +1,6 @@
 'use client'
 
-import { createContextStore } from '@ez-kit/valtio-kit'
+import { type ContextStoreInit, createContextStore } from '@ez-kit/valtio-kit'
 import { proxy } from 'valtio'
 
 type CounterState = {
@@ -8,13 +8,13 @@ type CounterState = {
 	increment: () => void
 }
 
-type CounterInit = {
+type CounterDefaultValue = {
 	initialCount: number
 }
 
-const counterStore = createContextStore(({ initialCount }: CounterInit) => {
+const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<CounterDefaultValue>) => {
 	const state = proxy<CounterState>({
-		count: initialCount,
+		count: defaultValue.initialCount,
 		increment: () => {
 			state.count += 1
 		},
@@ -44,10 +44,10 @@ function Counter({ label }: { label: string }) {
 export default function MultipleInstancesExample() {
 	return (
 		<div className='flex flex-col gap-3 sm:flex-row'>
-			<counterStore.Provider initialCount={0}>
+			<counterStore.Provider defaultValue={{ initialCount: 0 }}>
 				<Counter label='left' />
 			</counterStore.Provider>
-			<counterStore.Provider initialCount={100}>
+			<counterStore.Provider defaultValue={{ initialCount: 100 }}>
 				<Counter label='right' />
 			</counterStore.Provider>
 		</div>

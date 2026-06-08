@@ -50,11 +50,11 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 
 	return function createCachedStore<
 		TStore extends StoreApi<unknown>,
-		TDefaultProps extends object = Record<string, never>,
+		TDefaultValue extends object = Record<string, never>,
 	>(
-		factory: CachedStoreFactory<TStore, TDefaultProps>,
+		factory: CachedStoreFactory<TStore, TDefaultValue>,
 		options: CachedStoreOptions,
-	): CachedStoreGroup<TStore, TDefaultProps> {
+	): CachedStoreGroup<TStore, TDefaultValue> {
 		const { name } = options
 		registerGroupName(name)
 
@@ -94,7 +94,7 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 
 		type ProviderInnerProps = {
 			storeId: StoreId
-			defaultProps: TDefaultProps
+			defaultValue: TDefaultValue
 			gcTime: number
 			children: ReactNode
 		}
@@ -108,12 +108,12 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 		 * `setCanonical`. Because `StoreContext.Provider` propagates the new value reactively (rather than capturing
 		 * it via `useRef`), descendants re-subscribe to the canonical store without remounting.
 		 */
-		function ProviderInner({ storeId, defaultProps, gcTime, children }: ProviderInnerProps): ReactElement {
+		function ProviderInner({ storeId, defaultValue, gcTime, children }: ProviderInnerProps): ReactElement {
 			const cache = useContext(CacheContext)
 			if (!cache) throw new Error(missingProviderError)
 
 			// Lazy: factory runs once per fresh mount; never re-runs during this mount's life.
-			const [provisional] = useState<TStore>(() => factory(defaultProps))
+			const [provisional] = useState<TStore>(() => factory({ defaultValue }))
 			// Canonical store: starts as provisional; effect may swap if another mount already registered.
 			const [canonical, setCanonical] = useState<TStore>(provisional)
 
@@ -131,24 +131,24 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 			return <StoreContext.Provider value={canonical}>{children}</StoreContext.Provider>
 		}
 
-		function Provider(props: CachedProviderProps<TDefaultProps>): ReactElement {
+		function Provider(props: CachedProviderProps<TDefaultValue>): ReactElement {
 			const { id, path, gcTime, alwaysCache, children } = props
-			// `defaultProps` lives on one of two conditional branches of `CachedProviderProps`; access via index cast.
-			// Safe by the conditional type: when `TDefaultProps` has required fields, the type requires
-			// `defaultProps` so it is defined here. When `TDefaultProps` admits `{}`, omission is allowed and the
-			// `{}` fallback is a valid value of `TDefaultProps`.
-			const providedDefaults = (props as { defaultProps?: TDefaultProps }).defaultProps
+			// `defaultValue` lives on one of two conditional branches of `CachedProviderProps`; access via index cast.
+			// Safe by the conditional type: when `TDefaultValue` has required fields, the type requires
+			// `defaultValue` so it is defined here. When `TDefaultValue` admits `{}`, omission is allowed and the
+			// `{}` fallback is a valid value of `TDefaultValue`.
+			const providedDefaults = (props as { defaultValue?: TDefaultValue }).defaultValue
 			const inheritedScope = useContext(ScopeContext)
 			const resolvedPath = resolvePath(inheritedScope, path)
 			const resolvedGcTime = resolveGcTime(alwaysCache, gcTime, groupGcTime, cacheGcTime)
-			const seedDefaultProps: TDefaultProps = providedDefaults ?? ({} as TDefaultProps)
+			const seedDefaultValue: TDefaultValue = providedDefaults ?? ({} as TDefaultValue)
 			const storeId: StoreId = { path: resolvedPath, name, id }
 			const remountKey = serializeStoreId(storeId)
 			return (
 				<ProviderInner
 					key={remountKey}
 					storeId={storeId}
-					defaultProps={seedDefaultProps}
+					defaultValue={seedDefaultValue}
 					gcTime={resolvedGcTime}
 				>
 					{children}

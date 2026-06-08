@@ -11,10 +11,12 @@ pnpm add @ez-kit/zu-store zustand
 ## Signature
 
 ```ts
-function createContextStore<TStore, TInitProps>(
-  factory: (initProps: TInitProps) => TStore,
+type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
+
+function createContextStore<TStore, TDefaultValue = undefined>(
+  factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
 ): {
-  Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+  Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
   useContextStore: () => TStore
   useStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
   useShallowStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
@@ -22,10 +24,12 @@ function createContextStore<TStore, TInitProps>(
 }
 ```
 
+The factory is seeded through a single `defaultValue` envelope; type its parameter with the exported `ContextStoreInit<T>` helper. `defaultValue` is required on the `Provider` when the seed has required fields, optional otherwise.
+
 ## Basic Usage
 
 ```tsx
-import { createContextStore } from '@ez-kit/zu-store'
+import { type ContextStoreInit, createContextStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand'
 
 interface CounterState {
@@ -33,9 +37,9 @@ interface CounterState {
 	increment: () => void
 }
 
-const counterStore = createContextStore(({ count = 0 }: { count?: number }) =>
+const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ count?: number }>) =>
 	createStore<CounterState>()((set) => ({
-		count,
+		count: defaultValue.count ?? 0,
 		increment: () => set((s) => ({ count: s.count + 1 })),
 	})),
 )
@@ -43,7 +47,7 @@ const counterStore = createContextStore(({ count = 0 }: { count?: number }) =>
 // Wrap a subtree
 function App() {
 	return (
-		<counterStore.Provider count={10}>
+		<counterStore.Provider defaultValue={{ count: 10 }}>
 			<Counter />
 		</counterStore.Provider>
 	)
@@ -61,7 +65,7 @@ function Counter() {
 
 ### `Provider`
 
-Initialises the store once (via `useRef`) and provides it to the tree. Accepts the same props as `TInitProps`.
+Initialises the store once (via `useRef`) and provides it to the tree. Pass the seed through the single `defaultValue` prop.
 
 ### `useStore(selector)`
 
@@ -95,11 +99,11 @@ Render-prop alternative to `useStore`. Useful in JSX-heavy code or when the cons
 Each `Provider` creates its own store instance — state is not shared between them.
 
 ```tsx
-<counterStore.Provider count={1}>
+<counterStore.Provider defaultValue={{ count: 1 }}>
   <Counter /> {/* sees count = 1 */}
 </counterStore.Provider>
 
-<counterStore.Provider count={99}>
+<counterStore.Provider defaultValue={{ count: 99 }}>
   <Counter /> {/* sees count = 99 */}
 </counterStore.Provider>
 ```

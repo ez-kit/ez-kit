@@ -15,14 +15,14 @@ pnpm add @ez-kit/zu-store zustand
 Wraps a Zustand store in React context. Returns `Provider`, `useStore`, `useShallowStore`, `useContextStore`, and `Item`. Multiple `Provider` instances are fully independent.
 
 ```tsx
-const counterStore = createContextStore(({ count = 0 }: { count?: number }) =>
+const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ count?: number }>) =>
   createStore<{ count: number; increment: () => void }>()((set) => ({
-    count,
+    count: defaultValue.count ?? 0,
     increment: () => set((s) => ({ count: s.count + 1 })),
   })),
 )
 
-<counterStore.Provider count={10}>
+<counterStore.Provider defaultValue={{ count: 10 }}>
   <MyComponent />
 </counterStore.Provider>
 
@@ -57,8 +57,8 @@ import { CacheProvider, CacheScope, createCachedStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand/vanilla'
 
 const usersTable = createCachedStore(
-  (defaultProps: { filter?: string }) =>
-    createStore<{ filter: string }>(() => ({ filter: defaultProps.filter ?? 'all' })),
+  ({ defaultValue }: ContextStoreInit<{ filter?: string }>) =>
+    createStore<{ filter: string }>(() => ({ filter: defaultValue.filter ?? 'all' })),
   { name: 'users' },
 )
 
@@ -67,7 +67,7 @@ const usersTable = createCachedStore(
   {/* survives unmount; reused on remount within gcTime */}
   {/* <CacheScope> namespaces by location so two pages never collide on the same id */}
   <CacheScope path={['page-1']}>
-    <usersTable.Provider id="users" defaultProps={{ filter: 'active' }}>
+    <usersTable.Provider id="users" defaultValue={{ filter: 'active' }}>
       <UsersTable />
     </usersTable.Provider>
   </CacheScope>

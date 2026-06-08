@@ -17,12 +17,14 @@ Wraps a Valtio proxy in React context. Returns `Provider`, `useStore`, `useSnaps
 Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the proxy from `useStore()`.
 
 ```tsx
-import { createContextStore } from '@ez-kit/valtio-kit'
+import { type ContextStoreInit, createContextStore } from '@ez-kit/valtio-kit'
 import { proxy } from 'valtio'
 
-const counter = createContextStore(({ count = 0 }: { count?: number }) => proxy({ count }))
+const counter = createContextStore(({ defaultValue }: ContextStoreInit<{ count?: number }>) =>
+  proxy({ count: defaultValue.count ?? 0 }),
+)
 
-<counter.Provider count={10}>
+<counter.Provider defaultValue={{ count: 10 }}>
   <MyComponent />
 </counter.Provider>
 

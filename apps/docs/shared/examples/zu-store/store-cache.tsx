@@ -1,6 +1,6 @@
 'use client'
 
-import { createStoreCache } from '@ez-kit/zu-store'
+import { type ContextStoreInit, createStoreCache } from '@ez-kit/zu-store'
 import { useState } from 'react'
 import { createStore } from 'zustand/vanilla'
 
@@ -14,9 +14,9 @@ type TableState = {
 const cache = createStoreCache()
 
 const tableStore = cache.createCachedStore(
-	(defaultProps: { filter?: string }) =>
+	({ defaultValue }: ContextStoreInit<{ filter?: string }>) =>
 		createStore<TableState>((set) => ({
-			filter: defaultProps.filter ?? 'all',
+			filter: defaultValue.filter ?? 'all',
 			page: 1,
 			setFilter: (filter) => {
 				set({ filter })
@@ -122,7 +122,7 @@ function Demo() {
 			{tab === 'table' ? (
 				<tableStore.Provider
 					id='main'
-					defaultProps={{ filter: 'active' }}
+					defaultValue={{ filter: 'active' }}
 				>
 					<TablePanel />
 				</tableStore.Provider>

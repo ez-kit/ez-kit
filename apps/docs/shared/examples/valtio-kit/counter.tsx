@@ -1,6 +1,6 @@
 'use client'
 
-import { createContextStore } from '@ez-kit/valtio-kit'
+import { type ContextStoreInit, createContextStore } from '@ez-kit/valtio-kit'
 import { proxy } from 'valtio'
 
 type CounterState = {
@@ -10,11 +10,12 @@ type CounterState = {
 	reset: () => void
 }
 
-type CounterInit = {
+type CounterDefaultValue = {
 	initialCount?: number
 }
 
-const counterStore = createContextStore(({ initialCount = 0 }: CounterInit) => {
+const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<CounterDefaultValue>) => {
+	const initialCount = defaultValue.initialCount ?? 0
 	const state = proxy<CounterState>({
 		count: initialCount,
 		increment: () => {
@@ -64,7 +65,7 @@ function CounterDisplay() {
 
 export default function CounterExample() {
 	return (
-		<counterStore.Provider initialCount={0}>
+		<counterStore.Provider defaultValue={{ initialCount: 0 }}>
 			<CounterDisplay />
 		</counterStore.Provider>
 	)

@@ -10,17 +10,21 @@ Wraps a Valtio proxy in React context. Each `<Provider>` creates its own proxy i
 ## Signature
 
 ```ts
-function createContextStore<TState extends object, TInitProps extends object = Record<string, never>>(
-	factory: (initProps: TInitProps) => TState,
+type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
+
+function createContextStore<TState extends object, TDefaultValue = undefined>(
+	factory: (init: ContextStoreInit<TDefaultValue>) => TState,
 ): {
-	Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+	Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
 	useStore: () => TState
 	useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
-	Item: (props: { children: (snapshot: Snapshot<TState>) => ReactElement }) => ReactElement
+	Item: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
 }
 ```
 
 > **Rule of thumb:** read from snapshots (`useSnapshot`), mutate the source proxy (`useStore`).
+
+The factory is seeded through a single `defaultValue` envelope — type its parameter with the exported `ContextStoreInit<T>` helper. `defaultValue` is required on the `Provider` when your seed has required fields, and optional otherwise.
 
 ## Basic usage
 
@@ -32,10 +36,10 @@ The example above keeps its actions on the proxy (the idiomatic Valtio pattern),
 
 ### `Provider`
 
-Creates and provides the proxy. The factory runs **once per mount** (held in a `useRef`), so reading `initProps` after the first render won't recreate it. Accept whatever init props your factory needs.
+Creates and provides the proxy. The factory runs **once per mount** (held in a `useRef`), so changing `defaultValue` after the first render won't recreate it. Pass your seed through the single `defaultValue` prop.
 
 ```tsx
-<counterStore.Provider initialCount={10}>
+<counterStore.Provider defaultValue={{ initialCount: 10 }}>
 	<App />
 </counterStore.Provider>
 ```
@@ -91,10 +95,20 @@ useEffect(() => subscribe(state, () => console.log('changed')), [state])
 
 ### `Item`
 
-Render-prop alternative to `useSnapshot`. Handy in JSX-heavy code, or to keep a consuming component oblivious to the store.
+Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Item` can both render and mutate without a separate `useStore()` consumer.
 
 ```tsx
-<counterStore.Item>{(snap) => <span>{snap.count}</span>}</counterStore.Item>
+<counterStore.Item>
+	{({ snap, store }) => (
+		<button
+			onClick={() => {
+				store.count += 1
+			}}
+		>
+			{snap.count}
+		</button>
+	)}
+</counterStore.Item>
 ```
 
 ## Multiple independent instances

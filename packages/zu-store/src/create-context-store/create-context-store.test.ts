@@ -3,7 +3,7 @@ import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
 import { createStore } from 'zustand'
 
-import { createContextStore } from './index'
+import { type ContextStoreInit, createContextStore } from './index'
 
 type CounterState = {
 	count: number
@@ -12,20 +12,20 @@ type CounterState = {
 	setLabel: (label: string) => void
 }
 
-type CounterInitProps = {
+type CounterDefaultValue = {
 	count?: number
 	label?: string
 }
 
-const createCounterStore = (initProps: CounterInitProps) => {
-	const defaultProps: Required<CounterInitProps> = {
+const createCounterStore = ({ defaultValue }: ContextStoreInit<CounterDefaultValue>) => {
+	const seed: Required<CounterDefaultValue> = {
 		count: 0,
 		label: 'initial',
 	}
 
 	return createStore<CounterState>()((set) => ({
-		...defaultProps,
-		...initProps,
+		...seed,
+		...defaultValue,
 		increment: () => {
 			set((state) => ({ count: state.count + 1 }))
 		},
@@ -44,7 +44,13 @@ describe('@ez-kit/zu-store', () => {
 			return createElement('span', { 'data-testid': 'count' }, String(count))
 		}
 
-		render(createElement(counterContextStore.Provider, { count: 3, label: 'boot' }, createElement(CountView)))
+		render(
+			createElement(
+				counterContextStore.Provider,
+				{ defaultValue: { count: 3, label: 'boot' } },
+				createElement(CountView),
+			),
+		)
 
 		expect(screen.getByTestId('count')).toHaveTextContent('3')
 	})
@@ -63,7 +69,7 @@ describe('@ez-kit/zu-store', () => {
 		render(
 			createElement(
 				counterContextStore.Provider,
-				{ count: 1, label: 'boot' },
+				{ defaultValue: { count: 1, label: 'boot' } },
 				createElement(CountView),
 				createElement(IncrementButton),
 			),
@@ -78,7 +84,7 @@ describe('@ez-kit/zu-store', () => {
 		render(
 			createElement(
 				counterContextStore.Provider,
-				{ count: 5, label: 'boot' },
+				{ defaultValue: { count: 5, label: 'boot' } },
 				createElement(counterContextStore.Item<number>, {
 					selector: (state: CounterState) => state.count,
 					children: (count: number) => createElement('span', { 'data-testid': 'item-count' }, String(count)),
@@ -123,7 +129,7 @@ describe('@ez-kit/zu-store', () => {
 		render(
 			createElement(
 				counterContextStore.Provider,
-				{ count: 1, label: 'boot' },
+				{ defaultValue: { count: 1, label: 'boot' } },
 				createElement(ShallowCountView),
 				createElement(ChangeLabelButton),
 				createElement(IncrementButton),

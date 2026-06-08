@@ -1,6 +1,6 @@
 'use client'
 
-import { createContextStore } from '@ez-kit/zu-store'
+import { type ContextStoreInit, createContextStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand/vanilla'
 
 type CounterState = {
@@ -10,18 +10,19 @@ type CounterState = {
 	reset: () => void
 }
 
-type CounterInit = {
+type CounterDefaultValue = {
 	initialCount?: number
 }
 
-const counterStore = createContextStore(({ initialCount = 0 }: CounterInit) =>
-	createStore<CounterState>()((set, get) => ({
+const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<CounterDefaultValue>) => {
+	const initialCount = defaultValue.initialCount ?? 0
+	return createStore<CounterState>()((set, get) => ({
 		count: initialCount,
 		increment: () => { set({ count: get().count + 1 }); },
 		decrement: () => { set({ count: get().count - 1 }); },
 		reset: () => { set({ count: initialCount }); },
-	})),
-)
+	}))
+})
 
 function CounterDisplay() {
 	const count = counterStore.useStore((s) => s.count)
@@ -59,7 +60,7 @@ function CounterDisplay() {
 
 export default function CounterExample() {
 	return (
-		<counterStore.Provider initialCount={0}>
+		<counterStore.Provider defaultValue={{ initialCount: 0 }}>
 			<CounterDisplay />
 		</counterStore.Provider>
 	)

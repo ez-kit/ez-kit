@@ -5,6 +5,7 @@ import { createStore } from 'zustand/vanilla'
 import { createStoreCache } from './create-store-cache'
 import { CacheProvider, createCachedStore } from './default-cache'
 
+import type { ContextStoreInit } from '../create-context-store'
 import type { CachedStoreOptions } from './types'
 
 type TableState = {
@@ -12,9 +13,9 @@ type TableState = {
 	setFilter: (filter: string) => void
 }
 
-const tableFactory = (defaultProps: { filter?: string }) =>
+const tableFactory = ({ defaultValue }: ContextStoreInit<{ filter?: string }>) =>
 	createStore<TableState>((set) => ({
-		filter: defaultProps.filter ?? 'all',
+		filter: defaultValue.filter ?? 'all',
 		setFilter: (filter) => {
 			set({ filter })
 		},
@@ -46,7 +47,7 @@ describe('default cache — top-level exports', () => {
 					{show ? (
 						<table.Provider
 							id='main'
-							defaultProps={{ filter: 'active' }}
+							defaultValue={{ filter: 'active' }}
 						>
 							<FilterView />
 							<ArchiveButton />

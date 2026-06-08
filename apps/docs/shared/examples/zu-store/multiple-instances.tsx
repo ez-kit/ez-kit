@@ -1,6 +1,6 @@
 'use client'
 
-import { createContextStore } from '@ez-kit/zu-store'
+import { type ContextStoreInit, createContextStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand/vanilla'
 
 type CounterState = {
@@ -8,14 +8,14 @@ type CounterState = {
 	increment: () => void
 }
 
-type CounterInit = {
+type CounterDefaultValue = {
 	initialCount: number
 	label: string
 }
 
-const counterStore = createContextStore(({ initialCount }: CounterInit) =>
+const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<CounterDefaultValue>) =>
 	createStore<CounterState>()((set, get) => ({
-		count: initialCount,
+		count: defaultValue.initialCount,
 		increment: () => { set({ count: get().count + 1 }); },
 	})),
 )
@@ -42,10 +42,10 @@ function Counter({ label }: { label: string }) {
 export default function MultipleInstancesExample() {
 	return (
 		<div className='flex flex-col gap-3 sm:flex-row'>
-			<counterStore.Provider initialCount={0} label='left'>
+			<counterStore.Provider defaultValue={{ initialCount: 0, label: 'left' }}>
 				<Counter label='left' />
 			</counterStore.Provider>
-			<counterStore.Provider initialCount={100} label='right'>
+			<counterStore.Provider defaultValue={{ initialCount: 100, label: 'right' }}>
 				<Counter label='right' />
 			</counterStore.Provider>
 		</div>

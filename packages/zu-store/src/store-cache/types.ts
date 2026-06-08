@@ -1,3 +1,4 @@
+import type { ContextStoreInit } from '../create-context-store'
 import type { PropsWithChildren, ReactElement } from 'react'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
@@ -13,9 +14,9 @@ export type CachedStoreOptions = {
 	gcTime?: number
 }
 
-/** Builds the store instance for a freshly created cache entry, seeded with `defaultProps`. */
-export type CachedStoreFactory<TStore extends StoreApi<unknown>, TDefaultProps extends object> = (
-	defaultProps: TDefaultProps,
+/** Builds the store instance for a freshly created cache entry, seeded with `defaultValue`. */
+export type CachedStoreFactory<TStore extends StoreApi<unknown>, TDefaultValue extends object> = (
+	init: ContextStoreInit<TDefaultValue>,
 ) => TStore
 
 /** Absolute address of a cache entry within a store group: a tree `path` plus the entry `id`. */
@@ -55,12 +56,12 @@ type ProviderBaseProps = {
 }
 
 /**
- * `defaultProps` is required when `TDefaultProps` has required fields, optional when it doesn't.
+ * `defaultValue` is required when `TDefaultValue` has required fields, optional when it doesn't.
  * The conditional ensures consumers cannot silently omit a seed that the factory relies on.
  */
-export type CachedProviderProps<TDefaultProps extends object> = PropsWithChildren<
+export type CachedProviderProps<TDefaultValue extends object> = PropsWithChildren<
 	ProviderBaseProps &
-		(Record<string, never> extends TDefaultProps ? { defaultProps?: TDefaultProps } : { defaultProps: TDefaultProps })
+		(Record<string, never> extends TDefaultValue ? { defaultValue?: TDefaultValue } : { defaultValue: TDefaultValue })
 >
 
 export type CachedItemProps<TStore extends StoreApi<unknown>, TSelected> = {
@@ -69,8 +70,8 @@ export type CachedItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 }
 
 /** Handle returned by `createCachedStore` — a group of keep-alive stores keyed by `(path, id)`. */
-export type CachedStoreGroup<TStore extends StoreApi<unknown>, TDefaultProps extends object> = {
-	Provider: (props: CachedProviderProps<TDefaultProps>) => ReactElement
+export type CachedStoreGroup<TStore extends StoreApi<unknown>, TDefaultValue extends object> = {
+	Provider: (props: CachedProviderProps<TDefaultValue>) => ReactElement
 	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	useContextStore: () => TStore
@@ -101,8 +102,8 @@ export type StoreCache = {
 	useCache: () => StoreCacheController
 	/** Reactive: re-renders when entries are added or removed under the optional prefix. */
 	useKeys: (prefix?: readonly string[]) => CacheRecord[]
-	createCachedStore: <TStore extends StoreApi<unknown>, TDefaultProps extends object = Record<string, never>>(
-		factory: CachedStoreFactory<TStore, TDefaultProps>,
+	createCachedStore: <TStore extends StoreApi<unknown>, TDefaultValue extends object = Record<string, never>>(
+		factory: CachedStoreFactory<TStore, TDefaultValue>,
 		options: CachedStoreOptions,
-	) => CachedStoreGroup<TStore, TDefaultProps>
+	) => CachedStoreGroup<TStore, TDefaultValue>
 }

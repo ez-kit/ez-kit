@@ -13,32 +13,38 @@ pnpm add @ez-kit/valtio-kit valtio
 ## Signature
 
 ```ts
-function createContextStore<TState, TInitProps>(
-  factory: (initProps: TInitProps) => TState,
+type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
+
+function createContextStore<TState, TDefaultValue = undefined>(
+  factory: (init: ContextStoreInit<TDefaultValue>) => TState,
 ): {
-  Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+  Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
   useStore: () => TState
   useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
-  Item: (props: { children: (snapshot: Snapshot<TState>) => ReactElement }) => ReactElement
+  Item: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
 }
 ```
+
+The factory is seeded through a single `defaultValue` envelope; type its parameter with the exported `ContextStoreInit<T>` helper. `defaultValue` is required on the `Provider` when the seed has required fields, optional otherwise.
 
 ## Basic Usage
 
 ```tsx
-import { createContextStore } from '@ez-kit/valtio-kit'
+import { type ContextStoreInit, createContextStore } from '@ez-kit/valtio-kit'
 import { proxy } from 'valtio'
 
 interface CounterState {
 	count: number
 }
 
-const counter = createContextStore(({ count = 0 }: { count?: number }) => proxy<CounterState>({ count }))
+const counter = createContextStore(({ defaultValue }: ContextStoreInit<{ count?: number }>) =>
+	proxy<CounterState>({ count: defaultValue.count ?? 0 }),
+)
 
 // Wrap a subtree
 function App() {
 	return (
-		<counter.Provider count={10}>
+		<counter.Provider defaultValue={{ count: 10 }}>
 			<Counter />
 		</counter.Provider>
 	)
@@ -58,7 +64,7 @@ function Counter() {
 
 ### `Provider`
 
-Initialises the proxy once (via `useRef`) and provides it to the tree. Accepts the same props as `TInitProps`, which are forwarded to the factory.
+Initialises the proxy once (via `useRef`) and provides it to the tree. Pass the seed through the single `defaultValue` prop, which is forwarded to the factory as `{ defaultValue }`.
 
 ### `useStore()`
 
@@ -91,10 +97,14 @@ const snap = counter.useSnapshot({ sync: true })
 
 ### `Item`
 
-Render-prop alternative to `useSnapshot`. Useful in JSX-heavy code or when the consuming component should stay unaware of the store.
+Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads and `store` (the raw proxy) for writes — so one `Item` can render and mutate without a separate `useStore()` consumer.
 
 ```tsx
-<counter.Item>{(snap) => <span>{snap.count}</span>}</counter.Item>
+<counter.Item>
+	{({ snap, store }) => (
+		<button onClick={() => (store.count += 1)}>{snap.count}</button>
+	)}
+</counter.Item>
 ```
 
 ## Multiple Independent Instances
@@ -102,11 +112,11 @@ Render-prop alternative to `useSnapshot`. Useful in JSX-heavy code or when the c
 Each `Provider` creates its own proxy instance — state is not shared between them.
 
 ```tsx
-<counter.Provider count={1}>
+<counter.Provider defaultValue={{ count: 1 }}>
   <Counter /> {/* sees count = 1 */}
 </counter.Provider>
 
-<counter.Provider count={99}>
+<counter.Provider defaultValue={{ count: 99 }}>
   <Counter /> {/* sees count = 99 */}
 </counter.Provider>
 ```

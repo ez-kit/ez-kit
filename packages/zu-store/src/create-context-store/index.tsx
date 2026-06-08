@@ -6,17 +6,27 @@ import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
 const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
 
-export type CreateContextStoreFactory<TStore extends StoreApi<unknown>, TInitProps extends object> = (
-	initProps: TInitProps,
+/** Seed envelope passed to a `createContextStore` factory. Reserves room for a future controlled `value`. */
+export type ContextStoreInit<TDefaultValue> = {
+	defaultValue: TDefaultValue
+}
+
+export type CreateContextStoreFactory<TStore extends StoreApi<unknown>, TDefaultValue> = (
+	init: ContextStoreInit<TDefaultValue>,
 ) => TStore
+
+/** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
+type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
+	? { defaultValue?: TDefaultValue }
+	: { defaultValue: TDefaultValue }
 
 type ItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
 	children: (state: TSelected) => ReactElement
 }
 
-type CreateContextStoreResult<TStore extends StoreApi<unknown>, TInitProps extends object> = {
-	Provider: (props: PropsWithChildren<TInitProps>) => ReactElement
+type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultValue> = {
+	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
 	useContextStore: () => TStore
 	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
@@ -31,16 +41,16 @@ function getStoreFromContext<TStore extends StoreApi<unknown>>(store: TStore | n
 	return store
 }
 
-export function createContextStore<TStore extends StoreApi<unknown>, TInitProps extends object = Record<string, never>>(
-	createStore: CreateContextStoreFactory<TStore, TInitProps>,
-): CreateContextStoreResult<TStore, TInitProps> {
+export function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = undefined>(
+	createStore: CreateContextStoreFactory<TStore, TDefaultValue>,
+): CreateContextStoreResult<TStore, TDefaultValue> {
 	const StoreContext = createContext<TStore | null>(null)
 
-	function Provider(props: PropsWithChildren<TInitProps>): ReactElement {
-		const { children, ...initProps } = props
+	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue>>): ReactElement {
+		const { children, defaultValue } = props as PropsWithChildren<{ defaultValue: TDefaultValue }>
 		const storeRef = useRef<TStore | null>(null)
 
-		storeRef.current ??= createStore(initProps as TInitProps)
+		storeRef.current ??= createStore({ defaultValue })
 
 		return <StoreContext.Provider value={storeRef.current}>{children}</StoreContext.Provider>
 	}

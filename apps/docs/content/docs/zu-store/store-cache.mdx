@@ -25,7 +25,7 @@ Switch to **Away** (the table unmounts) and back — the filter and page are pre
 The package ships a ready-made default cache. Two steps: define a named store group, then mount the cache boundary once.
 
 ```tsx
-import { CacheProvider, createCachedStore } from '@ez-kit/zu-store'
+import { type ContextStoreInit, CacheProvider, createCachedStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand/vanilla'
 
 type TableState = {
@@ -36,9 +36,9 @@ type TableState = {
 
 // 1. Define a named store group against the default cache.
 const usersTable = createCachedStore(
-	(defaultProps: { filter?: string }) =>
+	({ defaultValue }: ContextStoreInit<{ filter?: string }>) =>
 		createStore<TableState>((set) => ({
-			filter: defaultProps.filter ?? 'all',
+			filter: defaultValue.filter ?? 'all',
 			page: 1,
 			setFilter: (filter) => set({ filter }),
 		})),
@@ -63,7 +63,7 @@ function UsersPage() {
 	return (
 		<usersTable.Provider
 			id='users'
-			defaultProps={{ filter: 'active' }}
+			defaultValue={{ filter: 'active' }}
 		>
 			<UsersTable />
 		</usersTable.Provider>
@@ -98,17 +98,17 @@ Each `<Provider>` is counted as an observer. When the **last** one unmounts, the
 
 `gcTime` and `alwaysCache` are **birth-config**: they are fixed by the first mount that creates the entry. Later mounts attach to the existing store and ignore them.
 
-## `defaultProps` seed once
+## `defaultValue` seed once
 
-`defaultProps` seeds the store **only when the key is first created**. On remount of a live entry it is ignored — that is the whole point of keep-alive.
+`defaultValue` seeds the store **only when the key is first created**. On remount of a live entry it is ignored — that is the whole point of keep-alive.
 
 ```tsx
 // First visit → store created as { filter: 'active' }
-<usersTable.Provider id='users' defaultProps={{ filter: 'active' }} />
+<usersTable.Provider id='users' defaultValue={{ filter: 'active' }} />
 
 // User changes filter to 'archived', navigates away, comes back:
-<usersTable.Provider id='users' defaultProps={{ filter: 'active' }} />
-// → still 'archived'. The new defaultProps do nothing.
+<usersTable.Provider id='users' defaultValue={{ filter: 'active' }} />
+// → still 'archived'. The new defaultValue do nothing.
 ```
 
 To open a page with pre-set state, drive it from the URL and seed from there, rather than mutating a cold store:
@@ -116,7 +116,7 @@ To open a page with pre-set state, drive it from the URL and seed from there, ra
 ```tsx
 <usersTable.Provider
 	id='users'
-	defaultProps={{ filter: searchParams.get('filter') ?? 'all' }}
+	defaultValue={{ filter: searchParams.get('filter') ?? 'all' }}
 />
 ```
 
@@ -413,7 +413,7 @@ The returned group exposes:
 
 | Member                                                      | Purpose                                                                                          |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `Provider`                                                  | Keyed observer: `id` (required), `path?`, `defaultProps`, `gcTime?`, `alwaysCache?`.       |
+| `Provider`                                                  | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.       |
 | `useStore` / `useShallowStore` / `useContextStore` / `Item` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`.   |
 | `fromCache({ path?, id })`                            | Imperative get-if-alive → `StoreApi` or `undefined`.                                             |
 | `useFromCache({ path?, id }, selector)`               | Reactive, passive cross-tree read.                                                               |
@@ -421,7 +421,7 @@ The returned group exposes:
 
 ## Server-side rendering
 
-The feature is client-only. On the server the group `Provider` behaves like `createContextStore` — a fresh store per request, seeded from `defaultProps` — and `fromCache` returns `undefined`. Because storage lives inside `CacheProvider` (per render tree), there is no cross-request leakage.
+The feature is client-only. On the server the group `Provider` behaves like `createContextStore` — a fresh store per request, seeded from `defaultValue` — and `fromCache` returns `undefined`. Because storage lives inside `CacheProvider` (per render tree), there is no cross-request leakage.
 
 ## Custom or multiple caches
 

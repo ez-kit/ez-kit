@@ -25,10 +25,10 @@ function createStoreCache(options?: { gcTime?: number }): {
 		clear: (prefix?: string[]) => void                   // optional subtree clear
 	}
 	useKeys: (prefix?: string[]) => CacheRecord[]          // reactive: re-renders on membership change
-	createCachedStore: <TStore, TDefaultProps>(
-		factory: (defaultProps: TDefaultProps) => TStore,
+	createCachedStore: <TStore, TDefaultValue>(
+		factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
 		options: { name: string; gcTime?: number },
-	) => CachedStoreGroup<TStore, TDefaultProps>
+	) => CachedStoreGroup<TStore, TDefaultValue>
 }
 
 // Default cache, exported at the top level (one ready-made instance):
@@ -42,7 +42,7 @@ A store-group handle from `createCachedStore` exposes:
 
 ```ts
 {
-	Provider // keyed observer: id + path? + defaultProps (+ gcTime / alwaysCache)
+	Provider // keyed observer: id + path? + defaultValue (+ gcTime / alwaysCache)
 	useStore // \
 	useShallowStore //  } same semantics as createContextStore, under the store-group Provider
 	useContextStore //  }
@@ -89,9 +89,9 @@ interface TableState {
 
 // 1. Define a store group against the default cache (the name is its inspectable namespace).
 const usersTable = createCachedStore(
-	(defaultProps: { filter?: string }) =>
+	({ defaultValue }: ContextStoreInit<{ filter?: string }>) =>
 		createStore<TableState>((set) => ({
-			filter: defaultProps.filter ?? 'all',
+			filter: defaultValue.filter ?? 'all',
 			page: 1,
 			setFilter: (filter) => set({ filter }),
 		})),
@@ -112,7 +112,7 @@ function UsersPage() {
 	return (
 		<usersTable.Provider
 			id='users'
-			defaultProps={{ filter: 'active' }}
+			defaultValue={{ filter: 'active' }}
 		>
 			<UsersTable />
 		</usersTable.Provider>
@@ -126,7 +126,7 @@ function UsersTable() {
 }
 ```
 
-Navigate away from `UsersPage` and back within `gcTime`: the store instance — and its `filter`/`page` — is reused. `defaultProps` only seeds the **first** creation of a key; on reuse it is ignored.
+Navigate away from `UsersPage` and back within `gcTime`: the store instance — and its `filter`/`page` — is reused. `defaultValue` only seeds the **first** creation of a key; on reuse it is ignored.
 
 ## API
 
@@ -139,7 +139,7 @@ Owns the real cache storage, created per React tree (so SSR renders and tests ar
 | Prop           |          | Description                                                                                     |
 | -------------- | -------- | ----------------------------------------------------------------------------------------------- |
 | `id`     | required | Identity of the entry within the store group.                                                   |
-| `defaultProps` | optional | Seed passed to the factory **only** when the key is first created.                              |
+| `defaultValue` | optional | Seed passed to the factory **only** when the key is first created.                              |
 | `gcTime`       | optional | Eviction delay (ms) once observers reach 0. Birth-config — fixed by the first mount of the key. |
 | `alwaysCache`  | optional | Pin the entry against automatic eviction (≡ `gcTime: Infinity`).                                |
 
@@ -214,5 +214,5 @@ function CachePanel({ customerId }: { customerId: string }) {
 - **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` take `{ path, id }` and default `path` to `[]`. A read with the wrong path silently misses.
 - **`useFromCache` is passive.** After the owning `Provider` unmounts and `gcTime` elapses, the store is evicted and the reader sees `undefined`. Use `alwaysCache`/`gcTime` if a reader must keep it alive.
 - **Imperative access needs a mounted `cache.Provider`.** `fromCache`/`remove` target the active client cache; with multiple `cache.Provider`s, prefer `useCache()` inside the tree.
-- **Prefer the URL for "prepare then navigate".** To open a page with pre-set state, carry intent in the URL/route and seed via `defaultProps` rather than setting a cold store before it mounts.
+- **Prefer the URL for "prepare then navigate".** To open a page with pre-set state, carry intent in the URL/route and seed via `defaultValue` rather than setting a cold store before it mounts.
 - **Client-only.** On the server the store-group `Provider` is ephemeral (seeded per request) and `fromCache` returns `undefined`.

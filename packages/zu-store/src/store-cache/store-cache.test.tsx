@@ -7,6 +7,8 @@ import { createStore } from 'zustand/vanilla'
 import { createStoreCache } from './create-store-cache'
 import { toTree } from './to-tree'
 
+import type { ContextStoreInit } from '../create-context-store'
+
 type TableState = {
 	filter: string
 	page: number
@@ -16,10 +18,10 @@ type TableState = {
 
 type TableDefaultProps = { filter?: string; page?: number }
 
-const tableFactory = (defaultProps: TableDefaultProps) =>
+const tableFactory = ({ defaultValue }: ContextStoreInit<TableDefaultProps>) =>
 	createStore<TableState>((set) => ({
-		filter: defaultProps.filter ?? 'all',
-		page: defaultProps.page ?? 1,
+		filter: defaultValue.filter ?? 'all',
+		page: defaultValue.page ?? 1,
 		setFilter: (filter) => {
 			set({ filter })
 		},
@@ -56,7 +58,7 @@ describe('createStoreCache — provider & context', () => {
 				<cache.Provider>
 					<table.Provider
 						id='main'
-						defaultProps={{ filter: 'seed' }}
+						defaultValue={{ filter: 'seed' }}
 					>
 						<Reader id='one' />
 						<SetButton />
@@ -65,7 +67,7 @@ describe('createStoreCache — provider & context', () => {
 				<cache.Provider>
 					<table.Provider
 						id='main'
-						defaultProps={{ filter: 'seed' }}
+						defaultValue={{ filter: 'seed' }}
 					>
 						<Reader id='two' />
 					</table.Provider>
@@ -124,7 +126,7 @@ describe('createStoreCache — namespacing & seeding', () => {
 		expect(users.fromCache({ id: 'main' })).not.toBe(orders.fromCache({ id: 'main' }))
 	})
 
-	it('seeds the store from defaultProps on first mount', () => {
+	it('seeds the store from defaultValue on first mount', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'seed-1' })
 		function Reader() {
@@ -135,7 +137,7 @@ describe('createStoreCache — namespacing & seeding', () => {
 			<cache.Provider>
 				<table.Provider
 					id='main'
-					defaultProps={{ filter: 'active' }}
+					defaultValue={{ filter: 'active' }}
 				>
 					<Reader />
 				</table.Provider>
@@ -287,7 +289,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 					<cache.Scope path={[page]}>
 						<table.Provider
 							id='main'
-							defaultProps={{ filter: page }}
+							defaultValue={{ filter: page }}
 						>
 							<FilterView />
 							<ArchiveButton />
@@ -310,7 +312,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 })
 
 describe('createStoreCache — keep-alive', () => {
-	it('preserves state across Provider unmount/remount and ignores defaultProps on reuse', () => {
+	it('preserves state across Provider unmount/remount and ignores defaultValue on reuse', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'keepalive-1' })
 
@@ -336,7 +338,7 @@ describe('createStoreCache — keep-alive', () => {
 					{show ? (
 						<table.Provider
 							id='main'
-							defaultProps={{ filter: seed }}
+							defaultValue={{ filter: seed }}
 						>
 							<FilterView />
 							<ArchiveButton />
@@ -436,7 +438,7 @@ describe('createStoreCache — keep-alive', () => {
 				<cache.Provider>
 					<table.Provider
 						id={k}
-						defaultProps={{ filter: k }}
+						defaultValue={{ filter: k }}
 					>
 						<FilterView />
 						<ArchiveButton />
@@ -640,7 +642,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 						<cache.Scope path={['page-1']}>
 							<table.Provider
 								id='main'
-								defaultProps={{ filter: 'active' }}
+								defaultValue={{ filter: 'active' }}
 							>
 								<ArchiveButton />
 							</table.Provider>
@@ -932,7 +934,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 						{show ? (
 							<table.Provider
 								id='main'
-								defaultProps={{ filter: 'active' }}
+								defaultValue={{ filter: 'active' }}
 							>
 								<FilterView />
 								<ArchiveButton />
@@ -964,7 +966,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 				<cache.Scope path={['page-1']}>
 					<table.Provider
 						id='main'
-						defaultProps={{ filter: 'active' }}
+						defaultValue={{ filter: 'active' }}
 					>
 						<Reader />
 					</table.Provider>
@@ -986,7 +988,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 			<cache.Provider>
 				<table.Provider
 					id='main'
-					defaultProps={{ filter: 'first' }}
+					defaultValue={{ filter: 'first' }}
 				>
 					<Reader />
 				</table.Provider>
@@ -996,7 +998,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 			<cache.Provider>
 				<table.Provider
 					id='main'
-					defaultProps={{ filter: 'second' }}
+					defaultValue={{ filter: 'second' }}
 				>
 					<Reader />
 				</table.Provider>
