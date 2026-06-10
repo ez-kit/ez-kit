@@ -1,0 +1,255 @@
+---
+title: Search params sync
+description: Two-way sync between a Valtio store and the URL search params — type-safe codecs, pluggable layouts, push/replace history control, react-router and Next adapters, and an SSR-correct form.
+---
+
+# Search params sync
+
+Mirror a Valtio store into the URL's query string and back, in both directions. Mutating the store updates the URL; navigating (deep link, Back/forward, an external write) updates the store. The proxy stays **synchronous and snappy** — the URL is a throttled, rehydratable projection of it.
+
+```bash
+pnpm add @ez-kit/valtio-kit valtio
+```
+
+Router and validator integrations are optional peers — install only what you use (`react-router`, `next`, `zod`, `qs`).
+
+## Mental model
+
+Valtio is the **source of truth**; the URL is a **mirror**.
+
+- **proxy → URL**: a `subscribe` watches the store; changed fields are coalesced into one navigation per tick (throttled, `replace` by default).
+- **URL → proxy**: the adapter's reactive read pushes external URL changes back into the store, writing only the diff — pulls never write the URL, so Back/forward and third-party writes are safe.
+- **Loop breaking**: each direction writes only when the value differs in a normalized form (serialized string for `flat`, canonical JSON for `json`). Codecs carry a round-trip contract so the feedback loop terminates.
+
+A single coordinator — `StoreSearchParamsProvider` — is the only component that reads and writes the URL. It connects every store, merges their owned keys, and preserves foreign keys it doesn't own.
+
+## Two forms
+
+| Form | Scope | Hydration | Use when |
+| --- | --- | --- | --- |
+| [`proxyWithSearchParams`](#proxywithsearchparams) | module/singleton | client-first (effect) | client-rendered SPAs; trivial to adopt |
+| [`createSearchParamsStore`](#createsearchparamsstore) | per-request (context) | synchronous, server + client | SSR/RSC; correct HTML, no flash |
+
+Both sit on the same engine (codecs, layouts, coordinator) and must be rendered inside a `StoreSearchParamsProvider`.
+
+## `proxyWithSearchParams`
+
+The module-global form. Create a proxy whose listed fields mirror the URL, mutate it directly, and read it with Valtio's `useSnapshot`. It auto-registers with the coordinator.
+
+```tsx
+import { proxyWithSearchParams, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
+
+export const filters = proxyWithSearchParams(
+	{ q: '', page: 1 },
+	{ fields: { q: paramString(), page: paramNumber() } },
+)
+
+// anywhere: mutate the proxy
+filters.q = 'boots'
+filters.page = 2
+```
+
+```tsx
+import { useSnapshot } from 'valtio'
+import { StoreSearchParamsProvider } from '@ez-kit/valtio-kit/search-params'
+import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
+
+function App() {
+	return (
+		<StoreSearchParamsProvider adapter={reactRouterAdapter}>
+			<Filters />
+		</StoreSearchParamsProvider>
+	)
+}
+
+function Filters() {
+	const snap = useSnapshot(filters)
+	return <input value={snap.q} onChange={(e) => (filters.q = e.target.value)} />
+}
+```
+
+<Callout type="warn">
+	Module-global proxies are shared across SSR requests, so `proxyWithSearchParams` is **module/singleton
+	scope, client-first**. On the server it renders defaults and hydrates from the URL in an effect (a deep-link
+	flash is possible). For SSR-correct rendering, use [`createSearchParamsStore`](#createsearchparamsstore).
+</Callout>
+
+## `createSearchParamsStore`
+
+The SSR-correct, request-scoped form. It fuses the [`createContextStore`](./create-context-store) lifecycle with the sync engine: the proxy is created per `<Provider>` and **seeded synchronously from the URL** — `defaultValue` first, then URL overrides — identically on server and client. The first paint already reflects the URL: no flash, no hydration mismatch.
+
+<LivePreview path='valtio-kit/search-params-flat' title='Flat layout — q + page' />
+
+```tsx
+import {
+	createSearchParamsStore,
+	flat,
+	paramString,
+	paramNumber,
+} from '@ez-kit/valtio-kit/search-params'
+import { proxy } from 'valtio'
+
+const filtersStore = createSearchParamsStore<{ q: string; page: number }>(
+	() => proxy({ q: '', page: 1 }),
+	{ fields: { q: paramString(), page: paramNumber() }, layout: flat() },
+)
+```
+
+Like `createContextStore`, the factory returns a Valtio `proxy` — keep your mutating actions on it (`setQ`, `nextPage`, …) and read with `useSnapshot`, so components never mutate a hook-returned value.
+
+It returns the same surface as `createContextStore` — `Provider`, `useStore`, `useSnapshot`, `Item` — so reads come from snapshots and writes mutate the proxy. Each `Provider` is an isolated instance, so two of them never collide (unlike the global `proxyWithSearchParams` registry).
+
+## Codecs
+
+A codec converts one typed field to/from a URL string. They never throw on read — invalid input falls back to the field's default.
+
+| Codec | Type | Notes |
+| --- | --- | --- |
+| `paramString()` | `string` | identity |
+| `paramNumber()` | `number` | finite numbers; non-finite omitted |
+| `paramBoolean()` | `boolean` | `1`/`0` |
+| `paramEnum(values)` | `T` | rejects values outside the set |
+| `paramArray(item)` | `T[]` | delimited list of an inner codec |
+| `paramJson()` | `T` | JSON value (objects/arrays) |
+
+```ts
+import { paramEnum, paramArray, paramString } from '@ez-kit/valtio-kit/search-params'
+
+const sort = paramEnum(['asc', 'desc'] as const)
+const tags = paramArray(paramString())
+```
+
+Each codec satisfies a round-trip contract — `deserialize(serialize(v))` deep-equals `v` — which is what lets the engine break the proxy⇄URL loop by comparing serialized forms. Provide an `equals` on a custom codec if `Object.is` isn't right for your type.
+
+### Zod validation
+
+`zodParam(schema)` turns any Zod schema into a codec — parsing **is** validation, and a failed parse gracefully falls back to the default. Ideal for bounded or shaped deep links.
+
+<LivePreview path='valtio-kit/search-params-zod' title='Zod-validated rating (1–5)' />
+
+```ts
+import { zodParam } from '@ez-kit/valtio-kit/search-params/validators/zod'
+import { z } from 'zod'
+
+const rating = zodParam(z.coerce.number().int().min(1).max(5))
+```
+
+## Layouts
+
+A layout maps the set of persisted fields onto URL keys. Pass one as `layout`; the default is `flat()`.
+
+### `flat()` — one key per field
+
+The default. Each field gets its own query key (`?q=boots&page=2`), so arbitrary components can read individual params with `useSearchParams().get('q')`. Pass `{ prefix }` to namespace keys.
+
+### `json(key)` — whole state under one key
+
+Packs every field into one canonical-JSON param. Compact and collision-free for multiple stores, at the cost of single-param interop. Canonical (stable) key ordering keeps the equality guard reliable.
+
+<LivePreview path='valtio-kit/search-params-json' title='JSON layout — one key carries everything' />
+
+```ts
+import { json } from '@ez-kit/valtio-kit/search-params'
+
+// fields packed into ?state={"view":"grid","compact":false}
+layout: json('state')
+```
+
+### `qs()` — arrays & nesting
+
+The `qs()` encoder (opt-in subpath, requires `qs`) serializes arrays and nested structures into readable keys like `tags[]=sale`, instead of JSON-encoding them.
+
+<LivePreview path='valtio-kit/search-params-qs' title='qs encoder — array fields' />
+
+```ts
+import { qs } from '@ez-kit/valtio-kit/search-params/encoders/qs'
+
+layout: qs()
+```
+
+<Callout type="info">
+	`flat()` is the mode that lets arbitrary components read individual params. `json()`/`qs()` trade that for
+	compactness and multi-store isolation.
+</Callout>
+
+## History control
+
+URL writes default to `history: 'replace'` so high-frequency fields (text inputs) don't spam the history stack. Override per write with the `$searchParams` control attached to the proxy:
+
+<LivePreview path='valtio-kit/search-params-history' title='push vs replace' />
+
+```ts
+// advancing a wizard: stack a Back-button-able entry
+store.$searchParams.push(() => (store.step = 'review'))
+
+// going back: replace, don't stack
+store.$searchParams.replace(() => (store.step = 'profile'))
+```
+
+Set a different default for the whole store with the `history` option, and tune write frequency with `throttleMs`. `clearOnDefault` (on by default) omits a param when its value equals the field default, keeping URLs clean.
+
+## Router adapters
+
+The core is router-agnostic. An adapter is a tiny object exposing the reactive read and the writer as hooks; the coordinator does all merging.
+
+### react-router
+
+```tsx
+import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
+
+<StoreSearchParamsProvider adapter={reactRouterAdapter}>{children}</StoreSearchParamsProvider>
+```
+
+Works with react-router v6/v7 (`BrowserRouter` / data routers).
+
+### Next.js
+
+```tsx
+import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
+
+<StoreSearchParamsProvider adapter={nextAdapter}>{children}</StoreSearchParamsProvider>
+```
+
+For the App Router, writes go through `router.replace`/`push`; client-held Valtio state survives the RSC refetch.
+
+### SSR-correct deep links
+
+Pair `createSearchParamsStore` with `nextAdapter` for HTML that reflects the URL on the first byte:
+
+<LivePreview path='valtio-kit/search-params-ssr' title='Synchronous URL seed — opens on ?tab=billing' />
+
+```tsx
+// app/layout.tsx (or a client boundary near the root)
+'use client'
+import { StoreSearchParamsProvider } from '@ez-kit/valtio-kit/search-params'
+import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+	return <StoreSearchParamsProvider adapter={nextAdapter}>{children}</StoreSearchParamsProvider>
+}
+```
+
+Because the store seeds synchronously from the request URL, the example above opens on `billing` (its seeded deep link) rather than the `overview` default — with no client flash.
+
+### Writing an adapter
+
+Any router fits by implementing three members:
+
+```ts
+import type { RouterAdapter } from '@ez-kit/valtio-kit/search-params'
+
+const myAdapter: RouterAdapter = {
+	useSearchParams: () => /* reactive URLSearchParams */,
+	useUpdater: () => (next, { history }) => {/* navigate to ?next, push|replace */},
+	getSnapshot: () => /* non-reactive URLSearchParams for the throttled flush */,
+}
+```
+
+The live demos on this page use exactly this contract with an in-memory adapter, so each example owns an isolated URL instead of driving the page address bar.
+
+## Caveats
+
+- **`proxyWithSearchParams` on the server** renders defaults and hydrates in an effect — accept a deep-link flash, or switch to `createSearchParamsStore`. Never hydrate a module proxy on the server.
+- **Non-canonical custom codecs** can loop — honor the round-trip contract (or supply `equals`). `json`/`qs` use stable ordering for you.
+- **`json`/`qs` break single-param interop** — use `flat()` when other components need to read individual keys.
+- **Next App Router** lacks true shallow routing; `nextAdapter` re-runs server components on write. Client Valtio state survives the refetch.

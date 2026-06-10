@@ -34,3 +34,41 @@ const state = counter.useStore() // write → state.count += 1
 ```
 
 → [Full docs](docs/create-context-store.md)
+
+### Search params sync
+
+Two-way sync between a Valtio store and the URL search params. The proxy stays the synchronous source of truth; the URL is a throttled, rehydratable mirror. Type-safe codecs, pluggable layouts (`flat`/`json`/`qs`), `push`/`replace` history control, and react-router + Next adapters — with an SSR-correct, request-scoped form.
+
+```tsx
+import {
+  createSearchParamsStore,
+  paramString,
+  paramNumber,
+  StoreSearchParamsProvider,
+} from '@ez-kit/valtio-kit/search-params'
+import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
+import { proxy } from 'valtio'
+
+const filters = createSearchParamsStore<{ q: string; page: number }>(
+  () => proxy({ q: '', page: 1 }),
+  { fields: { q: paramString(), page: paramNumber() } },
+)
+
+<StoreSearchParamsProvider adapter={reactRouterAdapter}>
+  <filters.Provider>
+    <Filters />
+  </filters.Provider>
+</StoreSearchParamsProvider>
+```
+
+Subpaths (optional peers, install only what you use):
+
+| Import | Peer |
+| --- | --- |
+| `@ez-kit/valtio-kit/search-params` | — (zero-dep core) |
+| `@ez-kit/valtio-kit/search-params/routers/react-router` | `react-router` |
+| `@ez-kit/valtio-kit/search-params/routers/next` | `next` |
+| `@ez-kit/valtio-kit/search-params/validators/zod` | `zod` |
+| `@ez-kit/valtio-kit/search-params/encoders/qs` | `qs` |
+
+→ [Full docs](docs/search-params.md)
