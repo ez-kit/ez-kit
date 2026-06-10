@@ -21,6 +21,7 @@ type SearchParamsStoreFactory<TState extends object, TDefaultValue> = (
 	init: ContextStoreInit<TDefaultValue>,
 ) => TState
 
+/** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
 type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
 	? { defaultValue?: TDefaultValue }
 	: { defaultValue: TDefaultValue }
