@@ -43,7 +43,11 @@ const settingsStore = createSearchParamsStore<SettingsState>(
 	},
 	{
 		// Every field is packed into one canonical-JSON param so a single key carries the whole state.
-		fields: { view: paramEnum<View>(['grid', 'list']), q: paramString(), compact: paramBoolean() },
+		fields: (field) => [
+			field((s) => s.view, paramEnum<View>(['grid', 'list'])),
+			field((s) => s.q, paramString()),
+			field((s) => s.compact, paramBoolean()),
+		],
 		layout: json('state'),
 	},
 )

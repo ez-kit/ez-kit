@@ -1,10 +1,10 @@
-import type { ParamCodec } from '../types'
+import type { Param } from '../types'
 
-/** Codec for boolean fields. Serializes to `true`/`false`; also reads `1`/`0`. */
-export function paramBoolean(): ParamCodec<boolean> {
+/** Parser for boolean fields. Serializes to `true`/`false`; also reads `1`/`0`. */
+export function paramBoolean(): Param<boolean> {
 	return {
-		serialize: (value) => (value ? 'true' : 'false'),
-		deserialize: (raw) => {
+		stringify: (value) => (value ? 'true' : 'false'),
+		parse: (raw) => {
 			if (raw === 'true' || raw === '1') {
 				return true
 			}

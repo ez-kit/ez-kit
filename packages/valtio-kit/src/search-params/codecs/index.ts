@@ -1,5 +1,7 @@
 export { paramArray, type ParamArrayOptions } from './param-array'
+export { paramBigInt } from './param-bigint'
 export { paramBoolean } from './param-boolean'
+export { paramDate } from './param-date'
 export { paramEnum } from './param-enum'
 export { paramJson } from './param-json'
 export { paramNumber } from './param-number'

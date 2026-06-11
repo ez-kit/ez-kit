@@ -1,8 +1,11 @@
 import { flat } from '../layouts/flat'
 
+import { parentOf, readPath, writePath } from './path'
+import { validateBinding } from './validate'
+
 import type {
-	FieldsRecord,
-	PersistedValues,
+	FieldDescriptor,
+	FieldValues,
 	SearchParamsHistory,
 	SearchParamsLayout,
 	SearchParamsOptions,
@@ -15,33 +18,43 @@ export type HistoryRunner = {
 
 /** A connected store: its proxy plus everything the engine needs to sync it. */
 export type SyncBinding = {
-	proxy: Record<string, unknown>
-	fields: FieldsRecord
-	fieldNames: string[]
+	proxy: object
+	fields: FieldDescriptor[]
 	layout: SearchParamsLayout
 	history: SearchParamsHistory
 	throttleMs: number
 	clearOnDefault: boolean
 	/** Field defaults captured before any URL hydration (for clearOnDefault and reset-on-absent). */
-	defaults: PersistedValues
+	defaults: Map<FieldDescriptor, unknown>
 	/** The engine currently syncing this binding, or `null` when no provider is mounted. */
 	engine: HistoryRunner | null
 }
 
-/** Build a binding from a proxy, its options, and the pre-hydration default snapshot. */
-export function createBinding<T extends object>(
-	proxy: T,
-	options: SearchParamsOptions<T>,
-	defaults: PersistedValues,
+/** Build a binding from a proxy, its resolved field descriptors, and the global options. */
+export function createBinding(
+	proxy: object,
+	fields: FieldDescriptor[],
+	options: SearchParamsOptions,
 ): SyncBinding {
-	const fields = options.fields as unknown as FieldsRecord
-	const fieldNames = Object.keys(fields).filter((name) => fields[name])
+	validateBinding(proxy, fields)
+
+	const layout = options.layout ?? flat()
+	if (layout.ignoresAbsolute && fields.some((field) => field.absolute)) {
+		 
+		console.warn(
+			`[valtio-kit] search-params: \`absolute\` is only honoured by the flat layout; ignoring it under this layout.`,
+		)
+	}
+
+	const defaults = new Map<FieldDescriptor, unknown>()
+	for (const field of fields) {
+		defaults.set(field, readPath(proxy, field.path))
+	}
 
 	return {
-		proxy: proxy as Record<string, unknown>,
+		proxy,
 		fields,
-		fieldNames,
-		layout: options.layout ?? flat(),
+		layout,
 		history: options.history ?? 'replace',
 		throttleMs: options.throttleMs ?? 0,
 		clearOnDefault: options.clearOnDefault ?? true,
@@ -50,37 +63,39 @@ export function createBinding<T extends object>(
 	}
 }
 
-function fieldEquals(binding: SyncBinding, name: string, a: unknown, b: unknown): boolean {
-	const codec = binding.fields[name]
-	if (codec?.equals) {
-		return codec.equals(a, b)
-	}
-	return Object.is(a, b)
+function fieldEquals(field: FieldDescriptor, a: unknown, b: unknown): boolean {
+	return field.parser.equals ? field.parser.equals(a, b) : Object.is(a, b)
 }
 
 /** Current proxy values that should appear in the URL (clearOnDefault drops default-valued fields). */
-export function desiredValues(binding: SyncBinding): PersistedValues {
-	const values: PersistedValues = {}
-	for (const name of binding.fieldNames) {
-		const value = binding.proxy[name]
-		if (binding.clearOnDefault && fieldEquals(binding, name, value, binding.defaults[name])) {
+export function desiredValues(binding: SyncBinding): FieldValues {
+	const values: FieldValues = new Map()
+	for (const field of binding.fields) {
+		const value = readPath(binding.proxy, field.path)
+		if (binding.clearOnDefault && fieldEquals(field, value, binding.defaults.get(field))) {
 			continue
 		}
-		values[name] = value
+		values.set(field, value)
 	}
 	return values
 }
 
 /**
  * Apply URL params into the proxy (a pull). Fields present in the URL win; fields absent
- * from the URL reset to their default. Writes only when the value actually changes.
+ * from the URL reset to their default. Only the leaf is assigned — intermediate nodes keep
+ * their identity (rule C). Writes only when the value actually changes.
  */
 export function applyParamsToProxy(binding: SyncBinding, params: URLSearchParams): void {
 	const incoming = binding.layout.read(params, binding.fields)
-	for (const name of binding.fieldNames) {
-		const desired = name in incoming ? incoming[name] : binding.defaults[name]
-		if (!fieldEquals(binding, name, binding.proxy[name], desired)) {
-			binding.proxy[name] = desired
+	for (const field of binding.fields) {
+		// Skip fields whose parent vanished (defensive — validation guards the bind-time shape).
+		if (parentOf(binding.proxy, field.path) === undefined) {
+			continue
+		}
+		const desired = incoming.has(field) ? incoming.get(field) : binding.defaults.get(field)
+		const current = readPath(binding.proxy, field.path)
+		if (!fieldEquals(field, current, desired)) {
+			writePath(binding.proxy, field.path, desired)
 		}
 	}
 }

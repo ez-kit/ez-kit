@@ -1,32 +1,36 @@
-import type { PersistedValues, SearchParamsLayout } from '../types'
+import type { FieldDescriptor, FieldValues, SearchParamsLayout } from '../types'
 
 export type FlatLayoutOptions = {
-	/** Prefix applied to every owned param key (e.g. `'cart.'` → `cart.id`). */
+	/** Prefix applied to every owned param key (e.g. `'cart.'` → `cart.filters.q`). */
 	prefix?: string
 }
 
+/** The URL key for a field: joined path by default, `key` renames the leaf, `absolute` drops the prefix. */
+export function flatKey(field: FieldDescriptor, prefix: string): string {
+	const leaf = field.key ?? field.path.at(-1) ?? ''
+	const base = field.absolute ? leaf : [...field.path.slice(0, -1), leaf].join('.')
+	return `${prefix}${base}`
+}
+
 /**
- * Maps each persisted field to its own URL key (`?id=5&sort=asc`). The mode that lets
+ * Maps each persisted field to its own URL key (`?q=5&filters.sort=asc`). The mode that lets
  * arbitrary components read individual params via the router's `useSearchParams`.
  */
 export function flat(options: FlatLayoutOptions = {}): SearchParamsLayout {
 	const prefix = options.prefix ?? ''
-	const keyFor = (name: string): string => `${prefix}${name}`
 
 	return {
-		ownedKeys: (fieldNames) => fieldNames.map(keyFor),
+		ownedKeys: (fields) => fields.map((field) => flatKey(field, prefix)),
 
 		read: (params, fields) => {
-			const values: PersistedValues = {}
-			for (const name of Object.keys(fields)) {
-				const codec = fields[name]
-				const key = keyFor(name)
-				if (!codec || !params.has(key)) {
+			const values: FieldValues = new Map()
+			for (const field of fields) {
+				const key = flatKey(field, prefix)
+				if (!params.has(key)) {
 					continue
 				}
-				const raw = params.get(key) ?? ''
 				try {
-					values[name] = codec.deserialize(raw)
+					values.set(field, field.parser.parse(params.get(key) ?? ''))
 				} catch {
 					// Invalid value — leave absent so the field keeps its default.
 				}
@@ -36,17 +40,13 @@ export function flat(options: FlatLayoutOptions = {}): SearchParamsLayout {
 
 		write: (params, values, fields) => {
 			const next = new URLSearchParams(params)
-			for (const name of Object.keys(fields)) {
-				const codec = fields[name]
-				if (!codec) {
-					continue
-				}
-				const key = keyFor(name)
-				if (!(name in values)) {
+			for (const field of fields) {
+				const key = flatKey(field, prefix)
+				if (!values.has(field)) {
 					next.delete(key)
 					continue
 				}
-				const encoded = codec.serialize(values[name])
+				const encoded = field.parser.stringify(values.get(field))
 				if (encoded === null) {
 					next.delete(key)
 				} else {

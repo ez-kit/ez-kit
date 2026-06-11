@@ -37,7 +37,7 @@ const filtersStore = createSearchParamsStore<FiltersState>(
 		return state
 	},
 	{
-		fields: { q: paramString(), page: paramNumber() },
+		fields: (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
 		layout: flat(),
 	},
 )

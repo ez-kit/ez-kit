@@ -1,10 +1,10 @@
-import type { ParamCodec } from '../types'
+import type { Param } from '../types'
 
-/** Codec for arbitrary JSON-serializable values. Use sparingly — keep URLs small. */
-export function paramJson<T>(): ParamCodec<T> {
+/** Parser for arbitrary JSON-serializable leaf values. Use sparingly — keep URLs small. */
+export function paramJson<T>(): Param<T> {
 	return {
-		serialize: (value) => JSON.stringify(value),
-		deserialize: (raw) => JSON.parse(raw) as T,
+		stringify: (value) => JSON.stringify(value),
+		parse: (raw) => JSON.parse(raw) as T,
 		equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
 	}
 }

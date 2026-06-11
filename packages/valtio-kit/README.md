@@ -37,7 +37,7 @@ const state = counter.useStore() // write → state.count += 1
 
 ### Search params sync
 
-Two-way sync between a Valtio store and the URL search params. The proxy stays the synchronous source of truth; the URL is a throttled, rehydratable mirror. Type-safe codecs, pluggable layouts (`flat`/`json`/`qs`), `push`/`replace` history control, and react-router + Next adapters — with an SSR-correct, request-scoped form.
+Two-way sync between a Valtio store and the URL search params. The proxy stays the synchronous source of truth; the URL is a throttled, rehydratable mirror. Type-safe parsers, pluggable layouts (`flat`/`json`/`qs`), `push`/`replace` history control, and react-router + Next adapters — with an SSR-correct, request-scoped form.
 
 ```tsx
 import {
@@ -51,7 +51,7 @@ import { proxy } from 'valtio'
 
 const filters = createSearchParamsStore<{ q: string; page: number }>(
   () => proxy({ q: '', page: 1 }),
-  { fields: { q: paramString(), page: paramNumber() } },
+  { fields: (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())] },
 )
 
 <StoreSearchParamsProvider adapter={reactRouterAdapter}>

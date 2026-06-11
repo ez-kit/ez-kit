@@ -29,7 +29,7 @@ const tabsStore = createSearchParamsStore<TabsState>(
 		})
 		return state
 	},
-	{ fields: { tab: paramEnum<Tab>(['overview', 'billing', 'team']) } },
+	{ fields: (field) => [field((s) => s.tab, paramEnum<Tab>(['overview', 'billing', 'team']))] },
 )
 
 const TABS: Tab[] = ['overview', 'billing', 'team']

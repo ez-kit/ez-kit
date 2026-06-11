@@ -1,4 +1,4 @@
-import type { ParamCodec } from '../types'
+import type { Param } from '../types'
 
 export type ParamArrayOptions = {
 	/** Separator between encoded items. Defaults to `,`. */
@@ -6,31 +6,31 @@ export type ParamArrayOptions = {
 }
 
 /**
- * Codec for arrays. Each item is encoded by `item`, URI-escaped to protect the
+ * Parser for arrays. Each item is encoded by `item`, URI-escaped to protect the
  * separator, then joined. An empty array is omitted (`null`).
  */
-export function paramArray<T>(item: ParamCodec<T>, options: ParamArrayOptions = {}): ParamCodec<T[]> {
+export function paramArray<T>(item: Param<T>, options: ParamArrayOptions = {}): Param<T[]> {
 	const separator = options.separator ?? ','
 
 	return {
-		serialize: (value) => {
+		stringify: (value) => {
 			if (value.length === 0) {
 				return null
 			}
 			const parts: string[] = []
 			for (const entry of value) {
-				const encoded = item.serialize(entry)
+				const encoded = item.stringify(entry)
 				if (encoded !== null) {
 					parts.push(encodeURIComponent(encoded))
 				}
 			}
 			return parts.length === 0 ? null : parts.join(separator)
 		},
-		deserialize: (raw) => {
+		parse: (raw) => {
 			if (raw === '') {
 				return []
 			}
-			return raw.split(separator).map((part) => item.deserialize(decodeURIComponent(part)))
+			return raw.split(separator).map((part) => item.parse(decodeURIComponent(part)))
 		},
 		equals: (a, b) => a.length === b.length && a.every((value, index) => Object.is(value, b[index])),
 	}

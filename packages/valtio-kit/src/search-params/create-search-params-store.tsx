@@ -8,18 +8,26 @@ import {
 } from 'react'
 import { ref, type Snapshot, useSnapshot as useValtioSnapshot } from 'valtio'
 
+import { type FieldsBuilder, resolveFieldSpecs } from './accessor'
+import { discoverDecoratedFields } from './decorators'
 import { applyParamsToProxy, createBinding, type SyncBinding } from './engine/binding'
 import { createControl } from './engine/control'
 import { useSearchParamsEngine } from './provider'
 
 import type { ContextStoreInit, UseSnapshotOptions } from '../create-context-store'
-import type { PersistedValues, SearchParamsOptions, SearchParamsProxy } from './types'
+import type { SearchParamsOptions, SearchParamsProxy } from './types'
 
 const MISSING_PROVIDER_ERROR = 'Missing Provider for createSearchParamsStore'
 
 type SearchParamsStoreFactory<TState extends object, TDefaultValue> = (
 	init: ContextStoreInit<TDefaultValue>,
 ) => TState
+
+/** Config for `createSearchParamsStore`: accessor `fields` (omit for `@searchParam` discovery) + global options. */
+export type CreateSearchParamsStoreConfig<TState> = SearchParamsOptions & {
+	/** Accessor field builder. Omit to discover `@searchParam`-decorated fields on the instance. */
+	fields?: FieldsBuilder<TState>
+}
 
 /** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
 type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
@@ -44,13 +52,15 @@ export type CreateSearchParamsStoreResult<TState extends object, TDefaultValue> 
  * Request-scoped, SSR-correct search-params store. Fuses the `createContextStore` lifecycle
  * with the sync engine: the proxy is created per request and seeded synchronously from the URL
  * (defaultValue, then URL overrides) on both server and client, so server HTML reflects the URL.
- * Must be rendered inside a `StoreSearchParamsProvider`.
+ * Fields come from `@searchParam` decorators on the factory-produced instance, or from accessor
+ * `fields` in the config. Must be rendered inside a `StoreSearchParamsProvider`.
  */
 export function createSearchParamsStore<TState extends object, TDefaultValue = undefined>(
 	factory: SearchParamsStoreFactory<TState, TDefaultValue>,
-	options: SearchParamsOptions<TState>,
+	config: CreateSearchParamsStoreConfig<TState> = {},
 ): CreateSearchParamsStoreResult<TState, TDefaultValue> {
 	const StoreContext = createContext<Instance<TState> | null>(null)
+	const { fields, ...options } = config
 
 	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue>>): ReactElement {
 		const { children, defaultValue } = props as PropsWithChildren<{ defaultValue: TDefaultValue }>
@@ -59,13 +69,9 @@ export function createSearchParamsStore<TState extends object, TDefaultValue = u
 
 		if (instanceRef.current === null) {
 			const store = factory({ defaultValue })
-			const source = store as Record<string, unknown>
-			const defaults: PersistedValues = {}
-			for (const name of Object.keys(options.fields)) {
-				defaults[name] = source[name]
-			}
-			const binding = createBinding(store, options, defaults)
-			source.$searchParams = ref(createControl(binding))
+			const descriptors = fields ? resolveFieldSpecs(store, fields) : discoverDecoratedFields(store)
+			const binding = createBinding(store, descriptors, options)
+			;(store as Record<string, unknown>).$searchParams = ref(createControl(binding))
 			// Synchronous URL seed → correct server HTML and matching client hydration.
 			if (engine) {
 				applyParamsToProxy(binding, engine.snapshot())

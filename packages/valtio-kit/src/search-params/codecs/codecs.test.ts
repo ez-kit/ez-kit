@@ -1,112 +1,174 @@
 import { describe, expect, it } from 'vitest'
 
-import { paramArray, paramBoolean, paramEnum, paramJson, paramNumber, paramString } from './index'
+import { resolveParser } from './auto'
 
-describe('@ez-kit/valtio-kit param codecs', () => {
+import {
+	paramArray,
+	paramBigInt,
+	paramBoolean,
+	paramDate,
+	paramEnum,
+	paramJson,
+	paramNumber,
+	paramString,
+} from './index'
+
+import type { Param } from '../types'
+
+describe('@ez-kit/valtio-kit param parsers', () => {
 	describe('paramString', () => {
 		it('round-trips strings', () => {
-			const codec = paramString()
-			expect(codec.serialize('shoes')).toBe('shoes')
-			expect(codec.deserialize('shoes')).toBe('shoes')
+			const parser = paramString()
+			expect(parser.stringify('shoes')).toBe('shoes')
+			expect(parser.parse('shoes')).toBe('shoes')
 		})
 	})
 
 	describe('paramNumber', () => {
 		it('round-trips finite numbers', () => {
-			const codec = paramNumber()
-			expect(codec.serialize(5)).toBe('5')
-			expect(codec.deserialize('5')).toBe(5)
+			const parser = paramNumber()
+			expect(parser.stringify(5)).toBe('5')
+			expect(parser.parse('5')).toBe(5)
 		})
 
 		it('omits non-finite numbers', () => {
-			const codec = paramNumber()
-			expect(codec.serialize(Number.NaN)).toBeNull()
-			expect(codec.serialize(Number.POSITIVE_INFINITY)).toBeNull()
+			const parser = paramNumber()
+			expect(parser.stringify(Number.NaN)).toBeNull()
+			expect(parser.stringify(Number.POSITIVE_INFINITY)).toBeNull()
 		})
 
 		it('throws on invalid input so the engine can fall back', () => {
-			const codec = paramNumber()
-			expect(() => codec.deserialize('abc')).toThrow()
-			expect(() => codec.deserialize('')).toThrow()
+			const parser = paramNumber()
+			expect(() => parser.parse('abc')).toThrow()
+			expect(() => parser.parse('')).toThrow()
 		})
 	})
 
 	describe('paramBoolean', () => {
 		it('round-trips booleans and reads 1/0', () => {
-			const codec = paramBoolean()
-			expect(codec.serialize(true)).toBe('true')
-			expect(codec.deserialize('true')).toBe(true)
-			expect(codec.deserialize('false')).toBe(false)
-			expect(codec.deserialize('1')).toBe(true)
-			expect(codec.deserialize('0')).toBe(false)
+			const parser = paramBoolean()
+			expect(parser.stringify(true)).toBe('true')
+			expect(parser.parse('true')).toBe(true)
+			expect(parser.parse('false')).toBe(false)
+			expect(parser.parse('1')).toBe(true)
+			expect(parser.parse('0')).toBe(false)
 		})
 
 		it('throws on invalid input', () => {
-			expect(() => paramBoolean().deserialize('yes')).toThrow()
+			expect(() => paramBoolean().parse('yes')).toThrow()
 		})
 	})
 
 	describe('paramEnum', () => {
 		it('round-trips allowed values', () => {
-			const codec = paramEnum(['asc', 'desc'] as const)
-			expect(codec.serialize('asc')).toBe('asc')
-			expect(codec.deserialize('desc')).toBe('desc')
+			const parser = paramEnum(['asc', 'desc'] as const)
+			expect(parser.stringify('asc')).toBe('asc')
+			expect(parser.parse('desc')).toBe('desc')
 		})
 
 		it('throws on values outside the set', () => {
-			const codec = paramEnum(['asc', 'desc'] as const)
-			expect(() => codec.deserialize('sideways')).toThrow()
+			const parser = paramEnum(['asc', 'desc'] as const)
+			expect(() => parser.parse('sideways')).toThrow()
 		})
 	})
 
 	describe('paramArray', () => {
 		it('round-trips arrays and omits empty', () => {
-			const codec = paramArray(paramString())
-			expect(codec.serialize(['a', 'b'])).toBe('a,b')
-			expect(codec.deserialize('a,b')).toEqual(['a', 'b'])
-			expect(codec.serialize([])).toBeNull()
-			expect(codec.deserialize('')).toEqual([])
+			const parser = paramArray(paramString())
+			expect(parser.stringify(['a', 'b'])).toBe('a,b')
+			expect(parser.parse('a,b')).toEqual(['a', 'b'])
+			expect(parser.stringify([])).toBeNull()
+			expect(parser.parse('')).toEqual([])
 		})
 
 		it('protects the separator inside item values', () => {
-			const codec = paramArray(paramString())
-			const encoded = codec.serialize(['a,b', 'c'])
+			const parser = paramArray(paramString())
+			const encoded = parser.stringify(['a,b', 'c'])
 			expect(encoded).not.toBeNull()
-			expect(codec.deserialize(encoded ?? '')).toEqual(['a,b', 'c'])
+			expect(parser.parse(encoded ?? '')).toEqual(['a,b', 'c'])
 		})
 
-		it('round-trips numbers via a nested codec', () => {
-			const codec = paramArray(paramNumber())
-			expect(codec.deserialize('1,2,3')).toEqual([1, 2, 3])
+		it('round-trips numbers via a nested parser', () => {
+			const parser = paramArray(paramNumber())
+			expect(parser.parse('1,2,3')).toEqual([1, 2, 3])
 		})
 	})
 
 	describe('paramJson', () => {
 		it('round-trips objects', () => {
-			const codec = paramJson<{ a: number; b: string }>()
+			const parser = paramJson<{ a: number; b: string }>()
 			const value = { a: 1, b: 'x' }
-			const raw = codec.serialize(value)
+			const raw = parser.stringify(value)
 			expect(raw).not.toBeNull()
-			expect(codec.deserialize(raw ?? '')).toEqual(value)
+			expect(parser.parse(raw ?? '')).toEqual(value)
+		})
+	})
+
+	describe('paramDate', () => {
+		it('round-trips a Date via ISO', () => {
+			const parser = paramDate()
+			const date = new Date('2026-06-10T00:00:00.000Z')
+			expect(parser.stringify(date)).toBe('2026-06-10T00:00:00.000Z')
+			expect(parser.parse('2026-06-10T00:00:00.000Z').getTime()).toBe(date.getTime())
+		})
+
+		it('throws on an invalid date string', () => {
+			expect(() => paramDate().parse('not-a-date')).toThrow()
+		})
+	})
+
+	describe('paramBigInt', () => {
+		it('round-trips bigints', () => {
+			const parser = paramBigInt()
+			expect(parser.stringify(42n)).toBe('42')
+			expect(parser.parse('42')).toBe(42n)
+		})
+
+		it('throws on invalid input', () => {
+			expect(() => paramBigInt().parse('x')).toThrow()
+		})
+	})
+
+	describe('resolveParser (auto)', () => {
+		it('resolves built-in brands from runtime values', () => {
+			expect(resolveParser('a', 'f').stringify('a')).toBe('a')
+			expect(resolveParser(1, 'f').stringify(2)).toBe('2')
+			expect(resolveParser(true, 'f').stringify(false)).toBe('false')
+			expect(resolveParser(1n, 'f').stringify(3n)).toBe('3')
+			expect(resolveParser(new Date('2026-01-01T00:00:00.000Z'), 'f').stringify(new Date('2026-01-01T00:00:00.000Z'))).toBe(
+				'2026-01-01T00:00:00.000Z',
+			)
+			expect(resolveParser(['a', 'b'], 'f').stringify(['a', 'b'])).toBe('a,b')
+		})
+
+		it('throws naming the field for unresolvable values', () => {
+			expect(() => resolveParser(null, 'data')).toThrow(/data/)
+			expect(() => resolveParser({ a: 1 }, 'data')).toThrow(/data/)
+			expect(() => resolveParser(new Set(), 'data')).toThrow(/data/)
+		})
+
+		it('throws for an empty array (no item brand to infer)', () => {
+			expect(() => resolveParser([], 'tags')).toThrow(/tags/)
 		})
 	})
 
 	describe('round-trip contract', () => {
-		it('serialize(deserialize(serialize(v))) is stable for every codec', () => {
-			const cases: { codec: { serialize: (v: never) => string | null; deserialize: (raw: string) => unknown }; value: unknown }[] = [
-				{ codec: paramString(), value: 'hello' },
-				{ codec: paramNumber(), value: 42 },
-				{ codec: paramBoolean(), value: true },
-				{ codec: paramEnum(['asc', 'desc'] as const), value: 'asc' },
-				{ codec: paramArray(paramNumber()), value: [1, 2, 3] },
-				{ codec: paramJson<{ a: number }>(), value: { a: 1 } },
+		it('stringify(parse(stringify(v))) is stable for every parser', () => {
+			const cases: { parser: Param<unknown>; value: unknown }[] = [
+				{ parser: paramString(), value: 'hello' },
+				{ parser: paramNumber(), value: 42 },
+				{ parser: paramBoolean(), value: true },
+				{ parser: paramEnum(['asc', 'desc'] as const), value: 'asc' },
+				{ parser: paramArray(paramNumber()), value: [1, 2, 3] },
+				{ parser: paramJson<{ a: number }>(), value: { a: 1 } },
+				{ parser: paramBigInt(), value: 7n },
 			]
 
-			for (const { codec, value } of cases) {
-				const first = codec.serialize(value as never)
+			for (const { parser, value } of cases) {
+				const first = parser.stringify(value)
 				expect(first).not.toBeNull()
-				const decoded = codec.deserialize(first ?? '')
-				const second = codec.serialize(decoded as never)
+				const decoded = parser.parse(first ?? '')
+				const second = parser.stringify(decoded)
 				expect(second).toBe(first)
 			}
 		})

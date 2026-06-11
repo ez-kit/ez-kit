@@ -1,52 +1,66 @@
-import type { PersistedValues, SearchParamsLayout } from '../types'
+import { canonicalStringify, nestedPath, readNested, setNested } from './nested'
 
-/** Stable-key-order JSON so the engine's equality guard is reliable. */
-function canonicalStringify(values: PersistedValues): string {
-	const sortedKeys = Object.keys(values).sort()
-	const ordered: PersistedValues = {}
-	for (const key of sortedKeys) {
-		ordered[key] = values[key]
-	}
-	return JSON.stringify(ordered)
-}
+import type { FieldValues, SearchParamsLayout } from '../types'
 
 /**
- * Bundles all persisted fields into one JSON-encoded key (`?filters={"q":"a","sort":"asc"}`).
- * Compact and collision-free across multiple stores; trades single-param interop.
+ * Bundles all persisted fields into one JSON-encoded key, mirroring their paths as a nested
+ * object of stringified leaves (`?filters={"price":{"min":"0"}}`). Compact and collision-free
+ * across multiple stores; trades single-param interop. `absolute` is ignored (the nesting is
+ * the structure).
  */
 export function json(key: string): SearchParamsLayout {
 	return {
+		ignoresAbsolute: true,
+
 		ownedKeys: () => [key],
 
 		read: (params, fields) => {
+			const values: FieldValues = new Map()
 			if (!params.has(key)) {
-				return {}
+				return values
 			}
 			let parsed: unknown
 			try {
 				parsed = JSON.parse(params.get(key) ?? '')
 			} catch {
-				return {}
+				return values
 			}
 			if (parsed === null || typeof parsed !== 'object') {
-				return {}
+				return values
 			}
-			const source = parsed as Record<string, unknown>
-			const values: PersistedValues = {}
-			for (const name of Object.keys(fields)) {
-				if (fields[name] && name in source) {
-					values[name] = source[name]
+			for (const field of fields) {
+				const raw = readNested(parsed, nestedPath(field))
+				if (raw === undefined) {
+					continue
+				}
+				try {
+					values.set(field, field.parser.parse(raw))
+				} catch {
+					// Invalid value — leave absent so the field keeps its default.
 				}
 			}
 			return values
 		},
 
-		write: (params, values) => {
+		write: (params, values, fields) => {
 			const next = new URLSearchParams(params)
-			if (Object.keys(values).length === 0) {
+			const root: Record<string, unknown> = {}
+			let any = false
+			for (const field of fields) {
+				if (!values.has(field)) {
+					continue
+				}
+				const encoded = field.parser.stringify(values.get(field))
+				if (encoded === null) {
+					continue
+				}
+				setNested(root, nestedPath(field), encoded)
+				any = true
+			}
+			if (!any) {
 				next.delete(key)
 			} else {
-				next.set(key, canonicalStringify(values))
+				next.set(key, canonicalStringify(root))
 			}
 			return next
 		},

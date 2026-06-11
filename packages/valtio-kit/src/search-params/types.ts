@@ -1,56 +1,63 @@
 /**
- * Per-field coder/decoder: converts one typed store value to/from a URL string.
+ * Per-field parser: converts one typed store value to/from a URL string.
  *
- * Contract (round-trip stability): for any value `v`, `deserialize(serialize(v))`
- * must deep-equal `v`, and `serialize(deserialize(s))` must be stable. This is what
+ * Contract (round-trip stability): for any value `v`, `parse(stringify(v))`
+ * must deep-equal `v`, and `stringify(parse(s))` must be stable. This is what
  * lets the sync engine break the feedback loop by comparing serialized forms.
  */
-export type ParamCodec<T> = {
+export type Param<T> = {
 	/** Encode a value to its URL string form. Return `null` to omit the parameter. */
-	serialize(value: T): string | null
+	stringify(value: T): string | null
 	/** Decode a raw URL string back to a value. May throw; callers fall back to the default. */
-	deserialize(raw: string): T
+	parse(raw: string): T
 	/** Optional equality used to break the loop. Defaults to `Object.is`. */
 	equals?(a: T, b: T): boolean
 }
 
-/** Map of persisted fields to their codecs. Partial — only listed fields are synced. */
-export type SearchParamsFields<T> = {
-	[K in keyof T]?: ParamCodec<T[K]>
+/** Type-erased parser used inside the engine/layouts. */
+export type AnyParam = Param<unknown>
+
+/**
+ * A resolved persisted field: the path into the proxy, the parser for its leaf value,
+ * and how its key is placed in the URL. Produced by both the decorator and accessor fronts.
+ */
+export type FieldDescriptor = {
+	/** Ordered property segments from the store root to the leaf (e.g. `['filters','price','min']`). */
+	path: string[]
+	/** Parser for the leaf value. */
+	parser: AnyParam
+	/** Override for the leaf segment of the URL key (relative) — defaults to the last path segment. */
+	key?: string
+	/** Pin to an exact top-level URL key, ignoring ancestor path segments (flat layout only). */
+	absolute?: boolean
 }
 
-/** Type-erased codec used inside the engine/layouts. */
-export type AnyParamCodec = ParamCodec<unknown>
-
-/** Type-erased fields map the engine passes to layouts. */
-export type FieldsRecord = Record<string, AnyParamCodec | undefined>
-
-/** A typed snapshot of just the persisted fields (the subset the engine owns). */
-export type PersistedValues = Record<string, unknown>
+/** Map of fields (by descriptor identity) to a value. Used between engine and layouts. */
+export type FieldValues = Map<FieldDescriptor, unknown>
 
 /**
  * Strategy that maps the set of persisted fields onto URL param keys.
  * `flat()` / `json(key)` / `qs()` each return one of these.
  */
 export type SearchParamsLayout = {
-	/** URL keys this layout owns, given the persisted field names. Used for merge/cleanup. */
-	ownedKeys(fieldNames: string[]): string[]
-	/** Read owned params into a partial values object (only fields actually present in the URL). */
-	read(params: URLSearchParams, fields: FieldsRecord): PersistedValues
+	/** URL keys this layout owns, given the field descriptors. Used for merge/cleanup. */
+	ownedKeys(fields: FieldDescriptor[]): string[]
+	/** Read owned params into a map of the fields actually present in the URL. */
+	read(params: URLSearchParams, fields: FieldDescriptor[]): FieldValues
 	/**
 	 * Write `values` (only the fields that should appear in the URL) into a clone of `params`,
 	 * deleting any owned key whose field is absent from `values`, preserving foreign keys.
 	 */
-	write(params: URLSearchParams, values: PersistedValues, fields: FieldsRecord): URLSearchParams
+	write(params: URLSearchParams, values: FieldValues, fields: FieldDescriptor[]): URLSearchParams
+	/** When true, `absolute` field placement is not honoured (json/qs); the engine warns. */
+	ignoresAbsolute?: boolean
 }
 
 /** How a URL update affects browser history. */
 export type SearchParamsHistory = 'push' | 'replace'
 
-/** Second argument to `proxyWithSearchParams` / `createSearchParamsStore`. */
-export type SearchParamsOptions<T> = {
-	/** Which fields are persisted, and with which codecs. */
-	fields: SearchParamsFields<T>
+/** Global sync options — the second argument to `withSearchParams` / `withSearchParamsFields`. */
+export type SearchParamsOptions = {
 	/** Layout strategy. Defaults to `flat()`. */
 	layout?: SearchParamsLayout
 	/** Default history behaviour for writes. Defaults to `'replace'`. */

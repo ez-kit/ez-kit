@@ -1,6 +1,6 @@
 ---
 title: Search params sync
-description: Two-way sync between a Valtio store and the URL search params — type-safe codecs, pluggable layouts, push/replace history control, react-router and Next adapters, and an SSR-correct form.
+description: Two-way sync between a Valtio store and the URL — class field decorators, an accessor API for plain proxies, a path-based engine that preserves identity, auto-resolved parsers, pluggable layouts, push/replace history, and SSR-correct rendering.
 ---
 
 # Search params sync
@@ -19,98 +19,130 @@ Valtio is the **source of truth**; the URL is a **mirror**.
 
 - **proxy → URL**: a `subscribe` watches the store; changed fields are coalesced into one navigation per tick (throttled, `replace` by default).
 - **URL → proxy**: the adapter's reactive read pushes external URL changes back into the store, writing only the diff — pulls never write the URL, so Back/forward and third-party writes are safe.
-- **Loop breaking**: each direction writes only when the value differs in a normalized form (serialized string for `flat`, canonical JSON for `json`). Codecs carry a round-trip contract so the feedback loop terminates.
+- **Identity-preserving writes**: fields are addressed by **path** (`filters.price.min`). A URL pull assigns only the **leaf** — nested objects, class instances, and computed getters keep their identity. The engine never replaces a whole subtree.
+- **Loop breaking**: each direction writes only when the value differs in a normalized form. Parsers carry a round-trip contract so the feedback loop terminates.
 
 A single coordinator — `StoreSearchParamsProvider` — is the only component that reads and writes the URL. It connects every store, merges their owned keys, and preserves foreign keys it doesn't own.
 
-## Two forms
+## Two ways to declare fields
 
-| Form | Scope | Hydration | Use when |
-| --- | --- | --- | --- |
-| [`proxyWithSearchParams`](#proxywithsearchparams) | module/singleton | client-first (effect) | client-rendered SPAs; trivial to adopt |
-| [`createSearchParamsStore`](#createsearchparamsstore) | per-request (context) | synchronous, server + client | SSR/RSC; correct HTML, no flash |
+You bring your own proxy and declare which fields sync. There are two fronts on one engine:
 
-Both sit on the same engine (codecs, layouts, coordinator) and must be rendered inside a `StoreSearchParamsProvider`.
+| Front | You write | Best for |
+| --- | --- | --- |
+| [Decorators](#decorators-class-stores) — `@searchParam` + `withSearchParams` | classes | entity models, composition, inheritance |
+| [Accessor](#accessor-plain-proxies) — `field()` + `withSearchParamsFields` | plain `proxy({…})` | quick stores; no build-time decorator support |
 
-## `proxyWithSearchParams`
+Both produce the same path-based descriptors and feed the same engine, so layouts, history, adapters, and SSR behave identically. For request-scoped SSR, wrap either in [`createSearchParamsStore`](#ssr-createsearchparamsstore).
 
-The module-global form. Create a proxy whose listed fields mirror the URL, mutate it directly, and read it with Valtio's `useSnapshot`. It auto-registers with the coordinator.
+## Decorators (class stores)
+
+Decorate the fields you want synced. The property name becomes the URL key, and the parser is **auto-resolved from the field's value** — so primitives need no parser at all.
 
 ```tsx
-import { proxyWithSearchParams, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
+import { searchParam, withSearchParams } from '@ez-kit/valtio-kit/search-params'
+import { proxy } from 'valtio'
 
-export const filters = proxyWithSearchParams(
-	{ q: '', page: 1 },
-	{ fields: { q: paramString(), page: paramNumber() } },
-)
+class Filters {
+	@searchParam() q = ''
+	@searchParam() page = 1          // number parser auto-resolved
+	@searchParam() inStock = false   // boolean parser auto-resolved
+}
 
-// anywhere: mutate the proxy
+export const filters = withSearchParams(proxy(new Filters()))
+
+// mutate the proxy directly
 filters.q = 'boots'
 filters.page = 2
 ```
 
+`withSearchParams` takes an **already-created** proxy and returns it, augmented with a `$searchParams` control. Because you bring the proxy, it composes with the rest of the valtio ecosystem (`proxyWithHistory`, `derive`, valtio-yjs, …).
+
+### Composition & inheritance
+
+Nested class instances are discovered automatically — no decorator on the composed field needed. Paths nest to match the shape, and inherited fields come along via the prototype chain.
+
 ```tsx
-import { useSnapshot } from 'valtio'
-import { StoreSearchParamsProvider } from '@ez-kit/valtio-kit/search-params'
-import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
-
-function App() {
-	return (
-		<StoreSearchParamsProvider adapter={reactRouterAdapter}>
-			<Filters />
-		</StoreSearchParamsProvider>
-	)
+class Price {
+	@searchParam() min = 0
+	@searchParam() max = 100
+}
+class Filters {
+	@searchParam() q = ''
+	price = new Price()           // composed — auto-recursed
+}
+class ProductFilters extends Filters {
+	@searchParam() onSale = false // inherited q + price.* come too
 }
 
-function Filters() {
-	const snap = useSnapshot(filters)
-	return <input value={snap.q} onChange={(e) => (filters.q = e.target.value)} />
-}
+withSearchParams(proxy(new ProductFilters()))
+// URL keys: q, price.min, price.max, onSale
 ```
 
-<Callout type="warn">
-	Module-global proxies are shared across SSR requests, so `proxyWithSearchParams` is **module/singleton
-	scope, client-first**. On the server it renders defaults and hydrates from the URL in an effect (a deep-link
-	flash is possible). For SSR-correct rendering, use [`createSearchParamsStore`](#createsearchparamsstore).
-</Callout>
+The walk recurses only into objects whose class declares `@searchParam` fields; `Date`, `Map`, `Set`, arrays, and plain objects are treated as leaves. Cyclic graphs terminate safely.
 
-## `createSearchParamsStore`
+## Accessor (plain proxies)
 
-The SSR-correct, request-scoped form. It fuses the [`createContextStore`](./create-context-store) lifecycle with the sync engine: the proxy is created per `<Provider>` and **seeded synchronously from the URL** — `defaultValue` first, then URL overrides — identically on server and client. The first paint already reflects the URL: no flash, no hydration mismatch.
-
-<LivePreview path='valtio-kit/search-params-flat' title='Flat layout — q + page' />
+No classes, no build-time decorator support required. Pass a builder that declares each field with a typed selector; the parser type follows the selected leaf, and you get autocomplete on the store shape.
 
 ```tsx
-import {
-	createSearchParamsStore,
-	flat,
-	paramString,
-	paramNumber,
-} from '@ez-kit/valtio-kit/search-params'
+import { field, withSearchParamsFields, paramString } from '@ez-kit/valtio-kit/search-params'
 import { proxy } from 'valtio'
 
-const filtersStore = createSearchParamsStore<{ q: string; page: number }>(
-	() => proxy({ q: '', page: 1 }),
-	{ fields: { q: paramString(), page: paramNumber() }, layout: flat() },
-)
+const store = proxy({ filters: { q: '', page: 1 } })
+
+withSearchParamsFields(store, (field) => [
+	field((s) => s.filters.q, paramString()), // explicit parser
+	field((s) => s.filters.page),             // auto-resolved (number)
+])
+// URL keys: filters.q, filters.page
 ```
 
-Like `createContextStore`, the factory returns a Valtio `proxy` — keep your mutating actions on it (`setQ`, `nextPage`, …) and read with `useSnapshot`, so components never mutate a hook-returned value.
+The selector supports **direct property access only** (`s => s.a.b.c`) — it's recorded to derive the path, not executed for its value.
 
-It returns the same surface as `createContextStore` — `Provider`, `useStore`, `useSnapshot`, `Item` — so reads come from snapshots and writes mutate the proxy. Each `Provider` is an isolated instance, so two of them never collide (unlike the global `proxyWithSearchParams` registry).
+## TypeScript & build setup
 
-## Codecs
+`@searchParam` uses **Stage 3 (standard) decorators** with `Symbol.metadata`. No `reflect-metadata`, no `emitDecoratorMetadata`.
 
-A codec converts one typed field to/from a URL string. They never throw on read — invalid input falls back to the field's default.
+```jsonc
+// tsconfig.json — TypeScript ≥ 5.2
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		// Do NOT set experimentalDecorators — Stage 3 is the default and what this package needs.
+		// "experimentalDecorators": false
+	}
+}
+```
 
-| Codec | Type | Notes |
+- **`experimentalDecorators` must be off** (or absent). The legacy decorator mode is incompatible.
+- **`Symbol.metadata`** is read at bind time. Modern bundlers (esbuild/Vite, swc, Babel `@babel/plugin-proposal-decorators` v2023-05, tsc) emit it. On runtimes without it, add a one-line polyfill at your entry:
+
+```ts
+;(Symbol as { metadata?: symbol }).metadata ??= Symbol.for('Symbol.metadata')
+```
+
+- **Decorators are applied in your code**, so your bundler must transpile them. If you can't enable Stage 3 decorators, use the [accessor API](#accessor-plain-proxies) instead — it needs **no transpilation** and is fully equivalent.
+
+<Callout type="info">
+	Same engine, two fronts: `@searchParam` for classes, `field()` for plain proxies. Pick per project; mix per
+	store if you like.
+</Callout>
+
+## Parsers
+
+A parser converts one typed leaf to/from a URL string. Reads never throw into render — invalid input falls back to the field's default.
+
+| Parser | Type | Notes |
 | --- | --- | --- |
 | `paramString()` | `string` | identity |
 | `paramNumber()` | `number` | finite numbers; non-finite omitted |
-| `paramBoolean()` | `boolean` | `1`/`0` |
+| `paramBoolean()` | `boolean` | also reads `1`/`0` |
+| `paramBigInt()` | `bigint` | decimal string |
+| `paramDate()` | `Date` | ISO string |
 | `paramEnum(values)` | `T` | rejects values outside the set |
-| `paramArray(item)` | `T[]` | delimited list of an inner codec |
-| `paramJson()` | `T` | JSON value (objects/arrays) |
+| `paramArray(item)` | `T[]` | delimited list of an inner parser |
+| `paramJson()` | `T` | JSON value (plain objects/arrays) |
 
 ```ts
 import { paramEnum, paramArray, paramString } from '@ez-kit/valtio-kit/search-params'
@@ -119,11 +151,31 @@ const sort = paramEnum(['asc', 'desc'] as const)
 const tags = paramArray(paramString())
 ```
 
-Each codec satisfies a round-trip contract — `deserialize(serialize(v))` deep-equals `v` — which is what lets the engine break the proxy⇄URL loop by comparing serialized forms. Provide an `equals` on a custom codec if `Object.is` isn't right for your type.
+Each parser satisfies a round-trip contract — `parse(stringify(v))` deep-equals `v` — which lets the engine break the proxy⇄URL loop by comparing serialized forms. Provide an `equals` on a custom parser if `Object.is` isn't right for your type.
+
+### Auto-resolution
+
+When you omit a parser, one is picked from the field's **runtime value** at bind time:
+
+| Value brand | Parser |
+| --- | --- |
+| `string` | `paramString()` |
+| `number` | `paramNumber()` |
+| `boolean` | `paramBoolean()` |
+| `bigint` | `paramBigInt()` |
+| `Date` instance | `paramDate()` |
+| array (non-empty) | `paramArray(<item>)`, item inferred from the first element |
+
+Anything else — `null`, `undefined`, a plain object, `Set`/`Map`, an empty array, or a class instance with no `@searchParam` fields — **throws at bind** with the field name and asks for an explicit parser:
+
+```ts
+@searchParam({ parser: paramJson() }) coords = { lat: 0, lng: 0 } // plain object → explicit
+@searchParam() createdAt = new Date()                              // Date → auto
+```
 
 ### Zod validation
 
-`zodParam(schema)` turns any Zod schema into a codec — parsing **is** validation, and a failed parse gracefully falls back to the default. Ideal for bounded or shaped deep links.
+`zodParam(schema)` turns any Zod schema into a parser — parsing **is** validation, and a failed parse gracefully falls back to the default.
 
 <LivePreview path='valtio-kit/search-params-zod' title='Zod-validated rating (1–5)' />
 
@@ -134,30 +186,55 @@ import { z } from 'zod'
 const rating = zodParam(z.coerce.number().int().min(1).max(5))
 ```
 
+## Key placement
+
+By default a field's URL key is its **joined path** — collision-free across nested shapes:
+
+```
+filters.price.min  →  ?filters.price.min=0
+```
+
+Two options override that, on both fronts (`@searchParam({ … })` or `field(…, { … })`):
+
+| Option | Effect | Example |
+| --- | --- | --- |
+| `key` | rename the **leaf** segment (keeps the ancestor prefix) | `{ key: 'query' }` on `filters.q` → `?filters.query` |
+| `absolute` | pin an **exact top-level** key, ignoring ancestors | `{ key: 'q', absolute: true }` on `filters.search.q` → `?q` |
+
+```tsx
+class Search {
+	@searchParam({ key: 'q', absolute: true }) query = ''
+}
+// wherever Search is nested, it always writes ?q=…
+```
+
+`absolute` is what lets a deeply-nested field own a short, shareable key regardless of where its class sits. Collisions from `absolute` are your call — the engine flags only statically-known duplicates at bind. `absolute` applies to the `flat` layout; under `json`/`qs` the nesting is the structure, so it's ignored (with a dev warning).
+
 ## Layouts
 
-A layout maps the set of persisted fields onto URL keys. Pass one as `layout`; the default is `flat()`.
+A layout maps the persisted fields onto URL keys. Pass one as `layout`; the default is `flat()`.
 
 ### `flat()` — one key per field
 
 The default. Each field gets its own query key (`?q=boots&page=2`), so arbitrary components can read individual params with `useSearchParams().get('q')`. Pass `{ prefix }` to namespace keys.
 
+<LivePreview path='valtio-kit/search-params-flat' title='Flat layout — q + page' />
+
 ### `json(key)` — whole state under one key
 
-Packs every field into one canonical-JSON param. Compact and collision-free for multiple stores, at the cost of single-param interop. Canonical (stable) key ordering keeps the equality guard reliable.
+Packs every field into one canonical-JSON param, mirroring field paths as a nested object of stringified leaves. Compact and collision-free for multiple stores, at the cost of single-param interop.
 
 <LivePreview path='valtio-kit/search-params-json' title='JSON layout — one key carries everything' />
 
 ```ts
 import { json } from '@ez-kit/valtio-kit/search-params'
 
-// fields packed into ?state={"view":"grid","compact":false}
-layout: json('state')
+layout: json('state') // ?state={"view":"grid","compact":"false"}
 ```
 
 ### `qs()` — arrays & nesting
 
-The `qs()` encoder (opt-in subpath, requires `qs`) serializes arrays and nested structures into readable keys like `tags[]=sale`, instead of JSON-encoding them.
+The `qs()` encoder (opt-in subpath, requires `qs`) serializes nested paths into bracket keys like `filters[price][min]=0`, instead of JSON-encoding them.
 
 <LivePreview path='valtio-kit/search-params-qs' title='qs encoder — array fields' />
 
@@ -174,19 +251,50 @@ layout: qs()
 
 ## History control
 
-URL writes default to `history: 'replace'` so high-frequency fields (text inputs) don't spam the history stack. Override per write with the `$searchParams` control attached to the proxy:
+URL writes default to `history: 'replace'` so high-frequency fields (text inputs) don't spam the history stack. Override per write with the `$searchParams` control attached to the proxy. Several mutations inside one call coalesce into a **single** history entry:
 
 <LivePreview path='valtio-kit/search-params-history' title='push vs replace' />
 
 ```ts
-// advancing a wizard: stack a Back-button-able entry
-store.$searchParams.push(() => (store.step = 'review'))
+// advancing a wizard: one Back-button-able entry, even with several changes
+store.$searchParams.push(() => {
+	store.step = 'review'
+	store.touched = true
+})
 
 // going back: replace, don't stack
 store.$searchParams.replace(() => (store.step = 'profile'))
 ```
 
 Set a different default for the whole store with the `history` option, and tune write frequency with `throttleMs`. `clearOnDefault` (on by default) omits a param when its value equals the field default, keeping URLs clean.
+
+## SSR (`createSearchParamsStore`)
+
+The request-scoped, SSR-correct form. It fuses the [`createContextStore`](./create-context-store) lifecycle with the sync engine: the proxy is created per `<Provider>` and **seeded synchronously from the URL** — `defaultValue` first, then URL overrides — identically on server and client. The first paint already reflects the URL: no flash, no hydration mismatch.
+
+Fields come from `@searchParam` decorators on the factory's instance, or from an accessor `fields` builder:
+
+<LivePreview path='valtio-kit/search-params-ssr' title='Synchronous URL seed — opens on ?tab=billing' />
+
+```tsx
+import { createSearchParamsStore, flat, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
+import { proxy } from 'valtio'
+
+// accessor form
+const filtersStore = createSearchParamsStore<{ q: string; page: number }>(
+	() => proxy({ q: '', page: 1 }),
+	{ fields: (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())], layout: flat() },
+)
+
+// or class form — omit `fields`, decorators are discovered on the instance
+class Filters {
+	@searchParam() q = ''
+	@searchParam() page = 1
+}
+const classStore = createSearchParamsStore(() => proxy(new Filters()))
+```
+
+It returns the same surface as `createContextStore` — `Provider`, `useStore`, `useSnapshot`, `Item`. Each `Provider` is an isolated instance, so two never collide.
 
 ## Router adapters
 
@@ -212,25 +320,6 @@ import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
 
 For the App Router, writes go through `router.replace`/`push`; client-held Valtio state survives the RSC refetch.
 
-### SSR-correct deep links
-
-Pair `createSearchParamsStore` with `nextAdapter` for HTML that reflects the URL on the first byte:
-
-<LivePreview path='valtio-kit/search-params-ssr' title='Synchronous URL seed — opens on ?tab=billing' />
-
-```tsx
-// app/layout.tsx (or a client boundary near the root)
-'use client'
-import { StoreSearchParamsProvider } from '@ez-kit/valtio-kit/search-params'
-import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
-
-export function Providers({ children }: { children: React.ReactNode }) {
-	return <StoreSearchParamsProvider adapter={nextAdapter}>{children}</StoreSearchParamsProvider>
-}
-```
-
-Because the store seeds synchronously from the request URL, the example above opens on `billing` (its seeded deep link) rather than the `overview` default — with no client flash.
-
 ### Writing an adapter
 
 Any router fits by implementing three members:
@@ -249,7 +338,9 @@ The live demos on this page use exactly this contract with an in-memory adapter,
 
 ## Caveats
 
-- **`proxyWithSearchParams` on the server** renders defaults and hydrates in an effect — accept a deep-link flash, or switch to `createSearchParamsStore`. Never hydrate a module proxy on the server.
-- **Non-canonical custom codecs** can loop — honor the round-trip contract (or supply `equals`). `json`/`qs` use stable ordering for you.
+- **Decorators need transpilation** in your toolchain (Stage 3 + `Symbol.metadata`). No build step for decorators? Use the accessor API — it's equivalent and needs none.
+- **Auto-resolution can't read your TS types**, only runtime values — `null`/`undefined`/plain objects/`Set`/`Map`/empty arrays/class leaves need an explicit `parser`.
+- **A parser on a class-instance node throws at bind** — sync its fields individually (that's what composition is for) rather than blobbing the whole instance.
+- **Non-canonical custom parsers can loop** — honor the round-trip contract (or supply `equals`). `json`/`qs` use stable ordering for you.
 - **`json`/`qs` break single-param interop** — use `flat()` when other components need to read individual keys.
 - **Next App Router** lacks true shallow routing; `nextAdapter` re-runs server components on write. Client Valtio state survives the refetch.

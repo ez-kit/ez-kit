@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { MemoryRouter } from 'react-router'
-import { useSnapshot } from 'valtio'
+import { proxy, useSnapshot } from 'valtio'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { withSearchParamsFields } from '../accessor'
 import { paramString } from '../codecs'
 import { clearRegistry } from '../engine/registry'
 import { StoreSearchParamsProvider } from '../provider'
-import { proxyWithSearchParams } from '../proxy-with-search-params'
 
 import { reactRouterAdapter } from './react-router'
 
@@ -17,7 +17,7 @@ describe('@ez-kit/valtio-kit reactRouterAdapter', () => {
 	})
 
 	it('hydrates from the router location and writes back', async () => {
-		const store = proxyWithSearchParams({ q: '' }, { fields: { q: paramString() } })
+		const store = withSearchParamsFields(proxy({ q: '' }), (field) => [field((s) => s.q, paramString())])
 
 		function View(): ReactElement {
 			const snap = useSnapshot(store)

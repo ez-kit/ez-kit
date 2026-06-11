@@ -1,31 +1,44 @@
 export {
+	type FieldBuilder,
+	type FieldOptions,
+	type FieldsBuilder,
+	type FieldSpec,
+	withSearchParamsFields,
+} from './accessor'
+export {
 	paramArray,
 	type ParamArrayOptions,
+	paramBigInt,
 	paramBoolean,
+	paramDate,
 	paramEnum,
 	paramJson,
 	paramNumber,
 	paramString,
 } from './codecs'
+export { resolveParser } from './codecs/auto'
 export {
 	createSearchParamsStore,
 	type CreateSearchParamsStoreResult,
 } from './create-search-params-store'
+export {
+	searchParam,
+	type SearchParamOptions,
+	withSearchParams,
+} from './decorators'
 export { flat, type FlatLayoutOptions, json } from './layouts'
-export { proxyWithSearchParams } from './proxy-with-search-params'
 export {
 	StoreSearchParamsProvider,
 	type StoreSearchParamsProviderProps,
 	useSearchParamsEngine,
 } from './provider'
 export type {
-	AnyParamCodec,
-	FieldsRecord,
-	ParamCodec,
-	PersistedValues,
+	AnyParam,
+	FieldDescriptor,
+	FieldValues,
+	Param,
 	RouterAdapter,
 	SearchParamsControl,
-	SearchParamsFields,
 	SearchParamsHistory,
 	SearchParamsLayout,
 	SearchParamsOptions,

@@ -6,7 +6,7 @@ import { paramNumber, paramString } from '../codecs'
 import { createBinding, type SyncBinding } from './binding'
 import { createSyncEngine, type EnginePort } from './engine'
 
-import type { SearchParamsOptions } from '../types'
+import type { FieldDescriptor, SearchParamsOptions } from '../types'
 
 function createFakePort() {
 	let params = new URLSearchParams()
@@ -30,12 +30,8 @@ function createFakePort() {
 	}
 }
 
-function bind<T extends object>(store: T, options: SearchParamsOptions<T>): SyncBinding {
-	const defaults: Record<string, unknown> = {}
-	for (const name of Object.keys(options.fields)) {
-		defaults[name] = (store as Record<string, unknown>)[name]
-	}
-	return createBinding(store, options, defaults)
+function bind(store: object, fields: FieldDescriptor[], options: SearchParamsOptions = {}): SyncBinding {
+	return createBinding(store, fields, options)
 }
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
@@ -47,7 +43,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		const engine = createSyncEngine(fake.port)
 		const store = proxy({ q: '' })
 
-		engine.connect(bind(store, { fields: { q: paramString() } }))
+		engine.connect(bind(store, [{ path: ['q'], parser: paramString() }]))
 
 		expect(store.q).toBe('shoes')
 		engine.dispose()
@@ -57,7 +53,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		const fake = createFakePort()
 		const engine = createSyncEngine(fake.port)
 		const store = proxy({ q: '' })
-		engine.connect(bind(store, { fields: { q: paramString() } }))
+		engine.connect(bind(store, [{ path: ['q'], parser: paramString() }]))
 
 		store.q = 'shoes'
 		await flush()
@@ -65,7 +61,6 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		expect(fake.search).toBe('q=shoes')
 		expect(fake.calls).toHaveLength(1)
 
-		// A pull of the same params must not produce another write.
 		engine.pull(new URLSearchParams(fake.search))
 		await flush()
 		expect(fake.calls).toHaveLength(1)
@@ -76,7 +71,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		const fake = createFakePort()
 		const engine = createSyncEngine(fake.port)
 		const store = proxy({ id: 1 })
-		engine.connect(bind(store, { fields: { id: paramNumber() } }))
+		engine.connect(bind(store, [{ path: ['id'], parser: paramNumber() }]))
 
 		fake.setExternal('?id=9')
 		engine.pull(new URLSearchParams('?id=9'))
@@ -92,8 +87,8 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		const engine = createSyncEngine(fake.port)
 		const a = proxy({ q: '' })
 		const b = proxy({ items: 0 })
-		engine.connect(bind(a, { fields: { q: paramString() } }))
-		engine.connect(bind(b, { fields: { items: paramNumber() } }))
+		engine.connect(bind(a, [{ path: ['q'], parser: paramString() }]))
+		engine.connect(bind(b, [{ path: ['items'], parser: paramNumber() }]))
 
 		a.q = 'a'
 		b.items = 3
@@ -111,7 +106,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		fake.setExternal('?q=shoes')
 		const engine = createSyncEngine(fake.port)
 		const store = proxy({ q: '' })
-		engine.connect(bind(store, { fields: { q: paramString() } }))
+		engine.connect(bind(store, [{ path: ['q'], parser: paramString() }]))
 
 		store.q = ''
 		await flush()
@@ -124,7 +119,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		const fake = createFakePort()
 		const engine = createSyncEngine(fake.port)
 		const store = proxy({ q: '' })
-		engine.connect(bind(store, { fields: { q: paramString() } }))
+		engine.connect(bind(store, [{ path: ['q'], parser: paramString() }]))
 
 		engine.runWithHistory('push', () => {
 			store.q = 'shoes'
@@ -140,7 +135,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		const fake = createFakePort()
 		const engine = createSyncEngine(fake.port)
 		const store = proxy({ q: '' })
-		engine.connect(bind(store, { fields: { q: paramString() } }))
+		engine.connect(bind(store, [{ path: ['q'], parser: paramString() }]))
 
 		store.q = 'shoes'
 		await flush()
@@ -154,7 +149,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		fake.setExternal('?theme=dark')
 		const engine = createSyncEngine(fake.port)
 		const store = proxy({ q: '' })
-		engine.connect(bind(store, { fields: { q: paramString() } }))
+		engine.connect(bind(store, [{ path: ['q'], parser: paramString() }]))
 
 		store.q = 'shoes'
 		await flush()

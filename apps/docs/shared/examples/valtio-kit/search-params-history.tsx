@@ -39,7 +39,7 @@ const wizardStore = createSearchParamsStore<WizardState>(
 		return state
 	},
 	{
-		fields: { step: paramString() },
+		fields: (field) => [field((s) => s.step, paramString())],
 		// Default writes replace; the control lets a specific mutation opt into a push instead.
 		history: 'replace',
 	},

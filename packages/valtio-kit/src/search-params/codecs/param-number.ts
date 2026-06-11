@@ -1,10 +1,10 @@
-import type { ParamCodec } from '../types'
+import type { Param } from '../types'
 
-/** Codec for finite number fields. Non-finite values are omitted; bad input throws (→ default). */
-export function paramNumber(): ParamCodec<number> {
+/** Parser for finite number fields. Non-finite values are omitted; bad input throws (→ default). */
+export function paramNumber(): Param<number> {
 	return {
-		serialize: (value) => (Number.isFinite(value) ? String(value) : null),
-		deserialize: (raw) => {
+		stringify: (value) => (Number.isFinite(value) ? String(value) : null),
+		parse: (raw) => {
 			if (raw.trim() === '') {
 				throw new Error(`paramNumber: empty value`)
 			}

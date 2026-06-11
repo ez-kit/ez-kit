@@ -37,7 +37,7 @@ const catalogStore = createSearchParamsStore<CatalogState>(
 	{
 		// The qs() layout serialises arrays/nesting with the `qs` library (tags[]=…), so multi-value
 		// fields stay readable in the URL instead of being JSON-encoded.
-		fields: { q: paramString(), tags: paramArray(paramString()) },
+		fields: (field) => [field((s) => s.q, paramString()), field((s) => s.tags, paramArray(paramString()))],
 		layout: qs(),
 	},
 )

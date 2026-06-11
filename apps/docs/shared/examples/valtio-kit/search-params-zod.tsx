@@ -28,7 +28,7 @@ const rangeStore = createSearchParamsStore<RatingState>(
 		})
 		return state
 	},
-	{ fields: { rating: zodParam(ratingSchema) } },
+	{ fields: (field) => [field((s) => s.rating, zodParam(ratingSchema))] },
 )
 
 const { adapter, useSearch } = createMemoryAdapter()

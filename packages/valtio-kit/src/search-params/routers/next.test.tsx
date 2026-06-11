@@ -1,12 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement, useSyncExternalStore } from 'react'
-import { useSnapshot } from 'valtio'
+import { proxy, useSnapshot } from 'valtio'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { withSearchParamsFields } from '../accessor'
 import { paramString } from '../codecs'
 import { clearRegistry } from '../engine/registry'
 import { StoreSearchParamsProvider } from '../provider'
-import { proxyWithSearchParams } from '../proxy-with-search-params'
 
 /**
  * In-memory stand-in for the App Router navigation state. `useSearchParams`/`usePathname`
@@ -73,7 +73,7 @@ describe('@ez-kit/valtio-kit nextAdapter', () => {
 
 	it('hydrates from the URL and writes proxy changes back to the router', async () => {
 		navStore.reset('/', 'q=shoes')
-		const store = proxyWithSearchParams({ q: '' }, { fields: { q: paramString() } })
+		const store = withSearchParamsFields(proxy({ q: '' }), (field) => [field((s) => s.q, paramString())])
 
 		function View(): ReactElement {
 			const snap = useSnapshot(store)
@@ -105,7 +105,7 @@ describe('@ez-kit/valtio-kit nextAdapter', () => {
 	})
 
 	it('pulls external URL changes (back/forward) into the proxy without re-writing', async () => {
-		const store = proxyWithSearchParams({ q: '' }, { fields: { q: paramString() } })
+		const store = withSearchParamsFields(proxy({ q: '' }), (field) => [field((s) => s.q, paramString())])
 
 		function View(): ReactElement {
 			const snap = useSnapshot(store)

@@ -1,9 +1,9 @@
-import type { ParamCodec } from '../types'
+import type { Param } from '../types'
 
-/** Codec for plain string fields. Identity in both directions. */
-export function paramString(): ParamCodec<string> {
+/** Parser for plain string fields. Identity in both directions. */
+export function paramString(): Param<string> {
 	return {
-		serialize: (value) => value,
-		deserialize: (raw) => raw,
+		stringify: (value) => value,
+		parse: (raw) => raw,
 	}
 }

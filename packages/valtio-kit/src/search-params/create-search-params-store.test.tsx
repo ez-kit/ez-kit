@@ -15,7 +15,7 @@ type Filters = { q: string }
 
 const filters = createSearchParamsStore(
 	({ defaultValue }: ContextStoreInit<{ q?: string }>) => proxy<Filters>({ q: defaultValue.q ?? '' }),
-	{ fields: { q: paramString() } },
+	{ fields: (field) => [field((s) => s.q, paramString())] },
 )
 
 function QView(): ReactElement {
