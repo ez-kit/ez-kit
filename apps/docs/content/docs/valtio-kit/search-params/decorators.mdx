@@ -1,0 +1,165 @@
+---
+title: Decorators
+description: The main way to declare URL-synced fields — @searchParam on class properties, with auto-resolved parsers, composition, inheritance, key placement, per-field options, and imperative history control.
+---
+
+# Decorators
+
+Decorate the fields you want synced. The property name becomes the URL key, and the parser is **auto-resolved from the field's value** — so primitives need no parser at all. This is the recommended path for anything shaped like an entity model.
+
+```tsx
+import { searchParam, withSearchParams } from '@ez-kit/valtio-kit/search-params'
+import { proxy } from 'valtio'
+
+class Filters {
+	@searchParam() q = ''
+	@searchParam() page = 1          // number parser auto-resolved
+	@searchParam() inStock = false   // boolean parser auto-resolved
+}
+
+export const filters = withSearchParams(proxy(new Filters()))
+
+// mutate the proxy directly
+filters.q = 'boots'
+filters.page = 2
+```
+
+`withSearchParams` takes an **already-created** proxy and returns it, augmented with a `$searchParams` control. Because you bring the proxy, it composes with the rest of the Valtio ecosystem (`proxyWithHistory`, `derive`, valtio-yjs, …).
+
+<Callout type="info">
+	`withSearchParams` binds a module-level proxy. For request-scoped, SSR-correct instances (one per
+	`<Provider>`, seeded from the URL on the server), use [`createSearchParamsStore`](./valtio-kit/search-params/ssr) —
+	it discovers the same decorators.
+</Callout>
+
+<Callout type="warn">
+	The **interactive demos** on this page are declared with the equivalent [accessor
+	API](./valtio-kit/search-params/fields) — `@searchParam` needs a build-time decorator transform that this
+	in-browser sandbox doesn't run. Same engine, identical URL output; the code blocks show the real decorator
+	syntax.
+</Callout>
+
+## Parsers: auto vs explicit
+
+A primitive field needs nothing — the parser is read from its runtime value at bind time. Non-primitives (enums, JSON objects, custom types) take an explicit `parser`:
+
+```tsx
+import { searchParam, paramEnum, paramJson } from '@ez-kit/valtio-kit/search-params'
+
+type Sort = 'asc' | 'desc'
+
+class Filters {
+	@searchParam() q = ''                                            // auto → string
+	@searchParam() createdAt = new Date()                            // auto → Date
+	@searchParam({ parser: paramEnum<Sort>(['asc', 'desc']) }) sort: Sort = 'asc'
+	@searchParam({ parser: paramJson() }) coords = { lat: 0, lng: 0 } // plain object → explicit
+}
+```
+
+The full parser catalogue, auto-resolution rules, and Zod integration live on the [Parsers](./valtio-kit/search-params/parsers) page.
+
+## Composition
+
+Nested class instances are discovered automatically — **no decorator on the composed field needed.** Paths nest to match the shape.
+
+```tsx
+class Price {
+	@searchParam() min = 0
+	@searchParam() max = 100
+}
+class Filters {
+	@searchParam() q = ''
+	price = new Price() // composed — auto-recursed
+}
+// URL keys: q, price.min, price.max
+```
+
+The walk recurses only into objects whose class declares `@searchParam` fields; `Date`, `Map`, `Set`, arrays, and plain objects are treated as leaves. Cyclic graphs terminate safely.
+
+## Inheritance
+
+Inherited fields come along via the prototype chain — a subclass adds its own synced fields on top of the parent's.
+
+```tsx
+class Filters {
+	@searchParam() q = ''
+	price = new Price()
+}
+class ProductFilters extends Filters {
+	@searchParam() onSale = false // inherited q + price.* come too
+}
+// URL keys: q, price.min, price.max, onSale
+```
+
+Composition and inheritance compose freely:
+
+<LivePreview path='valtio-kit/search-params-composition' title='Composed Price + inherited onSale' />
+
+## Key placement
+
+By default a field's URL key is its **joined path** (`filters.price.min → ?filters.price.min=0`) — collision-free across nested shapes. Two options override that:
+
+| Option | Effect | Example |
+| --- | --- | --- |
+| `key` | rename the **leaf** segment (keeps the ancestor prefix) | `{ key: 'query' }` on `filters.q` → `?filters.query` |
+| `absolute` | pin an **exact top-level** key, ignoring ancestors | `{ key: 'q', absolute: true }` on `filters.search.q` → `?q` |
+
+```tsx
+class Search {
+	@searchParam({ key: 'q', absolute: true }) query = ''
+}
+// wherever Search is nested, it always writes ?q=…
+```
+
+<LivePreview path='valtio-kit/search-params-key-placement' title='key rename + absolute pin' />
+
+`absolute` is what lets a deeply-nested field own a short, shareable key regardless of where its class sits. Collisions from `absolute` are your call — the engine flags only statically-known duplicates at bind. `absolute` applies to the `flat` [layout](./valtio-kit/search-params/layouts); under `json`/`qs` the nesting **is** the structure, so it's ignored (with a dev warning).
+
+> The same `key` / `absolute` options exist on the [accessor API](./valtio-kit/search-params/fields) via `field(selector, { … })`.
+
+## Per-field options
+
+`@searchParam(options)` accepts:
+
+| Option | Type | Purpose |
+| --- | --- | --- |
+| `parser` | `Param<V>` | Explicit parser; omit to auto-resolve from the runtime value. |
+| `key` | `string` | Rename the leaf URL segment. |
+| `absolute` | `boolean` | Pin an exact top-level key (flat layout only). |
+
+## Imperative history control
+
+The augmented proxy carries a `$searchParams` control. Wrap mutations to choose `push` vs `replace`; several mutations inside one call coalesce into a **single** history entry:
+
+```ts
+// advancing a wizard: one Back-button-able entry, even with several changes
+filters.$searchParams.push(() => {
+	filters.step = 'review'
+	filters.touched = true
+})
+
+// going back: replace, don't stack
+filters.$searchParams.replace(() => (filters.step = 'profile'))
+```
+
+Defaults, throttling, and `clearOnDefault` are covered on the [History](./valtio-kit/search-params/history) page.
+
+## Multiple stores, one URL
+
+Each decorated store owns its keys; the coordinator merges them and preserves foreign keys it doesn't own. Render any number under one `StoreSearchParamsProvider`:
+
+```tsx
+<StoreSearchParamsProvider adapter={adapter}>
+	<filtersStore.Provider>
+		<tableStore.Provider>
+			<App />
+		</tableStore.Provider>
+	</filtersStore.Provider>
+</StoreSearchParamsProvider>
+```
+
+Give each store its own key namespace — distinct field names, a `prefix` on [`flat()`](./valtio-kit/search-params/layouts), or a per-store `json()` key — so they don't collide.
+
+## Build setup
+
+`@searchParam` needs **Stage 3 decorators** + `Symbol.metadata` in your toolchain. If you can't enable them, the [accessor API](./valtio-kit/search-params/fields) is equivalent and needs no transpilation. Full configuration is on the [TypeScript](./valtio-kit/search-params/typescript) page.

@@ -1,0 +1,48 @@
+---
+title: History
+description: Control how URL writes land in browser history — push vs replace per mutation, throttling high-frequency writes, and clearOnDefault to keep URLs clean.
+---
+
+# History
+
+URL writes default to `history: 'replace'` so high-frequency fields (text inputs) don't spam the history stack. Override per write with the `$searchParams` control attached to the proxy. Several mutations inside one call coalesce into a **single** history entry.
+
+<LivePreview path='valtio-kit/search-params-history' title='push vs replace' />
+
+## Per-write control
+
+```ts
+// advancing a wizard: one Back-button-able entry, even with several changes
+store.$searchParams.push(() => {
+	store.step = 'review'
+	store.touched = true
+})
+
+// going back: replace, don't stack
+store.$searchParams.replace(() => (store.step = 'profile'))
+```
+
+The callback batches: every mutation inside it is coalesced into one navigation with the chosen history mode.
+
+## Store-wide options
+
+Set on `withSearchParams(proxy, options)`, `withSearchParamsFields(proxy, fields, options)`, or the [`createSearchParamsStore`](./valtio-kit/search-params/ssr) config:
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `history` | `'replace'` | Default history mode for all writes from this store. |
+| `throttleMs` | small | Coalesce rapid writes into one navigation per window — tune for text inputs. |
+| `clearOnDefault` | `true` | Omit a param when its value equals the field default, keeping URLs clean. |
+
+```ts
+withSearchParams(proxy(new Filters()), {
+	history: 'replace',
+	throttleMs: 200,
+	clearOnDefault: true,
+})
+```
+
+<Callout type="info">
+	`clearOnDefault` means a field at its default value produces **no** query key — the URL only carries what
+	differs from the initial state. Round-tripping a default-valued field therefore drops it from the URL.
+</Callout>

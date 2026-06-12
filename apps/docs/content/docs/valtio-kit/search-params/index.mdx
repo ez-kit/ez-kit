@@ -1,0 +1,51 @@
+---
+title: Search params sync
+description: Two-way sync between a Valtio store and the URL — the mental model, the two ways to declare fields, and where each feature lives.
+---
+
+# Search params sync
+
+Mirror a Valtio store into the URL's query string and back, in both directions. Mutating the store updates the URL; navigating (deep link, Back/forward, an external write) updates the store. The proxy stays **synchronous and snappy** — the URL is a throttled, rehydratable projection of it.
+
+```bash
+pnpm add @ez-kit/valtio-kit valtio
+```
+
+Router and validator integrations are optional peers — install only what you use (`react-router`, `next`, `zod`, `qs`).
+
+## Mental model
+
+Valtio is the **source of truth**; the URL is a **mirror**.
+
+- **proxy → URL**: a `subscribe` watches the store; changed fields are coalesced into one navigation per tick (throttled, `replace` by default).
+- **URL → proxy**: the adapter's reactive read pushes external URL changes back into the store, writing only the diff — pulls never write the URL, so Back/forward and third-party writes are safe.
+- **Identity-preserving writes**: fields are addressed by **path** (`filters.price.min`). A URL pull assigns only the **leaf** — nested objects, class instances, and computed getters keep their identity. The engine never replaces a whole subtree.
+- **Loop breaking**: each direction writes only when the value differs in a normalized form. Parsers carry a round-trip contract so the feedback loop terminates.
+
+A single coordinator — `StoreSearchParamsProvider` — is the only component that reads and writes the URL. It connects every store, merges their owned keys, and preserves foreign keys it doesn't own.
+
+## Two ways to declare fields
+
+You bring your own proxy and declare which fields sync. There are two fronts on one engine:
+
+| Front | You write | Best for |
+| --- | --- | --- |
+| [Decorators](./valtio-kit/search-params/decorators) — `@searchParam` + `withSearchParams` | classes | entity models, composition, inheritance |
+| [Fields / accessor](./valtio-kit/search-params/fields) — `field()` + `withSearchParamsFields` | plain `proxy({…})` | quick stores; no build-time decorator support |
+
+Both produce the same path-based descriptors and feed the same engine, so layouts, history, adapters, and SSR behave identically. New to the package? Start with the [basic example](./valtio-kit/search-params/basic-example).
+
+## On this topic
+
+| Page | What it covers |
+| --- | --- |
+| [Basic example](./valtio-kit/search-params/basic-example) | The shortest runnable store. |
+| [Decorators](./valtio-kit/search-params/decorators) | The main path: composition, inheritance, key placement, options, imperative control. |
+| [Fields](./valtio-kit/search-params/fields) | The accessor API for plain proxies. |
+| [TypeScript](./valtio-kit/search-params/typescript) | Decorator build setup in full. |
+| [Parsers](./valtio-kit/search-params/parsers) | Typed codecs, auto-resolution, Zod, custom parsers. |
+| [Layouts](./valtio-kit/search-params/layouts) | `flat` / `json` / `qs` URL shapes. |
+| [History](./valtio-kit/search-params/history) | push vs replace, throttling, `clearOnDefault`. |
+| [SSR](./valtio-kit/search-params/ssr) | `createSearchParamsStore` — request-scoped, no flash. |
+| [Router adapters](./valtio-kit/search-params/router-adapters) | react-router, Next.js, writing your own. |
+| [Recipes](./valtio-kit/search-params/recipes) | Common patterns and caveats. |

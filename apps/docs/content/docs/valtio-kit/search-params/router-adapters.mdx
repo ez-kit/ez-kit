@@ -1,0 +1,55 @@
+---
+title: Router adapters
+description: Connect the router-agnostic engine to your app — built-in adapters for react-router and Next.js, plus the three-member contract for writing your own.
+---
+
+# Router adapters
+
+The core is router-agnostic. An adapter is a tiny object exposing the reactive read and the writer as hooks; the coordinator does all merging. You pass one to `StoreSearchParamsProvider`.
+
+## react-router
+
+```tsx
+import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
+
+<StoreSearchParamsProvider adapter={reactRouterAdapter}>{children}</StoreSearchParamsProvider>
+```
+
+Works with react-router v6/v7 (`BrowserRouter` / data routers).
+
+## Next.js
+
+```tsx
+import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
+
+<StoreSearchParamsProvider adapter={nextAdapter}>{children}</StoreSearchParamsProvider>
+```
+
+For the App Router, writes go through `router.replace`/`push`; client-held Valtio state survives the RSC refetch. Pair it with [`createSearchParamsStore`](./valtio-kit/search-params/ssr) so the first server paint already reflects the URL.
+
+<Callout type="warn">
+	The Next App Router lacks true shallow routing; `nextAdapter` re-runs server components on write. Client Valtio
+	state survives the refetch, but expect the server component tree to re-render.
+</Callout>
+
+## Writing an adapter
+
+Any router fits by implementing three members:
+
+```ts
+import type { RouterAdapter } from '@ez-kit/valtio-kit/search-params'
+
+const myAdapter: RouterAdapter = {
+	useSearchParams: () => /* reactive URLSearchParams */,
+	useUpdater: () => (next, { history }) => {/* navigate to ?next, push|replace */},
+	getSnapshot: () => /* non-reactive URLSearchParams for the throttled flush */,
+}
+```
+
+| Member | Role |
+| --- | --- |
+| `useSearchParams` | Reactive read — re-renders when the URL changes (deep link, Back/forward, external write). |
+| `useUpdater` | Returns a writer `(next, { history }) => void` that navigates, honoring `push`/`replace`. |
+| `getSnapshot` | Non-reactive read used by the throttled flush to diff before writing. |
+
+The live demos throughout these docs use exactly this contract with an in-memory adapter, so each example owns an isolated URL instead of driving the page address bar — the same shape you'd implement for any custom router.

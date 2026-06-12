@@ -1,0 +1,84 @@
+---
+title: Parsers
+description: The typed codecs that convert each field to and from a URL string — the built-in catalogue, how parsers are auto-resolved when omitted, Zod validation, and the round-trip contract for custom parsers.
+---
+
+# Parsers
+
+A parser converts one typed leaf to/from a URL string. Reads never throw into render — invalid input falls back to the field's default.
+
+| Parser | Type | Notes |
+| --- | --- | --- |
+| `paramString()` | `string` | identity |
+| `paramNumber()` | `number` | finite numbers; non-finite omitted |
+| `paramBoolean()` | `boolean` | also reads `1`/`0` |
+| `paramBigInt()` | `bigint` | decimal string |
+| `paramDate()` | `Date` | ISO string |
+| `paramEnum(values)` | `T` | rejects values outside the set |
+| `paramArray(item)` | `T[]` | delimited list of an inner parser |
+| `paramJson()` | `T` | JSON value (plain objects/arrays) |
+
+```ts
+import { paramEnum, paramArray, paramString } from '@ez-kit/valtio-kit/search-params'
+
+const sort = paramEnum(['asc', 'desc'] as const)
+const tags = paramArray(paramString())
+```
+
+Each parser satisfies a round-trip contract — `parse(stringify(v))` deep-equals `v` — which lets the engine break the proxy⇄URL loop by comparing serialized forms. Provide an `equals` on a custom parser if `Object.is` isn't right for your type.
+
+## Auto-resolution
+
+When you omit a parser, one is picked from the field's **runtime value** at bind time:
+
+| Value brand | Parser |
+| --- | --- |
+| `string` | `paramString()` |
+| `number` | `paramNumber()` |
+| `boolean` | `paramBoolean()` |
+| `bigint` | `paramBigInt()` |
+| `Date` instance | `paramDate()` |
+| array (non-empty) | `paramArray(<item>)`, item inferred from the first element |
+
+Anything else — `null`, `undefined`, a plain object, `Set`/`Map`, an empty array, or a class instance with no `@searchParam` fields — **throws at bind** with the field name and asks for an explicit parser:
+
+```ts
+@searchParam({ parser: paramJson() }) coords = { lat: 0, lng: 0 } // plain object → explicit
+@searchParam() createdAt = new Date()                              // Date → auto
+```
+
+<Callout type="warn">
+	Auto-resolution can't read your TypeScript types, only runtime values. A field typed `string | null` that
+	starts `null` has no brand to resolve — give it an explicit parser.
+</Callout>
+
+## Zod validation
+
+`zodParam(schema)` turns any Zod schema into a parser — parsing **is** validation, and a failed parse gracefully falls back to the default.
+
+<LivePreview path='valtio-kit/search-params-zod' title='Zod-validated rating (1–5)' />
+
+```ts
+import { zodParam } from '@ez-kit/valtio-kit/search-params/validators/zod'
+import { z } from 'zod'
+
+const rating = zodParam(z.coerce.number().int().min(1).max(5))
+```
+
+`zod` is an optional peer — import `zodParam` from the dedicated subpath only if you use it.
+
+## Custom parsers
+
+A parser is a small object: `parse(string) → value`, `stringify(value) → string`, and an optional `equals`. Honor the round-trip contract so the proxy⇄URL loop terminates:
+
+```ts
+import type { Param } from '@ez-kit/valtio-kit/search-params'
+
+const csv: Param<string[]> = {
+	parse: (raw) => (raw ? raw.split(',') : []),
+	stringify: (value) => value.join(','),
+	equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+}
+```
+
+A non-canonical parser (one whose `stringify` output isn't stable) can loop — supply `equals`, or lean on `paramJson()` / the [`json`/`qs` layouts](./valtio-kit/search-params/layouts), which use stable ordering for you.

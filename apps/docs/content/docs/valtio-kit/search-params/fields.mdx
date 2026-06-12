@@ -1,0 +1,62 @@
+---
+title: Fields (accessor)
+description: Declare URL-synced fields on a plain Valtio proxy with field() and withSearchParamsFields — no classes, no build-time decorator support required.
+---
+
+# Fields (accessor)
+
+The accessor API is the second front on the same engine: no classes, no build-time decorator support required. Pass a builder that declares each field with a typed selector; the parser type follows the selected leaf, and you get autocomplete on the store shape.
+
+```tsx
+import { field, withSearchParamsFields, paramString } from '@ez-kit/valtio-kit/search-params'
+import { proxy } from 'valtio'
+
+const store = proxy({ filters: { q: '', page: 1 } })
+
+withSearchParamsFields(store, (field) => [
+	field((s) => s.filters.q, paramString()), // explicit parser
+	field((s) => s.filters.page),             // auto-resolved (number)
+])
+// URL keys: filters.q, filters.page
+```
+
+The selector supports **direct property access only** (`s => s.a.b.c`) — it's recorded to derive the path, not executed for its value. The parser is optional: omit it for primitives and one is [auto-resolved](./valtio-kit/search-params/parsers) from the runtime value.
+
+<Callout type="info">
+	Same engine, two fronts: `@searchParam` for [classes](./valtio-kit/search-params/decorators), `field()` for plain
+	proxies. Pick per project; mix per store if you like. Layouts, history, adapters, and SSR behave identically.
+</Callout>
+
+## Live example
+
+The flat-layout demo below is built on the accessor API — a plain `proxy({ q, page })` with two `field()` declarations:
+
+<LivePreview path='valtio-kit/search-params-flat' title='Accessor fields — q + page' />
+
+## Per-field options
+
+`field(selector, parser?, options?)` — or `field(selector, options?)` when the parser is auto-resolved — accepts the same placement options as decorators:
+
+| Option | Effect |
+| --- | --- |
+| `key` | rename the leaf URL segment (keeps the ancestor prefix) |
+| `absolute` | pin an exact top-level key, ignoring ancestors (flat layout only) |
+
+```ts
+withSearchParamsFields(store, (field) => [
+	field((s) => s.filters.search.q, paramString(), { key: 'q', absolute: true }), // → ?q
+])
+```
+
+See [Key placement](./valtio-kit/search-params/decorators#key-placement) for the full semantics — they're identical across both fronts.
+
+## Request-scoped form
+
+For SSR-correct, per-`Provider` instances, pass a `fields` builder to [`createSearchParamsStore`](./valtio-kit/search-params/ssr) instead of calling `withSearchParamsFields` on a module-level proxy:
+
+```tsx
+const filtersStore = createSearchParamsStore(
+	() => proxy({ q: '', page: 1 }),
+	{ fields: (field) => [field((s) => s.q), field((s) => s.page)] },
+)
+```
