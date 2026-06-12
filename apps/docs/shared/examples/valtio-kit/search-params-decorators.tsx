@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
 import {
-	createSearchParamsStore,
+	createFieldsStore,
 	paramEnum,
 	StoreSearchParamsProvider,
 } from '@ez-kit/valtio-kit/search-params'
@@ -22,16 +22,14 @@ type FiltersState = {
 
 // Declared with the accessor API so the demo runs in this in-browser sandbox; the decorator form
 // (class Filters { @searchParam() q = ''; … }) produces identical URL output. See the Fields page.
-const filtersStore = createSearchParamsStore<FiltersState>(
+const filtersStore = createFieldsStore<FiltersState>(
 	() => proxy<FiltersState>({ q: '', page: 1, inStock: false, sort: 'asc' }),
-	{
-		fields: (field) => [
-			field((s) => s.q),
-			field((s) => s.page),
-			field((s) => s.inStock),
-			field((s) => s.sort, paramEnum<Sort>(['asc', 'desc'])),
-		],
-	},
+	(field) => [
+		field((s) => s.q),
+		field((s) => s.page),
+		field((s) => s.inStock),
+		field((s) => s.sort, paramEnum<Sort>(['asc', 'desc'])),
+	],
 )
 
 const { adapter, useSearch } = createMemoryAdapter('q=boots&page=2')

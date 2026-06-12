@@ -52,11 +52,11 @@ See [Key placement](./valtio-kit/search-params/decorators#key-placement) for the
 
 ## Request-scoped form
 
-For SSR-correct, per-`Provider` instances, pass a `fields` builder to [`createSearchParamsStore`](./valtio-kit/search-params/ssr) instead of calling `withSearchParamsFields` on a module-level proxy:
+For SSR-correct, per-`Provider` instances, use [`createFieldsStore`](./valtio-kit/search-params/ssr) instead of calling `withSearchParamsFields` on a module-level proxy:
 
 ```tsx
-const filtersStore = createSearchParamsStore(
+const filtersStore = createFieldsStore(
 	() => proxy({ q: '', page: 1 }),
-	{ fields: (field) => [field((s) => s.q), field((s) => s.page)] },
+	(field) => [field((s) => s.q), field((s) => s.page)],
 )
 ```

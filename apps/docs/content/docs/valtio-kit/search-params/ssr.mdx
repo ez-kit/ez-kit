@@ -1,39 +1,40 @@
 ---
 title: SSR
-description: createSearchParamsStore — request-scoped, SSR-correct search-params stores seeded synchronously from the URL, so the first server paint already reflects the query string with no flash or hydration mismatch.
+description: createDecoratedStore / createFieldsStore — request-scoped, SSR-correct search-params stores seeded synchronously from the URL, so the first server paint already reflects the query string with no flash or hydration mismatch.
 ---
 
-# SSR — `createSearchParamsStore`
+# SSR — `createDecoratedStore` / `createFieldsStore`
 
 The request-scoped, SSR-correct form. It fuses the [`createContextStore`](./valtio-kit/create-context-store) lifecycle with the sync engine: the proxy is created per `<Provider>` and **seeded synchronously from the URL** — `defaultValue` first, then URL overrides — identically on server and client. The first paint already reflects the URL: no flash, no hydration mismatch.
 
 <LivePreview path='valtio-kit/search-params-ssr' title='Synchronous URL seed — opens on ?tab=billing' />
 
-Fields come from `@searchParam` decorators on the factory's instance, or from an accessor `fields` builder:
+Fields come from `@searchParam` decorators on the factory's instance (`createDecoratedStore`), or from a positional accessor `fields` builder (`createFieldsStore`):
 
 ```tsx
-import { createSearchParamsStore, flat, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
+import { createDecoratedStore, createFieldsStore, flat, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
 import { proxy } from 'valtio'
 
-// accessor form
-const filtersStore = createSearchParamsStore<{ q: string; page: number }>(
+// accessor form — fields builder is the positional 2nd argument
+const filtersStore = createFieldsStore<{ q: string; page: number }>(
 	() => proxy({ q: '', page: 1 }),
-	{ fields: (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())], layout: flat() },
+	(field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
+	{ layout: flat() },
 )
 
-// or class form — omit `fields`, decorators are discovered on the instance
+// or class form — decorators are discovered on the instance
 class Filters {
 	@searchParam() q = ''
 	@searchParam() page = 1
 }
-const classStore = createSearchParamsStore(() => proxy(new Filters()))
+const classStore = createDecoratedStore(() => proxy(new Filters()))
 ```
 
-It returns the same surface as `createContextStore` — `Provider`, `useStore`, `useSnapshot`, `Item`. Each `Provider` is an isolated instance, so two never collide.
+Both return the same surface as `createContextStore` — `Provider`, `useStore`, `useSnapshot`, `Item`. Each `Provider` is an isolated instance, so two never collide.
 
 ## Why request-scoped matters
 
-A module-level `withSearchParams` proxy is a singleton — shared across requests on the server. `createSearchParamsStore` defers proxy creation to the `Provider`, so each request (and each mount) gets a fresh instance seeded from **that** request's URL. That's what makes the server HTML correct and the client hydration match.
+A module-level `withSearchParams` proxy is a singleton — shared across requests on the server. The request-scoped store factories (`createDecoratedStore` and `createFieldsStore`) defer proxy creation to the `Provider`, so each request (and each mount) gets a fresh instance seeded from **that** request's URL. That's what makes the server HTML correct and the client hydration match.
 
 <Callout type="info">
 	Pair this with the [Next.js adapter](./valtio-kit/search-params/router-adapters#nextjs) for the App Router:

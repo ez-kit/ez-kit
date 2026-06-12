@@ -1,7 +1,7 @@
 'use client'
 
 import {
-	createSearchParamsStore,
+	createFieldsStore,
 	paramArray,
 	paramString,
 	StoreSearchParamsProvider,
@@ -20,7 +20,7 @@ type CatalogState = {
 
 const ALL_TAGS = ['new', 'sale', 'popular'] as const
 
-const catalogStore = createSearchParamsStore<CatalogState>(
+const catalogStore = createFieldsStore<CatalogState>(
 	() => {
 		const state = proxy<CatalogState>({
 			q: '',
@@ -34,12 +34,10 @@ const catalogStore = createSearchParamsStore<CatalogState>(
 		})
 		return state
 	},
-	{
-		// The qs() layout serialises arrays/nesting with the `qs` library (tags[]=…), so multi-value
-		// fields stay readable in the URL instead of being JSON-encoded.
-		fields: (field) => [field((s) => s.q, paramString()), field((s) => s.tags, paramArray(paramString()))],
-		layout: qs(),
-	},
+	// The qs() layout serialises arrays/nesting with the `qs` library (tags[]=…), so multi-value
+	// fields stay readable in the URL instead of being JSON-encoded.
+	(field) => [field((s) => s.q, paramString()), field((s) => s.tags, paramArray(paramString()))],
+	{ layout: qs() },
 )
 
 const { adapter, useSearch } = createMemoryAdapter('tags%5B0%5D=sale')

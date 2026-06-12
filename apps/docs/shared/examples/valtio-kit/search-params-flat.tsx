@@ -1,7 +1,7 @@
 'use client'
 
 import {
-	createSearchParamsStore,
+	createFieldsStore,
 	flat,
 	paramNumber,
 	paramString,
@@ -19,7 +19,7 @@ type FiltersState = {
 	decPage: () => void
 }
 
-const filtersStore = createSearchParamsStore<FiltersState>(
+const filtersStore = createFieldsStore<FiltersState>(
 	() => {
 		const state = proxy<FiltersState>({
 			q: '',
@@ -36,10 +36,8 @@ const filtersStore = createSearchParamsStore<FiltersState>(
 		})
 		return state
 	},
-	{
-		fields: (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
-		layout: flat(),
-	},
+	(field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
+	{ layout: flat() },
 )
 
 const { adapter, useSearch } = createMemoryAdapter('q=boots&page=2')

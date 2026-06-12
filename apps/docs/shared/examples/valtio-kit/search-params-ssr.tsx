@@ -1,7 +1,7 @@
 'use client'
 
 import {
-	createSearchParamsStore,
+	createFieldsStore,
 	paramEnum,
 	StoreSearchParamsProvider,
 } from '@ez-kit/valtio-kit/search-params'
@@ -19,7 +19,7 @@ type TabsState = {
 // Request-scoped store: the proxy is created per <Provider> and seeded synchronously from the
 // URL on both server and client, so the first paint already reflects ?tab=… with no flash and
 // no hydration mismatch. In a Next.js app, render <StoreSearchParamsProvider adapter={nextAdapter}>.
-const tabsStore = createSearchParamsStore<TabsState>(
+const tabsStore = createFieldsStore<TabsState>(
 	() => {
 		const state = proxy<TabsState>({
 			tab: 'overview',
@@ -29,7 +29,7 @@ const tabsStore = createSearchParamsStore<TabsState>(
 		})
 		return state
 	},
-	{ fields: (field) => [field((s) => s.tab, paramEnum<Tab>(['overview', 'billing', 'team']))] },
+	(field) => [field((s) => s.tab, paramEnum<Tab>(['overview', 'billing', 'team']))],
 )
 
 const TABS: Tab[] = ['overview', 'billing', 'team']

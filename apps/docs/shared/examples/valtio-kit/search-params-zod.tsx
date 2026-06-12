@@ -1,7 +1,7 @@
 'use client'
 
 import {
-	createSearchParamsStore,
+	createFieldsStore,
 	StoreSearchParamsProvider,
 } from '@ez-kit/valtio-kit/search-params'
 import { zodParam } from '@ez-kit/valtio-kit/search-params/validators/zod'
@@ -18,7 +18,7 @@ type RatingState = {
 
 const ratingSchema = z.coerce.number().int().min(1).max(5)
 
-const rangeStore = createSearchParamsStore<RatingState>(
+const rangeStore = createFieldsStore<RatingState>(
 	() => {
 		const state = proxy<RatingState>({
 			rating: 3,
@@ -28,7 +28,7 @@ const rangeStore = createSearchParamsStore<RatingState>(
 		})
 		return state
 	},
-	{ fields: (field) => [field((s) => s.rating, zodParam(ratingSchema))] },
+	(field) => [field((s) => s.rating, zodParam(ratingSchema))],
 )
 
 const { adapter, useSearch } = createMemoryAdapter()

@@ -7,64 +7,91 @@ import { describe, expect, it } from 'vitest'
 import { type ContextStoreInit } from '../create-context-store'
 
 import { paramString } from './codecs'
-import { createSearchParamsStore } from './create-search-params-store'
+import { createDecoratedStore, createFieldsStore } from './create-search-params-store'
+import { searchParam } from './decorators'
 import { StoreSearchParamsProvider } from './provider'
 import { createFakeRouterAdapter } from './testing/fake-router-adapter'
 
 type Filters = { q: string }
 
-const filters = createSearchParamsStore(
+// Accessor front: plain proxy + required `fields` builder.
+const fieldsStore = createFieldsStore(
 	({ defaultValue }: ContextStoreInit<{ q?: string }>) => proxy<Filters>({ q: defaultValue.q ?? '' }),
-	{ fields: (field) => [field((s) => s.q, paramString())] },
+	(field) => [field((s) => s.q, paramString())],
 )
 
-function QView(): ReactElement {
-	const snap = filters.useSnapshot()
-	return <span data-testid='q'>{snap.q}</span>
+// Decorator front: class instance with `@searchParam` fields, discovered automatically.
+class DecoratedFilters {
+	@searchParam() q = ''
+}
+const decoratedStore = createDecoratedStore(
+	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
+		const store = proxy(new DecoratedFilters())
+		store.q = defaultValue.q ?? ''
+		return store
+	},
+)
+
+function makeView(store: { useSnapshot: () => { q: string } }) {
+	return function QView(): ReactElement {
+		const snap = store.useSnapshot()
+		return <span data-testid='q'>{snap.q}</span>
+	}
 }
 
-describe('@ez-kit/valtio-kit createSearchParamsStore', () => {
-	it('exposes the createContextStore API surface', () => {
-		expect(typeof filters.Provider).toBe('function')
-		expect(typeof filters.useStore).toBe('function')
-		expect(typeof filters.useSnapshot).toBe('function')
-		expect(typeof filters.Item).toBe('function')
-	})
+const cases = [
+	{ name: 'createFieldsStore (accessor)', store: fieldsStore },
+	{ name: 'createDecoratedStore (decorators)', store: decoratedStore },
+] as const
 
-	it('seeds synchronously from the URL on first render (no flash)', () => {
-		const fake = createFakeRouterAdapter('?q=shoes')
-		render(
-			<StoreSearchParamsProvider adapter={fake.adapter}>
-				<filters.Provider defaultValue={{ q: 'fallback' }}>
-					<QView />
-				</filters.Provider>
-			</StoreSearchParamsProvider>,
-		)
-		// URL wins over defaultValue, and it is correct on the very first render.
-		expect(screen.getByTestId('q')).toHaveTextContent('shoes')
-	})
+describe('@ez-kit/valtio-kit request-scoped search-params stores', () => {
+	for (const { name, store } of cases) {
+		describe(name, () => {
+			const QView = makeView(store)
 
-	it('falls back to defaultValue when the param is absent', () => {
-		const fake = createFakeRouterAdapter()
-		render(
-			<StoreSearchParamsProvider adapter={fake.adapter}>
-				<filters.Provider defaultValue={{ q: 'fallback' }}>
-					<QView />
-				</filters.Provider>
-			</StoreSearchParamsProvider>,
-		)
-		expect(screen.getByTestId('q')).toHaveTextContent('fallback')
-	})
+			it('exposes the createContextStore API surface', () => {
+				expect(typeof store.Provider).toBe('function')
+				expect(typeof store.useStore).toBe('function')
+				expect(typeof store.useSnapshot).toBe('function')
+				expect(typeof store.Item).toBe('function')
+			})
 
-	it('renders URL-derived state on the server (renderToString)', () => {
-		const fake = createFakeRouterAdapter('?q=server')
-		const html = renderToString(
-			<StoreSearchParamsProvider adapter={fake.adapter}>
-				<filters.Provider defaultValue={{ q: 'fallback' }}>
-					<QView />
-				</filters.Provider>
-			</StoreSearchParamsProvider>,
-		)
-		expect(html).toContain('server')
-	})
+			it('seeds synchronously from the URL on first render (no flash)', () => {
+				const fake = createFakeRouterAdapter('?q=shoes')
+				render(
+					<StoreSearchParamsProvider adapter={fake.adapter}>
+						<store.Provider defaultValue={{ q: 'fallback' }}>
+							<QView />
+						</store.Provider>
+					</StoreSearchParamsProvider>,
+				)
+				// URL wins over defaultValue, and it is correct on the very first render.
+				expect(screen.getByTestId('q')).toHaveTextContent('shoes')
+			})
+
+			it('falls back to defaultValue when the param is absent', () => {
+				const fake = createFakeRouterAdapter()
+				render(
+					<StoreSearchParamsProvider adapter={fake.adapter}>
+						<store.Provider defaultValue={{ q: 'fallback' }}>
+							<QView />
+						</store.Provider>
+					</StoreSearchParamsProvider>,
+				)
+				expect(screen.getByTestId('q')).toHaveTextContent('fallback')
+			})
+
+			it('renders URL-derived state on the server (renderToString)', () => {
+				const fake = createFakeRouterAdapter('?q=server')
+				const html = renderToString(
+					<StoreSearchParamsProvider adapter={fake.adapter}>
+						<store.Provider defaultValue={{ q: 'fallback' }}>
+							<QView />
+						</store.Provider>
+					</StoreSearchParamsProvider>,
+				)
+				expect(html).toContain('server')
+			})
+		})
+	}
 })

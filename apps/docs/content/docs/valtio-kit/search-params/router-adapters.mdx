@@ -25,7 +25,7 @@ import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
 <StoreSearchParamsProvider adapter={nextAdapter}>{children}</StoreSearchParamsProvider>
 ```
 
-For the App Router, writes go through `router.replace`/`push`; client-held Valtio state survives the RSC refetch. Pair it with [`createSearchParamsStore`](./valtio-kit/search-params/ssr) so the first server paint already reflects the URL.
+For the App Router, writes go through `router.replace`/`push`; client-held Valtio state survives the RSC refetch. Pair it with [`createDecoratedStore` or `createFieldsStore`](./valtio-kit/search-params/ssr) so the first server paint already reflects the URL.
 
 <Callout type="warn">
 	The Next App Router lacks true shallow routing; `nextAdapter` re-runs server components on write. Client Valtio

@@ -1,7 +1,7 @@
 'use client'
 
 import {
-	createSearchParamsStore,
+	createFieldsStore,
 	paramString,
 	StoreSearchParamsProvider,
 } from '@ez-kit/valtio-kit/search-params'
@@ -17,7 +17,7 @@ type WizardState = {
 	back: () => void
 }
 
-const wizardStore = createSearchParamsStore<WizardState>(
+const wizardStore = createFieldsStore<WizardState>(
 	() => {
 		const state = proxy<WizardState>({
 			step: 'account',
@@ -38,11 +38,9 @@ const wizardStore = createSearchParamsStore<WizardState>(
 		})
 		return state
 	},
-	{
-		fields: (field) => [field((s) => s.step, paramString())],
-		// Default writes replace; the control lets a specific mutation opt into a push instead.
-		history: 'replace',
-	},
+	(field) => [field((s) => s.step, paramString())],
+	// Default writes replace; the control lets a specific mutation opt into a push instead.
+	{ history: 'replace' },
 )
 
 const { adapter, useSearch } = createMemoryAdapter('step=account')

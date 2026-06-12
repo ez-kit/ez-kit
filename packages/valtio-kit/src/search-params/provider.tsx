@@ -8,7 +8,7 @@ import type { RouterAdapter } from './types'
 
 const EngineContext = createContext<SyncEngine | null>(null)
 
-/** Access the coordinator engine — used by `createSearchParamsStore` to connect its binding. */
+/** Access the coordinator engine — used by the request-scoped store factories to connect their binding. */
 export function useSearchParamsEngine(): SyncEngine | null {
 	return useContext(EngineContext)
 }

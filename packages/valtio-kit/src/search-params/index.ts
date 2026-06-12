@@ -18,7 +18,8 @@ export {
 } from './codecs'
 export { resolveParser } from './codecs/auto'
 export {
-	createSearchParamsStore,
+	createDecoratedStore,
+	createFieldsStore,
 	type CreateSearchParamsStoreResult,
 } from './create-search-params-store'
 export {

@@ -15,19 +15,16 @@ import { createControl } from './engine/control'
 import { useSearchParamsEngine } from './provider'
 
 import type { ContextStoreInit, UseSnapshotOptions } from '../create-context-store'
-import type { SearchParamsOptions, SearchParamsProxy } from './types'
+import type { FieldDescriptor, SearchParamsOptions, SearchParamsProxy } from './types'
 
-const MISSING_PROVIDER_ERROR = 'Missing Provider for createSearchParamsStore'
+const MISSING_PROVIDER_ERROR = 'Missing Provider for search-params store'
 
 type SearchParamsStoreFactory<TState extends object, TDefaultValue> = (
 	init: ContextStoreInit<TDefaultValue>,
 ) => TState
 
-/** Config for `createSearchParamsStore`: accessor `fields` (omit for `@searchParam` discovery) + global options. */
-export type CreateSearchParamsStoreConfig<TState> = SearchParamsOptions & {
-	/** Accessor field builder. Omit to discover `@searchParam`-decorated fields on the instance. */
-	fields?: FieldsBuilder<TState>
-}
+/** Resolves the synced field descriptors from a freshly created store instance. */
+type ResolveDescriptors<TState extends object> = (store: TState) => FieldDescriptor[]
 
 /** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
 type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
@@ -49,18 +46,18 @@ export type CreateSearchParamsStoreResult<TState extends object, TDefaultValue> 
 }
 
 /**
- * Request-scoped, SSR-correct search-params store. Fuses the `createContextStore` lifecycle
- * with the sync engine: the proxy is created per request and seeded synchronously from the URL
- * (defaultValue, then URL overrides) on both server and client, so server HTML reflects the URL.
- * Fields come from `@searchParam` decorators on the factory-produced instance, or from accessor
- * `fields` in the config. Must be rendered inside a `StoreSearchParamsProvider`.
+ * Private store core shared by `createDecoratedStore` and `createFieldsStore`. Fuses the
+ * `createContextStore` lifecycle with the sync engine: the proxy is created per request and seeded
+ * synchronously from the URL (defaultValue, then URL overrides) on both server and client, so server
+ * HTML reflects the URL. The two public factories differ only in `resolveDescriptors` — how the
+ * synced fields are declared. Not part of the public API.
  */
-export function createSearchParamsStore<TState extends object, TDefaultValue = undefined>(
+function createSearchParamsStoreCore<TState extends object, TDefaultValue>(
 	factory: SearchParamsStoreFactory<TState, TDefaultValue>,
-	config: CreateSearchParamsStoreConfig<TState> = {},
+	resolveDescriptors: ResolveDescriptors<TState>,
+	options: SearchParamsOptions,
 ): CreateSearchParamsStoreResult<TState, TDefaultValue> {
 	const StoreContext = createContext<Instance<TState> | null>(null)
-	const { fields, ...options } = config
 
 	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue>>): ReactElement {
 		const { children, defaultValue } = props as PropsWithChildren<{ defaultValue: TDefaultValue }>
@@ -69,7 +66,7 @@ export function createSearchParamsStore<TState extends object, TDefaultValue = u
 
 		if (instanceRef.current === null) {
 			const store = factory({ defaultValue })
-			const descriptors = fields ? resolveFieldSpecs(store, fields) : discoverDecoratedFields(store)
+			const descriptors = resolveDescriptors(store)
 			const binding = createBinding(store, descriptors, options)
 			;(store as Record<string, unknown>).$searchParams = ref(createControl(binding))
 			// Synchronous URL seed → correct server HTML and matching client hydration.
@@ -116,4 +113,33 @@ export function createSearchParamsStore<TState extends object, TDefaultValue = u
 	}
 
 	return { Provider, useStore, useSnapshot, Item }
+}
+
+/**
+ * Request-scoped, SSR-correct search-params store for **class-based** stores. Discovers `@searchParam`
+ * fields from the factory-produced instance (auto-recursing composition and inheritance). The proxy is
+ * created per request and seeded synchronously from the URL on both server and client. Must be rendered
+ * inside a `StoreSearchParamsProvider`. Requires Stage 3 decorators in the consumer's toolchain — for the
+ * accessor (no-transpilation) equivalent, use `createFieldsStore`.
+ */
+export function createDecoratedStore<TState extends object, TDefaultValue = undefined>(
+	factory: SearchParamsStoreFactory<TState, TDefaultValue>,
+	options: SearchParamsOptions = {},
+): CreateSearchParamsStoreResult<TState, TDefaultValue> {
+	return createSearchParamsStoreCore(factory, discoverDecoratedFields, options)
+}
+
+/**
+ * Request-scoped, SSR-correct search-params store for **plain** proxies. Synced fields are declared by
+ * the required `fields` accessor builder (`field(s => s.a.b, parser?, opts?)`) resolved against the
+ * factory-produced proxy — no decorator transpilation required. The proxy is created per request and
+ * seeded synchronously from the URL on both server and client. Must be rendered inside a
+ * `StoreSearchParamsProvider`. For the class/decorator equivalent, use `createDecoratedStore`.
+ */
+export function createFieldsStore<TState extends object, TDefaultValue = undefined>(
+	factory: SearchParamsStoreFactory<TState, TDefaultValue>,
+	fields: FieldsBuilder<TState>,
+	options: SearchParamsOptions = {},
+): CreateSearchParamsStoreResult<TState, TDefaultValue> {
+	return createSearchParamsStoreCore(factory, (store) => resolveFieldSpecs(store, fields), options)
 }

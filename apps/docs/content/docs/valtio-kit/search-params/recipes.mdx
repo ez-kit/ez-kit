@@ -9,14 +9,14 @@ Practical patterns built from the pieces in the rest of this section, followed b
 
 ## URL as tabs
 
-Persist the active tab so a deep link opens the right panel and Back/forward works. Use `paramEnum` to reject unknown values, and [`createSearchParamsStore`](./valtio-kit/search-params/ssr) so the first server paint is correct:
+Persist the active tab so a deep link opens the right panel and Back/forward works. Use `paramEnum` to reject unknown values, and [`createDecoratedStore`](./valtio-kit/search-params/ssr) so the first server paint is correct:
 
 ```tsx
 class TabsState {
 	@searchParam({ parser: paramEnum(['overview', 'billing', 'team'] as const) })
 	tab: 'overview' | 'billing' | 'team' = 'overview'
 }
-const tabsStore = createSearchParamsStore(() => proxy(new TabsState()))
+const tabsStore = createDecoratedStore(() => proxy(new TabsState()))
 ```
 
 This is exactly the [SSR demo](./valtio-kit/search-params/ssr) — it opens on `?tab=billing`.
@@ -52,8 +52,8 @@ store.$searchParams.replace(() => (store.step = 'profile')) // rewrites it
 Render any number of stores under one `StoreSearchParamsProvider`; the coordinator merges their keys and preserves foreign ones. Namespace each so they don't collide — distinct field names, a `prefix` on `flat()`, or a per-store `json()` key:
 
 ```tsx
-const filters = createSearchParamsStore(() => proxy(new Filters()), { layout: flat({ prefix: 'f.' }) })
-const table = createSearchParamsStore(() => proxy(new TableState()), { layout: flat({ prefix: 't.' }) })
+const filters = createDecoratedStore(() => proxy(new Filters()), { layout: flat({ prefix: 'f.' }) })
+const table = createDecoratedStore(() => proxy(new TableState()), { layout: flat({ prefix: 't.' }) })
 ```
 
 ## Caveats

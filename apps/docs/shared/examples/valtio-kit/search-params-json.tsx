@@ -1,7 +1,7 @@
 'use client'
 
 import {
-	createSearchParamsStore,
+	createFieldsStore,
 	json,
 	paramBoolean,
 	paramEnum,
@@ -23,7 +23,7 @@ type SettingsState = {
 	toggleCompact: (next: boolean) => void
 }
 
-const settingsStore = createSearchParamsStore<SettingsState>(
+const settingsStore = createFieldsStore<SettingsState>(
 	() => {
 		const state = proxy<SettingsState>({
 			view: 'grid',
@@ -41,15 +41,13 @@ const settingsStore = createSearchParamsStore<SettingsState>(
 		})
 		return state
 	},
-	{
-		// Every field is packed into one canonical-JSON param so a single key carries the whole state.
-		fields: (field) => [
-			field((s) => s.view, paramEnum<View>(['grid', 'list'])),
-			field((s) => s.q, paramString()),
-			field((s) => s.compact, paramBoolean()),
-		],
-		layout: json('state'),
-	},
+	// Every field is packed into one canonical-JSON param so a single key carries the whole state.
+	(field) => [
+		field((s) => s.view, paramEnum<View>(['grid', 'list'])),
+		field((s) => s.q, paramString()),
+		field((s) => s.compact, paramBoolean()),
+	],
+	{ layout: json('state') },
 )
 
 const { adapter, useSearch } = createMemoryAdapter()
