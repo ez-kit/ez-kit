@@ -122,7 +122,7 @@ function createSearchParamsStoreCore<TState extends object, TDefaultValue>(
  * inside a `StoreSearchParamsProvider`. Requires Stage 3 decorators in the consumer's toolchain — for the
  * accessor (no-transpilation) equivalent, use `createFieldsStore`.
  */
-export function createDecoratedStore<TState extends object, TDefaultValue = undefined>(
+export function createSearchParamsStore<TState extends object, TDefaultValue = undefined>(
 	factory: SearchParamsStoreFactory<TState, TDefaultValue>,
 	options: SearchParamsOptions = {},
 ): CreateSearchParamsStoreResult<TState, TDefaultValue> {

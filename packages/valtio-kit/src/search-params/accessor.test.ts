@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { resolveFieldSpecs, withSearchParamsFields } from './accessor'
 import { paramNumber, paramString } from './codecs'
-import { clearRegistry } from './engine/registry'
+import { clearRegistry, getRegisteredBindings } from './engine/registry'
 
 describe('@ez-kit/valtio-kit accessor front', () => {
 	beforeEach(() => {
@@ -38,6 +38,15 @@ describe('@ez-kit/valtio-kit accessor front', () => {
 		expect(bound).toBe(store)
 		expect(typeof bound.$searchParams.push).toBe('function')
 		expect(typeof bound.$searchParams.replace).toBe('function')
+		expect(typeof bound.$searchParams.dispose).toBe('function')
+	})
+
+	it('dispose() deregisters the binding from the global registry', () => {
+		const store = proxy({ q: '' })
+		const bound = withSearchParamsFields(store, (field) => [field((s) => s.q, paramString())])
+		expect(getRegisteredBindings()).toHaveLength(1)
+		bound.$searchParams.dispose()
+		expect(getRegisteredBindings()).toHaveLength(0)
 	})
 
 	it('rejects a parser that does not match the selected leaf (type)', () => {

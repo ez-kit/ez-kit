@@ -11,6 +11,12 @@ export type ParamArrayOptions = {
  */
 export function paramArray<T>(item: Param<T>, options: ParamArrayOptions = {}): Param<T[]> {
 	const separator = options.separator ?? ','
+	// Always build the percent-encoded form unconditionally — encodeURIComponent leaves some
+	// characters (e.g. ",") unencoded, which would corrupt items that contain the separator.
+	const sepEncoded = Array.from(separator)
+		.map((c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
+		.join('')
+	const escapeItem = (s: string): string => encodeURIComponent(s).replaceAll(separator, sepEncoded)
 
 	return {
 		stringify: (value) => {
@@ -21,7 +27,7 @@ export function paramArray<T>(item: Param<T>, options: ParamArrayOptions = {}): 
 			for (const entry of value) {
 				const encoded = item.stringify(entry)
 				if (encoded !== null) {
-					parts.push(encodeURIComponent(encoded))
+					parts.push(escapeItem(encoded))
 				}
 			}
 			return parts.length === 0 ? null : parts.join(separator)

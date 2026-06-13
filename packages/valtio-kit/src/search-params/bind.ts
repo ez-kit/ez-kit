@@ -18,7 +18,7 @@ export function bindSearchParams<T extends object>(
 ): SearchParamsProxy<T> {
 	const source = store as Record<string, unknown>
 	const binding = createBinding(store, fields, options)
-	source.$searchParams = ref(createControl(binding))
-	registerBinding(binding)
+	const unsubscribe = registerBinding(binding)
+	source.$searchParams = ref(createControl(binding, unsubscribe))
 	return store as SearchParamsProxy<T>
 }

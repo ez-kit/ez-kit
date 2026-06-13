@@ -1,3 +1,5 @@
+import { canonicalStringify } from '../layouts/nested'
+
 import type { Param } from '../types'
 import type { ZodType } from 'zod'
 
@@ -17,6 +19,6 @@ export function zodParam<T>(schema: ZodType<T>): Param<T> {
 			}
 			return schema.parse(candidate)
 		},
-		equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+		equals: (a, b) => canonicalStringify(a) === canonicalStringify(b),
 	}
 }

@@ -41,7 +41,7 @@ Two-way sync between a Valtio store and the URL search params. The proxy stays t
 
 ```tsx
 import {
-  createSearchParamsStore,
+  createFieldsStore,
   paramString,
   paramNumber,
   StoreSearchParamsProvider,
@@ -49,9 +49,9 @@ import {
 import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
 import { proxy } from 'valtio'
 
-const filters = createSearchParamsStore<{ q: string; page: number }>(
+const filters = createFieldsStore(
   () => proxy({ q: '', page: 1 }),
-  { fields: (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())] },
+  (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
 )
 
 <StoreSearchParamsProvider adapter={reactRouterAdapter}>
@@ -60,6 +60,8 @@ const filters = createSearchParamsStore<{ q: string; page: number }>(
   </filters.Provider>
 </StoreSearchParamsProvider>
 ```
+
+For class-based stores using `@searchParam` decorators, use `createSearchParamsStore(factory, options?)` instead — it discovers the decorated fields automatically.
 
 Subpaths (optional peers, install only what you use):
 

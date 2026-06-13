@@ -102,6 +102,12 @@ describe('@ez-kit/valtio-kit param parsers', () => {
 			expect(raw).not.toBeNull()
 			expect(parser.parse(raw ?? '')).toEqual(value)
 		})
+
+		it('equals is key-order-insensitive', () => {
+			const parser = paramJson<Record<string, number>>()
+			expect(parser.equals?.({ b: 2, a: 1 }, { a: 1, b: 2 })).toBe(true)
+			expect(parser.equals?.({ a: 1 }, { a: 2 })).toBe(false)
+		})
 	})
 
 	describe('paramDate', () => {

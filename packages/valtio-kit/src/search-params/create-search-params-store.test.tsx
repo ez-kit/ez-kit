@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 import { type ContextStoreInit } from '../create-context-store'
 
 import { paramString } from './codecs'
-import { createDecoratedStore, createFieldsStore } from './create-search-params-store'
+import { createSearchParamsStore, createFieldsStore } from './create-search-params-store'
 import { searchParam } from './decorators'
 import { StoreSearchParamsProvider } from './provider'
 import { createFakeRouterAdapter } from './testing/fake-router-adapter'
@@ -24,7 +24,7 @@ const fieldsStore = createFieldsStore(
 class DecoratedFilters {
 	@searchParam() q = ''
 }
-const decoratedStore = createDecoratedStore(
+const decoratedStore = createSearchParamsStore(
 	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
 		const store = proxy(new DecoratedFilters())
 		store.q = defaultValue.q ?? ''
@@ -41,7 +41,7 @@ function makeView(store: { useSnapshot: () => { q: string } }) {
 
 const cases = [
 	{ name: 'createFieldsStore (accessor)', store: fieldsStore },
-	{ name: 'createDecoratedStore (decorators)', store: decoratedStore },
+	{ name: 'createSearchParamsStore (decorators)', store: decoratedStore },
 ] as const
 
 describe('@ez-kit/valtio-kit request-scoped search-params stores', () => {

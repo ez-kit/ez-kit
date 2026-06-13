@@ -74,6 +74,8 @@ export type SearchParamsControl = {
 	push(mutate: () => void): void
 	/** Run mutations whose resulting URL write replaces the current history entry. */
 	replace(mutate: () => void): void
+	/** Deregister this binding from the global coordinator. Use to clean up module-global bindings. */
+	dispose(): void
 }
 
 /** A Valtio proxy augmented with the search-params control handle. */

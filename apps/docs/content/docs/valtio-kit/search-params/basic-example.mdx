@@ -19,7 +19,7 @@ The quickest way in: decorate the fields you want synced, hand the proxy to a re
 
 ```tsx
 import {
-	createDecoratedStore,
+	createSearchParamsStore,
 	searchParam,
 	StoreSearchParamsProvider,
 } from '@ez-kit/valtio-kit/search-params'
@@ -33,7 +33,7 @@ class Filters {
 }
 
 // 2. Build a request-scoped store. Omit `fields` → decorators are discovered on the instance.
-const filtersStore = createDecoratedStore(() => proxy(new Filters()))
+const filtersStore = createSearchParamsStore(() => proxy(new Filters()))
 
 // 3. Render under the coordinator with a router adapter (here, the real app uses nextAdapter
 //    or reactRouterAdapter; the live demo above swaps in an in-memory one).

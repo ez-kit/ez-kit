@@ -37,7 +37,7 @@ const filters = withSearchParamsFields(
 filters.q = 'boots' // mutate → URL updates
 ```
 
-> Module-global proxies are shared across SSR requests — this form is client-first. It renders defaults on the server and hydrates from the URL in an effect (deep-link flash possible). For SSR-correct rendering, use `createSearchParamsStore`.
+> Module-global proxies are shared across SSR requests — this form is client-first. It renders defaults on the server and hydrates from the URL in an effect (deep-link flash possible). For SSR-correct rendering, use `createFieldsStore`.
 
 ### Decorator — `withSearchParams` + `@searchParam`
 
@@ -48,37 +48,39 @@ import { withSearchParams, searchParam, paramString, paramNumber } from '@ez-kit
 import { proxy } from 'valtio'
 
 class FiltersState {
-  @searchParam(paramString()) accessor q = ''
-  @searchParam(paramNumber()) accessor page = 1
+  @searchParam({ parser: paramString() }) q = ''
+  @searchParam({ parser: paramNumber() }) page = 1
 }
 
 const filters = withSearchParams(proxy(new FiltersState()))
 ```
 
-### `createSearchParamsStore(factory, options)` — SSR-correct, request-scoped
+`@searchParam(options?)` takes `{ key?, absolute?, parser? }`. The `parser` is optional for primitives, `Date`, and arrays of primitives (auto-resolved from the field's runtime value) — so `@searchParam() page = 1` works too.
+
+### `createFieldsStore(factory, fields, options?)` — SSR-correct, request-scoped
 
 Fuses the [`createContextStore`](./create-context-store.md) lifecycle with the sync engine: the proxy is created per `<Provider>` and **seeded synchronously from the URL** (`defaultValue` first, then URL overrides), identically on server and client. No flash, no hydration mismatch.
 
 ```tsx
-import { createSearchParamsStore, flat, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
+import { createFieldsStore, flat, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
 import { proxy } from 'valtio'
 
-const filtersStore = createSearchParamsStore<{ q: string; page: number }>(
+const filtersStore = createFieldsStore(
   () => proxy({ q: '', page: 1 }),
-  {
-    fields: (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
-    layout: flat(),
-  },
+  (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
+  { layout: flat() },
 )
 ```
 
-The `fields` option is a **builder function** — each `field(accessor, parser?, options?)` call declares one synced field:
+The second argument is a **fields builder** — each `field(accessor, parser?, options?)` call declares one synced field:
 
 - `accessor` — `(s) => s.someField` — picks the field from the state type (inferred, no type annotation needed).
 - `parser` — optional for primitives, `Date`, and arrays of primitives; auto-resolved from the runtime value. Required for everything else.
 - `options` — optional per-field overrides: `{ key, absolute }`.
 
 The factory returns a Valtio `proxy` — keep mutating actions on it and read with `useSnapshot`. Returns the same surface as `createContextStore` — `Provider`, `useStore`, `useSnapshot`, `Item`. Each `Provider` is isolated, so two never collide.
+
+For class-based stores, use the decorator counterpart `createSearchParamsStore(factory, options?)` — it discovers `@searchParam` fields from the instance instead of taking a fields builder.
 
 ## Parsers
 
@@ -105,8 +107,8 @@ Each satisfies a round-trip contract — `parse(stringify(v))` deep-equals `v` �
 import type { Param } from '@ez-kit/valtio-kit/search-params'
 
 const myParam: Param<MyType> = {
-  stringify: (value) => /* string */,
-  parse: (raw, defaultValue) => /* MyType */,
+  stringify: (value) => /* string | null — return null to omit the param */,
+  parse: (raw) => /* MyType — may throw; the engine falls back to the default */,
   equals: (a, b) => /* boolean */,  // optional, defaults to Object.is
 }
 ```
@@ -179,7 +181,7 @@ const myAdapter: RouterAdapter = {
 
 ## Caveats
 
-- **`withSearchParamsFields` / `withSearchParams` on the server** renders defaults and hydrates in an effect — accept a deep-link flash, or switch to `createSearchParamsStore`. Never hydrate a module proxy on the server.
+- **`withSearchParamsFields` / `withSearchParams` on the server** renders defaults and hydrates in an effect — accept a deep-link flash, or switch to the request-scoped factories (`createFieldsStore` for plain proxies, `createSearchParamsStore` for decorated classes). Never hydrate a module proxy on the server.
 - **Non-canonical custom parsers** can loop — honor the round-trip contract (or supply `equals`).
 - **`json`/`qs` break single-param interop** — use `flat()` when other components need individual keys.
 - **Decorator form** requires Stage 3 decorators (`experimentalDecorators` off) and `Symbol.metadata`. If your toolchain doesn't support it, use the accessor builder form instead.

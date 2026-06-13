@@ -1,12 +1,12 @@
 import type { SyncBinding } from './binding'
 
 /**
- * Module-global registry of bindings created by `proxyWithSearchParams`. The single
- * coordinator drains this and listens for late (code-split) additions.
+ * Module-global registry of bindings created by `withSearchParams` / `withSearchParamsFields`.
+ * The single coordinator drains this and listens for late (code-split) additions.
  *
- * NOTE: module-global state is shared across SSR requests — `proxyWithSearchParams` is
- * for module/singleton scope only. Request-scoped, SSR-correct syncing uses
- * `createDecoratedStore` / `createFieldsStore` instead.
+ * NOTE: module-global state is shared across SSR requests — `withSearchParams` /
+ * `withSearchParamsFields` are for module/singleton scope only. Request-scoped, SSR-correct
+ * syncing uses `createSearchParamsStore` / `createFieldsStore` instead.
  */
 const registeredBindings = new Set<SyncBinding>()
 const listeners = new Set<() => void>()

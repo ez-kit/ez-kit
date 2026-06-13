@@ -30,6 +30,12 @@ export function createSyncEngine(port: EnginePort): SyncEngine {
 	const bindings = new Set<SyncBinding>()
 	const unsubscribers = new Map<SyncBinding, () => void>()
 
+	/**
+	 * History mode is per-flush-batch, not per-mutation. Under throttling, multiple mutations
+	 * may accumulate before one flush fires — the first `push`-flagged mutation in the batch
+	 * determines the navigation type for the entire batch. Use `$searchParams.push(fn)` /
+	 * `$searchParams.replace(fn)` to wrap the specific mutation you want to control.
+	 */
 	let forcedHistory: SearchParamsHistory | null = null
 	let scheduled = false
 	let timer: ReturnType<typeof setTimeout> | null = null
