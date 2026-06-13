@@ -26,7 +26,14 @@ type SearchParamsStoreFactory<TState extends object, TDefaultValue> = (
 /** Resolves the synced field descriptors from a freshly created store instance. */
 type ResolveDescriptors<TState extends object> = (store: TState) => FieldDescriptor[]
 
-/** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
+/**
+ * Props for the generated `Provider`, with `defaultValue` made optional or required by the seed type.
+ *
+ * The conditional reads as: "if `undefined` is assignable to `TDefaultValue` (i.e. the store has no
+ * required seed — `TDefaultValue` defaults to `undefined`), make `defaultValue` optional; otherwise
+ * the caller must pass it." This keeps the prop ergonomic for seedless stores while staying type-safe
+ * for stores that genuinely need an initial value.
+ */
 type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
 	? { defaultValue?: TDefaultValue }
 	: { defaultValue: TDefaultValue }

@@ -198,3 +198,102 @@ const validated: UserInput = userSchema.parse(input)
 - No `console.log` statements in production code
 - Use proper logging libraries instead
 - See hooks for automatic detection
+
+## No Magic Values — Constants, Enums, and Lookups (ez-kit)
+
+> Distilled from recurring PR review feedback. Where this conflicts with the general
+> "prefer string literal unions over `enum`" guidance above, **this section wins** for
+> ez-kit code (project rules override the common default).
+
+### No magic strings or repeated literals
+
+Any string or number literal that carries meaning — or appears more than once — must be a
+named constant (`UPPER_SNAKE_CASE`) or an `enum` member. Never inline the bare literal at the
+use site. This covers option defaults, serialized forms, separators, mode flags, etc.
+
+```typescript
+// WRONG: bare literals scattered across the module
+const separator = options.separator ?? ','
+stringify: (value) => (value ? 'true' : 'false')
+
+// CORRECT: named constants
+const DEFAULT_SEPARATOR = ','
+const TRUE = 'true'
+const FALSE = 'false'
+const separator = options.separator ?? DEFAULT_SEPARATOR
+stringify: (value) => (value ? TRUE : FALSE)
+```
+
+### Closed sets → `enum`
+
+When a value is one of a small, fixed, named set (history modes, value brands, kinds), model it
+as a TS `enum` and reference its members **everywhere** — declarations, comparisons, defaults,
+and tests — never the raw string.
+
+```typescript
+// WRONG: the same closed set spelled as raw strings in many files
+type SearchParamsHistory = 'push' | 'replace'
+if (binding.history === 'push') return 'push'
+
+// CORRECT: one enum, referenced by member
+export enum SearchParamsHistory {
+	Push = 'push',
+	Replace = 'replace',
+}
+if (binding.history === SearchParamsHistory.Push) return SearchParamsHistory.Push
+```
+
+Because `enum`s are runtime values, import them as values (not `import type`) and export them with
+`export { … }` (not `export type { … }`) under `verbatimModuleSyntax`.
+
+### Lookup map over `switch`
+
+Replace a `switch` that maps a key to a value or factory with a lookup object (`Record<…>`).
+It is shorter, data-driven, and trivially extensible.
+
+```typescript
+// WRONG: switch as a dispatch table
+switch (typeof value) {
+	case 'string': return paramString()
+	case 'number': return paramNumber()
+}
+
+// CORRECT: lookup map (guard the result — noUncheckedIndexedAccess)
+const PRIMITIVE_PARSERS: Partial<Record<string, () => AnyParam>> = {
+	string: paramString,
+	number: paramNumber,
+}
+const make = PRIMITIVE_PARSERS[typeof value]
+if (make) return make()
+```
+
+### Extract pure helpers for repeated transforms
+
+Inline encoding/parsing/formatting logic that is reused — or is conceptually one unit — belongs in
+a small pure function. Prefer a native API when it fully covers the case; when it does not, keep the
+manual helper and comment *why* the native one is insufficient.
+
+```typescript
+// CORRECT: a named pure helper, with a note on why encodeURIComponent isn't enough
+/** encodeURIComponent leaves some separators (e.g. ",") untouched, so we encode them ourselves. */
+function percentEncode(value: string): string {
+	return Array.from(value)
+		.map((char) => '%' + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
+		.join('')
+}
+```
+
+### Document non-obvious types
+
+Conditional, mapped, or generic types that are not self-explanatory get a short JSDoc explaining
+what they resolve to and why — so a reader never has to ask "what is this type?".
+
+```typescript
+/**
+ * `defaultValue` is optional when the seed has no required fields (`TDefaultValue` includes
+ * `undefined`), and required otherwise.
+ */
+type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
+	? { defaultValue?: TDefaultValue }
+	: { defaultValue: TDefaultValue }
+```

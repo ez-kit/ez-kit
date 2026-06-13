@@ -54,7 +54,10 @@ export type SearchParamsLayout = {
 }
 
 /** How a URL update affects browser history. */
-export type SearchParamsHistory = 'push' | 'replace'
+export enum SearchParamsHistory {
+	Push = 'push',
+	Replace = 'replace',
+}
 
 /** Global sync options — the second argument to `withSearchParams` / `withSearchParamsFields`. */
 export type SearchParamsOptions = {

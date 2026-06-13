@@ -3,6 +3,7 @@
 import {
 	createFieldsStore,
 	paramString,
+	SearchParamsHistory,
 	StoreSearchParamsProvider,
 } from '@ez-kit/valtio-kit/search-params'
 import { proxy } from 'valtio'
@@ -40,7 +41,7 @@ const wizardStore = createFieldsStore<WizardState>(
 	},
 	(field) => [field((s) => s.step, paramString())],
 	// Default writes replace; the control lets a specific mutation opt into a push instead.
-	{ history: 'replace' },
+	{ history: SearchParamsHistory.Replace },
 )
 
 const { adapter, useSearch } = createMemoryAdapter('step=account')

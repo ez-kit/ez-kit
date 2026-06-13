@@ -7,16 +7,31 @@ import { paramString } from './param-string'
 
 import type { AnyParam } from '../types'
 
+/** Human-readable brands for runtime values that have no `typeof` of their own. */
+enum ValueBrand {
+	Null = 'null',
+	Array = 'array',
+	Object = 'object',
+}
+
+/** Maps a primitive `typeof` tag to the parser factory that handles it. */
+const PRIMITIVE_PARSERS: Partial<Record<string, () => AnyParam>> = {
+	string: paramString,
+	number: paramNumber,
+	boolean: paramBoolean,
+	bigint: paramBigInt,
+}
+
 function describe(value: unknown): string {
 	if (value === null) {
-		return 'null'
+		return ValueBrand.Null
 	}
 	if (Array.isArray(value)) {
-		return 'array'
+		return ValueBrand.Array
 	}
 	if (typeof value === 'object') {
 		const named = value as { constructor?: { name?: string } }
-		return named.constructor?.name ?? 'object'
+		return named.constructor?.name ?? ValueBrand.Object
 	}
 	return typeof value
 }
@@ -34,17 +49,9 @@ function unresolvable(pathLabel: string, value: unknown): never {
  * (`null`/`undefined`/plain object/`Set`/`Map`/class instance) fails fast.
  */
 export function resolveParser(value: unknown, pathLabel: string): AnyParam {
-	switch (typeof value) {
-		case 'string':
-			return paramString()
-		case 'number':
-			return paramNumber()
-		case 'boolean':
-			return paramBoolean()
-		case 'bigint':
-			return paramBigInt()
-		default:
-			break
+	const primitive = PRIMITIVE_PARSERS[typeof value]
+	if (primitive) {
+		return primitive()
 	}
 	if (value instanceof Date) {
 		return paramDate()

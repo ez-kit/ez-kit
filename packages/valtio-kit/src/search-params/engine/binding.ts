@@ -1,12 +1,13 @@
 import { flat } from '../layouts/flat'
+import { SearchParamsHistory } from '../types'
 
 import { parentOf, readPath, writePath } from './path'
 import { validateBinding } from './validate'
 
+
 import type {
 	FieldDescriptor,
 	FieldValues,
-	SearchParamsHistory,
 	SearchParamsLayout,
 	SearchParamsOptions,
 } from '../types'
@@ -55,7 +56,7 @@ export function createBinding(
 		proxy,
 		fields,
 		layout,
-		history: options.history ?? 'replace',
+		history: options.history ?? SearchParamsHistory.Replace,
 		throttleMs: options.throttleMs ?? 0,
 		clearOnDefault: options.clearOnDefault ?? true,
 		defaults,

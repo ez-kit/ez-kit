@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import { useSearchParams as useRouterSearchParams } from 'react-router'
 
+import { SearchParamsHistory } from '../types'
+
 import type { RouterAdapter, SearchParamsUpdater } from '../types'
 
 /** Read the current location's search without depending on React (for the async flush). */
@@ -16,7 +18,7 @@ export const reactRouterAdapter: RouterAdapter = {
 		const [, setSearchParams] = useRouterSearchParams()
 		return useCallback<SearchParamsUpdater>(
 			(next, { history }) => {
-				setSearchParams(next, { replace: history === 'replace' })
+				setSearchParams(next, { replace: history === SearchParamsHistory.Replace })
 			},
 			[setSearchParams],
 		)

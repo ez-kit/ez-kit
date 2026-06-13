@@ -3,6 +3,8 @@
 import { usePathname, useRouter, useSearchParams as useNextSearchParams } from 'next/navigation'
 import { useCallback } from 'react'
 
+import { SearchParamsHistory } from '../types'
+
 import type { RouterAdapter, SearchParamsUpdater } from '../types'
 
 function snapshot(): URLSearchParams {
@@ -24,7 +26,7 @@ export const nextAdapter: RouterAdapter = {
 			(next, { history }) => {
 				const query = next.toString()
 				const url = query ? `${pathname}?${query}` : pathname
-				if (history === 'push') {
+				if (history === SearchParamsHistory.Push) {
 					router.push(url)
 				} else {
 					router.replace(url)

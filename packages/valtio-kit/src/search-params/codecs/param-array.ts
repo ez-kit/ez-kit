@@ -1,5 +1,19 @@
 import type { Param } from '../types'
 
+/** Default separator between encoded array items. */
+const DEFAULT_SEPARATOR = ','
+
+/**
+ * Percent-encode every character of `value` (e.g. `,` → `%2C`). Native
+ * `encodeURIComponent` leaves some separator characters untouched, so we encode
+ * the separator ourselves to guarantee it can never collide with item content.
+ */
+function percentEncode(value: string): string {
+	return Array.from(value)
+		.map((char) => '%' + char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
+		.join('')
+}
+
 export type ParamArrayOptions = {
 	/** Separator between encoded items. Defaults to `,`. */
 	separator?: string
@@ -10,12 +24,8 @@ export type ParamArrayOptions = {
  * separator, then joined. An empty array is omitted (`null`).
  */
 export function paramArray<T>(item: Param<T>, options: ParamArrayOptions = {}): Param<T[]> {
-	const separator = options.separator ?? ','
-	// Always build the percent-encoded form unconditionally — encodeURIComponent leaves some
-	// characters (e.g. ",") unencoded, which would corrupt items that contain the separator.
-	const sepEncoded = Array.from(separator)
-		.map((c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
-		.join('')
+	const separator = options.separator ?? DEFAULT_SEPARATOR
+	const sepEncoded = percentEncode(separator)
 	const escapeItem = (s: string): string => encodeURIComponent(s).replaceAll(separator, sepEncoded)
 
 	return {

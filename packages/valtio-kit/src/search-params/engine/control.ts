@@ -1,3 +1,5 @@
+import { SearchParamsHistory } from '../types'
+
 import type { SearchParamsControl } from '../types'
 import type { SyncBinding } from './binding'
 
@@ -9,14 +11,14 @@ export function createControl(binding: SyncBinding, unsubscribe: () => void = ()
 	return {
 		push: (mutate) => {
 			if (binding.engine) {
-				binding.engine.runWithHistory('push', mutate)
+				binding.engine.runWithHistory(SearchParamsHistory.Push, mutate)
 			} else {
 				mutate()
 			}
 		},
 		replace: (mutate) => {
 			if (binding.engine) {
-				binding.engine.runWithHistory('replace', mutate)
+				binding.engine.runWithHistory(SearchParamsHistory.Replace, mutate)
 			} else {
 				mutate()
 			}

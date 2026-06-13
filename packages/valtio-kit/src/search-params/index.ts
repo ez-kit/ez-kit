@@ -33,6 +33,7 @@ export {
 	type StoreSearchParamsProviderProps,
 	useSearchParamsEngine,
 } from './provider'
+export { SearchParamsHistory } from './types'
 export type {
 	AnyParam,
 	FieldDescriptor,
@@ -40,7 +41,6 @@ export type {
 	Param,
 	RouterAdapter,
 	SearchParamsControl,
-	SearchParamsHistory,
 	SearchParamsLayout,
 	SearchParamsOptions,
 	SearchParamsProxy,

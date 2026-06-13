@@ -2,9 +2,11 @@ import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
 import { paramNumber, paramString } from '../codecs'
+import { SearchParamsHistory } from '../types'
 
 import { createBinding, type SyncBinding } from './binding'
 import { createSyncEngine, type EnginePort } from './engine'
+
 
 import type { FieldDescriptor, SearchParamsOptions } from '../types'
 
@@ -121,13 +123,13 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		const store = proxy({ q: '' })
 		engine.connect(bind(store, [{ path: ['q'], parser: paramString() }]))
 
-		engine.runWithHistory('push', () => {
+		engine.runWithHistory(SearchParamsHistory.Push, () => {
 			store.q = 'shoes'
 		})
 		await flush()
 
 		expect(fake.calls).toHaveLength(1)
-		expect(fake.calls[0]?.history).toBe('push')
+		expect(fake.calls[0]?.history).toBe(SearchParamsHistory.Push)
 		engine.dispose()
 	})
 
@@ -140,7 +142,7 @@ describe('@ez-kit/valtio-kit sync engine', () => {
 		store.q = 'shoes'
 		await flush()
 
-		expect(fake.calls[0]?.history).toBe('replace')
+		expect(fake.calls[0]?.history).toBe(SearchParamsHistory.Replace)
 		engine.dispose()
 	})
 

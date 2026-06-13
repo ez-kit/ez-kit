@@ -1,8 +1,9 @@
 import { subscribe } from 'valtio'
 
+import { SearchParamsHistory } from '../types'
+
 import { applyParamsToProxy, desiredValues, type SyncBinding } from './binding'
 
-import type { SearchParamsHistory } from '../types'
 
 /** Non-reactive read/write port the engine uses (supplied by the React provider). */
 export type EnginePort = {
@@ -52,11 +53,11 @@ export function createSyncEngine(port: EnginePort): SyncEngine {
 
 	function defaultHistory(): SearchParamsHistory {
 		for (const binding of bindings) {
-			if (binding.history === 'push') {
-				return 'push'
+			if (binding.history === SearchParamsHistory.Push) {
+				return SearchParamsHistory.Push
 			}
 		}
-		return 'replace'
+		return SearchParamsHistory.Replace
 	}
 
 	function flush(): void {
@@ -116,10 +117,10 @@ export function createSyncEngine(port: EnginePort): SyncEngine {
 		},
 
 		runWithHistory(mode, mutate) {
-			if (mode === 'push') {
-				forcedHistory = 'push'
+			if (mode === SearchParamsHistory.Push) {
+				forcedHistory = SearchParamsHistory.Push
 			} else {
-				forcedHistory ??= 'replace'
+				forcedHistory ??= SearchParamsHistory.Replace
 			}
 			mutate()
 		},

@@ -35,8 +35,10 @@ Set on `withSearchParams(proxy, options)`, `withSearchParamsFields(proxy, fields
 | `clearOnDefault` | `true` | Omit a param when its value equals the field default, keeping URLs clean. |
 
 ```ts
+import { SearchParamsHistory } from '@ez-kit/valtio-kit/search-params'
+
 withSearchParams(proxy(new Filters()), {
-	history: 'replace',
+	history: SearchParamsHistory.Replace,
 	throttleMs: 200,
 	clearOnDefault: true,
 })
