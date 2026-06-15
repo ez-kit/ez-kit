@@ -113,6 +113,27 @@ export function createStoragePort(area: () => Storage | null, storageKey: string
 				warnOnce(error)
 			}
 		},
+
+		subscribe(onChange: () => void): () => void {
+			if (typeof window === 'undefined') {
+				return () => undefined
+			}
+			const handler = (event: StorageEvent): void => {
+				// `storage` fires only in OTHER tabs, never the writer — so this can't echo back to itself.
+				// A `null` key means `clear()`; otherwise react only to our own key and storage area.
+				if (event.storageArea !== safeArea(area)) {
+					return
+				}
+				if (event.key !== null && event.key !== storageKey) {
+					return
+				}
+				onChange()
+			}
+			window.addEventListener('storage', handler)
+			return () => {
+				window.removeEventListener('storage', handler)
+			}
+		},
 	}
 }
 

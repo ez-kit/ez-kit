@@ -140,3 +140,57 @@ describe('@ez-kit/valtio-kit persist createStoragePort', () => {
 		}).not.toThrow()
 	})
 })
+
+describe('@ez-kit/valtio-kit persist storage subscribe (cross-tab)', () => {
+	beforeEach(() => {
+		window.localStorage.clear()
+	})
+
+	function fireStorage(init: StorageEventInit): void {
+		window.dispatchEvent(new StorageEvent('storage', init))
+	}
+
+	it('notifies on a cross-tab change to its own key', () => {
+		const port = createStoragePort(() => window.localStorage, KEY)
+		const onChange = vi.fn()
+		const unsubscribe = port.subscribe?.(onChange)
+
+		fireStorage({ key: KEY, storageArea: window.localStorage, newValue: '{"v":0,"s":{"q":"x"}}' })
+		expect(onChange).toHaveBeenCalledTimes(1)
+
+		unsubscribe?.()
+	})
+
+	it('notifies on a full clear (null key)', () => {
+		const port = createStoragePort(() => window.localStorage, KEY)
+		const onChange = vi.fn()
+		const unsubscribe = port.subscribe?.(onChange)
+
+		fireStorage({ key: null, storageArea: window.localStorage })
+		expect(onChange).toHaveBeenCalledTimes(1)
+
+		unsubscribe?.()
+	})
+
+	it('ignores changes to a different key or a different storage area', () => {
+		const port = createStoragePort(() => window.localStorage, KEY)
+		const onChange = vi.fn()
+		const unsubscribe = port.subscribe?.(onChange)
+
+		fireStorage({ key: 'other-store', storageArea: window.localStorage, newValue: '{}' })
+		fireStorage({ key: KEY, storageArea: window.sessionStorage, newValue: '{}' })
+		expect(onChange).not.toHaveBeenCalled()
+
+		unsubscribe?.()
+	})
+
+	it('stops notifying after unsubscribe', () => {
+		const port = createStoragePort(() => window.localStorage, KEY)
+		const onChange = vi.fn()
+		const unsubscribe = port.subscribe?.(onChange)
+
+		unsubscribe?.()
+		fireStorage({ key: KEY, storageArea: window.localStorage, newValue: '{}' })
+		expect(onChange).not.toHaveBeenCalled()
+	})
+})
