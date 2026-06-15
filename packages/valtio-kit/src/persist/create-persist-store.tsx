@@ -1,9 +1,18 @@
-import { createContext, type PropsWithChildren, type ReactElement, useContext, useEffect, useRef } from 'react'
+import {
+	createContext,
+	type PropsWithChildren,
+	type ReactElement,
+	useContext,
+	useEffect,
+	useRef,
+	useSyncExternalStore,
+} from 'react'
 import { type Snapshot, useSnapshot as useValtioSnapshot } from 'valtio'
 
 import { resolveFieldSpecs, type FieldsBuilder } from './accessor'
-import { applyKeyed, ApplyMode, createBinding, type PersistBinding } from './binding'
+import { applyKeyed, ApplyMode, createBinding } from './binding'
 import { discoverPersistFields } from './decorators'
+import { attachHandles, type SourceBinding } from './handle'
 import { usePersistEngines } from './provider'
 import { groupBySource, type PersistSpec } from './spec'
 
@@ -25,21 +34,31 @@ type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
 	? { defaultValue?: TDefaultValue }
 	: { defaultValue: TDefaultValue }
 
-type SourceBinding = { source: string; binding: PersistBinding }
-type Instance<TState extends object> = { store: TState; bindings: SourceBinding[] }
+/** Tracks when every source's first hydration has been applied (drives `useHydrated`). */
+type Hydration = { done: boolean; listeners: Set<() => void> }
+
+type Instance<TState extends object> = { store: TState; bindings: SourceBinding[]; hydration: Hydration }
 
 export type CreatePersistStoreResult<TState extends object, TDefaultValue> = {
 	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
 	useStore: () => TState
 	useSnapshot: (options?: UseSnapshotOptions) => Snapshot<TState>
+	/**
+	 * `false` on the server and the first client render, flipping to `true` once every source's first
+	 * read has been applied. For URL-only (synchronous) stores it flips on mount; use it to gate a
+	 * skeleton or defer side-effects while async sources (storage) fill in, avoiding a flash/CLS.
+	 */
+	useHydrated: () => boolean
 	Item: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
 }
 
 /**
  * Private store core shared by the decorator and accessor factories. Fuses the `createContextStore`
  * lifecycle with the persist engines: the proxy is created per request, its specs grouped by source,
- * one binding created per source, and each binding seeded synchronously from its source's engine
- * snapshot (so server HTML reflects the substrate) then connected on mount. Not part of the public API.
+ * one binding created per source, render-scoped (URL) sources seeded synchronously from their engine
+ * snapshot (so server HTML reflects the substrate), then every binding connected on mount. Ambient
+ * (storage) sources are NOT seeded in render — they would mismatch SSR — and hydrate on connect.
+ * Not part of the public API.
  */
 function createPersistStoreCore<TState extends object, TDefaultValue>(
 	factory: PersistStoreFactory<TState, TDefaultValue>,
@@ -60,29 +79,37 @@ function createPersistStoreCore<TState extends object, TDefaultValue>(
 			for (const [source, descriptors] of bySource) {
 				const binding = createBinding(store, descriptors, options)
 				bindings.push({ source, binding })
-				// Synchronous URL seed → correct server HTML and matching client hydration.
-				const engine = engines?.get(source)
-				if (engine) {
-					const seed = engine.snapshot()
+				// Synchronous seed for render-scoped (URL) sources only → correct server HTML + matching
+				// client hydration. Ambient (storage) sources hydrate on mount to avoid an SSR mismatch.
+				const mount = engines?.get(source)
+				if (mount?.seedSync) {
+					const seed = mount.engine.snapshot()
 					if (!(seed instanceof Promise)) {
 						applyKeyed(binding, seed, ApplyMode.Hydrate)
 					}
 				}
 			}
-			instanceRef.current = { store, bindings }
+			attachHandles(store, bindings)
+			instanceRef.current = { store, bindings, hydration: { done: false, listeners: new Set() } }
 		}
 
 		const instance = instanceRef.current
 
 		useEffect(() => {
-			if (!engines) {
-				return
-			}
 			const disconnects: (() => void)[] = []
-			for (const { source, binding } of instance.bindings) {
-				const engine = engines.get(source)
-				if (engine) {
-					disconnects.push(engine.connect(binding))
+			if (engines) {
+				for (const { source, binding } of instance.bindings) {
+					const mount = engines.get(source)
+					if (mount) {
+						disconnects.push(mount.engine.connect(binding))
+					}
+				}
+			}
+			// Sync sources have hydrated synchronously inside `connect`; mark the store hydrated.
+			if (!instance.hydration.done) {
+				instance.hydration.done = true
+				for (const listener of instance.hydration.listeners) {
+					listener()
 				}
 			}
 			return () => {
@@ -111,6 +138,20 @@ function createPersistStoreCore<TState extends object, TDefaultValue>(
 		return useValtioSnapshot(useInstance().store, snapshotOptions)
 	}
 
+	function useHydrated(): boolean {
+		const { hydration } = useInstance()
+		return useSyncExternalStore(
+			(onChange) => {
+				hydration.listeners.add(onChange)
+				return () => {
+					hydration.listeners.delete(onChange)
+				}
+			},
+			() => hydration.done,
+			() => false,
+		)
+	}
+
 	function Item({
 		children,
 	}: {
@@ -119,7 +160,7 @@ function createPersistStoreCore<TState extends object, TDefaultValue>(
 		return children({ snap: useSnapshot(), store: useStore() })
 	}
 
-	return { Provider, useStore, useSnapshot, Item }
+	return { Provider, useStore, useSnapshot, useHydrated, Item }
 }
 
 /**

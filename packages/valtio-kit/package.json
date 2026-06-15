@@ -23,6 +23,10 @@
 			"types": "./dist/persist/index.d.ts",
 			"import": "./dist/persist/index.js"
 		},
+		"./persist/storage": {
+			"types": "./dist/persist/storage/index.d.ts",
+			"import": "./dist/persist/storage/index.js"
+		},
 		"./persist/url": {
 			"types": "./dist/persist/url/index.d.ts",
 			"import": "./dist/persist/url/index.js"
@@ -61,6 +65,10 @@
 		{
 			"path": "dist/persist/index.js",
 			"limit": "10 KB"
+		},
+		{
+			"path": "dist/persist/storage/index.js",
+			"limit": "3 KB"
 		},
 		{
 			"path": "dist/persist/url/index.js",

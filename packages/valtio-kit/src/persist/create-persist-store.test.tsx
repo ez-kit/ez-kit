@@ -57,7 +57,7 @@ describe('@ez-kit/valtio-kit request-scoped persist stores', () => {
 			it('seeds synchronously from the URL on first render (no flash)', () => {
 				const fake = createFakePersistAdapter('?q=shoes')
 				render(
-					<PersistProvider adapter={fake.adapter}>
+					<PersistProvider adapters={[fake.adapter]}>
 						<store.Provider defaultValue={{ q: 'fallback' }}>
 							<QView />
 						</store.Provider>
@@ -69,7 +69,7 @@ describe('@ez-kit/valtio-kit request-scoped persist stores', () => {
 			it('falls back to defaultValue when the param is absent', () => {
 				const fake = createFakePersistAdapter()
 				render(
-					<PersistProvider adapter={fake.adapter}>
+					<PersistProvider adapters={[fake.adapter]}>
 						<store.Provider defaultValue={{ q: 'fallback' }}>
 							<QView />
 						</store.Provider>
@@ -81,7 +81,7 @@ describe('@ez-kit/valtio-kit request-scoped persist stores', () => {
 			it('renders URL-derived state on the server (renderToString)', () => {
 				const fake = createFakePersistAdapter('?q=server')
 				const html = renderToString(
-					<PersistProvider adapter={fake.adapter}>
+					<PersistProvider adapters={[fake.adapter]}>
 						<store.Provider defaultValue={{ q: 'fallback' }}>
 							<QView />
 						</store.Provider>

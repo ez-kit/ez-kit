@@ -4,6 +4,7 @@ export default defineConfig({
 	entry: {
 		index: 'src/index.ts',
 		'persist/index': 'src/persist/index.ts',
+		'persist/storage/index': 'src/persist/storage/index.ts',
 		'persist/url/index': 'src/persist/url/index.ts',
 		'persist/url/react-router': 'src/persist/url/react-router.ts',
 		'persist/url/next': 'src/persist/url/next.tsx',

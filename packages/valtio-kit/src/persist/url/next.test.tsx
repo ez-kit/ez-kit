@@ -98,7 +98,7 @@ describe('@ez-kit/valtio-kit persist nextAdapter', () => {
 		navStore.reset('/', 'q=shoes')
 
 		render(
-			<PersistProvider adapter={nextAdapter}>
+			<PersistProvider adapters={[nextAdapter]}>
 				<store.Provider>
 					<View />
 				</store.Provider>
@@ -118,7 +118,7 @@ describe('@ez-kit/valtio-kit persist nextAdapter', () => {
 
 	it('pulls external URL changes (back/forward) into the proxy without re-writing', async () => {
 		render(
-			<PersistProvider adapter={nextAdapter}>
+			<PersistProvider adapters={[nextAdapter]}>
 				<store.Provider>
 					<View />
 				</store.Provider>

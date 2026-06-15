@@ -7,20 +7,22 @@
  */
 
 // --- Store factories (SSR-correct, request-scoped) ---
-export {
-	createPersistFields,
-	createPersistStore,
-	type CreatePersistStoreResult,
-} from './create-persist-store'
+export { createPersistFields, createPersistStore, type CreatePersistStoreResult } from './create-persist-store'
 
 // --- Provider + adapter contract ---
 export {
+	type AmbientAdapter,
 	type EngineMap,
+	type PersistAdapter,
+	type PersistMount,
 	PersistProvider,
 	type PersistProviderProps,
 	type RenderScopedAdapter,
 	usePersistEngines,
 } from './provider'
+
+// --- Per-source control handles ($url / $persist) ---
+export { attachHandles, PERSIST_HANDLE, type PersistHandle, type SourceBinding, URL_HANDLE } from './handle'
 
 // --- Decorator + accessor fronts ---
 export { discoverPersistFields, persistField, type PersistFieldOptions } from './decorators'

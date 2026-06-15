@@ -39,7 +39,7 @@ describe('@ez-kit/valtio-kit persist reactRouterAdapter', () => {
 	it('hydrates from the router location and writes back', async () => {
 		render(
 			<MemoryRouter initialEntries={['/?q=shoes']}>
-				<PersistProvider adapter={reactRouterAdapter}>
+				<PersistProvider adapters={[reactRouterAdapter]}>
 					<store.Provider>
 						<View />
 					</store.Provider>
