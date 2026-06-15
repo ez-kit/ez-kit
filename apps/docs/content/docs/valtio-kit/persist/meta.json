@@ -1,0 +1,17 @@
+{
+	"title": "Persist",
+	"description": "Sync a Valtio store to the URL, storage, or any substrate",
+	"pages": [
+		"index",
+		"quick-start-url",
+		"quick-start-storage",
+		"combined",
+		"deep-dive-url",
+		"deep-dive-storage",
+		"custom-adapter",
+		"decorators",
+		"fields",
+		"parsers",
+		"typescript"
+	]
+}

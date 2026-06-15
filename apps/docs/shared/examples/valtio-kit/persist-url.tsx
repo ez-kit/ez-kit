@@ -1,49 +1,30 @@
 'use client'
 
-import {
-	createFieldsStore,
-	flat,
-	paramNumber,
-	paramString,
-	StoreSearchParamsProvider,
-} from '@ez-kit/valtio-kit/search-params'
+/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
+
+import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { urlField } from '@ez-kit/valtio-kit/persist/url'
 import { proxy } from 'valtio'
 
-import { createMemoryAdapter, UrlReadout } from './_memory-adapter'
+import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 
 type FiltersState = {
 	q: string
 	page: number
-	setQ: (value: string) => void
-	incPage: () => void
-	decPage: () => void
 }
 
-const filtersStore = createFieldsStore<FiltersState>(
-	() => {
-		const state = proxy<FiltersState>({
-			q: '',
-			page: 1,
-			setQ: (value) => {
-				state.q = value
-			},
-			incPage: () => {
-				state.page += 1
-			},
-			decPage: () => {
-				state.page = Math.max(1, state.page - 1)
-			},
-		})
-		return state
-	},
-	(field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
-	{ layout: flat() },
+// The accessor API runs in this in-browser sandbox (no decorator transform needed). The decorator
+// form — class Filters { @persistUrl() q = '' } — produces identical URL output. See Quick start → URL.
+const filtersStore = createPersistFields<FiltersState>(
+	() => proxy<FiltersState>({ q: '', page: 1 }),
+	(field) => [field((s) => s.q, urlField()), field((s) => s.page, urlField())],
 )
 
-const { adapter, useSearch } = createMemoryAdapter('q=boots&page=2')
+const { adapter, useSearch } = createMemoryUrlAdapter('q=boots&page=2')
 
 function FilterControls() {
 	const snap = filtersStore.useSnapshot()
+	const store = filtersStore.useStore() // the raw mutable proxy
 	const search = useSearch()
 
 	return (
@@ -54,7 +35,7 @@ function FilterControls() {
 					<input
 						value={snap.q}
 						onChange={(event) => {
-							snap.setQ(event.target.value)
+							store.q = event.target.value
 						}}
 						placeholder='search…'
 						className='w-40 rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
@@ -64,7 +45,9 @@ function FilterControls() {
 					<span className='text-fd-muted-foreground'>page</span>
 					<button
 						type='button'
-						onClick={snap.decPage}
+						onClick={() => {
+							store.page = Math.max(1, store.page - 1)
+						}}
 						className='rounded-md border border-fd-border bg-fd-card px-3 py-1 font-medium hover:bg-fd-muted'
 					>
 						−
@@ -72,7 +55,9 @@ function FilterControls() {
 					<output className='min-w-[2ch] text-center font-mono tabular-nums'>{snap.page}</output>
 					<button
 						type='button'
-						onClick={snap.incPage}
+						onClick={() => {
+							store.page += 1
+						}}
 						className='rounded-md border border-fd-border bg-fd-card px-3 py-1 font-medium hover:bg-fd-muted'
 					>
 						+
@@ -84,12 +69,12 @@ function FilterControls() {
 	)
 }
 
-export default function SearchParamsFlatExample() {
+export default function PersistUrlExample() {
 	return (
-		<StoreSearchParamsProvider adapter={adapter}>
+		<PersistProvider adapters={[adapter]}>
 			<filtersStore.Provider>
 				<FilterControls />
 			</filtersStore.Provider>
-		</StoreSearchParamsProvider>
+		</PersistProvider>
 	)
 }

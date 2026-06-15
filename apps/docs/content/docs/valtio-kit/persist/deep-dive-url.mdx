@@ -1,0 +1,81 @@
+---
+title: Deep dive — URL
+description: History push vs replace, key naming and prefixes, the router adapters (react-router, Next.js), imperative control via $url, and SSR.
+---
+
+# Deep dive — URL
+
+The URL source builds a `SourcePort` over a tiny router driver (`read()` / `commit()`). Key naming lives on the descriptor, so the engine's keys *are* the URL keys — params it doesn't own are preserved untouched.
+
+<LivePreview path='valtio-kit/persist-composition' title='Nested paths → dotted keys' />
+
+## History: push vs replace
+
+By default a commit **replaces** the current history entry, so typing in a search box doesn't stack dozens of Back steps. Opt a field into `push` so each change is a distinct, back-button-able entry:
+
+```tsx
+import { persistUrl } from '@ez-kit/valtio-kit/persist/url'
+import { UrlHistory } from '@ez-kit/valtio-kit/persist/url'
+
+class Wizard {
+	@persistUrl({ history: UrlHistory.Push }) step = 'account'
+}
+```
+
+When several field changes coalesce into one navigation, any `push` in the batch makes the whole navigation a push.
+
+## Key naming
+
+Three source-agnostic options shape a field's substrate key (they apply to storage too):
+
+| Option | Effect |
+| --- | --- |
+| `key` | Override the leaf segment (defaults to the property name). `@persistUrl({ key: 'query' })` → `?query=` |
+| `prefix` | Prepend a namespace, e.g. a per-widget scope. `@persistUrl({ prefix: 'a.' })` → `?a.q=` |
+| `absolute` | Pin to an exact top-level key, ignoring ancestor path segments (granular URL packing only). |
+
+Nested state maps to **dotted** keys by path: `price.min` → `?price.min=`. A URL pull assigns only the leaf, so the `price` object keeps its identity.
+
+## Router adapters
+
+A render-scoped adapter turns router hooks into a port. Two ship in the box; both are optional peers.
+
+```tsx
+// react-router v6/v7 (BrowserRouter / data routers)
+import { reactRouterAdapter } from '@ez-kit/valtio-kit/persist/url/react-router'
+
+<PersistProvider adapters={[reactRouterAdapter]}>…</PersistProvider>
+```
+
+```tsx
+// Next.js App Router
+import { nextAdapter } from '@ez-kit/valtio-kit/persist/url/next'
+
+<PersistProvider adapters={[nextAdapter]}>…</PersistProvider>
+```
+
+Render-scoped adapters call hooks, so the `adapters` array must be stable in length and order. To target a different router, [write your own adapter](./valtio-kit/persist/custom-adapter#render-scoped-url-adapters).
+
+## Imperative control via `$url`
+
+Each bound source attaches a non-enumerable handle to the proxy. The `$url` handle runs a mutation whose resulting commit carries explicit `meta` — e.g. forcing a one-off `push` regardless of the field's default:
+
+```tsx
+import { type PersistHandle, URL_HANDLE } from '@ez-kit/valtio-kit/persist'
+import { UrlHistory } from '@ez-kit/valtio-kit/persist/url'
+
+function next() {
+	const store = wizardStore.useStore()
+	// The handle is attached at runtime (not on the store's type) — read it by its key.
+	const $url = (store as Record<string, unknown>)[URL_HANDLE] as PersistHandle
+	$url.runWithMeta({ history: UrlHistory.Push }, () => {
+		store.step = 'profile'
+	})
+}
+```
+
+Before the provider connects (server render, first paint) the handle is inert — the mutation still runs, just without engine meta.
+
+## SSR
+
+`createPersistStore` is request-scoped: each `Provider` mount creates its own proxy, so concurrent requests never share state. The URL source seeds **synchronously** in render, so server HTML reflects the incoming query string and the first client render matches it — no flash, no hydration mismatch. (Storage sources defer to mount; see the [storage deep dive](./valtio-kit/persist/deep-dive-storage).)

@@ -1,24 +1,26 @@
 'use client'
 
-import { useCallback, useSyncExternalStore } from 'react'
+import { useRef, useSyncExternalStore } from 'react'
 
-import type { RouterAdapter } from '@ez-kit/valtio-kit/search-params'
+import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '@ez-kit/valtio-kit/persist/url'
+
+import type { RenderScopedAdapter, SyncSourcePort } from '@ez-kit/valtio-kit/persist'
 
 /**
- * A self-contained, in-memory `RouterAdapter` for the live docs examples.
+ * A self-contained, in-memory URL adapter for the live docs examples.
  *
- * The real adapters (`reactRouterAdapter`, `nextAdapter`) drive the browser URL. Inside the
- * docs we don't want a demo to hijack the page's address bar, so each example gets its own
- * isolated memory adapter and renders the resulting query string itself. Swapping this for
- * `nextAdapter` or `reactRouterAdapter` is the only change needed in a real app.
+ * The real adapters (`reactRouterAdapter`, `nextAdapter`) drive the browser URL. Inside the docs we
+ * don't want a demo to hijack the page's address bar, so each example gets its own isolated memory
+ * adapter and renders the resulting query string itself. Swapping this for `nextAdapter` or
+ * `reactRouterAdapter` is the only change needed in a real app.
  */
-export type MemoryAdapter = {
-	adapter: RouterAdapter
+export type MemoryUrlAdapter = {
+	adapter: RenderScopedAdapter
 	/** Reactive read of the current query string, for the example's URL read-out. */
 	useSearch: () => string
 }
 
-export function createMemoryAdapter(initial = ''): MemoryAdapter {
+export function createMemoryUrlAdapter(initial = ''): MemoryUrlAdapter {
 	let search = initial
 	const listeners = new Set<() => void>()
 
@@ -35,14 +37,24 @@ export function createMemoryAdapter(initial = ''): MemoryAdapter {
 		}
 	}
 
-	const adapter: RouterAdapter = {
-		useSearchParams: () => new URLSearchParams(useSyncExternalStore(subscribe, getSearch, getSearch)),
-		useUpdater: () =>
-			useCallback((next) => {
-				search = next.toString()
-				emit()
-			}, []),
-		getSnapshot: () => new URLSearchParams(search),
+	const adapter: RenderScopedAdapter = {
+		source: URL_SOURCE,
+		mergeMeta: urlMetaMerge,
+		defaultMeta: { history: UrlHistory.Replace },
+
+		usePort() {
+			const portRef = useRef<SyncSourcePort | null>(null)
+			portRef.current ??= createUrlPort({
+				read: () => new URLSearchParams(search),
+				commit: (next) => {
+					search = next.toString()
+					emit()
+				},
+			})
+			// `changeKey` changes whenever the substrate changes externally, driving the provider's pull.
+			const changeKey = useSyncExternalStore(subscribe, getSearch, getSearch)
+			return { port: portRef.current, changeKey }
+		},
 	}
 
 	const useSearch = (): string => useSyncExternalStore(subscribe, getSearch, getSearch)

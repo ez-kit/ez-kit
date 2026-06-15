@@ -2,10 +2,11 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createFieldsStore, StoreSearchParamsProvider } from '@ez-kit/valtio-kit/search-params'
+import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { urlField } from '@ez-kit/valtio-kit/persist/url'
 import { proxy } from 'valtio'
 
-import { createMemoryAdapter, UrlReadout } from './_memory-adapter'
+import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 
 type ProductFiltersState = {
 	q: string
@@ -13,19 +14,20 @@ type ProductFiltersState = {
 	onSale: boolean
 }
 
-// Declared with the accessor API so the demo runs here; the decorator form composes a nested
-// `class Price` and inherits via `extends` to produce the SAME paths: q, price.min, price.max, onSale.
-const store = createFieldsStore<ProductFiltersState>(
+// Fields are addressed by path, so nested state maps to dotted keys: price.min, price.max. A URL pull
+// assigns only the leaf — the `price` object keeps its identity. The decorator form composes a nested
+// `class Price` to the same paths.
+const store = createPersistFields<ProductFiltersState>(
 	() => proxy<ProductFiltersState>({ q: '', price: { min: 0, max: 100 }, onSale: false }),
 	(field) => [
-		field((s) => s.q),
-		field((s) => s.price.min),
-		field((s) => s.price.max),
-		field((s) => s.onSale),
+		field((s) => s.q, urlField()),
+		field((s) => s.price.min, urlField()),
+		field((s) => s.price.max, urlField()),
+		field((s) => s.onSale, urlField()),
 	],
 )
 
-const { adapter, useSearch } = createMemoryAdapter('q=jacket&price.min=20&price.max=80&onSale=true')
+const { adapter, useSearch } = createMemoryUrlAdapter('q=jacket&price.min=20&price.max=80&onSale=true')
 
 function Controls() {
 	const snap = store.useSnapshot()
@@ -84,12 +86,12 @@ function Controls() {
 	)
 }
 
-export default function SearchParamsCompositionExample() {
+export default function PersistCompositionExample() {
 	return (
-		<StoreSearchParamsProvider adapter={adapter}>
+		<PersistProvider adapters={[adapter]}>
 			<store.Provider>
 				<Controls />
 			</store.Provider>
-		</StoreSearchParamsProvider>
+		</PersistProvider>
 	)
 }

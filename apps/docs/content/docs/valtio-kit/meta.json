@@ -3,5 +3,5 @@
 	"description": "Valtio-powered React context proxies",
 	"icon": "Atom",
 	"root": true,
-	"pages": ["index", "getting-started", "create-context-store", "search-params"]
+	"pages": ["index", "getting-started", "create-context-store", "persist"]
 }

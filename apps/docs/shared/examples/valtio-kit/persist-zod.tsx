@@ -1,42 +1,34 @@
 'use client'
 
-import {
-	createFieldsStore,
-	StoreSearchParamsProvider,
-} from '@ez-kit/valtio-kit/search-params'
-import { zodParam } from '@ez-kit/valtio-kit/search-params/validators/zod'
+/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
+
+import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { urlField } from '@ez-kit/valtio-kit/persist/url'
+import { zodParam } from '@ez-kit/valtio-kit/persist/validators/zod'
 import { proxy } from 'valtio'
 import { z } from 'zod'
 
-import { createMemoryAdapter, UrlReadout } from './_memory-adapter'
+import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 
 type RatingState = {
 	// A bounded integer — deep-links outside 1…5 fall back to the default instead of throwing.
 	rating: number
-	setRating: (value: number) => void
 }
 
 const ratingSchema = z.coerce.number().int().min(1).max(5)
 
-const rangeStore = createFieldsStore<RatingState>(
-	() => {
-		const state = proxy<RatingState>({
-			rating: 3,
-			setRating: (value) => {
-				state.rating = value
-			},
-		})
-		return state
-	},
-	(field) => [field((s) => s.rating, zodParam(ratingSchema))],
+const ratingStore = createPersistFields<RatingState>(
+	() => proxy<RatingState>({ rating: 3 }),
+	(field) => [field((s) => s.rating, urlField({ parser: zodParam(ratingSchema) }))],
 )
 
-const { adapter, useSearch } = createMemoryAdapter()
+const { adapter, useSearch } = createMemoryUrlAdapter()
 
 const STARS = [1, 2, 3, 4, 5]
 
 function RatingControls() {
-	const snap = rangeStore.useSnapshot()
+	const snap = ratingStore.useSnapshot()
+	const store = ratingStore.useStore()
 	const search = useSearch()
 
 	return (
@@ -47,7 +39,7 @@ function RatingControls() {
 						key={value}
 						type='button'
 						onClick={() => {
-							snap.setRating(value)
+							store.rating = value
 						}}
 						aria-label={`Set rating to ${String(value)}`}
 						className={`text-2xl leading-none ${value <= snap.rating ? 'text-amber-500' : 'text-fd-muted-foreground/40'}`}
@@ -65,12 +57,12 @@ function RatingControls() {
 	)
 }
 
-export default function SearchParamsZodExample() {
+export default function PersistZodExample() {
 	return (
-		<StoreSearchParamsProvider adapter={adapter}>
-			<rangeStore.Provider>
+		<PersistProvider adapters={[adapter]}>
+			<ratingStore.Provider>
 				<RatingControls />
-			</rangeStore.Provider>
-		</StoreSearchParamsProvider>
+			</ratingStore.Provider>
+		</PersistProvider>
 	)
 }

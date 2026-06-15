@@ -13,7 +13,7 @@ description: Install @ez-kit/valtio-kit, create your first context-scoped Valtio
 pnpm add @ez-kit/valtio-kit valtio
 ```
 
-`valtio` is a **peer dependency** — pin whatever 2.x version your app already uses. Router and validator integrations used by [Search params sync](./valtio-kit/search-params) are optional peers; install only what you reach for (`react-router`, `next`, `zod`, `qs`).
+`valtio` is a **peer dependency** — pin whatever 2.x version your app already uses. Router, storage, and validator integrations used by [Persist](./valtio-kit/persist) are optional peers; install only what you reach for (`react-router`, `next`, `zod`).
 
 ## Your first store
 
@@ -52,11 +52,11 @@ Valtio optimises re-renders per accessed property, so — unlike [`@ez-kit/zu-st
 ## What's next
 
 - [`createContextStore`](./valtio-kit/create-context-store) — the full factory API: `Provider`, hooks, `Item`, default values.
-- [Search params sync](./valtio-kit/search-params) — mirror a store into the URL with typed codecs, decorators, layouts, and router adapters.
+- [Persist](./valtio-kit/persist) — sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate with typed codecs and decorators.
 
 ## TypeScript & decorators
 
-Plain `createContextStore` needs **no special TypeScript config**. The decorator API used by Search params sync (`@searchParam`) relies on **Stage 3 (standard) decorators** with `Symbol.metadata` — no `reflect-metadata`, no `experimentalDecorators`:
+Plain `createContextStore` needs **no special TypeScript config**. The decorator API used by Persist (`@persistUrl`, `@persistLocalStorage`, …) relies on **Stage 3 (standard) decorators** with `Symbol.metadata` — no `reflect-metadata`, no `experimentalDecorators`:
 
 ```jsonc
 // tsconfig.json — TypeScript ≥ 5.2
@@ -69,7 +69,7 @@ Plain `createContextStore` needs **no special TypeScript config**. The decorator
 ```
 
 <Callout type="info">
-	Prefer no build-time decorator support? The [accessor API](./valtio-kit/search-params/fields) is fully
-	equivalent and needs no transpilation. Full decorator setup lives in [Search params sync →
-	TypeScript](./valtio-kit/search-params/typescript).
+	Prefer no build-time decorator support? The [accessor API](./valtio-kit/persist/fields) is fully
+	equivalent and needs no transpilation. Full decorator setup lives in [Persist →
+	TypeScript](./valtio-kit/persist/typescript).
 </Callout>
