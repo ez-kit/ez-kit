@@ -1,6 +1,7 @@
 import { persistField, type PersistFieldOptions } from '../decorators'
 
 import { LOCAL_STORAGE_SOURCE, SESSION_STORAGE_SOURCE, type StorageMeta } from './adapter'
+import { INDEXED_DB_SOURCE } from './indexed-db'
 
 import type { AccessorFieldOptions } from '../accessor'
 import type { Parser } from '../types'
@@ -56,6 +57,11 @@ export function persistSessionStorage<V>(options: PersistStorageOptions<V> = {})
 	return persistField<V, StorageMeta>(storageFieldOptions(SESSION_STORAGE_SOURCE, options))
 }
 
+/** IndexedDB field decorator — like {@link persistLocalStorage}, backed by the async IndexedDB adapter. */
+export function persistIndexedDb<V>(options: PersistStorageOptions<V> = {}) {
+	return persistField<V, StorageMeta>(storageFieldOptions(INDEXED_DB_SOURCE, options))
+}
+
 function storageAccessor<V>(source: string, options: PersistStorageOptions<V>): AccessorFieldOptions<V, StorageMeta> {
 	const accessor: AccessorFieldOptions<V, StorageMeta> = { source, meta: storageMeta(options) }
 	if (options.key !== undefined) {
@@ -78,4 +84,9 @@ export function localStorageField<V>(options: PersistStorageOptions<V> = {}): Ac
 /** Build accessor options for a sessionStorage field — parity with {@link persistSessionStorage}. */
 export function sessionStorageField<V>(options: PersistStorageOptions<V> = {}): AccessorFieldOptions<V, StorageMeta> {
 	return storageAccessor(SESSION_STORAGE_SOURCE, options)
+}
+
+/** Build accessor options for an IndexedDB field — parity with {@link persistIndexedDb}. */
+export function indexedDbField<V>(options: PersistStorageOptions<V> = {}): AccessorFieldOptions<V, StorageMeta> {
+	return storageAccessor(INDEXED_DB_SOURCE, options)
 }
