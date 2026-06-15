@@ -65,12 +65,12 @@ For class-based stores using `@searchParam` decorators, use `createSearchParamsS
 
 Subpaths (optional peers, install only what you use):
 
-| Import | Peer |
-| --- | --- |
-| `@ez-kit/valtio-kit/search-params` | — (zero-dep core) |
-| `@ez-kit/valtio-kit/search-params/routers/react-router` | `react-router` |
-| `@ez-kit/valtio-kit/search-params/routers/next` | `next` |
-| `@ez-kit/valtio-kit/search-params/validators/zod` | `zod` |
-| `@ez-kit/valtio-kit/search-params/encoders/qs` | `qs` |
+| Import                                                  | Peer              |
+| ------------------------------------------------------- | ----------------- |
+| `@ez-kit/valtio-kit/search-params`                      | — (zero-dep core) |
+| `@ez-kit/valtio-kit/search-params/routers/react-router` | `react-router`    |
+| `@ez-kit/valtio-kit/search-params/routers/next`         | `next`            |
+| `@ez-kit/valtio-kit/search-params/validators/zod`       | `zod`             |
+| `@ez-kit/valtio-kit/search-params/encoders/qs`          | `qs`              |
 
 → [Full docs](docs/search-params.md)

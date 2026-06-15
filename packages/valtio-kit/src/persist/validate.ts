@@ -26,9 +26,7 @@ export function validateBinding(root: object, fields: FieldDescriptor[]): void {
 		let parent: unknown = root
 		for (const segment of path.slice(0, -1)) {
 			if (parent === null || typeof parent !== 'object' || !(segment in parent)) {
-				throw new Error(
-					`[valtio-kit] persist: path "${label}" is unreachable — "${segment}" is missing at bind time.`,
-				)
+				throw new Error(`[valtio-kit] persist: path "${label}" is unreachable — "${segment}" is missing at bind time.`)
 			}
 			parent = (parent as Record<string, unknown>)[segment]
 		}

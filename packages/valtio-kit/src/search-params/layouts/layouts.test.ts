@@ -66,7 +66,12 @@ describe('@ez-kit/valtio-kit layouts', () => {
 		it('renames the leaf segment with key (relative) and pins with absolute', () => {
 			const layout = flat()
 			const renamed: FieldDescriptor = { path: ['filters', 'q'], parser: paramString(), key: 'query' }
-			const pinned: FieldDescriptor = { path: ['filters', 'search', 'q'], parser: paramString(), key: 'q', absolute: true }
+			const pinned: FieldDescriptor = {
+				path: ['filters', 'search', 'q'],
+				parser: paramString(),
+				key: 'q',
+				absolute: true,
+			}
 			expect(layout.ownedKeys([renamed, pinned])).toEqual(['filters.query', 'q'])
 		})
 

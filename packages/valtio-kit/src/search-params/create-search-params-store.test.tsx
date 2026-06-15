@@ -24,13 +24,11 @@ const fieldsStore = createFieldsStore(
 class DecoratedFilters {
 	@searchParam() q = ''
 }
-const decoratedStore = createSearchParamsStore(
-	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
-		const store = proxy(new DecoratedFilters())
-		store.q = defaultValue.q ?? ''
-		return store
-	},
-)
+const decoratedStore = createSearchParamsStore(({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
+	const store = proxy(new DecoratedFilters())
+	store.q = defaultValue.q ?? ''
+	return store
+})
 
 function makeView(store: { useSnapshot: () => { q: string } }) {
 	return function QView(): ReactElement {

@@ -4,7 +4,6 @@ import { SearchParamsHistory } from '../types'
 
 import { applyParamsToProxy, desiredValues, type SyncBinding } from './binding'
 
-
 /** Non-reactive read/write port the engine uses (supplied by the React provider). */
 export type EnginePort = {
 	getSnapshot(): URLSearchParams
@@ -94,7 +93,9 @@ export function createSyncEngine(port: EnginePort): SyncEngine {
 	const api: SyncEngine = {
 		connect(binding) {
 			applyParamsToProxy(binding, port.getSnapshot())
-			const unsubscribe = subscribe(binding.proxy, () => { scheduleFlush(); })
+			const unsubscribe = subscribe(binding.proxy, () => {
+				scheduleFlush()
+			})
 			binding.engine = api
 			bindings.add(binding)
 			unsubscribers.set(binding, unsubscribe)

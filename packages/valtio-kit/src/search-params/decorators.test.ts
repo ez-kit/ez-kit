@@ -5,7 +5,6 @@ import { paramNumber, paramString } from './codecs'
 import { discoverDecoratedFields, searchParam, withSearchParams } from './decorators'
 import { clearRegistry } from './engine/registry'
 
-
 import type { FieldDescriptor } from './types'
 
 function byPath(fields: FieldDescriptor[]): Record<string, FieldDescriptor> {

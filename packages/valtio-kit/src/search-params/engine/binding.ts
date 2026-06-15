@@ -4,13 +4,7 @@ import { SearchParamsHistory } from '../types'
 import { parentOf, readPath, writePath } from './path'
 import { validateBinding } from './validate'
 
-
-import type {
-	FieldDescriptor,
-	FieldValues,
-	SearchParamsLayout,
-	SearchParamsOptions,
-} from '../types'
+import type { FieldDescriptor, FieldValues, SearchParamsLayout, SearchParamsOptions } from '../types'
 
 /** Minimal engine capability the `$searchParams` control needs (avoids an import cycle). */
 export type HistoryRunner = {
@@ -32,16 +26,11 @@ export type SyncBinding = {
 }
 
 /** Build a binding from a proxy, its resolved field descriptors, and the global options. */
-export function createBinding(
-	proxy: object,
-	fields: FieldDescriptor[],
-	options: SearchParamsOptions,
-): SyncBinding {
+export function createBinding(proxy: object, fields: FieldDescriptor[], options: SearchParamsOptions): SyncBinding {
 	validateBinding(proxy, fields)
 
 	const layout = options.layout ?? flat()
 	if (layout.ignoresAbsolute && fields.some((field) => field.absolute)) {
-		 
 		console.warn(
 			`[valtio-kit] search-params: \`absolute\` is only honoured by the flat layout; ignoring it under this layout.`,
 		)

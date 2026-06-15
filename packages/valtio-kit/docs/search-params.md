@@ -26,13 +26,10 @@ The simplest form — no transpilation required. Pass your existing proxy and a 
 import { withSearchParamsFields, paramString, paramNumber } from '@ez-kit/valtio-kit/search-params'
 import { proxy } from 'valtio'
 
-const filters = withSearchParamsFields(
-  proxy({ q: '', page: 1 }),
-  (field) => [
-    field((s) => s.q, paramString()),
-    field((s) => s.page, paramNumber()),
-  ],
-)
+const filters = withSearchParamsFields(proxy({ q: '', page: 1 }), (field) => [
+	field((s) => s.q, paramString()),
+	field((s) => s.page, paramNumber()),
+])
 
 filters.q = 'boots' // mutate → URL updates
 ```
@@ -48,8 +45,8 @@ import { withSearchParams, searchParam, paramString, paramNumber } from '@ez-kit
 import { proxy } from 'valtio'
 
 class FiltersState {
-  @searchParam({ parser: paramString() }) q = ''
-  @searchParam({ parser: paramNumber() }) page = 1
+	@searchParam({ parser: paramString() }) q = ''
+	@searchParam({ parser: paramNumber() }) page = 1
 }
 
 const filters = withSearchParams(proxy(new FiltersState()))
@@ -66,9 +63,9 @@ import { createFieldsStore, flat, paramString, paramNumber } from '@ez-kit/valti
 import { proxy } from 'valtio'
 
 const filtersStore = createFieldsStore(
-  () => proxy({ q: '', page: 1 }),
-  (field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
-  { layout: flat() },
+	() => proxy({ q: '', page: 1 }),
+	(field) => [field((s) => s.q, paramString()), field((s) => s.page, paramNumber())],
+	{ layout: flat() },
 )
 ```
 
@@ -86,16 +83,16 @@ For class-based stores, use the decorator counterpart `createSearchParamsStore(f
 
 A parser converts one typed field to/from a URL string. They never throw on read — invalid input falls back to the field's default.
 
-| Parser | Type | Notes |
-| --- | --- | --- |
-| `paramString()` | `string` | identity |
-| `paramNumber()` | `number` | finite numbers; non-finite omitted |
-| `paramBoolean()` | `boolean` | `1`/`0` |
-| `paramEnum(values)` | `T` | rejects values outside the set |
-| `paramArray(item)` | `T[]` | delimited list of an inner parser |
-| `paramJson()` | `T` | JSON value (objects/arrays) |
-| `paramDate()` | `Date` | ISO 8601 string |
-| `paramBigInt()` | `bigint` | decimal string |
+| Parser              | Type      | Notes                              |
+| ------------------- | --------- | ---------------------------------- |
+| `paramString()`     | `string`  | identity                           |
+| `paramNumber()`     | `number`  | finite numbers; non-finite omitted |
+| `paramBoolean()`    | `boolean` | `1`/`0`                            |
+| `paramEnum(values)` | `T`       | rejects values outside the set     |
+| `paramArray(item)`  | `T[]`     | delimited list of an inner parser  |
+| `paramJson()`       | `T`       | JSON value (objects/arrays)        |
+| `paramDate()`       | `Date`    | ISO 8601 string                    |
+| `paramBigInt()`     | `bigint`  | decimal string                     |
 
 Each satisfies a round-trip contract — `parse(stringify(v))` deep-equals `v` — which lets the engine break the proxy⇄URL loop by comparing stringified forms. Supply an `equals` on a custom parser if `Object.is` isn't right for your type.
 
@@ -161,7 +158,7 @@ The core is router-agnostic. An adapter exposes the reactive read and the writer
 import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
 import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
 
-<StoreSearchParamsProvider adapter={reactRouterAdapter}>{children}</StoreSearchParamsProvider>
+;<StoreSearchParamsProvider adapter={reactRouterAdapter}>{children}</StoreSearchParamsProvider>
 ```
 
 - **react-router** — v6/v7 (`BrowserRouter` / data routers).

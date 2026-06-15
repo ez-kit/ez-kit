@@ -141,9 +141,9 @@ describe('@ez-kit/valtio-kit param parsers', () => {
 			expect(resolveParser(1, 'f').stringify(2)).toBe('2')
 			expect(resolveParser(true, 'f').stringify(false)).toBe('false')
 			expect(resolveParser(1n, 'f').stringify(3n)).toBe('3')
-			expect(resolveParser(new Date('2026-01-01T00:00:00.000Z'), 'f').stringify(new Date('2026-01-01T00:00:00.000Z'))).toBe(
-				'2026-01-01T00:00:00.000Z',
-			)
+			expect(
+				resolveParser(new Date('2026-01-01T00:00:00.000Z'), 'f').stringify(new Date('2026-01-01T00:00:00.000Z')),
+			).toBe('2026-01-01T00:00:00.000Z')
 			expect(resolveParser(['a', 'b'], 'f').stringify(['a', 'b'])).toBe('a,b')
 		})
 

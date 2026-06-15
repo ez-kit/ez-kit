@@ -1,11 +1,4 @@
-import {
-	createContext,
-	type PropsWithChildren,
-	type ReactElement,
-	useContext,
-	useEffect,
-	useRef,
-} from 'react'
+import { createContext, type PropsWithChildren, type ReactElement, useContext, useEffect, useRef } from 'react'
 import { ref, type Snapshot, useSnapshot as useValtioSnapshot } from 'valtio'
 
 import { type FieldsBuilder, resolveFieldSpecs } from './accessor'
@@ -19,9 +12,7 @@ import type { FieldDescriptor, SearchParamsOptions, SearchParamsProxy } from './
 
 const MISSING_PROVIDER_ERROR = 'Missing Provider for search-params store'
 
-type SearchParamsStoreFactory<TState extends object, TDefaultValue> = (
-	init: ContextStoreInit<TDefaultValue>,
-) => TState
+type SearchParamsStoreFactory<TState extends object, TDefaultValue> = (init: ContextStoreInit<TDefaultValue>) => TState
 
 /** Resolves the synced field descriptors from a freshly created store instance. */
 type ResolveDescriptors<TState extends object> = (store: TState) => FieldDescriptor[]

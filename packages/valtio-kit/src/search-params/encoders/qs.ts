@@ -27,8 +27,7 @@ export function qs(options: QsLayoutOptions = {}): SearchParamsLayout {
 	return {
 		ignoresAbsolute: true,
 
-		ownedKeys: (fields) =>
-			namespace ? [namespace] : [...new Set(fields.map((field) => nestedPath(field)[0] ?? ''))],
+		ownedKeys: (fields) => (namespace ? [namespace] : [...new Set(fields.map((field) => nestedPath(field)[0] ?? ''))]),
 
 		read: (params, fields) => {
 			const parsed = qsLib.parse(params.toString()) as Nested
@@ -53,9 +52,7 @@ export function qs(options: QsLayoutOptions = {}): SearchParamsLayout {
 
 		write: (params, values, fields) => {
 			const parsed = qsLib.parse(params.toString()) as Nested
-			const container: Nested = namespace
-				? ((parsed[namespace] as Nested | undefined) ?? {})
-				: parsed
+			const container: Nested = namespace ? ((parsed[namespace] as Nested | undefined) ?? {}) : parsed
 
 			for (const field of fields) {
 				deleteNested(container, nestedPath(field))

@@ -7,7 +7,6 @@ import { SearchParamsHistory } from '../types'
 import { createBinding, type SyncBinding } from './binding'
 import { createSyncEngine, type EnginePort } from './engine'
 
-
 import type { FieldDescriptor, SearchParamsOptions } from '../types'
 
 function createFakePort() {

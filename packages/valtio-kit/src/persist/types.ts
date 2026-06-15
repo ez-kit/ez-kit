@@ -96,6 +96,16 @@ export type SourcePort = {
 }
 
 /**
+ * A synchronous {@link SourcePort} (URL, localStorage/sessionStorage) whose `get`/`set` return
+ * immediately. Assignable to {@link SourcePort}; lets callers consume `get()` as a plain `Keyed`.
+ */
+export type SyncSourcePort = {
+	get(): Keyed
+	set(desired: Keyed, ctx: CommitCtx): void
+	subscribe?(onChange: () => void): () => void
+}
+
+/**
  * Strategy for combining the `meta` of mutations that coalesce into one flush. Defaults to
  * last-wins (`{ ...prev, ...next }`). The URL adapter overrides this so a `push` request anywhere
  * in the batch wins over `replace`. The first call in a batch receives `null` as `prev`.

@@ -155,9 +155,6 @@ export function discoverDecoratedFields(store: object): FieldDescriptor[] {
  * the instance (auto-recursing composition and inheritance) and returns the same proxy augmented
  * with `$searchParams`. Requires Stage 3 decorators in the consumer's toolchain.
  */
-export function withSearchParams<T extends object>(
-	store: T,
-	options: SearchParamsOptions = {},
-): SearchParamsProxy<T> {
+export function withSearchParams<T extends object>(store: T, options: SearchParamsOptions = {}): SearchParamsProxy<T> {
 	return bindSearchParams(store, discoverDecoratedFields(store), options)
 }

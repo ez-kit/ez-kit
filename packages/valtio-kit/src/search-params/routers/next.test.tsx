@@ -80,7 +80,10 @@ describe('@ez-kit/valtio-kit nextAdapter', () => {
 			return (
 				<>
 					<span data-testid='q'>{snap.q}</span>
-					<button type='button' onClick={() => (store.q = 'boots')}>
+					<button
+						type='button'
+						onClick={() => (store.q = 'boots')}
+					>
 						write
 					</button>
 				</>

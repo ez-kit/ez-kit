@@ -16,12 +16,12 @@ pnpm add @ez-kit/valtio-kit valtio
 type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
 
 function createContextStore<TState, TDefaultValue = undefined>(
-  factory: (init: ContextStoreInit<TDefaultValue>) => TState,
+	factory: (init: ContextStoreInit<TDefaultValue>) => TState,
 ): {
-  Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
-  useStore: () => TState
-  useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
-  Item: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
+	Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
+	useStore: () => TState
+	useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
+	Item: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
 }
 ```
 
@@ -100,11 +100,7 @@ const snap = counter.useSnapshot({ sync: true })
 Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads and `store` (the raw proxy) for writes — so one `Item` can render and mutate without a separate `useStore()` consumer.
 
 ```tsx
-<counter.Item>
-	{({ snap, store }) => (
-		<button onClick={() => (store.count += 1)}>{snap.count}</button>
-	)}
-</counter.Item>
+<counter.Item>{({ snap, store }) => <button onClick={() => (store.count += 1)}>{snap.count}</button>}</counter.Item>
 ```
 
 ## Multiple Independent Instances

@@ -24,7 +24,10 @@ describe('@ez-kit/valtio-kit reactRouterAdapter', () => {
 			return (
 				<>
 					<span data-testid='q'>{snap.q}</span>
-					<button type='button' onClick={() => (store.q = 'boots')}>
+					<button
+						type='button'
+						onClick={() => (store.q = 'boots')}
+					>
 						write
 					</button>
 				</>
@@ -39,9 +42,13 @@ describe('@ez-kit/valtio-kit reactRouterAdapter', () => {
 			</MemoryRouter>,
 		)
 
-		await waitFor(() => { expect(screen.getByTestId('q')).toHaveTextContent('shoes'); })
+		await waitFor(() => {
+			expect(screen.getByTestId('q')).toHaveTextContent('shoes')
+		})
 
 		fireEvent.click(screen.getByRole('button', { name: 'write' }))
-		await waitFor(() => { expect(screen.getByTestId('q')).toHaveTextContent('boots'); })
+		await waitFor(() => {
+			expect(screen.getByTestId('q')).toHaveTextContent('boots')
+		})
 	})
 })

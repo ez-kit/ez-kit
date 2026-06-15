@@ -15,7 +15,8 @@ export type {
 	KeyedDiff,
 	MetaMerge,
 	Parser,
-	SourcePort,
 	PersistOptions,
+	SourcePort,
+	SyncSourcePort,
 } from './types'
 export { validateBinding } from './validate'
