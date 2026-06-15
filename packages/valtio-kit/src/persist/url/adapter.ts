@@ -2,6 +2,9 @@ import { fieldKey } from '../key-naming'
 
 import type { CommitCtx, FieldDescriptor, Keyed, MetaMerge, SyncSourcePort } from '../types'
 
+/** Source id for the URL engine, shared by the adapter, the `persistUrl` decorator, and the provider. */
+export const URL_SOURCE = 'url'
+
 /** How a URL commit affects browser history. */
 export enum UrlHistory {
 	Push = 'push',

@@ -157,7 +157,6 @@ The core is router-agnostic. An adapter exposes the reactive read and the writer
 ```tsx
 import { reactRouterAdapter } from '@ez-kit/valtio-kit/search-params/routers/react-router'
 import { nextAdapter } from '@ez-kit/valtio-kit/search-params/routers/next'
-
 ;<StoreSearchParamsProvider adapter={reactRouterAdapter}>{children}</StoreSearchParamsProvider>
 ```
 
