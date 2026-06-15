@@ -19,25 +19,25 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
-		"./search-params": {
-			"types": "./dist/search-params/index.d.ts",
-			"import": "./dist/search-params/index.js"
+		"./persist": {
+			"types": "./dist/persist/index.d.ts",
+			"import": "./dist/persist/index.js"
 		},
-		"./search-params/routers/react-router": {
-			"types": "./dist/search-params/routers/react-router.d.ts",
-			"import": "./dist/search-params/routers/react-router.js"
+		"./persist/url": {
+			"types": "./dist/persist/url/index.d.ts",
+			"import": "./dist/persist/url/index.js"
 		},
-		"./search-params/routers/next": {
-			"types": "./dist/search-params/routers/next.d.ts",
-			"import": "./dist/search-params/routers/next.js"
+		"./persist/url/react-router": {
+			"types": "./dist/persist/url/react-router.d.ts",
+			"import": "./dist/persist/url/react-router.js"
 		},
-		"./search-params/validators/zod": {
-			"types": "./dist/search-params/validators/zod.d.ts",
-			"import": "./dist/search-params/validators/zod.js"
+		"./persist/url/next": {
+			"types": "./dist/persist/url/next.d.ts",
+			"import": "./dist/persist/url/next.js"
 		},
-		"./search-params/encoders/qs": {
-			"types": "./dist/search-params/encoders/qs.d.ts",
-			"import": "./dist/search-params/encoders/qs.js"
+		"./persist/validators/zod": {
+			"types": "./dist/persist/validators/zod.d.ts",
+			"import": "./dist/persist/validators/zod.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -59,20 +59,22 @@
 			"limit": "50 KB"
 		},
 		{
-			"path": "dist/search-params/index.js",
+			"path": "dist/persist/index.js",
 			"limit": "10 KB"
 		},
 		{
-			"path": "dist/search-params/routers/react-router.js",
+			"path": "dist/persist/url/index.js",
+			"limit": "3 KB"
+		},
+		{
+			"path": "dist/persist/url/react-router.js",
 			"limit": "2 KB"
 		}
 	],
 	"devDependencies": {
-		"@types/qs": "^6.9.18",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"next": "16.2.4",
-		"qs": "^6.14.0",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
 		"react-router": "^7.9.0",
@@ -81,7 +83,6 @@
 	},
 	"peerDependencies": {
 		"next": ">=14.0.0",
-		"qs": ">=6.0.0",
 		"react": ">=18.0.0",
 		"react-router": ">=6.0.0",
 		"valtio": ">=2.0.0",
@@ -89,9 +90,6 @@
 	},
 	"peerDependenciesMeta": {
 		"next": {
-			"optional": true
-		},
-		"qs": {
 			"optional": true
 		},
 		"react-router": {

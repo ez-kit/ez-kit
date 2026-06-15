@@ -1,12 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement, useSyncExternalStore } from 'react'
-import { proxy, useSnapshot } from 'valtio'
+import { proxy } from 'valtio'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { withSearchParamsFields } from '../accessor'
 import { paramString } from '../codecs'
-import { clearRegistry } from '../engine/registry'
-import { StoreSearchParamsProvider } from '../provider'
+import { createPersistFields } from '../create-persist-store'
+import { PersistProvider } from '../provider'
 
 /**
  * In-memory stand-in for the App Router navigation state. `useSearchParams`/`usePathname`
@@ -64,36 +63,46 @@ vi.mock('next/navigation', () => ({
 // Imported after the mock so the adapter binds to the mocked `next/navigation`.
 const { nextAdapter } = await import('./next')
 
-describe('@ez-kit/valtio-kit nextAdapter', () => {
+const store = createPersistFields(
+	() => proxy({ q: '' }),
+	(field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+)
+
+function View(): ReactElement {
+	const snap = store.useSnapshot()
+	const state = store.useStore()
+	return (
+		<>
+			<span data-testid='q'>{snap.q}</span>
+			<button
+				type='button'
+				onClick={() => {
+					// valtio's API is to mutate the proxy directly; that's the intended write path.
+					// eslint-disable-next-line react-hooks/immutability
+					state.q = 'boots'
+				}}
+			>
+				write
+			</button>
+		</>
+	)
+}
+
+describe('@ez-kit/valtio-kit persist nextAdapter', () => {
 	beforeEach(() => {
-		clearRegistry()
 		navStore.listeners.clear()
 		navStore.reset('/', '')
 	})
 
 	it('hydrates from the URL and writes proxy changes back to the router', async () => {
 		navStore.reset('/', 'q=shoes')
-		const store = withSearchParamsFields(proxy({ q: '' }), (field) => [field((s) => s.q, paramString())])
-
-		function View(): ReactElement {
-			const snap = useSnapshot(store)
-			return (
-				<>
-					<span data-testid='q'>{snap.q}</span>
-					<button
-						type='button'
-						onClick={() => (store.q = 'boots')}
-					>
-						write
-					</button>
-				</>
-			)
-		}
 
 		render(
-			<StoreSearchParamsProvider adapter={nextAdapter}>
-				<View />
-			</StoreSearchParamsProvider>,
+			<PersistProvider adapter={nextAdapter}>
+				<store.Provider>
+					<View />
+				</store.Provider>
+			</PersistProvider>,
 		)
 
 		await waitFor(() => {
@@ -108,17 +117,12 @@ describe('@ez-kit/valtio-kit nextAdapter', () => {
 	})
 
 	it('pulls external URL changes (back/forward) into the proxy without re-writing', async () => {
-		const store = withSearchParamsFields(proxy({ q: '' }), (field) => [field((s) => s.q, paramString())])
-
-		function View(): ReactElement {
-			const snap = useSnapshot(store)
-			return <span data-testid='q'>{snap.q}</span>
-		}
-
 		render(
-			<StoreSearchParamsProvider adapter={nextAdapter}>
-				<View />
-			</StoreSearchParamsProvider>,
+			<PersistProvider adapter={nextAdapter}>
+				<store.Provider>
+					<View />
+				</store.Provider>
+			</PersistProvider>,
 		)
 
 		navStore.navigate('/?q=sandals')
