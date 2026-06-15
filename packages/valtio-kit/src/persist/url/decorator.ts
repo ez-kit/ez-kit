@@ -19,11 +19,8 @@ export type PersistUrlOptions<V> = {
 	history?: UrlHistory
 }
 
-function urlMeta(options: { prefix?: string; history?: UrlHistory }): UrlMeta {
+function urlMeta(options: { history?: UrlHistory }): UrlMeta {
 	const meta: UrlMeta = {}
-	if (options.prefix !== undefined) {
-		meta.prefix = options.prefix
-	}
 	if (options.history !== undefined) {
 		meta.history = options.history
 	}
@@ -31,8 +28,9 @@ function urlMeta(options: { prefix?: string; history?: UrlHistory }): UrlMeta {
 }
 
 /**
- * URL field decorator — a thin wrapper over {@link persistField} that targets the URL source and packs
- * `prefix`/`history` into the descriptor `meta` for the URL adapter to read.
+ * URL field decorator — a thin wrapper over {@link persistField} that targets the URL source. `key`,
+ * `absolute`, and `prefix` are source-agnostic key naming (on the descriptor); only `history` is URL
+ * `meta` for the adapter to read.
  */
 export function persistUrl<V>(options: PersistUrlOptions<V> = {}) {
 	const fieldOptions: PersistFieldOptions<V, UrlMeta> = { source: URL_SOURCE, meta: urlMeta(options) }
@@ -41,6 +39,9 @@ export function persistUrl<V>(options: PersistUrlOptions<V> = {}) {
 	}
 	if (options.absolute !== undefined) {
 		fieldOptions.absolute = options.absolute
+	}
+	if (options.prefix !== undefined) {
+		fieldOptions.prefix = options.prefix
 	}
 	if (options.parser !== undefined) {
 		fieldOptions.parser = options.parser
@@ -59,6 +60,9 @@ export function urlField<V>(options: UrlFieldOptions<V> = {}): AccessorFieldOpti
 	}
 	if (options.absolute !== undefined) {
 		accessor.absolute = options.absolute
+	}
+	if (options.prefix !== undefined) {
+		accessor.prefix = options.prefix
 	}
 	if (options.parser !== undefined) {
 		accessor.parser = options.parser

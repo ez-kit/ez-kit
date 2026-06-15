@@ -37,8 +37,9 @@ export type AnyParser = Parser<unknown>
 
 /**
  * A resolved persisted field: where it lives in the proxy, how its leaf value is parsed, how its
- * URL/substrate key is derived, and an opaque `meta` bag the engine forwards to the adapter
- * untouched (e.g. `{ prefix }` for URL, `{ storageKey }` for storage).
+ * substrate key is derived (key naming — `key`/`absolute`/`prefix` — is source-agnostic and lives
+ * here), and an opaque `meta` bag the engine forwards to the adapter untouched (e.g. `{ history }`
+ * for URL, `{ storageKey }` for storage).
  */
 export type FieldDescriptor = {
 	/** Ordered property segments from the store root to the leaf (e.g. `['filters','price','min']`). */
@@ -49,6 +50,8 @@ export type FieldDescriptor = {
 	key?: string
 	/** Pin to an exact top-level key, ignoring ancestor path segments (granular packing only). */
 	absolute?: boolean
+	/** Prefix prepended to the substrate key (e.g. a per-store namespace). */
+	prefix?: string
 	/** Opaque per-field metadata, forwarded to the adapter unread by the engine. */
 	meta?: unknown
 }

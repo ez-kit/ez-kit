@@ -12,6 +12,8 @@ export type AccessorFieldOptions<V, M = unknown> = {
 	key?: string
 	/** Pin to an exact top-level key, ignoring ancestor segments (granular packing only). */
 	absolute?: boolean
+	/** Prefix prepended to the substrate key (e.g. a per-store namespace). */
+	prefix?: string
 	/** Explicit parser. Omit to auto-resolve from the field's runtime value at bind time. */
 	parser?: Parser<V>
 	/** Opaque per-field metadata forwarded to the adapter. */
@@ -61,6 +63,9 @@ function toSpec(store: object, spec: FieldSpec): PersistSpec {
 	}
 	if (options.absolute !== undefined) {
 		descriptor.absolute = options.absolute
+	}
+	if (options.prefix !== undefined) {
+		descriptor.prefix = options.prefix
 	}
 	if (options.meta !== undefined) {
 		descriptor.meta = options.meta

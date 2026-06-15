@@ -22,13 +22,13 @@ describe('@ez-kit/valtio-kit persist key-naming', () => {
 		expect(fieldKey(field)).toBe('q')
 	})
 
-	it('prepends a prefix (adapter concern)', () => {
-		const field: FieldDescriptor = { path: ['q'], parser }
-		expect(fieldKey(field, 'cart.')).toBe('cart.q')
+	it('prepends a descriptor prefix', () => {
+		const field: FieldDescriptor = { path: ['q'], parser, prefix: 'cart.' }
+		expect(fieldKey(field)).toBe('cart.q')
 	})
 
 	it('combines absolute and key with a prefix', () => {
-		const field: FieldDescriptor = { path: ['filters', 'q'], parser, key: 'query', absolute: true }
-		expect(fieldKey(field, 'cart.')).toBe('cart.query')
+		const field: FieldDescriptor = { path: ['filters', 'q'], parser, key: 'query', absolute: true, prefix: 'cart.' }
+		expect(fieldKey(field)).toBe('cart.query')
 	})
 })

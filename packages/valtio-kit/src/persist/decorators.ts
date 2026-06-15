@@ -14,6 +14,7 @@ type FieldMeta = {
 	source: string
 	key?: string
 	absolute?: boolean
+	prefix?: string
 	parser?: Parser<unknown>
 	meta?: unknown
 }
@@ -26,9 +27,11 @@ export type PersistFieldOptions<V, M = unknown> = {
 	key?: string
 	/** Pin to an exact top-level key, ignoring ancestor segments (granular packing only). */
 	absolute?: boolean
+	/** Prefix prepended to the substrate key (e.g. a per-store namespace). */
+	prefix?: string
 	/** Explicit parser. Omit to auto-resolve from the field's runtime value at bind time. */
 	parser?: Parser<V>
-	/** Opaque per-field metadata forwarded to the adapter (e.g. `{ prefix, history }` for URL). */
+	/** Opaque per-field metadata forwarded to the adapter (e.g. `{ history }` for URL). */
 	meta?: M
 }
 
@@ -60,6 +63,9 @@ export function persistField<V, M = unknown>(options: PersistFieldOptions<V, M>)
 		}
 		if (options.absolute !== undefined) {
 			meta.absolute = options.absolute
+		}
+		if (options.prefix !== undefined) {
+			meta.prefix = options.prefix
 		}
 		if (options.parser !== undefined) {
 			meta.parser = options.parser
@@ -117,6 +123,9 @@ function specFor(path: string[], meta: FieldMeta, value: unknown): PersistSpec {
 	}
 	if (meta.absolute !== undefined) {
 		descriptor.absolute = meta.absolute
+	}
+	if (meta.prefix !== undefined) {
+		descriptor.prefix = meta.prefix
 	}
 	if (meta.meta !== undefined) {
 		descriptor.meta = meta.meta

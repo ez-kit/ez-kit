@@ -17,7 +17,8 @@ describe('@ez-kit/valtio-kit persist decorators', () => {
 		expect(specs).toHaveLength(1)
 		expect(specs[0]?.source).toBe('url')
 		expect(specs[0]?.descriptor.path).toEqual(['q'])
-		expect(specs[0]?.descriptor.meta).toEqual({ history: UrlHistory.Push, prefix: 'cart.' })
+		expect(specs[0]?.descriptor.prefix).toBe('cart.')
+		expect(specs[0]?.descriptor.meta).toEqual({ history: UrlHistory.Push })
 	})
 
 	it('auto-resolves a parser from the runtime value', () => {

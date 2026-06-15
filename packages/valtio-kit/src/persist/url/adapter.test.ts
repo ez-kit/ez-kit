@@ -38,27 +38,19 @@ const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0
 describe('@ez-kit/valtio-kit persist URL adapter', () => {
 	it('hydrates the proxy from the URL on connect', () => {
 		const url = fakeDriver('?q=shoes')
-		const fields: FieldDescriptor[] = [{ path: ['q'], parser: str }]
-		const engine = createPersistEngine(
-			createUrlPort(url.driver, () => fields),
-			{ mergeMeta: urlMetaMerge },
-		)
+		const engine = createPersistEngine(createUrlPort(url.driver), { mergeMeta: urlMetaMerge })
 		const store = proxy({ q: '' })
 
-		engine.connect(createBinding(store, fields, {}))
+		engine.connect(createBinding(store, [{ path: ['q'], parser: str }], {}))
 		expect(store.q).toBe('shoes')
 		engine.dispose()
 	})
 
 	it('writes a proxy change to the URL and preserves foreign params', async () => {
 		const url = fakeDriver('?theme=dark')
-		const fields: FieldDescriptor[] = [{ path: ['q'], parser: str }]
-		const engine = createPersistEngine(
-			createUrlPort(url.driver, () => fields),
-			{ mergeMeta: urlMetaMerge },
-		)
+		const engine = createPersistEngine(createUrlPort(url.driver), { mergeMeta: urlMetaMerge })
 		const store = proxy({ q: '' })
-		engine.connect(createBinding(store, fields, {}))
+		engine.connect(createBinding(store, [{ path: ['q'], parser: str }], {}))
 
 		store.q = 'shoes'
 		await tick()
@@ -71,13 +63,9 @@ describe('@ez-kit/valtio-kit persist URL adapter', () => {
 
 	it('removes a key from the URL when it returns to default (clearOnDefault)', async () => {
 		const url = fakeDriver('?q=shoes')
-		const fields: FieldDescriptor[] = [{ path: ['q'], parser: str }]
-		const engine = createPersistEngine(
-			createUrlPort(url.driver, () => fields),
-			{ mergeMeta: urlMetaMerge },
-		)
+		const engine = createPersistEngine(createUrlPort(url.driver), { mergeMeta: urlMetaMerge })
 		const store = proxy({ q: '' })
-		engine.connect(createBinding(store, fields, {}))
+		engine.connect(createBinding(store, [{ path: ['q'], parser: str }], {}))
 
 		store.q = ''
 		await tick()
@@ -88,16 +76,12 @@ describe('@ez-kit/valtio-kit persist URL adapter', () => {
 
 	it('defaults to replace history and honors a push override', async () => {
 		const url = fakeDriver()
-		const fields: FieldDescriptor[] = [{ path: ['q'], parser: str }]
-		const engine = createPersistEngine(
-			createUrlPort(url.driver, () => fields),
-			{
-				mergeMeta: urlMetaMerge,
-				defaultMeta: { history: UrlHistory.Replace },
-			},
-		)
+		const engine = createPersistEngine(createUrlPort(url.driver), {
+			mergeMeta: urlMetaMerge,
+			defaultMeta: { history: UrlHistory.Replace },
+		})
 		const store = proxy({ q: '' })
-		engine.connect(createBinding(store, fields, {}))
+		engine.connect(createBinding(store, [{ path: ['q'], parser: str }], {}))
 
 		store.q = 'a'
 		await tick()
@@ -111,13 +95,11 @@ describe('@ez-kit/valtio-kit persist URL adapter', () => {
 		engine.dispose()
 	})
 
-	it('applies a per-field prefix to the substrate key', async () => {
+	it('applies a descriptor prefix to the substrate key (write and read)', async () => {
 		const url = fakeDriver()
-		const fields: FieldDescriptor[] = [{ path: ['q'], parser: str, meta: { prefix: 'cart.' } }]
-		const engine = createPersistEngine(
-			createUrlPort(url.driver, () => fields),
-			{ mergeMeta: urlMetaMerge },
-		)
+		const fields: FieldDescriptor[] = [{ path: ['q'], parser: str, prefix: 'cart.' }]
+		const port = createUrlPort(url.driver)
+		const engine = createPersistEngine(port, { mergeMeta: urlMetaMerge })
 		const store = proxy({ q: '' })
 		engine.connect(createBinding(store, fields, {}))
 
@@ -125,9 +107,8 @@ describe('@ez-kit/valtio-kit persist URL adapter', () => {
 		await tick()
 		expect(new URLSearchParams(url.search).get('cart.q')).toBe('shoes')
 
-		// And it reads back through the prefix.
 		url.setExternal('?cart.q=boots')
-		engine.pull(createUrlPort(url.driver, () => fields).get())
+		engine.pull(port.get())
 		await tick()
 		expect(store.q).toBe('boots')
 		engine.dispose()
@@ -135,11 +116,10 @@ describe('@ez-kit/valtio-kit persist URL adapter', () => {
 
 	it('pull from an external URL change updates the proxy without writing back', async () => {
 		const url = fakeDriver('?id=1')
-		const fields: FieldDescriptor[] = [{ path: ['id'], parser: num }]
-		const port = createUrlPort(url.driver, () => fields)
+		const port = createUrlPort(url.driver)
 		const engine = createPersistEngine(port, { mergeMeta: urlMetaMerge })
 		const store = proxy({ id: 1 })
-		engine.connect(createBinding(store, fields, {}))
+		engine.connect(createBinding(store, [{ path: ['id'], parser: num }], {}))
 
 		url.setExternal('?id=9')
 		engine.pull(port.get())

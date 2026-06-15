@@ -7,6 +7,8 @@ import type { CommitCtx, FieldDescriptor, Keyed, KeyedDiff, MetaMerge, SourcePor
 export type PersistEngine = {
 	/** Hydrate the binding from the substrate and start syncing it. Returns a disconnect fn. */
 	connect(binding: PersistBinding): () => void
+	/** Current substrate snapshot (sync or async). Used for synchronous SSR seeding of new bindings. */
+	snapshot(): Keyed | Promise<Keyed>
 	/** Apply an external substrate change into every connected proxy (substrate → proxy). */
 	pull(external: Keyed): void
 	/** Run mutations whose resulting flush carries the given (merged) commit meta. */
@@ -187,6 +189,10 @@ export function createPersistEngine(port: SourcePort, options: CreateEngineOptio
 				unsubscribers.delete(binding)
 				rebaseline()
 			}
+		},
+
+		snapshot() {
+			return port.get()
 		},
 
 		pull(external) {
