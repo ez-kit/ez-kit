@@ -1,7 +1,5 @@
 'use client'
 
-/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
-
 import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
 import { urlField } from '@ez-kit/valtio-kit/persist/url'
 import { zodParam } from '@ez-kit/valtio-kit/persist/validators/zod'
