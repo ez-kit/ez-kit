@@ -1,7 +1,8 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense } from 'react'
 
+import { useUrlState } from '../hooks/use-url-state'
 import { dataGridPrimitiveExamples } from '../shared/data-grid/examples/generated/data-grid-primitive'
 import { DataGridSandpackExample } from '../shared/data-grid/sandpack/DataGridSandpackExample'
 import { DataGridTypeProvider } from '../shared/DataGrid'
@@ -18,11 +19,17 @@ export type DataGridDocsExampleProps = {
 	lockFlavor?: boolean
 }
 
+/** URL search param (and `localStorage` mirror key) that drives the active flavor. */
+const FLAVOR_PARAM = 'kit'
+const DEFAULT_FLAVOR: DataGridDocsExampleFlavor = 'shadcn'
+
 const FLAVORS: readonly { value: DataGridDocsExampleFlavor; label: string }[] = [
 	{ value: 'shadcn', label: 'shadcn' },
 	{ value: 'heroui', label: 'HeroUI' },
 	{ value: 'shadcn-native', label: 'shadcn-native' },
 ]
+
+const FLAVOR_VALUES: readonly DataGridDocsExampleFlavor[] = FLAVORS.map((flavor) => flavor.value)
 
 export function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: DataGridDocsExampleProps) {
 	if (lockFlavor === true && defaultType === undefined) {
@@ -31,55 +38,112 @@ export function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: Data
 		)
 	}
 
-	const [flavor, setFlavor] = useState<DataGridDocsExampleFlavor>(defaultType ?? 'shadcn')
+	// Locked examples never read the URL — the flavor is fixed by the author.
+	if (lockFlavor === true && defaultType !== undefined) {
+		return (
+			<ExampleShell>
+				<FlavorExample exampleId={exampleId} flavor={defaultType} />
+				<DataGridSourcePanel exampleId={exampleId} />
+			</ExampleShell>
+		)
+	}
 
+	const initialFlavor = defaultType ?? DEFAULT_FLAVOR
+
+	// `useUrlState` reads `useSearchParams`, which Next requires to live under a
+	// Suspense boundary so statically-rendered docs pages don't bail out.
 	return (
-		<div className='not-prose flex flex-col gap-3'>
-			{lockFlavor !== true ? (
-				<div
-					role='tablist'
-					aria-label='Flavor'
-					className='inline-flex w-fit gap-1 rounded-md border border-zinc-200 bg-zinc-50 p-1 text-sm dark:border-zinc-800 dark:bg-zinc-900'
-				>
-					{FLAVORS.map(({ value, label }) => {
-						const isActive = flavor === value
-						return (
-							<button
-								key={value}
-								type='button'
-								role='tab'
-								aria-selected={isActive}
-								onClick={() => { setFlavor(value); }}
-								className={
-									isActive
-										? 'rounded bg-white px-3 py-1 font-semibold underline underline-offset-4 shadow-sm dark:bg-zinc-800'
-										: 'rounded px-3 py-1 font-normal text-zinc-600 hover:bg-white/60 dark:text-zinc-300 dark:hover:bg-zinc-800/60'
-								}
-							>
-								{label}
-							</button>
-						)
-					})}
-				</div>
-			) : null}
-			{flavor === 'shadcn-native' ? (
-				<DataGridNativeExample exampleId={exampleId} />
-			) : (
-				<DataGridSandpackExample exampleId={exampleId} type={flavor} />
-			)}
+		<Suspense fallback={<FlavorSwitcherView exampleId={exampleId} flavor={initialFlavor} />}>
+			<FlavorSwitcher exampleId={exampleId} defaultType={initialFlavor} />
+		</Suspense>
+	)
+}
+
+function FlavorSwitcher({
+	exampleId,
+	defaultType,
+}: {
+	exampleId: DataGridSandpackExampleId
+	defaultType: DataGridDocsExampleFlavor
+}) {
+	const [flavor, setFlavor] = useUrlState<DataGridDocsExampleFlavor>(FLAVOR_PARAM, {
+		allowedValues: FLAVOR_VALUES,
+		defaultValue: defaultType,
+	})
+
+	return <FlavorSwitcherView exampleId={exampleId} flavor={flavor} onSelect={setFlavor} />
+}
+
+function FlavorSwitcherView({
+	exampleId,
+	flavor,
+	onSelect,
+}: {
+	exampleId: DataGridSandpackExampleId
+	flavor: DataGridDocsExampleFlavor
+	onSelect?: ((flavor: DataGridDocsExampleFlavor) => void) | undefined
+}) {
+	return (
+		<ExampleShell>
+			<FlavorTabs active={flavor} onSelect={onSelect} />
+			<FlavorExample exampleId={exampleId} flavor={flavor} />
 			<DataGridSourcePanel exampleId={exampleId} />
+		</ExampleShell>
+	)
+}
+
+function ExampleShell({ children }: { children: React.ReactNode }) {
+	return <div className='not-prose flex flex-col gap-3'>{children}</div>
+}
+
+function FlavorTabs({
+	active,
+	onSelect,
+}: {
+	active: DataGridDocsExampleFlavor
+	onSelect?: ((flavor: DataGridDocsExampleFlavor) => void) | undefined
+}) {
+	return (
+		<div
+			role='tablist'
+			aria-label='Flavor'
+			className='inline-flex w-fit gap-1 rounded-md border border-zinc-200 bg-zinc-50 p-1 text-sm dark:border-zinc-800 dark:bg-zinc-900'
+		>
+			{FLAVORS.map(({ value, label }) => {
+				const isActive = active === value
+				return (
+					<button
+						key={value}
+						type='button'
+						role='tab'
+						aria-selected={isActive}
+						onClick={onSelect ? () => { onSelect(value); } : undefined}
+						className={
+							isActive
+								? 'rounded bg-white px-3 py-1 font-semibold underline underline-offset-4 shadow-sm dark:bg-zinc-800'
+								: 'rounded px-3 py-1 font-normal text-zinc-600 hover:bg-white/60 dark:text-zinc-300 dark:hover:bg-zinc-800/60'
+						}
+					>
+						{label}
+					</button>
+				)
+			})}
 		</div>
 	)
 }
 
-function DataGridNativeExample({ exampleId }: { exampleId: DataGridSandpackExampleId }) {
-	const Example = dataGridPrimitiveExamples[exampleId]
+function FlavorExample({ exampleId, flavor }: { exampleId: DataGridSandpackExampleId; flavor: DataGridDocsExampleFlavor }) {
+	if (flavor === 'shadcn-native') {
+		const Example = dataGridPrimitiveExamples[exampleId]
 
-	return (
-		<DataGridTypeProvider type='shadcn'>
-			<Suspense fallback={<div>Loading…</div>}>
-				<Example />
-			</Suspense>
-		</DataGridTypeProvider>
-	)
+		return (
+			<DataGridTypeProvider type='shadcn'>
+				<Suspense fallback={<div>Loading…</div>}>
+					<Example />
+				</Suspense>
+			</DataGridTypeProvider>
+		)
+	}
+
+	return <DataGridSandpackExample exampleId={exampleId} type={flavor} />
 }
