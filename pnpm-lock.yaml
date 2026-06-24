@@ -396,7 +396,26 @@ importers:
         specifier: ^19.2.4
         version: 19.2.5(react@19.2.5)
 
+  packages/store-core:
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      react:
+        specifier: ^19.2.4
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.5(react@19.2.5)
+
   packages/valtio-kit:
+    dependencies:
+      '@ez-kit/store-core':
+        specifier: workspace:*
+        version: link:../store-core
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
@@ -427,6 +446,10 @@ importers:
         version: 4.3.6
 
   packages/zu-store:
+    dependencies:
+      '@ez-kit/store-core':
+        specifier: workspace:*
+        version: link:../store-core
     devDependencies:
       '@types/react':
         specifier: ^19.2.14

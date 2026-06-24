@@ -8,7 +8,8 @@ description: Declare persisted fields on class properties — @persistUrl / @per
 Decorate the fields you want synced with the wrapper for their source. The property name becomes the substrate key, and the parser is **auto-resolved from the field's value** — so primitives need no parser. This is the recommended path for anything shaped like an entity model.
 
 ```tsx
-import { createPersistStore } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { persist } from '@ez-kit/valtio-kit/persist'
 import { persistUrl } from '@ez-kit/valtio-kit/persist/url'
 import { persistLocalStorage } from '@ez-kit/valtio-kit/persist/storage'
 import { proxy } from 'valtio'
@@ -19,8 +20,8 @@ class Filters {
 	@persistLocalStorage() pageSize = 25 // persisted to localStorage instead
 }
 
-// Request-scoped store. Omit the fields list → decorators are discovered on the instance.
-const filtersStore = createPersistStore(() => proxy(new Filters()))
+// Request-scoped store with the `persist()` plugin. Omit `fields` → decorators are discovered on the instance.
+const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
 ```
 
 Every wrapper is a thin shim over the base `persistField({ source, … })`. They add exactly two things: a `source` and a typed options bag — so a field can carry `@persistUrl()` **and** `@persistLocalStorage()` to sync to both at once (one descriptor per source).

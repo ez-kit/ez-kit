@@ -6,12 +6,14 @@
 		"quick-start-url",
 		"quick-start-storage",
 		"combined",
+		"cache",
 		"deep-dive-url",
 		"deep-dive-storage",
 		"custom-adapter",
 		"decorators",
 		"fields",
 		"parsers",
-		"typescript"
+		"typescript",
+		"migration"
 	]
 }

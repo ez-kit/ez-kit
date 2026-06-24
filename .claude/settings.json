@@ -2,5 +2,22 @@
 	"enabledPlugins": {
 		"ecc@ecc": true,
 		"oh-my-claudecode@omc": true
+	},
+	"permissions": {
+		"allow": [
+			"Bash(pnpm typecheck:*)",
+			"Bash(pnpm lint:*)",
+			"Bash(pnpm test:*)",
+			"Bash(pnpm build:*)",
+			"Bash(pnpm --filter @ez-kit/zu-store typecheck:*)",
+			"Bash(pnpm --filter @ez-kit/zu-store lint:*)",
+			"Bash(pnpm --filter @ez-kit/zu-store test:*)",
+			"Bash(pnpm --filter @ez-kit/valtio-kit typecheck:*)",
+			"Bash(pnpm --filter @ez-kit/valtio-kit lint:*)",
+			"Bash(pnpm --filter @ez-kit/valtio-kit test:*)",
+			"Bash(pnpm --filter @ez-kit/valtio-kit size:*)",
+			"Bash(pnpm --filter @ez-kit/docs lint:*)",
+			"Bash(pnpm --filter @ez-kit/docs typecheck:*)"
+		]
 	}
 }

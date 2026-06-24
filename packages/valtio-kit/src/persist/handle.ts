@@ -1,4 +1,4 @@
-import { URL_SOURCE } from './url/adapter'
+import { URL_SOURCE, type UrlMeta } from './url/adapter'
 
 import type { PersistBinding } from './binding'
 
@@ -60,4 +60,46 @@ export function attachHandles(proxy: object, bindings: SourceBinding[]): void {
 			writable: false,
 		})
 	}
+}
+
+/** The URL control handle, with {@link UrlMeta}-typed commit meta (`{ history: UrlHistory.Push }`). */
+export type UrlHandle = Omit<PersistHandle, 'runWithMeta'> & {
+	/** Run a mutation whose URL commit uses `meta` (e.g. force a `push` instead of the default `replace`). */
+	runWithMeta(meta: UrlMeta, mutate: () => void): void
+}
+
+/**
+ * Read a per-source control handle off a bound proxy WITHOUT casts. The handle is attached as a
+ * non-enumerable property by the {@link persist} plugin's `setup`; this resolver looks it up by the
+ * source's handle name and throws a named error when it is absent (no persist plugin, no field for
+ * that source, or called before the store's Provider mounted).
+ */
+function requireHandle(proxy: object, name: string): PersistHandle {
+	const handle = (proxy as Record<string, PersistHandle | undefined>)[name]
+	if (!handle) {
+		throw new Error(
+			`[valtio-kit] no "${name}" handle on this proxy. Ensure the store uses the persist() plugin with a ` +
+				`${name === URL_HANDLE ? 'URL' : 'storage'} field, and resolve the handle after the store is created.`,
+		)
+	}
+	return handle
+}
+
+/**
+ * Typed accessor for the URL control handle (`$url`). Use it to drive history mode imperatively:
+ * `urlHandle(store).runWithMeta({ history: UrlHistory.Push }, () => { store.step = 'profile' })`.
+ * Replaces the `(store as Record<string, unknown>)[URL_HANDLE]` double-cast.
+ */
+export function urlHandle(proxy: object): UrlHandle {
+	// The underlying `runWithMeta` accepts `unknown`, so a PersistHandle structurally satisfies the
+	// narrower UrlHandle (UrlMeta) — no assertion needed.
+	return requireHandle(proxy, URL_HANDLE)
+}
+
+/**
+ * Typed accessor for the storage control handle (`$persist`), shared by all storage sources
+ * (localStorage / sessionStorage / IndexedDB) bound to the proxy.
+ */
+export function persistHandle(proxy: object): PersistHandle {
+	return requireHandle(proxy, PERSIST_HANDLE)
 }

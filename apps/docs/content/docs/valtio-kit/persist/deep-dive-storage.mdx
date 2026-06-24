@@ -26,7 +26,10 @@ A store's fields are packed into one JSON blob under one key:
 Storage can't be read synchronously in render without breaking SSR (server has no storage), so a stored non-default value appears one tick after mount. The default *silent fill* is fine when the gap is invisible. When it isn't — a theme that would flash, a layout that would shift, analytics that shouldn't fire on defaults — gate on `useHydrated()`:
 
 ```tsx
-const hydrated = store.useHydrated()
+import { useHydrated } from '@ez-kit/valtio-kit/persist'
+
+const store = prefsStore.useStore()
+const hydrated = useHydrated(store) // standalone hook — pass the raw proxy
 if (!hydrated) return <Skeleton /> // or: defer the side-effect until `hydrated`
 ```
 

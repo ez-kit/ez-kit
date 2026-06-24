@@ -1,6 +1,7 @@
 'use client'
 
-import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
 import { urlField } from '@ez-kit/valtio-kit/persist/url'
 import { zodParam } from '@ez-kit/valtio-kit/persist/validators/zod'
 import { proxy } from 'valtio'
@@ -15,10 +16,13 @@ type RatingState = {
 
 const ratingSchema = z.coerce.number().int().min(1).max(5)
 
-const ratingStore = createPersistFields<RatingState>(
-	() => proxy<RatingState>({ rating: 3 }),
-	(field) => [field((s) => s.rating, urlField({ parser: zodParam(ratingSchema) }))],
-)
+const fields: FieldsBuilder<RatingState> = (field) => [
+	field((s) => s.rating, urlField({ parser: zodParam(ratingSchema) })),
+]
+
+const ratingStore = createStore<RatingState>(() => proxy<RatingState>({ rating: 3 }), {
+	plugins: [persist({ fields })],
+})
 
 const { adapter, useSearch } = createMemoryUrlAdapter()
 

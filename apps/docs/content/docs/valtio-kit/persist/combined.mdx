@@ -10,7 +10,8 @@ A field is bound to a source, not a store — so one proxy can mix sources freel
 <LivePreview path='valtio-kit/persist-combined' title='URL + localStorage on one store' />
 
 ```tsx
-import { createPersistStore, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
 import { localStorageAdapter, persistLocalStorage } from '@ez-kit/valtio-kit/persist/storage'
 import { persistUrl } from '@ez-kit/valtio-kit/persist/url'
 import { reactRouterAdapter } from '@ez-kit/valtio-kit/persist/url/react-router'
@@ -20,7 +21,7 @@ class ListState {
 	@persistLocalStorage() density = 'comfortable' // device preference — restored, not shared
 }
 
-const listStore = createPersistStore(() => proxy(new ListState()))
+const listStore = createStore(() => proxy(new ListState()), { plugins: [persist()] })
 
 function Page() {
 	return (
@@ -45,13 +46,12 @@ class State {
 }
 ```
 
-With the accessor API, list the field once per source:
+With the accessor API, list the field once per source via `persist({ fields })`:
 
 ```tsx
-createPersistFields(
-	() => proxy({ q: '' }),
-	(field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())],
-)
+createStore(() => proxy({ q: '' }), {
+	plugins: [persist({ fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())] })],
+})
 ```
 
 ## First-present-wins on cold start

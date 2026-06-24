@@ -2,7 +2,8 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { type FieldsBuilder, persist, PersistProvider, useHydrated } from '@ez-kit/valtio-kit/persist'
 import { LOCAL_STORAGE_SOURCE, localStorageField } from '@ez-kit/valtio-kit/persist/storage'
 import { proxy } from 'valtio'
 
@@ -15,17 +16,21 @@ type PrefsState = {
 
 // Same store shape as the URL quick start — only the field source changes. Persisted to (isolated,
 // in-memory) localStorage here; in a real app swap in `localStorageAdapter()`.
-const prefsStore = createPersistFields<PrefsState>(
-	() => proxy<PrefsState>({ theme: 'light', fontScale: 1 }),
-	(field) => [field((s) => s.theme, localStorageField()), field((s) => s.fontScale, localStorageField())],
-)
+const fields: FieldsBuilder<PrefsState> = (field) => [
+	field((s) => s.theme, localStorageField()),
+	field((s) => s.fontScale, localStorageField()),
+]
+
+const prefsStore = createStore<PrefsState>(() => proxy<PrefsState>({ theme: 'light', fontScale: 1 }), {
+	plugins: [persist({ fields })],
+})
 
 const { adapter, useBlob } = createMemoryStorageAdapter(LOCAL_STORAGE_SOURCE)
 
 function PrefControls() {
 	const snap = prefsStore.useSnapshot()
 	const store = prefsStore.useStore() // the raw mutable proxy
-	const hydrated = prefsStore.useHydrated()
+	const hydrated = useHydrated(store) // standalone hook — pass the raw proxy
 	const blob = useBlob()
 
 	return (

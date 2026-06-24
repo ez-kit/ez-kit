@@ -1,0 +1,71 @@
+---
+title: Cached stores
+description: One store that is BOTH cached and persisted — kept alive across unmount/remount AND mirrored to the URL or storage, under a single StoreProvider.
+---
+
+# Cached stores
+
+`persist()` is a plugin, and [`createCachedStore`](./valtio-kit/cache) accepts the same `plugins` array as `createStore`. So a single store can be **both** kept alive in the cache **and** synced to the URL or storage — composed, not bolted together.
+
+A cache-hit returns the same already-bound proxy, so its persist binding (and any in-progress edits) survive a remount within `gcTime` — the substrate is never re-read on the way back.
+
+<LivePreview
+	path='valtio-kit/cache-persist-combined'
+	title='Cached + URL-persisted on one store'
+/>
+
+## Wiring it up
+
+Two pieces: a cached store group whose `plugins` include `persist()`, and a single `StoreProvider` that mounts **both** the persist engines and the cache.
+
+```tsx
+import { createStoreCache, StoreProvider } from '@ez-kit/valtio-kit'
+import { persist } from '@ez-kit/valtio-kit/persist'
+import { localStorageAdapter } from '@ez-kit/valtio-kit/persist/storage'
+import { reactRouterAdapter } from '@ez-kit/valtio-kit/persist/url/react-router'
+import { urlField } from '@ez-kit/valtio-kit/persist/url'
+import { proxy } from 'valtio'
+
+type FiltersState = { q: string; page: number }
+
+// An isolated cache, threaded into the StoreProvider below.
+const cache = createStoreCache()
+
+// Cached AND persisted: the cache keeps the proxy alive; `persist()` mirrors its fields to the URL.
+const filtersStore = cache.createCachedStore<FiltersState>(() => proxy<FiltersState>({ q: '', page: 1 }), {
+	name: 'filters',
+	plugins: [persist({ fields: (field) => [field((s) => s.q, urlField()), field((s) => s.page, urlField())] })],
+})
+
+// One StoreProvider mounts the persist engines (`persist`) and the cache (`cache`) at once.
+function App({ children }: { children: React.ReactNode }) {
+	return (
+		<StoreProvider
+			persist={[reactRouterAdapter, localStorageAdapter()]}
+			cache={cache}
+		>
+			{children}
+		</StoreProvider>
+	)
+}
+
+function FiltersPanel() {
+	return (
+		<filtersStore.Provider id='main'>
+			<Controls />
+		</filtersStore.Provider>
+	)
+}
+```
+
+`StoreProvider` composes the two layers in the right order — the persist engines outermost, the cache inside — so a cached store's `persist()` plugin always resolves the engines published above it. Omit either prop to skip that layer: no `persist` → no engines; no `cache` → no cache boundary (a plain `StoreProvider persist={[…]}` is the modern replacement for a bare `PersistProvider`).
+
+<Callout type="info">
+	A non-cached `createStore(factory, { plugins: [persist()] })` is request-scoped — a fresh proxy per
+	`Provider` mount, persisted but not kept alive. Add the cache only when the store should outlive its
+	`Provider`. See [createCachedStore](./valtio-kit/cache) for the keep-alive lifecycle.
+</Callout>
+
+## First-present-wins still holds
+
+When a cached, dual-source store is first created, the same [first-present-wins on cold start](./valtio-kit/persist/combined#first-present-wins-on-cold-start) rule applies — a shared `?q=` link beats a restored storage value. On a cache-remount the proxy already carries its hydrated state, so no source re-seeds; the kept-alive value wins, exactly as keep-alive intends.

@@ -4,13 +4,16 @@ import { renderToString } from 'react-dom/server'
 import { proxy } from 'valtio'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { createStore } from '../../create-store'
+import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
-import { createPersistFields } from '../create-persist-store'
 import { PERSIST_HANDLE, URL_HANDLE } from '../handle'
-import { PersistProvider } from '../provider'
+import { persist, useHydrated } from '../plugin'
 import { createFakePersistAdapter } from '../testing/fake-persist-adapter'
 
 import { DEFAULT_STORAGE_KEY, localStorageAdapter, sessionStorageAdapter } from './adapter'
+
+import type { FieldsBuilder } from '../accessor'
 
 beforeEach(() => {
 	window.localStorage.clear()
@@ -26,11 +29,16 @@ function blobOf(area: Storage): Record<string, string> {
 	return parsed.s ?? {}
 }
 
+/** Build a non-cached persist store (factory + accessor fields) mounted via the `persist()` plugin. */
+function persistFieldsStore<TState extends object>(factory: () => TState, fields: FieldsBuilder<object>) {
+	return createStore<TState>(factory, { plugins: [persist({ fields })] })
+}
+
 describe('@ez-kit/valtio-kit persist storage adapters', () => {
 	it('round-trips a value through localStorage across mounts', async () => {
-		const store = createPersistFields(
+		const store = persistFieldsStore(
 			() => proxy({ q: '' }),
-			(field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })],
+			(field) => [field((s) => (s as { q: string }).q, { source: 'localStorage', parser: paramString() })],
 		)
 
 		function Editor(): ReactElement {
@@ -50,11 +58,11 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 		}
 
 		const first = render(
-			<PersistProvider adapters={[localStorageAdapter()]}>
+			<StoreProvider persist={[localStorageAdapter()]}>
 				<store.Provider>
 					<Editor />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
 		screen.getByTestId('q').click()
@@ -65,11 +73,11 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 
 		// A fresh mount hydrates from the persisted blob.
 		render(
-			<PersistProvider adapters={[localStorageAdapter()]}>
+			<StoreProvider persist={[localStorageAdapter()]}>
 				<store.Provider>
 					<Editor />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 		await waitFor(() => {
 			expect(screen.getByTestId('q')).toHaveTextContent('boots')
@@ -77,11 +85,11 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 	})
 
 	it('persists a default-valued field absent from the blob (clearOnDefault)', async () => {
-		const store = createPersistFields(
+		const store = persistFieldsStore(
 			() => proxy({ q: '', page: '' }),
 			(field) => [
-				field((s) => s.q, { source: 'localStorage', parser: paramString() }),
-				field((s) => s.page, { source: 'localStorage', parser: paramString() }),
+				field((s) => (s as { q: string }).q, { source: 'localStorage', parser: paramString() }),
+				field((s) => (s as { page: string }).page, { source: 'localStorage', parser: paramString() }),
 			],
 		)
 
@@ -99,11 +107,11 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 		}
 
 		render(
-			<PersistProvider adapters={[localStorageAdapter()]}>
+			<StoreProvider persist={[localStorageAdapter()]}>
 				<store.Provider>
 					<Editor />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
 		screen.getByTestId('go').click()
@@ -115,9 +123,9 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 	})
 
 	it('shares the same contract via sessionStorage', async () => {
-		const store = createPersistFields(
+		const store = persistFieldsStore(
 			() => proxy({ q: '' }),
-			(field) => [field((s) => s.q, { source: 'sessionStorage', parser: paramString() })],
+			(field) => [field((s) => (s as { q: string }).q, { source: 'sessionStorage', parser: paramString() })],
 		)
 
 		function Editor(): ReactElement {
@@ -134,11 +142,11 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 		}
 
 		render(
-			<PersistProvider adapters={[sessionStorageAdapter()]}>
+			<StoreProvider persist={[sessionStorageAdapter()]}>
 				<store.Provider>
 					<Editor />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
 		screen.getByTestId('go').click()
@@ -150,17 +158,16 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 })
 
 describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
-	const dualStore = createPersistFields(
-		() => proxy({ q: '' }),
-		(field) => [
-			field((s) => s.q, { source: 'url', parser: paramString() }),
-			field((s) => s.q, { source: 'localStorage', parser: paramString() }),
-		],
-	)
+	const dualFields: FieldsBuilder<object> = (field) => [
+		field((s) => (s as { q: string }).q, { source: 'url', parser: paramString() }),
+		field((s) => (s as { q: string }).q, { source: 'localStorage', parser: paramString() }),
+	]
+	const makeDualStore = () => createStore<{ q: string }>(() => proxy({ q: '' }), { plugins: [persist({ fields: dualFields })] })
 
 	it('lets the URL win over a stale stored value on cold start (first-present-wins)', async () => {
 		window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify({ v: 0, s: { q: 'cached' } }))
 		const fake = createFakePersistAdapter('?q=shoes')
+		const dualStore = makeDualStore()
 
 		function QView(): ReactElement {
 			const snap = dualStore.useSnapshot()
@@ -168,15 +175,14 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 		}
 
 		render(
-			<PersistProvider adapters={[fake.adapter, localStorageAdapter()]}>
+			<StoreProvider persist={[fake.adapter, localStorageAdapter()]}>
 				<dualStore.Provider>
 					<QView />
 				</dualStore.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
-		// URL seeds synchronously and wins; the stale localStorage value never clobbers it.
-		expect(screen.getByTestId('q')).toHaveTextContent('shoes')
+		// URL connects first (adapter order) and wins; the stale localStorage value never clobbers it.
 		await waitFor(() => {
 			expect(screen.getByTestId('q')).toHaveTextContent('shoes')
 		})
@@ -184,6 +190,7 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 
 	it('writes a mutation to both the URL and storage', async () => {
 		const fake = createFakePersistAdapter()
+		const dualStore = makeDualStore()
 
 		function Editor(): ReactElement {
 			const state = dualStore.useStore()
@@ -199,11 +206,11 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 		}
 
 		render(
-			<PersistProvider adapters={[fake.adapter, localStorageAdapter()]}>
+			<StoreProvider persist={[fake.adapter, localStorageAdapter()]}>
 				<dualStore.Provider>
 					<Editor />
 				</dualStore.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
 		screen.getByTestId('go').click()
@@ -213,8 +220,9 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 		})
 	})
 
-	it('exposes both $url and $persist handles without collision; inert on the server', () => {
+	it('exposes both $url and $persist handles without collision; non-enumerable', async () => {
 		const fake = createFakePersistAdapter()
+		const dualStore = makeDualStore()
 		let captured: Record<string, unknown> = {}
 
 		function Capture(): ReactElement {
@@ -223,16 +231,18 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 		}
 
 		render(
-			<PersistProvider adapters={[fake.adapter, localStorageAdapter()]}>
+			<StoreProvider persist={[fake.adapter, localStorageAdapter()]}>
 				<dualStore.Provider>
 					<Capture />
 				</dualStore.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
-		const urlHandle = captured[URL_HANDLE] as { source: string } | undefined
+		await waitFor(() => {
+			const urlHandle = captured[URL_HANDLE] as { source: string } | undefined
+			expect(urlHandle?.source).toBe('url')
+		})
 		const persistHandle = captured[PERSIST_HANDLE] as { source: string } | undefined
-		expect(urlHandle?.source).toBe('url')
 		expect(persistHandle?.source).toBe('localStorage')
 		// Handles are non-enumerable, so they never leak into the snapshot/serialization.
 		expect(Object.keys(captured)).not.toContain(URL_HANDLE)
@@ -240,35 +250,40 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 })
 
 describe('@ez-kit/valtio-kit persist useHydrated', () => {
-	const store = createPersistFields(
-		() => proxy({ q: '' }),
-		(field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })],
-	)
-
-	function Gate(): ReactElement {
-		const hydrated = store.useHydrated()
-		return <span data-testid='state'>{hydrated ? 'ready' : 'loading'}</span>
-	}
+	const makeStore = () =>
+		createStore<{ q: string }>(() => proxy({ q: '' }), {
+			plugins: [persist({ fields: (field) => [field((s) => (s).q, { source: 'localStorage', parser: paramString() })] })],
+		})
 
 	it('is false on the server render', () => {
+		const store = makeStore()
+		function Gate(): ReactElement {
+			const hydrated = useHydrated(store.useStore())
+			return <span data-testid='state'>{hydrated ? 'ready' : 'loading'}</span>
+		}
 		const html = renderToString(
-			<PersistProvider adapters={[localStorageAdapter()]}>
+			<StoreProvider persist={[localStorageAdapter()]}>
 				<store.Provider>
 					<Gate />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 		expect(html).toContain('loading')
 		expect(html).not.toContain('ready')
 	})
 
 	it('flips to true after mount on the client', async () => {
+		const store = makeStore()
+		function Gate(): ReactElement {
+			const hydrated = useHydrated(store.useStore())
+			return <span data-testid='state'>{hydrated ? 'ready' : 'loading'}</span>
+		}
 		render(
-			<PersistProvider adapters={[localStorageAdapter()]}>
+			<StoreProvider persist={[localStorageAdapter()]}>
 				<store.Provider>
 					<Gate />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 		await waitFor(() => {
 			expect(screen.getByTestId('state')).toHaveTextContent('ready')

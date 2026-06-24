@@ -23,6 +23,10 @@
 			"types": "./dist/persist/index.d.ts",
 			"import": "./dist/persist/index.js"
 		},
+		"./persist/internals": {
+			"types": "./dist/persist/internals.d.ts",
+			"import": "./dist/persist/internals.js"
+		},
 		"./persist/storage": {
 			"types": "./dist/persist/storage/index.d.ts",
 			"import": "./dist/persist/storage/index.js"
@@ -46,6 +50,9 @@
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"dependencies": {
+		"@ez-kit/store-core": "workspace:*"
+	},
 	"scripts": {
 		"build": "tsup",
 		"lint": "eslint . --max-warnings=0",

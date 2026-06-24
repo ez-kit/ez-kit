@@ -2,7 +2,8 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
 import { urlField } from '@ez-kit/valtio-kit/persist/url'
 import { proxy } from 'valtio'
 
@@ -17,14 +18,16 @@ type ProductFiltersState = {
 // Fields are addressed by path, so nested state maps to dotted keys: price.min, price.max. A URL pull
 // assigns only the leaf — the `price` object keeps its identity. The decorator form composes a nested
 // `class Price` to the same paths.
-const store = createPersistFields<ProductFiltersState>(
+const fields: FieldsBuilder<ProductFiltersState> = (field) => [
+	field((s) => s.q, urlField()),
+	field((s) => s.price.min, urlField()),
+	field((s) => s.price.max, urlField()),
+	field((s) => s.onSale, urlField()),
+]
+
+const store = createStore<ProductFiltersState>(
 	() => proxy<ProductFiltersState>({ q: '', price: { min: 0, max: 100 }, onSale: false }),
-	(field) => [
-		field((s) => s.q, urlField()),
-		field((s) => s.price.min, urlField()),
-		field((s) => s.price.max, urlField()),
-		field((s) => s.onSale, urlField()),
-	],
+	{ plugins: [persist({ fields })] },
 )
 
 const { adapter, useSearch } = createMemoryUrlAdapter('q=jacket&price.min=20&price.max=80&onSale=true')

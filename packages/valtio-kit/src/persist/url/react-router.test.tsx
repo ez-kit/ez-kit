@@ -4,16 +4,16 @@ import { MemoryRouter } from 'react-router'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
+import { createStore } from '../../create-store'
+import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
-import { createPersistFields } from '../create-persist-store'
-import { PersistProvider } from '../provider'
+import { persist } from '../plugin'
 
 import { reactRouterAdapter } from './react-router'
 
-const store = createPersistFields(
-	() => proxy({ q: '' }),
-	(field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
-)
+const store = createStore<{ q: string }>(() => proxy({ q: '' }), {
+	plugins: [persist({ fields: (field) => [field((s) => (s).q, { source: 'url', parser: paramString() })] })],
+})
 
 function View(): ReactElement {
 	const snap = store.useSnapshot()
@@ -39,11 +39,11 @@ describe('@ez-kit/valtio-kit persist reactRouterAdapter', () => {
 	it('hydrates from the router location and writes back', async () => {
 		render(
 			<MemoryRouter initialEntries={['/?q=shoes']}>
-				<PersistProvider adapters={[reactRouterAdapter]}>
+				<StoreProvider persist={[reactRouterAdapter]}>
 					<store.Provider>
 						<View />
 					</store.Provider>
-				</PersistProvider>
+				</StoreProvider>
 			</MemoryRouter>,
 		)
 

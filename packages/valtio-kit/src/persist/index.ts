@@ -4,10 +4,15 @@
  *
  * This entrypoint is substrate-neutral: it never imports `react-router`, `next`, `URLSearchParams`,
  * or a storage API. Source adapters live behind their own peer-gated subpaths.
+ *
+ * This entry deliberately exposes only the app- and adapter-author-facing surface. Low-level engine
+ * primitives (bindings, the engine factory, path/key helpers, spec resolution) live on the separate
+ * `@ez-kit/valtio-kit/persist/internals` subpath — import from there only when building a custom adapter.
  */
 
-// --- Store factories (SSR-correct, request-scoped) ---
-export { createPersistFields, createPersistStore, type CreatePersistStoreResult } from './create-persist-store'
+// --- persist plugin + app-level engines service ---
+export { persist, type PersistPluginOptions, useHydrated } from './plugin'
+export { PERSIST_ENGINES, type PersistEngines } from './service'
 
 // --- Provider + adapter contract ---
 export {
@@ -21,22 +26,19 @@ export {
 	usePersistEngines,
 } from './provider'
 
-// --- Per-source control handles ($url / $persist) ---
-export { attachHandles, PERSIST_HANDLE, type PersistHandle, type SourceBinding, URL_HANDLE } from './handle'
+// --- Per-source control handles: typed accessors ($url / $persist) ---
+export { persistHandle, type PersistHandle, type UrlHandle, urlHandle } from './handle'
 
-// --- Decorator + accessor fronts ---
-export { discoverPersistFields, persistField, type PersistFieldOptions } from './decorators'
+// --- Decorator + accessor fronts (field declaration) ---
+export { persistField, type PersistFieldOptions } from './decorators'
 export {
 	type AccessorFieldOptions,
 	type FieldBuilder,
 	type FieldSpec,
 	type FieldsBuilder,
-	resolveFieldSpecs,
 } from './accessor'
-export { groupBySource, type PersistSpec } from './spec'
 
 // --- Codecs ---
-export { resolveParser } from './codecs/auto'
 export { type AnyCodec, type Codec } from './codecs/codec'
 export {
 	paramArray,
@@ -49,14 +51,6 @@ export {
 	paramNumber,
 	paramString,
 } from './codecs'
-
-// --- Engine primitives (for custom adapter authors) ---
-export { applyKeyed, ApplyMode, createBinding, desiredKeyed, type MetaRunner, type PersistBinding } from './binding'
-export { createPersistEngine, type CreateEngineOptions, type PersistEngine } from './engine'
-export { fieldKey } from './key-naming'
-export { findPropertyDescriptor, parentOf, readPath, writePath } from './path'
-export { type BindingRegistry, createRegistry } from './registry'
-export { validateBinding } from './validate'
 
 // --- Core types ---
 export type {

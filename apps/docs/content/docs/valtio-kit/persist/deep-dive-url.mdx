@@ -58,17 +58,16 @@ Render-scoped adapters call hooks, so the `adapters` array must be stable in len
 
 ## Imperative control via `$url`
 
-Each bound source attaches a non-enumerable handle to the proxy. The `$url` handle runs a mutation whose resulting commit carries explicit `meta` — e.g. forcing a one-off `push` regardless of the field's default:
+Each bound source attaches a non-enumerable handle to the proxy. Resolve the `$url` handle with the typed `urlHandle()` accessor — no casts — and run a mutation whose resulting commit carries explicit `meta`, e.g. forcing a one-off `push` regardless of the field's default:
 
 ```tsx
-import { type PersistHandle, URL_HANDLE } from '@ez-kit/valtio-kit/persist'
+import { urlHandle } from '@ez-kit/valtio-kit/persist'
 import { UrlHistory } from '@ez-kit/valtio-kit/persist/url'
 
 function next() {
 	const store = wizardStore.useStore()
-	// The handle is attached at runtime (not on the store's type) — read it by its key.
-	const $url = (store as Record<string, unknown>)[URL_HANDLE] as PersistHandle
-	$url.runWithMeta({ history: UrlHistory.Push }, () => {
+	// `urlHandle(store)` returns the typed handle; its `meta` is checked against UrlMeta.
+	urlHandle(store).runWithMeta({ history: UrlHistory.Push }, () => {
 		store.step = 'profile'
 	})
 }
@@ -78,4 +77,4 @@ Before the provider connects (server render, first paint) the handle is inert �
 
 ## SSR
 
-`createPersistStore` is request-scoped: each `Provider` mount creates its own proxy, so concurrent requests never share state. The URL source seeds **synchronously** in render, so server HTML reflects the incoming query string and the first client render matches it — no flash, no hydration mismatch. (Storage sources defer to mount; see the [storage deep dive](./valtio-kit/persist/deep-dive-storage).)
+A `createStore` + `persist()` store is request-scoped: each `Provider` mount creates its own proxy, so concurrent requests never share state. The URL source seeds **synchronously** in render, so server HTML reflects the incoming query string and the first client render matches it — no flash, no hydration mismatch. (Storage sources defer to mount; see the [storage deep dive](./valtio-kit/persist/deep-dive-storage).)

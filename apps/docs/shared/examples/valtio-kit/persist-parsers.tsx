@@ -2,7 +2,15 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createPersistFields, paramArray, paramEnum, paramString, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import {
+	type FieldsBuilder,
+	paramArray,
+	paramEnum,
+	paramString,
+	persist,
+	PersistProvider,
+} from '@ez-kit/valtio-kit/persist'
 import { urlField } from '@ez-kit/valtio-kit/persist/url'
 import { proxy } from 'valtio'
 
@@ -20,15 +28,17 @@ type SearchState = {
 
 // Primitives (`q`, `page`, `inStock`) auto-resolve their parser from the runtime value. Structured
 // values need an explicit codec: an array of strings, a closed enum.
-const searchStore = createPersistFields<SearchState>(
+const fields: FieldsBuilder<SearchState> = (field) => [
+	field((s) => s.q, urlField()),
+	field((s) => s.page, urlField()),
+	field((s) => s.inStock, urlField()),
+	field((s) => s.tags, urlField({ parser: paramArray(paramString()) })),
+	field((s) => s.sort, urlField({ parser: paramEnum<Sort>(['relevance', 'newest']) })),
+]
+
+const searchStore = createStore<SearchState>(
 	() => proxy<SearchState>({ q: '', page: 1, inStock: false, tags: [], sort: 'relevance' }),
-	(field) => [
-		field((s) => s.q, urlField()),
-		field((s) => s.page, urlField()),
-		field((s) => s.inStock, urlField()),
-		field((s) => s.tags, urlField({ parser: paramArray(paramString()) })),
-		field((s) => s.sort, urlField({ parser: paramEnum<Sort>(['relevance', 'newest']) })),
-	],
+	{ plugins: [persist({ fields })] },
 )
 
 const { adapter, useSearch } = createMemoryUrlAdapter('q=boots&tags=red,suede&sort=newest&page=2')

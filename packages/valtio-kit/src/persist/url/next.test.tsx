@@ -3,9 +3,10 @@ import { type ReactElement, useSyncExternalStore } from 'react'
 import { proxy } from 'valtio'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createStore } from '../../create-store'
+import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
-import { createPersistFields } from '../create-persist-store'
-import { PersistProvider } from '../provider'
+import { persist } from '../plugin'
 
 /**
  * In-memory stand-in for the App Router navigation state. `useSearchParams`/`usePathname`
@@ -63,10 +64,9 @@ vi.mock('next/navigation', () => ({
 // Imported after the mock so the adapter binds to the mocked `next/navigation`.
 const { nextAdapter } = await import('./next')
 
-const store = createPersistFields(
-	() => proxy({ q: '' }),
-	(field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
-)
+const store = createStore<{ q: string }>(() => proxy({ q: '' }), {
+	plugins: [persist({ fields: (field) => [field((s) => (s).q, { source: 'url', parser: paramString() })] })],
+})
 
 function View(): ReactElement {
 	const snap = store.useSnapshot()
@@ -98,11 +98,11 @@ describe('@ez-kit/valtio-kit persist nextAdapter', () => {
 		navStore.reset('/', 'q=shoes')
 
 		render(
-			<PersistProvider adapters={[nextAdapter]}>
+			<StoreProvider persist={[nextAdapter]}>
 				<store.Provider>
 					<View />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
 		await waitFor(() => {
@@ -118,11 +118,11 @@ describe('@ez-kit/valtio-kit persist nextAdapter', () => {
 
 	it('pulls external URL changes (back/forward) into the proxy without re-writing', async () => {
 		render(
-			<PersistProvider adapters={[nextAdapter]}>
+			<StoreProvider persist={[nextAdapter]}>
 				<store.Provider>
 					<View />
 				</store.Provider>
-			</PersistProvider>,
+			</StoreProvider>,
 		)
 
 		navStore.navigate('/?q=sandals')

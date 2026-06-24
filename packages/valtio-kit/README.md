@@ -42,7 +42,8 @@ Mirror a Valtio store into an external substrate — the URL, `localStorage`/`se
 One source-agnostic engine drives every substrate. Its only interchange language is `Keyed = Map<string, string>`; a **source adapter** teaches the engine how to read and write one substrate through a tiny port (`get` / `set` / optional `subscribe`). Codecs, key naming, throttling, loop-breaking, and hydration are shared, so a single field can sync to two substrates at once and async sources (IndexedDB) never stall the synchronous URL.
 
 ```tsx
-import { createPersistStore, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
 import { persistUrl } from '@ez-kit/valtio-kit/persist/url'
 import { reactRouterAdapter } from '@ez-kit/valtio-kit/persist/url/react-router'
 import { persistLocalStorage, localStorageAdapter } from '@ez-kit/valtio-kit/persist/storage'
@@ -54,8 +55,9 @@ class Filters {
   @persistLocalStorage() density = 'comfortable' // → localStorage
 }
 
-// Request-scoped, SSR-correct. Omit the fields list → decorators are discovered.
-const filtersStore = createPersistStore(() => proxy(new Filters()))
+// Persistence is a plugin on the base store. Request-scoped, SSR-correct.
+// `persist()` with no fields discovers the decorators.
+const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
 
 function Page() {
   return (
@@ -68,7 +70,7 @@ function Page() {
 }
 ```
 
-Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `filtersStore.useHydrated()` when the post-hydration fill would cause a flash. Can't use build-time decorators? `createPersistFields(factory, (field) => [field((s) => s.q, urlField())])` is the equivalent accessor front.
+Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `persist({ fields: (field) => [field((s) => s.q, urlField())] })` — and `persist` infers the state type from `createStore<T>`.
 
 Subpaths (optional peers, install only what you use):
 

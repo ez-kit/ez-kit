@@ -2,7 +2,8 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createPersistFields, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
 import { LOCAL_STORAGE_SOURCE, localStorageField } from '@ez-kit/valtio-kit/persist/storage'
 import { urlField } from '@ez-kit/valtio-kit/persist/url'
 import { proxy } from 'valtio'
@@ -18,10 +19,14 @@ type ListState = {
 }
 
 // One proxy, two sources. Each field picks where it syncs — `q` → URL, `density` → localStorage.
-const listStore = createPersistFields<ListState>(
-	() => proxy<ListState>({ q: '', density: 'comfortable' }),
-	(field) => [field((s) => s.q, urlField()), field((s) => s.density, localStorageField())],
-)
+const fields: FieldsBuilder<ListState> = (field) => [
+	field((s) => s.q, urlField()),
+	field((s) => s.density, localStorageField()),
+]
+
+const listStore = createStore<ListState>(() => proxy<ListState>({ q: '', density: 'comfortable' }), {
+	plugins: [persist({ fields })],
+})
 
 // Seed the URL with a shared link (?q=boots). Storage starts empty — first-present-wins means the
 // shared `q` is never clobbered by a restored value.

@@ -1,88 +1,24 @@
-import { createContext, type PropsWithChildren, type ReactElement, useContext, useRef } from 'react'
-import { useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
+import { createStore, type CreateStoreResult, type StoreFactory, type StoreInit } from '../create-store'
 
-const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
+import type { StorePlugin } from '@ez-kit/store-core'
 
 /** Seed envelope passed to a `createContextStore` factory. Reserves room for a future controlled `value`. */
-export type ContextStoreInit<TDefaultValue> = {
-	defaultValue: TDefaultValue
-}
+export type ContextStoreInit<TDefaultValue> = StoreInit<TDefaultValue>
 
-export type CreateContextStoreFactory<TState extends object, TDefaultValue> = (
-	init: ContextStoreInit<TDefaultValue>,
-) => TState
+export type CreateContextStoreFactory<TState extends object, TDefaultValue> = StoreFactory<TState, TDefaultValue>
 
-export type UseSnapshotOptions = {
-	sync?: boolean
-}
+export type CreateContextStoreResult<TState extends object, TDefaultValue> = CreateStoreResult<TState, TDefaultValue>
 
-/** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
-type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
-	? { defaultValue?: TDefaultValue }
-	: { defaultValue: TDefaultValue }
+export type { ItemRenderArg, UseSnapshotOptions } from '../create-store'
 
-/** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy) for writes. */
-export type ItemRenderArg<TState extends object> = {
-	snap: Snapshot<TState>
-	store: TState
-}
-
-type ItemProps<TState extends object> = {
-	children: (arg: ItemRenderArg<TState>) => ReactElement
-}
-
-export type CreateContextStoreResult<TState extends object, TDefaultValue> = {
-	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
-	/** Returns the raw, mutable Valtio proxy. Mutate it directly (e.g. `state.count++`). */
-	useStore: () => TState
-	/** Returns the readonly, auto-tracked snapshot. Forwards Valtio's `useSnapshot` options. */
-	useSnapshot: (options?: UseSnapshotOptions) => Snapshot<TState>
-	Item: (props: ItemProps<TState>) => ReactElement
-}
-
-function getStoreFromContext<TState extends object>(store: TState | null): TState {
-	if (!store) {
-		throw new Error(MISSING_PROVIDER_ERROR)
-	}
-
-	return store
-}
-
+/**
+ * Context store built on the plugin-aware {@link createStore}. With no plugins this is the original
+ * behavior unchanged: returns `{ Provider, useStore, useSnapshot, Item }` and creates the proxy once
+ * per Provider via `useRef`. Pass `plugins` to bind capabilities to the Provider's mount lifetime.
+ */
 export function createContextStore<TState extends object, TDefaultValue = undefined>(
-	createStore: CreateContextStoreFactory<TState, TDefaultValue>,
+	factory: CreateContextStoreFactory<TState, TDefaultValue>,
+	options?: { plugins?: readonly StorePlugin<TState>[] },
 ): CreateContextStoreResult<TState, TDefaultValue> {
-	const StoreContext = createContext<TState | null>(null)
-
-	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue>>): ReactElement {
-		const { children, defaultValue } = props as PropsWithChildren<{ defaultValue: TDefaultValue }>
-		const storeRef = useRef<TState | null>(null)
-
-		storeRef.current ??= createStore({ defaultValue })
-
-		return <StoreContext.Provider value={storeRef.current}>{children}</StoreContext.Provider>
-	}
-
-	function useContextStore(): TState {
-		return getStoreFromContext(useContext(StoreContext))
-	}
-
-	function useStore(): TState {
-		return useContextStore()
-	}
-
-	function useSnapshot(options?: UseSnapshotOptions): Snapshot<TState> {
-		const store = useContextStore()
-		return useValtioSnapshot(store, options)
-	}
-
-	function Item({ children }: ItemProps<TState>): ReactElement {
-		return children({ snap: useSnapshot(), store: useStore() })
-	}
-
-	return {
-		Provider,
-		useStore,
-		useSnapshot,
-		Item,
-	}
+	return createStore(factory, { name: 'createContextStore', plugins: options?.plugins ?? [] })
 }

@@ -17,7 +17,8 @@ Storage works exactly like the URL — same store shape, same fronts. Only the *
 ## The three pieces
 
 ```tsx
-import { createPersistStore, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { createStore } from '@ez-kit/valtio-kit'
+import { persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
 import { localStorageAdapter, persistLocalStorage } from '@ez-kit/valtio-kit/persist/storage'
 import { proxy } from 'valtio'
 
@@ -26,7 +27,7 @@ class Prefs {
 	@persistLocalStorage() fontScale = 1
 }
 
-const prefsStore = createPersistStore(() => proxy(new Prefs()))
+const prefsStore = createStore(() => proxy(new Prefs()), { plugins: [persist()] })
 
 function Page() {
 	return (
@@ -48,9 +49,12 @@ Reading storage synchronously during render would mismatch server HTML (the serv
 When the flash matters (layout shift, firing analytics on default values), gate on `useHydrated()`:
 
 ```tsx
+import { useHydrated } from '@ez-kit/valtio-kit/persist'
+
 function PrefControls() {
+	const store = prefsStore.useStore()
 	const snap = prefsStore.useSnapshot()
-	const hydrated = prefsStore.useHydrated() // false on server + first client render, then true
+	const hydrated = useHydrated(store) // false on server + first client render, then true
 
 	if (!hydrated) return <Skeleton />
 	return <Theme value={snap.theme} />
