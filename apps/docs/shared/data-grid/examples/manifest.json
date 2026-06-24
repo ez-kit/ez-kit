@@ -8,6 +8,14 @@
 		"exportName": "BasePlainExample"
 	},
 	{
+		"id": "base-inline",
+		"label": "Inline (no hook)",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/inline.tsx",
+		"exportName": "BaseInlineExample"
+	},
+	{
 		"id": "base-sorting",
 		"label": "Sorting",
 		"group": "base",

@@ -24,6 +24,24 @@ Below is the same grid running in both flavors. Use the toggle to flip between t
 
 The example renders against the real published package surface — what you copy is what you ship.
 
+## 2a. Controlled vs. uncontrolled
+
+`DataGrid` works two ways. Pass a `table` instance you built with `useDataGrid` (**controlled**), or skip the hook and hand the same config to `DataGrid` directly (**uncontrolled**).
+
+```tsx
+// Controlled — own the instance (needed to read state via useDataGridStore,
+// or to share one instance across several components)
+const table = useDataGrid({ data, columns, sorting: true })
+return <DataGrid table={table} />
+
+// Uncontrolled — no hook; DataGrid runs useDataGrid for you
+return <DataGrid data={data} columns={columns} sorting />
+```
+
+<DataGridDocsExample exampleId='base-inline' />
+
+Pick one mode for the lifetime of a given grid — switching between them remounts the grid and resets its state.
+
 ## 3. Next steps
 
 Once you have a grid rendering, branch out into the per-capability pages:

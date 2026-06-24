@@ -417,3 +417,45 @@ describe('<DataGrid>', () => {
 		expect(screen.getAllByTestId('registry-edit').length).toBeGreaterThan(0)
 	})
 })
+
+describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
+	it('renders rows from data/columns props directly', () => {
+		renderWithComponents(<DataGrid data={USERS} columns={COLUMNS} />)
+		expect(screen.getAllByRole('row')).toHaveLength(USERS.length + 1) // header + data rows
+	})
+
+	it('renders cell values without an explicit instance', () => {
+		renderWithComponents(<DataGrid data={USERS} columns={COLUMNS} />)
+		expect(screen.getByText('Alice')).toBeInTheDocument()
+		expect(screen.getByText('Bob')).toBeInTheDocument()
+	})
+
+	it('honors feature config passed inline (selection)', () => {
+		renderWithComponents(<DataGrid data={USERS} columns={COLUMNS} selection />)
+		// 1 header checkbox + 1 per data row
+		expect(screen.getAllByRole('checkbox')).toHaveLength(USERS.length + 1)
+	})
+
+	it('supports the compound API without a table prop', () => {
+		renderWithComponents(
+			<DataGrid data={USERS} columns={COLUMNS}>
+				<DataGrid.Table />
+			</DataGrid>,
+		)
+		expect(screen.getByText('Alice')).toBeInTheDocument()
+		expect(screen.getByText('Bob')).toBeInTheDocument()
+	})
+
+	it('warns when a mounted grid switches between controlled and uncontrolled', () => {
+		const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
+		try {
+			const { instance } = makeTable()
+			const { rerender } = renderWithComponents(<DataGrid table={instance} />)
+			expect(warn).not.toHaveBeenCalled()
+			rerender(<DataGrid data={USERS} columns={COLUMNS} />)
+			expect(warn).toHaveBeenCalledWith(expect.stringContaining('switched from'))
+		} finally {
+			warn.mockRestore()
+		}
+	})
+})

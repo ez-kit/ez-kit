@@ -1,11 +1,15 @@
+import { useRef } from 'react'
+
 import { CellTypesProvider } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
 import {
 	CELL_TYPES_KEY,
 	FILTER_CHIPS_KEY,
 	SELECTION_BAR_KEY,
+	useDataGrid,
 	type NormalizedFilterChipsConfig,
 	type SelectionBarConfig,
+	type UseDataGridConfig,
 } from '../use-data-grid'
 
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -38,15 +42,52 @@ import type { ConfirmationOptions } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-export type DataGridProps<TRow extends object> = {
-	/** Instance returned by `useDataGrid`. */
-	table: DataGridInstance<TRow>
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
+type DataGridSharedProps = {
 	/** Local component overrides — merged with global GridComponentsProvider. */
 	components?: GridComponents
-	/** Custom cell type renderers. Merged with types from `useDataGrid`. */
-	cellTypes?: CellTypeRegistry
 	children?: ReactNode
 }
+
+/**
+ * Controlled usage: the caller owns the instance built by `useDataGrid` and
+ * passes it in. Use this when several components need the same instance, or to
+ * read state via `useDataGridStore` outside the grid.
+ */
+export type DataGridControlledProps<TRow extends object> = DataGridSharedProps & {
+	/** Instance returned by `useDataGrid`. */
+	table: DataGridInstance<TRow>
+	/** Custom cell type renderers. Merged with types from `useDataGrid`. */
+	cellTypes?: CellTypeRegistry
+}
+
+/**
+ * Uncontrolled usage: pass the same config `useDataGrid` accepts directly and
+ * the grid runs the hook for you — no separate `useDataGrid` call needed.
+ */
+export type DataGridUncontrolledProps<TRow extends object> = DataGridSharedProps &
+	UseDataGridConfig<TRow> & {
+		/** Mutually exclusive with the inline config — never pass both. */
+		table?: never
+	}
+
+/**
+ * `DataGrid` accepts **either** a ready `table` instance (controlled) **or** the
+ * full `useDataGrid` config inline (uncontrolled). The two shapes are mutually
+ * exclusive — pick one mode for the lifetime of the component, since switching
+ * remounts the grid and resets its state.
+ *
+ * @example — controlled (explicit instance)
+ * const table = useDataGrid({ data, columns, sorting: true })
+ * return <DataGrid table={table} />
+ *
+ * @example — uncontrolled (no hook)
+ * return <DataGrid data={data} columns={columns} sorting />
+ */
+export type DataGridProps<TRow extends object> =
+	| DataGridControlledProps<TRow>
+	| DataGridUncontrolledProps<TRow>
 
 function resolveConfirmationText(
 	options: ConfirmationOptions,
@@ -136,24 +177,16 @@ function DefaultLayout() {
 }
 
 /**
- * Root compound component for the data grid.
- *
- * @example — default layout
- * <DataGrid table={table} />
- *
- * @example — custom layout via compound pattern
- * <DataGrid table={table}>
- *   <DataGrid.Toolbar />
- *   <DataGrid.Table />
- *   <DataGrid.Pagination />
- * </DataGrid>
+ * Shared core that mounts the provider tree around a ready instance. Both the
+ * controlled and uncontrolled paths funnel through here, so every compound
+ * child (`DataGrid.Table`, etc.) sees the same `TableContext`.
  */
-function DataGridRoot<TRow extends object>({
+function DataGridControlled<TRow extends object>({
 	table: instance,
 	components,
 	cellTypes,
 	children,
-}: DataGridProps<TRow>) {
+}: DataGridControlledProps<TRow>) {
 	const table = instance.table
 	// Read cellTypes stored on the table instance by useDataGrid, merge with direct prop
 	const tableCellTypes = (table as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] as CellTypeRegistry | undefined
@@ -171,6 +204,74 @@ function DataGridRoot<TRow extends object>({
 			</GridComponentsProvider>
 		</CellTypesProvider>
 	)
+}
+
+/**
+ * Uncontrolled path: builds the instance with `useDataGrid` from inline config,
+ * then renders the shared core. `cellTypes` (if any) flows through `config` into
+ * the instance, so it is not forwarded a second time.
+ */
+function DataGridUncontrolled<TRow extends object>({ components, children, ...config }: DataGridUncontrolledProps<TRow>) {
+	const instance = useDataGrid<TRow>(config)
+	return (
+		<DataGridControlled table={instance} {...(components !== undefined ? { components } : {})}>
+			{children}
+		</DataGridControlled>
+	)
+}
+
+/**
+ * Root compound component for the data grid. Dispatches to the controlled core
+ * (when a `table` instance is supplied) or the uncontrolled wrapper (when inline
+ * `useDataGrid` config is supplied). Holds no state of its own beyond a dev-only
+ * mode-switch guard.
+ *
+ * @example — controlled, default layout
+ * <DataGrid table={table} />
+ *
+ * @example — uncontrolled, no hook
+ * <DataGrid data={data} columns={columns} sorting />
+ *
+ * @example — custom layout via compound pattern (either mode)
+ * <DataGrid data={data} columns={columns}>
+ *   <DataGrid.Toolbar />
+ *   <DataGrid.Table />
+ *   <DataGrid.Pagination />
+ * </DataGrid>
+ */
+function DataGridRoot<TRow extends object>(props: DataGridProps<TRow>) {
+	const isControlled = props.table != null
+
+	// Dev-only: flipping a mounted grid between controlled and uncontrolled
+	// remounts the internal subtree and silently resets grid state. Warn so the
+	// mistake is visible in development; stripped from production builds.
+	const wasControlledRef = useRef(isControlled)
+	if (IS_DEV && wasControlledRef.current !== isControlled) {
+		const describe = (controlled: boolean) =>
+			controlled ? 'controlled (table prop)' : 'uncontrolled (inline config)'
+		console.error(
+			`<DataGrid> switched from ${describe(wasControlledRef.current)} to ${describe(isControlled)}. ` +
+				'Pick one mode for the lifetime of the component — switching remounts the grid and resets its state.',
+		)
+	}
+	wasControlledRef.current = isControlled
+
+	if (props.table != null) {
+		const { table, components, cellTypes, children } = props
+		return (
+			<DataGridControlled
+				table={table}
+				{...(components !== undefined ? { components } : {})}
+				{...(cellTypes !== undefined ? { cellTypes } : {})}
+			>
+				{children}
+			</DataGridControlled>
+		)
+	}
+
+	// Strip a possibly-present `table: undefined` before handing config to the hook.
+	const { table: _table, ...rest } = props
+	return <DataGridUncontrolled<TRow> {...rest} />
 }
 
 // ── Attach sub-components as static properties ────────────────────────────

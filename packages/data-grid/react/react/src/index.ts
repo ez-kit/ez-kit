@@ -61,7 +61,7 @@ export type { CreateDataGridOptions } from './create-data-grid'
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
-export type { DataGridProps } from './data-grid/data-grid'
+export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps } from './data-grid/data-grid'
 
 // Sub-components (also available as DataGrid.SelectionBar)
 export { SelectionBar } from './data-grid/selection-bar'
