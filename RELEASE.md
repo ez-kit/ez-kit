@@ -1,7 +1,7 @@
 Список команд по шагам
 
 1. Убедись, что всё чисто и собирается (CI)
-   pnpm ci # lint + typecheck + test + build + size
+   pnpm run ci # lint + typecheck + test + build + size
 
 2. Создай changeset (опиши изменения, выбери bump: patch/minor/major)
    pnpm changeset

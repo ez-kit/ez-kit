@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/valtio-kit",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "A Valtio kit for ez-kit.",
 	"license": "MIT",
 	"repository": {
