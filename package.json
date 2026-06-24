@@ -24,6 +24,7 @@
 		"docs:build": "pnpm --filter @ez-kit/docs build",
 		"docs:start": "pnpm --filter @ez-kit/docs start",
 		"ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm size",
+		"ci:fast": "pnpm lint && pnpm typecheck && pnpm test",
 		"prepare": "husky || true"
 	},
 	"devDependencies": {

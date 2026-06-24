@@ -1,0 +1,73 @@
+---
+title: Combined
+description: Sync one store to the URL and storage at once. Shared state deep-links; device preferences restore — and a shared link is never clobbered by a stale cache.
+---
+
+# Combined
+
+A field is bound to a source, not a store — so one proxy can mix sources freely. Put **shareable** state (`q`, filters) in the URL and **device-local** state (density, theme) in storage. Mount both adapters; each field picks where it goes.
+
+<LivePreview path='valtio-kit/persist-combined' title='URL + localStorage on one store' />
+
+```tsx
+import { createStore } from '@ez-kit/valtio-kit'
+import { persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
+import { localStorageAdapter, persistLocalStorage } from '@ez-kit/valtio-kit/persist/storage'
+import { persistUrl } from '@ez-kit/valtio-kit/persist/url'
+import { reactRouterAdapter } from '@ez-kit/valtio-kit/persist/url/react-router'
+
+class ListState {
+	@persistUrl() q = '' // shared — deep-links, survives Back/forward
+	@persistLocalStorage() density = 'comfortable' // device preference — restored, not shared
+}
+
+const listStore = createStore(() => proxy(new ListState()), { plugins: [persist()] })
+
+function Page() {
+	return (
+		<PersistProvider adapters={[reactRouterAdapter, localStorageAdapter()]}>
+			<listStore.Provider>…</listStore.Provider>
+		</PersistProvider>
+	)
+}
+```
+
+One engine is created per source — they never coordinate writes (each flushes its own substrate), and an async source (IndexedDB) can't stall the synchronous URL.
+
+## Dual-binding one field
+
+Bind the *same* field to two sources to keep a shareable value **and** a local fallback — a URL param when present, restored from storage otherwise:
+
+```tsx
+class State {
+	@persistUrl()
+	@persistLocalStorage()
+	q = ''
+}
+```
+
+With the accessor API, list the field once per source via `persist({ fields })`:
+
+```tsx
+createStore(() => proxy({ q: '' }), {
+	plugins: [persist({ fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())] })],
+})
+```
+
+## First-present-wins on cold start
+
+When several sources can fill the same field, the rule is **first-present-wins on cold start, last-arrival-wins at runtime**:
+
+- **Cold start** — a source writes an incoming value into a field only if that field still holds its default. The URL connects first (synchronous, in render) and sets `q`; storage then fills only the fields the URL left at default. A shared `?q=boots` link is **never** clobbered by a stale localStorage value — even an async IndexedDB value that resolves later can't win.
+- **Runtime** — after mount, whatever change arrives last wins (a fresh navigation, an edit, another tab).
+
+This makes "an explicit shared link beats a restored cache" automatic, with no precedence config. The only lever for sync-vs-sync ordering is adapter order in the `adapters` array; it's rarely needed.
+
+<Callout type="info">
+	A consumer who genuinely wants storage to override the URL on load can't, by design — the rule favors
+	shareable links. That trade-off is intentional.
+</Callout>
+
+## Per-source handles
+
+Each bound source attaches a non-enumerable control handle to the proxy — `$url` and `$persist` — for source-specific imperative control (e.g. forcing a URL `push`). A dual-bound proxy exposes both without collision. They're covered in the [URL deep dive](./valtio-kit/persist/deep-dive-url#imperative-control).

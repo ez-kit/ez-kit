@@ -11,23 +11,15 @@ Valtio already optimises re-renders per accessed property through `useSnapshot`,
 
 It exists because a plain `proxy()` is a module-level singleton — fine for app-wide state, awkward when you want a counter, modal, or form scoped to a subtree.
 
-## Install
-
-```bash
-pnpm add @ez-kit/valtio-kit valtio
-```
-
-`valtio` is a peer dependency — pin whatever 2.x version your app already uses.
-
-## A minimal example
-
-<LivePreview path='valtio-kit/counter' title='Counter' />
+→ **[Getting Started](./valtio-kit/getting-started)** — install, your first store, and the read/write model.
 
 ## What's in the box
 
-| Export                                                       | Purpose                                                                            |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| [`createContextStore`](./valtio-kit/create-context-store)    | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Item`. |
+| Export | Purpose |
+| --- | --- |
+| [Getting Started](./valtio-kit/getting-started) | Install, first store, read/write model, decorator TypeScript setup. |
+| [`createContextStore`](./valtio-kit/create-context-store) | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Item`. |
+| [Persist](./valtio-kit/persist) | Sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate: typed codecs, decorators, hydration, cross-tab. |
 
 ## Why not a plain Valtio proxy?
 

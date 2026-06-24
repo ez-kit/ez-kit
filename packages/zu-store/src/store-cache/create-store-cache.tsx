@@ -1,21 +1,39 @@
-import { createContext, useContext, useEffect, useMemo, useRef, type PropsWithChildren, type ReactElement } from 'react'
+import { createInstanceCache, DEFAULT_GC_TIME } from '@ez-kit/store-core/cache'
+import {
+	createContext,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	type PropsWithChildren,
+	type ReactElement,
+} from 'react'
 
-import { createCacheInstance, DEFAULT_GC_TIME } from './cache-instance'
-import { createCachedStoreFactory, type ActiveCacheRef } from './create-cached-store'
+
+import { wrapCachedStoreGroup } from './create-cached-store'
 import { createUseKeys } from './use-keys'
 
-import type { CacheInstance } from './cache-types'
 import type { ScopeProps, StoreCache, StoreCacheController, StoreCacheOptions } from './types'
+import type { InstanceCache } from '@ez-kit/store-core/cache'
 
-export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider for createStoreCache'
+export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider'
 
 const EMPTY_SCOPE: readonly string[] = []
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
+const MULTIPLE_PROVIDERS_WARNING =
+	'[zu-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
+	'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.'
+
+/** Mutable handle to the cache owned by the currently-mounted `cache.Provider` (client-only). */
+type ActiveCacheRef = { current: InstanceCache | null }
+
 export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 	const cacheGcTime = options.gcTime ?? DEFAULT_GC_TIME
-	const CacheContext = createContext<CacheInstance | null>(null)
+
+	const CacheContext = createContext<InstanceCache | null>(null)
 	const ScopeContext = createContext<readonly string[]>(EMPTY_SCOPE)
+
 	const activeCache: ActiveCacheRef = { current: null }
 	const registeredGroupNames = new Set<string>()
 
@@ -32,18 +50,15 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 	}
 
 	function Provider({ children }: PropsWithChildren): ReactElement {
-		const cacheRef = useRef<CacheInstance | null>(null)
-		cacheRef.current ??= createCacheInstance(cacheGcTime)
+		const cacheRef = useRef<InstanceCache | null>(null)
+		cacheRef.current ??= createInstanceCache(cacheGcTime !== DEFAULT_GC_TIME ? { defaultGcTime: cacheGcTime } : {})
 		const cache = cacheRef.current
 
 		useEffect(() => {
 			// Imperative access (fromCache/remove) is client-only; the cache never becomes "active" on the server.
 			if (typeof window === 'undefined') return
 			if (IS_DEV && activeCache.current !== null && activeCache.current !== cache) {
-				console.warn(
-					'[zu-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
-						'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.',
-				)
+				console.warn(MULTIPLE_PROVIDERS_WARNING)
 			}
 			activeCache.current = cache
 			return () => {
@@ -56,7 +71,6 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 
 	function Scope({ path, children }: ScopeProps): ReactElement {
 		const inherited = useContext(ScopeContext)
-		// Serialized path keeps the memo stable across inline-array prop churn and constant deps-array size.
 		const pathKey = JSON.stringify(path)
 		const value = useMemo(
 			() => [...inherited, ...path],
@@ -74,7 +88,7 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 		return { keys: cache.keys, clear: cache.clear }
 	}
 
-	const createCachedStore = createCachedStoreFactory({
+	const createCachedStore = wrapCachedStoreGroup({
 		CacheContext,
 		ScopeContext,
 		activeCache,
@@ -83,5 +97,5 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 		registerGroupName,
 	})
 
-	return { Provider, Scope, useCache, createCachedStore, useKeys }
+	return { Provider, Scope, useCache, useKeys, createCachedStore }
 }

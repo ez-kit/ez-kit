@@ -1,11 +1,20 @@
-import { createContext, useContext, useEffect, useState, type Context, type ReactElement, type ReactNode } from 'react'
+import {
+	createContext,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+	useSyncExternalStore,
+	type Context,
+	type ReactElement,
+	type ReactNode,
+} from 'react'
 import { useStore as useZustandStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { createStore } from 'zustand/vanilla'
 
 import { serializeStoreId, toStoreId } from './cache-utils'
 
-import type { CacheInstance, StoreId } from './cache-types'
 import type {
 	CacheAddress,
 	CachedItemProps,
@@ -14,13 +23,15 @@ import type {
 	CachedStoreGroup,
 	CachedStoreOptions,
 } from './types'
-import type { ExtractState, StoreApi } from 'zustand/vanilla'
+import type { StoreId , StorePlugin } from '@ez-kit/store-core'
+import type { InstanceCache } from '@ez-kit/store-core/cache'
+import type { StoreApi, ExtractState } from 'zustand/vanilla'
 
 /** Mutable handle to the cache owned by the currently-mounted `cache.Provider` (client-only). */
-export type ActiveCacheRef = { current: CacheInstance | null }
+export type ActiveCacheRef = { current: InstanceCache | null }
 
 type CreateCachedStoreDeps = {
-	CacheContext: Context<CacheInstance | null>
+	CacheContext: Context<InstanceCache | null>
 	ScopeContext: Context<readonly string[]>
 	activeCache: ActiveCacheRef
 	cacheGcTime: number
@@ -45,7 +56,7 @@ function resolvePath(scope: readonly string[], providerPath: readonly string[] |
 	return [...scope, ...providerPath]
 }
 
-export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
+export function wrapCachedStoreGroup(deps: CreateCachedStoreDeps) {
 	const { CacheContext, ScopeContext, activeCache, cacheGcTime, missingProviderError, registerGroupName } = deps
 
 	return function createCachedStore<
@@ -53,17 +64,13 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 		TDefaultValue extends object = Record<string, never>,
 	>(
 		factory: CachedStoreFactory<TStore, TDefaultValue>,
-		options: CachedStoreOptions,
+		options: CachedStoreOptions & { plugins?: readonly StorePlugin<TStore>[] },
 	): CachedStoreGroup<TStore, TDefaultValue> {
 		const { name } = options
 		registerGroupName(name)
 
 		const groupGcTime = options.gcTime
 
-		// Per-group context exposing the canonical store. Reactive: replacing the value (via setState)
-		// re-renders consumers, which re-subscribe to the new store via `useZustandStore`.
-		// We deliberately don't reuse `createContextStore` here — it captures the store via `useRef` and
-		// cannot adopt a swapped store mid-life.
 		const StoreContext = createContext<TStore | null>(null)
 		const MISSING_GROUP_PROVIDER = `Missing <${name}.Provider>`
 
@@ -86,8 +93,8 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 			return children(useStore(selector))
 		}
 
-		// Per-group typed fallback used only as a placeholder when `useFromCache` has no live entry.
-		// Its state is never read — the selector wrapper passes `undefined` to the user when there is no live store.
+		// Per-group typed fallback: used as a stable placeholder in `useFromCache` when there is
+		// no live entry. Its state is never read — the selector receives `undefined` in that case.
 		const fallbackStore: StoreApi<ExtractState<TStore>> = createStore<ExtractState<TStore>>(
 			() => ({}) as ExtractState<TStore>,
 		)
@@ -99,15 +106,6 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 			children: ReactNode
 		}
 
-		/**
-		 * Keyed inner Provider — `useState`/`useEffect` reset when the resolved identity (`remountKey`) changes.
-		 * Render is side-effect-free w.r.t. the cache: the provisional store is built locally; cache registration
-		 * happens in the effect, after commit. A discarded render leaves no cache state to clean up.
-		 *
-		 * On cache hit during re-mount, the provisional store is replaced by the canonical one in the effect via
-		 * `setCanonical`. Because `StoreContext.Provider` propagates the new value reactively (rather than capturing
-		 * it via `useRef`), descendants re-subscribe to the canonical store without remounting.
-		 */
 		function ProviderInner({ storeId, defaultValue, gcTime, children }: ProviderInnerProps): ReactElement {
 			const cache = useContext(CacheContext)
 			if (!cache) throw new Error(missingProviderError)
@@ -118,13 +116,18 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 			const [canonical, setCanonical] = useState<TStore>(provisional)
 
 			useEffect(() => {
-				const registered = cache.register(storeId, provisional, gcTime) as TStore
+				const registered = cache.getOrCreate(storeId, () => provisional, {
+					gcTime,
+					plugins: (options.plugins ?? []),
+					context: { services: {} as never, id: storeId, isServer: false },
+				})
 				if (registered !== canonical) setCanonical(registered)
 				cache.addObserver(storeId)
+
 				return () => {
 					cache.removeObserver(storeId)
 				}
-				// `storeId` is stable for this keyed mount; intentionally exclude `canonical` to run register exactly once.
+				// `storeId` is stable for this keyed mount; intentionally exclude `canonical`.
 				// eslint-disable-next-line react-hooks/exhaustive-deps
 			}, [cache])
 
@@ -133,10 +136,6 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 
 		function Provider(props: CachedProviderProps<TDefaultValue>): ReactElement {
 			const { id, path, gcTime, alwaysCache, children } = props
-			// `defaultValue` lives on one of two conditional branches of `CachedProviderProps`; access via index cast.
-			// Safe by the conditional type: when `TDefaultValue` has required fields, the type requires
-			// `defaultValue` so it is defined here. When `TDefaultValue` admits `{}`, omission is allowed and the
-			// `{}` fallback is a valid value of `TDefaultValue`.
 			const providedDefaults = (props as { defaultValue?: TDefaultValue }).defaultValue
 			const inheritedScope = useContext(ScopeContext)
 			const resolvedPath = resolvePath(inheritedScope, path)
@@ -157,7 +156,7 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 		}
 
 		function fromCache(target: CacheAddress): TStore | undefined {
-			return activeCache.current?.getCachedStore(toStoreId(target, name)) as TStore | undefined
+			return activeCache.current?.getInstance(toStoreId(target, name)) as TStore | undefined
 		}
 
 		function useFromCache<TSelected>(
@@ -167,13 +166,21 @@ export function createCachedStoreFactory(deps: CreateCachedStoreDeps) {
 			const cache = useContext(CacheContext)
 			if (!cache) throw new Error(missingProviderError)
 
-			const storeKey = serializeStoreId(toStoreId(target, name))
+			// Reactively reflect membership changes (entry appears/disappears) via the cache's pub/sub.
+			// `useSyncExternalStore` subscribes synchronously at render, so a passive reader never misses
+			// an entry created by an earlier-mounted sibling. It does not keep the entry alive.
+			const snapshot = useSyncExternalStore(cache.subscribe, cache.getKeysSnapshot, cache.getKeysSnapshot)
 
-			const liveStore = useZustandStore(
-				cache.cachedStores,
-				(state) => state.stores.get(storeKey)?.store as StoreApi<ExtractState<TStore>> | undefined,
+			const storeKey = serializeStoreId(toStoreId(target, name))
+			const liveStore = useMemo(
+				() => cache.getInstance(toStoreId(target, name)) as StoreApi<ExtractState<TStore>> | undefined,
+				// `snapshot` ⇒ membership change; `storeKey` ⇒ target change.
+				// eslint-disable-next-line react-hooks/exhaustive-deps
+				[cache, snapshot, storeKey],
 			)
 
+			// When there is no live entry, subscribe to a stable empty store; the selector receives
+			// `undefined` so the placeholder's state is never read.
 			const subscribed: StoreApi<ExtractState<TStore>> = liveStore ?? fallbackStore
 			return useZustandStore<StoreApi<ExtractState<TStore>>, TSelected>(
 				subscribed,

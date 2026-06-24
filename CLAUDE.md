@@ -22,7 +22,7 @@ pnpm typecheck        # TypeScript type-check all packages
 pnpm test             # Run all tests (requires build first per turbo deps)
 pnpm format           # Format all packages with Prettier
 pnpm size             # Check bundle size limits
-pnpm ci               # Full CI check: lint + typecheck + test + build + size
+pnpm run ci               # Full CI check: lint + typecheck + test + build + size
 ```
 
 Run a single package's tests directly (faster, no turbo overhead):
@@ -41,10 +41,11 @@ cd packages/zu-store && pnpm exec vitest
 Docs app:
 
 ```bash
-pnpm docs:dev         # Start Fumadocs dev server
+pnpm docs:dev         # Start Fumadocs dev server (runs sandpack:build first)
 pnpm docs:build
-pnpm docs:sandpack    # Regenerate Sandpack bundles (run after any package change, required before docs:dev/build)
 ```
+
+The docs app auto-runs `sandpack:build` (`apps/docs/scripts/build-sandpack.mjs`) before every `dev`, `build`, `lint`, and `typecheck` — there is no separate root command to invoke. Build a package first if docs need its latest output. To regenerate manually: `pnpm --filter @ez-kit/docs sandpack:build`.
 
 Generate a new package:
 
@@ -76,22 +77,24 @@ apps/
     shared/
       DataGrid.tsx              # Runtime switcher — lazy-loads shadcn or heroui DataGrid based on context
       data-grid/
-        examples/               # SHARED examples — one set of components used by BOTH shadcn and heroui
+        examples/               # data-grid examples — one set of components used by BOTH shadcn and heroui
           manifest.json         # List of all example slugs (add new examples here)
-          components/           # 12 example components, rendered via DataGridTypeProvider context
+          components/           # example components, rendered via DataGridTypeProvider context
         sandpack/
-          DataGridSandpackExample.tsx
-          generated/            # Auto-generated bundles — DO NOT edit manually, run docs:sandpack to regenerate
+          generated/            # Auto-generated bundles — DO NOT edit manually (see sandpack:build)
+      examples/                 # Newer per-package live examples — examples/<package>/<name>.tsx (zu-store, valtio-kit)
     scripts/
       build-sandpack.mjs        # Generates sandpack/generated/*.ts files (bundles each package with tsup)
 packages/
-  zu-store/           # @ez-kit/zu-store — Zustand context store factory
+  zu-store/           # @ez-kit/zu-store — Zustand context store factory (+ history middleware, store-cache)
+  valtio-kit/         # @ez-kit/valtio-kit — Valtio context store + source-agnostic persist engine (URL/storage/IndexedDB)
   data-grid/
     core/             # @ez-kit/data-grid-core — headless data-grid (TanStack Table)
     react/
       react/          # @ez-kit/data-grid-react — framework-agnostic React adapter
       shadcn/         # @ez-kit/data-grid-shadcn — Shadcn UI flavour
       heroui/         # @ez-kit/data-grid-heroui — HeroUI flavour
+      native/         # @ez-kit/data-grid-native — plain/native UI flavour (ships its own global.css)
 turbo/
   generators/         # Plop-based package scaffolding (config.ts + templates/)
 ```
@@ -107,17 +110,19 @@ turbo/
 
 ### Key architectural patterns
 
-**`@ez-kit/zu-store`** — `createContextStore(factory)` wraps a Zustand vanilla store in React context, returning `{ Provider, useStore, useShallowStore, Item }`. The `Provider` initialises the store once via `useRef` so it survives re-renders without re-creating state.
+**`@ez-kit/zu-store`** — `createContextStore(factory)` wraps a Zustand vanilla store in React context, returning `{ Provider, useStore, useShallowStore, Item }` (selector-based reads). The `Provider` initialises the store once via `useRef` so it survives re-renders without re-creating state. Also exports `withHistory` (undo/redo middleware) and `store-cache` (`createStoreCache`, `CacheProvider`, scoped/keyed nested stores).
 
-**`@ez-kit/data-grid-*`** — layered architecture: `data-grid-core` is a UI-framework-agnostic layer on top of TanStack Table core; `data-grid-react` adds React; the `shadcn` and `heroui` sub-packages layer UI-component-library-specific implementations on top. Each UI package uses `createDataGrid(components)` to inject its UI components into the shared render layer.
+**`@ez-kit/valtio-kit`** — sibling to zu-store but Valtio-backed. `createContextStore(factory)` returns `{ Provider, useStore, useSnapshot, Item }` where `useStore()` is the raw mutable proxy (mutate directly, e.g. `state.count++`) and `useSnapshot()` is the readonly auto-tracked read. The `persist` subsystem (subpath export `@ez-kit/valtio-kit/persist`) is a source-agnostic two-way sync engine: the Valtio proxy is the synchronous source of truth, the substrate is a throttled, rehydratable mirror. The core speaks one interchange type — `Keyed = Map<string, string>` — and every substrate is a `SourcePort` (`get`/`set`/optional `subscribe`); codecs (`paramString`/`paramNumber`/`paramArray`/`paramEnum`/`paramJson`/`paramBoolean`/`paramBigInt`/`paramDate`), key naming (`key`/`prefix`/`absolute`), throttling, loop-breaking, and hydration are shared. Source adapters live behind their own peer-gated subpaths: URL (`@ez-kit/valtio-kit/persist/url` + `…/url/react-router`, `…/url/next`), Web Storage + IndexedDB (`@ez-kit/valtio-kit/persist/storage`: `localStorageAdapter`/`sessionStorageAdapter`/`indexedDbAdapter`, with cross-tab `subscribe` and `version`/`migrate`), and optional `validators/zod`. Fields are declared via `@persistUrl()`/`@persistLocalStorage()`/`@persistField()` decorators or the accessor builder (`urlField()`/`localStorageField()`/…). Persistence is a **plugin** on the base store — `createStore(factory, { plugins: [persist({ fields? })] })` (request-scoped; `persist<T>` infers the state type from `createStore<T>`, so the accessor `fields` builder needs no cast); `PersistProvider adapters={[…]}` mounts one engine per source (a field can sync to several substrates at once); `useHydrated(store)` gates the post-hydration fill; per-source control handles are read with the typed `urlHandle(store)`/`persistHandle(store)` accessors (`$url`/`$persist`). Low-level engine primitives (bindings, engine factory, path/key helpers) live on the `@ez-kit/valtio-kit/persist/internals` subpath for custom-adapter authors. Each integration is an optional peer dependency.
+
+**`@ez-kit/data-grid-*`** — layered architecture: `data-grid-core` is a UI-framework-agnostic layer on top of TanStack Table core; `data-grid-react` adds React; the `shadcn`, `heroui`, and `native` sub-packages layer UI-component-library-specific implementations on top. Each UI package uses `createDataGrid({ components })` to inject its UI components into the shared render layer and re-exports the result (`DataGrid`, `useDataGrid`, `defineColumns`, `createColumnHelper`, `GridComponentsProvider`).
 
 ### Docs app architecture
 
 **Runtime UI switching** — `apps/docs/shared/DataGrid.tsx` lazy-loads either `@ez-kit/data-grid-shadcn` or `@ez-kit/data-grid-heroui` based on `DataGridTypeProvider` context set by the route layout. Example components are written **once** and automatically work for both UI kits — there is no duplication.
 
-**Adding a new example** — add the component to `apps/docs/shared/data-grid/examples/components/` and register its slug in `apps/docs/shared/data-grid/examples/manifest.json`. It will appear for both shadcn and heroui automatically.
+**Two example conventions** — (1) **data-grid** examples are manifest-based: add the component to `apps/docs/shared/data-grid/examples/components/` and register its slug in `apps/docs/shared/data-grid/examples/manifest.json`; it then appears for both shadcn and heroui automatically. (2) **Other packages** (zu-store, valtio-kit) use a flat per-package convention with no registry: drop a file at `apps/docs/shared/examples/<package>/<name>.tsx` and reference it from MDX by its relative path without the `.tsx` extension.
 
-**Sandpack build pipeline** — `scripts/build-sandpack.mjs` bundles each package with tsup and writes large pre-built files to `shared/data-grid/sandpack/generated/` (290 KB – 1.4 MB). Run `pnpm docs:sandpack` after any package change. Never edit the generated files manually.
+**Sandpack build pipeline** — `apps/docs/scripts/build-sandpack.mjs` bundles each package with tsup and writes large pre-built files to `shared/data-grid/sandpack/generated/`. It runs automatically before the docs app's `dev`/`build`/`lint`/`typecheck` (via the `sandpack:build` prebuild step) — never edit the generated files manually.
 
 ### TypeScript
 
@@ -128,7 +133,9 @@ Root `tsconfig.base.json` uses `strict`, `noUncheckedIndexedAccess`, `exactOptio
 ESLint flat config (`eslint.config.mjs`) with `typescript-eslint` strict + stylistic rules. `import/order` is enforced (alphabetical, grouped by type). Type imports must use `import type`. `--max-warnings=0` is enforced in every package's lint script.
 
 <!-- SPECKIT START -->
+
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 [specs/001-data-grid-docs/plan.md](./specs/001-data-grid-docs/plan.md)
+
 <!-- SPECKIT END -->
