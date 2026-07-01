@@ -20,9 +20,7 @@ export function EmptyStateRow() {
 		return (
 			<Tbody>
 				<Tr>
-					<Td colSpan={columnCount}>
-						{flexRender(customContent, { columnCount })}
-					</Td>
+					<Td colSpan={columnCount}>{flexRender(customContent, { columnCount })}</Td>
 				</Tr>
 			</Tbody>
 		)

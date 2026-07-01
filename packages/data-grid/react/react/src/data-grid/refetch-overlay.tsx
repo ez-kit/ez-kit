@@ -27,7 +27,10 @@ export function RefetchOverlayHost({ columnCount }: { columnCount: number }) {
 
 	return (
 		<Tr data-slot={REFETCH_OVERLAY_SLOT}>
-			<Td colSpan={visibleColumnCount} data-slot={REFETCH_OVERLAY_SLOT}>
+			<Td
+				colSpan={visibleColumnCount}
+				data-slot={REFETCH_OVERLAY_SLOT}
+			>
 				<RefetchOverlay columnCount={visibleColumnCount} />
 			</Td>
 		</Tr>

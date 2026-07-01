@@ -376,7 +376,11 @@ describe('<DataGrid>', () => {
 		})
 
 		it('renders floating SelectionBar after Table/Pagination by default', () => {
-			const { instance } = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() }, pagination: true })
+			const { instance } = makeTable({
+				selection: true,
+				creating: { onSave: () => Promise.resolve() },
+				pagination: true,
+			})
 			;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = true
 			instance.table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={instance} />)
@@ -420,25 +424,44 @@ describe('<DataGrid>', () => {
 
 describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('renders rows from data/columns props directly', () => {
-		renderWithComponents(<DataGrid data={USERS} columns={COLUMNS} />)
+		renderWithComponents(
+			<DataGrid
+				data={USERS}
+				columns={COLUMNS}
+			/>,
+		)
 		expect(screen.getAllByRole('row')).toHaveLength(USERS.length + 1) // header + data rows
 	})
 
 	it('renders cell values without an explicit instance', () => {
-		renderWithComponents(<DataGrid data={USERS} columns={COLUMNS} />)
+		renderWithComponents(
+			<DataGrid
+				data={USERS}
+				columns={COLUMNS}
+			/>,
+		)
 		expect(screen.getByText('Alice')).toBeInTheDocument()
 		expect(screen.getByText('Bob')).toBeInTheDocument()
 	})
 
 	it('honors feature config passed inline (selection)', () => {
-		renderWithComponents(<DataGrid data={USERS} columns={COLUMNS} selection />)
+		renderWithComponents(
+			<DataGrid
+				data={USERS}
+				columns={COLUMNS}
+				selection
+			/>,
+		)
 		// 1 header checkbox + 1 per data row
 		expect(screen.getAllByRole('checkbox')).toHaveLength(USERS.length + 1)
 	})
 
 	it('supports the compound API without a table prop', () => {
 		renderWithComponents(
-			<DataGrid data={USERS} columns={COLUMNS}>
+			<DataGrid
+				data={USERS}
+				columns={COLUMNS}
+			>
 				<DataGrid.Table />
 			</DataGrid>,
 		)
@@ -452,7 +475,12 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 			const { instance } = makeTable()
 			const { rerender } = renderWithComponents(<DataGrid table={instance} />)
 			expect(warn).not.toHaveBeenCalled()
-			rerender(<DataGrid data={USERS} columns={COLUMNS} />)
+			rerender(
+				<DataGrid
+					data={USERS}
+					columns={COLUMNS}
+				/>,
+			)
 			expect(warn).toHaveBeenCalledWith(expect.stringContaining('switched from'))
 		} finally {
 			warn.mockRestore()

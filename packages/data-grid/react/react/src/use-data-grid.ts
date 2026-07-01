@@ -355,8 +355,8 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	pagination?: boolean | ReactPaginationConfig
 } & Omit<TableConfig<TRow>, 'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination'> & {
-	expanding?: boolean | ReactExpandingConfig<TRow>
-}
+		expanding?: boolean | ReactExpandingConfig<TRow>
+	}
 
 /**
  * React hook that constructs a {@link DataGridInstance} once and returns it on
@@ -399,8 +399,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	// Build core-compatible expanding config (strip React-only fields)
 	const reactExpandingCfg = typeof rawExpanding === 'object' ? rawExpanding : undefined
 	const coreGetRowCanExpand =
-		reactExpandingCfg?.getRowCanExpand ??
-		(reactExpandingCfg?.renderExpanded !== undefined ? () => true : undefined)
+		reactExpandingCfg?.getRowCanExpand ?? (reactExpandingCfg?.renderExpanded !== undefined ? () => true : undefined)
 	const coreExpanding: boolean | ExpandingConfig | undefined =
 		rawExpanding === undefined
 			? undefined
@@ -504,9 +503,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	// snapshot — avoids redundant `store.setState` notifications on every render.
 	if (state !== undefined) {
 		const snapshot = instanceRef.current.table.getSnapshot()
-		const hasChanges = (Object.keys(state) as (keyof TableState)[]).some(
-			(key) => snapshot[key] !== state[key],
-		)
+		const hasChanges = (Object.keys(state) as (keyof TableState)[]).some((key) => snapshot[key] !== state[key])
 		if (hasChanges) {
 			instanceRef.current.table.syncControlledState(state)
 		}
@@ -605,6 +602,38 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	if (config.data !== dataRef.current) {
 		dataRef.current = config.data
 		instanceRef.current.table.setOptions((prev) => ({ ...prev, data: config.data }))
+	}
+
+	// Re-sync the manual-pagination server-data descriptors (`rowCount` / `pageCount`)
+	// on every render, mirroring the create-time logic in `createTable`. These are
+	// options, not state, so the `state` sync block above never touches them — yet a
+	// server total is inherently reactive (e.g. it starts at 0, then reflects the
+	// filtered total after each fetch). Without this projection the grid would freeze
+	// `pageCount` / "X of N" at the value present on first mount. Prefer `rowCount`
+	// (let TanStack derive `pageCount`); otherwise fall back to `pageCount ?? -1`.
+	const manualPagination = typeof corePagination === 'object' && corePagination.manual === true
+	const nextRowCount = manualPagination ? corePagination.rowCount : undefined
+	const nextPageCount = manualPagination
+		? nextRowCount !== undefined
+			? undefined
+			: (corePagination.pageCount ?? -1)
+		: undefined
+	const paginationDescriptorRef = useRef({ rowCount: nextRowCount, pageCount: nextPageCount })
+	if (
+		paginationDescriptorRef.current.rowCount !== nextRowCount ||
+		paginationDescriptorRef.current.pageCount !== nextPageCount
+	) {
+		paginationDescriptorRef.current = { rowCount: nextRowCount, pageCount: nextPageCount }
+		instanceRef.current.table.setOptions((prev) => {
+			// Assign only the defined descriptor and drop the other (both are optional
+			// options) — `exactOptionalPropertyTypes` forbids assigning `undefined`.
+			const next = { ...prev }
+			if (nextRowCount !== undefined) next.rowCount = nextRowCount
+			else delete next.rowCount
+			if (nextPageCount !== undefined) next.pageCount = nextPageCount
+			else delete next.pageCount
+			return next
+		})
 	}
 
 	// The loading status (`isPending`/`isFetching`/`isError`/`error`) is user-owned

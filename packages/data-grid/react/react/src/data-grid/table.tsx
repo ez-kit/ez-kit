@@ -48,7 +48,9 @@ function useScrollShadows(
 		const wrapper = wrapperRef.current
 		if (!wrapper) return
 		const scrollEl = scrollRef?.current ?? resolveScrollElement(wrapper)
-		const update = () => { updateScrollShadows(scrollEl, wrapper) }
+		const update = () => {
+			updateScrollShadows(scrollEl, wrapper)
+		}
 		scrollEl.addEventListener('scroll', update, { passive: true })
 		update()
 		const ro = new ResizeObserver(update)
@@ -65,10 +67,7 @@ function useScrollShadows(
  * pinned-top rows can be offset below the sticky header (consumed by the
  * structural stylesheet). No-op when sticky header is disabled.
  */
-function useHeaderHeightVar(
-	wrapperRef: { current: HTMLElement | null },
-	enabled: boolean,
-): void {
+function useHeaderHeightVar(wrapperRef: { current: HTMLElement | null }, enabled: boolean): void {
 	useEffect(() => {
 		if (!enabled) return
 		const wrapper = wrapperRef.current

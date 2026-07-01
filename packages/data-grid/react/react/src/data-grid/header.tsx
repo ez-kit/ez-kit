@@ -134,9 +134,15 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 								currentSort: sortDir,
 								canAsc: sortDir !== 'asc',
 								canDesc: sortDir !== 'desc',
-								onSortAsc: () => { header.column.toggleSorting(false); },
-								onSortDesc: () => { header.column.toggleSorting(true); },
-								onClearSort: () => { header.column.clearSorting(); },
+								onSortAsc: () => {
+									header.column.toggleSorting(false)
+								},
+								onSortDesc: () => {
+									header.column.toggleSorting(true)
+								},
+								onClearSort: () => {
+									header.column.clearSorting()
+								},
 							}
 						}
 
@@ -198,7 +204,8 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 												MultiSelectFilter,
 											})
 										: null
-									const sortDirAttr: 'asc' | 'desc' | 'none' = sortDir === 'asc' || sortDir === 'desc' ? sortDir : 'none'
+									const sortDirAttr: 'asc' | 'desc' | 'none' =
+										sortDir === 'asc' || sortDir === 'desc' ? sortDir : 'none'
 									return (
 										<>
 											<div data-slot='header-main'>
@@ -216,7 +223,10 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 																header.column.columnDef.header,
 																header.getContext() as unknown as Record<string, unknown>,
 															)}
-													<SortIndicator sortDir={sortDir} canSort={canSort} />
+													<SortIndicator
+														sortDir={sortDir}
+														canSort={canSort}
+													/>
 												</div>
 												{filteringVariant === 'popover' && canFilter && (
 													<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>
@@ -254,4 +264,3 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 		</Thead>
 	)
 }
-

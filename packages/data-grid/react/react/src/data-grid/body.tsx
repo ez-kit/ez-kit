@@ -15,7 +15,7 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
-import type { ExpandedRowProps , FallbacksConfig } from '../use-data-grid'
+import type { ExpandedRowProps, FallbacksConfig } from '../use-data-grid'
 import type { ComponentType, CSSProperties } from 'react'
 
 /**
@@ -120,7 +120,11 @@ export function Body() {
 					<DataGridRow
 						row={row}
 						data-pinned='bottom'
-						style={{ '--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
+						style={
+							{
+								'--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
+							} as CSSProperties
+						}
 					/>
 					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>

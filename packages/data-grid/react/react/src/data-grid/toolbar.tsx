@@ -51,15 +51,10 @@ export function Toolbar({ children }: ToolbarProps) {
 	const hasVisibilityToolbar =
 		colVisConfig === true || (typeof colVisConfig === 'object' && Boolean(colVisConfig.toolbar))
 
-	const sortConfig = (table as unknown as Record<symbol, unknown>)[SORTING_KEY] as
-		| boolean
-		| SortingConfig
-		| undefined
+	const sortConfig = (table as unknown as Record<symbol, unknown>)[SORTING_KEY] as boolean | SortingConfig | undefined
 	const hasSortingToolbar = typeof sortConfig === 'object' && Boolean(sortConfig.toolbar)
 
-	const pageSizerConfig = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as
-		| PageSizerConfig
-		| undefined
+	const pageSizerConfig = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as PageSizerConfig | undefined
 
 	const globalFilteringConfig = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as
 		| NormalizedGlobalFilteringConfig

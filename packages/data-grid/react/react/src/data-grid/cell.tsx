@@ -44,9 +44,19 @@ const EMPTY_ERRORS: readonly string[] = Object.freeze([])
 export function DataGridCell({ cell, row }: CellProps) {
 	const meta = cell.column.columnDef.meta
 	if (meta?.isSystemColumn) {
-		return <SystemCell cell={cell} row={row} />
+		return (
+			<SystemCell
+				cell={cell}
+				row={row}
+			/>
+		)
 	}
-	return <BodyDataCell cell={cell} row={row} />
+	return (
+		<BodyDataCell
+			cell={cell}
+			row={row}
+		/>
+	)
 }
 
 // ── system columns ──────────────────────────────────────────────────────────
@@ -57,21 +67,41 @@ function SystemCell({ cell, row }: CellProps) {
 	const { Td } = useGridComponents()
 
 	if (columnId === SELECTION_COLUMN_ID) {
-		return <SelectionCell row={row} pin={pin} />
+		return (
+			<SelectionCell
+				row={row}
+				pin={pin}
+			/>
+		)
 	}
 	if (columnId === EXPAND_COLUMN_ID) {
-		return <ExpandCell row={row} pin={pin} />
+		return (
+			<ExpandCell
+				row={row}
+				pin={pin}
+			/>
+		)
 	}
 	if (columnId === ACTIONS_COLUMN_ID) {
 		return (
-			<Td data-slot='td' style={pin.pinVars} pinned={pin.pinned} {...pin.pinnedAttrs}>
+			<Td
+				data-slot='td'
+				style={pin.pinVars}
+				pinned={pin.pinned}
+				{...pin.pinnedAttrs}
+			>
 				<ActionsCell row={row} />
 			</Td>
 		)
 	}
 	if (columnId === ROW_PIN_COLUMN_ID) {
 		return (
-			<Td data-slot='td' style={pin.pinVars} pinned={pin.pinned} {...pin.pinnedAttrs}>
+			<Td
+				data-slot='td'
+				style={pin.pinVars}
+				pinned={pin.pinned}
+				{...pin.pinnedAttrs}
+			>
 				<RowPinCell row={row} />
 			</Td>
 		)
@@ -94,7 +124,12 @@ function SelectionCell({ row, pin }: SystemSubProps) {
 	const isSelected = row.getIsSelected()
 	const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 	return (
-		<Td data-slot='td' style={pin.pinVars} pinned={pin.pinned} {...pin.pinnedAttrs}>
+		<Td
+			data-slot='td'
+			style={pin.pinVars}
+			pinned={pin.pinned}
+			{...pin.pinnedAttrs}
+		>
 			<Checkbox
 				value={isSelected}
 				{...(isIndeterminate !== undefined ? { indeterminate: isIndeterminate } : {})}
@@ -155,7 +190,14 @@ function BodyDataCell({ cell, row }: CellProps) {
 	)
 
 	if (isEditing && (editMode === 'cell' || meta?.editing !== false)) {
-		return <EditingCell cell={cell} editMode={editMode} cellId={cellId} pin={pin} />
+		return (
+			<EditingCell
+				cell={cell}
+				editMode={editMode}
+				cellId={cellId}
+				pin={pin}
+			/>
+		)
 	}
 
 	// ── normal view cell ───────────────────────────────────────────────────────
@@ -227,9 +269,7 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 	const editComp = resolveEditComponent(meta, cellTypes)
 
 	const onBlur =
-		editMode === 'cell'
-			? () => void table.editing.commitCell()
-			: () => void table.editing.validateField(columnId)
+		editMode === 'cell' ? () => void table.editing.commitCell() : () => void table.editing.validateField(columnId)
 
 	const fieldState: FieldState = {
 		id: cellId,

@@ -52,6 +52,42 @@ describe('useDataGrid', () => {
 		expect(result.current.table.getRowModel().rows[0]?.getValue('name')).toBe('Carol')
 	})
 
+	it('re-syncs manual pagination rowCount when it changes', () => {
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+					state: { pagination: { pageIndex: 0, pageSize: 10 } },
+				}),
+			{ initialProps: { rowCount: 0 } },
+		)
+		expect(result.current.table.getRowCount()).toBe(0)
+		expect(result.current.table.getPageCount()).toBe(0)
+
+		rerender({ rowCount: 1250 })
+		expect(result.current.table.getRowCount()).toBe(1250)
+		expect(result.current.table.getPageCount()).toBe(125)
+	})
+
+	it('re-syncs manual pagination pageCount when it changes', () => {
+		const { result, rerender } = renderHook(
+			({ pageCount }: { pageCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, pageCount, pageSize: 10 },
+					state: { pagination: { pageIndex: 0, pageSize: 10 } },
+				}),
+			{ initialProps: { pageCount: -1 } },
+		)
+		expect(result.current.table.getPageCount()).toBe(-1)
+
+		rerender({ pageCount: 7 })
+		expect(result.current.table.getPageCount()).toBe(7)
+	})
+
 	it('re-renders when table state changes', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({
@@ -226,9 +262,7 @@ describe('useDataGrid — selectionBar', () => {
 	})
 
 	it('FILTERING_VARIANT_KEY accepts "panel" and writes it through to the table', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }),
-		)
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }))
 		const key = (result.current.table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]
 		expect(key).toBe('panel')
 	})
@@ -282,7 +316,12 @@ describe('useDataGrid — controlled state', () => {
 		const second = vi.fn()
 		const { result, rerender } = renderHook(
 			({ cb }: { cb: typeof first }) =>
-				useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => Promise.resolve() }, onStateChange: cb }),
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					creating: { onSave: () => Promise.resolve() },
+					onStateChange: cb,
+				}),
 			{ initialProps: { cb: first } },
 		)
 		rerender({ cb: second })
@@ -369,9 +408,7 @@ describe('useDataGrid — filtering.chips normalization', () => {
 	})
 
 	it('chips: true → defaults to position "above"', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }),
-		)
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }))
 		expect(getChipsConfig(result.current.table)).toEqual({ position: 'above' })
 	})
 
@@ -383,9 +420,7 @@ describe('useDataGrid — filtering.chips normalization', () => {
 	})
 
 	it('chips: false → FILTER_CHIPS_KEY is undefined', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: false } }),
-		)
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: false } }))
 		expect(getChipsConfig(result.current.table)).toBeUndefined()
 	})
 })

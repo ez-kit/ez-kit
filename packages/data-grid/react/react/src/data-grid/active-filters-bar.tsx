@@ -73,9 +73,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 	const table = useTable()
 	const { FilterChip } = useGridComponents()
 
-	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as
-		| NormalizedFilterChipsConfig
-		| undefined
+	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig | undefined
 
 	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? 'above'
 	const columnFilters = table.getState().columnFilters

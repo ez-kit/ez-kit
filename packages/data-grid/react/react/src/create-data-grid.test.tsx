@@ -24,7 +24,12 @@ describe('createDataGrid', () => {
 	it('bound DataGrid renders uncontrolled (inline config) with row inference', () => {
 		const { DataGrid: BoundDataGrid } = createDataGrid({ components: testComponents })
 		// TRow is inferred from `data`/`columns` — no explicit type argument.
-		render(<BoundDataGrid data={ROWS} columns={ROW_COLUMNS} />)
+		render(
+			<BoundDataGrid
+				data={ROWS}
+				columns={ROW_COLUMNS}
+			/>,
+		)
 		expect(screen.getByText('Alice')).toBeInTheDocument()
 		expect(screen.getByText('Bob')).toBeInTheDocument()
 	})

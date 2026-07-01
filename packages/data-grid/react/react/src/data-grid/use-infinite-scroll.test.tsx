@@ -125,10 +125,7 @@ describe('infinite scroll — manual trigger', () => {
 describe('infinite scroll — error + retry', () => {
 	it('surfaces an error then retry re-invokes and clears it', async () => {
 		const user = userEvent.setup()
-		const onLoadMore = vi
-			.fn()
-			.mockRejectedValueOnce(new Error('boom'))
-			.mockResolvedValue(undefined)
+		const onLoadMore = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValue(undefined)
 		renderWithComponents(
 			<InfiniteGrid
 				config={{

@@ -4,12 +4,7 @@ import { useGridComponents } from '../components-context'
 import { renderFilterInput } from './render-filter-input'
 import { useTable } from './table-context'
 
-import type {
-	BadgeItem,
-	BetweenValue,
-	SelectItem,
-	StructuredFilterValue,
-} from '@ez-kit/data-grid-core'
+import type { BadgeItem, BetweenValue, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Header } from '@tanstack/table-core'
 
 const MAX_INLINE_VALUES = 2

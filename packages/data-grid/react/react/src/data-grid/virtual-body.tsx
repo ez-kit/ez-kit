@@ -118,7 +118,11 @@ export function VirtualBody() {
 					key={row.id}
 					row={row}
 					data-pinned='bottom'
-					style={{ '--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
+					style={
+						{
+							'--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
+						} as CSSProperties
+					}
 				/>
 			))}
 

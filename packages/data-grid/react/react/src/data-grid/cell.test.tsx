@@ -61,7 +61,12 @@ describe('<DataGridCell> — FieldState propagation', () => {
 				creating: { onSave: () => Promise.resolve() },
 			})
 			tableRef.table = t
-			return <DataGrid<Row> table={t} cellTypes={cellTypes} />
+			return (
+				<DataGrid<Row>
+					table={t}
+					cellTypes={cellTypes}
+				/>
+			)
 		}
 		const view = renderWithComponents(<Harness />)
 		const { table } = tableRef
@@ -71,7 +76,12 @@ describe('<DataGridCell> — FieldState propagation', () => {
 			table.table.creating.start()
 			table.table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
 		})
-		view.rerender(<DataGrid<Row> table={table} cellTypes={cellTypes} />)
+		view.rerender(
+			<DataGrid<Row>
+				table={table}
+				cellTypes={cellTypes}
+			/>,
+		)
 
 		const last = seen[seen.length - 1]
 		expect(last).toBeTruthy()
@@ -96,7 +106,12 @@ describe('<DataGridCell> — FieldState propagation', () => {
 				creating: { validate, onSave: () => Promise.resolve() },
 			})
 			tableRef.table = t
-			return <DataGrid<Row> table={t} cellTypes={cellTypes} />
+			return (
+				<DataGrid<Row>
+					table={t}
+					cellTypes={cellTypes}
+				/>
+			)
 		}
 		const view = renderWithComponents(<Harness />)
 		const { table } = tableRef
@@ -105,7 +120,12 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		act(() => {
 			table.table.creating.start()
 		})
-		view.rerender(<DataGrid<Row> table={table} cellTypes={cellTypes} />)
+		view.rerender(
+			<DataGrid<Row>
+				table={table}
+				cellTypes={cellTypes}
+			/>,
+		)
 
 		const last = seen[seen.length - 1]
 		expect(last).toBeTruthy()

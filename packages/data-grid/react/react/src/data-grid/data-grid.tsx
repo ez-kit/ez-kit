@@ -85,9 +85,7 @@ export type DataGridUncontrolledProps<TRow extends object> = DataGridSharedProps
  * @example — uncontrolled (no hook)
  * return <DataGrid data={data} columns={columns} sorting />
  */
-export type DataGridProps<TRow extends object> =
-	| DataGridControlledProps<TRow>
-	| DataGridUncontrolledProps<TRow>
+export type DataGridProps<TRow extends object> = DataGridControlledProps<TRow> | DataGridUncontrolledProps<TRow>
 
 function resolveConfirmationText(
 	options: ConfirmationOptions,
@@ -211,10 +209,17 @@ function DataGridControlled<TRow extends object>({
  * then renders the shared core. `cellTypes` (if any) flows through `config` into
  * the instance, so it is not forwarded a second time.
  */
-function DataGridUncontrolled<TRow extends object>({ components, children, ...config }: DataGridUncontrolledProps<TRow>) {
+function DataGridUncontrolled<TRow extends object>({
+	components,
+	children,
+	...config
+}: DataGridUncontrolledProps<TRow>) {
 	const instance = useDataGrid<TRow>(config)
 	return (
-		<DataGridControlled table={instance} {...(components !== undefined ? { components } : {})}>
+		<DataGridControlled
+			table={instance}
+			{...(components !== undefined ? { components } : {})}
+		>
 			{children}
 		</DataGridControlled>
 	)
@@ -247,8 +252,7 @@ function DataGridRoot<TRow extends object>(props: DataGridProps<TRow>) {
 	// mistake is visible in development; stripped from production builds.
 	const wasControlledRef = useRef(isControlled)
 	if (IS_DEV && wasControlledRef.current !== isControlled) {
-		const describe = (controlled: boolean) =>
-			controlled ? 'controlled (table prop)' : 'uncontrolled (inline config)'
+		const describe = (controlled: boolean) => (controlled ? 'controlled (table prop)' : 'uncontrolled (inline config)')
 		console.error(
 			`<DataGrid> switched from ${describe(wasControlledRef.current)} to ${describe(isControlled)}. ` +
 				'Pick one mode for the lifetime of the component — switching remounts the grid and resets its state.',

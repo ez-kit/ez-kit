@@ -31,7 +31,10 @@ export function CreatingRow() {
 	const isPinRow = creatingConfig?.mode === 'pin-row'
 
 	return (
-		<Tr data-slot='tr' data-creating-row>
+		<Tr
+			data-slot='tr'
+			data-creating-row
+		>
 			{table.getVisibleLeafColumns().map((col) => {
 				const meta = col.columnDef.meta
 				const pinVars = getCommonPinStyles(col)

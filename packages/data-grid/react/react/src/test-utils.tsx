@@ -46,14 +46,35 @@ import type { ReactElement, ReactNode } from 'react'
 
 // ── minimal HTML components for use in tests ─────────────────────────────
 
-function TestTable(props: TableProps) { return <table {...props} /> }
-function TestThead(props: TheadProps) { return <thead {...props} /> }
-function TestTbody(props: TbodyProps) { return <tbody {...props} /> }
-function TestTr(props: TrProps) { return <tr {...props} /> }
-function TestTh(props: ThProps) { return <th {...props} /> }
-function TestTd(props: TdProps) { return <td {...props} /> }
-function TestButton(props: ButtonProps) { return <button type='button' {...props} /> }
-function TestInput(props: InputProps) { return <input {...props} /> }
+function TestTable(props: TableProps) {
+	return <table {...props} />
+}
+function TestThead(props: TheadProps) {
+	return <thead {...props} />
+}
+function TestTbody(props: TbodyProps) {
+	return <tbody {...props} />
+}
+function TestTr(props: TrProps) {
+	return <tr {...props} />
+}
+function TestTh(props: ThProps) {
+	return <th {...props} />
+}
+function TestTd(props: TdProps) {
+	return <td {...props} />
+}
+function TestButton(props: ButtonProps) {
+	return (
+		<button
+			type='button'
+			{...props}
+		/>
+	)
+}
+function TestInput(props: InputProps) {
+	return <input {...props} />
+}
 function TestNumberInput({ value, onChange }: NumberInputProps) {
 	return (
 		<input
@@ -71,7 +92,9 @@ function TestCheckbox({ value, indeterminate, onChange, ...rest }: CheckboxProps
 		<input
 			type='checkbox'
 			checked={value}
-			ref={(el) => { if (el) el.indeterminate = indeterminate ?? false }}
+			ref={(el) => {
+				if (el) el.indeterminate = indeterminate ?? false
+			}}
 			onChange={(e) => onChange?.(e.target.checked)}
 			{...rest}
 		/>
@@ -79,7 +102,10 @@ function TestCheckbox({ value, indeterminate, onChange, ...rest }: CheckboxProps
 }
 function TestModal({ open, onClose, title, children }: ModalProps) {
 	return (
-		<dialog open={open} onClose={onClose}>
+		<dialog
+			open={open}
+			onClose={onClose}
+		>
 			{title ? <header>{title}</header> : null}
 			{children}
 		</dialog>
@@ -87,8 +113,20 @@ function TestModal({ open, onClose, title, children }: ModalProps) {
 }
 function TestPageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
 	return (
-		<select value={pageSize} onChange={(e) => { onPageSizeChange(Number(e.target.value)) }}>
-			{items.map((size) => <option key={size} value={size}>{size}</option>)}
+		<select
+			value={pageSize}
+			onChange={(e) => {
+				onPageSizeChange(Number(e.target.value))
+			}}
+		>
+			{items.map((size) => (
+				<option
+					key={size}
+					value={size}
+				>
+					{size}
+				</option>
+			))}
 		</select>
 	)
 }
@@ -103,16 +141,47 @@ function TestResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerProps)
 			onMouseDown={onMouseDown}
 			onTouchStart={onTouchStart}
 			onDoubleClick={onDoubleClick}
-			style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', cursor: 'col-resize', userSelect: 'none', touchAction: 'none' }}
+			style={{
+				position: 'absolute',
+				top: 0,
+				right: 0,
+				width: '4px',
+				height: '100%',
+				cursor: 'col-resize',
+				userSelect: 'none',
+				touchAction: 'none',
+			}}
 		/>
 	)
 }
 function TestRowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinBottom, onUnpin }: RowPinMenuProps) {
-	if (isPinned) return <button type='button' onClick={onUnpin}>Unpin</button>
+	if (isPinned)
+		return (
+			<button
+				type='button'
+				onClick={onUnpin}
+			>
+				Unpin
+			</button>
+		)
 	return (
 		<>
-			{canPinTop && <button type='button' onClick={onPinTop}>Pin Top</button>}
-			{canPinBottom && <button type='button' onClick={onPinBottom}>Pin Bottom</button>}
+			{canPinTop && (
+				<button
+					type='button'
+					onClick={onPinTop}
+				>
+					Pin Top
+				</button>
+			)}
+			{canPinBottom && (
+				<button
+					type='button'
+					onClick={onPinBottom}
+				>
+					Pin Bottom
+				</button>
+			)}
 		</>
 	)
 }
@@ -122,13 +191,60 @@ function TestColumnMenu({ sections }: ColumnMenuProps) {
 	if (!pin && !visibility) return null
 	return (
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
-			<button type='button' onClick={() => { setOpen((p) => !p) }}>⋮</button>
+			<button
+				type='button'
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
+			>
+				⋮
+			</button>
 			{open && (
 				<div style={{ position: 'absolute', top: '100%', background: 'white', border: '1px solid #ccc', zIndex: 10 }}>
-					{pin?.canPinLeft && <button type='button' onClick={() => { pin.onPinLeft(); setOpen(false) }}>Pin Left</button>}
-					{pin?.canPinRight && <button type='button' onClick={() => { pin.onPinRight(); setOpen(false) }}>Pin Right</button>}
-					{pin?.isPinned && <button type='button' onClick={() => { pin.onUnpin(); setOpen(false) }}>Unpin</button>}
-					{visibility && <button type='button' onClick={() => { visibility.onHide(); setOpen(false) }}>Hide</button>}
+					{pin?.canPinLeft && (
+						<button
+							type='button'
+							onClick={() => {
+								pin.onPinLeft()
+								setOpen(false)
+							}}
+						>
+							Pin Left
+						</button>
+					)}
+					{pin?.canPinRight && (
+						<button
+							type='button'
+							onClick={() => {
+								pin.onPinRight()
+								setOpen(false)
+							}}
+						>
+							Pin Right
+						</button>
+					)}
+					{pin?.isPinned && (
+						<button
+							type='button'
+							onClick={() => {
+								pin.onUnpin()
+								setOpen(false)
+							}}
+						>
+							Unpin
+						</button>
+					)}
+					{visibility && (
+						<button
+							type='button'
+							onClick={() => {
+								visibility.onHide()
+								setOpen(false)
+							}}
+						>
+							Hide
+						</button>
+					)}
 				</div>
 			)}
 		</div>
@@ -138,12 +254,23 @@ function TestColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 	const [open, setOpen] = useState(false)
 	return (
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
-			<button type='button' onClick={() => { setOpen((p) => !p) }}>Columns</button>
+			<button
+				type='button'
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
+			>
+				Columns
+			</button>
 			{open && (
 				<div style={{ position: 'absolute', top: '100%', right: 0 }}>
 					{columns.map((col) => (
 						<label key={col.id}>
-							<input type='checkbox' checked={col.isVisible} onChange={col.onToggle} />
+							<input
+								type='checkbox'
+								checked={col.isVisible}
+								onChange={col.onToggle}
+							/>
 							{col.label}
 						</label>
 					))}
@@ -161,45 +288,137 @@ function TestToolbar({ children, left, right }: ToolbarProps) {
 		</div>
 	)
 }
-function TestActionsCell({ row, isEditing, hasEditing, hasDeleting, onEdit, onDelete, onSave, onCancel }: ActionsCellProps) {
+function TestActionsCell({
+	row,
+	isEditing,
+	hasEditing,
+	hasDeleting,
+	onEdit,
+	onDelete,
+	onSave,
+	onCancel,
+}: ActionsCellProps) {
 	if (isEditing) {
 		return (
 			<>
-				<button type='button' onClick={() => void onSave()}>Save</button>
-				<button type='button' onClick={onCancel}>Cancel</button>
+				<button
+					type='button'
+					onClick={() => void onSave()}
+				>
+					Save
+				</button>
+				<button
+					type='button'
+					onClick={onCancel}
+				>
+					Cancel
+				</button>
 			</>
 		)
 	}
 	return (
 		<>
-			{hasEditing && <button type='button' onClick={onEdit} data-row-id={row.id}>Edit</button>}
-			{hasDeleting && <button type='button' onClick={onDelete} data-row-id={row.id}>Delete</button>}
+			{hasEditing && (
+				<button
+					type='button'
+					onClick={onEdit}
+					data-row-id={row.id}
+				>
+					Edit
+				</button>
+			)}
+			{hasDeleting && (
+				<button
+					type='button'
+					onClick={onDelete}
+					data-row-id={row.id}
+				>
+					Delete
+				</button>
+			)}
 		</>
 	)
 }
 function TestCreatingActionsCell({ onSave, onCancel }: CreatingActionsCellProps) {
 	return (
 		<>
-			<button type='button' onClick={() => void onSave()}>Save</button>
-			<button type='button' onClick={onCancel}>Cancel</button>
+			<button
+				type='button'
+				onClick={() => void onSave()}
+			>
+				Save
+			</button>
+			<button
+				type='button'
+				onClick={onCancel}
+			>
+				Cancel
+			</button>
 		</>
 	)
 }
-function TestPagination({ pageIndex, pageCount, canPreviousPage, canNextPage, onPreviousPage, onNextPage, onFirstPage, onLastPage }: PaginationProps) {
+function TestPagination({
+	pageIndex,
+	pageCount,
+	canPreviousPage,
+	canNextPage,
+	onPreviousPage,
+	onNextPage,
+	onFirstPage,
+	onLastPage,
+}: PaginationProps) {
 	return (
 		<div>
-			<button type='button' onClick={onFirstPage} disabled={!canPreviousPage}>{'«'}</button>
-			<button type='button' onClick={onPreviousPage} disabled={!canPreviousPage}>{'‹'}</button>
-			<span>{pageIndex + 1} / {pageCount}</span>
-			<button type='button' onClick={onNextPage} disabled={!canNextPage}>{'›'}</button>
-			<button type='button' onClick={onLastPage} disabled={!canNextPage}>{'»'}</button>
+			<button
+				type='button'
+				onClick={onFirstPage}
+				disabled={!canPreviousPage}
+			>
+				{'«'}
+			</button>
+			<button
+				type='button'
+				onClick={onPreviousPage}
+				disabled={!canPreviousPage}
+			>
+				{'‹'}
+			</button>
+			<span>
+				{pageIndex + 1} / {pageCount}
+			</span>
+			<button
+				type='button'
+				onClick={onNextPage}
+				disabled={!canNextPage}
+			>
+				{'›'}
+			</button>
+			<button
+				type='button'
+				onClick={onLastPage}
+				disabled={!canNextPage}
+			>
+				{'»'}
+			</button>
 		</div>
 	)
 }
 function TestOperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
 	return (
-		<select value={currentOperatorId} onChange={(e) => { onChange(e.target.value) }}>
-			{operators.map((op) => <option key={op.id} value={op.id}>{op.symbol ?? op.label}</option>)}
+		<select
+			value={currentOperatorId}
+			onChange={(e) => {
+				onChange(e.target.value)
+			}}
+		>
+			{operators.map((op) => (
+				<option
+					key={op.id}
+					value={op.id}
+				>
+					{op.symbol ?? op.label}
+				</option>
+			))}
 		</select>
 	)
 }
@@ -212,7 +431,12 @@ function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: Be
 				placeholder='From'
 				value={(value.from as string | number | undefined) ?? ''}
 				onChange={(e) => {
-					const v = inputType === 'number' ? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber) : e.target.value || undefined
+					const v =
+						inputType === 'number'
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, from: v })
 				}}
 			/>
@@ -222,7 +446,12 @@ function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: Be
 				placeholder='To'
 				value={(value.to as string | number | undefined) ?? ''}
 				onChange={(e) => {
-					const v = inputType === 'number' ? (Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber) : e.target.value || undefined
+					const v =
+						inputType === 'number'
+							? Number.isNaN(e.target.valueAsNumber)
+								? undefined
+								: e.target.valueAsNumber
+							: e.target.value || undefined
 					onChange({ ...value, to: v })
 				}}
 			/>
@@ -231,7 +460,10 @@ function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: Be
 	if (!presets || presets.length === 0 || !onPresetSelect) return inputs
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-			<div data-slot='between-presets' style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+			<div
+				data-slot='between-presets'
+				style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}
+			>
 				{presets.map((p) => (
 					<button
 						key={p.id}
@@ -254,13 +486,21 @@ function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder 
 		onChange(next)
 	}
 	return (
-		<div role='group' aria-label={placeholder ?? 'Filter'}>
+		<div
+			role='group'
+			aria-label={placeholder ?? 'Filter'}
+		>
 			{options.map((opt) => (
-				<label key={opt.value} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+				<label
+					key={opt.value}
+					style={{ display: 'flex', gap: 4, alignItems: 'center' }}
+				>
 					<input
 						type='checkbox'
 						checked={selectedValues.includes(opt.value)}
-						onChange={() => { toggle(opt.value) }}
+						onChange={() => {
+							toggle(opt.value)
+						}}
 					/>
 					<span>{opt.label}</span>
 					{opt.count !== undefined && <span data-slot='count'>{opt.count}</span>}
@@ -273,14 +513,28 @@ function TestFilterPopover({ children, hasActiveFilter }: FilterPopoverProps) {
 	const [open, setOpen] = useState(false)
 	return (
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
-			<button type='button' aria-label='Filter' aria-expanded={open} onClick={() => { setOpen((p) => !p) }} style={{ opacity: hasActiveFilter ? 1 : 0.5 }}>⊟</button>
+			<button
+				type='button'
+				aria-label='Filter'
+				aria-expanded={open}
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
+				style={{ opacity: hasActiveFilter ? 1 : 0.5 }}
+			>
+				⊟
+			</button>
 			{open && <div style={{ position: 'absolute', top: '100%' }}>{children}</div>}
 		</div>
 	)
 }
 function TestFilterPanel({ children, hasActiveFilter }: FilterPanelProps) {
 	return (
-		<section data-slot='filter-panel-chrome' data-has-active={hasActiveFilter ? 'true' : 'false'} style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 4 }}>
+		<section
+			data-slot='filter-panel-chrome'
+			data-has-active={hasActiveFilter ? 'true' : 'false'}
+			style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 4 }}
+		>
 			{children}
 		</section>
 	)
@@ -288,33 +542,82 @@ function TestFilterPanel({ children, hasActiveFilter }: FilterPanelProps) {
 function TestFilterPanelChip({ label, valueDisplay, hasValue, onClear, children }: FilterPanelChipProps) {
 	const [open, setOpen] = useState(false)
 	return (
-		<span data-slot='filter-panel-chip' data-has-value={hasValue ? 'true' : 'false'} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+		<span
+			data-slot='filter-panel-chip'
+			data-has-value={hasValue ? 'true' : 'false'}
+			style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 2 }}
+		>
 			<button
 				type='button'
-				onClick={() => { setOpen((p) => !p) }}
-				style={{ border: '1px solid #ccc', borderRadius: 4, padding: '2px 6px', background: hasValue ? '#eef' : 'transparent', cursor: 'pointer' }}
+				onClick={() => {
+					setOpen((p) => !p)
+				}}
+				style={{
+					border: '1px solid #ccc',
+					borderRadius: 4,
+					padding: '2px 6px',
+					background: hasValue ? '#eef' : 'transparent',
+					cursor: 'pointer',
+				}}
 			>
 				<strong>{label}:</strong> <span data-slot='filter-panel-chip-value'>{valueDisplay}</span>
 			</button>
 			{hasValue && (
-				<button type='button' aria-label={`Clear ${label} filter`} onClick={onClear} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>×</button>
+				<button
+					type='button'
+					aria-label={`Clear ${label} filter`}
+					onClick={onClear}
+					style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+				>
+					×
+				</button>
 			)}
-			{open && <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: '#fff', border: '1px solid #ccc', padding: 6 }}>{children}</div>}
+			{open && (
+				<div
+					style={{
+						position: 'absolute',
+						top: '100%',
+						left: 0,
+						zIndex: 10,
+						background: '#fff',
+						border: '1px solid #ccc',
+						padding: 6,
+					}}
+				>
+					{children}
+				</div>
+			)}
 		</span>
 	)
 }
 function TestFilterChip({ label, value, onRemove, kind }: FilterChipProps) {
 	return (
-		<span data-slot='filter-chip' data-chip-kind={kind} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', border: '1px solid #ccc' }}>
+		<span
+			data-slot='filter-chip'
+			data-chip-kind={kind}
+			style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', border: '1px solid #ccc' }}
+		>
 			<strong>{label}</strong>
 			<span>{value}</span>
-			<button type='button' aria-label={`Remove ${label} filter`} onClick={onRemove}>×</button>
+			<button
+				type='button'
+				aria-label={`Remove ${label} filter`}
+				onClick={onRemove}
+			>
+				×
+			</button>
 		</span>
 	)
 }
 function TestClearFiltersButton({ disabled, onPress, children, ariaLabel }: ClearFiltersButtonComponentProps) {
 	return (
-		<button type='button' data-slot='clear-filters-button' aria-label={ariaLabel} disabled={disabled} onClick={onPress}>
+		<button
+			type='button'
+			data-slot='clear-filters-button'
+			aria-label={ariaLabel}
+			disabled={disabled}
+			onClick={onPress}
+		>
 			{children ?? '⌫'}
 		</button>
 	)
@@ -323,50 +626,111 @@ function TestConfirmDialog({ open, title, description, onConfirm, onCancel }: Co
 	if (!open) return null
 	return (
 		<dialog open>
-			<p><strong>{title}</strong></p>
+			<p>
+				<strong>{title}</strong>
+			</p>
 			<p>{description}</p>
-			<button type='button' onClick={onConfirm}>Confirm</button>
-			<button type='button' onClick={onCancel}>Cancel</button>
+			<button
+				type='button'
+				onClick={onConfirm}
+			>
+				Confirm
+			</button>
+			<button
+				type='button'
+				onClick={onCancel}
+			>
+				Cancel
+			</button>
 		</dialog>
 	)
 }
 function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
 	if (!open) return null
 	return (
-		<div role='toolbar' data-slot='selection-bar' data-variant={variant} style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}>
+		<div
+			role='toolbar'
+			data-slot='selection-bar'
+			data-variant={variant}
+			style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}
+		>
 			<span>{count} selected</span>
-			{onDelete && <button type='button' onClick={onDelete}>Delete</button>}
+			{onDelete && (
+				<button
+					type='button'
+					onClick={onDelete}
+				>
+					Delete
+				</button>
+			)}
 			{actions}
-			<button type='button' onClick={onClear}>Cancel</button>
+			<button
+				type='button'
+				onClick={onClear}
+			>
+				Cancel
+			</button>
 		</div>
 	)
 }
 function TestLoadingRow({ columnCount }: LoadingRowProps) {
-	return <tr><td colSpan={columnCount}>Loading…</td></tr>
+	return (
+		<tr>
+			<td colSpan={columnCount}>Loading…</td>
+		</tr>
+	)
 }
 function TestEmptyState({ columnCount }: EmptyStateProps) {
-	return <tr><td colSpan={columnCount}>No data</td></tr>
+	return (
+		<tr>
+			<td colSpan={columnCount}>No data</td>
+		</tr>
+	)
 }
 function TestNoResultsState({ columnCount }: NoResultsStateProps) {
-	return <tr><td colSpan={columnCount}>No results</td></tr>
+	return (
+		<tr>
+			<td colSpan={columnCount}>No results</td>
+		</tr>
+	)
 }
 function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
 	if (error != null) {
 		return (
 			<div data-slot='load-more-error'>
-				<button type='button' onClick={onRetry}>Retry</button>
+				<button
+					type='button'
+					onClick={onRetry}
+				>
+					Retry
+				</button>
 			</div>
 		)
 	}
 	if (isFetching) return <div data-slot='load-more-spinner'>Loading more…</div>
 	if (trigger === 'manual' && hasMore) {
-		return <button type='button' data-slot='load-more-button' onClick={onTrigger}>Load more</button>
+		return (
+			<button
+				type='button'
+				data-slot='load-more-button'
+				onClick={onTrigger}
+			>
+				Load more
+			</button>
+		)
 	}
 	return null
 }
 
 function TestRefetchOverlay(_props: RefetchOverlayProps) {
-	return <div data-slot='refetch-overlay-inner' data-testid='refetch-overlay'>Refreshing…</div>
+	return (
+		<div
+			data-slot='refetch-overlay-inner'
+			data-testid='refetch-overlay'
+		>
+			Refreshing…
+		</div>
+	)
 }
 
 // Minimal FormShell stub (no chrome) — UI kits provide real implementations.
@@ -430,6 +794,9 @@ function TestWrapper({ children }: { children: ReactNode }) {
 	return <GridComponentsProvider components={testComponents}>{children}</GridComponentsProvider>
 }
 
-export function renderWithComponents(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>): ReturnType<typeof render> {
+export function renderWithComponents(
+	ui: ReactElement,
+	options?: Omit<RenderOptions, 'wrapper'>,
+): ReturnType<typeof render> {
 	return render(ui, { wrapper: TestWrapper, ...options })
 }

@@ -15,24 +15,36 @@
 
 /* ── table layout ─────────────────────────────────────────────────────── */
 
-[data-slot='table'][data-virtualized='true'] { @apply grid; }
-[data-slot='table'][data-virtualized='true'] [data-slot='thead'] { @apply grid; }
+[data-slot='table'][data-virtualized='true'] {
+	@apply grid;
+}
+[data-slot='table'][data-virtualized='true'] [data-slot='thead'] {
+	@apply grid;
+}
 
-[data-slot='table-wrapper'] { @apply relative; }
+[data-slot='table-wrapper'] {
+	@apply relative;
+}
 [data-slot='table-wrapper'][data-virtualized='true'] {
 	height: var(--dg-virtual-height, 600px);
 }
 
-[data-slot='table-scroll'] { @apply overflow-x-auto; }
+[data-slot='table-scroll'] {
+	@apply overflow-x-auto;
+}
 [data-slot='table-scroll'][data-sticky-header='true'] {
 	@apply overflow-y-auto;
 	max-height: var(--dg-table-max-height, 400px);
 }
-[data-slot='table-scroll'][data-virtualized='true'] { @apply overflow-auto h-full; }
+[data-slot='table-scroll'][data-virtualized='true'] {
+	@apply overflow-auto h-full;
+}
 
 /* ── sticky thead ─────────────────────────────────────────────────────── */
 
-[data-slot='thead'][data-sticky='true'] { @apply sticky top-0 z-10; }
+[data-slot='thead'][data-sticky='true'] {
+	@apply sticky top-0 z-10;
+}
 
 /* ── pinned columns ───────────────────────────────────────────────────── */
 
@@ -51,27 +63,43 @@
 
 /* ── resizable th — resizer is absolutely positioned inside ──────────── */
 
-[data-slot='th'][data-resizable='true'] { @apply relative; }
+[data-slot='th'][data-resizable='true'] {
+	@apply relative;
+}
 
 /* ── header inner layout ──────────────────────────────────────────────── */
 
-[data-slot='header-main'] { @apply flex items-center; }
-[data-slot='sort-trigger'] { @apply flex items-center flex-1; }
-[data-slot='sort-trigger'][data-sortable='true'] { @apply cursor-pointer; }
+[data-slot='header-main'] {
+	@apply flex items-center;
+}
+[data-slot='sort-trigger'] {
+	@apply flex items-center flex-1;
+}
+[data-slot='sort-trigger'][data-sortable='true'] {
+	@apply cursor-pointer;
+}
 
 /* ── loading body ─────────────────────────────────────────────────────── */
 
-[data-slot='loading-body-cell'] { @apply p-0; }
+[data-slot='loading-body-cell'] {
+	@apply p-0;
+}
 
 /* ── virtual body & rows ──────────────────────────────────────────────── */
 
-[data-slot='tbody'][data-virtualized='true'] { @apply relative grid; }
-[data-slot='tr'][data-virtual='row'] { @apply absolute top-0 left-0 w-full; }
+[data-slot='tbody'][data-virtualized='true'] {
+	@apply relative grid;
+}
+[data-slot='tr'][data-virtual='row'] {
+	@apply absolute top-0 left-0 w-full;
+}
 
 /* ── infinite scroll ──────────────────────────────────────────────────── */
 
 /* Detection sentinel is structurally invisible (zero height). */
-[data-slot='load-more-sentinel'] { @apply h-0; }
+[data-slot='load-more-sentinel'] {
+	@apply h-0;
+}
 /* Virtualized loader row is absolutely positioned below the spacer via inline translateY. */
 [data-slot='tbody'][data-virtualized='true'] [data-slot='load-more-row'][data-virtual='load-more'] {
 	@apply absolute top-0 left-0 w-full;
@@ -79,13 +107,18 @@
 
 /* ── pinned body rows ─────────────────────────────────────────────────── */
 
-[data-slot='tr'][data-pinned] { @apply sticky z-[2]; }
-[data-slot='tr'][data-pinned='top']    { top: var(--dg-row-pin-offset, 0); }
-[data-slot='tr'][data-pinned='bottom'] { bottom: var(--dg-row-pin-offset, 0); }
+[data-slot='tr'][data-pinned] {
+	@apply sticky z-[2];
+}
+[data-slot='tr'][data-pinned='top'] {
+	top: var(--dg-row-pin-offset, 0);
+}
+[data-slot='tr'][data-pinned='bottom'] {
+	bottom: var(--dg-row-pin-offset, 0);
+}
 
 /* Under a sticky header, pinned-top rows stack below it. */
-[data-slot='table-scroll'][data-sticky-header='true']
-	[data-slot='tr'][data-pinned='top'] {
+[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='tr'][data-pinned='top'] {
 	top: calc(var(--dg-row-pin-offset, 0px) + var(--dg-header-height, 0px));
 }
 
@@ -97,5 +130,9 @@
 [data-pin-shadow] {
 	@apply absolute top-0 bottom-0 pointer-events-none;
 }
-[data-pin-shadow='left']  { left: 0; }
-[data-pin-shadow='right'] { right: 0; }
+[data-pin-shadow='left'] {
+	left: 0;
+}
+[data-pin-shadow='right'] {
+	right: 0;
+}

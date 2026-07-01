@@ -68,7 +68,10 @@ function makeCountingComponents(counters: Counters): Required<GridComponents> {
 	function CountingToolbar({ children, left, right, ...rest }: ToolbarProps): ReactElement {
 		counters.toolbar += 1
 		return (
-			<div role='toolbar' {...rest}>
+			<div
+				role='toolbar'
+				{...rest}
+			>
 				{left}
 				{children}
 				{right}

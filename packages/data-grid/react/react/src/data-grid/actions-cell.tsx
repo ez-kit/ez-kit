@@ -25,9 +25,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
 	const isEditing = useDataGridStore((s) => s.editing.rowId === row.id)
-	const isPending = useDataGridStore(
-		(s) => s.editing.rowId === row.id && s.editing.commitStatus !== 'idle',
-	)
+	const isPending = useDataGridStore((s) => s.editing.rowId === row.id && s.editing.commitStatus !== 'idle')
 
 	return (
 		<Renderer

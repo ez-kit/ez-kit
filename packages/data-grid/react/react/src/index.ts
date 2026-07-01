@@ -80,11 +80,7 @@ export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
 // Validation API (re-export from core for convenience)
-export {
-	ValidationError,
-	isValidationError,
-	zodResolver,
-} from '@ez-kit/data-grid-core'
+export { ValidationError, isValidationError, zodResolver } from '@ez-kit/data-grid-core'
 export type {
 	CommitStatus,
 	CreatingSaveContext,

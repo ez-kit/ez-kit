@@ -22,7 +22,10 @@ export function LoadingBody() {
 		return (
 			<Tbody data-slot='tbody'>
 				<Tr data-slot='tr'>
-					<Td data-slot='loading-body-cell' colSpan={columnCount}>
+					<Td
+						data-slot='loading-body-cell'
+						colSpan={columnCount}
+					>
 						{flexRender(customContent, { columnCount })}
 					</Td>
 				</Tr>

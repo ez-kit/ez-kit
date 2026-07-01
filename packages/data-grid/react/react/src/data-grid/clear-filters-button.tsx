@@ -32,11 +32,7 @@ type ClearFiltersButtonProps = {
  * The visual is owned by the UI kit via the `ClearFiltersButton` DI slot; the
  * default rendering is icon-only.
  */
-export function ClearFiltersButton({
-	children,
-	alwaysShow: alwaysShowProp,
-	ariaLabel,
-}: ClearFiltersButtonProps = {}) {
+export function ClearFiltersButton({ children, alwaysShow: alwaysShowProp, ariaLabel }: ClearFiltersButtonProps = {}) {
 	const table = useTable()
 	const { ClearFiltersButton: Component } = useGridComponents()
 
