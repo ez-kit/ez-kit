@@ -128,6 +128,7 @@ export type {
 	MultiSelectFilterProps,
 	MultiSelectOption,
 	NoResultsStateProps,
+	RefetchOverlayProps,
 	OperatorSelectProps,
 	ResizerProps,
 	RowPinMenuProps,
@@ -200,3 +201,8 @@ export type {
 
 export { defineColumns, createTable, createColumnHelper } from '@ez-kit/data-grid-core'
 export type { ColumnHelper } from '@ez-kit/data-grid-core'
+
+// TanStack state types used when typing manual server-side `onChange` handlers
+// (sorting/filtering/pagination). Re-exported so consumers depend only on the
+// public surface instead of reaching into `@tanstack/table-core` directly.
+export type { SortingState, ColumnFiltersState, PaginationState } from '@tanstack/table-core'

@@ -50,6 +50,7 @@ import { InfiniteScrollAutoExample as Example45 } from '../components/infinite-s
 import { InfiniteScrollManualExample as Example46 } from '../components/infinite-scroll/manual'
 import { InfiniteScrollVirtualizedExample as Example47 } from '../components/infinite-scroll/virtualized'
 import { InfiniteScrollResetExample as Example48 } from '../components/infinite-scroll/reset-on-query'
+import { ServerDataExample as Example49 } from '../components/server-data'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -434,6 +435,14 @@ export const dataGridExamplesManifest = [
     "groupLabel": "Infinite Scroll",
     "sourceFile": "components/infinite-scroll/reset-on-query.tsx",
     "exportName": "InfiniteScrollResetExample"
+  },
+  {
+    "id": "server-data",
+    "label": "Server-side (full async)",
+    "group": "server-data",
+    "groupLabel": "Server-side",
+    "sourceFile": "components/server-data.tsx",
+    "exportName": "ServerDataExample"
   }
 ] as const
 
@@ -489,4 +498,5 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'infinite-scroll-manual': Example46,
 	'infinite-scroll-virtualized': Example47,
 	'infinite-scroll-reset': Example48,
+	'server-data': Example49,
 }

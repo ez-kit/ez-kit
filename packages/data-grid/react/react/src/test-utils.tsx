@@ -29,6 +29,7 @@ import type {
 	OperatorSelectProps,
 	PageSizerProps,
 	PaginationProps,
+	RefetchOverlayProps,
 	ResizerProps,
 	RowPinMenuProps,
 	SelectionBarProps,
@@ -364,6 +365,10 @@ function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRet
 	return null
 }
 
+function TestRefetchOverlay(_props: RefetchOverlayProps) {
+	return <div data-slot='refetch-overlay-inner' data-testid='refetch-overlay'>Refreshing…</div>
+}
+
 // Minimal FormShell stub (no chrome) — UI kits provide real implementations.
 function TestFormShell({ children }: { children?: ReactNode }) {
 	return <>{children}</>
@@ -412,6 +417,7 @@ export const testComponents: Required<GridComponents> = {
 	LoadingRow: TestLoadingRow,
 	EmptyState: TestEmptyState,
 	NoResultsState: TestNoResultsState,
+	RefetchOverlay: TestRefetchOverlay,
 	LoadMoreRow: TestLoadMoreRow,
 	SortIndicator: () => null,
 	SortMenu: () => null,

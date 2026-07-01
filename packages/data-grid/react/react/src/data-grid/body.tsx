@@ -9,6 +9,7 @@ import { ExpandedRow } from './expanded-row'
 import { LoadMoreFooter } from './load-more-footer'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
+import { RefetchOverlayHost } from './refetch-overlay'
 import { DataGridRow } from './row'
 import { useDataGridInstance, useDataGridStore } from './table-context'
 import { VirtualBody } from './virtual-body'
@@ -48,7 +49,8 @@ export function Body() {
 	// re-renders only when one of these slices actually changes. Editing,
 	// columnVisibility, columnSizing, columnPinning, rowSelection updates do
 	// NOT touch any of these → no Body re-render.
-	const isLoading = useDataGridStore((s) => s.loading.isLoading)
+	const isPending = useDataGridStore((s) => s.loading.isPending)
+	const isFetching = useDataGridStore((s) => s.loading.isFetching)
 	const isCreatingOpen = useDataGridStore((s) => s.creating.isOpen)
 	// Slices that affect getRowModel() / getTopRows() / getBottomRows() output:
 	useDataGridStore((s) => s.sorting)
@@ -66,7 +68,7 @@ export function Body() {
 		| undefined
 	const renderExpanded = expandConfig?.renderExpanded
 
-	if (isLoading && fallbacks?.loading !== false) {
+	if (isPending && fallbacks?.loading !== false) {
 		return <LoadingBody />
 	}
 
@@ -90,6 +92,9 @@ export function Body() {
 			return <NoResultsRow />
 		}
 	}
+
+	const columnCount = table.getVisibleLeafColumns().length
+	const showRefetchOverlay = isFetching && !isPending && allRows.length > 0
 
 	return (
 		<Tbody data-slot='tbody'>
@@ -121,6 +126,7 @@ export function Body() {
 				</Fragment>
 			))}
 			<LoadMoreFooter />
+			{showRefetchOverlay && <RefetchOverlayHost columnCount={columnCount} />}
 		</Tbody>
 	)
 }

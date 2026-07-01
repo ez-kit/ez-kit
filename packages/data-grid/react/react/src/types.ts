@@ -97,6 +97,12 @@ export type GlobalFilterInputProps = {
 export type PaginationProps = {
 	pageIndex: number
 	pageCount: number
+	/**
+	 * Total row count from the server. Present when the consumer supplied
+	 * `pagination.rowCount`; `undefined` when unknown (e.g. only `pageCount`
+	 * was given, or the total is not known). Use to render an "X–Y of N" label.
+	 */
+	rowCount?: number
 	canPreviousPage: boolean
 	canNextPage: boolean
 	onPreviousPage: () => void
@@ -321,6 +327,17 @@ export type NoResultsStateProps = {
 }
 
 /**
+ * Props for the injectable refetch overlay. Rendered over existing rows when a
+ * background refetch is in flight (`isFetching && !isPending && rows.length > 0`).
+ * All visual styling (dim, spinner, backdrop) lives in the UI kit — the react package
+ * only renders the structural host element with `data-slot="refetch-overlay"`.
+ */
+export type RefetchOverlayProps = {
+	/** Number of visible leaf columns — available if the kit needs a full-width cell. */
+	columnCount: number
+}
+
+/**
  * Props for the injectable infinite-scroll loader row. All visual styling lives in
  * the UI kit (`shadcn` / `heroui`); the react package only positions it inside a
  * full-width cell. The component should render:
@@ -422,6 +439,8 @@ export type GridComponents = {
 	LoadingRow?: ComponentType<LoadingRowProps>
 	EmptyState?: ComponentType<EmptyStateProps>
 	NoResultsState?: ComponentType<NoResultsStateProps>
+	// refetch overlay (server-side refetch over existing rows)
+	RefetchOverlay?: ComponentType<RefetchOverlayProps>
 	// infinite scroll
 	LoadMoreRow?: ComponentType<LoadMoreRowProps>
 	// row actions

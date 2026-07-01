@@ -30,6 +30,7 @@ import { NumberInput } from './blocks/NumberInput'
 import { OperatorSelect } from './blocks/OperatorSelect'
 import { PageSizer } from './blocks/PageSizer'
 import { Pagination } from './blocks/Pagination'
+import { RefetchOverlay } from './blocks/RefetchOverlay'
 import { Resizer } from './blocks/Resizer'
 import { RowPinMenu } from './blocks/RowPinMenu'
 import { SelectionBar } from './blocks/SelectionBar'
@@ -76,6 +77,7 @@ const components = {
 	LoadMoreRow,
 	EmptyState,
 	NoResultsState,
+	RefetchOverlay,
 	ActionsCell,
 	Chevron,
 	CreatingActionsCell,

@@ -49,7 +49,7 @@ export function FallbacksExample() {
 		filtering: true,
 		pagination: { pageSize: 5 },
 		state: {
-			loading: { isLoading: mode === 'loading' },
+			loading: { isPending: mode === 'loading', isFetching: false, isError: false, error: null },
 			// Reset column filters when leaving 'no-results' mode
 			...(mode !== 'no-results' ? { columnFilters: [] } : {}),
 		},

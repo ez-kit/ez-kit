@@ -1,0 +1,211 @@
+---
+title: Server-side Data
+description: Delegate sorting, filtering, and pagination to a remote API — with controlled loading status that drives the skeleton and refetch overlay.
+---
+
+# Server-side Data
+
+When your dataset is too large to load in full, hand every data operation to the server. The grid owns the UI state; your code owns the fetch.
+
+## Live example
+
+<DataGridDocsExample exampleId='server-data' />
+
+## How it works
+
+Enable `manual: true` on each feature you want to delegate. The grid will update its internal state immediately for instant UI feedback, then call the corresponding `onChange` handler so you can fire the matching API request.
+
+```ts
+const table = useDataGrid({
+  data,
+  columns,
+  pagination: {
+    manual: true,
+    rowCount,          // total rows — TanStack derives pageCount automatically
+    onChange: ({ pageIndex, pageSize }) => fetchPage({ pageIndex, pageSize }),
+  },
+  sorting: {
+    manual: true,
+    onChange: (sorting) => fetchPage({ sorting }),
+  },
+  filtering: {
+    manual: true,
+    onChange: (columnFilters) => fetchPage({ columnFilters }),
+  },
+  // Global search is made server-side by `filtering.manual` above — there is
+  // no separate `globalFiltering.manual` flag.
+  globalFiltering: {
+    onChange: (globalFilter) => fetchPage({ globalFilter }),
+  },
+  state: {
+    pagination: { pageIndex, pageSize },
+    sorting,
+    columnFilters,
+    globalFilter,
+  },
+})
+```
+
+## Loading status
+
+Pass loading status via `state.loading`. The grid reads this controlled slice to drive the skeleton and refetch overlay — the consumer is the single owner.
+
+```ts
+state: {
+  loading: {
+    isPending: boolean   // true on the very first load (no rows yet) → shows skeleton
+    isFetching: boolean  // true while any fetch is in flight → drives refetch overlay
+    isError: boolean     // available via useDataGridStore for custom error UI
+    error: unknown       // last fetch error, or null
+  }
+}
+```
+
+What each field drives:
+
+| Field | Effect |
+| --- | --- |
+| `isPending: true` | Full-body loading skeleton (no rows yet — initial load) |
+| `isFetching: true` (rows present, not pending) | Semi-transparent refetch overlay over the grid body |
+| `isError` / `error` | Readable via `useDataGridStore` — no built-in error component yet |
+
+### React Query (recommended)
+
+React Query mirrors the exact shape. Wire `q.isPending`, `q.isFetching`, `q.isError`, and `q.error` directly:
+
+```tsx
+const q = useQuery({
+  queryKey: ['users', pageIndex, pageSize, sorting, columnFilters, globalFilter],
+  queryFn: () => fetchPage({ pageIndex, pageSize, sorting, columnFilters, globalFilter }),
+  placeholderData: keepPreviousData,
+})
+
+const table = useDataGrid({
+  data: q.data?.rows ?? [],
+  columns,
+  state: {
+    loading: {
+      isPending: q.isPending,
+      isFetching: q.isFetching,
+      isError: q.isError,
+      error: q.error,
+    },
+    pagination: { pageIndex, pageSize },
+    sorting,
+    columnFilters,
+    globalFilter,
+  },
+  pagination: { manual: true, rowCount: q.data?.rowCount ?? 0, onChange },
+  sorting:    { manual: true, onChange },
+  filtering:  { manual: true, onChange },
+  globalFiltering: { onChange },
+})
+
+return <DataGrid table={table} />
+```
+
+React Query handles deduplication, caching, and background refetch — you only need to forward the status fields.
+
+### Manual / no-library
+
+Track the same booleans yourself with `useState` and a ref counter for last-write-wins race protection:
+
+```tsx
+const [isPending,  setIsPending]  = useState(true)   // true until first successful load
+const [isFetching, setIsFetching] = useState(false)
+const [isError,    setIsError]    = useState(false)
+const [error,      setError]      = useState<unknown>(null)
+
+// Last-write-wins guard — increment before each fetch, discard stale responses.
+const fetchCountRef = useRef(0)
+
+async function doFetch() {
+  const id = ++fetchCountRef.current
+  setIsFetching(true)
+  setIsError(false)
+  setError(null)
+
+  try {
+    const page = await fetchPage(query)
+    if (id !== fetchCountRef.current) return   // stale — discard
+
+    setRows(page.rows)
+    setRowCount(page.rowCount)
+    setIsPending(false)
+    setIsFetching(false)
+  } catch (err: unknown) {
+    if (id !== fetchCountRef.current) return
+
+    setIsPending(false)
+    setIsFetching(false)
+    setIsError(true)
+    setError(err)
+  }
+}
+
+const table = useDataGrid({
+  data: rows,
+  columns,
+  state: {
+    loading: { isPending, isFetching, isError, error },
+    /* … */
+  },
+})
+```
+
+## Refetch overlay
+
+A semi-transparent overlay renders automatically over the grid body when `isFetching` is `true`, the initial skeleton has already cleared (`!isPending`), and at least one row is visible. No extra wiring needed.
+
+## `rowCount` and page count
+
+Supply `rowCount` (the filtered total after a search, or the unfiltered total when no filter is active) when using manual pagination. TanStack Table derives `pageCount` from `Math.ceil(rowCount / pageSize)` automatically.
+
+```ts
+pagination: {
+  manual: true,
+  rowCount: 1_250,   // drives page count + "X of N rows" display
+  onChange: ...,
+}
+```
+
+## Options reference
+
+### `pagination`
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `manual` | `boolean` | Disable client-side paging. The grid calls `onChange` instead. |
+| `rowCount` | `number` | Server total rows. Derives `pageCount` automatically. |
+| `onChange` | `({ pageIndex, pageSize }) => void` | Called on every page or page-size change. |
+
+### `sorting`
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `manual` | `boolean` | Disable client-side sorting. The grid calls `onChange` instead. |
+| `onChange` | `(sorting: SortingState) => void` | Called when sort state changes. |
+
+### `filtering`
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `manual` | `boolean` | Disable client-side column filtering (and global filter). The grid calls `onChange` instead. |
+| `onChange` | `(columnFilters: ColumnFiltersState) => void` | Called when any column filter changes. |
+
+### `globalFiltering`
+
+Global search has no `manual` flag of its own — setting `filtering.manual: true` makes both column filters **and** the global search server-side. Just provide `onChange`.
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `onChange` | `(globalFilter: unknown) => void` | Called when the global search value changes (fires server-side when `filtering.manual` is set). |
+
+### `state.loading`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `isPending` | `boolean` | `true` on the very first load (no rows yet). Drives the full-body skeleton. |
+| `isFetching` | `boolean` | `true` while any fetch is in flight. Drives the refetch overlay when rows are already present. |
+| `isError` | `boolean` | Fetch ended in an error. |
+| `error` | `unknown` | Last fetch error, or `null`. |

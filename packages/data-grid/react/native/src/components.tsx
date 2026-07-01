@@ -29,6 +29,7 @@ import type {
 	OperatorSelectProps,
 	PageSizerProps,
 	PaginationProps,
+	RefetchOverlayProps,
 	ResizerProps,
 	RowPinMenuProps,
 	SelectionBarProps,
@@ -811,6 +812,14 @@ function NativeNoResultsState({ columnCount }: NoResultsStateProps) {
 	)
 }
 
+function NativeRefetchOverlay({ columnCount }: RefetchOverlayProps) {
+	return (
+		<tr>
+			<td colSpan={columnCount}>Refreshing…</td>
+		</tr>
+	)
+}
+
 function NativeActionsCell({
 	isEditing,
 	hasEditing,
@@ -915,6 +924,7 @@ export const nativeComponents: Required<GridComponents> = {
 	LoadMoreRow: NativeLoadMoreRow,
 	EmptyState: NativeEmptyState,
 	NoResultsState: NativeNoResultsState,
+	RefetchOverlay: NativeRefetchOverlay,
 	ActionsCell: NativeActionsCell,
 	CreatingActionsCell: NativeCreatingActionsCell,
 	FormShell: NativeFormShell,

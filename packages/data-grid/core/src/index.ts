@@ -63,7 +63,6 @@ export {
 export type { CreatingConfig, CreatingSaveContext, CreatingState } from './features/creating'
 export type { ConfirmationOptions, DeletingConfig, DeletingContext } from './features/deleting'
 export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
-export type { LoadingState } from './features/loading'
 
 // Validation API
 export {
@@ -93,6 +92,7 @@ export type {
 	GlobalFilterFn,
 	GlobalFilteringConfig,
 	InfiniteState,
+	LoadingState,
 	LoadMoreDirection,
 	MultiSortConfig,
 	MultiSortEvent,

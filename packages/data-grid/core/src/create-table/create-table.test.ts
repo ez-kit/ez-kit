@@ -293,6 +293,47 @@ describe('createTable — pagination', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, pagination: { manual: true } })
 		expect(table.options.pageCount).toBe(-1)
 	})
+
+	it('pagination: { manual: true, rowCount: 100, pageSize: 10 } derives pageCount via TanStack', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { manual: true, pageSize: 10, rowCount: 100 },
+		})
+		expect(table.options.manualPagination).toBe(true)
+		expect(table.options.rowCount).toBe(100)
+		// TanStack derives pageCount = ceil(rowCount / pageSize) = 10
+		expect(table.getPageCount()).toBe(10)
+	})
+
+	it('pagination: { manual: true, rowCount: 95, pageSize: 10 } rounds up derived pageCount', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { manual: true, pageSize: 10, rowCount: 95 },
+		})
+		// TanStack derives pageCount = ceil(95 / 10) = 10
+		expect(table.getPageCount()).toBe(10)
+	})
+
+	it('pagination: { manual: true, rowCount: 100 } exposes rowCount via getRowCount()', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { manual: true, pageSize: 10, rowCount: 100 },
+		})
+		expect(table.getRowCount()).toBe(100)
+	})
+
+	it('pagination: { manual: true, pageCount: 5 } with no rowCount leaves rowCount unset', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { manual: true, pageCount: 5 },
+		})
+		expect(table.options.rowCount).toBeUndefined()
+		expect(table.getPageCount()).toBe(5)
+	})
 })
 
 // ── selection ─────────────────────────────────────────────────────────────────
@@ -402,17 +443,26 @@ describe('createTable — creating / editing / deleting', () => {
 	})
 })
 
-// ── loading ───────────────────────────────────────────────────────────────────
+// ── loading ─────────────────────────────────────────────────────────────────
 
 describe('createTable — loading', () => {
-	it('initialState.loading sets initial isLoading to true', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, initialState: { loading: { isLoading: true } } })
-		expect(table.getIsLoading()).toBe(true)
+	it('seeds state.loading defaults (all false, error null)', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		expect(table.getSnapshot().loading).toEqual({
+			isPending: false,
+			isFetching: false,
+			isError: false,
+			error: null,
+		})
 	})
 
-	it('loading not set — getIsLoading() returns false', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS })
-		expect(table.getIsLoading()).toBe(false)
+	it('initialState.loading seeds the controlled slice', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } },
+		})
+		expect(table.getSnapshot().loading.isPending).toBe(true)
 	})
 })
 

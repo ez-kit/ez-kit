@@ -1,41 +1,42 @@
-import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
-
-/**
- * Loading feature — full-grid initial-load indicator.
- *
- * `loading` is plain table state (`state.loading.isLoading`), TanStack-style: set the
- * default via `initialState.loading` and control it via the `state` prop on the React
- * `useDataGrid` hook. There is intentionally no bespoke `loading` config prop and no
- * imperative `setLoading()` — a single source (controlled `state`) avoids drift.
- * `getIsLoading()` remains a read-only convenience. Incremental fetch status (infinite
- * scroll) lives in the grid-owned `InfiniteFeature`.
- */
-export type LoadingState = {
-	isLoading: boolean
-}
+import type { LoadingState } from '../../types'
+import type { InitialTableState, RowData, TableFeature, TableState } from '@tanstack/table-core'
 
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface TableState {
 		loading: LoadingState
 	}
-
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
-	interface Table<TData extends RowData> {
-		getIsLoading: () => boolean
-	}
 }
 
+/**
+ * Default seed for the fully-controlled `state.loading` slice: every flag starts
+ * falsy and `error` starts `null`. The consumer overrides these through the
+ * controlled `state.loading` prop; the grid never mutates them.
+ */
+const INITIAL_LOADING_STATE: LoadingState = {
+	isPending: false,
+	isFetching: false,
+	isError: false,
+	error: null,
+}
+
+/**
+ * Controlled loading-status feature. Owns **only** `getInitialState` — it seeds the
+ * `state.loading` slice with {@link INITIAL_LOADING_STATE} and merges any controlled
+ * `state.loading` supplied at construction.
+ *
+ * The slice is **user-owned / fully controlled**: the consumer feeds every field via
+ * the controlled `table.state.loading` prop (mirrored one-way by `syncControlledState`),
+ * typically from a data library's query status (React Query / SWR) or local `useState`.
+ * There is intentionally **no grid-owned writer** — no `setFetchingStatus`, no
+ * `getIsLoading` alias — so the grid only ever reads this slice to render.
+ */
 export const LoadingFeature: TableFeature<RowData> = {
 	getInitialState: (state?: InitialTableState) =>
 		({
 			...state,
-			loading: (state as Partial<TableState> | undefined)?.loading ?? ({ isLoading: false } satisfies LoadingState),
+			loading: { ...INITIAL_LOADING_STATE, ...(state as Partial<TableState> | undefined)?.loading },
 		}) as Partial<TableState>,
-
-	createTable: (table: Table<RowData>) => {
-		// loading state is always initialised by getInitialState; written one-way from
-		// the controlled `loading` prop via syncControlledState (no imperative setter).
-		table.getIsLoading = () => table.getState().loading.isLoading
-	},
 }
+
+export { INITIAL_LOADING_STATE }

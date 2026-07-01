@@ -260,8 +260,40 @@ export type InfiniteState = {
 	error: { direction: LoadMoreDirection; error: unknown } | null
 }
 
+/**
+ * Loading-status slice, held in `state.loading`. **User-owned / fully controlled** —
+ * the consumer feeds every field through the controlled `table.state.loading` prop
+ * (mirrored one-way by `syncControlledState`). The grid **never writes** this slice;
+ * there is no single-writer setter and no grid-owned derived alias. Typically fed
+ * straight from a data library's query status (React Query / SWR) or local `useState`.
+ *
+ * Rendering intent per field (the grid derives what to show from these):
+ * - `isPending` — no data yet (first load) → full-body **skeleton**.
+ * - `isFetching` — a background refetch is in flight while data is already on screen
+ *   → **refetch overlay**.
+ * - `isError` / `error` — the last load/refetch failed → **error status**, read from
+ *   the store to render a fallback (`isError` is the flag, `error` the thrown value).
+ *
+ * Incremental infinite-scroll status lives separately in {@link InfiniteState}.
+ */
+export type LoadingState = {
+	isPending: boolean
+	isFetching: boolean
+	isError: boolean
+	error: unknown
+}
+
 export type PaginationConfig = {
 	manual?: boolean
+	/**
+	 * Server total-rows descriptor. When set in manual pagination mode, TanStack
+	 * derives `pageCount` automatically from `rowCount` ÷ `pageSize` (ceiling).
+	 * `table.getRowCount()` returns this value.
+	 *
+	 * Supply EITHER `pageCount` (page total, already divided) OR `rowCount` (raw
+	 * server row total, let TanStack divide) — not both.
+	 */
+	rowCount?: number
 	pageCount?: number
 	pageSize?: number
 	/**
@@ -425,7 +457,8 @@ export type TableConfig<TRow extends object> = {
 	/**
 	 * Seed values for table state at construction (TanStack-style). Merged over the
 	 * grid's computed defaults; consumer values win. Use for uncontrolled initial
-	 * state, e.g. `initialState: { loading: { isLoading: true } }` or a default sort.
+	 * state, e.g. `initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } }`
+	 * or a default sort.
 	 */
 	initialState?: Partial<TableState>
 	/**

@@ -607,9 +607,11 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 		instanceRef.current.table.setOptions((prev) => ({ ...prev, data: config.data }))
 	}
 
-	// loading is plain controlled state — handled by the generic `state` sync block
-	// above (`state.loading`). hasNextPage is a pagination option read reactively from
-	// INFINITE_KEY by useInfiniteScroll. Neither needs a bespoke projection here.
+	// The loading status (`isPending`/`isFetching`/`isError`/`error`) is user-owned
+	// controlled state fed through the `state.loading` slice; it is handled by the
+	// generic `state` sync block above and the grid never writes it. hasNextPage is a
+	// pagination option read reactively from INFINITE_KEY by useInfiniteScroll. Neither
+	// needs a bespoke projection here.
 
 	return instanceRef.current
 }

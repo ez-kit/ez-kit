@@ -69,30 +69,32 @@ describe('useDataGrid', () => {
 
 	it('seeds loading from initialState (uncontrolled default)', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, initialState: { loading: { isLoading: true } } }),
+			useDataGrid({
+				data: USERS,
+				columns: COLUMNS,
+				initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } },
+			}),
 		)
-		expect(result.current.table.getIsLoading()).toBe(true)
+		expect(result.current.table.getSnapshot().loading.isPending).toBe(true)
 	})
 
 	it('propagates state.loading into the external snapshot so subscribers see it', () => {
 		const { result, rerender } = renderHook(
-			({ isLoading }: { isLoading: boolean }) =>
+			({ isPending }: { isPending: boolean }) =>
 				useDataGrid({
 					data: USERS,
 					columns: COLUMNS,
-					state: { loading: { isLoading } },
+					state: { loading: { isPending, isFetching: false, isError: false, error: null } },
 				}),
-			{ initialProps: { isLoading: false } },
+			{ initialProps: { isPending: false } },
 		)
 		// Baseline: snapshot reflects initial state
-		expect(result.current.table.getSnapshot().loading.isLoading).toBe(false)
-		expect(result.current.table.getIsLoading()).toBe(false)
+		expect(result.current.table.getSnapshot().loading.isPending).toBe(false)
 
 		// Flip via the controlled `state` prop — both options.state AND the external
 		// store must update so useSyncExternalStore subscribers (e.g. Body) re-read.
-		rerender({ isLoading: true })
-		expect(result.current.table.getSnapshot().loading.isLoading).toBe(true)
-		expect(result.current.table.getIsLoading()).toBe(true)
+		rerender({ isPending: true })
+		expect(result.current.table.getSnapshot().loading.isPending).toBe(true)
 	})
 
 	it('propagates state.columnFilters into the external snapshot', () => {
@@ -118,17 +120,17 @@ describe('useDataGrid', () => {
 	it('does not invoke onStateChange when state prop is the source of the change', () => {
 		const onStateChange = vi.fn()
 		const { rerender } = renderHook(
-			({ isLoading }: { isLoading: boolean }) =>
+			({ isPending }: { isPending: boolean }) =>
 				useDataGrid({
 					data: USERS,
 					columns: COLUMNS,
-					state: { loading: { isLoading } },
+					state: { loading: { isPending, isFetching: false, isError: false, error: null } },
 					onStateChange,
 				}),
-			{ initialProps: { isLoading: false } },
+			{ initialProps: { isPending: false } },
 		)
 		onStateChange.mockClear()
-		rerender({ isLoading: true })
+		rerender({ isPending: true })
 		// Prop-driven sync goes through syncControlledState, which intentionally skips
 		// onStateChange — otherwise consumers that mirror the callback back into React
 		// state would loop indefinitely.
@@ -136,7 +138,7 @@ describe('useDataGrid', () => {
 	})
 
 	it('skips the snapshot push when supplied slices are referentially equal', () => {
-		const stableLoading = { isLoading: false }
+		const stableLoading = { isPending: false, isFetching: false, isError: false, error: null }
 		const { result, rerender } = renderHook(
 			({ tag: _tag }: { tag: number }) =>
 				useDataGrid({

@@ -380,5 +380,13 @@
 		"groupLabel": "Infinite Scroll",
 		"sourceFile": "components/infinite-scroll/reset-on-query.tsx",
 		"exportName": "InfiniteScrollResetExample"
+	},
+	{
+		"id": "server-data",
+		"label": "Server-side (full async)",
+		"group": "server-data",
+		"groupLabel": "Server-side",
+		"sourceFile": "components/server-data.tsx",
+		"exportName": "ServerDataExample"
 	}
 ]

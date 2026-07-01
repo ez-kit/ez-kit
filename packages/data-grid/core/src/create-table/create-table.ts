@@ -281,7 +281,15 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(onRowSelectionChange ? { onRowSelectionChange } : {}),
 		// Pagination manual
 		...(typeof config.pagination === 'object' && config.pagination.manual
-			? { manualPagination: true, pageCount: config.pagination.pageCount ?? -1 }
+			? {
+					manualPagination: true,
+					// When rowCount is provided, omit pageCount so TanStack derives it
+					// automatically from rowCount ÷ pageSize. When only pageCount is
+					// given (or neither), fall back to the explicit value or -1 (unknown).
+					...(config.pagination.rowCount !== undefined
+						? { rowCount: config.pagination.rowCount }
+						: { pageCount: config.pagination.pageCount ?? -1 }),
+				}
 			: {}),
 		// Filtering manual
 		...(typeof config.filtering === 'object' && config.filtering.manual ? { manualFiltering: true } : {}),

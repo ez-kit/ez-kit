@@ -61,24 +61,24 @@ describe('appendData / prependData — immutability', () => {
 	})
 })
 
-describe('loading — plain state (no bespoke prop, no imperative setter)', () => {
-	it('defaults to isLoading false', () => {
+describe('loading — controlled state (no bespoke prop, no imperative setter)', () => {
+	it('defaults to isPending false', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
-		expect(table.getIsLoading()).toBe(false)
+		expect(table.getSnapshot().loading.isPending).toBe(false)
 	})
 
 	it('initialState seeds the loading state', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			initialState: { loading: { isLoading: true } },
+			initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } },
 		})
-		expect(table.getIsLoading()).toBe(true)
+		expect(table.getSnapshot().loading.isPending).toBe(true)
 	})
 
 	it('table has no setLoading method', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
-		// @ts-expect-error setLoading is removed — loading is plain controlled state
+		// @ts-expect-error setLoading is removed — state.loading is fed via the controlled prop only
 		expect(table.setLoading).toBeUndefined()
 	})
 })
