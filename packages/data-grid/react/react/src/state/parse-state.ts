@@ -1,7 +1,6 @@
 import { DEFAULT_STATE_KEYS } from './state-keys'
 
 import type { DataGridState, DataGridStateOptions, PersistableStateKey } from './state-keys'
-import type { TableState } from '@ez-kit/data-grid-core'
 
 /** Expected top-level JS shape of each persistable slice, for lightweight validation. */
 const SLICE_KIND: Record<PersistableStateKey, 'array' | 'object' | 'expanded' | 'any'> = {
@@ -36,14 +35,12 @@ function isValidSlice(key: PersistableStateKey, value: unknown): boolean {
 }
 
 /**
- * Assign a validated slice into the accumulator. Generic over a single key `K` so the
- * write type-checks. `value` was structurally validated by {@link isValidSlice}; the input
- * is untrusted, so casting to the slice type here is the deliberate boundary conversion.
+ * Assign a validated slice into the accumulator. `value` was structurally validated by
+ * {@link isValidSlice}. Writing an `unknown` value through a union-typed key onto a Partial
+ * is accepted by TypeScript, so no generic or cast is needed here.
  */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
-function assignSlice<K extends PersistableStateKey>(out: DataGridState, key: K, value: unknown): void {
-	// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-	out[key] = value as TableState[K]
+function assignSlice(out: DataGridState, key: PersistableStateKey, value: unknown): void {
+	out[key] = value
 }
 
 /**

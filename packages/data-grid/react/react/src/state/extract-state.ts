@@ -4,9 +4,10 @@ import type { DataGridState, DataGridStateOptions, PersistableStateKey } from '.
 import type { Table, TableState } from '@ez-kit/data-grid-core'
 
 /**
- * Copy one slice into the accumulator. Generic over a single key `K` so the indexed
- * write type-checks without a cast — a union key would not narrow, but `K` does.
- * Skips `undefined` values (exactOptionalPropertyTypes: never write `undefined`).
+ * Copy one slice into the accumulator. Generic over a single key `K`: reading `state[key]`
+ * with a union key widens to `any` (TanStack `TableState` indexing), so `K` keeps the value
+ * typed. Skips `undefined` (exactOptionalPropertyTypes: never write `undefined`).
+ * (Note: `parseState`'s `assignSlice` needs no generic — its `value` is already `unknown`.)
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 function copySlice<K extends PersistableStateKey>(out: DataGridState, state: TableState, key: K): void {
