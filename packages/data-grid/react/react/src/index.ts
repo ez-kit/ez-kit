@@ -55,6 +55,13 @@ export type { DataGridInstance } from './data-grid-instance'
 export type { TableStore } from './store/table-store'
 export { shallow } from './utils/shallow-equal'
 
+// State persistence (Layer 1 utilities + Layer 2 reactive hook)
+export { extractState } from './state/extract-state'
+export { parseState } from './state/parse-state'
+export { useExtractedState } from './state/use-extracted-state'
+export { PERSISTABLE_STATE_KEYS, DEFAULT_STATE_KEYS } from './state/state-keys'
+export type { DataGridState, DataGridStateOptions, PersistableStateKey } from './state/state-keys'
+
 // Factory
 export { createDataGrid } from './create-data-grid'
 export type { CreateDataGridOptions } from './create-data-grid'
