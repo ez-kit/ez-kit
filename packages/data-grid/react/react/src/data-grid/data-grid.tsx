@@ -17,6 +17,7 @@ import { Body } from './body'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
 import { ColumnVisibilityTrigger } from './column-visibility-trigger'
+import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
 import { EditingModal } from './editing-modal'
@@ -36,8 +37,8 @@ import { TableContext, useDataGridInstance, useDataGridStore } from './table-con
 import { Toolbar } from './toolbar'
 
 import type { CellTypeRegistry } from '../cell-types-context'
+import type { GridComponents } from '../contract'
 import type { DataGridInstance } from '../data-grid-instance'
-import type { GridComponents } from '../types'
 import type { ConfirmationOptions } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
@@ -105,7 +106,7 @@ function resolveConfirmationText(
 function ConfirmDialogRenderer() {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { ConfirmDialog } = useGridComponents()
+	const { ConfirmDialog } = useGridComponents().editing
 	// Narrow: re-render only when the pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave this stable.
 	const pendingId = useDataGridStore((s) => s.pendingDeleteRowId)
@@ -194,6 +195,7 @@ function DataGridControlled<TRow extends object>({
 		<CellTypesProvider types={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
 				<TableContext value={instance}>
+					{IS_DEV && <ComponentGuard />}
 					{children ?? <DefaultLayout />}
 					{table.options.creating?.mode === 'modal' && <CreatingModal />}
 					{table.options.editing?.mode === 'modal' && <EditingModal />}

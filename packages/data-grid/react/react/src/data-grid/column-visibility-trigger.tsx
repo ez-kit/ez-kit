@@ -10,7 +10,7 @@ import type { VisibilityColumnItem } from '../types'
  */
 export function ColumnVisibilityTrigger() {
 	const table = useTable()
-	const { ColumnVisibilityMenu } = useGridComponents()
+	const { ColumnVisibilityMenu } = useGridComponents()['column-visibility']
 
 	const columns: VisibilityColumnItem[] = table
 		.getAllLeafColumns()

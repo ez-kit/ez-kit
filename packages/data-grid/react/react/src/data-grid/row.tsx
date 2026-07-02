@@ -24,7 +24,7 @@ type RowProps = {
  * - `data-virtual="row"` for virtualized rows (positioned via runtime `transform`)
  */
 export function DataGridRow({ row, style, 'data-pinned': dataPinned, 'data-virtual': dataVirtual }: RowProps) {
-	const { Tr } = useGridComponents()
+	const { Tr } = useGridComponents().core
 	return (
 		<Tr
 			data-slot='tr'

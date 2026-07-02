@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 
+import type { FullGridComponents } from './contract'
 import type {
 	ActionsCellProps,
 	BetweenInputProps,
@@ -18,7 +19,6 @@ import type {
 	FilterPanelChipProps,
 	FilterPanelProps,
 	FilterPopoverProps,
-	GridComponents,
 	InputProps,
 	LoadingRowProps,
 	LoadMoreRowProps,
@@ -738,56 +738,80 @@ function TestFormShell({ children }: { children?: ReactNode }) {
 	return <>{children}</>
 }
 
-export const testComponents: Required<GridComponents> = {
-	FormShell: TestFormShell,
-	Table: TestTable,
-	Thead: TestThead,
-	Tbody: TestTbody,
-	Tr: TestTr,
-	Th: TestTh,
-	Td: TestTd,
-	Button: TestButton,
-	Input: TestInput,
-	Checkbox: TestCheckbox,
-	NumberInput: TestNumberInput,
-	Modal: TestModal,
-	Toolbar: TestToolbar,
-	GlobalFilterInput: ({ value, onChange, placeholder }) => (
-		<input
-			data-slot='global-filter-input'
-			value={value}
-			onChange={(e) => {
-				onChange(e.target.value)
-			}}
-			placeholder={placeholder}
-		/>
-	),
-	Pagination: TestPagination,
-	PageSizer: TestPageSizer,
-	Resizer: TestResizer,
-	RowPinMenu: TestRowPinMenu,
-	ColumnMenu: TestColumnMenu,
-	ColumnVisibilityMenu: TestColumnVisibilityMenu,
-	FilterPopover: TestFilterPopover,
-	FilterPanel: TestFilterPanel,
-	FilterPanelChip: TestFilterPanelChip,
-	FilterChip: TestFilterChip,
-	ClearFiltersButton: TestClearFiltersButton,
-	SelectionBar: TestSelectionBar,
-	ConfirmDialog: TestConfirmDialog,
-	OperatorSelect: TestOperatorSelect,
-	BetweenInput: TestBetweenInput,
-	MultiSelectFilter: TestMultiSelectFilter,
-	LoadingRow: TestLoadingRow,
-	EmptyState: TestEmptyState,
-	NoResultsState: TestNoResultsState,
-	RefetchOverlay: TestRefetchOverlay,
-	LoadMoreRow: TestLoadMoreRow,
-	SortIndicator: () => null,
-	SortMenu: () => null,
-	ActionsCell: TestActionsCell,
-	CreatingActionsCell: TestCreatingActionsCell,
-	Chevron: () => null,
+export const testComponents: FullGridComponents = {
+	core: {
+		Table: TestTable,
+		Thead: TestThead,
+		Tbody: TestTbody,
+		Tr: TestTr,
+		Th: TestTh,
+		Td: TestTd,
+		Button: TestButton,
+		Input: TestInput,
+		Checkbox: TestCheckbox,
+		Toolbar: TestToolbar,
+	},
+	pagination: {
+		Pagination: TestPagination,
+		PageSizer: TestPageSizer,
+	},
+	sorting: {
+		SortIndicator: () => null,
+		SortMenu: () => null,
+		ColumnMenu: TestColumnMenu,
+	},
+	filtering: {
+		FilterPopover: TestFilterPopover,
+		FilterPanel: TestFilterPanel,
+		FilterPanelChip: TestFilterPanelChip,
+		FilterChip: TestFilterChip,
+		ClearFiltersButton: TestClearFiltersButton,
+		GlobalFilterInput: ({ value, onChange, placeholder }) => (
+			<input
+				data-slot='global-filter-input'
+				value={value}
+				onChange={(e) => {
+					onChange(e.target.value)
+				}}
+				placeholder={placeholder}
+			/>
+		),
+		OperatorSelect: TestOperatorSelect,
+		BetweenInput: TestBetweenInput,
+		MultiSelectFilter: TestMultiSelectFilter,
+	},
+	editing: {
+		Modal: TestModal,
+		FormShell: TestFormShell,
+		ActionsCell: TestActionsCell,
+		CreatingActionsCell: TestCreatingActionsCell,
+		ConfirmDialog: TestConfirmDialog,
+		NumberInput: TestNumberInput,
+	},
+	selection: {
+		SelectionBar: TestSelectionBar,
+	},
+	pinning: {
+		RowPinMenu: TestRowPinMenu,
+	},
+	resizing: {
+		Resizer: TestResizer,
+	},
+	'column-visibility': {
+		ColumnVisibilityMenu: TestColumnVisibilityMenu,
+	},
+	'fallback-states': {
+		LoadingRow: TestLoadingRow,
+		EmptyState: TestEmptyState,
+		NoResultsState: TestNoResultsState,
+		RefetchOverlay: TestRefetchOverlay,
+	},
+	infinite: {
+		LoadMoreRow: TestLoadMoreRow,
+	},
+	expanding: {
+		Chevron: () => null,
+	},
 }
 
 function TestWrapper({ children }: { children: ReactNode }) {

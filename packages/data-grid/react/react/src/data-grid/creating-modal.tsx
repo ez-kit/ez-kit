@@ -10,7 +10,7 @@ import { useTable } from './table-context'
  */
 export function CreatingModal() {
 	const table = useTable()
-	const { Modal, FormShell } = useGridComponents()
+	const { Modal, FormShell } = useGridComponents().editing
 	const state = table.creating.getState()
 	const isOpen = state.isOpen
 

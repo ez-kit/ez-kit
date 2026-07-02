@@ -12,7 +12,7 @@ export type BooleanCellConfig = {
 }
 
 function BooleanCellInput(props: FieldState<BooleanCellConfig>): ReactNode {
-	const { Checkbox } = useGridComponents()
+	const { Checkbox } = useGridComponents().core
 	return (
 		<Checkbox
 			value={Boolean(props.value)}

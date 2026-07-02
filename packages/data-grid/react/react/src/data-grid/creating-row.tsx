@@ -20,7 +20,9 @@ import type { ChangeEvent, ComponentType, ReactNode } from 'react'
  */
 export function CreatingRow() {
 	const table = useTable()
-	const { Tr, Td, Input, Checkbox, CreatingActionsCell } = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Tr, Td, Input, Checkbox } = gridComponents.core
+	const { CreatingActionsCell } = gridComponents.editing
 	const cellTypes = useCellTypes()
 	const state = table.creating.getState()
 	const values = state.values

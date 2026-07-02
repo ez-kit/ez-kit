@@ -316,7 +316,7 @@ describe('<DataGrid>', () => {
 			)
 			const { instance } = makeTable({ sizing: true })
 			renderWithComponents(
-				<GridComponentsProvider components={{ Resizer: CustomResizer }}>
+				<GridComponentsProvider components={{ resizing: { Resizer: CustomResizer } }}>
 					<DataGrid table={instance} />
 				</GridComponentsProvider>,
 			)
@@ -332,7 +332,7 @@ describe('<DataGrid>', () => {
 			)
 			const { instance } = makeTable({ sizing: true })
 			renderWithComponents(
-				<GridComponentsProvider components={{ Resizer: CustomResizer }}>
+				<GridComponentsProvider components={{ resizing: { Resizer: CustomResizer } }}>
 					<DataGrid table={instance} />
 				</GridComponentsProvider>,
 			)

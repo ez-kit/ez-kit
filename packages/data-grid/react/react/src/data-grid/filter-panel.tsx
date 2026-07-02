@@ -90,14 +90,15 @@ function formatFilterValue(
  */
 export function FilterPanel() {
 	const table = useTable()
+	const gridComponents = useGridComponents()
+	const { Input } = gridComponents.core
 	const {
-		Input,
 		OperatorSelect,
 		BetweenInput,
 		FilterPanel: FilterPanelChrome,
 		FilterPanelChip,
 		MultiSelectFilter,
-	} = useGridComponents()
+	} = gridComponents.filtering
 	const cellTypes = useCellTypes()
 
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)

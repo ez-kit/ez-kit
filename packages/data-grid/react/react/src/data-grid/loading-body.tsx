@@ -10,7 +10,9 @@ const DEFAULT_LOADING_ROWS = 5
 
 export function LoadingBody() {
 	const table = useTable()
-	const { Tbody, Tr, Td, LoadingRow } = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Tbody, Tr, Td } = gridComponents.core
+	const { LoadingRow } = gridComponents['fallback-states']
 
 	const fallbacks = (table as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] as FallbacksConfig | undefined
 	const loadingConfig = fallbacks?.loading

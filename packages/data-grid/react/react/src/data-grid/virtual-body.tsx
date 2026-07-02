@@ -49,7 +49,9 @@ const DEFAULT_THRESHOLD_ROWS = 5
 export function VirtualBody() {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { Tbody, Tr, Td, LoadMoreRow } = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Tbody, Tr, Td } = gridComponents.core
+	const { LoadMoreRow } = gridComponents.infinite
 	const { rowVirtualizer } = useVirtualContext()
 	const controller = useInfiniteScroll()
 	// Subscribe to infinite slice so the loader row re-renders on status change.

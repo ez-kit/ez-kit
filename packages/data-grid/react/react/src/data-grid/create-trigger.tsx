@@ -14,7 +14,7 @@ type CreateTriggerProps = {
  */
 export function CreateTrigger({ children }: CreateTriggerProps) {
 	const table = useTable()
-	const { Button } = useGridComponents()
+	const { Button } = useGridComponents().core
 	const handleClick = (): void => {
 		table.creating.start()
 	}

@@ -26,7 +26,7 @@ function resolveRowPinConfig(pinning: boolean | PinningConfig | undefined): RowP
  */
 export function RowPinCell({ row }: RowPinCellProps) {
 	const table = useTable()
-	const { RowPinMenu } = useGridComponents()
+	const { RowPinMenu } = useGridComponents().pinning
 
 	const rawPinning = (table as unknown as Record<symbol, unknown>)[ROW_PINNING_KEY] as
 		| boolean

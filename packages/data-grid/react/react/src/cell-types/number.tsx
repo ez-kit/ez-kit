@@ -44,7 +44,7 @@ export function formatNumber(value: number, config?: NumberCellConfig): string {
 }
 
 function NumberCellInput(props: FieldState<NumberCellConfig>): ReactNode {
-	const { NumberInput } = useGridComponents()
+	const { NumberInput } = useGridComponents().editing
 	return (
 		<NumberInput
 			value={typeof props.value === 'number' ? props.value : undefined}

@@ -8,6 +8,7 @@ export const {
 	defineColumns,
 	createColumnHelper,
 	GridComponentsProvider,
+	extendDataGrid,
 } = createDataGrid({ components: nativeComponents })
 
 export { nativeComponents }

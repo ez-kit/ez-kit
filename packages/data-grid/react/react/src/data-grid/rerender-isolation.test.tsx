@@ -9,15 +9,8 @@ import { useDataGrid } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
-import type {
-	GridComponents,
-	PageSizerProps,
-	PaginationProps,
-	TbodyProps,
-	TdProps,
-	TheadProps,
-	ToolbarProps,
-} from '../types'
+import type { GridComponents } from '../contract'
+import type { PageSizerProps, PaginationProps, TbodyProps, TdProps, TheadProps, ToolbarProps } from '../types'
 import type { ReactElement } from 'react'
 
 // JSDOM lacks ResizeObserver; the table layout effect needs one.
@@ -78,8 +71,8 @@ function makeCountingComponents(counters: Counters): Required<GridComponents> {
 			</div>
 		)
 	}
-	const InnerPagination = testComponents.Pagination
-	const InnerPageSizer = testComponents.PageSizer
+	const InnerPagination = testComponents.pagination.Pagination
+	const InnerPageSizer = testComponents.pagination.PageSizer
 	function CountingPagination(props: PaginationProps): ReactElement {
 		counters.pagination += 1
 		return <InnerPagination {...props} />
@@ -90,12 +83,18 @@ function makeCountingComponents(counters: Counters): Required<GridComponents> {
 	}
 	return {
 		...testComponents,
-		Tbody: CountingTbody,
-		Td: CountingTd,
-		Thead: CountingThead,
-		Toolbar: CountingToolbar,
-		Pagination: CountingPagination,
-		PageSizer: CountingPageSizer,
+		core: {
+			...testComponents.core,
+			Tbody: CountingTbody,
+			Td: CountingTd,
+			Thead: CountingThead,
+			Toolbar: CountingToolbar,
+		},
+		pagination: {
+			...testComponents.pagination,
+			Pagination: CountingPagination,
+			PageSizer: CountingPageSizer,
+		},
 	}
 }
 

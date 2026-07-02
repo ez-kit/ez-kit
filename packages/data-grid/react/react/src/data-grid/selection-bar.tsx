@@ -15,7 +15,7 @@ import { useTable } from './table-context'
  */
 export function SelectionBar() {
 	const table = useTable()
-	const { SelectionBar: SelectionBarComponent } = useGridComponents()
+	const { SelectionBar: SelectionBarComponent } = useGridComponents().selection
 
 	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
 		| boolean

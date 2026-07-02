@@ -25,7 +25,7 @@ export function truncateText(value: string, config?: TextCellConfig): string {
 }
 
 function TextCellInput(props: FieldState<TextCellConfig>): ReactNode {
-	const { Input } = useGridComponents()
+	const { Input } = useGridComponents().core
 	return (
 		<Input
 			value={(props.value ?? '') as string | number | readonly string[]}

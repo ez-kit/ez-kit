@@ -2,107 +2,82 @@
 
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
-import { ActionsCell } from './blocks/ActionsCell'
-import { BetweenInput } from './blocks/BetweenInput'
-import { Button } from './blocks/Button'
 import { cellTypes } from './blocks/cell-types'
-import { Checkbox } from './blocks/Checkbox'
-import { Chevron } from './blocks/Chevron'
-import { ClearFiltersButton } from './blocks/ClearFiltersButton'
-import { ColumnMenu } from './blocks/ColumnMenu'
-import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
-import { ConfirmDialog } from './blocks/ConfirmDialog'
-import { CreatingActionsCell } from './blocks/CreatingActionsCell'
-import { EmptyState } from './blocks/EmptyState'
-import { FilterChip } from './blocks/FilterChip'
-import { FilterPanel } from './blocks/FilterPanel'
-import { FilterPanelChip } from './blocks/FilterPanelChip'
-import { FilterPopover } from './blocks/FilterPopover'
-import { FormShell } from './blocks/FormShell'
-import { GlobalFilterInput } from './blocks/GlobalFilterInput'
-import { Input } from './blocks/Input'
-import { LoadingRow } from './blocks/LoadingRow'
-import { LoadMoreRow } from './blocks/LoadMoreRow'
-import { Modal } from './blocks/Modal'
-import { MultiSelectFilter } from './blocks/MultiSelectFilter'
-import { NoResultsState } from './blocks/NoResultsState'
-import { NumberInput } from './blocks/NumberInput'
-import { OperatorSelect } from './blocks/OperatorSelect'
-import { PageSizer } from './blocks/PageSizer'
-import { Pagination } from './blocks/Pagination'
-import { RefetchOverlay } from './blocks/RefetchOverlay'
-import { Resizer } from './blocks/Resizer'
-import { RowPinMenu } from './blocks/RowPinMenu'
-import { SelectionBar } from './blocks/SelectionBar'
-import { SortIndicator } from './blocks/SortIndicator'
-import { SortMenu } from './blocks/SortMenu'
-import { Table, Tbody, Td, Th, Thead, Tr } from './blocks/table-adapters'
-import { Toolbar } from './blocks/Toolbar'
+import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilityMenu'
+import { Button } from './blocks/core/Button'
+import { Checkbox } from './blocks/core/Checkbox'
+import { Input } from './blocks/core/Input'
+import { Table, Tbody, Td, Th, Thead, Tr } from './blocks/core/table-adapters'
+import { Toolbar } from './blocks/core/Toolbar'
+import { ActionsCell } from './blocks/editing/ActionsCell'
+import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
+import { CreatingActionsCell } from './blocks/editing/CreatingActionsCell'
+import { FormShell } from './blocks/editing/FormShell'
+import { Modal } from './blocks/editing/Modal'
+import { NumberInput } from './blocks/editing/NumberInput'
+import { Chevron } from './blocks/expanding/Chevron'
+import { EmptyState } from './blocks/fallback-states/EmptyState'
+import { LoadingRow } from './blocks/fallback-states/LoadingRow'
+import { NoResultsState } from './blocks/fallback-states/NoResultsState'
+import { RefetchOverlay } from './blocks/fallback-states/RefetchOverlay'
+import { BetweenInput } from './blocks/filtering/BetweenInput'
+import { ClearFiltersButton } from './blocks/filtering/ClearFiltersButton'
+import { FilterChip } from './blocks/filtering/FilterChip'
+import { FilterPanel } from './blocks/filtering/FilterPanel'
+import { FilterPanelChip } from './blocks/filtering/FilterPanelChip'
+import { FilterPopover } from './blocks/filtering/FilterPopover'
+import { GlobalFilterInput } from './blocks/filtering/GlobalFilterInput'
+import { MultiSelectFilter } from './blocks/filtering/MultiSelectFilter'
+import { OperatorSelect } from './blocks/filtering/OperatorSelect'
+import { LoadMoreRow } from './blocks/infinite/LoadMoreRow'
+import { PageSizer } from './blocks/pagination/PageSizer'
+import { Pagination } from './blocks/pagination/Pagination'
+import { RowPinMenu } from './blocks/pinning/RowPinMenu'
+import { Resizer } from './blocks/resizing/Resizer'
+import { SelectionBar } from './blocks/selection/SelectionBar'
+import { ColumnMenu } from './blocks/sorting/ColumnMenu'
+import { SortIndicator } from './blocks/sorting/SortIndicator'
+import { SortMenu } from './blocks/sorting/SortMenu'
 
-import type { CellTypeRegistry, GridComponents } from '@ez-kit/data-grid-react'
+import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
 const components = {
-	Table,
-	Thead,
-	Tbody,
-	Tr,
-	Th,
-	Td,
-	Button,
-	Input,
-	Checkbox,
-	NumberInput,
-	Modal,
-	Pagination,
-	PageSizer,
-	Toolbar,
-	Resizer,
-	SortIndicator,
-	SortMenu,
-	RowPinMenu,
-	ColumnMenu,
-	ColumnVisibilityMenu,
-	FilterPopover,
-	FilterPanel,
-	FilterPanelChip,
-	FilterChip,
-	ClearFiltersButton,
-	GlobalFilterInput,
-	SelectionBar,
-	ConfirmDialog,
-	OperatorSelect,
-	BetweenInput,
-	MultiSelectFilter,
-	LoadingRow,
-	LoadMoreRow,
-	EmptyState,
-	NoResultsState,
-	RefetchOverlay,
-	ActionsCell,
-	Chevron,
-	CreatingActionsCell,
-	FormShell,
-} satisfies GridComponents
-
-const { DataGrid, GridComponentsProvider, useDataGrid } = createDataGrid({
-	components,
-	cellTypes,
-})
+	core: { Table, Thead, Tbody, Tr, Th, Td, Button, Input, Checkbox, Toolbar },
+	pagination: { Pagination, PageSizer },
+	sorting: { SortIndicator, SortMenu, ColumnMenu },
+	filtering: {
+		FilterPopover,
+		FilterPanel,
+		FilterPanelChip,
+		FilterChip,
+		ClearFiltersButton,
+		GlobalFilterInput,
+		OperatorSelect,
+		BetweenInput,
+		MultiSelectFilter,
+	},
+	editing: { Modal, FormShell, ActionsCell, CreatingActionsCell, ConfirmDialog, NumberInput },
+	selection: { SelectionBar },
+	pinning: { RowPinMenu },
+	resizing: { Resizer },
+	'column-visibility': { ColumnVisibilityMenu },
+	'fallback-states': { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },
+	infinite: { LoadMoreRow },
+	expanding: { Chevron },
+} satisfies FullGridComponents
 
 /**
- * Extend the DataGrid with additional custom cell types.
- * Returns a fully typed `{ DataGrid, useDataGrid, GridComponentsProvider, defineColumns }` bundle.
+ * `extendDataGrid` re-invokes the factory with the same HeroUI components while
+ * merging in additional custom cell types (return typed to the merged keys).
  *
  * @example
  * const { DataGrid, defineColumns } = extendDataGrid({
  *   rating: { view: RatingCellView, edit: RatingCellInput },
  * })
  */
-export function extendDataGrid<TExtra extends CellTypeRegistry>(extraCellTypes: TExtra) {
-	return createDataGrid({
-		components,
-		cellTypes: { ...cellTypes, ...extraCellTypes },
-	})
-}
+const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } = createDataGrid({
+	components,
+	cellTypes,
+})
 
-export { DataGrid, GridComponentsProvider, useDataGrid }
+export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid }

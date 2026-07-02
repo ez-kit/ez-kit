@@ -35,7 +35,7 @@ type ToolbarProps = {
  * - "+ Add" create trigger and column visibility toggle on the right
  */
 export function Toolbar({ children }: ToolbarProps) {
-	const { Toolbar: ToolbarComponent } = useGridComponents()
+	const { Toolbar: ToolbarComponent } = useGridComponents().core
 	// Toolbar reads only symbol-keyed UI configs and `table.options.*` (refs,
 	// not state). No state subscription — editing / sorting / filtering
 	// mutations do NOT re-render this component (sub-controls manage their

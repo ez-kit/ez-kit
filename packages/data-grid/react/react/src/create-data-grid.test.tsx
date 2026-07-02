@@ -43,3 +43,30 @@ describe('createDataGrid', () => {
 		expect(BoundDataGrid.CreateTrigger).toBe(DataGrid.CreateTrigger)
 	})
 })
+
+describe('extendDataGrid (folded into createDataGrid)', () => {
+	it('is returned from the factory and yields a complete bundle', () => {
+		const base = createDataGrid({ components: testComponents })
+		expect(base.extendDataGrid).toBeTypeOf('function')
+
+		const extended = base.extendDataGrid({ rating: { view: () => null } })
+		expect(extended.DataGrid).toBeTypeOf('function')
+		expect(extended.useDataGrid).toBeTypeOf('function')
+		expect(extended.GridComponentsProvider).toBeTypeOf('function')
+		expect(extended.defineColumns).toBeTypeOf('function')
+		// The extended bundle can itself be extended again.
+		expect(extended.extendDataGrid).toBeTypeOf('function')
+	})
+
+	it('extended bundle renders with the original components', () => {
+		const { extendDataGrid } = createDataGrid({ components: testComponents })
+		const { DataGrid: Extended } = extendDataGrid({})
+		render(
+			<Extended
+				data={ROWS}
+				columns={ROW_COLUMNS}
+			/>,
+		)
+		expect(screen.getByText('Alice')).toBeInTheDocument()
+	})
+})

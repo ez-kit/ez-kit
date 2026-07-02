@@ -43,7 +43,7 @@ export function Body() {
 	const { rowVirtualizer } = useVirtualContext()
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { Tbody } = useGridComponents()
+	const { Tbody } = useGridComponents().core
 
 	// Narrow subscriptions: each returns a referentially stable slice. Body
 	// re-renders only when one of these slices actually changes. Editing,

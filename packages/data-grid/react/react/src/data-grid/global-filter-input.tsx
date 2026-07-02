@@ -27,7 +27,7 @@ type GlobalFilterInputCompoundProps = {
  */
 export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilterInputCompoundProps = {}) {
 	const table = useTable()
-	const { GlobalFilterInput: Component } = useGridComponents()
+	const { GlobalFilterInput: Component } = useGridComponents().filtering
 
 	const cfg = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as
 		| NormalizedGlobalFilteringConfig

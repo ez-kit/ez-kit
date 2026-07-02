@@ -23,7 +23,9 @@ const DEFAULT_THRESHOLD_PX = 200
 export function LoadMoreFooter() {
 	const controller = useInfiniteScroll()
 	const instance = useDataGridInstance()
-	const { Tr, Td, LoadMoreRow } = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Tr, Td } = gridComponents.core
+	const { LoadMoreRow } = gridComponents.infinite
 	const { rowVirtualizer } = useVirtualContext()
 	const { getScrollElement } = useInfiniteContext()
 

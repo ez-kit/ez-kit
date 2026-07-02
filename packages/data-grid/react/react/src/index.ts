@@ -64,7 +64,26 @@ export type { DataGridState, DataGridStateOptions, PersistableStateKey } from '.
 
 // Factory
 export { createDataGrid } from './create-data-grid'
-export type { CreateDataGridOptions } from './create-data-grid'
+export type { CreateDataGridOptions, DataGridBundle } from './create-data-grid'
+
+// UI-kit contract (tiers + full-support marker + feature map)
+export { GridFeature, FEATURE_COMPONENTS, COMPONENT_FEATURE } from './contract'
+export type {
+	GridComponents,
+	FullGridComponents,
+	GridCoreComponents,
+	GridPaginationComponents,
+	GridSortingComponents,
+	GridFilteringComponents,
+	GridEditingComponents,
+	GridSelectionComponents,
+	GridPinningComponents,
+	GridResizingComponents,
+	GridColumnVisibilityComponents,
+	GridFallbackStateComponents,
+	GridInfiniteComponents,
+	GridExpandingComponents,
+} from './contract'
 
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
@@ -125,7 +144,7 @@ export type {
 	FilterPanelProps,
 	FilterPopoverProps,
 	GlobalFilterInputProps,
-	GridComponents,
+	GridComponentRegistry,
 	LoadingRowProps,
 	LoadMoreRowProps,
 	MultiSelectFilterProps,

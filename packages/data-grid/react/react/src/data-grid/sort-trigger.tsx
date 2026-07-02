@@ -13,7 +13,7 @@ import type { ColumnSort } from '@tanstack/table-core'
  */
 export function SortTrigger() {
 	const table = useTable()
-	const { SortMenu } = useGridComponents()
+	const { SortMenu } = useGridComponents().sorting
 
 	const sortableColumns: SortColumnOption[] = table
 		.getAllLeafColumns()

@@ -405,7 +405,13 @@ export type ChevronProps = {
 
 // ── DI registry ──────────────────────────────────────────────────────────
 
-export type GridComponents = {
+/**
+ * Flat map of every injectable component. This is the **internal** shape the DI
+ * context holds and every `useGridComponents()` consumer reads. Kits do not build
+ * this directly — they build the nested, feature-grouped `GridComponents` (see
+ * `./contract`), which the provider flattens into this registry.
+ */
+export type GridComponentRegistry = {
 	// layout
 	Table?: ComponentType<TableProps>
 	Thead?: ComponentType<TheadProps>

@@ -21,7 +21,9 @@ export const REFETCH_OVERLAY_SLOT = 'refetch-overlay' as const
  * the full tbody (dim effect, spinner, etc.).
  */
 export function RefetchOverlayHost({ columnCount }: { columnCount: number }) {
-	const { RefetchOverlay, Tr, Td } = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Tr, Td } = gridComponents.core
+	const { RefetchOverlay } = gridComponents['fallback-states']
 	const table = useTable()
 	const visibleColumnCount = columnCount > 0 ? columnCount : table.getVisibleLeafColumns().length
 

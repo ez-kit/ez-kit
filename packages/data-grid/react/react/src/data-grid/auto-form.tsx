@@ -28,7 +28,7 @@ type AutoFormProps = {
  */
 export function AutoForm({ mode }: AutoFormProps): ReactNode {
 	const table = useTable()
-	const { Input } = useGridComponents()
+	const { Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 
 	const state = mode === 'creating' ? table.creating.getState() : table.editing.getState()

@@ -8,7 +8,9 @@ import type { FallbacksConfig } from '../use-data-grid'
 
 export function EmptyStateRow() {
 	const table = useTable()
-	const { Tbody, Tr, Td, EmptyState } = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Tbody, Tr, Td } = gridComponents.core
+	const { EmptyState } = gridComponents['fallback-states']
 
 	const fallbacks = (table as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] as FallbacksConfig | undefined
 	const emptyConfig = fallbacks?.empty

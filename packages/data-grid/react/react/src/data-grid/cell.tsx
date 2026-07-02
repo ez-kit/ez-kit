@@ -64,7 +64,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 function SystemCell({ cell, row }: CellProps) {
 	const columnId = cell.column.id
 	const pin = getCellPinInfo(cell)
-	const { Td } = useGridComponents()
+	const { Td } = useGridComponents().core
 
 	if (columnId === SELECTION_COLUMN_ID) {
 		return (
@@ -116,7 +116,7 @@ type SystemSubProps = {
 }
 
 function SelectionCell({ row, pin }: SystemSubProps) {
-	const { Td, Checkbox } = useGridComponents()
+	const { Td, Checkbox } = useGridComponents().core
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
 	// re-derive correctly. Refining this to per-row keys breaks indeterminate
 	// state for parent rows (which depends on children).
@@ -143,7 +143,9 @@ function SelectionCell({ row, pin }: SystemSubProps) {
 }
 
 function ExpandCell({ row, pin }: SystemSubProps) {
-	const { Td, Chevron } = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Td } = gridComponents.core
+	const { Chevron } = gridComponents.expanding
 	// Subscribe broadly to expanded so derived row.getIsExpanded() re-renders.
 	useDataGridStore((s) => s.expanded)
 	const canExpand = row.getCanExpand()
@@ -173,7 +175,7 @@ function ExpandCell({ row, pin }: SystemSubProps) {
 function BodyDataCell({ cell, row }: CellProps) {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { Td } = useGridComponents()
+	const { Td } = useGridComponents().core
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
@@ -254,7 +256,7 @@ type EditingCellProps = {
 function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { Td, Input } = useGridComponents()
+	const { Td, Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta

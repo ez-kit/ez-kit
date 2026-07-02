@@ -11,7 +11,7 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 export function PageSizer() {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { PageSizer: PageSizerComponent } = useGridComponents()
+	const { PageSizer: PageSizerComponent } = useGridComponents().pagination
 	const config = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as PageSizerConfig | undefined
 
 	const pagination = useDataGridStore((s) => s.pagination)

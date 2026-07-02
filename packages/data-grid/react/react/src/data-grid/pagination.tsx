@@ -13,7 +13,7 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 export function Pagination() {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { Pagination: PaginationComponent } = useGridComponents()
+	const { Pagination: PaginationComponent } = useGridComponents().pagination
 
 	useDataGridStore((s) => s.pagination)
 	const isPending = useDataGridStore((s) => s.loading.isPending)

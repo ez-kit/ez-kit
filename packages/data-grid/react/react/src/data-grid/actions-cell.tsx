@@ -21,7 +21,7 @@ type ActionsCellProps = {
 export function ActionsCell({ row }: ActionsCellProps) {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { ActionsCell: Renderer } = useGridComponents()
+	const { ActionsCell: Renderer } = useGridComponents().editing
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
 	const isEditing = useDataGridStore((s) => s.editing.rowId === row.id)

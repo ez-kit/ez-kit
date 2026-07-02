@@ -45,20 +45,11 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 	useDataGridStore((s) => s.columnSizingInfo)
 	useDataGridStore((s) => s.rowSelection)
 
-	const {
-		Thead,
-		Tr,
-		Th,
-		Input,
-		Resizer,
-		SortIndicator,
-		ColumnMenu,
-		Checkbox,
-		OperatorSelect,
-		BetweenInput,
-		FilterPopover,
-		MultiSelectFilter,
-	} = useGridComponents()
+	const gridComponents = useGridComponents()
+	const { Thead, Tr, Th, Input, Checkbox } = gridComponents.core
+	const { Resizer } = gridComponents.resizing
+	const { SortIndicator, ColumnMenu } = gridComponents.sorting
+	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined

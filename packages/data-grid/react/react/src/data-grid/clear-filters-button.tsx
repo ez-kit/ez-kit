@@ -34,7 +34,7 @@ type ClearFiltersButtonProps = {
  */
 export function ClearFiltersButton({ children, alwaysShow: alwaysShowProp, ariaLabel }: ClearFiltersButtonProps = {}) {
 	const table = useTable()
-	const { ClearFiltersButton: Component } = useGridComponents()
+	const { ClearFiltersButton: Component } = useGridComponents().filtering
 
 	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] as
 		| NormalizedClearButtonConfig

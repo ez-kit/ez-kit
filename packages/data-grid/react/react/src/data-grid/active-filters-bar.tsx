@@ -71,7 +71,7 @@ function columnLabel(column: Column<any>): string {
  */
 export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarProps = {}) {
 	const table = useTable()
-	const { FilterChip } = useGridComponents()
+	const { FilterChip } = useGridComponents().filtering
 
 	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig | undefined
 

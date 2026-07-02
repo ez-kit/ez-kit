@@ -23,7 +23,7 @@ type ExpandConfig = {
  */
 export function ExpandedRow({ row }: ExpandedRowComponentProps) {
 	const table = useTable()
-	const { Tr, Td } = useGridComponents()
+	const { Tr, Td } = useGridComponents().core
 
 	const expandConfig = (table as unknown as Record<symbol, unknown>)[EXPAND_KEY] as ExpandConfig | undefined
 	const renderExpanded = expandConfig?.renderExpanded

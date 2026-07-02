@@ -109,7 +109,7 @@ function resolveEstimateSize(
  * on the wrapper drive their opacity.
  */
 export function DataGridTable() {
-	const { Table } = useGridComponents()
+	const { Table } = useGridComponents().core
 	const instance = useDataGridInstance()
 	const table = instance.table
 

@@ -2,10 +2,10 @@ import { createDataGridInstance, createTable, defineColumns } from '@ez-kit/data
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { BetweenInput } from './blocks/BetweenInput'
-import { ColumnVisibilityMenu } from './blocks/ColumnVisibilityMenu'
-import { MultiSelectFilter } from './blocks/MultiSelectFilter'
-import { PageSizer } from './blocks/PageSizer'
+import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilityMenu'
+import { BetweenInput } from './blocks/filtering/BetweenInput'
+import { MultiSelectFilter } from './blocks/filtering/MultiSelectFilter'
+import { PageSizer } from './blocks/pagination/PageSizer'
 
 import { CellTypesProvider, cellTypes, DataGrid, GridComponentsProvider, useDataGrid } from './index'
 
