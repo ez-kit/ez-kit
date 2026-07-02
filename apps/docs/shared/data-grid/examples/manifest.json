@@ -388,5 +388,11 @@
 		"groupLabel": "Server-side",
 		"sourceFile": "components/server-data.tsx",
 		"exportName": "ServerDataExample"
+	},
+	{
+		"id": "state-persistence",
+		"label": "State Persistence",
+		"sourceFile": "components/state-persistence.tsx",
+		"exportName": "StatePersistenceExample"
 	}
 ]

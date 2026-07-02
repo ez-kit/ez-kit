@@ -1,0 +1,53 @@
+---
+title: State Persistence
+description: Read grid state out for the URL or localStorage, and seed it back on load — you own the storage; we own the extract and parse.
+---
+
+# State Persistence
+
+Persist sort, filters, pagination, and column layout to the URL or `localStorage` so a reload
+preserves the view and links are shareable. The library gives you two pure utilities and one
+reactive hook; **you own the actual read/write** — that keeps your URL and routing logic yours.
+
+## Live example
+
+<DataGridDocsExample exampleId='state-persistence' />
+
+## The two directions
+
+- `extractState(table, { keys? })` — reads the persistable slices into a plain, JSON-safe object.
+- `parseState(stored, { keys? })` — validates an untrusted, already-decoded value back into that
+  shape. It never throws and drops anything malformed. It does **not** call `JSON.parse` and does
+  **not** write anywhere — you spread its result into `useDataGrid`.
+
+## Restore on mount
+
+```tsx
+const decoded = JSON.parse(localStorage.getItem('grid') ?? 'null')
+const grid = useDataGrid({ data, columns, initialState: parseState(decoded) })
+```
+
+## Save on change
+
+```tsx
+const grid = useDataGrid({ data, columns, sorting: true, filtering: true })
+const state = useExtractedState(grid, { keys: ['sorting', 'columnFilters', 'pagination'] })
+
+useEffect(() => {
+	localStorage.setItem('grid', JSON.stringify(state))
+}, [state])
+```
+
+The URL variant is the same shape — swap the effect body for your router's `setSearchParams`.
+
+## Which slices persist
+
+`keys` is an allowlist. The default (`DEFAULT_STATE_KEYS`) is the shareable **view**: `sorting`,
+`columnFilters`, `globalFilter`, `pagination`, `columnVisibility`, `columnPinning`, `rowPinning`,
+`columnSizing`. It intentionally **excludes** `rowSelection` and `expanded` (they key off row ids
+that may not survive a data reload). Opt into anything from `PERSISTABLE_STATE_KEYS` explicitly.
+
+## What you own
+
+Reading and writing storage, compact URL key names, and versioning/migration of stored payloads
+are deliberately left to you — real apps have their own URL and routing conventions.

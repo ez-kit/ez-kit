@@ -20,6 +20,7 @@
 		"cells",
 		"expanding",
 		"controlled-state",
+		"state-persistence",
 		"server-side",
 		"editing",
 		"fallbacks",

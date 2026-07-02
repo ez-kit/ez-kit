@@ -261,8 +261,10 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 	{
 		category: 'State & Tooling',
 		feature: 'URL / localStorage state persistence',
-		description: 'Sync grid state (filters, sort, page) to the URL or localStorage automatically.',
-		status: FeatureStatus.Planned,
+		description:
+			'Extract grid state (sort, filters, page, column layout) for the URL or localStorage, and seed it back on load.',
+		status: FeatureStatus.Done,
+		doc: 'state-persistence',
 	},
 	{
 		category: 'State & Tooling',
