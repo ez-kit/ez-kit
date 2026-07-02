@@ -1,4 +1,10 @@
 import type { InfiniteState } from '../../types'
+
+// Re-exported so `index.ts` can source `InfiniteState` from this module. That pulls
+// this file (and its `declare module '@tanstack/table-core'` augmentation for
+// `state.infinite` / `setInfiniteStatus`) into the bundled `.d.ts` — otherwise
+// rollup-dts drops the augmentation and downstream packages lose the types.
+export type { InfiniteState } from '../../types'
 import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 declare module '@tanstack/table-core' {

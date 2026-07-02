@@ -63,6 +63,11 @@ export {
 export type { CreatingConfig, CreatingSaveContext, CreatingState } from './features/creating'
 export type { ConfirmationOptions, DeletingConfig, DeletingContext } from './features/deleting'
 export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
+// Sourced from the feature modules (not `./types`) so their
+// `declare module '@tanstack/table-core'` augmentations (state.infinite /
+// setInfiniteStatus, state.loading) survive into the bundled `.d.ts`.
+export type { InfiniteState } from './features/infinite'
+export type { LoadingState } from './features/loading'
 
 // Validation API
 export {
@@ -91,8 +96,6 @@ export type {
 	FilteringConfig,
 	GlobalFilterFn,
 	GlobalFilteringConfig,
-	InfiniteState,
-	LoadingState,
 	LoadMoreDirection,
 	MultiSortConfig,
 	MultiSortEvent,

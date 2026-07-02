@@ -1,26 +1,33 @@
 {
 	"name": "@ez-kit/data-grid-heroui",
 	"version": "0.0.0",
-	"private": true,
-	"description": "HeroUI package for @ez-kit/data-grid/react.",
+	"description": "HeroUI flavour of @ez-kit/data-grid.",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/data-grid/react/heroui"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/data-grid/react/heroui#readme",
 	"type": "module",
-	"sideEffects": false,
+	"sideEffects": [
+		"*.css"
+	],
 	"files": [
 		"dist"
 	],
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
-			"import": "./src/index.ts",
-			"default": "./src/index.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		},
-		"./global.css": "./src/global.css"
+		"./global.css": "./dist/global.css"
 	},
-	"main": "./src/index.ts",
-	"types": "./src/index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/global.css dist/global.css",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"format": "node ../../../../scripts/prettier.mjs --write",
