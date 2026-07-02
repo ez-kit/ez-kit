@@ -4,17 +4,26 @@ import type { DataGridState, DataGridStateOptions, PersistableStateKey } from '.
 import type { Table, TableState } from '@ez-kit/data-grid-core'
 
 /**
+ * Copy one slice into the accumulator. Generic over a single key `K` so the indexed
+ * write type-checks without a cast — a union key would not narrow, but `K` does.
+ * Skips `undefined` values (exactOptionalPropertyTypes: never write `undefined`).
+ */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+function copySlice<K extends PersistableStateKey>(out: DataGridState, state: TableState, key: K): void {
+	const value = state[key]
+	if (value !== undefined) {
+		out[key] = value
+	}
+}
+
+/**
  * Pure pick of the included slices from a full TableState. Internal — the shared
- * core of {@link extractState} and the reactive hook. Skips slices whose value is
- * `undefined` (exactOptionalPropertyTypes: never write `undefined` into the result).
+ * core of {@link extractState} and the reactive hook.
  */
 export function pickState(state: TableState, keys: readonly PersistableStateKey[]): DataGridState {
 	const out: DataGridState = {}
 	for (const key of keys) {
-		const value = state[key]
-		if (value !== undefined) {
-			;(out as Record<string, unknown>)[key] = value
-		}
+		copySlice(out, state, key)
 	}
 	return out
 }
