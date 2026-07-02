@@ -1,10 +1,13 @@
 import { defineColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { useDataGrid } from '../use-data-grid'
 
 import { useExtractedState } from './use-extracted-state'
+
+import type { PersistableStateKey } from './state-keys'
 
 type Row = { id: number; name: string }
 const columns = defineColumns<Row>([{ accessorKey: 'name' }])
@@ -49,5 +52,36 @@ describe('useExtractedState', () => {
 			result.current.grid.table.setPageIndex(3)
 		})
 		expect(result.current.state).toBe(before)
+	})
+
+	it('produces a new identity when the keys list changes', () => {
+		const { result, rerender } = renderHook(
+			({ keys }: { keys: PersistableStateKey[] }) => {
+				const grid = useDataGrid({ data, columns, sorting: true })
+				return useExtractedState(grid, { keys })
+			},
+			{ initialProps: { keys: ['sorting'] as PersistableStateKey[] } },
+		)
+		const before = result.current
+		rerender({ keys: ['sorting', 'pagination'] as PersistableStateKey[] })
+		expect(result.current).not.toBe(before)
+		expect(result.current).toHaveProperty('pagination')
+	})
+
+	it('renders on the server without throwing and reflects seeded state', () => {
+		function Seeded() {
+			const grid = useDataGrid({
+				data,
+				columns,
+				sorting: true,
+				initialState: { sorting: [{ id: 'name', desc: true }] },
+			})
+			const state = useExtractedState(grid, { keys: ['sorting'] })
+			return <pre>{JSON.stringify(state)}</pre>
+		}
+
+		const markup = renderToStaticMarkup(<Seeded />)
+		expect(markup).toContain('&quot;name&quot;')
+		expect(markup).toContain('&quot;desc&quot;:true')
 	})
 })
