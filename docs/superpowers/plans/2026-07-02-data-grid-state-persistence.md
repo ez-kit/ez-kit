@@ -260,17 +260,27 @@ import type { DataGridState, DataGridStateOptions, PersistableStateKey } from '.
 import type { Table, TableState } from '@ez-kit/data-grid-core'
 
 /**
+ * Copy one slice into the accumulator. Generic over a single key `K`: reading `state[key]`
+ * with a union key widens to `any` (TanStack `TableState` indexing), so `K` keeps the value
+ * typed. Skips `undefined` (exactOptionalPropertyTypes: never write `undefined`).
+ * (Note: `parseState`'s `assignSlice` needs no generic — its `value` is already `unknown`.)
+ */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+function copySlice<K extends PersistableStateKey>(out: DataGridState, state: TableState, key: K): void {
+	const value = state[key]
+	if (value !== undefined) {
+		out[key] = value
+	}
+}
+
+/**
  * Pure pick of the included slices from a full TableState. Internal — the shared
- * core of {@link extractState} and the reactive hook. Skips slices whose value is
- * `undefined` (exactOptionalPropertyTypes: never write `undefined` into the result).
+ * core of {@link extractState} and the reactive hook.
  */
 export function pickState(state: TableState, keys: readonly PersistableStateKey[]): DataGridState {
 	const out: DataGridState = {}
 	for (const key of keys) {
-		const value = state[key]
-		if (value !== undefined) {
-			;(out as Record<string, unknown>)[key] = value
-		}
+		copySlice(out, state, key)
 	}
 	return out
 }
@@ -409,6 +419,15 @@ function isValidSlice(key: PersistableStateKey, value: unknown): boolean {
 }
 
 /**
+ * Assign a validated slice into the accumulator. `value` was structurally validated by
+ * {@link isValidSlice}. Writing an untrusted value through a union-typed key onto a Partial
+ * is accepted by TypeScript, so no generic or cast is needed here.
+ */
+function assignSlice(out: DataGridState, key: PersistableStateKey, value: unknown): void {
+	out[key] = value
+}
+
+/**
  * Validate + prune an UNTRUSTED, already-decoded value into a typed {@link DataGridState}.
  * The consumer owns JSON.parse / URL-decode; this does NOT parse strings. Never throws —
  * non-object input yields `{}`, keys outside the allowlist are dropped, and slices with the
@@ -422,7 +441,7 @@ export function parseState(stored: unknown, options?: DataGridStateOptions): Dat
 	for (const key of keys) {
 		const value = stored[key]
 		if (value !== undefined && isValidSlice(key, value)) {
-			;(out as Record<string, unknown>)[key] = value
+			assignSlice(out, key, value)
 		}
 	}
 	return out
@@ -433,6 +452,13 @@ export function parseState(stored: unknown, options?: DataGridStateOptions): Dat
 
 Run: `pnpm --filter @ez-kit/data-grid-react exec vitest run src/state/parse-state.test.ts`
 Expected: PASS (6 tests).
+
+- [ ] **Step 4b: Lint + typecheck the new file**
+
+Run: `pnpm --filter @ez-kit/data-grid-react exec eslint src/state/parse-state.ts`
+Expected: no errors, no warnings (the `--max-warnings=0` gate).
+Run: `pnpm --filter @ez-kit/data-grid-react typecheck`
+Expected: no errors.
 
 - [ ] **Step 5: Commit**
 
@@ -566,7 +592,9 @@ export function useExtractedState<TRow extends object>(
 	const cacheRef = useRef<Cache | null>(null)
 
 	const select = (state: TableState): DataGridState => {
-		const inputs = keys.map((key) => state[key])
+		// `state[key]` with a union key widens to `any` (TanStack TableState indexing); the
+		// value is only compared by reference in `sameList`, so widen `any` → `unknown`.
+		const inputs = keys.map((key) => state[key] as unknown)
 		const cache = cacheRef.current
 		if (cache && sameList(cache.keys, keys) && sameList(cache.inputs, inputs)) {
 			return cache.output
@@ -588,6 +616,13 @@ export function useExtractedState<TRow extends object>(
 
 Run: `pnpm --filter @ez-kit/data-grid-react exec vitest run src/state/use-extracted-state.test.tsx`
 Expected: PASS (3 tests). No "getSnapshot should be cached" warning.
+
+- [ ] **Step 4b: Lint + typecheck the new file**
+
+Run: `pnpm --filter @ez-kit/data-grid-react exec eslint src/state/use-extracted-state.ts`
+Expected: no errors, no warnings (the `--max-warnings=0` gate).
+Run: `pnpm --filter @ez-kit/data-grid-react typecheck`
+Expected: no errors.
 
 - [ ] **Step 5: Commit**
 
