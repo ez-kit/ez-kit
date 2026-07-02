@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { useDataGrid } from '../use-data-grid'
+
 import { useExtractedState } from './use-extracted-state'
 
 type Row = { id: number; name: string }

@@ -34,9 +34,6 @@ export function pickState(state: TableState, keys: readonly PersistableStateKey[
  * (takes the core `Table`, so it works outside React and against a bare `createTable`).
  * Does not touch storage. Default slice set: {@link DEFAULT_STATE_KEYS}.
  */
-export function extractState<TRow extends object>(
-	table: Table<TRow>,
-	options?: DataGridStateOptions,
-): DataGridState {
+export function extractState<TRow extends object>(table: Table<TRow>, options?: DataGridStateOptions): DataGridState {
 	return pickState(table.getState(), options?.keys ?? DEFAULT_STATE_KEYS)
 }
