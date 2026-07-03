@@ -1,5 +1,4 @@
 import type { InfiniteState } from '../../types'
-
 // Re-exported so `index.ts` can source `InfiniteState` from this module. That pulls
 // this file (and its `declare module '@tanstack/table-core'` augmentation for
 // `state.infinite` / `setInfiniteStatus`) into the bundled `.d.ts` — otherwise

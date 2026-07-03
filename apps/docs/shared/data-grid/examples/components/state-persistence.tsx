@@ -1,10 +1,9 @@
 'use client'
 
+import { defineColumns, extractState, parseState, useExtractedState } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
-
-import { defineColumns, extractState, parseState, useExtractedState } from '@ez-kit/data-grid-react'
 
 type Person = { id: number; name: string; role: string }
 

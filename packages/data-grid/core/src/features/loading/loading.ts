@@ -1,5 +1,4 @@
 import type { LoadingState } from '../../types'
-
 // Re-exported so `index.ts` can source `LoadingState` from this module. That pulls
 // this file (and its `declare module '@tanstack/table-core'` augmentation for
 // `state.loading`) into the bundled `.d.ts` — otherwise rollup-dts drops the

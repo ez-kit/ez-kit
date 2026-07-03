@@ -101,7 +101,9 @@ describe('DeletingFeature — confirmation flow', () => {
 
 	it('requestDeleteRow does nothing when deleting config is absent', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
-		expect(() => table.requestDeleteRow('0')).not.toThrow()
+		expect(() => {
+			table.requestDeleteRow('0')
+		}).not.toThrow()
 		expect(table.getState().pendingDeleteRowId).toBeNull()
 	})
 

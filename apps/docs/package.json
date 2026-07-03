@@ -5,8 +5,9 @@
 	"description": "Documentation site for ez-kit packages (Fumadocs + Next.js).",
 	"type": "module",
 	"scripts": {
-		"dev": "pnpm sandpack:build && next dev",
-		"build": "pnpm sandpack:build && next build",
+		"dev": "pnpm build:deps && pnpm sandpack:build && next dev",
+		"build": "pnpm build:deps && pnpm sandpack:build && next build",
+		"build:deps": "turbo run build --filter=@ez-kit/docs^...",
 		"start": "next start",
 		"lint": "pnpm sandpack:build && eslint .",
 		"format": "node ../../scripts/prettier.mjs --write",
