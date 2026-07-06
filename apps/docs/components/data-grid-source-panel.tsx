@@ -91,7 +91,7 @@ export function DataGridSourcePanel({ exampleId, language = 'tsx' }: DataGridSou
 	}, [])
 
 	return (
-		<div className='not-prose relative overflow-hidden rounded-md border border-fd-border bg-fd-card text-sm'>
+		<div className='not-prose relative overflow-hidden bg-fd-card text-sm'>
 			<button
 				type='button'
 				onClick={() => {
@@ -107,7 +107,11 @@ export function DataGridSourcePanel({ exampleId, language = 'tsx' }: DataGridSou
 				style={{ maxHeight }}
 			>
 				<div ref={contentRef}>
-					<DynamicCodeBlock lang={language} code={code.trimEnd()} />
+					<DynamicCodeBlock
+						codeblock={{ className: 'border-none shadow-none rounded-none' }}
+						lang={language}
+						code={code.trimEnd()}
+					/>
 				</div>
 				{collapsedNow ? (
 					<div

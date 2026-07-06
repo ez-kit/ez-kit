@@ -31,6 +31,15 @@ const FLAVORS: readonly { value: DataGridDocsExampleFlavor; label: string }[] = 
 
 const FLAVOR_VALUES: readonly DataGridDocsExampleFlavor[] = FLAVORS.map((flavor) => flavor.value)
 
+const ExampleCard = ({ view, source }: { view: React.ReactNode; source: React.ReactNode }) => {
+	return (
+		<div className='flex flex-col flex-1 border border-fd-border rounded-lg overflow-hidden'>
+			<div className='border-b border-fd-border p-2'>{view}</div>
+			{source && <div className=''>{source}</div>}
+		</div>
+	)
+}
+
 export function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: DataGridDocsExampleProps) {
 	if (lockFlavor === true && defaultType === undefined) {
 		throw new Error(
@@ -42,8 +51,15 @@ export function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: Data
 	if (lockFlavor === true && defaultType !== undefined) {
 		return (
 			<ExampleShell>
-				<FlavorExample exampleId={exampleId} flavor={defaultType} />
-				<DataGridSourcePanel exampleId={exampleId} />
+				<ExampleCard
+					view={
+						<FlavorExample
+							exampleId={exampleId}
+							flavor={defaultType}
+						/>
+					}
+					source={<DataGridSourcePanel exampleId={exampleId} />}
+				/>
 			</ExampleShell>
 		)
 	}
@@ -53,8 +69,18 @@ export function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: Data
 	// `useUrlState` reads `useSearchParams`, which Next requires to live under a
 	// Suspense boundary so statically-rendered docs pages don't bail out.
 	return (
-		<Suspense fallback={<FlavorSwitcherView exampleId={exampleId} flavor={initialFlavor} />}>
-			<FlavorSwitcher exampleId={exampleId} defaultType={initialFlavor} />
+		<Suspense
+			fallback={
+				<FlavorSwitcherView
+					exampleId={exampleId}
+					flavor={initialFlavor}
+				/>
+			}
+		>
+			<FlavorSwitcher
+				exampleId={exampleId}
+				defaultType={initialFlavor}
+			/>
 		</Suspense>
 	)
 }
@@ -71,7 +97,13 @@ function FlavorSwitcher({
 		defaultValue: defaultType,
 	})
 
-	return <FlavorSwitcherView exampleId={exampleId} flavor={flavor} onSelect={setFlavor} />
+	return (
+		<FlavorSwitcherView
+			exampleId={exampleId}
+			flavor={flavor}
+			onSelect={setFlavor}
+		/>
+	)
 }
 
 function FlavorSwitcherView({
@@ -85,9 +117,19 @@ function FlavorSwitcherView({
 }) {
 	return (
 		<ExampleShell>
-			<FlavorTabs active={flavor} onSelect={onSelect} />
-			<FlavorExample exampleId={exampleId} flavor={flavor} />
-			<DataGridSourcePanel exampleId={exampleId} />
+			<FlavorTabs
+				active={flavor}
+				onSelect={onSelect}
+			/>
+			<ExampleCard
+				view={
+					<FlavorExample
+						exampleId={exampleId}
+						flavor={flavor}
+					/>
+				}
+				source={<DataGridSourcePanel exampleId={exampleId} />}
+			/>
 		</ExampleShell>
 	)
 }
@@ -117,7 +159,13 @@ function FlavorTabs({
 						type='button'
 						role='tab'
 						aria-selected={isActive}
-						onClick={onSelect ? () => { onSelect(value); } : undefined}
+						onClick={
+							onSelect
+								? () => {
+										onSelect(value)
+									}
+								: undefined
+						}
 						className={
 							isActive
 								? 'rounded bg-white px-3 py-1 font-semibold underline underline-offset-4 shadow-sm dark:bg-zinc-800'
@@ -132,7 +180,13 @@ function FlavorTabs({
 	)
 }
 
-function FlavorExample({ exampleId, flavor }: { exampleId: DataGridSandpackExampleId; flavor: DataGridDocsExampleFlavor }) {
+function FlavorExample({
+	exampleId,
+	flavor,
+}: {
+	exampleId: DataGridSandpackExampleId
+	flavor: DataGridDocsExampleFlavor
+}) {
 	if (flavor === 'shadcn-native') {
 		const Example = dataGridPrimitiveExamples[exampleId]
 
@@ -145,5 +199,10 @@ function FlavorExample({ exampleId, flavor }: { exampleId: DataGridSandpackExamp
 		)
 	}
 
-	return <DataGridSandpackExample exampleId={exampleId} type={flavor} />
+	return (
+		<DataGridSandpackExample
+			exampleId={exampleId}
+			type={flavor}
+		/>
+	)
 }
