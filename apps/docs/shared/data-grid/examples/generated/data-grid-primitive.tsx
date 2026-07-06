@@ -38,20 +38,19 @@ import { EditingValidationExample as Example33 } from '../components/editing/Edi
 import { ExpandingSubContentExample as Example34 } from '../components/expanding/sub-content'
 import { ExpandingTreeExample as Example35 } from '../components/expanding/tree'
 import { ExpandingControlledExample as Example36 } from '../components/expanding/controlled'
-import { RowPinningPlainExample as Example37 } from '../components/row-pinning/plain'
-import { RowPinningStickyHeaderExample as Example38 } from '../components/row-pinning/sticky-header'
-import { StickyHeaderExample as Example39 } from '../components/sticky-header'
-import { VirtualizedExample as Example40 } from '../components/virtualized'
-import { CrudExample as Example41 } from '../components/crud/CrudExample'
-import { CrudClientExample as Example42 } from '../components/crud/CrudClientExample'
-import { ControlledStateExample as Example43 } from '../components/controlled-state'
-import { FallbacksExample as Example44 } from '../components/fallbacks'
-import { InfiniteScrollAutoExample as Example45 } from '../components/infinite-scroll/auto'
-import { InfiniteScrollManualExample as Example46 } from '../components/infinite-scroll/manual'
-import { InfiniteScrollVirtualizedExample as Example47 } from '../components/infinite-scroll/virtualized'
-import { InfiniteScrollResetExample as Example48 } from '../components/infinite-scroll/reset-on-query'
-import { ServerDataExample as Example49 } from '../components/server-data'
-import { StatePersistenceExample as Example50 } from '../components/state-persistence'
+import { RowPinningStickyHeaderExample as Example37 } from '../components/row-pinning/sticky-header'
+import { StickyHeaderExample as Example38 } from '../components/sticky-header'
+import { VirtualizedExample as Example39 } from '../components/virtualized'
+import { CrudExample as Example40 } from '../components/crud/CrudExample'
+import { CrudClientExample as Example41 } from '../components/crud/CrudClientExample'
+import { ControlledStateExample as Example42 } from '../components/controlled-state'
+import { FallbacksExample as Example43 } from '../components/fallbacks'
+import { InfiniteScrollAutoExample as Example44 } from '../components/infinite-scroll/auto'
+import { InfiniteScrollManualExample as Example45 } from '../components/infinite-scroll/manual'
+import { InfiniteScrollVirtualizedExample as Example46 } from '../components/infinite-scroll/virtualized'
+import { InfiniteScrollResetExample as Example47 } from '../components/infinite-scroll/reset-on-query'
+import { ServerDataExample as Example48 } from '../components/server-data'
+import { StatePersistenceExample as Example49 } from '../components/state-persistence'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -350,14 +349,6 @@ export const dataGridExamplesManifest = [
     "exportName": "ExpandingControlledExample"
   },
   {
-    "id": "row-pinning-plain",
-    "label": "Plain",
-    "group": "row-pinning",
-    "groupLabel": "Row Pinning",
-    "sourceFile": "components/row-pinning/plain.tsx",
-    "exportName": "RowPinningPlainExample"
-  },
-  {
     "id": "row-pinning-sticky-header",
     "label": "Sticky Header",
     "group": "row-pinning",
@@ -493,18 +484,17 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'expanding-sub-content': Example34,
 	'expanding-tree': Example35,
 	'expanding-controlled': Example36,
-	'row-pinning-plain': Example37,
-	'row-pinning-sticky-header': Example38,
-	'sticky-header': Example39,
-	'virtualized': Example40,
-	'crud-server': Example41,
-	'crud-client': Example42,
-	'controlled-state': Example43,
-	'fallbacks': Example44,
-	'infinite-scroll-auto': Example45,
-	'infinite-scroll-manual': Example46,
-	'infinite-scroll-virtualized': Example47,
-	'infinite-scroll-reset': Example48,
-	'server-data': Example49,
-	'state-persistence': Example50,
+	'row-pinning-sticky-header': Example37,
+	'sticky-header': Example38,
+	'virtualized': Example39,
+	'crud-server': Example40,
+	'crud-client': Example41,
+	'controlled-state': Example42,
+	'fallbacks': Example43,
+	'infinite-scroll-auto': Example44,
+	'infinite-scroll-manual': Example45,
+	'infinite-scroll-virtualized': Example46,
+	'infinite-scroll-reset': Example47,
+	'server-data': Example48,
+	'state-persistence': Example49,
 }
