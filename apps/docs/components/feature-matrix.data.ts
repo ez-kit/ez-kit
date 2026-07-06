@@ -83,7 +83,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Infinite scroll (forward)',
 		description: 'Append the next page automatically as the user scrolls to the bottom.',
 		status: FeatureStatus.Done,
-		doc: 'infinite-scroll',
+		doc: 'pagination/infinite-scroll',
 	},
 	{
 		category: 'Data & Display',
