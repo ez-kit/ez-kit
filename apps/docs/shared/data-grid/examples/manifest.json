@@ -302,12 +302,6 @@
 		"exportName": "RowPinningStickyHeaderExample"
 	},
 	{
-		"id": "sticky-header",
-		"label": "Sticky Header",
-		"sourceFile": "components/sticky-header.tsx",
-		"exportName": "StickyHeaderExample"
-	},
-	{
 		"id": "virtualized",
 		"label": "Virtualized",
 		"sourceFile": "components/virtualized.tsx",

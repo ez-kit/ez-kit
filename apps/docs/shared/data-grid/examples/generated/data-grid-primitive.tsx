@@ -39,18 +39,17 @@ import { ExpandingSubContentExample as Example34 } from '../components/expanding
 import { ExpandingTreeExample as Example35 } from '../components/expanding/tree'
 import { ExpandingControlledExample as Example36 } from '../components/expanding/controlled'
 import { RowPinningStickyHeaderExample as Example37 } from '../components/row-pinning/sticky-header'
-import { StickyHeaderExample as Example38 } from '../components/sticky-header'
-import { VirtualizedExample as Example39 } from '../components/virtualized'
-import { CrudExample as Example40 } from '../components/crud/CrudExample'
-import { CrudClientExample as Example41 } from '../components/crud/CrudClientExample'
-import { ControlledStateExample as Example42 } from '../components/controlled-state'
-import { FallbacksExample as Example43 } from '../components/fallbacks'
-import { InfiniteScrollAutoExample as Example44 } from '../components/infinite-scroll/auto'
-import { InfiniteScrollManualExample as Example45 } from '../components/infinite-scroll/manual'
-import { InfiniteScrollVirtualizedExample as Example46 } from '../components/infinite-scroll/virtualized'
-import { InfiniteScrollResetExample as Example47 } from '../components/infinite-scroll/reset-on-query'
-import { ServerDataExample as Example48 } from '../components/server-data'
-import { StatePersistenceExample as Example49 } from '../components/state-persistence'
+import { VirtualizedExample as Example38 } from '../components/virtualized'
+import { CrudExample as Example39 } from '../components/crud/CrudExample'
+import { CrudClientExample as Example40 } from '../components/crud/CrudClientExample'
+import { ControlledStateExample as Example41 } from '../components/controlled-state'
+import { FallbacksExample as Example42 } from '../components/fallbacks'
+import { InfiniteScrollAutoExample as Example43 } from '../components/infinite-scroll/auto'
+import { InfiniteScrollManualExample as Example44 } from '../components/infinite-scroll/manual'
+import { InfiniteScrollVirtualizedExample as Example45 } from '../components/infinite-scroll/virtualized'
+import { InfiniteScrollResetExample as Example46 } from '../components/infinite-scroll/reset-on-query'
+import { ServerDataExample as Example47 } from '../components/server-data'
+import { StatePersistenceExample as Example48 } from '../components/state-persistence'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -357,12 +356,6 @@ export const dataGridExamplesManifest = [
     "exportName": "RowPinningStickyHeaderExample"
   },
   {
-    "id": "sticky-header",
-    "label": "Sticky Header",
-    "sourceFile": "components/sticky-header.tsx",
-    "exportName": "StickyHeaderExample"
-  },
-  {
     "id": "virtualized",
     "label": "Virtualized",
     "sourceFile": "components/virtualized.tsx",
@@ -485,16 +478,15 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'expanding-tree': Example35,
 	'expanding-controlled': Example36,
 	'row-pinning-sticky-header': Example37,
-	'sticky-header': Example38,
-	'virtualized': Example39,
-	'crud-server': Example40,
-	'crud-client': Example41,
-	'controlled-state': Example42,
-	'fallbacks': Example43,
-	'infinite-scroll-auto': Example44,
-	'infinite-scroll-manual': Example45,
-	'infinite-scroll-virtualized': Example46,
-	'infinite-scroll-reset': Example47,
-	'server-data': Example48,
-	'state-persistence': Example49,
+	'virtualized': Example38,
+	'crud-server': Example39,
+	'crud-client': Example40,
+	'controlled-state': Example41,
+	'fallbacks': Example42,
+	'infinite-scroll-auto': Example43,
+	'infinite-scroll-manual': Example44,
+	'infinite-scroll-virtualized': Example45,
+	'infinite-scroll-reset': Example46,
+	'server-data': Example47,
+	'state-persistence': Example48,
 }
