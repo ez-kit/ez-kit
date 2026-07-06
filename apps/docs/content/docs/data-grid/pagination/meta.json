@@ -1,0 +1,5 @@
+{
+	"title": "Pagination",
+	"description": "Paginate grid rows — client-side by default, with controlled state for server-side fetching.",
+	"pages": ["index", "infinite-scroll"]
+}
