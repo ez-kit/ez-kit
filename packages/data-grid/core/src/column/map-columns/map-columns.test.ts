@@ -63,6 +63,21 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableSorting).toBeUndefined()
 	})
 
+	it('visibility: true → enableHiding: false (column is locked)', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: true }])
+		expect(result[0]?.enableHiding).toBe(false)
+	})
+
+	it('visibility: { defaultHidden: true } does not lock the column', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: { defaultHidden: true } }])
+		expect(result[0]?.enableHiding).toBeUndefined()
+	})
+
+	it('visibility omitted → column stays hideable (enableHiding undefined)', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name' }])
+		expect(result[0]?.enableHiding).toBeUndefined()
+	})
+
 	it('pinning: { pin: left } goes into meta.columnPinning', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { pin: 'left' } }])
 		expect(result[0]?.meta?.columnPinning).toEqual({ pin: 'left' })

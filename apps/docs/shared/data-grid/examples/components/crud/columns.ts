@@ -6,7 +6,7 @@ export const crudColumns = defineColumns<Employee>([
 	{
 		accessorKey: 'name',
 		header: 'Name',
-		visibility: false,
+		visibility: true,
 		pinning: { defaultPin: 'left' },
 		filtering: { operators: true },
 	},

@@ -306,10 +306,10 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 
 	/**
 	 * Column visibility configuration.
-	 * - `false` — column cannot be hidden (always visible, no Hide option in menu)
+	 * - `true` — column is always visible / locked (cannot be hidden, no Hide option in menu)
 	 * - `{ defaultHidden: true }` — starts hidden, user can toggle it on
 	 */
-	visibility?: false | ColumnVisibilityDef
+	visibility?: true | ColumnVisibilityDef
 
 	/** Column-level filtering config. Set to false to disable. */
 	filtering?: false | ColumnFilteringConfig
@@ -361,7 +361,7 @@ declare module '@tanstack/table-core' {
 		filtering?: false | ColumnFilteringConfig
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig
-		visibility?: false | ColumnVisibilityDef
+		visibility?: true | ColumnVisibilityDef
 		isSystemColumn?: boolean
 		systemColumnType?: 'selection' | 'expand' | 'actions' | 'row_pin'
 		/** Pre-resolved operator list for this column (set when filtering.operators is configured). */
