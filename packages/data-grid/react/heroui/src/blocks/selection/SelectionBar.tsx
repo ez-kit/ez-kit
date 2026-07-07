@@ -15,6 +15,8 @@ import {
 import type { SelectionBarProps } from '@ez-kit/data-grid-react'
 
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
+	const hasActions = Boolean(onDelete) || Boolean(actions)
+
 	if (variant === 'inline') {
 		if (!open) return null
 
@@ -69,7 +71,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 		>
 			<ActionBarGroup>
 				<ActionBarSelection>{count} selected</ActionBarSelection>
-				<ActionBarSeparator />
+				{hasActions && <ActionBarSeparator />}
 				{onDelete && (
 					<ActionBarItem
 						variant='danger'

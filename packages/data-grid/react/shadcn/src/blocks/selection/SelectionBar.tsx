@@ -8,6 +8,8 @@ import { cn } from '@grid-shadcn/lib/utils'
 import type { SelectionBarProps } from '@ez-kit/data-grid-react'
 
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
+	const hasActions = Boolean(onDelete) || Boolean(actions)
+
 	if (variant === 'inline') {
 		if (!open) return null
 
@@ -76,13 +78,15 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 				{count} selected
 			</div>
 
-			{/* Separator */}
-			<div
-				role='separator'
-				aria-orientation='horizontal'
-				aria-hidden='true'
-				className='h-6 w-px bg-border'
-			/>
+			{/* Separator — only when there are action buttons to divide from the count */}
+			{hasActions && (
+				<div
+					role='separator'
+					aria-orientation='horizontal'
+					aria-hidden='true'
+					className='h-6 w-px bg-border'
+				/>
+			)}
 
 			{/* Delete — only when handler provided */}
 			{onDelete && (
