@@ -24,6 +24,8 @@ test-results/
 openspec
 .specify
 
+.playwright-mcp
+
 # playwright snapshots
 apps/docs/tests/**/*.png
 
