@@ -180,7 +180,6 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		columnPinning: { left: pinnedLeft, right: pinnedRight },
 		pagination: { pageIndex: 0, pageSize: defaultPageSize },
 		...(Object.keys(defaultHidden).length > 0 ? { columnVisibility: defaultHidden } : {}),
-		...(sortingCfg?.defaultSorting ? { sorting: sortingCfg.defaultSorting } : {}),
 		// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
 		...config.initialState,
 	}

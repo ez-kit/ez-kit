@@ -86,29 +86,6 @@ export type SortingConfig = {
 	 * ```
 	 */
 	manual?: boolean
-	/**
-	 * Default multi-column sort applied in uncontrolled mode. Order in the array = sort priority.
-	 *
-	 * @example Single-column default sort
-	 * ```ts
-	 * sorting: { defaultSorting: [{ id: 'createdAt', desc: true }] }
-	 * ```
-	 *
-	 * @example Multi-column default — sort by status asc, then by updatedAt desc
-	 * ```ts
-	 * createTable({
-	 *   data, columns,
-	 *   sorting: {
-	 *     defaultSorting: [
-	 *       { id: 'status', desc: false },
-	 *       { id: 'updatedAt', desc: true },
-	 *     ],
-	 *     multi: true,
-	 *   },
-	 * })
-	 * ```
-	 */
-	defaultSorting?: SortingState
 	/** First click sorts descending. Default: false. */
 	descFirst?: boolean
 	/** Allow a third click to clear the sort. Default: true. */

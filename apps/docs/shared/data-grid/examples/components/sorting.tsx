@@ -62,12 +62,14 @@ export function SortingExample() {
 				sorting: { undefined: 'last' },
 			},
 		],
-		sorting: {
-			// Two-column default sort: critical first, then earliest due date.
-			defaultSorting: [
+		// Two-column initial sort: critical first, then earliest due date.
+		initialState: {
+			sorting: [
 				{ id: 'priority', desc: false },
 				{ id: 'dueDate', desc: false },
 			],
+		},
+		sorting: {
 			// Hold ⌘/Ctrl-click to extend; cap at 3 active sort columns.
 			multi: { max: 3, event: 'ctrl' },
 			// Custom comparator addressable from `column.sorting.fn = 'priorityRank'`.
