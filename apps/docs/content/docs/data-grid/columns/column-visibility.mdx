@@ -32,7 +32,8 @@ A simpler base example is also available:
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `enableHiding` | `boolean` | Per-column. Default `true`. Set to `false` on columns that must always remain visible (e.g., a row-id column). |
+| `visibility` | `true \| { defaultHidden: true }` | Per-column. `true` locks the column as always visible (no Hide option in its menu, absent from the Columns toggle). `{ defaultHidden: true }` starts the column hidden but toggleable. |
+| `enableHiding` | `boolean` | Per-column TanStack pass-through. Default `true`. `visibility: true` sets this to `false` under the hood. |
 | `state.columnVisibility` | `Record<string, boolean>` | Controlled visibility state (passes through to `useDataGrid`). |
 | `initialState.columnVisibility` | `Record<string, boolean>` | Default hidden columns at mount. |
 | `onColumnVisibilityChange` | `(updater) => void` | Subscribe to visibility changes for persistence (e.g., to localStorage). |

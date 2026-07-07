@@ -113,8 +113,8 @@ function mapColumn<TRow extends object>(
 		if (sorting.multi === false) result.enableMultiSort = false
 	}
 
-	// visibility: false → column cannot be hidden
-	if (visibility === false) result.enableHiding = false
+	// visibility: true → column is locked (always visible, cannot be hidden)
+	if (visibility === true) result.enableHiding = false
 
 	// cell.component (preferred) or cell.view → TanStack cell renderer
 	if (viewFn !== undefined) {
