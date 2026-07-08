@@ -2,9 +2,11 @@ import { createTable } from '@ez-kit/data-grid-core'
 import { useRef } from 'react'
 
 import { createDataGridInstance } from './data-grid-instance'
+import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridInstance } from './data-grid-instance'
+import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type {
 	ExpandingConfig,
 	FilteringConfig,
@@ -367,11 +369,25 @@ export type UseDataGridConfig<TRow extends object> = {
  * need to re-render on table state updates should call `useDataGridStore`
  * (or `useTable()`, which subscribes broadly for back-compat).
  *
+ * Default options contributed by an ancestor {@link DataGridOptionsProvider} and by the
+ * kit factory's `defaultOptions` are merged **under** the passed `config` (instance wins),
+ * with a per-feature deep merge. Precedence, low → high:
+ * factory `defaultOptions` < provider `defaults` < instance `config`.
+ *
+ * @param instanceConfig Per-call grid config; the highest-priority option layer.
+ * @param factoryDefaults Base defaults bound by `createDataGrid({ defaultOptions })`.
+ *   Internal — supplied by the kit factory, not by application call sites.
+ *
  * @example
  * const instance = useDataGrid({ data: users, columns, sorting: true })
  * return <DataGrid table={instance} />
  */
-export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>): DataGridInstance<TRow> {
+export function useDataGrid<TRow extends object>(
+	instanceConfig: UseDataGridConfig<TRow>,
+	factoryDefaults?: DataGridDefaultOptions<TRow>,
+): DataGridInstance<TRow> {
+	const providerDefaults = useDataGridOptions<TRow>()
+	const config = mergeGridOptionLayers(factoryDefaults, providerDefaults, instanceConfig)
 	const {
 		cellTypes,
 		pageSizer,

@@ -10,11 +10,22 @@ import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
+import type { DataGridInstance } from './data-grid-instance'
+import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { UseDataGridConfig } from './use-data-grid'
 import type { ColumnDef, ColumnHelper } from '@ez-kit/data-grid-core'
 
 export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 	components: Partial<GridComponents>
 	cellTypes?: TCellTypes
+	/**
+	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
+	 * under an app-level `DataGridOptionsProvider` and the per-call config
+	 * (factory `defaultOptions` < provider `defaults` < instance config). Lets a kit ship
+	 * opinionated defaults (e.g. `{ sorting: true, columnVisibility: true }`) so consumers
+	 * need not repeat them at every `useDataGrid` call site.
+	 */
+	defaultOptions?: DataGridDefaultOptions<object>
 }
 
 /**
@@ -54,6 +65,7 @@ export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
 export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeRegistry>({
 	components,
 	cellTypes,
+	defaultOptions,
 }: CreateDataGridOptions<TCellTypes>): DataGridBundle<TCellTypes> {
 	type DataGridProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: DataGridProps) {
@@ -100,14 +112,26 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 			: (createColumnHelper<TRow>() as ColumnHelper<TRow, Extract<keyof TCellTypes, string>>)
 	}
 
+	// Bind the kit-level `defaultOptions` as the base option layer for every call. The provider
+	// wraps the DataGrid render tree, but `useDataGrid` runs in the *consumer's* tree (the caller
+	// builds the instance, then passes it to `<DataGrid table={…} />`), so factory defaults must be
+	// threaded through the hook itself rather than via a wrapping provider.
+	function useDataGridWithDefaults<TRow extends object>(config: UseDataGridConfig<TRow>): DataGridInstance<TRow> {
+		return useDataGrid<TRow>(config, defaultOptions as DataGridDefaultOptions<TRow> | undefined)
+	}
+
 	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(extraCellTypes: TExtra): DataGridBundle<TCellTypes & TExtra> {
 		const mergedCellTypes = { ...cellTypes, ...extraCellTypes } as TCellTypes & TExtra
-		return createDataGrid<TCellTypes & TExtra>({ components, cellTypes: mergedCellTypes })
+		return createDataGrid<TCellTypes & TExtra>({
+			components,
+			cellTypes: mergedCellTypes,
+			...(defaultOptions !== undefined ? { defaultOptions } : {}),
+		})
 	}
 
 	return {
 		DataGrid: BoundDataGrid as typeof DataGrid,
-		useDataGrid,
+		useDataGrid: useDataGridWithDefaults,
 		useDataGridStore,
 		GridComponentsProvider,
 		defineColumns: boundDefineColumns,
