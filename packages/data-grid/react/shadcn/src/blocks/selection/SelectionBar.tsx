@@ -42,15 +42,15 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 
 					{actions}
 
-					<button
-						type='button'
+					<Button
+						variant='ghost'
+						size='icon'
 						data-slot='selection-bar-close'
 						onClick={onClear}
-						className='rounded-xs opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 [&_svg]:size-3.5'
 						aria-label='Clear selection'
 					>
 						<X />
-					</button>
+					</Button>
 				</div>
 			</div>
 		)
@@ -111,15 +111,15 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 			/>
 
 			{/* Cancel / Clear */}
-			<button
-				type='button'
+			<Button
+				variant='ghost'
+				size='icon'
 				data-slot='selection-bar-close'
 				onClick={onClear}
-				className='rounded-xs opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50 [&_svg]:size-3.5'
 				aria-label='Clear selection'
 			>
 				<X />
-			</button>
+			</Button>
 		</div>
 	)
 }
