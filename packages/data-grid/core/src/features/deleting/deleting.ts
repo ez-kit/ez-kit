@@ -33,6 +33,8 @@ declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface TableState {
 		pendingDeleteRowId: string | null
+		/** True while a bulk (selection-bar) delete is staged awaiting confirmation. */
+		pendingBulkDelete: boolean
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
@@ -41,6 +43,12 @@ declare module '@tanstack/table-core' {
 		requestDeleteRow: (rowId: string) => void
 		confirmDeleteRow: () => Promise<void>
 		cancelDeleteRow: () => void
+		/** Stage a bulk (selection-bar) delete, awaiting confirmation. */
+		requestBulkDelete: () => void
+		/** Clear the staged bulk delete after the handler has run. */
+		confirmBulkDelete: () => void
+		/** Clear the staged bulk delete without running the handler. */
+		cancelBulkDelete: () => void
 	}
 }
 
@@ -49,6 +57,7 @@ export const DeletingFeature: TableFeature<RowData> = {
 		({
 			...state,
 			pendingDeleteRowId: null,
+			pendingBulkDelete: false,
 		}) as Partial<TableState>,
 
 	createTable: (table: Table<RowData>) => {
@@ -93,6 +102,21 @@ export const DeletingFeature: TableFeature<RowData> = {
 			controller?.abort()
 			controller = undefined
 			table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
+		}
+
+		// Bulk (selection-bar) delete confirmation. Core owns only the staged flag;
+		// the React layer runs the actual bulk handler on confirm (mirrors how the
+		// selection-bar handler lives outside core options).
+		table.requestBulkDelete = () => {
+			table.setState((state) => ({ ...state, pendingBulkDelete: true }))
+		}
+
+		table.confirmBulkDelete = () => {
+			table.setState((state) => ({ ...state, pendingBulkDelete: false }))
+		}
+
+		table.cancelBulkDelete = () => {
+			table.setState((state) => ({ ...state, pendingBulkDelete: false }))
 		}
 	},
 }

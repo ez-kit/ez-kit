@@ -148,6 +148,47 @@ describe('DeletingFeature — confirmation flow', () => {
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
+	it('initializes pendingBulkDelete to false', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: vi.fn() },
+		})
+		expect(table.getState().pendingBulkDelete).toBe(false)
+	})
+
+	it('requestBulkDelete stages a bulk delete', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: vi.fn() },
+		})
+		table.requestBulkDelete()
+		expect(table.getState().pendingBulkDelete).toBe(true)
+	})
+
+	it('confirmBulkDelete clears the staged bulk delete', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: vi.fn() },
+		})
+		table.requestBulkDelete()
+		table.confirmBulkDelete()
+		expect(table.getState().pendingBulkDelete).toBe(false)
+	})
+
+	it('cancelBulkDelete clears the staged bulk delete', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: vi.fn() },
+		})
+		table.requestBulkDelete()
+		table.cancelBulkDelete()
+		expect(table.getState().pendingBulkDelete).toBe(false)
+	})
+
 	it('cancelDeleteRow aborts the in-flight delete signal', () => {
 		let captured: AbortSignal | undefined
 		const onDelete = vi.fn((ctx: { signal: AbortSignal }) => {

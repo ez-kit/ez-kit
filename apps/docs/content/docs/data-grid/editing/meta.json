@@ -1,5 +1,5 @@
 {
 	"title": "Editing",
 	"description": "Inline editing and CRUD workflows",
-	"pages": ["index", "crud-server", "crud-client", "creating", "validation"]
+	"pages": ["index", "crud-server", "crud-client", "creating", "validation", "delete-confirmation"]
 }

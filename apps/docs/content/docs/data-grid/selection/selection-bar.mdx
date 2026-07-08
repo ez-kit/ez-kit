@@ -36,12 +36,34 @@ The same content can be rendered inline above the table — no portal, no z-inde
 </DataGrid.SelectionBar>
 ```
 
+## Delete confirmation
+
+Bulk delete is destructive. Set `confirmation` on the selection-bar config to prompt before
+running `onDelete` — the shared `ConfirmDialog` slot opens with count-aware text ("Delete N rows?")
+and the handler fires only on confirm. Omit it (or pass `false`) for the default instant behaviour.
+
+```tsx
+selectionBar: {
+	onDelete: ({ selectedRows, clearSelection }) => {
+		bulkDelete(selectedRows)
+		clearSelection()
+	},
+	// `true` uses the default copy; pass an object to customise it.
+	confirmation: { title: 'Delete selected products?' },
+}
+```
+
+The dialog reuses the same `ConfirmDialog` component as per-row [delete confirmation](./data-grid/editing/delete-confirmation), so it renders in the active UI flavor (shadcn AlertDialog or HeroUI Modal) with no extra wiring.
+
 ## Options
 
 | Prop | Type | Description |
 | --- | --- | --- |
 | `variant` | `'floating' \| 'inline'` | Default `'floating'`. |
-| `children` | `({ selectedRows, clearSelection }) => ReactNode` | Render-prop access to the selection state. |
+| `onDelete` | `({ table, selectedRows, clearSelection }) => void` | Adds a Delete button that runs this handler. |
+| `confirmation` | `boolean \| ConfirmationOptions` | Prompt before `onDelete`. `ConfirmationOptions` = `{ title?, description? }`. |
+| `onClear` | `({ table, selectedRows, clearSelection }) => void` | Overrides the default clear behaviour. |
+| `actions` | `ReactElement \| (args) => ReactElement` | Extra controls rendered between Delete and Cancel. |
 
 ## Source
 
