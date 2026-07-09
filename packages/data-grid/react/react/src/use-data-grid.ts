@@ -6,6 +6,7 @@ import { createDataGridInstance } from './data-grid-instance'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridInstance } from './data-grid-instance'
 import type {
+	ConfirmationOptions,
 	ExpandingConfig,
 	FilteringConfig,
 	GlobalFilteringConfig,
@@ -102,6 +103,13 @@ export type SelectionBarConfig<TRow extends object = object> = {
 	variant?: SelectionBarVariant
 	/** If provided — Delete button appears in the bar. */
 	onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
+	/**
+	 * Prompt before running `onDelete`. When set, clicking Delete opens the shared
+	 * `ConfirmDialog` slot with count-aware text; `onDelete` runs only on confirm.
+	 * Omit (or `false`) for the default instant behaviour. Reuses the core
+	 * {@link ConfirmationOptions} shape from the per-row `deleting` feature.
+	 */
+	confirmation?: boolean | ConfirmationOptions
 	/**
 	 * Replaces default clear behaviour.
 	 * `clearSelection` arg is the default reset — call it if needed.

@@ -30,7 +30,7 @@ import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
-import { SelectionBar } from './selection-bar'
+import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
 import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useDataGridInstance, useDataGridStore } from './table-context'
@@ -40,7 +40,7 @@ import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
 import type { DataGridInstance } from '../data-grid-instance'
 import type { ConfirmationOptions } from '@ez-kit/data-grid-core'
-import type { Row } from '@tanstack/table-core'
+import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
@@ -88,28 +88,94 @@ export type DataGridUncontrolledProps<TRow extends object> = DataGridSharedProps
  */
 export type DataGridProps<TRow extends object> = DataGridControlledProps<TRow> | DataGridUncontrolledProps<TRow>
 
+const DEFAULT_CONFIRM_TITLE = 'Are you sure?'
+const DEFAULT_CONFIRM_DESCRIPTION = 'This action cannot be undone.'
+const DEFAULT_BULK_CONFIRM_TITLE = 'Delete selected rows?'
+const ROW_NOUN_SINGULAR = 'row'
+const ROW_NOUN_PLURAL = 'rows'
+
+function defaultBulkConfirmDescription(count: number): string {
+	const noun = count === 1 ? ROW_NOUN_SINGULAR : ROW_NOUN_PLURAL
+	return `Delete ${String(count)} ${noun}? ${DEFAULT_CONFIRM_DESCRIPTION}`
+}
+
 function resolveConfirmationText(
 	options: ConfirmationOptions,
 	row: Row<unknown> | undefined,
 ): { title: string; description: string } {
-	const title = options.title ?? 'Are you sure?'
+	const title = options.title ?? DEFAULT_CONFIRM_TITLE
 	const desc = options.description
 	let description: string
 	if (typeof desc === 'function') {
-		description = row ? desc(row) : 'This action cannot be undone.'
+		description = row ? desc(row) : DEFAULT_CONFIRM_DESCRIPTION
 	} else {
-		description = desc ?? 'This action cannot be undone.'
+		description = desc ?? DEFAULT_CONFIRM_DESCRIPTION
 	}
 	return { title, description }
+}
+
+/**
+ * Bulk (selection-bar) confirmation text. Unlike the per-row resolver there is no
+ * single `row`, so a `description` function is ignored in favour of a count-aware
+ * default ("Delete N rows?").
+ */
+function resolveBulkConfirmationText(
+	options: ConfirmationOptions,
+	count: number,
+): { title: string; description: string } {
+	const title = options.title ?? DEFAULT_BULK_CONFIRM_TITLE
+	const desc = options.description
+	const description = typeof desc === 'string' ? desc : defaultBulkConfirmDescription(count)
+	return { title, description }
+}
+
+/** Whether either the per-row or the bulk (selection-bar) confirmation dialog is configured. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hasConfirmDialog(table: Table<any>): boolean {
+	if (table.options.deleting?.confirmation) return true
+	const barConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
+	return typeof barConfig === 'object' && barConfig !== null && Boolean((barConfig as SelectionBarConfig).confirmation)
 }
 
 function ConfirmDialogRenderer() {
 	const instance = useDataGridInstance()
 	const table = instance.table
 	const { ConfirmDialog } = useGridComponents().editing
-	// Narrow: re-render only when the pending delete target changes. Other
-	// state mutations (editing, sorting, etc.) leave this stable.
+	// Narrow: re-render only when a pending delete target changes. Other
+	// state mutations (editing, sorting, etc.) leave these stable.
 	const pendingId = useDataGridStore((s) => s.pendingDeleteRowId)
+	const pendingBulk = useDataGridStore((s) => s.pendingBulkDelete)
+
+	const barConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
+		| boolean
+		| SelectionBarConfig
+		| undefined
+	const barConfigObj = typeof barConfig === 'object' ? barConfig : undefined
+	const bulkConfirmation = barConfigObj?.confirmation
+	const bulkOnDelete = barConfigObj?.onDelete
+
+	// Bulk (selection-bar) confirmation takes precedence while staged. The handler
+	// lives outside core, so run it here on confirm, then clear the pending flag.
+	if (pendingBulk && bulkConfirmation && bulkOnDelete) {
+		const bulkOptions: ConfirmationOptions = bulkConfirmation === true ? {} : bulkConfirmation
+		const args = buildSelectionBarArgs(table)
+		const { title, description } = resolveBulkConfirmationText(bulkOptions, args.selectedRows.length)
+		return (
+			<ConfirmDialog
+				open
+				title={title}
+				description={description}
+				onConfirm={() => {
+					bulkOnDelete(args)
+					table.confirmBulkDelete()
+				}}
+				onCancel={() => {
+					table.cancelBulkDelete()
+				}}
+			/>
+		)
+	}
+
 	const confirmation = table.options.deleting?.confirmation
 
 	if (!confirmation) return null
@@ -199,7 +265,7 @@ function DataGridControlled<TRow extends object>({
 					{children ?? <DefaultLayout />}
 					{table.options.creating?.mode === 'modal' && <CreatingModal />}
 					{table.options.editing?.mode === 'modal' && <EditingModal />}
-					{table.options.deleting?.confirmation && <ConfirmDialogRenderer />}
+					{hasConfirmDialog(table) && <ConfirmDialogRenderer />}
 				</TableContext>
 			</GridComponentsProvider>
 		</CellTypesProvider>

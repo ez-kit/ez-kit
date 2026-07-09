@@ -1,5 +1,5 @@
 import { createTable, defineColumns } from '@ez-kit/data-grid-core'
-import { act, screen } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -419,6 +419,93 @@ describe('<DataGrid>', () => {
 			/>,
 		)
 		expect(screen.getAllByTestId('registry-edit').length).toBeGreaterThan(0)
+	})
+})
+
+describe('<DataGrid> selection-bar delete confirmation', () => {
+	function setSelectionBar(instance: ReturnType<typeof makeTable>['instance'], value: unknown) {
+		;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = value
+	}
+
+	function getDialog(): HTMLElement {
+		const dialog = document.querySelector('dialog')
+		if (!(dialog instanceof HTMLElement)) throw new Error('expected an open ConfirmDialog <dialog>')
+		return dialog
+	}
+
+	it('runs onDelete instantly when confirmation is not set (no dialog)', async () => {
+		const user = userEvent.setup()
+		const onDelete = vi.fn()
+		const { instance } = makeTable({ selection: true })
+		setSelectionBar(instance, { onDelete })
+		instance.table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={instance} />)
+
+		await user.click(screen.getByRole('button', { name: /delete/i }))
+		expect(onDelete).toHaveBeenCalledOnce()
+		expect(document.querySelector('dialog')).toBeNull()
+	})
+
+	it('opens the ConfirmDialog and defers onDelete when confirmation is set', async () => {
+		const user = userEvent.setup()
+		const onDelete = vi.fn()
+		const { instance } = makeTable({ selection: true })
+		setSelectionBar(instance, { onDelete, confirmation: true })
+		instance.table.setRowSelection({ '1': true, '2': true })
+		renderWithComponents(<DataGrid table={instance} />)
+
+		await user.click(screen.getByRole('button', { name: /delete/i }))
+		expect(onDelete).not.toHaveBeenCalled()
+		expect(instance.table.getState().pendingBulkDelete).toBe(true)
+		// Count-aware default description for the two selected rows.
+		expect(screen.getByText(/delete 2 rows/i)).toBeInTheDocument()
+	})
+
+	it('runs onDelete and clears the pending flag on confirm', async () => {
+		const user = userEvent.setup()
+		const onDelete = vi.fn()
+		const { instance } = makeTable({ selection: true })
+		setSelectionBar(instance, { onDelete, confirmation: true })
+		instance.table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={instance} />)
+
+		await user.click(screen.getByRole('button', { name: /delete/i }))
+		await user.click(within(getDialog()).getByRole('button', { name: /confirm/i }))
+
+		expect(onDelete).toHaveBeenCalledOnce()
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+		const args = onDelete.mock.calls.at(0)?.at(0)
+		expect((args as { selectedRows: unknown[] }).selectedRows).toHaveLength(1)
+		expect(instance.table.getState().pendingBulkDelete).toBe(false)
+		expect(document.querySelector('dialog')).toBeNull()
+	})
+
+	it('leaves data intact and clears pending on cancel', async () => {
+		const user = userEvent.setup()
+		const onDelete = vi.fn()
+		const { instance } = makeTable({ selection: true })
+		setSelectionBar(instance, { onDelete, confirmation: true })
+		instance.table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={instance} />)
+
+		await user.click(screen.getByRole('button', { name: /delete/i }))
+		await user.click(within(getDialog()).getByRole('button', { name: /cancel/i }))
+
+		expect(onDelete).not.toHaveBeenCalled()
+		expect(instance.table.getState().pendingBulkDelete).toBe(false)
+		expect(document.querySelector('dialog')).toBeNull()
+	})
+
+	it('uses a custom confirmation title when provided', async () => {
+		const user = userEvent.setup()
+		const onDelete = vi.fn()
+		const { instance } = makeTable({ selection: true })
+		setSelectionBar(instance, { onDelete, confirmation: { title: 'Remove these?' } })
+		instance.table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={instance} />)
+
+		await user.click(screen.getByRole('button', { name: /delete/i }))
+		expect(screen.getByText('Remove these?')).toBeInTheDocument()
 	})
 })
 
