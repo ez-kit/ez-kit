@@ -88,12 +88,52 @@
 		"exportName": "SortToolbarExample"
 	},
 	{
-		"id": "filter-operators",
-		"label": "Operators",
+		"id": "filter-operators-text",
+		"label": "Operators · Text",
 		"group": "filtering",
 		"groupLabel": "Filtering",
-		"sourceFile": "components/filter-operators.tsx",
-		"exportName": "FilterOperatorsExample"
+		"sourceFile": "components/filter-operators-text.tsx",
+		"exportName": "FilterOperatorsTextExample"
+	},
+	{
+		"id": "filter-operators-number",
+		"label": "Operators · Number",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-number.tsx",
+		"exportName": "FilterOperatorsNumberExample"
+	},
+	{
+		"id": "filter-operators-between-inputs",
+		"label": "Operators · Between (inputs)",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-between-inputs.tsx",
+		"exportName": "FilterOperatorsBetweenInputsExample"
+	},
+	{
+		"id": "filter-operators-between-slider",
+		"label": "Operators · Between (slider)",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-between-slider.tsx",
+		"exportName": "FilterOperatorsBetweenSliderExample"
+	},
+	{
+		"id": "filter-operators-date",
+		"label": "Operators · Date",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-date.tsx",
+		"exportName": "FilterOperatorsDateExample"
+	},
+	{
+		"id": "filter-operators-date-between",
+		"label": "Operators · Date between",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-date-between.tsx",
+		"exportName": "FilterOperatorsDateBetweenExample"
 	},
 	{
 		"id": "filter-popover",

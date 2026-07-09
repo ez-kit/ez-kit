@@ -9,8 +9,6 @@ Each column can expose a list of operators the user picks from when filtering �
 
 ## Usage
 
-<DataGridDocsExample exampleId='filter-operators' />
-
 ```ts
 const columns = defineColumns<User>([
 	{
@@ -24,6 +22,42 @@ const columns = defineColumns<User>([
 	},
 ])
 ```
+
+### Text operators
+
+Enable the full text operator set with `filtering: { operators: true }`, or pass an explicit `items` list to restrict it — here **Department** offers only `contains`, `equals`, `isEmpty`, and `isNotEmpty`.
+
+<DataGridDocsExample exampleId='filter-operators-text' />
+
+### Number operators
+
+Numeric columns expose comparison operators (`=`, `≠`, `>`, `≥`, `<`, `≤`). Use `defaultOperator` to pick the one selected first — **Salary** defaults to `gte`.
+
+<DataGridDocsExample exampleId='filter-operators-number' />
+
+### Between — inputs
+
+The `between` operator renders two bound inputs when `betweenOperator.variant` is `'inputs'`, matching an inclusive numeric range.
+
+<DataGridDocsExample exampleId='filter-operators-between-inputs' />
+
+### Between — slider
+
+Switch `betweenOperator.variant` to `'slider'` and provide `min`/`max` for a draggable range control instead of typed bounds.
+
+<DataGridDocsExample exampleId='filter-operators-between-slider' />
+
+### Date operators
+
+Date columns get date-aware operators (`before`, `after`, `between`, …) with a calendar picker. Enable them with `filtering: { operators: true }`.
+
+<DataGridDocsExample exampleId='filter-operators-date' />
+
+### Date between
+
+Combine the date operators with `between` (`betweenOperator.variant: 'inputs'`) to filter rows falling inside a start–end date range.
+
+<DataGridDocsExample exampleId='filter-operators-date-between' />
 
 ## Built-in operators
 
