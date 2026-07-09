@@ -41,7 +41,7 @@ const rootAppFile = "export { default } from './src/SandpackRoot'\n"
 function createBridgeFile(type: DataGridType) {
 	const uiPackage = packageByType[type]
 
-	return `export { DataGrid } from '${uiPackage}'\nexport { defineColumns, useDataGrid } from '@ez-kit/data-grid-react'\n`
+	return `export { DataGrid } from '${uiPackage}'\nexport { defineColumns, useDataGrid, DataGridOptionsProvider, useDataGridOptions } from '@ez-kit/data-grid-react'\n`
 }
 
 function createGlobalCss(sandpackCss: string) {

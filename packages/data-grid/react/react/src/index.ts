@@ -103,6 +103,10 @@ export { GridComponentsProvider, defaultComponents, useGridComponents } from './
 export { CellTypesProvider, useCellTypes } from './cell-types-context'
 export type { CellTypeDefinition, CellTypeRegistry, CellViewProps, CellInputProps } from './cell-types-context'
 
+// Default options (app-level provider + kit-level factory `defaultOptions`)
+export { DataGridOptionsProvider, useDataGridOptions } from './data-grid-options-context'
+export type { DataGridDefaultOptions, DataGridOptionsProviderProps } from './data-grid-options-context'
+
 // Utilities
 export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'

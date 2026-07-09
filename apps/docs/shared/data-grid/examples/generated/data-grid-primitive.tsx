@@ -48,13 +48,14 @@ import { VirtualizedExample as Example43 } from '../components/virtualized'
 import { CrudExample as Example44 } from '../components/crud/CrudExample'
 import { CrudClientExample as Example45 } from '../components/crud/CrudClientExample'
 import { ControlledStateExample as Example46 } from '../components/controlled-state'
-import { FallbacksExample as Example47 } from '../components/fallbacks'
-import { InfiniteScrollAutoExample as Example48 } from '../components/infinite-scroll/auto'
-import { InfiniteScrollManualExample as Example49 } from '../components/infinite-scroll/manual'
-import { InfiniteScrollVirtualizedExample as Example50 } from '../components/infinite-scroll/virtualized'
-import { InfiniteScrollResetExample as Example51 } from '../components/infinite-scroll/reset-on-query'
-import { ServerDataExample as Example52 } from '../components/server-data'
-import { StatePersistenceExample as Example53 } from '../components/state-persistence'
+import { DefaultOptionsExample as Example47 } from '../components/default-options'
+import { FallbacksExample as Example48 } from '../components/fallbacks'
+import { InfiniteScrollAutoExample as Example49 } from '../components/infinite-scroll/auto'
+import { InfiniteScrollManualExample as Example50 } from '../components/infinite-scroll/manual'
+import { InfiniteScrollVirtualizedExample as Example51 } from '../components/infinite-scroll/virtualized'
+import { InfiniteScrollResetExample as Example52 } from '../components/infinite-scroll/reset-on-query'
+import { ServerDataExample as Example53 } from '../components/server-data'
+import { StatePersistenceExample as Example54 } from '../components/state-persistence'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -429,6 +430,12 @@ export const dataGridExamplesManifest = [
     "exportName": "ControlledStateExample"
   },
   {
+    "id": "default-options",
+    "label": "Default Options",
+    "sourceFile": "components/default-options.tsx",
+    "exportName": "DefaultOptionsExample"
+  },
+  {
     "id": "fallbacks",
     "label": "Fallbacks",
     "sourceFile": "components/fallbacks.tsx",
@@ -532,11 +539,12 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'crud-server': Example44,
 	'crud-client': Example45,
 	'controlled-state': Example46,
-	'fallbacks': Example47,
-	'infinite-scroll-auto': Example48,
-	'infinite-scroll-manual': Example49,
-	'infinite-scroll-virtualized': Example50,
-	'infinite-scroll-reset': Example51,
-	'server-data': Example52,
-	'state-persistence': Example53,
+	'default-options': Example47,
+	'fallbacks': Example48,
+	'infinite-scroll-auto': Example49,
+	'infinite-scroll-manual': Example50,
+	'infinite-scroll-virtualized': Example51,
+	'infinite-scroll-reset': Example52,
+	'server-data': Example53,
+	'state-persistence': Example54,
 }

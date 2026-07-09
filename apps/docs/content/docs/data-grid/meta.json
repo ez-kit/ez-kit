@@ -19,6 +19,7 @@
 		"cells",
 		"expanding",
 		"controlled-state",
+		"default-options",
 		"state-persistence",
 		"server-side",
 		"editing",
