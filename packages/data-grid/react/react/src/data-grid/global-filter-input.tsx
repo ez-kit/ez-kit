@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { useGridComponents } from '../components-context'
+import { DATA_GRID_DEFAULTS } from '../defaults'
 import { GLOBAL_FILTERING_KEY } from '../use-data-grid'
 import { useDebouncedValue } from '../utils/use-debounced-value'
 
 import { useTable } from './table-context'
 
 import type { NormalizedGlobalFilteringConfig } from '../use-data-grid'
-
-const DEFAULT_PLACEHOLDER = 'Search…'
-const DEFAULT_DEBOUNCE_MS = 250
 
 type GlobalFilterInputCompoundProps = {
 	/** Override the placeholder configured via `globalFiltering.placeholder`. */
@@ -33,8 +31,8 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilter
 		| NormalizedGlobalFilteringConfig
 		| undefined
 
-	const debounce = cfg?.debounce ?? DEFAULT_DEBOUNCE_MS
-	const placeholder = placeholderProp ?? cfg?.placeholder ?? DEFAULT_PLACEHOLDER
+	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.globalFiltering.debounce
+	const placeholder = placeholderProp ?? cfg?.placeholder ?? DATA_GRID_DEFAULTS.globalFiltering.placeholder
 
 	const committed = String(table.getState().globalFilter ?? '')
 	const [draft, setDraft] = useState(committed)

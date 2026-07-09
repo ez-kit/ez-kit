@@ -10,6 +10,7 @@ import {
 } from '@tanstack/table-core'
 
 import { mapColumns } from '../column/map-columns'
+import { DEFAULT_PAGE_SIZE } from '../defaults'
 import { CreatingFeature } from '../features/creating'
 import { DeletingFeature } from '../features/deleting'
 import { EditingFeature } from '../features/editing'
@@ -172,7 +173,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 
 	// ── build TanStack options ────────────────────────────────────────────────
 	const defaultPageSize =
-		typeof config.pagination === 'object' && config.pagination.pageSize ? config.pagination.pageSize : 10
+		typeof config.pagination === 'object' && config.pagination.pageSize
+			? config.pagination.pageSize
+			: DEFAULT_PAGE_SIZE
 
 	const defaultHidden = collectDefaultHidden(config.columns)
 

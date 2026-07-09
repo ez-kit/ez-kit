@@ -1,6 +1,9 @@
 // Core factory
 export { createTable } from './create-table'
 
+// Default option values (single source; referenced by the React adapter + UI kits)
+export { DEFAULT_PAGE_SIZE } from './defaults'
+
 // Column helpers
 export { defineColumns } from './column/define-columns'
 export { mapColumns } from './column/map-columns'

@@ -3,6 +3,7 @@ import { useRef } from 'react'
 
 import { createDataGridInstance } from './data-grid-instance'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
+import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridInstance } from './data-grid-instance'
@@ -51,8 +52,8 @@ export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
 /** Symbol used to carry the column filter commit debounce (ms) on the table instance for Header / FilterPanel to read. */
 export const FILTERING_DEBOUNCE_KEY = Symbol('filteringDebounce')
 
-/** Default commit debounce (ms) for column text filter inputs. `0` = commit on every keystroke (backward compatible). */
-export const DEFAULT_FILTER_DEBOUNCE_MS = 0
+// Re-exported from the shared defaults module so the public API surface is unchanged.
+export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 /** Symbol used to carry normalized globalFiltering UI config on the table instance for Toolbar / GlobalFilterInput to read. */
 export const GLOBAL_FILTERING_KEY = Symbol('globalFiltering')
@@ -180,9 +181,9 @@ function normalizeInfinite(
 	pagination: boolean | ReactPaginationConfig | undefined,
 ): NormalizedInfiniteConfig | undefined {
 	if (typeof pagination !== 'object' || pagination.mode !== 'infinite') return undefined
-	const threshold = pagination.threshold ?? { rows: 5 }
+	const threshold = pagination.threshold ?? { rows: DATA_GRID_DEFAULTS.infinite.threshold.rows }
 	return {
-		trigger: pagination.trigger ?? 'auto',
+		trigger: pagination.trigger ?? DATA_GRID_DEFAULTS.infinite.trigger,
 		threshold,
 		hasNextPage: pagination.hasNextPage ?? false,
 		hasPreviousPage: pagination.hasPreviousPage ?? false,
@@ -460,8 +461,8 @@ export function useDataGrid<TRow extends object>(
 		if (typeof rawFiltering !== 'object' || rawFiltering.chips === undefined || rawFiltering.chips === false) {
 			return undefined
 		}
-		if (rawFiltering.chips === true) return { position: 'above' }
-		return { position: rawFiltering.chips.position ?? 'above' }
+		if (rawFiltering.chips === true) return { position: DATA_GRID_DEFAULTS.filtering.chips.position }
+		return { position: rawFiltering.chips.position ?? DATA_GRID_DEFAULTS.filtering.chips.position }
 	})()
 
 	const normalizedClearButton: NormalizedClearButtonConfig | undefined = (() => {
@@ -472,7 +473,7 @@ export function useDataGrid<TRow extends object>(
 		) {
 			return undefined
 		}
-		if (rawFiltering.clearButton === true) return { alwaysShow: false }
+		if (rawFiltering.clearButton === true) return { alwaysShow: DATA_GRID_DEFAULTS.filtering.clearButton.alwaysShow }
 		return { alwaysShow: Boolean(rawFiltering.clearButton.alwaysShow) }
 	})()
 
@@ -488,11 +489,15 @@ export function useDataGrid<TRow extends object>(
 	const normalizedGlobalFiltering: NormalizedGlobalFilteringConfig | undefined = (() => {
 		if (!rawGlobalFiltering) return undefined
 		if (rawGlobalFiltering === true) {
-			return { placeholder: 'Search…', debounce: 250, toolbar: true }
+			return {
+				placeholder: DATA_GRID_DEFAULTS.globalFiltering.placeholder,
+				debounce: DATA_GRID_DEFAULTS.globalFiltering.debounce,
+				toolbar: true,
+			}
 		}
 		return {
-			placeholder: rawGlobalFiltering.placeholder ?? 'Search…',
-			debounce: rawGlobalFiltering.debounce ?? 250,
+			placeholder: rawGlobalFiltering.placeholder ?? DATA_GRID_DEFAULTS.globalFiltering.placeholder,
+			debounce: rawGlobalFiltering.debounce ?? DATA_GRID_DEFAULTS.globalFiltering.debounce,
 			toolbar: rawGlobalFiltering.toolbar !== false,
 		}
 	})()

@@ -1,13 +1,12 @@
 import { useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
+import { DATA_GRID_DEFAULTS } from '../defaults'
 
 import { useInfiniteContext } from './infinite-context'
 import { useDataGridInstance } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
 import { useVirtualContext } from './virtual-context'
-
-const DEFAULT_THRESHOLD_PX = 200
 
 /**
  * Forward infinite-scroll footer. Emits only structural markers
@@ -32,7 +31,7 @@ export function LoadMoreFooter() {
 	const sentinelRef = useRef<HTMLTableRowElement>(null)
 
 	const { enabled, trigger, hasMore, loadMore } = controller
-	const thresholdPx = controller.threshold.px ?? DEFAULT_THRESHOLD_PX
+	const thresholdPx = controller.threshold.px ?? DATA_GRID_DEFAULTS.infinite.threshold.px
 	const isVirtualized = rowVirtualizer !== null
 
 	useEffect(() => {
