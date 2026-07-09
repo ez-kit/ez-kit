@@ -33,7 +33,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Delete + confirmation dialog',
 		description: 'Remove selected rows with a confirmation step to prevent accidental deletion.',
 		status: FeatureStatus.Done,
-		doc: 'selection/delete-confirmation',
+		doc: 'editing/delete-confirmation',
 	},
 	{
 		category: 'Editing & CRUD',

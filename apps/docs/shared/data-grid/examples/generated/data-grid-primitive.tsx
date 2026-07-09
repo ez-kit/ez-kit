@@ -12,45 +12,50 @@ import { BaseColumnVisibilityExample as Example7 } from '../components/base/colu
 import { BaseFullExample as Example8 } from '../components/base/full'
 import { SortingExample as Example9 } from '../components/sorting'
 import { SortToolbarExample as Example10 } from '../components/sort-toolbar'
-import { FilterOperatorsExample as Example11 } from '../components/filter-operators'
-import { FilterPopoverExample as Example12 } from '../components/filter-popover'
-import { GlobalFilteringExample as Example13 } from '../components/global-filtering'
-import { FilterChipsExample as Example14 } from '../components/filter-chips'
-import { FilterMultiValueExample as Example15 } from '../components/filter-multi-value'
-import { FilterDateRangeExample as Example16 } from '../components/filter-date-range'
-import { FilterPanelExample as Example17 } from '../components/filter-panel'
-import { SelectionBarExample as Example18 } from '../components/selection-bar'
-import { SelectionBarInlineExample as Example19 } from '../components/selection-bar-inline'
-import { DeleteConfirmationExample as Example20 } from '../components/delete-confirmation'
-import { ColumnVisibilityExample as Example21 } from '../components/column-visibility'
-import { ColumnPinningExample as Example22 } from '../components/column-pinning'
-import { ResizingExample as Example23 } from '../components/resizing'
-import { ColumnsCombinedExample as Example24 } from '../components/columns/combined'
-import { ColumnHelperBaseExample as Example25 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example26 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example27 } from '../components/column-helper'
-import { CellTypesExample as Example28 } from '../components/cell-types'
-import { CustomCellTypesExample as Example29 } from '../components/custom-cell-types'
-import { DateCellExample as Example30 } from '../components/date-cell'
-import { CreatingExample as Example31 } from '../components/creating/CreatingExample'
-import { CreatingValidationExample as Example32 } from '../components/creating/CreatingValidationExample'
-import { EditingValidationExample as Example33 } from '../components/editing/EditingValidationExample'
-import { ExpandingSubContentExample as Example34 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example35 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example36 } from '../components/expanding/controlled'
-import { RowPinningStickyHeaderExample as Example37 } from '../components/row-pinning/sticky-header'
-import { VirtualizedExample as Example38 } from '../components/virtualized'
-import { CrudExample as Example39 } from '../components/crud/CrudExample'
-import { CrudClientExample as Example40 } from '../components/crud/CrudClientExample'
-import { ControlledStateExample as Example41 } from '../components/controlled-state'
-import { DefaultOptionsExample as Example42 } from '../components/default-options'
-import { FallbacksExample as Example43 } from '../components/fallbacks'
-import { InfiniteScrollAutoExample as Example44 } from '../components/infinite-scroll/auto'
-import { InfiniteScrollManualExample as Example45 } from '../components/infinite-scroll/manual'
-import { InfiniteScrollVirtualizedExample as Example46 } from '../components/infinite-scroll/virtualized'
-import { InfiniteScrollResetExample as Example47 } from '../components/infinite-scroll/reset-on-query'
-import { ServerDataExample as Example48 } from '../components/server-data'
-import { StatePersistenceExample as Example49 } from '../components/state-persistence'
+import { FilterOperatorsTextExample as Example11 } from '../components/filter-operators-text'
+import { FilterOperatorsNumberExample as Example12 } from '../components/filter-operators-number'
+import { FilterOperatorsBetweenInputsExample as Example13 } from '../components/filter-operators-between-inputs'
+import { FilterOperatorsBetweenSliderExample as Example14 } from '../components/filter-operators-between-slider'
+import { FilterOperatorsDateExample as Example15 } from '../components/filter-operators-date'
+import { FilterOperatorsDateBetweenExample as Example16 } from '../components/filter-operators-date-between'
+import { FilterPopoverExample as Example17 } from '../components/filter-popover'
+import { GlobalFilteringExample as Example18 } from '../components/global-filtering'
+import { FilterChipsExample as Example19 } from '../components/filter-chips'
+import { FilterMultiValueExample as Example20 } from '../components/filter-multi-value'
+import { FilterDateRangeExample as Example21 } from '../components/filter-date-range'
+import { FilterPanelExample as Example22 } from '../components/filter-panel'
+import { SelectionBarExample as Example23 } from '../components/selection-bar'
+import { SelectionBarInlineExample as Example24 } from '../components/selection-bar-inline'
+import { DeleteConfirmationExample as Example25 } from '../components/delete-confirmation'
+import { ColumnVisibilityExample as Example26 } from '../components/column-visibility'
+import { ColumnPinningExample as Example27 } from '../components/column-pinning'
+import { ResizingExample as Example28 } from '../components/resizing'
+import { ColumnsCombinedExample as Example29 } from '../components/columns/combined'
+import { ColumnHelperBaseExample as Example30 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example31 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example32 } from '../components/column-helper'
+import { CellTypesExample as Example33 } from '../components/cell-types'
+import { CustomCellTypesExample as Example34 } from '../components/custom-cell-types'
+import { DateCellExample as Example35 } from '../components/date-cell'
+import { CreatingExample as Example36 } from '../components/creating/CreatingExample'
+import { CreatingValidationExample as Example37 } from '../components/creating/CreatingValidationExample'
+import { EditingValidationExample as Example38 } from '../components/editing/EditingValidationExample'
+import { ExpandingSubContentExample as Example39 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example40 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example41 } from '../components/expanding/controlled'
+import { RowPinningStickyHeaderExample as Example42 } from '../components/row-pinning/sticky-header'
+import { VirtualizedExample as Example43 } from '../components/virtualized'
+import { CrudExample as Example44 } from '../components/crud/CrudExample'
+import { CrudClientExample as Example45 } from '../components/crud/CrudClientExample'
+import { ControlledStateExample as Example46 } from '../components/controlled-state'
+import { DefaultOptionsExample as Example47 } from '../components/default-options'
+import { FallbacksExample as Example48 } from '../components/fallbacks'
+import { InfiniteScrollAutoExample as Example49 } from '../components/infinite-scroll/auto'
+import { InfiniteScrollManualExample as Example50 } from '../components/infinite-scroll/manual'
+import { InfiniteScrollVirtualizedExample as Example51 } from '../components/infinite-scroll/virtualized'
+import { InfiniteScrollResetExample as Example52 } from '../components/infinite-scroll/reset-on-query'
+import { ServerDataExample as Example53 } from '../components/server-data'
+import { StatePersistenceExample as Example54 } from '../components/state-persistence'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -143,12 +148,52 @@ export const dataGridExamplesManifest = [
     "exportName": "SortToolbarExample"
   },
   {
-    "id": "filter-operators",
-    "label": "Operators",
+    "id": "filter-operators-text",
+    "label": "Operators · Text",
     "group": "filtering",
     "groupLabel": "Filtering",
-    "sourceFile": "components/filter-operators.tsx",
-    "exportName": "FilterOperatorsExample"
+    "sourceFile": "components/filter-operators-text.tsx",
+    "exportName": "FilterOperatorsTextExample"
+  },
+  {
+    "id": "filter-operators-number",
+    "label": "Operators · Number",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-operators-number.tsx",
+    "exportName": "FilterOperatorsNumberExample"
+  },
+  {
+    "id": "filter-operators-between-inputs",
+    "label": "Operators · Between (inputs)",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-operators-between-inputs.tsx",
+    "exportName": "FilterOperatorsBetweenInputsExample"
+  },
+  {
+    "id": "filter-operators-between-slider",
+    "label": "Operators · Between (slider)",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-operators-between-slider.tsx",
+    "exportName": "FilterOperatorsBetweenSliderExample"
+  },
+  {
+    "id": "filter-operators-date",
+    "label": "Operators · Date",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-operators-date.tsx",
+    "exportName": "FilterOperatorsDateExample"
+  },
+  {
+    "id": "filter-operators-date-between",
+    "label": "Operators · Date between",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-operators-date-between.tsx",
+    "exportName": "FilterOperatorsDateBetweenExample"
   },
   {
     "id": "filter-popover",
@@ -458,43 +503,48 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'base-full': Example8,
 	'sorting': Example9,
 	'sort-toolbar': Example10,
-	'filter-operators': Example11,
-	'filter-popover': Example12,
-	'global-filtering': Example13,
-	'filter-chips': Example14,
-	'filter-multi-value': Example15,
-	'filter-date-range': Example16,
-	'filter-panel': Example17,
-	'selection-bar': Example18,
-	'selection-bar-inline': Example19,
-	'delete-confirmation': Example20,
-	'column-visibility': Example21,
-	'column-pinning': Example22,
-	'resizing': Example23,
-	'columns-combined': Example24,
-	'column-helper': Example25,
-	'column-helper-custom-view': Example26,
-	'column-helper-registered': Example27,
-	'cell-types': Example28,
-	'custom-cell-types': Example29,
-	'date-cell': Example30,
-	'creating': Example31,
-	'creating-validation': Example32,
-	'editing-validation': Example33,
-	'expanding-sub-content': Example34,
-	'expanding-tree': Example35,
-	'expanding-controlled': Example36,
-	'row-pinning-sticky-header': Example37,
-	'virtualized': Example38,
-	'crud-server': Example39,
-	'crud-client': Example40,
-	'controlled-state': Example41,
-	'default-options': Example42,
-	'fallbacks': Example43,
-	'infinite-scroll-auto': Example44,
-	'infinite-scroll-manual': Example45,
-	'infinite-scroll-virtualized': Example46,
-	'infinite-scroll-reset': Example47,
-	'server-data': Example48,
-	'state-persistence': Example49,
+	'filter-operators-text': Example11,
+	'filter-operators-number': Example12,
+	'filter-operators-between-inputs': Example13,
+	'filter-operators-between-slider': Example14,
+	'filter-operators-date': Example15,
+	'filter-operators-date-between': Example16,
+	'filter-popover': Example17,
+	'global-filtering': Example18,
+	'filter-chips': Example19,
+	'filter-multi-value': Example20,
+	'filter-date-range': Example21,
+	'filter-panel': Example22,
+	'selection-bar': Example23,
+	'selection-bar-inline': Example24,
+	'delete-confirmation': Example25,
+	'column-visibility': Example26,
+	'column-pinning': Example27,
+	'resizing': Example28,
+	'columns-combined': Example29,
+	'column-helper': Example30,
+	'column-helper-custom-view': Example31,
+	'column-helper-registered': Example32,
+	'cell-types': Example33,
+	'custom-cell-types': Example34,
+	'date-cell': Example35,
+	'creating': Example36,
+	'creating-validation': Example37,
+	'editing-validation': Example38,
+	'expanding-sub-content': Example39,
+	'expanding-tree': Example40,
+	'expanding-controlled': Example41,
+	'row-pinning-sticky-header': Example42,
+	'virtualized': Example43,
+	'crud-server': Example44,
+	'crud-client': Example45,
+	'controlled-state': Example46,
+	'default-options': Example47,
+	'fallbacks': Example48,
+	'infinite-scroll-auto': Example49,
+	'infinite-scroll-manual': Example50,
+	'infinite-scroll-virtualized': Example51,
+	'infinite-scroll-reset': Example52,
+	'server-data': Example53,
+	'state-persistence': Example54,
 }

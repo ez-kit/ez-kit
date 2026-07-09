@@ -1,5 +1,5 @@
 {
 	"title": "Selection",
 	"description": "Row selection and bulk actions",
-	"pages": ["index", "selection-bar", "delete-confirmation"]
+	"pages": ["index", "selection-bar"]
 }

@@ -20,8 +20,12 @@
 }
 
 :root {
-	--dg-pin-shadow-color: var(--surface-foreground);
+	--dg-pin-shadow-color: oklch(0 0 0 / 0.1);
 	--dg-pin-cell-background: var(--surface);
+}
+
+.dark {
+	--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
 }
 
 [data-sticky='true'] {
@@ -36,14 +40,14 @@
 
 [data-pin-shadow='left'] {
 	width: 12px;
-	box-shadow: inset 4px 0 8px -2px var(--dg-pin-shadow-color);
+	box-shadow: inset 8px 0 5px -5px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-left-shadow, 0);
 	transition: opacity 150ms;
 }
 
 [data-pin-shadow='right'] {
 	width: 12px;
-	box-shadow: inset -4px 0 8px -2px var(--dg-pin-shadow-color);
+	box-shadow: inset -8px 0 5px -5px var(--dg-pin-shadow-color);
 	opacity: var(--dg-pin-right-shadow, 0);
 	transition: opacity 150ms;
 }
@@ -61,11 +65,11 @@
 /* Soft edge shadow matching the column-pin overlay style.
    Targets only the last pinned-top row and the first pinned-bottom row in a stack. */
 [data-slot='tr'][data-pinned='top']:not(:has(+ [data-slot='tr'][data-pinned='top'])) {
-	box-shadow: 0 4px 8px -2px var(--dg-pin-shadow-color);
+	box-shadow: 0 8px 5px -5px var(--dg-pin-shadow-color);
 	clip-path: inset(0 0 -12px 0);
 }
 [data-slot='tr']:not([data-pinned='bottom']) + [data-slot='tr'][data-pinned='bottom'] {
-	box-shadow: 0 -4px 8px -2px var(--dg-pin-shadow-color);
+	box-shadow: 0 -8px 5px -5px var(--dg-pin-shadow-color);
 	clip-path: inset(-12px 0 0 0);
 }
 

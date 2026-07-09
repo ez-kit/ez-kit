@@ -1,7 +1,28 @@
 import { useGridComponents } from '../components-context'
-import { SELECTION_BAR_KEY, type SelectionBarConfig } from '../use-data-grid'
+import { SELECTION_BAR_KEY, type SelectionBarCallbackArgs, type SelectionBarConfig } from '../use-data-grid'
 
 import { useTable } from './table-context'
+
+import type { Table } from '@tanstack/table-core'
+
+/**
+ * Build the `{ table, clearSelection, selectedRows }` argument passed to every
+ * selection-bar callback. Shared with the bulk `ConfirmDialog` renderer so the
+ * confirmed handler receives the exact same shape as the instant path.
+ */
+export function buildSelectionBarArgs(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	table: Table<any>,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): SelectionBarCallbackArgs<any> {
+	return {
+		table,
+		clearSelection: () => {
+			table.resetRowSelection()
+		},
+		selectedRows: table.getSelectedRowModel().rows,
+	}
+}
 
 /**
  * Selection info bar. Automatically visible when `selection` is enabled
@@ -28,28 +49,24 @@ export function SelectionBar() {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const config: SelectionBarConfig<any> = typeof rawConfig === 'object' ? rawConfig : {}
 
-	const selectedRows = table.getSelectedRowModel().rows
+	const callbackArgs = buildSelectionBarArgs(table)
+	const { selectedRows } = callbackArgs
 	const count = selectedRows.length
 	const open = count > 0
-
-	const clearSelection = () => {
-		table.resetRowSelection()
-	}
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const callbackArgs: Parameters<NonNullable<SelectionBarConfig<any>['onDelete']>>[0] = {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-		table: table as any,
-		clearSelection,
-		selectedRows,
-	}
+	const clearSelection = callbackArgs.clearSelection
 
 	const { onDelete: onDeleteHandler, onClear: onClearHandler } = config
 
+	// When `confirmation` is set, Delete stages a pending bulk delete and the
+	// shared ConfirmDialog runs the handler on confirm. Otherwise it fires instantly.
 	const onDelete = onDeleteHandler
-		? () => {
-				onDeleteHandler(callbackArgs)
-			}
+		? config.confirmation
+			? () => {
+					table.requestBulkDelete()
+				}
+			: () => {
+					onDeleteHandler(callbackArgs)
+				}
 		: undefined
 
 	const onClear = onClearHandler

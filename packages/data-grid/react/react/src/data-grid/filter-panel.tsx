@@ -1,5 +1,6 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { DEFAULT_FILTER_DEBOUNCE_MS, FILTERING_DEBOUNCE_KEY } from '../use-data-grid'
 
 import { renderFilterInput } from './render-filter-input'
 import { useTable } from './table-context'
@@ -100,6 +101,9 @@ export function FilterPanel() {
 		MultiSelectFilter,
 	} = gridComponents.filtering
 	const cellTypes = useCellTypes()
+	const filteringDebounce =
+		((table as unknown as Record<symbol, unknown>)[FILTERING_DEBOUNCE_KEY] as number | undefined) ??
+		DEFAULT_FILTER_DEBOUNCE_MS
 
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 	if (!hasFiltering) return null
@@ -133,6 +137,7 @@ export function FilterPanel() {
 			OperatorSelect,
 			BetweenInput,
 			MultiSelectFilter,
+			debounce: filteringDebounce,
 		})
 
 		const onClear = (): void => {
