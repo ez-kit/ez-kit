@@ -330,6 +330,12 @@
 		"exportName": "ControlledStateExample"
 	},
 	{
+		"id": "default-options",
+		"label": "Default Options",
+		"sourceFile": "components/default-options.tsx",
+		"exportName": "DefaultOptionsExample"
+	},
+	{
 		"id": "fallbacks",
 		"label": "Fallbacks",
 		"sourceFile": "components/fallbacks.tsx",

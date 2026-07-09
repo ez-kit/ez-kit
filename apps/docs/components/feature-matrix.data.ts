@@ -253,6 +253,14 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 	},
 	{
 		category: 'State & Tooling',
+		feature: 'Default options (provider / kit)',
+		description:
+			'Set grid options once — app-wide via a provider or baked into a custom kit — with instance config always winning.',
+		status: FeatureStatus.Done,
+		doc: 'default-options',
+	},
+	{
+		category: 'State & Tooling',
 		feature: 'Theming',
 		description: 'Customize colors, spacing, and typography via CSS variables or design tokens.',
 		status: FeatureStatus.Done,

@@ -1,0 +1,126 @@
+---
+title: Default Options
+description: Set data grid options once — app-wide or baked into a kit — instead of repeating them at every useDataGrid call site. Instance config always wins.
+---
+
+# Default Options
+
+By default every grid declares its own feature config at the `useDataGrid` call site. When most grids in an app share the same options — page size, sort behavior, fallbacks, sticky header — repeating them everywhere is noise. Default options let you set them **once** and override per-grid only where it matters.
+
+Two layers supply defaults; both merge **under** each instance's own config, so **the instance always wins**:
+
+- **App-level** — `DataGridOptionsProvider defaults={{…}}` wraps a React subtree.
+- **Kit-level** — `createDataGrid({ defaultOptions })` bakes defaults into a custom kit bundle.
+
+## App-level: `DataGridOptionsProvider`
+
+Wrap any part of your tree. Every `useDataGrid` call beneath the provider inherits its `defaults`, merged under the grid's own config.
+
+<DataGridDocsExample exampleId='default-options' />
+
+```tsx
+import { DataGridOptionsProvider } from '@ez-kit/data-grid-react'
+
+function App() {
+	return (
+		<DataGridOptionsProvider defaults={{ sorting: true, pagination: { pageSize: 3 } }}>
+			{/* Inherits sorting + pageSize: 3 — no feature flags needed */}
+			<UsersGrid />
+
+			{/* Same provider, but this grid overrides pageSize and drops sorting */}
+			<AuditGrid />
+		</DataGridOptionsProvider>
+	)
+}
+
+function UsersGrid() {
+	const table = useDataGrid({ data, columns })
+	return <DataGrid table={table} />
+}
+
+function AuditGrid() {
+	// Deep-merged over the defaults: pageSize wins, sorting is turned off.
+	const table = useDataGrid({ data, columns, sorting: false, pagination: { pageSize: 5 } })
+	return <DataGrid table={table} />
+}
+```
+
+### Nested providers
+
+Providers compose. A child provider's `defaults` are deep-merged on top of its parent's, so a subtree can refine app-wide defaults without repeating them.
+
+```tsx
+<DataGridOptionsProvider defaults={{ sorting: true, stickyHeader: true }}>
+	{/* inherits sorting + stickyHeader */}
+	<DataGridOptionsProvider defaults={{ pagination: { pageSize: 25 } }}>
+		{/* inherits sorting + stickyHeader + pageSize: 25 */}
+	</DataGridOptionsProvider>
+</DataGridOptionsProvider>
+```
+
+### Reading the merged defaults
+
+`useDataGridOptions()` returns the resolved defaults contributed by ancestor providers — useful for debugging or building tooling around your grids.
+
+```tsx
+import { useDataGridOptions } from '@ez-kit/data-grid-react'
+
+const defaults = useDataGridOptions() // { sorting: true, pagination: { pageSize: 3 } }
+```
+
+## Kit-level: factory `defaultOptions`
+
+When you build a custom kit with `createDataGrid`, pass `defaultOptions` to bake defaults into the kit itself. Every grid built with that kit's `useDataGrid` inherits them — no provider required.
+
+```tsx
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+export const { DataGrid, useDataGrid } = createDataGrid({
+	components,
+	defaultOptions: {
+		pagination: { pageSize: 20 },
+		fallbacks: { empty: 'No records' },
+	},
+})
+```
+
+## Merge semantics
+
+Options are combined with an **immutable, per-feature deep merge** ([`utils/deep-merge.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/utils/deep-merge.ts)):
+
+- Nested config objects combine — `pagination: true` from defaults plus `pagination: { pageSize: 20 }` at the call site resolve together.
+- Arrays, atomics, and React elements **replace** wholesale — they are not merged element-by-element.
+- `undefined` never overrides a defined default.
+
+Precedence, low → high:
+
+```
+factory defaultOptions  <  provider defaults  <  instance config
+```
+
+### What can be defaulted
+
+`DataGridDefaultOptions<TRow>` is the mergeable subset of `useDataGrid` config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `selectionBar`, `columnVisibility`, `expanding`, `pinning`, `sizing`, `stickyHeader`, `fallbacks`, …).
+
+It **excludes** the per-instance inputs that are meaningless as shared defaults:
+
+| Excluded key | Why |
+| --- | --- |
+| `data` | Row data is always per-grid. |
+| `columns` | Column definitions are always per-grid. |
+| `state` | Controlled state belongs to the owning component. |
+| `onStateChange` | Its handler belongs to the owning component. |
+
+## When to use which
+
+| Need | Reach for |
+| --- | --- |
+| App-wide defaults, set in your own app tree | `DataGridOptionsProvider` |
+| A subtree that refines app defaults | Nested `DataGridOptionsProvider` |
+| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaultOptions })` |
+| One-off options for a single grid | Plain `useDataGrid` config (always wins) |
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid-options-context.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid-options-context.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/create-data-grid.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/create-data-grid.tsx)
