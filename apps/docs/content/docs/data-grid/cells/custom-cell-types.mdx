@@ -41,6 +41,28 @@ const grid = useDataGrid({
 })
 ```
 
+## More examples
+
+Each custom type is just a docs-layer renderer registered via `extendDataGrid()`. The three below show different render strategies — a visual bar, a formatted value, and a composite view.
+
+### Progress
+
+A visual bar for the view plus a range slider and number input for editing. The renderer clamps to 0–100 and shifts color as completion rises.
+
+<DataGridDocsExample exampleId='custom-cell-progress' />
+
+### Currency
+
+The view formats the raw number with `Intl.NumberFormat`; the editor stays a plain number input, so the stored value is never a formatted string.
+
+<DataGridDocsExample exampleId='custom-cell-currency' />
+
+### User
+
+A composite view that derives an initials avatar (color hashed from the name) next to the member's name.
+
+<DataGridDocsExample exampleId='custom-cell-user' />
+
 ## Type-safety
 
 `defineCellType` infers the meta shape so columns using your cell type get autocomplete on the extra `meta` fields. Mismatched meta is a TS error at the column site, not a runtime surprise.
