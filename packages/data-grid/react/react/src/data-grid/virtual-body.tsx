@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 
 import { useGridComponents } from '../components-context'
+import { DATA_GRID_DEFAULTS } from '../defaults'
 
 import { DataGridRow } from './row'
 import { useDataGridInstance, useTable } from './table-context'
@@ -23,8 +24,6 @@ const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
  * overflow the reserved area. Generous enough for the shipped shadcn/heroui kits.
  */
 const LOAD_MORE_ALLOWANCE_PX = 56
-
-const DEFAULT_THRESHOLD_ROWS = 5
 
 /**
  * Virtualized tbody — renders only the rows currently in the viewport.
@@ -66,7 +65,7 @@ export function VirtualBody() {
 	const bottomRows = hasPinning ? table.getBottomRows() : []
 
 	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
-	const thresholdRows = controller.threshold.rows ?? DEFAULT_THRESHOLD_ROWS
+	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.infinite.threshold.rows
 	const rowCount = centerRows.length
 
 	// Index-based detection: load when the last rendered row nears the end.

@@ -1,4 +1,5 @@
 import { useGridComponents } from '../components-context'
+import { DATA_GRID_DEFAULTS } from '../defaults'
 import { FILTER_CHIPS_KEY } from '../use-data-grid'
 
 import { useTable } from './table-context'
@@ -75,7 +76,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 
 	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig | undefined
 
-	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? 'above'
+	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
 	const columnFilters = table.getState().columnFilters
 	const globalFilter = table.getState().globalFilter as unknown
 

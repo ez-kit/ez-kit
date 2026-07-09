@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 
+import { DATA_GRID_DEFAULTS } from '../defaults'
 import { INFINITE_KEY } from '../use-data-grid'
 
 import { useDataGridInstance, useDataGridStore } from './table-context'
@@ -96,8 +97,8 @@ export function useInfiniteScroll(): InfiniteController {
 
 	return {
 		enabled: Boolean(config),
-		trigger: config?.trigger ?? 'auto',
-		threshold: config?.threshold ?? { rows: 5 },
+		trigger: config?.trigger ?? DATA_GRID_DEFAULTS.infinite.trigger,
+		threshold: config?.threshold ?? { rows: DATA_GRID_DEFAULTS.infinite.threshold.rows },
 		isFetching: isFetchingNextPage,
 		hasMore: config?.hasNextPage ?? false,
 		error: errorState?.error ?? null,
