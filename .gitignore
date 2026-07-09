@@ -17,6 +17,9 @@ test-results/
 # task-flow-execute visual-check scratch (screenshots/snapshots; published as release assets, never committed)
 **/.visual/
 
+# task-flow-execute agent-gate/agent-push scratch (full gate command logs; tail printed to stdout, never committed)
+**/.agent-logs/
+
 .agents/skills/
 .claude/skills/
 .claude/commands
