@@ -5,7 +5,6 @@ import { Trash2, X } from 'lucide-react'
 
 import {
 	ActionBar,
-	ActionBarClose,
 	ActionBarGroup,
 	ActionBarItem,
 	ActionBarSelection,
@@ -83,12 +82,15 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 				)}
 				{actions}
 				<ActionBarSeparator />
-				<ActionBarClose
+				<Button
+					size='sm'
+					variant='ghost'
+					isIconOnly
 					aria-label='Clear selection'
-					onClick={onClear}
+					onPress={onClear}
 				>
-					<X size={14} />
-				</ActionBarClose>
+					<X size={16} />
+				</Button>
 			</ActionBarGroup>
 		</ActionBar>
 	)
