@@ -1,5 +1,7 @@
 import { DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
 
+import { FilterTextInput } from './filter-text-input'
+
 import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
 import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSelectProps } from '../types'
 import type {
@@ -23,6 +25,8 @@ export type RenderFilterInputArgs = {
 	OperatorSelect: ComponentType<OperatorSelectProps>
 	BetweenInput: ComponentType<BetweenInputProps>
 	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
+	/** Commit debounce (ms) for the fallback text inputs. `0` = commit on every keystroke. */
+	debounce: number
 }
 
 /**
@@ -117,6 +121,7 @@ export function renderFilterInput({
 	OperatorSelect,
 	BetweenInput,
 	MultiSelectFilter,
+	debounce,
 }: RenderFilterInputArgs): ReactNode {
 	const resolvedOperators = meta?.resolvedOperators
 
@@ -245,12 +250,12 @@ export function renderFilterInput({
 
 		return (
 			<>
-				<Input
+				<FilterTextInput
+					Input={Input}
 					placeholder={`Filter ${header.column.id}…`}
 					value={(inputValue ?? '') as string}
-					onChange={(e) => {
-						onValueChange(e.target.value)
-					}}
+					onCommit={onValueChange}
+					debounce={debounce}
 				/>
 				{operatorSelect}
 			</>
@@ -293,12 +298,12 @@ export function renderFilterInput({
 	}
 
 	return (
-		<Input
+		<FilterTextInput
+			Input={Input}
 			placeholder={`Filter ${header.column.id}…`}
 			value={(filterValue ?? '') as string}
-			onChange={(e) => {
-				header.column.setFilterValue(e.target.value)
-			}}
+			onCommit={onChange}
+			debounce={debounce}
 		/>
 	)
 }

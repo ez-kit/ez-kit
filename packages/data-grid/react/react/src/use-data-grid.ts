@@ -46,6 +46,12 @@ export const SORTING_KEY = Symbol('sorting')
 /** Symbol used to carry filtering variant on the table instance for Header to read. */
 export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
 
+/** Symbol used to carry the column filter commit debounce (ms) on the table instance for Header / FilterPanel to read. */
+export const FILTERING_DEBOUNCE_KEY = Symbol('filteringDebounce')
+
+/** Default commit debounce (ms) for column text filter inputs. `0` = commit on every keystroke (backward compatible). */
+export const DEFAULT_FILTER_DEBOUNCE_MS = 0
+
 /** Symbol used to carry normalized globalFiltering UI config on the table instance for Toolbar / GlobalFilterInput to read. */
 export const GLOBAL_FILTERING_KEY = Symbol('globalFiltering')
 
@@ -248,6 +254,13 @@ export type ReactFilteringConfig = {
 	/** Display variant for column filter controls. Default: 'inline'. */
 	variant?: FilteringVariant
 	/**
+	 * Commit debounce in milliseconds for column text filter inputs.
+	 * `0` (default) commits on every keystroke — behaviour unchanged.
+	 * Discrete controls (between, multi-select, select/badge, custom components)
+	 * always commit instantly and are unaffected by this option.
+	 */
+	debounce?: number
+	/**
 	 * Auto-mount a strip of removable chips for active filters.
 	 * - `false` / omitted — no auto-mount. `<DataGrid.ActiveFiltersBar />` still works manually.
 	 * - `true` — auto-mount with `position: 'above'`.
@@ -424,6 +437,9 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 	const filteringVariant: FilteringVariant | undefined =
 		typeof rawFiltering === 'object' ? rawFiltering.variant : undefined
 
+	const filteringDebounce: number =
+		typeof rawFiltering === 'object' ? (rawFiltering.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS) : DEFAULT_FILTER_DEBOUNCE_MS
+
 	const normalizedChips: NormalizedFilterChipsConfig | undefined = (() => {
 		if (typeof rawFiltering !== 'object' || rawFiltering.chips === undefined || rawFiltering.chips === false) {
 			return undefined
@@ -446,7 +462,7 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 
 	const coreFiltering: boolean | FilteringConfig | undefined =
 		typeof rawFiltering === 'object'
-			? (({ variant: _v, chips: _c, clearButton: _cb, ...rest }) => rest)(rawFiltering)
+			? (({ variant: _v, chips: _c, clearButton: _cb, debounce: _d, ...rest }) => rest)(rawFiltering)
 			: rawFiltering
 
 	// Split `globalFiltering` into:
@@ -563,6 +579,9 @@ export function useDataGrid<TRow extends object>(config: UseDataGridConfig<TRow>
 
 	// Store filteringVariant on the table instance so Header can read without an extra prop
 	tableAsSymbolMap[FILTERING_VARIANT_KEY] = filteringVariant
+
+	// Store the column filter commit debounce on the table instance so Header / FilterPanel can read it
+	tableAsSymbolMap[FILTERING_DEBOUNCE_KEY] = filteringDebounce
 
 	// Store normalized globalFiltering UI config (placeholder, debounce, toolbar) on the
 	// table instance so Toolbar / GlobalFilterInput can read it without prop drilling.
