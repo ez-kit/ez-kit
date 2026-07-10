@@ -77,17 +77,25 @@ export function ColorCellInput({ value, onChange }: CellInputProps) {
 	)
 }
 
-// ── progress ────────────────────────────────────────────────────────────────────
+// ── completion ──────────────────────────────────────────────────────────────────
 
 const PROGRESS_MIN = 0
 const PROGRESS_MAX = 100
+const PROGRESS_LOW_THRESHOLD = 40
+const PROGRESS_MID_THRESHOLD = 70
 
 function clampProgress(value: number): number {
 	if (Number.isNaN(value)) return PROGRESS_MIN
 	return Math.min(PROGRESS_MAX, Math.max(PROGRESS_MIN, value))
 }
 
-export function ProgressCellView({ value }: CellViewProps) {
+function progressColor(pct: number): string {
+	if (pct < PROGRESS_LOW_THRESHOLD) return '#ef4444'
+	if (pct < PROGRESS_MID_THRESHOLD) return '#f59e0b'
+	return '#10b981'
+}
+
+export function CompletionCellView({ value }: CellViewProps) {
 	const pct = clampProgress(Number(value))
 	return (
 		<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', minWidth: '8rem' }}>
@@ -106,7 +114,7 @@ export function ProgressCellView({ value }: CellViewProps) {
 						position: 'absolute',
 						inset: 0,
 						width: `${String(pct)}%`,
-						background: pct < 40 ? '#ef4444' : pct < 70 ? '#f59e0b' : '#10b981',
+						background: progressColor(pct),
 						borderRadius: '9999px',
 					}}
 				/>
@@ -126,7 +134,7 @@ export function ProgressCellView({ value }: CellViewProps) {
 	)
 }
 
-export function ProgressCellInput({ value, onChange }: CellInputProps) {
+export function CompletionCellInput({ value, onChange }: CellInputProps) {
 	const pct = clampProgress(Number(value))
 	return (
 		<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -178,7 +186,10 @@ export function CurrencyCellInput({ value, onChange }: CellInputProps) {
 				type='number'
 				step='0.01'
 				value={Number.isNaN(amount) ? '' : amount}
-				onChange={(e) => { onChange(Number(e.target.value)); }}
+				onChange={(e) => {
+					const next = Number(e.target.value)
+					onChange(Number.isNaN(next) ? 0 : next)
+				}}
 				style={{ width: '6rem' }}
 			/>
 		</span>

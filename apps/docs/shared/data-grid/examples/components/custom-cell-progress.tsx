@@ -23,7 +23,7 @@ const TASK_DATA: Task[] = [
 const taskColumns = defineColumns<Task>([
 	{ accessorKey: 'title', header: 'Task' },
 	{ accessorKey: 'owner', header: 'Owner' },
-	{ accessorKey: 'completion', header: 'Progress', cell: { type: 'progress' } },
+	{ accessorKey: 'completion', header: 'Progress', cell: { type: 'completion' } },
 ])
 
 export function CustomCellProgressExample() {
