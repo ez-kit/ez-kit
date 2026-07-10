@@ -85,12 +85,6 @@ export function FilterChipsExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Active filter chips and a Clear-all button are both opt-in via{' '}
-				<code>{`filtering: { chips, clearButton }`}</code>. Both compound members are also available for custom
-				layouts.
-			</p>
-
 			<div
 				style={{
 					display: 'flex',

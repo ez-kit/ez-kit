@@ -51,12 +51,5 @@ export function ColumnPinningExample() {
 		pinning: { column: true },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Click ⋮ next to a column header to pin left / right or unpin. Scroll horizontally to see pin shadows.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

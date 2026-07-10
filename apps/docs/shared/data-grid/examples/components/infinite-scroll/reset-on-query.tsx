@@ -30,13 +30,5 @@ export function InfiniteScrollResetExample() {
 		pagination: { mode: 'infinite', hasNextPage, onLoadMore },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Change the sort by clicking a column header — accumulated rows are dropped and page 1 is refetched for the new
-				order.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

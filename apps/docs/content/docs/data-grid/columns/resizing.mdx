@@ -5,9 +5,11 @@ description: Drag column borders to resize them. Persist sizes through controlle
 
 # Resizing
 
-Enable drag-to-resize on column borders.
+Enable drag-to-resize on column borders. Double-click a border to reset a column, and note that the **Active** column has resizing disabled.
 
 ## Usage
+
+The two grids below contrast the resize modes: **onChange** updates widths live during the drag, while **onEnd (performant)** commits the new width only on mouse release, avoiding re-renders mid-drag.
 
 <DataGridDocsExample exampleId='resizing' />
 

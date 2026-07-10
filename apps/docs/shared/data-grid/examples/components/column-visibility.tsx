@@ -111,14 +111,5 @@ export function ColumnVisibilityExample() {
 		columnVisibility: { toolbar: true },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				<strong>Name</strong> column is locked (cannot be hidden). <strong>Salary</strong> and{' '}
-				<strong>Start Date</strong> are hidden by default. Use the <strong>Columns</strong> button or the column menu
-				(⋯) to toggle visibility.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

@@ -41,13 +41,5 @@ export function CustomCellProgressExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				A custom <code>progress</code> cell type — a colored bar for the view, a range slider + number input for
-				editing. Click Edit on any row to drag the slider.
-			</p>
-			<CustomDataGrid table={table} />
-		</div>
-	)
+	return <CustomDataGrid table={table} />
 }

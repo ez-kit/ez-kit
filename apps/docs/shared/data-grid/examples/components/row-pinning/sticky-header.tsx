@@ -16,14 +16,5 @@ export function RowPinningStickyHeaderExample() {
 		stickyHeader: true,
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Pinned rows stay locked to the top and bottom while the header sticks to the top of the
-				scroll container. Container height is controlled by <code>--dg-table-max-height</code>{' '}
-				(default 400px).
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

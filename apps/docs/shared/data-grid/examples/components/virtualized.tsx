@@ -29,13 +29,5 @@ export function VirtualizedExample() {
 		virtualized: { row: { estimateSize: 49, overscan: 10 } },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Only visible rows are rendered. Scroll to see all {VIRTUAL_ROW_COUNT.toLocaleString()} rows. Container height is
-				controlled by <code>--dg-virtual-height</code> (default 600px).
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

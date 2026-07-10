@@ -94,11 +94,6 @@ export function FilterPopoverExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				A filter icon appears in each column header. Click it to open a popover with the filter input and operators. The
-				icon turns primary colour when a filter is active.
-			</p>
-
 			<div
 				style={{
 					display: 'flex',

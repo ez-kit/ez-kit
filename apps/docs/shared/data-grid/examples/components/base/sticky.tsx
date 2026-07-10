@@ -17,13 +17,5 @@ export function BaseStickyExample() {
 		pageSizer: { items: [10, 25, 50] },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				The header stays fixed while the body scrolls. Container height is controlled by{' '}
-				<code>--dg-table-max-height</code>.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

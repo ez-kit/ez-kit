@@ -43,13 +43,5 @@ export function CustomCellTypesExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Custom <code>rating</code> and <code>color</code> cell types added via <code>extendDataGrid()</code>. Click Edit
-				on any row to try the custom inputs.
-			</p>
-			<CustomDataGrid table={table} />
-		</div>
-	)
+	return <CustomDataGrid table={table} />
 }

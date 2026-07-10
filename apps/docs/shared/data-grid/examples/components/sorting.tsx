@@ -88,15 +88,5 @@ export function SortingExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Initial sort is <strong>priority asc → due asc</strong>. Click headers to sort; hold <kbd>⌘</kbd>/<kbd>Ctrl</kbd>{' '}
-				to add more columns (max 3). The <strong>Priority</strong> column uses a registered <code>priorityRank</code>{' '}
-				comparator, <strong>Rank</strong> is inverted (lower = better), and <strong>Assignee</strong> pushes empty
-				values to the bottom.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

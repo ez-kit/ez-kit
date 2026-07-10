@@ -22,12 +22,5 @@ export function InfiniteScrollAutoExample() {
 		pagination: { mode: 'infinite', hasNextPage, onLoadMore },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Scroll to the bottom — the next page loads automatically until the data is exhausted.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

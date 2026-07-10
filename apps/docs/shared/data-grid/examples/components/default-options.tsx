@@ -12,7 +12,12 @@ import { columns, INITIAL_DATA } from './_data'
 function DefaultsGrid() {
 	// No feature flags here — sorting + pagination come from the provider.
 	const table = useDataGrid({ data: INITIAL_DATA, columns })
-	return <DataGrid table={table} />
+	return (
+		<section>
+			<h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Inherits defaults</h2>
+			<DataGrid table={table} />
+		</section>
+	)
 }
 
 function OverrideGrid() {
@@ -25,7 +30,12 @@ function OverrideGrid() {
 		sorting: false,
 		pagination: { pageSize: 5 },
 	})
-	return <DataGrid table={table} />
+	return (
+		<section>
+			<h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Overrides defaults</h2>
+			<DataGrid table={table} />
+		</section>
+	)
 }
 
 export function DefaultOptionsExample() {
@@ -34,20 +44,8 @@ export function DefaultOptionsExample() {
 			defaults={{ sorting: true, pagination: { pageSize: 3 } }}
 		>
 			<div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-				<section>
-					<p style={{ marginBottom: '0.75rem', color: '#666', fontSize: '0.875rem' }}>
-						<strong>Inherits defaults</strong> — sortable, 3 rows per page. No feature flags at the
-						call site.
-					</p>
-					<DefaultsGrid />
-				</section>
-				<section>
-					<p style={{ marginBottom: '0.75rem', color: '#666', fontSize: '0.875rem' }}>
-						<strong>Overrides defaults</strong> — same provider, but this instance sets{' '}
-						<code>pageSize: 5</code> and turns sorting off. Instance always wins.
-					</p>
-					<OverrideGrid />
-				</section>
+				<DefaultsGrid />
+				<OverrideGrid />
 			</div>
 		</DataGridOptionsProvider>
 	)

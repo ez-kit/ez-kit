@@ -21,11 +21,6 @@ export function CrudExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Full CRUD demo: create, edit, delete rows — plus sorting, filtering (popover), column visibility, column
-				pinning, pagination, and bulk selection.
-			</p>
-
 			<div
 				style={{
 					display: 'flex',

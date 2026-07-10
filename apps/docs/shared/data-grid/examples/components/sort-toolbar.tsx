@@ -38,13 +38,5 @@ export function SortToolbarExample() {
 		sorting: { toolbar: true },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click the <strong>Sort</strong> button in the toolbar to add sort entries (column + direction). Header clicks and
-				the popover share the same multi-sort state.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

@@ -41,14 +41,7 @@ export function ColumnHelperBaseExample() {
 	const [data] = useState(EMPLOYEE_DATA)
 	const table = useDataGrid({ data, columns: baseColumns, sorting: true })
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Built-in types via <code>createColumnHelper&lt;Employee&gt;()</code>.
-			</p>
-			<CustomDataGrid table={table} />
-		</div>
-	)
+	return <CustomDataGrid table={table} />
 }
 
 // ── Example 2: custom() — inherit type, override view ────────────────────────
@@ -80,14 +73,7 @@ export function ColumnHelperCustomViewExample() {
 	const [data] = useState(EMPLOYEE_DATA)
 	const table = useDataGrid({ data, columns: customViewColumns, sorting: true })
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				<code>helper.custom()</code> inherits <code>number</code> type behavior with a custom star-rating view.
-			</p>
-			<CustomDataGrid table={table} />
-		</div>
-	)
+	return <CustomDataGrid table={table} />
 }
 
 // ── Example 3: registered custom types (from extendDataGrid) ─────────────────
@@ -106,12 +92,5 @@ export function ColumnHelperRegisteredExample() {
 	const [data] = useState(EMPLOYEE_DATA)
 	const table = useDataGrid({ data, columns: registeredColumns as ColumnDef<Employee>[], sorting: true })
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Named method <code>helper.rating()</code> for a type registered via <code>extendDataGrid()</code>.
-			</p>
-			<CustomDataGrid table={table} />
-		</div>
-	)
+	return <CustomDataGrid table={table} />
 }

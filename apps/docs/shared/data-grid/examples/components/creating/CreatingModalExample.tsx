@@ -33,12 +33,5 @@ export function CreatingModalExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click <strong>Add row</strong> in the toolbar to open a modal dialog with the create form.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }
