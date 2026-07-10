@@ -280,6 +280,30 @@
 		"exportName": "CustomCellTypesExample"
 	},
 	{
+		"id": "custom-cell-progress",
+		"label": "Custom · Progress",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/custom-cell-progress.tsx",
+		"exportName": "CustomCellProgressExample"
+	},
+	{
+		"id": "custom-cell-currency",
+		"label": "Custom · Currency",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/custom-cell-currency.tsx",
+		"exportName": "CustomCellCurrencyExample"
+	},
+	{
+		"id": "custom-cell-user",
+		"label": "Custom · User",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/custom-cell-user.tsx",
+		"exportName": "CustomCellUserExample"
+	},
+	{
 		"id": "date-cell",
 		"label": "Date Cell",
 		"group": "cells",
