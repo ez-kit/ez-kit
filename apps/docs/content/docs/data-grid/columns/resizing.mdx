@@ -9,9 +9,15 @@ Enable drag-to-resize on column borders. Double-click a border to reset a column
 
 ## Usage
 
-The two grids below contrast the resize modes: **onChange** updates widths live during the drag, while **onEnd (performant)** commits the new width only on mouse release, avoiding re-renders mid-drag.
+The two grids below contrast the resize modes.
 
-<DataGridDocsExample exampleId='resizing' />
+Drag to resize, double-click to reset.
+
+<DataGridDocsExample exampleId='resizing-on-change' />
+
+Width updates only after release — no re-renders during drag.
+
+<DataGridDocsExample exampleId='resizing-on-end' />
 
 ```ts
 const grid = useDataGrid({
