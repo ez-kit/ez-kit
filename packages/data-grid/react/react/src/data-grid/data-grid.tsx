@@ -5,10 +5,12 @@ import { GridComponentsProvider, useGridComponents } from '../components-context
 import {
 	CELL_TYPES_KEY,
 	FILTER_CHIPS_KEY,
-	SELECTION_BAR_KEY,
+	SELECTION_PANEL_KEY,
+	SELECTION_PANEL_VARIANT,
+	DEFAULT_SELECTION_PANEL_VARIANT,
 	useDataGrid,
 	type NormalizedFilterChipsConfig,
-	type SelectionBarConfig,
+	type SelectionPanelConfig,
 	type UseDataGridConfig,
 } from '../use-data-grid'
 
@@ -30,7 +32,7 @@ import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
-import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
+import { SelectionBar, buildSelectionPanelArgs } from './selection-bar'
 import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useDataGridInstance, useDataGridStore } from './table-context'
@@ -129,12 +131,14 @@ function resolveBulkConfirmationText(
 	return { title, description }
 }
 
-/** Whether either the per-row or the bulk (selection-bar) confirmation dialog is configured. */
+/** Whether either the per-row or the bulk (selection-panel) confirmation dialog is configured. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function hasConfirmDialog(table: Table<any>): boolean {
 	if (table.options.deleting?.confirmation) return true
-	const barConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY]
-	return typeof barConfig === 'object' && barConfig !== null && Boolean((barConfig as SelectionBarConfig).confirmation)
+	const panelConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+	return (
+		typeof panelConfig === 'object' && panelConfig !== null && Boolean((panelConfig as SelectionPanelConfig).confirmation)
+	)
 }
 
 function ConfirmDialogRenderer() {
@@ -146,19 +150,19 @@ function ConfirmDialogRenderer() {
 	const pendingId = useDataGridStore((s) => s.pendingDeleteRowId)
 	const pendingBulk = useDataGridStore((s) => s.pendingBulkDelete)
 
-	const barConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
+	const panelConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
 		| boolean
-		| SelectionBarConfig
+		| SelectionPanelConfig
 		| undefined
-	const barConfigObj = typeof barConfig === 'object' ? barConfig : undefined
-	const bulkConfirmation = barConfigObj?.confirmation
-	const bulkOnDelete = barConfigObj?.onDelete
+	const panelConfigObj = typeof panelConfig === 'object' ? panelConfig : undefined
+	const bulkConfirmation = panelConfigObj?.confirmation
+	const bulkOnDelete = panelConfigObj?.onDelete
 
-	// Bulk (selection-bar) confirmation takes precedence while staged. The handler
+	// Bulk (selection-panel) confirmation takes precedence while staged. The handler
 	// lives outside core, so run it here on confirm, then clear the pending flag.
 	if (pendingBulk && bulkConfirmation && bulkOnDelete) {
 		const bulkOptions: ConfirmationOptions = bulkConfirmation === true ? {} : bulkConfirmation
-		const args = buildSelectionBarArgs(table)
+		const args = buildSelectionPanelArgs(table)
 		const { title, description } = resolveBulkConfirmationText(bulkOptions, args.selectedRows.length)
 		return (
 			<ConfirmDialog
@@ -204,11 +208,11 @@ function DefaultLayout() {
 	// state mutations the layout doesn't actually depend on.
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
+	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
 		| boolean
-		| SelectionBarConfig
+		| SelectionPanelConfig
 		| undefined
-	const variant = (typeof rawConfig === 'object' ? rawConfig.variant : undefined) ?? 'floating'
+	const variant = (typeof rawConfig === 'object' ? rawConfig.variant : undefined) ?? DEFAULT_SELECTION_PANEL_VARIANT
 
 	const chipsConfig = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as
 		| NormalizedFilterChipsConfig
@@ -216,7 +220,7 @@ function DefaultLayout() {
 	const chipsAbove = chipsConfig?.position === 'above' ? <ActiveFiltersBar /> : null
 	const chipsBelow = chipsConfig?.position === 'below' ? <ActiveFiltersBar /> : null
 
-	if (variant === 'inline') {
+	if (variant === SELECTION_PANEL_VARIANT.Inline) {
 		return (
 			<>
 				<SelectionBar />

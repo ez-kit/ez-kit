@@ -38,18 +38,20 @@ The same content can be rendered inline above the table — no portal, no z-inde
 
 ## Delete confirmation
 
-Bulk delete is destructive. Set `confirmation` on the selection-bar config to prompt before
+Bulk delete is destructive. Set `confirmation` on the selection panel config to prompt before
 running `onDelete` — the shared `ConfirmDialog` slot opens with count-aware text ("Delete N rows?")
 and the handler fires only on confirm. Omit it (or pass `false`) for the default instant behaviour.
 
 ```tsx
-selectionBar: {
-	onDelete: ({ selectedRows, clearSelection }) => {
-		bulkDelete(selectedRows)
-		clearSelection()
+selection: {
+	panel: {
+		onDelete: ({ selectedRows, clearSelection }) => {
+			bulkDelete(selectedRows)
+			clearSelection()
+		},
+		// `true` uses the default copy; pass an object to customise it.
+		confirmation: { title: 'Delete selected products?' },
 	},
-	// `true` uses the default copy; pass an object to customise it.
-	confirmation: { title: 'Delete selected products?' },
 }
 ```
 
@@ -57,7 +59,10 @@ The dialog reuses the same `ConfirmDialog` component as per-row [delete confirma
 
 ## Options
 
-| Prop | Type | Description |
+The panel is configured under `selection.panel` — pass `true` for the default (read-only) panel or an
+object with the keys below. It renders only while `selection` is enabled.
+
+| `selection.panel` key | Type | Description |
 | --- | --- | --- |
 | `variant` | `'floating' \| 'inline'` | Default `'floating'`. |
 | `onDelete` | `({ table, selectedRows, clearSelection }) => void` | Adds a Delete button that runs this handler. |

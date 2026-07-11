@@ -19,37 +19,38 @@ export function SelectionBarExample() {
 		columns,
 		sorting: true,
 		pagination: { pageSize: 10 },
-		selection: true,
-		selectionBar: {
-			onDelete: ({ selectedRows, clearSelection }) => {
-				const names = selectedRows.map((r) => r.original.name).join(', ')
-				setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
-				clearSelection()
-				addLog(`Deleted: ${names}`)
+		selection: {
+			panel: {
+				onDelete: ({ selectedRows, clearSelection }) => {
+					const names = selectedRows.map((r) => r.original.name).join(', ')
+					setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
+					clearSelection()
+					addLog(`Deleted: ${names}`)
+				},
+				onClear: ({ clearSelection }) => {
+					clearSelection()
+					addLog('Selection cleared')
+				},
+				actions: (
+					<button
+						type='button'
+						onClick={() => {
+							addLog('Export triggered')
+						}}
+						style={{
+							padding: '0 10px',
+							height: 28,
+							fontSize: 12,
+							border: '1px solid #e2e8f0',
+							borderRadius: 6,
+							background: 'white',
+							cursor: 'pointer',
+						}}
+					>
+						Export
+					</button>
+				),
 			},
-			onClear: ({ clearSelection }) => {
-				clearSelection()
-				addLog('Selection cleared')
-			},
-			actions: (
-				<button
-					type='button'
-					onClick={() => {
-						addLog('Export triggered')
-					}}
-					style={{
-						padding: '0 10px',
-						height: 28,
-						fontSize: 12,
-						border: '1px solid #e2e8f0',
-						borderRadius: 6,
-						background: 'white',
-						cursor: 'pointer',
-					}}
-				>
-					Export
-				</button>
-			),
 		},
 	})
 

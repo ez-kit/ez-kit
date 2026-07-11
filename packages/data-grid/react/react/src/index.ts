@@ -14,7 +14,6 @@ export {
 	INFINITE_KEY,
 	PAGE_SIZER_KEY,
 	ROW_PINNING_KEY,
-	SELECTION_BAR_KEY,
 	SORTING_KEY,
 	VIRTUALIZED_KEY,
 } from './use-data-grid'
@@ -40,9 +39,10 @@ export type {
 	ReactFilteringConfig,
 	ReactGlobalFilteringConfig,
 	ReactPaginationConfig,
-	SelectionBarCallbackArgs,
-	SelectionBarConfig,
-	SelectionBarVariant,
+	ReactSelectionConfig,
+	SelectionPanelCallbackArgs,
+	SelectionPanelConfig,
+	SelectionPanelVariant,
 } from './use-data-grid'
 
 // Infinite scroll
