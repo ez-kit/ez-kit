@@ -97,12 +97,6 @@ export function FilterMultiValueExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Multi-value filters for <code>select</code> and <code>badge</code> columns — pick any combination of values to
-				narrow the table. With <code>filtering: {'{'} faceted: true {'}'}</code> each option also shows how many rows
-				would remain when selected.
-			</p>
-
 			<div
 				style={{
 					display: 'flex',

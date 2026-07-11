@@ -38,10 +38,6 @@ export function ControlledStateExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Sorting and pagination state are fully controlled by React state. Click a column header to
-				sort — state is owned by the parent and can be reset or preset programmatically.
-			</p>
 			<div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
 				<span style={{ fontSize: '0.875rem', color: '#666' }}>
 					Active sort: <strong>{sortLabel}</strong>

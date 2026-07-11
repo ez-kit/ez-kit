@@ -23,12 +23,5 @@ export function InfiniteScrollVirtualizedExample() {
 		pagination: { mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Virtualized + infinite: rows render on demand and pages load as you approach the end.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

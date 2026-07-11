@@ -34,12 +34,5 @@ export function DeleteConfirmationExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Click Delete on any row — a confirmation dialog will appear before the row is removed.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

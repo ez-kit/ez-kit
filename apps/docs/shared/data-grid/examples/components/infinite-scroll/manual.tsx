@@ -22,12 +22,5 @@ export function InfiniteScrollManualExample() {
 		pagination: { mode: 'infinite', trigger: 'manual', hasNextPage, onLoadMore },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click <strong>Load more</strong> to fetch the next page — nothing loads on scroll alone.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

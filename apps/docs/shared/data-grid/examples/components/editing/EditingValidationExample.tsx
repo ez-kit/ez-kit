@@ -39,13 +39,5 @@ export function EditingValidationExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click <strong>Edit</strong> on any row, then <strong>Save</strong>. Try setting the email to{' '}
-				<code>taken@example.com</code> to see the server simulator throw <code>ValidationError</code>.
-			</p>
-			<DataGrid<User> table={table} />
-		</div>
-	)
+	return <DataGrid<User> table={table} />
 }

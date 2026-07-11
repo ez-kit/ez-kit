@@ -17,12 +17,5 @@ export function BaseSelectionExample() {
 		pageSizer: { items: [5, 10, 25] },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click checkboxes to select rows. The header checkbox toggles the current page.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

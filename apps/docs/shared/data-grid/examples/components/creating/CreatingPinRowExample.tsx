@@ -33,12 +33,5 @@ export function CreatingPinRowExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				A blank input row is pinned to the top of the table — always visible and ready to fill in.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

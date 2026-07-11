@@ -41,13 +41,5 @@ export function CustomCellUserExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				A custom <code>user</code> cell type — a composite view that derives an initials avatar (color hashed from the
-				name) next to the name. Click Edit to rename a member.
-			</p>
-			<CustomDataGrid table={table} />
-		</div>
-	)
+	return <CustomDataGrid table={table} />
 }

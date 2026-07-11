@@ -75,19 +75,11 @@ export function FilterPanelExample() {
 		filtering: { variant: 'panel', faceted: true },
 	})
 	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Panel variant — все column-фильтры собраны в одну строку чипов вместо шапки. Каждый чип показывает{' '}
-				<code>label: value</code> (или <code>Any</code> если пусто), клик открывает popover с инпутом, X очищает.
-				Header теряет inline-фильтры, но остаётся sortable.
-			</p>
-
-			<DataGrid table={table}>
-				<DataGrid.Toolbar />
-				<DataGrid.FilterPanel />
-				<DataGrid.Table />
-				<DataGrid.Pagination />
-			</DataGrid>
-		</div>
+		<DataGrid table={table}>
+			<DataGrid.Toolbar />
+			<DataGrid.FilterPanel />
+			<DataGrid.Table />
+			<DataGrid.Pagination />
+		</DataGrid>
 	)
 }

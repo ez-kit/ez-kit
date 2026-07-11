@@ -17,12 +17,5 @@ export function BaseSortingExample() {
 		pageSizer: { items: [5, 10, 25] },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click a column header to sort by that column. Shift-click for multi-column sorting.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

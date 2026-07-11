@@ -16,12 +16,5 @@ export function BasePlainExample() {
 		pageSizer: { items: [5, 10, 25] },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Minimal table with pagination and a page-size selector. No sorting, no filtering.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

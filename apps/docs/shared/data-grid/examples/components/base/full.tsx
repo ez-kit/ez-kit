@@ -43,12 +43,5 @@ export function BaseFullExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Demonstrates sorting, filtering, pagination, selection, creating (row mode), editing (row mode), and deleting.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

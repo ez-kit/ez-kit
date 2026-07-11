@@ -29,12 +29,5 @@ export function CellTypesExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Demonstrates select, badge, image, link, and progress cell types with editing and filtering.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

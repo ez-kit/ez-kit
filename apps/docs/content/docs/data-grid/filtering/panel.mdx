@@ -9,6 +9,8 @@ When per-column popovers feel cramped, switch to a side panel that lists every f
 
 ## Usage
 
+The panel variant collects every column filter into a single row of chips instead of the header. Each chip shows `label: value` (or `Any` when empty); clicking it opens a popover with the input, and the X clears it. The header drops its inline filters but stays sortable.
+
 <DataGridDocsExample exampleId='filter-panel' />
 
 The panel is a `<DataGrid.FilterPanel />` slot. Each row corresponds to a filterable column; the engine reads `meta.filterVariant` and `meta.operators` to pick controls.

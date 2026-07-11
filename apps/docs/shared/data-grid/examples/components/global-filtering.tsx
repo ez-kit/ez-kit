@@ -92,11 +92,6 @@ export function GlobalFilteringExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				A search field appears in the right side of the toolbar. Typing into it filters rows across all searchable columns
-				with a 250ms debounce by default.
-			</p>
-
 			<div
 				style={{
 					display: 'flex',

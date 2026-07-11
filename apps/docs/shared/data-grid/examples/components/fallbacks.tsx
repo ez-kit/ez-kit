@@ -57,11 +57,6 @@ export function FallbacksExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666', fontSize: 14 }}>
-				Fallback states render automatically when the grid has no visible rows. Switch between states to preview
-				each one.
-			</p>
-
 			<div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
 				{(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
 					<TabButton

@@ -41,13 +41,5 @@ export function CustomCellCurrencyExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				A custom <code>currency</code> cell type — the view formats the raw number with{' '}
-				<code>Intl.NumberFormat</code>, the editor is a plain number input. Click Edit to change a price.
-			</p>
-			<CustomDataGrid table={table} />
-		</div>
-	)
+	return <CustomDataGrid table={table} />
 }

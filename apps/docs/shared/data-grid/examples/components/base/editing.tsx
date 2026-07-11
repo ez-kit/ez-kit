@@ -24,12 +24,5 @@ export function BaseEditingExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click the row menu (⋮) to edit a row inline. Changes are saved back into local state.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

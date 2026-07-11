@@ -22,10 +22,6 @@ export function CreatingExample() {
 
 	return (
 		<div>
-			<p className='mb-4 text-sm text-muted-foreground'>
-				Demonstrates the three creating modes: inline row, modal dialog, and pinned row.
-			</p>
-
 			<div className='mb-6 overflow-x-auto'>
 				<Tabs
 					value={active}

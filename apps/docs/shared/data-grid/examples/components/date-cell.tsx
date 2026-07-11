@@ -67,14 +67,7 @@ function InlineEditDemo() {
 			},
 		},
 	})
-	return (
-		<div>
-			<p style={{ marginBottom: '0.75rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Double-click a date cell to open the picker. Both columns round-trip ISO 8601 strings.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }
 
 function CreatingDemo() {
@@ -99,15 +92,7 @@ function CreatingDemo() {
 			},
 		},
 	})
-	return (
-		<div>
-			<p style={{ marginBottom: '0.75rem', color: '#64748b', fontSize: '0.875rem' }}>
-				The inline create row reuses the same DatePicker for the `creating` slot — `minValue` / `maxValue` from
-				`DateCellConfig` clamp the calendar.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }
 
 const SUB_TABS = [
@@ -124,13 +109,6 @@ export function DateCellExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Demonstrates the `date` cell type end-to-end — view formatting via{' '}
-				<code style={{ background: '#f1f5f9', padding: '0 0.25rem', borderRadius: 4 }}>Intl.DateTimeFormat</code>{' '}
-				options, inline cell editing, inline row creating, and per-column filter operators (including a
-				date-aware `between`).
-			</p>
-
 			<div
 				style={{
 					display: 'flex',

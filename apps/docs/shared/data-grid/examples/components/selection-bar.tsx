@@ -55,10 +55,6 @@ export function SelectionBarExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Select rows to reveal the selection bar. Supports Delete, custom actions slot, and Cancel.
-			</p>
-
 			<DataGrid table={table} />
 
 			{log.length > 0 && (

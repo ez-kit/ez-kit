@@ -48,13 +48,5 @@ export function ColumnsCombinedExample() {
 		sizing: { mode: 'onEnd' },
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Visibility, pinning and resizing combined. Drag column borders to resize. Pin a column via the ⋮ menu. Toggle
-				columns through the <strong>Columns</strong> button. <strong>Active</strong> starts hidden.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

@@ -46,10 +46,6 @@ export function CreatingValidationExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '0.75rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Open the create form via <strong>Add row</strong>. Validation runs on submit using a zod schema; the server
-				simulator can be toggled to throw <code>ValidationError</code>.
-			</p>
 			<label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
 				<input
 					type='checkbox'

@@ -56,11 +56,6 @@ export function SelectionBarInlineExample() {
 
 	return (
 		<div>
-			<p style={{ marginBottom: '1rem', color: '#666' }}>
-				Inline variant — selection bar renders as a normal block above the Toolbar, without overlay or
-				positioning. No animation, instant show/hide.
-			</p>
-
 			<DataGrid table={table} />
 
 			{log.length > 0 && (

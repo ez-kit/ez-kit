@@ -186,15 +186,5 @@ export function ServerDataExample() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pageIndex, pageSize, sorting, columnFilters, globalFilter])
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				All data operations (sort, filter, global search, pagination) are delegated to the server.
-				Change a filter or sort column to trigger a simulated network request — the refetch overlay
-				appears automatically while data is loading. Rapid changes are coalesced via last-write-wins
-				race protection.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }

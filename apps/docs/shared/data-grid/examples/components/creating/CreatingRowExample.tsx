@@ -33,12 +33,5 @@ export function CreatingRowExample() {
 		},
 	})
 
-	return (
-		<div>
-			<p style={{ marginBottom: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
-				Click <strong>Add row</strong> in the toolbar to open an inline form at the bottom of the table.
-			</p>
-			<DataGrid table={table} />
-		</div>
-	)
+	return <DataGrid table={table} />
 }
