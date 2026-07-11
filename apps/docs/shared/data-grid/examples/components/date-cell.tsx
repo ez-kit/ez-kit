@@ -48,12 +48,12 @@ const baseColumns = defineColumns<Milestone>([
 	},
 ])
 
-function ViewOnlyDemo() {
+export function DateCellViewExample() {
 	const table = useDataGrid({ data: INITIAL_DATA, columns: baseColumns, filtering: true })
 	return <DataGrid table={table} />
 }
 
-function InlineEditDemo() {
+export function DateCellEditExample() {
 	const [rows, setRows] = useState<Milestone[]>(INITIAL_DATA)
 	const table = useDataGrid({
 		data: rows,
@@ -70,7 +70,7 @@ function InlineEditDemo() {
 	return <DataGrid table={table} />
 }
 
-function CreatingDemo() {
+export function DateCellCreateExample() {
 	const [rows, setRows] = useState<Milestone[]>(INITIAL_DATA)
 	const table = useDataGrid({
 		data: rows,
@@ -93,55 +93,4 @@ function CreatingDemo() {
 		},
 	})
 	return <DataGrid table={table} />
-}
-
-const SUB_TABS = [
-	{ id: 'view', label: 'View + formatting', Component: ViewOnlyDemo },
-	{ id: 'edit', label: 'Inline edit', Component: InlineEditDemo },
-	{ id: 'create', label: 'Creating', Component: CreatingDemo },
-] as const
-
-type SubTabId = (typeof SUB_TABS)[number]['id']
-
-export function DateCellExample() {
-	const [active, setActive] = useState<SubTabId>('view')
-	const tab = SUB_TABS.find((t) => t.id === active) ?? SUB_TABS[0]
-
-	return (
-		<div>
-			<div
-				style={{
-					display: 'flex',
-					gap: '0.25rem',
-					flexWrap: 'wrap',
-					borderBottom: '1px solid #e2e8f0',
-					marginBottom: '1.5rem',
-				}}
-			>
-				{SUB_TABS.map((t) => (
-					<button
-						key={t.id}
-						onClick={() => {
-							setActive(t.id)
-						}}
-						style={{
-							padding: '0.375rem 0.75rem',
-							border: 'none',
-							borderBottom: active === t.id ? '2px solid #0f172a' : '2px solid transparent',
-							background: 'none',
-							cursor: 'pointer',
-							fontSize: '0.875rem',
-							fontWeight: active === t.id ? 600 : 400,
-							color: active === t.id ? '#0f172a' : '#64748b',
-							marginBottom: '-1px',
-						}}
-					>
-						{t.label}
-					</button>
-				))}
-			</div>
-
-			<tab.Component />
-		</div>
-	)
 }

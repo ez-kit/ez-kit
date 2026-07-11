@@ -13,9 +13,13 @@ Base behavior — per-column filter inputs:
 
 <DataGridDocsExample exampleId='base-filtering' />
 
-A filter icon appears in each column header. Click it to open a popover with the filter input and operators; the icon turns the primary colour while a filter is active.
+A filter icon appears in each column header. Click it to open a popover with the filter input; the icon turns the primary colour while a filter is active.
 
-<DataGridDocsExample exampleId='filter-popover' />
+<DataGridDocsExample exampleId='filter-popover-basic' />
+
+Opt columns into richer comparisons with `filtering: { operators }` — text operators like _contains_ / _equals_ / _is empty_, a `between` slider for numbers, and date-aware operators. The popover then renders an operator selector above the input.
+
+<DataGridDocsExample exampleId='filter-popover-operators' />
 
 ```ts
 const grid = useDataGrid({

@@ -9,9 +9,17 @@ The grid ships a "creating" flow: a trigger renders a button; clicking it opens 
 
 ## Usage
 
-The creating flow supports three modes — an inline row at the bottom of the table, a modal dialog, or a blank row pinned to the top. Switch between them in the tabs below.
+The creating flow supports three modes. The default `mode: 'row'` appends an inline draft row at the bottom of the table.
 
-<DataGridDocsExample exampleId='creating' />
+<DataGridDocsExample exampleId='creating-row' />
+
+`mode: 'modal'` collects the new row in a dialog prepared from the columns' edit types.
+
+<DataGridDocsExample exampleId='creating-modal' />
+
+Or pin the draft as a blank row at the top of the table so it stays visible while scrolling.
+
+<DataGridDocsExample exampleId='creating-pin-row' />
 
 With per-field validation:
 

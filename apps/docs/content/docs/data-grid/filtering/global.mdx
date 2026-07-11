@@ -11,7 +11,19 @@ Sometimes a user just wants one search box, not per-column filters. Global filte
 
 A search field sits at the right of the toolbar. Typing into it filters rows across all searchable columns, with a 250ms debounce by default.
 
-<DataGridDocsExample exampleId='global-filtering' />
+<DataGridDocsExample exampleId='global-filtering-basic' />
+
+Global search and per-column filters coexist — enable both `filtering` and `globalFiltering` and they compose.
+
+<DataGridDocsExample exampleId='global-filtering-combined' />
+
+Set `globalFilter: false` on a column to exclude it from the global match (here the `Internal ID` column is never searched).
+
+<DataGridDocsExample exampleId='global-filtering-excluded' />
+
+Provide your own `fn` to change the match semantics — this one does a starts-with match instead of the default substring search.
+
+<DataGridDocsExample exampleId='global-filtering-custom-fn' />
 
 ```tsx
 <DataGrid.GlobalFilterInput placeholder='Search…' />

@@ -18,47 +18,60 @@ import { FilterOperatorsBetweenInputsExample as Example13 } from '../components/
 import { FilterOperatorsBetweenSliderExample as Example14 } from '../components/filter-operators-between-slider'
 import { FilterOperatorsDateExample as Example15 } from '../components/filter-operators-date'
 import { FilterOperatorsDateBetweenExample as Example16 } from '../components/filter-operators-date-between'
-import { FilterPopoverExample as Example17 } from '../components/filter-popover'
-import { GlobalFilteringExample as Example18 } from '../components/global-filtering'
-import { FilterChipsExample as Example19 } from '../components/filter-chips'
-import { FilterMultiValueExample as Example20 } from '../components/filter-multi-value'
-import { FilterDateRangeExample as Example21 } from '../components/filter-date-range'
-import { FilterPanelExample as Example22 } from '../components/filter-panel'
-import { SelectionBarExample as Example23 } from '../components/selection-bar'
-import { SelectionBarInlineExample as Example24 } from '../components/selection-bar-inline'
-import { DeleteConfirmationExample as Example25 } from '../components/delete-confirmation'
-import { ColumnVisibilityExample as Example26 } from '../components/column-visibility'
-import { ColumnPinningExample as Example27 } from '../components/column-pinning'
-import { ResizingExample as Example28 } from '../components/resizing'
-import { ColumnsCombinedExample as Example29 } from '../components/columns/combined'
-import { ColumnHelperBaseExample as Example30 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example31 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example32 } from '../components/column-helper'
-import { CellTypesExample as Example33 } from '../components/cell-types'
-import { CustomCellTypesExample as Example34 } from '../components/custom-cell-types'
-import { CustomCellProgressExample as Example35 } from '../components/custom-cell-progress'
-import { CustomCellCurrencyExample as Example36 } from '../components/custom-cell-currency'
-import { CustomCellUserExample as Example37 } from '../components/custom-cell-user'
-import { DateCellExample as Example38 } from '../components/date-cell'
-import { CreatingExample as Example39 } from '../components/creating/CreatingExample'
-import { CreatingValidationExample as Example40 } from '../components/creating/CreatingValidationExample'
-import { EditingValidationExample as Example41 } from '../components/editing/EditingValidationExample'
-import { ExpandingSubContentExample as Example42 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example43 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example44 } from '../components/expanding/controlled'
-import { RowPinningStickyHeaderExample as Example45 } from '../components/row-pinning/sticky-header'
-import { VirtualizedExample as Example46 } from '../components/virtualized'
-import { CrudExample as Example47 } from '../components/crud/CrudExample'
-import { CrudClientExample as Example48 } from '../components/crud/CrudClientExample'
-import { ControlledStateExample as Example49 } from '../components/controlled-state'
-import { DefaultOptionsExample as Example50 } from '../components/default-options'
-import { FallbacksExample as Example51 } from '../components/fallbacks'
-import { InfiniteScrollAutoExample as Example52 } from '../components/infinite-scroll/auto'
-import { InfiniteScrollManualExample as Example53 } from '../components/infinite-scroll/manual'
-import { InfiniteScrollVirtualizedExample as Example54 } from '../components/infinite-scroll/virtualized'
-import { InfiniteScrollResetExample as Example55 } from '../components/infinite-scroll/reset-on-query'
-import { ServerDataExample as Example56 } from '../components/server-data'
-import { StatePersistenceExample as Example57 } from '../components/state-persistence'
+import { FilterPopoverBasicExample as Example17 } from '../components/filter-popover'
+import { FilterPopoverOperatorsExample as Example18 } from '../components/filter-popover'
+import { GlobalFilteringBasicExample as Example19 } from '../components/global-filtering'
+import { GlobalFilteringCombinedExample as Example20 } from '../components/global-filtering'
+import { GlobalFilteringExcludedExample as Example21 } from '../components/global-filtering'
+import { GlobalFilteringCustomFnExample as Example22 } from '../components/global-filtering'
+import { FilterChipsAutoExample as Example23 } from '../components/filter-chips'
+import { FilterChipsAlwaysExample as Example24 } from '../components/filter-chips'
+import { FilterChipsCustomExample as Example25 } from '../components/filter-chips'
+import { FilterMultiValueInExample as Example26 } from '../components/filter-multi-value'
+import { FilterMultiValueFacetedExample as Example27 } from '../components/filter-multi-value'
+import { FilterMultiValueNotInExample as Example28 } from '../components/filter-multi-value'
+import { FilterDateRangeBuiltInExample as Example29 } from '../components/filter-date-range'
+import { FilterDateRangeCalendarExample as Example30 } from '../components/filter-date-range'
+import { FilterDateRangeCustomExample as Example31 } from '../components/filter-date-range'
+import { FilterPanelExample as Example32 } from '../components/filter-panel'
+import { SelectionBarExample as Example33 } from '../components/selection-bar'
+import { SelectionBarInlineExample as Example34 } from '../components/selection-bar-inline'
+import { DeleteConfirmationExample as Example35 } from '../components/delete-confirmation'
+import { ColumnVisibilityExample as Example36 } from '../components/column-visibility'
+import { ColumnPinningExample as Example37 } from '../components/column-pinning'
+import { ResizingExample as Example38 } from '../components/resizing'
+import { ColumnsCombinedExample as Example39 } from '../components/columns/combined'
+import { ColumnHelperBaseExample as Example40 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example41 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example42 } from '../components/column-helper'
+import { CellTypesExample as Example43 } from '../components/cell-types'
+import { CustomCellTypesExample as Example44 } from '../components/custom-cell-types'
+import { CustomCellProgressExample as Example45 } from '../components/custom-cell-progress'
+import { CustomCellCurrencyExample as Example46 } from '../components/custom-cell-currency'
+import { CustomCellUserExample as Example47 } from '../components/custom-cell-user'
+import { DateCellViewExample as Example48 } from '../components/date-cell'
+import { DateCellEditExample as Example49 } from '../components/date-cell'
+import { DateCellCreateExample as Example50 } from '../components/date-cell'
+import { CreatingRowExample as Example51 } from '../components/creating/CreatingRowExample'
+import { CreatingModalExample as Example52 } from '../components/creating/CreatingModalExample'
+import { CreatingPinRowExample as Example53 } from '../components/creating/CreatingPinRowExample'
+import { CreatingValidationExample as Example54 } from '../components/creating/CreatingValidationExample'
+import { EditingValidationExample as Example55 } from '../components/editing/EditingValidationExample'
+import { ExpandingSubContentExample as Example56 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example57 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example58 } from '../components/expanding/controlled'
+import { RowPinningStickyHeaderExample as Example59 } from '../components/row-pinning/sticky-header'
+import { VirtualizedExample as Example60 } from '../components/virtualized'
+import { CrudClientExample as Example61 } from '../components/crud/CrudClientExample'
+import { ControlledStateExample as Example62 } from '../components/controlled-state'
+import { DefaultOptionsExample as Example63 } from '../components/default-options'
+import { FallbacksExample as Example64 } from '../components/fallbacks'
+import { InfiniteScrollAutoExample as Example65 } from '../components/infinite-scroll/auto'
+import { InfiniteScrollManualExample as Example66 } from '../components/infinite-scroll/manual'
+import { InfiniteScrollVirtualizedExample as Example67 } from '../components/infinite-scroll/virtualized'
+import { InfiniteScrollResetExample as Example68 } from '../components/infinite-scroll/reset-on-query'
+import { ServerDataExample as Example69 } from '../components/server-data'
+import { StatePersistenceExample as Example70 } from '../components/state-persistence'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -199,44 +212,124 @@ export const dataGridExamplesManifest = [
     "exportName": "FilterOperatorsDateBetweenExample"
   },
   {
-    "id": "filter-popover",
-    "label": "Popover",
+    "id": "filter-popover-basic",
+    "label": "Popover · Basic",
     "group": "filtering",
     "groupLabel": "Filtering",
     "sourceFile": "components/filter-popover.tsx",
-    "exportName": "FilterPopoverExample"
+    "exportName": "FilterPopoverBasicExample"
   },
   {
-    "id": "global-filtering",
-    "label": "Global search",
+    "id": "filter-popover-operators",
+    "label": "Popover · With operators",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-popover.tsx",
+    "exportName": "FilterPopoverOperatorsExample"
+  },
+  {
+    "id": "global-filtering-basic",
+    "label": "Global search · Basic",
     "group": "filtering",
     "groupLabel": "Filtering",
     "sourceFile": "components/global-filtering.tsx",
-    "exportName": "GlobalFilteringExample"
+    "exportName": "GlobalFilteringBasicExample"
   },
   {
-    "id": "filter-chips",
-    "label": "Active chips & clear",
+    "id": "global-filtering-combined",
+    "label": "Global search · With column filters",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/global-filtering.tsx",
+    "exportName": "GlobalFilteringCombinedExample"
+  },
+  {
+    "id": "global-filtering-excluded",
+    "label": "Global search · Exclude a column",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/global-filtering.tsx",
+    "exportName": "GlobalFilteringExcludedExample"
+  },
+  {
+    "id": "global-filtering-custom-fn",
+    "label": "Global search · Custom filter fn",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/global-filtering.tsx",
+    "exportName": "GlobalFilteringCustomFnExample"
+  },
+  {
+    "id": "filter-chips-auto",
+    "label": "Active chips · Auto-mount",
     "group": "filtering",
     "groupLabel": "Filtering",
     "sourceFile": "components/filter-chips.tsx",
-    "exportName": "FilterChipsExample"
+    "exportName": "FilterChipsAutoExample"
   },
   {
-    "id": "filter-multi-value",
-    "label": "Multi-value & faceted",
+    "id": "filter-chips-always",
+    "label": "Active chips · Always show clear",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-chips.tsx",
+    "exportName": "FilterChipsAlwaysExample"
+  },
+  {
+    "id": "filter-chips-custom",
+    "label": "Active chips · Custom layout",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-chips.tsx",
+    "exportName": "FilterChipsCustomExample"
+  },
+  {
+    "id": "filter-multi-value-in",
+    "label": "Multi-value · In (default)",
     "group": "filtering",
     "groupLabel": "Filtering",
     "sourceFile": "components/filter-multi-value.tsx",
-    "exportName": "FilterMultiValueExample"
+    "exportName": "FilterMultiValueInExample"
   },
   {
-    "id": "filter-date-range",
-    "label": "Date range & presets",
+    "id": "filter-multi-value-faceted",
+    "label": "Multi-value · Faceted counts",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-multi-value.tsx",
+    "exportName": "FilterMultiValueFacetedExample"
+  },
+  {
+    "id": "filter-multi-value-not-in",
+    "label": "Multi-value · Not in",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-multi-value.tsx",
+    "exportName": "FilterMultiValueNotInExample"
+  },
+  {
+    "id": "filter-date-range-built-in",
+    "label": "Date range · Built-in presets",
     "group": "filtering",
     "groupLabel": "Filtering",
     "sourceFile": "components/filter-date-range.tsx",
-    "exportName": "FilterDateRangeExample"
+    "exportName": "FilterDateRangeBuiltInExample"
+  },
+  {
+    "id": "filter-date-range-calendar",
+    "label": "Date range · Range calendar",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-date-range.tsx",
+    "exportName": "FilterDateRangeCalendarExample"
+  },
+  {
+    "id": "filter-date-range-custom",
+    "label": "Date range · Custom presets",
+    "group": "filtering",
+    "groupLabel": "Filtering",
+    "sourceFile": "components/filter-date-range.tsx",
+    "exportName": "FilterDateRangeCustomExample"
   },
   {
     "id": "filter-panel",
@@ -367,18 +460,46 @@ export const dataGridExamplesManifest = [
     "exportName": "CustomCellUserExample"
   },
   {
-    "id": "date-cell",
-    "label": "Date Cell",
+    "id": "date-cell-view",
+    "label": "Date Cell · View + formatting",
     "group": "cells",
     "groupLabel": "Cells",
     "sourceFile": "components/date-cell.tsx",
-    "exportName": "DateCellExample"
+    "exportName": "DateCellViewExample"
   },
   {
-    "id": "creating",
-    "label": "Creating",
-    "sourceFile": "components/creating/CreatingExample.tsx",
-    "exportName": "CreatingExample"
+    "id": "date-cell-edit",
+    "label": "Date Cell · Inline edit",
+    "group": "cells",
+    "groupLabel": "Cells",
+    "sourceFile": "components/date-cell.tsx",
+    "exportName": "DateCellEditExample"
+  },
+  {
+    "id": "date-cell-create",
+    "label": "Date Cell · Creating",
+    "group": "cells",
+    "groupLabel": "Cells",
+    "sourceFile": "components/date-cell.tsx",
+    "exportName": "DateCellCreateExample"
+  },
+  {
+    "id": "creating-row",
+    "label": "Creating · Inline row",
+    "sourceFile": "components/creating/CreatingRowExample.tsx",
+    "exportName": "CreatingRowExample"
+  },
+  {
+    "id": "creating-modal",
+    "label": "Creating · Modal",
+    "sourceFile": "components/creating/CreatingModalExample.tsx",
+    "exportName": "CreatingModalExample"
+  },
+  {
+    "id": "creating-pin-row",
+    "label": "Creating · Pinned row",
+    "sourceFile": "components/creating/CreatingPinRowExample.tsx",
+    "exportName": "CreatingPinRowExample"
   },
   {
     "id": "creating-validation",
@@ -433,14 +554,6 @@ export const dataGridExamplesManifest = [
     "label": "Virtualized",
     "sourceFile": "components/virtualized.tsx",
     "exportName": "VirtualizedExample"
-  },
-  {
-    "id": "crud-server",
-    "label": "Server",
-    "group": "crud",
-    "groupLabel": "CRUD",
-    "sourceFile": "components/crud/CrudExample.tsx",
-    "exportName": "CrudExample"
   },
   {
     "id": "crud-client",
@@ -536,45 +649,58 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'filter-operators-between-slider': Example14,
 	'filter-operators-date': Example15,
 	'filter-operators-date-between': Example16,
-	'filter-popover': Example17,
-	'global-filtering': Example18,
-	'filter-chips': Example19,
-	'filter-multi-value': Example20,
-	'filter-date-range': Example21,
-	'filter-panel': Example22,
-	'selection-bar': Example23,
-	'selection-bar-inline': Example24,
-	'delete-confirmation': Example25,
-	'column-visibility': Example26,
-	'column-pinning': Example27,
-	'resizing': Example28,
-	'columns-combined': Example29,
-	'column-helper': Example30,
-	'column-helper-custom-view': Example31,
-	'column-helper-registered': Example32,
-	'cell-types': Example33,
-	'custom-cell-types': Example34,
-	'custom-cell-progress': Example35,
-	'custom-cell-currency': Example36,
-	'custom-cell-user': Example37,
-	'date-cell': Example38,
-	'creating': Example39,
-	'creating-validation': Example40,
-	'editing-validation': Example41,
-	'expanding-sub-content': Example42,
-	'expanding-tree': Example43,
-	'expanding-controlled': Example44,
-	'row-pinning-sticky-header': Example45,
-	'virtualized': Example46,
-	'crud-server': Example47,
-	'crud-client': Example48,
-	'controlled-state': Example49,
-	'default-options': Example50,
-	'fallbacks': Example51,
-	'infinite-scroll-auto': Example52,
-	'infinite-scroll-manual': Example53,
-	'infinite-scroll-virtualized': Example54,
-	'infinite-scroll-reset': Example55,
-	'server-data': Example56,
-	'state-persistence': Example57,
+	'filter-popover-basic': Example17,
+	'filter-popover-operators': Example18,
+	'global-filtering-basic': Example19,
+	'global-filtering-combined': Example20,
+	'global-filtering-excluded': Example21,
+	'global-filtering-custom-fn': Example22,
+	'filter-chips-auto': Example23,
+	'filter-chips-always': Example24,
+	'filter-chips-custom': Example25,
+	'filter-multi-value-in': Example26,
+	'filter-multi-value-faceted': Example27,
+	'filter-multi-value-not-in': Example28,
+	'filter-date-range-built-in': Example29,
+	'filter-date-range-calendar': Example30,
+	'filter-date-range-custom': Example31,
+	'filter-panel': Example32,
+	'selection-bar': Example33,
+	'selection-bar-inline': Example34,
+	'delete-confirmation': Example35,
+	'column-visibility': Example36,
+	'column-pinning': Example37,
+	'resizing': Example38,
+	'columns-combined': Example39,
+	'column-helper': Example40,
+	'column-helper-custom-view': Example41,
+	'column-helper-registered': Example42,
+	'cell-types': Example43,
+	'custom-cell-types': Example44,
+	'custom-cell-progress': Example45,
+	'custom-cell-currency': Example46,
+	'custom-cell-user': Example47,
+	'date-cell-view': Example48,
+	'date-cell-edit': Example49,
+	'date-cell-create': Example50,
+	'creating-row': Example51,
+	'creating-modal': Example52,
+	'creating-pin-row': Example53,
+	'creating-validation': Example54,
+	'editing-validation': Example55,
+	'expanding-sub-content': Example56,
+	'expanding-tree': Example57,
+	'expanding-controlled': Example58,
+	'row-pinning-sticky-header': Example59,
+	'virtualized': Example60,
+	'crud-client': Example61,
+	'controlled-state': Example62,
+	'default-options': Example63,
+	'fallbacks': Example64,
+	'infinite-scroll-auto': Example65,
+	'infinite-scroll-manual': Example66,
+	'infinite-scroll-virtualized': Example67,
+	'infinite-scroll-reset': Example68,
+	'server-data': Example69,
+	'state-persistence': Example70,
 }
