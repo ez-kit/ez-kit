@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
-import { COLUMN_VISIBILITY_KEY, SELECTION_BAR_KEY, SORTING_KEY, useDataGrid } from './use-data-grid'
+import { COLUMN_VISIBILITY_KEY, SELECTION_PANEL_KEY, SORTING_KEY, useDataGrid } from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { UseDataGridConfig } from './use-data-grid'
@@ -88,10 +88,10 @@ describe('DataGridOptionsProvider', () => {
 
 	it('lets an instance override provider defaults inside useDataGrid', () => {
 		const { result } = renderHook(
-			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selectionBar: false }),
-			{ wrapper: makeWrapper({ selectionBar: true }) },
+			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { panel: false } }),
+			{ wrapper: makeWrapper({ selection: { panel: true } }) },
 		)
-		expect(symbols(result.current.table)[SELECTION_BAR_KEY]).toBe(false)
+		expect(symbols(result.current.table)[SELECTION_PANEL_KEY]).toBe(false)
 	})
 })
 

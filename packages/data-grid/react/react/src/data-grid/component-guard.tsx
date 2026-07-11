@@ -2,7 +2,7 @@
 
 import { useGridComponents } from '../components-context'
 import { COMPONENT_FEATURE } from '../contract'
-import { SELECTION_BAR_KEY, type SelectionBarConfig } from '../use-data-grid'
+import { SELECTION_PANEL_KEY, type SelectionPanelConfig } from '../use-data-grid'
 
 import { useDataGridInstance } from './table-context'
 
@@ -37,11 +37,11 @@ export function ComponentGuard(): null {
 	if (table.options.deleting?.confirmation) required.add('ConfirmDialog')
 	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormShell')
 
-	const selectionConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] as
+	const selectionPanel = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
 		| boolean
-		| SelectionBarConfig
+		| SelectionPanelConfig
 		| undefined
-	if (selectionConfig !== undefined && selectionConfig !== false) required.add('SelectionBar')
+	if (selectionPanel !== undefined && selectionPanel !== false) required.add('SelectionBar')
 
 	const missing = [...required].filter((key) => {
 		// Resolve the component through its feature group; a partial kit may omit the

@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { createDataGridInstance } from '../data-grid-instance'
 import { renderWithComponents } from '../test-utils'
-import { PAGE_SIZER_KEY, SELECTION_BAR_KEY } from '../use-data-grid'
+import { PAGE_SIZER_KEY, SELECTION_PANEL_KEY } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
@@ -367,7 +367,7 @@ describe('<DataGrid>', () => {
 		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
 			const { instance } = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = { variant: 'inline' }
+			;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] = { variant: 'inline' }
 			instance.table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={instance} />)
 
@@ -381,7 +381,7 @@ describe('<DataGrid>', () => {
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = true
+			;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] = true
 			instance.table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={instance} />)
 
@@ -424,7 +424,7 @@ describe('<DataGrid>', () => {
 
 describe('<DataGrid> selection-bar delete confirmation', () => {
 	function setSelectionBar(instance: ReturnType<typeof makeTable>['instance'], value: unknown) {
-		;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_BAR_KEY] = value
+		;(instance.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] = value
 	}
 
 	function getDialog(): HTMLElement {
