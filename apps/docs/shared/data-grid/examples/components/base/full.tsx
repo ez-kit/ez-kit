@@ -16,12 +16,13 @@ export function BaseFullExample() {
 		filtering: true,
 		pagination: { pageSize: 10 },
 		pageSizer: { items: [3, 5, 10] },
-		selection: true,
 		columnVisibility: true,
-		selectionBar: {
-			onDelete: ({ selectedRows, clearSelection }) => {
-				setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
-				clearSelection()
+		selection: {
+			panel: {
+				onDelete: ({ selectedRows, clearSelection }) => {
+					setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
+					clearSelection()
+				},
 			},
 		},
 		editing: {

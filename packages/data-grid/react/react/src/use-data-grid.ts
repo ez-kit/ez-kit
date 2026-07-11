@@ -16,6 +16,7 @@ import type {
 	LoadMoreDirection,
 	PaginationConfig,
 	RowVirtualOptions,
+	SelectionConfig,
 	TableConfig,
 	VirtualizedConfig,
 } from '@ez-kit/data-grid-core'
@@ -37,8 +38,8 @@ export const COL_PINNING_KEY = Symbol('colPinning')
 /** Symbol used to carry normalized virtualized config on the table instance for Body/Table to read. */
 export const VIRTUALIZED_KEY = Symbol('virtualized')
 
-/** Symbol used to carry selectionBar config on the table instance for SelectionBar to read. */
-export const SELECTION_BAR_KEY = Symbol('selectionBar')
+/** Symbol used to carry the selection panel config on the table instance for SelectionBar to read. Internal — not part of the public API. */
+export const SELECTION_PANEL_KEY = Symbol('selectionPanel')
 
 /** Symbol used to carry columnVisibility UI config on the table instance for Toolbar to read. */
 export const COLUMN_VISIBILITY_KEY = Symbol('columnVisibility')
@@ -95,23 +96,32 @@ export type ReactExpandingConfig<TRow extends object> = {
 	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
 }
 
-export type SelectionBarCallbackArgs<TRow extends object = object> = {
+export type SelectionPanelCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
 	clearSelection: () => void
 	selectedRows: Row<TRow>[]
 }
 
-export type SelectionBarVariant = 'floating' | 'inline'
+export type SelectionPanelVariant = 'floating' | 'inline'
 
-export type SelectionBarConfig<TRow extends object = object> = {
+/** Named render modes for the selection panel — avoids scattering the raw literals. Internal. */
+export const SELECTION_PANEL_VARIANT = {
+	Floating: 'floating',
+	Inline: 'inline',
+} as const satisfies Record<string, SelectionPanelVariant>
+
+/** Render mode used when a panel config omits `variant`. Internal. */
+export const DEFAULT_SELECTION_PANEL_VARIANT: SelectionPanelVariant = SELECTION_PANEL_VARIANT.Floating
+
+export type SelectionPanelConfig<TRow extends object = object> = {
 	/**
 	 * Render mode.
 	 * - `'floating'` (default) — rendered as a positioned/sticky bar, typically overlaying the table area.
 	 * - `'inline'` — rendered as a normal block in the document flow, above the Toolbar.
 	 */
-	variant?: SelectionBarVariant
-	/** If provided — Delete button appears in the bar. */
-	onDelete?: (args: SelectionBarCallbackArgs<TRow>) => void
+	variant?: SelectionPanelVariant
+	/** If provided — Delete button appears in the panel. */
+	onDelete?: (args: SelectionPanelCallbackArgs<TRow>) => void
 	/**
 	 * Prompt before running `onDelete`. When set, clicking Delete opens the shared
 	 * `ConfirmDialog` slot with count-aware text; `onDelete` runs only on confirm.
@@ -123,9 +133,25 @@ export type SelectionBarConfig<TRow extends object = object> = {
 	 * Replaces default clear behaviour.
 	 * `clearSelection` arg is the default reset — call it if needed.
 	 */
-	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	onClear?: (args: SelectionPanelCallbackArgs<TRow>) => void
 	/** Rendered between Delete and Cancel. ReactElement or render-function. */
-	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+	actions?: ReactElement | ((args: SelectionPanelCallbackArgs<TRow>) => ReactElement)
+}
+
+/**
+ * React-layer selection config. Extends the headless core {@link SelectionConfig}
+ * (`onChange`, `multiple`) with the React-only `panel` — a selection info bar that is
+ * inherently React (its `actions` are `ReactElement`s), so it lives only in this layer
+ * and is never passed down to the core `selection` config.
+ */
+export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig & {
+	/**
+	 * Selection info panel config.
+	 * - `false` — panel never shown
+	 * - `undefined` | `true` — panel shown when ≥1 row selected (no delete button)
+	 * - {@link SelectionPanelConfig} — panel shown with config
+	 */
+	panel?: boolean | SelectionPanelConfig<TRow>
 }
 
 /** Normalized virtualized config stored on the table instance. */
@@ -346,14 +372,13 @@ export type UseDataGridConfig<TRow extends object> = {
 	/** Page size selector config. When provided, renders a PageSizer control. */
 	pageSizer?: PageSizerConfig
 	/**
-	 * Selection info bar config.
-	 * - `false` — bar never shown
-	 * - `undefined` | `true` — bar shown when ≥1 row selected (no delete button)
-	 * - `SelectionBarConfig` — bar shown with config
-	 *
-	 * Requires `selection: true` to have any effect.
+	 * Enable row selection.
+	 * - `false` / omitted — disabled
+	 * - `true` — enabled (multi-select) with no info panel
+	 * - {@link ReactSelectionConfig} — headless options (`onChange`, `multiple`) plus the
+	 *   React-only `panel` (selection info bar). `panel` renders only when selection is enabled.
 	 */
-	selectionBar?: boolean | SelectionBarConfig<TRow>
+	selection?: boolean | ReactSelectionConfig<TRow>
 	/**
 	 * Column visibility UI config.
 	 * - `true` — enables column visibility (toolbar button shown)
@@ -378,7 +403,10 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * the headless {@link PaginationConfig}.
 	 */
 	pagination?: boolean | ReactPaginationConfig
-} & Omit<TableConfig<TRow>, 'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination'> & {
+} & Omit<
+		TableConfig<TRow>,
+		'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection'
+	> & {
 		expanding?: boolean | ReactExpandingConfig<TRow>
 	}
 
@@ -413,7 +441,7 @@ export function useDataGrid<TRow extends object>(
 	const {
 		cellTypes,
 		pageSizer,
-		selectionBar,
+		selection: rawSelection,
 		columnVisibility,
 		fallbacks,
 		filtering: rawFiltering,
@@ -425,6 +453,16 @@ export function useDataGrid<TRow extends object>(
 		stickyHeader,
 		...restConfig
 	} = config
+
+	// Split `selection` into the headless core part (`onChange` / `multiple`) passed to
+	// createTable and the React-only `panel` stored on the instance for SelectionBar to read.
+	// `panel` is stripped so the core `selection` config never carries React-specific fields.
+	const selectionPanel: boolean | SelectionPanelConfig<TRow> | undefined =
+		typeof rawSelection === 'object' ? rawSelection.panel : undefined
+	const coreSelection: boolean | SelectionConfig | undefined =
+		typeof rawSelection === 'object'
+			? (({ panel: _panel, ...rest }) => rest)(rawSelection)
+			: rawSelection
 
 	// Split pagination into the headless core part (strip React-only detection tuning)
 	// and the normalized infinite config stored on the instance for the infinite hook.
@@ -526,6 +564,7 @@ export function useDataGrid<TRow extends object>(
 			globalFiltering: coreGlobalFiltering,
 			expanding: coreExpanding,
 			pagination: corePagination,
+			selection: coreSelection,
 			// Pass columnVisibility presence to core so it can table-level-gate enableHiding.
 			// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
 			// is layered separately via the COLUMN_VISIBILITY_KEY symbol.
@@ -583,10 +622,10 @@ export function useDataGrid<TRow extends object>(
 		config.pinning === true || (typeof config.pinning === 'object' && Boolean(config.pinning.column))
 	tableAsSymbolMap[COL_PINNING_KEY] = colPinEnabled
 
-	// Store selectionBar config on the table instance so SelectionBar can read without an extra prop
-	const selectionBarRef = useRef(selectionBar)
-	selectionBarRef.current = selectionBar
-	tableAsSymbolMap[SELECTION_BAR_KEY] = selectionBarRef.current
+	// Store the selection panel config on the table instance so SelectionBar can read without an extra prop
+	const selectionPanelRef = useRef(selectionPanel)
+	selectionPanelRef.current = selectionPanel
+	tableAsSymbolMap[SELECTION_PANEL_KEY] = selectionPanelRef.current
 
 	// Store columnVisibility UI config on the table instance so Toolbar can read without an extra prop
 	const colVisibilityRef = useRef(columnVisibility)
