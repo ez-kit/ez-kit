@@ -304,12 +304,20 @@
 		"exportName": "ColumnPinningExample"
 	},
 	{
-		"id": "resizing",
-		"label": "Resizing",
+		"id": "resizing-on-change",
+		"label": "onChange",
 		"group": "columns",
 		"groupLabel": "Columns",
-		"sourceFile": "components/resizing.tsx",
-		"exportName": "ResizingExample"
+		"sourceFile": "components/columns/resizing-on-change.tsx",
+		"exportName": "ResizingOnChangeExample"
+	},
+	{
+		"id": "resizing-on-end",
+		"label": "onEnd (performant)",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/columns/resizing-on-end.tsx",
+		"exportName": "ResizingOnEndExample"
 	},
 	{
 		"id": "columns-combined",

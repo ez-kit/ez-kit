@@ -39,39 +39,40 @@ import { SelectionBarInlineExample as Example34 } from '../components/selection-
 import { DeleteConfirmationExample as Example35 } from '../components/delete-confirmation'
 import { ColumnVisibilityExample as Example36 } from '../components/column-visibility'
 import { ColumnPinningExample as Example37 } from '../components/column-pinning'
-import { ResizingExample as Example38 } from '../components/resizing'
-import { ColumnsCombinedExample as Example39 } from '../components/columns/combined'
-import { ColumnHelperBaseExample as Example40 } from '../components/column-helper'
-import { ColumnHelperCustomViewExample as Example41 } from '../components/column-helper'
-import { ColumnHelperRegisteredExample as Example42 } from '../components/column-helper'
-import { CellTypesExample as Example43 } from '../components/cell-types'
-import { CustomCellTypesExample as Example44 } from '../components/custom-cell-types'
-import { CustomCellProgressExample as Example45 } from '../components/custom-cell-progress'
-import { CustomCellCurrencyExample as Example46 } from '../components/custom-cell-currency'
-import { CustomCellUserExample as Example47 } from '../components/custom-cell-user'
-import { DateCellViewExample as Example48 } from '../components/date-cell'
-import { DateCellEditExample as Example49 } from '../components/date-cell'
-import { DateCellCreateExample as Example50 } from '../components/date-cell'
-import { CreatingRowExample as Example51 } from '../components/creating/CreatingRowExample'
-import { CreatingModalExample as Example52 } from '../components/creating/CreatingModalExample'
-import { CreatingPinRowExample as Example53 } from '../components/creating/CreatingPinRowExample'
-import { CreatingValidationExample as Example54 } from '../components/creating/CreatingValidationExample'
-import { EditingValidationExample as Example55 } from '../components/editing/EditingValidationExample'
-import { ExpandingSubContentExample as Example56 } from '../components/expanding/sub-content'
-import { ExpandingTreeExample as Example57 } from '../components/expanding/tree'
-import { ExpandingControlledExample as Example58 } from '../components/expanding/controlled'
-import { RowPinningStickyHeaderExample as Example59 } from '../components/row-pinning/sticky-header'
-import { VirtualizedExample as Example60 } from '../components/virtualized'
-import { CrudClientExample as Example61 } from '../components/crud/CrudClientExample'
-import { ControlledStateExample as Example62 } from '../components/controlled-state'
-import { DefaultOptionsExample as Example63 } from '../components/default-options'
-import { FallbacksExample as Example64 } from '../components/fallbacks'
-import { InfiniteScrollAutoExample as Example65 } from '../components/infinite-scroll/auto'
-import { InfiniteScrollManualExample as Example66 } from '../components/infinite-scroll/manual'
-import { InfiniteScrollVirtualizedExample as Example67 } from '../components/infinite-scroll/virtualized'
-import { InfiniteScrollResetExample as Example68 } from '../components/infinite-scroll/reset-on-query'
-import { ServerDataExample as Example69 } from '../components/server-data'
-import { StatePersistenceExample as Example70 } from '../components/state-persistence'
+import { ResizingOnChangeExample as Example38 } from '../components/columns/resizing-on-change'
+import { ResizingOnEndExample as Example39 } from '../components/columns/resizing-on-end'
+import { ColumnsCombinedExample as Example40 } from '../components/columns/combined'
+import { ColumnHelperBaseExample as Example41 } from '../components/column-helper'
+import { ColumnHelperCustomViewExample as Example42 } from '../components/column-helper'
+import { ColumnHelperRegisteredExample as Example43 } from '../components/column-helper'
+import { CellTypesExample as Example44 } from '../components/cell-types'
+import { CustomCellTypesExample as Example45 } from '../components/custom-cell-types'
+import { CustomCellProgressExample as Example46 } from '../components/custom-cell-progress'
+import { CustomCellCurrencyExample as Example47 } from '../components/custom-cell-currency'
+import { CustomCellUserExample as Example48 } from '../components/custom-cell-user'
+import { DateCellViewExample as Example49 } from '../components/date-cell'
+import { DateCellEditExample as Example50 } from '../components/date-cell'
+import { DateCellCreateExample as Example51 } from '../components/date-cell'
+import { CreatingRowExample as Example52 } from '../components/creating/CreatingRowExample'
+import { CreatingModalExample as Example53 } from '../components/creating/CreatingModalExample'
+import { CreatingPinRowExample as Example54 } from '../components/creating/CreatingPinRowExample'
+import { CreatingValidationExample as Example55 } from '../components/creating/CreatingValidationExample'
+import { EditingValidationExample as Example56 } from '../components/editing/EditingValidationExample'
+import { ExpandingSubContentExample as Example57 } from '../components/expanding/sub-content'
+import { ExpandingTreeExample as Example58 } from '../components/expanding/tree'
+import { ExpandingControlledExample as Example59 } from '../components/expanding/controlled'
+import { RowPinningStickyHeaderExample as Example60 } from '../components/row-pinning/sticky-header'
+import { VirtualizedExample as Example61 } from '../components/virtualized'
+import { CrudClientExample as Example62 } from '../components/crud/CrudClientExample'
+import { ControlledStateExample as Example63 } from '../components/controlled-state'
+import { DefaultOptionsExample as Example64 } from '../components/default-options'
+import { FallbacksExample as Example65 } from '../components/fallbacks'
+import { InfiniteScrollAutoExample as Example66 } from '../components/infinite-scroll/auto'
+import { InfiniteScrollManualExample as Example67 } from '../components/infinite-scroll/manual'
+import { InfiniteScrollVirtualizedExample as Example68 } from '../components/infinite-scroll/virtualized'
+import { InfiniteScrollResetExample as Example69 } from '../components/infinite-scroll/reset-on-query'
+import { ServerDataExample as Example70 } from '../components/server-data'
+import { StatePersistenceExample as Example71 } from '../components/state-persistence'
 import type { ComponentType } from 'react'
 
 export const dataGridExamplesManifest = [
@@ -380,12 +381,20 @@ export const dataGridExamplesManifest = [
     "exportName": "ColumnPinningExample"
   },
   {
-    "id": "resizing",
-    "label": "Resizing",
+    "id": "resizing-on-change",
+    "label": "onChange",
     "group": "columns",
     "groupLabel": "Columns",
-    "sourceFile": "components/resizing.tsx",
-    "exportName": "ResizingExample"
+    "sourceFile": "components/columns/resizing-on-change.tsx",
+    "exportName": "ResizingOnChangeExample"
+  },
+  {
+    "id": "resizing-on-end",
+    "label": "onEnd (performant)",
+    "group": "columns",
+    "groupLabel": "Columns",
+    "sourceFile": "components/columns/resizing-on-end.tsx",
+    "exportName": "ResizingOnEndExample"
   },
   {
     "id": "columns-combined",
@@ -670,37 +679,38 @@ export const dataGridPrimitiveExamples: Record<DataGridExampleId, ComponentType>
 	'delete-confirmation': Example35,
 	'column-visibility': Example36,
 	'column-pinning': Example37,
-	'resizing': Example38,
-	'columns-combined': Example39,
-	'column-helper': Example40,
-	'column-helper-custom-view': Example41,
-	'column-helper-registered': Example42,
-	'cell-types': Example43,
-	'custom-cell-types': Example44,
-	'custom-cell-progress': Example45,
-	'custom-cell-currency': Example46,
-	'custom-cell-user': Example47,
-	'date-cell-view': Example48,
-	'date-cell-edit': Example49,
-	'date-cell-create': Example50,
-	'creating-row': Example51,
-	'creating-modal': Example52,
-	'creating-pin-row': Example53,
-	'creating-validation': Example54,
-	'editing-validation': Example55,
-	'expanding-sub-content': Example56,
-	'expanding-tree': Example57,
-	'expanding-controlled': Example58,
-	'row-pinning-sticky-header': Example59,
-	'virtualized': Example60,
-	'crud-client': Example61,
-	'controlled-state': Example62,
-	'default-options': Example63,
-	'fallbacks': Example64,
-	'infinite-scroll-auto': Example65,
-	'infinite-scroll-manual': Example66,
-	'infinite-scroll-virtualized': Example67,
-	'infinite-scroll-reset': Example68,
-	'server-data': Example69,
-	'state-persistence': Example70,
+	'resizing-on-change': Example38,
+	'resizing-on-end': Example39,
+	'columns-combined': Example40,
+	'column-helper': Example41,
+	'column-helper-custom-view': Example42,
+	'column-helper-registered': Example43,
+	'cell-types': Example44,
+	'custom-cell-types': Example45,
+	'custom-cell-progress': Example46,
+	'custom-cell-currency': Example47,
+	'custom-cell-user': Example48,
+	'date-cell-view': Example49,
+	'date-cell-edit': Example50,
+	'date-cell-create': Example51,
+	'creating-row': Example52,
+	'creating-modal': Example53,
+	'creating-pin-row': Example54,
+	'creating-validation': Example55,
+	'editing-validation': Example56,
+	'expanding-sub-content': Example57,
+	'expanding-tree': Example58,
+	'expanding-controlled': Example59,
+	'row-pinning-sticky-header': Example60,
+	'virtualized': Example61,
+	'crud-client': Example62,
+	'controlled-state': Example63,
+	'default-options': Example64,
+	'fallbacks': Example65,
+	'infinite-scroll-auto': Example66,
+	'infinite-scroll-manual': Example67,
+	'infinite-scroll-virtualized': Example68,
+	'infinite-scroll-reset': Example69,
+	'server-data': Example70,
+	'state-persistence': Example71,
 }
