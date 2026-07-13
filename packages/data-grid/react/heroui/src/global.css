@@ -73,6 +73,37 @@
 	clip-path: inset(-12px 0 0 0);
 }
 
+/* ── virtualization layout ──────────────────────────────────────────────────
+ * HeroUI renders a real <table>/<thead>/<tbody>/<tr>/<td> with native table
+ * display. In virtualized mode the shared structural stylesheet
+ * (@ez-kit/data-grid-react) switches the header/body to CSS grid and positions
+ * each virtual row absolutely — but the per-row column template is the UI kit's
+ * responsibility (shadcn applies it inline on its vendored row; HeroUI must do
+ * the equivalent here). Without it, absolutely-positioned <tr> rows blockify
+ * and their cells collapse, breaking the layout. Re-assert the grid column
+ * model on HeroUI's real table nodes, scoped to virtualization so normal tables
+ * stay on their native table layout. The template is published as
+ * `--grid-template-columns` on the table root (data-grid-react `table.tsx`) and
+ * inherits down to the header and rows. */
+[data-slot='table'][data-virtualized='true'] table {
+	display: grid;
+}
+[data-slot='table'][data-virtualized='true'] [data-slot='thead'] {
+	grid-template-columns: var(--grid-template-columns);
+}
+/* React Aria's TableHeader wraps the <th> columns in its own <tr> (no data-slot),
+ * so the header columns are grandchildren of the grid thead, not direct grid items.
+ * Collapse that wrapper with `display: contents` so the columns lay out on the
+ * thead's grid template and align with the body. (Body rows need no equivalent:
+ * React Aria's Row *is* the `data-slot='tr'` with cells as direct children.) */
+[data-slot='table'][data-virtualized='true'] [data-slot='thead'] tr {
+	display: contents;
+}
+[data-slot='table'][data-virtualized='true'] [data-slot='tr'] {
+	display: grid;
+	grid-template-columns: var(--grid-template-columns);
+}
+
 tr[data-expanded] {
 	display: block !important;
 	grid-template-columns: none !important;
