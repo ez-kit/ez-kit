@@ -26,6 +26,10 @@ type ClientProps = {
 }
 
 export function DataGridDocsExampleClient({ exampleId, source, defaultType, lockFlavor }: ClientProps) {
+	// Invariant: `lockFlavor` always arrives with a `defaultType`. The server
+	// wrapper in `data-grid-docs-example.tsx` throws when `lockFlavor` is set
+	// without one, so the `&& defaultType` guard here can never fall through to
+	// the unlocked UI in practice.
 	if (lockFlavor && defaultType) {
 		return (
 			<ExampleShell>
