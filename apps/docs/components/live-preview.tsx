@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { ExampleCard, ExampleShell } from './example-card'
-import { SourcePanel } from './source-panel'
+import { ExampleCard, ExampleShell } from '@/components/example-card'
+import { SourcePanel } from '@/components/source-panel'
 
 import type { ComponentType } from 'react'
 
