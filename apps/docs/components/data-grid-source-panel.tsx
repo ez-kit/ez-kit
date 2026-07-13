@@ -3,25 +3,17 @@
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { dataGridExampleSources } from '../shared/data-grid/examples/generated/data-grid-source'
-
-import type { DataGridSourceExampleId } from '../shared/data-grid/examples/generated/data-grid-source'
-
 const COLLAPSED_HEIGHT_PX = 100
 const COPY_FEEDBACK_MS = 2000
 const FALLBACK_EXPANDED_PX = 4000
 
 export type DataGridSourcePanelProps = {
-	exampleId: DataGridSourceExampleId
+	source: string
 	language?: string
 }
 
-export function DataGridSourcePanel({ exampleId, language = 'tsx' }: DataGridSourcePanelProps) {
-	const code = dataGridExampleSources[exampleId]
-
-	if (typeof code !== 'string') {
-		throw new Error(`<DataGridSourcePanel />: unknown example id "${exampleId}".`)
-	}
+export function DataGridSourcePanel({ source, language = 'tsx' }: DataGridSourcePanelProps) {
+	const code = source
 
 	const contentRef = useRef<HTMLDivElement>(null)
 	const [fullHeight, setFullHeight] = useState<number | null>(null)

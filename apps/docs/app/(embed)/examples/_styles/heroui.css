@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+@import '@ez-kit/data-grid-heroui/global.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@source '../../../../shared/data-grid/examples/components/**/*.{ts,tsx}';
+@source '../../../../../../packages/data-grid/react/heroui/src/**/*.{ts,tsx}';

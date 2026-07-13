@@ -1,0 +1,8 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@ez-kit/data-grid-shadcn/global.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@source '../../../../shared/data-grid/examples/components/**/*.{ts,tsx}';
+@source '../../../../../../packages/data-grid/react/shadcn/src/**/*.{ts,tsx}';

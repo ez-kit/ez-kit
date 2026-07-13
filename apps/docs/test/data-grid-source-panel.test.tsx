@@ -2,16 +2,12 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../shared/data-grid/examples/generated/data-grid-source', () => ({
-	dataGridExampleSources: {
-		'short-example': 'export const a = 1\n',
-		'long-example': Array.from({ length: 80 }, (_, i) => `const v${i.toString()} = ${i.toString()}`).join('\n') + '\n',
-	},
-}))
-
 vi.mock('fumadocs-ui/components/dynamic-codeblock', () => ({
 	DynamicCodeBlock: ({ code, lang }: { code: string; lang: string }) => (
-		<pre data-testid='mock-dyncode' data-lang={lang}>
+		<pre
+			data-testid='mock-dyncode'
+			data-lang={lang}
+		>
 			{code}
 		</pre>
 	),
@@ -19,11 +15,8 @@ vi.mock('fumadocs-ui/components/dynamic-codeblock', () => ({
 
 import { DataGridSourcePanel } from '../components/data-grid-source-panel'
 
-import type { DataGridSourceExampleId } from '../shared/data-grid/examples/generated/data-grid-source'
-
-const SHORT_EXAMPLE_ID = 'short-example' as DataGridSourceExampleId
-const LONG_EXAMPLE_ID = 'long-example' as DataGridSourceExampleId
-const MISSING_EXAMPLE_ID = 'missing-example' as DataGridSourceExampleId
+const SHORT_SOURCE = 'export const a = 1\n'
+const LONG_SOURCE = Array.from({ length: 80 }, (_, i) => `const v${i.toString()} = ${i.toString()}`).join('\n') + '\n'
 
 type RaiseHeight = (el: HTMLElement, height: number) => void
 
@@ -87,28 +80,26 @@ const findMeasuredNode = () => {
 }
 
 describe('<DataGridSourcePanel />', () => {
+	it('renders the provided source string', () => {
+		render(<DataGridSourcePanel source={'const answer = 42\n'} />)
+		expect(screen.getByText(/const answer = 42/)).toBeTruthy()
+	})
+
 	it('renders the code via DynamicCodeBlock with the provided language', () => {
-		render(<DataGridSourcePanel exampleId={SHORT_EXAMPLE_ID} language='tsx' />)
+		render(
+			<DataGridSourcePanel
+				source={SHORT_SOURCE}
+				language='tsx'
+			/>,
+		)
 
 		const block = screen.getByTestId('mock-dyncode')
 		expect(block).toHaveAttribute('data-lang', 'tsx')
 		expect(block.textContent).toContain('export const a = 1')
 	})
 
-	it('throws a contracted error when the example id is unknown', () => {
-		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-
-		try {
-			expect(() =>
-				render(<DataGridSourcePanel exampleId={MISSING_EXAMPLE_ID} />),
-			).toThrow(/unknown example id/i)
-		} finally {
-			consoleError.mockRestore()
-		}
-	})
-
 	it('hides the Show all toggle and gradient when the code fits within 100px', () => {
-		const { container } = render(<DataGridSourcePanel exampleId={SHORT_EXAMPLE_ID} />)
+		const { container } = render(<DataGridSourcePanel source={SHORT_SOURCE} />)
 
 		const measured = findMeasuredNode()
 		act(() => {
@@ -122,7 +113,7 @@ describe('<DataGridSourcePanel />', () => {
 	})
 
 	it('reveals the Show all toggle and gradient when the code overflows 100px', () => {
-		const { container } = render(<DataGridSourcePanel exampleId={LONG_EXAMPLE_ID} />)
+		const { container } = render(<DataGridSourcePanel source={LONG_SOURCE} />)
 
 		const measured = findMeasuredNode()
 		act(() => {
@@ -137,7 +128,7 @@ describe('<DataGridSourcePanel />', () => {
 	})
 
 	it('expands and collapses when the toggle is clicked', () => {
-		const { container } = render(<DataGridSourcePanel exampleId={LONG_EXAMPLE_ID} />)
+		const { container } = render(<DataGridSourcePanel source={LONG_SOURCE} />)
 
 		const measured = findMeasuredNode()
 		act(() => {
@@ -162,7 +153,7 @@ describe('<DataGridSourcePanel />', () => {
 		const writeText = vi.fn().mockResolvedValue(undefined)
 		Object.assign(navigator, { clipboard: { writeText } })
 
-		render(<DataGridSourcePanel exampleId={SHORT_EXAMPLE_ID} />)
+		render(<DataGridSourcePanel source={SHORT_SOURCE} />)
 
 		fireEvent.click(screen.getByRole('button', { name: /^copy$/i }))
 
