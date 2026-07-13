@@ -1,7 +1,6 @@
 'use client'
 
 import { defineColumns } from '@ez-kit/data-grid-react'
-import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
@@ -61,7 +60,7 @@ const withOperatorsColumns = defineColumns<Employee>([
 	},
 ])
 
-function BasicDemo() {
+export function FilterPopoverBasicExample() {
 	const table = useDataGrid({
 		data: DATA,
 		columns: basicColumns,
@@ -71,7 +70,7 @@ function BasicDemo() {
 	return <DataGrid table={table} />
 }
 
-function WithOperatorsDemo() {
+export function FilterPopoverOperatorsExample() {
 	const table = useDataGrid({
 		data: DATA,
 		columns: withOperatorsColumns,
@@ -79,54 +78,4 @@ function WithOperatorsDemo() {
 		sorting: true,
 	})
 	return <DataGrid table={table} />
-}
-
-const SUB_TABS = [
-	{ id: 'basic', label: 'Basic', Component: BasicDemo },
-	{ id: 'with-operators', label: 'With operators', Component: WithOperatorsDemo },
-] as const
-
-type SubTabId = (typeof SUB_TABS)[number]['id']
-
-export function FilterPopoverExample() {
-	const [active, setActive] = useState<SubTabId>('basic')
-	const tab = SUB_TABS.find((t) => t.id === active) ?? SUB_TABS[0]
-
-	return (
-		<div>
-			<div
-				style={{
-					display: 'flex',
-					gap: '0.25rem',
-					flexWrap: 'wrap',
-					borderBottom: '1px solid #e2e8f0',
-					marginBottom: '1.5rem',
-				}}
-			>
-				{SUB_TABS.map((t) => (
-					<button
-						key={t.id}
-						onClick={() => {
-							setActive(t.id)
-						}}
-						style={{
-							padding: '0.375rem 0.75rem',
-							border: 'none',
-							borderBottom: active === t.id ? '2px solid #0f172a' : '2px solid transparent',
-							background: 'none',
-							cursor: 'pointer',
-							fontSize: '0.875rem',
-							fontWeight: active === t.id ? 600 : 400,
-							color: active === t.id ? '#0f172a' : '#64748b',
-							marginBottom: '-1px',
-						}}
-					>
-						{t.label}
-					</button>
-				))}
-			</div>
-
-			<tab.Component />
-		</div>
-	)
 }

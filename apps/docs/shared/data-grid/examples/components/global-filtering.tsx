@@ -1,7 +1,7 @@
 'use client'
 
 import { defineColumns } from '@ez-kit/data-grid-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
@@ -25,7 +25,7 @@ function makeUsersWithSecret(count: number) {
 	return makeUsers(count).map((u) => ({ ...u, internalId: `INT-${String(u.id).padStart(5, '0')}` }))
 }
 
-function BasicDemo() {
+export function GlobalFilteringBasicExample() {
 	const data = useMemo(() => makeUsers(50), [])
 	const table = useDataGrid({
 		data,
@@ -36,7 +36,7 @@ function BasicDemo() {
 	return <DataGrid table={table} />
 }
 
-function CombinedDemo() {
+export function GlobalFilteringCombinedExample() {
 	const data = useMemo(() => makeUsers(50), [])
 	const table = useDataGrid({
 		data,
@@ -48,7 +48,7 @@ function CombinedDemo() {
 	return <DataGrid table={table} />
 }
 
-function ExcludedColumnDemo() {
+export function GlobalFilteringExcludedExample() {
 	const data = useMemo(() => makeUsersWithSecret(50), [])
 	const table = useDataGrid({
 		data,
@@ -59,7 +59,7 @@ function ExcludedColumnDemo() {
 	return <DataGrid table={table} />
 }
 
-function CustomFnDemo() {
+export function GlobalFilteringCustomFnExample() {
 	const data = useMemo(() => makeUsers(50), [])
 	const table = useDataGrid({
 		data,
@@ -75,56 +75,4 @@ function CustomFnDemo() {
 		pagination: { pageSize: 10 },
 	})
 	return <DataGrid table={table} />
-}
-
-const SUB_TABS = [
-	{ id: 'basic', label: 'Basic', Component: BasicDemo },
-	{ id: 'combined', label: 'With column filters', Component: CombinedDemo },
-	{ id: 'excluded', label: 'Exclude a column', Component: ExcludedColumnDemo },
-	{ id: 'custom-fn', label: 'Custom filter fn', Component: CustomFnDemo },
-] as const
-
-type SubTabId = (typeof SUB_TABS)[number]['id']
-
-export function GlobalFilteringExample() {
-	const [active, setActive] = useState<SubTabId>('basic')
-	const tab = SUB_TABS.find((t) => t.id === active) ?? SUB_TABS[0]
-
-	return (
-		<div>
-			<div
-				style={{
-					display: 'flex',
-					gap: '0.25rem',
-					flexWrap: 'wrap',
-					borderBottom: '1px solid #e2e8f0',
-					marginBottom: '1.5rem',
-				}}
-			>
-				{SUB_TABS.map((t) => (
-					<button
-						key={t.id}
-						onClick={() => {
-							setActive(t.id)
-						}}
-						style={{
-							padding: '0.375rem 0.75rem',
-							border: 'none',
-							borderBottom: active === t.id ? '2px solid #0f172a' : '2px solid transparent',
-							background: 'none',
-							cursor: 'pointer',
-							fontSize: '0.875rem',
-							fontWeight: active === t.id ? 600 : 400,
-							color: active === t.id ? '#0f172a' : '#64748b',
-							marginBottom: '-1px',
-						}}
-					>
-						{t.label}
-					</button>
-				))}
-			</div>
-
-			<tab.Component />
-		</div>
-	)
 }

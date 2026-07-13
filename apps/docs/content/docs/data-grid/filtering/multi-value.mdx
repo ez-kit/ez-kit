@@ -9,9 +9,17 @@ For columns with a bounded set of values (status, category, tag), let users pick
 
 ## Usage
 
-Multi-value filters let users pick any combination of values from a `select` or `badge` column to narrow the table. With `filtering: { faceted: true }`, each option also shows how many rows would remain when selected.
+Multi-value filters let users pick any combination of values from a `select` or `badge` column to narrow the table. The default `in` operator keeps every row whose value matches one of the selected options.
 
-<DataGridDocsExample exampleId='filter-multi-value' />
+<DataGridDocsExample exampleId='filter-multi-value-in' />
+
+With `filtering: { faceted: true }`, each option also shows how many rows would remain if it were selected — useful for analytics-shaped grids.
+
+<DataGridDocsExample exampleId='filter-multi-value-faceted' />
+
+Flip the default to `notIn` to exclude the selected values instead of including them.
+
+<DataGridDocsExample exampleId='filter-multi-value-not-in' />
 
 ```ts
 const columns = defineColumns<Order>([
