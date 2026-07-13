@@ -11,7 +11,7 @@ export function generateStaticParams() {
 	return entries.map((entry) => ({ slug: entry.id }))
 }
 
-export default async function ShadcnExamplePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function HerouiExamplePage({ params }: { params: Promise<{ slug: string }> }) {
 	const { slug } = await params
 	const entry = entries.find((item) => item.id === slug)
 
@@ -21,7 +21,7 @@ export default async function ShadcnExamplePage({ params }: { params: Promise<{ 
 
 	return (
 		<ExampleRenderer
-			kit='shadcn'
+			kit='heroui'
 			slug={slug}
 		/>
 	)
