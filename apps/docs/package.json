@@ -8,7 +8,7 @@
 		"#globals.css": "./app/globals.css"
 	},
 	"scripts": {
-		"dev": "pnpm build:deps && next dev",
+		"dev": "pnpm build:deps && node scripts/dev-server.mjs",
 		"build": "pnpm build:deps && next build",
 		"build:deps": "turbo run build --filter=@ez-kit/docs^...",
 		"start": "next start",
