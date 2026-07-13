@@ -1,18 +1,20 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useMemo } from 'react'
+import { createElement } from 'react'
 
 import manifest from '@/shared/data-grid/examples/manifest.json'
 import { exampleModules } from '@/shared/data-grid/examples/registry'
 import { DataGridTypeProvider } from '@/shared/DataGrid'
+
+import type { ComponentType } from 'react'
 
 type ManifestEntry = { id: string; sourceFile: string; exportName: string }
 type ExampleKit = 'heroui' | 'shadcn'
 
 const entries = manifest as ManifestEntry[]
 
-interface ExampleRendererProps {
+type ExampleRendererProps = {
 	kit: ExampleKit
 	slug: string
 }
@@ -47,16 +49,26 @@ function loadExample(slug: string) {
 	})
 }
 
-export function ExampleRenderer({ kit, slug }: ExampleRendererProps) {
-	// `next/dynamic` returns a fresh component identity on every call, so calling it inline in
-	// the render body would remount the example (losing grid state, re-flashing the loading
-	// fallback) on every re-render. The loaded module depends only on `slug`, so memoize the
-	// dynamic component to keep its identity stable per slug.
-	const Example = useMemo(() => dynamic(() => loadExample(slug), { ssr: false }), [slug])
+// `next/dynamic` returns a fresh component identity on every call, so creating it in the render
+// body would remount the example (losing grid state, re-flashing the loading fallback) on every
+// re-render. The loaded module depends only on `slug`, so memoize the dynamic component at module
+// scope — keeping its identity stable across all renders and instances for a given slug.
+const exampleComponents = new Map<string, ComponentType>()
 
-	return (
-		<DataGridTypeProvider type={kit}>
-			<Example />
-		</DataGridTypeProvider>
-	)
+function getExampleComponent(slug: string): ComponentType {
+	let component = exampleComponents.get(slug)
+	if (!component) {
+		component = dynamic(() => loadExample(slug), { ssr: false })
+		exampleComponents.set(slug, component)
+	}
+	return component
+}
+
+export function ExampleRenderer({ kit, slug }: ExampleRendererProps) {
+	// Render the dynamic component via `createElement` rather than a `<Example />` JSX tag:
+	// `react-hooks/static-components` flags any JSX tag whose identity traces back to a call
+	// (here `getExampleComponent`), even though the module-scope cache above makes it stable.
+	// Passing it as a `createElement` argument is the idiomatic way to render a runtime-selected
+	// component and satisfies the rule without an eslint-disable.
+	return <DataGridTypeProvider type={kit}>{createElement(getExampleComponent(slug))}</DataGridTypeProvider>
 }
