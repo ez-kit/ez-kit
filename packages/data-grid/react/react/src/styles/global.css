@@ -124,15 +124,13 @@
 
 /* ── pin-shadow overlay ───────────────────────────────────────────────── */
 
+/* Full-size, non-collapsing layer. Each shadow is positioned independently via
+   its own inline `left`/`right` offset (set in pin-shadow-overlay.tsx), so the
+   two shadows never share — and never collapse — a single sized box even when
+   the combined pinned-column width approaches the viewport. */
 [data-slot='pin-shadow-overlay'] {
-	@apply absolute top-0 bottom-0 pointer-events-none overflow-hidden;
+	@apply absolute inset-0 pointer-events-none overflow-hidden;
 }
 [data-pin-shadow] {
 	@apply absolute top-0 bottom-0 pointer-events-none;
-}
-[data-pin-shadow='left'] {
-	left: 0;
-}
-[data-pin-shadow='right'] {
-	right: 0;
 }

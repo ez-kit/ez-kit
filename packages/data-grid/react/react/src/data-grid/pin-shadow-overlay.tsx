@@ -3,14 +3,23 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 /**
  * Renders the overlay that shows scroll shadows alongside pinned columns.
  *
- * The wrapper carries `data-slot="pin-shadow-overlay"` plus the runtime-computed
- * `left` / `right` pixel offsets (sum of pinned-column widths) as inline styles
- * — these values are read from the table model and can't move to CSS.
+ * The wrapper carries `data-slot="pin-shadow-overlay"` and fills the whole table
+ * wrapper (`inset: 0`) — it is a non-collapsing layer, never sized to the gap
+ * between the pinned blocks.
  *
- * Each shadow div uses `data-pin-shadow="left" | "right"`. Positioning is set
- * by the structural stylesheet (`@ez-kit/data-grid-react/styles.css`); the
- * actual visual shadow (box-shadow, opacity, transition) lives in each UI kit's
- * stylesheet, since it's a visual choice.
+ * Each shadow div uses `data-pin-shadow="left" | "right"` and carries its OWN
+ * runtime-computed pixel offset as an inline style: the left shadow sits at
+ * `left = sum of left-pinned widths`, the right shadow at `right = sum of
+ * right-pinned widths`. These offsets come from the table model and can't move
+ * to CSS. Positioning each shadow independently (rather than sizing one shared
+ * overlay to `[leftSize … width − rightSize]`) is what keeps both shadows visible
+ * when the combined pinned width approaches the viewport — otherwise the shared
+ * box would collapse to zero width and `overflow: hidden` would clip both shadows.
+ *
+ * The actual visual shadow (box-shadow, opacity, transition) lives in each UI
+ * kit's stylesheet, since it's a visual choice; structural positioning
+ * (`position`, `top`/`bottom`, `inset`) lives in the shared structural stylesheet
+ * (`@ez-kit/data-grid-react/styles.css`).
  *
  * CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow` (0 or 1) on the
  * table wrapper drive the shadow opacity.
@@ -39,10 +48,19 @@ export function PinShadowOverlay() {
 		<div
 			aria-hidden
 			data-slot='pin-shadow-overlay'
-			style={{ left: leftSize, right: rightSize }}
 		>
-			{leftCols.length > 0 && <div data-pin-shadow='left' />}
-			{rightCols.length > 0 && <div data-pin-shadow='right' />}
+			{leftCols.length > 0 && (
+				<div
+					data-pin-shadow='left'
+					style={{ left: leftSize }}
+				/>
+			)}
+			{rightCols.length > 0 && (
+				<div
+					data-pin-shadow='right'
+					style={{ right: rightSize }}
+				/>
+			)}
 		</div>
 	)
 }

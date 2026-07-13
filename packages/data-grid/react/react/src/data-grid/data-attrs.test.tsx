@@ -104,4 +104,31 @@ describe('headless data-* contract', () => {
 		expect(container.querySelector("[data-pin-shadow='left']")).not.toBeNull()
 		expect(container.querySelector("[data-slot='pin-shadow-overlay']")).not.toBeNull()
 	})
+
+	// Regression (#42): with >1 pinned column per side the pixel offset must live on
+	// each shadow div independently (left = Σ left widths, right = Σ right widths) — NOT
+	// as `left`/`right` on a shared overlay box. The shared box was sized to the gap
+	// between the pinned blocks and `overflow: hidden`, so once the combined pinned width
+	// reached the viewport it collapsed to zero width and clipped BOTH shadows.
+	it('positions each pin shadow independently by the summed width of that side (>1 pinned column)', () => {
+		const COLS_MULTI = defineColumns<User>([
+			{ accessorKey: 'name', header: 'Name', size: 180, pinning: { pin: 'left' } },
+			{ accessorKey: 'age', header: 'Age', size: 120, pinning: { pin: 'left' } },
+			{ accessorKey: 'id', header: 'Id', size: 90, pinning: { pin: 'right' } },
+		])
+		const table = createTable<User>({ data: USERS, columns: COLS_MULTI, pinning: { column: true } })
+		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
+
+		const overlay = container.querySelector<HTMLElement>("[data-slot='pin-shadow-overlay']")
+		const left = container.querySelector<HTMLElement>("[data-pin-shadow='left']")
+		const right = container.querySelector<HTMLElement>("[data-pin-shadow='right']")
+
+		// The offset is carried by each shadow div, summed across that side's pinned columns
+		// (left = 180 + 120 = 300; right = 90)…
+		expect(left?.style.left).toBe('300px')
+		expect(right?.style.right).toBe('90px')
+		// …and NOT by the overlay, which must stay a full-size, non-collapsing layer.
+		expect(overlay?.style.left).toBe('')
+		expect(overlay?.style.right).toBe('')
+	})
 })
