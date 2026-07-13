@@ -13,6 +13,7 @@ const colPinColumns = defineColumns<Product>([
 		accessorKey: 'status',
 		header: 'Status',
 		size: 120,
+		pinning: { defaultPin: 'left' },
 		cell: {
 			type: 'badge',
 			config: {
@@ -31,7 +32,7 @@ const colPinColumns = defineColumns<Product>([
 		size: 80,
 		cell: { type: 'image', config: { width: 40, height: 40, alt: 'Product' } },
 	},
-	{ accessorKey: 'website', header: 'Website', size: 220, cell: { type: 'link' } },
+	{ accessorKey: 'website', header: 'Website', size: 140, cell: { type: 'link' }, pinning: { defaultPin: 'right' } },
 	{
 		accessorKey: 'stock',
 		header: 'Stock %',
