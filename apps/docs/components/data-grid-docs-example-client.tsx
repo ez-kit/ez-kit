@@ -2,8 +2,9 @@
 
 import { Suspense } from 'react'
 
-import { DataGridSourcePanel } from '@/components/data-grid-source-panel'
+import { ExampleCard, ExampleShell } from '@/components/example-card'
 import { ExampleFrame } from '@/components/example-frame'
+import { SourcePanel } from '@/components/source-panel'
 import { useUrlState } from '@/hooks/use-url-state'
 
 import type { DataGridDocsExampleFlavor } from './data-grid-docs-example'
@@ -40,7 +41,7 @@ export function DataGridDocsExampleClient({ exampleId, source, defaultType, lock
 							slug={exampleId}
 						/>
 					}
-					source={<DataGridSourcePanel source={source} />}
+					source={<SourcePanel source={source} />}
 				/>
 			</ExampleShell>
 		)
@@ -112,22 +113,9 @@ function Switcher({
 						slug={exampleId}
 					/>
 				}
-				source={<DataGridSourcePanel source={source} />}
+				source={<SourcePanel source={source} />}
 			/>
 		</ExampleShell>
-	)
-}
-
-function ExampleShell({ children }: { children: React.ReactNode }) {
-	return <div className='not-prose flex flex-col gap-3'>{children}</div>
-}
-
-function ExampleCard({ view, source }: { view: React.ReactNode; source: React.ReactNode }) {
-	return (
-		<div className='flex flex-col flex-1 border border-fd-border rounded-lg overflow-hidden'>
-			<div className='border-b border-fd-border p-2'>{view}</div>
-			{source ? <div>{source}</div> : null}
-		</div>
 	)
 }
 

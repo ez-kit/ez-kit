@@ -13,7 +13,7 @@ vi.mock('fumadocs-ui/components/dynamic-codeblock', () => ({
 	),
 }))
 
-import { DataGridSourcePanel } from '../components/data-grid-source-panel'
+import { SourcePanel } from '../components/source-panel'
 
 const SHORT_SOURCE = 'export const a = 1\n'
 const LONG_SOURCE = Array.from({ length: 80 }, (_, i) => `const v${i.toString()} = ${i.toString()}`).join('\n') + '\n'
@@ -79,15 +79,15 @@ const findMeasuredNode = () => {
 	return parent
 }
 
-describe('<DataGridSourcePanel />', () => {
+describe('<SourcePanel />', () => {
 	it('renders the provided source string', () => {
-		render(<DataGridSourcePanel source={'const answer = 42\n'} />)
+		render(<SourcePanel source={'const answer = 42\n'} />)
 		expect(screen.getByText(/const answer = 42/)).toBeTruthy()
 	})
 
 	it('renders the code via DynamicCodeBlock with the provided language', () => {
 		render(
-			<DataGridSourcePanel
+			<SourcePanel
 				source={SHORT_SOURCE}
 				language='tsx'
 			/>,
@@ -99,7 +99,7 @@ describe('<DataGridSourcePanel />', () => {
 	})
 
 	it('hides the Show all toggle and gradient when the code fits within 100px', () => {
-		const { container } = render(<DataGridSourcePanel source={SHORT_SOURCE} />)
+		const { container } = render(<SourcePanel source={SHORT_SOURCE} />)
 
 		const measured = findMeasuredNode()
 		act(() => {
@@ -113,7 +113,7 @@ describe('<DataGridSourcePanel />', () => {
 	})
 
 	it('reveals the Show all toggle and gradient when the code overflows 100px', () => {
-		const { container } = render(<DataGridSourcePanel source={LONG_SOURCE} />)
+		const { container } = render(<SourcePanel source={LONG_SOURCE} />)
 
 		const measured = findMeasuredNode()
 		act(() => {
@@ -128,7 +128,7 @@ describe('<DataGridSourcePanel />', () => {
 	})
 
 	it('expands and collapses when the toggle is clicked', () => {
-		const { container } = render(<DataGridSourcePanel source={LONG_SOURCE} />)
+		const { container } = render(<SourcePanel source={LONG_SOURCE} />)
 
 		const measured = findMeasuredNode()
 		act(() => {
@@ -153,7 +153,7 @@ describe('<DataGridSourcePanel />', () => {
 		const writeText = vi.fn().mockResolvedValue(undefined)
 		Object.assign(navigator, { clipboard: { writeText } })
 
-		render(<DataGridSourcePanel source={SHORT_SOURCE} />)
+		render(<SourcePanel source={SHORT_SOURCE} />)
 
 		fireEvent.click(screen.getByRole('button', { name: /^copy$/i }))
 

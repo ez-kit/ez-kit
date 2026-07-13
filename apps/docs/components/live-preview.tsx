@@ -1,9 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
-
-import { LiveTabs } from './live-tabs'
+import { ExampleCard, ExampleShell } from './example-card'
+import { SourcePanel } from './source-panel'
 
 import type { ComponentType } from 'react'
 
@@ -21,10 +20,17 @@ export async function LivePreview({ path: examplePath, lang = 'tsx', title }: Li
 	const source = await fs.readFile(path.join(EXAMPLES_ROOT, `${examplePath}.tsx`), 'utf-8')
 
 	return (
-		<LiveTabs
-			title={title}
-			preview={<Component />}
-			code={<DynamicCodeBlock lang={lang} code={source.trimEnd()} />}
-		/>
+		<ExampleShell>
+			{title ? <span className='text-xs text-fd-muted-foreground'>{title}</span> : null}
+			<ExampleCard
+				view={<Component />}
+				source={
+					<SourcePanel
+						source={source.trimEnd()}
+						language={lang}
+					/>
+				}
+			/>
+		</ExampleShell>
 	)
 }
