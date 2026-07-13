@@ -9,9 +9,17 @@ For date columns, the `'date'` cell type renders a locale-aware string and shows
 
 ## Usage
 
-The tabs below show the `date` cell type end-to-end — view formatting, inline cell editing, inline row creating, and per-column filter operators (including a date-aware `between`).
+The `date` cell type renders a locale-aware, formatted value and exposes date-aware filter operators (including a `between` range). Configure the display via `cell: { type: 'date', config: { format } }`.
 
-<DataGridDocsExample exampleId='date-cell' />
+<DataGridDocsExample exampleId='date-cell-view' />
+
+The same cell type doubles as an inline editor — with `editing: { mode: 'cell' }` a date picker opens on edit.
+
+<DataGridDocsExample exampleId='date-cell-edit' />
+
+And it powers the new-row form when `creating` is enabled, so authored dates go through the same picker.
+
+<DataGridDocsExample exampleId='date-cell-create' />
 
 ```ts
 {

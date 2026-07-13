@@ -9,9 +9,17 @@ For date columns, prefer the date-range filter variant. It renders a calendar pi
 
 ## Usage
 
-Date range filters offer built-in presets (Today, Yesterday, Last 7/30 days, This/Last month), a true range calendar via `variant: 'calendar'`, and custom presets — quarterly ranges, year-long windows, or anything else that fits your domain.
+Built-in presets (Today, Yesterday, Last 7/30 days, This/Last month) sit alongside the two-input range picker via `betweenOperator: { variant: 'inputs', presets: true }`.
 
-<DataGridDocsExample exampleId='filter-date-range' />
+<DataGridDocsExample exampleId='filter-date-range-built-in' />
+
+Switch to `variant: 'calendar'` for a true range calendar where the user drags across a month to select both endpoints at once.
+
+<DataGridDocsExample exampleId='filter-date-range-calendar' />
+
+Supply your own `presets` array — quarterly ranges, year-long windows, or anything else that fits your domain — via `betweenOperator: { presets: [...] }`.
+
+<DataGridDocsExample exampleId='filter-date-range-custom' />
 
 ```ts
 const columns = defineColumns<Order>([

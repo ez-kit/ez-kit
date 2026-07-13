@@ -136,44 +136,124 @@
 		"exportName": "FilterOperatorsDateBetweenExample"
 	},
 	{
-		"id": "filter-popover",
-		"label": "Popover",
+		"id": "filter-popover-basic",
+		"label": "Popover · Basic",
 		"group": "filtering",
 		"groupLabel": "Filtering",
 		"sourceFile": "components/filter-popover.tsx",
-		"exportName": "FilterPopoverExample"
+		"exportName": "FilterPopoverBasicExample"
 	},
 	{
-		"id": "global-filtering",
-		"label": "Global search",
+		"id": "filter-popover-operators",
+		"label": "Popover · With operators",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-popover.tsx",
+		"exportName": "FilterPopoverOperatorsExample"
+	},
+	{
+		"id": "global-filtering-basic",
+		"label": "Global search · Basic",
 		"group": "filtering",
 		"groupLabel": "Filtering",
 		"sourceFile": "components/global-filtering.tsx",
-		"exportName": "GlobalFilteringExample"
+		"exportName": "GlobalFilteringBasicExample"
 	},
 	{
-		"id": "filter-chips",
-		"label": "Active chips & clear",
+		"id": "global-filtering-combined",
+		"label": "Global search · With column filters",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/global-filtering.tsx",
+		"exportName": "GlobalFilteringCombinedExample"
+	},
+	{
+		"id": "global-filtering-excluded",
+		"label": "Global search · Exclude a column",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/global-filtering.tsx",
+		"exportName": "GlobalFilteringExcludedExample"
+	},
+	{
+		"id": "global-filtering-custom-fn",
+		"label": "Global search · Custom filter fn",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/global-filtering.tsx",
+		"exportName": "GlobalFilteringCustomFnExample"
+	},
+	{
+		"id": "filter-chips-auto",
+		"label": "Active chips · Auto-mount",
 		"group": "filtering",
 		"groupLabel": "Filtering",
 		"sourceFile": "components/filter-chips.tsx",
-		"exportName": "FilterChipsExample"
+		"exportName": "FilterChipsAutoExample"
 	},
 	{
-		"id": "filter-multi-value",
-		"label": "Multi-value & faceted",
+		"id": "filter-chips-always",
+		"label": "Active chips · Always show clear",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-chips.tsx",
+		"exportName": "FilterChipsAlwaysExample"
+	},
+	{
+		"id": "filter-chips-custom",
+		"label": "Active chips · Custom layout",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-chips.tsx",
+		"exportName": "FilterChipsCustomExample"
+	},
+	{
+		"id": "filter-multi-value-in",
+		"label": "Multi-value · In (default)",
 		"group": "filtering",
 		"groupLabel": "Filtering",
 		"sourceFile": "components/filter-multi-value.tsx",
-		"exportName": "FilterMultiValueExample"
+		"exportName": "FilterMultiValueInExample"
 	},
 	{
-		"id": "filter-date-range",
-		"label": "Date range & presets",
+		"id": "filter-multi-value-faceted",
+		"label": "Multi-value · Faceted counts",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-multi-value.tsx",
+		"exportName": "FilterMultiValueFacetedExample"
+	},
+	{
+		"id": "filter-multi-value-not-in",
+		"label": "Multi-value · Not in",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-multi-value.tsx",
+		"exportName": "FilterMultiValueNotInExample"
+	},
+	{
+		"id": "filter-date-range-built-in",
+		"label": "Date range · Built-in presets",
 		"group": "filtering",
 		"groupLabel": "Filtering",
 		"sourceFile": "components/filter-date-range.tsx",
-		"exportName": "FilterDateRangeExample"
+		"exportName": "FilterDateRangeBuiltInExample"
+	},
+	{
+		"id": "filter-date-range-calendar",
+		"label": "Date range · Range calendar",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-date-range.tsx",
+		"exportName": "FilterDateRangeCalendarExample"
+	},
+	{
+		"id": "filter-date-range-custom",
+		"label": "Date range · Custom presets",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-date-range.tsx",
+		"exportName": "FilterDateRangeCustomExample"
 	},
 	{
 		"id": "filter-panel",
@@ -312,18 +392,46 @@
 		"exportName": "CustomCellUserExample"
 	},
 	{
-		"id": "date-cell",
-		"label": "Date Cell",
+		"id": "date-cell-view",
+		"label": "Date Cell · View + formatting",
 		"group": "cells",
 		"groupLabel": "Cells",
 		"sourceFile": "components/date-cell.tsx",
-		"exportName": "DateCellExample"
+		"exportName": "DateCellViewExample"
 	},
 	{
-		"id": "creating",
-		"label": "Creating",
-		"sourceFile": "components/creating/CreatingExample.tsx",
-		"exportName": "CreatingExample"
+		"id": "date-cell-edit",
+		"label": "Date Cell · Inline edit",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/date-cell.tsx",
+		"exportName": "DateCellEditExample"
+	},
+	{
+		"id": "date-cell-create",
+		"label": "Date Cell · Creating",
+		"group": "cells",
+		"groupLabel": "Cells",
+		"sourceFile": "components/date-cell.tsx",
+		"exportName": "DateCellCreateExample"
+	},
+	{
+		"id": "creating-row",
+		"label": "Creating · Inline row",
+		"sourceFile": "components/creating/CreatingRowExample.tsx",
+		"exportName": "CreatingRowExample"
+	},
+	{
+		"id": "creating-modal",
+		"label": "Creating · Modal",
+		"sourceFile": "components/creating/CreatingModalExample.tsx",
+		"exportName": "CreatingModalExample"
+	},
+	{
+		"id": "creating-pin-row",
+		"label": "Creating · Pinned row",
+		"sourceFile": "components/creating/CreatingPinRowExample.tsx",
+		"exportName": "CreatingPinRowExample"
 	},
 	{
 		"id": "creating-validation",
@@ -378,14 +486,6 @@
 		"label": "Virtualized",
 		"sourceFile": "components/virtualized.tsx",
 		"exportName": "VirtualizedExample"
-	},
-	{
-		"id": "crud-server",
-		"label": "Server",
-		"group": "crud",
-		"groupLabel": "CRUD",
-		"sourceFile": "components/crud/CrudExample.tsx",
-		"exportName": "CrudExample"
 	},
 	{
 		"id": "crud-client",

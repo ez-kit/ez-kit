@@ -15,9 +15,17 @@ The panel variant collects every column filter into a single row of chips instea
 
 The panel is a `<DataGrid.FilterPanel />` slot. Each row corresponds to a filterable column; the engine reads `meta.filterVariant` and `meta.operators` to pick controls.
 
-A complementary surface is the active-filters chip strip:
+A complementary surface is the active-filters chip strip. With `filtering: { chips: true, clearButton: true }`, a chip appears per active filter and the clear button auto-mounts once at least one filter is set.
 
-<DataGridDocsExample exampleId='filter-chips' />
+<DataGridDocsExample exampleId='filter-chips-auto' />
+
+Pass `clearButton: { alwaysShow: true }` to keep the clear button mounted even when no filter is active.
+
+<DataGridDocsExample exampleId='filter-chips-always' />
+
+For full control, compose the toolbar yourself — drop `<DataGrid.ActiveFiltersBar />` and `<DataGrid.ClearFiltersButton />` wherever the layout calls for them.
+
+<DataGridDocsExample exampleId='filter-chips-custom' />
 
 ```tsx
 <DataGrid.ActiveFiltersBar />

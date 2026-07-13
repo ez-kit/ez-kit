@@ -1,7 +1,7 @@
 'use client'
 
 import { defineColumns } from '@ez-kit/data-grid-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
@@ -14,7 +14,7 @@ const columns = defineColumns<User>([
 	{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } },
 ])
 
-function AutoMountDemo() {
+export function FilterChipsAutoExample() {
 	const data = useMemo(() => makeUsers(50), [])
 	const table = useDataGrid({
 		data,
@@ -26,7 +26,7 @@ function AutoMountDemo() {
 	return <DataGrid table={table} />
 }
 
-function AlwaysShowDemo() {
+export function FilterChipsAlwaysExample() {
 	const data = useMemo(() => makeUsers(50), [])
 	const table = useDataGrid({
 		data,
@@ -38,7 +38,7 @@ function AlwaysShowDemo() {
 	return <DataGrid table={table} />
 }
 
-function CustomLayoutDemo() {
+export function FilterChipsCustomExample() {
 	const data = useMemo(() => makeUsers(50), [])
 	const table = useDataGrid({
 		data,
@@ -68,56 +68,5 @@ function CustomLayoutDemo() {
 			<DataGrid.Table />
 			<DataGrid.Pagination />
 		</DataGrid>
-	)
-}
-
-const SUB_TABS = [
-	{ id: 'auto', label: 'Auto-mount', Component: AutoMountDemo },
-	{ id: 'always', label: 'Always show clear', Component: AlwaysShowDemo },
-	{ id: 'custom', label: 'Custom layout', Component: CustomLayoutDemo },
-] as const
-
-type SubTabId = (typeof SUB_TABS)[number]['id']
-
-export function FilterChipsExample() {
-	const [active, setActive] = useState<SubTabId>('auto')
-	const tab = SUB_TABS.find((t) => t.id === active) ?? SUB_TABS[0]
-
-	return (
-		<div>
-			<div
-				style={{
-					display: 'flex',
-					gap: '0.25rem',
-					flexWrap: 'wrap',
-					borderBottom: '1px solid #e2e8f0',
-					marginBottom: '1.5rem',
-				}}
-			>
-				{SUB_TABS.map((t) => (
-					<button
-						key={t.id}
-						onClick={() => {
-							setActive(t.id)
-						}}
-						style={{
-							padding: '0.375rem 0.75rem',
-							border: 'none',
-							borderBottom: active === t.id ? '2px solid #0f172a' : '2px solid transparent',
-							background: 'none',
-							cursor: 'pointer',
-							fontSize: '0.875rem',
-							fontWeight: active === t.id ? 600 : 400,
-							color: active === t.id ? '#0f172a' : '#64748b',
-							marginBottom: '-1px',
-						}}
-					>
-						{t.label}
-					</button>
-				))}
-			</div>
-
-			<tab.Component />
-		</div>
 	)
 }

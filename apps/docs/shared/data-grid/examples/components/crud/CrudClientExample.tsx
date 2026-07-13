@@ -18,7 +18,14 @@ export function CrudClientExample() {
 		pageSizer: { items: [5, 10, 20, 50] },
 		columnVisibility: { toolbar: true },
 		pinning: { column: true },
-		selection: true,
+		selection: {
+			panel: {
+				onDelete: ({ selectedRows, clearSelection }) => {
+					removeMany(selectedRows.map((r) => r.original.id))
+					clearSelection()
+				},
+			},
+		},
 		creating: {
 			mode: 'row',
 			onSave: ({ values }) => {
@@ -39,12 +46,6 @@ export function CrudClientExample() {
 				title: 'Delete employee?',
 				description: (row) =>
 					`Are you sure you want to delete "${(row.original as Employee).name}"? This action cannot be undone.`,
-			},
-		},
-		selectionBar: {
-			onDelete: ({ selectedRows, clearSelection }) => {
-				removeMany(selectedRows.map((r) => r.original.id))
-				clearSelection()
 			},
 		},
 	})
