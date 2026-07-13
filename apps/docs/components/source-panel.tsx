@@ -7,12 +7,12 @@ const COLLAPSED_HEIGHT_PX = 100
 const COPY_FEEDBACK_MS = 2000
 const FALLBACK_EXPANDED_PX = 4000
 
-export type DataGridSourcePanelProps = {
+export type SourcePanelProps = {
 	source: string
 	language?: string
 }
 
-export function DataGridSourcePanel({ source, language = 'tsx' }: DataGridSourcePanelProps) {
+export function SourcePanel({ source, language = 'tsx' }: SourcePanelProps) {
 	const code = source
 
 	const contentRef = useRef<HTMLDivElement>(null)
