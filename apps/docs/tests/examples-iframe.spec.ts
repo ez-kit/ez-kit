@@ -67,3 +67,40 @@ test('embed page reports its content height to the parent', async ({ page }) => 
 	})
 	expect(height).toBeGreaterThan(0)
 })
+
+test('embed theme message flips the child document to dark', async ({ page }) => {
+	await page.goto('/')
+	const appliedDark = await page.evaluate(async () => {
+		type MessageData = { type: string }
+		const origin = window.location.origin
+
+		const frame = document.createElement('iframe')
+		frame.src = `${origin}/examples/shadcn/base-sorting?theme=light`
+		document.body.appendChild(frame)
+
+		await new Promise<void>((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				reject(new Error('Timeout waiting for frame ready'))
+			}, 15000)
+			const handleReady = (e: MessageEvent<MessageData>) => {
+				if (e.data.type === 'ez-frame-ready') {
+					clearTimeout(timeout)
+					window.removeEventListener('message', handleReady as unknown as EventListener)
+					resolve()
+				}
+			}
+			window.addEventListener('message', handleReady as unknown as EventListener)
+		})
+
+		frame.contentWindow?.postMessage({ type: 'ez-frame-theme', theme: 'dark' }, origin)
+
+		const deadline = Date.now() + 15000
+		while (Date.now() < deadline) {
+			const isDark = frame.contentDocument?.documentElement.classList.contains('dark') ?? false
+			if (isDark) return true
+			await new Promise((resolve) => setTimeout(resolve, 100))
+		}
+		return false
+	})
+	expect(appliedDark).toBe(true)
+})
