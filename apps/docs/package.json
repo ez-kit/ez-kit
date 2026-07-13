@@ -54,6 +54,7 @@
 		"react-resizable-panels": "^4.11.1",
 		"recharts": "3.8.0",
 		"sass": "^1.101.0",
+		"server-only": "^0.0.1",
 		"shadcn": "^4.7.0",
 		"sonner": "^2.0.7",
 		"tailwind-merge": "^3.5.0",

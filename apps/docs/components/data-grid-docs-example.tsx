@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 
 import { useUrlState } from '../hooks/use-url-state'
 import { dataGridPrimitiveExamples } from '../shared/data-grid/examples/generated/data-grid-primitive'
+import { dataGridExampleSources } from '../shared/data-grid/examples/generated/data-grid-source'
 import { DataGridSandpackExample } from '../shared/data-grid/sandpack/DataGridSandpackExample'
 import { DataGridTypeProvider } from '../shared/DataGrid'
 
@@ -58,7 +59,7 @@ export function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: Data
 							flavor={defaultType}
 						/>
 					}
-					source={<DataGridSourcePanel exampleId={exampleId} />}
+					source={<DataGridSourcePanel source={dataGridExampleSources[exampleId]} />}
 				/>
 			</ExampleShell>
 		)
@@ -128,7 +129,7 @@ function FlavorSwitcherView({
 						flavor={flavor}
 					/>
 				}
-				source={<DataGridSourcePanel exampleId={exampleId} />}
+				source={<DataGridSourcePanel source={dataGridExampleSources[exampleId]} />}
 			/>
 		</ExampleShell>
 	)
