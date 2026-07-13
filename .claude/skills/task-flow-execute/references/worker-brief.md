@@ -1,28 +1,28 @@
-# Worker brief — one isolated task
+# Execution brief — one task in the current worktree
 
-This is the contract for a single **Phase B worker**. The worker runs inside its own git
-worktree (spawned via the Agent tool with `isolation: "worktree"`) and is fully autonomous
-for one issue. Give the worker: the **issue number**, its **`PW_PORT`**, the **affected
-package filter(s)**, and the ez-kit constraints below. The worker returns a structured
-result; it does **not** verify itself past the objective gate and does **not** move the card
-to In review.
+This is the contract for **Phase B**. The main session runs these steps itself in the
+**current worktree** — it does **not** create a worktree and does **not** spawn a worker. It
+is autonomous for one issue. Inputs: the **issue number**, the fixed **`PW_PORT=3101`**, the
+**affected package filter(s)** (from the plan), and the ez-kit constraints below. Phase B ends
+at the open draft PR; it does **not** self-verify past the objective gate and does **not** move
+the card to In review — that's Phase C.
 
 Every gate / visual / push step is a **deterministic wrapper script** under
-`<repo>/.claude/skills/task-flow-execute/scripts/`. The worker calls these scripts and never
-hand-rolls the underlying `pnpm`/`git` commands — the correct order, `--no-verify` policy,
-warm dev server, and log-to-file (so build output never floods the agent's context) are all
-baked into the scripts, not left to the agent's judgement. Run every script from the
-**worktree root** unless noted.
+`<repo>/.claude/skills/task-flow-execute/scripts/`. Call these scripts and never hand-roll the
+underlying `pnpm`/`git` commands — the correct order, `--no-verify` policy, warm dev server,
+and log-to-file (so build output never floods the context) are all baked into the scripts, not
+left to judgement. Run every script from the **repo root** unless noted.
 
 ## Steps
 
 1. **Claim** — `node <repo>/.claude/skills/task-flow-plan/scripts/board.mjs status <N> "In progress"`.
 2. **Read the plan** — `gh issue view <N> --repo ez-kit/ez-kit --comments`. The approved
    plan is the latest `## План выполнения` comment. That plan is your spec.
-3. **Branch** — the worktree is already on its own branch; ensure the branch name is
-   `issue-<N>-<slug>` (rename if the harness auto-named it otherwise).
+3. **Branch** — confirm the working tree is clean (`git status --porcelain` empty), then create
+   the task branch off `main` in the current worktree:
+   `git switch main && git switch -c issue-<N>-<slug>`. Never edit on `main` directly.
 4. **Implement** per the plan, honoring the ez-kit constraints below.
-5. **Setup** — `pnpm install` in the worktree (fast; shares the global pnpm store).
+5. **Setup** — `pnpm install` (fast; shares the global pnpm store).
 6. **Objective gate — one command, fail-fast:**
    ```bash
    node <repo>/.claude/skills/task-flow-execute/scripts/agent-gate.mjs \
@@ -83,10 +83,11 @@ baked into the scripts, not left to the agent's judgement. Run every script from
     The script uploads each `.visual/*.png` to the shared `visual-artifacts` prerelease and
     writes the comment body (one section per path: embedded screenshot + HTTP status + title
     + console errors). Skip for non-visual tasks and say so in the result.
-12. **Return** a JSON-ish result: `{ issue, branch, prUrl, gate: "PASS", visual: {...}, notes }`.
-    Do **not** move the card to In review — the orchestrator does that after code review.
+12. **Record** the result: `{ issue, branch, prUrl, gate: "PASS", visual: {...}, notes }` —
+    this feeds Phase C. Do **not** move the card to In review yet — that happens after code
+    review passes.
 
-## ez-kit constraints (pass these to the worker)
+## ez-kit constraints
 
 - No visual styling in `packages/data-grid/react/react` — only semantic `data-*` attrs.
 - `packages/data-grid/react/shadcn/src/components/ui/**` is vendored & immutable; overrides
