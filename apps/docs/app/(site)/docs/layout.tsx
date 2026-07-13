@@ -1,7 +1,7 @@
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 
-import { baseOptions } from '../../lib/layout.shared'
-import { source } from '../../lib/source'
+import { baseOptions } from '../../../lib/layout.shared'
+import { source } from '../../../lib/source'
 
 import styles from './styles.module.css'
 

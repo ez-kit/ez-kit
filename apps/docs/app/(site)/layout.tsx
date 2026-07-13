@@ -3,7 +3,7 @@ import { Inter, Figtree } from 'next/font/google'
 
 import { cn } from '@/lib/utils'
 
-import './globals.css'
+import '../globals.css'
 
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
