@@ -61,8 +61,18 @@ export function ExampleFrame({ kit, slug, action }: ExampleFrameProps) {
 		iframeRef.current?.contentWindow?.postMessage({ type: FRAME_THEME, theme }, window.location.origin)
 	}, [ready, theme])
 
-	// Initial theme travels in the URL so there is no flash before READY.
-	const src = visible ? `/examples/${kit}/${slug}?theme=${theme}` : undefined
+	// Freeze the theme into `src` the moment the iframe first becomes visible: `src` must
+	// never change again on subsequent theme toggles, or the browser navigates/reloads the
+	// iframe (destroying grid state — sort/selection/expansion/scroll). Any theme change
+	// after that point travels exclusively through the ready-gated FRAME_THEME postMessage
+	// effect above, which also corrects the child if this frozen value was stale (e.g.
+	// `resolvedTheme` resolved after first mount).
+	const frozenThemeRef = useRef<typeof theme | null>(null)
+	if (visible && frozenThemeRef.current === null) {
+		frozenThemeRef.current = theme
+	}
+	const initialTheme = frozenThemeRef.current ?? theme
+	const src = visible ? `/examples/${kit}/${slug}?theme=${initialTheme}` : undefined
 
 	return (
 		<div

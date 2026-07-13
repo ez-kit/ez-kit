@@ -25,6 +25,7 @@ export function FrameBridge() {
 
 		const onMessage = (event: MessageEvent) => {
 			if (event.origin !== window.location.origin) return
+			if (event.source !== window.parent) return
 			if (!isFrameMessage(event.data)) return
 			if (event.data.type === FRAME_THEME) applyTheme(event.data.theme)
 		}

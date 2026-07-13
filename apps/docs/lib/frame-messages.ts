@@ -11,6 +11,9 @@ export type FrameMessage =
 
 export function isFrameMessage(value: unknown): value is FrameMessage {
 	if (typeof value !== 'object' || value === null) return false
-	const type = (value as { type?: unknown }).type
-	return type === FRAME_READY || type === FRAME_HEIGHT || type === FRAME_THEME
+	const { type, height, theme } = value as { type?: unknown; height?: unknown; theme?: unknown }
+	if (type === FRAME_READY) return true
+	if (type === FRAME_HEIGHT) return typeof height === 'number' && Number.isFinite(height)
+	if (type === FRAME_THEME) return theme === 'light' || theme === 'dark'
+	return false
 }

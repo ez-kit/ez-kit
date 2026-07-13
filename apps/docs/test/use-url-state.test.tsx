@@ -14,15 +14,13 @@ vi.mock('next/navigation', () => ({
 	useSearchParams: () => new URLSearchParams(currentSearch),
 }))
 
-const FLAVORS = ['shadcn', 'heroui', 'shadcn-native'] as const
+const FLAVORS = ['shadcn', 'heroui'] as const
 type Flavor = (typeof FLAVORS)[number]
 
 const STORAGE_KEY = 'ez-docs:url-state:kit'
 
 const renderUrlState = (defaultValue: Flavor = 'shadcn', persistAcrossNavigation = true) =>
-	renderHook(() =>
-		useUrlState<Flavor>('kit', { allowedValues: FLAVORS, defaultValue, persistAcrossNavigation }),
-	)
+	renderHook(() => useUrlState<Flavor>('kit', { allowedValues: FLAVORS, defaultValue, persistAcrossNavigation }))
 
 afterEach(() => {
 	vi.clearAllMocks()
