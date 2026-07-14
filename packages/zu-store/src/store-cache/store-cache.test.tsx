@@ -1,3 +1,4 @@
+import { toTree } from '@ez-kit/store-core/cache'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { renderToString } from 'react-dom/server'
@@ -5,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
 import { createStoreCache } from './create-store-cache'
-import { toTree } from './to-tree'
 
 import type { ContextStoreInit } from '../create-context-store'
 
@@ -718,13 +718,77 @@ describe('createStoreCache — imperative & reactive access', () => {
 	})
 })
 
-describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
-	it('useKeys re-renders on membership change (add and explicit removal)', () => {
+describe('createStoreCache — useContextStore', () => {
+	it('returns the same live store instance the cache holds', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'ctx-1' })
+		const seen: ReturnType<typeof table.useContextStore>[] = []
+
+		function Reader() {
+			seen.push(table.useContextStore())
+			return null
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<Reader />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(seen[0]).toBe(table.fromCache({ id: 'main' }))
+		expect(seen[0]?.getState().filter).toBe('all')
+	})
+
+	it('does NOT re-render when the store state changes', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'ctx-2' })
+		let readerRenders = 0
+
+		function Reader() {
+			table.useContextStore()
+			readerRenders += 1
+			return null
+		}
+		function FilterButton() {
+			const setFilter = table.useStore((s) => s.setFilter)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setFilter('changed')
+					}}
+				>
+					change
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<Reader />
+					<FilterButton />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		const before = readerRenders
+		fireEvent.click(screen.getByRole('button', { name: 'change' }))
+		// The raw handle is a passive read: state changed, but the holder must not re-render.
+		expect(readerRenders).toBe(before)
+		expect(table.fromCache({ id: 'main' })?.getState().filter).toBe('changed')
+	})
+})
+
+describe('createStoreCache — reactive inspection (useCacheKeys + toTree)', () => {
+	it('useCacheKeys re-renders on membership change (add and explicit removal)', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'react-1' })
 
 		function Watcher() {
-			const keys = cache.useKeys()
+			const keys = cache.useCacheKeys()
 			return <span data-testid='count'>{keys.length}</span>
 		}
 		function ClearButton() {
@@ -767,13 +831,13 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 		expect(screen.getByTestId('count')).toHaveTextContent('0')
 	})
 
-	it('useKeys does NOT re-render on internal store state changes', () => {
+	it('useCacheKeys does NOT re-render on internal store state changes', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'react-2' })
 		let watcherRenders = 0
 
 		function Watcher() {
-			cache.useKeys()
+			cache.useCacheKeys()
 			watcherRenders += 1
 			return null
 		}
@@ -802,16 +866,16 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 
 		const before = watcherRenders
 		fireEvent.click(screen.getByRole('button', { name: 'change' }))
-		// Internal filter change should NOT cause Watcher (subscribed via useKeys) to re-render.
+		// Internal filter change should NOT cause Watcher (subscribed via useCacheKeys) to re-render.
 		expect(watcherRenders).toBe(before)
 	})
 
-	it('toTree(useKeys()) gives a reactive nested view', () => {
+	it('toTree(useCacheKeys()) gives a reactive nested view', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'react-3' })
 
 		function TreeView() {
-			const tree = toTree(cache.useKeys())
+			const tree = toTree(cache.useCacheKeys())
 			return <pre data-testid='tree'>{JSON.stringify(tree)}</pre>
 		}
 
@@ -837,12 +901,12 @@ describe('createStoreCache — reactive inspection (useKeys + toTree)', () => {
 		expect(screen.getByTestId('tree')).toHaveTextContent('{"page-1":{"react-3":["u1"]}}')
 	})
 
-	it('useKeys(prefix) filters to a subtree', () => {
+	it('useCacheKeys(prefix) filters to a subtree', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'react-4' })
 
 		function PrefixView({ prefix }: { prefix?: string[] }) {
-			const keys = cache.useKeys(prefix)
+			const keys = cache.useCacheKeys(prefix)
 			return <span data-testid='filtered'>{keys.length}</span>
 		}
 

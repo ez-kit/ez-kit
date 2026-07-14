@@ -25,7 +25,7 @@ type ItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 	children: (state: TSelected) => ReactElement
 }
 
-type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultValue> = {
+export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultValue> = {
 	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
 	useContextStore: () => TStore
 	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected

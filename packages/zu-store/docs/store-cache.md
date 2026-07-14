@@ -24,7 +24,7 @@ function createStoreCache(options?: { gcTime?: number }): {
 		keys: (prefix?: string[]) => CacheRecord[]           // non-reactive snapshot
 		clear: (prefix?: string[]) => void                   // optional subtree clear
 	}
-	useKeys: (prefix?: string[]) => CacheRecord[]          // reactive: re-renders on membership change
+	useCacheKeys: (prefix?: string[]) => CacheRecord[]     // reactive: re-renders on membership change
 	createCachedStore: <TStore, TDefaultValue>(
 		factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
 		options: { name: string; gcTime?: number },
@@ -171,20 +171,20 @@ const activeFilters = usersTable.useFromCache({ path: ['page-1'], id: 'users' },
 
 Returns a flat `CacheRecord[]` of live entries — `{ path, name, id }` per entry. Non-reactive snapshot, assertion- and iteration-friendly. Pass an optional path `prefix` to scope the result to a subtree.
 
-### `cache.useKeys(prefix?)` — reactive hook
+### `cache.useCacheKeys(prefix?)` — reactive hook
 
-Live equivalent of `useCache().keys()`, exposed at the top level of the cache bundle. Re-renders only when the cache **membership** changes (entries added or removed); internal state changes inside individual entries do not trigger it, so devtools panels and badges built on `useKeys` stay cheap.
+Live equivalent of `useCache().keys()`, exposed at the top level of the cache bundle. Re-renders only when the cache **membership** changes (entries added or removed); internal state changes inside individual entries do not trigger it, so devtools panels and badges built on `useCacheKeys` stay cheap.
 
 ```tsx
 function CacheBadge() {
-	const records = cache.useKeys()
+	const records = cache.useCacheKeys()
 	return <span>{records.length} cached</span>
 }
 ```
 
 ### `toTree(records)` — standalone utility
 
-Pure function exported alongside `createStoreCache`. Takes any coordinate list and returns a nested object view (log- and devtools-friendly). Compose with `useCache().keys()` for a one-off snapshot or with `cache.useKeys()` for a reactive nested view:
+Pure function exported alongside `createStoreCache`. Takes any coordinate list and returns a nested object view (log- and devtools-friendly). Compose with `useCache().keys()` for a one-off snapshot or with `cache.useCacheKeys()` for a reactive nested view:
 
 ```tsx
 import { toTree } from '@ez-kit/zu-store'
@@ -195,7 +195,7 @@ const subtree = toTree(cache.useCache().keys(['page-1']))
 
 // reactive (inside a component)
 function CachePanel({ customerId }: { customerId: string }) {
-	const tree = toTree(cache.useKeys(['customer', customerId]))
+	const tree = toTree(cache.useCacheKeys(['customer', customerId]))
 	return <pre>{JSON.stringify(tree, null, 2)}</pre>
 }
 ```

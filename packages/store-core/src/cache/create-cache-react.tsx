@@ -25,6 +25,9 @@ const IS_DEV = process.env.NODE_ENV !== 'production'
 const EMPTY_SCOPE: readonly string[] = []
 const EMPTY_RECORDS: readonly CacheRecord[] = []
 
+/** Default `useFromCache` placeholder, for managers whose read hook accepts any object. */
+const EMPTY_FALLBACK: object = {}
+
 export const MISSING_CACHE_PROVIDER = 'Missing cache Provider for createCacheReact'
 
 /**
@@ -41,6 +44,13 @@ export type CacheReactMessages = {
 /** The single store-manager-specific dependency: how to reactively read an instance via a selector. */
 export type CacheReactOptions<TInstance extends object> = {
 	useRead: <S>(instance: TInstance, selector: (snap: unknown) => S) => S
+	/**
+	 * Stable placeholder that `useFromCache` subscribes to when no live entry exists at the target. Its
+	 * state is never read — the selector receives `undefined` — but `useRead` still runs against it, so
+	 * managers whose read hook requires a real instance (e.g. Zustand's `useStore` calls `getState`)
+	 * must supply one. Defaults to a plain empty object.
+	 */
+	fallbackInstance?: TInstance
 	messages?: CacheReactMessages
 }
 
@@ -130,6 +140,7 @@ export function createCacheReact<TInstance extends object>(
 	cacheOptions: StoreCacheOptions = {},
 ): CacheReact<TInstance> {
 	const { useRead } = opts
+	const fallbackInstance = opts.fallbackInstance ?? (EMPTY_FALLBACK as TInstance)
 	const missingProviderMessage = opts.messages?.missingProvider ?? MISSING_CACHE_PROVIDER
 	const multipleProvidersMessage = opts.messages?.multipleProviders
 	const cacheGcTime = cacheOptions.gcTime ?? DEFAULT_GC_TIME
@@ -302,7 +313,7 @@ export function createCacheReact<TInstance extends object>(
 			)
 			// Subscribe to a stable empty placeholder when there is no live entry; the selector ignores its
 			// snapshot (passes `undefined`), so the placeholder's shape is never read.
-			const subscribed = live ?? (fallbackInstance as TInstance)
+			const subscribed = live ?? fallbackInstance
 			return useRead(subscribed, (snap) => selector(live ? snap : undefined))
 		}
 
@@ -315,8 +326,6 @@ export function createCacheReact<TInstance extends object>(
 
 	return { Provider, Scope, useCache, useCacheKeys, createCachedStore }
 }
-
-const fallbackInstance: object = {}
 
 function noopSubscribe(): () => void {
 	return () => {}

@@ -18,7 +18,7 @@ export type CachedItemRenderArg<TState extends object> = {
 	store: TState
 }
 
-type CachedItemProps<TState extends object> = {
+export type CachedItemProps<TState extends object> = {
 	children: (arg: CachedItemRenderArg<TState>) => ReactElement
 }
 

@@ -1,101 +1,147 @@
-import { createInstanceCache, DEFAULT_GC_TIME } from '@ez-kit/store-core/cache'
-import {
-	createContext,
-	useContext,
-	useEffect,
-	useMemo,
-	useRef,
-	type PropsWithChildren,
-	type ReactElement,
-} from 'react'
+import { createCacheReact } from '@ez-kit/store-core/cache'
+import { type ReactElement } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import { createStore } from 'zustand/vanilla'
 
+import { RAW_SELECTOR, useRead } from './use-read'
 
-import { wrapCachedStoreGroup } from './create-cached-store'
-import { createUseKeys } from './use-keys'
-
-import type { ScopeProps, StoreCache, StoreCacheController, StoreCacheOptions } from './types'
-import type { InstanceCache } from '@ez-kit/store-core/cache'
+import type {
+	CacheAddress,
+	CachedProviderProps,
+	CachedStoreFactory,
+	CachedStoreOptions,
+	CacheReact,
+	StoreCacheOptions,
+} from '@ez-kit/store-core/cache'
+import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
 export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider'
-
-const EMPTY_SCOPE: readonly string[] = []
-const IS_DEV = process.env.NODE_ENV !== 'production'
 
 const MULTIPLE_PROVIDERS_WARNING =
 	'[zu-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
 	'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
-/** Mutable handle to the cache owned by the currently-mounted `cache.Provider` (client-only). */
-type ActiveCacheRef = { current: InstanceCache | null }
+/** The instance type this cache stores: any Zustand vanilla store. */
+type AnyStore = StoreApi<unknown>
 
+/**
+ * Stable placeholder `useFromCache` subscribes to when the target has no live entry. Zustand's
+ * `useStore` calls `getState`, so this must be a real store rather than a bare object. Its state is
+ * never read — the selector receives `undefined` in that case.
+ */
+const FALLBACK_STORE: AnyStore = createStore<unknown>(() => ({}))
+
+export type CachedItemProps<TStore extends AnyStore, TSelected> = {
+	selector: (state: ExtractState<TStore>) => TSelected
+	children: (state: TSelected) => ReactElement
+}
+
+/** Handle returned by `createCachedStore` — a group of keep-alive stores keyed by `(path, id)`. */
+export type CachedStoreGroup<TStore extends AnyStore, TDefaultValue extends object> = {
+	Provider: (props: CachedProviderProps<TDefaultValue>) => ReactElement
+	/** Selector-based read of this group's entry. Re-renders when the selected value changes. */
+	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
+	/** As `useStore`, but compares the selected value shallowly — for object/array selections. */
+	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
+	/** The raw store handle for this group's entry. Does not subscribe, so it never re-renders. */
+	useContextStore: () => TStore
+	/** Render-prop receiving the selected state, mirroring `createContextStore`'s `Item`. */
+	Item: <TSelected>(props: CachedItemProps<TStore, TSelected>) => ReactElement
+	/** Imperative get-if-alive at `(path, id)`. Returns the live store or `undefined`. Never creates. */
+	fromCache: (target: CacheAddress) => TStore | undefined
+	/** Reactive, passive cross-tree read at `(path, id)`. Does not keep the store alive. */
+	useFromCache: <TSelected>(
+		target: CacheAddress,
+		selector: (state: ExtractState<TStore> | undefined) => TSelected,
+	) => TSelected
+	/** Remove this group's entry at `(path, id)` immediately. */
+	remove: (target: CacheAddress) => void
+}
+
+export type StoreCache = {
+	Provider: CacheReact<AnyStore>['Provider']
+	/** Contributes inherited path segments to descendant store-group `Provider`s. */
+	Scope: CacheReact<AnyStore>['Scope']
+	useCache: CacheReact<AnyStore>['useCache']
+	/** Reactive: re-renders when entries are added or removed under the optional prefix. */
+	useCacheKeys: CacheReact<AnyStore>['useCacheKeys']
+	createCachedStore: <TStore extends AnyStore, TDefaultValue extends object = Record<string, never>>(
+		factory: CachedStoreFactory<TStore, TDefaultValue>,
+		options: CachedStoreOptions<TStore>,
+	) => CachedStoreGroup<TStore, TDefaultValue>
+}
+
+/**
+ * Zustand-bound cache surface, built on `@ez-kit/store-core/cache` via `createCacheReact` with
+ * `useRead = (store, selector) => useStore(store, selector)`. Returns the same
+ * `{ Provider, Scope, useCache, useCacheKeys, createCachedStore }` shape as `@ez-kit/valtio-kit`.
+ */
 export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
-	const cacheGcTime = options.gcTime ?? DEFAULT_GC_TIME
+	const cache = createCacheReact<AnyStore>(
+		{
+			useRead,
+			fallbackInstance: FALLBACK_STORE,
+			messages: { missingProvider: MISSING_CACHE_PROVIDER, multipleProviders: MULTIPLE_PROVIDERS_WARNING },
+		},
+		options,
+	)
 
-	const CacheContext = createContext<InstanceCache | null>(null)
-	const ScopeContext = createContext<readonly string[]>(EMPTY_SCOPE)
+	function createCachedStore<TStore extends AnyStore, TDefaultValue extends object = Record<string, never>>(
+		factory: CachedStoreFactory<TStore, TDefaultValue>,
+		groupOptions: CachedStoreOptions<TStore>,
+	): CachedStoreGroup<TStore, TDefaultValue> {
+		const group = cache.createCachedStore<TDefaultValue>(factory, groupOptions)
 
-	const activeCache: ActiveCacheRef = { current: null }
-	const registeredGroupNames = new Set<string>()
-
-	function registerGroupName(name: string): void {
-		if (!IS_DEV) return
-		if (registeredGroupNames.has(name)) {
-			console.warn(
-				`[zu-store] createCachedStore({ name: '${name}' }) was called more than once on the same cache. ` +
-					'If you intended a single group, call createCachedStore at module top-level (not inside render). ' +
-					'If you intended distinct groups, give each a unique name.',
-			)
+		function useStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+			return group.useStore(selector as (snap: unknown) => TSelected)
 		}
-		registeredGroupNames.add(name)
+
+		function useShallowStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+			return group.useStore(useShallow(selector) as (snap: unknown) => TSelected)
+		}
+
+		function useContextStore(): TStore {
+			return group.useStore(RAW_SELECTOR) as TStore
+		}
+
+		function Item<TSelected>({ selector, children }: CachedItemProps<TStore, TSelected>): ReactElement {
+			return children(useStore(selector))
+		}
+
+		function fromCache(target: CacheAddress): TStore | undefined {
+			return group.fromCache(target) as TStore | undefined
+		}
+
+		function useFromCache<TSelected>(
+			target: CacheAddress,
+			selector: (state: ExtractState<TStore> | undefined) => TSelected,
+		): TSelected {
+			// Shallow-compare the cross-tree read: `useShallow` memoises its own last result, so the
+			// fresh wrapper the core builds around this selector still yields a stable reference.
+			return group.useFromCache(target, useShallow(selector) as (snap: unknown) => TSelected)
+		}
+
+		function remove(target: CacheAddress): void {
+			group.remove(target)
+		}
+
+		return {
+			Provider: group.Provider,
+			useStore,
+			useShallowStore,
+			useContextStore,
+			Item,
+			fromCache,
+			useFromCache,
+			remove,
+		}
 	}
 
-	function Provider({ children }: PropsWithChildren): ReactElement {
-		const cacheRef = useRef<InstanceCache | null>(null)
-		cacheRef.current ??= createInstanceCache(cacheGcTime !== DEFAULT_GC_TIME ? { defaultGcTime: cacheGcTime } : {})
-		const cache = cacheRef.current
-
-		useEffect(() => {
-			// Imperative access (fromCache/remove) is client-only; the cache never becomes "active" on the server.
-			if (typeof window === 'undefined') return
-			if (IS_DEV && activeCache.current !== null && activeCache.current !== cache) {
-				console.warn(MULTIPLE_PROVIDERS_WARNING)
-			}
-			activeCache.current = cache
-			return () => {
-				if (activeCache.current === cache) activeCache.current = null
-			}
-		}, [cache])
-
-		return <CacheContext.Provider value={cache}>{children}</CacheContext.Provider>
+	return {
+		Provider: cache.Provider,
+		Scope: cache.Scope,
+		useCache: cache.useCache,
+		useCacheKeys: cache.useCacheKeys,
+		createCachedStore,
 	}
-
-	function Scope({ path, children }: ScopeProps): ReactElement {
-		const inherited = useContext(ScopeContext)
-		const pathKey = JSON.stringify(path)
-		const value = useMemo(
-			() => [...inherited, ...path],
-			// eslint-disable-next-line react-hooks/exhaustive-deps
-			[inherited, pathKey],
-		)
-		return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>
-	}
-
-	const useKeys = createUseKeys({ CacheContext, missingProviderError: MISSING_CACHE_PROVIDER })
-
-	function useCache(): StoreCacheController {
-		const cache = useContext(CacheContext)
-		if (!cache) throw new Error(MISSING_CACHE_PROVIDER)
-		return { keys: cache.keys, clear: cache.clear }
-	}
-
-	const createCachedStore = wrapCachedStoreGroup({
-		CacheContext,
-		ScopeContext,
-		activeCache,
-		cacheGcTime,
-		missingProviderError: MISSING_CACHE_PROVIDER,
-		registerGroupName,
-	})
-
-	return { Provider, Scope, useCache, useKeys, createCachedStore }
 }

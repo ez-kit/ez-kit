@@ -1,31 +1,23 @@
 export { createContextStore } from './create-context-store'
-export type { ContextStoreInit, CreateContextStoreFactory } from './create-context-store'
+export type { ContextStoreInit, CreateContextStoreFactory, CreateContextStoreResult } from './create-context-store'
 
 export { useStoreState } from './use-store-state'
 
 export { withHistory } from './middlewares'
 export type { HistoryActionTag, HistoryOptions, HistoryState } from './middlewares'
 
-export {
-	createStoreCache,
-	CacheProvider,
-	CacheScope,
-	useCache,
-	useCacheKeys,
-	createCachedStore,
-	toTree,
-} from './store-cache'
+export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore } from './store-cache'
+export type { StoreCache, CachedStoreGroup, CachedItemProps } from './store-cache'
+
+export { toTree } from '@ez-kit/store-core/cache'
 export type {
-	StoreCache,
-	StoreCacheOptions,
-	StoreCacheController,
-	CachedStoreOptions,
-	CachedStoreFactory,
-	CachedStoreGroup,
-	CachedProviderProps,
-	CachedItemProps,
 	CacheAddress,
+	CachedProviderProps,
+	CachedStoreFactory,
+	CachedStoreOptions,
 	CacheRecord,
 	CacheTree,
 	ScopeProps,
-} from './store-cache'
+	StoreCacheController,
+	StoreCacheOptions,
+} from '@ez-kit/store-core/cache'

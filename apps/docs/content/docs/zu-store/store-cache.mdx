@@ -291,7 +291,7 @@ usersTable.remove({ path: ['page-1'], id: 'main' }) // drop a single entry (over
 
 ### Reactive inspection — `useCacheKeys`
 
-`useCacheKeys(prefix?)` is the one reactive inspection hook (the default cache's `useKeys`). It re-renders only when the cache **membership** changes (entries added or removed); internal state changes inside tracked stores do **not** trigger it, so a devtools panel built on `useCacheKeys` stays cheap even with chatty entries.
+`useCacheKeys(prefix?)` is the one reactive inspection hook. It re-renders only when the cache **membership** changes (entries added or removed); internal state changes inside tracked stores do **not** trigger it, so a devtools panel built on `useCacheKeys` stays cheap even with chatty entries.
 
 ```tsx
 import { useCacheKeys } from '@ez-kit/zu-store'
@@ -395,7 +395,7 @@ import {
 type CacheRecord = { path: string[]; name: string; id: string }
 ```
 
-`Cache`-qualified names are used only where the bare member name would be too generic at package scope (`Provider`→`CacheProvider`, `Scope`→`CacheScope`, `useKeys`→`useCacheKeys`). `useCache` and `createCachedStore` are already specific and keep their names. `toTree` is a standalone pure function — it takes any coordinate list (e.g. the output of `keys()` or `useCacheKeys()`, or an array you assembled by hand for a test) and returns the nested view. For a reactive nested view, compose `toTree(useCacheKeys(prefix?))` at the call site.
+`Cache`-qualified names are used only where the bare member name would be too generic at package scope (`Provider`→`CacheProvider`, `Scope`→`CacheScope`). `useCache`, `useCacheKeys`, and `createCachedStore` are already specific and keep their names. `toTree` is a standalone pure function — it takes any coordinate list (e.g. the output of `keys()` or `useCacheKeys()`, or an array you assembled by hand for a test) and returns the nested view. For a reactive nested view, compose `toTree(useCacheKeys(prefix?))` at the call site.
 
 ### `CacheScope`
 
@@ -432,7 +432,7 @@ createStoreCache(options?: { gcTime?: number }): {
 	Provider // ↔ CacheProvider
 	Scope // ↔ CacheScope
 	useCache // ↔ useCache
-	useKeys // ↔ useCacheKeys
+	useCacheKeys // ↔ useCacheKeys
 	createCachedStore // ↔ createCachedStore
 }
 ```
@@ -457,7 +457,7 @@ function App() {
 }
 ```
 
-A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `Missing StoreCacheProvider for createStoreCache`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
+A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `Missing StoreCacheProvider for createStoreCache`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useCacheKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
 
 ## Gotchas
 
