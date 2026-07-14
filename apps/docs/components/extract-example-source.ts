@@ -16,8 +16,10 @@ import ts from 'typescript'
 /** Parsed as TSX: every example file is a `.tsx` component module. */
 const SOURCE_FILE_NAME = 'example.tsx'
 
-/** Three or more consecutive newlines — left behind where a sibling was cut out. */
-const EXCESS_BLANK_LINES = /\n{3,}/gu
+const NEWLINE = /\n/gu
+
+/** Two newlines is one blank line — the most a gap between statements may keep. */
+const MAX_SEPARATOR_NEWLINES = 2
 
 /** A top-level declaration that can be referenced by name from another statement. */
 type NamedStatement = {
@@ -39,8 +41,10 @@ export function extractExampleSource(source: string, exportName: string): string
 	const target = declarations.find((declaration) => declaration.name === exportName)
 	if (!target) return source
 
-	const exportCount = sourceFile.statements.filter(isExported).length
-	if (exportCount <= 1) return source
+	const exportedNames = declarations.filter((declaration) => isExported(declaration.statement))
+	if (exportedNames.length <= 1) return source
+
+	if (hasUnsupportedDeclaration(sourceFile)) return source
 
 	const kept = collectReachable(target, declarations)
 	const referenced = collectIdentifiers(kept)
@@ -59,24 +63,59 @@ function collectTopLevelDeclarations(sourceFile: ts.SourceFile): NamedStatement[
 	const declarations: NamedStatement[] = []
 
 	for (const statement of sourceFile.statements) {
-		if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) {
-			if (statement.name) declarations.push({ name: statement.name.text, statement })
-			continue
-		}
-
-		if (ts.isVariableStatement(statement)) {
-			for (const declaration of statement.declarationList.declarations) {
-				if (ts.isIdentifier(declaration.name)) declarations.push({ name: declaration.name.text, statement })
-			}
-			continue
-		}
-
-		if (ts.isTypeAliasDeclaration(statement) || ts.isInterfaceDeclaration(statement)) {
-			declarations.push({ name: statement.name.text, statement })
-		}
+		for (const name of declaredNames(statement)) declarations.push({ name, statement })
 	}
 
 	return declarations
+}
+
+/**
+ * Every module-scope name a statement introduces. A name missed here is a name
+ * `collectReachable` cannot find, which would drop the declaration silently —
+ * so unknown statement kinds are reported rather than ignored (see
+ * `hasUnsupportedDeclaration`).
+ */
+function declaredNames(statement: ts.Statement): string[] {
+	if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) {
+		return statement.name ? [statement.name.text] : []
+	}
+
+	if (ts.isVariableStatement(statement)) {
+		return statement.declarationList.declarations.flatMap((declaration) => bindingNames(declaration.name))
+	}
+
+	if (
+		ts.isTypeAliasDeclaration(statement) ||
+		ts.isInterfaceDeclaration(statement) ||
+		ts.isEnumDeclaration(statement)
+	) {
+		return [statement.name.text]
+	}
+
+	if (ts.isModuleDeclaration(statement) && ts.isIdentifier(statement.name)) return [statement.name.text]
+
+	return []
+}
+
+/** Flattens a binding name, so destructured declarations register every name they bind. */
+function bindingNames(name: ts.BindingName): string[] {
+	if (ts.isIdentifier(name)) return [name.text]
+
+	return name.elements.flatMap((element) => (ts.isBindingElement(element) ? bindingNames(element.name) : []))
+}
+
+/**
+ * True when a statement declares something but `declaredNames` yields nothing —
+ * i.e. a form this module does not understand. Slicing a file like that could
+ * drop a declaration the target needs, and since the result is only ever
+ * displayed, nothing downstream would fail. Returning the file whole is wrong in
+ * a way a reader can see, which is the better failure.
+ */
+function hasUnsupportedDeclaration(sourceFile: ts.SourceFile): boolean {
+	return sourceFile.statements.some((statement) => {
+		if (ts.isImportDeclaration(statement) || isDirective(statement)) return false
+		return declaredNames(statement).length === 0
+	})
 }
 
 /**
@@ -139,24 +178,57 @@ function isImportUsed(statement: ts.ImportDeclaration, referenced: Set<string>):
 }
 
 /**
- * Statement text including its leading trivia, so each kept statement carries
- * its own comments and a sibling's section comment leaves with the sibling.
+ * Statement text plus the leading comments it owns, so a section comment travels
+ * with its declaration. Everything before that — whitespace, and any comment
+ * belonging to a statement that was dropped — collapses to plain newlines, which
+ * keeps the file's grouping without ever rewriting code.
  */
 function sliceStatement(statement: ts.Statement, sourceFile: ts.SourceFile): string {
-	return sourceFile.text.slice(statement.getFullStart(), statement.getEnd())
+	const text = sourceFile.text
+	const fullStart = statement.getFullStart()
+	const start = ownedStart(text, fullStart, statement.getStart(sourceFile))
+
+	return separator(text.slice(fullStart, start)) + text.slice(start, statement.getEnd())
 }
 
-/** `'use client'` and friends: parsed as statements, but they must lead the file. */
+/**
+ * Where this statement's own text begins. Leading trivia starts at the previous
+ * token's end, so a comment trailing the previous statement on *its* line reads
+ * as this statement's leading comment — disown those, or a dropped sibling's
+ * trailing note leaks onto whatever follows it. Nothing precedes the first
+ * statement, so at the start of the file every comment is owned.
+ */
+function ownedStart(text: string, fullStart: number, tokenStart: number): number {
+	const previousLineEnd = fullStart === 0 ? -1 : text.indexOf('\n', fullStart)
+	const comments = ts.getLeadingCommentRanges(text, fullStart) ?? []
+	const owned = comments.filter((comment) => previousLineEnd === -1 || comment.pos > previousLineEnd)
+
+	return owned[0]?.pos ?? tokenStart
+}
+
+/** The gap before a statement, reduced to at most one blank line. */
+function separator(gap: string): string {
+	const newlines = (gap.match(NEWLINE) ?? []).length
+	return '\n'.repeat(Math.min(newlines, MAX_SEPARATOR_NEWLINES))
+}
+
+/**
+ * `'use client'` and friends: parsed as ordinary statements, but they are only
+ * directives at the head of the file and they must stay there.
+ */
 function directivePrologue(sourceFile: ts.SourceFile, source: string): string {
-	const directives = sourceFile.statements.filter(
-		(statement) => ts.isExpressionStatement(statement) && ts.isStringLiteral(statement.expression),
-	)
-	if (directives.length === 0) return ''
+	let end = 0
+	for (const statement of sourceFile.statements) {
+		if (!isDirective(statement)) break
+		end = statement.getEnd()
+	}
 
-	const last = directives[directives.length - 1]
-	if (!last) return ''
+	// No trailing newline: the next statement's own gap supplies the spacing.
+	return source.slice(0, end)
+}
 
-	return source.slice(0, last.getEnd()) + '\n'
+function isDirective(statement: ts.Statement): boolean {
+	return ts.isExpressionStatement(statement) && ts.isStringLiteral(statement.expression)
 }
 
 function isExported(statement: ts.Statement): boolean {
@@ -165,7 +237,11 @@ function isExported(statement: ts.Statement): boolean {
 		: false
 }
 
-/** Collapses the gaps left by removed statements and normalises the file ending. */
+/**
+ * Normalises the file ending only. Gaps left by removed statements are already
+ * collapsed in `sliceStatement`, which can tell trivia from code — this cannot,
+ * so it must not touch the body.
+ */
 function format(source: string): string {
-	return source.replace(EXCESS_BLANK_LINES, '\n\n').trim() + '\n'
+	return source.trim() + '\n'
 }

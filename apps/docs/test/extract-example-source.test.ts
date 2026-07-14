@@ -1,6 +1,13 @@
+import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 import { extractExampleSource } from '../components/extract-example-source'
+
+/** Sliced output is only ever displayed, so a syntax error would surface to no one but the reader. */
+function parseErrorCount(source: string): number {
+	const parsed = ts.createSourceFile('check.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+	return (parsed as unknown as { parseDiagnostics: unknown[] }).parseDiagnostics.length
+}
 
 const MULTI_EXPORT = `'use client'
 
@@ -146,5 +153,114 @@ describe('extractExampleSource', () => {
 		// Assert
 		expect(result).not.toMatch(/\n{3,}/u)
 		expect(result.endsWith('}\n')).toBe(true)
+	})
+
+	it('produces source that still parses', () => {
+		// Arrange / Act
+		const result = extractExampleSource(PER_EXAMPLE_PREAMBLE, 'ColumnHelperBaseExample')
+
+		// Assert
+		expect(parseErrorCount(result)).toBe(0)
+	})
+
+	it('keeps an enum the target depends on', () => {
+		// Arrange
+		const source = `enum Mode {
+	On = 'on',
+}
+
+export function Sibling() {
+	return <div />
+}
+
+export function Target() {
+	return <div>{Mode.On}</div>
+}
+`
+		// Act
+		const result = extractExampleSource(source, 'Target')
+
+		// Assert
+		expect(result).toContain('enum Mode')
+		expect(result).not.toContain('Sibling')
+	})
+
+	it('keeps a destructured module-scope declaration the target depends on', () => {
+		// Arrange
+		const source = `const { columns, data } = buildFixture()
+
+export function Sibling() {
+	return <div />
+}
+
+export function Target() {
+	return <Grid columns={columns} data={data} />
+}
+`
+		// Act
+		const result = extractExampleSource(source, 'Target')
+
+		// Assert
+		expect(result).toContain('const { columns, data } = buildFixture()')
+		expect(result).not.toContain('Sibling')
+	})
+
+	it('preserves blank lines inside a template literal', () => {
+		// Arrange
+		const source = `const QUERY = \`SELECT
+
+1\`
+
+export function Sibling() {
+	return <div />
+}
+
+export function Target() {
+	return <pre>{QUERY}</pre>
+}
+`
+		// Act
+		const result = extractExampleSource(source, 'Target')
+
+		// Assert
+		expect(result).toContain('SELECT\n\n1')
+		expect(result).not.toContain('Sibling')
+	})
+
+	it('does not carry a dropped sibling’s trailing comment onto the kept export', () => {
+		// Arrange
+		const source = `export function Sibling() {
+	return <div />
+} // sibling-only note
+
+export function Target() {
+	return <span />
+}
+`
+		// Act
+		const result = extractExampleSource(source, 'Target')
+
+		// Assert
+		expect(result).not.toContain('sibling-only note')
+		expect(result.startsWith('export function Target')).toBe(true)
+	})
+
+	it('returns the source whole rather than risk dropping an unsupported declaration', () => {
+		// Arrange — a top-level form `declaredNames` does not model.
+		const source = `export * from './re-exported'
+
+export function Sibling() {
+	return <div />
+}
+
+export function Target() {
+	return <span />
+}
+`
+		// Act
+		const result = extractExampleSource(source, 'Target')
+
+		// Assert
+		expect(result).toBe(source)
 	})
 })
