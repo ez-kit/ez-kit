@@ -12,6 +12,10 @@ export const RAW_SELECTOR = (state: unknown): unknown => state
  * Constant selector used on the {@link RAW_SELECTOR} path. Zustand compares the selected value with
  * `Object.is`, so a selector that always returns the same constant never triggers a re-render — the
  * raw-handle read stays passive, matching `createContextStore`'s `useContextStore`.
+ *
+ * This does still register a (no-op) subscription, where a bare `useContext` read would not. That is
+ * the price of routing every read through one `useRead` injection: the hook must be called
+ * unconditionally, and the core cache owns the instance lookup.
  */
 const NO_STATE_SELECTOR = (): null => null
 

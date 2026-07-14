@@ -77,7 +77,7 @@ const usersTable = createCachedStore(
 usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'archived' })
 ```
 
-Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useKeys`, `cache.createCachedStore`).
+Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useCacheKeys`, `cache.createCachedStore`).
 
 → [Full docs](docs/store-cache.md)
 

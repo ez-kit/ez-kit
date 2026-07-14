@@ -718,6 +718,70 @@ describe('createStoreCache — imperative & reactive access', () => {
 	})
 })
 
+describe('createStoreCache — useContextStore', () => {
+	it('returns the same live store instance the cache holds', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'ctx-1' })
+		const seen: ReturnType<typeof table.useContextStore>[] = []
+
+		function Reader() {
+			seen.push(table.useContextStore())
+			return null
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<Reader />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(seen[0]).toBe(table.fromCache({ id: 'main' }))
+		expect(seen[0]?.getState().filter).toBe('all')
+	})
+
+	it('does NOT re-render when the store state changes', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'ctx-2' })
+		let readerRenders = 0
+
+		function Reader() {
+			table.useContextStore()
+			readerRenders += 1
+			return null
+		}
+		function FilterButton() {
+			const setFilter = table.useStore((s) => s.setFilter)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setFilter('changed')
+					}}
+				>
+					change
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<Reader />
+					<FilterButton />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		const before = readerRenders
+		fireEvent.click(screen.getByRole('button', { name: 'change' }))
+		// The raw handle is a passive read: state changed, but the holder must not re-render.
+		expect(readerRenders).toBe(before)
+		expect(table.fromCache({ id: 'main' })?.getState().filter).toBe('changed')
+	})
+})
+
 describe('createStoreCache — reactive inspection (useCacheKeys + toTree)', () => {
 	it('useCacheKeys re-renders on membership change (add and explicit removal)', () => {
 		const cache = createStoreCache()
