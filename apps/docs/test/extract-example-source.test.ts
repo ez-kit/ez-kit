@@ -245,6 +245,46 @@ export function Target() {
 		expect(result.startsWith('export function Target')).toBe(true)
 	})
 
+	it('keeps a trailing comment on a declaration it kept', () => {
+		// Arrange
+		const source = `const columns = defineColumns([]) // shared by both examples
+
+export function Sibling() {
+	return <Grid columns={columns} />
+}
+
+export function Target() {
+	return <Grid columns={columns} />
+}
+`
+		// Act
+		const result = extractExampleSource(source, 'Target')
+
+		// Assert
+		expect(result).toContain('// shared by both examples')
+		expect(result).not.toContain('Sibling')
+	})
+
+	it('keeps a leading comment on the first statement of the file', () => {
+		// Arrange
+		const source = `// fixture shared by the examples below
+const columns = defineColumns([])
+
+export function Sibling() {
+	return <Grid columns={columns} />
+}
+
+export function Target() {
+	return <Grid columns={columns} />
+}
+`
+		// Act
+		const result = extractExampleSource(source, 'Target')
+
+		// Assert
+		expect(result.startsWith('// fixture shared by the examples below')).toBe(true)
+	})
+
 	it('returns the source whole rather than risk dropping an unsupported declaration', () => {
 		// Arrange — a top-level form `declaredNames` does not model.
 		const source = `export * from './re-exported'

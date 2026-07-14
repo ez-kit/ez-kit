@@ -178,17 +178,18 @@ function isImportUsed(statement: ts.ImportDeclaration, referenced: Set<string>):
 }
 
 /**
- * Statement text plus the leading comments it owns, so a section comment travels
- * with its declaration. Everything before that — whitespace, and any comment
- * belonging to a statement that was dropped — collapses to plain newlines, which
- * keeps the file's grouping without ever rewriting code.
+ * Statement text plus the comments it owns — the ones leading it, and any note
+ * trailing it on its own line — so a comment lives and dies with the declaration
+ * it describes. Everything before that (whitespace, and comments owned by a
+ * statement that was dropped) collapses to plain newlines, which keeps the
+ * file's grouping without ever rewriting code.
  */
 function sliceStatement(statement: ts.Statement, sourceFile: ts.SourceFile): string {
 	const text = sourceFile.text
 	const fullStart = statement.getFullStart()
 	const start = ownedStart(text, fullStart, statement.getStart(sourceFile))
 
-	return separator(text.slice(fullStart, start)) + text.slice(start, statement.getEnd())
+	return separator(text.slice(fullStart, start)) + text.slice(start, ownedEnd(text, statement.getEnd()))
 }
 
 /**
@@ -199,11 +200,24 @@ function sliceStatement(statement: ts.Statement, sourceFile: ts.SourceFile): str
  * statement, so at the start of the file every comment is owned.
  */
 function ownedStart(text: string, fullStart: number, tokenStart: number): number {
-	const previousLineEnd = fullStart === 0 ? -1 : text.indexOf('\n', fullStart)
+	const isFileStart = fullStart === 0
+	const previousLineEnd = text.indexOf('\n', fullStart)
+	const ownsEveryComment = isFileStart || previousLineEnd === -1
+
 	const comments = ts.getLeadingCommentRanges(text, fullStart) ?? []
-	const owned = comments.filter((comment) => previousLineEnd === -1 || comment.pos > previousLineEnd)
+	const owned = comments.filter((comment) => ownsEveryComment || comment.pos > previousLineEnd)
 
 	return owned[0]?.pos ?? tokenStart
+}
+
+/**
+ * Where this statement's own text ends: after a note trailing it on the same
+ * line. `ownedStart` disowns exactly these on behalf of the next statement, so
+ * without this they would belong to nobody and vanish.
+ */
+function ownedEnd(text: string, end: number): number {
+	const trailing = ts.getTrailingCommentRanges(text, end) ?? []
+	return trailing[trailing.length - 1]?.end ?? end
 }
 
 /** The gap before a statement, reduced to at most one blank line. */
@@ -231,6 +245,12 @@ function isDirective(statement: ts.Statement): boolean {
 	return ts.isExpressionStatement(statement) && ts.isStringLiteral(statement.expression)
 }
 
+/**
+ * Only an `export` modifier counts. An example published via `export { X }` or
+ * `export default` reads as zero exports here, so its file is returned whole —
+ * visibly unsliced rather than silently wrong. Every example file declares its
+ * examples as `export function X`.
+ */
 function isExported(statement: ts.Statement): boolean {
 	return ts.canHaveModifiers(statement)
 		? (ts.getModifiers(statement)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false)
