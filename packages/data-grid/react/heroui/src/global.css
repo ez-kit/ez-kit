@@ -1,6 +1,17 @@
 @import '@heroui/styles';
 @import '@ez-kit/data-grid-react/styles.css';
 
+/* Inline (non-popover) column filters render the filter input and its operator select as
+ * plain siblings of this slot (data-grid-react `render-filter-input.tsx`), which carries no
+ * styling by design. Stack them with a gap so the operator does not sit flush against the
+ * input. Items stay stretched, so the input keeps the column width while the operator
+ * trigger opts out via `w-fit`. */
+[data-slot='header-extras'] {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
 [data-slot='active-filters-bar'] {
 	display: flex;
 	flex-wrap: wrap;
