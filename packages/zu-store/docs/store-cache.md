@@ -24,7 +24,7 @@ function createStoreCache(options?: { gcTime?: number }): {
 		keys: (prefix?: string[]) => CacheRecord[]           // non-reactive snapshot
 		clear: (prefix?: string[]) => void                   // optional subtree clear
 	}
-	useCacheKeys: (prefix?: string[]) => CacheRecord[]          // reactive: re-renders on membership change
+	useCacheKeys: (prefix?: string[]) => CacheRecord[]     // reactive: re-renders on membership change
 	createCachedStore: <TStore, TDefaultValue>(
 		factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
 		options: { name: string; gcTime?: number },
