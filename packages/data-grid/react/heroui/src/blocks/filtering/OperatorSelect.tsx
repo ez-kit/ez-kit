@@ -9,11 +9,16 @@ import type { OperatorSelectProps } from '@ez-kit/data-grid-react'
 const SELECT_CLASS = 'w-fit'
 /** Neutralises the HeroUI field look (`min-h-9 border bg-field shadow-field px-3 py-2`)
  *  so the operator reads as an inline affordance, matching the shadcn flavour.
- *  `pe-6` reserves room for the absolutely-positioned indicator (`end-2` + `size-4`):
- *  these utilities override HeroUI's `:has(.select__indicator) { pe-7 }`, so the space
- *  must be re-declared here or the chevron overlaps the label. Padding is set per side —
- *  a `px-*` shorthand would race `pe-*` on `padding-inline` in the same cascade layer. */
-const TRIGGER_CLASS = 'h-7 min-h-0 gap-1 border-0 bg-transparent ps-1.5 pe-6 py-0 text-xs shadow-none'
+ *  `pr-7` re-reserves room for the indicator, which HeroUI positions out of flow against
+ *  the physical right edge (`right-2` + `size-4`). Its own `:has(.select__indicator)`
+ *  padding sits in the `components` layer, so these utilities drop it and the space has to
+ *  be restated or the chevron overlaps the label. Padding is per side: a `px-*` shorthand
+ *  would race the per-side value, and physical sides keep it aligned with the physically
+ *  positioned indicator. */
+const TRIGGER_CLASS = 'h-7 min-h-0 border-0 bg-transparent pl-1.5 pr-7 py-0 shadow-none'
+/** HeroUI sets a font-size on `.select__value` itself (`text-base sm:text-sm`), so a
+ *  `text-xs` on the trigger would never cascade in — it has to land on the value. */
+const VALUE_CLASS = 'text-xs'
 const ITEM_CLASS = 'text-xs'
 const SYMBOL_CLASS = 'font-mono'
 
@@ -28,7 +33,7 @@ export function OperatorSelect({ operators, currentOperatorId, onChange }: Opera
 			}}
 		>
 			<Select.Trigger className={TRIGGER_CLASS}>
-				<Select.Value />
+				<Select.Value className={VALUE_CLASS} />
 				<Select.Indicator />
 			</Select.Trigger>
 			<Select.Popover>
