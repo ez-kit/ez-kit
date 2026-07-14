@@ -27,7 +27,7 @@ export function Pagination({
 		: undefined
 
 	return (
-		<HeroPagination aria-label='Pagination'>
+		<HeroPagination aria-label='Pagination' className='mt-3'>
 			{rangeLabel !== undefined && (
 				<HeroPagination.Item>
 					<span className='px-2 text-sm text-default-500'>{rangeLabel}</span>
