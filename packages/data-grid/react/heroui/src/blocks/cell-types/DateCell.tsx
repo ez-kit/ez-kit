@@ -81,6 +81,14 @@ function DateCellInput({
 						<Calendar.GridHeader>{(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}</Calendar.GridHeader>
 						<Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
 					</Calendar.Grid>
+					{/* Required whenever the header uses YearPickerTrigger: opening year mode hides the
+					 * nav buttons (`.calendar__header:has(.calendar-year-picker__trigger[data-open='true'])`),
+					 * so without this grid the calendar loses navigation with no year list to replace it. */}
+					<Calendar.YearPickerGrid>
+						<Calendar.YearPickerGridBody>
+							{({ year }) => <Calendar.YearPickerCell year={year} />}
+						</Calendar.YearPickerGridBody>
+					</Calendar.YearPickerGrid>
 				</Calendar>
 			</DatePicker.Popover>
 		</DatePicker>
