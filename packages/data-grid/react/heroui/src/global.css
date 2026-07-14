@@ -1,6 +1,21 @@
 @import '@heroui/styles';
 @import '@ez-kit/data-grid-react/styles.css';
 
+/* HeroUI renders header cells as real `<th>` elements inside a native table layout, so they
+ * inherit `vertical-align: middle` from the table. The row is as tall as its tallest cell, so
+ * a column whose filter carries an operator select makes every shorter header cell centre its
+ * content against that height — and the filter inputs end up on different levels. Align header
+ * content to the top so the inputs line up across columns regardless of the extras each column
+ * renders. (The shadcn kit gets this for free: its header row is a CSS grid, so header cells
+ * stretch and their content flows from the top.) The selection checkbox column keeps its
+ * centred content, matching shadcn, where that cell is a stretched flex box with `items-center`. */
+[data-slot='th'] {
+	vertical-align: top;
+}
+[data-slot='th'][data-slot-selection-th='true'] {
+	vertical-align: middle;
+}
+
 /* Inline (non-popover) column filters render the filter input and its operator select as
  * plain siblings of this slot (data-grid-react `render-filter-input.tsx`), which carries no
  * styling by design. Stack them with a gap so the operator does not sit flush against the
