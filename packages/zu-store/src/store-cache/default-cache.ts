@@ -13,10 +13,4 @@ import { createStoreCache } from './create-store-cache'
  */
 const defaultCache = createStoreCache()
 
-export const {
-	Provider: CacheProvider,
-	Scope: CacheScope,
-	useCache,
-	useKeys: useCacheKeys,
-	createCachedStore,
-} = defaultCache
+export const { Provider: CacheProvider, Scope: CacheScope, useCache, useCacheKeys, createCachedStore } = defaultCache

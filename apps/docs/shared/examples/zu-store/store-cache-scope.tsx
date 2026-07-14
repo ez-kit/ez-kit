@@ -69,8 +69,8 @@ function Page({ name }: { name: string }) {
 
 function Demo() {
 	const { clear } = cache.useCache()
-	// Pure utility composed with the top-level reactive `useKeys` — re-renders only on membership changes.
-	const tree = toTree(cache.useKeys())
+	// Pure utility composed with the reactive `useCacheKeys` — re-renders only on membership changes.
+	const tree = toTree(cache.useCacheKeys())
 	const [showA, setShowA] = useState(true)
 
 	return (
