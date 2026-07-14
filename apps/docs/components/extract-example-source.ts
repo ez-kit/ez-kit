@@ -193,21 +193,15 @@ function sliceStatement(statement: ts.Statement, sourceFile: ts.SourceFile): str
 }
 
 /**
- * Where this statement's own text begins. Leading trivia starts at the previous
- * token's end, so a comment trailing the previous statement on *its* line reads
- * as this statement's leading comment — disown those, or a dropped sibling's
- * trailing note leaks onto whatever follows it. Nothing precedes the first
- * statement, so at the start of the file every comment is owned.
+ * Where this statement's own text begins: at its first leading comment, else at
+ * its first token. A note trailing the *previous* statement on that statement's
+ * line is not among these — `getLeadingCommentRanges` starts collecting only
+ * past the first newline, and `ownedEnd` gives that note to the statement it
+ * trails. The two sets never overlap, so no comment is emitted twice or lost.
  */
 function ownedStart(text: string, fullStart: number, tokenStart: number): number {
-	const isFileStart = fullStart === 0
-	const previousLineEnd = text.indexOf('\n', fullStart)
-	const ownsEveryComment = isFileStart || previousLineEnd === -1
-
 	const comments = ts.getLeadingCommentRanges(text, fullStart) ?? []
-	const owned = comments.filter((comment) => ownsEveryComment || comment.pos > previousLineEnd)
-
-	return owned[0]?.pos ?? tokenStart
+	return comments[0]?.pos ?? tokenStart
 }
 
 /**
