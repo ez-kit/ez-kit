@@ -108,8 +108,8 @@ async function main() {
 		await browser.close()
 	}
 	const summary = { base, viewport: VIEWPORT, results }
-	// Persist the summary next to the screenshots so visual-report.mjs can consume it
-	// (stdout alone is lost once the worker moves on).
+	// Persist the summary next to the screenshots so the reviewer (and the agent's own
+	// post-run read of the PNGs) can consume it — stdout alone is lost once work moves on.
 	await writeFile(path.join(out, 'summary.json'), JSON.stringify(summary, null, 2))
 	console.log(JSON.stringify(summary, null, 2))
 }

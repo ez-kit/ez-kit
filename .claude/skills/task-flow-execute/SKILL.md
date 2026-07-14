@@ -48,11 +48,9 @@ wrapper scripts every gate/visual/push step must go through. In short:
 4. objective gate — all must pass: `lint`, `typecheck`, `test`, `build` of the affected
    package, **plus** an isolated visual check (dev server on `PW_PORT=3101` + Chromium via
    `scripts/visual-check.mjs`) for visual/UI/docs tasks
-5. commit, push branch `issue-<N>-<slug>`, open a **draft** PR with `Closes #<N>`
-6. for visual/UI/docs tasks, post a **visual-verification comment** on the PR
-   (`scripts/visual-report.mjs`): the screenshots that were looked at, one section per path
-   (embedded image + HTTP status + title + console errors) so the reviewer sees exactly what
-   was checked
+5. commit, push branch `issue-<N>-<slug>`, open a **draft** PR with `Closes #<N>` — the
+   visual verdict from step 4 goes in the PR body as a one-line note (screenshots are **not**
+   uploaded to the PR)
 
 ### Phase C — verification (separate lane)
 

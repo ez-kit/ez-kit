@@ -22,7 +22,9 @@ left to judgement. Run every script from the **repo root** unless noted.
    the task branch off `main` in the current worktree:
    `git switch main && git switch -c issue-<N>-<slug>`. Never edit on `main` directly.
 4. **Implement** per the plan, honoring the ez-kit constraints below.
-5. **Setup** — `pnpm install` (fast; shares the global pnpm store).
+5. **Setup** — `pnpm install` **only if** the plan touched `package.json` or the lockfile
+   (`git status --porcelain -- '**/package.json' pnpm-lock.yaml` non-empty). Otherwise skip —
+   the worktree deps are already current.
 6. **Objective gate — one command, fail-fast:**
    ```bash
    node <repo>/.claude/skills/task-flow-execute/scripts/agent-gate.mjs \
@@ -53,12 +55,11 @@ left to judgement. Run every script from the **repo root** unless noted.
    task only; do not sweep in unrelated files.
 9. **Push — via the script only (never raw `git push`):**
    ```bash
-   node <repo>/.claude/skills/task-flow-execute/scripts/agent-push.mjs \
-     --pkg <pkgA> [--pkg <pkgB> ...]
+   node <repo>/.claude/skills/task-flow-execute/scripts/agent-push.mjs
    ```
-   It re-runs fast `lint` + `typecheck` as a pre-push safety net, then pushes with
-   `--no-verify` baked in (so the repo's husky full-monorepo `ci:fast` does not re-run — the
-   authoritative gate already passed in step 6). Red linters → it refuses to push.
+   It pushes with `--no-verify` baked in (so the repo's husky full-monorepo `ci:fast` does
+   not re-run — the authoritative gate already passed build/lint/typecheck/test in step 6, so
+   no pre-push re-check is needed).
 10. **Open the draft PR:**
     ```bash
     gh pr create --repo ez-kit/ez-kit --base main --head issue-<N>-<slug> --draft \
@@ -71,21 +72,13 @@ left to judgement. Run every script from the **repo root** unless noted.
     - agent-gate: PASS (build/lint/typecheck/test[/docs:build])
     - visual: <verdict, or 'не визуальная'>"
     ```
-11. **Post the visual-verification comment (visual/UI/docs tasks only).** After the PR
-    exists, publish the screenshots you looked at so the reviewer sees exactly what was
-    checked. Runs from `apps/docs` (where `.visual/` lives):
-    ```bash
-    body=$(node <repo>/.claude/skills/task-flow-execute/scripts/visual-report.mjs \
-      --in ./.visual --issue <N> --repo ez-kit/ez-kit \
-      --verdict "<your one-line judgement>")
-    gh pr comment <PR#> --repo ez-kit/ez-kit --body-file "$body"
-    ```
-    The script uploads each `.visual/*.png` to the shared `visual-artifacts` prerelease and
-    writes the comment body (one section per path: embedded screenshot + HTTP status + title
-    + console errors). Skip for non-visual tasks and say so in the result.
-12. **Record** the result: `{ issue, branch, prUrl, gate: "PASS", visual: {...}, notes }` —
+11. **Record** the result: `{ issue, branch, prUrl, gate: "PASS", visual: {...}, notes }` —
     this feeds Phase C. Do **not** move the card to In review yet — that happens after code
     review passes.
+
+    The visual judgement from step 7 goes into the PR **body** as a one-line verdict (step 10)
+    — screenshots are **not** uploaded to the PR. The `.visual/*.png` you read stay local
+    scratch.
 
 ## ez-kit constraints
 
