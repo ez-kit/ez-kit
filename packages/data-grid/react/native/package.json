@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-native",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Plain/native UI flavour of @ez-kit/data-grid (ships its own global.css).",
 	"license": "MIT",
 	"repository": {

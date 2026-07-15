@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-core",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Headless, UI-framework-agnostic data-grid core for @ez-kit/data-grid (built on TanStack Table core).",
 	"license": "MIT",
 	"repository": {
