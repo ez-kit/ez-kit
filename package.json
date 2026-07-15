@@ -5,6 +5,9 @@
 	"license": "MIT",
 	"description": "Monorepo for ez-kit npm UI helper libraries.",
 	"packageManager": "pnpm@10.18.0",
+	"engines": {
+		"node": ">=22"
+	},
 	"scripts": {
 		"pkg:new": "turbo gen package",
 		"build": "turbo run build",
