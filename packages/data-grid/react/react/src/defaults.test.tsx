@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
-import { FILTER_CHIPS_KEY, GLOBAL_FILTERING_KEY, INFINITE_KEY, useDataGrid } from './use-data-grid'
+import { PaginationVariant } from './types'
+import {
+	FILTER_CHIPS_KEY,
+	GLOBAL_FILTERING_KEY,
+	INFINITE_KEY,
+	PAGINATION_VARIANT_KEY,
+	useDataGrid,
+} from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type {
@@ -33,6 +40,10 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 		expect(DEFAULT_PAGE_SIZE).toBe(10)
 	})
 
+	it('page-based pagination renders the numbered variant by default', () => {
+		expect(DATA_GRID_DEFAULTS.pagination.variant).toBe(PaginationVariant.Numbered)
+	})
+
 	it('global search input defaults', () => {
 		expect(DATA_GRID_DEFAULTS.globalFiltering.placeholder).toBe('Search…')
 		expect(DATA_GRID_DEFAULTS.globalFiltering.debounce).toBe(250)
@@ -59,6 +70,25 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	it('pagination: true → pageSize is the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
 		expect(result.current.table.getState().pagination.pageSize).toBe(DATA_GRID_DEFAULTS.pagination.pageSize)
+	})
+
+	it('pagination without a variant → resolves to the named default', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
+		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(DATA_GRID_DEFAULTS.pagination.variant)
+	})
+
+	it('pagination.variant → stored on the instance for Pagination to read', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariant.Simple } }),
+		)
+		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariant.Simple)
+	})
+
+	it('pagination.variant is display-only → never reaches core pagination state', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariant.Compact } }),
+		)
+		expect(result.current.table.getState().pagination).not.toHaveProperty('variant')
 	})
 
 	it('globalFiltering: true → placeholder/debounce are the named defaults', () => {

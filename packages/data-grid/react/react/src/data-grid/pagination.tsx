@@ -1,6 +1,15 @@
 import { useGridComponents } from '../components-context'
+import { DATA_GRID_DEFAULTS } from '../defaults'
+import { PAGINATION_VARIANT_KEY } from '../use-data-grid'
 
 import { useDataGridInstance, useDataGridStore } from './table-context'
+
+import type { PaginationVariant } from '../types'
+
+function readVariant(table: object): PaginationVariant {
+	const variant = (table as Record<symbol, unknown>)[PAGINATION_VARIANT_KEY] as PaginationVariant | undefined
+	return variant ?? DATA_GRID_DEFAULTS.pagination.variant
+}
 
 /**
  * Pagination controls. Rendered only when `pagination` is enabled in config.
@@ -28,7 +37,7 @@ export function Pagination() {
 	if (isPending) return null
 	if (!table.options.getPaginationRowModel) return null
 
-	const { pageIndex } = table.getState().pagination
+	const { pageIndex, pageSize } = table.getState().pagination
 	const pageCount = table.getPageCount()
 	const rawRowCount = table.getRowCount()
 	// `getRowCount()` returns 0 when no rowCount was supplied (TanStack default).
@@ -40,7 +49,9 @@ export function Pagination() {
 	return (
 		<PaginationComponent
 			{...(rowCount !== undefined ? { rowCount } : {})}
+			variant={readVariant(table)}
 			pageIndex={pageIndex}
+			pageSize={pageSize}
 			pageCount={pageCount}
 			canPreviousPage={canPrevious}
 			canNextPage={canNext}

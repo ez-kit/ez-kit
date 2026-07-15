@@ -13,6 +13,7 @@ export {
 	GLOBAL_FILTERING_KEY,
 	INFINITE_KEY,
 	PAGE_SIZER_KEY,
+	PAGINATION_VARIANT_KEY,
 	ROW_PINNING_KEY,
 	SORTING_KEY,
 	VIRTUALIZED_KEY,
@@ -167,6 +168,8 @@ export type {
 	SortMenuProps,
 	VisibilityColumnItem,
 } from './types'
+// `PaginationVariant` is an enum (runtime value) — exported as a value, not a type.
+export { PaginationVariant } from './types'
 export type {
 	ButtonProps,
 	CheckboxProps,

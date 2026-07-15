@@ -100,15 +100,32 @@ export type GlobalFilterInputProps = {
 	debounce?: number
 }
 
+/**
+ * Presentation of the page-based pagination footer. A pure display concern —
+ * the page-based logic is identical across variants, only the controls differ.
+ */
+export enum PaginationVariant {
+	/** Prev/next plus a link per page. The default. */
+	Numbered = 'numbered',
+	/** Prev/next plus an "X–Y of N" range label; no page links. */
+	Simple = 'simple',
+	/** Prev/next plus a "Page X of Y" label; no page links. */
+	Compact = 'compact',
+}
+
 export type PaginationProps = {
 	pageIndex: number
 	pageCount: number
+	/** Rows per page, from the table's pagination state. Drives the "X–Y of N" range label. */
+	pageSize: number
 	/**
 	 * Total row count from the server. Present when the consumer supplied
 	 * `pagination.rowCount`; `undefined` when unknown (e.g. only `pageCount`
 	 * was given, or the total is not known). Use to render an "X–Y of N" label.
 	 */
 	rowCount?: number
+	/** Which set of controls to render. Resolved by the react layer; never undefined. */
+	variant: PaginationVariant
 	canPreviousPage: boolean
 	canNextPage: boolean
 	onPreviousPage: () => void

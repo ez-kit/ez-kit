@@ -28,6 +28,53 @@ const grid = useDataGrid({
 <DataGrid.PageSizer options={[10, 25, 50, 100]} />
 ```
 
+## Variants
+
+`pagination.variant` picks which footer controls render. It is presentational only — paging
+behaviour is identical across variants, and the footer always sits below the table.
+
+### Numbered
+
+The default: previous/next plus a link per page. Best when the page count is small enough to
+scan.
+
+<DataGridDocsExample exampleId='pagination-variant-numbered' />
+
+```ts
+import { PaginationVariant } from '@ez-kit/data-grid-react'
+
+const grid = useDataGrid({
+	data,
+	columns,
+	pagination: { pageSize: 10, variant: PaginationVariant.Numbered },
+})
+```
+
+### Simple
+
+Previous/next plus an "X–Y of N" range label, without per-page links. Best when there are too
+many pages to list, but the total still matters.
+
+<DataGridDocsExample exampleId='pagination-variant-simple' />
+
+```ts
+pagination: { pageSize: 10, variant: PaginationVariant.Simple }
+```
+
+The range label needs a total. Client-side it is known automatically; server-side it comes from
+`rowCount`. When the total is unknown, `simple` falls back to the `compact` label rather than
+rendering prev/next with no context.
+
+### Compact
+
+Previous/next plus a "Page X of Y" label. The smallest footer — best in dense layouts.
+
+<DataGridDocsExample exampleId='pagination-variant-compact' />
+
+```ts
+pagination: { pageSize: 10, variant: PaginationVariant.Compact }
+```
+
 ## Server-side pagination
 
 Pass controlled pagination state, set `manualPagination: true`, and supply `rowCount`:
@@ -51,6 +98,7 @@ const grid = useDataGrid({
 
 | Option | Type | Description |
 | --- | --- | --- |
+| `pagination.variant` | `PaginationVariant` | Footer controls: `Numbered` (default), `Simple`, `Compact`. Display only. |
 | `initialState.pagination` | `{ pageIndex, pageSize }` | Defaults at mount. |
 | `state.pagination` | same | Controlled state. |
 | `onPaginationChange` | `(updater) => void` | Subscribe to changes. |
@@ -61,7 +109,11 @@ const grid = useDataGrid({
 
 For append-on-scroll instead of a page footer, set `pagination.mode: 'infinite'` — see
 [Infinite Scroll](/docs/data-grid/pagination/infinite-scroll). It is mutually exclusive with the
-page-based footer.
+page-based footer, so `variant` does not apply to it.
+
+For a "Load more" button instead of pages, use infinite mode with a manual trigger —
+`pagination: { mode: 'infinite', trigger: 'manual' }`. See
+[Infinite Scroll](/docs/data-grid/pagination/infinite-scroll).
 
 ## Source
 
