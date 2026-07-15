@@ -219,12 +219,21 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 }
 
 /* ---- Data-grid HeroUI theme-driven classes ----
-   These wrap the small set of inline styles that must reference HeroUI runtime
-   theme tokens (`var(--heroui-*)`, `color-mix(... var(--color-danger) ...)`).
-   They cannot be expressed via plain Tailwind utilities because the values are
-   resolved at runtime by the HeroUI provider.
-   Layout/spacing/typography for the same elements stay as Tailwind classes on
-   the JSX side; these CSS rules only own the theme-dependent properties. */
+   These own the few properties that need a `color-mix()` over a theme token, which
+   has no plain Tailwind utility. Layout/spacing/typography for the same elements
+   stay as Tailwind classes on the JSX side.
+
+   Reach for a utility first. HeroUI v3 maps its semantic tokens into the Tailwind
+   theme via `@theme inline` (see `@heroui/styles/dist/themes/shared/theme.css`), so
+   `bg-surface-secondary`, `text-foreground`, `border-separator` etc. all exist — a
+   token being theme-driven is NOT a reason to hand-write CSS here.
+
+   Do NOT write `--heroui-*` tokens: those are v2 names and this package is on v3,
+   where they resolve to nothing. `hsl(var(--heroui-default-100))` is invalid at
+   computed-value time and silently drops the whole declaration (this is what broke
+   the inline selection bar's background — see #68). The `var(--heroui-*, <literal>)`
+   rules below still render only because of their hardcoded fallback, which means
+   they are stuck on one theme. */
 
 .dg-form-error {
 	background: color-mix(in oklab, var(--color-danger) 12%, transparent);
@@ -239,12 +248,6 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 .dg-empty-state,
 .dg-no-results-state {
 	color: var(--heroui-default-400, #a1a1aa);
-}
-
-.dg-selection-bar {
-	border-radius: var(--heroui-radius-medium, 8px);
-	background: hsl(var(--heroui-default-100));
-	color: hsl(var(--heroui-foreground));
 }
 
 .dg-sort-count-badge {
