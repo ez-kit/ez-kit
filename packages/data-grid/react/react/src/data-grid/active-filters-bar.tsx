@@ -45,7 +45,7 @@ function renderInnerValue(v: unknown): ReactNode {
 function renderValueDisplay(rawValue: unknown, operators?: FilterOperatorDef[]): ReactNode {
 	if (isStructuredFilterValue(rawValue)) {
 		const op = operators?.find((o) => o.id === rawValue.operator)
-		const indicator = op?.symbol ?? op?.label ?? rawValue.operator
+		const indicator = op?.label ?? rawValue.operator
 		if (op?.requiresInput === false) return indicator
 		const inner = renderInnerValue(rawValue.value)
 		if (inner == null) return indicator

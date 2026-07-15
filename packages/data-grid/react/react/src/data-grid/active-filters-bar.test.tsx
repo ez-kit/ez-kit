@@ -77,8 +77,8 @@ describe('<ActiveFiltersBar>', () => {
 		)
 		expect(screen.getByRole('button', { name: /remove name filter/i })).toBeInTheDocument()
 		expect(screen.getByText('Name')).toBeInTheDocument()
-		// `contains` symbol is `⊇`; chip shows "⊇ ali"
-		expect(screen.getByText('⊇ ali')).toBeInTheDocument()
+		// `contains` label is `Contains`; chip shows "Contains ali"
+		expect(screen.getByText('Contains ali')).toBeInTheDocument()
 	})
 
 	it('renders a chip for the global filter when set', () => {
@@ -126,7 +126,7 @@ describe('<ActiveFiltersBar>', () => {
 		expect(instance.table.getState().globalFilter).toBeUndefined()
 	})
 
-	it('formats StructuredFilterValue with operator symbol and value', () => {
+	it('formats StructuredFilterValue with operator label and value', () => {
 		const { instance } = makeTable()
 		instance.table.setColumnFilters([{ id: 'name', value: { operator: 'equals', value: 'Alice' } }])
 
@@ -135,11 +135,11 @@ describe('<ActiveFiltersBar>', () => {
 				<ActiveFiltersBar />
 			</Wrapper>,
 		)
-		// `equals` symbol is `=`
-		expect(screen.getByText('= Alice')).toBeInTheDocument()
+		// `equals` label is `Equals`
+		expect(screen.getByText('Equals Alice')).toBeInTheDocument()
 	})
 
-	it('formats between operator with BetweenValue as "↔ from – to"', () => {
+	it('formats between operator with BetweenValue as "Between from – to"', () => {
 		const { instance } = makeTable()
 		instance.table.setColumnFilters([{ id: 'age', value: { operator: 'between', value: { from: 20, to: 40 } } }])
 
@@ -148,8 +148,8 @@ describe('<ActiveFiltersBar>', () => {
 				<ActiveFiltersBar />
 			</Wrapper>,
 		)
-		// `between` symbol is `↔`
-		expect(screen.getByText('↔ 20 – 40')).toBeInTheDocument()
+		// `between` label is `Between`
+		expect(screen.getByText('Between 20 – 40')).toBeInTheDocument()
 	})
 
 	it('renders operator-only chip when op.requiresInput is false (isEmpty)', () => {
@@ -161,8 +161,8 @@ describe('<ActiveFiltersBar>', () => {
 				<ActiveFiltersBar />
 			</Wrapper>,
 		)
-		// `isEmpty` symbol is `∅` and value is suppressed
-		expect(screen.getByText('∅')).toBeInTheDocument()
+		// `isEmpty` label is `Is empty` and value is suppressed
+		expect(screen.getByText('Is empty')).toBeInTheDocument()
 	})
 
 	it('emits data-chip-position from FILTER_CHIPS_KEY', () => {

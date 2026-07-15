@@ -2,8 +2,6 @@
 export type FilterOperatorDef<TValue = unknown> = {
 	id: string
 	label: string
-	/** Short symbol shown in the trigger button (e.g. '=', '>', '⊇'). */
-	symbol?: string
 	/** When false, no value input is rendered (e.g. isEmpty). Default: true. */
 	requiresInput?: boolean
 	filterFn: (rowValue: unknown, filterValue: TValue) => boolean
@@ -142,7 +140,6 @@ export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 	{
 		id: 'contains',
 		label: 'Contains',
-		symbol: '⊇',
 		filterFn: (rowValue, filterValue) => {
 			if (rowValue == null) return false
 			return String(rowValue).toLowerCase().includes(filterValue.toLowerCase())
@@ -151,13 +148,11 @@ export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 	{
 		id: 'equals',
 		label: 'Equals',
-		symbol: '=',
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '').toLowerCase() === filterValue.toLowerCase(),
 	},
 	{
 		id: 'startsWith',
 		label: 'Starts with',
-		symbol: 'a…',
 		filterFn: (rowValue, filterValue) =>
 			String(rowValue ?? '')
 				.toLowerCase()
@@ -166,7 +161,6 @@ export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 	{
 		id: 'endsWith',
 		label: 'Ends with',
-		symbol: '…a',
 		filterFn: (rowValue, filterValue) =>
 			String(rowValue ?? '')
 				.toLowerCase()
@@ -175,14 +169,12 @@ export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 	{
 		id: 'isEmpty',
 		label: 'Is empty',
-		symbol: '∅',
 		requiresInput: false,
 		filterFn: (rowValue) => rowValue == null || rowValue === '',
 	},
 	{
 		id: 'isNotEmpty',
 		label: 'Is not empty',
-		symbol: '≠∅',
 		requiresInput: false,
 		filterFn: (rowValue) => rowValue != null && rowValue !== '',
 	},
@@ -194,43 +186,36 @@ export const NUMBER_OPERATORS: FilterOperatorDef<number>[] = [
 	{
 		id: 'eq',
 		label: 'Equals',
-		symbol: '=',
 		filterFn: (rowValue, filterValue) => Number(rowValue) === filterValue,
 	},
 	{
 		id: 'neq',
 		label: 'Not equals',
-		symbol: '≠',
 		filterFn: (rowValue, filterValue) => Number(rowValue) !== filterValue,
 	},
 	{
 		id: 'gt',
 		label: 'Greater than',
-		symbol: '>',
 		filterFn: (rowValue, filterValue) => Number(rowValue) > filterValue,
 	},
 	{
 		id: 'gte',
 		label: 'Greater than or equal',
-		symbol: '≥',
 		filterFn: (rowValue, filterValue) => Number(rowValue) >= filterValue,
 	},
 	{
 		id: 'lt',
 		label: 'Less than',
-		symbol: '<',
 		filterFn: (rowValue, filterValue) => Number(rowValue) < filterValue,
 	},
 	{
 		id: 'lte',
 		label: 'Less than or equal',
-		symbol: '≤',
 		filterFn: (rowValue, filterValue) => Number(rowValue) <= filterValue,
 	},
 	{
 		id: 'between',
 		label: 'Between',
-		symbol: '↔',
 		filterFn: (rowValue, filterValue) => {
 			const val = Number(rowValue)
 			const fv = filterValue as unknown as BetweenValue<number>
@@ -255,7 +240,6 @@ export const IN_OPERATORS: FilterOperatorDef<string[]>[] = [
 	{
 		id: 'in',
 		label: 'Is any of',
-		symbol: '∈',
 		filterFn: (rowValue, filterValue) => {
 			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
 			const v = rowValue == null ? '' : String(rowValue)
@@ -265,7 +249,6 @@ export const IN_OPERATORS: FilterOperatorDef<string[]>[] = [
 	{
 		id: 'notIn',
 		label: 'Is none of',
-		symbol: '∉',
 		filterFn: (rowValue, filterValue) => {
 			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
 			const v = rowValue == null ? '' : String(rowValue)
@@ -280,37 +263,31 @@ export const DATE_OPERATORS: FilterOperatorDef<string>[] = [
 	{
 		id: 'eq',
 		label: 'Equals',
-		symbol: '=',
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') === filterValue,
 	},
 	{
 		id: 'after',
 		label: 'After',
-		symbol: '>',
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') > filterValue,
 	},
 	{
 		id: 'onOrAfter',
 		label: 'On or after',
-		symbol: '≥',
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') >= filterValue,
 	},
 	{
 		id: 'before',
 		label: 'Before',
-		symbol: '<',
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') < filterValue,
 	},
 	{
 		id: 'onOrBefore',
 		label: 'On or before',
-		symbol: '≤',
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') <= filterValue,
 	},
 	{
 		id: 'between',
 		label: 'Between',
-		symbol: '↔',
 		filterFn: (rowValue, filterValue) => {
 			const val = String(rowValue ?? '')
 			const fv = filterValue as unknown as BetweenValue<string>

@@ -416,7 +416,7 @@ function TestOperatorSelect({ operators, currentOperatorId, onChange }: Operator
 					key={op.id}
 					value={op.id}
 				>
-					{op.symbol ?? op.label}
+					{op.label}
 				</option>
 			))}
 		</select>

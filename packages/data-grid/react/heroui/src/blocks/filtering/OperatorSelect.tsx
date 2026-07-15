@@ -20,7 +20,6 @@ const TRIGGER_CLASS = 'h-7 min-h-0 border-0 bg-transparent pl-1.5 pr-7 py-0 shad
  *  `text-xs` on the trigger would never cascade in — it has to land on the value. */
 const VALUE_CLASS = 'text-xs'
 const ITEM_CLASS = 'text-xs'
-const SYMBOL_CLASS = 'font-mono'
 
 export function OperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
 	return (
@@ -45,7 +44,7 @@ export function OperatorSelect({ operators, currentOperatorId, onChange }: Opera
 							textValue={op.label}
 							className={ITEM_CLASS}
 						>
-							{op.symbol ? <span className={SYMBOL_CLASS}>{op.symbol}</span> : null} {op.label}
+							{op.label}
 						</ListBox.Item>
 					))}
 				</ListBox>
