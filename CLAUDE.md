@@ -77,10 +77,15 @@ Release flow (automated — changesets, `.github/workflows/release.yml`):
    (`turbo run build && changeset publish`) → publishes to npm **with provenance**,
    creates git tags and GitHub Releases.
 
-`changesets` `baseBranch` is `develop`. Publishing needs the `NPM_TOKEN` repo
-secret (npm automation token with publish access to `@ez-kit`). Local manual
-release is still possible with `pnpm changeset` / `pnpm version-packages` /
-`pnpm release`.
+`changesets` `baseBranch` is `develop`. Publishing uses **npm trusted publishing
+(OIDC)** — no long-lived npm token. Each `@ez-kit/*` package must have a trusted
+publisher configured on npmjs.com (repo `ez-kit/ez-kit`, workflow `release.yml`);
+the publish job upgrades npm to ≥ 11.5.1 and relies on `id-token: write`.
+A brand-new package's first version must be bootstrapped once from a local
+`pnpm release` (the trusted publisher can only be set after the package exists).
+The `version` job's PR bot uses the `CHANGESETS_TOKEN` PAT because the org blocks
+the default token from creating PRs. Local manual release stays possible with
+`pnpm changeset` / `pnpm version-packages` / `pnpm release`.
 
 ## Architecture
 
