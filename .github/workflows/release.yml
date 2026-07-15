@@ -8,6 +8,11 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# Don't run local git hooks (husky) in CI — the changesets action pushes
+# internally and must not trigger the pre-push gate.
+env:
+  HUSKY: 0
+
 jobs:
   # On develop: open/update the "version packages" PR. Never publishes.
   version:
