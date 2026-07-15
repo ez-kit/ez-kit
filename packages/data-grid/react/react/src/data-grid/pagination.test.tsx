@@ -1,6 +1,6 @@
 import { defineColumns, UNKNOWN_PAGE_COUNT } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { renderWithComponents } from '../test-utils'
@@ -12,6 +12,7 @@ import { TableContext } from './table-context'
 
 import type { PaginationProps } from '../types'
 import type { UseDataGridConfig } from '../use-data-grid'
+import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 type User = { id: number; name: string }
@@ -25,7 +26,10 @@ const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
  * to the UI kit. This is the seam the kits consume, so it is where the "unknown total"
  * normalization has to hold.
  */
-function captureProps(config: Omit<UseDataGridConfig<User>, 'data' | 'columns'>, data: User[] = USERS): PaginationProps {
+function captureProps(
+	config: Omit<UseDataGridConfig<User>, 'data' | 'columns'>,
+	data: User[] = USERS,
+): { props: PaginationProps; table: DataTable<User> } {
 	let captured: PaginationProps | undefined
 	const Spy = (props: PaginationProps): ReactNode => {
 		captured = props
@@ -44,23 +48,23 @@ function captureProps(config: Omit<UseDataGridConfig<User>, 'data' | 'columns'>,
 	)
 
 	if (!captured) throw new Error('Pagination did not render')
-	return captured
+	return { props: captured, table: instance.table }
 }
 
 describe('Pagination — variant plumbing', () => {
 	it('passes the configured variant through to the UI kit', () => {
-		const props = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Compact } })
+		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Compact } })
 		expect(props.variant).toBe(PaginationVariant.Compact)
 	})
 
 	it('defaults to the numbered variant', () => {
-		const props = captureProps({ pagination: true })
+		const { props } = captureProps({ pagination: true })
 		expect(props.variant).toBe(PaginationVariant.Numbered)
 	})
 
 	it('passes the real pageSize, not one derived from rowCount ÷ pageCount', () => {
 		// 11 rows @ pageSize 10 → 2 pages. The old derivation (ceil(11/2)) reported 6.
-		const props = captureProps({ pagination: { pageSize: PAGE_SIZE } }, USERS.slice(0, 11))
+		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE } }, USERS.slice(0, 11))
 		expect(props.pageSize).toBe(PAGE_SIZE)
 		expect(props.pageCount).toBe(2)
 	})
@@ -68,7 +72,7 @@ describe('Pagination — variant plumbing', () => {
 
 describe('Pagination — client-side totals are known', () => {
 	it('reports the full row count, not the current page length', () => {
-		const props = captureProps({ pagination: { pageSize: PAGE_SIZE } })
+		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE } })
 		expect(props.rowCount).toBe(USERS.length)
 		expect(props.pageCount).toBe(5)
 	})
@@ -76,7 +80,7 @@ describe('Pagination — client-side totals are known', () => {
 
 describe('Pagination — manual pagination normalizes unknown totals', () => {
 	it('surfaces a consumer-supplied rowCount', () => {
-		const props = captureProps({ pagination: { manual: true, pageSize: PAGE_SIZE, rowCount: 500 } }, USERS.slice(0, 10))
+		const { props } = captureProps({ pagination: { manual: true, pageSize: PAGE_SIZE, rowCount: 500 } }, USERS.slice(0, 10))
 		expect(props.rowCount).toBe(500)
 		expect(props.pageCount).toBe(50)
 	})
@@ -85,7 +89,7 @@ describe('Pagination — manual pagination normalizes unknown totals', () => {
 	// pagination, which the old `rawRowCount > 0` check mistook for a real total and turned
 	// into the inverted range "21–10 of 10".
 	it('reports rowCount as unknown rather than echoing the loaded page length', () => {
-		const props = captureProps(
+		const { props } = captureProps(
 			{ pagination: { manual: true, pageSize: PAGE_SIZE, pageCount: 5 } },
 			USERS.slice(0, PAGE_SIZE),
 		)
@@ -96,19 +100,33 @@ describe('Pagination — manual pagination normalizes unknown totals', () => {
 	// Regression: the UNKNOWN_PAGE_COUNT (-1) sentinel reached the kits and rendered as
 	// the literal user-visible text "Page 1 of -1".
 	it('normalizes the unknown-page-count sentinel to undefined', () => {
-		const props = captureProps({ pagination: { manual: true, pageSize: PAGE_SIZE } }, USERS.slice(0, PAGE_SIZE))
+		const { props } = captureProps({ pagination: { manual: true, pageSize: PAGE_SIZE } }, USERS.slice(0, PAGE_SIZE))
 		expect(UNKNOWN_PAGE_COUNT).toBe(-1)
 		expect(props.pageCount).toBeUndefined()
 		expect(props.rowCount).toBeUndefined()
 	})
 
-	it('onLastPage is inert when there is no known last page', () => {
-		const props = captureProps({ pagination: { manual: true, pageSize: PAGE_SIZE } }, USERS.slice(0, PAGE_SIZE))
+	// Asserting on the resulting pageIndex would be unfalsifiable: core clamps setPageIndex
+	// (`Math.max(0, Math.min(i, maxPageIndex))`), so the old `setPageIndex(-2)` already landed
+	// on 0. Assert the nonsensical call is not made at all.
+	it('onLastPage does not seek a last page that is unknown', () => {
+		const { props, table } = captureProps(
+			{ pagination: { manual: true, pageSize: PAGE_SIZE } },
+			USERS.slice(0, PAGE_SIZE),
+		)
+		const setPageIndex = vi.spyOn(table, 'setPageIndex')
 
-		// Previously this called setPageIndex(pageCount - 1) → setPageIndex(-2).
-		expect(() => {
-			props.onLastPage()
-		}).not.toThrow()
-		expect(props.pageIndex).toBe(0)
+		props.onLastPage()
+
+		expect(setPageIndex).not.toHaveBeenCalled()
+	})
+
+	it('onLastPage seeks the last page when the page count is known', () => {
+		const { props, table } = captureProps({ pagination: { manual: true, pageSize: PAGE_SIZE, pageCount: 5 } })
+		const setPageIndex = vi.spyOn(table, 'setPageIndex')
+
+		props.onLastPage()
+
+		expect(setPageIndex).toHaveBeenCalledWith(4)
 	})
 })

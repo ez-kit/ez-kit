@@ -94,6 +94,33 @@ describe('buildPaginationLabel — simple', () => {
 
 		expect(label).toBe('0–0 of 0')
 	})
+
+	// Regression: a server-paginated grid does not rewind when `rowCount` shrinks under it
+	// (`autoResetPageIndex` defaults to `!manualPagination`), so the page can sit past the
+	// end of the total. Clamping only `to` produced the inverted "21–5 of 5".
+	it('reports a page past the end of a shrunken total as holding no rows', () => {
+		const label = buildPaginationLabel({
+			variant: PaginationVariant.Simple,
+			pageIndex: 2,
+			pageSize: PAGE_SIZE,
+			pageCount: 1,
+			rowCount: 5,
+		})
+
+		expect(label).toBe('0–0 of 5')
+	})
+
+	it('still reports the last partial page when it holds rows', () => {
+		const label = buildPaginationLabel({
+			variant: PaginationVariant.Simple,
+			pageIndex: 4,
+			pageSize: PAGE_SIZE,
+			pageCount: 5,
+			rowCount: 42,
+		})
+
+		expect(label).toBe('41–42 of 42')
+	})
 })
 
 describe('buildPaginationLabel — compact', () => {
@@ -116,6 +143,18 @@ describe('buildPaginationLabel — compact', () => {
 			variant: PaginationVariant.Compact,
 			pageIndex: 0,
 			pageSize: PAGE_SIZE,
+		})
+
+		expect(label).toBe('Page 1')
+	})
+
+	it('omits a zero total on an empty grid rather than saying "Page 1 of 0"', () => {
+		const label = buildPaginationLabel({
+			variant: PaginationVariant.Compact,
+			pageIndex: 0,
+			pageSize: PAGE_SIZE,
+			pageCount: 0,
+			rowCount: 0,
 		})
 
 		expect(label).toBe('Page 1')

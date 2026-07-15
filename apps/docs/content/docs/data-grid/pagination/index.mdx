@@ -88,6 +88,10 @@ on, so every variant degrades rather than inventing a total:
 
 Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
 
+A page that sits past the end of the total reports `0–0 of N` rather than an impossible range:
+`autoResetPageIndex` defaults to `!manualPagination`, so a server-paginated grid does not rewind
+on its own when `rowCount` shrinks beneath the current page.
+
 ## Server-side pagination
 
 Pass controlled pagination state, set `manualPagination: true`, and supply `rowCount`:

@@ -22,17 +22,32 @@ export type PaginationLabelInput = {
 	rowCount?: number | undefined
 }
 
-/** `1–10 of 50` — the slice of the total currently on screen. */
+/**
+ * `1–10 of 50` — the slice of the total currently on screen, or `0–0 of N` when this page
+ * holds no rows.
+ *
+ * The page can legitimately sit past the end of the total: `autoResetPageIndex` defaults to
+ * `!manualPagination`, so a server-paginated grid does NOT rewind when `rowCount` shrinks
+ * under it (e.g. a filter narrows 500 rows to 5 while the user sits on page 3). Both ends are
+ * therefore clamped to the total — an unclamped `from` reported the inverted `21–5 of 5`.
+ */
 function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number): string {
-	const from = rowCount === 0 ? 0 : pageIndex * pageSize + 1
-	const to = Math.min((pageIndex + 1) * pageSize, rowCount)
+	const firstRow = pageIndex * pageSize + 1
+	const isPastEnd = firstRow > rowCount
+	const from = isPastEnd ? 0 : firstRow
+	const to = isPastEnd ? 0 : Math.min(firstRow + pageSize - 1, rowCount)
 	return `${String(from)}${RANGE_SEPARATOR}${String(to)} ${OF_LABEL} ${String(rowCount)}`
 }
 
-/** `Page 2 of 5`, or `Page 2` when the total page count is unknown. */
+/**
+ * `Page 2 of 5`, or `Page 2` when the total page count is unknown.
+ *
+ * A `pageCount` of `0` (empty grid) is a known total but not a meaningful one — "Page 1 of 0"
+ * is nonsense, so it degrades to the bare page number like the unknown case.
+ */
 function buildPageLabel(pageIndex: number, pageCount: number | undefined): string {
 	const current = `${PAGE_LABEL} ${String(pageIndex + 1)}`
-	return pageCount === undefined ? current : `${current} ${OF_LABEL} ${String(pageCount)}`
+	return pageCount === undefined || pageCount === 0 ? current : `${current} ${OF_LABEL} ${String(pageCount)}`
 }
 
 /**

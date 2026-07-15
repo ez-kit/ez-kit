@@ -22,13 +22,16 @@ export function Pagination({
 	onPageChange,
 }: PaginationProps) {
 	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
-	// Page links (and a last-page jump) need a known page count; without one `numbered`
-	// degrades to prev/next.
-	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
+	const isNumbered = variant === PaginationVariant.Numbered
+	// Page links need a known page count; without one `numbered` degrades to the jumps + prev/next.
+	const showLinks = isNumbered && pageCount !== undefined
+	// Jumping to the first page is always page 0 — unlike the last page, it needs no total.
+	const showFirst = isNumbered
+	const showLast = isNumbered && pageCount !== undefined
 
 	return (
 		<div data-variant={variant}>
-			{showLinks && (
+			{showFirst && (
 				<button
 					type='button'
 					onClick={onFirstPage}
@@ -65,7 +68,7 @@ export function Pagination({
 			>
 				{NEXT_GLYPH}
 			</button>
-			{showLinks && (
+			{showLast && (
 				<button
 					type='button'
 					onClick={onLastPage}

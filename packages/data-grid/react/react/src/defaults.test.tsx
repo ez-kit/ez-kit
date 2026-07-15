@@ -1,6 +1,6 @@
 import { DEFAULT_PAGE_SIZE, defineColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
@@ -19,7 +19,19 @@ import type {
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
 } from './use-data-grid'
+import type * as DataGridCore from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
+
+type DataGridCoreModule = typeof DataGridCore
+
+// Spy on `createTable` while keeping the real implementation — the strip of React-only
+// pagination fields is only observable at that call site.
+const createTableSpy = vi.hoisted(() => vi.fn())
+vi.mock('@ez-kit/data-grid-core', async (importOriginal) => {
+	const actual = await importOriginal<DataGridCoreModule>()
+	createTableSpy.mockImplementation(actual.createTable)
+	return { ...actual, createTable: createTableSpy }
+})
 
 type User = { id: number; name: string }
 
@@ -30,6 +42,10 @@ const USERS: User[] = [
 const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
 
 const symbols = (table: unknown) => table as Record<symbol, unknown>
+
+beforeEach(() => {
+	createTableSpy.mockClear()
+})
 
 // ── Named-default values (single source) ──────────────────────────────────────
 // These lock the documented default *values*. They must not drift: the whole point of
@@ -84,18 +100,24 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariant.Simple)
 	})
 
-	// `getState().pagination` is rebuilt by TanStack from pageIndex/pageSize, so asserting on
-	// it would pass even if the strip were removed. Assert on the options core actually saw.
-	it('pagination.variant is display-only → never reaches the core table options', () => {
-		const { result } = renderHook(() =>
+	// Asserting on `table.options` / `getState().pagination` would be unfalsifiable: core only
+	// *reads* fields off `config.pagination` and rebuilds state from pageIndex/pageSize, so an
+	// unstripped `variant` would be inert there and the test would pass regardless. The
+	// invariant worth guarding is what `createTable` is actually handed — so spy on that.
+	it('pagination.variant is display-only → never reaches the config handed to createTable', () => {
+		renderHook(() =>
 			useDataGrid({
 				data: USERS,
 				columns: COLUMNS,
 				pagination: { variant: PaginationVariant.Compact, pageSize: 10 },
 			}),
 		)
-		expect(result.current.table.options).not.toHaveProperty('variant')
-		expect(result.current.table.getState().pagination).not.toHaveProperty('variant')
+
+		const config = createTableSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
+		expect(config?.pagination).toBeDefined()
+		expect(config?.pagination).not.toHaveProperty('variant')
+		// Sanity: the spy sees a real config, so the assertion above can actually fail.
+		expect(config?.pagination).toHaveProperty('pageSize', 10)
 	})
 
 	it('globalFiltering: true → placeholder/debounce are the named defaults', () => {
