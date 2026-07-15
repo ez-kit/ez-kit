@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/docs",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"private": true,
 	"description": "Documentation site for ez-kit packages (Fumadocs + Next.js).",
 	"type": "module",
@@ -13,8 +13,6 @@
 		"build:deps": "turbo run build --filter=@ez-kit/docs^...",
 		"start": "next start",
 		"lint": "eslint .",
-		"format": "node ../../scripts/prettier.mjs --write",
-		"format:check": "node ../../scripts/prettier.mjs --check",
 		"typecheck": "next typegen && fumadocs-mdx && tsc --project tsconfig.json --noEmit",
 		"test": "vitest run --passWithNoTests",
 		"test:visual": "playwright test",

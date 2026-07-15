@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-heroui",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "HeroUI flavour of @ez-kit/data-grid.",
 	"license": "MIT",
 	"repository": {
@@ -30,8 +30,6 @@
 		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/global.css dist/global.css",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
-		"format": "node ../../../../scripts/prettier.mjs --write",
-		"format:check": "node ../../../../scripts/prettier.mjs --check",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
 		"size": "size-limit",

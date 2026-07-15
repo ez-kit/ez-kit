@@ -9,3 +9,7 @@ build
 out
 .omc
 *.tsbuildinfo
+
+# Generated / committed lock files — never format these
+pnpm-lock.yaml
+skills-lock.json

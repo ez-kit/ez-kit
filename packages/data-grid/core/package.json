@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-core",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Headless, UI-framework-agnostic data-grid core for @ez-kit/data-grid (built on TanStack Table core).",
 	"license": "MIT",
 	"repository": {
@@ -27,8 +27,6 @@
 		"build": "tsup src/index.ts --format esm --dts --sourcemap",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
-		"format": "node ../../../scripts/prettier.mjs --write",
-		"format:check": "node ../../../scripts/prettier.mjs --check",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
 		"size": "size-limit",

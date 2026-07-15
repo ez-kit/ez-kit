@@ -6,17 +6,11 @@
 			"outputs": ["dist/**", ".next/**"]
 		},
 		"lint": {
-			"dependsOn": ["^lint"],
-			"outputs": []
-		},
-		"format": {
-			"outputs": []
-		},
-		"format:check": {
+			"dependsOn": ["^build"],
 			"outputs": []
 		},
 		"typecheck": {
-			"dependsOn": ["^typecheck"],
+			"dependsOn": ["^build"],
 			"outputs": []
 		},
 		"test": {

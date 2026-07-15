@@ -15,7 +15,7 @@ in a separate lane.
 ## Phase B — implement (in place)
 
 The main session does the work itself in the current worktree, following
-`references/worker-brief.md`. It creates the branch `issue-<N>-<slug>` from `main`, implements
+`references/worker-brief.md`. It creates the branch `issue-<N>-<slug>` from `develop`, implements
 the approved plan, runs the objective gate + (for visual tasks) the isolated visual check via
 the deterministic wrapper scripts, commits, pushes, and opens the **draft** PR.
 
@@ -51,4 +51,4 @@ Then stop. The user reviews the In-review PR (gate #2) and merges → admin sets
 
 - Port `3101` keeps the visual dev server clear of `3100` (the default `test:visual` port) so
   a stray harness run doesn't clash.
-- The whole run stays on `issue-<N>-<slug>` in the current worktree — `main` is never touched.
+- The whole run stays on `issue-<N>-<slug>` in the current worktree — `develop` is never touched.

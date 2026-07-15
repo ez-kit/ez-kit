@@ -12,6 +12,14 @@ The shared React package (`data-grid/react/react`) must contain **zero visual st
 
 `packages/data-grid/react/shadcn/src/components/ui/**` is vendored from shadcn — **do not modify these files.** All behavioral overrides (colSpan handling, alignment, pinning, custom slots, etc.) must live in `packages/data-grid/react/shadcn/src/blocks/` adapters that wrap the primitives. See `packages/data-grid/react/shadcn/CLAUDE.md` for the full rule.
 
+## Branching & Release Flow
+
+- `develop` is the default integration branch — all feature branches fork from and merge into `develop`.
+- `main` is release-only: a `develop → main` PR **is** a release. `main` is the Vercel **production** branch (docs deploy on release) and the npm release point. `develop` and feature branches get Vercel **preview** URLs.
+- CI (`.github/workflows/ci.yml`) gates every PR into `develop` and `main` with `build → lint → typecheck → test → size` (job name `verify`).
+- Git hooks (husky): pre-commit runs `lint-staged` (Prettier + ESLint on staged files only), commit-msg enforces Conventional Commits via commitlint, pre-push runs `pnpm ci:fast`.
+- Node is pinned via `.nvmrc` (22.18.0) and `engines.node` (`>=22`).
+
 ## Commands
 
 ```bash
@@ -20,7 +28,8 @@ pnpm build            # Build all packages via Turborepo
 pnpm lint             # Lint all packages (0 warnings allowed)
 pnpm typecheck        # TypeScript type-check all packages
 pnpm test             # Run all tests (requires build first per turbo deps)
-pnpm format           # Format all packages with Prettier
+pnpm format           # Prettier write across the whole repo (scripts/prettier.mjs)
+pnpm format:check     # Prettier check across the whole repo
 pnpm size             # Check bundle size limits
 pnpm run ci               # Full CI check: lint + typecheck + test + build + size
 ```
@@ -56,13 +65,27 @@ Generate a new package:
 pnpm pkg:new          # Runs turbo gen package — interactive prompts
 ```
 
-Release flow:
+Release flow (automated — changesets, `.github/workflows/release.yml`):
 
-```bash
-pnpm changeset        # Create a changeset for changed public packages
-pnpm version-packages # Bump versions from changesets
-pnpm release          # Publish to npm
-```
+1. In a feature PR into `develop`, run `pnpm changeset` and commit the generated
+   `.changeset/*.md` (pick the packages + bump type + summary).
+2. Once changesets land on `develop`, the `version` job opens/updates a
+   **"version packages"** PR into `develop` (bumps versions, writes CHANGELOG,
+   consumes the changeset files). Merge it when ready to cut a release.
+3. Open the release PR `develop → main` — it already carries the bumped versions.
+   Merging it runs the `publish` job on `main`: `pnpm release`
+   (`turbo run build && changeset publish`) → publishes to npm **with provenance**,
+   creates git tags and GitHub Releases.
+
+`changesets` `baseBranch` is `develop`. Publishing uses **npm trusted publishing
+(OIDC)** — no long-lived npm token. Each `@ez-kit/*` package must have a trusted
+publisher configured on npmjs.com (repo `ez-kit/ez-kit`, workflow `release.yml`);
+the publish job upgrades npm to ≥ 11.5.1 and relies on `id-token: write`.
+A brand-new package's first version must be bootstrapped once from a local
+`pnpm release` (the trusted publisher can only be set after the package exists).
+The `version` job's PR bot uses the `CHANGESETS_TOKEN` PAT because the org blocks
+the default token from creating PRs. Local manual release stays possible with
+`pnpm changeset` / `pnpm version-packages` / `pnpm release`.
 
 ## Architecture
 
