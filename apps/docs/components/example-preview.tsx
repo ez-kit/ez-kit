@@ -8,6 +8,7 @@ export type ExamplePreviewProps = {
 	view: ReactNode
 	/** Example source, already in the exact form it should be shown and copied in. */
 	source: string
+	/** Syntax-highlighting language for the source panel. Defaults to tsx. */
 	language?: string
 	/** Optional row above the card — a title caption or the flavor tabs. */
 	header?: ReactNode
