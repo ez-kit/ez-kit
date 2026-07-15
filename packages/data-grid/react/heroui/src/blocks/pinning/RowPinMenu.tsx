@@ -1,7 +1,7 @@
 'use client'
 
 import { Dropdown } from '@heroui/react'
-import { ArrowDownToLine, ArrowUpToLine, PinOff } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpToLine, MoreHorizontal, PinOff } from 'lucide-react'
 
 import type { RowPinMenuProps } from '@ez-kit/data-grid-react'
 import type { Key } from 'react'
@@ -20,7 +20,7 @@ export function RowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinB
 					aria-label='Row pinning'
 					className='inline-flex items-center'
 				>
-					{isPinned ? <PinOff size={14} /> : <ArrowUpToLine size={14} />}
+					<MoreHorizontal size={14} />
 				</span>
 			</Dropdown.Trigger>
 			<Dropdown.Popover>
