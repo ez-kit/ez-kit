@@ -1,6 +1,6 @@
 ---
-'@ez-kit/data-grid-core': major
-'@ez-kit/data-grid-react': major
+'@ez-kit/data-grid-core': minor
+'@ez-kit/data-grid-react': minor
 ---
 
 Replace the boolean loading state with a fully-controlled `state.loading` slice.
