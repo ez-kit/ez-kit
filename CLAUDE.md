@@ -65,13 +65,22 @@ Generate a new package:
 pnpm pkg:new          # Runs turbo gen package — interactive prompts
 ```
 
-Release flow:
+Release flow (automated — changesets, `.github/workflows/release.yml`):
 
-```bash
-pnpm changeset        # Create a changeset for changed public packages
-pnpm version-packages # Bump versions from changesets
-pnpm release          # Publish to npm
-```
+1. In a feature PR into `develop`, run `pnpm changeset` and commit the generated
+   `.changeset/*.md` (pick the packages + bump type + summary).
+2. Once changesets land on `develop`, the `version` job opens/updates a
+   **"version packages"** PR into `develop` (bumps versions, writes CHANGELOG,
+   consumes the changeset files). Merge it when ready to cut a release.
+3. Open the release PR `develop → main` — it already carries the bumped versions.
+   Merging it runs the `publish` job on `main`: `pnpm release`
+   (`turbo run build && changeset publish`) → publishes to npm **with provenance**,
+   creates git tags and GitHub Releases.
+
+`changesets` `baseBranch` is `develop`. Publishing needs the `NPM_TOKEN` repo
+secret (npm automation token with publish access to `@ez-kit`). Local manual
+release is still possible with `pnpm changeset` / `pnpm version-packages` /
+`pnpm release`.
 
 ## Architecture
 
