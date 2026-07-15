@@ -1,100 +1,150 @@
 # Releasing Packages
 
-This monorepo uses [Changesets](https://github.com/changesets/changesets) to manage versioning and publishing to npm.
+This monorepo uses [Changesets](https://github.com/changesets/changesets) to
+version and publish packages to npm. Releases are **automated** — the flow below is
+the normal path; manual commands are kept at the end as an escape hatch. This is a
+maintainer guide; end-user docs live in the Fumadocs site under `apps/docs`.
 
-## Full release flow (all changed packages)
+## Branch model
 
-```bash
-pnpm changeset        # Create a changeset — describe what changed and select affected packages
-pnpm version-packages # Apply version bumps and update CHANGELOGs
-git add . && git commit -m "chore: version packages"
-pnpm release          # Build and publish to npm
-```
+- **`develop`** — integration branch. Every feature/fix branch forks from and
+  merges into `develop`.
+- **`main`** — release-only. A `develop → main` PR **is** a release: `main` is the
+  Vercel production branch and the npm publish point. `develop` and feature
+  branches get Vercel preview URLs.
+- Both are protected — a PR and a green `verify` CI check are required to merge.
+- `main` is the GitHub default branch, but tooling pins base branches explicitly
+  (`--base develop`), so open normal PRs against `develop`.
 
-## Release a single package
+## The release cycle
 
-When you only want to bump one package (e.g. `@ez-kit/zu-store`):
+1. **Add a changeset in your feature PR.** Run `pnpm changeset`, select the
+   affected packages and bump type, write a summary, and commit the generated
+   `.changeset/*.md` with your code. A changeset is an _intent to release_ — it
+   doesn't change versions yet. Pre-1.0 packages take **minor** for breaking
+   changes (see below).
+2. **The version PR opens automatically.** Once changesets sit on `develop`, the
+   `version` job keeps a **"chore: version packages"** PR open (mechanics below).
+   Merge it when you want to cut a release — this applies version bumps and
+   CHANGELOGs to `develop`, but does **not** publish.
+3. **Release.** Open a `develop → main` PR and merge it. The `publish` job on
+   `main` runs `pnpm release` (`turbo run build && changeset publish`) and
+   publishes every package whose version is ahead of npm — with provenance, git
+   tags, and GitHub Releases.
 
-**1. Create a targeted changeset**
+Not every merge to `main` publishes: `changeset publish` only pushes packages
+whose local version is newer than npm. A `main` merge with no version change is a
+no-op.
 
-```bash
-pnpm changeset
-```
+## How the version PR works
 
-In the interactive prompt:
+A single bot (`changesets/action`, in `.github/workflows/release.yml`) manages it
+through one dedicated branch, `changeset-release/develop`.
 
-- Use arrow keys + **space** to select **only** the package you want to release
-- Leave all other packages unselected
-- Choose the bump type: `patch` / `minor` / `major`
-- Write a short description of what changed
+**Trigger:** the `version` job runs on every push to `develop` (i.e. every merge).
 
-This creates a file like `.changeset/some-random-name.md`.
+**Each run:**
 
-**2. Apply version bumps**
+1. Check out `develop`.
+2. If any `.changeset/*.md` exist, run `changeset version` — bump `package.json`
+   versions, update `CHANGELOG.md`, delete the consumed changeset files.
+3. Commit as `chore: version packages` and **force-push** to
+   `changeset-release/develop`.
+4. Create **or update** a PR from that branch into `develop`.
 
-```bash
-pnpm version-packages
-```
+**Why it "updates" instead of stacking commits:** the branch is regenerated from
+scratch each run (current `develop` + all pending changesets) and force-pushed, so
+the PR always shows exactly what would ship if merged now. The same PR number keeps
+refreshing as new changesets land.
 
-Only packages that have a pending changeset will have their `package.json` and `CHANGELOG.md` updated.
+**A new version PR is created (new number) when:**
 
-**3. Commit the version bump**
+- You **merge** the version PR — changesets are consumed and the branch deleted;
+  the next changeset that lands on `develop` produces a fresh branch and PR.
+- You **close** it without merging — the next run recreates it.
 
-```bash
-git add .
-git commit -m "chore: release @ez-kit/zu-store"
-```
+**No version PR exists** when there are zero pending `.changeset/*.md` files — one
+reappears when a new changeset arrives.
 
-**4. Publish**
+The PR is created with the `CHANGESETS_TOKEN` PAT (the org blocks the default
+Actions token from creating PRs), which also makes the PR trigger the `verify`
+check that branch protection requires.
 
-```bash
-pnpm release
-```
+## Publishing (trusted publishing / OIDC)
 
-`pnpm release` publishes only packages whose version has changed and is not yet on npm — so unrelated packages are safe.
+Publishing is **tokenless** via npm trusted publishing — no long-lived npm token.
+The `publish` job upgrades npm to ≥ 11.5.1 and relies on `id-token: write`;
+provenance is automatic.
 
-## Check what will be released
+Each publishable `@ez-kit/*` package needs a trusted publisher on npmjs.com:
 
-Before publishing, inspect pending changesets:
+- Publisher: **GitHub Actions**
+- Organization or user: `ez-kit`
+- Repository: `ez-kit`
+- Workflow filename: `release.yml`
+- Environment: _(empty)_
+- Allowed actions: **`npm publish`**
+
+A brand-new package's first version must be **bootstrapped once** from a local
+`pnpm release` — a trusted publisher can only be configured after the package
+exists on npm. Afterwards, releases are fully automated from CI.
+
+## Excluding a package from publishing
+
+Set `"private": true` in the package's `package.json`. `changeset publish` skips
+private packages, so the package stays in the monorepo (buildable, usable via
+workspace deps) but is never pushed to npm. Remove the flag when ready to publish.
+(`@ez-kit/data-grid-shadcn` is currently private for this reason.)
+
+## Bump types
+
+Pre-1.0 packages (the `data-grid-*` set) are still stabilising: ship breaking
+changes as **minor**, not major — fits ez-kit's stance that breaking changes are
+acceptable without compat shims.
+
+| Type    | 1.0+ meaning              | Pre-1.0 (`0.x`) meaning             |
+| ------- | ------------------------- | ----------------------------------- |
+| `patch` | Bug fixes, no API change  | Bug fixes, no API change            |
+| `minor` | Backwards-compatible adds | Features **and breaking changes**   |
+| `major` | Breaking changes          | Avoid until intentionally going 1.0 |
+
+## Preview what will be released
 
 ```bash
 pnpm changeset status
 ```
 
-Output shows which packages have unreleased changesets and what the next version will be.
+Shows which packages have unreleased changesets and their next versions.
 
-## Bump types
+## Manual release (escape hatch)
 
-| Type    | When to use                                      |
-| ------- | ------------------------------------------------ |
-| `patch` | Bug fixes, internal refactors, no API changes    |
-| `minor` | New features, backwards-compatible API additions |
-| `major` | Breaking changes                                 |
-
-## Manual publish (escape hatch)
-
-If you need to bypass Changesets entirely:
+The whole cycle can be run locally if CI automation is unavailable — this is also
+how a brand-new package is bootstrapped before trusted publishing can be set up:
 
 ```bash
-cd packages/zu-store
-npm publish --access public
+pnpm changeset        # create a changeset (or several)
+pnpm version-packages # apply bumps + CHANGELOGs (= changeset version)
+git commit -am "chore: version packages"
+pnpm release          # turbo run build && changeset publish (asks for npm OTP)
+git push --follow-tags
 ```
 
-> **Not recommended** — skips CHANGELOG generation and version synchronisation across the monorepo.
+`pnpm release` publishes only packages whose version isn't yet on npm, so unrelated
+packages are safe. Local publishes have no provenance (that requires CI OIDC).
+
+Last-resort single-package publish, bypassing Changesets entirely:
+
+```bash
+cd packages/zu-store && npm publish --access public
+```
+
+> Not recommended — skips CHANGELOG generation and cross-package version sync.
 
 ## Troubleshooting
 
-**Problem:** `pnpm release` published more packages than expected.  
-**Cause:** Other packages had open changesets from previous runs.  
-**Fix:** Run `pnpm changeset status` before releasing to review what is pending. Remove stale `.changeset/*.md` files if they were created by mistake.
+**`pnpm release` / the publish job published more packages than expected.**
+Stale changesets were pending. Run `pnpm changeset status` before releasing and
+delete any `.changeset/*.md` created by mistake.
 
----
-
-**Related commands**
-
-```bash
-pnpm changeset        # Create changeset
-pnpm version-packages # Bump versions
-pnpm release          # Publish to npm
-pnpm changeset status # Preview what will be released
-```
+**A package you expected didn't publish.** Check it isn't `"private": true`, and
+that its version in the version PR is actually ahead of npm.
