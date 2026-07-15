@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns, PaginationVariant } from '@ez-kit/data-grid-react'
+import { defineColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
@@ -21,7 +21,7 @@ export function PaginationVariantNumberedExample() {
 	const table = useDataGrid({
 		data,
 		columns,
-		pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Numbered },
+		pagination: { pageSize: PAGE_SIZE, variant: 'numbered' },
 	})
 	return <DataGrid table={table} />
 }
@@ -31,7 +31,7 @@ export function PaginationVariantSimpleExample() {
 	const table = useDataGrid({
 		data,
 		columns,
-		pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Simple },
+		pagination: { pageSize: PAGE_SIZE, variant: 'simple' },
 	})
 	return <DataGrid table={table} />
 }
@@ -41,7 +41,7 @@ export function PaginationVariantCompactExample() {
 	const table = useDataGrid({
 		data,
 		columns,
-		pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Compact },
+		pagination: { pageSize: PAGE_SIZE, variant: 'compact' },
 	})
 	return <DataGrid table={table} />
 }

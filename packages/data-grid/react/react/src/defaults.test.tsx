@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
-import { PaginationVariant } from './types'
+import { PaginationVariants } from './types'
 import {
 	FILTER_CHIPS_KEY,
 	GLOBAL_FILTERING_KEY,
@@ -57,7 +57,7 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 	})
 
 	it('page-based pagination renders the numbered variant by default', () => {
-		expect(DATA_GRID_DEFAULTS.pagination.variant).toBe(PaginationVariant.Numbered)
+		expect(DATA_GRID_DEFAULTS.pagination.variant).toBe(PaginationVariants.Numbered)
 	})
 
 	it('global search input defaults', () => {
@@ -95,9 +95,19 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 
 	it('pagination.variant → stored on the instance for Pagination to read', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariant.Simple } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariants.Simple } }),
 		)
-		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariant.Simple)
+		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariants.Simple)
+	})
+
+	// The public option is the `PaginationVariant` string union — `PaginationVariants` is only
+	// sugar. A plain literal must compile and behave identically; typing the option as an enum
+	// would reject this call.
+	it('pagination.variant as a plain string → accepted, same as the named member', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: 'simple' } }),
+		)
+		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariants.Simple)
 	})
 
 	// Asserting on `table.options` / `getState().pagination` would be unfalsifiable: core only
@@ -109,7 +119,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 			useDataGrid({
 				data: USERS,
 				columns: COLUMNS,
-				pagination: { variant: PaginationVariant.Compact, pageSize: 10 },
+				pagination: { variant: PaginationVariants.Compact, pageSize: 10 },
 			}),
 		)
 

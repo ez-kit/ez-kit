@@ -1,4 +1,4 @@
-import { PaginationVariant } from '../types'
+import { type PaginationVariant, PaginationVariants } from '../types'
 
 const RANGE_SEPARATOR = '–'
 const OF_LABEL = 'of'
@@ -67,8 +67,8 @@ export function buildPaginationLabel({
 	pageCount,
 	rowCount,
 }: PaginationLabelInput): string | undefined {
-	if (variant === PaginationVariant.Compact) return buildPageLabel(pageIndex, pageCount)
+	if (variant === PaginationVariants.Compact) return buildPageLabel(pageIndex, pageCount)
 	if (rowCount !== undefined) return buildRangeLabel(pageIndex, pageSize, rowCount)
 	// No total to range over: `simple` still needs a label, `numbered` has its page links.
-	return variant === PaginationVariant.Simple ? buildPageLabel(pageIndex, pageCount) : undefined
+	return variant === PaginationVariants.Simple ? buildPageLabel(pageIndex, pageCount) : undefined
 }

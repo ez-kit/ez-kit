@@ -172,8 +172,9 @@ export type {
 	SortMenuProps,
 	VisibilityColumnItem,
 } from './types'
-// `PaginationVariant` is an enum (runtime value) — exported as a value, not a type.
-export { PaginationVariant } from './types'
+// `PaginationVariants` is a const object (runtime value) — exported as a value, not a type.
+// Optional sugar: `pagination.variant` accepts the plain `PaginationVariant` string union.
+export { PaginationVariants } from './types'
 export type {
 	ButtonProps,
 	CheckboxProps,
@@ -182,6 +183,7 @@ export type {
 	NumberInputProps,
 	PageSizerProps,
 	PaginationProps,
+	PaginationVariant,
 	TbodyProps,
 	TdProps,
 	ThProps,

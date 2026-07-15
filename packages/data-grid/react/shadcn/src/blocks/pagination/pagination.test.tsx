@@ -1,4 +1,4 @@
-import { PaginationVariant } from '@ez-kit/data-grid-react'
+import { PaginationVariants } from '@ez-kit/data-grid-react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -9,7 +9,7 @@ import type { PaginationProps } from '@ez-kit/data-grid-react'
 /** A known-total, mid-range page — overridden per case. */
 function makeProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
 	return {
-		variant: PaginationVariant.Numbered,
+		variant: PaginationVariants.Numbered,
 		pageIndex: 0,
 		pageSize: 10,
 		pageCount: 5,
@@ -82,7 +82,7 @@ describe('shadcn Pagination — numbered', () => {
 
 describe('shadcn Pagination — simple', () => {
 	it('shows the range label and no page links', () => {
-		const { container } = render(<Pagination {...makeProps({ variant: PaginationVariant.Simple })} />)
+		const { container } = render(<Pagination {...makeProps({ variant: PaginationVariants.Simple })} />)
 
 		expect(screen.getByText('1–10 of 50')).toBeDefined()
 		expect(pageLinks(container)).toEqual([])
@@ -90,7 +90,7 @@ describe('shadcn Pagination — simple', () => {
 
 	// Regression: an unknown total under manual pagination produced the inverted "21–10 of 10".
 	it('falls back to the page label when the total is unknown', () => {
-		render(<Pagination {...makeUnknownRowCountProps({ variant: PaginationVariant.Simple, pageIndex: 2 })} />)
+		render(<Pagination {...makeUnknownRowCountProps({ variant: PaginationVariants.Simple, pageIndex: 2 })} />)
 
 		expect(screen.getByText('Page 3 of 5')).toBeDefined()
 	})
@@ -98,7 +98,7 @@ describe('shadcn Pagination — simple', () => {
 
 describe('shadcn Pagination — compact', () => {
 	it('shows the page label and no page links', () => {
-		const { container } = render(<Pagination {...makeProps({ variant: PaginationVariant.Compact })} />)
+		const { container } = render(<Pagination {...makeProps({ variant: PaginationVariants.Compact })} />)
 
 		expect(screen.getByText('Page 1 of 5')).toBeDefined()
 		expect(pageLinks(container)).toEqual([])
@@ -106,7 +106,7 @@ describe('shadcn Pagination — compact', () => {
 
 	// Regression: the core -1 unknown-pageCount sentinel rendered as "Page 1 of -1".
 	it('omits the total when the page count is unknown', () => {
-		render(<Pagination {...makeUnknownTotalProps({ variant: PaginationVariant.Compact })} />)
+		render(<Pagination {...makeUnknownTotalProps({ variant: PaginationVariants.Compact })} />)
 
 		expect(screen.getByText('Page 1')).toBeDefined()
 	})

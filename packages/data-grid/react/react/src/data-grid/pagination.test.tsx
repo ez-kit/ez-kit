@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { renderWithComponents } from '../test-utils'
-import { PaginationVariant } from '../types'
+import { PaginationVariants } from '../types'
 import { useDataGrid } from '../use-data-grid'
 
 import { Pagination } from './pagination'
@@ -53,13 +53,13 @@ function captureProps(
 
 describe('Pagination — variant plumbing', () => {
 	it('passes the configured variant through to the UI kit', () => {
-		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Compact } })
-		expect(props.variant).toBe(PaginationVariant.Compact)
+		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariants.Compact } })
+		expect(props.variant).toBe(PaginationVariants.Compact)
 	})
 
 	it('defaults to the numbered variant', () => {
 		const { props } = captureProps({ pagination: true })
-		expect(props.variant).toBe(PaginationVariant.Numbered)
+		expect(props.variant).toBe(PaginationVariants.Numbered)
 	})
 
 	it('passes the real pageSize, not one derived from rowCount ÷ pageCount', () => {

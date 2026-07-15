@@ -1,6 +1,6 @@
 'use client'
 
-import { buildPaginationLabel, PaginationVariant } from '@ez-kit/data-grid-react'
+import { buildPaginationLabel, PaginationVariants } from '@ez-kit/data-grid-react'
 import { Pagination as HeroPagination } from '@heroui/react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
@@ -24,7 +24,7 @@ export function Pagination({
 }: PaginationProps) {
 	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
 	// Page links need a known page count; without one `numbered` degrades to prev/next.
-	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
+	const showLinks = variant === PaginationVariants.Numbered && pageCount !== undefined
 
 	return (
 		<HeroPagination

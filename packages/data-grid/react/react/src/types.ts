@@ -101,17 +101,31 @@ export type GlobalFilterInputProps = {
 }
 
 /**
+ * Named members of {@link PaginationVariant}. A convenience handle — the option and every prop
+ * are typed as the string union, so `variant: 'simple'` is equally valid and needs no import.
+ * Internal code (defaults, label builder, kits) references the members instead of repeating
+ * the literals.
+ *
+ * A const object rather than an `enum` on purpose: enum members are a nominal type, so code
+ * holding the public union could not be compared against them
+ * (`@typescript-eslint/no-unsafe-enum-comparison`).
+ */
+export const PaginationVariants = {
+	/** Prev/next plus a link per page. The default. */
+	Numbered: 'numbered',
+	/** Prev/next plus an "X–Y of N" range label; no page links. */
+	Simple: 'simple',
+	/** Prev/next plus a "Page X of Y" label; no page links. */
+	Compact: 'compact',
+} as const
+
+/**
  * Presentation of the page-based pagination footer. A pure display concern —
  * the page-based logic is identical across variants, only the controls differ.
+ *
+ * Derived from {@link PaginationVariants} so the union and the members cannot drift apart.
  */
-export enum PaginationVariant {
-	/** Prev/next plus a link per page. The default. */
-	Numbered = 'numbered',
-	/** Prev/next plus an "X–Y of N" range label; no page links. */
-	Simple = 'simple',
-	/** Prev/next plus a "Page X of Y" label; no page links. */
-	Compact = 'compact',
-}
+export type PaginationVariant = (typeof PaginationVariants)[keyof typeof PaginationVariants]
 
 export type PaginationProps = {
 	pageIndex: number

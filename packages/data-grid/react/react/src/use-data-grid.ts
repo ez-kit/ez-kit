@@ -183,7 +183,7 @@ function normalizeVirtualized(
 export type ReactPaginationConfig = PaginationConfig & {
 	/**
 	 * Page-based mode only. Which footer controls to render.
-	 * Default {@link PaginationVariant.Numbered}. Purely presentational — paging
+	 * Default {@link PaginationVariants.Numbered}. Purely presentational — paging
 	 * behaviour is identical across variants.
 	 */
 	variant?: PaginationVariant

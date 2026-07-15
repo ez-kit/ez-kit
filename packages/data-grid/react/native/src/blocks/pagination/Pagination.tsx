@@ -1,4 +1,4 @@
-import { buildPaginationLabel, PaginationVariant } from '@ez-kit/data-grid-react'
+import { buildPaginationLabel, PaginationVariants } from '@ez-kit/data-grid-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
@@ -22,7 +22,7 @@ export function Pagination({
 	onPageChange,
 }: PaginationProps) {
 	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
-	const isNumbered = variant === PaginationVariant.Numbered
+	const isNumbered = variant === PaginationVariants.Numbered
 	// Page links need a known page count; without one `numbered` degrades to the jumps + prev/next.
 	const showLinks = isNumbered && pageCount !== undefined
 	// Jumping to the first page is always page 0 — unlike the last page, it needs no total.

@@ -41,12 +41,10 @@ scan.
 <DataGridDocsExample exampleId='pagination-variant-numbered' />
 
 ```ts
-import { PaginationVariant } from '@ez-kit/data-grid-react'
-
 const grid = useDataGrid({
 	data,
 	columns,
-	pagination: { pageSize: 10, variant: PaginationVariant.Numbered },
+	pagination: { pageSize: 10, variant: 'numbered' },
 })
 ```
 
@@ -58,7 +56,7 @@ many pages to list, but the total still matters.
 <DataGridDocsExample exampleId='pagination-variant-simple' />
 
 ```ts
-pagination: { pageSize: 10, variant: PaginationVariant.Simple }
+pagination: { pageSize: 10, variant: 'simple' }
 ```
 
 The range label needs a total. Client-side it is known automatically; server-side it comes from
@@ -72,7 +70,7 @@ Previous/next plus a "Page X of Y" label. The smallest footer — best in dense 
 <DataGridDocsExample exampleId='pagination-variant-compact' />
 
 ```ts
-pagination: { pageSize: 10, variant: PaginationVariant.Compact }
+pagination: { pageSize: 10, variant: 'compact' }
 ```
 
 ### When the total is unknown
@@ -82,9 +80,9 @@ on, so every variant degrades rather than inventing a total:
 
 | Variant | Total known | `pageCount` only | Neither | Empty grid |
 | --- | --- | --- | --- | --- |
-| `Numbered` | `1–10 of 50` + page links | page links | no page links | `0–0 of 0` |
-| `Simple` | `1–10 of 50` | `Page 3 of 5` | `Page 3` | `0–0 of 0` |
-| `Compact` | `Page 1 of 5` | `Page 3 of 5` | `Page 3` | `Page 1` |
+| `'numbered'` | `1–10 of 50` + page links | page links | no page links | `0–0 of 0` |
+| `'simple'` | `1–10 of 50` | `Page 3 of 5` | `Page 3` | `0–0 of 0` |
+| `'compact'` | `Page 1 of 5` | `Page 3 of 5` | `Page 3` | `Page 1` |
 
 Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
 Page links are dropped when the page count is unknown, since they cannot be enumerated; each
@@ -118,7 +116,7 @@ const grid = useDataGrid({
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `pagination.variant` | `PaginationVariant` | Footer controls: `Numbered` (default), `Simple`, `Compact`. Display only. |
+| `pagination.variant` | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only. |
 | `initialState.pagination` | `{ pageIndex, pageSize }` | Defaults at mount. |
 | `state.pagination` | same | Controlled state. |
 | `onPaginationChange` | `(updater) => void` | Subscribe to changes. |
