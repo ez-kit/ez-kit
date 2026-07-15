@@ -191,7 +191,7 @@ tr                         th                      td
 toolbar                    header-main             header-extras
 sort-trigger               create-trigger          global-filter-input
 filter-panel               active-filters-bar      pin-shadow-overlay
-load-more-row              load-more-sentinel      loading-body-cell
+load-more-row              loading-body-cell
 ```
 
 Kits may add their own `data-slot`/`data-*` attributes inside their components; the
