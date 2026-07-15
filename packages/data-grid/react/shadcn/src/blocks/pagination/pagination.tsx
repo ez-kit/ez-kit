@@ -1,3 +1,5 @@
+import { buildPaginationLabel, PaginationVariants } from '@ez-kit/data-grid-react'
+
 import {
 	Pagination as ShadcnPagination,
 	PaginationContent,
@@ -10,15 +12,12 @@ import {
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
 const DISABLED_CLASS = 'pointer-events-none opacity-50'
-
-function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number): string {
-	const from = pageIndex * pageSize + 1
-	const to = Math.min((pageIndex + 1) * pageSize, rowCount)
-	return `${String(from)}–${String(to)} of ${String(rowCount)}`
-}
+const LABEL_CLASS = 'mr-3 flex items-center text-sm text-muted-foreground'
 
 export function Pagination({
+	variant,
 	pageIndex,
+	pageSize,
 	pageCount,
 	rowCount,
 	canPreviousPage,
@@ -27,20 +26,16 @@ export function Pagination({
 	onNextPage,
 	onPageChange,
 }: PaginationProps) {
-	// Derive pageSize from rowCount and pageCount when available for the range label.
-	// This is only meaningful when both rowCount and a valid pageCount are present.
-	const pageSize = rowCount !== undefined && pageCount > 0 ? Math.ceil(rowCount / pageCount) : undefined
-	const rangeLabel = rowCount !== undefined && pageSize !== undefined
-		? buildRangeLabel(pageIndex, pageSize, rowCount)
-		: undefined
+	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
+	// Page links need a known page count; without one `numbered` degrades to prev/next.
+	const showLinks = variant === PaginationVariants.Numbered && pageCount !== undefined
 
 	return (
-		<ShadcnPagination className='mt-3'>
-			{rangeLabel !== undefined && (
-				<span className='mr-3 flex items-center text-sm text-muted-foreground'>
-					{rangeLabel}
-				</span>
-			)}
+		<ShadcnPagination
+			className='mt-3'
+			data-variant={variant}
+		>
+			{label !== undefined && <span className={LABEL_CLASS}>{label}</span>}
 			<PaginationContent>
 				<PaginationItem>
 					<PaginationPrevious
@@ -49,18 +44,19 @@ export function Pagination({
 						onClick={canPreviousPage ? onPreviousPage : undefined}
 					/>
 				</PaginationItem>
-				{Array.from({ length: pageCount }).map((_, index) => (
-					<PaginationItem key={index}>
-						<PaginationLink
-							isActive={index === pageIndex}
-							onClick={() => {
-								onPageChange(index)
-							}}
-						>
-							{index + 1}
-						</PaginationLink>
-					</PaginationItem>
-				))}
+				{showLinks &&
+					Array.from({ length: pageCount }).map((_, index) => (
+						<PaginationItem key={index}>
+							<PaginationLink
+								isActive={index === pageIndex}
+								onClick={() => {
+									onPageChange(index)
+								}}
+							>
+								{index + 1}
+							</PaginationLink>
+						</PaginationItem>
+					))}
 				<PaginationItem>
 					<PaginationNext
 						aria-disabled={!canNextPage}

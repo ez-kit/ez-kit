@@ -514,6 +514,30 @@
 		"exportName": "FallbacksExample"
 	},
 	{
+		"id": "pagination-variant-numbered",
+		"label": "Numbered (default)",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/pagination-variants.tsx",
+		"exportName": "PaginationVariantNumberedExample"
+	},
+	{
+		"id": "pagination-variant-simple",
+		"label": "Simple",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/pagination-variants.tsx",
+		"exportName": "PaginationVariantSimpleExample"
+	},
+	{
+		"id": "pagination-variant-compact",
+		"label": "Compact",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/pagination-variants.tsx",
+		"exportName": "PaginationVariantCompactExample"
+	},
+	{
 		"id": "infinite-scroll-auto",
 		"label": "Auto",
 		"group": "infinite-scroll",

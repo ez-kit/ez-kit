@@ -1,17 +1,19 @@
 'use client'
 
+import { buildPaginationLabel, PaginationVariants } from '@ez-kit/data-grid-react'
 import { Pagination as HeroPagination } from '@heroui/react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
-function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number): string {
-	const from = pageIndex * pageSize + 1
-	const to = Math.min((pageIndex + 1) * pageSize, rowCount)
-	return `${String(from)}–${String(to)} of ${String(rowCount)}`
-}
+const LABEL_CLASS = 'px-2 text-sm text-default-500'
+const PREVIOUS_LABEL = 'Previous'
+const NEXT_LABEL = 'Next'
+const PAGINATION_ARIA_LABEL = 'Pagination'
 
 export function Pagination({
+	variant,
 	pageIndex,
+	pageSize,
 	pageCount,
 	rowCount,
 	canPreviousPage,
@@ -20,17 +22,19 @@ export function Pagination({
 	onNextPage,
 	onPageChange,
 }: PaginationProps) {
-	// Derive pageSize from rowCount and pageCount when available for the range label.
-	const pageSize = rowCount !== undefined && pageCount > 0 ? Math.ceil(rowCount / pageCount) : undefined
-	const rangeLabel = rowCount !== undefined && pageSize !== undefined
-		? buildRangeLabel(pageIndex, pageSize, rowCount)
-		: undefined
+	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
+	// Page links need a known page count; without one `numbered` degrades to prev/next.
+	const showLinks = variant === PaginationVariants.Numbered && pageCount !== undefined
 
 	return (
-		<HeroPagination aria-label='Pagination' className='mt-3'>
-			{rangeLabel !== undefined && (
+		<HeroPagination
+			aria-label={PAGINATION_ARIA_LABEL}
+			className='mt-3'
+			data-variant={variant}
+		>
+			{label !== undefined && (
 				<HeroPagination.Item>
-					<span className='px-2 text-sm text-default-500'>{rangeLabel}</span>
+					<span className={LABEL_CLASS}>{label}</span>
 				</HeroPagination.Item>
 			)}
 			<HeroPagination.Content>
@@ -39,27 +43,28 @@ export function Pagination({
 						isDisabled={!canPreviousPage}
 						onPress={onPreviousPage}
 					>
-						Previous
+						{PREVIOUS_LABEL}
 					</HeroPagination.Previous>
 				</HeroPagination.Item>
-				{Array.from({ length: pageCount }).map((_, index) => (
-					<HeroPagination.Item key={index}>
-						<HeroPagination.Link
-							isActive={index === pageIndex}
-							onPress={() => {
-								onPageChange(index)
-							}}
-						>
-							{index + 1}
-						</HeroPagination.Link>
-					</HeroPagination.Item>
-				))}
+				{showLinks &&
+					Array.from({ length: pageCount }).map((_, index) => (
+						<HeroPagination.Item key={index}>
+							<HeroPagination.Link
+								isActive={index === pageIndex}
+								onPress={() => {
+									onPageChange(index)
+								}}
+							>
+								{index + 1}
+							</HeroPagination.Link>
+						</HeroPagination.Item>
+					))}
 				<HeroPagination.Item>
 					<HeroPagination.Next
 						isDisabled={!canNextPage}
 						onPress={onNextPage}
 					>
-						Next
+						{NEXT_LABEL}
 					</HeroPagination.Next>
 				</HeroPagination.Item>
 			</HeroPagination.Content>

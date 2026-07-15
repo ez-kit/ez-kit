@@ -8,6 +8,7 @@ import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridInstance } from './data-grid-instance'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { PaginationVariant } from './types'
 import type {
 	ConfirmationOptions,
 	ExpandingConfig,
@@ -28,6 +29,9 @@ export const CELL_TYPES_KEY = Symbol('cellTypes')
 
 /** Symbol used to carry pageSizer config on the table instance for PageSizer to read. */
 export const PAGE_SIZER_KEY = Symbol('pageSizer')
+
+/** Symbol used to carry the page-based pagination variant on the table instance for Pagination to read. */
+export const PAGINATION_VARIANT_KEY = Symbol('paginationVariant')
 
 /** Symbol used to carry rowPinning config on the table instance for RowPinCell to read. */
 export const ROW_PINNING_KEY = Symbol('rowPinning')
@@ -177,6 +181,12 @@ function normalizeVirtualized(
  * pattern: data semantics in core, DOM detection here.
  */
 export type ReactPaginationConfig = PaginationConfig & {
+	/**
+	 * Page-based mode only. Which footer controls to render.
+	 * Default {@link PaginationVariants.Numbered}. Purely presentational — paging
+	 * behaviour is identical across variants.
+	 */
+	variant?: PaginationVariant
 	/**
 	 * Infinite mode only. `'auto'` (default) loads when the edge enters view;
 	 * `'manual'` suppresses auto detection and renders a "Load more" control.
@@ -464,13 +474,19 @@ export function useDataGrid<TRow extends object>(
 			? (({ panel: _panel, ...rest }) => rest)(rawSelection)
 			: rawSelection
 
-	// Split pagination into the headless core part (strip React-only detection tuning)
-	// and the normalized infinite config stored on the instance for the infinite hook.
+	// Split pagination into the headless core part (strip React-only detection tuning and
+	// the display-only `variant`) and the normalized infinite config stored on the instance
+	// for the infinite hook.
 	const corePagination: boolean | PaginationConfig | undefined =
 		typeof rawPagination === 'object'
-			? (({ trigger: _trigger, threshold: _threshold, ...rest }) => rest)(rawPagination)
+			? (({ trigger: _trigger, threshold: _threshold, variant: _variant, ...rest }) => rest)(rawPagination)
 			: rawPagination
 	const normalizedInfinite = normalizeInfinite(rawPagination)
+
+	const paginationVariant: PaginationVariant =
+		typeof rawPagination === 'object'
+			? (rawPagination.variant ?? DATA_GRID_DEFAULTS.pagination.variant)
+			: DATA_GRID_DEFAULTS.pagination.variant
 
 	// Build core-compatible expanding config (strip React-only fields)
 	const reactExpandingCfg = typeof rawExpanding === 'object' ? rawExpanding : undefined
@@ -639,6 +655,9 @@ export function useDataGrid<TRow extends object>(
 
 	// Store filteringVariant on the table instance so Header can read without an extra prop
 	tableAsSymbolMap[FILTERING_VARIANT_KEY] = filteringVariant
+
+	// Store the resolved pagination variant so Pagination can read it without an extra prop
+	tableAsSymbolMap[PAGINATION_VARIANT_KEY] = paginationVariant
 
 	// Store the column filter commit debounce on the table instance so Header / FilterPanel can read it
 	tableAsSymbolMap[FILTERING_DEBOUNCE_KEY] = filteringDebounce

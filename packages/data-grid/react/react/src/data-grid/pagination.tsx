@@ -1,6 +1,15 @@
 import { useGridComponents } from '../components-context'
+import { DATA_GRID_DEFAULTS } from '../defaults'
+import { PAGINATION_VARIANT_KEY } from '../use-data-grid'
 
 import { useDataGridInstance, useDataGridStore } from './table-context'
+
+import type { PaginationVariant } from '../types'
+
+function readVariant(table: object): PaginationVariant {
+	const variant = (table as Record<symbol, unknown>)[PAGINATION_VARIANT_KEY] as PaginationVariant | undefined
+	return variant ?? DATA_GRID_DEFAULTS.pagination.variant
+}
 
 /**
  * Pagination controls. Rendered only when `pagination` is enabled in config.
@@ -28,20 +37,29 @@ export function Pagination() {
 	if (isPending) return null
 	if (!table.options.getPaginationRowModel) return null
 
-	const { pageIndex } = table.getState().pagination
-	const pageCount = table.getPageCount()
-	const rawRowCount = table.getRowCount()
-	// `getRowCount()` returns 0 when no rowCount was supplied (TanStack default).
-	// Only surface it as a prop when it's meaningful (> 0).
-	const rowCount = rawRowCount > 0 ? rawRowCount : undefined
+	const { pageIndex, pageSize } = table.getState().pagination
+	// Normalize both totals here so no UI kit ever sees an "unknown" sentinel.
+	//
+	// `getPageCount()` returns `options.pageCount` verbatim when set, and core sets it to
+	// UNKNOWN_PAGE_COUNT (-1) for a manual grid given neither `rowCount` nor `pageCount`.
+	const rawPageCount = table.getPageCount()
+	const pageCount = rawPageCount >= 0 ? rawPageCount : undefined
+	// `getRowCount()` is `options.rowCount ?? prePaginationRowModel.rows.length`. Client-side
+	// that fallback is the true total; under `manualPagination` `data` is only the current
+	// page, so it is the page length — a total we must not report. The count is therefore
+	// trustworthy iff the grid paginates client-side or the consumer supplied `rowCount`.
+	const hasTrustedRowCount = table.options.manualPagination !== true || table.options.rowCount !== undefined
+	const rowCount = hasTrustedRowCount ? table.getRowCount() : undefined
 	const canPrevious = table.getCanPreviousPage()
 	const canNext = table.getCanNextPage()
 
 	return (
 		<PaginationComponent
 			{...(rowCount !== undefined ? { rowCount } : {})}
+			{...(pageCount !== undefined ? { pageCount } : {})}
+			variant={readVariant(table)}
 			pageIndex={pageIndex}
-			pageCount={pageCount}
+			pageSize={pageSize}
 			canPreviousPage={canPrevious}
 			canNextPage={canNext}
 			onPreviousPage={() => {
@@ -54,7 +72,9 @@ export function Pagination() {
 				table.setPageIndex(0)
 			}}
 			onLastPage={() => {
-				table.setPageIndex(pageCount - 1)
+				// No-op when the page count is unknown — there is no last page to jump to.
+				// (Unguarded this called setPageIndex(-2) for the -1 sentinel.)
+				if (pageCount !== undefined) table.setPageIndex(pageCount - 1)
 			}}
 			onPageChange={(pageIndex) => {
 				table.setPageIndex(pageIndex)

@@ -28,6 +28,71 @@ const grid = useDataGrid({
 <DataGrid.PageSizer options={[10, 25, 50, 100]} />
 ```
 
+## Variants
+
+`pagination.variant` picks which footer controls render. It is presentational only — paging
+behaviour is identical across variants, and the footer always sits below the table.
+
+### Numbered
+
+The default: previous/next plus a link per page. Best when the page count is small enough to
+scan.
+
+<DataGridDocsExample exampleId='pagination-variant-numbered' />
+
+```ts
+const grid = useDataGrid({
+	data,
+	columns,
+	pagination: { pageSize: 10, variant: 'numbered' },
+})
+```
+
+### Simple
+
+Previous/next plus an "X–Y of N" range label, without per-page links. Best when there are too
+many pages to list, but the total still matters.
+
+<DataGridDocsExample exampleId='pagination-variant-simple' />
+
+```ts
+pagination: { pageSize: 10, variant: 'simple' }
+```
+
+The range label needs a total. Client-side it is known automatically; server-side it comes from
+`rowCount` — the total is never guessed from the rows currently loaded. When it is unknown,
+`simple` falls back to the `compact` label rather than rendering prev/next with no context.
+
+### Compact
+
+Previous/next plus a "Page X of Y" label. The smallest footer — best in dense layouts.
+
+<DataGridDocsExample exampleId='pagination-variant-compact' />
+
+```ts
+pagination: { pageSize: 10, variant: 'compact' }
+```
+
+### When the total is unknown
+
+A manually paginated grid given neither `rowCount` nor `pageCount` knows only which page it is
+on, so every variant degrades rather than inventing a total:
+
+| Variant | Total known | `pageCount` only | Neither | Empty grid |
+| --- | --- | --- | --- | --- |
+| `'numbered'` | `1–10 of 50` + page links | page links | no page links | `0–0 of 0` |
+| `'simple'` | `1–10 of 50` | `Page 3 of 5` | `Page 3` | `0–0 of 0` |
+| `'compact'` | `Page 1 of 5` | `Page 3 of 5` | `Page 3` | `Page 1` |
+
+Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
+Page links are dropped when the page count is unknown, since they cannot be enumerated; each
+kit decides what to keep alongside prev/next (the native kit, for instance, keeps its
+jump-to-first control, which needs no total).
+
+A page that sits past the end of the total reports `0–0 of N` rather than an impossible range:
+`autoResetPageIndex` defaults to `!manualPagination`, so a server-paginated grid does not rewind
+on its own when `rowCount` shrinks beneath the current page.
+
 ## Server-side pagination
 
 Pass controlled pagination state, set `manualPagination: true`, and supply `rowCount`:
@@ -51,6 +116,7 @@ const grid = useDataGrid({
 
 | Option | Type | Description |
 | --- | --- | --- |
+| `pagination.variant` | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only. |
 | `initialState.pagination` | `{ pageIndex, pageSize }` | Defaults at mount. |
 | `state.pagination` | same | Controlled state. |
 | `onPaginationChange` | `(updater) => void` | Subscribe to changes. |
@@ -61,7 +127,11 @@ const grid = useDataGrid({
 
 For append-on-scroll instead of a page footer, set `pagination.mode: 'infinite'` — see
 [Infinite Scroll](/docs/data-grid/pagination/infinite-scroll). It is mutually exclusive with the
-page-based footer.
+page-based footer, so `variant` does not apply to it.
+
+For a "Load more" button instead of pages, use infinite mode with a manual trigger —
+`pagination: { mode: 'infinite', trigger: 'manual' }`. See
+[Infinite Scroll](/docs/data-grid/pagination/infinite-scroll).
 
 ## Source
 

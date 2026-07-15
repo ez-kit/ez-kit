@@ -1,5 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '@ez-kit/data-grid-core'
 
+import { PaginationVariants } from './types'
+
 /**
  * Default commit debounce (ms) for column text filter inputs.
  * `0` = commit on every keystroke (backward compatible).
@@ -23,6 +25,7 @@ export const DATA_GRID_DEFAULTS = {
 	/** Page-based pagination. `pageSize` mirrors the core default (one source across layers). */
 	pagination: {
 		pageSize: DEFAULT_PAGE_SIZE,
+		variant: PaginationVariants.Numbered,
 	},
 	/** Cross-column global search input. */
 	globalFiltering: {

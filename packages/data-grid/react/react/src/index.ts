@@ -13,6 +13,7 @@ export {
 	GLOBAL_FILTERING_KEY,
 	INFINITE_KEY,
 	PAGE_SIZER_KEY,
+	PAGINATION_VARIANT_KEY,
 	ROW_PINNING_KEY,
 	SORTING_KEY,
 	VIRTUALIZED_KEY,
@@ -44,6 +45,10 @@ export type {
 	SelectionPanelConfig,
 	SelectionPanelVariant,
 } from './use-data-grid'
+
+// Pagination footer label (shared by every UI kit — content, not styling)
+export { buildPaginationLabel } from './data-grid/pagination-label'
+export type { PaginationLabelInput } from './data-grid/pagination-label'
 
 // Infinite scroll
 export { useInfiniteScroll } from './data-grid/use-infinite-scroll'
@@ -167,6 +172,9 @@ export type {
 	SortMenuProps,
 	VisibilityColumnItem,
 } from './types'
+// `PaginationVariants` is a const object (runtime value) — exported as a value, not a type.
+// Optional sugar: `pagination.variant` accepts the plain `PaginationVariant` string union.
+export { PaginationVariants } from './types'
 export type {
 	ButtonProps,
 	CheckboxProps,
@@ -175,6 +183,7 @@ export type {
 	NumberInputProps,
 	PageSizerProps,
 	PaginationProps,
+	PaginationVariant,
 	TbodyProps,
 	TdProps,
 	ThProps,

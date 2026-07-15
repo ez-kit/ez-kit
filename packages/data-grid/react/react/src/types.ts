@@ -100,15 +100,51 @@ export type GlobalFilterInputProps = {
 	debounce?: number
 }
 
+/**
+ * Named members of {@link PaginationVariant}. A convenience handle — the option and every prop
+ * are typed as the string union, so `variant: 'simple'` is equally valid and needs no import.
+ * Internal code (defaults, label builder, kits) references the members instead of repeating
+ * the literals.
+ *
+ * A const object rather than an `enum` on purpose: enum members are a nominal type, so code
+ * holding the public union could not be compared against them
+ * (`@typescript-eslint/no-unsafe-enum-comparison`).
+ */
+export const PaginationVariants = {
+	/** Prev/next plus a link per page. The default. */
+	Numbered: 'numbered',
+	/** Prev/next plus an "X–Y of N" range label; no page links. */
+	Simple: 'simple',
+	/** Prev/next plus a "Page X of Y" label; no page links. */
+	Compact: 'compact',
+} as const
+
+/**
+ * Presentation of the page-based pagination footer. A pure display concern —
+ * the page-based logic is identical across variants, only the controls differ.
+ *
+ * Derived from {@link PaginationVariants} so the union and the members cannot drift apart.
+ */
+export type PaginationVariant = (typeof PaginationVariants)[keyof typeof PaginationVariants]
+
 export type PaginationProps = {
 	pageIndex: number
-	pageCount: number
 	/**
-	 * Total row count from the server. Present when the consumer supplied
-	 * `pagination.rowCount`; `undefined` when unknown (e.g. only `pageCount`
-	 * was given, or the total is not known). Use to render an "X–Y of N" label.
+	 * Total number of pages. `undefined` when unknown — a manually paginated grid given
+	 * neither `rowCount` nor `pageCount` knows only which page it is on. Already
+	 * normalized: the core `UNKNOWN_PAGE_COUNT` sentinel never reaches a UI kit.
+	 */
+	pageCount?: number
+	/** Rows per page, from the table's pagination state. Drives the "X–Y of N" range label. */
+	pageSize: number
+	/**
+	 * Total row count across all pages. `undefined` when unknown — i.e. a manually
+	 * paginated grid where the consumer supplied no `pagination.rowCount`. Never inferred
+	 * from the loaded page. Use to render an "X–Y of N" label.
 	 */
 	rowCount?: number
+	/** Which set of controls to render. Resolved by the react layer; never undefined. */
+	variant: PaginationVariant
 	canPreviousPage: boolean
 	canNextPage: boolean
 	onPreviousPage: () => void
