@@ -2,6 +2,13 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
+## Branching
+
+- `develop` is the default integration branch — feature branches fork from and merge into `develop`.
+- `main` is release-only: a `develop → main` PR is a release and the Vercel production + npm release point.
+- CI (`.github/workflows/ci.yml`, job `verify`) gates every PR into `develop` and `main`.
+- Hooks: pre-commit `lint-staged`, commit-msg `commitlint` (Conventional Commits), pre-push `pnpm ci:fast`. Node pinned via `.nvmrc` (22.18.0).
+
 ## Commands
 
 ```bash
@@ -10,7 +17,8 @@ pnpm build            # Build all packages via Turborepo
 pnpm lint             # Lint all packages (0 warnings allowed)
 pnpm typecheck        # TypeScript type-check all packages
 pnpm test             # Run all tests (requires build first per turbo deps)
-pnpm format           # Format all packages with Prettier
+pnpm format           # Prettier write across the whole repo
+pnpm format:check     # Prettier check across the whole repo
 pnpm size             # Check bundle size limits
 pnpm ci               # Full CI check: lint + typecheck + test + build + size
 ```

@@ -12,6 +12,14 @@ The shared React package (`data-grid/react/react`) must contain **zero visual st
 
 `packages/data-grid/react/shadcn/src/components/ui/**` is vendored from shadcn — **do not modify these files.** All behavioral overrides (colSpan handling, alignment, pinning, custom slots, etc.) must live in `packages/data-grid/react/shadcn/src/blocks/` adapters that wrap the primitives. See `packages/data-grid/react/shadcn/CLAUDE.md` for the full rule.
 
+## Branching & Release Flow
+
+- `develop` is the default integration branch — all feature branches fork from and merge into `develop`.
+- `main` is release-only: a `develop → main` PR **is** a release. `main` is the Vercel **production** branch (docs deploy on release) and the npm release point. `develop` and feature branches get Vercel **preview** URLs.
+- CI (`.github/workflows/ci.yml`) gates every PR into `develop` and `main` with `build → lint → typecheck → test → size` (job name `verify`).
+- Git hooks (husky): pre-commit runs `lint-staged` (Prettier + ESLint on staged files only), commit-msg enforces Conventional Commits via commitlint, pre-push runs `pnpm ci:fast`.
+- Node is pinned via `.nvmrc` (22.18.0) and `engines.node` (`>=22`).
+
 ## Commands
 
 ```bash
@@ -20,7 +28,8 @@ pnpm build            # Build all packages via Turborepo
 pnpm lint             # Lint all packages (0 warnings allowed)
 pnpm typecheck        # TypeScript type-check all packages
 pnpm test             # Run all tests (requires build first per turbo deps)
-pnpm format           # Format all packages with Prettier
+pnpm format           # Prettier write across the whole repo (scripts/prettier.mjs)
+pnpm format:check     # Prettier check across the whole repo
 pnpm size             # Check bundle size limits
 pnpm run ci               # Full CI check: lint + typecheck + test + build + size
 ```
