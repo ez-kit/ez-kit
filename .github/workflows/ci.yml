@@ -8,6 +8,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Local git hooks (husky) are for developer machines, not CI.
+env:
+  HUSKY: 0
+
 jobs:
   verify:
     name: verify
