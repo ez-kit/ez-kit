@@ -80,13 +80,16 @@ pagination: { pageSize: 10, variant: PaginationVariant.Compact }
 A manually paginated grid given neither `rowCount` nor `pageCount` knows only which page it is
 on, so every variant degrades rather than inventing a total:
 
-| Variant | Total known | `pageCount` only | Neither |
-| --- | --- | --- | --- |
-| `Numbered` | `1–10 of 50` + page links | page links | prev/next only |
-| `Simple` | `1–10 of 50` | `Page 3 of 5` | `Page 3` |
-| `Compact` | `Page 1 of 5` | `Page 3 of 5` | `Page 3` |
+| Variant | Total known | `pageCount` only | Neither | Empty grid |
+| --- | --- | --- | --- | --- |
+| `Numbered` | `1–10 of 50` + page links | page links | no page links | `0–0 of 0` |
+| `Simple` | `1–10 of 50` | `Page 3 of 5` | `Page 3` | `0–0 of 0` |
+| `Compact` | `Page 1 of 5` | `Page 3 of 5` | `Page 3` | `Page 1` |
 
 Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
+Page links are dropped when the page count is unknown, since they cannot be enumerated; each
+kit decides what to keep alongside prev/next (the native kit, for instance, keeps its
+jump-to-first control, which needs no total).
 
 A page that sits past the end of the total reports `0–0 of N` rather than an impossible range:
 `autoResetPageIndex` defaults to `!manualPagination`, so a server-paginated grid does not rewind
