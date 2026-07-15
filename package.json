@@ -20,7 +20,7 @@
 		"clean": "turbo run clean",
 		"changeset": "changeset",
 		"version-packages": "changeset version",
-		"release": "changeset publish",
+		"release": "turbo run build && changeset publish",
 		"docs:dev": "pnpm --filter @ez-kit/docs dev",
 		"docs:build": "pnpm --filter @ez-kit/docs build",
 		"docs:start": "pnpm --filter @ez-kit/docs start",
