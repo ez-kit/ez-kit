@@ -7,7 +7,23 @@ import { BetweenInput } from './blocks/filtering/BetweenInput'
 import { MultiSelectFilter } from './blocks/filtering/MultiSelectFilter'
 import { PageSizer } from './blocks/pagination/PageSizer'
 
-import { CellTypesProvider, cellTypes, DataGrid, GridComponentsProvider, useDataGrid } from './index'
+import {
+	CellTypesProvider,
+	cellTypes,
+	createColumnHelper,
+	DataGrid,
+	DataGridOptionsProvider,
+	defineColumns as kitDefineColumns,
+	extractState,
+	GridComponentsProvider,
+	parseState,
+	useDataGrid,
+	useDataGridOptions,
+	useExtractedState,
+	ValidationError,
+} from './index'
+
+import type { ColumnDef, ColumnHelper, DataGridProps, SortingState } from './index'
 
 type User = {
 	id: number
@@ -25,6 +41,33 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(cellTypes.image).toBeDefined()
 		expect(cellTypes.link).toBeDefined()
 		expect(cellTypes.progress).toBeDefined()
+	})
+
+	// The kit must carry the whole consumer surface on its own: installing a kit and also
+	// depending on `@ez-kit/data-grid-react` to reach `defineColumns` is the thing #66 removes.
+	it('re-exports the adapter consumer surface', () => {
+		expect(kitDefineColumns).toBeTypeOf('function')
+		expect(createColumnHelper).toBeTypeOf('function')
+		expect(extractState).toBeTypeOf('function')
+		expect(parseState).toBeTypeOf('function')
+		expect(useExtractedState).toBeTypeOf('function')
+		expect(DataGridOptionsProvider).toBeTypeOf('function')
+		expect(useDataGridOptions).toBeTypeOf('function')
+		expect(ValidationError).toBeTypeOf('function')
+	})
+
+	// Type-level half of the same guarantee: these annotations are the assertion — the test
+	// fails at `pnpm typecheck` if the kit stops carrying a type an example relies on.
+	it('types a consumer that imports from the kit alone', () => {
+		const columns: ColumnDef<User>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+		const helper: ColumnHelper<User> = createColumnHelper<User>()
+		const sorting: SortingState = [{ id: 'name', desc: false }]
+		const props: DataGridProps<User> = { data: [{ id: 1, name: 'Ada' }], columns }
+
+		expect(columns).toHaveLength(1)
+		expect(helper).toBeDefined()
+		expect(sorting[0]?.id).toBe('name')
+		expect(props.columns).toBe(columns)
 	})
 
 	it('renders a simple DataGrid', () => {

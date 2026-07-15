@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 
 import { ExampleCard, ExampleShell } from '@/components/example-card'
 import { ExampleFrame } from '@/components/example-frame'
+import { rewriteExampleImports } from '@/components/rewrite-example-imports'
 import { SourcePanel } from '@/components/source-panel'
 import { useUrlState } from '@/hooks/use-url-state'
 
@@ -41,7 +42,7 @@ export function DataGridDocsExampleClient({ exampleId, source, defaultType, lock
 							slug={exampleId}
 						/>
 					}
-					source={<SourcePanel source={source} />}
+					source={<SourcePanel source={rewriteExampleImports(source, defaultType)} />}
 				/>
 			</ExampleShell>
 		)
@@ -113,7 +114,7 @@ function Switcher({
 						slug={exampleId}
 					/>
 				}
-				source={<SourcePanel source={source} />}
+				source={<SourcePanel source={rewriteExampleImports(source, flavor)} />}
 			/>
 		</ExampleShell>
 	)
