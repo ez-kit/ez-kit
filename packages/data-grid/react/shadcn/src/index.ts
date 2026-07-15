@@ -1,4 +1,29 @@
 export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from './data-grid'
 export { cellTypes } from './blocks/cell-types'
-export { CellTypesProvider, DataGridOptionsProvider, useDataGridOptions, createColumnHelper } from '@ez-kit/data-grid-react'
-export type { ColumnHelper, DataGridDefaultOptions, DataGridOptionsProviderProps } from '@ez-kit/data-grid-react'
+
+// Curated re-export of the consumer surface from the adapter, so a kit consumer never has to
+// add `@ez-kit/data-grid-react` as a second dependency. Deliberately not `export *`: the star
+// would re-export the adapter's unbound `DataGrid`/`useDataGrid`/`GridComponentsProvider` and
+// collide with the shadcn-bound ones above.
+export {
+	CellTypesProvider,
+	DataGridOptionsProvider,
+	useDataGridOptions,
+	createColumnHelper,
+	defineColumns,
+	extractState,
+	parseState,
+	useExtractedState,
+	ValidationError,
+} from '@ez-kit/data-grid-react'
+export type {
+	ColumnDef,
+	ColumnFiltersState,
+	ColumnHelper,
+	DataGridDefaultOptions,
+	DataGridOptionsProviderProps,
+	DataGridProps,
+	DateRangePreset,
+	SortingState,
+	TableState,
+} from '@ez-kit/data-grid-react'
