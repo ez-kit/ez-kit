@@ -2,10 +2,9 @@
 
 import { Suspense } from 'react'
 
-import { ExampleCard, ExampleShell } from '@/components/example-card'
 import { ExampleFrame } from '@/components/example-frame'
+import { ExamplePreview } from '@/components/example-preview'
 import { rewriteExampleImports } from '@/components/rewrite-example-imports'
-import { SourcePanel } from '@/components/source-panel'
 import { useUrlState } from '@/hooks/use-url-state'
 
 import type { DataGridDocsExampleFlavor } from './data-grid-docs-example'
@@ -34,17 +33,15 @@ export function DataGridDocsExampleClient({ exampleId, source, defaultType, lock
 	// the unlocked UI in practice.
 	if (lockFlavor && defaultType) {
 		return (
-			<ExampleShell>
-				<ExampleCard
-					view={
-						<ExampleFrame
-							kit={defaultType}
-							slug={exampleId}
-						/>
-					}
-					source={<SourcePanel source={rewriteExampleImports(source, defaultType)} />}
-				/>
-			</ExampleShell>
+			<ExamplePreview
+				view={
+					<ExampleFrame
+						kit={defaultType}
+						slug={exampleId}
+					/>
+				}
+				source={rewriteExampleImports(source, defaultType)}
+			/>
 		)
 	}
 
@@ -102,21 +99,21 @@ function Switcher({
 	onSelect?: ((flavor: DataGridDocsExampleFlavor) => void) | undefined
 }) {
 	return (
-		<ExampleShell>
-			<FlavorTabs
-				active={flavor}
-				onSelect={onSelect}
-			/>
-			<ExampleCard
-				view={
-					<ExampleFrame
-						kit={flavor}
-						slug={exampleId}
-					/>
-				}
-				source={<SourcePanel source={rewriteExampleImports(source, flavor)} />}
-			/>
-		</ExampleShell>
+		<ExamplePreview
+			view={
+				<ExampleFrame
+					kit={flavor}
+					slug={exampleId}
+				/>
+			}
+			source={rewriteExampleImports(source, flavor)}
+			header={
+				<FlavorTabs
+					active={flavor}
+					onSelect={onSelect}
+				/>
+			}
+		/>
 	)
 }
 
