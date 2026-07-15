@@ -89,6 +89,22 @@ describe('renderFilterInput — multi-value (in / notIn) branch', () => {
 	})
 })
 
+describe('OperatorSelect — operator options read as text labels', () => {
+	it('renders every operator option as its English label, with no symbol glyphs', () => {
+		setup()
+
+		// A `select` column resolves to IN_OPERATORS + the text empty operators.
+		for (const label of ['Is any of', 'Is none of', 'Is empty', 'Is not empty']) {
+			expect(screen.getByRole('option', { name: label })).toBeInTheDocument()
+		}
+
+		// The glyphs these operators used to render (∈ / ∉ / ∅ / ≠∅) are gone.
+		for (const glyph of ['∈', '∉', '∅', '≠∅']) {
+			expect(screen.queryByText(glyph)).not.toBeInTheDocument()
+		}
+	})
+})
+
 type DateRow = { id: number; joinedAt: string }
 
 const DATE_DATA: DateRow[] = [

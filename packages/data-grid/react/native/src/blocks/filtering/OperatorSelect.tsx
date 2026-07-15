@@ -14,7 +14,7 @@ export function OperatorSelect({ operators, currentOperatorId, onChange }: Opera
 					key={op.id}
 					value={op.id}
 				>
-					{op.symbol ?? op.label}
+					{op.label}
 				</option>
 			))}
 		</select>

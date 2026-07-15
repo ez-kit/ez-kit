@@ -18,7 +18,7 @@ export function OperatorSelect({ operators, currentOperatorId, onChange }: Opera
 						value={op.id}
 						className='text-xs'
 					>
-						{op.symbol ? <span className='font-mono'>{op.symbol}</span> : null} {op.label}
+						{op.label}
 					</SelectItem>
 				))}
 			</SelectContent>

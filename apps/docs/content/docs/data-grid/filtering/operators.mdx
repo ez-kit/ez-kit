@@ -5,7 +5,7 @@ description: Switch the matching strategy per filter — equals, contains, start
 
 # Filter Operators
 
-Each column can expose a list of operators the user picks from when filtering — `=`, `≠`, `contains`, `starts with`, `>`, `<`, `between`, and more. Operators are configured per column via `meta`.
+Each column can expose a list of operators the user picks from when filtering — `equals`, `notEquals`, `contains`, `startsWith`, `gt`, `lt`, `between`, and more. Operators are configured per column via `meta`.
 
 ## Usage
 
@@ -31,7 +31,7 @@ Enable the full text operator set with `filtering: { operators: true }`, or pass
 
 ### Number operators
 
-Numeric columns expose comparison operators (`=`, `≠`, `>`, `≥`, `<`, `≤`). Use `defaultOperator` to pick the one selected first — **Salary** defaults to `gte`.
+Numeric columns expose comparison operators (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`). Use `defaultOperator` to pick the one selected first — **Salary** defaults to `gte`.
 
 <DataGridDocsExample exampleId='filter-operators-number' />
 
