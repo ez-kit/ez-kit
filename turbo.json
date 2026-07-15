@@ -9,12 +9,6 @@
 			"dependsOn": ["^lint"],
 			"outputs": []
 		},
-		"format": {
-			"outputs": []
-		},
-		"format:check": {
-			"outputs": []
-		},
 		"typecheck": {
 			"dependsOn": ["^typecheck"],
 			"outputs": []
