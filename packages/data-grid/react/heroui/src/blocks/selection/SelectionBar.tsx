@@ -22,9 +22,11 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 		return (
 			<div
 				role='toolbar'
+				aria-orientation='horizontal'
 				data-slot='selection-bar'
 				data-variant='inline'
-				className='dg-selection-bar flex items-center gap-2 px-3 py-2 mb-2 w-full text-sm'
+				data-state='open'
+				className='mb-2 flex w-full flex-row items-center gap-2 rounded-lg bg-surface-secondary px-3 py-2 text-surface-secondary-foreground text-sm'
 			>
 				<span
 					data-slot='action-bar-selection'

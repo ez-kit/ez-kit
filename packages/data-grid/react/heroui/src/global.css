@@ -241,12 +241,6 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	color: var(--heroui-default-400, #a1a1aa);
 }
 
-.dg-selection-bar {
-	border-radius: var(--heroui-radius-medium, 8px);
-	background: hsl(var(--heroui-default-100));
-	color: hsl(var(--heroui-foreground));
-}
-
 .dg-sort-count-badge {
 	margin-left: 0.125rem;
 	border-radius: 9999px;
