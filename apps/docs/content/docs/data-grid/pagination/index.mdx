@@ -62,8 +62,8 @@ pagination: { pageSize: 10, variant: PaginationVariant.Simple }
 ```
 
 The range label needs a total. Client-side it is known automatically; server-side it comes from
-`rowCount`. When the total is unknown, `simple` falls back to the `compact` label rather than
-rendering prev/next with no context.
+`rowCount` — the total is never guessed from the rows currently loaded. When it is unknown,
+`simple` falls back to the `compact` label rather than rendering prev/next with no context.
 
 ### Compact
 
@@ -74,6 +74,19 @@ Previous/next plus a "Page X of Y" label. The smallest footer — best in dense 
 ```ts
 pagination: { pageSize: 10, variant: PaginationVariant.Compact }
 ```
+
+### When the total is unknown
+
+A manually paginated grid given neither `rowCount` nor `pageCount` knows only which page it is
+on, so every variant degrades rather than inventing a total:
+
+| Variant | Total known | `pageCount` only | Neither |
+| --- | --- | --- | --- |
+| `Numbered` | `1–10 of 50` + page links | page links | prev/next only |
+| `Simple` | `1–10 of 50` | `Page 3 of 5` | `Page 3` |
+| `Compact` | `Page 1 of 5` | `Page 3 of 5` | `Page 3` |
+
+Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
 
 ## Server-side pagination
 

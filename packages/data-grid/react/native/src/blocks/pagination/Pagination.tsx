@@ -1,4 +1,4 @@
-import { PaginationVariant } from '@ez-kit/data-grid-react'
+import { buildPaginationLabel, PaginationVariant } from '@ez-kit/data-grid-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
@@ -6,19 +6,6 @@ const FIRST_GLYPH = '«'
 const PREVIOUS_GLYPH = '‹'
 const NEXT_GLYPH = '›'
 const LAST_GLYPH = '»'
-const RANGE_SEPARATOR = '–'
-const OF_LABEL = 'of'
-const PAGE_LABEL = 'Page'
-
-function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number): string {
-	const from = pageIndex * pageSize + 1
-	const to = Math.min((pageIndex + 1) * pageSize, rowCount)
-	return `${String(from)}${RANGE_SEPARATOR}${String(to)} ${OF_LABEL} ${String(rowCount)}`
-}
-
-function buildPageLabel(pageIndex: number, pageCount: number): string {
-	return `${PAGE_LABEL} ${String(pageIndex + 1)} ${OF_LABEL} ${String(pageCount)}`
-}
 
 export function Pagination({
 	variant,
@@ -34,18 +21,14 @@ export function Pagination({
 	onLastPage,
 	onPageChange,
 }: PaginationProps) {
-	const isNumbered = variant === PaginationVariant.Numbered
-	const rangeLabel = rowCount !== undefined ? buildRangeLabel(pageIndex, pageSize, rowCount) : undefined
-	// `simple` is defined by its range label, so when the total is unknown it degrades to
-	// the page label rather than rendering bare prev/next with no context.
-	const label =
-		variant === PaginationVariant.Simple
-			? (rangeLabel ?? buildPageLabel(pageIndex, pageCount))
-			: buildPageLabel(pageIndex, pageCount)
+	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
+	// Page links (and a last-page jump) need a known page count; without one `numbered`
+	// degrades to prev/next.
+	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
 
 	return (
 		<div data-variant={variant}>
-			{isNumbered && (
+			{showLinks && (
 				<button
 					type='button'
 					onClick={onFirstPage}
@@ -61,7 +44,8 @@ export function Pagination({
 			>
 				{PREVIOUS_GLYPH}
 			</button>
-			{isNumbered ? (
+			{label !== undefined && <span>{label}</span>}
+			{showLinks &&
 				Array.from({ length: pageCount }).map((_, index) => (
 					<button
 						key={index}
@@ -73,10 +57,7 @@ export function Pagination({
 					>
 						{index + 1}
 					</button>
-				))
-			) : (
-				<span>{label}</span>
-			)}
+				))}
 			<button
 				type='button'
 				onClick={onNextPage}
@@ -84,7 +65,7 @@ export function Pagination({
 			>
 				{NEXT_GLYPH}
 			</button>
-			{isNumbered && (
+			{showLinks && (
 				<button
 					type='button'
 					onClick={onLastPage}

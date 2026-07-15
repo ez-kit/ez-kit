@@ -84,10 +84,17 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariant.Simple)
 	})
 
-	it('pagination.variant is display-only → never reaches core pagination state', () => {
+	// `getState().pagination` is rebuilt by TanStack from pageIndex/pageSize, so asserting on
+	// it would pass even if the strip were removed. Assert on the options core actually saw.
+	it('pagination.variant is display-only → never reaches the core table options', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariant.Compact } }),
+			useDataGrid({
+				data: USERS,
+				columns: COLUMNS,
+				pagination: { variant: PaginationVariant.Compact, pageSize: 10 },
+			}),
 		)
+		expect(result.current.table.options).not.toHaveProperty('variant')
 		expect(result.current.table.getState().pagination).not.toHaveProperty('variant')
 	})
 

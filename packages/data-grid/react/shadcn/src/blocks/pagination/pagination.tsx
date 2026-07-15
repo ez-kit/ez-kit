@@ -1,4 +1,4 @@
-import { PaginationVariant } from '@ez-kit/data-grid-react'
+import { buildPaginationLabel, PaginationVariant } from '@ez-kit/data-grid-react'
 
 import {
 	Pagination as ShadcnPagination,
@@ -9,24 +9,10 @@ import {
 	PaginationNext,
 } from '@grid-shadcn/components/ui/pagination'
 
-
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
 const DISABLED_CLASS = 'pointer-events-none opacity-50'
 const LABEL_CLASS = 'mr-3 flex items-center text-sm text-muted-foreground'
-const RANGE_SEPARATOR = '–'
-const OF_LABEL = 'of'
-const PAGE_LABEL = 'Page'
-
-function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number): string {
-	const from = pageIndex * pageSize + 1
-	const to = Math.min((pageIndex + 1) * pageSize, rowCount)
-	return `${String(from)}${RANGE_SEPARATOR}${String(to)} ${OF_LABEL} ${String(rowCount)}`
-}
-
-function buildPageLabel(pageIndex: number, pageCount: number): string {
-	return `${PAGE_LABEL} ${String(pageIndex + 1)} ${OF_LABEL} ${String(pageCount)}`
-}
 
 export function Pagination({
 	variant,
@@ -40,13 +26,9 @@ export function Pagination({
 	onNextPage,
 	onPageChange,
 }: PaginationProps) {
-	const rangeLabel = rowCount !== undefined ? buildRangeLabel(pageIndex, pageSize, rowCount) : undefined
-	// `simple` is defined by its range label, so when the total is unknown it degrades to
-	// the page label rather than rendering bare prev/next with no context.
-	const label =
-		variant === PaginationVariant.Compact
-			? buildPageLabel(pageIndex, pageCount)
-			: (rangeLabel ?? (variant === PaginationVariant.Simple ? buildPageLabel(pageIndex, pageCount) : undefined))
+	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
+	// Page links need a known page count; without one `numbered` degrades to prev/next.
+	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
 
 	return (
 		<ShadcnPagination
@@ -62,7 +44,7 @@ export function Pagination({
 						onClick={canPreviousPage ? onPreviousPage : undefined}
 					/>
 				</PaginationItem>
-				{variant === PaginationVariant.Numbered &&
+				{showLinks &&
 					Array.from({ length: pageCount }).map((_, index) => (
 						<PaginationItem key={index}>
 							<PaginationLink

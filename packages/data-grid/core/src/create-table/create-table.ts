@@ -10,7 +10,7 @@ import {
 } from '@tanstack/table-core'
 
 import { mapColumns } from '../column/map-columns'
-import { DEFAULT_PAGE_SIZE } from '../defaults'
+import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingFeature } from '../features/creating'
 import { DeletingFeature } from '../features/deleting'
 import { EditingFeature } from '../features/editing'
@@ -290,7 +290,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 					// given (or neither), fall back to the explicit value or -1 (unknown).
 					...(config.pagination.rowCount !== undefined
 						? { rowCount: config.pagination.rowCount }
-						: { pageCount: config.pagination.pageCount ?? -1 }),
+						: { pageCount: config.pagination.pageCount ?? UNKNOWN_PAGE_COUNT }),
 				}
 			: {}),
 		// Filtering manual

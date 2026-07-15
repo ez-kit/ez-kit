@@ -115,13 +115,18 @@ export enum PaginationVariant {
 
 export type PaginationProps = {
 	pageIndex: number
-	pageCount: number
+	/**
+	 * Total number of pages. `undefined` when unknown — a manually paginated grid given
+	 * neither `rowCount` nor `pageCount` knows only which page it is on. Already
+	 * normalized: the core `UNKNOWN_PAGE_COUNT` sentinel never reaches a UI kit.
+	 */
+	pageCount?: number
 	/** Rows per page, from the table's pagination state. Drives the "X–Y of N" range label. */
 	pageSize: number
 	/**
-	 * Total row count from the server. Present when the consumer supplied
-	 * `pagination.rowCount`; `undefined` when unknown (e.g. only `pageCount`
-	 * was given, or the total is not known). Use to render an "X–Y of N" label.
+	 * Total row count across all pages. `undefined` when unknown — i.e. a manually
+	 * paginated grid where the consumer supplied no `pagination.rowCount`. Never inferred
+	 * from the loaded page. Use to render an "X–Y of N" label.
 	 */
 	rowCount?: number
 	/** Which set of controls to render. Resolved by the react layer; never undefined. */

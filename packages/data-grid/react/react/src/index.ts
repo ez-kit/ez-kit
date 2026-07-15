@@ -46,6 +46,10 @@ export type {
 	SelectionPanelVariant,
 } from './use-data-grid'
 
+// Pagination footer label (shared by every UI kit — content, not styling)
+export { buildPaginationLabel } from './data-grid/pagination-label'
+export type { PaginationLabelInput } from './data-grid/pagination-label'
+
 // Infinite scroll
 export { useInfiniteScroll } from './data-grid/use-infinite-scroll'
 export type { InfiniteController } from './data-grid/use-infinite-scroll'

@@ -360,6 +360,7 @@ function TestCreatingActionsCell({ onSave, onCancel }: CreatingActionsCellProps)
 function TestPagination({
 	pageIndex,
 	pageCount,
+	variant,
 	canPreviousPage,
 	canNextPage,
 	onPreviousPage,
@@ -367,8 +368,11 @@ function TestPagination({
 	onFirstPage,
 	onLastPage,
 }: PaginationProps) {
+	// `pageCount` is undefined when the total is unknown — render the page number alone
+	// rather than "1 / undefined".
+	const position = pageCount === undefined ? String(pageIndex + 1) : `${String(pageIndex + 1)} / ${String(pageCount)}`
 	return (
-		<div>
+		<div data-variant={variant}>
 			<button
 				type='button'
 				onClick={onFirstPage}
@@ -383,9 +387,7 @@ function TestPagination({
 			>
 				{'‹'}
 			</button>
-			<span>
-				{pageIndex + 1} / {pageCount}
-			</span>
+			<span>{position}</span>
 			<button
 				type='button'
 				onClick={onNextPage}
