@@ -1,5 +1,5 @@
 ---
-'@ez-kit/data-grid-react': major
+'@ez-kit/data-grid-react': minor
 ---
 
 Fix infinite scroll's auto trigger in collection-rendering UI kits (HeroUI), and detect the
@@ -12,7 +12,7 @@ ref resolved to a collection node rather than an element. `IntersectionObserver.
 threw and took the grid down with it; in `manual` mode the same drop silently removed the
 "Load more" button. Detection now measures the scroll container, which this package owns, so
 it no longer depends on how a kit renders rows. Infinite scroll also resolves that container
-directly rather than through `resolveScrollElement()`, which finds the first *horizontal*
+directly rather than through `resolveScrollElement()`, which finds the first _horizontal_
 scroller (HeroUI's inner `ScrollContainer` — it grows with its content and never scrolls
 vertically, so it read as "already at the bottom" forever and broke reset-to-top).
 

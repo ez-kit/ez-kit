@@ -1,9 +1,9 @@
 ---
-'@ez-kit/data-grid-core': major
-'@ez-kit/data-grid-react': major
-'@ez-kit/data-grid-shadcn': major
-'@ez-kit/data-grid-heroui': major
-'@ez-kit/data-grid-native': major
+'@ez-kit/data-grid-core': minor
+'@ez-kit/data-grid-react': minor
+'@ez-kit/data-grid-shadcn': minor
+'@ez-kit/data-grid-heroui': minor
+'@ez-kit/data-grid-native': minor
 ---
 
 Add `pagination.variant` for the page-based footer: `'numbered'` (the default), `'simple'` (prev/next + an "X–Y of N" range label) and `'compact'` (prev/next + "Page X of Y"). The option takes the `PaginationVariant` string union, so no import is needed; the exported `PaginationVariants` const object (`PaginationVariants.Simple`) is optional sugar for the same values. The variant is presentational only — paging behaviour is identical across variants and the footer position is unchanged. Load-more is not a variant; it remains `pagination: { mode: 'infinite', trigger: 'manual' }`.
