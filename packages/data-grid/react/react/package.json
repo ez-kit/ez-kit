@@ -35,8 +35,6 @@
 		"build": "tsup src/index.ts src/cell-types/index.ts --format esm --dts --sourcemap && cp src/styles/global.css dist/styles.css",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
-		"format": "node ../../../../scripts/prettier.mjs --write",
-		"format:check": "node ../../../../scripts/prettier.mjs --check",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
 		"size": "size-limit",

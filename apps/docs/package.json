@@ -13,8 +13,6 @@
 		"build:deps": "turbo run build --filter=@ez-kit/docs^...",
 		"start": "next start",
 		"lint": "eslint .",
-		"format": "node ../../scripts/prettier.mjs --write",
-		"format:check": "node ../../scripts/prettier.mjs --check",
 		"typecheck": "next typegen && fumadocs-mdx && tsc --project tsconfig.json --noEmit",
 		"test": "vitest run --passWithNoTests",
 		"test:visual": "playwright test",
