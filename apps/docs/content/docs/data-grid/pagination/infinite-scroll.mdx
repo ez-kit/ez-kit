@@ -120,8 +120,12 @@ while a fetch is in flight.
 ## Notes
 
 - The `@ez-kit/data-grid-react` package ships **zero styling** for the loader — it emits
-  `data-slot="load-more-row" | "load-more-sentinel"` and renders the injected `LoadMoreRow`.
-  The shadcn and HeroUI flavors provide the styled spinner / button / retry.
+  `data-slot="load-more-row"` and renders the injected `LoadMoreRow`. The shadcn and HeroUI
+  flavors provide the styled spinner / button / retry.
+- Auto detection measures the scroll container itself, so it needs a container that actually
+  scrolls vertically — give the grid a bounded height (`stickyHeader`, or your own
+  `--dg-table-max-height`). If the rows never overflow, there is no edge to reach and nothing
+  auto-loads; use `trigger: 'manual'` for that case.
 - Infinite mode replaces the page footer — see [Pagination](/docs/data-grid/pagination).
 
 ## Source
