@@ -21,34 +21,56 @@ const COLUMNS = [
 	{ accessorKey: 'age', header: 'Age' },
 ] as UseDataGridConfig<User>['columns']
 
-// ── IntersectionObserver mock ───────────────────────────────────────────────
-type IOEntry = { isIntersecting: boolean }
-let ioCallbacks: ((entries: IOEntry[]) => void)[] = []
+// ── scroll-container driver ─────────────────────────────────────────────────
+// Auto detection measures the scroll container, so these drive real scroll events against
+// it. jsdom has no layout, so the metrics the detection reads are stubbed explicitly.
+const CLIENT_HEIGHT = 400
+const SCROLL_HEIGHT = 1000
 
-class MockIntersectionObserver {
-	constructor(cb: (entries: IOEntry[]) => void) {
-		ioCallbacks.push(cb)
-	}
-	observe(): void {}
-	unobserve(): void {}
-	disconnect(): void {}
-	takeRecords(): IOEntry[] {
-		return []
-	}
+function getScrollContainer(): HTMLElement {
+	const el = document.querySelector("[data-slot='table-scroll']")
+	if (!(el instanceof HTMLElement)) throw new Error('expected a table-scroll container')
+	return el
 }
 
-function fireIntersect(): void {
+/** Give the container a laid-out size so it has a meaningful bottom edge. */
+function stubLayout(root: HTMLElement): void {
+	vi.spyOn(root, 'clientHeight', 'get').mockReturnValue(CLIENT_HEIGHT)
+	vi.spyOn(root, 'scrollHeight', 'get').mockReturnValue(SCROLL_HEIGHT)
+}
+
+/** Scroll to a given distance from the bottom edge and emit the scroll event. */
+function scrollToDistanceFromBottom(distance: number): void {
+	const root = getScrollContainer()
+	stubLayout(root)
 	act(() => {
-		for (const cb of ioCallbacks) cb([{ isIntersecting: true }])
+		root.scrollTop = SCROLL_HEIGHT - CLIENT_HEIGHT - distance
+		root.dispatchEvent(new Event('scroll'))
 	})
 }
 
+function scrollToBottom(): void {
+	scrollToDistanceFromBottom(0)
+}
+
+/** Leave the trigger zone, so the next scrollToBottom() is a fresh entry into it. */
+function scrollAwayFromBottom(): void {
+	scrollToDistanceFromBottom(SCROLL_HEIGHT)
+}
+
 beforeEach(() => {
-	ioCallbacks = []
-	vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
+	vi.stubGlobal(
+		'ResizeObserver',
+		class {
+			observe(): void {}
+			unobserve(): void {}
+			disconnect(): void {}
+		},
+	)
 })
 
 afterEach(() => {
+	vi.restoreAllMocks()
 	vi.unstubAllGlobals()
 })
 
@@ -58,7 +80,7 @@ function InfiniteGrid(props: { config: UseDataGridConfig<User> }) {
 }
 
 describe('infinite scroll — auto trigger', () => {
-	it('fires onLoadMore({ direction: forward }) once when the sentinel intersects', () => {
+	it('fires onLoadMore({ direction: forward }) once when scrolled to the bottom', () => {
 		const onLoadMore = vi.fn().mockResolvedValue(undefined)
 		renderWithComponents(
 			<InfiniteGrid
@@ -66,10 +88,37 @@ describe('infinite scroll — auto trigger', () => {
 			/>,
 		)
 
-		fireIntersect()
+		scrollToBottom()
 
 		expect(onLoadMore).toHaveBeenCalledTimes(1)
 		expect(onLoadMore).toHaveBeenCalledWith({ direction: 'forward' })
+	})
+
+	it('does not fire while the bottom edge is still out of range', () => {
+		const onLoadMore = vi.fn().mockResolvedValue(undefined)
+		renderWithComponents(
+			<InfiniteGrid
+				config={{ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', hasNextPage: true, onLoadMore } }}
+			/>,
+		)
+
+		scrollAwayFromBottom()
+
+		expect(onLoadMore).not.toHaveBeenCalled()
+	})
+
+	it('fires once per entry into the trigger zone, not for every scroll event', () => {
+		const onLoadMore = vi.fn().mockResolvedValue(undefined)
+		renderWithComponents(
+			<InfiniteGrid
+				config={{ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', hasNextPage: true, onLoadMore } }}
+			/>,
+		)
+
+		scrollToBottom()
+		scrollToBottom()
+
+		expect(onLoadMore).toHaveBeenCalledTimes(1)
 	})
 
 	it('does not refire while a fetch is in flight', () => {
@@ -80,8 +129,9 @@ describe('infinite scroll — auto trigger', () => {
 			/>,
 		)
 
-		fireIntersect()
-		fireIntersect()
+		scrollToBottom()
+		scrollAwayFromBottom()
+		scrollToBottom()
 
 		expect(onLoadMore).toHaveBeenCalledTimes(1)
 	})
@@ -94,7 +144,7 @@ describe('infinite scroll — auto trigger', () => {
 			/>,
 		)
 
-		fireIntersect()
+		scrollToBottom()
 
 		expect(onLoadMore).not.toHaveBeenCalled()
 	})
@@ -114,7 +164,7 @@ describe('infinite scroll — manual trigger', () => {
 			/>,
 		)
 
-		fireIntersect()
+		scrollToBottom()
 		expect(onLoadMore).not.toHaveBeenCalled()
 
 		await user.click(screen.getByText('Load more'))

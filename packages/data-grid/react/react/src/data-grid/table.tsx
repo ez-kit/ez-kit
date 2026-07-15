@@ -142,6 +142,8 @@ export function DataGridTable() {
 	const wrapperRef = useRef<HTMLDivElement>(null)
 	// containerRef — inner scroll div used by useVirtualizer (virtualized mode only)
 	const containerRef = useRef<HTMLDivElement>(null)
+	// scrollRef — the `data-slot="table-scroll"` div (non-virtualized mode); see getScrollElement
+	const scrollRef = useRef<HTMLDivElement>(null)
 
 	const rows = isVirtualized ? (table.options.enableRowPinning ? table.getCenterRows() : table.getRowModel().rows) : []
 
@@ -173,11 +175,14 @@ export function DataGridTable() {
 	}, [gridTemplateColumns])
 
 	// ── infinite scroll ───────────────────────────────────────────────────────
-	// Shared scroll-element resolver for the IntersectionObserver root and reset-to-top.
+	// Shared scroll element for edge detection and reset-to-top: the element that scrolls
+	// *vertically*, which is our own `table-scroll` div (it owns the bounded height via
+	// `max-height` in sticky-header mode). Deliberately NOT resolveScrollElement — that finds
+	// the first *horizontal* scroller for the pin shadows, and in HeroUI that is the kit's
+	// inner ScrollContainer, which grows with its content and never scrolls vertically. Using
+	// it here reported "already at the bottom" forever and never scrolled back to top.
 	const getScrollElement = useCallback((): HTMLElement | null => {
-		if (isVirtualized) return containerRef.current
-		const wrapper = wrapperRef.current
-		return wrapper ? resolveScrollElement(wrapper) : null
+		return isVirtualized ? containerRef.current : scrollRef.current
 		// isVirtualized never changes after mount; refs are stable.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
@@ -249,6 +254,7 @@ export function DataGridTable() {
 				data-slot='table-wrapper'
 			>
 				<div
+					ref={scrollRef}
 					data-slot='table-scroll'
 					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
 				>

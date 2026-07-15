@@ -10,14 +10,21 @@ import { useVirtualContext } from './virtual-context'
 
 /**
  * Forward infinite-scroll footer. Emits only structural markers
- * (`data-slot="load-more-sentinel" | "load-more-row"`, `data-direction="forward"`)
- * and the injectable {@link LoadMoreRow} — no visual styling (that lives in the UI kit).
+ * (`data-slot="load-more-row"`, `data-direction="forward"`) and the injectable
+ * {@link LoadMoreRow} — no visual styling (that lives in the UI kit).
  *
- * Auto detection: in **non-virtualized** mode an IntersectionObserver watches the
- * sentinel against the scroll container. In virtualized mode detection is driven by the
- * virtualizer's last index in `VirtualBody`, so the observer here is skipped to avoid a
- * double trigger. In `manual` mode no observer runs — the injected "Load more" control
- * drives `onTrigger`.
+ * Auto detection: in **non-virtualized** mode the scroll container is watched directly and a
+ * load fires once its bottom edge comes within `threshold.px`. In virtualized mode detection
+ * is driven by the virtualizer's last index in `VirtualBody`, so this listener is skipped to
+ * avoid a double trigger. In `manual` mode nothing is watched — the injected "Load more"
+ * control drives `onTrigger`.
+ *
+ * Detection deliberately measures the scroll container rather than observing a sentinel
+ * element rendered into the table: a UI kit may render `Tbody` as a collection (HeroUI's
+ * `Table.Body` is a React Aria collection) which builds its rows in one pass and renders the
+ * real DOM in a later commit. A ref pointing into that content resolves to a collection node
+ * — or to nothing at all — so a sentinel-based observer either threw or silently never
+ * armed. The scroll container is owned by this package, so measuring it works in every kit.
  */
 export function LoadMoreFooter() {
 	const controller = useInfiniteScroll()
@@ -28,72 +35,77 @@ export function LoadMoreFooter() {
 	const { rowVirtualizer } = useVirtualContext()
 	const { getScrollElement } = useInfiniteContext()
 
-	const sentinelRef = useRef<HTMLTableRowElement>(null)
-
-	const { enabled, trigger, hasMore, loadMore } = controller
+	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
 	const thresholdPx = controller.threshold.px ?? DATA_GRID_DEFAULTS.infinite.threshold.px
 	const isVirtualized = rowVirtualizer !== null
 
+	// Whether the last measurement was already inside the trigger zone. Held in a ref so it
+	// survives re-arming (e.g. when `hasMore` changes) — a fresh `false` would re-fire a load
+	// for a bottom edge the user never crossed again.
+	const wasWithinThresholdRef = useRef(false)
+
 	useEffect(() => {
 		if (!enabled || trigger !== 'auto' || isVirtualized || !hasMore) return
-		// IntersectionObserver is browser-only; effects don't run on the server, but
-		// guard defensively for non-DOM test/runtime environments.
-		if (typeof IntersectionObserver === 'undefined') return
-		const sentinel = sentinelRef.current
 		const root = getScrollElement()
-		if (!sentinel || !root) return
+		if (!root) return
 
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries.some((entry) => entry.isIntersecting)) {
-					loadMore('forward')
-				}
-			},
-			{ root, rootMargin: `0px 0px ${String(thresholdPx)}px 0px`, threshold: 0 },
-		)
-		observer.observe(sentinel)
-		return () => {
-			observer.disconnect()
+		// Edge-triggered, mirroring the IntersectionObserver this replaced: a load fires when
+		// the bottom edge is *entered*, not for as long as it stays in view. Level-triggering
+		// would drain every page at once whenever the content cannot overflow.
+		const check = () => {
+			// Nothing to scroll — the content fits, or the container has no laid-out height yet.
+			// There is no bottom edge for the user to reach, so firing here would load pages with
+			// no interaction at all; a kit that commits its rows in a later pass (HeroUI's
+			// collection body) measures as an empty container on this first pass.
+			if (root.scrollHeight <= root.clientHeight) {
+				wasWithinThresholdRef.current = false
+				return
+			}
+			const distanceToBottom = root.scrollHeight - root.scrollTop - root.clientHeight
+			const isWithinThreshold = distanceToBottom <= thresholdPx
+			if (isWithinThreshold && !wasWithinThresholdRef.current) loadMore('forward')
+			wasWithinThresholdRef.current = isWithinThreshold
 		}
-	}, [enabled, trigger, isVirtualized, hasMore, thresholdPx, getScrollElement, loadMore])
+
+		root.addEventListener('scroll', check, { passive: true })
+		// A container that grows/shrinks can cross the threshold without a scroll event.
+		const resizeObserver = new ResizeObserver(check)
+		resizeObserver.observe(root)
+		// Runs on mount and, via the `isFetching` dependency, again once each load settles:
+		// appended rows push the bottom edge away without emitting a scroll event, so this is
+		// what clears the "already in the zone" latch and re-arms the next entry.
+		check()
+
+		return () => {
+			root.removeEventListener('scroll', check)
+			resizeObserver.disconnect()
+		}
+	}, [enabled, trigger, isVirtualized, hasMore, isFetching, thresholdPx, getScrollElement, loadMore])
 
 	if (!enabled) return null
-	if (!hasMore && !controller.isFetching && controller.error == null) return null
+	if (!hasMore && !isFetching && controller.error == null) return null
 
 	const columnCount = instance.table.getVisibleLeafColumns().length
 
 	return (
-		<>
-			<tr
-				ref={sentinelRef}
-				data-slot='load-more-sentinel'
-				data-direction='forward'
-				aria-hidden='true'
-			>
-				<td
-					colSpan={columnCount}
-					aria-hidden='true'
+		<Tr
+			data-slot='load-more-row'
+			data-direction='forward'
+		>
+			<Td colSpan={columnCount}>
+				<LoadMoreRow
+					columnCount={columnCount}
+					direction='forward'
+					isFetching={isFetching}
+					hasMore={hasMore}
+					error={controller.error}
+					trigger={trigger}
+					onTrigger={() => {
+						loadMore('forward')
+					}}
+					onRetry={controller.retry}
 				/>
-			</tr>
-			<Tr
-				data-slot='load-more-row'
-				data-direction='forward'
-			>
-				<Td colSpan={columnCount}>
-					<LoadMoreRow
-						columnCount={columnCount}
-						direction='forward'
-						isFetching={controller.isFetching}
-						hasMore={controller.hasMore}
-						error={controller.error}
-						trigger={controller.trigger}
-						onTrigger={() => {
-							controller.loadMore('forward')
-						}}
-						onRetry={controller.retry}
-					/>
-				</Td>
-			</Tr>
-		</>
+			</Td>
+		</Tr>
 	)
 }
