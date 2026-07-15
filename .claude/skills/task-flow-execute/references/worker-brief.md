@@ -19,8 +19,8 @@ left to judgement. Run every script from the **repo root** unless noted.
 2. **Read the plan** — `gh issue view <N> --repo ez-kit/ez-kit --comments`. The approved
    plan is the latest `## План выполнения` comment. That plan is your spec.
 3. **Branch** — confirm the working tree is clean (`git status --porcelain` empty), then create
-   the task branch off `main` in the current worktree:
-   `git switch main && git switch -c issue-<N>-<slug>`. Never edit on `main` directly.
+   the task branch off `develop` in the current worktree:
+   `git switch develop && git switch -c issue-<N>-<slug>`. Never edit on `develop` directly.
 4. **Implement** per the plan, honoring the ez-kit constraints below.
 5. **Setup** — `pnpm install` **only if** the plan touched `package.json` or the lockfile
    (`git status --porcelain -- '**/package.json' pnpm-lock.yaml` non-empty). Otherwise skip —
@@ -62,7 +62,7 @@ left to judgement. Run every script from the **repo root** unless noted.
    no pre-push re-check is needed).
 10. **Open the draft PR:**
     ```bash
-    gh pr create --repo ez-kit/ez-kit --base main --head issue-<N>-<slug> --draft \
+    gh pr create --repo ez-kit/ez-kit --base develop --head issue-<N>-<slug> --draft \
       --title "<type>: <summary>" \
       --body "Closes #<N>
 

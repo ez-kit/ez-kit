@@ -42,8 +42,8 @@ worktree worker. Read `references/worker-brief.md` for the exact steps and the d
 wrapper scripts every gate/visual/push step must go through. In short:
 
 1. `Ready → In progress`
-2. create the branch `issue-<N>-<slug>` from `main` in the current worktree (never edit on
-   `main` directly)
+2. create the branch `issue-<N>-<slug>` from `develop` in the current worktree (never edit on
+   `develop` directly)
 3. read the approved plan from the issue comment; implement it
 4. objective gate — all must pass: `lint`, `typecheck`, `test`, `build` of the affected
    package, **plus** an isolated visual check (dev server on `PW_PORT=3101` + Chromium via
@@ -73,7 +73,7 @@ was skipped or failed, state the reason. Then stop — the user reviews the PR (
 
 ## Guardrails
 
-- Never touch `main`; all work happens on the `issue-<N>-<slug>` branch in the current
+- Never touch `develop`; all work happens on the `issue-<N>-<slug>` branch in the current
   worktree.
 - Never create a worktree; never set `Done`; never merge.
 - The task only reaches `In review` after its objective gate AND code review are green.
