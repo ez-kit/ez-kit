@@ -206,6 +206,47 @@ describe('useDataGrid', () => {
 		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
 	})
 
+	// `rowCount: data?.rowCount ?? 0` is the canonical manual-pagination shape, so a `0` on the
+	// first render means "not loaded yet", not "empty" — the resync comment above says as much
+	// ("it starts at 0, then reflects the filtered total after each fetch"). Clamping there would
+	// discard a deep-linked page while its fetch is still in flight: the inverse of #82.
+	it('does not clamp a deep-linked pageIndex while rowCount is still a loading placeholder', () => {
+		const onStateChangeSpy = vi.fn()
+		render(
+			<ClampGrid
+				rowCount={0}
+				tableState={{ pagination: { pageIndex: 3, pageSize: 10 } }}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		expect(onStateChangeSpy).not.toHaveBeenCalled()
+	})
+
+	it('keeps a deep-linked pageIndex once the placeholder rowCount resolves', () => {
+		const onStateChangeSpy = vi.fn()
+		const deepLinked: Partial<TableState> = { pagination: { pageIndex: 3, pageSize: 10 } }
+		const { rerender, getByTestId } = render(
+			<ClampGrid
+				rowCount={0}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		// The fetch lands: the total grows into place. Page 4 is valid — nothing to clamp.
+		rerender(
+			<ClampGrid
+				rowCount={500}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		expect(onStateChangeSpy).not.toHaveBeenCalled()
+		expect(getByTestId('page-index').textContent).toBe('3')
+	})
+
 	// The controlled state deliberately lives in a PARENT (`ClampPage`) rather than alongside
 	// `useDataGrid`: co-locating it is React's legal same-component derived-state path and hides
 	// the real failure. Clamping from the render body calls the parent's setter mid-render, which
@@ -225,7 +266,7 @@ describe('useDataGrid', () => {
 		errorSpy.mockRestore()
 	})
 
-	it('notifies once and does not loop when a controlled consumer ignores the clamp', () => {
+	it('notifies the consumer but does not loop when it ignores the clamp', () => {
 		const onStateChangeSpy = vi.fn()
 		const ignoredState: Partial<TableState> = { pagination: { pageIndex: 2, pageSize: 10 } }
 		const { rerender, getByTestId } = render(
@@ -244,11 +285,14 @@ describe('useDataGrid', () => {
 			/>,
 		)
 
-		// The grid asks once, then defers: the consumer owns the index, so it stays out of range
+		// The grid asks, then defers: the consumer owns the index, so it stays out of range
 		// rather than the grid re-issuing the clamp on every pass.
-		expect(onStateChangeSpy).toHaveBeenCalledTimes(1)
+		const callsAfterShrink = onStateChangeSpy.mock.calls.length
+		expect(callsAfterShrink).toBeGreaterThan(0)
 		expect(getByTestId('page-index').textContent).toBe('2')
 
+		// A delta, not an absolute count: what matters is that further renders add nothing (no
+		// loop) — which stays true even if the suite ever double-invokes effects.
 		rerender(
 			<ClampGrid
 				rowCount={5}
@@ -256,7 +300,7 @@ describe('useDataGrid', () => {
 				onStateChange={onStateChangeSpy}
 			/>,
 		)
-		expect(onStateChangeSpy).toHaveBeenCalledTimes(1)
+		expect(onStateChangeSpy.mock.calls.length).toBe(callsAfterShrink)
 	})
 
 	it('re-syncs manual pagination pageCount when it changes', () => {

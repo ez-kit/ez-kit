@@ -182,10 +182,14 @@ function normalizeVirtualized(
  *
  * **Manual pagination — `pageIndex` clamping.** TanStack disables `autoResetPageIndex`
  * under `manual: true`, so a shrinking {@link PaginationConfig.rowCount} would otherwise
- * strand the user past the last page. When `rowCount` is supplied, `useDataGrid` clamps
- * `pageIndex` to the last valid page via `setPageIndex` — i.e. through `onChange` /
- * `onStateChange`, the normal controlled flow. An unknown total (`pageCount` only) is
- * never clamped: there is nothing to clamp to.
+ * strand the user past the last page. When a supplied `rowCount` actually **shrinks**,
+ * `useDataGrid` clamps `pageIndex` to the last valid page via `setPageIndex` — i.e. through
+ * `onChange` / `onStateChange`, the normal controlled flow. An unknown total (`pageCount`
+ * only) is never clamped: there is nothing to clamp to.
+ *
+ * Only a shrink clamps, never the first total observed: with the usual
+ * `rowCount: data?.rowCount ?? 0`, the initial `0` means "not loaded yet", and clamping it
+ * would reset a deep-linked page mid-fetch.
  *
  * The clamp lands **after commit**, so the render in which `rowCount` shrinks still paints
  * the pre-clamp page for one frame before the corrected one. Notifying the consumer during
@@ -773,12 +777,25 @@ export function useDataGrid<TRow extends object>(
 	// pre-clamp label — which is exactly the honest "0–0 of 5" the footer already shows today,
 	// never the inverted range.
 	//
-	// A trusted `rowCount` is the only trigger: an unknown total (`pageCount` sentinel / no total
-	// at all) has nothing to clamp to. Because the deps change only when that total does, one
-	// pass per shrink cannot re-trigger itself — a consumer that ignores the callback simply
-	// stays put instead of looping.
+	// Only an actual **shrink** of a trusted `rowCount` clamps — never the first total we see.
+	// `rowCount: data?.rowCount ?? 0` is the canonical manual shape, so the initial `0` usually
+	// means "not loaded yet" rather than "empty" (the resync above says as much), and it is
+	// indistinguishable from a genuine empty result. Clamping on it would reset a deep-linked
+	// `pageIndex` while its fetch is still in flight — the exact inverse of the bug being fixed:
+	// #82 loses the user's rows, that would lose the user's page. An unknown total (`pageCount`
+	// sentinel / no total at all) has nothing to clamp to either.
+	//
+	// A shrink can only move `pageIndex` down, and the deps change only when the total does, so
+	// one pass per shrink cannot re-trigger itself: a consumer that ignores the callback stays put
+	// instead of looping. Note this deliberately ignores a `pageSize` change at an unchanged
+	// total — `table.setPageSize` already rebases `pageIndex` itself, so only a consumer driving
+	// `pageSize` from its own state could sit out of range, which is outside this fix's scope.
+	const prevRowCountRef = useRef<number | undefined>(undefined)
 	useEffect(() => {
-		if (nextRowCount === undefined) return
+		const prevRowCount = prevRowCountRef.current
+		prevRowCountRef.current = nextRowCount
+		if (nextRowCount === undefined || prevRowCount === undefined) return
+		if (nextRowCount >= prevRowCount) return
 		const { pageIndex, pageSize } = table.getState().pagination
 		// An empty or otherwise degenerate total collapses to the single first page.
 		const lastPageIndex = nextRowCount <= 0 || pageSize <= 0 ? 0 : Math.ceil(nextRowCount / pageSize) - 1
