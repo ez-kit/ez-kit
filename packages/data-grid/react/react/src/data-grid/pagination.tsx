@@ -6,6 +6,9 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 
 import type { PaginationVariant } from '../types'
 
+/** A trusted page total of zero — the grid is known to be empty, so there is nothing to paginate. */
+const EMPTY_TOTAL = 0
+
 function readVariant(table: object): PaginationVariant {
 	const variant = (table as Record<symbol, unknown>)[PAGINATION_VARIANT_KEY] as PaginationVariant | undefined
 	return variant ?? DATA_GRID_DEFAULTS.pagination.variant
@@ -50,6 +53,20 @@ export function Pagination() {
 	// trustworthy iff the grid paginates client-side or the consumer supplied `rowCount`.
 	const hasTrustedRowCount = table.options.manualPagination !== true || table.options.rowCount !== undefined
 	const rowCount = hasTrustedRowCount ? table.getRowCount() : undefined
+
+	// Known-empty grid: a *trusted* total of zero means there is nothing to paginate, so the
+	// whole footer is hidden and the empty/no-results state stands alone. This unifies the
+	// variants — otherwise `compact` claims `Page 1` while `simple` shows `0–0 of 0` for the
+	// same empty table. An *unknown* total is deliberately excluded: it is `undefined` by the
+	// normalization above (never `0`), so a manual grid given neither count still renders `Page N`.
+	//
+	// `pageCount` alone decides this. A trusted `rowCount` of 0 implies `pageCount === 0`:
+	// `useDataGrid` keeps the two mutually exclusive (see `use-data-grid.ts` — supplying
+	// `rowCount` forces `options.pageCount` to `undefined`), so core always derives
+	// `ceil(rowCount / pageSize)` whenever the row total is known. Testing `rowCount === 0` too
+	// would add an arm no reachable config can trigger on its own.
+	if (pageCount === EMPTY_TOTAL) return null
+
 	const canPrevious = table.getCanPreviousPage()
 	const canNext = table.getCanNextPage()
 

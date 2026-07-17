@@ -78,11 +78,11 @@ pagination: { pageSize: 10, variant: 'compact' }
 A manually paginated grid given neither `rowCount` nor `pageCount` knows only which page it is
 on, so every variant degrades rather than inventing a total:
 
-| Variant | Total known | `pageCount` only | Neither | Empty grid |
-| --- | --- | --- | --- | --- |
-| `'numbered'` | `1–10 of 50` + page links | page links | no page links | `0–0 of 0` |
-| `'simple'` | `1–10 of 50` | `Page 3 of 5` | `Page 3` | `0–0 of 0` |
-| `'compact'` | `Page 1 of 5` | `Page 3 of 5` | `Page 3` | `Page 1` |
+| Variant      | Total known               | `pageCount` only | Neither       |
+| ------------ | ------------------------- | ---------------- | ------------- |
+| `'numbered'` | `1–10 of 50` + page links | page links       | no page links |
+| `'simple'`   | `1–10 of 50`              | `Page 3 of 5`    | `Page 3`      |
+| `'compact'`  | `Page 1 of 5`             | `Page 3 of 5`    | `Page 3`      |
 
 Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
 Page links are dropped when the page count is unknown, since they cannot be enumerated; each
@@ -92,6 +92,14 @@ jump-to-first control, which needs no total).
 A page that sits past the end of the total reports `0–0 of N` rather than an impossible range:
 `autoResetPageIndex` defaults to `!manualPagination`, so a server-paginated grid does not rewind
 on its own when `rowCount` shrinks beneath the current page.
+
+### Empty grid
+
+When the total is known to be zero — a client-side grid with no rows, or a server-paginated grid
+that reports `rowCount: 0` / `pageCount: 0` — the footer is not rendered at all, for every
+variant. There is nothing to paginate, so the empty/no-results state stands on its own. This only
+applies to a **trusted** zero: a manual grid with an unknown total (neither `rowCount` nor
+`pageCount`) still shows `Page N`.
 
 ## Server-side pagination
 
@@ -114,14 +122,14 @@ const grid = useDataGrid({
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `pagination.variant` | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only. |
-| `initialState.pagination` | `{ pageIndex, pageSize }` | Defaults at mount. |
-| `state.pagination` | same | Controlled state. |
-| `onPaginationChange` | `(updater) => void` | Subscribe to changes. |
-| `manualPagination` | `boolean` | Default `false`. Set `true` when paginating server-side. |
-| `rowCount` | `number` | Required when `manualPagination` is `true`. |
+| Option                    | Type                                  | Description                                                                     |
+| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------- |
+| `pagination.variant`      | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only. |
+| `initialState.pagination` | `{ pageIndex, pageSize }`             | Defaults at mount.                                                              |
+| `state.pagination`        | same                                  | Controlled state.                                                               |
+| `onPaginationChange`      | `(updater) => void`                   | Subscribe to changes.                                                           |
+| `manualPagination`        | `boolean`                             | Default `false`. Set `true` when paginating server-side.                        |
+| `rowCount`                | `number`                              | Required when `manualPagination` is `true`.                                     |
 
 ## Infinite scroll
 
