@@ -1,7 +1,10 @@
 import { defineColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { buildPaginationLabel } from './data-grid/pagination-label'
+import { PaginationVariants } from './types'
 import {
 	FILTERING_VARIANT_KEY,
 	FILTER_CHIPS_KEY,
@@ -17,6 +20,7 @@ import type {
 	NormalizedFilterChipsConfig,
 	NormalizedGlobalFilteringConfig,
 } from './use-data-grid'
+import type { TableState } from '@ez-kit/data-grid-core'
 
 type User = {
 	id: number
@@ -69,6 +73,135 @@ describe('useDataGrid', () => {
 		rerender({ rowCount: 1250 })
 		expect(result.current.table.getRowCount()).toBe(1250)
 		expect(result.current.table.getPageCount()).toBe(125)
+	})
+
+	// Regression (#82): `autoResetPageIndex` defaults to `!manualPagination`, so TanStack never
+	// rewinds the page itself under manual mode. With a shrinking server total the footer claimed
+	// "0–0 of 5" while `getPaginationRowModel()` — the whole `data` under manual mode — still
+	// rendered all 5 rows.
+	it('clamps pageIndex to the last page when a manual rowCount shrinks under the user', () => {
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+				}),
+			{ initialProps: { rowCount: 500 } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+
+		// A server filter narrows 500 rows to 5 while the user sits on page 3.
+		rerender({ rowCount: 5 })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+		expect(
+			buildPaginationLabel({
+				variant: PaginationVariants.Simple,
+				pageIndex: result.current.table.getState().pagination.pageIndex,
+				pageSize: 10,
+				rowCount: result.current.table.getRowCount(),
+			}),
+		).toBe('1–5 of 5')
+	})
+
+	it('clamps pageIndex to the first page when a manual rowCount drops to zero', () => {
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+				}),
+			{ initialProps: { rowCount: 500 } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+
+		rerender({ rowCount: 0 })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+	})
+
+	it('leaves pageIndex alone while it is still within a shrunken manual rowCount', () => {
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+				}),
+			{ initialProps: { rowCount: 500 } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+
+		// 50 rows still spans 5 pages — page 3 remains valid, so nothing to clamp.
+		rerender({ rowCount: 50 })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+	})
+
+	it('never clamps pageIndex when the manual total is unknown', () => {
+		const { result, rerender } = renderHook(
+			({ data }: { data: User[] }) =>
+				useDataGrid({
+					data,
+					columns: COLUMNS,
+					// Neither rowCount nor pageCount: the total is genuinely unknown.
+					pagination: { manual: true, pageSize: 10 },
+				}),
+			{ initialProps: { data: USERS } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+
+		rerender({ data: [{ id: 3, name: 'Carol' }] })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+	})
+
+	it('clamps through onStateChange when a controlled consumer mirrors it, without looping', () => {
+		const onStateChangeSpy = vi.fn()
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) => {
+				const [tableState, setTableState] = useState<Partial<TableState>>({
+					pagination: { pageIndex: 2, pageSize: 10 },
+				})
+				return useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+					state: tableState,
+					onStateChange: (updater) => {
+						onStateChangeSpy()
+						setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+					},
+				})
+			},
+			{ initialProps: { rowCount: 500 } },
+		)
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+
+		rerender({ rowCount: 5 })
+		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+
+		// Converged: the mirrored clamp does not re-trigger itself on later renders.
+		const callsAfterClamp = onStateChangeSpy.mock.calls.length
+		rerender({ rowCount: 5 })
+		expect(onStateChangeSpy.mock.calls.length).toBe(callsAfterClamp)
+		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
 	})
 
 	it('re-syncs manual pagination pageCount when it changes', () => {

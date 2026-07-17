@@ -179,6 +179,17 @@ function normalizeVirtualized(
  * (`trigger`, `threshold`) on top of the headless {@link PaginationConfig}
  * (`mode`, `hasNextPage`, `onLoadMore`). Mirrors the `ReactFilteringConfig`
  * pattern: data semantics in core, DOM detection here.
+ *
+ * **Manual pagination — `pageIndex` clamping.** TanStack disables `autoResetPageIndex`
+ * under `manual: true`, so a shrinking {@link PaginationConfig.rowCount} would otherwise
+ * strand the user past the last page. When `rowCount` is supplied, `useDataGrid` clamps
+ * `pageIndex` to the last valid page via `setPageIndex` — i.e. through `onChange` /
+ * `onStateChange`, the normal controlled flow. An unknown total (`pageCount` only) is
+ * never clamped: there is nothing to clamp to.
+ *
+ * Limitation: a consumer that fully controls `state.pagination` but **ignores** the change
+ * callback keeps ownership of the index — the grid cannot force the shift, and the page
+ * stays out of range until the consumer mirrors the callback.
  */
 export type ReactPaginationConfig = PaginationConfig & {
 	/**
@@ -414,9 +425,9 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	pagination?: boolean | ReactPaginationConfig
 } & Omit<
-		TableConfig<TRow>,
-		'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection'
-	> & {
+	TableConfig<TRow>,
+	'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection'
+> & {
 		expanding?: boolean | ReactExpandingConfig<TRow>
 	}
 
@@ -470,9 +481,7 @@ export function useDataGrid<TRow extends object>(
 	const selectionPanel: boolean | SelectionPanelConfig<TRow> | undefined =
 		typeof rawSelection === 'object' ? rawSelection.panel : undefined
 	const coreSelection: boolean | SelectionConfig | undefined =
-		typeof rawSelection === 'object'
-			? (({ panel: _panel, ...rest }) => rest)(rawSelection)
-			: rawSelection
+		typeof rawSelection === 'object' ? (({ panel: _panel, ...rest }) => rest)(rawSelection) : rawSelection
 
 	// Split pagination into the headless core part (strip React-only detection tuning and
 	// the display-only `variant`) and the normalized infinite config stored on the instance
@@ -509,7 +518,9 @@ export function useDataGrid<TRow extends object>(
 		typeof rawFiltering === 'object' ? rawFiltering.variant : undefined
 
 	const filteringDebounce: number =
-		typeof rawFiltering === 'object' ? (rawFiltering.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS) : DEFAULT_FILTER_DEBOUNCE_MS
+		typeof rawFiltering === 'object'
+			? (rawFiltering.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS)
+			: DEFAULT_FILTER_DEBOUNCE_MS
 
 	const normalizedChips: NormalizedFilterChipsConfig | undefined = (() => {
 		if (typeof rawFiltering !== 'object' || rawFiltering.chips === undefined || rawFiltering.chips === false) {
@@ -740,6 +751,34 @@ export function useDataGrid<TRow extends object>(
 			else delete next.pageCount
 			return next
 		})
+	}
+
+	// Clamp `pageIndex` to the last valid page when a manual-pagination `rowCount` shrinks
+	// under the user (e.g. a server filter narrows 500 rows to 5 while they sit on page 3).
+	// TanStack defaults `autoResetPageIndex` to `!manualPagination`, so under manual mode it
+	// never resets the index itself, and the resync above only projects the descriptors. Left
+	// alone, the footer reads "0–0 of 5" while `getPaginationRowModel()` — which returns the
+	// whole `data` under manual mode — still renders all 5 rows: the label contradicts the
+	// screen. Only clamp against a trusted total (`rowCount`); with an unknown total
+	// (`pageCount` sentinel / no total at all) there is nothing to clamp to.
+	const clampTargetRef = useRef<number | null>(null)
+	if (manualPagination && nextRowCount !== undefined) {
+		const { pageIndex, pageSize } = instanceRef.current.table.getState().pagination
+		// An empty (or degenerate) total collapses to the single first page.
+		const lastPageIndex = nextRowCount === 0 || pageSize <= 0 ? 0 : Math.ceil(nextRowCount / pageSize) - 1
+		if (pageIndex > lastPageIndex) {
+			// Guard against re-issuing the same target every render: `setPageIndex` routes
+			// through `onPaginationChange`, so a controlled consumer that mirrors it converges
+			// on the next render (where the branch below resets the guard), and one that
+			// ignores it simply stays put instead of looping.
+			if (clampTargetRef.current !== lastPageIndex) {
+				clampTargetRef.current = lastPageIndex
+				instanceRef.current.table.setPageIndex(lastPageIndex)
+			}
+		} else {
+			// Already within range — drop the guard so a later shrink can clamp again.
+			clampTargetRef.current = null
+		}
 	}
 
 	// The loading status (`isPending`/`isFetching`/`isError`/`error`) is user-owned
