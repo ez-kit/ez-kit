@@ -1,5 +1,6 @@
 import { DEFAULT_PAGE_SIZE } from '@ez-kit/data-grid-core'
 
+import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from './data-grid/page-window'
 import { PaginationVariants } from './types'
 
 /**
@@ -26,6 +27,9 @@ export const DATA_GRID_DEFAULTS = {
 	pagination: {
 		pageSize: DEFAULT_PAGE_SIZE,
 		variant: PaginationVariants.Numbered,
+		/** `numbered` page-link window; mirrors the `buildPageWindow` defaults. */
+		siblings: DEFAULT_PAGE_SIBLINGS,
+		boundaries: DEFAULT_PAGE_BOUNDARIES,
 	},
 	/** Cross-column global search input. */
 	globalFiltering: {

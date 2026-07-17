@@ -1,17 +1,29 @@
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
-import { PAGINATION_VARIANT_KEY } from '../use-data-grid'
+import { PAGINATION_VARIANT_KEY, PAGINATION_WINDOW_KEY } from '../use-data-grid'
 
 import { useDataGridInstance, useDataGridStore } from './table-context'
 
 import type { PaginationVariant } from '../types'
+import type { NormalizedPageWindowConfig } from '../use-data-grid'
 
 /** A trusted page total of zero — the grid is known to be empty, so there is nothing to paginate. */
 const EMPTY_TOTAL = 0
 
+/** The window a table carries no config for — a grid built outside `useDataGrid` (e.g. in a test). */
+const FALLBACK_PAGE_WINDOW: NormalizedPageWindowConfig = {
+	siblings: DATA_GRID_DEFAULTS.pagination.siblings,
+	boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
+}
+
 function readVariant(table: object): PaginationVariant {
 	const variant = (table as Record<symbol, unknown>)[PAGINATION_VARIANT_KEY] as PaginationVariant | undefined
 	return variant ?? DATA_GRID_DEFAULTS.pagination.variant
+}
+
+function readPageWindow(table: object): NormalizedPageWindowConfig {
+	const window = (table as Record<symbol, unknown>)[PAGINATION_WINDOW_KEY] as NormalizedPageWindowConfig | undefined
+	return window ?? FALLBACK_PAGE_WINDOW
 }
 
 /**
@@ -69,12 +81,15 @@ export function Pagination() {
 
 	const canPrevious = table.getCanPreviousPage()
 	const canNext = table.getCanNextPage()
+	const { siblings, boundaries } = readPageWindow(table)
 
 	return (
 		<PaginationComponent
 			{...(rowCount !== undefined ? { rowCount } : {})}
 			{...(pageCount !== undefined ? { pageCount } : {})}
 			variant={readVariant(table)}
+			siblings={siblings}
+			boundaries={boundaries}
 			pageIndex={pageIndex}
 			pageSize={pageSize}
 			canPreviousPage={canPrevious}

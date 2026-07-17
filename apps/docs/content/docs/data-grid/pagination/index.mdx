@@ -35,8 +35,9 @@ behaviour is identical across variants, and the footer always sits below the tab
 
 ### Numbered
 
-The default: previous/next plus a link per page. Best when the page count is small enough to
-scan.
+The default: previous/next plus per-page links. The link strip is **windowed** — it shows the
+first and last pages, a window around the current page, and an ellipsis for each hidden run
+(`1 … 4 5 6 … 100`), so a large page count never renders one live control per page.
 
 <DataGridDocsExample exampleId='pagination-variant-numbered' />
 
@@ -46,6 +47,15 @@ const grid = useDataGrid({
 	columns,
 	pagination: { pageSize: 10, variant: 'numbered' },
 })
+```
+
+Tune the window with `siblings` (pages either side of the current one) and `boundaries` (pages
+at each end); both default to `1`. A grid small enough to fit shows every page, so the window
+only kicks in once there are more pages than the strip can hold.
+
+```ts
+// Wider window: 2 neighbours each side, 1 page pinned at each end.
+pagination: { variant: 'numbered', siblings: 2, boundaries: 1 }
 ```
 
 ### Simple
@@ -78,11 +88,11 @@ pagination: { pageSize: 10, variant: 'compact' }
 A manually paginated grid given neither `rowCount` nor `pageCount` knows only which page it is
 on, so every variant degrades rather than inventing a total:
 
-| Variant      | Total known               | `pageCount` only | Neither       |
-| ------------ | ------------------------- | ---------------- | ------------- |
-| `'numbered'` | `1–10 of 50` + page links | page links       | no page links |
-| `'simple'`   | `1–10 of 50`              | `Page 3 of 5`    | `Page 3`      |
-| `'compact'`  | `Page 1 of 5`             | `Page 3 of 5`    | `Page 3`      |
+| Variant      | Total known                        | `pageCount` only    | Neither       |
+| ------------ | ---------------------------------- | ------------------- | ------------- |
+| `'numbered'` | `1–10 of 50` + windowed page links | windowed page links | no page links |
+| `'simple'`   | `1–10 of 50`                       | `Page 3 of 5`       | `Page 3`      |
+| `'compact'`  | `Page 1 of 5`                      | `Page 3 of 5`       | `Page 3`      |
 
 Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
 Page links are dropped when the page count is unknown, since they cannot be enumerated; each
@@ -125,6 +135,8 @@ const grid = useDataGrid({
 | Option                    | Type                                  | Description                                                                     |
 | ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------- |
 | `pagination.variant`      | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only. |
+| `pagination.siblings`     | `number`                              | `'numbered'` only. Pages kept either side of the current one. Default `1`.      |
+| `pagination.boundaries`   | `number`                              | `'numbered'` only. Pages kept at each end of the link strip. Default `1`.       |
 | `initialState.pagination` | `{ pageIndex, pageSize }`             | Defaults at mount.                                                              |
 | `state.pagination`        | same                                  | Controlled state.                                                               |
 | `onPaginationChange`      | `(updater) => void`                   | Subscribe to changes.                                                           |

@@ -1,8 +1,9 @@
-import { buildPaginationLabel, PaginationVariants } from '@ez-kit/data-grid-react'
+import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariants } from '@ez-kit/data-grid-react'
 
 import {
 	Pagination as ShadcnPagination,
 	PaginationContent,
+	PaginationEllipsis,
 	PaginationLink,
 	PaginationItem,
 	PaginationPrevious,
@@ -20,6 +21,8 @@ export function Pagination({
 	pageSize,
 	pageCount,
 	rowCount,
+	siblings,
+	boundaries,
 	canPreviousPage,
 	canNextPage,
 	onPreviousPage,
@@ -29,6 +32,8 @@ export function Pagination({
 	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
 	// Page links need a known page count; without one `numbered` degrades to prev/next.
 	const showLinks = variant === PaginationVariants.Numbered && pageCount !== undefined
+	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
+	const pages = showLinks ? buildPageWindow({ pageIndex, pageCount, siblings, boundaries }) : []
 
 	return (
 		<ShadcnPagination
@@ -44,19 +49,24 @@ export function Pagination({
 						onClick={canPreviousPage ? onPreviousPage : undefined}
 					/>
 				</PaginationItem>
-				{showLinks &&
-					Array.from({ length: pageCount }).map((_, index) => (
-						<PaginationItem key={index}>
+				{pages.map((page, slot) =>
+					page === PAGE_GAP ? (
+						<PaginationItem key={`${PAGE_GAP}-${String(slot)}`}>
+							<PaginationEllipsis />
+						</PaginationItem>
+					) : (
+						<PaginationItem key={page}>
 							<PaginationLink
-								isActive={index === pageIndex}
+								isActive={page === pageIndex}
 								onClick={() => {
-									onPageChange(index)
+									onPageChange(page)
 								}}
 							>
-								{index + 1}
+								{page + 1}
 							</PaginationLink>
 						</PaginationItem>
-					))}
+					),
+				)}
 				<PaginationItem>
 					<PaginationNext
 						aria-disabled={!canNextPage}
