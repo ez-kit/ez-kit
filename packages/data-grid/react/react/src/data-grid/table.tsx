@@ -49,7 +49,7 @@ function resolveScrollElement(wrapper: HTMLElement): HTMLElement {
  * reason this is not just `querySelector`) is NOT the vertical scroller, and
  * treating it as one reports "already at the bottom" forever.
  */
-function resolveVerticalScrollElement(scrollRoot: HTMLElement): HTMLElement {
+export function resolveVerticalScrollElement(scrollRoot: HTMLElement): HTMLElement {
 	const tagged = scrollRoot.querySelector("[data-slot='table-scroll-container']")
 	if (tagged instanceof HTMLElement && SCROLLING_OVERFLOWS.includes(getComputedStyle(tagged).overflowY)) {
 		return tagged
