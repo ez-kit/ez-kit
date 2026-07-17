@@ -13,6 +13,8 @@
 
 The `components/ui/` directory borrowed shadcn's convention without the meaning that makes it immutable. Edit `action-bar.tsx` when the task calls for it — no adapter dance required.
 
+It is not, however, in good shape: it still writes `--heroui-*` v2 tokens (see "HeroUI v3 tokens" below). Some are unguarded and silently drop (`text-[hsl(var(--heroui-foreground))]`, `border-[hsl(var(--heroui-divider))]`); the rest render only via a hardcoded fallback, which pins them to one theme. Treat those as fair game to fix while you are in the file.
+
 **Known limitation:** the path still reads as "vendored, don't touch" to anyone who has not read this file. Moving the file into `blocks/` would remove the cause rather than document it; that is a possible future task, deliberately out of scope here.
 
 ## Layering
