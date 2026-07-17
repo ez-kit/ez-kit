@@ -8,4 +8,6 @@ TanStack disables `autoResetPageIndex` under `manual: true`, so a server total t
 
 Only an actual shrink of a trusted `rowCount` clamps: the first total observed is left alone, since with the usual `rowCount: data?.rowCount ?? 0` the initial `0` means "not loaded yet" and clamping it would reset a deep-linked page mid-fetch. An unknown total is never clamped either.
 
+Known limitation: because the first total never clamps, a deep link straight to a page that is already out of range (mount at `pageIndex: 3`, total then resolves to 5 rows) is left as-is — the server returns no rows for it and the footer reads `0–0 of 5`, which matches the empty screen. Clamping that case would need to distinguish a first _real_ total from a `keepPreviousData` placeholder.
+
 The clamp lands after commit, so the render in which `rowCount` shrinks still paints the pre-clamp page for one frame. That frame shows the same honest `0–0 of 5` the footer displays today, never an inverted range.

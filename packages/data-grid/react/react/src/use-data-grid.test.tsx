@@ -247,6 +247,34 @@ describe('useDataGrid', () => {
 		expect(getByTestId('page-index').textContent).toBe('3')
 	})
 
+	// Pins the scope boundary as intentional, not an oversight: a first total that resolves
+	// straight into an out-of-range page is NOT clamped, because it is indistinguishable from a
+	// `keepPreviousData` placeholder. Unlike #82 this contradicts nothing on screen — a real
+	// server returns no rows for page 4 of 5, so the `0–0 of 5` footer matches an empty grid.
+	it('leaves a deep link to an already-out-of-range page alone when the first total resolves', () => {
+		const onStateChangeSpy = vi.fn()
+		const deepLinked: Partial<TableState> = { pagination: { pageIndex: 3, pageSize: 10 } }
+		const { rerender, getByTestId } = render(
+			<ClampGrid
+				rowCount={0}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		// 0 → 5 is a growth, not a shrink: the grid has never seen a trustworthy larger total.
+		rerender(
+			<ClampGrid
+				rowCount={5}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		expect(onStateChangeSpy).not.toHaveBeenCalled()
+		expect(getByTestId('page-index').textContent).toBe('3')
+	})
+
 	// The controlled state deliberately lives in a PARENT (`ClampPage`) rather than alongside
 	// `useDataGrid`: co-locating it is React's legal same-component derived-state path and hides
 	// the real failure. Clamping from the render body calls the parent's setter mid-render, which
