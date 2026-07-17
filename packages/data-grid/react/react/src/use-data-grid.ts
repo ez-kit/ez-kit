@@ -1,5 +1,5 @@
 import { createTable } from '@ez-kit/data-grid-core'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { createDataGridInstance } from './data-grid-instance'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
@@ -186,6 +186,10 @@ function normalizeVirtualized(
  * `pageIndex` to the last valid page via `setPageIndex` — i.e. through `onChange` /
  * `onStateChange`, the normal controlled flow. An unknown total (`pageCount` only) is
  * never clamped: there is nothing to clamp to.
+ *
+ * The clamp lands **after commit**, so the render in which `rowCount` shrinks still paints
+ * the pre-clamp page for one frame before the corrected one. Notifying the consumer during
+ * render would mean calling its state setter mid-render, which React rejects.
  *
  * Limitation: a consumer that fully controls `state.pagination` but **ignores** the change
  * callback keeps ownership of the index — the grid cannot force the shift, and the page
@@ -756,30 +760,30 @@ export function useDataGrid<TRow extends object>(
 	// Clamp `pageIndex` to the last valid page when a manual-pagination `rowCount` shrinks
 	// under the user (e.g. a server filter narrows 500 rows to 5 while they sit on page 3).
 	// TanStack defaults `autoResetPageIndex` to `!manualPagination`, so under manual mode it
-	// never resets the index itself, and the resync above only projects the descriptors. Left
+	// never rewinds the index itself, and the resync above only projects the descriptors. Left
 	// alone, the footer reads "0–0 of 5" while `getPaginationRowModel()` — which returns the
-	// whole `data` under manual mode — still renders all 5 rows: the label contradicts the
-	// screen. Only clamp against a trusted total (`rowCount`); with an unknown total
-	// (`pageCount` sentinel / no total at all) there is nothing to clamp to.
-	const clampTargetRef = useRef<number | null>(null)
-	if (manualPagination && nextRowCount !== undefined) {
-		const { pageIndex, pageSize } = instanceRef.current.table.getState().pagination
-		// An empty (or degenerate) total collapses to the single first page.
-		const lastPageIndex = nextRowCount === 0 || pageSize <= 0 ? 0 : Math.ceil(nextRowCount / pageSize) - 1
-		if (pageIndex > lastPageIndex) {
-			// Guard against re-issuing the same target every render: `setPageIndex` routes
-			// through `onPaginationChange`, so a controlled consumer that mirrors it converges
-			// on the next render (where the branch below resets the guard), and one that
-			// ignores it simply stays put instead of looping.
-			if (clampTargetRef.current !== lastPageIndex) {
-				clampTargetRef.current = lastPageIndex
-				instanceRef.current.table.setPageIndex(lastPageIndex)
-			}
-		} else {
-			// Already within range — drop the guard so a later shrink can clamp again.
-			clampTargetRef.current = null
-		}
-	}
+	// whole `data` under manual mode — still renders all 5 rows: the label contradicts the screen.
+	//
+	// Deliberately an effect rather than a render-body write like the sync blocks above:
+	// `setPageIndex` routes through `onStateChange`, i.e. the **consumer's** callback. Those
+	// blocks never reach the consumer — `setOptions` fires no callback and `syncControlledState`
+	// skips `onStateChange` on purpose (see the comment above it). Writing here during render
+	// would therefore setState a parent mid-render ("Cannot update a component while rendering a
+	// different component"), so the notification waits for commit. The cost is one frame of the
+	// pre-clamp label — which is exactly the honest "0–0 of 5" the footer already shows today,
+	// never the inverted range.
+	//
+	// A trusted `rowCount` is the only trigger: an unknown total (`pageCount` sentinel / no total
+	// at all) has nothing to clamp to. Because the deps change only when that total does, one
+	// pass per shrink cannot re-trigger itself — a consumer that ignores the callback simply
+	// stays put instead of looping.
+	useEffect(() => {
+		if (nextRowCount === undefined) return
+		const { pageIndex, pageSize } = table.getState().pagination
+		// An empty or otherwise degenerate total collapses to the single first page.
+		const lastPageIndex = nextRowCount <= 0 || pageSize <= 0 ? 0 : Math.ceil(nextRowCount / pageSize) - 1
+		if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex)
+	}, [table, nextRowCount])
 
 	// The loading status (`isPending`/`isFetching`/`isError`/`error`) is user-owned
 	// controlled state fed through the `state.loading` slice; it is handled by the

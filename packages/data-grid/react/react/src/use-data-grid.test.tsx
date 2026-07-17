@@ -1,5 +1,5 @@
 import { defineColumns } from '@ez-kit/data-grid-core'
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -21,6 +21,7 @@ import type {
 	NormalizedGlobalFilteringConfig,
 } from './use-data-grid'
 import type { TableState } from '@ez-kit/data-grid-core'
+import type { Updater } from '@tanstack/table-core'
 
 type User = {
 	id: number
@@ -32,6 +33,40 @@ const USERS: User[] = [
 	{ id: 2, name: 'Bob' },
 ]
 const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
+
+type ClampGridProps = {
+	rowCount: number
+	tableState: Partial<TableState>
+	onStateChange: (updater: Updater<TableState>) => void
+}
+
+/** Renders the live `pageIndex` under fully controlled manual pagination. */
+function ClampGrid({ rowCount, tableState, onStateChange }: ClampGridProps) {
+	const { table } = useDataGrid({
+		data: USERS,
+		columns: COLUMNS,
+		pagination: { manual: true, rowCount, pageSize: 10 },
+		state: tableState,
+		onStateChange,
+	})
+	return <span data-testid='page-index'>{table.getState().pagination.pageIndex}</span>
+}
+
+/** Parent-owned controlled state — the ordinary consumer shape (state above the grid). */
+function ClampPage({ rowCount }: { rowCount: number }) {
+	const [tableState, setTableState] = useState<Partial<TableState>>({
+		pagination: { pageIndex: 2, pageSize: 10 },
+	})
+	return (
+		<ClampGrid
+			rowCount={rowCount}
+			tableState={tableState}
+			onStateChange={(updater) => {
+				setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+			}}
+		/>
+	)
+}
 
 describe('useDataGrid', () => {
 	it('creates a table instance with initial data', () => {
@@ -171,37 +206,57 @@ describe('useDataGrid', () => {
 		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
 	})
 
-	it('clamps through onStateChange when a controlled consumer mirrors it, without looping', () => {
+	// The controlled state deliberately lives in a PARENT (`ClampPage`) rather than alongside
+	// `useDataGrid`: co-locating it is React's legal same-component derived-state path and hides
+	// the real failure. Clamping from the render body calls the parent's setter mid-render, which
+	// React rejects with "Cannot update a component while rendering a different component" — this
+	// is the regression test for that.
+	it('clamps parent-owned controlled pagination without a render-phase update warning', () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const { rerender, getByTestId } = render(<ClampPage rowCount={500} />)
+		expect(getByTestId('page-index').textContent).toBe('2')
+
+		rerender(<ClampPage rowCount={5} />)
+
+		expect(getByTestId('page-index').textContent).toBe('0')
+		expect(errorSpy.mock.calls.map((call) => String(call[0])).join('\n')).not.toContain(
+			'while rendering a different component',
+		)
+		errorSpy.mockRestore()
+	})
+
+	it('notifies once and does not loop when a controlled consumer ignores the clamp', () => {
 		const onStateChangeSpy = vi.fn()
-		const { result, rerender } = renderHook(
-			({ rowCount }: { rowCount: number }) => {
-				const [tableState, setTableState] = useState<Partial<TableState>>({
-					pagination: { pageIndex: 2, pageSize: 10 },
-				})
-				return useDataGrid({
-					data: USERS,
-					columns: COLUMNS,
-					pagination: { manual: true, rowCount, pageSize: 10 },
-					state: tableState,
-					onStateChange: (updater) => {
-						onStateChangeSpy()
-						setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
-					},
-				})
-			},
-			{ initialProps: { rowCount: 500 } },
+		const ignoredState: Partial<TableState> = { pagination: { pageIndex: 2, pageSize: 10 } }
+		const { rerender, getByTestId } = render(
+			<ClampGrid
+				rowCount={500}
+				tableState={ignoredState}
+				onStateChange={onStateChangeSpy}
+			/>,
 		)
 
-		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+		rerender(
+			<ClampGrid
+				rowCount={5}
+				tableState={ignoredState}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
 
-		rerender({ rowCount: 5 })
-		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+		// The grid asks once, then defers: the consumer owns the index, so it stays out of range
+		// rather than the grid re-issuing the clamp on every pass.
+		expect(onStateChangeSpy).toHaveBeenCalledTimes(1)
+		expect(getByTestId('page-index').textContent).toBe('2')
 
-		// Converged: the mirrored clamp does not re-trigger itself on later renders.
-		const callsAfterClamp = onStateChangeSpy.mock.calls.length
-		rerender({ rowCount: 5 })
-		expect(onStateChangeSpy.mock.calls.length).toBe(callsAfterClamp)
-		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+		rerender(
+			<ClampGrid
+				rowCount={5}
+				tableState={ignoredState}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+		expect(onStateChangeSpy).toHaveBeenCalledTimes(1)
 	})
 
 	it('re-syncs manual pagination pageCount when it changes', () => {
