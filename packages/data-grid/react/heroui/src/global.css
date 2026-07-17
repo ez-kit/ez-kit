@@ -40,6 +40,37 @@
 	margin-top: 0.75rem;
 }
 
+/* ── scrollport ownership ──────────────────────────────────────────────────
+ * `position: sticky` resolves against the nearest scroll container. The shared
+ * stylesheet puts the bounded vertical scrollport on `[data-slot='table-scroll']`,
+ * which is enough for shadcn: it nests nothing that scrolls, so that div is the
+ * scrollport the header and pinned rows resolve against.
+ *
+ * HeroUI nests one. `Table.ScrollContainer` (`.table__scroll-container`) is
+ * `overflow-x: auto`, and per CSS Overflow 3 a non-`visible` value on one axis
+ * computes the other from `visible` to `auto` — so it is a scroll container on
+ * BOTH axes, and being the innermost one it steals the scrollport from the div
+ * that actually has the height bound. Nothing constrains its height, so it never
+ * scrolls and sticky offsets never clamp: the sticky header and pinned rows carry
+ * `position: sticky` but behave like `static` (#105, #103).
+ *
+ * Neutralizing it is not an option — HeroUI's `.table-root` is `overflow: clip`
+ * over a `minmax(0, 1fr)` grid track, a hard width boundary the outer div cannot
+ * scroll past, so the inner container is the only element that can own the
+ * horizontal axis. Give it the vertical bound as well and let the outer div step
+ * aside, leaving one element that owns both axes.
+ *
+ * Kept in sync with `[data-slot='table-scroll'][data-sticky-header='true']` in
+ * `@ez-kit/data-grid-react`'s structural stylesheet, whose bound this relocates. */
+[data-slot='table-scroll'][data-sticky-header='true'] {
+	overflow: visible;
+	max-height: none;
+}
+[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='table-scroll-container'] {
+	overflow-y: auto;
+	max-height: var(--dg-table-max-height, 400px);
+}
+
 @theme inline {
 	--color-surface: var(--surface);
 	--color-surface-secondary: var(--surface-secondary);
