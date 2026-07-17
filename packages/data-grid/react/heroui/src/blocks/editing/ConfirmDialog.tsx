@@ -6,13 +6,12 @@ import type { ConfirmDialogProps } from '@ez-kit/data-grid-react'
 
 export function ConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
 	return (
-		<Modal
+		<Modal.Backdrop
 			isOpen={open}
 			onOpenChange={(isOpen) => {
 				if (!isOpen) onCancel()
 			}}
 		>
-			<Modal.Backdrop />
 			<Modal.Container>
 				<Modal.Dialog>
 					<Modal.Header>
@@ -35,6 +34,6 @@ export function ConfirmDialog({ open, title, description, onConfirm, onCancel }:
 					</Modal.Footer>
 				</Modal.Dialog>
 			</Modal.Container>
-		</Modal>
+		</Modal.Backdrop>
 	)
 }

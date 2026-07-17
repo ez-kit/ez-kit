@@ -6,13 +6,12 @@ import type { ModalProps } from '@ez-kit/data-grid-react'
 
 export function Modal({ open, onClose, onSave, onCancel, title, children }: ModalProps) {
 	return (
-		<HeroModal
+		<HeroModal.Backdrop
 			isOpen={open}
 			onOpenChange={(isOpen) => {
 				if (!isOpen) onClose()
 			}}
 		>
-			<HeroModal.Backdrop />
 			<HeroModal.Container>
 				<HeroModal.Dialog>
 					{title ? (
@@ -43,6 +42,6 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 					) : null}
 				</HeroModal.Dialog>
 			</HeroModal.Container>
-		</HeroModal>
+		</HeroModal.Backdrop>
 	)
 }
