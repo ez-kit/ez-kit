@@ -40,6 +40,54 @@
 	margin-top: 0.75rem;
 }
 
+/* ── scrollport ownership ──────────────────────────────────────────────────
+ * `position: sticky` resolves against the nearest scroll container. The shared
+ * stylesheet puts the bounded vertical scrollport on `[data-slot='table-scroll']`,
+ * which is enough for shadcn: it nests nothing that scrolls, so that div is the
+ * scrollport the header and pinned rows resolve against.
+ *
+ * HeroUI nests one. `Table.ScrollContainer` (`.table__scroll-container`) is
+ * `overflow-x: auto`, and per CSS Overflow 3 a non-`visible` value on one axis
+ * computes the other from `visible` to `auto` — so it is a scroll container on
+ * BOTH axes, and being the innermost one it steals the scrollport from the div
+ * that actually has the height bound. Nothing constrains its height, so it never
+ * scrolls and sticky offsets never clamp: the sticky header and pinned rows carry
+ * `position: sticky` but behave like `static` (#105, #103).
+ *
+ * Neutralizing it is not an option — HeroUI's `.table-root` is `overflow: clip`
+ * over a `minmax(0, 1fr)` grid track, a hard width boundary the outer div cannot
+ * scroll past, so the inner container is the only element that can own the
+ * horizontal axis. Give it the vertical bound as well and let the outer div step
+ * aside, leaving one element that owns both axes.
+ *
+ * Kept in sync with `[data-slot='table-scroll'][data-sticky-header='true']` in
+ * `@ez-kit/data-grid-react`'s structural stylesheet, whose bound this relocates. */
+[data-slot='table-scroll'][data-sticky-header='true'] {
+	/* Both axes must go to `visible`, not just `overflow-y`: leaving `overflow-x: auto`
+	 * (the shared stylesheet's default on this div) would make CSS Overflow 3 recompute
+	 * `overflow-y` back to `auto`, so this div would re-become a scroll container and
+	 * re-steal the scrollport we are handing to the inner container. HeroUI's own
+	 * `.table-root` (`overflow: clip` over a `minmax(0, 1fr)` grid track) keeps the width
+	 * boundary, so dropping the horizontal scroll here is safe. */
+	overflow: visible;
+	max-height: none;
+}
+[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='table-scroll-container'] {
+	overflow-y: auto;
+	max-height: var(--dg-table-max-height, 400px);
+}
+
+/* Virtualized mode has its own scrollport: `[data-slot='table-scroll'][data-virtualized]`
+ * is the element the row virtualizer scrolls (shared stylesheet: `overflow: auto` + a fixed
+ * `--dg-virtual-height`). HeroUI's inner container nests inside it and — same CSS Overflow 3
+ * mechanism — becomes a competing scroll container that swallows the whole virtual height and
+ * steals the sticky context from the header (#103, the virtual-scroll case). Neutralize it so
+ * the virtualizer's own div is the sole scroll context and the sticky header resolves against
+ * it; horizontal column scroll stays on that outer div (also `overflow: auto`). */
+[data-slot='table-scroll'][data-virtualized='true'] [data-slot='table-scroll-container'] {
+	overflow: visible;
+}
+
 @theme inline {
 	--color-surface: var(--surface);
 	--color-surface-secondary: var(--surface-secondary);

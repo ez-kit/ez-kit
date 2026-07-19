@@ -1,0 +1,7 @@
+{
+	"title": "twc",
+	"description": "Tailwind + cva styled-components factory",
+	"icon": "Paintbrush",
+	"root": true,
+	"pages": ["index"]
+}

@@ -1,0 +1,91 @@
+---
+title: '@ez-kit/twc'
+description: A styled-components-flavored factory over Tailwind + cva — bind classes and variants to an element or to any component that accepts className.
+---
+
+# `@ez-kit/twc`
+
+Declare a component once by binding Tailwind classes and [cva](https://cva.style) variants to it, then use it like any other component:
+
+```tsx
+import { twc } from '@ez-kit/twc'
+
+const Button = twc.button(
+	{
+		base: 'rounded px-4 py-2 font-medium',
+		variants: {
+			intent: { primary: 'bg-blue-500 text-white', ghost: 'bg-transparent text-blue-500' },
+			size: { sm: 'text-sm', lg: 'text-lg' },
+		},
+		defaultVariants: { intent: 'primary', size: 'sm' },
+	},
+	'Button',
+)
+```
+
+cva does the class composition; `twc` binds it to an element, splits variant props from DOM props, merges an incoming `className`, and forwards refs.
+
+## Install
+
+```bash
+pnpm add @ez-kit/twc
+```
+
+`react >= 18` is a peer dependency.
+
+## Variants
+
+Variant props are inferred from the config. A group listed in `defaultVariants` is optional; a group without a default is **required**, because there is nothing to fall back to.
+
+<LivePreview
+	path='twc/button'
+	title='Variants and compound variants'
+/>
+
+## className merging
+
+The final class list is `twMerge(generatedClasses, props.className)`, so an incoming class wins over a conflicting generated one and non-conflicting classes are simply added. Set `configure({ twMerge: false })` to plain-join instead.
+
+<LivePreview
+	path='twc/class-merge'
+	title='Incoming className vs. generated classes'
+/>
+
+## Wrapping an existing component
+
+`twc(Component, config, name?)` styles anything that accepts `className`. The wrapped component's own props stay available, and the constraint is enforced at the type level.
+
+<LivePreview
+	path='twc/wrapping'
+	title='Wrapping a component'
+/>
+
+## Debug names
+
+The optional last argument is a component name. It renders into a `data-component` attribute outside production, which makes a styled tree readable in devtools:
+
+```ts
+import { configure } from '@ez-kit/twc'
+
+configure({
+	attribute: 'data-component', // attribute the name renders into
+	enabled: process.env.NODE_ENV !== 'production', // whether it reaches the DOM at all
+	twMerge: true, // whether tailwind-merge resolves conflicts
+})
+```
+
+Those are the defaults. The config is global and read lazily at render time, so it only has to be set before the first render.
+
+[`@ez-kit/babel-plugin-twc`](https://github.com/ez-kit/ez-kit/tree/main/packages/babel-plugin-twc#readme) fills that name in from the variable name, so it never has to be written by hand.
+
+## Tailwind IntelliSense
+
+Class strings inside `base` / `variants` need a hint for the **Tailwind CSS IntelliSense** extension. In `.vscode/settings.json`:
+
+```jsonc
+{
+	"tailwindCSS.experimental.classRegex": [["twc[.(][^)]*", "[\"'`]([^\"'`]*)[\"'`]"]],
+}
+```
+
+See the [package README](https://github.com/ez-kit/ez-kit/tree/main/packages/twc#readme) for the trade-offs of that pattern.
