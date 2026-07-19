@@ -31,10 +31,7 @@ const form = useForm({
 
 Each issue lands on the field its path points at, and that field renders it:
 
-<LivePreview
-	path='form/validation'
-	title='Zod schema validation'
-/>
+<KitExample exampleId='form-validation' />
 
 Note the submit button: it is subscribed to `canSubmit`, so it stays disabled until the schema is satisfied.
 

@@ -1,14 +1,15 @@
 'use client'
 
-import { TextInputType, useForm } from '@ez-kit/form-shadcn'
 import { useState } from 'react'
+
+import { TextInputType, useForm } from 'shared/form/FormKit'
 
 type Signup = {
 	email: string
 	password: string
 }
 
-export default function BasicFormExample() {
+export function BasicExample() {
 	const [saved, setSaved] = useState<Signup | null>(null)
 
 	const form = useForm({
@@ -35,7 +36,9 @@ export default function BasicFormExample() {
 				<form.SubmitButton>Create account</form.SubmitButton>
 			</form.Form>
 
-			{saved ? <pre className='rounded-md bg-fd-muted p-3 text-xs'>{JSON.stringify(saved, null, 2)}</pre> : null}
+			{saved ? (
+				<pre className='rounded-md bg-black/5 p-3 text-xs dark:bg-white/10'>{JSON.stringify(saved, null, 2)}</pre>
+			) : null}
 		</div>
 	)
 }

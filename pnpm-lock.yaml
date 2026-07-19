@@ -113,6 +113,12 @@ importers:
       '@ez-kit/data-grid-shadcn':
         specifier: workspace:*
         version: link:../../packages/data-grid/react/shadcn
+      '@ez-kit/form-heroui':
+        specifier: workspace:*
+        version: link:../../packages/form/react/heroui
+      '@ez-kit/form-react':
+        specifier: workspace:*
+        version: link:../../packages/form/react/react
       '@ez-kit/form-shadcn':
         specifier: workspace:*
         version: link:../../packages/form/react/shadcn

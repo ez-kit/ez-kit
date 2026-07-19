@@ -1,8 +1,10 @@
 'use client'
 
-import { useForm } from '@ez-kit/form-shadcn'
+import { useForm } from 'shared/form/FormKit'
 
-export default function NativeApiExample() {
+const SEAT_CHOICES = [1, 2, 3, 4]
+
+export function NativeApiExample() {
 	const form = useForm({
 		defaultValues: { guest: '', seats: 1 },
 	})
@@ -21,7 +23,7 @@ export default function NativeApiExample() {
 				{(field) => (
 					<div className='flex items-center gap-2'>
 						<span className='text-sm'>Seats</span>
-						{[1, 2, 3, 4].map((count) => (
+						{SEAT_CHOICES.map((count) => (
 							<button
 								key={count}
 								type='button'
@@ -30,8 +32,8 @@ export default function NativeApiExample() {
 								}}
 								className={
 									field.state.value === count
-										? 'rounded-md bg-fd-primary px-3 py-1 text-sm text-fd-primary-foreground'
-										: 'rounded-md border border-fd-border px-3 py-1 text-sm'
+										? 'rounded-md bg-black px-3 py-1 text-sm text-white dark:bg-white dark:text-black'
+										: 'rounded-md border border-black/20 px-3 py-1 text-sm dark:border-white/25'
 								}
 							>
 								{count}
@@ -42,7 +44,7 @@ export default function NativeApiExample() {
 			</form.Field>
 
 			<form.Subscribe selector={(state) => `${state.values.guest || '—'} · ${String(state.values.seats)} seat(s)`}>
-				{(summary) => <p className='text-sm text-fd-muted-foreground'>{summary}</p>}
+				{(summary) => <p className='text-sm opacity-70'>{summary}</p>}
 			</form.Subscribe>
 		</form.Form>
 	)

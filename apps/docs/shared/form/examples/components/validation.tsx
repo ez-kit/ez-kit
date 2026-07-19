@@ -1,8 +1,9 @@
 'use client'
 
-import { useForm } from '@ez-kit/form-shadcn'
 import { useState } from 'react'
 import { z } from 'zod'
+
+import { useForm } from 'shared/form/FormKit'
 
 // A plain standard-schema validator. TanStack Form consumes it natively —
 // @ez-kit/form adds no resolver of its own.
@@ -12,7 +13,7 @@ const schema = z.object({
 	terms: z.literal(true, { error: 'You have to accept the terms' }),
 })
 
-export default function ValidationExample() {
+export function ValidationExample() {
 	const [saved, setSaved] = useState<string | null>(null)
 
 	const form = useForm({
@@ -42,7 +43,7 @@ export default function ValidationExample() {
 				<form.SubmitButton>Submit</form.SubmitButton>
 			</form.Form>
 
-			{saved ? <p className='text-sm text-fd-muted-foreground'>Submitted as {saved}</p> : null}
+			{saved ? <p className='text-sm opacity-70'>Submitted as {saved}</p> : null}
 		</div>
 	)
 }

@@ -5,3 +5,9 @@
 
 @source '../../../../shared/data-grid/examples/components/**/*.{ts,tsx}';
 @source '../../../../../../packages/data-grid/react/heroui/src/**/*.{ts,tsx}';
+
+/* The form kit's own `global.css` is not imported: `@ez-kit/data-grid-heroui/global.css`
+ * already pulled `@heroui/styles` into this document. Tailwind still has to see the form
+ * kit's sources to emit the utilities they reference. */
+@source '../../../../shared/form/examples/components/**/*.{ts,tsx}';
+@source '../../../../../../packages/form/react/heroui/src/**/*.{ts,tsx}';

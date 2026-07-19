@@ -1,6 +1,6 @@
 'use client'
 
-import { useForm } from '@ez-kit/form-shadcn'
+import { useForm } from 'shared/form/FormKit'
 
 const ROLES = [
 	{ label: 'Viewer', value: 'viewer' },
@@ -8,7 +8,7 @@ const ROLES = [
 	{ label: 'Admin', value: 'admin' },
 ]
 
-export default function FieldsExample() {
+export function FieldsExample() {
 	const form = useForm({
 		defaultValues: { name: '', age: 30, bio: '', role: 'viewer', newsletter: false },
 	})
@@ -45,7 +45,9 @@ export default function FieldsExample() {
 
 			{/* Reading live form state through the native Subscribe API. */}
 			<form.Subscribe selector={(state) => state.values}>
-				{(values) => <pre className='rounded-md bg-fd-muted p-3 text-xs'>{JSON.stringify(values, null, 2)}</pre>}
+				{(values) => (
+					<pre className='rounded-md bg-black/5 p-3 text-xs dark:bg-white/10'>{JSON.stringify(values, null, 2)}</pre>
+				)}
 			</form.Subscribe>
 		</form.Form>
 	)
