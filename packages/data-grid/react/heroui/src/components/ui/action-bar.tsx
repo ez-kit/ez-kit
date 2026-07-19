@@ -2,7 +2,6 @@
 
 import { Button as HeroButton } from '@heroui/react'
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
 
 import { useAsRef } from '../../hooks/use-as-ref'
 import { useIsomorphicLayoutEffect } from '../../hooks/use-isomorphic-layout-effect'
@@ -19,6 +18,24 @@ const EVENT_OPTIONS = { bubbles: false, cancelable: true }
 
 type Direction = 'ltr' | 'rtl'
 type Orientation = 'horizontal' | 'vertical'
+type Align = 'start' | 'center' | 'end'
+type Side = 'top' | 'bottom'
+
+/**
+ * The bar is `w-fit` inside a full-width block, so cross-axis alignment is expressed
+ * with auto margins rather than with `left`/`right` offsets (which only apply to the
+ * `fixed`/`absolute` positioning this component deliberately no longer uses).
+ */
+const ALIGN_CLASSES: Record<Align, string> = {
+	start: 'mr-auto',
+	center: 'mx-auto',
+	end: 'ml-auto',
+}
+
+/** Minimal class joiner — this package has no `cn`, and no conflict-merging is needed here. */
+function cx(...classNames: (string | false | undefined)[]) {
+	return classNames.filter(Boolean).join(' ')
+}
 
 type HeroButtonProps = React.ComponentProps<typeof HeroButton>
 type HeroPressEvent = Parameters<NonNullable<HeroButtonProps['onPress']>>[0]
@@ -97,27 +114,14 @@ type ActionBarProps = {
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
 	onEscapeKeyDown?: (event: KeyboardEvent) => void
-	align?: 'start' | 'center' | 'end'
-	alignOffset?: number
-	side?: 'top' | 'bottom'
+	align?: Align
+	side?: Side
+	/** Distance in px between the bar and the `side` edge of its scrollport. */
 	sideOffset?: number
-	portalContainer?: Element | DocumentFragment | null
 	dir?: Direction
 	orientation?: Orientation
 	loop?: boolean
 } & DivProps
-
-function subscribeToMountedStore() {
-	return () => {}
-}
-
-function getClientMountedSnapshot() {
-	return true
-}
-
-function getServerMountedSnapshot() {
-	return false
-}
 
 function ActionBar(props: ActionBarProps) {
 	const {
@@ -125,10 +129,8 @@ function ActionBar(props: ActionBarProps) {
 		onOpenChange,
 		onEscapeKeyDown,
 		side = 'bottom',
-		alignOffset = 0,
 		align = 'center',
 		sideOffset = 16,
-		portalContainer: portalContainerProp,
 		dir = 'ltr',
 		orientation = 'horizontal',
 		loop = true,
@@ -136,12 +138,6 @@ function ActionBar(props: ActionBarProps) {
 		ref,
 		...rootProps
 	} = props
-
-	const mounted = React.useSyncExternalStore(
-		subscribeToMountedStore,
-		getClientMountedSnapshot,
-		getServerMountedSnapshot,
-	)
 
 	const rootRef = React.useRef<RootElement>(null)
 	const composedRef = useComposedRefs(ref, rootRef)
@@ -181,88 +177,72 @@ function ActionBar(props: ActionBarProps) {
 		[onOpenChange, dir, orientation, loop],
 	)
 
-	const portalContainer = portalContainerProp ?? (mounted ? globalThis.document.body : null)
-
-	if (!portalContainer || !open) return null
+	if (!open) return null
 
 	const isHorizontal = orientation === 'horizontal'
 
-	const rootClassName = [
-		'fixed',
-		'z-50',
+	// `sticky` (not `fixed`) + no portal: the bar belongs to the grid it acts on, so it
+	// tracks that grid's scrollport instead of floating over the whole viewport. This
+	// matches the shadcn kit, and keeps several grids on one page from stacking bars.
+	const rootClassName = cx(
+		'sticky z-10 w-fit',
+		ALIGN_CLASSES[align],
 		'flex',
-		isHorizontal ? 'flex-row items-center gap-2 py-1.5 px-2' : 'flex-col items-start gap-2 px-1.5 py-2',
-		'rounded-[var(--heroui-radius-large,12px)]',
-		'text-[hsl(var(--heroui-foreground))]',
-		'border',
-		'border-solid',
-		'border-[hsl(var(--heroui-divider))]',
-		'shadow-[0_10px_15px_-3px_rgb(0_0_0_/_0.1),0_4px_6px_-4px_rgb(0_0_0_/_0.1)]',
+		isHorizontal ? 'flex-row items-center gap-2 px-2 py-1.5' : 'flex-col items-start gap-2 px-1.5 py-2',
+		'rounded-xl border border-separator bg-overlay text-overlay-foreground shadow-overlay',
 		'outline-none',
 		rootProps.className,
-	]
-		.filter(Boolean)
-		.join(' ')
+	)
 
 	const rootStyle: React.CSSProperties = {
 		[side]: `${String(sideOffset)}px`,
-		...(align === 'center' && {
-			left: '50%',
-			translate: '-50% 0',
-		}),
-		...(align === 'start' && { left: `${String(alignOffset)}px` }),
-		...(align === 'end' && { right: `${String(alignOffset)}px` }),
 		...style,
 	}
 
 	return (
 		<ActionBarContext.Provider value={contextValue}>
-			{ReactDOM.createPortal(
-				<div
-					role='toolbar'
-					aria-orientation={orientation}
-					data-slot='action-bar'
-					data-state='open'
-					data-side={side}
-					data-align={align}
-					data-orientation={orientation}
-					dir={dir}
-					{...rootProps}
-					ref={composedRef}
-					className={rootClassName}
-					style={rootStyle}
-				/>,
-				portalContainer,
-			)}
+			<div
+				role='toolbar'
+				aria-orientation={orientation}
+				data-slot='action-bar'
+				data-state='open'
+				data-side={side}
+				data-align={align}
+				data-orientation={orientation}
+				dir={dir}
+				{...rootProps}
+				ref={composedRef}
+				className={rootClassName}
+				style={rootStyle}
+			/>
 		</ActionBarContext.Provider>
 	)
 }
 
 function ActionBarSelection(props: DivProps) {
-	const { style, ...selectionProps } = props
+	const { className, ...selectionProps } = props
 
 	return (
 		<div
 			data-slot='action-bar-selection'
 			{...selectionProps}
-			style={{
-				display: 'flex',
-				alignItems: 'center',
-				gap: '0.25rem',
-				borderRadius: 'var(--heroui-radius-small, 6px)',
-				border: '1px solid hsl(var(--heroui-divider))',
-				padding: '0.25rem 0.5rem',
-				fontWeight: 500,
-				fontSize: '0.875rem',
-				fontVariantNumeric: 'tabular-nums',
-				...style,
-			}}
+			className={cx(
+				'flex items-center gap-1 rounded-md border border-separator px-2 py-1 font-medium text-sm tabular-nums',
+				className,
+			)}
 		/>
 	)
 }
 
 function ActionBarGroup(props: DivProps) {
-	const { onBlur: onBlurProp, onFocus: onFocusProp, onMouseDown: onMouseDownProp, style, ref, ...groupProps } = props
+	const {
+		onBlur: onBlurProp,
+		onFocus: onFocusProp,
+		onMouseDown: onMouseDownProp,
+		className,
+		ref,
+		...groupProps
+	} = props
 
 	const [tabStopId, setTabStopId] = React.useState<string | null>(null)
 	const [isTabbingBackOut, setIsTabbingBackOut] = React.useState(false)
@@ -399,15 +379,11 @@ function ActionBarGroup(props: DivProps) {
 				tabIndex={isTabbingBackOut || focusableItemCount === 0 ? -1 : 0}
 				{...groupProps}
 				ref={composedRef}
-				style={{
-					display: 'flex',
-					flexDirection: isHorizontal ? 'row' : 'column',
-					alignItems: isHorizontal ? 'center' : 'flex-start',
-					width: isHorizontal ? undefined : '100%',
-					gap: '0.5rem',
-					outline: 'none',
-					...style,
-				}}
+				className={cx(
+					'flex gap-2 outline-none',
+					isHorizontal ? 'flex-row items-center' : 'w-full flex-col items-start',
+					className,
+				)}
 				onBlur={onBlur}
 				onFocus={onFocus}
 				onMouseDown={onMouseDown}
@@ -570,6 +546,9 @@ function ActionBarItem(props: ActionBarItemProps) {
 	// HeroUI Button uses React Aria's wrapped event types (with `continuePropagation`),
 	// so the standard React.FocusEvent / KeyboardEvent / MouseEvent we use internally
 	// must be widened through `unknown`. The lint rule does not see the underlying mismatch.
+	//
+	// The vertical full-width rule stays an inline style rather than a class: React Aria types
+	// `className` as `string | ((state) => string)`, so it cannot be joined with `cx` safely.
 	/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 	return (
 		<HeroButton
@@ -594,7 +573,7 @@ function ActionBarItem(props: ActionBarItemProps) {
 type ActionBarCloseProps = React.ComponentProps<'button'>
 
 function ActionBarClose(props: ActionBarCloseProps) {
-	const { style, onClick, ...closeProps } = props
+	const { className, onClick, ...closeProps } = props
 
 	const { onOpenChange } = useActionBarContext(CLOSE_NAME)
 
@@ -613,20 +592,12 @@ function ActionBarClose(props: ActionBarCloseProps) {
 			type='button'
 			data-slot='action-bar-close'
 			{...closeProps}
-			style={{
-				display: 'inline-flex',
-				alignItems: 'center',
-				justifyContent: 'center',
-				background: 'transparent',
-				border: 'none',
-				borderRadius: 'var(--heroui-radius-small, 6px)',
-				opacity: 0.7,
-				outline: 'none',
-				cursor: 'pointer',
-				color: 'inherit',
-				padding: '0.25rem',
-				...style,
-			}}
+			className={cx(
+				'inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-1 text-inherit',
+				'opacity-70 transition-opacity hover:opacity-100',
+				'outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-overlay',
+				className,
+			)}
 			onClick={onCloseClick}
 		/>
 	)
@@ -637,7 +608,7 @@ type ActionBarSeparatorProps = {
 } & DivProps
 
 function ActionBarSeparator(props: ActionBarSeparatorProps) {
-	const { orientation: orientationProp, style, ...separatorProps } = props
+	const { orientation: orientationProp, className, ...separatorProps } = props
 
 	const context = useActionBarContext(SEPARATOR_NAME)
 	const orientation = orientationProp ?? context.orientation
@@ -651,13 +622,7 @@ function ActionBarSeparator(props: ActionBarSeparatorProps) {
 			aria-hidden='true'
 			data-slot='action-bar-separator'
 			{...separatorProps}
-			style={{
-				background: 'hsl(var(--heroui-divider))',
-				height: isHorizontalBar ? '1.5rem' : '1px',
-				width: isHorizontalBar ? '1px' : '100%',
-				flexShrink: 0,
-				...style,
-			}}
+			className={cx('shrink-0 bg-separator', isHorizontalBar ? 'h-6 w-px' : 'h-px w-full', className)}
 		/>
 	)
 }

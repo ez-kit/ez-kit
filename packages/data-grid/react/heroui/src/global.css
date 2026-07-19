@@ -88,11 +88,6 @@
 	overflow: visible;
 }
 
-@theme inline {
-	--color-surface: var(--surface);
-	--color-surface-secondary: var(--surface-secondary);
-}
-
 :root {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.1);
 	--dg-pin-cell-background: var(--surface);
@@ -249,9 +244,9 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	}
 }
 
-[data-slot='action-bar'] {
-	@apply bg-background;
-}
+/* The bar's surface, border and radius live on the component itself (`bg-overlay` etc.,
+ * see `components/ui/action-bar.tsx`) — an action bar floats over content, so it takes the
+ * overlay surface rather than `--background`, which is the page canvas it sits on. */
 
 [data-slot='action-bar'][data-state='open'][data-side='bottom'] {
 	animation: ez-action-bar-slide-from-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -279,9 +274,9 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
    Do NOT write `--heroui-*` tokens: those are v2 names and this package is on v3,
    where they resolve to nothing. `hsl(var(--heroui-default-100))` is invalid at
    computed-value time and silently drops the whole declaration (this is what broke
-   the inline selection bar's background — see #68). The `var(--heroui-*, <literal>)`
-   rules below still render only because of their hardcoded fallback, which means
-   they are stuck on one theme. */
+   the inline selection bar's background — see #68). A `var(--heroui-*, <literal>)`
+   fallback form is no better: it renders, but always from the literal, so it is
+   frozen on one theme. */
 
 .dg-form-error {
 	background: color-mix(in oklab, var(--color-danger) 12%, transparent);
@@ -289,13 +284,10 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent);
 }
 
-.dg-page-sizer-label {
-	color: var(--heroui-default-500, #71717a);
-}
-
+.dg-page-sizer-label,
 .dg-empty-state,
 .dg-no-results-state {
-	color: var(--heroui-default-400, #a1a1aa);
+	color: var(--muted);
 }
 
 .dg-sort-count-badge {
@@ -311,5 +303,5 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 }
 
 .dg-sort-menu-footer {
-	border-top: 1px solid hsl(var(--heroui-default-200));
+	border-top: 1px solid var(--separator);
 }
