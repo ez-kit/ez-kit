@@ -8,4 +8,13 @@ export type { SelectOption } from './select-option'
  * React adapter build on. Re-exported here so downstream packages depend on
  * `@ez-kit/form-core` rather than reaching into `@tanstack/form-core` directly.
  */
-export type { AnyFieldApi, AnyFormApi, FormState, FormValidateOrFn, StandardSchemaV1 } from '@tanstack/form-core'
+export type {
+	AnyFieldApi,
+	AnyFormApi,
+	DeepKeysOfType,
+	FormAsyncValidateOrFn,
+	FormOptions,
+	FormState,
+	FormValidateOrFn,
+	StandardSchemaV1,
+} from '@tanstack/form-core'
