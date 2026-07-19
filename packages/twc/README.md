@@ -101,6 +101,8 @@ On every render the incoming props are split in two:
 - keys present in `config.variants` feed cva and **never reach the DOM**;
 - everything else is forwarded to the element or wrapped component untouched.
 
+> **Do not name a variant group after a real prop of the target.** The split is by key alone, so a `size` variant on `twc.input` swallows the native `size` attribute: it is routed to cva instead of the DOM and silently disappears. TypeScript removes the shadowed key from the public props, so a typed caller gets a compile error — but JS callers and generic `{...rest}` spreads lose the attribute with no warning. Watch out for `size`, `color`, `title`, `label`, `target`, `form`, `hidden` and `disabled`.
+
 The final class list is `twMerge(generatedClasses, props.className)`. With `twMerge` disabled the two are plain space-joined instead, so conflicting utilities both survive and the last one in the stylesheet wins.
 
 Refs are forwarded to the underlying element (React 18 and 19 alike):
@@ -153,7 +155,9 @@ configure({
 })
 ```
 
-Those are the defaults. The config is global, read **lazily at render time**, and repeated calls merge over the previous state — so it only has to be set before the first render. Because `enabled` derives from `NODE_ENV`, the server and the client agree and hydration does not mismatch.
+Those are the defaults. The config is global, read **lazily at render time**, and repeated calls merge over the previous state — so it only has to be set before the first render.
+
+`enabled` derives from `NODE_ENV`, so server and client agree wherever the bundler inlines `process.env.NODE_ENV` into the client build — which every mainstream bundler does. If yours does not (raw ESM in the browser, some edge runtimes), `process` is absent, the client falls back to development, and a production build would render the attribute on the client but not on the server. Pass `enabled` explicitly before the first render to pin it.
 
 With `enabled: false` the attribute never appears in the markup, so the debug affordance costs nothing in production.
 

@@ -96,6 +96,11 @@ export default function babelPluginTwc({ types: t }: BabelApi): PluginObj {
 					return
 				}
 
+				// A spread hides the real argument count, so the check above proves nothing.
+				if (init.arguments.some((argument) => t.isSpreadElement(argument))) {
+					return
+				}
+
 				init.arguments.push(t.stringLiteral(id.name))
 			},
 		},

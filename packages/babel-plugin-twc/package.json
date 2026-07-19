@@ -38,11 +38,9 @@
 			"limit": "50 KB"
 		}
 	],
-	"dependencies": {
-		"@babel/types": "^7.29.0"
-	},
 	"devDependencies": {
 		"@babel/core": "^7.29.0",
+		"@babel/types": "^7.29.0",
 		"@types/babel__core": "^7.20.5"
 	},
 	"peerDependencies": {

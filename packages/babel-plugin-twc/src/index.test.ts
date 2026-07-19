@@ -153,6 +153,13 @@ describe('calls it must not touch', () => {
 		`)
 	})
 
+	it('ignores a call whose arguments are spread', () => {
+		expect(transform(`${IMPORT}\nconst Button = twc.button(...args);`)).toMatchInlineSnapshot(`
+			"import { twc } from '@ez-kit/twc';
+			const Button = twc.button(...args);"
+		`)
+	})
+
 	it('ignores unrelated calls entirely', () => {
 		expect(transform(`${IMPORT}\nconst value = compute({ base: 'px-4' });`)).toMatchInlineSnapshot(`
 			"import { twc } from '@ez-kit/twc';

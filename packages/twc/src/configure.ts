@@ -5,8 +5,12 @@ const DEFAULT_ATTRIBUTE = 'data-component'
 const PRODUCTION = 'production'
 
 /**
- * Derived from `NODE_ENV` so the value is identical on the server and the
- * client — a mismatch here would surface as a hydration error.
+ * Derived from `NODE_ENV` so server and client agree — provided the bundler
+ * inlines `process.env.NODE_ENV` for the client build, as every mainstream one
+ * does. Where `process` is absent and not replaced (raw ESM in the browser, some
+ * edge runtimes) this reports development, which in a production build would
+ * render the name attribute on the client but not on the server. Call
+ * `configure({ enabled })` explicitly before the first render to pin it there.
  */
 function isDevelopmentEnvironment(): boolean {
 	return typeof process === 'undefined' || process.env.NODE_ENV !== PRODUCTION

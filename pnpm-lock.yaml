@@ -251,12 +251,11 @@ importers:
         version: 5.9.3
 
   packages/babel-plugin-twc:
-    dependencies:
-      '@babel/types':
-        specifier: ^7.29.0
-        version: 7.29.0
     devDependencies:
       '@babel/core':
+        specifier: ^7.29.0
+        version: 7.29.0
+      '@babel/types':
         specifier: ^7.29.0
         version: 7.29.0
       '@types/babel__core':

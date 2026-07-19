@@ -108,6 +108,35 @@ describe('twc.<tag>', () => {
 	})
 })
 
+describe('the twc proxy', () => {
+	it('is not a thenable, so awaiting it resolves instead of hanging', async () => {
+		const settled = await Promise.race([
+			Promise.resolve(twc).then(() => 'settled'),
+			new Promise((resolve) =>
+				setTimeout(() => {
+					resolve('hung')
+				}, 100),
+			),
+		])
+
+		expect(settled).toBe('settled')
+	})
+
+	it('keeps the inherited object protocol working', () => {
+		expect(() => String(twc)).not.toThrow()
+		expect(typeof twc.toString()).toBe('string')
+		expect(typeof twc.bind).toBe('function')
+	})
+
+	it('still builds a component for every intrinsic tag', () => {
+		const Section = twc.section({ base: 'block' })
+
+		render(<Section data-testid='section' />)
+
+		expect(screen.getByTestId('section')).toHaveClass('block')
+	})
+})
+
 describe('className merging', () => {
 	it('lets an incoming className win over a conflicting generated one', () => {
 		const Button = twc.button(BUTTON_CONFIG)

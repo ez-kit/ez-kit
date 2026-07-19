@@ -10,6 +10,16 @@ import type { ComponentPropsWithoutRef, ComponentRef, ComponentType, JSX, Ref } 
 /** Separator used when `twMerge` is disabled and classes are plain-joined. */
 const CLASS_SEPARATOR = ' '
 
+/** Stand-in name for a wrapped target that exposes neither `displayName` nor `name`. */
+const ANONYMOUS_TARGET = 'Component'
+
+/**
+ * `then` makes any object a thenable: `await`-ing or resolving a promise with
+ * `twc` would call it and hang forever. It is not an intrinsic tag, and it is
+ * not on `Function.prototype`, so it has to be excluded by name.
+ */
+const THENABLE_KEY = 'then'
+
 /** An empty variants map — the inferred default when a config declares none. */
 type NoVariants = Record<never, never>
 
@@ -114,7 +124,9 @@ function resolveDisplayName(target: RenderTarget, name: string | undefined): str
 		return `twc.${target}`
 	}
 
-	return `twc(${target.displayName ?? target.name})`
+	// A `forwardRef` target is a plain object, so it carries no function `name`.
+	const targetName = target.displayName ?? target.name
+	return `twc(${targetName || ANONYMOUS_TARGET})`
 }
 
 function createTwcComponent(target: RenderTarget, config: AnyTwcConfig, name: string | undefined): unknown {
@@ -159,7 +171,10 @@ const wrapComponent: WrapComponent = ((component: ComponentType<StyleableProps>,
  */
 export const twc: Twc = new Proxy(wrapComponent, {
 	get(target, property, receiver) {
-		if (typeof property !== 'string') {
+		// Anything the target already answers for — `toString`, `valueOf`, `name`,
+		// `bind`, … — must keep its normal meaning, or generic object protocols
+		// break on `twc`. No intrinsic tag collides with those names.
+		if (typeof property !== 'string' || property === THENABLE_KEY || Reflect.has(target, property)) {
 			return Reflect.get(target, property, receiver) as unknown
 		}
 
