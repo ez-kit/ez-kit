@@ -36,6 +36,8 @@ export type FieldRootProps = ComponentPropsWithoutRef<'div'>
 export type LabelProps = {
 	/** Always the input's `id`, so clicking the label focuses the control. */
 	htmlFor: string
+	/** Referenced from the input's `aria-labelledby`; kits must render it. */
+	id: string
 	children: ReactNode
 }
 
@@ -68,6 +70,12 @@ export type BaseInputProps = {
 	 * unconditionally, and a field with neither description nor error has nothing to point at.
 	 */
 	'aria-describedby'?: string | undefined
+	/**
+	 * Points at the field's label element. A native `<label for>` covers simple inputs, but
+	 * composite widgets — a React Aria select trigger, a number-field group — are not
+	 * labelled by it and need the explicit reference.
+	 */
+	'aria-labelledby'?: string | undefined
 }
 
 export type TextInputProps = BaseInputProps & {

@@ -17,10 +17,11 @@ export const testComponents: FormComponents = {
 			{children}
 		</div>
 	),
-	Label: ({ htmlFor, children }) => (
+	Label: ({ htmlFor, id, children }) => (
 		<label
 			data-testkit='label'
 			htmlFor={htmlFor}
+			id={id}
 		>
 			{children}
 		</label>

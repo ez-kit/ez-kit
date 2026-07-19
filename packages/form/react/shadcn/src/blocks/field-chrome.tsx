@@ -24,11 +24,12 @@ export function FieldRoot({ className, children, ...props }: FieldRootProps): Re
 	)
 }
 
-export function Label({ htmlFor, children }: LabelProps): ReactNode {
+export function Label({ htmlFor, id, children }: LabelProps): ReactNode {
 	return (
 		<LabelPrimitive
 			data-slot='form-label'
 			htmlFor={htmlFor}
+			id={id}
 		>
 			{children}
 		</LabelPrimitive>
