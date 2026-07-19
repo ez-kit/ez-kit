@@ -5,9 +5,17 @@
 
 @import '@ez-kit/data-grid-shadcn/global.css';
 
-@import "tw-animate-css";
+/* `@ez-kit/form-shadcn/global.css` is deliberately **not** imported: it ships the full shadcn
+ * theme (`shadcn/tailwind.css` plus its own `:root` / `.dark` token blocks), which would
+ * duplicate — and, depending on order, override — the palette this file defines below. The
+ * form kit's components consume those same token names, so all they need from here is for
+ * Tailwind to scan their sources and emit the utilities they reference. */
+@source '../../../packages/form/react/shadcn/src/**/*.{ts,tsx}';
+@source '../shared/examples/form/**/*.{ts,tsx}';
 
-@import "shadcn/tailwind.css";
+@import 'tw-animate-css';
+
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -266,13 +274,13 @@ body {
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+	* {
+		@apply border-border outline-ring/50;
 	}
-  body {
-    @apply bg-background text-foreground;
+	body {
+		@apply bg-background text-foreground;
 	}
-  html {
-    @apply font-sans;
+	html {
+		@apply font-sans;
 	}
 }

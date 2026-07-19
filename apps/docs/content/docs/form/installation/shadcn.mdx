@@ -1,0 +1,84 @@
+---
+title: shadcn install
+description: Install the form kit for a shadcn-based React app — package, CSS import, and a working minimal example.
+---
+
+# Install for shadcn
+
+## 1. Install the package
+
+```bash
+pnpm add @ez-kit/form-shadcn
+```
+
+That is the only package you need at the call site — it re-exports the consumer surface of `@ez-kit/form-react` (field prop types, `TextInputType`, `SelectOption`, the error helpers). Add `@ez-kit/form-react` yourself only if you are [building your own kit](./form/custom-kit).
+
+`react` and `react-dom` (18 or 19) are peer dependencies.
+
+## 2. Import the stylesheet
+
+Pull in the prebuilt CSS once at your app entry (`app/layout.tsx`, `_app.tsx`, `main.tsx`, …):
+
+```ts
+import '@ez-kit/form-shadcn/global.css'
+```
+
+It ships the shadcn theme tokens (`--background`, `--foreground`, `--destructive`, `--radius`, …) plus the Tailwind v4 entry the vendored primitives rely on.
+
+<Callout type='warn'>
+	If your app already defines the shadcn tokens — because you run shadcn yourself, or you also use
+	`@ez-kit/data-grid-shadcn` — do **not** import this stylesheet a second time. Both files declare the
+	same `:root` block, and whichever loads last wins, which will silently repaint your palette. Point
+	Tailwind at the package sources instead so the utilities still get generated:
+
+    ```css
+    @source '../node_modules/@ez-kit/form-shadcn/dist/**/*.js';
+    ```
+
+</Callout>
+
+## 3. Render a form
+
+```tsx
+'use client'
+
+import { useForm } from '@ez-kit/form-shadcn'
+
+export function SignUpForm() {
+	const form = useForm({
+		defaultValues: { email: '', password: '' },
+		onSubmit: ({ value }) => api.signUp(value),
+	})
+
+	return (
+		<form.Form>
+			<form.TextField
+				name='email'
+				label='Email'
+			/>
+			<form.TextField
+				name='password'
+				label='Password'
+				type={TextInputType.Password}
+			/>
+			<form.SubmitButton>Create account</form.SubmitButton>
+		</form.Form>
+	)
+}
+```
+
+<LivePreview
+	path='form/basic'
+	title='Running under shadcn'
+/>
+
+## What the kit is made of
+
+- `src/components/ui/**` — vendored shadcn primitives (input, textarea, select, checkbox, label, button). Upstream-owned and never edited.
+- `src/blocks/**` — the adapters that implement the `@ez-kit/form-react` contract on top of those primitives.
+
+If you want to restyle an input, edit the vendored primitive in your own copy or [supply your own kit](./form/custom-kit) — the adapters deliberately hold no styling decisions beyond layout.
+
+## Source
+
+- `@ez-kit/form-shadcn` — [`packages/form/react/shadcn/README.md`](https://github.com/ez-kit/ez-kit/blob/main/packages/form/react/shadcn/README.md)

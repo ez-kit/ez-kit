@@ -1,0 +1,111 @@
+---
+title: Custom kit
+description: The FormComponents contract and createForm — bind your own design system's inputs and get the same fields.
+---
+
+# Custom kit
+
+`@ez-kit/form-shadcn` and `@ez-kit/form-heroui` are not special. Each is ~150 lines that implement one contract and call one factory. Your design system can do the same.
+
+## The idea
+
+`@ez-kit/form-react` owns the behaviour — binding a field to form state, accessibility wiring, error normalisation, layout order — and **no pixels at all**. Every visible element is injected:
+
+```tsx
+import { createForm } from '@ez-kit/form-react'
+import type { FormComponents } from '@ez-kit/form-react'
+
+const components = {
+	// chrome
+	FieldRoot,
+	Label,
+	Description,
+	ErrorText,
+	// inputs
+	TextInput,
+	NumberInput,
+	Textarea,
+	Select,
+	Checkbox,
+	// form level
+	Button,
+	Form,
+} satisfies FormComponents
+
+export const { useForm } = createForm({ components })
+```
+
+That is the whole kit. Export `useForm` and your consumers get the same `form.TextField` / `form.SubmitButton` / `form.Form` API.
+
+<Callout>
+	Use `satisfies FormComponents` rather than a type annotation. It turns a forgotten primitive into a compile error
+	instead of a runtime crash, while keeping your components' own prop types intact.
+</Callout>
+
+## The contract
+
+Eleven components, split three ways.
+
+### Chrome
+
+| Component     | Props                       | Renders                                                      |
+| ------------- | --------------------------- | ------------------------------------------------------------ |
+| `FieldRoot`   | `<div>` props               | The per-field wrapper. Receives the `data-*` attributes.     |
+| `Label`       | `htmlFor`, `id`, `children` | Must render **both** ids — they are referenced by the input. |
+| `Description` | `id`, `children`            | Helper text.                                                 |
+| `ErrorText`   | `id`, `errors: string[]`    | Errors, already normalised to display strings.               |
+
+### Inputs
+
+Every input receives `id`, `name`, `onBlur`, `invalid`, `aria-describedby`, `aria-labelledby`, plus optional `disabled` / `required`. On top of that:
+
+| Component     | Value props                                                      |
+| ------------- | ---------------------------------------------------------------- |
+| `TextInput`   | `value: string`, `onChange(value)`, `placeholder?`, `type?`      |
+| `NumberInput` | `value: number \| undefined`, `onChange(value)`, `min/max/step?` |
+| `Textarea`    | `value: string`, `onChange(value)`, `rows?`                      |
+| `Select`      | `value: string`, `onChange(value)`, `options: SelectOption[]`    |
+| `Checkbox`    | `checked: boolean`, `onChange(checked)`                          |
+
+<Callout type='warn'>
+	`onChange` receives **the value**, not a DOM event. That is what keeps the contract identical across
+	kits whose primitives disagree — some hand you an event, some a value, some a React Aria callback.
+	Unwrapping is the adapter's job:
+
+    ```tsx
+    export function TextInput({ value, onChange, invalid, ...props }: TextInputProps) {
+    	return <input value={value} onChange={(event) => { onChange(event.target.value) }} aria-invalid={invalid} {...props} />
+    }
+    ```
+
+</Callout>
+
+### Form level
+
+| Component | Props                            | Renders                      |
+| --------- | -------------------------------- | ---------------------------- |
+| `Button`  | `type?`, `disabled?`, `children` | The submit button.           |
+| `Form`    | `<form>` props                   | The `<form>` element itself. |
+
+## What you must not forget
+
+- **Render `Label`'s `id`.** Simple inputs are covered by `htmlFor`, but composite widgets — a listbox trigger, a spin-button group — are not labelled by a native `<label>`, and the field layer points `aria-labelledby` at that id.
+- **Spread the rest props onto the real control.** `id`, `name`, `onBlur` and the `aria-*` attributes arrive that way; dropping them breaks focus, blur validation and screen-reader wiring.
+- **Map `invalid` to whatever your system wants.** `aria-invalid`, `isInvalid`, a `data-` attribute — the field layer only tells you _that_ it is invalid.
+
+## Boolean props and `exactOptionalPropertyTypes`
+
+Both shipped kits run under `exactOptionalPropertyTypes`, where passing an explicit `undefined` is not the same as omitting a key — and several third-party primitives reject it. Spread conditionally rather than passing through:
+
+```tsx
+<Primitive {...(disabled !== undefined ? { disabled } : {})} />
+```
+
+## Worked examples
+
+The two shipped kits are the reference implementations, and they deliberately solve the problem differently:
+
+- [`packages/form/react/shadcn/src/blocks`](https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/shadcn/src/blocks) — thin adapters over Radix-based primitives.
+- [`packages/form/react/heroui/src/blocks`](https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/heroui/src/blocks) — React Aria compositions, where the root owns state and the control is a child.
+
+Reading both is the fastest way to see which parts of the contract are load-bearing.

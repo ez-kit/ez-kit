@@ -26,6 +26,7 @@
 		"@ez-kit/data-grid-heroui": "workspace:*",
 		"@ez-kit/data-grid-react": "workspace:*",
 		"@ez-kit/data-grid-shadcn": "workspace:*",
+		"@ez-kit/form-shadcn": "workspace:*",
 		"@ez-kit/valtio-kit": "workspace:*",
 		"@ez-kit/zu-store": "workspace:*",
 		"@react-three/fiber": "^9.6.1",
