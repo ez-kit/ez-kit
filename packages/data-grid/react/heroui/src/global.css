@@ -290,18 +290,6 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	color: var(--muted);
 }
 
-.dg-sort-count-badge {
-	margin-left: 0.125rem;
-	border-radius: 9999px;
-	padding: 0 0.375rem;
-	font-size: 0.75rem;
-	font-weight: 500;
-	background: currentColor;
-	color: transparent;
-	background-clip: padding-box;
-	opacity: 0.85;
-}
-
 .dg-sort-menu-footer {
 	border-top: 1px solid var(--separator);
 }
