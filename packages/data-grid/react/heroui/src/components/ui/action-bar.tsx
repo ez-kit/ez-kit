@@ -32,7 +32,11 @@ const ALIGN_CLASSES: Record<Align, string> = {
 	end: 'ml-auto',
 }
 
-/** Minimal class joiner — this package has no `cn`, and no conflict-merging is needed here. */
+/**
+ * Minimal class joiner — this package ships no `cn`/`tailwind-merge`. Caller classes are
+ * appended last, which composes fine for non-conflicting utilities; a caller utility that
+ * conflicts with one of the defaults is resolved by CSS source order, not by prop order.
+ */
 function cx(...classNames: (string | false | undefined)[]) {
 	return classNames.filter(Boolean).join(' ')
 }
@@ -182,8 +186,12 @@ function ActionBar(props: ActionBarProps) {
 	const isHorizontal = orientation === 'horizontal'
 
 	// `sticky` (not `fixed`) + no portal: the bar belongs to the grid it acts on, so it
-	// tracks that grid's scrollport instead of floating over the whole viewport. This
-	// matches the shadcn kit, and keeps several grids on one page from stacking bars.
+	// tracks that grid's scrollport instead of floating over the whole viewport, which
+	// keeps several grids on one page (e.g. a docs page) from stacking bars on top of
+	// each other. This matches what the shadcn kit actually renders — its
+	// `blocks/selection/SelectionBar.tsx` builds the floating bar as a plain
+	// `sticky bottom-2 z-10 mx-auto w-fit` div. (Note that kit's own
+	// `components/ui/action-bar.tsx` is still `fixed` + portal, but nothing imports it.)
 	const rootClassName = cx(
 		'sticky z-10 w-fit',
 		ALIGN_CLASSES[align],
