@@ -44,6 +44,9 @@ export function SelectionBarExample() {
 							border: '1px solid #e2e8f0',
 							borderRadius: 6,
 							background: 'white',
+							// The background is hardcoded, so the text colour must be too — otherwise it
+							// inherits the bar's foreground and goes white-on-white in the dark theme.
+							color: '#0f172a',
 							cursor: 'pointer',
 						}}
 					>
