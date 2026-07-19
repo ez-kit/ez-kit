@@ -1,3 +1,4 @@
+import { FormFieldType } from '@ez-kit/form-react'
 import { Description as HeroDescription, Label as HeroLabel } from '@heroui/react'
 
 import type { DescriptionProps, ErrorTextProps, FieldRootProps, LabelProps } from '@ez-kit/form-react'
@@ -9,11 +10,23 @@ import type { ReactNode } from 'react'
  * All visual styling for a field lives here — `@ez-kit/form-react` ships none.
  */
 
+/**
+ * A checkbox reads as `[control] Label`, not as a label stacked above a lone box.
+ *
+ * The shared field frame renders chrome in one fixed order (label, description, input,
+ * error) because that is right for every other field, so the kit reorders it here. HeroUI's
+ * checkbox root carries the `.checkbox` class, which is what the child selector targets.
+ */
+const CHECKBOX_LAYOUT =
+	'flex flex-wrap items-center gap-x-2 gap-y-1 [&>.checkbox]:order-1 [&>[data-slot=form-label]]:order-2 [&>[data-slot=form-description]]:order-3 [&>[data-slot=form-description]]:w-full [&>[data-slot=form-error]]:order-4 [&>[data-slot=form-error]]:w-full'
+
 export function FieldRoot({ className, children, ...props }: FieldRootProps): ReactNode {
+	const layout = props['data-field-type'] === FormFieldType.Checkbox ? CHECKBOX_LAYOUT : 'flex flex-col gap-1'
+
 	return (
 		<div
 			data-slot='form-field'
-			className={['flex flex-col gap-1', className].filter(Boolean).join(' ')}
+			className={[layout, className].filter(Boolean).join(' ')}
 			{...props}
 		>
 			{children}

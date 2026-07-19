@@ -43,6 +43,8 @@
 	],
 	"dependencies": {
 		"@ez-kit/form-react": "workspace:*",
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-react": "^0.577.0",

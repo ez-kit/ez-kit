@@ -1,4 +1,4 @@
-import type { SelectOption } from '@ez-kit/form-core'
+import type { FormFieldType, SelectOption } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -28,10 +28,20 @@ export enum TextInputType {
 // ── field chrome ─────────────────────────────────────────────────────────────
 
 /**
- * The per-field wrapper element. Receives the `data-field`, `data-field-type` and
- * `data-invalid` attributes, so kit CSS can style a field by name, kind or validity.
+ * The per-field wrapper element.
+ *
+ * The `data-*` attributes are declared rather than left implicit so a kit can *read* them —
+ * a checkbox, for instance, needs a different layout from a text field — instead of only
+ * matching them from CSS.
  */
-export type FieldRootProps = ComponentPropsWithoutRef<'div'>
+export type FieldRootProps = ComponentPropsWithoutRef<'div'> & {
+	/** The field's `name`. */
+	'data-field': string
+	/** Which kind of field this is. */
+	'data-field-type': FormFieldType
+	/** Present only while the field has errors. */
+	'data-invalid'?: true | undefined
+}
 
 export type LabelProps = {
 	/** Always the input's `id`, so clicking the label focuses the control. */
