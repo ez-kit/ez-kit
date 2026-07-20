@@ -34,14 +34,15 @@ describe('FEATURE_MATRIX manifest', () => {
 			if (row.doc === undefined) continue
 			const { doc } = row
 			const resolved = resolveDocSlug(doc)
-			expect(resolved, `doc "${doc}" for feature "${row.feature}" not found as ${doc}.mdx or ${doc}/index.mdx`).not.toBeNull()
+			expect(
+				resolved,
+				`doc "${doc}" for feature "${row.feature}" not found as ${doc}.mdx or ${doc}/index.mdx`,
+			).not.toBeNull()
 		}
 	})
 
 	it('Planned rows have no doc', () => {
-		const plannedWithDoc = FEATURE_MATRIX.filter(
-			(row) => row.status === FeatureStatus.Planned && row.doc !== undefined,
-		)
+		const plannedWithDoc = FEATURE_MATRIX.filter((row) => row.status === FeatureStatus.Planned && row.doc !== undefined)
 		expect(plannedWithDoc).toEqual([])
 	})
 

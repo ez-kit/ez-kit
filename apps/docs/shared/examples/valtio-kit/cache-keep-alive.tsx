@@ -100,8 +100,8 @@ function Demo() {
 				</tableStore.Provider>
 			) : (
 				<p className='rounded-lg border border-dashed border-fd-border p-4 text-sm text-fd-muted-foreground'>
-					The table is unmounted, but its filter and page are kept alive in the cache. Reopen it — your
-					selection is exactly where you left it.
+					The table is unmounted, but its filter and page are kept alive in the cache. Reopen it — your selection is
+					exactly where you left it.
 				</p>
 			)}
 		</div>

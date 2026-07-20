@@ -145,6 +145,14 @@ export type PaginationProps = {
 	rowCount?: number
 	/** Which set of controls to render. Resolved by the react layer; never undefined. */
 	variant: PaginationVariant
+	/**
+	 * `numbered` only. Pages kept either side of the current one in the page-link strip.
+	 * Resolved by the react layer; never undefined. Feed it to `buildPageWindow` rather than
+	 * looping over `pageCount` — see {@link https://github.com/ez-kit/ez-kit/issues/106}.
+	 */
+	siblings: number
+	/** `numbered` only. Pages kept at each end of the page-link strip. Never undefined. */
+	boundaries: number
 	canPreviousPage: boolean
 	canNextPage: boolean
 	onPreviousPage: () => void

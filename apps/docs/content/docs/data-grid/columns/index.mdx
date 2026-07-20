@@ -29,19 +29,19 @@ For typed accessors, custom rendering, and registered cell types, prefer the [co
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `id` | `string` | Stable column identifier. Required when no `accessorKey` is given. |
-| `accessorKey` | `keyof TRow` | Reads a row property by name. |
-| `accessorFn` | `(row: TRow) => unknown` | Computed accessor; takes the whole row. |
-| `header` | `string \| ReactNode \| (ctx) => ReactNode` | Header label or render fn. |
-| `cell` | `(ctx) => ReactNode` | Custom cell renderer. |
-| `enableSorting` | `boolean` | Default `true`. |
-| `enableColumnFilter` | `boolean` | Default `true`. |
-| `enableHiding` | `boolean` | Default `true`. |
-| `enablePinning` | `boolean` | Default `false`. |
-| `size` / `minSize` / `maxSize` | `number` | Column-width constraints when resizing is enabled. |
-| `meta` | `unknown` | Free-form per-column data; commonly used for alignment, formatter hints, or cell-type registration. |
+| Option                         | Type                                        | Description                                                                                         |
+| ------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `id`                           | `string`                                    | Stable column identifier. Required when no `accessorKey` is given.                                  |
+| `accessorKey`                  | `keyof TRow`                                | Reads a row property by name.                                                                       |
+| `accessorFn`                   | `(row: TRow) => unknown`                    | Computed accessor; takes the whole row.                                                             |
+| `header`                       | `string \| ReactNode \| (ctx) => ReactNode` | Header label or render fn.                                                                          |
+| `cell`                         | `(ctx) => ReactNode`                        | Custom cell renderer.                                                                               |
+| `enableSorting`                | `boolean`                                   | Default `true`.                                                                                     |
+| `enableColumnFilter`           | `boolean`                                   | Default `true`.                                                                                     |
+| `enableHiding`                 | `boolean`                                   | Default `true`.                                                                                     |
+| `enablePinning`                | `boolean`                                   | Default `false`.                                                                                    |
+| `size` / `minSize` / `maxSize` | `number`                                    | Column-width constraints when resizing is enabled.                                                  |
+| `meta`                         | `unknown`                                   | Free-form per-column data; commonly used for alignment, formatter hints, or cell-type registration. |
 
 ## See also
 

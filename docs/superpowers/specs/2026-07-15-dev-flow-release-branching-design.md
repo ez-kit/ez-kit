@@ -75,7 +75,7 @@ New files: `.husky/pre-commit`, `.husky/commit-msg`, `commitlint.config.mjs`,
   `pnpm install --frozen-lockfile`, Turbo cache (`actions/cache`), then the full
   gate `pnpm ci` (lint → typecheck → test → build → size).
 - **fumadocs `.source` gotcha:** docs lint/typecheck need generated `.source`
-  from a real `next build`. `pnpm ci` runs lint/typecheck *before* build, so CI
+  from a real `next build`. `pnpm ci` runs lint/typecheck _before_ build, so CI
   must generate `.source` first (build docs / run `fumadocs-mdx` up front) or the
   docs steps flake. Resolve in the workflow.
 - Concurrency group to cancel superseded runs per branch.

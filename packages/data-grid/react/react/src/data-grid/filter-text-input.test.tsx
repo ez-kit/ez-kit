@@ -7,7 +7,12 @@ import { FilterTextInput } from './filter-text-input'
 import type { InputProps } from '../types'
 
 function TestInput(props: InputProps) {
-	return <input aria-label='filter' {...props} />
+	return (
+		<input
+			aria-label='filter'
+			{...props}
+		/>
+	)
 }
 
 afterEach(() => {
@@ -17,7 +22,15 @@ afterEach(() => {
 describe('FilterTextInput', () => {
 	it('commits on every keystroke when debounce is 0 (backward compatible)', () => {
 		const onCommit = vi.fn()
-		render(<FilterTextInput Input={TestInput} value='' onCommit={onCommit} placeholder='Filter…' debounce={0} />)
+		render(
+			<FilterTextInput
+				Input={TestInput}
+				value=''
+				onCommit={onCommit}
+				placeholder='Filter…'
+				debounce={0}
+			/>,
+		)
 
 		const input = screen.getByLabelText('filter')
 		fireEvent.change(input, { target: { value: 'a' } })
@@ -31,7 +44,15 @@ describe('FilterTextInput', () => {
 	it('commits only after the debounce delay, not on every keystroke', () => {
 		vi.useFakeTimers()
 		const onCommit = vi.fn()
-		render(<FilterTextInput Input={TestInput} value='' onCommit={onCommit} placeholder='Filter…' debounce={200} />)
+		render(
+			<FilterTextInput
+				Input={TestInput}
+				value=''
+				onCommit={onCommit}
+				placeholder='Filter…'
+				debounce={200}
+			/>,
+		)
 
 		const input = screen.getByLabelText('filter')
 		fireEvent.change(input, { target: { value: 'a' } })
@@ -55,7 +76,13 @@ describe('FilterTextInput', () => {
 			const [value, setValue] = useState('initial')
 			return (
 				<>
-					<FilterTextInput Input={TestInput} value={value} onCommit={() => {}} placeholder='Filter…' debounce={0} />
+					<FilterTextInput
+						Input={TestInput}
+						value={value}
+						onCommit={() => {}}
+						placeholder='Filter…'
+						debounce={0}
+					/>
 					<button
 						onClick={() => {
 							setValue('')

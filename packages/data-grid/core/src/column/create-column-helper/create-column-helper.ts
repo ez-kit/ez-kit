@@ -95,11 +95,11 @@ export function createColumnHelper<TRow extends object, TCustom extends string =
 		(opts: { config?: Record<string, unknown> } & Omit<ColumnDef<TRow, TCustom>, 'cell'>) => ColumnDef<TRow, TCustom>
 	> = {}
 	for (const typeName of customTypes ?? []) {
-			registered[typeName] = ({ config, ...opts }) => ({
-				...opts,
-				cell: { type: typeName, config },
-			})
-		}
+		registered[typeName] = ({ config, ...opts }) => ({
+			...opts,
+			cell: { type: typeName, config },
+		})
+	}
 
 	return { ...base, ...registered } as ColumnHelper<TRow, TCustom>
 }

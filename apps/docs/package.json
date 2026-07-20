@@ -29,6 +29,7 @@
 		"@ez-kit/form-heroui": "workspace:*",
 		"@ez-kit/form-react": "workspace:*",
 		"@ez-kit/form-shadcn": "workspace:*",
+		"@ez-kit/twc": "workspace:*",
 		"@ez-kit/valtio-kit": "workspace:*",
 		"@ez-kit/zu-store": "workspace:*",
 		"@react-three/fiber": "^9.6.1",

@@ -1,4 +1,4 @@
-import { PaginationVariants } from '@ez-kit/data-grid-react'
+import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariants } from '@ez-kit/data-grid-react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -8,6 +8,7 @@ import type { PaginationProps } from '@ez-kit/data-grid-react'
 
 const FIRST_GLYPH = '«'
 const LAST_GLYPH = '»'
+const GAP_GLYPH = '…'
 
 /** A known-total, mid-range page — overridden per case. */
 function makeProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
@@ -17,6 +18,8 @@ function makeProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
 		pageSize: 10,
 		pageCount: 5,
 		rowCount: 50,
+		siblings: DEFAULT_PAGE_SIBLINGS,
+		boundaries: DEFAULT_PAGE_BOUNDARIES,
 		canPreviousPage: false,
 		canNextPage: true,
 		onPreviousPage: vi.fn(),
@@ -69,6 +72,16 @@ describe('native Pagination — numbered', () => {
 		const { container } = render(<Pagination {...makeProps()} />)
 
 		expect(container.querySelector('[data-variant="numbered"]')).not.toBeNull()
+	})
+
+	// Regression (#106): 100 pages used to render 100 live page links in one row, blowing out
+	// the footer. The window keeps it to boundaries + the current page's neighbours, with a
+	// gap glyph for each hidden run.
+	it('windows a large page count instead of a link per page', () => {
+		render(<Pagination {...makeProps({ pageIndex: 49, pageCount: 100 })} />)
+
+		expect(pageLinks()).toEqual(['1', '49', '50', '51', '100'])
+		expect(screen.getAllByText(GAP_GLYPH)).toHaveLength(2)
 	})
 })
 

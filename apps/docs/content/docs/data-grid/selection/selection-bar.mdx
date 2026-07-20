@@ -31,9 +31,7 @@ The same content can be rendered inline above the table — no portal, no z-inde
 <DataGridDocsExample exampleId='selection-bar-inline' />
 
 ```tsx
-<DataGrid.SelectionBar variant='inline'>
-	{/* same content */}
-</DataGrid.SelectionBar>
+<DataGrid.SelectionBar variant='inline'>{/* same content */}</DataGrid.SelectionBar>
 ```
 
 ## Delete confirmation
@@ -62,13 +60,13 @@ The dialog reuses the same `ConfirmDialog` component as per-row [delete confirma
 The panel is configured under `selection.panel` — pass `true` for the default (read-only) panel or an
 object with the keys below. It renders only while `selection` is enabled.
 
-| `selection.panel` key | Type | Description |
-| --- | --- | --- |
-| `variant` | `'floating' \| 'inline'` | Default `'floating'`. |
-| `onDelete` | `({ table, selectedRows, clearSelection }) => void` | Adds a Delete button that runs this handler. |
-| `confirmation` | `boolean \| ConfirmationOptions` | Prompt before `onDelete`. `ConfirmationOptions` = `{ title?, description? }`. |
-| `onClear` | `({ table, selectedRows, clearSelection }) => void` | Overrides the default clear behaviour. |
-| `actions` | `ReactElement \| (args) => ReactElement` | Extra controls rendered between Delete and Cancel. |
+| `selection.panel` key | Type                                                | Description                                                                   |
+| --------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `variant`             | `'floating' \| 'inline'`                            | Default `'floating'`.                                                         |
+| `onDelete`            | `({ table, selectedRows, clearSelection }) => void` | Adds a Delete button that runs this handler.                                  |
+| `confirmation`        | `boolean \| ConfirmationOptions`                    | Prompt before `onDelete`. `ConfirmationOptions` = `{ title?, description? }`. |
+| `onClear`             | `({ table, selectedRows, clearSelection }) => void` | Overrides the default clear behaviour.                                        |
+| `actions`             | `ReactElement \| (args) => ReactElement`            | Extra controls rendered between Delete and Cancel.                            |
 
 ## Source
 

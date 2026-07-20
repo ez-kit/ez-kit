@@ -22,7 +22,7 @@ type Filters = { q: string }
 // Accessor front: plain proxy + plugin `fields` builder.
 const fieldsStore = createStore<Filters, { q?: string }>(
 	({ defaultValue }: StoreInit<{ q?: string }>) => proxy<Filters>({ q: defaultValue.q ?? '' }),
-	{ plugins: [persist({ fields: (field) => [field((s) => (s).q, { source: 'url', parser: paramString() })] })] },
+	{ plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })] },
 )
 
 // Decorator front: class instance with `persistUrl` fields, discovered automatically.

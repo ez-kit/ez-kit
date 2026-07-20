@@ -84,11 +84,7 @@ function declaredNames(statement: ts.Statement): string[] {
 		return statement.declarationList.declarations.flatMap((declaration) => bindingNames(declaration.name))
 	}
 
-	if (
-		ts.isTypeAliasDeclaration(statement) ||
-		ts.isInterfaceDeclaration(statement) ||
-		ts.isEnumDeclaration(statement)
-	) {
+	if (ts.isTypeAliasDeclaration(statement) || ts.isInterfaceDeclaration(statement) || ts.isEnumDeclaration(statement)) {
 		return [statement.name.text]
 	}
 

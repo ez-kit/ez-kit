@@ -73,11 +73,7 @@ export type { InfiniteState } from './features/infinite'
 export type { LoadingState } from './features/loading'
 
 // Validation API
-export {
-	ValidationError,
-	isValidationError,
-	zodResolver,
-} from './features/validation'
+export { ValidationError, isValidationError, zodResolver } from './features/validation'
 
 export type {
 	CommitStatus,

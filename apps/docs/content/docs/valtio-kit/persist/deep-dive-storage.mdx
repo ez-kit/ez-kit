@@ -23,7 +23,7 @@ A store's fields are packed into one JSON blob under one key:
 
 ## `useHydrated()` — flash and CLS
 
-Storage can't be read synchronously in render without breaking SSR (server has no storage), so a stored non-default value appears one tick after mount. The default *silent fill* is fine when the gap is invisible. When it isn't — a theme that would flash, a layout that would shift, analytics that shouldn't fire on defaults — gate on `useHydrated()`:
+Storage can't be read synchronously in render without breaking SSR (server has no storage), so a stored non-default value appears one tick after mount. The default _silent fill_ is fine when the gap is invisible. When it isn't — a theme that would flash, a layout that would shift, analytics that shouldn't fire on defaults — gate on `useHydrated()`:
 
 ```tsx
 import { useHydrated } from '@ez-kit/valtio-kit/persist'
@@ -60,7 +60,7 @@ On `get()`, if the stored `v` is older than the configured `version`, the adapte
 
 ## Cross-tab sync
 
-`localStorage` writes in one tab fire a `storage` event in **other** tabs (never the writer), which the adapter subscribes to and turns into a `pull`. Edits propagate tab-to-tab automatically. The `pull` re-baselines the binding before re-flushing, so an A→B→A echo terminates. (Two proxies bound to the *same* key within *one* tab is unsupported.)
+`localStorage` writes in one tab fire a `storage` event in **other** tabs (never the writer), which the adapter subscribes to and turns into a `pull`. Edits propagate tab-to-tab automatically. The `pull` re-baselines the binding before re-flushing, so an A→B→A echo terminates. (Two proxies bound to the _same_ key within _one_ tab is unsupported.)
 
 ## Graceful degradation
 
@@ -72,6 +72,5 @@ For larger or structured data, `indexedDbAdapter()` is the async sibling — sam
 
 ```tsx
 import { indexedDbAdapter } from '@ez-kit/valtio-kit/persist/storage'
-
-<PersistProvider adapters={[indexedDbAdapter({ dbName: 'my-app', storeName: 'state' })]}>…</PersistProvider>
+;<PersistProvider adapters={[indexedDbAdapter({ dbName: 'my-app', storeName: 'state' })]}>…</PersistProvider>
 ```

@@ -162,7 +162,8 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 		field((s) => (s as { q: string }).q, { source: 'url', parser: paramString() }),
 		field((s) => (s as { q: string }).q, { source: 'localStorage', parser: paramString() }),
 	]
-	const makeDualStore = () => createStore<{ q: string }>(() => proxy({ q: '' }), { plugins: [persist({ fields: dualFields })] })
+	const makeDualStore = () =>
+		createStore<{ q: string }>(() => proxy({ q: '' }), { plugins: [persist({ fields: dualFields })] })
 
 	it('lets the URL win over a stale stored value on cold start (first-present-wins)', async () => {
 		window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify({ v: 0, s: { q: 'cached' } }))
@@ -252,7 +253,7 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 describe('@ez-kit/valtio-kit persist useHydrated', () => {
 	const makeStore = () =>
 		createStore<{ q: string }>(() => proxy({ q: '' }), {
-			plugins: [persist({ fields: (field) => [field((s) => (s).q, { source: 'localStorage', parser: paramString() })] })],
+			plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })] })],
 		})
 
 	it('is false on the server render', () => {

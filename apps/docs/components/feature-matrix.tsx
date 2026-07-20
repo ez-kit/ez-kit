@@ -55,7 +55,11 @@ export function FeatureMatrix() {
 				</thead>
 				<tbody>
 					{Array.from(groups.entries()).map(([category, rows]) => (
-						<CategoryGroup key={category} category={category} rows={rows} />
+						<CategoryGroup
+							key={category}
+							category={category}
+							rows={rows}
+						/>
 					))}
 				</tbody>
 			</table>
@@ -80,7 +84,10 @@ function CategoryGroup({ category, rows }: CategoryGroupProps) {
 				</td>
 			</tr>
 			{rows.map((row) => (
-				<FeatureRowItem key={row.feature} row={row} />
+				<FeatureRowItem
+					key={row.feature}
+					row={row}
+				/>
 			))}
 		</>
 	)

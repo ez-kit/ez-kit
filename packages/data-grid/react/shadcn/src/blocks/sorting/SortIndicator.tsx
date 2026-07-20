@@ -8,11 +8,20 @@ export function SortIndicator({ sortDir, canSort }: SortIndicatorProps) {
 	if (!canSort) return null
 	const icon =
 		sortDir === 'asc' ? (
-			<ArrowUp className='h-3 w-3' aria-hidden />
+			<ArrowUp
+				className='h-3 w-3'
+				aria-hidden
+			/>
 		) : sortDir === 'desc' ? (
-			<ArrowDown className='h-3 w-3' aria-hidden />
+			<ArrowDown
+				className='h-3 w-3'
+				aria-hidden
+			/>
 		) : (
-			<ArrowUpDown className='h-3 w-3 opacity-40' aria-hidden />
+			<ArrowUpDown
+				className='h-3 w-3 opacity-40'
+				aria-hidden
+			/>
 		)
 	return (
 		<Button

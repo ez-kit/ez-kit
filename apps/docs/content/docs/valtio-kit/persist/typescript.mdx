@@ -13,9 +13,9 @@ The decorators use **Stage 3 (standard) decorators** with `Symbol.metadata`. No 
 // tsconfig.json — TypeScript ≥ 5.2
 {
 	"compilerOptions": {
-		"target": "ES2022"
+		"target": "ES2022",
 		// Do NOT set experimentalDecorators — Stage 3 is the default and what this package needs.
-	}
+	},
 }
 ```
 
@@ -32,14 +32,14 @@ The decorators use **Stage 3 (standard) decorators** with `Symbol.metadata`. No 
 
 ## Toolchain notes
 
-| Toolchain | Status |
-| --- | --- |
-| TypeScript ≥ 5.2 (`tsc`) | Emits Stage 3 decorators + `Symbol.metadata`. |
-| esbuild / Vite | Supported (esbuild ≥ 0.21). |
-| SWC (Next.js, etc.) | Supported with `target` ES2022 and no `experimentalDecorators`. |
-| Babel | `@babel/plugin-proposal-decorators` version `2023-05`. |
+| Toolchain                | Status                                                          |
+| ------------------------ | --------------------------------------------------------------- |
+| TypeScript ≥ 5.2 (`tsc`) | Emits Stage 3 decorators + `Symbol.metadata`.                   |
+| esbuild / Vite           | Supported (esbuild ≥ 0.21).                                     |
+| SWC (Next.js, etc.)      | Supported with `target` ES2022 and no `experimentalDecorators`. |
+| Babel                    | `@babel/plugin-proposal-decorators` version `2023-05`.          |
 
-<Callout type="warn">
+<Callout type='warn'>
 	If you set `experimentalDecorators: true` anywhere in your config chain, the decorators will not bind correctly.
 	Remove it, or switch that store to the accessor API.
 </Callout>

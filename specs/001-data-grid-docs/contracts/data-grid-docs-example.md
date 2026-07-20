@@ -32,25 +32,25 @@ import type { DataGridSandpackExampleId } from '@/shared/data-grid/sandpack/Data
 export type DataGridDocsExampleFlavor = 'shadcn' | 'heroui'
 
 export interface DataGridDocsExampleProps {
-  /**
-   * Manifest slug from
-   * apps/docs/shared/data-grid/examples/manifest.json.
-   * Compile-time enforced via the DataGridSandpackExampleId union.
-   */
-  exampleId: DataGridSandpackExampleId
+	/**
+	 * Manifest slug from
+	 * apps/docs/shared/data-grid/examples/manifest.json.
+	 * Compile-time enforced via the DataGridSandpackExampleId union.
+	 */
+	exampleId: DataGridSandpackExampleId
 
-  /**
-   * Initial flavor. Defaults to 'shadcn'.
-   * Pass to lock the toggle on a flavor-specific page.
-   */
-  defaultType?: DataGridDocsExampleFlavor
+	/**
+	 * Initial flavor. Defaults to 'shadcn'.
+	 * Pass to lock the toggle on a flavor-specific page.
+	 */
+	defaultType?: DataGridDocsExampleFlavor
 
-  /**
-   * When true, hide the toggle. The page is responsible for explaining
-   * why only one flavor is shown. Defaults to false.
-   * Use this for pages whose appliesTo is 'shadcn' or 'heroui' only.
-   */
-  lockFlavor?: boolean
+	/**
+	 * When true, hide the toggle. The page is responsible for explaining
+	 * why only one flavor is shown. Defaults to false.
+	 * Use this for pages whose appliesTo is 'shadcn' or 'heroui' only.
+	 */
+	lockFlavor?: boolean
 }
 
 export function DataGridDocsExample(props: DataGridDocsExampleProps): JSX.Element

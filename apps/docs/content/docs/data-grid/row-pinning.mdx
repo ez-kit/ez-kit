@@ -26,12 +26,12 @@ const grid = useDataGrid({
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `enableRowPinning` | `boolean` | Master switch. Default `false`. |
-| `state.rowPinning` | `{ top?: string[], bottom?: string[] }` | Controlled pinning. |
-| `onRowPinningChange` | `(updater) => void` | Subscribe. |
-| `getRowId` | `(row) => string` | REQUIRED for stable pinning across data refreshes. |
+| Option               | Type                                    | Description                                        |
+| -------------------- | --------------------------------------- | -------------------------------------------------- |
+| `enableRowPinning`   | `boolean`                               | Master switch. Default `false`.                    |
+| `state.rowPinning`   | `{ top?: string[], bottom?: string[] }` | Controlled pinning.                                |
+| `onRowPinningChange` | `(updater) => void`                     | Subscribe.                                         |
+| `getRowId`           | `(row) => string`                       | REQUIRED for stable pinning across data refreshes. |
 
 ## See also
 

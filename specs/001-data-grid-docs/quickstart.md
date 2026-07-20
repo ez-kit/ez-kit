@@ -48,13 +48,13 @@ entry whose topic matches the page. The `id` field is what you reference.
 
 Examples:
 
-| Page | Manifest IDs |
-|---|---|
-| `sorting.mdx` | `base-sorting`, `sorting`, `sort-toolbar` |
-| `filtering/date-range.mdx` | `filter-date-range` |
-| `cells/custom-cell-types.mdx` | `custom-cell-types` |
-| `controlled-state.mdx` | `controlled-state` |
-| `fallbacks.mdx` | `fallbacks` |
+| Page                          | Manifest IDs                              |
+| ----------------------------- | ----------------------------------------- |
+| `sorting.mdx`                 | `base-sorting`, `sorting`, `sort-toolbar` |
+| `filtering/date-range.mdx`    | `filter-date-range`                       |
+| `cells/custom-cell-types.mdx` | `custom-cell-types`                       |
+| `controlled-state.mdx`        | `controlled-state`                        |
+| `fallbacks.mdx`               | `fallbacks`                               |
 
 ## 3. Write the page
 
@@ -79,8 +79,8 @@ description: <30–200 char one-liner that contains the primary keyword>
 ## Options
 
 | Option | Type | Description |
-|---|---|---|
-| `…`    | `…` | … |
+| ------ | ---- | ----------- |
+| `…`    | `…`  | …           |
 
 ## Notes
 
@@ -96,22 +96,22 @@ description: <30–200 char one-liner that contains the primary keyword>
 ```
 
 Concept-only pages (Overview, Architecture, Theming, Migration,
-Installation/*) MAY omit `<DataGridDocsExample />` and the Options table —
+Installation/\*) MAY omit `<DataGridDocsExample />` and the Options table —
 see the contract for the full rule.
 
 ## 4. Add the page to the parent `meta.json`
 
 ```jsonc
 {
-  "title": "Filtering",
-  "pages": [
-    "index",
-    "operators",
-    "panel",
-    "date-range",   // <-- the page you just added
-    "multi-value",
-    "global"
-  ]
+	"title": "Filtering",
+	"pages": [
+		"index",
+		"operators",
+		"panel",
+		"date-range", // <-- the page you just added
+		"multi-value",
+		"global",
+	],
 }
 ```
 

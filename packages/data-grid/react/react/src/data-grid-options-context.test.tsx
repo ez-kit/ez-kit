@@ -33,10 +33,14 @@ describe('mergeGridOptionLayers', () => {
 	})
 
 	it('deep-merges nested feature settings across layers', () => {
-		const merged = mergeGridOptionLayers<User>(undefined, { pagination: { pageSize: 50 } }, {
-			...config,
-			pagination: { manual: true },
-		})
+		const merged = mergeGridOptionLayers<User>(
+			undefined,
+			{ pagination: { pageSize: 50 } },
+			{
+				...config,
+				pagination: { manual: true },
+			},
+		)
 		expect(merged.pagination).toEqual({ pageSize: 50, manual: true })
 	})
 

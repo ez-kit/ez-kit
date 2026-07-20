@@ -300,10 +300,7 @@ describe('EditingFeature — validate config variants', () => {
 
 	it('multi-message preserved', async () => {
 		const schema = z.object({
-			password: z
-				.string()
-				.min(8, 'too short')
-				.regex(/[A-Z]/, 'needs uppercase'),
+			password: z.string().min(8, 'too short').regex(/[A-Z]/, 'needs uppercase'),
 		})
 		const table = createTable({
 			data: DATA,
@@ -321,9 +318,8 @@ describe('EditingFeature — validate config variants', () => {
 
 describe('EditingFeature — per-column validateOn', () => {
 	it("validateOn: 'change' triggers field-level validate after debounce", async () => {
-		const validate = vi.fn(
-			(values: Partial<Row>, _ctx: ValidateContext) =>
-				values.name === 'taken' ? { errors: { name: ['Already taken'] } } : null,
+		const validate = vi.fn((values: Partial<Row>, _ctx: ValidateContext) =>
+			values.name === 'taken' ? { errors: { name: ['Already taken'] } } : null,
 		)
 		const table = createTable({
 			data: DATA,

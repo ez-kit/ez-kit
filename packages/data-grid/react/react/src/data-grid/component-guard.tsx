@@ -13,7 +13,14 @@ import type { GridComponentRegistry } from '../types'
  * which features are enabled. Missing one of these is what produces React's opaque
  * "undefined is not a component" — the guard replaces that with a named error.
  */
-const REQUIRED_STRUCTURAL = ['Table', 'Thead', 'Tbody', 'Tr', 'Th', 'Td'] as const satisfies readonly (keyof GridComponentRegistry)[]
+const REQUIRED_STRUCTURAL = [
+	'Table',
+	'Thead',
+	'Tbody',
+	'Tr',
+	'Th',
+	'Td',
+] as const satisfies readonly (keyof GridComponentRegistry)[]
 
 /**
  * Dev-only completeness check for the injected UI-kit components. Mounted inside the

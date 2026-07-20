@@ -5,7 +5,6 @@ import { docsContentRoute, docsRoute } from '@/lib/shared'
 
 import type { NextRequest } from 'next/server'
 
-
 const rewriteDocs = rewritePath(`${docsRoute}{/*path}`, `${docsContentRoute}{/*path}/content.md`)
 const rewriteSuffix = rewritePath(`${docsRoute}{/*path}.mdx`, `${docsContentRoute}{/*path}/content.md`)
 

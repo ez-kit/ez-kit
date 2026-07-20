@@ -102,9 +102,7 @@ describe('withHistory — records writes performed from inside actions', () => {
 		)
 		store.getState().inc()
 		expect(store.getState().count).toBe(1)
-		expect(store.history.getState().pasts).toEqual([
-			expect.objectContaining({ count: 0 }),
-		])
+		expect(store.history.getState().pasts).toEqual([expect.objectContaining({ count: 0 })])
 	})
 
 	it('records when an action uses the wrapped set with a function updater', () => {
@@ -342,9 +340,7 @@ describe('withHistory — pause / resume', () => {
 	})
 
 	it('defaultPaused: true seeds isPaused', () => {
-		const store = createStore<PaintState>()(
-			withHistory(() => ({ color: 'red', size: 10 }), { defaultPaused: true }),
-		)
+		const store = createStore<PaintState>()(withHistory(() => ({ color: 'red', size: 10 }), { defaultPaused: true }))
 		store.setState({ color: 'blue' })
 		expect(store.history.getState().pasts).toEqual([])
 		expect(store.history.getState().isPaused).toBe(true)
@@ -470,9 +466,7 @@ describe('withHistory — shouldRecord predicate', () => {
 
 	it('predicate is NOT invoked during undo/redo/goto restorations', () => {
 		const fn = vi.fn(() => true)
-		const store = createStore<PaintState>()(
-			withHistory(() => ({ color: 'red', size: 10 }), { shouldRecord: fn }),
-		)
+		const store = createStore<PaintState>()(withHistory(() => ({ color: 'red', size: 10 }), { shouldRecord: fn }))
 		store.setState({ color: 'blue' })
 		fn.mockClear()
 		store.history.getState().undo()
@@ -489,9 +483,7 @@ describe('withHistory — limit and seeded defaults', () => {
 	})
 
 	it('caps pasts at the configured limit', () => {
-		const store = createStore<PaintState>()(
-			withHistory(() => ({ color: 'red', size: 10 }), { limit: 2 }),
-		)
+		const store = createStore<PaintState>()(withHistory(() => ({ color: 'red', size: 10 }), { limit: 2 }))
 		store.setState({ color: 'a' })
 		store.setState({ color: 'b' })
 		store.setState({ color: 'c' })
@@ -531,9 +523,7 @@ describe('withHistory — limit and seeded defaults', () => {
 
 	it('undo works with defaultPasts pre-populated', () => {
 		const past: PaintState = { color: 'blue', size: 5 }
-		const store = createStore<PaintState>()(
-			withHistory(() => ({ color: 'red', size: 10 }), { defaultPasts: [past] }),
-		)
+		const store = createStore<PaintState>()(withHistory(() => ({ color: 'red', size: 10 }), { defaultPasts: [past] }))
 		store.history.getState().undo()
 		expect(store.getState()).toEqual(past)
 	})

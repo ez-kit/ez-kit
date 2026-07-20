@@ -83,7 +83,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 					</ActionBarItem>
 				)}
 				{actions}
-				<ActionBarSeparator />
+				{hasActions && <ActionBarSeparator />}
 				<Button
 					size='sm'
 					variant='ghost'

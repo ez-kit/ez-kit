@@ -17,14 +17,14 @@ Router, storage, and validator integrations are optional peers — install only 
 
 The core never imports React, `URLSearchParams`, or a storage API. Its only interchange language is `Keyed = Map<string, string>` — a logical key mapped to an already-stringified value. A **source adapter** teaches the engine how to read and write one substrate through a small port (`get` / `set` / `subscribe`). Everything else — typed codecs, key naming, throttling, loop-breaking, hydration — is shared.
 
-| Source | Import | Sync? |
-| --- | --- | --- |
-| URL search params | `@ez-kit/valtio-kit/persist/url` | sync |
-| localStorage / sessionStorage | `@ez-kit/valtio-kit/persist/storage` | sync |
-| IndexedDB | `@ez-kit/valtio-kit/persist/storage` | async |
-| your own | a `SourcePort` you write | either |
+| Source                        | Import                               | Sync?  |
+| ----------------------------- | ------------------------------------ | ------ |
+| URL search params             | `@ez-kit/valtio-kit/persist/url`     | sync   |
+| localStorage / sessionStorage | `@ez-kit/valtio-kit/persist/storage` | sync   |
+| IndexedDB                     | `@ez-kit/valtio-kit/persist/storage` | async  |
+| your own                      | a `SourcePort` you write             | either |
 
-Because each source is just an adapter, a single field can sync to **two** substrates at once (a shared `?q=` in the URL *and* a cached copy in storage), and async sources (IndexedDB) never stall the synchronous URL.
+Because each source is just an adapter, a single field can sync to **two** substrates at once (a shared `?q=` in the URL _and_ a cached copy in storage), and async sources (IndexedDB) never stall the synchronous URL.
 
 ## Mental model
 
@@ -39,26 +39,26 @@ Valtio is the **source of truth**; the substrate is a **mirror**.
 
 You bring your own proxy and declare which fields sync. There are two fronts on one engine:
 
-| Front | You write | Best for |
-| --- | --- | --- |
-| [Decorators](./valtio-kit/persist/decorators) — `@persistUrl()` / `@persistLocalStorage()` | classes | entity models, composition, inheritance |
-| [Fields / accessor](./valtio-kit/persist/fields) — `field(s => s.q, urlField())` | plain `proxy({…})` | quick stores; no build-time decorator support |
+| Front                                                                                      | You write          | Best for                                      |
+| ------------------------------------------------------------------------------------------ | ------------------ | --------------------------------------------- |
+| [Decorators](./valtio-kit/persist/decorators) — `@persistUrl()` / `@persistLocalStorage()` | classes            | entity models, composition, inheritance       |
+| [Fields / accessor](./valtio-kit/persist/fields) — `field(s => s.q, urlField())`           | plain `proxy({…})` | quick stores; no build-time decorator support |
 
 Both produce the same path-based descriptors and feed the same engine, so sources, parsers, and SSR behave identically.
 
 ## On this topic
 
-| Page | What it covers |
-| --- | --- |
-| [Quick start — URL](./valtio-kit/persist/quick-start-url) | The shortest URL-synced store. |
-| [Quick start — storage](./valtio-kit/persist/quick-start-storage) | The same store, persisted to localStorage. |
-| [Combined](./valtio-kit/persist/combined) | URL + storage on one store; first-present-wins; per-source handles. |
-| [Cached stores](./valtio-kit/persist/cache) | One store that is both cached and persisted, under one `StoreProvider`. |
-| [Deep dive — URL](./valtio-kit/persist/deep-dive-url) | History push/replace, key prefix, router adapters, SSR. |
-| [Deep dive — storage](./valtio-kit/persist/deep-dive-storage) | Blob packing, `useHydrated()`, schema versioning, cross-tab. |
-| [Custom adapter](./valtio-kit/persist/custom-adapter) | Write your own `SourcePort`. |
-| [Decorators](./valtio-kit/persist/decorators) | Classes: composition, inheritance, key placement. |
-| [Fields](./valtio-kit/persist/fields) | The accessor API for plain proxies. |
-| [Parsers](./valtio-kit/persist/parsers) | Typed codecs, auto-resolution, Zod, custom parsers. |
-| [TypeScript](./valtio-kit/persist/typescript) | Decorator build setup. |
-| [Migration](./valtio-kit/persist/migration) | Moving off `createPersistStore` / `createPersistFields`. |
+| Page                                                              | What it covers                                                          |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [Quick start — URL](./valtio-kit/persist/quick-start-url)         | The shortest URL-synced store.                                          |
+| [Quick start — storage](./valtio-kit/persist/quick-start-storage) | The same store, persisted to localStorage.                              |
+| [Combined](./valtio-kit/persist/combined)                         | URL + storage on one store; first-present-wins; per-source handles.     |
+| [Cached stores](./valtio-kit/persist/cache)                       | One store that is both cached and persisted, under one `StoreProvider`. |
+| [Deep dive — URL](./valtio-kit/persist/deep-dive-url)             | History push/replace, key prefix, router adapters, SSR.                 |
+| [Deep dive — storage](./valtio-kit/persist/deep-dive-storage)     | Blob packing, `useHydrated()`, schema versioning, cross-tab.            |
+| [Custom adapter](./valtio-kit/persist/custom-adapter)             | Write your own `SourcePort`.                                            |
+| [Decorators](./valtio-kit/persist/decorators)                     | Classes: composition, inheritance, key placement.                       |
+| [Fields](./valtio-kit/persist/fields)                             | The accessor API for plain proxies.                                     |
+| [Parsers](./valtio-kit/persist/parsers)                           | Typed codecs, auto-resolution, Zod, custom parsers.                     |
+| [TypeScript](./valtio-kit/persist/typescript)                     | Decorator build setup.                                                  |
+| [Migration](./valtio-kit/persist/migration)                       | Moving off `createPersistStore` / `createPersistFields`.                |

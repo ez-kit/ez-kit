@@ -107,7 +107,10 @@ browser; a Server Component does not.
 Replaces `DataGridSandpackExample`. Location: `apps/docs/components/example-frame.tsx`.
 
 ```tsx
-<ExampleFrame kit={kit} slug={slug} />
+<ExampleFrame
+	kit={kit}
+	slug={slug}
+/>
 ```
 
 Three standard mechanics:

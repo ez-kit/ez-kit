@@ -9,6 +9,8 @@ import { makeUsers, type User } from './_data'
 
 const PAGE_SIZE = 10
 const ROW_TOTAL = 50
+// Enough pages that the numbered strip has to window (1 … 4 5 6 … 100) rather than list them all.
+const NUMBERED_ROW_TOTAL = 1000
 
 const columns = defineColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
@@ -17,7 +19,7 @@ const columns = defineColumns<User>([
 ])
 
 export function PaginationVariantNumberedExample() {
-	const data = useMemo(() => makeUsers(ROW_TOTAL), [])
+	const data = useMemo(() => makeUsers(NUMBERED_ROW_TOTAL), [])
 	const table = useDataGrid({
 		data,
 		columns,

@@ -1,4 +1,4 @@
-import { buildPaginationLabel, PaginationVariants } from '@ez-kit/data-grid-react'
+import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariants } from '@ez-kit/data-grid-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
@@ -6,6 +6,7 @@ const FIRST_GLYPH = '«'
 const PREVIOUS_GLYPH = '‹'
 const NEXT_GLYPH = '›'
 const LAST_GLYPH = '»'
+const GAP_GLYPH = '…'
 
 export function Pagination({
 	variant,
@@ -13,6 +14,8 @@ export function Pagination({
 	pageSize,
 	pageCount,
 	rowCount,
+	siblings,
+	boundaries,
 	canPreviousPage,
 	canNextPage,
 	onPreviousPage,
@@ -25,6 +28,8 @@ export function Pagination({
 	const isNumbered = variant === PaginationVariants.Numbered
 	// Page links need a known page count; without one `numbered` degrades to the jumps + prev/next.
 	const showLinks = isNumbered && pageCount !== undefined
+	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
+	const pages = showLinks ? buildPageWindow({ pageIndex, pageCount, siblings, boundaries }) : []
 	// Jumping to the first page is always page 0 — unlike the last page, it needs no total.
 	const showFirst = isNumbered
 	const showLast = isNumbered && pageCount !== undefined
@@ -48,19 +53,27 @@ export function Pagination({
 				{PREVIOUS_GLYPH}
 			</button>
 			{label !== undefined && <span>{label}</span>}
-			{showLinks &&
-				Array.from({ length: pageCount }).map((_, index) => (
+			{pages.map((page, slot) =>
+				page === PAGE_GAP ? (
+					<span
+						key={`${PAGE_GAP}-${String(slot)}`}
+						aria-hidden
+					>
+						{GAP_GLYPH}
+					</span>
+				) : (
 					<button
-						key={index}
+						key={page}
 						type='button'
-						aria-current={index === pageIndex ? 'page' : undefined}
+						aria-current={page === pageIndex ? 'page' : undefined}
 						onClick={() => {
-							onPageChange(index)
+							onPageChange(page)
 						}}
 					>
-						{index + 1}
+						{page + 1}
 					</button>
-				))}
+				),
+			)}
 			<button
 				type='button'
 				onClick={onNextPage}

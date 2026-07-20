@@ -33,6 +33,9 @@ export const PAGE_SIZER_KEY = Symbol('pageSizer')
 /** Symbol used to carry the page-based pagination variant on the table instance for Pagination to read. */
 export const PAGINATION_VARIANT_KEY = Symbol('paginationVariant')
 
+/** Symbol used to carry the resolved `numbered` page-link window on the table instance for Pagination to read. */
+export const PAGINATION_WINDOW_KEY = Symbol('paginationWindow')
+
 /** Symbol used to carry rowPinning config on the table instance for RowPinCell to read. */
 export const ROW_PINNING_KEY = Symbol('rowPinning')
 
@@ -209,6 +212,16 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 */
 	variant?: PaginationVariant
 	/**
+	 * `numbered` variant only. How many pages stay either side of the current one in the page-link
+	 * strip. Default {@link DATA_GRID_DEFAULTS.pagination.siblings} (1) → `1 … 4 5 6 … 100`.
+	 */
+	siblings?: number
+	/**
+	 * `numbered` variant only. How many pages stay at each end of the page-link strip.
+	 * Default {@link DATA_GRID_DEFAULTS.pagination.boundaries} (1) → the `1` and `100` above.
+	 */
+	boundaries?: number
+	/**
 	 * Infinite mode only. `'auto'` (default) loads when the edge enters view;
 	 * `'manual'` suppresses auto detection and renders a "Load more" control.
 	 */
@@ -246,6 +259,16 @@ function normalizeInfinite(
 		hasPreviousPage: pagination.hasPreviousPage ?? false,
 		...(pagination.onLoadMore !== undefined ? { onLoadMore: pagination.onLoadMore } : {}),
 	}
+}
+
+/**
+ * Fully resolved `numbered` page-link window stored on the table instance for `Pagination` to
+ * read. Both fields are required here — the `undefined`s from {@link ReactPaginationConfig}
+ * are settled against {@link DATA_GRID_DEFAULTS} once, in the hook.
+ */
+export type NormalizedPageWindowConfig = {
+	siblings: number
+	boundaries: number
 }
 
 export type PageSizerConfig = {
@@ -498,7 +521,14 @@ export function useDataGrid<TRow extends object>(
 	// for the infinite hook.
 	const corePagination: boolean | PaginationConfig | undefined =
 		typeof rawPagination === 'object'
-			? (({ trigger: _trigger, threshold: _threshold, variant: _variant, ...rest }) => rest)(rawPagination)
+			? (({
+					trigger: _trigger,
+					threshold: _threshold,
+					variant: _variant,
+					siblings: _siblings,
+					boundaries: _boundaries,
+					...rest
+				}) => rest)(rawPagination)
 			: rawPagination
 	const normalizedInfinite = normalizeInfinite(rawPagination)
 
@@ -506,6 +536,18 @@ export function useDataGrid<TRow extends object>(
 		typeof rawPagination === 'object'
 			? (rawPagination.variant ?? DATA_GRID_DEFAULTS.pagination.variant)
 			: DATA_GRID_DEFAULTS.pagination.variant
+
+	// Resolved once here — like the variant — so no UI kit ever has to fall back for itself.
+	const paginationWindow: NormalizedPageWindowConfig = {
+		siblings:
+			typeof rawPagination === 'object'
+				? (rawPagination.siblings ?? DATA_GRID_DEFAULTS.pagination.siblings)
+				: DATA_GRID_DEFAULTS.pagination.siblings,
+		boundaries:
+			typeof rawPagination === 'object'
+				? (rawPagination.boundaries ?? DATA_GRID_DEFAULTS.pagination.boundaries)
+				: DATA_GRID_DEFAULTS.pagination.boundaries,
+	}
 
 	// Build core-compatible expanding config (strip React-only fields)
 	const reactExpandingCfg = typeof rawExpanding === 'object' ? rawExpanding : undefined
@@ -679,6 +721,9 @@ export function useDataGrid<TRow extends object>(
 
 	// Store the resolved pagination variant so Pagination can read it without an extra prop
 	tableAsSymbolMap[PAGINATION_VARIANT_KEY] = paginationVariant
+
+	// Store the resolved page-link window alongside it, read by Pagination for `numbered`
+	tableAsSymbolMap[PAGINATION_WINDOW_KEY] = paginationWindow
 
 	// Store the column filter commit debounce on the table instance so Header / FilterPanel can read it
 	tableAsSymbolMap[FILTERING_DEBOUNCE_KEY] = filteringDebounce

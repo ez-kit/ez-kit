@@ -19,10 +19,10 @@ Every kit owes exactly two things:
    import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
    const components = {
-     core: { Table, Thead, Tbody, Tr, Th, Td, Button, Input, Checkbox, Toolbar },
-     pagination: { Pagination, PageSizer },
-     sorting: { SortIndicator, SortMenu, ColumnMenu },
-     // …one group per feature (see the tables below)
+   	core: { Table, Thead, Tbody, Tr, Th, Td, Button, Input, Checkbox, Toolbar },
+   	pagination: { Pagination, PageSizer },
+   	sorting: { SortIndicator, SortMenu, ColumnMenu },
+   	// …one group per feature (see the tables below)
    } satisfies FullGridComponents
 
    export const { DataGrid, useDataGrid, extendDataGrid } = createDataGrid({ components })
@@ -39,7 +39,7 @@ Every kit owes exactly two things:
    ```
 
    This stylesheet is **structural only** — positioning, layout, overflow, z-index,
-   cursor, and the pinning offsets. All *visual* styling (color, borders, spacing,
+   cursor, and the pinning offsets. All _visual_ styling (color, borders, spacing,
    typography, hover/focus, motion) is yours: target the `data-slot` hooks the react
    layer emits (see [Structural `data-slot` hooks](#structural-data-slot-hooks)).
 
@@ -85,97 +85,97 @@ exported — read them for the exact shape.
 
 ### `core` — always required to render a grid
 
-| Component | Props | Notes |
-|-----------|-------|-------|
-| `Table`   | `TableProps`   | Table root. Emits `data-slot="table"`. |
-| `Thead`   | `TheadProps`   | Emits `data-slot="thead"`. |
-| `Tbody`   | `TbodyProps`   | Emits `data-slot="tbody"`. |
-| `Tr`      | `TrProps`      | Emits `data-slot="tr"`. |
-| `Th`      | `ThProps`      | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="th"`. |
-| `Td`      | `TdProps`      | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="td"`. |
-| `Button`  | `ButtonProps`  | Generic button used by triggers/actions. |
-| `Input`   | `InputProps`   | Generic text input. |
-| `Checkbox`| `CheckboxProps`| Row/all selection. `indeterminate`, `onChange(checked)`. |
-| `Toolbar` | `ToolbarProps` | Chrome around search/actions. `left` / `right` / `children`. |
+| Component  | Props           | Notes                                                          |
+| ---------- | --------------- | -------------------------------------------------------------- |
+| `Table`    | `TableProps`    | Table root. Emits `data-slot="table"`.                         |
+| `Thead`    | `TheadProps`    | Emits `data-slot="thead"`.                                     |
+| `Tbody`    | `TbodyProps`    | Emits `data-slot="tbody"`.                                     |
+| `Tr`       | `TrProps`       | Emits `data-slot="tr"`.                                        |
+| `Th`       | `ThProps`       | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="th"`. |
+| `Td`       | `TdProps`       | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="td"`. |
+| `Button`   | `ButtonProps`   | Generic button used by triggers/actions.                       |
+| `Input`    | `InputProps`    | Generic text input.                                            |
+| `Checkbox` | `CheckboxProps` | Row/all selection. `indeterminate`, `onChange(checked)`.       |
+| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `left` / `right` / `children`.   |
 
 ### `pagination`
 
-| Component | Props |
-|-----------|-------|
+| Component    | Props             |
+| ------------ | ----------------- |
 | `Pagination` | `PaginationProps` |
-| `PageSizer`  | `PageSizerProps` |
+| `PageSizer`  | `PageSizerProps`  |
 
 ### `sorting`
 
-| Component | Props |
-|-----------|-------|
-| `SortIndicator` | `SortIndicatorProps` |
-| `SortMenu`      | `SortMenuProps` |
+| Component       | Props                                                   |
+| --------------- | ------------------------------------------------------- |
+| `SortIndicator` | `SortIndicatorProps`                                    |
+| `SortMenu`      | `SortMenuProps`                                         |
 | `ColumnMenu`    | `ColumnMenuProps` (pin / visibility / sorting sections) |
 
 ### `filtering`
 
-| Component | Props |
-|-----------|-------|
-| `FilterPopover`      | `FilterPopoverProps` |
-| `FilterPanel`        | `FilterPanelProps` |
-| `FilterPanelChip`    | `FilterPanelChipProps` |
-| `FilterChip`         | `FilterChipProps` |
-| `ClearFiltersButton` | `ClearFiltersButtonComponentProps` |
-| `GlobalFilterInput`  | `GlobalFilterInputProps` (debounce applied upstream) |
-| `OperatorSelect`     | `OperatorSelectProps` |
+| Component            | Props                                                  |
+| -------------------- | ------------------------------------------------------ |
+| `FilterPopover`      | `FilterPopoverProps`                                   |
+| `FilterPanel`        | `FilterPanelProps`                                     |
+| `FilterPanelChip`    | `FilterPanelChipProps`                                 |
+| `FilterChip`         | `FilterChipProps`                                      |
+| `ClearFiltersButton` | `ClearFiltersButtonComponentProps`                     |
+| `GlobalFilterInput`  | `GlobalFilterInputProps` (debounce applied upstream)   |
+| `OperatorSelect`     | `OperatorSelectProps`                                  |
 | `BetweenInput`       | `BetweenInputProps` (`inputs` / `slider` / `calendar`) |
-| `MultiSelectFilter`  | `MultiSelectFilterProps` |
+| `MultiSelectFilter`  | `MultiSelectFilterProps`                               |
 
 ### `editing`
 
-| Component | Props |
-|-----------|-------|
-| `Modal`               | `ModalProps` |
+| Component             | Props                                             |
+| --------------------- | ------------------------------------------------- |
+| `Modal`               | `ModalProps`                                      |
 | `FormShell`           | `FormShellProps` (creating / editing modal shell) |
-| `ActionsCell`         | `ActionsCellProps` |
-| `CreatingActionsCell` | `CreatingActionsCellProps` |
-| `ConfirmDialog`       | `ConfirmDialogProps` (delete confirmation) |
-| `NumberInput`         | `NumberInputProps` |
+| `ActionsCell`         | `ActionsCellProps`                                |
+| `CreatingActionsCell` | `CreatingActionsCellProps`                        |
+| `ConfirmDialog`       | `ConfirmDialogProps` (delete confirmation)        |
+| `NumberInput`         | `NumberInputProps`                                |
 
 ### `selection`
 
-| Component | Props |
-|-----------|-------|
+| Component      | Props                                       |
+| -------------- | ------------------------------------------- |
 | `SelectionBar` | `SelectionBarProps` (`floating` / `inline`) |
 
 ### `pinning` / `resizing`
 
-| Component | Props | Feature |
-|-----------|-------|---------|
-| `RowPinMenu` | `RowPinMenuProps` | `pinning` |
+| Component    | Props             | Feature    |
+| ------------ | ----------------- | ---------- |
+| `RowPinMenu` | `RowPinMenuProps` | `pinning`  |
 | `Resizer`    | `ResizerProps`    | `resizing` |
 
 ### `column-visibility`
 
-| Component | Props |
-|-----------|-------|
+| Component              | Props                       |
+| ---------------------- | --------------------------- |
 | `ColumnVisibilityMenu` | `ColumnVisibilityMenuProps` |
 
 ### `fallback-states`
 
-| Component | Props |
-|-----------|-------|
-| `LoadingRow`     | `LoadingRowProps` |
-| `EmptyState`     | `EmptyStateProps` |
+| Component        | Props                 |
+| ---------------- | --------------------- |
+| `LoadingRow`     | `LoadingRowProps`     |
+| `EmptyState`     | `EmptyStateProps`     |
 | `NoResultsState` | `NoResultsStateProps` |
 | `RefetchOverlay` | `RefetchOverlayProps` |
 
 ### `infinite`
 
-| Component | Props |
-|-----------|-------|
+| Component     | Props              |
+| ------------- | ------------------ |
 | `LoadMoreRow` | `LoadMoreRowProps` |
 
 ### `expanding`
 
-| Component | Props |
-|-----------|-------|
+| Component | Props          |
+| --------- | -------------- |
 | `Chevron` | `ChevronProps` |
 
 ## Structural `data-slot` hooks
@@ -200,7 +200,7 @@ react package only owns the structural ones above.
 ## Dev-time guard
 
 When a grid mounts in development (`process.env.NODE_ENV !== 'production'`), a guard
-verifies the components required for the *current* configuration are registered. If any
+verifies the components required for the _current_ configuration are registered. If any
 are missing it throws, e.g.:
 
 ```

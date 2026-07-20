@@ -171,10 +171,7 @@ export const EditingFeature: TableFeature<RowData> = {
 			return config?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
 		}
 
-		const runValidate = async (
-			values: Record<string, unknown>,
-			ctx: ValidateContext,
-		): Promise<ValidationResult> => {
+		const runValidate = async (values: Record<string, unknown>, ctx: ValidateContext): Promise<ValidationResult> => {
 			const config = getConfig()
 			if (!config?.validate) return null
 			if (typeof config.validate === 'function') {

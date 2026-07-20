@@ -28,7 +28,10 @@ The factory is seeded through a single `defaultValue` envelope — type its para
 
 ## Basic usage
 
-<LivePreview path='valtio-kit/counter' title='Counter' />
+<LivePreview
+	path='valtio-kit/counter'
+	title='Counter'
+/>
 
 The example above keeps its actions on the proxy (the idiomatic Valtio pattern), so components only ever read from `useSnapshot()`. You can also mutate the proxy directly — see [`useStore`](#usestore) below.
 
@@ -115,7 +118,10 @@ Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` �
 
 Each `Provider` creates its own proxy — state is never shared between siblings.
 
-<LivePreview path='valtio-kit/multiple-instances' title='Two isolated counters' />
+<LivePreview
+	path='valtio-kit/multiple-instances'
+	title='Two isolated counters'
+/>
 
 ## Errors
 

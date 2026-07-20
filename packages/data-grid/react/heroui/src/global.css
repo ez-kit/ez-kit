@@ -40,9 +40,52 @@
 	margin-top: 0.75rem;
 }
 
-@theme inline {
-	--color-surface: var(--surface);
-	--color-surface-secondary: var(--surface-secondary);
+/* ── scrollport ownership ──────────────────────────────────────────────────
+ * `position: sticky` resolves against the nearest scroll container. The shared
+ * stylesheet puts the bounded vertical scrollport on `[data-slot='table-scroll']`,
+ * which is enough for shadcn: it nests nothing that scrolls, so that div is the
+ * scrollport the header and pinned rows resolve against.
+ *
+ * HeroUI nests one. `Table.ScrollContainer` (`.table__scroll-container`) is
+ * `overflow-x: auto`, and per CSS Overflow 3 a non-`visible` value on one axis
+ * computes the other from `visible` to `auto` — so it is a scroll container on
+ * BOTH axes, and being the innermost one it steals the scrollport from the div
+ * that actually has the height bound. Nothing constrains its height, so it never
+ * scrolls and sticky offsets never clamp: the sticky header and pinned rows carry
+ * `position: sticky` but behave like `static` (#105, #103).
+ *
+ * Neutralizing it is not an option — HeroUI's `.table-root` is `overflow: clip`
+ * over a `minmax(0, 1fr)` grid track, a hard width boundary the outer div cannot
+ * scroll past, so the inner container is the only element that can own the
+ * horizontal axis. Give it the vertical bound as well and let the outer div step
+ * aside, leaving one element that owns both axes.
+ *
+ * Kept in sync with `[data-slot='table-scroll'][data-sticky-header='true']` in
+ * `@ez-kit/data-grid-react`'s structural stylesheet, whose bound this relocates. */
+[data-slot='table-scroll'][data-sticky-header='true'] {
+	/* Both axes must go to `visible`, not just `overflow-y`: leaving `overflow-x: auto`
+	 * (the shared stylesheet's default on this div) would make CSS Overflow 3 recompute
+	 * `overflow-y` back to `auto`, so this div would re-become a scroll container and
+	 * re-steal the scrollport we are handing to the inner container. HeroUI's own
+	 * `.table-root` (`overflow: clip` over a `minmax(0, 1fr)` grid track) keeps the width
+	 * boundary, so dropping the horizontal scroll here is safe. */
+	overflow: visible;
+	max-height: none;
+}
+[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='table-scroll-container'] {
+	overflow-y: auto;
+	max-height: var(--dg-table-max-height, 400px);
+}
+
+/* Virtualized mode has its own scrollport: `[data-slot='table-scroll'][data-virtualized]`
+ * is the element the row virtualizer scrolls (shared stylesheet: `overflow: auto` + a fixed
+ * `--dg-virtual-height`). HeroUI's inner container nests inside it and — same CSS Overflow 3
+ * mechanism — becomes a competing scroll container that swallows the whole virtual height and
+ * steals the sticky context from the header (#103, the virtual-scroll case). Neutralize it so
+ * the virtualizer's own div is the sole scroll context and the sticky header resolves against
+ * it; horizontal column scroll stays on that outer div (also `overflow: auto`). */
+[data-slot='table-scroll'][data-virtualized='true'] [data-slot='table-scroll-container'] {
+	overflow: visible;
 }
 
 :root {
@@ -201,9 +244,9 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	}
 }
 
-[data-slot='action-bar'] {
-	@apply bg-background;
-}
+/* The bar's surface, border and radius live on the component itself (`bg-overlay` etc.,
+ * see `components/ui/action-bar.tsx`) — an action bar floats over content, so it takes the
+ * overlay surface rather than `--background`, which is the page canvas it sits on. */
 
 [data-slot='action-bar'][data-state='open'][data-side='bottom'] {
 	animation: ez-action-bar-slide-from-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -231,9 +274,9 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
    Do NOT write `--heroui-*` tokens: those are v2 names and this package is on v3,
    where they resolve to nothing. `hsl(var(--heroui-default-100))` is invalid at
    computed-value time and silently drops the whole declaration (this is what broke
-   the inline selection bar's background — see #68). The `var(--heroui-*, <literal>)`
-   rules below still render only because of their hardcoded fallback, which means
-   they are stuck on one theme. */
+   the inline selection bar's background — see #68). A `var(--heroui-*, <literal>)`
+   fallback form is no better: it renders, but always from the literal, so it is
+   frozen on one theme. */
 
 .dg-form-error {
 	background: color-mix(in oklab, var(--color-danger) 12%, transparent);
@@ -241,27 +284,12 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent);
 }
 
-.dg-page-sizer-label {
-	color: var(--heroui-default-500, #71717a);
-}
-
+.dg-page-sizer-label,
 .dg-empty-state,
 .dg-no-results-state {
-	color: var(--heroui-default-400, #a1a1aa);
-}
-
-.dg-sort-count-badge {
-	margin-left: 0.125rem;
-	border-radius: 9999px;
-	padding: 0 0.375rem;
-	font-size: 0.75rem;
-	font-weight: 500;
-	background: currentColor;
-	color: transparent;
-	background-clip: padding-box;
-	opacity: 0.85;
+	color: var(--muted);
 }
 
 .dg-sort-menu-footer {
-	border-top: 1px solid hsl(var(--heroui-default-200));
+	border-top: 1px solid var(--separator);
 }

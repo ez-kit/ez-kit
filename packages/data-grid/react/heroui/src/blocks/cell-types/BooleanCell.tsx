@@ -72,13 +72,22 @@ function BooleanFilterInput({ id, value, onChange, onBlur, label, description, e
 			</Select.Trigger>
 			<Select.Popover>
 				<ListBox>
-					<ListBox.Item id={ALL_SENTINEL} textValue='All'>
+					<ListBox.Item
+						id={ALL_SENTINEL}
+						textValue='All'
+					>
 						All
 					</ListBox.Item>
-					<ListBox.Item id={TRUE_KEY} textValue='Yes'>
+					<ListBox.Item
+						id={TRUE_KEY}
+						textValue='Yes'
+					>
 						Yes
 					</ListBox.Item>
-					<ListBox.Item id={FALSE_KEY} textValue='No'>
+					<ListBox.Item
+						id={FALSE_KEY}
+						textValue='No'
+					>
 						No
 					</ListBox.Item>
 				</ListBox>

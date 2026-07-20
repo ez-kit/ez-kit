@@ -28,10 +28,7 @@ describe('zodResolver', () => {
 
 	it('collects multi-issue per field into a string array (multi-message)', () => {
 		const schema = z.object({
-			password: z
-				.string()
-				.min(8, 'too short')
-				.regex(/[A-Z]/, 'needs uppercase'),
+			password: z.string().min(8, 'too short').regex(/[A-Z]/, 'needs uppercase'),
 		})
 		const resolver = zodResolver(schema)
 		const result = resolver({ password: 'abc' })

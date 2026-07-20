@@ -137,7 +137,9 @@ function hasConfirmDialog(table: Table<any>): boolean {
 	if (table.options.deleting?.confirmation) return true
 	const panelConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
 	return (
-		typeof panelConfig === 'object' && panelConfig !== null && Boolean((panelConfig as SelectionPanelConfig).confirmation)
+		typeof panelConfig === 'object' &&
+		panelConfig !== null &&
+		Boolean((panelConfig as SelectionPanelConfig).confirmation)
 	)
 }
 

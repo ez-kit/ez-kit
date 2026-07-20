@@ -28,7 +28,9 @@ export function RatingCellInput({ value, onChange }: CellInputProps) {
 				<button
 					type='button'
 					key={i}
-					onClick={() => { onChange(i + 1); }}
+					onClick={() => {
+						onChange(i + 1)
+					}}
 					style={{
 						color: i < n ? '#f59e0b' : '#d1d5db',
 						fontSize: '1.25rem',
@@ -71,7 +73,9 @@ export function ColorCellInput({ value, onChange }: CellInputProps) {
 		<input
 			type='color'
 			value={String(value ?? '#000000')}
-			onChange={(e) => { onChange(e.target.value); }}
+			onChange={(e) => {
+				onChange(e.target.value)
+			}}
 			style={{ width: '2.5rem', height: '2rem', cursor: 'pointer', border: 'none', padding: 0 }}
 		/>
 	)
@@ -143,7 +147,9 @@ export function CompletionCellInput({ value, onChange }: CellInputProps) {
 				min={PROGRESS_MIN}
 				max={PROGRESS_MAX}
 				value={pct}
-				onChange={(e) => { onChange(clampProgress(Number(e.target.value))); }}
+				onChange={(e) => {
+					onChange(clampProgress(Number(e.target.value)))
+				}}
 				style={{ cursor: 'pointer' }}
 			/>
 			<input
@@ -151,7 +157,9 @@ export function CompletionCellInput({ value, onChange }: CellInputProps) {
 				min={PROGRESS_MIN}
 				max={PROGRESS_MAX}
 				value={pct}
-				onChange={(e) => { onChange(clampProgress(Number(e.target.value))); }}
+				onChange={(e) => {
+					onChange(clampProgress(Number(e.target.value)))
+				}}
 				style={{ width: '3.5rem' }}
 			/>
 		</span>
@@ -252,7 +260,9 @@ export function UserCellInput({ value, onChange }: CellInputProps) {
 		<input
 			type='text'
 			value={String(value ?? '')}
-			onChange={(e) => { onChange(e.target.value); }}
+			onChange={(e) => {
+				onChange(e.target.value)
+			}}
 			style={{ width: '10rem' }}
 		/>
 	)

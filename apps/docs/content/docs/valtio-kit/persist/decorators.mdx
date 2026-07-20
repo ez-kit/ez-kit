@@ -26,10 +26,10 @@ const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist
 
 Every wrapper is a thin shim over the base `persistField({ source, … })`. They add exactly two things: a `source` and a typed options bag — so a field can carry `@persistUrl()` **and** `@persistLocalStorage()` to sync to both at once (one descriptor per source).
 
-<Callout type="warn">
-	The **interactive demos** in this section are declared with the equivalent [accessor
-	API](./valtio-kit/persist/fields) — decorators need a build-time transform this in-browser sandbox doesn't run.
-	Same engine, identical output; the code blocks show the real decorator syntax.
+<Callout type='warn'>
+	The **interactive demos** in this section are declared with the equivalent [accessor API](./valtio-kit/persist/fields)
+	— decorators need a build-time transform this in-browser sandbox doesn't run. Same engine, identical output; the code
+	blocks show the real decorator syntax.
 </Callout>
 
 ## Parsers: auto vs explicit
@@ -86,17 +86,20 @@ class ProductFilters extends Filters {
 
 Composition and inheritance compose freely:
 
-<LivePreview path='valtio-kit/persist-composition' title='Composed Price + inherited onSale' />
+<LivePreview
+	path='valtio-kit/persist-composition'
+	title='Composed Price + inherited onSale'
+/>
 
 ## Key placement
 
 By default a field's key is its **joined path** (`price.min → price.min`) — collision-free across nested shapes. The source-agnostic naming options override that:
 
-| Option | Effect | Example |
-| --- | --- | --- |
-| `key` | rename the **leaf** segment (keeps the ancestor prefix) | `{ key: 'query' }` on `filters.q` → `filters.query` |
-| `prefix` | prepend a namespace | `{ prefix: 'a.' }` on `q` → `a.q` |
-| `absolute` | pin an **exact top-level** key, ignoring ancestors | `{ key: 'q', absolute: true }` on `search.q` → `q` |
+| Option     | Effect                                                  | Example                                             |
+| ---------- | ------------------------------------------------------- | --------------------------------------------------- |
+| `key`      | rename the **leaf** segment (keeps the ancestor prefix) | `{ key: 'query' }` on `filters.q` → `filters.query` |
+| `prefix`   | prepend a namespace                                     | `{ prefix: 'a.' }` on `q` → `a.q`                   |
+| `absolute` | pin an **exact top-level** key, ignoring ancestors      | `{ key: 'q', absolute: true }` on `search.q` → `q`  |
 
 ```tsx
 class Search {

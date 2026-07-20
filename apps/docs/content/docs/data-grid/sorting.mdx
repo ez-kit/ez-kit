@@ -23,15 +23,15 @@ A toolbar-driven sort UI for selecting sort field + direction:
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `enableSorting` | `boolean` | Master switch. Default `true`. |
-| `enableMultiSort` | `boolean` | Default `true`. Set `false` to allow only one sorted column at a time. |
-| `initialState.sorting` | `SortingState` | `[{ id, desc }]` — initial sort order. |
-| `state.sorting` | `SortingState` | Controlled sort state. |
-| `onSortingChange` | `(updater) => void` | Subscribe to sort changes. |
-| Per-column `enableSorting` | `boolean` | Disable sort on specific columns. |
-| Per-column `sortingFn` | name \| `(a, b) => number` | Built-in: `'auto'`, `'alphanumeric'`, `'basic'`, `'datetime'`, `'text'`, etc. Or pass a custom comparator. |
+| Option                     | Type                       | Description                                                                                                |
+| -------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `enableSorting`            | `boolean`                  | Master switch. Default `true`.                                                                             |
+| `enableMultiSort`          | `boolean`                  | Default `true`. Set `false` to allow only one sorted column at a time.                                     |
+| `initialState.sorting`     | `SortingState`             | `[{ id, desc }]` — initial sort order.                                                                     |
+| `state.sorting`            | `SortingState`             | Controlled sort state.                                                                                     |
+| `onSortingChange`          | `(updater) => void`        | Subscribe to sort changes.                                                                                 |
+| Per-column `enableSorting` | `boolean`                  | Disable sort on specific columns.                                                                          |
+| Per-column `sortingFn`     | name \| `(a, b) => number` | Built-in: `'auto'`, `'alphanumeric'`, `'basic'`, `'datetime'`, `'text'`, etc. Or pass a custom comparator. |
 
 ## Source
 

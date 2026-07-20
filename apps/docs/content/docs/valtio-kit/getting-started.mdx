@@ -36,16 +36,19 @@ const counterStore = createContextStore(() => {
 
 Render it inside its `Provider`, read with `useSnapshot`, and **mutate the proxy directly**:
 
-<LivePreview path='valtio-kit/counter' title='Counter' />
+<LivePreview
+	path='valtio-kit/counter'
+	title='Counter'
+/>
 
 ## The read/write model
 
 Valtio optimises re-renders per accessed property, so — unlike [`@ez-kit/zu-store`](./zu-store) — there are **no selectors**:
 
-| Action | How |
-| --- | --- |
-| Read | `const snap = store.useSnapshot()` → tracked snapshot; reading `snap.count` subscribes to just that field |
-| Write | `store.useStore().count++` → mutate the raw proxy; snapshots update automatically |
+| Action | How                                                                                                       |
+| ------ | --------------------------------------------------------------------------------------------------------- |
+| Read   | `const snap = store.useSnapshot()` → tracked snapshot; reading `snap.count` subscribes to just that field |
+| Write  | `store.useStore().count++` → mutate the raw proxy; snapshots update automatically                         |
 
 `useStore()` returns the **raw mutable proxy**; `useSnapshot()` returns an immutable, render-safe view. Read from snapshots, write to the proxy.
 
@@ -62,14 +65,13 @@ Plain `createContextStore` needs **no special TypeScript config**. The decorator
 // tsconfig.json — TypeScript ≥ 5.2
 {
 	"compilerOptions": {
-		"target": "ES2022"
+		"target": "ES2022",
 		// Do NOT set experimentalDecorators — Stage 3 is the default and what this package needs.
-	}
+	},
 }
 ```
 
-<Callout type="info">
-	Prefer no build-time decorator support? The [accessor API](./valtio-kit/persist/fields) is fully
-	equivalent and needs no transpilation. Full decorator setup lives in [Persist →
-	TypeScript](./valtio-kit/persist/typescript).
+<Callout type='info'>
+	Prefer no build-time decorator support? The [accessor API](./valtio-kit/persist/fields) is fully equivalent and needs
+	no transpilation. Full decorator setup lives in [Persist → TypeScript](./valtio-kit/persist/typescript).
 </Callout>

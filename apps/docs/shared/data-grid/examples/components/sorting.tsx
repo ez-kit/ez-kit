@@ -24,7 +24,14 @@ const DATA: Task[] = [
 	{ id: 3, title: 'Refresh design tokens', priority: 'medium', rank: 7, dueDate: '2026-06-02', assignee: undefined },
 	{ id: 4, title: 'Backfill historical events', priority: 'high', rank: 3, dueDate: '2026-05-19', assignee: 'Carol' },
 	{ id: 5, title: 'Tidy onboarding copy', priority: 'low', rank: 12, dueDate: '2026-06-12', assignee: 'David' },
-	{ id: 6, title: 'Audit permissions matrix', priority: 'critical', rank: 2, dueDate: '2026-05-15', assignee: undefined },
+	{
+		id: 6,
+		title: 'Audit permissions matrix',
+		priority: 'critical',
+		rank: 2,
+		dueDate: '2026-05-15',
+		assignee: undefined,
+	},
 	{ id: 7, title: 'Investigate slow query', priority: 'high', rank: 5, dueDate: '2026-05-25', assignee: 'Eve' },
 	{ id: 8, title: 'Wire up push notifications', priority: 'medium', rank: 9, dueDate: '2026-06-08', assignee: 'Frank' },
 ]

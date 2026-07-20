@@ -97,8 +97,8 @@ function Demo() {
 				</filtersStore.Provider>
 			) : (
 				<p className='rounded-lg border border-dashed border-fd-border p-4 text-sm text-fd-muted-foreground'>
-					Panel closed. The filter store is kept alive in the cache and still mirrored to the URL — reopen it
-					and your <code>q</code>/<code>page</code> are preserved.
+					Panel closed. The filter store is kept alive in the cache and still mirrored to the URL — reopen it and your{' '}
+					<code>q</code>/<code>page</code> are preserved.
 				</p>
 			)}
 		</div>

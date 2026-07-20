@@ -14,6 +14,7 @@ export {
 	INFINITE_KEY,
 	PAGE_SIZER_KEY,
 	PAGINATION_VARIANT_KEY,
+	PAGINATION_WINDOW_KEY,
 	ROW_PINNING_KEY,
 	SORTING_KEY,
 	VIRTUALIZED_KEY,
@@ -34,6 +35,7 @@ export type {
 	NormalizedFilterChipsConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
+	NormalizedPageWindowConfig,
 	PageSizerConfig,
 	NormalizedVirtualizedConfig,
 	ReactExpandingConfig,
@@ -49,6 +51,10 @@ export type {
 // Pagination footer label (shared by every UI kit — content, not styling)
 export { buildPaginationLabel } from './data-grid/pagination-label'
 export type { PaginationLabelInput } from './data-grid/pagination-label'
+
+// Numbered-pagination page window (shared by every UI kit — structure, not styling)
+export { buildPageWindow, PAGE_GAP, DEFAULT_PAGE_SIBLINGS, DEFAULT_PAGE_BOUNDARIES } from './data-grid/page-window'
+export type { PageWindowInput, PageWindowItem } from './data-grid/page-window'
 
 // Infinite scroll
 export { useInfiniteScroll } from './data-grid/use-infinite-scroll'
