@@ -114,4 +114,3 @@ export function isValidationError(e: unknown): e is ValidationError {
 	if (typeof e !== 'object' || e === null) return false
 	return (e as Record<PropertyKey, unknown>)[VALIDATION_ERROR_BRAND] === true
 }
-

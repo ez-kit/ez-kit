@@ -21,10 +21,10 @@ function createStoreCache(options?: { gcTime?: number }): {
 	Provider: (props: PropsWithChildren) => ReactElement
 	Scope: (props: { path: string[]; children: ReactNode }) => ReactElement
 	useCache: () => {
-		keys: (prefix?: string[]) => CacheRecord[]           // non-reactive snapshot
-		clear: (prefix?: string[]) => void                   // optional subtree clear
+		keys: (prefix?: string[]) => CacheRecord[] // non-reactive snapshot
+		clear: (prefix?: string[]) => void // optional subtree clear
 	}
-	useCacheKeys: (prefix?: string[]) => CacheRecord[]     // reactive: re-renders on membership change
+	useCacheKeys: (prefix?: string[]) => CacheRecord[] // reactive: re-renders on membership change
 	createCachedStore: <TStore, TDefaultValue>(
 		factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
 		options: { name: string; gcTime?: number },
@@ -138,7 +138,7 @@ Owns the real cache storage, created per React tree (so SSR renders and tests ar
 
 | Prop           |          | Description                                                                                     |
 | -------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `id`     | required | Identity of the entry within the store group.                                                   |
+| `id`           | required | Identity of the entry within the store group.                                                   |
 | `defaultValue` | optional | Seed passed to the factory **only** when the key is first created.                              |
 | `gcTime`       | optional | Eviction delay (ms) once observers reach 0. Birth-config — fixed by the first mount of the key. |
 | `alwaysCache`  | optional | Pin the entry against automatic eviction (≡ `gcTime: Infinity`).                                |

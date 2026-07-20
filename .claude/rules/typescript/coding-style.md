@@ -254,8 +254,10 @@ It is shorter, data-driven, and trivially extensible.
 ```typescript
 // WRONG: switch as a dispatch table
 switch (typeof value) {
-	case 'string': return paramString()
-	case 'number': return paramNumber()
+	case 'string':
+		return paramString()
+	case 'number':
+		return paramNumber()
 }
 
 // CORRECT: lookup map (guard the result — noUncheckedIndexedAccess)
@@ -271,7 +273,7 @@ if (make) return make()
 
 Inline encoding/parsing/formatting logic that is reused — or is conceptually one unit — belongs in
 a small pure function. Prefer a native API when it fully covers the case; when it does not, keep the
-manual helper and comment *why* the native one is insufficient.
+manual helper and comment _why_ the native one is insufficient.
 
 ```typescript
 // CORRECT: a named pure helper, with a note on why encodeURIComponent isn't enough

@@ -38,12 +38,8 @@ export function PackageCards() {
 		<section className='py-20 px-6'>
 			<div className='max-w-[1040px] mx-auto'>
 				<ScrollReveal>
-					<h2 className='text-2xl font-bold tracking-[-0.03em] mb-1.5'>
-						Everything you need
-					</h2>
-					<p className='text-gray-500 dark:text-gray-400 mb-10 text-[0.95rem]'>
-						Five focused packages, zero bloat.
-					</p>
+					<h2 className='text-2xl font-bold tracking-[-0.03em] mb-1.5'>Everything you need</h2>
+					<p className='text-gray-500 dark:text-gray-400 mb-10 text-[0.95rem]'>Five focused packages, zero bloat.</p>
 				</ScrollReveal>
 
 				<div className='grid sm:grid-cols-2 lg:grid-cols-3 gap-4'>
@@ -68,7 +64,9 @@ function PackageCard({ name, full, desc }: { name: string; full: string; desc: s
 	function handleCopy() {
 		void navigator.clipboard.writeText(installCmd)
 		setCopied(true)
-		setTimeout(() => { setCopied(false); }, 1500)
+		setTimeout(() => {
+			setCopied(false)
+		}, 1500)
 	}
 
 	return (
@@ -88,9 +86,7 @@ function PackageCard({ name, full, desc }: { name: string; full: string; desc: s
 				onClick={handleCopy}
 				className='flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-left group hover:border-[color:var(--mint-border)] transition-colors cursor-pointer w-full'
 			>
-				<code className='text-[0.75rem] text-gray-600 dark:text-gray-400 font-mono truncate'>
-					{installCmd}
-				</code>
+				<code className='text-[0.75rem] text-gray-600 dark:text-gray-400 font-mono truncate'>{installCmd}</code>
 				<span className='text-[0.72rem] text-gray-400 group-hover:text-[color:var(--mint)] transition-colors flex-shrink-0'>
 					{copied ? '✓' : 'copy'}
 				</span>

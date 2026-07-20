@@ -115,18 +115,14 @@ describe('mapColumns', () => {
 	})
 
 	it('forwards creating.description to meta.creating.description', () => {
-		const result = mapColumns<Row>([
-			{ accessorKey: 'name', creating: { description: 'Choose a unique name' } },
-		])
+		const result = mapColumns<Row>([{ accessorKey: 'name', creating: { description: 'Choose a unique name' } }])
 		const created = result[0]?.meta?.creating
 		const description = created !== false ? created?.description : undefined
 		expect(description).toBe('Choose a unique name')
 	})
 
 	it('forwards editing.description to meta.editing.description', () => {
-		const result = mapColumns<Row>([
-			{ accessorKey: 'name', editing: { description: 'Cannot be changed once saved' } },
-		])
+		const result = mapColumns<Row>([{ accessorKey: 'name', editing: { description: 'Cannot be changed once saved' } }])
 		const edited = result[0]?.meta?.editing
 		const description = edited !== false ? edited?.description : undefined
 		expect(description).toBe('Cannot be changed once saved')
@@ -203,20 +199,16 @@ describe('mapColumns', () => {
 	})
 
 	it('column.filtering.faceted: true → meta.facetedEnabled = true (overrides table flag)', () => {
-		const result = mapColumns<Row>(
-			[{ accessorKey: 'name', filtering: { faceted: true } }],
-			undefined,
-			{ tableFaceted: false },
-		)
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: true } }], undefined, {
+			tableFaceted: false,
+		})
 		expect(result[0]?.meta?.facetedEnabled).toBe(true)
 	})
 
 	it('column.filtering.faceted: false → meta.facetedEnabled is not set even when table-level is on', () => {
-		const result = mapColumns<Row>(
-			[{ accessorKey: 'name', filtering: { faceted: false } }],
-			undefined,
-			{ tableFaceted: true },
-		)
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: false } }], undefined, {
+			tableFaceted: true,
+		})
 		expect(result[0]?.meta?.facetedEnabled).toBeUndefined()
 	})
 
@@ -227,13 +219,16 @@ describe('mapColumns', () => {
 
 	it('select cell with operators: true resolves to in/notIn defaults', () => {
 		const registry = buildOperatorRegistry()
-		const result = mapColumns<Row>([
-			{
-				accessorKey: 'name',
-				cell: { type: 'select', config: { items: [{ value: 'a', label: 'A' }] } },
-				filtering: { operators: true },
-			},
-		], registry)
+		const result = mapColumns<Row>(
+			[
+				{
+					accessorKey: 'name',
+					cell: { type: 'select', config: { items: [{ value: 'a', label: 'A' }] } },
+					filtering: { operators: true },
+				},
+			],
+			registry,
+		)
 		const resolved = result[0]?.meta?.resolvedOperators
 		expect(resolved?.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
 		expect(result[0]?.meta?.defaultOperatorId).toBe('in')

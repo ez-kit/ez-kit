@@ -51,8 +51,8 @@ import { proxy } from 'valtio'
 
 // Decorate the fields to sync. Primitives need no parser — it's auto-resolved.
 class Filters {
-  @persistUrl() q = '' // → ?q=…
-  @persistLocalStorage() density = 'comfortable' // → localStorage
+	@persistUrl() q = '' // → ?q=…
+	@persistLocalStorage() density = 'comfortable' // → localStorage
 }
 
 // Persistence is a plugin on the base store. Request-scoped, SSR-correct.
@@ -60,13 +60,13 @@ class Filters {
 const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
 
 function Page() {
-  return (
-    <PersistProvider adapters={[reactRouterAdapter, localStorageAdapter()]}>
-      <filtersStore.Provider>
-        <Filters />
-      </filtersStore.Provider>
-    </PersistProvider>
-  )
+	return (
+		<PersistProvider adapters={[reactRouterAdapter, localStorageAdapter()]}>
+			<filtersStore.Provider>
+				<Filters />
+			</filtersStore.Provider>
+		</PersistProvider>
+	)
 }
 ```
 
@@ -74,13 +74,13 @@ Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storag
 
 Subpaths (optional peers, install only what you use):
 
-| Import                                          | Peer              |
-| ----------------------------------------------- | ----------------- |
-| `@ez-kit/valtio-kit/persist`                    | — (zero-dep core) |
-| `@ez-kit/valtio-kit/persist/url`                | — (zero-dep core) |
-| `@ez-kit/valtio-kit/persist/storage`            | — (zero-dep core) |
-| `@ez-kit/valtio-kit/persist/url/react-router`   | `react-router`    |
-| `@ez-kit/valtio-kit/persist/url/next`           | `next`            |
-| `@ez-kit/valtio-kit/persist/validators/zod`     | `zod`             |
+| Import                                        | Peer              |
+| --------------------------------------------- | ----------------- |
+| `@ez-kit/valtio-kit/persist`                  | — (zero-dep core) |
+| `@ez-kit/valtio-kit/persist/url`              | — (zero-dep core) |
+| `@ez-kit/valtio-kit/persist/storage`          | — (zero-dep core) |
+| `@ez-kit/valtio-kit/persist/url/react-router` | `react-router`    |
+| `@ez-kit/valtio-kit/persist/url/next`         | `next`            |
+| `@ez-kit/valtio-kit/persist/validators/zod`   | `zod`             |
 
 → [Full docs](https://github.com/ez-kit/ez-kit/tree/main/apps/docs/content/docs/valtio-kit/persist)

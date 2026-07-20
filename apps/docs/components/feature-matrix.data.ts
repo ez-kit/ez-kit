@@ -52,7 +52,8 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 	{
 		category: 'Editing & CRUD',
 		feature: 'Server-side mode (full async)',
-		description: 'Full async server mode with manual pagination/sort/filter, rowCount, controlled state.loading (isPending/isFetching/isError/error), and refetch overlay.',
+		description:
+			'Full async server mode with manual pagination/sort/filter, rowCount, controlled state.loading (isPending/isFetching/isError/error), and refetch overlay.',
 		status: FeatureStatus.Done,
 		doc: 'server-side',
 	},

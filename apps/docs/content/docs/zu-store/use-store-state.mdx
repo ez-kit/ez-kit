@@ -22,7 +22,10 @@ The return type is inferred from the key, so passing an unknown key is a compile
 
 ## Basic usage
 
-<LivePreview path='zu-store/form' title='Form with two fields' />
+<LivePreview
+	path='zu-store/form'
+	title='Form with two fields'
+/>
 
 ## Behaviour
 
@@ -48,7 +51,12 @@ const formStore = createContextStore(() => createStore<FormState>()(() => ({ nam
 function NameField() {
 	const store = formStore.useContextStore()
 	const [name, setName] = useStoreState(store, 'name')
-	return <input value={name} onChange={(e) => setName(e.target.value)} />
+	return (
+		<input
+			value={name}
+			onChange={(e) => setName(e.target.value)}
+		/>
+	)
 }
 ```
 

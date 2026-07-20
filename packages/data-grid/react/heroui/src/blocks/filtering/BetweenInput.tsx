@@ -62,16 +62,7 @@ function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode
 	)
 }
 
-export function BetweenInput({
-	value,
-	onChange,
-	variant,
-	type,
-	min,
-	max,
-	presets,
-	onPresetSelect,
-}: BetweenInputProps) {
+export function BetweenInput({ value, onChange, variant, type, min, max, presets, onPresetSelect }: BetweenInputProps) {
 	const presetRow =
 		presets && presets.length > 0 && onPresetSelect ? (
 			<PresetRow
@@ -168,9 +159,7 @@ export function BetweenInput({
 								<RangeCalendar.GridHeader>
 									{(day) => <RangeCalendar.HeaderCell>{day}</RangeCalendar.HeaderCell>}
 								</RangeCalendar.GridHeader>
-								<RangeCalendar.GridBody>
-									{(date) => <RangeCalendar.Cell date={date} />}
-								</RangeCalendar.GridBody>
+								<RangeCalendar.GridBody>{(date) => <RangeCalendar.Cell date={date} />}</RangeCalendar.GridBody>
 							</RangeCalendar.Grid>
 						</RangeCalendar>
 					</Popover.Dialog>

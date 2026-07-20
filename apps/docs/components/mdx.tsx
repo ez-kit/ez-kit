@@ -1,23 +1,23 @@
-import defaultMdxComponents from 'fumadocs-ui/mdx';
+import defaultMdxComponents from 'fumadocs-ui/mdx'
 
-import { DataGridDocsExample } from './data-grid-docs-example';
-import { FeatureMatrix } from './feature-matrix';
-import { LivePreview } from './live-preview';
+import { DataGridDocsExample } from './data-grid-docs-example'
+import { FeatureMatrix } from './feature-matrix'
+import { LivePreview } from './live-preview'
 
-import type { MDXComponents } from 'mdx/types';
+import type { MDXComponents } from 'mdx/types'
 
 export function getMDXComponents(components?: MDXComponents) {
-  return {
-    ...defaultMdxComponents,
-    LivePreview,
-    DataGridDocsExample,
-    FeatureMatrix,
-    ...components,
-  } as MDXComponents;
+	return {
+		...defaultMdxComponents,
+		LivePreview,
+		DataGridDocsExample,
+		FeatureMatrix,
+		...components,
+	} as MDXComponents
 }
 
-export const useMDXComponents = getMDXComponents;
+export const useMDXComponents = getMDXComponents
 
 declare global {
-  type MDXProvidedComponents = ReturnType<typeof getMDXComponents>;
+	type MDXProvidedComponents = ReturnType<typeof getMDXComponents>
 }

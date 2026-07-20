@@ -169,12 +169,27 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			)
 		}
 
-		const { rerender } = render(<App show={true} seed='first' />)
+		const { rerender } = render(
+			<App
+				show={true}
+				seed='first'
+			/>,
+		)
 		expect(screen.getByTestId('name')).toHaveTextContent('first')
 		const live = form.fromCache({ id: 'form' })
 
-		rerender(<App show={false} seed='first' />)
-		rerender(<App show={true} seed='second' />)
+		rerender(
+			<App
+				show={false}
+				seed='first'
+			/>,
+		)
+		rerender(
+			<App
+				show={true}
+				seed='second'
+			/>,
+		)
 
 		expect(screen.getByTestId('name')).toHaveTextContent('first')
 		expect(form.fromCache({ id: 'form' })).toBe(live)
@@ -202,18 +217,33 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			)
 		}
 
-		const { rerender } = render(<App show={true} seed='first' />)
+		const { rerender } = render(
+			<App
+				show={true}
+				seed='first'
+			/>,
+		)
 		expect(screen.getByTestId('name')).toHaveTextContent('first')
 
 		// Unmount the form provider, then wait past gcTime so the unobserved entry is evicted.
-		rerender(<App show={false} seed='first' />)
+		rerender(
+			<App
+				show={false}
+				seed='first'
+			/>,
+		)
 		await act(async () => {
 			await new Promise((resolve) => setTimeout(resolve, 1100))
 		})
 		expect(form.fromCache({ id: 'form' })).toBeUndefined()
 
 		// Remount: the entry is gone, so the new defaultValue seeds a fresh proxy.
-		rerender(<App show={true} seed='second' />)
+		rerender(
+			<App
+				show={true}
+				seed='second'
+			/>,
+		)
 		expect(screen.getByTestId('name')).toHaveTextContent('second')
 	})
 })

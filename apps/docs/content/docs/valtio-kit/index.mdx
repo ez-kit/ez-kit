@@ -15,11 +15,11 @@ It exists because a plain `proxy()` is a module-level singleton — fine for app
 
 ## What's in the box
 
-| Export | Purpose |
-| --- | --- |
-| [Getting Started](./valtio-kit/getting-started) | Install, first store, read/write model, decorator TypeScript setup. |
-| [`createContextStore`](./valtio-kit/create-context-store) | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Item`. |
-| [Persist](./valtio-kit/persist) | Sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate: typed codecs, decorators, hydration, cross-tab. |
+| Export                                                    | Purpose                                                                                                                                 |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| [Getting Started](./valtio-kit/getting-started)           | Install, first store, read/write model, decorator TypeScript setup.                                                                     |
+| [`createContextStore`](./valtio-kit/create-context-store) | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Item`.                                                    |
+| [Persist](./valtio-kit/persist)                           | Sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate: typed codecs, decorators, hydration, cross-tab. |
 
 ## Why not a plain Valtio proxy?
 
@@ -29,9 +29,9 @@ A `proxy()` lives at module scope. Two `<Modal>` instances or two `<DataGrid>` i
 
 Both kits expose `createContextStore` for cross-kit familiarity, but the read/write model differs:
 
-| | `zu-store` (Zustand) | `valtio-kit` (Valtio) |
-| --- | --- | --- |
-| Read | `useStore(selector)` → slice | `useSnapshot()` → tracked snapshot |
-| Write | actions call `set(...)` | mutate the proxy: `state.count++` |
-| `useStore()` | raw `StoreApi` | **the raw mutable proxy** |
-| Selectors | yes (`useStore`, `useShallowStore`) | none — tracking is automatic |
+|              | `zu-store` (Zustand)                | `valtio-kit` (Valtio)              |
+| ------------ | ----------------------------------- | ---------------------------------- |
+| Read         | `useStore(selector)` → slice        | `useSnapshot()` → tracked snapshot |
+| Write        | actions call `set(...)`             | mutate the proxy: `state.count++`  |
+| `useStore()` | raw `StoreApi`                      | **the raw mutable proxy**          |
+| Selectors    | yes (`useStore`, `useShallowStore`) | none — tracking is automatic       |

@@ -40,10 +40,12 @@
 ### Task 1: Key sets and types
 
 **Files:**
+
 - Create: `packages/data-grid/react/react/src/state/state-keys.ts`
 - Test: `packages/data-grid/react/react/src/state/state-keys.test.ts`
 
 **Interfaces:**
+
 - Consumes: `TableState` from `@ez-kit/data-grid-core`.
 - Produces:
   - `PERSISTABLE_STATE_KEYS: readonly ['sorting','columnFilters','globalFilter','pagination','rowSelection','columnVisibility','columnPinning','rowPinning','expanded','columnSizing']`
@@ -179,10 +181,12 @@ git commit -m "feat(data-grid): add persistable state key sets and types"
 ### Task 2: `extractState` (Layer 1 read)
 
 **Files:**
+
 - Create: `packages/data-grid/react/react/src/state/extract-state.ts`
 - Test: `packages/data-grid/react/react/src/state/extract-state.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DEFAULT_STATE_KEYS`, `DataGridState`, `DataGridStateOptions`, `PersistableStateKey` from `./state-keys`; `Table`, `TableState` from `@ez-kit/data-grid-core`; `createTable`, `defineColumns` from `@ez-kit/data-grid-core` (tests only).
 - Produces:
   - `pickState(state: TableState, keys: readonly PersistableStateKey[]): DataGridState` — internal, pure. Copies each included key whose value is not `undefined`.
@@ -290,10 +294,7 @@ export function pickState(state: TableState, keys: readonly PersistableStateKey[
  * (takes the core `Table`, so it works outside React and against a bare `createTable`).
  * Does not touch storage. Default slice set: {@link DEFAULT_STATE_KEYS}.
  */
-export function extractState<TRow extends object>(
-	table: Table<TRow>,
-	options?: DataGridStateOptions,
-): DataGridState {
+export function extractState<TRow extends object>(table: Table<TRow>, options?: DataGridStateOptions): DataGridState {
 	return pickState(table.getState(), options?.keys ?? DEFAULT_STATE_KEYS)
 }
 ```
@@ -315,10 +316,12 @@ git commit -m "feat(data-grid): add extractState utility"
 ### Task 3: `parseState` (Layer 1 write-back)
 
 **Files:**
+
 - Create: `packages/data-grid/react/react/src/state/parse-state.ts`
 - Test: `packages/data-grid/react/react/src/state/parse-state.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DEFAULT_STATE_KEYS`, `DataGridState`, `DataGridStateOptions`, `PersistableStateKey` from `./state-keys`.
 - Produces: `parseState(stored: unknown, options?: DataGridStateOptions): DataGridState` — validates + prunes untrusted, already-decoded input into a typed partial. Never throws. Does NOT call `JSON.parse`. Drops keys outside the allowlist and slices whose top-level JS type is wrong (per the `SLICE_KIND` guard below). `globalFilter` is `unknown` — passed through when present.
 
@@ -472,10 +475,12 @@ git commit -m "feat(data-grid): add parseState utility"
 ### Task 4: `useExtractedState` (Layer 2 reactive hook)
 
 **Files:**
+
 - Create: `packages/data-grid/react/react/src/state/use-extracted-state.ts`
 - Test: `packages/data-grid/react/react/src/state/use-extracted-state.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `pickState` from `./extract-state`; `DEFAULT_STATE_KEYS`, `DataGridState`, `DataGridStateOptions`, `PersistableStateKey` from `./state-keys`; `DataGridInstance` from `../data-grid-instance`; `TableState` from `@ez-kit/data-grid-core`; `useSyncExternalStore` from `react`; `useDataGrid` from `../use-data-grid` (tests only); `act`, `renderHook` from `@testing-library/react` (tests only).
 - Produces: `useExtractedState<TRow extends object>(instance: DataGridInstance<TRow>, options?: DataGridStateOptions): DataGridState`. Returns a referentially stable object; identity changes only when an included slice's reference changes or the `keys` list changes.
 
@@ -636,11 +641,13 @@ git commit -m "feat(data-grid): add useExtractedState reactive hook"
 ### Task 5: Public exports, round-trip integration test, changeset
 
 **Files:**
+
 - Modify: `packages/data-grid/react/react/src/index.ts` (add a new export block after the "Selector hook + store primitives" block, around line 56)
 - Create: `packages/data-grid/react/react/src/state/round-trip.test.tsx`
 - Create: `.changeset/data-grid-state-persistence.md`
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 1–4, now via the package entrypoint.
 - Produces: public exports `extractState`, `parseState`, `useExtractedState`, `PERSISTABLE_STATE_KEYS`, `DEFAULT_STATE_KEYS` (values) and `DataGridState`, `DataGridStateOptions`, `PersistableStateKey` (types).
 
@@ -675,9 +682,7 @@ describe('state persistence round-trip', () => {
 		const wire = JSON.parse(JSON.stringify(extractState(source.current.table)))
 		const restored = parseState(wire)
 
-		const { result: seeded } = renderHook(() =>
-			useDataGrid({ data, columns, sorting: true, initialState: restored }),
-		)
+		const { result: seeded } = renderHook(() => useDataGrid({ data, columns, sorting: true, initialState: restored }))
 		expect(seeded.current.table.getState().sorting).toEqual([{ id: 'name', desc: true }])
 		expect(seeded.current.table.getState().pagination).toEqual({ pageIndex: 3, pageSize: 50 })
 	})
@@ -745,6 +750,7 @@ git commit -m "feat(data-grid): export state persistence API + round-trip test"
 ### Task 6: Docs — guide page, live example, flip roadmap status
 
 **Files:**
+
 - Create: `apps/docs/shared/data-grid/examples/components/state-persistence.tsx`
 - Modify: `apps/docs/shared/data-grid/examples/manifest.json` (register the slug)
 - Create: `apps/docs/content/docs/data-grid/state-persistence.mdx`
@@ -752,6 +758,7 @@ git commit -m "feat(data-grid): export state persistence API + round-trip test"
 - Modify: `apps/docs/components/feature-matrix.data.ts:261-266` (flip status to `Done`, add `doc` slug)
 
 **Interfaces:**
+
 - Consumes: `extractState`, `parseState`, `useExtractedState` from `@ez-kit/data-grid-react`; the docs' shared `DataGrid` switcher and `useDataGrid` as used by sibling examples.
 
 - [ ] **Step 1: Inspect a sibling example to copy its exact shape**
@@ -765,6 +772,7 @@ Read how imports, the `useDataGrid` call, and the exported component are structu
 - [ ] **Step 2: Write the live example**
 
 Create `apps/docs/shared/data-grid/examples/components/state-persistence.tsx` following the sibling's structure. It must:
+
 - build columns with `defineColumns`,
 - read an initial value from a local `useState(() => parseState(seed))` where `seed` is a small in-file object (no real `localStorage` in the example — keep it deterministic),
 - render the shared `DataGrid`,
@@ -823,7 +831,7 @@ In `apps/docs/shared/data-grid/examples/manifest.json`, add `"state-persistence"
 
 Create `apps/docs/content/docs/data-grid/state-persistence.mdx`:
 
-```mdx
+````mdx
 ---
 title: State Persistence
 description: Read grid state out for the URL or localStorage, and seed it back on load — you own the storage; we own the extract and parse.
@@ -852,6 +860,7 @@ reactive hook; **you own the actual read/write** — that keeps your URL and rou
 const decoded = JSON.parse(localStorage.getItem('grid') ?? 'null')
 const grid = useDataGrid({ data, columns, initialState: parseState(decoded) })
 ```
+````
 
 ## Save on change
 
@@ -877,7 +886,8 @@ that may not survive a data reload). Opt into anything from `PERSISTABLE_STATE_K
 
 Reading and writing storage, compact URL key names, and versioning/migration of stored payloads
 are deliberately left to you — real apps have their own URL and routing conventions.
-```
+
+````
 
 - [ ] **Step 5: Add the page to the nav**
 
@@ -895,7 +905,7 @@ In `apps/docs/components/feature-matrix.data.ts`, update the persistence entry (
 		status: FeatureStatus.Done,
 		doc: 'state-persistence',
 	},
-```
+````
 
 - [ ] **Step 7: Verify the docs app builds**
 
@@ -914,6 +924,7 @@ git commit -m "docs(data-grid): document state persistence and mark feature done
 ## Self-Review
 
 **Spec coverage:**
+
 - §3.1 key sets + types → Task 1 ✓
 - §3.2 `extractState` / `parseState` → Tasks 2, 3 ✓
 - §3.3 `useExtractedState` → Task 4 ✓

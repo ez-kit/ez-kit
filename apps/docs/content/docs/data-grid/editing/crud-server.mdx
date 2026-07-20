@@ -24,7 +24,7 @@ The example assumes a REST shape but the pattern is transport-agnostic:
 
 ```ts
 type Api = {
-	list: (params: { sort, filters, page }) => Promise<{ rows, total }>
+	list: (params: { sort; filters; page }) => Promise<{ rows; total }>
 	create: (row) => Promise<TRow>
 	update: (id, patch) => Promise<TRow>
 	delete: (ids: string[]) => Promise<void>

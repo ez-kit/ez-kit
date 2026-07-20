@@ -7,7 +7,10 @@ description: Sync one store to the URL and storage at once. Shared state deep-li
 
 A field is bound to a source, not a store — so one proxy can mix sources freely. Put **shareable** state (`q`, filters) in the URL and **device-local** state (density, theme) in storage. Mount both adapters; each field picks where it goes.
 
-<LivePreview path='valtio-kit/persist-combined' title='URL + localStorage on one store' />
+<LivePreview
+	path='valtio-kit/persist-combined'
+	title='URL + localStorage on one store'
+/>
 
 ```tsx
 import { createStore } from '@ez-kit/valtio-kit'
@@ -36,7 +39,7 @@ One engine is created per source — they never coordinate writes (each flushes 
 
 ## Dual-binding one field
 
-Bind the *same* field to two sources to keep a shareable value **and** a local fallback — a URL param when present, restored from storage otherwise:
+Bind the _same_ field to two sources to keep a shareable value **and** a local fallback — a URL param when present, restored from storage otherwise:
 
 ```tsx
 class State {
@@ -63,9 +66,9 @@ When several sources can fill the same field, the rule is **first-present-wins o
 
 This makes "an explicit shared link beats a restored cache" automatic, with no precedence config. The only lever for sync-vs-sync ordering is adapter order in the `adapters` array; it's rarely needed.
 
-<Callout type="info">
-	A consumer who genuinely wants storage to override the URL on load can't, by design — the rule favors
-	shareable links. That trade-off is intentional.
+<Callout type='info'>
+	A consumer who genuinely wants storage to override the URL on load can't, by design — the rule favors shareable links.
+	That trade-off is intentional.
 </Callout>
 
 ## Per-source handles

@@ -12,17 +12,17 @@ and the relationships between them.
 
 A single mdx file under `apps/docs/content/docs/data-grid/`.
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | URL path segment derived from filename, e.g. `cells/custom-cell-types`. |
-| `title` | string | Frontmatter `title`. Used in nav and search results. MUST be unique within the data-grid section. |
-| `description` | string | Frontmatter `description`. Used in search snippets. Should contain a primary query keyword (e.g. "filtering", "selection") to satisfy FR-011. |
-| `group` | string \| null | Subdirectory name when nested (e.g. `cells`, `filtering`). Top-level pages have `null`. |
-| `learningOrder` | integer | Implicit — derived from the `pages` array order in the enclosing `meta.json`. |
-| `embeddedExampleIds` | string[] | Manifest slugs the page embeds via `<DataGridDocsExample>`. Empty allowed only for concept pages (Overview, Architecture, Theming, Migration, Installation/*) — see "Validation rules" below. |
-| `appliesTo` | `'shadcn' \| 'heroui' \| 'both' \| 'core' \| 'react'` | Which flavor or layer the page documents. Most pages are `'both'`. Pages under `installation/` are flavor-specific. Pages under `advanced/` are `'core'` or `'react'`. |
-| `sourceLinks` | `{ pkg: string; path: string }[]` | One or more references to the package source for the surface this page documents. Renders as a "Source" section at the bottom of the page. |
-| `requirementsCovered` | string[] | The FR identifiers this page contributes to (e.g. `["FR-002", "FR-006"]`). Used only at planning / verification time; not rendered. |
+| Field                 | Type                                                  | Notes                                                                                                                                                                                          |
+| --------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`                | string                                                | URL path segment derived from filename, e.g. `cells/custom-cell-types`.                                                                                                                        |
+| `title`               | string                                                | Frontmatter `title`. Used in nav and search results. MUST be unique within the data-grid section.                                                                                              |
+| `description`         | string                                                | Frontmatter `description`. Used in search snippets. Should contain a primary query keyword (e.g. "filtering", "selection") to satisfy FR-011.                                                  |
+| `group`               | string \| null                                        | Subdirectory name when nested (e.g. `cells`, `filtering`). Top-level pages have `null`.                                                                                                        |
+| `learningOrder`       | integer                                               | Implicit — derived from the `pages` array order in the enclosing `meta.json`.                                                                                                                  |
+| `embeddedExampleIds`  | string[]                                              | Manifest slugs the page embeds via `<DataGridDocsExample>`. Empty allowed only for concept pages (Overview, Architecture, Theming, Migration, Installation/\*) — see "Validation rules" below. |
+| `appliesTo`           | `'shadcn' \| 'heroui' \| 'both' \| 'core' \| 'react'` | Which flavor or layer the page documents. Most pages are `'both'`. Pages under `installation/` are flavor-specific. Pages under `advanced/` are `'core'` or `'react'`.                         |
+| `sourceLinks`         | `{ pkg: string; path: string }[]`                     | One or more references to the package source for the surface this page documents. Renders as a "Source" section at the bottom of the page.                                                     |
+| `requirementsCovered` | string[]                                              | The FR identifiers this page contributes to (e.g. `["FR-002", "FR-006"]`). Used only at planning / verification time; not rendered.                                                            |
 
 ### Validation rules
 
@@ -40,7 +40,7 @@ A single mdx file under `apps/docs/content/docs/data-grid/`.
   `<DataGridDocsExample>` — those surfaces are not in the flavor manifest;
   use code blocks instead.
 - `sourceLinks` MUST be non-empty for pages with `appliesTo ∈ {both,
-  shadcn, heroui, core, react}` (i.e. all pages that document a code
+shadcn, heroui, core, react}` (i.e. all pages that document a code
   surface). Exempt: Overview, Architecture, Getting Started, Migration.
 - `embeddedExampleIds` values MUST exist in
   `apps/docs/shared/data-grid/examples/manifest.json` (FR-007).
@@ -54,11 +54,11 @@ A single mdx file under `apps/docs/content/docs/data-grid/`.
 A `meta.json` file in any directory under
 `apps/docs/content/docs/data-grid/`.
 
-| Field | Type | Notes |
-|---|---|---|
-| `title` | string | Display name for the group in the sidebar. |
-| `description` | string \| undefined | Optional. |
-| `pages` | string[] | Ordered list of slugs (filenames without extension, including subdirectory names for nested groups) that belong to this directory. Defines `learningOrder`. |
+| Field         | Type                | Notes                                                                                                                                                       |
+| ------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`       | string              | Display name for the group in the sidebar.                                                                                                                  |
+| `description` | string \| undefined | Optional.                                                                                                                                                   |
+| `pages`       | string[]            | Ordered list of slugs (filenames without extension, including subdirectory names for nested groups) that belong to this directory. Defines `learningOrder`. |
 
 ### Validation rules
 
@@ -75,14 +75,14 @@ A `meta.json` file in any directory under
 
 Each entry in `apps/docs/shared/data-grid/examples/manifest.json`.
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | string | Manifest slug. The value `DocPage.embeddedExampleIds[*]` references. |
-| `label` | string | Human-friendly name for the example. |
-| `group` | string \| undefined | Manifest grouping (e.g. `base`, `filtering`). |
-| `groupLabel` | string \| undefined | Group display name. |
-| `sourceFile` | string | Path to the example component, relative to `apps/docs/shared/data-grid/examples/`. |
-| `exportName` | string | The named export the Sandpack bundle pulls in. |
+| Field        | Type                | Notes                                                                              |
+| ------------ | ------------------- | ---------------------------------------------------------------------------------- |
+| `id`         | string              | Manifest slug. The value `DocPage.embeddedExampleIds[*]` references.               |
+| `label`      | string              | Human-friendly name for the example.                                               |
+| `group`      | string \| undefined | Manifest grouping (e.g. `base`, `filtering`).                                      |
+| `groupLabel` | string \| undefined | Group display name.                                                                |
+| `sourceFile` | string              | Path to the example component, relative to `apps/docs/shared/data-grid/examples/`. |
+| `exportName` | string              | The named export the Sandpack bundle pulls in.                                     |
 
 ### Invariants this feature MUST preserve
 

@@ -23,9 +23,7 @@ export function ControlledStateExample() {
 		pagination: true,
 		state: tableState,
 		onStateChange: (updater) => {
-			setTableState((prev) =>
-				typeof updater === 'function' ? updater(prev as TableState) : updater,
-			)
+			setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
 		},
 	})
 

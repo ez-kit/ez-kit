@@ -2,7 +2,12 @@ import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { COL_PINNING_KEY, DEFAULT_FILTER_DEBOUNCE_MS, FILTERING_DEBOUNCE_KEY, FILTERING_VARIANT_KEY } from '../use-data-grid'
+import {
+	COL_PINNING_KEY,
+	DEFAULT_FILTER_DEBOUNCE_MS,
+	FILTERING_DEBOUNCE_KEY,
+	FILTERING_VARIANT_KEY,
+} from '../use-data-grid'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'

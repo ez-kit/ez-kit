@@ -37,7 +37,7 @@ Pages MUST use these `##` sections in this order. Sections that do not
 apply MUST be omitted (not left empty).
 
 1. `## Usage` — required for pages whose `appliesTo` ∈ `{both, shadcn,
-   heroui}`. Contains the `<DataGridDocsExample />` invocation and the
+heroui}`. Contains the `<DataGridDocsExample />` invocation and the
    minimum prose needed to explain it.
 2. `## Options` — required for any page that documents an API surface
    (props, options, types). Renders as a markdown table.
@@ -47,10 +47,10 @@ apply MUST be omitted (not left empty).
 4. `## See also` — required if there are sibling pages that someone reading
    this one will likely also want.
 5. `## Source` — required for pages whose `appliesTo` ∈ `{both, shadcn,
-   heroui, core, react}`. See [Source section](#source-section).
+heroui, core, react}`. See [Source section](#source-section).
 
 Concept pages (Overview, Architecture, Getting Started, Migration,
-Installation/*, Theming) MAY use additional `##` sections appropriate to
+Installation/\*, Theming) MAY use additional `##` sections appropriate to
 their narrative, but MUST still start with a top-level paragraph that
 states what the page is.
 
@@ -65,7 +65,10 @@ Pages embed runnable examples using exactly the new MDX shortcode:
 Optional flavor lock for flavor-specific pages only:
 
 ```mdx
-<DataGridDocsExample exampleId='<manifest-id>' defaultType='shadcn' />
+<DataGridDocsExample
+	exampleId='<manifest-id>'
+	defaultType='shadcn'
+/>
 ```
 
 Rules:
@@ -90,7 +93,7 @@ Renders at the bottom of the page. Format:
 ```mdx
 ## Source
 
-- `@ez-kit/data-grid-<pkg>` — [`<repo-relative-path>`](<absolute-link-to-repo-blob>)
+- `@ez-kit/data-grid-<pkg>` — [`<repo-relative-path>`](absolute-link-to-repo-blob)
 ```
 
 - One bullet per package + path that owns the documented surface.
@@ -117,13 +120,13 @@ Renders at the bottom of the page. Format:
 
 ## Flavor handling
 
-| `appliesTo` | What the page does |
-|---|---|
-| `both` | Use `<DataGridDocsExample exampleId='…' />` without `defaultType`. The component renders the toggle. |
-| `shadcn` | `<DataGridDocsExample exampleId='…' defaultType='shadcn' />`. Page prose explains the shadcn-specific behavior. |
-| `heroui` | Same as shadcn, with `defaultType='heroui'`. |
-| `core` | No `<DataGridDocsExample>`. Use fenced code blocks. |
-| `react` | No `<DataGridDocsExample>`. Use fenced code blocks. |
+| `appliesTo` | What the page does                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `both`      | Use `<DataGridDocsExample exampleId='…' />` without `defaultType`. The component renders the toggle.            |
+| `shadcn`    | `<DataGridDocsExample exampleId='…' defaultType='shadcn' />`. Page prose explains the shadcn-specific behavior. |
+| `heroui`    | Same as shadcn, with `defaultType='heroui'`.                                                                    |
+| `core`      | No `<DataGridDocsExample>`. Use fenced code blocks.                                                             |
+| `react`     | No `<DataGridDocsExample>`. Use fenced code blocks.                                                             |
 
 If a capability differs between shadcn and heroui in a way the example
 cannot demonstrate by toggle alone (rare), the page MUST add a `## Notes`
@@ -135,18 +138,18 @@ lives in source.
 For pages whose topic appears in FR-011, the page MUST contain the query
 keyword in at least one of: title, description, first paragraph. Examples:
 
-| FR-011 query | Page that MUST contain it |
-|---|---|
-| `columns` | `columns/index.mdx` title or description |
-| `filtering` | `filtering/index.mdx` title or description |
-| `sorting` | `sorting.mdx` title or description |
-| `pagination` | `pagination.mdx` title or description |
-| `selection` | `selection/index.mdx` title or description |
-| `row pinning` | `row-pinning.mdx` title or description |
-| `cell types` | `cells/cell-types.mdx` title or description |
-| `controlled state` | `controlled-state.mdx` title or description |
-| `loading` | `fallbacks.mdx` description |
-| `custom cell` | `cells/custom-cell-types.mdx` title or description |
+| FR-011 query       | Page that MUST contain it                          |
+| ------------------ | -------------------------------------------------- |
+| `columns`          | `columns/index.mdx` title or description           |
+| `filtering`        | `filtering/index.mdx` title or description         |
+| `sorting`          | `sorting.mdx` title or description                 |
+| `pagination`       | `pagination.mdx` title or description              |
+| `selection`        | `selection/index.mdx` title or description         |
+| `row pinning`      | `row-pinning.mdx` title or description             |
+| `cell types`       | `cells/cell-types.mdx` title or description        |
+| `controlled state` | `controlled-state.mdx` title or description        |
+| `loading`          | `fallbacks.mdx` description                        |
+| `custom cell`      | `cells/custom-cell-types.mdx` title or description |
 
 ## Authoring checklist
 
@@ -156,7 +159,7 @@ A page is "done" when ALL of these are true:
       chars.
 - [ ] Section order matches the rule above.
 - [ ] At least one `<DataGridDocsExample />` if `appliesTo ∈ {both,
-      shadcn, heroui}` (or an explicit "no example — reason" note for
+  shadcn, heroui}` (or an explicit "no example — reason" note for
       Theming-style exceptions).
 - [ ] All `exampleId`s resolve in `manifest.json`.
 - [ ] `## Source` bullets present for code-surface pages.

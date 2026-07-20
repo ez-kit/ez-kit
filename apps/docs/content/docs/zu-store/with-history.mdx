@@ -11,7 +11,10 @@ Because it follows the canonical middleware shape and registers a `StoreMutators
 
 ## Basic usage
 
-<LivePreview path='zu-store/history' title='Counter with undo / redo / goto' />
+<LivePreview
+	path='zu-store/history'
+	title='Counter with undo / redo / goto'
+/>
 
 ```tsx
 import { withHistory } from '@ez-kit/zu-store'
@@ -88,11 +91,7 @@ For actions like `undo` / `redo` / `clear` / `goto`, where you just need to **tr
 
 ```tsx
 function ToolbarUndoButton() {
-	return (
-		<button onClick={() => store.history.getState().undo()}>
-			Undo
-		</button>
-	)
+	return <button onClick={() => store.history.getState().undo()}>Undo</button>
 }
 ```
 
@@ -107,7 +106,10 @@ function UndoButton() {
 	const canUndo = useStore(store.history, (h) => h.pasts.length > 0)
 	const undo = useStore(store.history, (h) => h.undo)
 	return (
-		<button onClick={undo} disabled={!canUndo}>
+		<button
+			onClick={undo}
+			disabled={!canUndo}
+		>
 			Undo
 		</button>
 	)
@@ -165,11 +167,7 @@ withHistory(
 	(set) => ({
 		count: 0,
 		moveCursor: (pos: number) =>
-			(set as (p: { cursorPos: number }, r?: false, a?: string) => void)(
-				{ cursorPos: pos },
-				false,
-				'cursor/move',
-			),
+			(set as (p: { cursorPos: number }, r?: false, a?: string) => void)({ cursorPos: pos }, false, 'cursor/move'),
 	}),
 	{
 		shouldRecord: (_prev, _next, action) => action !== 'cursor/move',
@@ -182,9 +180,7 @@ withHistory(
 Start the history paused. Combine with `history.getState().resume()` once your initial bootstrap finishes:
 
 ```ts
-const store = createStore<T>()(
-	withHistory(initializer, { defaultPaused: true }),
-)
+const store = createStore<T>()(withHistory(initializer, { defaultPaused: true }))
 hydrateFromServer()
 store.history.getState().resume()
 ```
@@ -216,8 +212,7 @@ Inside actions, reach the API through the `api` argument:
 ```ts
 withHistory((set, _get, api) => ({
 	cursorPos: 0,
-	moveCursor: (pos: number) =>
-		api.history.getState().skip(() => set({ cursorPos: pos })),
+	moveCursor: (pos: number) => api.history.getState().skip(() => set({ cursorPos: pos })),
 }))
 ```
 
@@ -253,13 +248,7 @@ Each store (the main store and the `history` sub-store) is notified exactly once
 ```ts
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware'
 
-const store = createStore<T>()(
-	devtools(
-		subscribeWithSelector(
-			withHistory(initializer, { defaultPaused: true }),
-		),
-	),
-)
+const store = createStore<T>()(devtools(subscribeWithSelector(withHistory(initializer, { defaultPaused: true }))))
 ```
 
 Recommended order: keep `withHistory` close to the initializer (innermost), then `subscribeWithSelector` / `persist` / `devtools` on top.
@@ -269,15 +258,12 @@ Recommended order: keep `withHistory` close to the initializer (innermost), then
 Persist rehydration triggers a `setState` after the store is constructed. That write **will** be recorded as a history entry by default. If you don't want it in the timeline, call `clear()` (or `skip`) from `onRehydrateStorage`:
 
 ```ts
-persist(
-	withHistory(initializer),
-	{
-		name: 'my-store',
-		onRehydrateStorage: () => (_state) => {
-			store.history.getState().clear()
-		},
+persist(withHistory(initializer), {
+	name: 'my-store',
+	onRehydrateStorage: () => (_state) => {
+		store.history.getState().clear()
 	},
-)
+})
 ```
 
 Alternatively, pass `defaultPaused: true` and call `resume()` after hydration.

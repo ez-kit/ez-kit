@@ -20,7 +20,10 @@ import type { UrlDriver } from '../persist/url/adapter'
  * that N cached stores binding `url` route through ONE engine (one writer) and coalesce into a single
  * navigation rather than N races.
  */
-function createSpyUrlAdapter(initialSearch = ''): { adapter: RenderScopedAdapter; commitSpy: ReturnType<typeof vi.fn> } {
+function createSpyUrlAdapter(initialSearch = ''): {
+	adapter: RenderScopedAdapter
+	commitSpy: ReturnType<typeof vi.fn>
+} {
 	let current = new URLSearchParams(initialSearch)
 	const listeners = new Set<() => void>()
 	const commitSpy = vi.fn()
@@ -97,7 +100,7 @@ describe('StoreProvider — service resolution', () => {
 		const cache = createStoreCache()
 		const group = cache.createCachedStore<{ q: string }>(() => proxy({ q: '' }), {
 			name: 'cached-persist',
-			plugins: [persist({ fields: (field) => [field((s) => (s).q, { source: URL_SOURCE, parser: paramString() })] })],
+			plugins: [persist({ fields: (field) => [field((s) => s.q, { source: URL_SOURCE, parser: paramString() })] })],
 		})
 
 		function QView(): ReactElement {
@@ -106,7 +109,10 @@ describe('StoreProvider — service resolution', () => {
 		}
 
 		render(
-			<StoreProvider persist={[adapter]} cache={cache}>
+			<StoreProvider
+				persist={[adapter]}
+				cache={cache}
+			>
 				<group.Provider id='one'>
 					<QView />
 				</group.Provider>
@@ -123,10 +129,14 @@ describe('StoreProvider — single writer for one source', () => {
 		const { adapter, commitSpy } = createSpyUrlAdapter()
 
 		const storeA = createStore<{ a: string }>(() => proxy({ a: '' }), {
-			plugins: [persist({ fields: (field) => [field((s) => (s).a, { source: URL_SOURCE, key: 'a', parser: paramString() })] })],
+			plugins: [
+				persist({ fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })] }),
+			],
 		})
 		const storeB = createStore<{ b: string }>(() => proxy({ b: '' }), {
-			plugins: [persist({ fields: (field) => [field((s) => (s).b, { source: URL_SOURCE, key: 'b', parser: paramString() })] })],
+			plugins: [
+				persist({ fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })] }),
+			],
 		})
 
 		function Editor(): ReactElement {

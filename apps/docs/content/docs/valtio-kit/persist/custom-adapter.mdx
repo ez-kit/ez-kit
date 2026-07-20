@@ -29,10 +29,10 @@ type SourcePort = {
 
 There are two adapter families, unified only at the port:
 
-| | Ambient (storage-like) | Render-scoped (router-like) |
-| --- | --- | --- |
-| State location | reachable anywhere | only in render (hooks) |
-| You ship | a ready `port` | a `usePort()` hook |
+|                  | Ambient (storage-like)       | Render-scoped (router-like)       |
+| ---------------- | ---------------------------- | --------------------------------- |
+| State location   | reachable anywhere           | only in render (hooks)            |
+| You ship         | a ready `port`               | a `usePort()` hook                |
 | External changes | `subscribe` (e.g. cross-tab) | provider re-renders → `changeKey` |
 
 ### Ambient adapters

@@ -24,10 +24,7 @@ function isMergeableObject(value: unknown): value is Record<string, unknown> {
  *
  * Neither argument is mutated — a fresh object graph is returned for every merged branch.
  */
-export function deepMerge(
-	target: Record<string, unknown>,
-	source: Record<string, unknown>,
-): Record<string, unknown> {
+export function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
 	const result: Record<string, unknown> = { ...target }
 	for (const key of Object.keys(source)) {
 		const sourceValue = source[key]

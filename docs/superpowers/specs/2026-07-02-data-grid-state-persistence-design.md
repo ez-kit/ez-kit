@@ -26,11 +26,11 @@ We own the hard, grid-specific part (reading state out, validating it back in). 
 consumer owns the storage side-effect, because real apps have bespoke URL/routing and
 serialization logic we should not dictate.
 
-| Layer | What | Ships |
-| --- | --- | --- |
-| **1 — pure utilities** | `extractState` (grid → object), `parseState` (untrusted value → typed partial) | Now |
-| **2 — reactive hook** | `useExtractedState` — subscribes to the store, returns the always-current extracted subset | Now |
-| **3 — actual read/write to URL / localStorage** | The storage side-effect, key renaming, versioning/migration | **Deferred** (consumer-owned) |
+| Layer                                           | What                                                                                       | Ships                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------- |
+| **1 — pure utilities**                          | `extractState` (grid → object), `parseState` (untrusted value → typed partial)             | Now                           |
+| **2 — reactive hook**                           | `useExtractedState` — subscribes to the store, returns the always-current extracted subset | Now                           |
+| **3 — actual read/write to URL / localStorage** | The storage side-effect, key renaming, versioning/migration                                | **Deferred** (consumer-owned) |
 
 The selling point is precisely that Layers 1–2 **never touch storage and never mutate the
 store**. The chosen verbs (`extract` / `parse`) reflect that — as opposed to
@@ -44,23 +44,37 @@ perform.
 ```ts
 /** Top-level TableState keys this feature can persist. Closed set. */
 export const PERSISTABLE_STATE_KEYS = [
-  'sorting', 'columnFilters', 'globalFilter', 'pagination', 'rowSelection',
-  'columnVisibility', 'columnPinning', 'rowPinning', 'expanded', 'columnSizing',
+	'sorting',
+	'columnFilters',
+	'globalFilter',
+	'pagination',
+	'rowSelection',
+	'columnVisibility',
+	'columnPinning',
+	'rowPinning',
+	'expanded',
+	'columnSizing',
 ] as const
 export type PersistableStateKey = (typeof PERSISTABLE_STATE_KEYS)[number]
 
 /** Opinionated default: shareable "view" state only. Excludes row-id-coupled, ephemeral slices. */
 export const DEFAULT_STATE_KEYS = [
-  'sorting', 'columnFilters', 'globalFilter', 'pagination',
-  'columnVisibility', 'columnPinning', 'rowPinning', 'columnSizing',
+	'sorting',
+	'columnFilters',
+	'globalFilter',
+	'pagination',
+	'columnVisibility',
+	'columnPinning',
+	'rowPinning',
+	'columnSizing',
 ] as const satisfies readonly PersistableStateKey[]
 
 /** The serialized shape: a flat, JSON-safe subset of TableState. */
 export type DataGridState = Partial<Pick<TableState, PersistableStateKey>>
 
 export type DataGridStateOptions = {
-  /** Allowlist of slices to include. Default: DEFAULT_STATE_KEYS. */
-  keys?: readonly PersistableStateKey[]
+	/** Allowlist of slices to include. Default: DEFAULT_STATE_KEYS. */
+	keys?: readonly PersistableStateKey[]
 }
 ```
 
@@ -71,20 +85,14 @@ export type DataGridStateOptions = {
  * Read the persistable slices out of a grid. Pure, synchronous, framework-agnostic
  * (takes the core `Table`, so it works outside React and against a bare createTable).
  */
-export function extractState<TRow extends object>(
-  table: Table<TRow>,
-  options?: DataGridStateOptions,
-): DataGridState
+export function extractState<TRow extends object>(table: Table<TRow>, options?: DataGridStateOptions): DataGridState
 
 /**
  * Validate + prune an UNTRUSTED, already-decoded value into a typed DataGridState.
  * The consumer owns JSON.parse / URL-decode; this does NOT parse strings.
  * Never throws — unknown/malformed keys are dropped (URL and localStorage are user-editable).
  */
-export function parseState(
-  stored: unknown,
-  options?: DataGridStateOptions,
-): DataGridState
+export function parseState(stored: unknown, options?: DataGridStateOptions): DataGridState
 ```
 
 ### 3.3 Layer 2 — reactive hook
@@ -96,8 +104,8 @@ export function parseState(
  * of the included slices changes.
  */
 export function useExtractedState<TRow extends object>(
-  instance: DataGridInstance<TRow>,
-  options?: DataGridStateOptions,
+	instance: DataGridInstance<TRow>,
+	options?: DataGridStateOptions,
 ): DataGridState
 ```
 
@@ -108,7 +116,7 @@ shapes, no wrapper, no remap. Consequences:
 
 - **Round-trip correct by construction.** `extract` = pick; `parse` = validate + pick.
   There is no transform layer to drift.
-- **Zero-adapter plug-in.** Because the shape *is* `Partial<TableState>`, `parseState`
+- **Zero-adapter plug-in.** Because the shape _is_ `Partial<TableState>`, `parseState`
   output drops straight into `useDataGrid`'s existing `initialState` (or controlled
   `state`) with no translation.
 - **Already JSON-safe.** Every slice is a plain array / record / primitive
@@ -150,7 +158,7 @@ const grid = useDataGrid({ data, columns, initialState: parseState(decoded) })
 const grid = useDataGrid({ data, columns, sorting: true, filtering: true })
 const state = useExtractedState(grid, { keys: ['sorting', 'columnFilters', 'pagination'] })
 useEffect(() => {
-  localStorage.setItem('grid', JSON.stringify(state))
+	localStorage.setItem('grid', JSON.stringify(state))
 }, [state])
 ```
 
@@ -161,8 +169,10 @@ The URL variant is identical — swap the effect body for `setSearchParams`.
 ```ts
 const [state, setState] = useState(() => parseState(decoded))
 useDataGrid({
-  data, columns, state,
-  onStateChange: (u) => setState((p) => (typeof u === 'function' ? u(p as TableState) : u)),
+	data,
+	columns,
+	state,
+	onStateChange: (u) => setState((p) => (typeof u === 'function' ? u(p as TableState) : u)),
 })
 ```
 
@@ -200,14 +210,14 @@ useDataGrid({
 
 ## 9. Risks
 
-| Risk | Mitigation |
-| --- | --- |
-| Unmemoized hook breaks `useSyncExternalStore` | Memoized output is the first unit test (see §7). |
-| Users assume `parseState` writes / applies | Docs lead with the full round-trip and state "you own the write". |
-| Users assume URL auto-syncs | Docs state Layer 3 is deliberately deferred + show the 6-line recipe. |
-| Serializing volatile slices (loading/editing) into the URL | `DEFAULT_STATE_KEYS` is a curated allowlist; volatile slices are not in `PERSISTABLE_STATE_KEYS`. |
-| Non-JSON custom `globalFilter` won't round-trip | Documented: only JSON-safe global filters survive. |
-| Controlled `state` + `initialState` both supplied | Documented as mutually exclusive restore strategies; controlled `state` wins per `use-data-grid.ts` sync. |
+| Risk                                                       | Mitigation                                                                                                |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Unmemoized hook breaks `useSyncExternalStore`              | Memoized output is the first unit test (see §7).                                                          |
+| Users assume `parseState` writes / applies                 | Docs lead with the full round-trip and state "you own the write".                                         |
+| Users assume URL auto-syncs                                | Docs state Layer 3 is deliberately deferred + show the 6-line recipe.                                     |
+| Serializing volatile slices (loading/editing) into the URL | `DEFAULT_STATE_KEYS` is a curated allowlist; volatile slices are not in `PERSISTABLE_STATE_KEYS`.         |
+| Non-JSON custom `globalFilter` won't round-trip            | Documented: only JSON-safe global filters survive.                                                        |
+| Controlled `state` + `initialState` both supplied          | Documented as mutually exclusive restore strategies; controlled `state` wins per `use-data-grid.ts` sync. |
 
 ## 10. Testing strategy
 

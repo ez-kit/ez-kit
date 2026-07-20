@@ -29,16 +29,19 @@ const store = createStore(() => proxy({ q: '', page: 1, pageSize: 25 }), {
 
 The selector supports **direct property access only** (`s => s.a.b.c`) — it's recorded to derive the path, not executed for its value. Each field's second argument is a source helper (`urlField()`, `localStorageField()`, `sessionStorageField()`, `indexedDbField()`), which returns the `{ source, … }` options the field needs.
 
-<Callout type="info">
-	Same engine, two fronts: decorators for [classes](./valtio-kit/persist/decorators), `field()` for plain proxies.
-	Pick per project; mix per store. Sources, parsers, and SSR behave identically.
+<Callout type='info'>
+	Same engine, two fronts: decorators for [classes](./valtio-kit/persist/decorators), `field()` for plain proxies. Pick
+	per project; mix per store. Sources, parsers, and SSR behave identically.
 </Callout>
 
 ## Live example
 
 The URL quick start runs on the accessor API — a plain `proxy({ q, page })` with two `field()` declarations:
 
-<LivePreview path='valtio-kit/persist-url' title='Accessor fields — q + page' />
+<LivePreview
+	path='valtio-kit/persist-url'
+	title='Accessor fields — q + page'
+/>
 
 ## Per-field options
 

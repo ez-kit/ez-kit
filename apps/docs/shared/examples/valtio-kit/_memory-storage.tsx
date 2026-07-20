@@ -69,7 +69,12 @@ export function createMemoryStorageAdapter(source: string): MemoryStorageAdapter
 			readout.delete(listener)
 		}
 	}
-	const useBlob = (): string => useSyncExternalStore(subscribeReadout, () => blob, () => EMPTY_BLOB)
+	const useBlob = (): string =>
+		useSyncExternalStore(
+			subscribeReadout,
+			() => blob,
+			() => EMPTY_BLOB,
+		)
 
 	return { adapter, useBlob }
 }

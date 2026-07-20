@@ -22,11 +22,13 @@
 ### Task 1: Consolidate format commands
 
 **Files:**
+
 - Modify: `package.json` (root scripts)
 - Modify: `turbo.json` (remove format tasks)
 - Modify: `packages/zu-store/package.json`, `packages/valtio-kit/package.json`, `packages/store-core/package.json`, `packages/data-grid/core/package.json`, `packages/data-grid/react/react/package.json`, `packages/data-grid/react/shadcn/package.json`, `packages/data-grid/react/heroui/package.json`, `packages/data-grid/react/native/package.json`, `apps/docs/package.json` (remove per-package `format`/`format:check`)
 
 **Interfaces:**
+
 - Produces: root scripts `format` = `node ./scripts/prettier.mjs --write`, `format:check` = `node ./scripts/prettier.mjs --check`. No `format:write`, no `prettier:check`, no Turbo `format*` tasks.
 
 - [ ] **Step 1: Confirm which package.json files declare a format script**
@@ -70,6 +72,7 @@ git commit -m "refactor: consolidate prettier scripts to root format/format:chec
 ### Task 2: Add lint-staged + commitlint git hooks
 
 **Files:**
+
 - Create: `.lintstagedrc.json`
 - Create: `commitlint.config.mjs`
 - Create: `.husky/pre-commit`
@@ -77,6 +80,7 @@ git commit -m "refactor: consolidate prettier scripts to root format/format:chec
 - Modify: `package.json` (devDependencies)
 
 **Interfaces:**
+
 - Consumes: root `scripts/prettier.mjs`, root ESLint flat config.
 - Produces: pre-commit runs `lint-staged`; commit-msg runs `commitlint`.
 
@@ -91,13 +95,8 @@ Create `.lintstagedrc.json`:
 
 ```json
 {
-  "*.{ts,tsx,js,jsx,mjs,cjs}": [
-    "node ./scripts/prettier.mjs --write",
-    "eslint --fix --max-warnings=0"
-  ],
-  "*.{json,jsonc,md,mdx,css,yml,yaml}": [
-    "node ./scripts/prettier.mjs --write"
-  ]
+	"*.{ts,tsx,js,jsx,mjs,cjs}": ["node ./scripts/prettier.mjs --write", "eslint --fix --max-warnings=0"],
+	"*.{json,jsonc,md,mdx,css,yml,yaml}": ["node ./scripts/prettier.mjs --write"]
 }
 ```
 
@@ -155,6 +154,7 @@ Expected: PASS (exit 0, no output).
 git add .lintstagedrc.json commitlint.config.mjs .husky/pre-commit .husky/commit-msg package.json pnpm-lock.yaml
 git commit -m "chore: add lint-staged and commitlint git hooks"
 ```
+
 Expected: pre-commit runs lint-staged on staged files, commit succeeds.
 
 ---
@@ -162,6 +162,7 @@ Expected: pre-commit runs lint-staged on staged files, commit succeeds.
 ### Task 3: Pin the Node version
 
 **Files:**
+
 - Create: `.nvmrc`
 - Modify: `package.json` (add `engines`)
 
@@ -200,9 +201,11 @@ git commit -m "chore: pin node version via .nvmrc and engines"
 ### Task 4: GitHub Actions CI
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`
 
 **Interfaces:**
+
 - Produces: a `pull_request` check named **`verify`** used later by branch protection.
 
 - [ ] **Step 1: Create the workflow**
@@ -272,6 +275,7 @@ git commit -m "ci: add GitHub Actions CI gate for PRs to develop and main"
 ### Task 5: .github hygiene
 
 **Files:**
+
 - Create: `.github/pull_request_template.md`
 - Create: `.github/CODEOWNERS`
 
@@ -323,6 +327,7 @@ git commit -m "chore: add PR template and CODEOWNERS"
 ### Task 6: Refresh CLAUDE.md and AGENTS.md
 
 **Files:**
+
 - Modify: `CLAUDE.md` (add a "Branching & Release Flow" section; update commands)
 - Modify: `AGENTS.md` (mirror the branch/command changes)
 
@@ -377,6 +382,7 @@ git commit -m "docs: document branch/release flow, hooks, and format commands"
 ### Task 7: Retarget task-flow skills to `develop`
 
 **Files:**
+
 - Modify: task-flow skill references that assume `main` as the base branch (locate first).
 
 - [ ] **Step 1: Find every `main` base-branch assumption in the task-flow skills**
@@ -429,6 +435,7 @@ git push -u origin develop
 ```bash
 gh repo edit ez-kit/ez-kit --default-branch develop
 ```
+
 Expected: confirmation. New PRs now target `develop`.
 
 - [ ] **Step 4: Trigger a first CI run so the `verify` check exists**
@@ -459,6 +466,7 @@ gh api -X PUT repos/ez-kit/ez-kit/branches/develop/protection \
 }
 JSON
 ```
+
 Expected: JSON response describing the protection. If it errors that context `verify` is unknown, re-run after CI finishes.
 
 - [ ] **Step 6: Protect `main`**
@@ -477,6 +485,7 @@ gh api -X PUT repos/ez-kit/ez-kit/branches/main/protection \
 }
 JSON
 ```
+
 Expected: JSON response. (If the token lacks admin on `ez-kit/ez-kit`, hand these two `gh api` commands to the user to run.)
 
 - [ ] **Step 7: Confirm Vercel production branch**

@@ -17,7 +17,9 @@ function NameField({ store }: { store: ReturnType<typeof createFormStore> }) {
 			<input
 				type='text'
 				value={name}
-				onChange={(e) => { setName(e.target.value); }}
+				onChange={(e) => {
+					setName(e.target.value)
+				}}
 				className='rounded-md border border-fd-border bg-fd-card px-2 py-1'
 			/>
 		</label>
@@ -32,7 +34,9 @@ function AgeField({ store }: { store: ReturnType<typeof createFormStore> }) {
 			<input
 				type='number'
 				value={age}
-				onChange={(e) => { setAge(Number(e.target.value)); }}
+				onChange={(e) => {
+					setAge(Number(e.target.value))
+				}}
 				className='w-24 rounded-md border border-fd-border bg-fd-card px-2 py-1'
 			/>
 		</label>
