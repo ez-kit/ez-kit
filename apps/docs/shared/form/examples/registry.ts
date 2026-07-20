@@ -1,0 +1,13 @@
+// Hand-maintained fallback for dynamic import over shared/form/examples, mirroring
+// shared/data-grid/examples/registry.ts: Turbopack cannot statically analyze a context
+// module built from a variable path segment when the target files are 'use client'
+// components consumed from a Server Component. Keyed by manifest.sourceFile (not id) so
+// several ids can share one source file.
+import type { ComponentType } from 'react'
+
+export const exampleModules: Record<string, () => Promise<Record<string, ComponentType>>> = {
+	'components/basic.tsx': () => import('./components/basic'),
+	'components/fields.tsx': () => import('./components/fields'),
+	'components/native-api.tsx': () => import('./components/native-api'),
+	'components/validation.tsx': () => import('./components/validation'),
+}

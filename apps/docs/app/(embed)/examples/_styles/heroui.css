@@ -5,3 +5,11 @@
 
 @source '../../../../shared/data-grid/examples/components/**/*.{ts,tsx}';
 @source '../../../../../../packages/data-grid/react/heroui/src/**/*.{ts,tsx}';
+
+/* The form kit ships no stylesheet — the app owns the HeroUI setup, and
+ * `@ez-kit/data-grid-heroui/global.css` already pulled `@heroui/styles` into this document.
+ * Tailwind still has to see the form kit's sources to emit the utilities they reference;
+ * these point at `src` rather than `dist` because this is the kit's own repo. A consuming
+ * app uses `@source '…/node_modules/@ez-kit/form-heroui/dist/**\/*.js'` instead. */
+@source '../../../../shared/form/examples/components/**/*.{ts,tsx}';
+@source '../../../../../../packages/form/react/heroui/src/**/*.{ts,tsx}';

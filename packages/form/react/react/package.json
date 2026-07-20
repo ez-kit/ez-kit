@@ -1,0 +1,55 @@
+{
+	"name": "@ez-kit/form-react",
+	"version": "0.1.0",
+	"description": "Framework-agnostic React adapter for @ez-kit/form — DI field layer with zero visual styling.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/form/react/react"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/react#readme",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "20 KB"
+		}
+	],
+	"dependencies": {
+		"@ez-kit/form-core": "workspace:*",
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0"
+	}
+}

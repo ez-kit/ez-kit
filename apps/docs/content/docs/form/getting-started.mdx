@@ -1,0 +1,123 @@
+---
+title: Getting started
+description: Install a flavour, call useForm, render fields — the whole loop in one page.
+---
+
+# Getting started
+
+## 1. Install a flavour
+
+Pick the UI kit you already use. It pulls in `@ez-kit/form-react` and `@ez-kit/form-core` for you.
+
+```bash
+# shadcn
+pnpm add @ez-kit/form-shadcn
+
+# …or HeroUI (its packages are peer dependencies)
+pnpm add @ez-kit/form-heroui @heroui/react @heroui/styles
+```
+
+Neither kit ships a stylesheet — your app owns its theme. Add one `@source` line to the CSS
+file you already have so Tailwind v4 generates the kit's classes, since it does not scan
+`node_modules`:
+
+```css
+@source '../node_modules/@ez-kit/form-shadcn/dist/**/*.js';
+/* …or */
+@source '../node_modules/@ez-kit/form-heroui/dist/**/*.js';
+```
+
+Full per-kit details — Tailwind setup, theming, peer dependencies — live in [Installation](./form/installation/shadcn).
+
+## 2. Create a form
+
+`useForm` takes everything TanStack Form's `useForm` takes. `defaultValues` is what types the whole form.
+
+```tsx
+import { useForm } from '@ez-kit/form-shadcn'
+
+const form = useForm({
+	defaultValues: { email: '', password: '' },
+	onSubmit: ({ value }) => {
+		await api.signUp(value)
+	},
+})
+```
+
+## 3. Render fields
+
+`form.Form` is a `<form>` element already wired to `handleSubmit` — it calls `preventDefault` for you, so there is no `onSubmit` prop to pass.
+
+```tsx
+<form.Form>
+	<form.TextField
+		name='email'
+		label='Email'
+		placeholder='you@example.com'
+	/>
+	<form.TextField
+		name='password'
+		label='Password'
+		type={TextInputType.Password}
+	/>
+	<form.SubmitButton>Create account</form.SubmitButton>
+</form.Form>
+```
+
+That is the whole loop:
+
+<KitExample exampleId='form-basic' />
+
+## Type safety
+
+`name` is not a loose string. It is narrowed to the paths in your form data **whose value type matches the field**, so a mismatch is a compile error rather than a runtime surprise:
+
+```tsx
+const form = useForm({ defaultValues: { email: '', age: 0 } })
+
+<form.TextField name='email' label='Email' />    // ✅
+<form.NumberField name='age' label='Age' />      // ✅
+<form.NumberField name='email' label='Email' />  // ❌ 'email' is a string, not a number
+<form.TextField name='emial' label='Email' />    // ❌ no such path
+```
+
+## What each field renders
+
+A single `<form.TextField name='email' label='Email' description='Work address' />` produces the label, the input, the description and — once validation fails — the error message, with the accessibility wiring already done:
+
+```html
+<div
+	data-field="email"
+	data-field-type="text"
+	data-invalid="true"
+>
+	<label
+		id="email-label"
+		for="email"
+		>Email</label
+	>
+	<p id="email-description">Work address</p>
+	<input
+		id="email"
+		name="email"
+		aria-invalid="true"
+		aria-labelledby="email-label"
+		aria-describedby="email-description email-error"
+	/>
+	<p
+		id="email-error"
+		role="alert"
+	>
+		Enter a valid email address
+	</p>
+</div>
+```
+
+The `data-*` attributes are the styling hooks; the visible elements all come from your kit. See [Fields](./form/fields) for the full prop reference.
+
+## Next steps
+
+- [Fields](./form/fields) — the five base fields and their props.
+- [Validation](./form/validation) — zod / valibot / arktype, straight through.
+- [Native API](./form/native-api) — everything TanStack Form gives you, still available.
+- [Custom kit](./form/custom-kit) — bind your own components.

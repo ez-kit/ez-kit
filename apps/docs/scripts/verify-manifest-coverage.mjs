@@ -6,11 +6,23 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const docsRoot = resolve(__dirname, '..')
 
-const MANIFEST = join(docsRoot, 'shared/data-grid/examples/manifest.json')
-const DOCS_DIR = join(docsRoot, 'content/docs/data-grid')
-
-const manifest = JSON.parse(readFileSync(MANIFEST, 'utf-8'))
-const manifestIds = new Set(manifest.map((entry) => entry.id))
+/**
+ * Each kit-switched product pairs one example manifest with the docs section that is
+ * supposed to reference it. Both directions are checked per product, so a form example can
+ * never be satisfied by a data-grid page happening to mention its id.
+ */
+const PRODUCTS = [
+	{
+		name: 'data-grid',
+		manifest: join(docsRoot, 'shared/data-grid/examples/manifest.json'),
+		docsDir: join(docsRoot, 'content/docs/data-grid'),
+	},
+	{
+		name: 'form',
+		manifest: join(docsRoot, 'shared/form/examples/manifest.json'),
+		docsDir: join(docsRoot, 'content/docs/form'),
+	},
+]
 
 function walk(dir) {
 	const out = []
@@ -26,43 +38,52 @@ function walk(dir) {
 	return out
 }
 
-const mdxFiles = walk(DOCS_DIR)
-const referencedIds = new Set()
-const idPattern = /exampleId\s*=\s*['"]([a-z0-9-]+)['"]/g
-const fileReferences = new Map()
+let failed = false
 
-for (const file of mdxFiles) {
-	const body = readFileSync(file, 'utf-8')
-	let match
-	while ((match = idPattern.exec(body)) !== null) {
-		const id = match[1]
-		referencedIds.add(id)
-		const rel = relative(docsRoot, file)
-		if (!fileReferences.has(id)) fileReferences.set(id, [])
-		fileReferences.get(id).push(rel)
+for (const product of PRODUCTS) {
+	const manifest = JSON.parse(readFileSync(product.manifest, 'utf-8'))
+	const manifestIds = new Set(manifest.map((entry) => entry.id))
+
+	const mdxFiles = walk(product.docsDir)
+	const referencedIds = new Set()
+	const idPattern = /exampleId\s*=\s*['"]([a-z0-9-]+)['"]/g
+	const fileReferences = new Map()
+
+	for (const file of mdxFiles) {
+		const body = readFileSync(file, 'utf-8')
+		let match
+		while ((match = idPattern.exec(body)) !== null) {
+			const id = match[1]
+			referencedIds.add(id)
+			const rel = relative(docsRoot, file)
+			if (!fileReferences.has(id)) fileReferences.set(id, [])
+			fileReferences.get(id).push(rel)
+		}
+	}
+
+	const missing = [...manifestIds].filter((id) => !referencedIds.has(id)).sort()
+	const unknown = [...referencedIds].filter((id) => !manifestIds.has(id)).sort()
+
+	if (missing.length === 0 && unknown.length === 0) {
+		console.log(
+			`✓ ${product.name}: ${manifestIds.size}/${manifestIds.size} manifest examples referenced from ${mdxFiles.length} mdx files`,
+		)
+		continue
+	}
+
+	failed = true
+
+	if (missing.length > 0) {
+		console.error(`\n✗ ${product.name}: ${missing.length} manifest example(s) not referenced from any doc page:`)
+		for (const id of missing) console.error(`  - ${id}`)
+	}
+	if (unknown.length > 0) {
+		console.error(`\n✗ ${product.name}: ${unknown.length} unknown exampleId(s) referenced from doc pages:`)
+		for (const id of unknown) {
+			const sources = fileReferences.get(id) ?? []
+			console.error(`  - ${id} (in: ${sources.join(', ')})`)
+		}
 	}
 }
 
-const missing = [...manifestIds].filter((id) => !referencedIds.has(id)).sort()
-const unknown = [...referencedIds].filter((id) => !manifestIds.has(id)).sort()
-
-if (missing.length === 0 && unknown.length === 0) {
-	console.log(
-		`✓ verify-manifest-coverage: ${manifestIds.size}/${manifestIds.size} manifest examples referenced from ${mdxFiles.length} mdx files`,
-	)
-	process.exit(0)
-}
-
-if (missing.length > 0) {
-	console.error(`\n✗ ${missing.length} manifest example(s) not referenced from any doc page:`)
-	for (const id of missing) console.error(`  - ${id}`)
-}
-if (unknown.length > 0) {
-	console.error(`\n✗ ${unknown.length} unknown exampleId(s) referenced from doc pages:`)
-	for (const id of unknown) {
-		const sources = fileReferences.get(id) ?? []
-		console.error(`  - ${id} (in: ${sources.join(', ')})`)
-	}
-}
-
-process.exit(1)
+process.exit(failed ? 1 : 0)

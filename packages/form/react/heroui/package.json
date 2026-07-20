@@ -1,0 +1,60 @@
+{
+	"name": "@ez-kit/form-heroui",
+	"version": "0.1.0",
+	"description": "HeroUI flavour of @ez-kit/form.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/form/react/heroui"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/heroui#readme",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "200 KB"
+		}
+	],
+	"dependencies": {
+		"@ez-kit/form-react": "workspace:*",
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2"
+	},
+	"devDependencies": {
+		"@heroui/react": "^3.0.3",
+		"@heroui/styles": "^3.0.3",
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
+	},
+	"peerDependencies": {
+		"@heroui/react": "^3.0.0",
+		"@heroui/styles": "^3.0.0",
+		"react": ">=18.0.0",
+		"react-dom": ">=18.0.0"
+	}
+}

@@ -2,6 +2,7 @@ import defaultMdxComponents from 'fumadocs-ui/mdx'
 
 import { DataGridDocsExample } from './data-grid-docs-example'
 import { FeatureMatrix } from './feature-matrix'
+import { KitExample } from './kit-example'
 import { LivePreview } from './live-preview'
 
 import type { MDXComponents } from 'mdx/types'
@@ -11,6 +12,7 @@ export function getMDXComponents(components?: MDXComponents) {
 		...defaultMdxComponents,
 		LivePreview,
 		DataGridDocsExample,
+		KitExample,
 		FeatureMatrix,
 		...components,
 	} as MDXComponents

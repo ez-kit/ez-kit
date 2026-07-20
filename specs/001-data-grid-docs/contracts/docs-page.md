@@ -159,7 +159,7 @@ A page is "done" when ALL of these are true:
       chars.
 - [ ] Section order matches the rule above.
 - [ ] At least one `<DataGridDocsExample />` if `appliesTo ∈ {both,
-  shadcn, heroui}` (or an explicit "no example — reason" note for
+shadcn, heroui}` (or an explicit "no example — reason" note for
       Theming-style exceptions).
 - [ ] All `exampleId`s resolve in `manifest.json`.
 - [ ] `## Source` bullets present for code-surface pages.
