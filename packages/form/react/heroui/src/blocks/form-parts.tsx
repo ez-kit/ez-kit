@@ -1,4 +1,4 @@
-import { Button as HeroButton } from '@heroui/react'
+import { Button as HeroButton, Form as HeroForm } from '@heroui/react'
 
 import type { ButtonProps, FormElementProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
@@ -21,21 +21,38 @@ export function Button({ type, disabled, children }: ButtonProps): ReactNode {
 }
 
 /**
- * A plain `<form>`, not HeroUI's `Form`.
+ * HeroUI's `Form` — the same React Aria `Form` the kit's fields already expect.
  *
- * HeroUI's `Form` is React Aria's, whose job is to own submission and native-validation
- * reporting for the fields inside it. Here TanStack Form owns both — the shell only needs
- * to be an element and to carry the kit's spacing. Its React Aria props are also narrower
- * than the contract's `<form>` props (`encType`, `target`, …), so wrapping it would force
- * the contract to shrink to one kit's shape.
+ * Rendering it (rather than a bare `<form>`) puts the fields inside React Aria's form and
+ * validation contexts, so `<FieldError>` and the `isInvalid` wiring inside `TextField` &
+ * co. behave exactly as HeroUI documents them, and a `type='reset'` button resets through
+ * the same path.
+ *
+ * `validationBehavior='aria'` because TanStack Form owns validation and submission here:
+ * `'native'` (React Aria's default) would let the browser's constraint validation block or
+ * duplicate that. In `'aria'` mode React Aria only exposes state through ARIA attributes,
+ * never intercepting the submit.
+ *
+ * The contract's shell props are the full `<form>` set, which is wider than React Aria's
+ * typed props — `data-form=''` and `noValidate` from `@ez-kit/form-react` have nowhere to
+ * go. `render` is React Aria's escape hatch for exactly that: it hands us the props it
+ * computed for the element, and we merge the contract's on top so every one of them lands
+ * on the real `<form>`. Contract props win by design — a caller's explicit `noValidate` or
+ * `onSubmit` should not be silently dropped.
  */
 export function Form({ className, children, ...props }: FormElementProps): ReactNode {
 	return (
-		<form
+		<HeroForm
 			className={['flex flex-col gap-4', className].filter(Boolean).join(' ')}
-			{...props}
+			validationBehavior='aria'
+			render={(formProps) => (
+				<form
+					{...formProps}
+					{...props}
+				/>
+			)}
 		>
 			{children}
-		</form>
+		</HeroForm>
 	)
 }
