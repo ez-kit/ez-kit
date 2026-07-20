@@ -5,29 +5,22 @@ description: The FormComponents contract and createForm — bind your own design
 
 # Custom kit
 
-`@ez-kit/form-shadcn` and `@ez-kit/form-heroui` are not special. Each is ~150 lines that implement one contract and call one factory. Your design system can do the same.
+`@ez-kit/form-shadcn` and `@ez-kit/form-heroui` are not special. Each is ~200 lines that implement one contract and call one factory. Your design system can do the same.
 
 ## The idea
 
-`@ez-kit/form-react` owns the behaviour — binding a field to form state, accessibility wiring, error normalisation, layout order — and **no pixels at all**. Every visible element is injected:
+`@ez-kit/form-react` owns the behaviour — binding a field to form state, normalising errors, tracking submit state — and **no pixels and no DOM structure at all**. It hands you one flat props object per field and you build the whole element tree:
 
 ```tsx
 import { createForm } from '@ez-kit/form-react'
 import type { FormComponents } from '@ez-kit/form-react'
 
 const components = {
-	// chrome
-	FieldRoot,
-	Label,
-	Description,
-	ErrorText,
-	// inputs
-	TextInput,
-	NumberInput,
-	Textarea,
-	Select,
-	Checkbox,
-	// form level
+	TextField,
+	NumberField,
+	TextareaField,
+	SelectField,
+	CheckboxField,
 	Button,
 	Form,
 } satisfies FormComponents
@@ -38,46 +31,57 @@ export const { useForm } = createForm({ components })
 That is the whole kit. Export `useForm` and your consumers get the same `form.TextField` / `form.SubmitButton` / `form.Form` API.
 
 <Callout>
-	Use `satisfies FormComponents` rather than a type annotation. It turns a forgotten primitive into a compile error
-	instead of a runtime crash, while keeping your components' own prop types intact.
+	Use `satisfies FormComponents` rather than a type annotation. It turns a forgotten field into a compile error instead
+	of a runtime crash, while keeping your components' own prop types intact.
 </Callout>
+
+### Why the kit owns the markup
+
+An earlier version of this contract asked kits for chrome primitives — `FieldRoot`, `Label`, `Description`, `ErrorText` — and assembled them itself, in one fixed order, as siblings of the input.
+
+That works for a plain-DOM system like shadcn and breaks a React-Aria-based one like HeroUI v3, where a field is a **context**:
+
+```tsx
+<TextField isInvalid>
+	<Label /> {/* takes the control's id from the root */}
+	<Input />
+	<Description /> {/* routed into aria-describedby by the root */}
+	<FieldError /> {/* reads validation state from the root */}
+</TextField>
+```
+
+Rendered outside that root, `FieldError` has nothing to read and `Label` has nothing to point at — the wiring can only be faked, and the kit's own slot styling never applies. So the contract inverts: the shared layer stops rendering, and each kit expresses its natural anatomy.
 
 ## The contract
 
-Eleven components, split three ways.
+Seven components: one per field kind, plus two form-level pieces.
 
-### Chrome
+### Fields
 
-| Component     | Props                       | Renders                                                      |
-| ------------- | --------------------------- | ------------------------------------------------------------ |
-| `FieldRoot`   | `<div>` props               | The per-field wrapper. Receives the `data-*` attributes.     |
-| `Label`       | `htmlFor`, `id`, `children` | Must render **both** ids — they are referenced by the input. |
-| `Description` | `id`, `children`            | Helper text.                                                 |
-| `ErrorText`   | `id`, `errors: string[]`    | Errors, already normalised to display strings.               |
+Every field receives the same base props:
 
-### Inputs
+| Prop                            | Meaning                                                           |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `data-field`, `data-field-type` | Spread onto your root so CSS, tests and e2e can find the field.   |
+| `id`, `name`                    | `id` goes on the focusable control.                               |
+| `label`, `description`          | `ReactNode`; `null`/`undefined` when the consumer passed none.    |
+| `errors: string[]`, `invalid`   | Already normalised display strings; `errors` is empty when valid. |
+| `onBlur`                        | Must reach the control — blur validation depends on it.           |
+| `disabled`, `required`          | `boolean \| undefined`.                                           |
 
-Every input receives `id`, `name`, `onBlur`, `invalid`, `aria-describedby`, `aria-labelledby`, plus optional `disabled` / `required`. On top of that:
+On top of that, per kind:
 
-| Component     | Value props                                                      |
-| ------------- | ---------------------------------------------------------------- |
-| `TextInput`   | `value: string`, `onChange(value)`, `placeholder?`, `type?`      |
-| `NumberInput` | `value: number \| undefined`, `onChange(value)`, `min/max/step?` |
-| `Textarea`    | `value: string`, `onChange(value)`, `rows?`                      |
-| `Select`      | `value: string`, `onChange(value)`, `options: SelectOption[]`    |
-| `Checkbox`    | `checked: boolean`, `onChange(checked)`                          |
+| Component       | Value props                                                      |
+| --------------- | ---------------------------------------------------------------- |
+| `TextField`     | `value: string`, `onChange(value)`, `placeholder?`, `type?`      |
+| `NumberField`   | `value: number \| undefined`, `onChange(value)`, `min/max/step?` |
+| `TextareaField` | `value: string`, `onChange(value)`, `rows?`                      |
+| `SelectField`   | `value: string`, `onChange(value)`, `options: SelectOption[]`    |
+| `CheckboxField` | `checked: boolean`, `onChange(checked)`                          |
 
 <Callout type='warn'>
-	`onChange` receives **the value**, not a DOM event. That is what keeps the contract identical across
-	kits whose primitives disagree — some hand you an event, some a value, some a React Aria callback.
-	Unwrapping is the adapter's job:
-
-    ```tsx
-    export function TextInput({ value, onChange, invalid, ...props }: TextInputProps) {
-    	return <input value={value} onChange={(event) => { onChange(event.target.value) }} aria-invalid={invalid} {...props} />
-    }
-    ```
-
+	`onChange` receives **the value**, not a DOM event. That is what keeps the contract identical across kits whose
+	primitives disagree — some hand you an event, some a value, some a React Aria callback. Unwrapping is the kit's job.
 </Callout>
 
 ### Form level
@@ -87,15 +91,82 @@ Every input receives `id`, `name`, `onBlur`, `invalid`, `aria-describedby`, `ari
 | `Button`  | `type?`, `disabled?`, `children` | The submit button.           |
 | `Form`    | `<form>` props                   | The `<form>` element itself. |
 
+## Two shapes, two implementations
+
+**Plain DOM (shadcn).** Chrome is siblings of the control, wired by explicit ids. Because that shape is uniform, the kit factors it into one internal `FieldShell` — but that is the _kit's_ choice, not the contract's:
+
+```tsx
+export function TextField({ value, onChange, id, name, onBlur, ...field }: TextFieldRenderProps) {
+	return (
+		<FieldShell
+			id={id}
+			{...field}
+		>
+			{(binding) => (
+				<Input
+					id={id}
+					name={name}
+					value={value}
+					onBlur={onBlur}
+					onChange={(event) => {
+						onChange(event.target.value)
+					}}
+					aria-invalid={field.invalid}
+					{...binding}
+				/>
+			)}
+		</FieldShell>
+	)
+}
+```
+
+**React Aria (HeroUI).** Chrome is nested inside the root, and the library owns the ids:
+
+```tsx
+export function TextField({
+	value,
+	onChange,
+	id,
+	name,
+	onBlur,
+	label,
+	description,
+	errors,
+	...field
+}: TextFieldRenderProps) {
+	return (
+		<HeroTextField
+			value={value}
+			onChange={onChange}
+			name={name}
+			{...fieldRoot(field)}
+		>
+			<FieldLabel label={label} />
+			<Input
+				id={id}
+				onBlur={onBlur}
+			/>
+			<FieldDescription description={description} />
+			<FieldErrorText
+				errors={errors}
+				invalid={field.invalid}
+			/>
+		</HeroTextField>
+	)
+}
+```
+
 ## What you must not forget
 
-- **Render `Label`'s `id`.** Simple inputs are covered by `htmlFor`, but composite widgets — a listbox trigger, a spin-button group — are not labelled by a native `<label>`, and the field layer points `aria-labelledby` at that id.
-- **Spread the rest props onto the real control.** `id`, `name`, `onBlur` and the `aria-*` attributes arrive that way; dropping them breaks focus, blur validation and screen-reader wiring.
-- **Map `invalid` to whatever your system wants.** `aria-invalid`, `isInvalid`, a `data-` attribute — the field layer only tells you _that_ it is invalid.
+- **Spread `data-field` and `data-field-type` onto your root.** They are the only structural convention the contract keeps, and kit CSS, tests and e2e selectors rely on them.
+- **Put `id` on the focusable control** and make sure a click on the label focuses it — via `htmlFor`, or via your library's own labelling.
+- **Route `onBlur` to the control.** Dropping it silently disables `onBlur` validators.
+- **Render errors only when `invalid`.** `errors` is empty otherwise.
+- **Map `invalid` to whatever your system wants** — `aria-invalid`, `isInvalid`, a `data-` attribute.
 
 ## Boolean props and `exactOptionalPropertyTypes`
 
-Both shipped kits run under `exactOptionalPropertyTypes`, where passing an explicit `undefined` is not the same as omitting a key — and several third-party primitives reject it. Spread conditionally rather than passing through:
+The contract declares optional inputs as `T | undefined` rather than `?:`, so nothing is ever silently absent. Several third-party primitives reject an explicit `undefined` under `exactOptionalPropertyTypes` — spread conditionally at that edge:
 
 ```tsx
 <Primitive {...(disabled !== undefined ? { disabled } : {})} />
@@ -105,7 +176,7 @@ Both shipped kits run under `exactOptionalPropertyTypes`, where passing an expli
 
 The two shipped kits are the reference implementations, and they deliberately solve the problem differently:
 
-- [`packages/form/react/shadcn/src/blocks`](https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/shadcn/src/blocks) — thin adapters over Radix-based primitives.
-- [`packages/form/react/heroui/src/blocks`](https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/heroui/src/blocks) — React Aria compositions, where the root owns state and the control is a child.
+- [`packages/form/react/shadcn/src/blocks`](https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/shadcn/src/blocks) — one shared `FieldShell` over Radix-based primitives.
+- [`packages/form/react/heroui/src/blocks`](https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/heroui/src/blocks) — React Aria compositions, chrome nested inside the field root.
 
 Reading both is the fastest way to see which parts of the contract are load-bearing.

@@ -1,10 +1,9 @@
-import { FormFieldType } from '@ez-kit/form-core'
+import { formatFieldErrors, FormFieldType } from '@ez-kit/form-core'
 
 import { asBoolean, asNumber, asText } from './coerce'
-import { FieldFrame } from './field-frame'
 
-import type { BindableForm, SubmitState } from './bindable-form'
-import type { FormComponents } from './contract'
+import type { BindableForm, BoundFieldApi, SubmitState } from './bindable-form'
+import type { FieldRenderProps, FormComponents } from './contract'
 import type {
 	CheckboxFieldProps,
 	FormFieldComponents,
@@ -18,43 +17,81 @@ import type {
 import type { ReactNode } from 'react'
 
 /**
+ * The half of a field's props that is identical for every field kind: identity, chrome
+ * content, validation state and the blur handler.
+ *
+ * Everything visible is assembled by the kit from these; this package renders no element of
+ * its own, not even a wrapper.
+ */
+function fieldRenderProps(
+	field: BoundFieldApi,
+	fieldType: FormFieldType,
+	{
+		label,
+		description,
+		disabled,
+		required,
+	}: { label: ReactNode; description: ReactNode; disabled: boolean | undefined; required: boolean | undefined },
+): FieldRenderProps {
+	const errors = formatFieldErrors(field.state.meta.errors)
+
+	return {
+		'data-field': field.name,
+		'data-field-type': fieldType,
+		id: field.name,
+		name: field.name,
+		label,
+		description,
+		errors,
+		invalid: errors.length > 0,
+		onBlur: field.handleBlur,
+		disabled,
+		required,
+	}
+}
+
+/**
  * Build the flat field components for one form instance.
  *
  * Each component closes over both the injected `components` and the `form` it belongs to,
  * which is why they are built per instance rather than once per kit: `form.AppField` needs
  * the concrete form. `createForm` memoises the result so the identities stay stable across
  * renders and React never remounts the inputs.
- *
- * Nothing here renders a styled element — only injected primitives plus `data-*` hooks.
  */
 export function buildFieldComponents<TFormData>(
 	form: BindableForm,
 	components: FormComponents,
 ): FormFieldComponents<TFormData> {
-	const { TextInput, NumberInput, Textarea, Select, Checkbox, Button, Form } = components
+	const {
+		TextField: KitTextField,
+		NumberField: KitNumberField,
+		TextareaField: KitTextareaField,
+		SelectField: KitSelectField,
+		CheckboxField: KitCheckboxField,
+		Button,
+		Form,
+	} = components
 
-	function TextField({ name, label, description, type, placeholder, ...rest }: TextFieldProps<TFormData>): ReactNode {
+	function TextField({
+		name,
+		label,
+		description,
+		disabled,
+		required,
+		type,
+		placeholder,
+	}: TextFieldProps<TFormData>): ReactNode {
 		return (
 			<form.AppField name={name}>
 				{(field) => (
-					<FieldFrame
-						components={components}
-						field={field}
-						fieldType={FormFieldType.Text}
-						label={label}
-						description={description}
-						renderInput={(binding) => (
-							<TextInput
-								{...binding}
-								{...rest}
-								{...(type !== undefined ? { type } : {})}
-								{...(placeholder !== undefined ? { placeholder } : {})}
-								value={asText(field.state.value)}
-								onChange={(value) => {
-									field.handleChange(value)
-								}}
-							/>
-						)}
+					<KitTextField
+						{...fieldRenderProps(field, FormFieldType.Text, { label, description, disabled, required })}
+						type={type}
+						placeholder={placeholder}
+						value={asText(field.state.value)}
+						onChange={(value) => {
+							field.handleChange(value)
+						}}
 					/>
 				)}
 			</form.AppField>
@@ -65,35 +102,26 @@ export function buildFieldComponents<TFormData>(
 		name,
 		label,
 		description,
+		disabled,
+		required,
 		placeholder,
 		min,
 		max,
 		step,
-		...rest
 	}: NumberFieldProps<TFormData>): ReactNode {
 		return (
 			<form.AppField name={name}>
 				{(field) => (
-					<FieldFrame
-						components={components}
-						field={field}
-						fieldType={FormFieldType.Number}
-						label={label}
-						description={description}
-						renderInput={(binding) => (
-							<NumberInput
-								{...binding}
-								{...rest}
-								{...(placeholder !== undefined ? { placeholder } : {})}
-								{...(min !== undefined ? { min } : {})}
-								{...(max !== undefined ? { max } : {})}
-								{...(step !== undefined ? { step } : {})}
-								value={asNumber(field.state.value)}
-								onChange={(value) => {
-									field.handleChange(value)
-								}}
-							/>
-						)}
+					<KitNumberField
+						{...fieldRenderProps(field, FormFieldType.Number, { label, description, disabled, required })}
+						placeholder={placeholder}
+						min={min}
+						max={max}
+						step={step}
+						value={asNumber(field.state.value)}
+						onChange={(value) => {
+							field.handleChange(value)
+						}}
 					/>
 				)}
 			</form.AppField>
@@ -104,31 +132,22 @@ export function buildFieldComponents<TFormData>(
 		name,
 		label,
 		description,
+		disabled,
+		required,
 		placeholder,
 		rows,
-		...rest
 	}: TextareaFieldProps<TFormData>): ReactNode {
 		return (
 			<form.AppField name={name}>
 				{(field) => (
-					<FieldFrame
-						components={components}
-						field={field}
-						fieldType={FormFieldType.Textarea}
-						label={label}
-						description={description}
-						renderInput={(binding) => (
-							<Textarea
-								{...binding}
-								{...rest}
-								{...(placeholder !== undefined ? { placeholder } : {})}
-								{...(rows !== undefined ? { rows } : {})}
-								value={asText(field.state.value)}
-								onChange={(value) => {
-									field.handleChange(value)
-								}}
-							/>
-						)}
+					<KitTextareaField
+						{...fieldRenderProps(field, FormFieldType.Textarea, { label, description, disabled, required })}
+						placeholder={placeholder}
+						rows={rows}
+						value={asText(field.state.value)}
+						onChange={(value) => {
+							field.handleChange(value)
+						}}
 					/>
 				)}
 			</form.AppField>
@@ -139,57 +158,38 @@ export function buildFieldComponents<TFormData>(
 		name,
 		label,
 		description,
+		disabled,
+		required,
 		options,
 		placeholder,
-		...rest
 	}: SelectFieldProps<TFormData>): ReactNode {
 		return (
 			<form.AppField name={name}>
 				{(field) => (
-					<FieldFrame
-						components={components}
-						field={field}
-						fieldType={FormFieldType.Select}
-						label={label}
-						description={description}
-						renderInput={(binding) => (
-							<Select
-								{...binding}
-								{...rest}
-								{...(placeholder !== undefined ? { placeholder } : {})}
-								options={options}
-								value={asText(field.state.value)}
-								onChange={(value) => {
-									field.handleChange(value)
-								}}
-							/>
-						)}
+					<KitSelectField
+						{...fieldRenderProps(field, FormFieldType.Select, { label, description, disabled, required })}
+						options={options}
+						placeholder={placeholder}
+						value={asText(field.state.value)}
+						onChange={(value) => {
+							field.handleChange(value)
+						}}
 					/>
 				)}
 			</form.AppField>
 		)
 	}
 
-	function CheckboxField({ name, label, description, ...rest }: CheckboxFieldProps<TFormData>): ReactNode {
+	function CheckboxField({ name, label, description, disabled, required }: CheckboxFieldProps<TFormData>): ReactNode {
 		return (
 			<form.AppField name={name}>
 				{(field) => (
-					<FieldFrame
-						components={components}
-						field={field}
-						fieldType={FormFieldType.Checkbox}
-						label={label}
-						description={description}
-						renderInput={(binding) => (
-							<Checkbox
-								{...binding}
-								{...rest}
-								checked={asBoolean(field.state.value)}
-								onChange={(checked) => {
-									field.handleChange(checked)
-								}}
-							/>
-						)}
+					<KitCheckboxField
+						{...fieldRenderProps(field, FormFieldType.Checkbox, { label, description, disabled, required })}
+						checked={asBoolean(field.state.value)}
+						onChange={(checked) => {
+							field.handleChange(checked)
+						}}
 					/>
 				)}
 			</form.AppField>

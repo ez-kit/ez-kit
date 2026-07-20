@@ -1,31 +1,37 @@
-import type { BaseInputProps } from '@ez-kit/form-react'
+import type { FieldRenderProps } from '@ez-kit/form-react'
 
 /**
- * React Aria's boolean state props, which HeroUI v3 exposes on every field root.
+ * Everything that goes on a HeroUI field root: the shared `data-field` hooks kit CSS and
+ * tests target, plus React Aria's boolean state props, which HeroUI v3 exposes on every
+ * root.
  *
- * Built by spreading rather than passing directly: under `exactOptionalPropertyTypes` an
- * explicit `undefined` is rejected, and "not disabled" has to mean the key is absent.
+ * `isDisabled` / `isRequired` are spread rather than passed directly: under
+ * `exactOptionalPropertyTypes` an explicit `undefined` is rejected, and "not disabled" has
+ * to mean the key is absent.
+ *
+ * Deliberately no `data-slot`: HeroUI sets its own (`checkbox`, `textfield`, …) *before*
+ * spreading props, so ours would win and silently break `@heroui/styles` selectors.
+ *
+ * Nothing here fakes accessibility wiring either. The label, description and error live
+ * *inside* the field root in this kit, so React Aria derives `id` / `aria-describedby` /
+ * `aria-labelledby` itself — exactly as it does in HeroUI's own examples.
  */
-export function ariaFieldState({
+export function fieldRoot({
 	invalid,
 	disabled,
 	required,
-	'aria-describedby': describedBy,
-	'aria-labelledby': labelledBy,
-}: Pick<BaseInputProps, 'invalid' | 'disabled' | 'required' | 'aria-describedby' | 'aria-labelledby'>): {
-	isInvalid?: boolean
+	...data
+}: Pick<FieldRenderProps, 'invalid' | 'disabled' | 'required' | 'data-field' | 'data-field-type'>): {
+	'data-field': string
+	'data-field-type': string
+	isInvalid: boolean
 	isDisabled?: boolean
 	isRequired?: boolean
-	'aria-describedby'?: string
-	'aria-labelledby'?: string
 } {
 	return {
-		...(invalid !== undefined ? { isInvalid: invalid } : {}),
+		...data,
+		isInvalid: invalid,
 		...(disabled !== undefined ? { isDisabled: disabled } : {}),
 		...(required !== undefined ? { isRequired: required } : {}),
-		...(describedBy !== undefined ? { 'aria-describedby': describedBy } : {}),
-		// React Aria cannot see the frame's label — it is a sibling of this composition, not a
-		// child — so without this the roots warn and composite widgets go unlabelled.
-		...(labelledBy !== undefined ? { 'aria-labelledby': labelledBy } : {}),
 	}
 }

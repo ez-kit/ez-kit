@@ -38,7 +38,7 @@ You install exactly one of the two flavours; it pulls the rest in.
 
 ## Why the layering
 
-`@ez-kit/form-react` knows how to bind a field to form state, wire accessibility, and render errors — but it owns no pixels. Every visible element is injected by a kit through a `FormComponents` contract. That is what lets the **same example render under either kit**, and it is why you can [build your own kit](./form/custom-kit) without forking anything.
+`@ez-kit/form-react` knows how to bind a field to form state, normalise errors and track submit state — but it owns no pixels and no markup. Each field's entire element tree is supplied by a kit through a `FormComponents` contract, so a React Aria kit can nest its label and error inside the field root while a plain-DOM kit keeps them as siblings. That is what lets the **same example render under either kit**, and it is why you can [build your own kit](./form/custom-kit) without forking anything.
 
 ## What's in the box
 

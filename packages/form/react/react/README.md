@@ -45,39 +45,43 @@ import { createForm } from '@ez-kit/form-react'
 import type { FormComponents } from '@ez-kit/form-react'
 
 const components = {
-	FieldRoot,
-	Label,
-	Description,
-	ErrorText, // chrome
-	TextInput,
-	NumberInput,
-	Textarea,
-	Select,
-	Checkbox, // inputs
+	TextField,
+	NumberField,
+	TextareaField,
+	SelectField,
+	CheckboxField,
 	Button,
-	Form, // form level
+	Form,
 } satisfies FormComponents
 
 export const { useForm } = createForm({ components })
 ```
 
-`satisfies FormComponents` turns a forgotten primitive into a compile error rather than a
+`satisfies FormComponents` turns a forgotten field into a compile error rather than a
 runtime crash. Components are bound by closure at `createForm` time — no runtime provider
 is involved.
 
+This package renders **no elements at all** — not even a field wrapper. It hands each kit
+one flat props object per field (identity, `label`, `description`, `errors`, `invalid`,
+`value`/`onChange`, `onBlur`) and the kit builds the entire tree. That is what lets a
+React-Aria kit nest its `Label` / `Description` / `FieldError` inside the field root, where
+the library's own id and validation wiring lives, while a plain-DOM kit keeps them as
+siblings.
+
 ## Styling hooks
 
-The wrappers emit, and never style:
+Two attributes travel with every field for the kit to spread onto its root, plus one on the
+form:
 
-| Attribute         | Where        | Value                                                  |
-| ----------------- | ------------ | ------------------------------------------------------ |
-| `data-field`      | `FieldRoot`  | the field's `name`                                     |
-| `data-field-type` | `FieldRoot`  | `text` / `number` / `textarea` / `select` / `checkbox` |
-| `data-invalid`    | `FieldRoot`  | `true` while the field has errors                      |
-| `data-form`       | the `<form>` | always present                                         |
+| Attribute         | Where          | Value                                                  |
+| ----------------- | -------------- | ------------------------------------------------------ |
+| `data-field`      | the kit's root | the field's `name`                                     |
+| `data-field-type` | the kit's root | `text` / `number` / `textarea` / `select` / `checkbox` |
+| `data-form`       | the `<form>`   | always present                                         |
 
-Accessibility is wired for you: the label's `htmlFor` and the input's `id` are the field
-name, and `aria-describedby` points at the description and error nodes.
+Accessibility is the kit's to wire, because only the kit knows its markup. The shared layer
+supplies the raw material: a stable `id`, the label and description nodes, and the
+normalised `errors`.
 
 ## License
 

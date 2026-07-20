@@ -64,35 +64,64 @@ describe('@ez-kit/form-heroui smoke', () => {
 	it('renders every field through the HeroUI primitives', () => {
 		const { container } = render(<Case />)
 
-		expect(container.querySelectorAll('[data-slot="form-field"]')).toHaveLength(5)
+		expect(container.querySelectorAll('[data-field]')).toHaveLength(5)
 		// HeroUI v3 stamps its own class names on the React Aria compositions, so their
 		// presence proves the kit's components — not fallback markup — did the rendering.
 		expect(container.querySelector('.textfield')).toBeInTheDocument()
 		expect(container.querySelector('.number-field')).toBeInTheDocument()
 		expect(container.querySelector('.checkbox')).toBeInTheDocument()
 		expect(container.querySelector('.select')).toBeInTheDocument()
-		expect(container.querySelector('[data-slot="form-submit"]')).toBeInTheDocument()
+		expect(container.querySelector('[data-form-submit]')).toBeInTheDocument()
 	})
 
-	it('stamps the shared data-* hooks the kit CSS targets', () => {
+	it("stamps the shared data-* hooks without clobbering HeroUI's own slots", () => {
 		const { container } = render(<Case />)
 
 		expect(container.querySelector('[data-form]')).toBeInTheDocument()
+		// HeroUI sets `data-slot` before spreading props, so the kit must never pass one of its
+		// own — doing so silently breaks every `@heroui/styles` slot selector.
+		expect(container.querySelector('[data-field="agree"]')).toHaveAttribute('data-slot', 'checkbox')
+		expect(container.querySelector('[data-slot^="form-"]')).not.toBeInTheDocument()
 		expect(container.querySelector('[data-field="email"]')).toHaveAttribute('data-field-type', 'text')
 		expect(container.querySelector('[data-field="role"]')).toHaveAttribute('data-field-type', 'select')
 	})
 
-	it('binds text input and renders errors through the HeroUI ErrorText', async () => {
+	it("binds text input and renders errors through HeroUI's own FieldError", async () => {
 		const user = userEvent.setup()
-		render(<Case />)
+		const { container } = render(<Case />)
 
 		const input = screen.getByLabelText('Email')
 		await user.type(input, 'nope')
 
 		expect(input).toHaveValue('nope')
-		const error = await screen.findByRole('alert')
-		expect(error).toHaveTextContent('Enter a valid email')
-		expect(error).toHaveAttribute('data-slot', 'form-error')
+		await waitFor(() => {
+			expect(container.querySelector('[data-slot="field-error"]')).toHaveTextContent('Enter a valid email')
+		})
+		// React Aria's `FieldError`, not a hand-rolled stand-in: it only renders inside a field
+		// root, carries the `errorMessage` slot, and is wired into the input's description.
+		const error = container.querySelector('[data-slot="field-error"]')
+		expect(error).toHaveAttribute('slot', 'errorMessage')
+		expect(input.getAttribute('aria-describedby')).toContain(error?.id)
+	})
+
+	it('lets React Aria wire description and error into the input', async () => {
+		const user = userEvent.setup()
+		const { container } = render(<Case />)
+
+		const input = screen.getByLabelText('Email')
+		const description = container.querySelector('[data-slot="description"]')
+
+		expect(description).toHaveTextContent('Work address')
+		expect(input.getAttribute('aria-describedby')).toContain(description?.id)
+
+		await user.type(input, 'nope')
+
+		// Both ids stay referenced once the field turns invalid — the description does not get
+		// replaced by the error.
+		await waitFor(() => {
+			expect(container.querySelector('[data-slot="field-error"]')).toBeInTheDocument()
+		})
+		expect(input.getAttribute('aria-describedby')).toContain(description?.id)
 	})
 
 	it('submits through the HeroUI button', async () => {

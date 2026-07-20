@@ -3,19 +3,15 @@ export { TextInputType } from './contract'
 
 export type { BoundForm, CreateFormOptions, FormBundle } from './create-form'
 export type {
-	BaseInputProps,
 	ButtonProps,
-	CheckboxProps,
-	DescriptionProps,
-	ErrorTextProps,
-	FieldRootProps,
+	CheckboxFieldRenderProps,
+	FieldRenderProps,
 	FormComponents,
 	FormElementProps,
-	LabelProps,
-	NumberInputProps,
-	SelectProps,
-	TextareaProps,
-	TextInputProps,
+	NumberFieldRenderProps,
+	SelectFieldRenderProps,
+	TextareaFieldRenderProps,
+	TextFieldRenderProps,
 } from './contract'
 export type {
 	BaseFieldProps,

@@ -8,7 +8,9 @@ import type { ReactNode } from 'react'
 export function Button({ type, disabled, children }: ButtonProps): ReactNode {
 	return (
 		<HeroButton
-			data-slot='form-submit'
+			// Not `data-slot`: HeroUI stamps its own before spreading props, so ours would win
+			// and detach the element from `@heroui/styles`.
+			data-form-submit=''
 			type={type ?? 'button'}
 			variant='primary'
 			{...(disabled !== undefined ? { isDisabled: disabled } : {})}

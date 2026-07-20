@@ -424,14 +424,15 @@ describe('createForm — dependency injection', () => {
 	it('binds a different component set per createForm call', () => {
 		const altComponents: FormComponents = {
 			...testComponents,
-			TextInput: ({ value, onChange, invalid: _invalid, ...rest }) => (
+			TextField: ({ value, onChange, id, name }) => (
 				<input
 					data-alt-kit='text-input'
+					id={id}
+					name={name}
 					value={value}
 					onChange={(event) => {
 						onChange(event.target.value)
 					}}
-					{...rest}
 				/>
 			),
 		}

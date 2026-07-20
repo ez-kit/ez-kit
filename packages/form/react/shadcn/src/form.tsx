@@ -2,30 +2,25 @@
 
 import { createForm } from '@ez-kit/form-react'
 
-import { Description, ErrorText, FieldRoot, Label } from '@form-shadcn/blocks/field-chrome'
+import { CheckboxField, NumberField, TextareaField, TextField } from '@form-shadcn/blocks/fields'
 import { Button, Form } from '@form-shadcn/blocks/form-parts'
-import { Checkbox, NumberInput, Textarea, TextInput } from '@form-shadcn/blocks/inputs'
-import { Select } from '@form-shadcn/blocks/select'
+import { SelectField } from '@form-shadcn/blocks/select'
 
 import type { FormComponents } from '@ez-kit/form-react'
 
 /**
  * The shadcn implementation of the UI contract.
  *
- * `satisfies FormComponents` makes a forgotten primitive a compile error. Every entry is a
+ * `satisfies FormComponents` makes a forgotten field a compile error. Every entry is a
  * `blocks/` adapter — the vendored shadcn primitives under `components/ui/` are never
  * edited (see CLAUDE.md).
  */
 const components = {
-	FieldRoot,
-	Label,
-	Description,
-	ErrorText,
-	TextInput,
-	NumberInput,
-	Textarea,
-	Select,
-	Checkbox,
+	TextField,
+	NumberField,
+	TextareaField,
+	SelectField,
+	CheckboxField,
 	Button,
 	Form,
 } satisfies FormComponents

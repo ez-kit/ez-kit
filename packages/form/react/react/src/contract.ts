@@ -4,15 +4,22 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 /**
  * The UI-kit contract.
  *
- * This package renders **no visuals of its own** — every visible element is supplied by a
- * kit through {@link FormComponents} and injected at `createForm({ components })` time.
- * The wrappers here only compose those primitives, wire them to TanStack Form state, and
- * add `data-*` attributes for kit CSS to target.
+ * This package renders **no visuals of its own** and — deliberately — no DOM structure
+ * either. It binds TanStack Form state, normalises errors, and hands one flat props object
+ * per field to the kit; the kit owns the entire element tree of that field, label and
+ * description and error text included.
+ *
+ * That inversion is what makes React-Aria-based kits work. HeroUI v3 fields are *contexts*:
+ * `<Label>`, `<Description>` and `<FieldError>` must be **children** of `<TextField>` to
+ * pick up ids, `aria-describedby` and validation state. A shared wrapper that rendered them
+ * as siblings could only ever fake that wiring. shadcn has the opposite shape — plain
+ * siblings in a grid — and both now express their natural anatomy without fighting a
+ * one-size layout.
  *
  * Both `@ez-kit/form-shadcn` and `@ez-kit/form-heroui` implement this identical interface,
  * which is what lets one example render under either kit. Register a kit with
- * `satisfies FormComponents` so a forgotten primitive is a compile error rather than a
- * runtime crash.
+ * `satisfies FormComponents` so a forgotten field is a compile error rather than a runtime
+ * crash.
  */
 
 /** The `type` attribute a text input may carry — a closed set, never a bare string. */
@@ -25,104 +32,77 @@ export enum TextInputType {
 	Search = 'search',
 }
 
-// ── field chrome ─────────────────────────────────────────────────────────────
-
 /**
- * The per-field wrapper element.
+ * What every field receives, whatever its value type.
  *
- * The `data-*` attributes are declared rather than left implicit so a kit can *read* them —
- * a checkbox, for instance, needs a different layout from a text field — instead of only
- * matching them from CSS.
+ * Optional consumer inputs (`label`, `description`, `disabled`, `required`, …) are declared
+ * as `T | undefined` rather than `?:` on purpose: under `exactOptionalPropertyTypes` the
+ * binding layer would otherwise have to spread each key conditionally, and a kit could not
+ * tell "absent" from "explicitly nothing". A kit that forwards these to a library which
+ * rejects an explicit `undefined` (React Aria, Radix) spreads conditionally at *its* edge,
+ * where the constraint actually lives.
  */
-export type FieldRootProps = ComponentPropsWithoutRef<'div'> & {
-	/** The field's `name`. */
+export type FieldRenderProps = {
+	/** The field's `name`. Kits spread it onto their root so CSS and tests can find the field. */
 	'data-field': string
-	/** Which kind of field this is. */
+	/** Which kind of field this is; also spread onto the kit's root. */
 	'data-field-type': FormFieldType
-	/** Present only while the field has errors. */
-	'data-invalid'?: true | undefined
-}
-
-export type LabelProps = {
-	/** Always the input's `id`, so clicking the label focuses the control. */
-	htmlFor: string
-	/** Referenced from the input's `aria-labelledby`; kits must render it. */
-	id: string
-	children: ReactNode
-}
-
-export type DescriptionProps = {
-	/** Referenced from the input's `aria-describedby`. */
-	id: string
-	children: ReactNode
-}
-
-export type ErrorTextProps = {
-	/** Referenced from the input's `aria-describedby`. */
-	id: string
-	/** Already normalised to display strings by `formatFieldErrors`; never empty when rendered. */
-	errors: string[]
-}
-
-// ── inputs ───────────────────────────────────────────────────────────────────
-
-/** What every injected input receives, whatever its value type. */
-export type BaseInputProps = {
+	/**
+	 * The DOM id the kit must put on the focusable control, so `data-field` lookups and a
+	 * `<label for>` agree. React-Aria kits still let the library own its internal wiring —
+	 * this only pins the control's own id.
+	 */
 	id: string
 	name: string
+	label: ReactNode
+	description: ReactNode
+	/**
+	 * Display strings, already normalised by `formatFieldErrors`. Empty while the field is
+	 * valid — kits render their error element only when it is not.
+	 */
+	errors: string[]
+	/** `errors.length > 0`, precomputed because every kit needs it as a boolean prop. */
+	invalid: boolean
 	onBlur: () => void
-	disabled?: boolean
-	required?: boolean
-	/** Drives the kit's invalid styling; the wrapper also sets `aria-invalid`. */
-	invalid?: boolean
-	/**
-	 * Explicitly nullable: under `exactOptionalPropertyTypes` the wrapper passes the key
-	 * unconditionally, and a field with neither description nor error has nothing to point at.
-	 */
-	'aria-describedby'?: string | undefined
-	/**
-	 * Points at the field's label element. A native `<label for>` covers simple inputs, but
-	 * composite widgets — a React Aria select trigger, a number-field group — are not
-	 * labelled by it and need the explicit reference.
-	 */
-	'aria-labelledby'?: string | undefined
+	disabled: boolean | undefined
+	required: boolean | undefined
 }
 
-export type TextInputProps = BaseInputProps & {
+export type TextFieldRenderProps = FieldRenderProps & {
 	value: string
 	onChange: (value: string) => void
-	placeholder?: string
-	type?: TextInputType
+	placeholder: string | undefined
+	type: TextInputType | undefined
 }
 
-export type NumberInputProps = BaseInputProps & {
+export type NumberFieldRenderProps = FieldRenderProps & {
 	/**
 	 * `undefined` while the control is empty — an empty numeric input is genuinely
 	 * "no number", which `NaN` would model far worse.
 	 */
 	value: number | undefined
 	onChange: (value: number | undefined) => void
-	placeholder?: string
-	min?: number
-	max?: number
-	step?: number
+	placeholder: string | undefined
+	min: number | undefined
+	max: number | undefined
+	step: number | undefined
 }
 
-export type TextareaProps = BaseInputProps & {
+export type TextareaFieldRenderProps = FieldRenderProps & {
 	value: string
 	onChange: (value: string) => void
-	placeholder?: string
-	rows?: number
+	placeholder: string | undefined
+	rows: number | undefined
 }
 
-export type SelectProps = BaseInputProps & {
+export type SelectFieldRenderProps = FieldRenderProps & {
 	value: string
 	onChange: (value: string) => void
 	options: readonly SelectOption[]
-	placeholder?: string
+	placeholder: string | undefined
 }
 
-export type CheckboxProps = BaseInputProps & {
+export type CheckboxFieldRenderProps = FieldRenderProps & {
 	checked: boolean
 	onChange: (checked: boolean) => void
 }
@@ -140,22 +120,15 @@ export type FormElementProps = ComponentPropsWithoutRef<'form'>
 // ── the contract itself ──────────────────────────────────────────────────────
 
 /**
- * Every primitive a kit must supply. A kit registers one object literal covering all of
- * them; there is no partial tier in v1 because every field is part of the base set.
+ * Every component a kit must supply — one per field kind, plus the two form-level pieces.
+ * There is no partial tier in v1 because every field is part of the base set.
  */
 export type FormComponents = {
-	// chrome
-	FieldRoot: (props: FieldRootProps) => ReactNode
-	Label: (props: LabelProps) => ReactNode
-	Description: (props: DescriptionProps) => ReactNode
-	ErrorText: (props: ErrorTextProps) => ReactNode
-	// inputs
-	TextInput: (props: TextInputProps) => ReactNode
-	NumberInput: (props: NumberInputProps) => ReactNode
-	Textarea: (props: TextareaProps) => ReactNode
-	Select: (props: SelectProps) => ReactNode
-	Checkbox: (props: CheckboxProps) => ReactNode
-	// form level
+	TextField: (props: TextFieldRenderProps) => ReactNode
+	NumberField: (props: NumberFieldRenderProps) => ReactNode
+	TextareaField: (props: TextareaFieldRenderProps) => ReactNode
+	SelectField: (props: SelectFieldRenderProps) => ReactNode
+	CheckboxField: (props: CheckboxFieldRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
 }

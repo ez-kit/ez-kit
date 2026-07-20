@@ -2,28 +2,23 @@
 
 import { createForm } from '@ez-kit/form-react'
 
-import { Description, ErrorText, FieldRoot, Label } from './blocks/field-chrome'
+import { CheckboxField, NumberField, TextareaField, TextField } from './blocks/fields'
 import { Button, Form } from './blocks/form-parts'
-import { Checkbox, NumberInput, Textarea, TextInput } from './blocks/inputs'
-import { Select } from './blocks/select'
+import { SelectField } from './blocks/select'
 
 import type { FormComponents } from '@ez-kit/form-react'
 
 /**
  * The HeroUI v3 implementation of the UI contract.
  *
- * `satisfies FormComponents` makes a forgotten primitive a compile error.
+ * `satisfies FormComponents` makes a forgotten field a compile error.
  */
 const components = {
-	FieldRoot,
-	Label,
-	Description,
-	ErrorText,
-	TextInput,
-	NumberInput,
-	Textarea,
-	Select,
-	Checkbox,
+	TextField,
+	NumberField,
+	TextareaField,
+	SelectField,
+	CheckboxField,
 	Button,
 	Form,
 } satisfies FormComponents
