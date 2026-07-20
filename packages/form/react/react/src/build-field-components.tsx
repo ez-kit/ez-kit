@@ -1,54 +1,13 @@
-import { formatFieldErrors, FormFieldType } from '@ez-kit/form-core'
+import { createCheckboxField } from './fields/checkbox-field'
+import { createFormWrapper, createSubmitButton } from './fields/form-parts'
+import { createNumberField } from './fields/number-field'
+import { createSelectField } from './fields/select-field'
+import { createTextField } from './fields/text-field'
+import { createTextareaField } from './fields/textarea-field'
 
-import { asBoolean, asNumber, asText } from './coerce'
-
-import type { BindableForm, BoundFieldApi, SubmitState } from './bindable-form'
-import type { FieldRenderProps, FormComponents } from './contract'
-import type {
-	CheckboxFieldProps,
-	FormFieldComponents,
-	FormWrapperProps,
-	NumberFieldProps,
-	SelectFieldProps,
-	SubmitButtonProps,
-	TextareaFieldProps,
-	TextFieldProps,
-} from './field-props'
-import type { ReactNode } from 'react'
-
-/**
- * The half of a field's props that is identical for every field kind: identity, chrome
- * content, validation state and the blur handler.
- *
- * Everything visible is assembled by the kit from these; this package renders no element of
- * its own, not even a wrapper.
- */
-function fieldRenderProps(
-	field: BoundFieldApi,
-	fieldType: FormFieldType,
-	{
-		label,
-		description,
-		disabled,
-		required,
-	}: { label: ReactNode; description: ReactNode; disabled: boolean | undefined; required: boolean | undefined },
-): FieldRenderProps {
-	const errors = formatFieldErrors(field.state.meta.errors)
-
-	return {
-		'data-field': field.name,
-		'data-field-type': fieldType,
-		id: field.name,
-		name: field.name,
-		label,
-		description,
-		errors,
-		invalid: errors.length > 0,
-		onBlur: field.handleBlur,
-		disabled,
-		required,
-	}
-}
+import type { BindableForm } from './bindable-form'
+import type { FormComponents } from './contract'
+import type { FormFieldComponents } from './field-props'
 
 /**
  * Build the flat field components for one form instance.
@@ -72,175 +31,13 @@ export function buildFieldComponents<TFormData>(
 		Form,
 	} = components
 
-	function TextField({
-		name,
-		label,
-		description,
-		disabled,
-		required,
-		type,
-		placeholder,
-	}: TextFieldProps<TFormData>): ReactNode {
-		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitTextField
-						{...fieldRenderProps(field, FormFieldType.Text, { label, description, disabled, required })}
-						type={type}
-						placeholder={placeholder}
-						value={asText(field.state.value)}
-						onChange={(value) => {
-							field.handleChange(value)
-						}}
-					/>
-				)}
-			</form.AppField>
-		)
-	}
-
-	function NumberField({
-		name,
-		label,
-		description,
-		disabled,
-		required,
-		placeholder,
-		min,
-		max,
-		step,
-	}: NumberFieldProps<TFormData>): ReactNode {
-		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitNumberField
-						{...fieldRenderProps(field, FormFieldType.Number, { label, description, disabled, required })}
-						placeholder={placeholder}
-						min={min}
-						max={max}
-						step={step}
-						value={asNumber(field.state.value)}
-						onChange={(value) => {
-							field.handleChange(value)
-						}}
-					/>
-				)}
-			</form.AppField>
-		)
-	}
-
-	function TextareaField({
-		name,
-		label,
-		description,
-		disabled,
-		required,
-		placeholder,
-		rows,
-	}: TextareaFieldProps<TFormData>): ReactNode {
-		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitTextareaField
-						{...fieldRenderProps(field, FormFieldType.Textarea, { label, description, disabled, required })}
-						placeholder={placeholder}
-						rows={rows}
-						value={asText(field.state.value)}
-						onChange={(value) => {
-							field.handleChange(value)
-						}}
-					/>
-				)}
-			</form.AppField>
-		)
-	}
-
-	function SelectField({
-		name,
-		label,
-		description,
-		disabled,
-		required,
-		options,
-		placeholder,
-	}: SelectFieldProps<TFormData>): ReactNode {
-		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitSelectField
-						{...fieldRenderProps(field, FormFieldType.Select, { label, description, disabled, required })}
-						options={options}
-						placeholder={placeholder}
-						value={asText(field.state.value)}
-						onChange={(value) => {
-							field.handleChange(value)
-						}}
-					/>
-				)}
-			</form.AppField>
-		)
-	}
-
-	function CheckboxField({ name, label, description, disabled, required }: CheckboxFieldProps<TFormData>): ReactNode {
-		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitCheckboxField
-						{...fieldRenderProps(field, FormFieldType.Checkbox, { label, description, disabled, required })}
-						checked={asBoolean(field.state.value)}
-						onChange={(checked) => {
-							field.handleChange(checked)
-						}}
-					/>
-				)}
-			</form.AppField>
-		)
-	}
-
-	function selectSubmitState(state: SubmitState): SubmitState {
-		return { canSubmit: state.canSubmit, isSubmitting: state.isSubmitting }
-	}
-
-	function SubmitButton({ children, disabled }: SubmitButtonProps): ReactNode {
-		return (
-			<form.Subscribe selector={selectSubmitState}>
-				{({ canSubmit, isSubmitting }) => (
-					<Button
-						type='submit'
-						disabled={disabled === true || !canSubmit || isSubmitting}
-					>
-						{children}
-					</Button>
-				)}
-			</form.Subscribe>
-		)
-	}
-
-	function FormWrapper({ children, ...rest }: FormWrapperProps): ReactNode {
-		return (
-			<Form
-				data-form=''
-				noValidate
-				{...rest}
-				onSubmit={(event) => {
-					// The browser must not navigate, and a nested form's submit must not bubble
-					// out to an enclosing one.
-					event.preventDefault()
-					event.stopPropagation()
-					void form.handleSubmit()
-				}}
-			>
-				{children}
-			</Form>
-		)
-	}
-
 	return {
-		TextField,
-		NumberField,
-		TextareaField,
-		SelectField,
-		CheckboxField,
-		SubmitButton,
-		Form: FormWrapper,
+		TextField: createTextField<TFormData>(form, KitTextField),
+		NumberField: createNumberField<TFormData>(form, KitNumberField),
+		TextareaField: createTextareaField<TFormData>(form, KitTextareaField),
+		SelectField: createSelectField<TFormData>(form, KitSelectField),
+		CheckboxField: createCheckboxField<TFormData>(form, KitCheckboxField),
+		SubmitButton: createSubmitButton(form, Button),
+		Form: createFormWrapper(form, Form),
 	}
 }
