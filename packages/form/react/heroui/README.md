@@ -6,16 +6,22 @@ HeroUI v3 (React Aria) fields wired for you.
 ## Install
 
 ```bash
-pnpm add @ez-kit/form-heroui
+pnpm add @ez-kit/form-heroui @heroui/react @heroui/styles
 ```
 
-Import the stylesheet once at your app root:
+`@heroui/react` and `@heroui/styles` (v3) are peer dependencies — React Aria's fields reach
+their controls through React context, so a second copy in your tree would break the
+compositions.
 
-```ts
-import '@ez-kit/form-heroui/global.css'
+The kit ships no stylesheet. In your app's CSS:
+
+```css
+@import '@heroui/styles';
+@source '../node_modules/@ez-kit/form-heroui/dist/**/*.js';
 ```
 
-HeroUI v3 requires Tailwind CSS v4.
+The `@source` line is what makes Tailwind generate the kit's classes — it does not scan
+`node_modules` on its own. HeroUI v3 requires Tailwind CSS v4.
 
 ## Usage
 

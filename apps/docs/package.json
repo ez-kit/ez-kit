@@ -32,6 +32,8 @@
 		"@ez-kit/twc": "workspace:*",
 		"@ez-kit/valtio-kit": "workspace:*",
 		"@ez-kit/zu-store": "workspace:*",
+		"@heroui/react": "^3.0.3",
+		"@heroui/styles": "^3.0.3",
 		"@react-three/fiber": "^9.6.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",

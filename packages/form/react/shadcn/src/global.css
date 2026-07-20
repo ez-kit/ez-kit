@@ -1,3 +1,11 @@
+/* Repo-local development asset — NOT published.
+ *
+ * `components.json` points the shadcn CLI here, so `npx shadcn add <component>` has a
+ * stylesheet to write its theme tokens into when a primitive is vendored into
+ * `src/components/ui/`. Nothing in `dist` references it and `package.json` exports no
+ * stylesheet: consuming apps own their shadcn theme (that is what `npx shadcn init`
+ * generates) and their Tailwind setup. See the installation docs. */
+
 @import 'shadcn/tailwind.css';
 @custom-variant dark (&:is(.dark *));
 @source "../../**/*.{ts,tsx}";

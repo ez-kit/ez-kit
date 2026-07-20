@@ -15,26 +15,26 @@ That is the only package you need at the call site — it re-exports the consume
 
 `react` and `react-dom` (18 or 19) are peer dependencies.
 
-## 2. Import the stylesheet
+## 2. Point Tailwind at the package
 
-Pull in the prebuilt CSS once at your app entry (`app/layout.tsx`, `_app.tsx`, `main.tsx`, …):
+The kit ships **no stylesheet**. Your app owns its shadcn theme — that is exactly what
+`npx shadcn init` generates — so the kit does not ship a competing `:root` block that would
+silently repaint your palette.
 
-```ts
-import '@ez-kit/form-shadcn/global.css'
+The one thing your app cannot know is where the kit's utility classes live. Tailwind v4 does
+not scan `node_modules`, so add a `@source` line to the CSS file that already holds your
+shadcn theme:
+
+```css
+@source '../node_modules/@ez-kit/form-shadcn/dist/**/*.js';
 ```
 
-It ships the shadcn theme tokens (`--background`, `--foreground`, `--destructive`, `--radius`, …) plus the Tailwind v4 entry the vendored primitives rely on.
+Adjust the relative path to your own stylesheet's location. Without it the kit renders with
+no layout at all — the classes are simply never generated.
 
-<Callout type='warn'>
-	If your app already defines the shadcn tokens — because you run shadcn yourself, or you also use
-	`@ez-kit/data-grid-shadcn` — do **not** import this stylesheet a second time. Both files declare the
-	same `:root` block, and whichever loads last wins, which will silently repaint your palette. Point
-	Tailwind at the package sources instead so the utilities still get generated:
-
-    ```css
-    @source '../node_modules/@ez-kit/form-shadcn/dist/**/*.js';
-    ```
-
+<Callout>
+	If you have no shadcn theme yet, run `npx shadcn init` first. The kit expects the standard tokens (`--background`,
+	`--foreground`, `--destructive`, `--radius`, …) and the Tailwind v4 entry.
 </Callout>
 
 ## 3. Render a form

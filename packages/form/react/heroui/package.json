@@ -10,9 +10,7 @@
 	},
 	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/heroui#readme",
 	"type": "module",
-	"sideEffects": [
-		"*.css"
-	],
+	"sideEffects": false,
 	"files": [
 		"dist"
 	],
@@ -21,13 +19,12 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
-		},
-		"./global.css": "./dist/global.css"
+		}
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/global.css dist/global.css",
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -43,18 +40,20 @@
 	],
 	"dependencies": {
 		"@ez-kit/form-react": "workspace:*",
-		"@heroui/react": "^3.0.3",
-		"@heroui/styles": "^3.0.3",
 		"@tanstack/form-core": "^1.33.2",
 		"@tanstack/react-form": "^1.33.2"
 	},
 	"devDependencies": {
+		"@heroui/react": "^3.0.3",
+		"@heroui/styles": "^3.0.3",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
+		"@heroui/react": "^3.0.0",
+		"@heroui/styles": "^3.0.0",
 		"react": ">=18.0.0",
 		"react-dom": ">=18.0.0"
 	}

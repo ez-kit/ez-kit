@@ -9,10 +9,11 @@ shadcn-styled fields wired for you.
 pnpm add @ez-kit/form-shadcn
 ```
 
-Import the stylesheet once at your app root:
+The kit ships no stylesheet — your app owns its shadcn theme (`npx shadcn init`). Add one
+line to the CSS file that holds it, so Tailwind v4 generates the kit's classes:
 
-```ts
-import '@ez-kit/form-shadcn/global.css'
+```css
+@source '../node_modules/@ez-kit/form-shadcn/dist/**/*.js';
 ```
 
 ## Usage

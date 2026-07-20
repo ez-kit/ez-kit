@@ -10,9 +10,7 @@
 	},
 	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/form/react/shadcn#readme",
 	"type": "module",
-	"sideEffects": [
-		"*.css"
-	],
+	"sideEffects": false,
 	"files": [
 		"dist"
 	],
@@ -21,13 +19,12 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
-		},
-		"./global.css": "./dist/global.css"
+		}
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/global.css dist/global.css",
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",

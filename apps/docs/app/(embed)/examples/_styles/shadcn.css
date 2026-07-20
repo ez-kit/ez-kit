@@ -7,9 +7,10 @@
 @source '../../../../shared/data-grid/examples/components/**/*.{ts,tsx}';
 @source '../../../../../../packages/data-grid/react/shadcn/src/**/*.{ts,tsx}';
 
-/* The form kit's own `global.css` is not imported: it re-declares the same shadcn `:root`
- * theme block that `@ez-kit/data-grid-shadcn/global.css` already put in this document, and
- * a second copy would only be dead weight. Tailwind still has to see the form kit's sources
- * to emit the utilities they reference. */
+/* The form kit ships no stylesheet — the app owns the shadcn theme, which
+ * `@ez-kit/data-grid-shadcn/global.css` already put in this document. Tailwind still has to
+ * see the form kit's sources to emit the utilities they reference; these point at `src`
+ * rather than `dist` because this is the kit's own repo. A consuming app uses
+ * `@source '…/node_modules/@ez-kit/form-shadcn/dist/**\/*.js'` instead. */
 @source '../../../../shared/form/examples/components/**/*.{ts,tsx}';
 @source '../../../../../../packages/form/react/shadcn/src/**/*.{ts,tsx}';

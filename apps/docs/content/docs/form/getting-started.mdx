@@ -13,19 +13,21 @@ Pick the UI kit you already use. It pulls in `@ez-kit/form-react` and `@ez-kit/f
 # shadcn
 pnpm add @ez-kit/form-shadcn
 
-# …or HeroUI
-pnpm add @ez-kit/form-heroui
+# …or HeroUI (its packages are peer dependencies)
+pnpm add @ez-kit/form-heroui @heroui/react @heroui/styles
 ```
 
-Then import the kit's stylesheet once at your app root:
+Neither kit ships a stylesheet — your app owns its theme. Add one `@source` line to the CSS
+file you already have so Tailwind v4 generates the kit's classes, since it does not scan
+`node_modules`:
 
-```ts
-import '@ez-kit/form-shadcn/global.css'
-// …or
-import '@ez-kit/form-heroui/global.css'
+```css
+@source '../node_modules/@ez-kit/form-shadcn/dist/**/*.js';
+/* …or */
+@source '../node_modules/@ez-kit/form-heroui/dist/**/*.js';
 ```
 
-Full per-kit details — Tailwind setup, theming, what the stylesheet contains — live in [Installation](./form/installation/shadcn).
+Full per-kit details — Tailwind setup, theming, peer dependencies — live in [Installation](./form/installation/shadcn).
 
 ## 2. Create a form
 
