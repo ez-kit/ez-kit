@@ -2,6 +2,9 @@ import {
 	Checkbox as HeroCheckbox,
 	Input,
 	NumberField as HeroNumberField,
+	Radio,
+	RadioGroup as HeroRadioGroup,
+	Switch as HeroSwitch,
 	TextArea,
 	TextField as HeroTextField,
 } from '@heroui/react'
@@ -12,6 +15,8 @@ import { fieldRoot } from './field-state'
 import type {
 	CheckboxFieldRenderProps,
 	NumberFieldRenderProps,
+	RadioGroupFieldRenderProps,
+	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
 } from '@ez-kit/form-react'
@@ -180,5 +185,89 @@ export function CheckboxField({
 				invalid={field.invalid}
 			/>
 		</HeroCheckbox>
+	)
+}
+
+export function SwitchField({
+	checked,
+	onChange,
+	id,
+	name,
+	onBlur,
+	label,
+	description,
+	errors,
+	...field
+}: SwitchFieldRenderProps): ReactNode {
+	return (
+		// HeroUI's Switch anatomy: `Switch.Content` is the clickable label wrapping the control
+		// track and the label text; `Description`/`FieldError` sit beside it as field-level rows.
+		<HeroSwitch
+			id={id}
+			name={name}
+			isSelected={checked}
+			onChange={onChange}
+			onBlur={onBlur}
+			{...fieldRoot(field)}
+		>
+			<HeroSwitch.Content>
+				<HeroSwitch.Control>
+					<HeroSwitch.Thumb />
+				</HeroSwitch.Control>
+				<FieldLabel label={label} />
+			</HeroSwitch.Content>
+			<FieldDescription description={description} />
+			<FieldErrorText
+				errors={errors}
+				invalid={field.invalid}
+			/>
+		</HeroSwitch>
+	)
+}
+
+export function RadioGroupField({
+	value,
+	onChange,
+	options,
+	id,
+	name,
+	onBlur,
+	label,
+	description,
+	errors,
+	...field
+}: RadioGroupFieldRenderProps): ReactNode {
+	return (
+		// The group root owns value/validation; label and description are its leading children,
+		// each `Radio` its own control + label, and `FieldError` the trailing group-level row.
+		<HeroRadioGroup
+			id={id}
+			name={name}
+			value={value}
+			onChange={onChange}
+			onBlur={onBlur}
+			{...fieldRoot(field)}
+		>
+			<FieldLabel label={label} />
+			<FieldDescription description={description} />
+			{options.map((option) => (
+				<Radio
+					key={option.value}
+					value={option.value}
+					{...(option.disabled !== undefined ? { isDisabled: option.disabled } : {})}
+				>
+					<Radio.Content>
+						<Radio.Control>
+							<Radio.Indicator />
+						</Radio.Control>
+						{option.label}
+					</Radio.Content>
+				</Radio>
+			))}
+			<FieldErrorText
+				errors={errors}
+				invalid={field.invalid}
+			/>
+		</HeroRadioGroup>
 	)
 }

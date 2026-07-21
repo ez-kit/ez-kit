@@ -1,5 +1,8 @@
 import { Checkbox as CheckboxPrimitive } from '@form-shadcn/components/ui/checkbox'
 import { Input } from '@form-shadcn/components/ui/input'
+import { Label } from '@form-shadcn/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@form-shadcn/components/ui/radio-group'
+import { Switch as SwitchPrimitive } from '@form-shadcn/components/ui/switch'
 import { Textarea as TextareaPrimitive } from '@form-shadcn/components/ui/textarea'
 
 import { FieldShell } from './field-shell'
@@ -7,10 +10,15 @@ import { FieldShell } from './field-shell'
 import type {
 	CheckboxFieldRenderProps,
 	NumberFieldRenderProps,
+	RadioGroupFieldRenderProps,
+	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
 } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
+
+/** Joins the field id and an option value into the per-radio-item id a `<label for>` targets. */
+const RADIO_ITEM_ID_SEPARATOR = '-'
 
 /**
  * The value-carrying fields of the shadcn kit.
@@ -175,6 +183,93 @@ export function CheckboxField({
 					}}
 					{...binding}
 				/>
+			)}
+		</FieldShell>
+	)
+}
+
+export function SwitchField({
+	checked,
+	onChange,
+	id,
+	name,
+	onBlur,
+	disabled,
+	required,
+	...field
+}: SwitchFieldRenderProps): ReactNode {
+	return (
+		<FieldShell
+			controlFirst
+			id={id}
+			{...field}
+		>
+			{(binding) => (
+				<SwitchPrimitive
+					id={id}
+					name={name}
+					// Radix types `disabled`/`required` as plain booleans, which under
+					// `exactOptionalPropertyTypes` reject an explicit `undefined`.
+					{...(disabled !== undefined ? { disabled } : {})}
+					{...(required !== undefined ? { required } : {})}
+					aria-invalid={field.invalid}
+					checked={checked}
+					onBlur={onBlur}
+					onCheckedChange={onChange}
+					{...binding}
+				/>
+			)}
+		</FieldShell>
+	)
+}
+
+export function RadioGroupField({
+	value,
+	onChange,
+	options,
+	id,
+	name,
+	onBlur,
+	disabled,
+	required,
+	...field
+}: RadioGroupFieldRenderProps): ReactNode {
+	return (
+		<FieldShell
+			id={id}
+			{...field}
+		>
+			{(binding) => (
+				<RadioGroup
+					id={id}
+					name={name}
+					// Radix reserves `''` for "no selection", and under `exactOptionalPropertyTypes` an
+					// explicit `undefined` is rejected — so an empty form value omits the key entirely.
+					{...(value === '' ? {} : { value })}
+					{...(disabled !== undefined ? { disabled } : {})}
+					{...(required !== undefined ? { required } : {})}
+					aria-invalid={field.invalid}
+					onValueChange={onChange}
+					onBlur={onBlur}
+					{...binding}
+				>
+					{options.map((option) => {
+						const itemId = `${id}${RADIO_ITEM_ID_SEPARATOR}${option.value}`
+						return (
+							<div
+								key={option.value}
+								className='flex items-center gap-2'
+							>
+								<RadioGroupItem
+									id={itemId}
+									value={option.value}
+									{...(option.disabled !== undefined ? { disabled: option.disabled } : {})}
+								/>
+								<Label htmlFor={itemId}>{option.label}</Label>
+							</div>
+						)
+					})}
+				</RadioGroup>
 			)}
 		</FieldShell>
 	)
