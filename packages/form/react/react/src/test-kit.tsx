@@ -212,6 +212,69 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
+	SwitchField: ({ checked, onChange, id, name, onBlur, disabled, required, ...field }) => (
+		<Shell
+			controlFirst
+			id={id}
+			{...field}
+		>
+			{(aria) => (
+				<input
+					data-testkit='switch'
+					id={id}
+					name={name}
+					type='checkbox'
+					role='switch'
+					disabled={disabled}
+					required={required}
+					aria-invalid={field.invalid}
+					checked={checked}
+					onBlur={onBlur}
+					onChange={(event) => {
+						onChange(event.target.checked)
+					}}
+					{...aria}
+				/>
+			)}
+		</Shell>
+	),
+	RadioGroupField: ({ value, onChange, options, id, name, onBlur, disabled, required, ...field }) => (
+		<Shell
+			id={id}
+			{...field}
+		>
+			{(aria) => (
+				<div
+					data-testkit='radiogroup'
+					id={id}
+					role='radiogroup'
+					aria-invalid={field.invalid}
+					{...aria}
+				>
+					{options.map((option) => (
+						<label
+							key={option.value}
+							data-testkit='radio-option'
+						>
+							<input
+								type='radio'
+								name={name}
+								value={option.value}
+								disabled={disabled === true || option.disabled === true}
+								required={required}
+								checked={value === option.value}
+								onBlur={onBlur}
+								onChange={(event) => {
+									onChange(event.target.value)
+								}}
+							/>
+							{option.label}
+						</label>
+					))}
+				</div>
+			)}
+		</Shell>
+	),
 	Button: ({ type, disabled, children }) => (
 		<button
 			data-testkit='button'
