@@ -40,6 +40,12 @@ export type SelectFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
 
 export type CheckboxFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
 
+export type SwitchFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
+
+export type RadioGroupFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
+	options: readonly SelectOption[]
+}
+
 /**
  * Props of `form.Form`. `onSubmit` is omitted deliberately: the wrapper owns it and routes
  * it to `form.handleSubmit()`, which is the whole point of the component.
@@ -65,6 +71,8 @@ export type FormFieldComponents<TFormData> = {
 	TextareaField: (props: TextareaFieldProps<TFormData>) => ReactNode
 	SelectField: (props: SelectFieldProps<TFormData>) => ReactNode
 	CheckboxField: (props: CheckboxFieldProps<TFormData>) => ReactNode
+	SwitchField: (props: SwitchFieldProps<TFormData>) => ReactNode
+	RadioGroupField: (props: RadioGroupFieldProps<TFormData>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
 	Form: (props: FormWrapperProps) => ReactNode
 }

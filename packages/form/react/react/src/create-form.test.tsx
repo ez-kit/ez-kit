@@ -14,13 +14,20 @@ type Values = {
 	bio: string
 	role: string
 	agree: boolean
+	notify: boolean
+	plan: string
 }
 
-const DEFAULTS: Values = { email: '', age: 0, bio: '', role: '', agree: false }
+const DEFAULTS: Values = { email: '', age: 0, bio: '', role: '', agree: false, notify: false, plan: '' }
 
 const ROLE_OPTIONS = [
 	{ label: 'User', value: 'user' },
 	{ label: 'Admin', value: 'admin' },
+]
+
+const PLAN_OPTIONS = [
+	{ label: 'Free', value: 'free' },
+	{ label: 'Pro', value: 'pro' },
 ]
 
 const { useForm } = createForm({ components: testComponents })
@@ -166,6 +173,57 @@ describe('createForm — field binding', () => {
 		await user.click(screen.getByLabelText('I agree'))
 
 		expect(screen.getByRole('status')).toHaveTextContent('true')
+	})
+
+	it('binds the switch field to a boolean', async () => {
+		const user = userEvent.setup()
+
+		function SwitchCase() {
+			const form = useForm({ defaultValues: DEFAULTS })
+
+			return (
+				<form.Form>
+					<form.SwitchField
+						name='notify'
+						label='Notify me'
+					/>
+					<form.Subscribe selector={(state) => state.values.notify}>
+						{(notify) => <output>{String(notify)}</output>}
+					</form.Subscribe>
+				</form.Form>
+			)
+		}
+
+		render(<SwitchCase />)
+		expect(screen.getByRole('status')).toHaveTextContent('false')
+
+		await user.click(screen.getByLabelText('Notify me'))
+
+		expect(screen.getByRole('status')).toHaveTextContent('true')
+	})
+
+	it('binds the radio-group field to the selected option', async () => {
+		const user = userEvent.setup()
+
+		function RadioGroupCase() {
+			const form = useForm({ defaultValues: DEFAULTS })
+
+			return (
+				<form.Form>
+					<form.RadioGroupField
+						name='plan'
+						label='Plan'
+						options={PLAN_OPTIONS}
+					/>
+					<form.Subscribe selector={(state) => state.values.plan}>{(plan) => <output>{plan}</output>}</form.Subscribe>
+				</form.Form>
+			)
+		}
+
+		render(<RadioGroupCase />)
+		await user.click(screen.getByLabelText('Pro'))
+
+		expect(screen.getByRole('status')).toHaveTextContent('pro')
 	})
 
 	it('fires onBlur so blur-time validation can run', async () => {
