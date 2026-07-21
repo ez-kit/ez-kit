@@ -15,6 +15,8 @@ describe('@ez-kit/form-core public surface', () => {
 			FormFieldType.Textarea,
 			FormFieldType.Select,
 			FormFieldType.Checkbox,
+			FormFieldType.Switch,
+			FormFieldType.RadioGroup,
 		])
 		expect(new Set(FORM_FIELD_TYPES).size).toBe(FORM_FIELD_TYPES.length)
 	})
