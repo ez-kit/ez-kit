@@ -107,6 +107,17 @@ export type CheckboxFieldRenderProps = FieldRenderProps & {
 	onChange: (checked: boolean) => void
 }
 
+export type SwitchFieldRenderProps = FieldRenderProps & {
+	checked: boolean
+	onChange: (checked: boolean) => void
+}
+
+export type RadioGroupFieldRenderProps = FieldRenderProps & {
+	value: string
+	onChange: (value: string) => void
+	options: readonly SelectOption[]
+}
+
 // ── form level ───────────────────────────────────────────────────────────────
 
 export type ButtonProps = {
@@ -129,6 +140,8 @@ export type FormComponents = {
 	TextareaField: (props: TextareaFieldRenderProps) => ReactNode
 	SelectField: (props: SelectFieldRenderProps) => ReactNode
 	CheckboxField: (props: CheckboxFieldRenderProps) => ReactNode
+	SwitchField: (props: SwitchFieldRenderProps) => ReactNode
+	RadioGroupField: (props: RadioGroupFieldRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
 }

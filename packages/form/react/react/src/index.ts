@@ -9,7 +9,9 @@ export type {
 	FormComponents,
 	FormElementProps,
 	NumberFieldRenderProps,
+	RadioGroupFieldRenderProps,
 	SelectFieldRenderProps,
+	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
 } from './contract'
@@ -19,8 +21,10 @@ export type {
 	FormFieldComponents,
 	FormWrapperProps,
 	NumberFieldProps,
+	RadioGroupFieldProps,
 	SelectFieldProps,
 	SubmitButtonProps,
+	SwitchFieldProps,
 	TextareaFieldProps,
 	TextFieldProps,
 } from './field-props'

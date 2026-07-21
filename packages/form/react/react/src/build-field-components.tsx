@@ -1,7 +1,9 @@
 import { createCheckboxField } from './fields/checkbox-field'
 import { createFormWrapper, createSubmitButton } from './fields/form-parts'
 import { createNumberField } from './fields/number-field'
+import { createRadioGroupField } from './fields/radio-group-field'
 import { createSelectField } from './fields/select-field'
+import { createSwitchField } from './fields/switch-field'
 import { createTextField } from './fields/text-field'
 import { createTextareaField } from './fields/textarea-field'
 
@@ -27,6 +29,8 @@ export function buildFieldComponents<TFormData>(
 		TextareaField: KitTextareaField,
 		SelectField: KitSelectField,
 		CheckboxField: KitCheckboxField,
+		SwitchField: KitSwitchField,
+		RadioGroupField: KitRadioGroupField,
 		Button,
 		Form,
 	} = components
@@ -37,6 +41,8 @@ export function buildFieldComponents<TFormData>(
 		TextareaField: createTextareaField<TFormData>(form, KitTextareaField),
 		SelectField: createSelectField<TFormData>(form, KitSelectField),
 		CheckboxField: createCheckboxField<TFormData>(form, KitCheckboxField),
+		SwitchField: createSwitchField<TFormData>(form, KitSwitchField),
+		RadioGroupField: createRadioGroupField<TFormData>(form, KitRadioGroupField),
 		SubmitButton: createSubmitButton(form, Button),
 		Form: createFormWrapper(form, Form),
 	}
