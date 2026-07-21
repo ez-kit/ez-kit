@@ -8,9 +8,23 @@ const ROLES = [
 	{ label: 'Admin', value: 'admin' },
 ]
 
+const PLANS = [
+	{ label: 'Free', value: 'free' },
+	{ label: 'Pro', value: 'pro' },
+	{ label: 'Enterprise', value: 'enterprise' },
+]
+
 export function FieldsExample() {
 	const form = useForm({
-		defaultValues: { name: '', age: 30, bio: '', role: 'viewer', newsletter: false },
+		defaultValues: {
+			name: '',
+			age: 30,
+			bio: '',
+			role: 'viewer',
+			newsletter: false,
+			notifications: true,
+			plan: 'free',
+		},
 	})
 
 	return (
@@ -41,6 +55,16 @@ export function FieldsExample() {
 			<form.CheckboxField
 				name='newsletter'
 				label='Send me the newsletter'
+			/>
+			<form.SwitchField
+				name='notifications'
+				label='Enable notifications'
+				description='Toggle email and in-app alerts.'
+			/>
+			<form.RadioGroupField
+				name='plan'
+				label='Plan'
+				options={PLANS}
 			/>
 
 			{/* Reading live form state through the native Subscribe API. */}
