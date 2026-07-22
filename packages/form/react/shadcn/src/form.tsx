@@ -6,6 +6,7 @@ import {
 	CheckboxField,
 	NumberField,
 	RadioGroupField,
+	SliderField,
 	SwitchField,
 	TextareaField,
 	TextField,
@@ -30,6 +31,7 @@ const components = {
 	CheckboxField,
 	SwitchField,
 	RadioGroupField,
+	SliderField,
 	Button,
 	Form,
 } satisfies FormComponents

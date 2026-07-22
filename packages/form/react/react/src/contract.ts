@@ -118,6 +118,19 @@ export type RadioGroupFieldRenderProps = FieldRenderProps & {
 	options: readonly SelectOption[]
 }
 
+export type SliderFieldRenderProps = FieldRenderProps & {
+	/**
+	 * A slider always sits at a concrete point on its track, so — unlike a numeric text input —
+	 * an empty form value is coerced to a real number by the binding layer rather than passed
+	 * through as `undefined`.
+	 */
+	value: number
+	onChange: (value: number) => void
+	min: number | undefined
+	max: number | undefined
+	step: number | undefined
+}
+
 // ── form level ───────────────────────────────────────────────────────────────
 
 export type ButtonProps = {
@@ -142,6 +155,7 @@ export type FormComponents = {
 	CheckboxField: (props: CheckboxFieldRenderProps) => ReactNode
 	SwitchField: (props: SwitchFieldRenderProps) => ReactNode
 	RadioGroupField: (props: RadioGroupFieldRenderProps) => ReactNode
+	SliderField: (props: SliderFieldRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
 }

@@ -17,6 +17,7 @@ describe('@ez-kit/form-core public surface', () => {
 			FormFieldType.Checkbox,
 			FormFieldType.Switch,
 			FormFieldType.RadioGroup,
+			FormFieldType.Slider,
 		])
 		expect(new Set(FORM_FIELD_TYPES).size).toBe(FORM_FIELD_TYPES.length)
 	})

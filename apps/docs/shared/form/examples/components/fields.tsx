@@ -24,6 +24,7 @@ export function FieldsExample() {
 			newsletter: false,
 			notifications: true,
 			plan: 'free',
+			volume: 50,
 		},
 	})
 
@@ -65,6 +66,14 @@ export function FieldsExample() {
 				name='plan'
 				label='Plan'
 				options={PLANS}
+			/>
+			<form.SliderField
+				name='volume'
+				label='Volume'
+				description='Drag the thumb to set a value between 0 and 100.'
+				min={0}
+				max={100}
+				step={5}
 			/>
 
 			{/* Reading live form state through the native Subscribe API. */}

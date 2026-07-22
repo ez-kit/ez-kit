@@ -2,7 +2,15 @@
 
 import { createForm } from '@ez-kit/form-react'
 
-import { CheckboxField, NumberField, RadioGroupField, SwitchField, TextareaField, TextField } from './blocks/fields'
+import {
+	CheckboxField,
+	NumberField,
+	RadioGroupField,
+	SliderField,
+	SwitchField,
+	TextareaField,
+	TextField,
+} from './blocks/fields'
 import { Button, Form } from './blocks/form-parts'
 import { SelectField } from './blocks/select'
 
@@ -21,6 +29,7 @@ const components = {
 	CheckboxField,
 	SwitchField,
 	RadioGroupField,
+	SliderField,
 	Button,
 	Form,
 } satisfies FormComponents

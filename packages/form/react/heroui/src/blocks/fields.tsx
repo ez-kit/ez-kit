@@ -4,6 +4,7 @@ import {
 	NumberField as HeroNumberField,
 	Radio,
 	RadioGroup as HeroRadioGroup,
+	Slider as HeroSlider,
 	Switch as HeroSwitch,
 	TextArea,
 	TextField as HeroTextField,
@@ -16,6 +17,7 @@ import type {
 	CheckboxFieldRenderProps,
 	NumberFieldRenderProps,
 	RadioGroupFieldRenderProps,
+	SliderFieldRenderProps,
 	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
@@ -269,5 +271,62 @@ export function RadioGroupField({
 				invalid={field.invalid}
 			/>
 		</HeroRadioGroup>
+	)
+}
+
+export function SliderField({
+	value,
+	onChange,
+	min,
+	max,
+	step,
+	id,
+	name,
+	onBlur,
+	label,
+	description,
+	errors,
+	invalid,
+	disabled,
+	// React Aria's Slider models no `isRequired`/`isInvalid` — a slider always holds an in-range
+	// value — so those flags are not forwarded to the primitive.
+	required: _required,
+	'data-field': dataField,
+	'data-field-type': dataFieldType,
+}: SliderFieldRenderProps): ReactNode {
+	return (
+		// HeroUI's Slider anatomy: label and value output lead, then the track owns the fill and
+		// the single thumb; description and error close the field. The thumb carries `name`/`onBlur`
+		// because it is the focusable control React Aria wires the hidden form input to.
+		<HeroSlider
+			id={id}
+			value={value}
+			data-field={dataField}
+			data-field-type={dataFieldType}
+			onChange={(next) => {
+				// A single-thumb slider yields a number; the range form yields an array. The contract
+				// binds one number, so collapse an array back to its first thumb.
+				onChange(typeof next === 'number' ? next : (next[0] ?? value))
+			}}
+			{...(min !== undefined ? { minValue: min } : {})}
+			{...(max !== undefined ? { maxValue: max } : {})}
+			{...(step !== undefined ? { step } : {})}
+			{...(disabled !== undefined ? { isDisabled: disabled } : {})}
+		>
+			<FieldLabel label={label} />
+			<HeroSlider.Output />
+			<HeroSlider.Track>
+				<HeroSlider.Fill />
+				<HeroSlider.Thumb
+					name={name}
+					onBlur={onBlur}
+				/>
+			</HeroSlider.Track>
+			<FieldDescription description={description} />
+			<FieldErrorText
+				errors={errors}
+				invalid={invalid}
+			/>
+		</HeroSlider>
 	)
 }
