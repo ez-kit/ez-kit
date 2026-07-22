@@ -13,6 +13,7 @@ export enum FormFieldType {
 	Checkbox = 'checkbox',
 	Switch = 'switch',
 	RadioGroup = 'radiogroup',
+	Slider = 'slider',
 }
 
 /** Every built-in field kind, in the order the contract declares them. */
@@ -24,4 +25,5 @@ export const FORM_FIELD_TYPES = [
 	FormFieldType.Checkbox,
 	FormFieldType.Switch,
 	FormFieldType.RadioGroup,
+	FormFieldType.Slider,
 ] as const

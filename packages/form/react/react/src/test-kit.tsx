@@ -275,6 +275,33 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
+	SliderField: ({ value, onChange, min, max, step, id, name, onBlur, disabled, required, ...field }) => (
+		<Shell
+			id={id}
+			{...field}
+		>
+			{(aria) => (
+				<input
+					data-testkit='slider'
+					id={id}
+					name={name}
+					type='range'
+					min={min}
+					max={max}
+					step={step}
+					disabled={disabled}
+					required={required}
+					aria-invalid={field.invalid}
+					value={value}
+					onBlur={onBlur}
+					onChange={(event) => {
+						onChange(event.target.valueAsNumber)
+					}}
+					{...aria}
+				/>
+			)}
+		</Shell>
+	),
 	Button: ({ type, disabled, children }) => (
 		<button
 			data-testkit='button'
