@@ -125,6 +125,29 @@ Binds to a `string`. Like `form.SelectField` it takes a flat `options` list, but
 
 Each option is the same `SelectOption` shape as `form.SelectField`: `{ label, value, disabled? }`. The value in form state is the selected option's `value`; an empty string means nothing is selected.
 
+## `form.SliderField`
+
+Binds to a `number`, like `form.NumberField`, but picks the value along a track instead of typing it. Accepts `min`, `max`, `step` — reach for it when the range is bounded and the exact digit matters less than the feel of "more or less".
+
+```tsx
+<form.SliderField
+	name='volume'
+	label='Volume'
+	description='Drag the thumb to set a value between 0 and 100.'
+	min={0}
+	max={100}
+	step={5}
+/>
+```
+
+| Prop   | Type     | Notes                                    |
+| ------ | -------- | ---------------------------------------- |
+| `min`  | `number` | Track start. Defaults to `0` if omitted. |
+| `max`  | `number` | Track end.                               |
+| `step` | `number` | Granularity of each move.                |
+
+A slider has no "empty" position: when the form value is not yet a number the thumb rests at `min` (or `0` when `min` is omitted), so the control always shows a definite value. Both kits render a real slider widget with a draggable thumb (Radix for shadcn, React Aria for HeroUI).
+
 ## `form.SubmitButton`
 
 Subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it.
@@ -145,12 +168,12 @@ A `<form>` element already wired to `handleSubmit`, with `noValidate` set so the
 
 The field layer emits these and styles none of them — that is the kit's job:
 
-| Attribute         | Where        | Value                                                                            |
-| ----------------- | ------------ | -------------------------------------------------------------------------------- |
-| `data-field`      | field root   | the field's `name`                                                               |
-| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `checkbox` / `switch` / `radiogroup` |
-| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                              |
-| `data-form`       | the `<form>` | always present                                                                   |
+| Attribute         | Where        | Value                                                                                       |
+| ----------------- | ------------ | ------------------------------------------------------------------------------------------- |
+| `data-field`      | field root   | the field's `name`                                                                          |
+| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `checkbox` / `switch` / `radiogroup` / `slider` |
+| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                         |
+| `data-form`       | the `<form>` | always present                                                                              |
 
 So targeting one field, or every field of a kind, is plain CSS:
 
