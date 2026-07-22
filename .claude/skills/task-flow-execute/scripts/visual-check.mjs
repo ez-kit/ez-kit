@@ -71,7 +71,30 @@ async function visit(page, base, p, outDir) {
 		// open (streaming / HMR in dev), so 'networkidle' can hang past the timeout on a
 		// perfectly healthy page. A visible <main>/<h1> is a truer "page is ready" signal;
 		// swallow the wait error so a page legitimately lacking them still gets screenshotted.
-		await page.waitForSelector('main, h1, [role="main"]', { timeout: NAV_TIMEOUT_MS }).catch(() => {})
+		//
+		// Docs pages with a live example render it inside a SEPARATE-document <iframe> (see
+		// apps/docs/components/example-frame.tsx) pointing at an (embed) route whose content
+		// is client-only (`next/dynamic({ ssr: false })`). `waitForSelector` on the OUTER page
+		// is satisfied by the docs shell's own <h1>/<main> immediately and never observes
+		// whether the iframe has actually hydrated — a screenshot taken at that instant can
+		// capture a blank iframe box that looks broken but isn't (found live: the grid was
+		// genuinely fine on a slower, separately-verified reload). When an iframe is present,
+		// wait for content to appear *inside* it instead.
+		const iframeCount = await page
+			.locator('iframe')
+			.count()
+			.catch(() => 0)
+		if (iframeCount > 0) {
+			await page
+				.frameLocator('iframe')
+				.first()
+				.locator('body *')
+				.first()
+				.waitFor({ state: 'visible', timeout: NAV_TIMEOUT_MS })
+				.catch(() => {})
+		} else {
+			await page.waitForSelector('main, h1, [role="main"]', { timeout: NAV_TIMEOUT_MS }).catch(() => {})
+		}
 		title = await page.title()
 		await page.screenshot({ path: shot, fullPage: true })
 		// Accessibility tree is best-effort reference only: `page.accessibility` was removed
