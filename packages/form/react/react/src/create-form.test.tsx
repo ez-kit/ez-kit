@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -224,6 +224,59 @@ describe('createForm — field binding', () => {
 		await user.click(screen.getByLabelText('Pro'))
 
 		expect(screen.getByRole('status')).toHaveTextContent('pro')
+	})
+
+	it('binds the slider field to a number', () => {
+		function SliderCase() {
+			const form = useForm({ defaultValues: DEFAULTS })
+
+			return (
+				<form.Form>
+					<form.SliderField
+						name='age'
+						label='Age'
+						min={0}
+						max={10}
+					/>
+					<form.Subscribe selector={(state) => state.values.age}>
+						{(age) => <output>{String(age)}</output>}
+					</form.Subscribe>
+				</form.Form>
+			)
+		}
+
+		render(<SliderCase />)
+		expect(screen.getByRole('status')).toHaveTextContent('0')
+
+		// A range input reports its value as a string; the adapter must write a real `number` back.
+		fireEvent.change(screen.getByLabelText('Age'), { target: { value: '7' } })
+
+		expect(screen.getByRole('status')).toHaveTextContent('7')
+	})
+
+	it('rests at the minimum when the bound value is not a real number', () => {
+		const { useForm: useSliderForm } = createForm({ components: testComponents })
+
+		function FallbackCase() {
+			// `NaN` is a `number` to the type system but "no value" to `asNumber`, so the thumb must
+			// fall back to the declared `min` rather than render `NaN`.
+			const form = useSliderForm({ defaultValues: { level: Number.NaN } })
+
+			return (
+				<form.Form>
+					<form.SliderField
+						name='level'
+						label='Level'
+						min={10}
+						max={20}
+					/>
+				</form.Form>
+			)
+		}
+
+		render(<FallbackCase />)
+
+		expect(screen.getByLabelText('Level')).toHaveValue('10')
 	})
 
 	it('fires onBlur so blur-time validation can run', async () => {

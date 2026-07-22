@@ -2,6 +2,7 @@ import { Checkbox as CheckboxPrimitive } from '@form-shadcn/components/ui/checkb
 import { Input } from '@form-shadcn/components/ui/input'
 import { Label } from '@form-shadcn/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@form-shadcn/components/ui/radio-group'
+import { Slider as SliderPrimitive } from '@form-shadcn/components/ui/slider'
 import { Switch as SwitchPrimitive } from '@form-shadcn/components/ui/switch'
 import { Textarea as TextareaPrimitive } from '@form-shadcn/components/ui/textarea'
 
@@ -11,6 +12,7 @@ import type {
 	CheckboxFieldRenderProps,
 	NumberFieldRenderProps,
 	RadioGroupFieldRenderProps,
+	SliderFieldRenderProps,
 	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
@@ -270,6 +272,50 @@ export function RadioGroupField({
 						)
 					})}
 				</RadioGroup>
+			)}
+		</FieldShell>
+	)
+}
+
+export function SliderField({
+	value,
+	onChange,
+	min,
+	max,
+	step,
+	id,
+	name,
+	onBlur,
+	disabled,
+	// Radix's Slider has no `required` prop — a slider always holds a value — so the flag is
+	// dropped here rather than forwarded to the primitive.
+	required: _required,
+	...field
+}: SliderFieldRenderProps): ReactNode {
+	return (
+		<FieldShell
+			id={id}
+			{...field}
+		>
+			{(binding) => (
+				<SliderPrimitive
+					id={id}
+					name={name}
+					// Radix types `min`/`max`/`step`/`disabled` as plain values, which under
+					// `exactOptionalPropertyTypes` reject an explicit `undefined`.
+					{...(min !== undefined ? { min } : {})}
+					{...(max !== undefined ? { max } : {})}
+					{...(step !== undefined ? { step } : {})}
+					{...(disabled !== undefined ? { disabled } : {})}
+					aria-invalid={field.invalid}
+					// Radix models the multi-thumb range as an array; the contract is a single number.
+					value={[value]}
+					onBlur={onBlur}
+					onValueChange={(next) => {
+						onChange(next[0] ?? value)
+					}}
+					{...binding}
+				/>
 			)}
 		</FieldShell>
 	)

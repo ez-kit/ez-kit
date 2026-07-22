@@ -46,6 +46,12 @@ export type RadioGroupFieldProps<TFormData> = BaseFieldProps<TFormData, string> 
 	options: readonly SelectOption[]
 }
 
+export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
+	min?: number
+	max?: number
+	step?: number
+}
+
 /**
  * Props of `form.Form`. `onSubmit` is omitted deliberately: the wrapper owns it and routes
  * it to `form.handleSubmit()`, which is the whole point of the component.
@@ -73,6 +79,7 @@ export type FormFieldComponents<TFormData> = {
 	CheckboxField: (props: CheckboxFieldProps<TFormData>) => ReactNode
 	SwitchField: (props: SwitchFieldProps<TFormData>) => ReactNode
 	RadioGroupField: (props: RadioGroupFieldProps<TFormData>) => ReactNode
+	SliderField: (props: SliderFieldProps<TFormData>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
 	Form: (props: FormWrapperProps) => ReactNode
 }
