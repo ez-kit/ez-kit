@@ -189,6 +189,16 @@ tr[data-expanded] > td {
 	justify-content: center;
 }
 
+/* Row-height rule: cell height is driven by content, and the action buttons are the only
+ * icon-only buttons in the kit without an explicit `size`, so they fall back to HeroUI's
+ * default `md` (36-40px) instead of matching the rest of the kit's `sm` (32px). A bare `<td>`
+ * is not a flex container, so the two buttons also render as inline neighbours with no gap. */
+[data-system-column='actions'] {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
 tr[data-depth='1'] [data-system-column='expand'] {
 	padding-left: 1rem;
 }
