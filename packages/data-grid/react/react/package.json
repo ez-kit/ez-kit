@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-react",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Framework-agnostic React adapter for @ez-kit/data-grid — headless render layer with zero visual styling.",
 	"license": "MIT",
 	"repository": {

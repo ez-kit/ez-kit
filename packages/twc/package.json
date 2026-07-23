@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/twc",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "styled-components-flavored factory over Tailwind + cva: bind classes and variants to an element or component.",
 	"license": "MIT",
 	"repository": {
