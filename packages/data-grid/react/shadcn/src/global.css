@@ -136,6 +136,16 @@
 	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 40%, var(--background));
 }
 
+/* Pinned cells paint an opaque `--dg-pin-cell-background` instead of letting the row's
+ * `hover:bg-muted/50` show through, so they need the row's transition too. Custom properties
+ * are not animatable, but `background-color` is — the var is only its source — so the same
+ * `transition-colors` the row uses makes the pinned column fade in step with it instead of
+ * snapping instantly (which read as a separate, non-table element). */
+[data-slot='th'][data-pinned],
+[data-slot='td'][data-pinned] {
+	@apply transition-colors;
+}
+
 /* Pinned rows must be opaque while body content scrolls underneath. */
 [data-slot='tr'][data-pinned] > [data-slot='td'],
 [data-slot='tr'][data-pinned] > [data-slot='th'] {

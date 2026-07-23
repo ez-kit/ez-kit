@@ -103,10 +103,18 @@
  * `[data-slot='thead'][data-sticky='true']` (higher specificity) owns `z-index`. Repainting the
  * header `--surface` here made the sticky grid the only white-headed table in the kit (#140). */
 
+/* HeroUI paints its row hover on `.table__cell` as `--surface` at 40% alpha, which composites
+ * against what is actually behind the cells: `.table-root`, i.e. `--surface-secondary`. Mixing
+ * against `--background` (the page, neutral) instead made the pinned column land on a different
+ * lightness *and* a different hue than every other cell in the same row. */
 .table__row:hover,
 .table__row[data-hovered='true'] {
-	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--background));
+	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--surface-secondary));
 }
+
+/* No `transition` on pinned cells here, deliberately — unlike shadcn (whose row carries
+ * `transition-colors`), HeroUI paints `.table__cell` hover with no transition at all, so the
+ * pinned column snapping instantly is what keeps it in step with the rest of the row. */
 
 [data-pin-shadow='left'] {
 	width: 12px;
