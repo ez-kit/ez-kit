@@ -97,10 +97,11 @@
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
 }
 
-[data-sticky='true'] {
-	background-color: var(--surface);
-	z-index: 2;
-}
+/* The sticky header needs no background or stacking rule here. HeroUI's own `.table__header`
+ * already paints `--surface-secondary` — the color every non-sticky grid in this kit shows, and
+ * the one HeroUI's own sticky-header recipe reaches for — and the shared stylesheet's
+ * `[data-slot='thead'][data-sticky='true']` (higher specificity) owns `z-index`. Repainting the
+ * header `--surface` here made the sticky grid the only white-headed table in the kit (#140). */
 
 .table__row:hover,
 .table__row[data-hovered='true'] {
@@ -123,12 +124,24 @@
 
 [data-slot='tr'][data-pinned] {
 	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+	/* The row is 1px taller than its cells — HeroUI gives `.table__row` its own `border-bottom`,
+	 * and that border's color is 50% transparent. Painting only the cells (below) therefore leaves
+	 * a 1px band per pinned row that the scrolling content bleeds through. Background paints over
+	 * the border box, so covering the row covers that band too. */
+	background-color: var(--dg-pin-cell-background);
 }
 
-/* Pinned rows must be opaque while body content scrolls underneath. */
+/* Pinned rows must be opaque while body content scrolls underneath.
+ *
+ * The radius reset undoes HeroUI's `.table__body tr:first-child td:first-child` /
+ * `…:last-child` top corners. Those exist because in HeroUI's layout the body *is* the top of the
+ * card; a pinned row is the first row in the tbody, so it carried the card's rounded corners into
+ * the middle of the table, floating under the header (#140). HeroUI's own `--secondary` variant
+ * zeroes the same radii, so this is variant decoration rather than a table invariant. */
 [data-slot='tr'][data-pinned] > [data-slot='td'],
 [data-slot='tr'][data-pinned] > [data-slot='th'] {
 	background-color: var(--dg-pin-cell-background);
+	border-radius: 0;
 }
 
 /* Soft edge shadow matching the column-pin overlay style.

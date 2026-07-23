@@ -87,32 +87,6 @@ function useScrollShadows(
 	}, [wrapperRef, scrollRef])
 }
 
-/**
- * Publishes the rendered thead height as `--dg-header-height` on the wrapper so
- * pinned-top rows can be offset below the sticky header (consumed by the
- * structural stylesheet). No-op when sticky header is disabled.
- */
-function useHeaderHeightVar(wrapperRef: { current: HTMLElement | null }, enabled: boolean): void {
-	useEffect(() => {
-		if (!enabled) return
-		const wrapper = wrapperRef.current
-		if (!wrapper) return
-		const thead = wrapper.querySelector("[data-slot='thead']")
-		if (!(thead instanceof HTMLElement)) return
-
-		const update = () => {
-			wrapper.style.setProperty('--dg-header-height', `${String(thead.offsetHeight)}px`)
-		}
-		update()
-		const ro = new ResizeObserver(update)
-		ro.observe(thead)
-		return () => {
-			ro.disconnect()
-			wrapper.style.removeProperty('--dg-header-height')
-		}
-	}, [wrapperRef, enabled])
-}
-
 function resolveEstimateSize(
 	estimateSize: NormalizedVirtualizedConfig['row']['estimateSize'],
 ): (index: number) => number {
@@ -185,7 +159,6 @@ export function DataGridTable() {
 	// Non-virtualized: resolveScrollElement finds the real scroll element inside wrapperRef
 	// (handles both shadcn's inner overflow div and HeroUI's inner ScrollContainer).
 	useScrollShadows(wrapperRef, isVirtualized ? containerRef : undefined)
-	useHeaderHeightVar(wrapperRef, isStickyHeader)
 
 	// Re-evaluate shadow state immediately when column layout changes (pin/unpin, resize)
 	// so shadows update without requiring a scroll event.

@@ -23,6 +23,41 @@ It is not, however, in good shape: it still writes `--heroui-*` v2 tokens (see "
 
 Add new components to `src/blocks/`. Do **not** extend `src/components/ui/` — keeping it at one file keeps the misleading path from spreading.
 
+## Collection items: `items` + render prop, never conditional JSX
+
+Any menu/list whose set of items **varies** (`Dropdown.Item`, `ListBox.Item`, …) must be driven by
+`items={…}` plus a render-prop child — not by `{cond && <Item id='x'/>}` or a ternary between item sets:
+
+```tsx
+<Dropdown.Menu
+	items={getItems(props)}
+	onAction={onAction}
+>
+	{(item: RowPinMenuItem) => (
+		<Dropdown.Item id={item.id}>
+			{item.icon} {item.label}
+		</Dropdown.Item>
+	)}
+</Dropdown.Menu>
+```
+
+react-aria stores each item as a CollectionNode whose `id` is **immutable**; feeding a mounted node a
+different `id` throws `Cannot change the id of an item` (`react-aria/…/collections/Document.mjs`). With
+conditional JSX, React can reconcile one item's fiber onto another's element — an unkeyed top-level
+fragment gets unwrapped, so `{isPinned ? <Item id='unpin'/> : <><Item id='pin-top'/>…</>}` matched
+`unpin` onto the live `pin-top` node and crashed row pinning (#140). A flat `{cond && <Item/>}` array
+survives only because index alignment happens to hold — that is luck, not correctness.
+
+The `items` path removes the hazard rather than working around it: `useCachedChildren` clones every
+element with `key = props.id ?? item.key ?? item.id`, so React can never reuse a fiber across ids.
+
+Build the item objects **fresh on each render**. `useCachedChildren` caches the rendered element in a
+`WeakMap` keyed by item identity (invalidated only by the `dependencies` prop), so reused objects would
+freeze the rendered item along with anything it closes over.
+
+Statically-shaped lists (`SelectCell`, `SortMenu`'s asc/desc, `BooleanCell`) can stay as literal JSX —
+their item set never changes shape. Mapped lists must keep `key={…}` as they already do.
+
 ## HeroUI v3 tokens
 
 Do **not** write `--heroui-*` tokens: those are v2 names, this package is on v3, and they resolve to nothing — `hsl(var(--heroui-default-100))` is invalid at computed-value time and silently drops the whole declaration (this is what broke the inline selection bar's background, #68).

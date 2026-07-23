@@ -4,13 +4,42 @@ import { Dropdown } from '@heroui/react'
 import { ArrowDownToLine, ArrowUpToLine, MoreHorizontal, PinOff } from 'lucide-react'
 
 import type { RowPinMenuProps } from '@ez-kit/data-grid-react'
-import type { Key } from 'react'
+import type { Key, ReactNode } from 'react'
 
-export function RowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinBottom, onUnpin }: RowPinMenuProps) {
+enum RowPinAction {
+	PinTop = 'pin-top',
+	PinBottom = 'pin-bottom',
+	Unpin = 'unpin',
+}
+
+type RowPinMenuItem = {
+	id: RowPinAction
+	label: string
+	icon: ReactNode
+}
+
+/**
+ * Fresh item objects on every render: `useCachedChildren` keys its element cache on the item
+ * identity, so reusing objects would freeze the rendered item — including any closure it captures.
+ */
+function getItems({ isPinned, canPinTop, canPinBottom }: RowPinMenuProps): RowPinMenuItem[] {
+	if (isPinned) {
+		return [{ id: RowPinAction.Unpin, label: 'Unpin', icon: <PinOff size={16} /> }]
+	}
+
+	return [
+		...(canPinTop ? [{ id: RowPinAction.PinTop, label: 'Pin Top', icon: <ArrowUpToLine size={16} /> }] : []),
+		...(canPinBottom ? [{ id: RowPinAction.PinBottom, label: 'Pin Bottom', icon: <ArrowDownToLine size={16} /> }] : []),
+	]
+}
+
+export function RowPinMenu(props: RowPinMenuProps) {
+	const { onPinTop, onPinBottom, onUnpin } = props
+
 	const onAction = (key: Key) => {
-		if (key === 'pin-top') onPinTop()
-		if (key === 'pin-bottom') onPinBottom()
-		if (key === 'unpin') onUnpin()
+		if (key === RowPinAction.PinTop) onPinTop()
+		if (key === RowPinAction.PinBottom) onPinBottom()
+		if (key === RowPinAction.Unpin) onUnpin()
 	}
 
 	return (
@@ -26,25 +55,13 @@ export function RowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinB
 			<Dropdown.Popover>
 				<Dropdown.Menu
 					aria-label='Row pinning'
+					items={getItems(props)}
 					onAction={onAction}
 				>
-					{isPinned ? (
-						<Dropdown.Item id='unpin'>
-							<PinOff size={16} /> Unpin
+					{(item: RowPinMenuItem) => (
+						<Dropdown.Item id={item.id}>
+							{item.icon} {item.label}
 						</Dropdown.Item>
-					) : (
-						<>
-							{canPinTop && (
-								<Dropdown.Item id='pin-top'>
-									<ArrowUpToLine size={16} /> Pin Top
-								</Dropdown.Item>
-							)}
-							{canPinBottom && (
-								<Dropdown.Item id='pin-bottom'>
-									<ArrowDownToLine size={16} /> Pin Bottom
-								</Dropdown.Item>
-							)}
-						</>
 					)}
 				</Dropdown.Menu>
 			</Dropdown.Popover>

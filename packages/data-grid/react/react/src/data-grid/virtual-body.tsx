@@ -6,16 +6,10 @@ import { DATA_GRID_DEFAULTS } from '../defaults'
 import { DataGridRow } from './row'
 import { useDataGridInstance, useTable } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
+import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { useVirtualContext } from './virtual-context'
 
 import type { VirtualItem } from '@tanstack/react-virtual'
-import type { CSSProperties } from 'react'
-
-/**
- * CSS custom property used to compute sticky offsets for pinned rows.
- * Same variable as Body — override with `--dg-row-height` to match your row height.
- */
-const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
 
 /**
  * Vertical space reserved below the virtual rows for the load-more loader (px).
@@ -63,6 +57,8 @@ export function VirtualBody() {
 	const topRows = hasPinning ? table.getTopRows() : []
 	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
 	const bottomRows = hasPinning ? table.getBottomRows() : []
+	const registerTopRow = usePinnedRowOffsets('top', topRows.length)
+	const registerBottomRow = usePinnedRowOffsets('bottom', bottomRows.length)
 
 	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
 	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.infinite.threshold.rows
@@ -97,7 +93,7 @@ export function VirtualBody() {
 					key={row.id}
 					row={row}
 					data-pinned='top'
-					style={{ '--dg-row-pin-offset': `calc(${String(index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
+					ref={registerTopRow(index)}
 				/>
 			))}
 
@@ -119,11 +115,7 @@ export function VirtualBody() {
 					key={row.id}
 					row={row}
 					data-pinned='bottom'
-					style={
-						{
-							'--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
-						} as CSSProperties
-					}
+					ref={registerBottomRow(index)}
 				/>
 			))}
 

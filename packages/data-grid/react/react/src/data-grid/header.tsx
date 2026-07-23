@@ -1,4 +1,5 @@
 import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import { useEffect, useState } from 'react'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
@@ -23,6 +24,40 @@ type HeaderProps = {
 }
 
 /**
+ * Publishes the rendered thead height as `--dg-header-height` on the table wrapper so pinned-top
+ * rows can be offset below the sticky header (consumed by the structural stylesheet).
+ *
+ * Measures through a ref rather than by querying the DOM for the thead: a kit may commit its
+ * header in a later pass than the one that mounts this component — HeroUI builds it through a
+ * react-aria collection — and a query that runs too early finds nothing and never retries (#140).
+ * The ref lands in state so the effect re-runs whenever the element actually attaches.
+ *
+ * Returns the ref callback to hand to the thead. No-op when sticky header is disabled.
+ */
+function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | null) => void {
+	const [thead, setThead] = useState<HTMLTableSectionElement | null>(null)
+
+	useEffect(() => {
+		if (!enabled || !thead) return
+		const wrapper = thead.closest("[data-slot='table-wrapper']")
+		if (!(wrapper instanceof HTMLElement)) return
+
+		const update = () => {
+			wrapper.style.setProperty('--dg-header-height', `${String(thead.offsetHeight)}px`)
+		}
+		update()
+		const ro = new ResizeObserver(update)
+		ro.observe(thead)
+		return () => {
+			ro.disconnect()
+			wrapper.style.removeProperty('--dg-header-height')
+		}
+	}, [enabled, thead])
+
+	return setThead
+}
+
+/**
  * Renders the table `<thead>` with all header groups.
  *
  * Emits data attributes consumed by the structural stylesheet
@@ -35,6 +70,7 @@ type HeaderProps = {
  * structural CSS reads them on `[data-pinned]` elements.
  */
 export function Header({ stickyHeader }: HeaderProps = {}) {
+	const theadRef = useHeaderHeightVar(Boolean(stickyHeader))
 	const instance = useDataGridInstance()
 	const table = instance.table
 
@@ -69,6 +105,7 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 
 	return (
 		<Thead
+			ref={theadRef}
 			data-slot='thead'
 			{...(stickyHeader ? { 'data-sticky': 'true' } : {})}
 		>

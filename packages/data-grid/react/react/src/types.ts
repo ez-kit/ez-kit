@@ -14,6 +14,7 @@ import type {
 	MouseEventHandler,
 	ReactElement,
 	ReactNode,
+	RefAttributes,
 	TdHTMLAttributes,
 	ThHTMLAttributes,
 	TouchEventHandler,
@@ -46,9 +47,15 @@ export type ActionsCellProps = {
 // ── primitive component props ─────────────────────────────────────────────
 
 export type TableProps = HTMLAttributes<HTMLTableElement>
-export type TheadProps = HTMLAttributes<HTMLTableSectionElement>
+/**
+ * The thead adapter must forward `ref` to the rendered element: the shared layer measures the
+ * header there to publish `--dg-header-height` (see `Header`), and a kit that swallows the ref
+ * leaves pinned-top rows stacked under the sticky header.
+ */
+export type TheadProps = HTMLAttributes<HTMLTableSectionElement> & RefAttributes<HTMLTableSectionElement>
 export type TbodyProps = HTMLAttributes<HTMLTableSectionElement>
-export type TrProps = HTMLAttributes<HTMLTableRowElement>
+/** Like {@link TheadProps}, the ref must reach the rendered row: pinned rows are measured there. */
+export type TrProps = HTMLAttributes<HTMLTableRowElement> & RefAttributes<HTMLTableRowElement>
 export type ThProps = ThHTMLAttributes<HTMLTableCellElement> & { pinned?: 'left' | 'right' | false }
 export type TdProps = TdHTMLAttributes<HTMLTableCellElement> & { pinned?: 'left' | 'right' | false }
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>
