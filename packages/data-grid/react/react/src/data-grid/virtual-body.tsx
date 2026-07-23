@@ -57,8 +57,14 @@ export function VirtualBody() {
 	const topRows = hasPinning ? table.getTopRows() : []
 	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
 	const bottomRows = hasPinning ? table.getBottomRows() : []
-	const registerTopRow = usePinnedRowOffsets('top', topRows.length)
-	const registerBottomRow = usePinnedRowOffsets('bottom', bottomRows.length)
+	const registerTopRow = usePinnedRowOffsets(
+		'top',
+		topRows.map((row) => row.id),
+	)
+	const registerBottomRow = usePinnedRowOffsets(
+		'bottom',
+		bottomRows.map((row) => row.id),
+	)
 
 	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
 	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.infinite.threshold.rows
