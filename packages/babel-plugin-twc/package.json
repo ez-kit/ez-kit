@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/babel-plugin-twc",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Babel plugin for @ez-kit/twc: fills the component-name argument from the variable name.",
 	"license": "MIT",
 	"repository": {

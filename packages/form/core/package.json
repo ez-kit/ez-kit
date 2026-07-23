@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/form-core",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Framework-agnostic form core for @ez-kit/form — field types, select options and error formatting (built on TanStack Form).",
 	"license": "MIT",
 	"repository": {
