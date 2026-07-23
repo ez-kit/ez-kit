@@ -80,25 +80,25 @@ hosting target `apps/docs` currently uses — same as the existing site).
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design._
 
 Constitution version evaluated: **0.1.0**.
 
-| Principle / Constraint | Relevance | Pass? | Notes |
-|---|---|---|---|
-| I. Layered Headless Architecture (NON-NEGOTIABLE) | Indirect | ✅ | Feature touches docs only. No runtime code added to `packages/`. The new MDX shortcode reuses `DataGridSandpackExample` and the manifest unchanged. |
-| II. No Style Bleed in Shared React Package | Indirect | ✅ | `packages/data-grid/react/react` is not modified. New styling lives in `apps/docs/`, not in the shared React package. |
-| III. Vendored Primitives Are Immutable | Indirect | ✅ | `packages/data-grid/react/shadcn/src/components/ui/**` is not modified. |
-| IV. Test-First Discipline (NON-NEGOTIABLE) | Direct | ✅ | The new `<DataGridDocsExample>` shortcode is code; a failing Vitest test will be written first, then the implementation. A Playwright visual test for one representative page covers end-to-end behavior. MDX prose content itself is not unit-tested — that is consistent with how the existing `zu-store` docs operate. |
-| V. Breaking Changes Documented via Changesets | Indirect | ✅ | `apps/docs` is a private workspace package (`"private": true` per `apps/docs/package.json` defaults for monorepo apps) — it is not published, so no changeset is required for the docs app itself. Any data-grid package break documented inline must already have a changeset on its source package; this feature is downstream content. |
-| Additional: ESM-only, TS strictness, lint --max-warnings=0 | Direct | ✅ | New code follows the same strict TS + ESM pattern as the rest of `apps/docs`. |
-| Additional: Single public entry | N/A | ✅ | Not applicable to a docs subproject. |
-| Additional: Size budgets | N/A | ✅ | `apps/docs` has no `size-limit` budget (`pnpm size` is a no-op for docs per its package.json). |
-| Additional: Immutability | Direct | ✅ | New shortcode uses local `useState` and renders Sandpack; no shared mutation. |
-| Additional: File size 200–400 typical, max 800 | Direct | ✅ | mdx pages will be authored to that envelope; the shortcode component is small (~50 LoC expected). |
-| Additional: Docs sandbox parity | Direct | ✅ | This feature explicitly enforces parity (FR-006) by exposing both flavors via the new shortcode's toggle, and by reusing existing dual-flavor examples. |
-| Workflow: TDD | Direct | ✅ | See Principle IV row. |
-| Workflow: Local CI parity | Direct | ✅ | `pnpm ci` MUST pass before merge; FR-013 makes `pnpm docs:build` the doc-specific gate. |
+| Principle / Constraint                                     | Relevance | Pass? | Notes                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------- | --------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I. Layered Headless Architecture (NON-NEGOTIABLE)          | Indirect  | ✅    | Feature touches docs only. No runtime code added to `packages/`. The new MDX shortcode reuses `DataGridSandpackExample` and the manifest unchanged.                                                                                                                                                                                       |
+| II. No Style Bleed in Shared React Package                 | Indirect  | ✅    | `packages/data-grid/react/react` is not modified. New styling lives in `apps/docs/`, not in the shared React package.                                                                                                                                                                                                                     |
+| III. Vendored Primitives Are Immutable                     | Indirect  | ✅    | `packages/data-grid/react/shadcn/src/components/ui/**` is not modified.                                                                                                                                                                                                                                                                   |
+| IV. Test-First Discipline (NON-NEGOTIABLE)                 | Direct    | ✅    | The new `<DataGridDocsExample>` shortcode is code; a failing Vitest test will be written first, then the implementation. A Playwright visual test for one representative page covers end-to-end behavior. MDX prose content itself is not unit-tested — that is consistent with how the existing `zu-store` docs operate.                 |
+| V. Breaking Changes Documented via Changesets              | Indirect  | ✅    | `apps/docs` is a private workspace package (`"private": true` per `apps/docs/package.json` defaults for monorepo apps) — it is not published, so no changeset is required for the docs app itself. Any data-grid package break documented inline must already have a changeset on its source package; this feature is downstream content. |
+| Additional: ESM-only, TS strictness, lint --max-warnings=0 | Direct    | ✅    | New code follows the same strict TS + ESM pattern as the rest of `apps/docs`.                                                                                                                                                                                                                                                             |
+| Additional: Single public entry                            | N/A       | ✅    | Not applicable to a docs subproject.                                                                                                                                                                                                                                                                                                      |
+| Additional: Size budgets                                   | N/A       | ✅    | `apps/docs` has no `size-limit` budget (`pnpm size` is a no-op for docs per its package.json).                                                                                                                                                                                                                                            |
+| Additional: Immutability                                   | Direct    | ✅    | New shortcode uses local `useState` and renders Sandpack; no shared mutation.                                                                                                                                                                                                                                                             |
+| Additional: File size 200–400 typical, max 800             | Direct    | ✅    | mdx pages will be authored to that envelope; the shortcode component is small (~50 LoC expected).                                                                                                                                                                                                                                         |
+| Additional: Docs sandbox parity                            | Direct    | ✅    | This feature explicitly enforces parity (FR-006) by exposing both flavors via the new shortcode's toggle, and by reusing existing dual-flavor examples.                                                                                                                                                                                   |
+| Workflow: TDD                                              | Direct    | ✅    | See Principle IV row.                                                                                                                                                                                                                                                                                                                     |
+| Workflow: Local CI parity                                  | Direct    | ✅    | `pnpm ci` MUST pass before merge; FR-013 makes `pnpm docs:build` the doc-specific gate.                                                                                                                                                                                                                                                   |
 
 **Gate result**: PASS. Proceed to Phase 0.
 
@@ -213,5 +213,5 @@ No violations. This feature is content + one shared shortcode, fully aligned
 with the constitution.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| _(none)_ | — | — |
+| --------- | ---------- | ------------------------------------ |
+| _(none)_  | —          | —                                    |

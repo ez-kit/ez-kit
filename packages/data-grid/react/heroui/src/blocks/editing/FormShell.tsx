@@ -11,13 +11,12 @@ import type { FormShellProps } from '@ez-kit/data-grid-react'
  */
 export function FormShell({ open, title, formError, isPending, onSave, onCancel, children }: FormShellProps) {
 	return (
-		<HeroModal
+		<HeroModal.Backdrop
 			isOpen={open}
 			onOpenChange={(isOpen) => {
 				if (!isOpen) onCancel()
 			}}
 		>
-			<HeroModal.Backdrop />
 			<HeroModal.Container>
 				<HeroModal.Dialog>
 					<HeroModal.Header>
@@ -51,6 +50,6 @@ export function FormShell({ open, title, formError, isPending, onSave, onCancel,
 					</HeroModal.Footer>
 				</HeroModal.Dialog>
 			</HeroModal.Container>
-		</HeroModal>
+		</HeroModal.Backdrop>
 	)
 }

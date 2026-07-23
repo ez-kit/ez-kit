@@ -40,13 +40,13 @@ const grid = useDataGrid({
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `enableGlobalFilter` | `boolean` | Master switch. Default `false`. |
-| `globalFilterFn` | name \| `(row, value) => boolean` | Default `'includesString'`. Built-ins also include `'equals'`, `'fuzzy'`. |
-| `state.globalFilter` | `string` | Controlled global filter value. |
-| `onGlobalFilterChange` | `(updater) => void` | Subscribe to changes. |
-| Per-column `enableGlobalFilter` | `boolean` | Default `true`. Set `false` to exclude a column from global matching. |
+| Option                          | Type                              | Description                                                               |
+| ------------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
+| `enableGlobalFilter`            | `boolean`                         | Master switch. Default `false`.                                           |
+| `globalFilterFn`                | name \| `(row, value) => boolean` | Default `'includesString'`. Built-ins also include `'equals'`, `'fuzzy'`. |
+| `state.globalFilter`            | `string`                          | Controlled global filter value.                                           |
+| `onGlobalFilterChange`          | `(updater) => void`               | Subscribe to changes.                                                     |
+| Per-column `enableGlobalFilter` | `boolean`                         | Default `true`. Set `false` to exclude a column from global matching.     |
 
 ## Source
 

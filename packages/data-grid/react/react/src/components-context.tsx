@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react'
 
-import type { GridFeature , FullGridComponents, GridComponents } from './contract'
+import type { GridFeature, FullGridComponents, GridComponents } from './contract'
 import type { ReactNode } from 'react'
 
 export const defaultComponents: FullGridComponents = {} as FullGridComponents

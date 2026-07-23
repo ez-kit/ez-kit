@@ -1,0 +1,54 @@
+{
+	"name": "@ez-kit/twc",
+	"version": "0.1.0",
+	"description": "styled-components-flavored factory over Tailwind + cva: bind classes and variants to an element or component.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/twc"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/twc#readme",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "50 KB"
+		}
+	],
+	"dependencies": {
+		"class-variance-authority": "^0.7.1",
+		"tailwind-merge": "^3.5.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0"
+	}
+}

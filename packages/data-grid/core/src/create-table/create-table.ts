@@ -22,14 +22,7 @@ import { buildColumnList, extractPinningState } from '../system-columns'
 import { setIfDefined } from '../utils/set-if-defined'
 
 import type { ColumnDef } from '../column/types'
-import type {
-	DataTable,
-	GlobalFilterFn,
-	MultiSortConfig,
-	PinningConfig,
-	RowPinningConfig,
-	TableConfig,
-} from '../types'
+import type { DataTable, GlobalFilterFn, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
 import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
 /** Translate our `sorting.multi` shape into TanStack option flags. */
@@ -103,8 +96,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
 
 	// ── faceted opt-in (table-level) ─────────────────────────────────────────
-	const tableFaceted =
-		typeof config.filtering === 'object' && config.filtering.faceted === true
+	const tableFaceted = typeof config.filtering === 'object' && config.filtering.faceted === true
 
 	// Column-level opt-in: detect even when table-level flag is off so the row
 	// models still attach when any single column requests faceted data.
@@ -173,9 +165,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 
 	// ── build TanStack options ────────────────────────────────────────────────
 	const defaultPageSize =
-		typeof config.pagination === 'object' && config.pagination.pageSize
-			? config.pagination.pageSize
-			: DEFAULT_PAGE_SIZE
+		typeof config.pagination === 'object' && config.pagination.pageSize ? config.pagination.pageSize : DEFAULT_PAGE_SIZE
 
 	const defaultHidden = collectDefaultHidden(config.columns)
 
@@ -241,9 +231,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// return false for all columns regardless of per-column config, and the matching
 		// getXRowModel is not attached. Truthy config (true or object) leaves the
 		// TanStack default in place so per-column overrides keep working.
-		...(config.sorting
-			? { getSortedRowModel: getSortedRowModel() }
-			: { enableSorting: false }),
+		...(config.sorting ? { getSortedRowModel: getSortedRowModel() } : { enableSorting: false }),
 		// Filtering: `getFilteredRowModel` is attached when either column filters
 		// or global search is enabled. Each axis is gated independently:
 		// - `filtering` falsy → enableColumnFilters: false (per-column UI disabled)

@@ -30,13 +30,13 @@ const grid = useDataGrid({
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `enableColumnResizing` | `boolean` | Master switch. Default `false`. |
-| `columnResizeMode` | `'onChange' \| 'onEnd'` | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters. |
-| Per-column `size` / `minSize` / `maxSize` | `number` | Constrain individual columns. |
-| `state.columnSizing` | `Record<string, number>` | Controlled sizing state. |
-| `onColumnSizingChange` | `(updater) => void` | Subscribe to size changes for persistence. |
+| Option                                    | Type                     | Description                                                                                                                                               |
+| ----------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enableColumnResizing`                    | `boolean`                | Master switch. Default `false`.                                                                                                                           |
+| `columnResizeMode`                        | `'onChange' \| 'onEnd'`  | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters. |
+| Per-column `size` / `minSize` / `maxSize` | `number`                 | Constrain individual columns.                                                                                                                             |
+| `state.columnSizing`                      | `Record<string, number>` | Controlled sizing state.                                                                                                                                  |
+| `onColumnSizingChange`                    | `(updater) => void`      | Subscribe to size changes for persistence.                                                                                                                |
 
 ## Source
 

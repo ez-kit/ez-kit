@@ -1,5 +1,13 @@
 # @ez-kit/data-grid-native
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [904d9df]
+- Updated dependencies [6cf77ea]
+  - @ez-kit/data-grid-react@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

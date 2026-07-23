@@ -1,7 +1,10 @@
 import { defineColumns } from '@ez-kit/data-grid-core'
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { buildPaginationLabel } from './data-grid/pagination-label'
+import { PaginationVariants } from './types'
 import {
 	FILTERING_VARIANT_KEY,
 	FILTER_CHIPS_KEY,
@@ -17,6 +20,8 @@ import type {
 	NormalizedFilterChipsConfig,
 	NormalizedGlobalFilteringConfig,
 } from './use-data-grid'
+import type { TableState } from '@ez-kit/data-grid-core'
+import type { Updater } from '@tanstack/table-core'
 
 type User = {
 	id: number
@@ -28,6 +33,40 @@ const USERS: User[] = [
 	{ id: 2, name: 'Bob' },
 ]
 const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
+
+type ClampGridProps = {
+	rowCount: number
+	tableState: Partial<TableState>
+	onStateChange: (updater: Updater<TableState>) => void
+}
+
+/** Renders the live `pageIndex` under fully controlled manual pagination. */
+function ClampGrid({ rowCount, tableState, onStateChange }: ClampGridProps) {
+	const { table } = useDataGrid({
+		data: USERS,
+		columns: COLUMNS,
+		pagination: { manual: true, rowCount, pageSize: 10 },
+		state: tableState,
+		onStateChange,
+	})
+	return <span data-testid='page-index'>{table.getState().pagination.pageIndex}</span>
+}
+
+/** Parent-owned controlled state — the ordinary consumer shape (state above the grid). */
+function ClampPage({ rowCount }: { rowCount: number }) {
+	const [tableState, setTableState] = useState<Partial<TableState>>({
+		pagination: { pageIndex: 2, pageSize: 10 },
+	})
+	return (
+		<ClampGrid
+			rowCount={rowCount}
+			tableState={tableState}
+			onStateChange={(updater) => {
+				setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+			}}
+		/>
+	)
+}
 
 describe('useDataGrid', () => {
 	it('creates a table instance with initial data', () => {
@@ -69,6 +108,227 @@ describe('useDataGrid', () => {
 		rerender({ rowCount: 1250 })
 		expect(result.current.table.getRowCount()).toBe(1250)
 		expect(result.current.table.getPageCount()).toBe(125)
+	})
+
+	// Regression (#82): `autoResetPageIndex` defaults to `!manualPagination`, so TanStack never
+	// rewinds the page itself under manual mode. With a shrinking server total the footer claimed
+	// "0–0 of 5" while `getPaginationRowModel()` — the whole `data` under manual mode — still
+	// rendered all 5 rows.
+	it('clamps pageIndex to the last page when a manual rowCount shrinks under the user', () => {
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+				}),
+			{ initialProps: { rowCount: 500 } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+
+		// A server filter narrows 500 rows to 5 while the user sits on page 3.
+		rerender({ rowCount: 5 })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+		expect(
+			buildPaginationLabel({
+				variant: PaginationVariants.Simple,
+				pageIndex: result.current.table.getState().pagination.pageIndex,
+				pageSize: 10,
+				rowCount: result.current.table.getRowCount(),
+			}),
+		).toBe('1–5 of 5')
+	})
+
+	it('clamps pageIndex to the first page when a manual rowCount drops to zero', () => {
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+				}),
+			{ initialProps: { rowCount: 500 } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+
+		rerender({ rowCount: 0 })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+	})
+
+	it('leaves pageIndex alone while it is still within a shrunken manual rowCount', () => {
+		const { result, rerender } = renderHook(
+			({ rowCount }: { rowCount: number }) =>
+				useDataGrid({
+					data: USERS,
+					columns: COLUMNS,
+					pagination: { manual: true, rowCount, pageSize: 10 },
+				}),
+			{ initialProps: { rowCount: 500 } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+
+		// 50 rows still spans 5 pages — page 3 remains valid, so nothing to clamp.
+		rerender({ rowCount: 50 })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+	})
+
+	it('never clamps pageIndex when the manual total is unknown', () => {
+		const { result, rerender } = renderHook(
+			({ data }: { data: User[] }) =>
+				useDataGrid({
+					data,
+					columns: COLUMNS,
+					// Neither rowCount nor pageCount: the total is genuinely unknown.
+					pagination: { manual: true, pageSize: 10 },
+				}),
+			{ initialProps: { data: USERS } },
+		)
+
+		act(() => {
+			result.current.table.setPageIndex(2)
+		})
+
+		rerender({ data: [{ id: 3, name: 'Carol' }] })
+
+		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+	})
+
+	// `rowCount: data?.rowCount ?? 0` is the canonical manual-pagination shape, so a `0` on the
+	// first render means "not loaded yet", not "empty" — the resync comment above says as much
+	// ("it starts at 0, then reflects the filtered total after each fetch"). Clamping there would
+	// discard a deep-linked page while its fetch is still in flight: the inverse of #82.
+	it('does not clamp a deep-linked pageIndex while rowCount is still a loading placeholder', () => {
+		const onStateChangeSpy = vi.fn()
+		render(
+			<ClampGrid
+				rowCount={0}
+				tableState={{ pagination: { pageIndex: 3, pageSize: 10 } }}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		expect(onStateChangeSpy).not.toHaveBeenCalled()
+	})
+
+	it('keeps a deep-linked pageIndex once the placeholder rowCount resolves', () => {
+		const onStateChangeSpy = vi.fn()
+		const deepLinked: Partial<TableState> = { pagination: { pageIndex: 3, pageSize: 10 } }
+		const { rerender, getByTestId } = render(
+			<ClampGrid
+				rowCount={0}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		// The fetch lands: the total grows into place. Page 4 is valid — nothing to clamp.
+		rerender(
+			<ClampGrid
+				rowCount={500}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		expect(onStateChangeSpy).not.toHaveBeenCalled()
+		expect(getByTestId('page-index').textContent).toBe('3')
+	})
+
+	// Pins the scope boundary as intentional, not an oversight: a first total that resolves
+	// straight into an out-of-range page is NOT clamped, because it is indistinguishable from a
+	// `keepPreviousData` placeholder. Unlike #82 this contradicts nothing on screen — a real
+	// server returns no rows for page 4 of 5, so the `0–0 of 5` footer matches an empty grid.
+	it('leaves a deep link to an already-out-of-range page alone when the first total resolves', () => {
+		const onStateChangeSpy = vi.fn()
+		const deepLinked: Partial<TableState> = { pagination: { pageIndex: 3, pageSize: 10 } }
+		const { rerender, getByTestId } = render(
+			<ClampGrid
+				rowCount={0}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		// 0 → 5 is a growth, not a shrink: the grid has never seen a trustworthy larger total.
+		rerender(
+			<ClampGrid
+				rowCount={5}
+				tableState={deepLinked}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		expect(onStateChangeSpy).not.toHaveBeenCalled()
+		expect(getByTestId('page-index').textContent).toBe('3')
+	})
+
+	// The controlled state deliberately lives in a PARENT (`ClampPage`) rather than alongside
+	// `useDataGrid`: co-locating it is React's legal same-component derived-state path and hides
+	// the real failure. Clamping from the render body calls the parent's setter mid-render, which
+	// React rejects with "Cannot update a component while rendering a different component" — this
+	// is the regression test for that.
+	it('clamps parent-owned controlled pagination without a render-phase update warning', () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const { rerender, getByTestId } = render(<ClampPage rowCount={500} />)
+		expect(getByTestId('page-index').textContent).toBe('2')
+
+		rerender(<ClampPage rowCount={5} />)
+
+		expect(getByTestId('page-index').textContent).toBe('0')
+		expect(errorSpy.mock.calls.map((call) => String(call[0])).join('\n')).not.toContain(
+			'while rendering a different component',
+		)
+		errorSpy.mockRestore()
+	})
+
+	it('notifies the consumer but does not loop when it ignores the clamp', () => {
+		const onStateChangeSpy = vi.fn()
+		const ignoredState: Partial<TableState> = { pagination: { pageIndex: 2, pageSize: 10 } }
+		const { rerender, getByTestId } = render(
+			<ClampGrid
+				rowCount={500}
+				tableState={ignoredState}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		rerender(
+			<ClampGrid
+				rowCount={5}
+				tableState={ignoredState}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+
+		// The grid asks, then defers: the consumer owns the index, so it stays out of range
+		// rather than the grid re-issuing the clamp on every pass.
+		const callsAfterShrink = onStateChangeSpy.mock.calls.length
+		expect(callsAfterShrink).toBeGreaterThan(0)
+		expect(getByTestId('page-index').textContent).toBe('2')
+
+		// A delta, not an absolute count: what matters is that further renders add nothing (no
+		// loop) — which stays true even if the suite ever double-invokes effects.
+		rerender(
+			<ClampGrid
+				rowCount={5}
+				tableState={ignoredState}
+				onStateChange={onStateChangeSpy}
+			/>,
+		)
+		expect(onStateChangeSpy.mock.calls.length).toBe(callsAfterShrink)
 	})
 
 	it('re-syncs manual pagination pageCount when it changes', () => {

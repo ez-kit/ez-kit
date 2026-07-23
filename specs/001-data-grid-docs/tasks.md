@@ -41,10 +41,10 @@ canonical layout.
 
 **Purpose**: Prepare the docs app for new content + the new MDX shortcode.
 
-- [X] T001 Verify workspace is current by running `pnpm install` at repo root
-- [X] T002 Regenerate Sandpack bundles by running `pnpm docs:sandpack` (must succeed before any data-grid example renders in the new pages)
-- [X] T003 Create new directory `apps/docs/content/docs/data-grid/` with an initial `apps/docs/content/docs/data-grid/meta.json` containing `{ "title": "Data Grid", "description": "Headless data grid with shadcn and HeroUI flavors", "pages": [] }`
-- [X] T004 [P] Confirm `DataGridSandpackExampleId` is exported from `apps/docs/shared/data-grid/sandpack/DataGridSandpackExample.tsx`; if not, add an `export type` line (no other changes)
+- [x] T001 Verify workspace is current by running `pnpm install` at repo root
+- [x] T002 Regenerate Sandpack bundles by running `pnpm docs:sandpack` (must succeed before any data-grid example renders in the new pages)
+- [x] T003 Create new directory `apps/docs/content/docs/data-grid/` with an initial `apps/docs/content/docs/data-grid/meta.json` containing `{ "title": "Data Grid", "description": "Headless data grid with shadcn and HeroUI flavors", "pages": [] }`
+- [x] T004 [P] Confirm `DataGridSandpackExampleId` is exported from `apps/docs/shared/data-grid/sandpack/DataGridSandpackExample.tsx`; if not, add an `export type` line (no other changes)
 
 ---
 
@@ -59,11 +59,11 @@ MUST fail before T006 is started. Verify the failure by running
 `pnpm --filter @ez-kit/docs test` and observing the test for
 `DataGridDocsExample` fail with "module not found" or equivalent.
 
-- [X] T005 Write Vitest tests for `<DataGridDocsExample />` in `apps/docs/test/data-grid-docs-example.test.tsx` (path adjusted from `tests/` to `test/` to match the workspace `vitest.shared.ts` include pattern; Playwright owns `tests/`). Covers (a) default render uses `type='shadcn'` and renders the toggle, (b) `defaultType='heroui'` initial render uses `'heroui'`, (c) clicking the HeroUI control switches the rendered `DataGridSandpackExample`'s `type` prop to `'heroui'`, (d) `lockFlavor=true` hides the toggle, (e) `lockFlavor=true` without `defaultType` throws at runtime with the contracted message, (f) toggle exposes correct ARIA attributes per `contracts/data-grid-docs-example.md`. Verified all six FAIL before T006.
-- [X] T006 Implement `<DataGridDocsExample />` in `apps/docs/components/data-grid-docs-example.tsx` to make T005 tests pass. Followed `contracts/data-grid-docs-example.md`. Also updated `apps/docs/vitest.config.ts` to set `esbuild.jsx: 'automatic'` (one-line config change so JSX in tests/components doesn't need explicit React import). All six tests PASS.
-- [X] T007 Register `DataGridDocsExample` in `apps/docs/components/mdx.tsx` by importing it and adding it to the components map exported from that file (so mdx pages can use it without a per-file `import`)
-- [X] T008 [P] Update `apps/docs/content/docs/index.mdx` to add a bullet linking to the new Data Grid section
-- [X] T009 [P] Add a Playwright visual-test scaffold file at `apps/docs/tests/data-grid-docs.visual.spec.ts` (filename uses `.visual.spec.ts` suffix to match the existing vitest-exclude pattern). One placeholder test visits `/docs/data-grid` and asserts the page responds with < 400 and `<h1>` is visible.
+- [x] T005 Write Vitest tests for `<DataGridDocsExample />` in `apps/docs/test/data-grid-docs-example.test.tsx` (path adjusted from `tests/` to `test/` to match the workspace `vitest.shared.ts` include pattern; Playwright owns `tests/`). Covers (a) default render uses `type='shadcn'` and renders the toggle, (b) `defaultType='heroui'` initial render uses `'heroui'`, (c) clicking the HeroUI control switches the rendered `DataGridSandpackExample`'s `type` prop to `'heroui'`, (d) `lockFlavor=true` hides the toggle, (e) `lockFlavor=true` without `defaultType` throws at runtime with the contracted message, (f) toggle exposes correct ARIA attributes per `contracts/data-grid-docs-example.md`. Verified all six FAIL before T006.
+- [x] T006 Implement `<DataGridDocsExample />` in `apps/docs/components/data-grid-docs-example.tsx` to make T005 tests pass. Followed `contracts/data-grid-docs-example.md`. Also updated `apps/docs/vitest.config.ts` to set `esbuild.jsx: 'automatic'` (one-line config change so JSX in tests/components doesn't need explicit React import). All six tests PASS.
+- [x] T007 Register `DataGridDocsExample` in `apps/docs/components/mdx.tsx` by importing it and adding it to the components map exported from that file (so mdx pages can use it without a per-file `import`)
+- [x] T008 [P] Update `apps/docs/content/docs/index.mdx` to add a bullet linking to the new Data Grid section
+- [x] T009 [P] Add a Playwright visual-test scaffold file at `apps/docs/tests/data-grid-docs.visual.spec.ts` (filename uses `.visual.spec.ts` suffix to match the existing vitest-exclude pattern). One placeholder test visits `/docs/data-grid` and asserts the page responds with < 400 and `<h1>` is visible.
 
 **Checkpoint**: Foundation ready — `<DataGridDocsExample />` is implemented,
 registered, and unit-tested. User story implementation can now begin.
@@ -83,15 +83,15 @@ build clean (SC-005).
 
 ### Implementation for User Story 1
 
-- [X] T010 [P] [US1] Author `apps/docs/content/docs/data-grid/index.mdx` (Overview)
-- [X] T011 [P] [US1] Author `apps/docs/content/docs/data-grid/getting-started.mdx`
-- [X] T012 [P] [US1] Author `apps/docs/content/docs/data-grid/architecture.mdx`
-- [X] T013 [P] [US1] Author `apps/docs/content/docs/data-grid/installation/shadcn.mdx`
-- [X] T014 [P] [US1] Author `apps/docs/content/docs/data-grid/installation/heroui.mdx`
-- [X] T015 [US1] Create `apps/docs/content/docs/data-grid/installation/meta.json`
-- [X] T016 [US1] Update the top-level `apps/docs/content/docs/data-grid/meta.json` to `["index", "getting-started", "architecture", "installation"]`
-- [X] T017 [US1] Extend `apps/docs/tests/data-grid-docs.visual.spec.ts` with three Playwright assertions (landing 200, getting-started flavor toggle, sidebar presence — also covers FR-012 per analysis finding U1)
-- [X] T018 [US1] `pnpm --filter @ez-kit/docs build` — **GREEN**. ✓ Compiled successfully in 13.7s, 160/160 static pages prerendered, zero warnings. Required 7 pre-existing fixes (5 vendored shadcn `exactOptionalPropertyTypes` violations + 1 react-day-picker v10 ClassNames key removal + 1 `shared/DataGrid.tsx` TS2742 inferred-type annotation).
+- [x] T010 [P] [US1] Author `apps/docs/content/docs/data-grid/index.mdx` (Overview)
+- [x] T011 [P] [US1] Author `apps/docs/content/docs/data-grid/getting-started.mdx`
+- [x] T012 [P] [US1] Author `apps/docs/content/docs/data-grid/architecture.mdx`
+- [x] T013 [P] [US1] Author `apps/docs/content/docs/data-grid/installation/shadcn.mdx`
+- [x] T014 [P] [US1] Author `apps/docs/content/docs/data-grid/installation/heroui.mdx`
+- [x] T015 [US1] Create `apps/docs/content/docs/data-grid/installation/meta.json`
+- [x] T016 [US1] Update the top-level `apps/docs/content/docs/data-grid/meta.json` to `["index", "getting-started", "architecture", "installation"]`
+- [x] T017 [US1] Extend `apps/docs/tests/data-grid-docs.visual.spec.ts` with three Playwright assertions (landing 200, getting-started flavor toggle, sidebar presence — also covers FR-012 per analysis finding U1)
+- [x] T018 [US1] `pnpm --filter @ez-kit/docs build` — **GREEN**. ✓ Compiled successfully in 13.7s, 160/160 static pages prerendered, zero warnings. Required 7 pre-existing fixes (5 vendored shadcn `exactOptionalPropertyTypes` violations + 1 react-day-picker v10 ClassNames key removal + 1 `shared/DataGrid.tsx` TS2742 inferred-type annotation).
 
 **Checkpoint**: User Story 1 (MVP) is shippable. A first-time user can
 install and render a grid using only these pages.
@@ -118,82 +118,82 @@ referenced by at least one page (SC-002).
 
 ### Implementation for User Story 2 — Columns group
 
-- [X] T019 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/index.mdx` (Defining columns). Embed `<DataGridDocsExample exampleId='columns-combined' />`. Source bullets to `@ez-kit/data-grid-core` column types.
-- [X] T020 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/column-helper.mdx`. Embed three examples: `<DataGridDocsExample exampleId='column-helper' />`, `<DataGridDocsExample exampleId='column-helper-custom-view' />`, `<DataGridDocsExample exampleId='column-helper-registered' />`.
-- [X] T021 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/column-visibility.mdx`. Embed `<DataGridDocsExample exampleId='column-visibility' />` and reference `base-column-visibility` as well.
-- [X] T022 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/column-pinning.mdx`. Embed `<DataGridDocsExample exampleId='column-pinning' />`. Add a Notes section calling out the immutable shadcn-primitive rule from constitution Principle III as the reason pinning overrides live in `blocks/`.
-- [X] T023 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/resizing.mdx`. Embed `<DataGridDocsExample exampleId='resizing' />`.
-- [X] T024 [US2] Create `apps/docs/content/docs/data-grid/columns/meta.json` listing `["index", "column-helper", "column-visibility", "column-pinning", "resizing"]`. (Depends on T019–T023.)
+- [x] T019 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/index.mdx` (Defining columns). Embed `<DataGridDocsExample exampleId='columns-combined' />`. Source bullets to `@ez-kit/data-grid-core` column types.
+- [x] T020 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/column-helper.mdx`. Embed three examples: `<DataGridDocsExample exampleId='column-helper' />`, `<DataGridDocsExample exampleId='column-helper-custom-view' />`, `<DataGridDocsExample exampleId='column-helper-registered' />`.
+- [x] T021 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/column-visibility.mdx`. Embed `<DataGridDocsExample exampleId='column-visibility' />` and reference `base-column-visibility` as well.
+- [x] T022 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/column-pinning.mdx`. Embed `<DataGridDocsExample exampleId='column-pinning' />`. Add a Notes section calling out the immutable shadcn-primitive rule from constitution Principle III as the reason pinning overrides live in `blocks/`.
+- [x] T023 [P] [US2] Author `apps/docs/content/docs/data-grid/columns/resizing.mdx`. Embed `<DataGridDocsExample exampleId='resizing' />`.
+- [x] T024 [US2] Create `apps/docs/content/docs/data-grid/columns/meta.json` listing `["index", "column-helper", "column-visibility", "column-pinning", "resizing"]`. (Depends on T019–T023.)
 
 ### Implementation for User Story 2 — Sorting
 
-- [X] T025 [P] [US2] Author `apps/docs/content/docs/data-grid/sorting.mdx`. Embed three examples in order: `<DataGridDocsExample exampleId='base-sorting' />`, `<DataGridDocsExample exampleId='sorting' />`, `<DataGridDocsExample exampleId='sort-toolbar' />`. Description MUST contain the word "sorting" for FR-011.
+- [x] T025 [P] [US2] Author `apps/docs/content/docs/data-grid/sorting.mdx`. Embed three examples in order: `<DataGridDocsExample exampleId='base-sorting' />`, `<DataGridDocsExample exampleId='sorting' />`, `<DataGridDocsExample exampleId='sort-toolbar' />`. Description MUST contain the word "sorting" for FR-011.
 
 ### Implementation for User Story 2 — Filtering group
 
-- [X] T026 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/index.mdx` (basic filtering). Embed `<DataGridDocsExample exampleId='base-filtering' />` and `<DataGridDocsExample exampleId='filter-popover' />`. Description MUST contain "filtering" for FR-011.
-- [X] T027 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/operators.mdx`. Embed `<DataGridDocsExample exampleId='filter-operators' />`.
-- [X] T028 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/panel.mdx`. Embed `<DataGridDocsExample exampleId='filter-panel' />`. Also reference `<DataGridDocsExample exampleId='filter-chips' />` for chip-based active filter display.
-- [X] T029 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/date-range.mdx`. Embed `<DataGridDocsExample exampleId='filter-date-range' />`.
-- [X] T030 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/multi-value.mdx`. Embed `<DataGridDocsExample exampleId='filter-multi-value' />`.
-- [X] T031 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/global.mdx`. Embed `<DataGridDocsExample exampleId='global-filtering' />`.
-- [X] T032 [US2] Create `apps/docs/content/docs/data-grid/filtering/meta.json` listing `["index", "operators", "panel", "date-range", "multi-value", "global"]`. (Depends on T026–T031.)
+- [x] T026 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/index.mdx` (basic filtering). Embed `<DataGridDocsExample exampleId='base-filtering' />` and `<DataGridDocsExample exampleId='filter-popover' />`. Description MUST contain "filtering" for FR-011.
+- [x] T027 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/operators.mdx`. Embed `<DataGridDocsExample exampleId='filter-operators' />`.
+- [x] T028 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/panel.mdx`. Embed `<DataGridDocsExample exampleId='filter-panel' />`. Also reference `<DataGridDocsExample exampleId='filter-chips' />` for chip-based active filter display.
+- [x] T029 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/date-range.mdx`. Embed `<DataGridDocsExample exampleId='filter-date-range' />`.
+- [x] T030 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/multi-value.mdx`. Embed `<DataGridDocsExample exampleId='filter-multi-value' />`.
+- [x] T031 [P] [US2] Author `apps/docs/content/docs/data-grid/filtering/global.mdx`. Embed `<DataGridDocsExample exampleId='global-filtering' />`.
+- [x] T032 [US2] Create `apps/docs/content/docs/data-grid/filtering/meta.json` listing `["index", "operators", "panel", "date-range", "multi-value", "global"]`. (Depends on T026–T031.)
 
 ### Implementation for User Story 2 — Pagination
 
-- [X] T033 [P] [US2] Author `apps/docs/content/docs/data-grid/pagination.mdx`. Per research.md Decision 2, embed `<DataGridDocsExample exampleId='base-full' />` and call out in prose where pagination appears in the example. Description MUST contain "pagination" for FR-011.
+- [x] T033 [P] [US2] Author `apps/docs/content/docs/data-grid/pagination.mdx`. Per research.md Decision 2, embed `<DataGridDocsExample exampleId='base-full' />` and call out in prose where pagination appears in the example. Description MUST contain "pagination" for FR-011.
 
 ### Implementation for User Story 2 — Selection group
 
-- [X] T034 [P] [US2] Author `apps/docs/content/docs/data-grid/selection/index.mdx`. Embed `<DataGridDocsExample exampleId='base-selection' />`. Description MUST contain "selection" for FR-011.
-- [X] T035 [P] [US2] Author `apps/docs/content/docs/data-grid/selection/selection-bar.mdx`. Embed `<DataGridDocsExample exampleId='selection-bar' />` and `<DataGridDocsExample exampleId='selection-bar-inline' />`.
-- [X] T036 [P] [US2] Author `apps/docs/content/docs/data-grid/selection/delete-confirmation.mdx`. Embed `<DataGridDocsExample exampleId='delete-confirmation' />`.
-- [X] T037 [US2] Create `apps/docs/content/docs/data-grid/selection/meta.json` listing `["index", "selection-bar", "delete-confirmation"]`. (Depends on T034–T036.)
+- [x] T034 [P] [US2] Author `apps/docs/content/docs/data-grid/selection/index.mdx`. Embed `<DataGridDocsExample exampleId='base-selection' />`. Description MUST contain "selection" for FR-011.
+- [x] T035 [P] [US2] Author `apps/docs/content/docs/data-grid/selection/selection-bar.mdx`. Embed `<DataGridDocsExample exampleId='selection-bar' />` and `<DataGridDocsExample exampleId='selection-bar-inline' />`.
+- [x] T036 [P] [US2] Author `apps/docs/content/docs/data-grid/selection/delete-confirmation.mdx`. Embed `<DataGridDocsExample exampleId='delete-confirmation' />`.
+- [x] T037 [US2] Create `apps/docs/content/docs/data-grid/selection/meta.json` listing `["index", "selection-bar", "delete-confirmation"]`. (Depends on T034–T036.)
 
 ### Implementation for User Story 2 — Row pinning + Virtualization
 
-- [X] T038 [P] [US2] Author `apps/docs/content/docs/data-grid/row-pinning.mdx`. Embed `<DataGridDocsExample exampleId='row-pinning-plain' />` and `<DataGridDocsExample exampleId='row-pinning-sticky-header' />`. Description MUST contain "row pinning" for FR-011.
-- [X] T039 [P] [US2] Author `apps/docs/content/docs/data-grid/virtualization.mdx`. Embed `<DataGridDocsExample exampleId='virtualized' />`.
+- [x] T038 [P] [US2] Author `apps/docs/content/docs/data-grid/row-pinning.mdx`. Embed `<DataGridDocsExample exampleId='row-pinning-plain' />` and `<DataGridDocsExample exampleId='row-pinning-sticky-header' />`. Description MUST contain "row pinning" for FR-011.
+- [x] T039 [P] [US2] Author `apps/docs/content/docs/data-grid/virtualization.mdx`. Embed `<DataGridDocsExample exampleId='virtualized' />`.
 
 ### Implementation for User Story 2 — Cells group
 
-- [X] T040 [P] [US2] Author `apps/docs/content/docs/data-grid/cells/cell-types.mdx`. Embed `<DataGridDocsExample exampleId='cell-types' />`. Description MUST contain "cell types" for FR-011.
-- [X] T041 [P] [US2] Author `apps/docs/content/docs/data-grid/cells/custom-cell-types.mdx`. Embed `<DataGridDocsExample exampleId='custom-cell-types' />`. Cross-reference the typed `CellTypeDefinition` contract documented at the API level. Description MUST contain "custom cell" for FR-011.
-- [X] T042 [P] [US2] Author `apps/docs/content/docs/data-grid/cells/date-cell.mdx`. Embed `<DataGridDocsExample exampleId='date-cell' />`.
-- [X] T043 [US2] Create `apps/docs/content/docs/data-grid/cells/meta.json` listing `["cell-types", "custom-cell-types", "date-cell"]`. (Depends on T040–T042.)
+- [x] T040 [P] [US2] Author `apps/docs/content/docs/data-grid/cells/cell-types.mdx`. Embed `<DataGridDocsExample exampleId='cell-types' />`. Description MUST contain "cell types" for FR-011.
+- [x] T041 [P] [US2] Author `apps/docs/content/docs/data-grid/cells/custom-cell-types.mdx`. Embed `<DataGridDocsExample exampleId='custom-cell-types' />`. Cross-reference the typed `CellTypeDefinition` contract documented at the API level. Description MUST contain "custom cell" for FR-011.
+- [x] T042 [P] [US2] Author `apps/docs/content/docs/data-grid/cells/date-cell.mdx`. Embed `<DataGridDocsExample exampleId='date-cell' />`.
+- [x] T043 [US2] Create `apps/docs/content/docs/data-grid/cells/meta.json` listing `["cell-types", "custom-cell-types", "date-cell"]`. (Depends on T040–T042.)
 
 ### Implementation for User Story 2 — Expanding group
 
-- [X] T044 [P] [US2] Author `apps/docs/content/docs/data-grid/expanding/sub-content.mdx`. Embed `<DataGridDocsExample exampleId='expanding-sub-content' />`.
-- [X] T045 [P] [US2] Author `apps/docs/content/docs/data-grid/expanding/tree.mdx`. Embed `<DataGridDocsExample exampleId='expanding-tree' />`.
-- [X] T046 [P] [US2] Author `apps/docs/content/docs/data-grid/expanding/controlled.mdx`. Embed `<DataGridDocsExample exampleId='expanding-controlled' />`.
-- [X] T047 [US2] Create `apps/docs/content/docs/data-grid/expanding/meta.json` listing `["sub-content", "tree", "controlled"]`. (Depends on T044–T046.)
+- [x] T044 [P] [US2] Author `apps/docs/content/docs/data-grid/expanding/sub-content.mdx`. Embed `<DataGridDocsExample exampleId='expanding-sub-content' />`.
+- [x] T045 [P] [US2] Author `apps/docs/content/docs/data-grid/expanding/tree.mdx`. Embed `<DataGridDocsExample exampleId='expanding-tree' />`.
+- [x] T046 [P] [US2] Author `apps/docs/content/docs/data-grid/expanding/controlled.mdx`. Embed `<DataGridDocsExample exampleId='expanding-controlled' />`.
+- [x] T047 [US2] Create `apps/docs/content/docs/data-grid/expanding/meta.json` listing `["sub-content", "tree", "controlled"]`. (Depends on T044–T046.)
 
 ### Implementation for User Story 2 — Controlled state
 
-- [X] T048 [P] [US2] Author `apps/docs/content/docs/data-grid/controlled-state.mdx`. Embed `<DataGridDocsExample exampleId='controlled-state' />`. Description MUST contain "controlled state" for FR-011. Reference the recent controlled-state change in source bullets.
+- [x] T048 [P] [US2] Author `apps/docs/content/docs/data-grid/controlled-state.mdx`. Embed `<DataGridDocsExample exampleId='controlled-state' />`. Description MUST contain "controlled state" for FR-011. Reference the recent controlled-state change in source bullets.
 
 ### Implementation for User Story 2 — Editing group
 
-- [X] T049 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/index.mdx` (inline editing). Embed `<DataGridDocsExample exampleId='base-editing' />`.
-- [X] T050 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/crud-server.mdx`. Embed `<DataGridDocsExample exampleId='crud-server' />`.
-- [X] T051 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/crud-client.mdx`. Embed `<DataGridDocsExample exampleId='crud-client' />`.
-- [X] T052 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/creating.mdx`. Embed `<DataGridDocsExample exampleId='creating' />` and `<DataGridDocsExample exampleId='creating-validation' />`.
-- [X] T053 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/validation.mdx`. Embed `<DataGridDocsExample exampleId='editing-validation' />` and cross-link to the `creating-validation` page.
-- [X] T054 [US2] Create `apps/docs/content/docs/data-grid/editing/meta.json` listing `["index", "crud-server", "crud-client", "creating", "validation"]`. (Depends on T049–T053.)
+- [x] T049 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/index.mdx` (inline editing). Embed `<DataGridDocsExample exampleId='base-editing' />`.
+- [x] T050 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/crud-server.mdx`. Embed `<DataGridDocsExample exampleId='crud-server' />`.
+- [x] T051 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/crud-client.mdx`. Embed `<DataGridDocsExample exampleId='crud-client' />`.
+- [x] T052 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/creating.mdx`. Embed `<DataGridDocsExample exampleId='creating' />` and `<DataGridDocsExample exampleId='creating-validation' />`.
+- [x] T053 [P] [US2] Author `apps/docs/content/docs/data-grid/editing/validation.mdx`. Embed `<DataGridDocsExample exampleId='editing-validation' />` and cross-link to the `creating-validation` page.
+- [x] T054 [US2] Create `apps/docs/content/docs/data-grid/editing/meta.json` listing `["index", "crud-server", "crud-client", "creating", "validation"]`. (Depends on T049–T053.)
 
 ### Implementation for User Story 2 — Standalone capability pages
 
-- [X] T055 [P] [US2] Author `apps/docs/content/docs/data-grid/fallbacks.mdx`. Embed `<DataGridDocsExample exampleId='fallbacks' />`. Description MUST contain "loading" for FR-011 (the surface covers loading / empty / error states).
-- [X] T056 [P] [US2] Author `apps/docs/content/docs/data-grid/sticky-header.mdx`. Embed `<DataGridDocsExample exampleId='base-sticky' />` and `<DataGridDocsExample exampleId='sticky-header' />`.
-- [X] T057 [P] [US2] Author `apps/docs/content/docs/data-grid/theming.mdx`. Per research.md Decision 3, NO `<DataGridDocsExample />` — reference prose only. Document CSS-token / `data-*` attribute surface for both flavors. Source bullets to each flavor's CSS entry point.
-- [X] T058 [P] [US2] Author `apps/docs/content/docs/data-grid/migration.mdx`. Per research.md Decision 8, initial content covers (a) custom cell types refactor and (b) controlled state semantics. Mirror `apps/docs/content/docs/migration-v2.mdx` structure. Each entry: short "what changed" + before/after code snippet.
+- [x] T055 [P] [US2] Author `apps/docs/content/docs/data-grid/fallbacks.mdx`. Embed `<DataGridDocsExample exampleId='fallbacks' />`. Description MUST contain "loading" for FR-011 (the surface covers loading / empty / error states).
+- [x] T056 [P] [US2] Author `apps/docs/content/docs/data-grid/sticky-header.mdx`. Embed `<DataGridDocsExample exampleId='base-sticky' />` and `<DataGridDocsExample exampleId='sticky-header' />`.
+- [x] T057 [P] [US2] Author `apps/docs/content/docs/data-grid/theming.mdx`. Per research.md Decision 3, NO `<DataGridDocsExample />` — reference prose only. Document CSS-token / `data-*` attribute surface for both flavors. Source bullets to each flavor's CSS entry point.
+- [x] T058 [P] [US2] Author `apps/docs/content/docs/data-grid/migration.mdx`. Per research.md Decision 8, initial content covers (a) custom cell types refactor and (b) controlled state semantics. Mirror `apps/docs/content/docs/migration-v2.mdx` structure. Each entry: short "what changed" + before/after code snippet.
 
 ### Verification & wiring for User Story 2
 
-- [X] T059 [US2] Update `apps/docs/content/docs/data-grid/meta.json` `pages` array to append, after the US1 slice, the full US2 ordering per research.md Decision 6: `["index", "getting-started", "architecture", "installation", "columns", "sorting", "filtering", "pagination", "selection", "row-pinning", "virtualization", "cells", "expanding", "controlled-state", "editing", "fallbacks", "sticky-header", "theming", "migration"]`.
-- [X] T060 [US2] Write a verifier script `apps/docs/scripts/verify-manifest-coverage.mjs` that reads `apps/docs/shared/data-grid/examples/manifest.json`, greps every `.mdx` under `apps/docs/content/docs/data-grid/` for `exampleId='<id>'`, and exits non-zero if any manifest `id` is not referenced. Wire it into the docs `lint` script (or a new `pnpm --filter @ez-kit/docs verify:manifest`). Run it — MUST pass (SC-002).
-- [X] T061 [US2] Run `pnpm --filter @ez-kit/docs build` and confirm zero warnings and zero broken internal links (SC-005). Fix any reported issues in the offending mdx file.
+- [x] T059 [US2] Update `apps/docs/content/docs/data-grid/meta.json` `pages` array to append, after the US1 slice, the full US2 ordering per research.md Decision 6: `["index", "getting-started", "architecture", "installation", "columns", "sorting", "filtering", "pagination", "selection", "row-pinning", "virtualization", "cells", "expanding", "controlled-state", "editing", "fallbacks", "sticky-header", "theming", "migration"]`.
+- [x] T060 [US2] Write a verifier script `apps/docs/scripts/verify-manifest-coverage.mjs` that reads `apps/docs/shared/data-grid/examples/manifest.json`, greps every `.mdx` under `apps/docs/content/docs/data-grid/` for `exampleId='<id>'`, and exits non-zero if any manifest `id` is not referenced. Wire it into the docs `lint` script (or a new `pnpm --filter @ez-kit/docs verify:manifest`). Run it — MUST pass (SC-002).
+- [x] T061 [US2] Run `pnpm --filter @ez-kit/docs build` and confirm zero warnings and zero broken internal links (SC-005). Fix any reported issues in the offending mdx file.
 - [ ] T062 [US2] Extend `apps/docs/tests/data-grid-docs.spec.ts` with Playwright visual regression for one representative capability page per group: `cells/cell-types`, `filtering/date-range`, `selection/index`, `row-pinning`. Test light theme + dark theme. Regenerate baselines.
 - [ ] T063 [US2] Smoke-check Fumadocs search by running `pnpm --filter @ez-kit/docs dev`, opening the search UI, querying each FR-011 term ("columns", "filtering", "sorting", "pagination", "selection", "row pinning", "cell types", "controlled state", "loading", "custom cell"), and asserting at least one data-grid page appears in the top results (SC-006). Record any miss in a follow-up issue.
 
@@ -216,10 +216,10 @@ spec US3). All pages build clean.
 
 ### Implementation for User Story 3
 
-- [X] T064 [P] [US3] Author `apps/docs/content/docs/data-grid/advanced/core.mdx`. Frontmatter title "Core (advanced)". Body: the headless contract — what `@ez-kit/data-grid-core` exports, how it composes TanStack Table, and the rule that it MUST NOT import React. Per `contracts/docs-page.md`, this page has `appliesTo: 'core'` — NO `<DataGridDocsExample>`; use fenced code blocks for any code samples. Source bullets to `packages/data-grid/core/src/index.ts` and `packages/data-grid/core/README.md`.
-- [X] T065 [P] [US3] Author `apps/docs/content/docs/data-grid/advanced/react.mdx`. Frontmatter title "React adapter (advanced)". Body: how `@ez-kit/data-grid-react` adapts core, what `useDataGrid` / `defineColumns` / context surfaces look like, and how to build your own UI flavor (the "Build your own flavor" content from spec US3). Per `contracts/docs-page.md`, this page has `appliesTo: 'react'` — NO `<DataGridDocsExample>`. Source bullets to `packages/data-grid/react/react/src/index.ts` and the existing shadcn/heroui `createDataGrid` call sites as reference implementations.
-- [X] T066 [US3] Create `apps/docs/content/docs/data-grid/advanced/meta.json` listing `["core", "react"]` with `title: "Advanced"`. (Depends on T064 and T065.)
-- [X] T067 [US3] Update `apps/docs/content/docs/data-grid/meta.json` `pages` array to insert `"advanced"` immediately before `"migration"` (per research.md Decision 6).
+- [x] T064 [P] [US3] Author `apps/docs/content/docs/data-grid/advanced/core.mdx`. Frontmatter title "Core (advanced)". Body: the headless contract — what `@ez-kit/data-grid-core` exports, how it composes TanStack Table, and the rule that it MUST NOT import React. Per `contracts/docs-page.md`, this page has `appliesTo: 'core'` — NO `<DataGridDocsExample>`; use fenced code blocks for any code samples. Source bullets to `packages/data-grid/core/src/index.ts` and `packages/data-grid/core/README.md`.
+- [x] T065 [P] [US3] Author `apps/docs/content/docs/data-grid/advanced/react.mdx`. Frontmatter title "React adapter (advanced)". Body: how `@ez-kit/data-grid-react` adapts core, what `useDataGrid` / `defineColumns` / context surfaces look like, and how to build your own UI flavor (the "Build your own flavor" content from spec US3). Per `contracts/docs-page.md`, this page has `appliesTo: 'react'` — NO `<DataGridDocsExample>`. Source bullets to `packages/data-grid/react/react/src/index.ts` and the existing shadcn/heroui `createDataGrid` call sites as reference implementations.
+- [x] T066 [US3] Create `apps/docs/content/docs/data-grid/advanced/meta.json` listing `["core", "react"]` with `title: "Advanced"`. (Depends on T064 and T065.)
+- [x] T067 [US3] Update `apps/docs/content/docs/data-grid/meta.json` `pages` array to insert `"advanced"` immediately before `"migration"` (per research.md Decision 6).
 - [ ] T068 [US3] Extend `apps/docs/tests/data-grid-docs.spec.ts` with one Playwright visual test for `advanced/react` in light theme. Regenerate baseline.
 
 **Checkpoint**: User Story 3 complete. Architecture and contributor
@@ -232,10 +232,10 @@ documentation are present and discoverable.
 **Purpose**: Final cleanliness sweep before the feature is declared done.
 
 - [ ] T069 [P] Run the full docs-app CI gate: `pnpm --filter @ez-kit/docs lint && pnpm --filter @ez-kit/docs typecheck && pnpm --filter @ez-kit/docs test && pnpm --filter @ez-kit/docs build`. All four MUST pass with zero warnings (constitution Workflow rule 4 + SC-005).
-- [X] T070 [P] Audit every new mdx file for line count using `find apps/docs/content/docs/data-grid -name '*.mdx' -exec wc -l {} +`. Any file > 800 lines MUST be split into a sub-page; flag any file > 400 lines for a follow-up split decision (constitution: file size).
+- [x] T070 [P] Audit every new mdx file for line count using `find apps/docs/content/docs/data-grid -name '*.mdx' -exec wc -l {} +`. Any file > 800 lines MUST be split into a sub-page; flag any file > 400 lines for a follow-up split decision (constitution: file size).
 - [ ] T071 [P] Manual accessibility pass on the new `<DataGridDocsExample />` toggle: keyboard reach via Tab from the preceding heading, arrow-key or Enter activation, screen-reader announces the active flavor, color-contrast meets WCAG AA (does NOT rely on color alone). Record any failure as a bug-fix task before checkpoint.
 - [ ] T072 [P] Walk every page and verify the Authoring Checklist at the end of `contracts/docs-page.md` (frontmatter present, sections in order, exampleId values resolve, source bullets present, FR-011 keyword discipline, flavor-divergence notes where applicable, parent `meta.json` 1:1 agreement).
-- [X] T073 Re-run `apps/docs/scripts/verify-manifest-coverage.mjs` after all phases — final SC-002 confirmation.
+- [x] T073 Re-run `apps/docs/scripts/verify-manifest-coverage.mjs` after all phases — final SC-002 confirmation.
 - [ ] T074 Final review against the success criteria in `spec.md`: SC-001 (10-minute install + render — manual time-box test), SC-002 (manifest coverage — automated), SC-003 (every public surface has an example — manual audit), SC-004 (flavor parity — manual audit), SC-005 (build clean — automated), SC-006 (search — manual smoke), SC-007 (≤ 3 clicks from landing — manual). Record each as PASS/FAIL.
 - [ ] T075 Stage and commit using Conventional Commits — one logical group per commit (`docs(data-grid): add overview + getting started`, `docs(data-grid): add columns pages`, ..., `docs(data-grid): add advanced reference pages`). No changeset required (`apps/docs` is private per the plan's Constitution Check).
 

@@ -22,15 +22,16 @@ const USERS: User[] = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `
 const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
 
 /**
- * Render the real `Pagination` against a real grid instance and capture the props it hands
- * to the UI kit. This is the seam the kits consume, so it is where the "unknown total"
- * normalization has to hold.
+ * Render the real `Pagination` against a real grid instance and capture the props it hands to
+ * the UI kit — or `null` when the footer short-circuits to `return null` (a known-empty grid).
+ * This is the seam the kits consume, so it is where the "unknown total" normalization and the
+ * known-empty gate both have to hold.
  */
-function captureProps(
+function renderPagination(
 	config: Omit<UseDataGridConfig<User>, 'data' | 'columns'>,
 	data: User[] = USERS,
-): { props: PaginationProps; table: DataTable<User> } {
-	let captured: PaginationProps | undefined
+): { props: PaginationProps | null; table: DataTable<User> } {
+	let captured: PaginationProps | null = null
 	const Spy = (props: PaginationProps): ReactNode => {
 		captured = props
 		return null
@@ -47,9 +48,61 @@ function captureProps(
 		</TableContext>,
 	)
 
-	if (!captured) throw new Error('Pagination did not render')
 	return { props: captured, table: instance.table }
 }
+
+/**
+ * {@link renderPagination} for the cases that require the footer to render — it fails loudly
+ * rather than handing back a `null` the caller would have to narrow.
+ */
+function captureProps(
+	config: Omit<UseDataGridConfig<User>, 'data' | 'columns'>,
+	data: User[] = USERS,
+): { props: PaginationProps; table: DataTable<User> } {
+	const { props, table } = renderPagination(config, data)
+	if (!props) throw new Error('Pagination did not render')
+	return { props, table }
+}
+
+describe('Pagination — hides the footer on a known-empty grid', () => {
+	const EMPTY: User[] = []
+
+	it('renders nothing when a client-side grid has no rows', () => {
+		// rowCount 0 / pageCount 0 — a trusted, meaningful zero: nothing to paginate.
+		expect(renderPagination({ pagination: { pageSize: PAGE_SIZE } }, EMPTY).props).toBeNull()
+	})
+
+	it('renders nothing when a manual grid reports rowCount 0', () => {
+		expect(renderPagination({ pagination: { manual: true, pageSize: PAGE_SIZE, rowCount: 0 } }, EMPTY).props).toBeNull()
+	})
+
+	it('renders nothing when a manual grid reports pageCount 0', () => {
+		expect(
+			renderPagination({ pagination: { manual: true, pageSize: PAGE_SIZE, pageCount: 0 } }, EMPTY).props,
+		).toBeNull()
+	})
+
+	// The gate keys off `pageCount` alone, which is sound only because supplying `rowCount`
+	// makes core derive `pageCount` from it — `useDataGrid` keeps the two mutually exclusive.
+	// Pin that derivation: were it to change so a trusted `rowCount: 0` no longer implied
+	// `pageCount: 0`, the gate would start showing a footer on an empty grid, and this fails
+	// first, naming the reason.
+	it('derives pageCount 0 from a trusted rowCount 0 — the value the gate keys off', () => {
+		const { table } = renderPagination({ pagination: { manual: true, pageSize: PAGE_SIZE, rowCount: 0 } }, EMPTY)
+		expect(table.getRowCount()).toBe(0)
+		expect(table.options.pageCount).toBeUndefined()
+		expect(table.getPageCount()).toBe(0)
+	})
+
+	// Regression guard: an *unknown* total is not an empty total. A manual grid given neither
+	// count still knows which page it is on, so the footer stays and shows `Page N`.
+	it('keeps the footer when the total is unknown', () => {
+		const { props } = renderPagination({ pagination: { manual: true, pageSize: PAGE_SIZE } }, USERS.slice(0, PAGE_SIZE))
+		expect(props).not.toBeNull()
+		expect(props?.rowCount).toBeUndefined()
+		expect(props?.pageCount).toBeUndefined()
+	})
+})
 
 describe('Pagination — variant plumbing', () => {
 	it('passes the configured variant through to the UI kit', () => {
@@ -80,7 +133,10 @@ describe('Pagination — client-side totals are known', () => {
 
 describe('Pagination — manual pagination normalizes unknown totals', () => {
 	it('surfaces a consumer-supplied rowCount', () => {
-		const { props } = captureProps({ pagination: { manual: true, pageSize: PAGE_SIZE, rowCount: 500 } }, USERS.slice(0, 10))
+		const { props } = captureProps(
+			{ pagination: { manual: true, pageSize: PAGE_SIZE, rowCount: 500 } },
+			USERS.slice(0, 10),
+		)
 		expect(props.rowCount).toBe(500)
 		expect(props.pageCount).toBe(50)
 	})

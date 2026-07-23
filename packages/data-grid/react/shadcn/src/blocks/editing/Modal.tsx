@@ -30,13 +30,7 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 								Cancel
 							</Button>
 						) : null}
-						{onSave ? (
-							<Button
-								onClick={onSave}
-							>
-								Save
-							</Button>
-						) : null}
+						{onSave ? <Button onClick={onSave}>Save</Button> : null}
 					</DialogFooter>
 				) : null}
 			</DialogContent>

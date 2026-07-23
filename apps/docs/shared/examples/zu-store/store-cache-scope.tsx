@@ -76,8 +76,8 @@ function Demo() {
 	return (
 		<div className='flex flex-col gap-4'>
 			<p className='text-sm text-fd-muted-foreground'>
-				Same <code>user-42</code> table, same store group — mounted under two scopes. Changing one never
-				touches the other.
+				Same <code>user-42</code> table, same store group — mounted under two scopes. Changing one never touches the
+				other.
 			</p>
 
 			<div className='grid gap-3 sm:grid-cols-2'>
@@ -93,9 +93,7 @@ function Demo() {
 
 			<div className='flex flex-col gap-2 rounded-lg border border-dashed border-fd-border p-4'>
 				<div className='flex items-center justify-between gap-2'>
-					<span className='text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground'>
-						cache tree
-					</span>
+					<span className='text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground'>cache tree</span>
 					<button
 						type='button'
 						onClick={() => {

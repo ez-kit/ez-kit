@@ -9,10 +9,10 @@ This page walks you from zero to a working data grid. Pick the flavor that match
 
 ## 1. Pick a flavor
 
-| Flavor | Install guide |
-| --- | --- |
+| Flavor                                       | Install guide                                         |
+| -------------------------------------------- | ----------------------------------------------------- |
 | **shadcn** — Tailwind + Radix UI primitives. | [Install for shadcn](./data-grid/installation/shadcn) |
-| **HeroUI** — HeroUI design system. | [Install for HeroUI](./data-grid/installation/heroui) |
+| **HeroUI** — HeroUI design system.           | [Install for HeroUI](./data-grid/installation/heroui) |
 
 The behavior layer is identical between flavors. You can switch at any time by swapping one package import.
 
@@ -35,7 +35,13 @@ const table = useDataGrid({ data, columns, sorting: true })
 return <DataGrid table={table} />
 
 // Uncontrolled — no hook; DataGrid runs useDataGrid for you
-return <DataGrid data={data} columns={columns} sorting />
+return (
+	<DataGrid
+		data={data}
+		columns={columns}
+		sorting
+	/>
+)
 ```
 
 <DataGridDocsExample exampleId='base-inline' />

@@ -16,7 +16,9 @@ type CounterDefaultValue = {
 const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<CounterDefaultValue>) =>
 	createStore<CounterState>()((set, get) => ({
 		count: defaultValue.initialCount,
-		increment: () => { set({ count: get().count + 1 }); },
+		increment: () => {
+			set({ count: get().count + 1 })
+		},
 	})),
 )
 

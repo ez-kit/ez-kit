@@ -15,7 +15,11 @@ export function SplitText({ text, className, delay = 0, style }: SplitTextProps)
 	const words = text.split(' ')
 
 	return (
-		<span className={className} style={style} aria-label={text}>
+		<span
+			className={className}
+			style={style}
+			aria-label={text}
+		>
 			{words.map((word, i) => (
 				<motion.span
 					key={`${word}-${String(i)}`}

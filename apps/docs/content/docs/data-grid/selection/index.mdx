@@ -24,14 +24,14 @@ const grid = useDataGrid({
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `enableRowSelection` | `boolean \| (row) => boolean` | Master switch. Pass a fn to enable per-row. Default `false`. |
-| `enableMultiRowSelection` | `boolean` | Default `true`. Set `false` to allow only one selected row. |
-| `enableSubRowSelection` | `boolean` | Selecting a parent also selects its sub-rows. |
-| `state.rowSelection` | `Record<string, boolean>` | Controlled selection state. |
-| `onRowSelectionChange` | `(updater) => void` | Subscribe. |
-| `getRowId` | `(row) => string` | REQUIRED if you want stable selection across data refreshes; default uses row index. |
+| Option                    | Type                          | Description                                                                          |
+| ------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
+| `enableRowSelection`      | `boolean \| (row) => boolean` | Master switch. Pass a fn to enable per-row. Default `false`.                         |
+| `enableMultiRowSelection` | `boolean`                     | Default `true`. Set `false` to allow only one selected row.                          |
+| `enableSubRowSelection`   | `boolean`                     | Selecting a parent also selects its sub-rows.                                        |
+| `state.rowSelection`      | `Record<string, boolean>`     | Controlled selection state.                                                          |
+| `onRowSelectionChange`    | `(updater) => void`           | Subscribe.                                                                           |
+| `getRowId`                | `(row) => string`             | REQUIRED if you want stable selection across data refreshes; default uses row index. |
 
 ## See also
 

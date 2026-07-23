@@ -8,7 +8,7 @@
 
 **Input**: User description: "need to add docs through fumadocs for data-grid packages"
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - First-time install and ship (Priority: P1)
 
@@ -120,7 +120,7 @@ where they would add a third UI kit — without opening the source.
   error) with their own page — these are easy to miss and commonly asked
   about.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -187,7 +187,7 @@ where they would add a third UI kit — without opening the source.
 - **Flavor**: `shadcn` or `heroui`; some pages render identical content
   across both, others render flavor-specific content.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

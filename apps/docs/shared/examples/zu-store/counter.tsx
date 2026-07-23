@@ -18,9 +18,15 @@ const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<Coun
 	const initialCount = defaultValue.initialCount ?? 0
 	return createStore<CounterState>()((set, get) => ({
 		count: initialCount,
-		increment: () => { set({ count: get().count + 1 }); },
-		decrement: () => { set({ count: get().count - 1 }); },
-		reset: () => { set({ count: initialCount }); },
+		increment: () => {
+			set({ count: get().count + 1 })
+		},
+		decrement: () => {
+			set({ count: get().count - 1 })
+		},
+		reset: () => {
+			set({ count: initialCount })
+		},
 	}))
 })
 

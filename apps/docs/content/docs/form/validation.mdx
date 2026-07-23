@@ -1,0 +1,85 @@
+---
+title: Validation
+description: Standard-schema validators passed straight through to TanStack Form — no resolver, no adapter.
+---
+
+# Validation
+
+There is **no resolver here**. `@ez-kit/form` adds nothing to TanStack Form's validation — it passes your validators through untouched, then renders whatever errors come back through the kit's error component.
+
+That means everything in the [TanStack Form validation guide](https://tanstack.com/form/latest/docs/framework/react/guides/validation) applies verbatim.
+
+## Schema validation
+
+Hand `validators.onChange` any [standard-schema](https://github.com/standard-schema/standard-schema) validator — zod, valibot, arktype:
+
+```tsx
+import { z } from 'zod'
+
+const schema = z.object({
+	email: z.email('Enter a valid email address'),
+	age: z.number().min(18, 'You must be at least 18'),
+	terms: z.literal(true, { error: 'You have to accept the terms' }),
+})
+
+const form = useForm({
+	defaultValues: { email: '', age: 0, terms: false as boolean },
+	validators: { onChange: schema },
+	onSubmit: ({ value }) => save(value),
+})
+```
+
+Each issue lands on the field its path points at, and that field renders it:
+
+<KitExample exampleId='form-validation' />
+
+Note the submit button: it is subscribed to `canSubmit`, so it stays disabled until the schema is satisfied.
+
+## When validation runs
+
+Pick the trigger with the key you use:
+
+```tsx
+validators: {
+	onChange: schema,   // as the user types
+	onBlur: schema,     // when the field loses focus
+	onSubmit: schema,   // only on submit
+}
+```
+
+Async validators (`onChangeAsync`, `onBlurAsync`) and `onChangeAsyncDebounceMs` work exactly as in TanStack Form.
+
+## Per-field validators
+
+The flat fields do not take a `validators` prop — validation is declared on the form, which is where a schema naturally lives. For a rule that belongs to one field only, use a form-level function validator returning the `fields` map:
+
+```tsx
+const form = useForm({
+	defaultValues: { username: '' },
+	validators: {
+		onChange: ({ value }) =>
+			value.username.length < 3 ? { fields: { username: 'At least 3 characters' } } : undefined,
+	},
+})
+```
+
+…or drop to [the native `form.Field`](./form/native-api), which accepts its own `validators`.
+
+## How errors are rendered
+
+Whatever a validator produces — a standard-schema issue object, a plain string, an `Error` — is normalised to display strings before it reaches your kit. Empty and `null` slots are dropped, so a field with nothing renderable is not marked invalid.
+
+The same helper is exported if you need it in a custom field:
+
+```ts
+import { formatFieldErrors, hasFieldErrors } from '@ez-kit/form-shadcn'
+
+formatFieldErrors([{ message: 'Required' }, undefined, 'Too short'])
+// → ['Required', 'Too short']
+```
+
+When a field has at least one error, its root gets `data-invalid`, the input gets `aria-invalid`, and the error element is linked through `aria-describedby`.
+
+## `required` is not validation
+
+The `required` prop on a field marks the control required for assistive technology and native form semantics. It does **not** produce an error message — that is the validator's job. Set both when you want both.

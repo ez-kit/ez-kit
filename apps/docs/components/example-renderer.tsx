@@ -3,20 +3,24 @@
 import dynamic from 'next/dynamic'
 import { createElement } from 'react'
 
-import manifest from '@/shared/data-grid/examples/manifest.json'
-import { exampleModules } from '@/shared/data-grid/examples/registry'
+import { exampleModules as dataGridModules } from '@/shared/data-grid/examples/registry'
 import { DataGridTypeProvider } from '@/shared/DataGrid'
+import { ExampleProduct, findExample } from '@/shared/examples-registry'
+import { exampleModules as formModules } from '@/shared/form/examples/registry'
 
 import type { ComponentType } from 'react'
 
-type ManifestEntry = { id: string; sourceFile: string; exportName: string }
 type ExampleKit = 'heroui' | 'shadcn'
-
-const entries = manifest as ManifestEntry[]
 
 type ExampleRendererProps = {
 	kit: ExampleKit
 	slug: string
+}
+
+/** Per-product `sourceFile` → dynamic import. See each registry for why they are hand-maintained. */
+const MODULE_REGISTRIES: Record<ExampleProduct, Record<string, () => Promise<Record<string, ComponentType>>>> = {
+	[ExampleProduct.DataGrid]: dataGridModules,
+	[ExampleProduct.Form]: formModules,
 }
 
 // The `@ez-kit/data-grid-heroui` bundle contains a dynamic `require` that Turbopack/RSC
@@ -26,13 +30,13 @@ type ExampleRendererProps = {
 // shadcn and heroui routes on one shared, symmetric rendering path instead of shadcn
 // SSRing while heroui silently falls back to client rendering.
 function loadExample(slug: string) {
-	const entry = entries.find((item) => item.id === slug)
+	const entry = findExample(slug)
 
 	if (!entry) {
 		throw new Error(`Example "${slug}" has no manifest entry`)
 	}
 
-	const loadModule = exampleModules[entry.sourceFile]
+	const loadModule = MODULE_REGISTRIES[entry.product][entry.sourceFile]
 
 	if (!loadModule) {
 		throw new Error(`Example "${slug}" has no registry entry for "${entry.sourceFile}"`)
@@ -70,5 +74,14 @@ export function ExampleRenderer({ kit, slug }: ExampleRendererProps) {
 	// (here `getExampleComponent`), even though the module-scope cache above makes it stable.
 	// Passing it as a `createElement` argument is the idiomatic way to render a runtime-selected
 	// component and satisfies the rule without an eslint-disable.
-	return <DataGridTypeProvider type={kit}>{createElement(getExampleComponent(slug))}</DataGridTypeProvider>
+	const example = createElement(getExampleComponent(slug))
+
+	// A form example takes its kit from the `FormKitProvider` the kit's `(embed)` layout
+	// mounts — a hook cannot be lazy-selected at render time the way `DataGrid` is, so the
+	// route supplies it instead. Only the grid needs the provider below.
+	if (findExample(slug)?.product === ExampleProduct.Form) {
+		return example
+	}
+
+	return <DataGridTypeProvider type={kit}>{example}</DataGridTypeProvider>
 }

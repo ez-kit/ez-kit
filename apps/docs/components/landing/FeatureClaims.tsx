@@ -43,12 +43,9 @@ export function FeatureClaims() {
 								◈
 							</span>
 							<div>
-								<h3 className='text-lg font-bold tracking-tight mb-2'>
-									Framework agnostic
-								</h3>
+								<h3 className='text-lg font-bold tracking-tight mb-2'>Framework agnostic</h3>
 								<p className='text-sm text-gray-500 dark:text-gray-400 leading-relaxed'>
-									React today. Vue, Svelte, or Solid tomorrow. The core is always
-									UI-framework-free.
+									React today. Vue, Svelte, or Solid tomorrow. The core is always UI-framework-free.
 								</p>
 							</div>
 						</div>
@@ -61,15 +58,9 @@ export function FeatureClaims() {
 							delay={0.1 + i * 0.07}
 						>
 							<div className='p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950'>
-								<span className='text-xl text-gray-200 dark:text-gray-800 mb-3 block'>
-									{claim.icon}
-								</span>
-								<h3 className='text-base font-semibold tracking-tight mb-1.5'>
-									{claim.title}
-								</h3>
-								<p className='text-sm text-gray-500 dark:text-gray-400 leading-relaxed'>
-									{claim.body}
-								</p>
+								<span className='text-xl text-gray-200 dark:text-gray-800 mb-3 block'>{claim.icon}</span>
+								<h3 className='text-base font-semibold tracking-tight mb-1.5'>{claim.title}</h3>
+								<p className='text-sm text-gray-500 dark:text-gray-400 leading-relaxed'>{claim.body}</p>
 							</div>
 						</ScrollReveal>
 					))}

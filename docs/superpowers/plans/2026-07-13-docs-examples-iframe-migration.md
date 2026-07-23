@@ -61,6 +61,7 @@ apps/docs/
 ## Task 1: Route-group restructure + isolated shadcn example route
 
 **Files:**
+
 - Create dir: `apps/docs/app/(site)/`
 - Move: `apps/docs/app/layout.tsx` → `apps/docs/app/(site)/layout.tsx`
 - Move: `app/(home)`, `app/docs`, `app/sandbox`, `app/og`, `app/llms.txt`, `app/llms.mdx`, `app/llms-full.txt` → under `app/(site)/`
@@ -72,6 +73,7 @@ apps/docs/
 - Test: `apps/docs/tests/examples-iframe.spec.ts` (Playwright)
 
 **Interfaces:**
+
 - Consumes: `apps/docs/shared/data-grid/examples/manifest.json` (array of `{ id, sourceFile, exportName }`), `DataGridTypeProvider` from `shared/DataGrid`.
 - Produces: URL `/examples/shadcn/<slug>?theme=<light|dark>` renders the example. `generateStaticParams()` yields `{ slug }` for every manifest id.
 
@@ -229,10 +231,7 @@ export default async function ShadcnExamplePage({ params }: { params: Promise<{ 
 
 	// Static prefix + variable suffix → bundler builds a recursive context module
 	// over shared/data-grid/examples. Validated on Turbopack in Step 10.
-	const mod = (await import(`@/shared/data-grid/examples/${entry.sourceFile}`)) as Record<
-		string,
-		React.ComponentType
-	>
+	const mod = (await import(`@/shared/data-grid/examples/${entry.sourceFile}`)) as Record<string, React.ComponentType>
 	const Example = mod[entry.exportName]
 
 	if (!Example) {
@@ -280,12 +279,14 @@ git commit -m "feat(docs): isolated shadcn example route via embed root layout"
 ## Task 2: Isolated heroui example route
 
 **Files:**
+
 - Create: `apps/docs/app/(embed)/examples/_styles/heroui.css`
 - Create: `apps/docs/app/(embed)/examples/heroui/layout.tsx`
 - Create: `apps/docs/app/(embed)/examples/heroui/[slug]/page.tsx`
 - Modify: `apps/docs/tests/examples-iframe.spec.ts`
 
 **Interfaces:**
+
 - Consumes: same manifest + `DataGridTypeProvider` as Task 1.
 - Produces: URL `/examples/heroui/<slug>?theme=<light|dark>`.
 
@@ -343,10 +344,7 @@ export default async function HerouiExamplePage({ params }: { params: Promise<{ 
 		notFound()
 	}
 
-	const mod = (await import(`@/shared/data-grid/examples/${entry.sourceFile}`)) as Record<
-		string,
-		React.ComponentType
-	>
+	const mod = (await import(`@/shared/data-grid/examples/${entry.sourceFile}`)) as Record<string, React.ComponentType>
 	const Example = mod[entry.exportName]
 
 	if (!Example) {
@@ -398,11 +396,13 @@ git commit -m "feat(docs): isolated heroui example route"
 ## Task 3: postMessage protocol + child bridge (height + theme)
 
 **Files:**
+
 - Create: `apps/docs/lib/frame-messages.ts`
 - Modify: `apps/docs/components/frame-bridge.tsx` (replace Task 1 stub)
 - Test: `apps/docs/tests/examples-iframe.spec.ts`
 
 **Interfaces:**
+
 - Produces: `FrameMessage` union and `FRAME_HEIGHT`/`FRAME_THEME`/`FRAME_READY` constants consumed by `ExampleFrame` (Task 4). Child posts `{ type: FRAME_HEIGHT, height }` and `{ type: FRAME_READY }`; child listens for `{ type: FRAME_THEME, theme }`.
 
 - [ ] **Step 1: Create the typed protocol module**
@@ -515,10 +515,12 @@ git commit -m "feat(docs): frame message protocol and embed child bridge"
 ## Task 4: `<ExampleFrame>` parent component
 
 **Files:**
+
 - Create: `apps/docs/components/example-frame.tsx`
 - Test: `apps/docs/tests/examples-iframe.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `frame-messages.ts` constants; `useTheme` from `next-themes` (available via Fumadocs `RootProvider`).
 - Produces: `<ExampleFrame kit={'shadcn' | 'heroui'} slug={string} />` — a lazy, auto-height, theme-synced iframe. Exposes an optional `action?: ReactNode` slot (deferred "open in sandbox" seam; renders nothing when omitted).
 
@@ -587,10 +589,7 @@ export function ExampleFrame({ kit, slug, action }: ExampleFrameProps) {
 	// Push theme changes once the child is ready.
 	useEffect(() => {
 		if (!ready) return
-		iframeRef.current?.contentWindow?.postMessage(
-			{ type: FRAME_THEME, theme },
-			window.location.origin,
-		)
+		iframeRef.current?.contentWindow?.postMessage({ type: FRAME_THEME, theme }, window.location.origin)
 	}, [ready, theme])
 
 	// Initial theme travels in the URL so there is no flash before READY.
@@ -624,7 +623,12 @@ Create `apps/docs/app/(site)/examples-harness/page.tsx`:
 import { ExampleFrame } from '@/components/example-frame'
 
 export default function Harness() {
-	return <ExampleFrame kit='shadcn' slug='base-sorting' />
+	return (
+		<ExampleFrame
+			kit='shadcn'
+			slug='base-sorting'
+		/>
+	)
 }
 ```
 
@@ -670,11 +674,13 @@ git commit -m "feat(docs): ExampleFrame lazy iframe with auto-height and theme s
 ## Task 5: Source panel via `fs`
 
 **Files:**
+
 - Create: `apps/docs/components/example-source.ts`
 - Modify: `apps/docs/components/data-grid-source-panel.tsx`
 - Test: `apps/docs/test/data-grid-source-panel.test.tsx`
 
 **Interfaces:**
+
 - Produces: `readExampleSource(exampleId: string): Promise<string>` (server-only). `DataGridSourcePanel` now takes `{ source: string; language?: string }` instead of `{ exampleId }`.
 
 - [ ] **Step 1: Create the server-only source reader**
@@ -760,10 +766,12 @@ git commit -m "feat(docs): source panel reads example source via fs"
 ## Task 6: Switch `DataGridDocsExample` to iframe preview, drop native flavor
 
 **Files:**
+
 - Modify: `apps/docs/components/data-grid-docs-example.tsx`
 - Test: `apps/docs/test/data-grid-docs-example.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `ExampleFrame` (Task 4), `readExampleSource` (Task 5), `DataGridSourcePanel` (Task 5, `source` prop).
 - Produces: `DataGridDocsExample` unchanged public props (`exampleId`, `defaultType?`, `lockFlavor?`), now an async server component that reads source and renders a client switcher whose preview is `<ExampleFrame>`. Flavors: `shadcn`, `heroui`.
 
@@ -786,9 +794,7 @@ export type DataGridDocsExampleProps = {
 
 export async function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: DataGridDocsExampleProps) {
 	if (lockFlavor === true && defaultType === undefined) {
-		throw new Error(
-			'<DataGridDocsExample />: `lockFlavor` requires `defaultType` ("shadcn" or "heroui").',
-		)
+		throw new Error('<DataGridDocsExample />: `lockFlavor` requires `defaultType` ("shadcn" or "heroui").')
 	}
 
 	const source = await readExampleSource(exampleId)
@@ -841,7 +847,12 @@ export function DataGridDocsExampleClient({ exampleId, source, defaultType, lock
 		return (
 			<ExampleShell>
 				<ExampleCard
-					view={<ExampleFrame kit={defaultType} slug={exampleId} />}
+					view={
+						<ExampleFrame
+							kit={defaultType}
+							slug={exampleId}
+						/>
+					}
 					source={<DataGridSourcePanel source={source} />}
 				/>
 			</ExampleShell>
@@ -908,7 +919,12 @@ function Switcher({
 				onSelect={onSelect}
 			/>
 			<ExampleCard
-				view={<ExampleFrame kit={flavor} slug={exampleId} />}
+				view={
+					<ExampleFrame
+						kit={flavor}
+						slug={exampleId}
+					/>
+				}
 				source={<DataGridSourcePanel source={source} />}
 			/>
 		</ExampleShell>
@@ -1015,6 +1031,7 @@ git commit -m "feat(docs): docs example uses ExampleFrame, drop shadcn-native fl
 ## Task 7: Remove Sandpack and its build pipeline
 
 **Files:**
+
 - Delete: `apps/docs/scripts/build-sandpack.mjs`
 - Delete: `apps/docs/shared/data-grid/sandpack/` (whole dir incl. `DataGridSandpackExample.tsx` and `generated/`)
 - Delete: `apps/docs/shared/data-grid/examples/generated/` (regenerated no more)
@@ -1022,6 +1039,7 @@ git commit -m "feat(docs): docs example uses ExampleFrame, drop shadcn-native fl
 - Modify: any remaining importers of the deleted modules
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces: a docs app with no Sandpack code, no prebuild step.
 
@@ -1085,6 +1103,7 @@ git commit -m "chore(docs): remove Sandpack and its build pipeline"
 ## Self-Review
 
 **Spec coverage:**
+
 - Routes `/examples/[kit]/[slug]` + CSS isolation → Tasks 1, 2 (per-kit segments under an isolated embed root — the spec's `[kit]` dynamic segment is realized as explicit `shadcn/`+`heroui/` segments to allow static per-kit CSS imports; same URLs, same behavior).
 - Dynamic import from manifest, no codegen → Task 1 Step 8 (+ fallback map in Step 10).
 - Source panel via `fs` → Task 5.

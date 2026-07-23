@@ -1,0 +1,5 @@
+{
+	"title": "Installation",
+	"description": "Install instructions per UI-kit flavor",
+	"pages": ["shadcn", "heroui"]
+}

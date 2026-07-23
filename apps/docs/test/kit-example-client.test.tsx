@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
 
-import { DataGridDocsExampleClient } from '@/components/data-grid-docs-example-client'
+import { KitExampleClient } from '@/components/kit-example-client'
 
 // Render ExampleFrame's props observably so we can assert the propagated
 // `kit`/`slug` directly. This also sidesteps the real IntersectionObserver
@@ -26,7 +26,7 @@ vi.mock('@/hooks/use-url-state', () => ({
 
 test('locked flavor renders that kit and hides the tab switcher', () => {
 	render(
-		<DataGridDocsExampleClient
+		<KitExampleClient
 			exampleId='base-sorting'
 			source={'const x = 1\n'}
 			defaultType='heroui'
@@ -45,7 +45,7 @@ test('locked flavor renders that kit and hides the tab switcher', () => {
 
 test('switching tabs drives the ExampleFrame kit', () => {
 	render(
-		<DataGridDocsExampleClient
+		<KitExampleClient
 			exampleId='base-sorting'
 			source={'const x = 1\n'}
 			defaultType='shadcn'

@@ -132,14 +132,21 @@ Returns the live `StoreApi` or `undefined`. Never creates an entry. Use it in ev
 // A global "reset filters" button, even outside the table's subtree:
 function ResetButton() {
 	return (
-		<button onClick={() => usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'all', page: 1 })}>
+		<button
+			onClick={() => usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'all', page: 1 })}
+		>
 			Reset
 		</button>
 	)
 }
 
 // A WebSocket pushing rows into the live store:
-socket.on('row', (row) => usersTable.fromCache({ path: ['page-1'], id: 'users' })?.getState().addRow(row))
+socket.on('row', (row) =>
+	usersTable
+		.fromCache({ path: ['page-1'], id: 'users' })
+		?.getState()
+		.addRow(row),
+)
 ```
 
 ### `useFromCache({ path, id }, selector)` — reactive
@@ -209,7 +216,11 @@ Nested `Scope`s **concatenate** (outermost first), so `resolvedPath = [...inheri
 <CacheScope path={['page-1']}>
 	<CacheScope path={['section-1']}>
 		<usersTable.Provider id='user-42' /> {/* path: ['page-1', 'section-1'] */}
-		<usersTable.Provider id='user-42' path={['detail']} /> {/* ['page-1','section-1','detail'] */}
+		<usersTable.Provider
+			id='user-42'
+			path={['detail']}
+		/>{' '}
+		{/* ['page-1','section-1','detail'] */}
 	</CacheScope>
 </CacheScope>
 ```
@@ -224,12 +235,18 @@ When you don't want to lift a `Scope` boundary but still need to disambiguate tw
 function CompanyView({ companyId }: { companyId: string }) {
 	return (
 		<>
-			<usersTable.Provider id={`company-${companyId}`} path={['main']}>
+			<usersTable.Provider
+				id={`company-${companyId}`}
+				path={['main']}
+			>
 				<UsersTable />
 			</usersTable.Provider>
 
 			<Modal title='Edit users'>
-				<usersTable.Provider id={`company-${companyId}`} path={['modal']}>
+				<usersTable.Provider
+					id={`company-${companyId}`}
+					path={['modal']}
+				>
 					<UsersTable />
 				</usersTable.Provider>
 			</Modal>
@@ -252,9 +269,9 @@ const invoicesTable = createCachedStore(invoicesFactory, { name: 'invoices' })
 function CustomerDetailPage({ customerId }: { customerId: string }) {
 	return (
 		<CacheScope path={['customer', customerId]}>
-			<usersTable.Provider id='list' />     {/* path: ['customer', '42'] */}
-			<ordersTable.Provider id='list' />    {/* path: ['customer', '42'] */}
-			<invoicesTable.Provider id='list' />  {/* path: ['customer', '42'] */}
+			<usersTable.Provider id='list' /> {/* path: ['customer', '42'] */}
+			<ordersTable.Provider id='list' /> {/* path: ['customer', '42'] */}
+			<invoicesTable.Provider id='list' /> {/* path: ['customer', '42'] */}
 		</CacheScope>
 	)
 }
@@ -411,13 +428,13 @@ Returns a store group. `options.name` is the group's namespace (visible in `useC
 
 The returned group exposes:
 
-| Member                                                      | Purpose                                                                                          |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `Provider`                                                  | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.       |
-| `useStore` / `useShallowStore` / `useContextStore` / `Item` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`.   |
-| `fromCache({ path?, id })`                            | Imperative get-if-alive → `StoreApi` or `undefined`.                                             |
-| `useFromCache({ path?, id }, selector)`               | Reactive, passive cross-tree read.                                                               |
-| `remove({ path?, id })`                               | Drop one entry immediately.                                                                       |
+| Member                                                      | Purpose                                                                                        |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Provider`                                                  | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.           |
+| `useStore` / `useShallowStore` / `useContextStore` / `Item` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`. |
+| `fromCache({ path?, id })`                                  | Imperative get-if-alive → `StoreApi` or `undefined`.                                           |
+| `useFromCache({ path?, id }, selector)`                     | Reactive, passive cross-tree read.                                                             |
+| `remove({ path?, id })`                                     | Drop one entry immediately.                                                                    |
 
 ## Server-side rendering
 

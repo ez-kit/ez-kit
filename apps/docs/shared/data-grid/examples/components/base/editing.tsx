@@ -17,9 +17,7 @@ export function BaseEditingExample() {
 		editing: {
 			mode: 'row',
 			onSave: ({ rowId, values }) => {
-				setData((prev) =>
-					prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)),
-				)
+				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 			},
 		},
 	})

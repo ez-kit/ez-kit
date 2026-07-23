@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@heroui/react'
-import { Check, Pencil, Trash2, X } from 'lucide-react'
+import { Check, Loader2, Pencil, Trash2, X } from 'lucide-react'
 
 import type { ActionsCellProps } from '@ez-kit/data-grid-react'
 
@@ -21,18 +21,20 @@ export function ActionsCell({
 			<>
 				<Button
 					variant='ghost'
+					size='sm'
 					isIconOnly
-					isPending={isPending}
+					isDisabled={isPending}
 					onPress={() => void onSave()}
 				>
-					<Check size={16} />
+					{isPending ? <Loader2 className='size-4 animate-spin' /> : <Check className='size-4' />}
 				</Button>
 				<Button
 					variant='ghost'
+					size='sm'
 					isIconOnly
 					onPress={onCancel}
 				>
-					<X size={16} />
+					<X className='size-4' />
 				</Button>
 			</>
 		)
@@ -43,19 +45,21 @@ export function ActionsCell({
 			{hasEditing && (
 				<Button
 					variant='ghost'
+					size='sm'
 					isIconOnly
 					onPress={onEdit}
 				>
-					<Pencil size={16} />
+					<Pencil className='size-4' />
 				</Button>
 			)}
 			{hasDeleting && (
 				<Button
 					variant='danger-soft'
+					size='sm'
 					isIconOnly
 					onPress={onDelete}
 				>
-					<Trash2 size={16} />
+					<Trash2 className='size-4' />
 				</Button>
 			)}
 		</>

@@ -7,12 +7,15 @@ description: Sync a few fields to the URL query string — decorate them, mount 
 
 The shortest path to URL-as-state: declare which fields sync, mount the URL adapter under a `PersistProvider`, and read/write the store as usual.
 
-<LivePreview path='valtio-kit/persist-url' title='URL-synced filters' />
+<LivePreview
+	path='valtio-kit/persist-url'
+	title='URL-synced filters'
+/>
 
-<Callout type="warn">
-	The interactive demo is declared with the [accessor API](./valtio-kit/persist/fields) so it runs in this
-	in-browser sandbox, and uses an isolated in-memory URL adapter so it doesn't hijack this page's address bar.
-	The behavior and URL output match the decorator form below exactly.
+<Callout type='warn'>
+	The interactive demo is declared with the [accessor API](./valtio-kit/persist/fields) so it runs in this in-browser
+	sandbox, and uses an isolated in-memory URL adapter so it doesn't hijack this page's address bar. The behavior and URL
+	output match the decorator form below exactly.
 </Callout>
 
 ## The three pieces

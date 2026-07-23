@@ -42,8 +42,7 @@ via `createDataGrid({ components })`. What makes onboarding a new kit rough toda
 - The de-duplication is done by **folding `extendDataGrid` into the existing
   `createDataGrid` return value** — no new factory function. Kits write:
   ```ts
-  const { DataGrid, useDataGrid, GridComponentsProvider, extendDataGrid } =
-    createDataGrid({ components, cellTypes })
+  const { DataGrid, useDataGrid, GridComponentsProvider, extendDataGrid } = createDataGrid({ components, cellTypes })
   ```
 - Scaffold generator is out of scope for this spec.
 
@@ -59,23 +58,36 @@ _obligation_ types layered on top:
 ```ts
 // react/src/contract.ts
 export type GridCoreComponents = Required<
-  Pick<GridComponents, 'Table' | 'Thead' | 'Tbody' | 'Tr' | 'Th' | 'Td' | 'Button' | 'Input' | 'Checkbox' | 'Toolbar'>
+	Pick<GridComponents, 'Table' | 'Thead' | 'Tbody' | 'Tr' | 'Th' | 'Td' | 'Button' | 'Input' | 'Checkbox' | 'Toolbar'>
 >
 export type GridPaginationComponents = Required<Pick<GridComponents, 'Pagination' | 'PageSizer'>>
-export type GridSortingComponents    = Required<Pick<GridComponents, 'SortIndicator' | 'SortMenu' | 'ColumnMenu'>>
-export type GridFilteringComponents  = Required<Pick<GridComponents,
-  'FilterPopover' | 'FilterPanel' | 'FilterPanelChip' | 'FilterChip' | 'ClearFiltersButton'
-  | 'GlobalFilterInput' | 'OperatorSelect' | 'BetweenInput' | 'MultiSelectFilter'>>
-export type GridEditingComponents    = Required<Pick<GridComponents,
-  'Modal' | 'FormShell' | 'ActionsCell' | 'CreatingActionsCell' | 'ConfirmDialog' | 'NumberInput'>>
-export type GridSelectionComponents  = Required<Pick<GridComponents, 'SelectionBar'>>
-export type GridPinningComponents    = Required<Pick<GridComponents, 'RowPinMenu'>>
-export type GridResizingComponents   = Required<Pick<GridComponents, 'Resizer'>>
-export type GridStateComponents      = Required<Pick<GridComponents,
-  'LoadingRow' | 'EmptyState' | 'NoResultsState' | 'RefetchOverlay'>>
-export type GridInfiniteComponents   = Required<Pick<GridComponents, 'LoadMoreRow'>>
-export type GridColumnComponents     = Required<Pick<GridComponents, 'ColumnVisibilityMenu'>>
-export type GridExpandComponents     = Required<Pick<GridComponents, 'Chevron'>>
+export type GridSortingComponents = Required<Pick<GridComponents, 'SortIndicator' | 'SortMenu' | 'ColumnMenu'>>
+export type GridFilteringComponents = Required<
+	Pick<
+		GridComponents,
+		| 'FilterPopover'
+		| 'FilterPanel'
+		| 'FilterPanelChip'
+		| 'FilterChip'
+		| 'ClearFiltersButton'
+		| 'GlobalFilterInput'
+		| 'OperatorSelect'
+		| 'BetweenInput'
+		| 'MultiSelectFilter'
+	>
+>
+export type GridEditingComponents = Required<
+	Pick<GridComponents, 'Modal' | 'FormShell' | 'ActionsCell' | 'CreatingActionsCell' | 'ConfirmDialog' | 'NumberInput'>
+>
+export type GridSelectionComponents = Required<Pick<GridComponents, 'SelectionBar'>>
+export type GridPinningComponents = Required<Pick<GridComponents, 'RowPinMenu'>>
+export type GridResizingComponents = Required<Pick<GridComponents, 'Resizer'>>
+export type GridStateComponents = Required<
+	Pick<GridComponents, 'LoadingRow' | 'EmptyState' | 'NoResultsState' | 'RefetchOverlay'>
+>
+export type GridInfiniteComponents = Required<Pick<GridComponents, 'LoadMoreRow'>>
+export type GridColumnComponents = Required<Pick<GridComponents, 'ColumnVisibilityMenu'>>
+export type GridExpandComponents = Required<Pick<GridComponents, 'Chevron'>>
 
 /** A kit that advertises full support for every feature. */
 export type FullGridComponents = Required<GridComponents>
@@ -102,10 +114,17 @@ bound to the same `components` + `cellTypes` closure:
 ```ts
 // inside createDataGrid, alongside the existing return
 function extendDataGrid<TExtra extends CellTypeRegistry>(extra: TExtra) {
-  return createDataGrid({ components, cellTypes: { ...cellTypes, ...extra } as TCellTypes & TExtra })
+	return createDataGrid({ components, cellTypes: { ...cellTypes, ...extra } as TCellTypes & TExtra })
 }
-return { DataGrid: BoundDataGrid, useDataGrid, useDataGridStore, GridComponentsProvider,
-         defineColumns, createColumnHelper, extendDataGrid }
+return {
+	DataGrid: BoundDataGrid,
+	useDataGrid,
+	useDataGridStore,
+	GridComponentsProvider,
+	defineColumns,
+	createColumnHelper,
+	extendDataGrid,
+}
 ```
 
 Each kit's `data-grid.tsx` then drops its hand-written `extendDataGrid` function and the
@@ -149,9 +168,10 @@ Add `packages/data-grid/react/react/CONTRACT.md` — the "implement this" refere
 external developer reads. One row per component:
 
 | Component | Tier / feature | Props type | Required `data-slot` | Notes |
-|-----------|----------------|-----------|----------------------|-------|
+| --------- | -------------- | ---------- | -------------------- | ----- |
 
 Plus a short preamble covering:
+
 - The two obligations every kit has: register components + `import '@ez-kit/data-grid-react/styles.css'` once at the kit/app root.
 - `FullGridComponents` vs partial `GridComponents`.
 - That the `react` layer emits `data-slot="…"` structural hooks; the kit's CSS targets them.
@@ -202,7 +222,7 @@ Two follow-up refinements applied after the initial approval:
    `COMPONENT_FEATURE` written by hand, the source of truth is a nested
    `FEATURE_COMPONENTS: Record<GridFeature, readonly (keyof GridComponents)[]>`
    (`satisfies` forces every feature to be present). Both the flat `COMPONENT_FEATURE`
-   lookup (used by the guard) and every `Grid*Components` tier type are *derived* from it
+   lookup (used by the guard) and every `Grid*Components` tier type are _derived_ from it
    (`ComponentsFor<F> = Required<Pick<GridComponents, (typeof FEATURE_COMPONENTS)[F][number]>>`),
    so the grouping lives in exactly one place. All three are exported.
 

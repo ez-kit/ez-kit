@@ -1,5 +1,5 @@
 import { createTable } from '@ez-kit/data-grid-core'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { createDataGridInstance } from './data-grid-instance'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
@@ -32,6 +32,9 @@ export const PAGE_SIZER_KEY = Symbol('pageSizer')
 
 /** Symbol used to carry the page-based pagination variant on the table instance for Pagination to read. */
 export const PAGINATION_VARIANT_KEY = Symbol('paginationVariant')
+
+/** Symbol used to carry the resolved `numbered` page-link window on the table instance for Pagination to read. */
+export const PAGINATION_WINDOW_KEY = Symbol('paginationWindow')
 
 /** Symbol used to carry rowPinning config on the table instance for RowPinCell to read. */
 export const ROW_PINNING_KEY = Symbol('rowPinning')
@@ -179,6 +182,27 @@ function normalizeVirtualized(
  * (`trigger`, `threshold`) on top of the headless {@link PaginationConfig}
  * (`mode`, `hasNextPage`, `onLoadMore`). Mirrors the `ReactFilteringConfig`
  * pattern: data semantics in core, DOM detection here.
+ *
+ * **Manual pagination — `pageIndex` clamping.** TanStack disables `autoResetPageIndex`
+ * under `manual: true`, so a shrinking {@link PaginationConfig.rowCount} would otherwise
+ * strand the user past the last page. When a supplied `rowCount` actually **shrinks**,
+ * `useDataGrid` clamps `pageIndex` to the last valid page via `setPageIndex` — i.e. through
+ * `onChange` / `onStateChange`, the normal controlled flow. An unknown total (`pageCount`
+ * only) is never clamped: there is nothing to clamp to.
+ *
+ * Only a shrink clamps, never the first total observed: with the usual
+ * `rowCount: data?.rowCount ?? 0`, the initial `0` means "not loaded yet", and clamping it
+ * would reset a deep-linked page mid-fetch. The trade-off is that a deep link to an
+ * already-out-of-range page is left as-is — the server returns no rows for it, so the
+ * `0–0 of N` footer matches the empty screen rather than contradicting it.
+ *
+ * The clamp lands **after commit**, so the render in which `rowCount` shrinks still paints
+ * the pre-clamp page for one frame before the corrected one. Notifying the consumer during
+ * render would mean calling its state setter mid-render, which React rejects.
+ *
+ * Limitation: a consumer that fully controls `state.pagination` but **ignores** the change
+ * callback keeps ownership of the index — the grid cannot force the shift, and the page
+ * stays out of range until the consumer mirrors the callback.
  */
 export type ReactPaginationConfig = PaginationConfig & {
 	/**
@@ -187,6 +211,16 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 * behaviour is identical across variants.
 	 */
 	variant?: PaginationVariant
+	/**
+	 * `numbered` variant only. How many pages stay either side of the current one in the page-link
+	 * strip. Default {@link DATA_GRID_DEFAULTS.pagination.siblings} (1) → `1 … 4 5 6 … 100`.
+	 */
+	siblings?: number
+	/**
+	 * `numbered` variant only. How many pages stay at each end of the page-link strip.
+	 * Default {@link DATA_GRID_DEFAULTS.pagination.boundaries} (1) → the `1` and `100` above.
+	 */
+	boundaries?: number
 	/**
 	 * Infinite mode only. `'auto'` (default) loads when the edge enters view;
 	 * `'manual'` suppresses auto detection and renders a "Load more" control.
@@ -225,6 +259,16 @@ function normalizeInfinite(
 		hasPreviousPage: pagination.hasPreviousPage ?? false,
 		...(pagination.onLoadMore !== undefined ? { onLoadMore: pagination.onLoadMore } : {}),
 	}
+}
+
+/**
+ * Fully resolved `numbered` page-link window stored on the table instance for `Pagination` to
+ * read. Both fields are required here — the `undefined`s from {@link ReactPaginationConfig}
+ * are settled against {@link DATA_GRID_DEFAULTS} once, in the hook.
+ */
+export type NormalizedPageWindowConfig = {
+	siblings: number
+	boundaries: number
 }
 
 export type PageSizerConfig = {
@@ -414,9 +458,9 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	pagination?: boolean | ReactPaginationConfig
 } & Omit<
-		TableConfig<TRow>,
-		'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection'
-	> & {
+	TableConfig<TRow>,
+	'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection'
+> & {
 		expanding?: boolean | ReactExpandingConfig<TRow>
 	}
 
@@ -470,16 +514,21 @@ export function useDataGrid<TRow extends object>(
 	const selectionPanel: boolean | SelectionPanelConfig<TRow> | undefined =
 		typeof rawSelection === 'object' ? rawSelection.panel : undefined
 	const coreSelection: boolean | SelectionConfig | undefined =
-		typeof rawSelection === 'object'
-			? (({ panel: _panel, ...rest }) => rest)(rawSelection)
-			: rawSelection
+		typeof rawSelection === 'object' ? (({ panel: _panel, ...rest }) => rest)(rawSelection) : rawSelection
 
 	// Split pagination into the headless core part (strip React-only detection tuning and
 	// the display-only `variant`) and the normalized infinite config stored on the instance
 	// for the infinite hook.
 	const corePagination: boolean | PaginationConfig | undefined =
 		typeof rawPagination === 'object'
-			? (({ trigger: _trigger, threshold: _threshold, variant: _variant, ...rest }) => rest)(rawPagination)
+			? (({
+					trigger: _trigger,
+					threshold: _threshold,
+					variant: _variant,
+					siblings: _siblings,
+					boundaries: _boundaries,
+					...rest
+				}) => rest)(rawPagination)
 			: rawPagination
 	const normalizedInfinite = normalizeInfinite(rawPagination)
 
@@ -487,6 +536,18 @@ export function useDataGrid<TRow extends object>(
 		typeof rawPagination === 'object'
 			? (rawPagination.variant ?? DATA_GRID_DEFAULTS.pagination.variant)
 			: DATA_GRID_DEFAULTS.pagination.variant
+
+	// Resolved once here — like the variant — so no UI kit ever has to fall back for itself.
+	const paginationWindow: NormalizedPageWindowConfig = {
+		siblings:
+			typeof rawPagination === 'object'
+				? (rawPagination.siblings ?? DATA_GRID_DEFAULTS.pagination.siblings)
+				: DATA_GRID_DEFAULTS.pagination.siblings,
+		boundaries:
+			typeof rawPagination === 'object'
+				? (rawPagination.boundaries ?? DATA_GRID_DEFAULTS.pagination.boundaries)
+				: DATA_GRID_DEFAULTS.pagination.boundaries,
+	}
 
 	// Build core-compatible expanding config (strip React-only fields)
 	const reactExpandingCfg = typeof rawExpanding === 'object' ? rawExpanding : undefined
@@ -509,7 +570,9 @@ export function useDataGrid<TRow extends object>(
 		typeof rawFiltering === 'object' ? rawFiltering.variant : undefined
 
 	const filteringDebounce: number =
-		typeof rawFiltering === 'object' ? (rawFiltering.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS) : DEFAULT_FILTER_DEBOUNCE_MS
+		typeof rawFiltering === 'object'
+			? (rawFiltering.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS)
+			: DEFAULT_FILTER_DEBOUNCE_MS
 
 	const normalizedChips: NormalizedFilterChipsConfig | undefined = (() => {
 		if (typeof rawFiltering !== 'object' || rawFiltering.chips === undefined || rawFiltering.chips === false) {
@@ -659,6 +722,9 @@ export function useDataGrid<TRow extends object>(
 	// Store the resolved pagination variant so Pagination can read it without an extra prop
 	tableAsSymbolMap[PAGINATION_VARIANT_KEY] = paginationVariant
 
+	// Store the resolved page-link window alongside it, read by Pagination for `numbered`
+	tableAsSymbolMap[PAGINATION_WINDOW_KEY] = paginationWindow
+
 	// Store the column filter commit debounce on the table instance so Header / FilterPanel can read it
 	tableAsSymbolMap[FILTERING_DEBOUNCE_KEY] = filteringDebounce
 
@@ -741,6 +807,47 @@ export function useDataGrid<TRow extends object>(
 			return next
 		})
 	}
+
+	// Clamp `pageIndex` to the last valid page when a manual-pagination `rowCount` shrinks
+	// under the user (e.g. a server filter narrows 500 rows to 5 while they sit on page 3).
+	// TanStack defaults `autoResetPageIndex` to `!manualPagination`, so under manual mode it
+	// never rewinds the index itself, and the resync above only projects the descriptors. Left
+	// alone, the footer reads "0–0 of 5" while `getPaginationRowModel()` — which returns the
+	// whole `data` under manual mode — still renders all 5 rows: the label contradicts the screen.
+	//
+	// Deliberately an effect rather than a render-body write like the sync blocks above:
+	// `setPageIndex` routes through `onStateChange`, i.e. the **consumer's** callback. Those
+	// blocks never reach the consumer — `setOptions` fires no callback and `syncControlledState`
+	// skips `onStateChange` on purpose (see the comment above it). Writing here during render
+	// would therefore setState a parent mid-render ("Cannot update a component while rendering a
+	// different component"), so the notification waits for commit. The cost is one frame of the
+	// pre-clamp label — which is exactly the honest "0–0 of 5" the footer already shows today,
+	// never the inverted range.
+	//
+	// Only an actual **shrink** of a trusted `rowCount` clamps — never the first total we see.
+	// `rowCount: data?.rowCount ?? 0` is the canonical manual shape, so the initial `0` usually
+	// means "not loaded yet" rather than "empty" (the resync above says as much), and it is
+	// indistinguishable from a genuine empty result. Clamping on it would reset a deep-linked
+	// `pageIndex` while its fetch is still in flight — the exact inverse of the bug being fixed:
+	// #82 loses the user's rows, that would lose the user's page. An unknown total (`pageCount`
+	// sentinel / no total at all) has nothing to clamp to either.
+	//
+	// A shrink can only move `pageIndex` down, and the deps change only when the total does, so
+	// one pass per shrink cannot re-trigger itself: a consumer that ignores the callback stays put
+	// instead of looping. Note this deliberately ignores a `pageSize` change at an unchanged
+	// total — `table.setPageSize` already rebases `pageIndex` itself, so only a consumer driving
+	// `pageSize` from its own state could sit out of range, which is outside this fix's scope.
+	const prevRowCountRef = useRef<number | undefined>(undefined)
+	useEffect(() => {
+		const prevRowCount = prevRowCountRef.current
+		prevRowCountRef.current = nextRowCount
+		if (nextRowCount === undefined || prevRowCount === undefined) return
+		if (nextRowCount >= prevRowCount) return
+		const { pageIndex, pageSize } = table.getState().pagination
+		// An empty or otherwise degenerate total collapses to the single first page.
+		const lastPageIndex = nextRowCount <= 0 || pageSize <= 0 ? 0 : Math.ceil(nextRowCount / pageSize) - 1
+		if (pageIndex > lastPageIndex) table.setPageIndex(lastPageIndex)
+	}, [table, nextRowCount])
 
 	// The loading status (`isPending`/`isFetching`/`isError`/`error`) is user-owned
 	// controlled state fed through the `state.loading` slice; it is handled by the

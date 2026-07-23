@@ -40,9 +40,7 @@ function OverrideGrid() {
 
 export function DefaultOptionsExample() {
 	return (
-		<DataGridOptionsProvider<(typeof INITIAL_DATA)[number]>
-			defaults={{ sorting: true, pagination: { pageSize: 3 } }}
-		>
+		<DataGridOptionsProvider<(typeof INITIAL_DATA)[number]> defaults={{ sorting: true, pagination: { pageSize: 3 } }}>
 			<div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 				<DefaultsGrid />
 				<OverrideGrid />

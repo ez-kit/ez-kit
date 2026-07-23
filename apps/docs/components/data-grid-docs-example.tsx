@@ -1,28 +1,7 @@
-import { readExampleSource } from '@/components/example-source'
-
-import { DataGridDocsExampleClient } from './data-grid-docs-example-client'
-
-export type DataGridDocsExampleFlavor = 'shadcn' | 'heroui'
-
-export type DataGridDocsExampleProps = {
-	exampleId: string
-	defaultType?: DataGridDocsExampleFlavor
-	lockFlavor?: boolean
-}
-
-export async function DataGridDocsExample({ exampleId, defaultType, lockFlavor }: DataGridDocsExampleProps) {
-	if (lockFlavor === true && defaultType === undefined) {
-		throw new Error('<DataGridDocsExample />: `lockFlavor` requires `defaultType` ("shadcn" or "heroui").')
-	}
-
-	const source = await readExampleSource(exampleId)
-
-	return (
-		<DataGridDocsExampleClient
-			exampleId={exampleId}
-			source={source}
-			defaultType={defaultType}
-			lockFlavor={lockFlavor ?? false}
-		/>
-	)
-}
+/**
+ * The data-grid docs pages call this component ~77 times. It is now just the name those
+ * pages know {@link KitExample} by — the implementation is shared with the form docs, since
+ * nothing about the switcher was ever specific to the grid.
+ */
+export { KitExample as DataGridDocsExample } from './kit-example'
+export type { DataGridDocsExampleFlavor, KitExampleProps as DataGridDocsExampleProps } from './kit-example'

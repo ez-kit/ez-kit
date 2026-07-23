@@ -7,7 +7,7 @@ import { ExamplePreview } from '@/components/example-preview'
 import { rewriteExampleImports } from '@/components/rewrite-example-imports'
 import { useUrlState } from '@/hooks/use-url-state'
 
-import type { DataGridDocsExampleFlavor } from './data-grid-docs-example'
+import type { DataGridDocsExampleFlavor } from './kit-example'
 
 const FLAVOR_PARAM = 'kit'
 const DEFAULT_FLAVOR: DataGridDocsExampleFlavor = 'shadcn'
@@ -26,7 +26,7 @@ type ClientProps = {
 	lockFlavor: boolean
 }
 
-export function DataGridDocsExampleClient({ exampleId, source, defaultType, lockFlavor }: ClientProps) {
+export function KitExampleClient({ exampleId, source, defaultType, lockFlavor }: ClientProps) {
 	// Invariant: `lockFlavor` always arrives with a `defaultType`. The server
 	// wrapper in `data-grid-docs-example.tsx` throws when `lockFlavor` is set
 	// without one, so the `&& defaultType` guard here can never fall through to

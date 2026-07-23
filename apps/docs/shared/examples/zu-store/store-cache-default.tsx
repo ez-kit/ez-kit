@@ -85,8 +85,8 @@ function Demo() {
 				</draftStore.Provider>
 			) : (
 				<p className='rounded-lg border border-dashed border-fd-border p-4 text-sm text-fd-muted-foreground'>
-					The composer is closed, but your draft is kept alive in the default cache. Reopen it — your
-					subject and body are still there.
+					The composer is closed, but your draft is kept alive in the default cache. Reopen it — your subject and body
+					are still there.
 				</p>
 			)}
 		</div>

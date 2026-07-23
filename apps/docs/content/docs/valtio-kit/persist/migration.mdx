@@ -83,8 +83,7 @@ A bare `PersistProvider adapters={[…]}` still works for persist-only apps and 
 ```tsx
 // After — persist (+ optional cache) under one root
 import { StoreProvider } from '@ez-kit/valtio-kit'
-
-<StoreProvider
+;<StoreProvider
 	persist={[reactRouterAdapter, localStorageAdapter()]}
 	cache={cache}
 >
@@ -96,10 +95,10 @@ Omit `cache` for a persist-only tree (equivalent to `PersistProvider`), or omit 
 
 ## Summary
 
-| Before | After |
-| --- | --- |
-| `createPersistStore(factory)` | `createStore(factory, { plugins: [persist()] })` |
-| `createPersistFields(factory, fields)` | `createStore(factory, { plugins: [persist({ fields })] })` |
-| `store.useHydrated()` | `useHydrated(store.useStore())` |
-| `<PersistProvider adapters={[…]}>` | `<StoreProvider persist={[…]} cache={cache}>` (or keep `PersistProvider` for persist-only) |
-| decorators, accessor builder, codecs, adapters, `$url` / `$persist` | unchanged |
+| Before                                                              | After                                                                                      |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `createPersistStore(factory)`                                       | `createStore(factory, { plugins: [persist()] })`                                           |
+| `createPersistFields(factory, fields)`                              | `createStore(factory, { plugins: [persist({ fields })] })`                                 |
+| `store.useHydrated()`                                               | `useHydrated(store.useStore())`                                                            |
+| `<PersistProvider adapters={[…]}>`                                  | `<StoreProvider persist={[…]} cache={cache}>` (or keep `PersistProvider` for persist-only) |
+| decorators, accessor builder, codecs, adapters, `$url` / `$persist` | unchanged                                                                                  |

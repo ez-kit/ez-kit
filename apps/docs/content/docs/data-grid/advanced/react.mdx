@@ -11,14 +11,14 @@ The React adapter sits between [core](./data-grid/advanced/core) and the UI-kit 
 
 ## Public surface (overview)
 
-| Export | What it is |
-| --- | --- |
-| `useDataGrid(options)` | The single React entry point. Wires `createTable` from core into a memoized React model + context. |
-| `defineColumns<TRow>(defs)` | Typed column array helper. |
-| `createColumnHelper<TRow>()` | Typed column **builder** (see [Column Helper](./data-grid/columns/column-helper)). |
-| `defineCellType(def)` | Typed cell-type registration (see [Custom Cell Types](./data-grid/cells/custom-cell-types)). |
-| `createDataGrid(components)` | **Inject a UI-kit's components.** Flavor packages call this exactly once at module scope. |
-| `DataGrid.*` | Compound render slots — `Toolbar`, `Table`, `Header`, `Body`, `Row`, `Cell`, `Pagination`, `PageSizer`, `SelectionBar`, `CreateTrigger`, `ColumnVisibilityTrigger`, `SortTrigger`, `GlobalFilterInput`, `ActiveFiltersBar`, `ClearFiltersButton`, `FilterPanel`, `CreatingModal`, `EditingModal`, `LoadingBody`, `EmptyStateRow`, `NoResultsRow`. |
+| Export                       | What it is                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useDataGrid(options)`       | The single React entry point. Wires `createTable` from core into a memoized React model + context.                                                                                                                                                                                                                                                |
+| `defineColumns<TRow>(defs)`  | Typed column array helper.                                                                                                                                                                                                                                                                                                                        |
+| `createColumnHelper<TRow>()` | Typed column **builder** (see [Column Helper](./data-grid/columns/column-helper)).                                                                                                                                                                                                                                                                |
+| `defineCellType(def)`        | Typed cell-type registration (see [Custom Cell Types](./data-grid/cells/custom-cell-types)).                                                                                                                                                                                                                                                      |
+| `createDataGrid(components)` | **Inject a UI-kit's components.** Flavor packages call this exactly once at module scope.                                                                                                                                                                                                                                                         |
+| `DataGrid.*`                 | Compound render slots — `Toolbar`, `Table`, `Header`, `Body`, `Row`, `Cell`, `Pagination`, `PageSizer`, `SelectionBar`, `CreateTrigger`, `ColumnVisibilityTrigger`, `SortTrigger`, `GlobalFilterInput`, `ActiveFiltersBar`, `ClearFiltersButton`, `FilterPanel`, `CreatingModal`, `EditingModal`, `LoadingBody`, `EmptyStateRow`, `NoResultsRow`. |
 
 ## Build your own UI flavor
 

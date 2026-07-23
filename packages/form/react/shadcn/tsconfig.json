@@ -1,0 +1,10 @@
+{
+	"extends": "../../../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"types": ["vitest/globals", "@testing-library/jest-dom"],
+		"baseUrl": ".",
+		"paths": { "@form-shadcn/*": ["./src/*"] }
+	},
+	"include": ["src", "test"]
+}

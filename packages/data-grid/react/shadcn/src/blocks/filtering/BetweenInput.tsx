@@ -63,16 +63,7 @@ function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode
 	)
 }
 
-export function BetweenInput({
-	value,
-	onChange,
-	variant,
-	type,
-	min,
-	max,
-	presets,
-	onPresetSelect,
-}: BetweenInputProps) {
+export function BetweenInput({ value, onChange, variant, type, min, max, presets, onPresetSelect }: BetweenInputProps) {
 	const presetRow =
 		presets && presets.length > 0 && onPresetSelect ? (
 			<PresetRow
@@ -108,8 +99,7 @@ export function BetweenInput({
 	if (variant === 'calendar' && type === 'date') {
 		const fromDate = toDate(value.from)
 		const toDateVal = toDate(value.to)
-		const selected: DateRange | undefined =
-			fromDate || toDateVal ? { from: fromDate, to: toDateVal } : undefined
+		const selected: DateRange | undefined = fromDate || toDateVal ? { from: fromDate, to: toDateVal } : undefined
 		const displayLabel =
 			fromDate && toDateVal
 				? `${format(fromDate, DISPLAY_FORMAT)} – ${format(toDateVal, DISPLAY_FORMAT)}`

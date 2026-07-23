@@ -23,16 +23,16 @@ const columns = defineColumns<Order>([
 
 ## Built-in cell types
 
-| `meta.cellType` | Expected accessor | Notes |
-| --- | --- | --- |
-| `'text'` | `string` | Default for accessor columns. |
-| `'number'` | `number` | Formatted by locale. |
-| `'currency'` | `number` | Needs `meta.currency`. |
-| `'date'` | `Date \| string` | See also [Date cell](./data-grid/cells/date-cell). |
-| `'badge'` | `string` | Picks tone by value or `meta.tones`. |
-| `'link'` | `{ href, label }` or `string` | `meta.target`, `meta.rel`. |
-| `'image'` | `string` | Avatar / thumbnail. |
-| `'boolean'` | `boolean` | Renders a check/cross icon. |
+| `meta.cellType` | Expected accessor             | Notes                                              |
+| --------------- | ----------------------------- | -------------------------------------------------- |
+| `'text'`        | `string`                      | Default for accessor columns.                      |
+| `'number'`      | `number`                      | Formatted by locale.                               |
+| `'currency'`    | `number`                      | Needs `meta.currency`.                             |
+| `'date'`        | `Date \| string`              | See also [Date cell](./data-grid/cells/date-cell). |
+| `'badge'`       | `string`                      | Picks tone by value or `meta.tones`.               |
+| `'link'`        | `{ href, label }` or `string` | `meta.target`, `meta.rel`.                         |
+| `'image'`       | `string`                      | Avatar / thumbnail.                                |
+| `'boolean'`     | `boolean`                     | Renders a check/cross icon.                        |
 
 ## See also
 

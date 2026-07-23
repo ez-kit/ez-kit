@@ -1,0 +1,49 @@
+{
+	"name": "@ez-kit/babel-plugin-twc",
+	"version": "0.1.0",
+	"description": "Babel plugin for @ez-kit/twc: fills the component-name argument from the variable name.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/babel-plugin-twc"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/babel-plugin-twc#readme",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "50 KB"
+		}
+	],
+	"devDependencies": {
+		"@babel/core": "^7.29.0",
+		"@babel/types": "^7.29.0",
+		"@types/babel__core": "^7.20.5"
+	},
+	"peerDependencies": {
+		"@babel/core": "^7.0.0"
+	}
+}

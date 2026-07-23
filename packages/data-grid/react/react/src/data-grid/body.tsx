@@ -12,18 +12,12 @@ import { NoResultsRow } from './no-results-row'
 import { RefetchOverlayHost } from './refetch-overlay'
 import { DataGridRow } from './row'
 import { useDataGridInstance, useDataGridStore } from './table-context'
+import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
 import type { ExpandedRowProps, FallbacksConfig } from '../use-data-grid'
-import type { ComponentType, CSSProperties } from 'react'
-
-/**
- * CSS custom property used to compute sticky offsets for pinned rows.
- * Override with `--dg-row-height` on the table container to match your row height.
- * Default: 49px (matches shadcn table row height).
- */
-const ROW_HEIGHT_CSS = 'var(--dg-row-height, 49px)'
+import type { ComponentType } from 'react'
 
 /**
  * Renders the table `<tbody>`.
@@ -60,6 +54,19 @@ export function Body() {
 	useDataGridStore((s) => s.expanded)
 	useDataGridStore((s) => s.rowPinning)
 
+	// Read before the early returns below: the offset hooks must run on every render.
+	const hasPinning = Boolean(table.options.enableRowPinning)
+	const topRows = hasPinning ? table.getTopRows() : []
+	const bottomRows = hasPinning ? table.getBottomRows() : []
+	const registerTopRow = usePinnedRowOffsets(
+		'top',
+		topRows.map((row) => row.id),
+	)
+	const registerBottomRow = usePinnedRowOffsets(
+		'bottom',
+		bottomRows.map((row) => row.id),
+	)
+
 	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = (table as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] as FallbacksConfig | undefined
@@ -77,10 +84,7 @@ export function Body() {
 	const showCreatingRow =
 		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
 
-	const hasPinning = Boolean(table.options.enableRowPinning)
-	const topRows = hasPinning ? table.getTopRows() : []
 	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
-	const bottomRows = hasPinning ? table.getBottomRows() : []
 	const allRows = table.getRowModel().rows
 	const rawDataLength = (table.options.data as unknown[]).length
 
@@ -104,7 +108,7 @@ export function Body() {
 					<DataGridRow
 						row={row}
 						data-pinned='top'
-						style={{ '--dg-row-pin-offset': `calc(${String(index)} * ${ROW_HEIGHT_CSS})` } as CSSProperties}
+						ref={registerTopRow(index)}
 					/>
 					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
@@ -120,11 +124,7 @@ export function Body() {
 					<DataGridRow
 						row={row}
 						data-pinned='bottom'
-						style={
-							{
-								'--dg-row-pin-offset': `calc(${String(bottomRows.length - 1 - index)} * ${ROW_HEIGHT_CSS})`,
-							} as CSSProperties
-						}
+						ref={registerBottomRow(index)}
 					/>
 					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>

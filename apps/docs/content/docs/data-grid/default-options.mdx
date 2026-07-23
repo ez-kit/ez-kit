@@ -104,21 +104,21 @@ factory defaultOptions  <  provider defaults  <  instance config
 
 It **excludes** the per-instance inputs that are meaningless as shared defaults:
 
-| Excluded key | Why |
-| --- | --- |
-| `data` | Row data is always per-grid. |
-| `columns` | Column definitions are always per-grid. |
-| `state` | Controlled state belongs to the owning component. |
-| `onStateChange` | Its handler belongs to the owning component. |
+| Excluded key    | Why                                               |
+| --------------- | ------------------------------------------------- |
+| `data`          | Row data is always per-grid.                      |
+| `columns`       | Column definitions are always per-grid.           |
+| `state`         | Controlled state belongs to the owning component. |
+| `onStateChange` | Its handler belongs to the owning component.      |
 
 ## When to use which
 
-| Need | Reach for |
-| --- | --- |
-| App-wide defaults, set in your own app tree | `DataGridOptionsProvider` |
-| A subtree that refines app defaults | Nested `DataGridOptionsProvider` |
-| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaultOptions })` |
-| One-off options for a single grid | Plain `useDataGrid` config (always wins) |
+| Need                                              | Reach for                                |
+| ------------------------------------------------- | ---------------------------------------- |
+| App-wide defaults, set in your own app tree       | `DataGridOptionsProvider`                |
+| A subtree that refines app defaults               | Nested `DataGridOptionsProvider`         |
+| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaultOptions })`     |
+| One-off options for a single grid                 | Plain `useDataGrid` config (always wins) |
 
 ## Source
 

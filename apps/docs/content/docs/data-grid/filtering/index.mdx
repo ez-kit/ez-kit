@@ -34,14 +34,14 @@ const grid = useDataGrid({
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `enableColumnFilters` | `boolean` | Master switch. Default `true`. |
-| `state.columnFilters` | `ColumnFiltersState` | Controlled filter state. |
-| `onColumnFiltersChange` | `(updater) => void` | Subscribe to filter changes. |
-| Per-column `enableColumnFilter` | `boolean` | Default `true`; turn off for non-filterable columns. |
-| Per-column `filterFn` | name \| custom | Built-in: `'auto'`, `'includesString'`, `'equals'`, `'arrIncludes'`, `'inNumberRange'`, etc. |
-| Per-column `meta.filterVariant` | string | Hint to the UI which input to render (text, number, select, date). |
+| Option                          | Type                 | Description                                                                                  |
+| ------------------------------- | -------------------- | -------------------------------------------------------------------------------------------- |
+| `enableColumnFilters`           | `boolean`            | Master switch. Default `true`.                                                               |
+| `state.columnFilters`           | `ColumnFiltersState` | Controlled filter state.                                                                     |
+| `onColumnFiltersChange`         | `(updater) => void`  | Subscribe to filter changes.                                                                 |
+| Per-column `enableColumnFilter` | `boolean`            | Default `true`; turn off for non-filterable columns.                                         |
+| Per-column `filterFn`           | name \| custom       | Built-in: `'auto'`, `'includesString'`, `'equals'`, `'arrIncludes'`, `'inNumberRange'`, etc. |
+| Per-column `meta.filterVariant` | string               | Hint to the UI which input to render (text, number, select, date).                           |
 
 ## See also
 

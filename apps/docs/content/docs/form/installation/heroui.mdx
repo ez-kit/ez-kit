@@ -1,0 +1,97 @@
+---
+title: HeroUI install
+description: Install the form kit for a HeroUI v3 app — package, Tailwind v4 setup, and how the React Aria mapping differs.
+---
+
+# Install for HeroUI
+
+## 1. Install the package
+
+```bash
+pnpm add @ez-kit/form-heroui @heroui/react @heroui/styles
+```
+
+`@heroui/react` and `@heroui/styles` (v3) are **peer dependencies**, as are `react` and
+`react-dom` (18 or 19). HeroUI is peer rather than bundled on purpose: it is built on React
+Aria, whose fields talk to their controls through React context. A second, differently
+versioned copy of `@heroui/react` in your tree would create a second set of contexts and the
+compositions would break in ways that are hard to trace.
+
+<Callout type='warn'>
+	This kit targets **HeroUI v3**, which is built on React Aria and requires **Tailwind CSS v4**. It is not compatible
+	with HeroUI v2.
+</Callout>
+
+## 2. Set up styles
+
+The kit ships **no stylesheet** — your app owns the HeroUI setup, which is a single import in
+whatever CSS file your app already has:
+
+```css
+@import '@heroui/styles';
+```
+
+Then point Tailwind at the kit, because Tailwind v4 does not scan `node_modules` and the
+kit's utility classes would otherwise never be generated:
+
+```css
+@source '../node_modules/@ez-kit/form-heroui/dist/**/*.js';
+```
+
+Adjust the relative path to your own stylesheet's location. Beyond those two lines there is
+nothing to configure — HeroUI v3 needs no provider component.
+
+## 3. Render a form
+
+The call site is identical to the shadcn kit — only the import changes:
+
+```tsx
+'use client'
+
+import { useForm } from '@ez-kit/form-heroui'
+
+export function SignUpForm() {
+	const form = useForm({
+		defaultValues: { email: '', password: '' },
+		onSubmit: ({ value }) => api.signUp(value),
+	})
+
+	return (
+		<form.Form>
+			<form.TextField
+				name='email'
+				label='Email'
+			/>
+			<form.TextField
+				name='password'
+				label='Password'
+				type={TextInputType.Password}
+			/>
+			<form.SubmitButton>Create account</form.SubmitButton>
+		</form.Form>
+	)
+}
+```
+
+<KitExample
+	exampleId='form-basic'
+	defaultType='heroui'
+	lockFlavor
+/>
+
+Every other live example in these docs carries a kit switcher, so you can see the same
+component rendered by either kit — and the source panel names the package that kit ships.
+
+## How the HeroUI mapping differs
+
+HeroUI v3 fields are React Aria **compositions**: a state-owning root (`TextField`, `NumberField`, `Checkbox`) wraps the actual control, and label / description / error are normally its children. The shared field layer instead renders that chrome as _siblings_ of the input, so the kit's adapters compensate:
+
+- They pass `aria-labelledby` and `aria-describedby` **explicitly**. React Aria cannot see a label that is not its child, and without the reference composite widgets — the select trigger, the number-field group — would go unlabelled.
+- Error text is a plain element carrying HeroUI's danger token rather than HeroUI's `FieldError`, which requires the enclosing field context.
+- The shell renders HeroUI's `Form` with `validationBehavior='aria'`. TanStack Form owns submission and validation, so React Aria's default native constraint validation would otherwise block or duplicate it.
+
+None of this is visible at the call site — it only matters if you are reading the adapter source or [writing your own kit](./form/custom-kit).
+
+## Source
+
+- `@ez-kit/form-heroui` — [`packages/form/react/heroui/README.md`](https://github.com/ez-kit/ez-kit/blob/main/packages/form/react/heroui/README.md)

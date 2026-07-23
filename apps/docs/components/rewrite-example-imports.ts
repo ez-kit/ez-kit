@@ -1,31 +1,40 @@
-import type { DataGridDocsExampleFlavor } from './data-grid-docs-example'
+import type { DataGridDocsExampleFlavor } from './kit-example'
 
 /**
- * Examples import `DataGrid` from the docs-only runtime switcher so that one component
- * can render under both kits (see `shared/DataGrid.tsx`). That specifier is an artifact
- * of how the docs are built — a reader copying the example needs the kit package they
- * actually installed, so the displayed source names it instead.
+ * Examples import their kit-switched entry point from a docs-only module, so that one
+ * component can render under both kits (`shared/DataGrid.tsx`, `shared/form/FormKit.tsx`).
+ * Those specifiers are an artifact of how the docs are built — a reader copying the example
+ * needs the kit package they actually installed, so the displayed source names it instead.
  *
- * Display-only: the rendered example still executes the real `shared/DataGrid` import.
+ * Display-only: the rendered example still executes the real docs-module import.
  */
-const DOCS_DATA_GRID_MODULE = 'shared/DataGrid'
-
-const KIT_PACKAGES: Record<DataGridDocsExampleFlavor, string> = {
-	shadcn: '@ez-kit/data-grid-shadcn',
-	heroui: '@ez-kit/data-grid-heroui',
+const DOCS_MODULE_PACKAGES: Record<string, Record<DataGridDocsExampleFlavor, string>> = {
+	'shared/DataGrid': {
+		shadcn: '@ez-kit/data-grid-shadcn',
+		heroui: '@ez-kit/data-grid-heroui',
+	},
+	'shared/form/FormKit': {
+		shadcn: '@ez-kit/form-shadcn',
+		heroui: '@ez-kit/form-heroui',
+	},
 }
 
 /**
- * Matches the module specifier of `… from 'shared/DataGrid'`, capturing the quote so the
+ * Matches the module specifier of `… from '<docs module>'`, capturing the quote so the
  * replacement reuses the style the file was written in. `/` carries no meaning to the
- * `RegExp` constructor, so the module constant interpolates without escaping.
+ * `RegExp` constructor, so the module constants interpolate without escaping.
  */
-const DOCS_MODULE_SPECIFIER = new RegExp(`(from\\s*)(['"])${DOCS_DATA_GRID_MODULE}\\2`, 'gu')
+function specifierPattern(docsModule: string): RegExp {
+	return new RegExp(`(from\\s*)(['"])${docsModule}\\2`, 'gu')
+}
 
 /**
- * Rewrites the docs switcher import in displayed example source to the kit package for
- * `kit`. Returns `source` unchanged when the example does not import the switcher.
+ * Rewrites the docs switcher imports in displayed example source to the kit packages for
+ * `kit`. Returns `source` unchanged when the example imports no switcher.
  */
 export function rewriteExampleImports(source: string, kit: DataGridDocsExampleFlavor): string {
-	return source.replace(DOCS_MODULE_SPECIFIER, `$1$2${KIT_PACKAGES[kit]}$2`)
+	return Object.entries(DOCS_MODULE_PACKAGES).reduce(
+		(rewritten, [docsModule, packages]) => rewritten.replace(specifierPattern(docsModule), `$1$2${packages[kit]}$2`),
+		source,
+	)
 }

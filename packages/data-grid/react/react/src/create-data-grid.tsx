@@ -120,7 +120,9 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 		return useDataGrid<TRow>(config, defaultOptions as DataGridDefaultOptions<TRow> | undefined)
 	}
 
-	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(extraCellTypes: TExtra): DataGridBundle<TCellTypes & TExtra> {
+	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(
+		extraCellTypes: TExtra,
+	): DataGridBundle<TCellTypes & TExtra> {
 		const mergedCellTypes = { ...cellTypes, ...extraCellTypes } as TCellTypes & TExtra
 		return createDataGrid<TCellTypes & TExtra>({
 			components,

@@ -1,0 +1,195 @@
+---
+title: Fields
+description: The base fields, the props they share, and the styling hooks they emit.
+---
+
+# Fields
+
+Every field is **complete**: it renders its own label, description, input and error message, and wires the accessibility attributes that tie them together. You give it a `name` and a `label`.
+
+<KitExample exampleId='form-fields' />
+
+## Shared props
+
+| Prop          | Type        | Notes                                                                                       |
+| ------------- | ----------- | ------------------------------------------------------------------------------------------- |
+| `name`        | typed path  | **Required.** Narrowed to paths whose value type matches the field.                         |
+| `label`       | `ReactNode` | Omit it and no label element is rendered.                                                   |
+| `description` | `ReactNode` | Helper text, linked via `aria-describedby`.                                                 |
+| `disabled`    | `boolean`   |                                                                                             |
+| `required`    | `boolean`   | Marks the control required. It does **not** validate — see [Validation](./form/validation). |
+
+## `form.TextField`
+
+Single-line text. Accepts `placeholder` and `type`.
+
+```tsx
+import { TextInputType } from '@ez-kit/form-shadcn'
+;<form.TextField
+	name='email'
+	label='Email'
+	placeholder='you@example.com'
+	type={TextInputType.Email}
+/>
+```
+
+`type` is the `TextInputType` enum — `Text`, `Email`, `Password`, `Tel`, `Url`, `Search` — rather than a bare string, so a typo cannot slip through.
+
+## `form.NumberField`
+
+Binds to a `number`. Accepts `placeholder`, `min`, `max`, `step`.
+
+```tsx
+<form.NumberField
+	name='age'
+	label='Age'
+	min={0}
+	max={130}
+/>
+```
+
+An empty control is `undefined` in form state, not `NaN` — "no number entered" is genuinely a different thing from "not a number", and `undefined` is what a schema like `z.number()` will correctly reject as missing.
+
+## `form.TextareaField`
+
+Multi-line text. Accepts `placeholder` and `rows`.
+
+```tsx
+<form.TextareaField
+	name='bio'
+	label='Bio'
+	rows={4}
+/>
+```
+
+## `form.SelectField`
+
+Binds to a `string`. Options are a flat list, identical across kits:
+
+```tsx
+<form.SelectField
+	name='role'
+	label='Role'
+	placeholder='Pick a role'
+	options={[
+		{ label: 'Viewer', value: 'viewer' },
+		{ label: 'Admin', value: 'admin', disabled: true },
+	]}
+/>
+```
+
+Each option is a `SelectOption`: `{ label, value, disabled? }`. Both kits render a real listbox widget (Radix for shadcn, React Aria for HeroUI), not a native `<select>` — the flat list is what shields you from that difference.
+
+An empty string means "nothing selected", so the placeholder shows.
+
+## `form.CheckboxField`
+
+Binds to a `boolean`.
+
+```tsx
+<form.CheckboxField
+	name='newsletter'
+	label='Send me the newsletter'
+/>
+```
+
+## `form.SwitchField`
+
+Binds to a `boolean`, like `form.CheckboxField` — same props, no extras. Reach for the switch when the control toggles a setting that takes effect immediately (notifications, dark mode), and the checkbox when it records a choice the form submits later (accept terms, subscribe).
+
+```tsx
+<form.SwitchField
+	name='notifications'
+	label='Enable notifications'
+	description='Toggle email and in-app alerts.'
+/>
+```
+
+Both kits render a real switch widget with a moving thumb (Radix for shadcn, React Aria for HeroUI), so its on/off state reads at a glance.
+
+## `form.RadioGroupField`
+
+Binds to a `string`. Like `form.SelectField` it takes a flat `options` list, but it lays every choice out at once instead of hiding them behind a trigger — use it for a small, fixed set the user should see in full:
+
+```tsx
+<form.RadioGroupField
+	name='plan'
+	label='Plan'
+	options={[
+		{ label: 'Free', value: 'free' },
+		{ label: 'Pro', value: 'pro' },
+		{ label: 'Enterprise', value: 'enterprise', disabled: true },
+	]}
+/>
+```
+
+Each option is the same `SelectOption` shape as `form.SelectField`: `{ label, value, disabled? }`. The value in form state is the selected option's `value`; an empty string means nothing is selected.
+
+## `form.SliderField`
+
+Binds to a `number`, like `form.NumberField`, but picks the value along a track instead of typing it. Accepts `min`, `max`, `step` — reach for it when the range is bounded and the exact digit matters less than the feel of "more or less".
+
+```tsx
+<form.SliderField
+	name='volume'
+	label='Volume'
+	description='Drag the thumb to set a value between 0 and 100.'
+	min={0}
+	max={100}
+	step={5}
+/>
+```
+
+| Prop   | Type     | Notes                                    |
+| ------ | -------- | ---------------------------------------- |
+| `min`  | `number` | Track start. Defaults to `0` if omitted. |
+| `max`  | `number` | Track end.                               |
+| `step` | `number` | Granularity of each move.                |
+
+A slider has no "empty" position: when the form value is not yet a number the thumb rests at `min` (or `0` when `min` is omitted), so the control always shows a definite value. Both kits render a real slider widget with a draggable thumb (Radix for shadcn, React Aria for HeroUI).
+
+## `form.SubmitButton`
+
+Subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it.
+
+```tsx
+<form.SubmitButton>Save</form.SubmitButton>
+```
+
+## `form.Form`
+
+A `<form>` element already wired to `handleSubmit`, with `noValidate` set so the browser's own bubbles stay out of the way. It accepts the usual `<form>` props **except `onSubmit`**, which it owns.
+
+```tsx
+<form.Form className='max-w-sm'>{/* fields */}</form.Form>
+```
+
+## Styling hooks
+
+The field layer emits these and styles none of them — that is the kit's job:
+
+| Attribute         | Where        | Value                                                                                       |
+| ----------------- | ------------ | ------------------------------------------------------------------------------------------- |
+| `data-field`      | field root   | the field's `name`                                                                          |
+| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `checkbox` / `switch` / `radiogroup` / `slider` |
+| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                         |
+| `data-form`       | the `<form>` | always present                                                                              |
+
+So targeting one field, or every field of a kind, is plain CSS:
+
+```css
+[data-field='email'] {
+	grid-column: span 2;
+}
+[data-field-type='checkbox'] {
+	flex-direction: row;
+	align-items: center;
+}
+[data-invalid] label {
+	color: var(--destructive);
+}
+```
+
+## Fields we do not ship yet
+
+Date-picker and combobox are planned. Until then, build them with [the native API](./form/native-api) — it composes with the flat fields in the same form.

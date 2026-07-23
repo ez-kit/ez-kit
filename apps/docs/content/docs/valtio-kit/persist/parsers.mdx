@@ -7,16 +7,16 @@ description: The typed codecs that convert each field to and from its string for
 
 A parser converts one typed leaf to/from a string. The substrate (URL, storage blob, IndexedDB record) only ever stores strings, so the **same** parsers round-trip a value through every source. Reads never throw into render — invalid input falls back to the field's default.
 
-| Parser | Type | Notes |
-| --- | --- | --- |
-| `paramString()` | `string` | identity |
-| `paramNumber()` | `number` | finite numbers; non-finite omitted |
-| `paramBoolean()` | `boolean` | also reads `1`/`0` |
-| `paramBigInt()` | `bigint` | decimal string |
-| `paramDate()` | `Date` | ISO string |
-| `paramEnum(values)` | `T` | rejects values outside the set |
-| `paramArray(item)` | `T[]` | delimited list of an inner parser |
-| `paramJson()` | `T` | JSON value (plain objects/arrays) |
+| Parser              | Type      | Notes                              |
+| ------------------- | --------- | ---------------------------------- |
+| `paramString()`     | `string`  | identity                           |
+| `paramNumber()`     | `number`  | finite numbers; non-finite omitted |
+| `paramBoolean()`    | `boolean` | also reads `1`/`0`                 |
+| `paramBigInt()`     | `bigint`  | decimal string                     |
+| `paramDate()`       | `Date`    | ISO string                         |
+| `paramEnum(values)` | `T`       | rejects values outside the set     |
+| `paramArray(item)`  | `T[]`     | delimited list of an inner parser  |
+| `paramJson()`       | `T`       | JSON value (plain objects/arrays)  |
 
 ```ts
 import { paramArray, paramEnum, paramString } from '@ez-kit/valtio-kit/persist'
@@ -33,13 +33,13 @@ The parsers are exercised live by the [URL deep dive demo](./valtio-kit/persist/
 
 When you omit a parser, one is picked from the field's **runtime value** at bind time:
 
-| Value brand | Parser |
-| --- | --- |
-| `string` | `paramString()` |
-| `number` | `paramNumber()` |
-| `boolean` | `paramBoolean()` |
-| `bigint` | `paramBigInt()` |
-| `Date` instance | `paramDate()` |
+| Value brand       | Parser                                                     |
+| ----------------- | ---------------------------------------------------------- |
+| `string`          | `paramString()`                                            |
+| `number`          | `paramNumber()`                                            |
+| `boolean`         | `paramBoolean()`                                           |
+| `bigint`          | `paramBigInt()`                                            |
+| `Date` instance   | `paramDate()`                                              |
 | array (non-empty) | `paramArray(<item>)`, item inferred from the first element |
 
 Anything else — `null`, `undefined`, a plain object, `Set`/`Map`, an empty array, or a class instance with no persisted fields — **throws at bind** with the field name and asks for an explicit parser:
@@ -49,16 +49,19 @@ Anything else — `null`, `undefined`, a plain object, `Set`/`Map`, an empty arr
 @persistUrl() createdAt = new Date() // Date → auto
 ```
 
-<Callout type="warn">
-	Auto-resolution can't read your TypeScript types, only runtime values. A field typed `string | null` that
-	starts `null` has no brand to resolve — give it an explicit parser.
+<Callout type='warn'>
+	Auto-resolution can't read your TypeScript types, only runtime values. A field typed `string | null` that starts
+	`null` has no brand to resolve — give it an explicit parser.
 </Callout>
 
 ## Zod validation
 
 `zodParam(schema)` turns any Zod schema into a parser — parsing **is** validation, and a failed parse gracefully falls back to the default.
 
-<LivePreview path='valtio-kit/persist-zod' title='Zod-validated rating (1–5)' />
+<LivePreview
+	path='valtio-kit/persist-zod'
+	title='Zod-validated rating (1–5)'
+/>
 
 ```ts
 import { zodParam } from '@ez-kit/valtio-kit/persist/validators/zod'

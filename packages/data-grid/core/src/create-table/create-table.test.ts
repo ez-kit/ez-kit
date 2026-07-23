@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { createTable, defineColumns } from '../index'
 import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
 
-
 type Row = {
 	id: number
 	name: string
@@ -119,11 +118,13 @@ describe('createTable — sorting', () => {
 	})
 
 	it('sorting.fns → sortingFns registry', () => {
-		const fns = { byLength: (a: unknown, b: unknown, id: string) => {
-			const av = String((a as { getValue: (k: string) => unknown }).getValue(id) ?? '')
-			const bv = String((b as { getValue: (k: string) => unknown }).getValue(id) ?? '')
-			return av.length - bv.length
-		} }
+		const fns = {
+			byLength: (a: unknown, b: unknown, id: string) => {
+				const av = String((a as { getValue: (k: string) => unknown }).getValue(id) ?? '')
+				const bv = String((b as { getValue: (k: string) => unknown }).getValue(id) ?? '')
+				return av.length - bv.length
+			},
+		}
 		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { fns } })
 		expect((table.options as unknown as { sortingFns?: typeof fns }).sortingFns).toBe(fns)
 	})
@@ -489,7 +490,11 @@ describe('createTable — system columns', () => {
 	})
 
 	it('editing: true appends __actions__ column after user columns', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, editing: { mode: 'row', onSave: () => Promise.resolve() } })
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'row', onSave: () => Promise.resolve() },
+		})
 		const ids = columnIds(table)
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})

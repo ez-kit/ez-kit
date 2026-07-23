@@ -48,14 +48,16 @@ function applyFilters(rows: User[], columnFilters: ColumnFiltersState, globalFil
 
 	for (const f of columnFilters) {
 		const val = String(f.value).toLowerCase()
-		result = result.filter((row) => String(row[f.id as keyof User]).toLowerCase().includes(val))
+		result = result.filter((row) =>
+			String(row[f.id as keyof User])
+				.toLowerCase()
+				.includes(val),
+		)
 	}
 
 	if (globalFilter.trim()) {
 		const q = globalFilter.trim().toLowerCase()
-		result = result.filter((row) =>
-			Object.values(row).some((v) => String(v).toLowerCase().includes(q)),
-		)
+		result = result.filter((row) => Object.values(row).some((v) => String(v).toLowerCase().includes(q)))
 	}
 
 	return result

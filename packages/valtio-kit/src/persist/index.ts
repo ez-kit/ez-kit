@@ -31,12 +31,7 @@ export { persistHandle, type PersistHandle, type UrlHandle, urlHandle } from './
 
 // --- Decorator + accessor fronts (field declaration) ---
 export { persistField, type PersistFieldOptions } from './decorators'
-export {
-	type AccessorFieldOptions,
-	type FieldBuilder,
-	type FieldSpec,
-	type FieldsBuilder,
-} from './accessor'
+export { type AccessorFieldOptions, type FieldBuilder, type FieldSpec, type FieldsBuilder } from './accessor'
 
 // --- Codecs ---
 export { type AnyCodec, type Codec } from './codecs/codec'

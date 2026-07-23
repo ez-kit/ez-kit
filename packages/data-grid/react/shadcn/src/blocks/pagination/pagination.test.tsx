@@ -1,4 +1,4 @@
-import { PaginationVariants } from '@ez-kit/data-grid-react'
+import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariants } from '@ez-kit/data-grid-react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -14,6 +14,8 @@ function makeProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
 		pageSize: 10,
 		pageCount: 5,
 		rowCount: 50,
+		siblings: DEFAULT_PAGE_SIBLINGS,
+		boundaries: DEFAULT_PAGE_BOUNDARIES,
 		canPreviousPage: false,
 		canNextPage: true,
 		onPreviousPage: vi.fn(),
@@ -77,6 +79,20 @@ describe('shadcn Pagination — numbered', () => {
 		const { container } = render(<Pagination {...makeUnknownTotalProps()} />)
 
 		expect(pageLinks(container)).toEqual([])
+	})
+
+	// Regression (#106): 100 pages used to render 100 live page links in one flex row, blowing
+	// out the footer. The window keeps it to boundaries + the current page's neighbours.
+	it('windows a large page count instead of a link per page', () => {
+		const { container } = render(<Pagination {...makeProps({ pageIndex: 49, pageCount: 100 })} />)
+
+		expect(pageLinks(container)).toEqual(['1', '49', '50', '51', '100'])
+	})
+
+	it('marks the hidden runs of a windowed strip with ellipses', () => {
+		const { container } = render(<Pagination {...makeProps({ pageIndex: 49, pageCount: 100 })} />)
+
+		expect(container.querySelectorAll('[data-slot="pagination-ellipsis"]')).toHaveLength(2)
 	})
 })
 

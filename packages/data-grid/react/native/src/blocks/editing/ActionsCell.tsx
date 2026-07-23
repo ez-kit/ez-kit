@@ -13,17 +13,40 @@ export function ActionsCell({
 	if (isEditing) {
 		return (
 			<>
-				<button type='button' onClick={() => void onSave()} disabled={isPending}>
+				<button
+					type='button'
+					onClick={() => void onSave()}
+					disabled={isPending}
+				>
 					{isPending ? 'Saving…' : 'Save'}
 				</button>
-				<button type='button' onClick={onCancel}>Cancel</button>
+				<button
+					type='button'
+					onClick={onCancel}
+				>
+					Cancel
+				</button>
 			</>
 		)
 	}
 	return (
 		<>
-			{hasEditing && <button type='button' onClick={onEdit}>Edit</button>}
-			{hasDeleting && <button type='button' onClick={onDelete}>Delete</button>}
+			{hasEditing && (
+				<button
+					type='button'
+					onClick={onEdit}
+				>
+					Edit
+				</button>
+			)}
+			{hasDeleting && (
+				<button
+					type='button'
+					onClick={onDelete}
+				>
+					Delete
+				</button>
+			)}
 		</>
 	)
 }

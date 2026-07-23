@@ -37,20 +37,20 @@ an in-page flavor toggle (shadcn ↔ heroui).
 
 **Alternatives considered**:
 
-- *Reuse `<LivePreview path="..." />` from `zu-store` and read directly from
-  `apps/docs/shared/data-grid/examples/components/...`* — rejected. It would
+- _Reuse `<LivePreview path="..." />` from `zu-store` and read directly from
+  `apps/docs/shared/data-grid/examples/components/...`_ — rejected. It would
   render the example component but **not** demonstrate the actual public
   package surface (consumers wouldn't see `import { DataGrid } from
-  '@ez-kit/data-grid-shadcn'`). It also can't switch flavors without
+'@ez-kit/data-grid-shadcn'`). It also can't switch flavors without
   duplicating registry indirection that `DataGridSandpackExample` already
   solves.
-- *Create per-flavor route trees (`/docs/data-grid/shadcn/...` and
-  `/docs/data-grid/heroui/...`)* — rejected. ~2× page count, ~2× drift risk,
+- _Create per-flavor route trees (`/docs/data-grid/shadcn/...` and
+  `/docs/data-grid/heroui/...`)_ — rejected. ~2× page count, ~2× drift risk,
   ~2× maintenance. The in-page toggle is the proven pattern from the
   existing sandbox routes (`apps/docs/app/sandbox/data-grid/shadcn/page.tsx`
   and `.../heroui/page.tsx` both render the same `DataGridTabsExample`).
-- *Use Fumadocs `<Tabs>` with two `DataGridSandpackExample` instances side by
-  side* — rejected. Doubles the Sandpack render cost on every page. The
+- _Use Fumadocs `<Tabs>` with two `DataGridSandpackExample` instances side by
+  side_ — rejected. Doubles the Sandpack render cost on every page. The
   toggle approach renders only the active flavor.
 
 ---
@@ -74,9 +74,9 @@ example is added.
 
 **Alternatives considered**:
 
-- *Add a new `pagination` example to the manifest and Sandpack bundle* —
+- _Add a new `pagination` example to the manifest and Sandpack bundle_ —
   rejected for v1 of this feature; possible follow-up.
-- *Skip the pagination page entirely* — rejected. SC-006 / FR-011 / FR-002
+- _Skip the pagination page entirely_ — rejected. SC-006 / FR-011 / FR-002
   all require pagination to be discoverable and documented.
 
 ---
@@ -102,7 +102,7 @@ embedding a Sandpack example.
 
 **Alternatives considered**:
 
-- *Build a theming sandbox* — rejected. Out of scope and risks drifting from
+- _Build a theming sandbox_ — rejected. Out of scope and risks drifting from
   the package's real styling contract.
 
 ---
@@ -124,9 +124,9 @@ does **not** persist across pages or reloads.
 
 **Alternatives considered**:
 
-- *Sync flavor via URL search param* — rejected for now; documented as a
+- _Sync flavor via URL search param_ — rejected for now; documented as a
   follow-up opportunity.
-- *Sync flavor via theme context* — rejected; entangles content with theme.
+- _Sync flavor via theme context_ — rejected; entangles content with theme.
 
 ---
 
@@ -146,7 +146,7 @@ repo has a remote) or just text + a relative `code` span if not.
 
 **Alternatives considered**:
 
-- *Auto-generate from TypeScript types* — rejected; explicit non-goal in the
+- _Auto-generate from TypeScript types_ — rejected; explicit non-goal in the
   spec's Assumptions.
 
 ---
@@ -218,8 +218,8 @@ Migration
 
 **Alternatives considered**:
 
-- *Single flat list of ~27 pages* — rejected; defeats discoverability.
-- *Mirror the manifest exactly* — rejected; the manifest is task-oriented,
+- _Single flat list of ~27 pages_ — rejected; defeats discoverability.
+- _Mirror the manifest exactly_ — rejected; the manifest is task-oriented,
   not reading-oriented.
 
 ---
@@ -240,8 +240,8 @@ No auto-generated TypeScript-derived reference in v1.
 
 **Alternatives considered**:
 
-- *Auto-generate now* — rejected; explicit non-goal.
-- *Skip API reference entirely and link to types* — rejected; violates
+- _Auto-generate now_ — rejected; explicit non-goal.
+- _Skip API reference entirely and link to types_ — rejected; violates
   FR-010 ("MUST NOT be a stub that links away").
 
 ---
@@ -263,9 +263,9 @@ state semantics — both of which become brief entries.
 
 **Alternatives considered**:
 
-- *Postpone the migration page to a separate feature* — rejected. FR-009
+- _Postpone the migration page to a separate feature_ — rejected. FR-009
   requires it now.
-- *Embed migration notes inside each individual page* — rejected. Migration
+- _Embed migration notes inside each individual page_ — rejected. Migration
   notes are time-sequenced; pages are topic-sequenced. Two different axes.
 
 ---
@@ -287,7 +287,7 @@ return at least one relevant page.
 
 **Alternatives considered**:
 
-- *Add Algolia / Orama / custom search* — rejected; out of scope and
+- _Add Algolia / Orama / custom search_ — rejected; out of scope and
   unnecessary for the spec's success criteria.
 
 ---
@@ -320,26 +320,26 @@ return at least one relevant page.
 
 **Alternatives considered**:
 
-- *Skip tests because "it's just docs"* — rejected; the new component is
+- _Skip tests because "it's just docs"_ — rejected; the new component is
   code under `apps/docs/components/`.
-- *Snapshot the whole page* — rejected without behavioral assertions
+- _Snapshot the whole page_ — rejected without behavioral assertions
   (Principle IV explicitly forbids "I clicked a thing" snapshot tests).
 
 ---
 
 ## Open items resolved
 
-| Spec/plan item | Resolution |
-|---|---|
-| Embed mechanism for examples | Decision 1 |
-| Pagination without dedicated example | Decision 2 |
-| Theming page without example | Decision 3 |
-| Per-page flavor toggle behavior | Decisions 1, 4 |
-| Source linking | Decision 5 |
-| Navigation order | Decision 6 |
-| API reference depth | Decision 7 |
-| Migration page scope | Decision 8 |
-| Search expectations | Decision 9 |
-| Test strategy for new code | Decision 10 |
+| Spec/plan item                       | Resolution     |
+| ------------------------------------ | -------------- |
+| Embed mechanism for examples         | Decision 1     |
+| Pagination without dedicated example | Decision 2     |
+| Theming page without example         | Decision 3     |
+| Per-page flavor toggle behavior      | Decisions 1, 4 |
+| Source linking                       | Decision 5     |
+| Navigation order                     | Decision 6     |
+| API reference depth                  | Decision 7     |
+| Migration page scope                 | Decision 8     |
+| Search expectations                  | Decision 9     |
+| Test strategy for new code           | Decision 10    |
 
 No `NEEDS CLARIFICATION` markers remain.

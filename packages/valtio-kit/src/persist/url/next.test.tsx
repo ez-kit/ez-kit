@@ -65,7 +65,7 @@ vi.mock('next/navigation', () => ({
 const { nextAdapter } = await import('./next')
 
 const store = createStore<{ q: string }>(() => proxy({ q: '' }), {
-	plugins: [persist({ fields: (field) => [field((s) => (s).q, { source: 'url', parser: paramString() })] })],
+	plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })],
 })
 
 function View(): ReactElement {

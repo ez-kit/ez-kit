@@ -18,6 +18,8 @@ import type { CSSProperties } from 'react'
 const DEFAULT_ESTIMATE_SIZE = 50
 const DEFAULT_OVERSCAN = 5
 
+const SCROLLING_OVERFLOWS = ['auto', 'scroll']
+
 function resolveScrollElement(wrapper: HTMLElement): HTMLElement {
 	const tagged = wrapper.querySelector("[data-slot='table-scroll-container']")
 	if (tagged instanceof HTMLElement) return tagged
@@ -25,11 +27,34 @@ function resolveScrollElement(wrapper: HTMLElement): HTMLElement {
 	for (const el of wrapper.querySelectorAll('*')) {
 		if (el instanceof HTMLElement) {
 			const { overflowX } = getComputedStyle(el)
-			if (overflowX === 'auto' || overflowX === 'scroll') return el
+			if (SCROLLING_OVERFLOWS.includes(overflowX)) return el
 		}
 	}
 
 	return wrapper
+}
+
+/**
+ * The element that scrolls *vertically* under `scrollRoot` — i.e. the one holding
+ * the bounded height, which is what infinite-scroll edge detection and
+ * scroll-to-top must act on.
+ *
+ * Usually that is `scrollRoot` (the `table-scroll` div) itself: it owns the
+ * `max-height` in sticky-header mode and no kit nests anything bounded inside it.
+ * A kit may relocate the bound onto its own nested scroll container, though —
+ * HeroUI does, because its `.table-root` clips horizontally and only the kit's
+ * inner container can own that axis, so the vertical bound has to join it there.
+ * Probe the computed overflow instead of assuming a kit: an inner container that
+ * scrolls horizontally but grows freely in height (HeroUI's default, and the
+ * reason this is not just `querySelector`) is NOT the vertical scroller, and
+ * treating it as one reports "already at the bottom" forever.
+ */
+export function resolveVerticalScrollElement(scrollRoot: HTMLElement): HTMLElement {
+	const tagged = scrollRoot.querySelector("[data-slot='table-scroll-container']")
+	if (tagged instanceof HTMLElement && SCROLLING_OVERFLOWS.includes(getComputedStyle(tagged).overflowY)) {
+		return tagged
+	}
+	return scrollRoot
 }
 
 function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): void {
@@ -60,32 +85,6 @@ function useScrollShadows(
 			ro.disconnect()
 		}
 	}, [wrapperRef, scrollRef])
-}
-
-/**
- * Publishes the rendered thead height as `--dg-header-height` on the wrapper so
- * pinned-top rows can be offset below the sticky header (consumed by the
- * structural stylesheet). No-op when sticky header is disabled.
- */
-function useHeaderHeightVar(wrapperRef: { current: HTMLElement | null }, enabled: boolean): void {
-	useEffect(() => {
-		if (!enabled) return
-		const wrapper = wrapperRef.current
-		if (!wrapper) return
-		const thead = wrapper.querySelector("[data-slot='thead']")
-		if (!(thead instanceof HTMLElement)) return
-
-		const update = () => {
-			wrapper.style.setProperty('--dg-header-height', `${String(thead.offsetHeight)}px`)
-		}
-		update()
-		const ro = new ResizeObserver(update)
-		ro.observe(thead)
-		return () => {
-			ro.disconnect()
-			wrapper.style.removeProperty('--dg-header-height')
-		}
-	}, [wrapperRef, enabled])
 }
 
 function resolveEstimateSize(
@@ -160,7 +159,6 @@ export function DataGridTable() {
 	// Non-virtualized: resolveScrollElement finds the real scroll element inside wrapperRef
 	// (handles both shadcn's inner overflow div and HeroUI's inner ScrollContainer).
 	useScrollShadows(wrapperRef, isVirtualized ? containerRef : undefined)
-	useHeaderHeightVar(wrapperRef, isStickyHeader)
 
 	// Re-evaluate shadow state immediately when column layout changes (pin/unpin, resize)
 	// so shadows update without requiring a scroll event.
@@ -176,13 +174,13 @@ export function DataGridTable() {
 
 	// ── infinite scroll ───────────────────────────────────────────────────────
 	// Shared scroll element for edge detection and reset-to-top: the element that scrolls
-	// *vertically*, which is our own `table-scroll` div (it owns the bounded height via
-	// `max-height` in sticky-header mode). Deliberately NOT resolveScrollElement — that finds
-	// the first *horizontal* scroller for the pin shadows, and in HeroUI that is the kit's
-	// inner ScrollContainer, which grows with its content and never scrolls vertically. Using
-	// it here reported "already at the bottom" forever and never scrolled back to top.
+	// *vertically*. Deliberately NOT resolveScrollElement — that finds the first *horizontal*
+	// scroller for the pin shadows, which is a different element whenever a kit nests its own
+	// horizontally-scrolling container. See resolveVerticalScrollElement.
 	const getScrollElement = useCallback((): HTMLElement | null => {
-		return isVirtualized ? containerRef.current : scrollRef.current
+		if (isVirtualized) return containerRef.current
+		const scrollRoot = scrollRef.current
+		return scrollRoot ? resolveVerticalScrollElement(scrollRoot) : null
 		// isVirtualized never changes after mount; refs are stable.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])

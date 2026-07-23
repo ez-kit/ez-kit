@@ -89,6 +89,7 @@ function SystemCell({ cell, row }: CellProps) {
 				style={pin.pinVars}
 				pinned={pin.pinned}
 				{...pin.pinnedAttrs}
+				data-system-column='actions'
 			>
 				<ActionsCell row={row} />
 			</Td>

@@ -40,9 +40,52 @@
 	margin-top: 0.75rem;
 }
 
-@theme inline {
-	--color-surface: var(--surface);
-	--color-surface-secondary: var(--surface-secondary);
+/* ── scrollport ownership ──────────────────────────────────────────────────
+ * `position: sticky` resolves against the nearest scroll container. The shared
+ * stylesheet puts the bounded vertical scrollport on `[data-slot='table-scroll']`,
+ * which is enough for shadcn: it nests nothing that scrolls, so that div is the
+ * scrollport the header and pinned rows resolve against.
+ *
+ * HeroUI nests one. `Table.ScrollContainer` (`.table__scroll-container`) is
+ * `overflow-x: auto`, and per CSS Overflow 3 a non-`visible` value on one axis
+ * computes the other from `visible` to `auto` — so it is a scroll container on
+ * BOTH axes, and being the innermost one it steals the scrollport from the div
+ * that actually has the height bound. Nothing constrains its height, so it never
+ * scrolls and sticky offsets never clamp: the sticky header and pinned rows carry
+ * `position: sticky` but behave like `static` (#105, #103).
+ *
+ * Neutralizing it is not an option — HeroUI's `.table-root` is `overflow: clip`
+ * over a `minmax(0, 1fr)` grid track, a hard width boundary the outer div cannot
+ * scroll past, so the inner container is the only element that can own the
+ * horizontal axis. Give it the vertical bound as well and let the outer div step
+ * aside, leaving one element that owns both axes.
+ *
+ * Kept in sync with `[data-slot='table-scroll'][data-sticky-header='true']` in
+ * `@ez-kit/data-grid-react`'s structural stylesheet, whose bound this relocates. */
+[data-slot='table-scroll'][data-sticky-header='true'] {
+	/* Both axes must go to `visible`, not just `overflow-y`: leaving `overflow-x: auto`
+	 * (the shared stylesheet's default on this div) would make CSS Overflow 3 recompute
+	 * `overflow-y` back to `auto`, so this div would re-become a scroll container and
+	 * re-steal the scrollport we are handing to the inner container. HeroUI's own
+	 * `.table-root` (`overflow: clip` over a `minmax(0, 1fr)` grid track) keeps the width
+	 * boundary, so dropping the horizontal scroll here is safe. */
+	overflow: visible;
+	max-height: none;
+}
+[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='table-scroll-container'] {
+	overflow-y: auto;
+	max-height: var(--dg-table-max-height, 400px);
+}
+
+/* Virtualized mode has its own scrollport: `[data-slot='table-scroll'][data-virtualized]`
+ * is the element the row virtualizer scrolls (shared stylesheet: `overflow: auto` + a fixed
+ * `--dg-virtual-height`). HeroUI's inner container nests inside it and — same CSS Overflow 3
+ * mechanism — becomes a competing scroll container that swallows the whole virtual height and
+ * steals the sticky context from the header (#103, the virtual-scroll case). Neutralize it so
+ * the virtualizer's own div is the sole scroll context and the sticky header resolves against
+ * it; horizontal column scroll stays on that outer div (also `overflow: auto`). */
+[data-slot='table-scroll'][data-virtualized='true'] [data-slot='table-scroll-container'] {
+	overflow: visible;
 }
 
 :root {
@@ -54,15 +97,24 @@
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.35);
 }
 
-[data-sticky='true'] {
-	background-color: var(--surface);
-	z-index: 2;
-}
+/* The sticky header needs no background or stacking rule here. HeroUI's own `.table__header`
+ * already paints `--surface-secondary` — the color every non-sticky grid in this kit shows, and
+ * the one HeroUI's own sticky-header recipe reaches for — and the shared stylesheet's
+ * `[data-slot='thead'][data-sticky='true']` (higher specificity) owns `z-index`. Repainting the
+ * header `--surface` here made the sticky grid the only white-headed table in the kit (#140). */
 
+/* HeroUI paints its row hover on `.table__cell` as `--surface` at 40% alpha, which composites
+ * against what is actually behind the cells: `.table-root`, i.e. `--surface-secondary`. Mixing
+ * against `--background` (the page, neutral) instead made the pinned column land on a different
+ * lightness *and* a different hue than every other cell in the same row. */
 .table__row:hover,
 .table__row[data-hovered='true'] {
-	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--background));
+	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--surface-secondary));
 }
+
+/* No `transition` on pinned cells here, deliberately — unlike shadcn (whose row carries
+ * `transition-colors`), HeroUI paints `.table__cell` hover with no transition at all, so the
+ * pinned column snapping instantly is what keeps it in step with the rest of the row. */
 
 [data-pin-shadow='left'] {
 	width: 12px;
@@ -80,12 +132,24 @@
 
 [data-slot='tr'][data-pinned] {
 	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 92%, var(--surface-foreground));
+	/* The row is 1px taller than its cells — HeroUI gives `.table__row` its own `border-bottom`,
+	 * and that border's color is 50% transparent. Painting only the cells (below) therefore leaves
+	 * a 1px band per pinned row that the scrolling content bleeds through. Background paints over
+	 * the border box, so covering the row covers that band too. */
+	background-color: var(--dg-pin-cell-background);
 }
 
-/* Pinned rows must be opaque while body content scrolls underneath. */
+/* Pinned rows must be opaque while body content scrolls underneath.
+ *
+ * The radius reset undoes HeroUI's `.table__body tr:first-child td:first-child` /
+ * `…:last-child` top corners. Those exist because in HeroUI's layout the body *is* the top of the
+ * card; a pinned row is the first row in the tbody, so it carried the card's rounded corners into
+ * the middle of the table, floating under the header (#140). HeroUI's own `--secondary` variant
+ * zeroes the same radii, so this is variant decoration rather than a table invariant. */
 [data-slot='tr'][data-pinned] > [data-slot='td'],
 [data-slot='tr'][data-pinned] > [data-slot='th'] {
 	background-color: var(--dg-pin-cell-background);
+	border-radius: 0;
 }
 
 /* Soft edge shadow matching the column-pin overlay style.
@@ -99,33 +163,63 @@
 	clip-path: inset(-12px 0 0 0);
 }
 
-/* ── virtualization layout ──────────────────────────────────────────────────
- * HeroUI renders a real <table>/<thead>/<tbody>/<tr>/<td> with native table
- * display. In virtualized mode the shared structural stylesheet
- * (@ez-kit/data-grid-react) switches the header/body to CSS grid and positions
- * each virtual row absolutely — but the per-row column template is the UI kit's
- * responsibility (shadcn applies it inline on its vendored row; HeroUI must do
- * the equivalent here). Without it, absolutely-positioned <tr> rows blockify
- * and their cells collapse, breaking the layout. Re-assert the grid column
- * model on HeroUI's real table nodes, scoped to virtualization so normal tables
- * stay on their native table layout. The template is published as
- * `--grid-template-columns` on the table root (data-grid-react `table.tsx`) and
- * inherits down to the header and rows. */
-[data-slot='table'][data-virtualized='true'] table {
-	display: grid;
+/* ── grid column model ──────────────────────────────────────────────────────
+ * HeroUI renders a real <table>/<thead>/<tbody>/<tr>/<td>. Left to native table
+ * layout those elements size themselves from their content, so the rendered
+ * column widths diverge from the table model — a long cell value stretches its
+ * column well past its declared `size`. Everything positional is computed from
+ * the model: the sticky pin offsets (`--dg-pin-left` / `--dg-pin-right`, from
+ * `column.getStart('left')` / `getAfter('right')`) and the pin-shadow overlay
+ * offsets (`Σ col.getSize()`, `pin-shadow-overlay.tsx`). When model and DOM
+ * disagree, pinned columns stick at the wrong offset — leaving a gap between
+ * neighbouring pinned columns that the scrolling content shows through — and
+ * the shadow strip floats over the middle of the table instead of hugging the
+ * pinned edge (#141).
+ *
+ * Take the same layout model shadcn uses (its row is a CSS grid over the same
+ * template), so the rendered widths ARE the model widths and every offset lands
+ * where the model says. The template is published as `--grid-template-columns`
+ * on the table root (data-grid-react `table.tsx`) and inherits down to the
+ * header and rows.
+ *
+ * Semantics are unaffected: React Aria sets the roles explicitly on these nodes
+ * (`role="grid"` / `"row"` / `"rowheader"` / `"columnheader"`), so dropping the
+ * native table box does not take the table semantics with it.
+ *
+ * Virtualized mode needs this too — there the shared structural stylesheet
+ * positions each virtual row absolutely, and without a column template those
+ * rows blockify and their cells collapse. */
+/* Only the rows carry the grid; the table, header and body stay block containers —
+ * the same split shadcn uses. Making the <table> itself the grid instead is what one
+ * would reach for first, and it does lay the columns out correctly, but it stretches
+ * `<tbody>` to the scrollport height, and HeroUI's `.table__row` is `height: 100%` —
+ * so every row then resolves to the full body height and the rows overlap. */
+[data-slot='table'] table {
+	display: block;
+	/* A block box is only as wide as its container, and HeroUI's `.table__content` is
+	 * `overflow: clip` — so without this the row grids are clipped at the container
+	 * width and the scroll container never sees anything to scroll to. (A native table
+	 * box grew to its columns on its own; a block box does not.) Floor it at the tracks'
+	 * width and let it stretch past that when there is room (`minmax(…, 1fr)` tracks). */
+	min-width: max-content;
 }
-[data-slot='table'][data-virtualized='true'] [data-slot='thead'] {
+[data-slot='table'] [data-slot='thead'] {
+	display: block;
+}
+/* A `table-row-group` left inside a non-table parent gets wrapped in an anonymous table
+ * box, which shrink-wraps its rows instead of filling the width — the body would then be
+ * narrower than the header. (Virtualized mode excluded: there the shared stylesheet makes
+ * this the positioning context for the absolutely-placed virtual rows.) */
+[data-slot='table'] [data-slot='tbody']:not([data-virtualized='true']) {
+	display: block;
+}
+/* React Aria's TableHeader wraps the <th> columns in its own <tr> (no data-slot), so
+ * that wrapper — not the thead — is the header's row box and carries the template. */
+[data-slot='table'] [data-slot='thead'] tr {
+	display: grid;
 	grid-template-columns: var(--grid-template-columns);
 }
-/* React Aria's TableHeader wraps the <th> columns in its own <tr> (no data-slot),
- * so the header columns are grandchildren of the grid thead, not direct grid items.
- * Collapse that wrapper with `display: contents` so the columns lay out on the
- * thead's grid template and align with the body. (Body rows need no equivalent:
- * React Aria's Row *is* the `data-slot='tr'` with cells as direct children.) */
-[data-slot='table'][data-virtualized='true'] [data-slot='thead'] tr {
-	display: contents;
-}
-[data-slot='table'][data-virtualized='true'] [data-slot='tr'] {
+[data-slot='table'] [data-slot='tr'] {
 	display: grid;
 	grid-template-columns: var(--grid-template-columns);
 }
@@ -144,6 +238,16 @@ tr[data-expanded] > td {
 [data-system-column='expand'] {
 	padding-inline: 0.25rem;
 	justify-content: center;
+}
+
+/* Row-height rule: cell height is driven by content, and the action buttons are the only
+ * icon-only buttons in the kit without an explicit `size`, so they fall back to HeroUI's
+ * default `md` (36-40px) instead of matching the rest of the kit's `sm` (32px). A bare `<td>`
+ * is not a flex container, so the two buttons also render as inline neighbours with no gap. */
+[data-system-column='actions'] {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
 }
 
 tr[data-depth='1'] [data-system-column='expand'] {
@@ -201,9 +305,9 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	}
 }
 
-[data-slot='action-bar'] {
-	@apply bg-background;
-}
+/* The bar's surface, border and radius live on the component itself (`bg-overlay` etc.,
+ * see `components/ui/action-bar.tsx`) — an action bar floats over content, so it takes the
+ * overlay surface rather than `--background`, which is the page canvas it sits on. */
 
 [data-slot='action-bar'][data-state='open'][data-side='bottom'] {
 	animation: ez-action-bar-slide-from-bottom 250ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -231,9 +335,9 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
    Do NOT write `--heroui-*` tokens: those are v2 names and this package is on v3,
    where they resolve to nothing. `hsl(var(--heroui-default-100))` is invalid at
    computed-value time and silently drops the whole declaration (this is what broke
-   the inline selection bar's background — see #68). The `var(--heroui-*, <literal>)`
-   rules below still render only because of their hardcoded fallback, which means
-   they are stuck on one theme. */
+   the inline selection bar's background — see #68). A `var(--heroui-*, <literal>)`
+   fallback form is no better: it renders, but always from the literal, so it is
+   frozen on one theme. */
 
 .dg-form-error {
 	background: color-mix(in oklab, var(--color-danger) 12%, transparent);
@@ -241,27 +345,12 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent);
 }
 
-.dg-page-sizer-label {
-	color: var(--heroui-default-500, #71717a);
-}
-
+.dg-page-sizer-label,
 .dg-empty-state,
 .dg-no-results-state {
-	color: var(--heroui-default-400, #a1a1aa);
-}
-
-.dg-sort-count-badge {
-	margin-left: 0.125rem;
-	border-radius: 9999px;
-	padding: 0 0.375rem;
-	font-size: 0.75rem;
-	font-weight: 500;
-	background: currentColor;
-	color: transparent;
-	background-clip: padding-box;
-	opacity: 0.85;
+	color: var(--muted);
 }
 
 .dg-sort-menu-footer {
-	border-top: 1px solid hsl(var(--heroui-default-200));
+	border-top: 1px solid var(--separator);
 }

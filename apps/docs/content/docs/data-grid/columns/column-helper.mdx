@@ -37,12 +37,12 @@ When a column declares a registered cell-type id in `meta`, the engine resolves 
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `helper.accessor(key, def)` | builder | Typed accessor column. `key` is `keyof TRow`. |
-| `helper.display(def)` | builder | Display-only column (no accessor); cell renderers are required. |
-| `helper.group(def)` | builder | Header group containing nested columns. |
-| `meta.cellType` | `string` | If the column should be rendered by a registered cell type, set this id. |
+| Option                      | Type     | Description                                                              |
+| --------------------------- | -------- | ------------------------------------------------------------------------ |
+| `helper.accessor(key, def)` | builder  | Typed accessor column. `key` is `keyof TRow`.                            |
+| `helper.display(def)`       | builder  | Display-only column (no accessor); cell renderers are required.          |
+| `helper.group(def)`         | builder  | Header group containing nested columns.                                  |
+| `meta.cellType`             | `string` | If the column should be rendered by a registered cell type, set this id. |
 
 ## Source
 

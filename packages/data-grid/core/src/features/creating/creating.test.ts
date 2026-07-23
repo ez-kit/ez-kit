@@ -14,10 +14,7 @@ type Row = {
 }
 
 const DATA: Row[] = [{ id: 1, name: 'Alice', email: 'a@b.co' }]
-const COLUMNS = defineColumns<Row>([
-	{ accessorKey: 'name' },
-	{ accessorKey: 'email' },
-])
+const COLUMNS = defineColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email' }])
 
 const noop = (): void => {}
 
@@ -296,10 +293,7 @@ describe('CreatingFeature — validate config variants', () => {
 
 	it('multi-message: zod min(8).regex preserves both messages', async () => {
 		const schema = z.object({
-			password: z
-				.string()
-				.min(8, 'too short')
-				.regex(/[A-Z]/, 'needs uppercase'),
+			password: z.string().min(8, 'too short').regex(/[A-Z]/, 'needs uppercase'),
 		})
 
 		type PwRow = { id: number; password: string }
@@ -333,9 +327,8 @@ describe('CreatingFeature — validate config variants', () => {
 
 describe('CreatingFeature — per-column validateOn', () => {
 	it("meta.validateOn = 'change' triggers field-level validate after debounce", async () => {
-		const validate = vi.fn(
-			(values: Partial<Row>, _ctx: ValidateContext) =>
-				values.email === 'taken@x.co' ? { errors: { email: ['taken'] } } : null,
+		const validate = vi.fn((values: Partial<Row>, _ctx: ValidateContext) =>
+			values.email === 'taken@x.co' ? { errors: { email: ['taken'] } } : null,
 		)
 		const table = createTable({
 			data: DATA,
@@ -383,10 +376,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 		const validate = vi.fn().mockReturnValue(null)
 		const table = createTable({
 			data: DATA,
-			columns: defineColumns<Row>([
-				{ accessorKey: 'name' },
-				{ accessorKey: 'email', validateOn: 'blur' },
-			]),
+			columns: defineColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email', validateOn: 'blur' }]),
 			creating: { validate, onSave: () => Promise.resolve() },
 		})
 		table.creating.start()
