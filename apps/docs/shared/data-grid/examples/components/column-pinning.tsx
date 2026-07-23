@@ -8,7 +8,7 @@ import { DataGrid, useDataGrid } from 'shared/DataGrid'
 import { PRODUCT_DATA, type Product } from './_data'
 
 const colPinColumns = defineColumns<Product>([
-	{ accessorKey: 'name', header: 'Name', size: 180, pinning: { defaultPin: 'left' } },
+	{ accessorKey: 'name', header: 'Name', size: 250, pinning: { defaultPin: 'left' } },
 	{
 		accessorKey: 'status',
 		header: 'Status',
@@ -25,7 +25,7 @@ const colPinColumns = defineColumns<Product>([
 			},
 		},
 	},
-	{ accessorKey: 'category', header: 'Category', size: 140 },
+	{ accessorKey: 'category', header: 'Category', size: 200 },
 	{
 		accessorKey: 'image',
 		header: 'Image',
@@ -36,7 +36,7 @@ const colPinColumns = defineColumns<Product>([
 	{
 		accessorKey: 'stock',
 		header: 'Stock %',
-		size: 120,
+		size: 180,
 		cell: { type: 'progress', config: { max: 100 } },
 		pinning: { defaultPin: 'right' },
 	},

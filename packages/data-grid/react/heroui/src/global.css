@@ -142,33 +142,63 @@
 	clip-path: inset(-12px 0 0 0);
 }
 
-/* ── virtualization layout ──────────────────────────────────────────────────
- * HeroUI renders a real <table>/<thead>/<tbody>/<tr>/<td> with native table
- * display. In virtualized mode the shared structural stylesheet
- * (@ez-kit/data-grid-react) switches the header/body to CSS grid and positions
- * each virtual row absolutely — but the per-row column template is the UI kit's
- * responsibility (shadcn applies it inline on its vendored row; HeroUI must do
- * the equivalent here). Without it, absolutely-positioned <tr> rows blockify
- * and their cells collapse, breaking the layout. Re-assert the grid column
- * model on HeroUI's real table nodes, scoped to virtualization so normal tables
- * stay on their native table layout. The template is published as
- * `--grid-template-columns` on the table root (data-grid-react `table.tsx`) and
- * inherits down to the header and rows. */
-[data-slot='table'][data-virtualized='true'] table {
-	display: grid;
+/* ── grid column model ──────────────────────────────────────────────────────
+ * HeroUI renders a real <table>/<thead>/<tbody>/<tr>/<td>. Left to native table
+ * layout those elements size themselves from their content, so the rendered
+ * column widths diverge from the table model — a long cell value stretches its
+ * column well past its declared `size`. Everything positional is computed from
+ * the model: the sticky pin offsets (`--dg-pin-left` / `--dg-pin-right`, from
+ * `column.getStart('left')` / `getAfter('right')`) and the pin-shadow overlay
+ * offsets (`Σ col.getSize()`, `pin-shadow-overlay.tsx`). When model and DOM
+ * disagree, pinned columns stick at the wrong offset — leaving a gap between
+ * neighbouring pinned columns that the scrolling content shows through — and
+ * the shadow strip floats over the middle of the table instead of hugging the
+ * pinned edge (#141).
+ *
+ * Take the same layout model shadcn uses (its row is a CSS grid over the same
+ * template), so the rendered widths ARE the model widths and every offset lands
+ * where the model says. The template is published as `--grid-template-columns`
+ * on the table root (data-grid-react `table.tsx`) and inherits down to the
+ * header and rows.
+ *
+ * Semantics are unaffected: React Aria sets the roles explicitly on these nodes
+ * (`role="grid"` / `"row"` / `"rowheader"` / `"columnheader"`), so dropping the
+ * native table box does not take the table semantics with it.
+ *
+ * Virtualized mode needs this too — there the shared structural stylesheet
+ * positions each virtual row absolutely, and without a column template those
+ * rows blockify and their cells collapse. */
+/* Only the rows carry the grid; the table, header and body stay block containers —
+ * the same split shadcn uses. Making the <table> itself the grid instead is what one
+ * would reach for first, and it does lay the columns out correctly, but it stretches
+ * `<tbody>` to the scrollport height, and HeroUI's `.table__row` is `height: 100%` —
+ * so every row then resolves to the full body height and the rows overlap. */
+[data-slot='table'] table {
+	display: block;
+	/* A block box is only as wide as its container, and HeroUI's `.table__content` is
+	 * `overflow: clip` — so without this the row grids are clipped at the container
+	 * width and the scroll container never sees anything to scroll to. (A native table
+	 * box grew to its columns on its own; a block box does not.) Floor it at the tracks'
+	 * width and let it stretch past that when there is room (`minmax(…, 1fr)` tracks). */
+	min-width: max-content;
 }
-[data-slot='table'][data-virtualized='true'] [data-slot='thead'] {
+[data-slot='table'] [data-slot='thead'] {
+	display: block;
+}
+/* A `table-row-group` left inside a non-table parent gets wrapped in an anonymous table
+ * box, which shrink-wraps its rows instead of filling the width — the body would then be
+ * narrower than the header. (Virtualized mode excluded: there the shared stylesheet makes
+ * this the positioning context for the absolutely-placed virtual rows.) */
+[data-slot='table'] [data-slot='tbody']:not([data-virtualized='true']) {
+	display: block;
+}
+/* React Aria's TableHeader wraps the <th> columns in its own <tr> (no data-slot), so
+ * that wrapper — not the thead — is the header's row box and carries the template. */
+[data-slot='table'] [data-slot='thead'] tr {
+	display: grid;
 	grid-template-columns: var(--grid-template-columns);
 }
-/* React Aria's TableHeader wraps the <th> columns in its own <tr> (no data-slot),
- * so the header columns are grandchildren of the grid thead, not direct grid items.
- * Collapse that wrapper with `display: contents` so the columns lay out on the
- * thead's grid template and align with the body. (Body rows need no equivalent:
- * React Aria's Row *is* the `data-slot='tr'` with cells as direct children.) */
-[data-slot='table'][data-virtualized='true'] [data-slot='thead'] tr {
-	display: contents;
-}
-[data-slot='table'][data-virtualized='true'] [data-slot='tr'] {
+[data-slot='table'] [data-slot='tr'] {
 	display: grid;
 	grid-template-columns: var(--grid-template-columns);
 }
