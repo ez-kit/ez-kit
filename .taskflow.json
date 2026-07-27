@@ -1,0 +1,67 @@
+{
+	"repo": "ez-kit/ez-kit",
+	"projectNumber": 2,
+	"baseBranch": "develop",
+	"integrationPrefix": "integration/",
+	"branchPattern": "issue-{issue}-{slug}",
+	"plan": {
+		"heading": "## План выполнения",
+		"language": "ru"
+	},
+	"statuses": {
+		"backlog": "Backlog",
+		"ready": "Ready",
+		"inProgress": "In progress",
+		"inReview": "In review",
+		"done": "Done"
+	},
+	"gate": {
+		"logDir": ".agent-logs",
+		"steps": [
+			{
+				"name": "build",
+				"command": ["pnpm", "exec", "turbo", "run", "build"],
+				"perPkg": ["--filter={pkg}"]
+			},
+			{
+				"name": "lint",
+				"command": ["pnpm"],
+				"perPkg": ["--filter", "{pkg}"],
+				"append": ["lint"]
+			},
+			{
+				"name": "typecheck",
+				"command": ["pnpm"],
+				"perPkg": ["--filter", "{pkg}"],
+				"append": ["typecheck"]
+			},
+			{
+				"name": "test",
+				"command": ["pnpm"],
+				"perPkg": ["--filter", "{pkg}"],
+				"append": ["test"]
+			}
+		],
+		"docsStep": {
+			"name": "docs:build",
+			"command": ["pnpm", "docs:build"]
+		},
+		"cleanBeforeDocs": ["apps/docs/.source", "apps/docs/.next"],
+		"docsCodegen": {
+			"name": "docs-codegen",
+			"command": ["pnpm", "--filter", "@ez-kit/docs", "exec", "fumadocs-mdx"]
+		},
+		"docsPackages": ["@ez-kit/docs"],
+		"fullBuild": {
+			"name": "full-build",
+			"command": ["pnpm", "build"]
+		}
+	},
+	"visual": {
+		"basePort": 3101,
+		"startCommand": ["pnpm", "--filter", "@ez-kit/docs", "start"],
+		"cwd": "apps/docs",
+		"outDir": ".visual"
+	},
+	"constraintsFile": ".claude/taskflow-constraints.md"
+}
