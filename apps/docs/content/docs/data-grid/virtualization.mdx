@@ -15,28 +15,31 @@ For grids with thousands of rows, render only the rows currently in view. Memory
 const grid = useDataGrid({
 	data, // 10_000+ rows
 	columns,
-	enableVirtualization: true,
-	estimateRowHeight: 44,
+	virtualized: { row: { estimateSize: 44, overscan: 10 } },
 })
 ```
 
-```tsx
-<DataGrid.Body virtualized />
-```
+Virtualization is enabled entirely through this option — there is no separate component or prop to set on the body.
+
+When the defaults suit you, `virtualized: true` is shorthand for `virtualized: { row: true }`, which uses an `estimateSize` of 50 and an `overscan` of 5.
 
 ## Options
 
-| Option                 | Type                          | Description                                                                         |
-| ---------------------- | ----------------------------- | ----------------------------------------------------------------------------------- |
-| `enableVirtualization` | `boolean`                     | Master switch. Default `false`.                                                     |
-| `estimateRowHeight`    | `number \| (index) => number` | Required when virtualization is on. Use a function when rows have variable heights. |
-| `overscan`             | `number`                      | Extra rows rendered above/below the viewport. Default `5`.                          |
+| Option             | Type                           | Description                                                                                       |
+| ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `virtualized`      | `boolean \| VirtualizedConfig` | Master switch. Default off. `true` is shorthand for `{ row: true }`.                              |
+| `virtualized.row`  | `boolean \| RowVirtualOptions` | Row virtualization. `true` uses the defaults below. Column virtualization is not implemented yet. |
+| `row.estimateSize` | `number \| (index) => number`  | Estimated row height in px. Default `50`. Pass a function when rows have variable heights.        |
+| `row.overscan`     | `number`                       | Extra rows rendered above/below the viewport. Default `5`.                                        |
 
 ## Notes
 
-- Virtualization is **not free**: layout-dependent features (column resizing on first paint, certain accessibility patterns) may need extra care. If your data set is small (≤ 200 rows), leave virtualization off.
+- Virtualization is **not free**: rows are absolutely positioned and the body's height is computed at runtime, so anything measuring real row geometry needs care. If your data set is small (≤ 200 rows), leave virtualization off.
+- Column sizing works the same virtualized or not — the column width variables are set on the shared `<table>` element in both modes, so [resizing](/docs/data-grid/columns/resizing) needs no extra configuration here.
 - The shadcn and HeroUI flavors both honor `virtualized` — toggle the flavor above to see equivalent behavior.
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/body.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/body.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/virtual-body.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/virtual-body.tsx) — renders the virtual rows
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/table.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/table.tsx) — sets up the virtualizer, its defaults, and the shared column-width variables
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/types.ts) — `VirtualizedConfig`
