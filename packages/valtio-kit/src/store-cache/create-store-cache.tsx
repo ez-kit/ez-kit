@@ -19,6 +19,12 @@ import type {
  */
 const FALLBACK_PROXY: object = proxy({})
 
+export const MISSING_CACHE_PROVIDER = 'Missing CacheProvider'
+
+const MULTIPLE_PROVIDERS_WARNING =
+	'[valtio-kit] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
+	'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.'
+
 /** Render-prop argument for a cached group `Item`: `snap` for reads, `store` (raw proxy) for writes. */
 export type CachedItemRenderArg<TState extends object> = {
 	snap: Snapshot<TState>
@@ -41,7 +47,7 @@ export type CachedStoreGroup<TState extends object, TDefaultValue extends object
 	useStore: () => Snapshot<TState>
 	/** Explicit alias of `useStore()` — the readonly, auto-tracked snapshot for this group's entry. */
 	useSnapshot: () => Snapshot<TState>
-	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never subscribes. */
+	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never re-renders. */
 	useContextStore: () => TState
 	/** Render-prop receiving `{ snap, store }`, mirroring `createContextStore`'s `Item`. */
 	Item: (props: CachedItemProps<TState>) => ReactElement
@@ -76,7 +82,14 @@ export type StoreCache = {
  * `{ Provider, Scope, useCache, useCacheKeys, createCachedStore }` shape as `@ez-kit/zu-store`.
  */
 export function createStoreCache(options: Parameters<typeof createCacheReact>[1] = {}): StoreCache {
-	const cache = createCacheReact<object>({ useRead, fallbackInstance: FALLBACK_PROXY }, options)
+	const cache = createCacheReact<object>(
+		{
+			useRead,
+			fallbackInstance: FALLBACK_PROXY,
+			messages: { missingProvider: MISSING_CACHE_PROVIDER, multipleProviders: MULTIPLE_PROVIDERS_WARNING },
+		},
+		options,
+	)
 
 	function createCachedStore<TState extends object, TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TState, TDefaultValue>,
@@ -86,6 +99,10 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 
 		function useSnapshot(): Snapshot<TState> {
 			return group.useStore((snap) => snap) as Snapshot<TState>
+		}
+
+		function useStore(): Snapshot<TState> {
+			return useSnapshot()
 		}
 
 		function useContextStore(): TState {
@@ -113,7 +130,7 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 
 		return {
 			Provider: group.Provider,
-			useStore: useSnapshot,
+			useStore,
 			useSnapshot,
 			useContextStore,
 			Item,

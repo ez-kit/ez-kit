@@ -1,12 +1,12 @@
-import { MISSING_CACHE_PROVIDER } from '@ez-kit/store-core/cache'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
-import { createStoreCache } from './create-store-cache'
+import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 
 import type { StoreInit } from '../create-store'
+import type { Snapshot } from 'valtio'
 
 type FormState = {
 	dirty: boolean
@@ -76,11 +76,12 @@ describe('valtio createStoreCache — surface', () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'surface-semantics' })
 
+		let snapshot: Snapshot<FormState> | undefined
 		let raw: FormState | undefined
 		function Probe() {
-			const snap = form.useStore()
+			snapshot = form.useStore()
 			raw = form.useContextStore()
-			return <span data-testid='probe'>{snap.name}</span>
+			return null
 		}
 
 		render(
@@ -94,9 +95,51 @@ describe('valtio createStoreCache — surface', () => {
 			</cache.Provider>,
 		)
 
-		// `useStore()` yields the readonly snapshot; `useContextStore()` yields the live cached proxy.
-		expect(screen.getByTestId('probe')).toHaveTextContent('seed')
+		// `useStore()` yields the readonly snapshot — a distinct object from the live cached proxy that
+		// `useContextStore()` returns. Under the old semantics both hooks handed back the same proxy.
 		expect(raw).toBe(form.fromCache({ id: 'main' }))
+		expect(snapshot).not.toBe(raw)
+		expect(snapshot?.name).toBe('seed')
+	})
+
+	it('re-renders a useStore() reader when the raw proxy is mutated elsewhere', async () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'surface-use-store-reactivity' })
+
+		function NameView() {
+			return <span data-testid='name'>{form.useStore().name}</span>
+		}
+		function RenameButton() {
+			const store = form.useContextStore()
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						store.name = 'Ann'
+					}}
+				>
+					rename
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<form.Provider
+					id='main'
+					defaultValue={{ name: 'seed' }}
+				>
+					<NameView />
+					<RenameButton />
+				</form.Provider>
+			</cache.Provider>,
+		)
+
+		expect(screen.getByTestId('name')).toHaveTextContent('seed')
+		fireEvent.click(screen.getByRole('button', { name: 'rename' }))
+		await waitFor(() => {
+			expect(screen.getByTestId('name')).toHaveTextContent('Ann')
+		})
 	})
 
 	it('exposes { snap, store } via the Item render-prop', () => {
