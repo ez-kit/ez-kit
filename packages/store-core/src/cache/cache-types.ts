@@ -10,14 +10,17 @@ export type AnyInstance = object
 /** A live instance paired with its structural id, kept on the reactive membership view. */
 export type MountedInstance = { instance: AnyInstance; storeId: StoreId }
 
-/** Per-entry lifecycle metadata: ref-count, gc config, idle timestamp, eviction timer, plugin cleanups. */
+/** Per-entry lifecycle metadata: ref-count, gc config, eviction timer, plugin cleanups. */
 export type InstanceMeta = {
 	instance: AnyInstance
 	storeId: StoreId
 	observerCount: number
 	gcTime: number
-	/** Timestamp the entry became idle (observerCount hit 0); `undefined` while observed. */
-	idleSince: number | undefined
+	/**
+	 * Pending eviction timer, live only while the entry is unobserved. It is the sole authority on
+	 * the deadline — there is deliberately no wall-clock idle stamp to cross-check it against, since
+	 * the two clocks drift and disagreeing with the timer once strands the entry forever.
+	 */
 	evictionTimer: ReturnType<typeof setTimeout> | undefined
 	/** Retained plugin cleanups; run exactly once when the entry is cleared. */
 	cleanups: readonly PluginCleanup[]

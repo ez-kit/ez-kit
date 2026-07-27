@@ -1,6 +1,6 @@
 import { serializeStoreId } from '../store-id'
 
-import { createMembershipView, isExpired, startsWithPrefix, toRecords, updateMembership } from './cache-utils'
+import { createMembershipView, startsWithPrefix, toRecords, updateMembership } from './cache-utils'
 
 import type { InstanceMeta, MembershipView } from './cache-types'
 import type { CacheRecord, CreateOptions } from './types'
@@ -33,7 +33,7 @@ export type InstanceCache = {
 	 * membership changes, so React's snapshot caching invariant holds.
 	 */
 	getKeysSnapshot: () => readonly CacheRecord[]
-	/** Live instance for `id` if present and not expired, without affecting its lifecycle. */
+	/** Live instance for `id` if currently mounted in the cache, without affecting its lifecycle. */
 	getInstance: (id: StoreId) => object | undefined
 }
 
@@ -75,22 +75,34 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		setMembership(meta.storeId, undefined)
 	}
 
-	function removeExpired(): void {
-		const now = Date.now()
-		for (const [key, meta] of [...metaByKey]) {
-			if (isExpired(meta, now)) dropEntry(key, meta)
-		}
+	/**
+	 * Eviction timer callback for a single entry. The timer is the authority on the deadline: it is
+	 * installed only when the last observer leaves and cleared the moment one returns, so reaching
+	 * here means the entry is due. Deliberately does NOT re-derive expiry from `Date.now()` — the
+	 * wall clock drifts against the runtime's timer clock, so a marginally early fire would fail
+	 * that comparison and strand the entry alive with no timer left to retry it.
+	 */
+	function evictIfIdle(key: string): void {
+		const meta = metaByKey.get(key)
+		if (!meta) return
+		meta.evictionTimer = undefined
+		if (meta.observerCount > 0) return
+		dropEntry(key, meta)
 	}
 
 	function scheduleEviction(storeId: StoreId): void {
-		const meta = metaByKey.get(serializeStoreId(storeId))
+		const key = serializeStoreId(storeId)
+		const meta = metaByKey.get(key)
 		if (!meta) return
 		if (meta.evictionTimer) {
 			clearTimeout(meta.evictionTimer)
 			meta.evictionTimer = undefined
 		}
 		if (meta.gcTime === Infinity) return
-		meta.evictionTimer = setTimeout(removeExpired, meta.gcTime)
+		// Per-entry timer: a fired deadline must never sweep siblings whose own gcTime is not up yet.
+		meta.evictionTimer = setTimeout(() => {
+			evictIfIdle(key)
+		}, meta.gcTime)
 	}
 
 	function getOrCreate<T>(id: StoreId, create: () => T, opts: CreateOptions<T>): T {
@@ -105,7 +117,6 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 			storeId: id,
 			observerCount: 0,
 			gcTime: opts.gcTime,
-			idleSince: Date.now(),
 			evictionTimer: undefined,
 			cleanups,
 			cleared: false,
@@ -117,7 +128,6 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		const meta = metaByKey.get(serializeStoreId(id))
 		if (!meta) return
 		meta.observerCount += 1
-		meta.idleSince = undefined
 		if (meta.evictionTimer) {
 			clearTimeout(meta.evictionTimer)
 			meta.evictionTimer = undefined
@@ -130,16 +140,15 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		if (!meta) return
 		meta.observerCount = Math.max(0, meta.observerCount - 1)
 		if (meta.observerCount === 0) {
-			meta.idleSince = Date.now()
 			scheduleEviction(id)
 		}
 	}
 
 	function getInstance(id: StoreId): object | undefined {
-		const key = serializeStoreId(id)
-		const meta = metaByKey.get(key)
-		if (!meta || isExpired(meta, Date.now())) return undefined
-		return membership.getSnapshot().get(key)?.instance
+		// Membership alone decides liveness. Screening on a wall-clock deadline here would let this
+		// answer flip without any membership change — and `useFromCache` recomputes its live instance
+		// only when the membership signature changes, so the two would disagree.
+		return membership.getSnapshot().get(serializeStoreId(id))?.instance
 	}
 
 	function keys(prefix?: readonly string[]): CacheRecord[] {

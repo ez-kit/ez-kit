@@ -15,6 +15,11 @@ type FormState = {
 
 type FormDefaultValue = { dirty?: boolean; name?: string }
 
+/** Eviction window for tests that wait out `gcTime`. Short — the wait is real wall-clock time. */
+const GC_TIME = 200
+/** A multiple of gcTime, not a hair over it, so a loaded CI runner cannot race the eviction timer. */
+const PAST_GC_TIME = GC_TIME * 2
+
 const formFactory = ({ defaultValue }: StoreInit<FormDefaultValue>) =>
 	proxy<FormState>({
 		dirty: defaultValue.dirty ?? false,
@@ -267,7 +272,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 	})
 
 	it('seeds a fresh proxy from defaultValue after the entry is evicted', async () => {
-		const cache = createStoreCache({ gcTime: 1000 })
+		const cache = createStoreCache({ gcTime: GC_TIME })
 		const form = cache.createCachedStore(formFactory, { name: 'reuse-evict' })
 
 		function NameView() {
@@ -304,7 +309,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			/>,
 		)
 		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 1100))
+			await new Promise((resolve) => setTimeout(resolve, PAST_GC_TIME))
 		})
 		expect(form.fromCache({ id: 'form' })).toBeUndefined()
 
@@ -335,7 +340,7 @@ describe('valtio createStoreCache — useFromCache', () => {
 	})
 
 	it('passively reflects creation, mutation, and eviction of an entry at an address', async () => {
-		const cache = createStoreCache({ gcTime: 1000 })
+		const cache = createStoreCache({ gcTime: GC_TIME })
 		const form = cache.createCachedStore(formFactory, { name: 'from-cache-passive' })
 
 		function Badge() {
@@ -392,7 +397,7 @@ describe('valtio createStoreCache — useFromCache', () => {
 		// Unmount and wait past gcTime: the entry is evicted and the reader falls back again.
 		rerender(<App show={false} />)
 		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 1100))
+			await new Promise((resolve) => setTimeout(resolve, PAST_GC_TIME))
 		})
 		await waitFor(() => {
 			expect(screen.getByTestId('badge')).toHaveTextContent(NO_ENTRY)
