@@ -1,6 +1,6 @@
 import { createCacheReact } from '@ez-kit/store-core/cache'
 import { type ReactElement } from 'react'
-import { type Snapshot } from 'valtio'
+import { proxy, type Snapshot } from 'valtio'
 
 import { RAW_SELECTOR, useRead } from './use-read'
 
@@ -11,6 +11,19 @@ import type {
 	CachedProviderProps,
 	CacheAddress,
 } from '@ez-kit/store-core/cache'
+
+/**
+ * Stable placeholder `useFromCache` subscribes to when the target has no live entry. Valtio's
+ * `useSnapshot` only accepts a registered proxy, so this must be a real proxy rather than a bare
+ * object. Its state is never read — the selector receives `undefined` in that case.
+ */
+const FALLBACK_PROXY: object = proxy({})
+
+export const MISSING_CACHE_PROVIDER = 'Missing CacheProvider'
+
+const MULTIPLE_PROVIDERS_WARNING =
+	'[valtio-kit] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
+	'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
 /** Render-prop argument for a cached group `Item`: `snap` for reads, `store` (raw proxy) for writes. */
 export type CachedItemRenderArg<TState extends object> = {
@@ -23,20 +36,28 @@ export type CachedItemProps<TState extends object> = {
 }
 
 /**
- * A keep-alive group of Valtio proxies keyed by `(path, id)`. `useStore()` returns the raw mutable
- * proxy (mutate directly); `useSnapshot()` returns the tracked readonly snapshot. Cache-hits return
+ * A keep-alive group of Valtio proxies keyed by `(path, id)`. `useSnapshot()` returns the tracked
+ * readonly snapshot; `useContextStore()` returns the raw mutable proxy to write to. Cache-hits return
  * the SAME proxy object, so in-progress mutations survive unmount/remount within `gcTime`.
  */
 export type CachedStoreGroup<TState extends object, TDefaultValue extends object> = {
 	Provider: (props: CachedProviderProps<TDefaultValue>) => ReactElement
-	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly. */
-	useStore: () => TState
-	/** Returns the readonly, auto-tracked snapshot for this group's entry. */
+	/** Returns the readonly, auto-tracked snapshot for this group's entry. Re-renders on read fields. */
 	useSnapshot: () => Snapshot<TState>
+	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never re-renders. */
+	useContextStore: () => TState
 	/** Render-prop receiving `{ snap, store }`, mirroring `createContextStore`'s `Item`. */
 	Item: (props: CachedItemProps<TState>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live proxy or `undefined`. Never creates. */
 	fromCache: (target: CacheAddress) => TState | undefined
+	/**
+	 * Reactive, passive cross-tree read at `(path, id)`. The selector receives the entry's snapshot,
+	 * or `undefined` when no entry is live. Never creates an entry and never keeps one alive.
+	 */
+	useFromCache: <TSelected>(
+		target: CacheAddress,
+		selector: (snap: Snapshot<TState> | undefined) => TSelected,
+	) => TSelected
 	/** Remove this group's entry at `(path, id)` immediately. */
 	remove: (target: CacheAddress) => void
 }
@@ -58,7 +79,14 @@ export type StoreCache = {
  * `{ Provider, Scope, useCache, useCacheKeys, createCachedStore }` shape as `@ez-kit/zu-store`.
  */
 export function createStoreCache(options: Parameters<typeof createCacheReact>[1] = {}): StoreCache {
-	const cache = createCacheReact<object>({ useRead }, options)
+	const cache = createCacheReact<object>(
+		{
+			useRead,
+			fallbackInstance: FALLBACK_PROXY,
+			messages: { missingProvider: MISSING_CACHE_PROVIDER, multipleProviders: MULTIPLE_PROVIDERS_WARNING },
+		},
+		options,
+	)
 
 	function createCachedStore<TState extends object, TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TState, TDefaultValue>,
@@ -66,27 +94,42 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 	): CachedStoreGroup<TState, TDefaultValue> {
 		const group = cache.createCachedStore<TDefaultValue>(factory, groupOptions)
 
-		function useStore(): TState {
-			return group.useStore(RAW_SELECTOR) as TState
-		}
-
 		function useSnapshot(): Snapshot<TState> {
 			return group.useStore((snap) => snap) as Snapshot<TState>
 		}
 
+		function useContextStore(): TState {
+			return group.useStore(RAW_SELECTOR) as TState
+		}
+
 		function Item({ children }: CachedItemProps<TState>): ReactElement {
-			return children({ snap: useSnapshot(), store: useStore() })
+			return children({ snap: useSnapshot(), store: useContextStore() })
 		}
 
 		function fromCache(target: CacheAddress): TState | undefined {
 			return group.fromCache(target) as TState | undefined
 		}
 
+		function useFromCache<TSelected>(
+			target: CacheAddress,
+			selector: (snap: Snapshot<TState> | undefined) => TSelected,
+		): TSelected {
+			return group.useFromCache(target, selector as (snap: unknown) => TSelected)
+		}
+
 		function remove(target: CacheAddress): void {
 			group.remove(target)
 		}
 
-		return { Provider: group.Provider, useStore, useSnapshot, Item, fromCache, remove }
+		return {
+			Provider: group.Provider,
+			useSnapshot,
+			useContextStore,
+			Item,
+			fromCache,
+			useFromCache,
+			remove,
+		}
 	}
 
 	return {
