@@ -47,16 +47,11 @@ type ItemProps<TState extends object> = {
 
 export type CreateStoreResult<TState extends object, TDefaultValue> = {
 	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
-	/**
-	 * Reactive read: the readonly, auto-tracked snapshot. Alias of {@link CreateStoreResult.useSnapshot},
-	 * so the name matches `@ez-kit/zu-store`, where `useStore` is also the read path.
-	 */
-	useStore: (options?: UseSnapshotOptions) => Snapshot<TState>
-	/** Returns the readonly, auto-tracked snapshot. Forwards Valtio's `useSnapshot` options. */
+	/** Reactive read: the readonly, auto-tracked snapshot. Forwards Valtio's `useSnapshot` options. */
 	useSnapshot: (options?: UseSnapshotOptions) => Snapshot<TState>
 	/**
 	 * Write path / escape hatch: the raw, mutable Valtio proxy. Mutate it directly (e.g. `state.count++`).
-	 * It does **not** subscribe the calling component — pair it with `useStore()`/`useSnapshot()` to render.
+	 * It does **not** subscribe the calling component — pair it with `useSnapshot()` to render.
 	 */
 	useContextStore: () => TState
 	Item: (props: ItemProps<TState>) => ReactElement
@@ -73,8 +68,8 @@ function getStoreFromContext<TState extends object>(store: TState | null): TStat
  * `PluginCleanup` runs on unmount. `ctx.services` resolves app-level services published by an
  * ancestor `ServicesProvider`/`StoreProvider`. `createContextStore` is this factory with no plugins.
  *
- * Reads go through `useStore()`/`useSnapshot()` — both return the auto-tracked readonly snapshot.
- * Writes go through `useContextStore()`, which hands back the raw mutable proxy without subscribing.
+ * Reads go through `useSnapshot()`, which returns the auto-tracked readonly snapshot. Writes go
+ * through `useContextStore()`, which hands back the raw mutable proxy without subscribing.
  */
 export function createStore<TState extends object, TDefaultValue = undefined>(
 	factory: StoreFactory<TState, TDefaultValue>,
@@ -122,5 +117,5 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 		return children({ snap: useSnapshot(), store: useContextStore() })
 	}
 
-	return { Provider, useStore: useSnapshot, useSnapshot, useContextStore, Item }
+	return { Provider, useSnapshot, useContextStore, Item }
 }

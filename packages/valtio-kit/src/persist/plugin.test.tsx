@@ -57,8 +57,8 @@ describe('@ez-kit/valtio-kit persist() plugin on a non-cached store', () => {
 
 			it('exposes the createStore API surface', () => {
 				expect(typeof store.Provider).toBe('function')
-				expect(typeof store.useStore).toBe('function')
 				expect(typeof store.useSnapshot).toBe('function')
+				expect(typeof store.useContextStore).toBe('function')
 				expect(typeof store.Item).toBe('function')
 			})
 

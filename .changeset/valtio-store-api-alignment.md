@@ -2,17 +2,23 @@
 '@ez-kit/valtio-kit': minor
 ---
 
-Align the store API with `@ez-kit/zu-store`: `useStore()` is now the **reactive read**.
+Split the store surface into one read hook and one write hook: `useSnapshot()` reads,
+`useContextStore()` writes. `useStore()` is **removed**.
 
-**Breaking.** `useStore()` no longer returns the raw mutable Valtio proxy — it returns the
-readonly, auto-tracked `Snapshot<TState>` (an alias of `useSnapshot()`, options included).
-The raw proxy moved to the new `useContextStore()`, which is the write path / escape hatch and
-does not subscribe the calling component.
+**Breaking.** `useStore()` used to return the raw mutable Valtio proxy. It is gone — there is no
+alias for `useSnapshot()`, so there is exactly one way to read and one way to write. The raw proxy
+moved to the new `useContextStore()`, which is the write path / escape hatch and does not subscribe
+the calling component.
 
 ```diff
 - const state = store.useStore()
 + const state = store.useContextStore()
   state.count += 1
+```
+
+```diff
+- const snap = store.useStore()
++ const snap = store.useSnapshot()
 ```
 
 Reads that already used `useSnapshot()` are unaffected, and `Item`'s `{ snap, store }` render

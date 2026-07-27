@@ -192,7 +192,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 
 	it('throws when a hook is used without a Provider', () => {
 		function BrokenConsumer() {
-			counter.useStore()
+			counter.useSnapshot()
 			return <div />
 		}
 
@@ -208,9 +208,9 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		expect(() => render(<BrokenWriter />)).toThrowError('Missing Provider for createContextStore')
 	})
 
-	it('re-renders a useStore consumer when the field it reads changes', async () => {
+	it('re-renders a useSnapshot consumer when the field it reads changes', async () => {
 		function StoreCountView() {
-			const snap = counter.useStore()
+			const snap = counter.useSnapshot()
 			return <span data-testid='store-count'>{snap.count}</span>
 		}
 

@@ -146,7 +146,7 @@ describe('createStore — base behavior without plugins', () => {
 	it('throws the createContextStore error message when used without a Provider', () => {
 		const store = createStore(counterFactory)
 		function Broken() {
-			store.useStore()
+			store.useSnapshot()
 			return null
 		}
 		expect(() => render(<Broken />)).toThrowError('Missing Provider for createContextStore')
@@ -161,11 +161,11 @@ describe('createStore — base behavior without plugins', () => {
 		expect(() => render(<Broken />)).toThrowError('Missing Provider for createContextStore')
 	})
 
-	it('exposes useStore as the reactive snapshot read', async () => {
+	it('exposes useSnapshot as the reactive read alongside the raw useContextStore write path', async () => {
 		const store = createStore(counterFactory)
 
 		function CountView() {
-			return <span data-testid='count'>{store.useStore().count}</span>
+			return <span data-testid='count'>{store.useSnapshot().count}</span>
 		}
 		function IncrementButton() {
 			const state = store.useContextStore()
