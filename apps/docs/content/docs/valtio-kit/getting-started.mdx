@@ -48,9 +48,14 @@ Valtio optimises re-renders per accessed property, so — unlike [`@ez-kit/zu-st
 | Action | How                                                                                                       |
 | ------ | --------------------------------------------------------------------------------------------------------- |
 | Read   | `const snap = store.useSnapshot()` → tracked snapshot; reading `snap.count` subscribes to just that field |
-| Write  | `store.useStore().count++` → mutate the raw proxy; snapshots update automatically                         |
+| Write  | `store.useContextStore().count++` → mutate the raw proxy; snapshots update automatically                  |
 
-`useStore()` returns the **raw mutable proxy**; `useSnapshot()` returns an immutable, render-safe view. Read from snapshots, write to the proxy.
+`useContextStore()` returns the **raw mutable proxy** and does not subscribe the component; `useSnapshot()` returns an immutable, render-safe view. Read from snapshots, write to the proxy.
+
+<Callout type='warn'>
+	**Breaking change.** `useStore()` has been removed — it was the raw proxy, now returned by `useContextStore()`. There
+	is exactly one read path (`useSnapshot()`) and one write path (`useContextStore()`).
+</Callout>
 
 ## What's next
 
