@@ -16,13 +16,20 @@ function createContextStore<TState extends object, TDefaultValue = undefined>(
 	factory: (init: ContextStoreInit<TDefaultValue>) => TState,
 ): {
 	Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
-	useStore: () => TState
 	useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
+	useContextStore: () => TState
 	Item: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
 }
 ```
 
-> **Rule of thumb:** read from snapshots (`useSnapshot`), mutate the source proxy (`useStore`).
+> **Rule of thumb:** read from snapshots (`useSnapshot`), mutate the source proxy (`useContextStore`).
+
+<Callout type='warn'>
+	**Breaking change.** `useStore()` has been **removed**. It used to return the raw mutable proxy — that is now
+	`useContextStore()`. There is no alias for reads either: `useSnapshot()` is the only read path. Migrate
+	`store.useStore()` → `store.useContextStore()` when you were writing, and → `store.useSnapshot()` when you were
+	reading.
+</Callout>
 
 The factory is seeded through a single `defaultValue` envelope — type its parameter with the exported `ContextStoreInit<T>` helper. `defaultValue` is required on the `Provider` when your seed has required fields, and optional otherwise.
 
@@ -33,7 +40,7 @@ The factory is seeded through a single `defaultValue` envelope — type its para
 	title='Counter'
 />
 
-The example above keeps its actions on the proxy (the idiomatic Valtio pattern), so components only ever read from `useSnapshot()`. You can also mutate the proxy directly — see [`useStore`](#usestore) below.
+The example above keeps its actions on the proxy (the idiomatic Valtio pattern), so components only ever read from `useSnapshot()`. You can also mutate the proxy directly — see [`useContextStore`](#usecontextstore) below.
 
 ## API
 
@@ -62,12 +69,12 @@ Valtio's options pass straight through. Use `{ sync: true }` for synchronous re-
 const snap = counterStore.useSnapshot({ sync: true })
 ```
 
-### `useStore()`
+### `useContextStore()`
 
-Returns the raw, **mutable** proxy. Mutate it directly to update state:
+Returns the raw, **mutable** proxy — the write path. It does **not** subscribe the calling component, so pair it with `useSnapshot()` when the same component also renders that state. Mutate it directly to update state:
 
 ```tsx
-const state = counterStore.useStore()
+const state = counterStore.useContextStore()
 
 const onClick = () => {
 	state.count += 1
@@ -75,9 +82,9 @@ const onClick = () => {
 ```
 
 <Callout type='info'>
-	This differs from [`@ez-kit/zu-store`](../zu-store/create-context-store), where `useStore(selector)` returns a
-	_slice_. Here `useStore()` is the **write path** — the proxy itself. Mutate it in event handlers and effects, not
-	during render.
+	The name matches [`@ez-kit/zu-store`](../zu-store/create-context-store), where `useContextStore()` likewise hands back
+	the raw store handle (there, the Zustand `StoreApi`). Reads differ per kit: `useStore(selector)` in zu-store,
+	`useSnapshot()` here. Mutate the proxy in event handlers and effects, not during render.
 </Callout>
 
 You can also feed it to Valtio's vanilla utilities:
@@ -85,7 +92,7 @@ You can also feed it to Valtio's vanilla utilities:
 ```tsx
 import { subscribe } from 'valtio'
 
-const state = counterStore.useStore()
+const state = counterStore.useContextStore()
 
 useEffect(() => subscribe(state, () => console.log('changed')), [state])
 ```
@@ -98,7 +105,7 @@ useEffect(() => subscribe(state, () => console.log('changed')), [state])
 
 ### `Item`
 
-Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Item` can both render and mutate without a separate `useStore()` consumer.
+Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Item` can both render and mutate without a separate `useContextStore()` consumer.
 
 ```tsx
 <counterStore.Item>
@@ -125,7 +132,7 @@ Each `Provider` creates its own proxy — state is never shared between siblings
 
 ## Errors
 
-Using `useStore`, `useSnapshot`, or `Item` outside a `Provider` throws:
+Using `useSnapshot`, `useContextStore`, or `Item` outside a `Provider` throws:
 
 ```
 Error: Missing Provider for createContextStore
