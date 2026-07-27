@@ -54,7 +54,7 @@ function UsersPage() {
 
 function UsersTable() {
 	const snap = usersTable.useSnapshot()
-	const store = usersTable.useStore() // the raw mutable proxy — mutate directly
+	const store = usersTable.useContextStore() // the raw mutable proxy — mutate directly
 	return (
 		<input
 			value={snap.filter}
@@ -66,7 +66,7 @@ function UsersTable() {
 }
 ```
 
-`useStore()`, `useSnapshot()`, and `Item` behave exactly like [`createContextStore`](./valtio-kit/create-context-store): read from the snapshot, mutate the proxy.
+`useSnapshot()`, `useContextStore()`, and `Item` behave exactly like [`createContextStore`](./valtio-kit/create-context-store): read from the snapshot, mutate the proxy. There is no `useStore()` — reading is `useSnapshot()`, writing is `useContextStore()`.
 
 ## How it stays alive
 
@@ -84,7 +84,11 @@ Each `<Provider>` is counted as an observer. When the **last** one unmounts, the
 
 ## Reading from anywhere
 
-The group exposes `fromCache({ path?, id })` — an imperative get-if-alive that returns the live proxy or `undefined`, never creating an entry. Use it in event handlers or non-React code:
+The group exposes two cross-tree reads at an address `({ path?, id })`. Neither ever **creates** an entry, and neither keeps one alive.
+
+### `fromCache({ path, id })` — imperative
+
+An imperative get-if-alive that returns the live proxy or `undefined`. Use it in event handlers or non-React code:
 
 ```tsx
 function ResetButton() {
@@ -103,6 +107,19 @@ function ResetButton() {
 	)
 }
 ```
+
+### `useFromCache({ path, id }, selector)` — reactive
+
+Reactively read a cached entry from **anywhere** — even a badge that is not inside the table's `Provider`. The selector receives the entry's **snapshot**, or `undefined` when no entry is live, so the component re-renders only when the fields it actually reads change:
+
+```tsx
+function ActiveFilterBadge() {
+	const filter = usersTable.useFromCache({ id: 'users' }, (snap) => snap?.filter ?? 'none')
+	return <span>{filter}</span>
+}
+```
+
+`useFromCache` is **passive** — it reflects the cache but does not keep the entry alive. Once the owning `Provider` unmounts and `gcTime` elapses, the entry is evicted and the reader's selector sees `undefined` again. Use `alwaysCache` if a reader must outlive its writer.
 
 `remove({ path?, id })` drops one entry immediately (overriding `alwaysCache`).
 
