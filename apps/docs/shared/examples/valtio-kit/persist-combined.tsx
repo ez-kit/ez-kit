@@ -1,6 +1,6 @@
 'use client'
 
-/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
+/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useContextStore() */
 
 import { createStore } from '@ez-kit/valtio-kit'
 import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/valtio-kit/persist'
@@ -35,7 +35,7 @@ const storage = createMemoryStorageAdapter(LOCAL_STORAGE_SOURCE)
 
 function ListControls() {
 	const snap = listStore.useSnapshot()
-	const store = listStore.useStore()
+	const store = listStore.useContextStore()
 	const search = url.useSearch()
 	const blob = storage.useBlob()
 

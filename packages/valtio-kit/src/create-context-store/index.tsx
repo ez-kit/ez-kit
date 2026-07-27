@@ -13,8 +13,10 @@ export type { ItemRenderArg, UseSnapshotOptions } from '../create-store'
 
 /**
  * Context store built on the plugin-aware {@link createStore}. With no plugins this is the original
- * behavior unchanged: returns `{ Provider, useStore, useSnapshot, Item }` and creates the proxy once
- * per Provider via `useRef`. Pass `plugins` to bind capabilities to the Provider's mount lifetime.
+ * behavior unchanged: returns `{ Provider, useSnapshot, useContextStore, Item }` and creates the proxy
+ * once per Provider via `useRef`. Read with `useSnapshot()` (auto-tracked snapshot), write through the
+ * raw proxy from `useContextStore()`. Pass `plugins` to bind capabilities to the Provider's mount
+ * lifetime.
  */
 export function createContextStore<TState extends object, TDefaultValue = undefined>(
 	factory: CreateContextStoreFactory<TState, TDefaultValue>,
