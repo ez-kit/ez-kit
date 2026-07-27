@@ -53,12 +53,12 @@ The `adapters` array is read once and may call hooks (router adapters do), so de
 
 ## Read and write
 
-Read with `useSnapshot()`, write through the raw proxy from `useStore()`:
+Read with `useSnapshot()`, write through the raw proxy from `useContextStore()`:
 
 ```tsx
 function FilterControls() {
 	const snap = filtersStore.useSnapshot()
-	const store = filtersStore.useStore()
+	const store = filtersStore.useContextStore()
 	return (
 		<input
 			value={snap.q}
