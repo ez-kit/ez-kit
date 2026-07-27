@@ -1,6 +1,6 @@
 import { serializeStoreId } from '../store-id'
 
-import type { AnyInstance, InstanceMeta, MembershipView, MountedInstance } from './cache-types'
+import type { AnyInstance, MembershipView, MountedInstance } from './cache-types'
 import type { CacheAddress, CacheRecord } from './types'
 import type { StoreId } from '../store-id'
 
@@ -33,15 +33,6 @@ export function startsWithPrefix(path: readonly string[], prefix: readonly strin
 		if (path[i] !== prefix[i]) return false
 	}
 	return true
-}
-
-/**
- * True when an entry has no observers and has been idle past `gcTime`. Never expires when pinned
- * (`gcTime === Infinity`). Observe-on-effect means there is no orphan window to grace.
- */
-export function isExpired(meta: InstanceMeta, now: number): boolean {
-	if (meta.observerCount > 0 || meta.idleSince === undefined) return false
-	return meta.gcTime !== Infinity && now - meta.idleSince >= meta.gcTime
 }
 
 /** Immutable flat-map update of the membership view. Returns the same map when nothing changes. */
