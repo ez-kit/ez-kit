@@ -72,14 +72,14 @@ describe('valtio createStoreCache — surface', () => {
 		})
 	})
 
-	it('useStore() reads the snapshot while useContextStore() hands back the raw proxy', () => {
+	it('useSnapshot() reads the snapshot while useContextStore() hands back the raw proxy', () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'surface-semantics' })
 
 		let snapshot: Snapshot<FormState> | undefined
 		let raw: FormState | undefined
 		function Probe() {
-			snapshot = form.useStore()
+			snapshot = form.useSnapshot()
 			raw = form.useContextStore()
 			return null
 		}
@@ -95,19 +95,19 @@ describe('valtio createStoreCache — surface', () => {
 			</cache.Provider>,
 		)
 
-		// `useStore()` yields the readonly snapshot — a distinct object from the live cached proxy that
-		// `useContextStore()` returns. Under the old semantics both hooks handed back the same proxy.
+		// `useSnapshot()` yields the readonly snapshot — a distinct object from the live cached proxy that
+		// `useContextStore()` returns. Under the old semantics `useStore()` handed back that same proxy.
 		expect(raw).toBe(form.fromCache({ id: 'main' }))
 		expect(snapshot).not.toBe(raw)
 		expect(snapshot?.name).toBe('seed')
 	})
 
-	it('re-renders a useStore() reader when the raw proxy is mutated elsewhere', async () => {
+	it('re-renders a useSnapshot() reader when the raw proxy is mutated elsewhere', async () => {
 		const cache = createStoreCache()
-		const form = cache.createCachedStore(formFactory, { name: 'surface-use-store-reactivity' })
+		const form = cache.createCachedStore(formFactory, { name: 'surface-use-snapshot-reactivity' })
 
 		function NameView() {
-			return <span data-testid='name'>{form.useStore().name}</span>
+			return <span data-testid='name'>{form.useSnapshot().name}</span>
 		}
 		function RenameButton() {
 			const store = form.useContextStore()

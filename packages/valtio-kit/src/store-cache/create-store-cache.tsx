@@ -36,16 +36,13 @@ export type CachedItemProps<TState extends object> = {
 }
 
 /**
- * A keep-alive group of Valtio proxies keyed by `(path, id)`. `useStore()` (and its explicit alias
- * `useSnapshot()`) returns the tracked readonly snapshot; `useContextStore()` returns the raw mutable
- * proxy to write to. Cache-hits return the SAME proxy object, so in-progress mutations survive
- * unmount/remount within `gcTime`.
+ * A keep-alive group of Valtio proxies keyed by `(path, id)`. `useSnapshot()` returns the tracked
+ * readonly snapshot; `useContextStore()` returns the raw mutable proxy to write to. Cache-hits return
+ * the SAME proxy object, so in-progress mutations survive unmount/remount within `gcTime`.
  */
 export type CachedStoreGroup<TState extends object, TDefaultValue extends object> = {
 	Provider: (props: CachedProviderProps<TDefaultValue>) => ReactElement
 	/** Returns the readonly, auto-tracked snapshot for this group's entry. Re-renders on read fields. */
-	useStore: () => Snapshot<TState>
-	/** Explicit alias of `useStore()` — the readonly, auto-tracked snapshot for this group's entry. */
 	useSnapshot: () => Snapshot<TState>
 	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never re-renders. */
 	useContextStore: () => TState
@@ -101,10 +98,6 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 			return group.useStore((snap) => snap) as Snapshot<TState>
 		}
 
-		function useStore(): Snapshot<TState> {
-			return useSnapshot()
-		}
-
 		function useContextStore(): TState {
 			return group.useStore(RAW_SELECTOR) as TState
 		}
@@ -130,7 +123,6 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 
 		return {
 			Provider: group.Provider,
-			useStore,
 			useSnapshot,
 			useContextStore,
 			Item,
