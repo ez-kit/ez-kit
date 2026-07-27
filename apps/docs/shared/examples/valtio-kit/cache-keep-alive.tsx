@@ -1,6 +1,6 @@
 'use client'
 
-/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo writes the raw mutable proxy from useStore() */
+/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo writes the raw mutable proxy from useContextStore() */
 
 import { CacheProvider, createCachedStore, useCacheKeys } from '@ez-kit/valtio-kit'
 import { useState } from 'react'
@@ -22,7 +22,7 @@ const FILTERS = ['all', 'active', 'archived']
 
 function TablePanel() {
 	const snap = tableStore.useSnapshot()
-	const store = tableStore.useStore() // the raw mutable proxy
+	const store = tableStore.useContextStore() // the raw mutable proxy
 
 	return (
 		<div className='flex flex-col gap-3 rounded-lg border border-fd-border bg-fd-card p-4'>

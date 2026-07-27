@@ -29,7 +29,7 @@ function CountView() {
 }
 
 function IncrementButton() {
-	const state = counter.useStore()
+	const state = counter.useContextStore()
 	return (
 		<button
 			type='button'
@@ -55,7 +55,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		expect(screen.getByTestId('count')).toHaveTextContent('3')
 	})
 
-	it('re-renders snapshot consumers when the proxy is mutated via useStore', async () => {
+	it('re-renders snapshot consumers when the proxy is mutated via useContextStore', async () => {
 		render(
 			<counter.Provider defaultValue={{ count: 1, label: 'boot' }}>
 				<CountView />
@@ -82,7 +82,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		}
 
 		function ChangeLabelButton() {
-			const state = counter.useStore()
+			const state = counter.useContextStore()
 			return (
 				<button
 					type='button'
@@ -192,11 +192,82 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 
 	it('throws when a hook is used without a Provider', () => {
 		function BrokenConsumer() {
-			counter.useStore()
+			counter.useSnapshot()
 			return <div />
 		}
 
 		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for createContextStore')
+	})
+
+	it('throws when useContextStore is used without a Provider', () => {
+		function BrokenWriter() {
+			counter.useContextStore()
+			return <div />
+		}
+
+		expect(() => render(<BrokenWriter />)).toThrowError('Missing Provider for createContextStore')
+	})
+
+	it('re-renders a useSnapshot consumer when the field it reads changes', async () => {
+		function StoreCountView() {
+			const snap = counter.useSnapshot()
+			return <span data-testid='store-count'>{snap.count}</span>
+		}
+
+		render(
+			<counter.Provider defaultValue={{ count: 4, label: 'boot' }}>
+				<StoreCountView />
+				<IncrementButton />
+			</counter.Provider>,
+		)
+
+		expect(screen.getByTestId('store-count')).toHaveTextContent('4')
+
+		fireEvent.click(screen.getByRole('button', { name: 'Increment' }))
+
+		await waitFor(() => {
+			expect(screen.getByTestId('store-count')).toHaveTextContent('5')
+		})
+	})
+
+	it('does not subscribe a component that only calls useContextStore', async () => {
+		let writerCommits = 0
+
+		function WriterOnly() {
+			const state = counter.useContextStore()
+			useEffect(() => {
+				writerCommits += 1
+			})
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						// Mutating the proxy is the intended Valtio write path.
+						// eslint-disable-next-line react-hooks/immutability
+						state.count += 1
+					}}
+				>
+					Write only
+				</button>
+			)
+		}
+
+		render(
+			<counter.Provider defaultValue={{ count: 0, label: 'boot' }}>
+				<CountView />
+				<WriterOnly />
+			</counter.Provider>,
+		)
+
+		expect(writerCommits).toBe(1)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Write only' }))
+
+		// The snapshot consumer re-renders, the raw-proxy consumer does not.
+		await waitFor(() => {
+			expect(screen.getByTestId('count')).toHaveTextContent('1')
+		})
+		expect(writerCommits).toBe(1)
 	})
 
 	it('forwards options to useSnapshot (sync)', async () => {

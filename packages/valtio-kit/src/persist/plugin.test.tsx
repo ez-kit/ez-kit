@@ -57,8 +57,8 @@ describe('@ez-kit/valtio-kit persist() plugin on a non-cached store', () => {
 
 			it('exposes the createStore API surface', () => {
 				expect(typeof store.Provider).toBe('function')
-				expect(typeof store.useStore).toBe('function')
 				expect(typeof store.useSnapshot).toBe('function')
+				expect(typeof store.useContextStore).toBe('function')
 				expect(typeof store.Item).toBe('function')
 			})
 
@@ -138,7 +138,7 @@ describe('@ez-kit/valtio-kit persist() plugin — service contract', () => {
 	it('reports useHydrated true after mount for a synchronous (URL) source', async () => {
 		const fake = createFakePersistAdapter()
 		function Gate(): ReactElement {
-			const store = fieldsStore.useStore()
+			const store = fieldsStore.useContextStore()
 			const hydrated = useHydrated(store)
 			return <span data-testid='state'>{hydrated ? 'ready' : 'loading'}</span>
 		}

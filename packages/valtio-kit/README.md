@@ -12,9 +12,9 @@ pnpm add @ez-kit/valtio-kit valtio
 
 ### `createContextStore(factory)`
 
-Wraps a Valtio proxy in React context. Returns `Provider`, `useStore`, `useSnapshot`, and `Item`. Multiple `Provider` instances are fully independent.
+Wraps a Valtio proxy in React context. Returns `Provider`, `useSnapshot`, `useContextStore`, and `Item`. Multiple `Provider` instances are fully independent.
 
-Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the proxy from `useStore()`.
+Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the raw proxy from `useContextStore()`. (`useStore()` has been removed — it was the raw proxy, now `useContextStore()`.)
 
 ```tsx
 import { type ContextStoreInit, createContextStore } from '@ez-kit/valtio-kit'
@@ -30,7 +30,7 @@ const counter = createContextStore(({ defaultValue }: ContextStoreInit<{ count?:
 
 // inside MyComponent:
 const snap = counter.useSnapshot() // read  → snap.count
-const state = counter.useStore() // write → state.count += 1
+const state = counter.useContextStore() // write → state.count += 1
 ```
 
 → [Full docs](docs/create-context-store.md)
@@ -70,7 +70,7 @@ function Page() {
 }
 ```
 
-Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `persist({ fields: (field) => [field((s) => s.q, urlField())] })` — and `persist` infers the state type from `createStore<T>`.
+Read with `useSnapshot()`, write through the raw proxy from `useContextStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `persist({ fields: (field) => [field((s) => s.q, urlField())] })` — and `persist` infers the state type from `createStore<T>`.
 
 Subpaths (optional peers, install only what you use):
 

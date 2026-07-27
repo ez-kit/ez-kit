@@ -30,7 +30,7 @@ const STARS = [1, 2, 3, 4, 5]
 
 function RatingControls() {
 	const snap = ratingStore.useSnapshot()
-	const store = ratingStore.useStore()
+	const store = ratingStore.useContextStore()
 	const search = useSearch()
 
 	return (

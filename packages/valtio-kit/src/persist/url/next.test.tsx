@@ -70,7 +70,7 @@ const store = createStore<{ q: string }>(() => proxy({ q: '' }), {
 
 function View(): ReactElement {
 	const snap = store.useSnapshot()
-	const state = store.useStore()
+	const state = store.useContextStore()
 	return (
 		<>
 			<span data-testid='q'>{snap.q}</span>

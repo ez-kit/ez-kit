@@ -35,7 +35,7 @@ type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
 	? { defaultValue?: TDefaultValue }
 	: { defaultValue: TDefaultValue }
 
-/** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy) for writes. */
+/** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy, as from `useContextStore()`) for writes. */
 export type ItemRenderArg<TState extends object> = {
 	snap: Snapshot<TState>
 	store: TState
@@ -47,10 +47,13 @@ type ItemProps<TState extends object> = {
 
 export type CreateStoreResult<TState extends object, TDefaultValue> = {
 	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
-	/** Returns the raw, mutable Valtio proxy. Mutate it directly (e.g. `state.count++`). */
-	useStore: () => TState
-	/** Returns the readonly, auto-tracked snapshot. Forwards Valtio's `useSnapshot` options. */
+	/** Reactive read: the readonly, auto-tracked snapshot. Forwards Valtio's `useSnapshot` options. */
 	useSnapshot: (options?: UseSnapshotOptions) => Snapshot<TState>
+	/**
+	 * Write path / escape hatch: the raw, mutable Valtio proxy. Mutate it directly (e.g. `state.count++`).
+	 * It does **not** subscribe the calling component — pair it with `useSnapshot()` to render.
+	 */
+	useContextStore: () => TState
 	Item: (props: ItemProps<TState>) => ReactElement
 }
 
@@ -64,6 +67,9 @@ function getStoreFromContext<TState extends object>(store: TState | null): TStat
  * `plugins` are declared, each plugin's `setup(proxy, ctx)` runs once on mount and its returned
  * `PluginCleanup` runs on unmount. `ctx.services` resolves app-level services published by an
  * ancestor `ServicesProvider`/`StoreProvider`. `createContextStore` is this factory with no plugins.
+ *
+ * Reads go through `useSnapshot()`, which returns the auto-tracked readonly snapshot. Writes go
+ * through `useContextStore()`, which hands back the raw mutable proxy without subscribing.
  */
 export function createStore<TState extends object, TDefaultValue = undefined>(
 	factory: StoreFactory<TState, TDefaultValue>,
@@ -103,17 +109,13 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 		return getStoreFromContext(useContext(StoreContext))
 	}
 
-	function useStore(): TState {
-		return useContextStore()
-	}
-
 	function useSnapshot(snapshotOptions?: UseSnapshotOptions): Snapshot<TState> {
 		return useValtioSnapshot(useContextStore(), snapshotOptions)
 	}
 
 	function Item({ children }: ItemProps<TState>): ReactElement {
-		return children({ snap: useSnapshot(), store: useStore() })
+		return children({ snap: useSnapshot(), store: useContextStore() })
 	}
 
-	return { Provider, useStore, useSnapshot, Item }
+	return { Provider, useSnapshot, useContextStore, Item }
 }
