@@ -1,3 +1,4 @@
+import { MISSING_CACHE_PROVIDER } from '@ez-kit/store-core/cache'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { renderToString } from 'react-dom/server'
 import { proxy } from 'valtio'
@@ -39,7 +40,7 @@ describe('valtio createStoreCache — surface', () => {
 			return <span data-testid='name'>{snap.name}</span>
 		}
 		function RenameButton() {
-			const store = form.useStore()
+			const store = form.useContextStore()
 			return (
 				<button
 					type='button'
@@ -71,6 +72,33 @@ describe('valtio createStoreCache — surface', () => {
 		})
 	})
 
+	it('useStore() reads the snapshot while useContextStore() hands back the raw proxy', () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'surface-semantics' })
+
+		let raw: FormState | undefined
+		function Probe() {
+			const snap = form.useStore()
+			raw = form.useContextStore()
+			return <span data-testid='probe'>{snap.name}</span>
+		}
+
+		render(
+			<cache.Provider>
+				<form.Provider
+					id='main'
+					defaultValue={{ name: 'seed' }}
+				>
+					<Probe />
+				</form.Provider>
+			</cache.Provider>,
+		)
+
+		// `useStore()` yields the readonly snapshot; `useContextStore()` yields the live cached proxy.
+		expect(screen.getByTestId('probe')).toHaveTextContent('seed')
+		expect(raw).toBe(form.fromCache({ id: 'main' }))
+	})
+
 	it('exposes { snap, store } via the Item render-prop', () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'surface-item' })
@@ -100,7 +128,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			return <span data-testid='name'>{`${snap.name}:${String(snap.dirty)}`}</span>
 		}
 		function DirtyButton() {
-			const store = form.useStore()
+			const store = form.useContextStore()
 			return (
 				<button
 					type='button'
@@ -245,6 +273,106 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			/>,
 		)
 		expect(screen.getByTestId('name')).toHaveTextContent('second')
+	})
+})
+
+describe('valtio createStoreCache — useFromCache', () => {
+	const NO_ENTRY = 'none'
+
+	it('throws when used without a cache Provider', () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'from-cache-no-provider' })
+
+		function Badge() {
+			form.useFromCache({ id: 'main' }, (snap) => snap?.name)
+			return null
+		}
+
+		expect(() => render(<Badge />)).toThrowError(MISSING_CACHE_PROVIDER)
+	})
+
+	it('passively reflects creation, mutation, and eviction of an entry at an address', async () => {
+		const cache = createStoreCache({ gcTime: 1000 })
+		const form = cache.createCachedStore(formFactory, { name: 'from-cache-passive' })
+
+		function Badge() {
+			const name = form.useFromCache({ path: ['page-1'], id: 'main' }, (snap) => snap?.name ?? NO_ENTRY)
+			return <span data-testid='badge'>{name}</span>
+		}
+		function RenameButton() {
+			const store = form.useContextStore()
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						store.name = 'Ann'
+					}}
+				>
+					rename
+				</button>
+			)
+		}
+		function App({ show }: { show: boolean }) {
+			return (
+				<cache.Provider>
+					<Badge />
+					{show ? (
+						<cache.Scope path={['page-1']}>
+							<form.Provider
+								id='main'
+								defaultValue={{ name: 'seed' }}
+							>
+								<RenameButton />
+							</form.Provider>
+						</cache.Scope>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		// No live entry at the address yet — the selector receives `undefined`.
+		const { rerender } = render(<App show={false} />)
+		expect(screen.getByTestId('badge')).toHaveTextContent(NO_ENTRY)
+
+		// Mounting the group Provider creates the entry; the passive reader picks it up.
+		rerender(<App show={true} />)
+		await waitFor(() => {
+			expect(screen.getByTestId('badge')).toHaveTextContent('seed')
+		})
+
+		// Mutating the proxy from the owning tree re-renders the passive reader.
+		fireEvent.click(screen.getByRole('button', { name: 'rename' }))
+		await waitFor(() => {
+			expect(screen.getByTestId('badge')).toHaveTextContent('Ann')
+		})
+
+		// Unmount and wait past gcTime: the entry is evicted and the reader falls back again.
+		rerender(<App show={false} />)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 1100))
+		})
+		await waitFor(() => {
+			expect(screen.getByTestId('badge')).toHaveTextContent(NO_ENTRY)
+		})
+	})
+
+	it('does not create an entry at the address it reads', () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'from-cache-passive-no-create' })
+
+		function Badge() {
+			const name = form.useFromCache({ id: 'main' }, (snap) => snap?.name ?? NO_ENTRY)
+			return <span data-testid='badge'>{name}</span>
+		}
+
+		render(
+			<cache.Provider>
+				<Badge />
+			</cache.Provider>,
+		)
+
+		expect(screen.getByTestId('badge')).toHaveTextContent(NO_ENTRY)
+		expect(form.fromCache({ id: 'main' })).toBeUndefined()
 	})
 })
 
