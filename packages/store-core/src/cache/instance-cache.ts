@@ -33,7 +33,7 @@ export type InstanceCache = {
 	 * membership changes, so React's snapshot caching invariant holds.
 	 */
 	getKeysSnapshot: () => readonly CacheRecord[]
-	/** Live instance for `id` if present and not expired, without affecting its lifecycle. */
+	/** Live instance for `id` if currently mounted in the cache, without affecting its lifecycle. */
 	getInstance: (id: StoreId) => object | undefined
 }
 
