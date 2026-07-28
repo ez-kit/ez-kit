@@ -1,11 +1,11 @@
 ---
 title: Custom Cell Types
-description: Define and register your own cell types — typed renderer, typed meta, reused across many columns and grids.
+description: Define and register your own cell types — typed renderers for view, edit, create and filter, reused across many columns and grids.
 ---
 
 # Custom Cell Types
 
-When the built-in cell types don't cover your needs, register your own. A custom cell type is a typed renderer + a typed meta shape. You write it once, then opt columns in via `meta.cellType`.
+When the built-in cell types don't cover your needs, register your own. A custom cell type is an **id mapped to its renderers**; you write it once, then opt columns in with `cell: { type: '<id>' }`.
 
 ## Usage
 
@@ -13,33 +13,56 @@ This grid registers custom `rating` and `color` cell types via `extendDataGrid()
 
 <DataGridDocsExample exampleId='custom-cell-types' />
 
-```ts
-import { defineCellType } from '@ez-kit/data-grid-react'
+A cell type is a `CellTypeDefinition` — up to four renderers, all optional:
 
-export const statusCell = defineCellType({
-	id: 'status',
-	meta: {
-		toneMap: {} as Record<string, 'positive' | 'warning' | 'critical' | 'neutral'>,
+```tsx
+import type { CellTypeRegistry, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+
+const TONE_MAP: Record<string, string> = { active: 'positive', cancelled: 'critical' }
+
+const CELL_TYPES = {
+	status: {
+		view: ({ value }: CellViewProps) => <span data-tone={TONE_MAP[String(value)] ?? 'neutral'}>{String(value)}</span>,
+		edit: ({ value, onChange }: FieldState) => (
+			<input
+				value={String(value ?? '')}
+				onChange={(e) => {
+					onChange(e.target.value)
+				}}
+			/>
+		),
 	},
-	render: ({ value, meta }) => (
-		<span data-tone={meta.toneMap[value as string] ?? 'neutral'}>{value as string}</span>
-	),
-})
+} satisfies CellTypeRegistry
 ```
 
-Then extend the grid with it:
+| Renderer   | Receives        | Used for                                                                       |
+| ---------- | --------------- | ------------------------------------------------------------------------------ |
+| `view`     | `CellViewProps` | Display mode.                                                                  |
+| `edit`     | `FieldState`    | Editing input. **No fallback** — omit it and edit mode uses the default input. |
+| `creating` | `FieldState`    | Create-row input. Falls back to `edit` when omitted.                           |
+| `filter`   | `FieldState`    | Filter input. Falls back to `edit` when omitted.                               |
+
+The fallbacks run one way only — `creating → edit` and `filter → edit`, never `edit → creating`. A definition with just `creating` leaves edit mode on the default input.
+
+`CellTypeDefinition` also takes optional `operators` / `defaultOperator`, which seed the filter UI for columns of that type.
+
+Register the whole map once for a grid module. `extendDataGrid` comes from your UI kit — `@ez-kit/data-grid-shadcn`, `-heroui`, or `-native` — not from the headless package:
+
+```tsx
+import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
+
+const grid = extendDataGrid(CELL_TYPES)
+
+export const { DataGrid, useDataGrid, defineColumns, createColumnHelper } = grid
+```
+
+…or per grid, with the `cellTypes` prop — registries nest, so this merges over the ones the kit already provides instead of replacing them:
 
 ```tsx
 <DataGrid
 	data={data}
-	columns={defineColumns<Order>([
-		{
-			id: 'status',
-			accessorKey: 'status',
-			meta: { cellType: 'status', toneMap: { active: 'positive', cancelled: 'critical' } },
-		},
-	])}
-	cellTypes={[statusCell]}
+	columns={defineColumns<Order>([{ accessorKey: 'status', header: 'Status', cell: { type: 'status' } }])}
+	cellTypes={CELL_TYPES}
 />
 ```
 
@@ -67,13 +90,15 @@ A composite view that derives an initials avatar (color hashed from the name) ne
 
 ## Type-safety
 
-`defineCellType` infers the meta shape so columns using your cell type get autocomplete on the extra `meta` fields. Mismatched meta is a TS error at the column site, not a runtime surprise.
+The registry's **keys** are the source of truth. `extendDataGrid()` returns a bundle whose `createColumnHelper` is typed to those keys, so the helper gains a matching `helper.status({ … })` method and a typo in the method name is a TS error.
+
+Hand-written `cell: { type: '…' }` is **not** id-checked — `CellType` keeps a `string & {}` tail so custom ids stay assignable. A typo there silently falls through to the raw, unstyled value instead of your renderer: no compile error, and no visibly broken cell to tip you off. One more reason to go through the helper.
 
 ## See also
 
-- [Column helper](./data-grid/columns/column-helper) — typed column builder
-- [Cell types](./data-grid/cells/cell-types) — built-ins
+- [Column helper](/docs/data-grid/columns/column-helper) — typed column builder
+- [Cell types](/docs/data-grid/cells/cell-types) — built-ins
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/define-cell-type.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/define-cell-type.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cell-types-context.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/cell-types-context.tsx)
