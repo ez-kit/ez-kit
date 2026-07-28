@@ -4,8 +4,9 @@ import { createColumnHelper } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
+import { DataGrid } from 'shared/DataGrid'
 
-import type { ColumnDef } from '@ez-kit/data-grid-react'
+import type { CellTypeRegistry, ColumnDef, FieldState } from '@ez-kit/data-grid-react'
 
 // ── data ─────────────────────────────────────────────────────────────────────
 
@@ -51,12 +52,44 @@ export function ColumnHelperBaseExample() {
 
 // ── Example 2: custom() — inherit type, override view ────────────────────────
 
+const MAX_RATING = 5
+const STAR_COLOR = '#f59e0b'
+const STAR_EMPTY_COLOR = '#d1d5db'
+
 function StarRatingView({ value }: { value: unknown }) {
 	const count = typeof value === 'number' ? value : 0
 	return (
-		<span style={{ color: '#f59e0b', letterSpacing: 2 }}>
+		<span style={{ color: STAR_COLOR, letterSpacing: 2 }}>
 			{'★'.repeat(count)}
-			{'☆'.repeat(5 - count)}
+			{'☆'.repeat(MAX_RATING - count)}
+		</span>
+	)
+}
+
+/** Editing input for the `rating` cell type registered in example 3. */
+function StarRatingInput({ value, onChange }: FieldState) {
+	const count = typeof value === 'number' ? value : 0
+	return (
+		<span>
+			{Array.from({ length: MAX_RATING }, (_, index) => (
+				<button
+					type='button'
+					key={index}
+					onClick={() => {
+						onChange(index + 1)
+					}}
+					style={{
+						color: index < count ? STAR_COLOR : STAR_EMPTY_COLOR,
+						fontSize: '1.25rem',
+						cursor: 'pointer',
+						background: 'transparent',
+						border: 'none',
+						padding: 0,
+					}}
+				>
+					★
+				</button>
+			))}
 		</span>
 	)
 }
@@ -86,12 +119,27 @@ export function ColumnHelperCustomViewExample() {
 	)
 }
 
-// ── Example 3: registered custom types (from extendDataGrid) ─────────────────
+// ── Example 3: registered cell type ──────────────────────────────────────────
 
-// The custom grid registers 'rating' and 'color' via extendDataGrid().
-// Passing both type params gives type-safe named methods on the helper.
-const registeredHelper = createColumnHelper<Employee, 'rating' | 'color'>(['rating', 'color'])
+// Step 1 — the registry. A cell type is an id mapped to its renderers: `view`
+// for display, `edit` for the editing input. This one is registered on the grid
+// itself via the `cellTypes` prop below, so everything the example needs is in
+// this file. An app registers the same shape once for the whole grid module
+// instead — see `extendDataGrid()` on the docs page.
+const RATING_CELL_TYPES = {
+	rating: { view: StarRatingView, edit: StarRatingInput },
+} satisfies CellTypeRegistry
 
+// Step 2 — the helper. The registry is the single source of truth for both the
+// type parameter and the runtime ids, so the two can never drift apart.
+type RatingCellType = keyof typeof RATING_CELL_TYPES
+
+const registeredHelper = createColumnHelper<Employee, RatingCellType>(
+	Object.keys(RATING_CELL_TYPES) as RatingCellType[],
+)
+
+// Step 3 — the column. `registeredHelper.rating` exists because 'rating' is a
+// key of the registry; it emits `cell: { type: 'rating' }` for you.
 const registeredColumns = [
 	registeredHelper.text({ accessorKey: 'name', header: 'Name' }),
 	registeredHelper.text({ accessorKey: 'department', header: 'Department' }),
@@ -102,9 +150,13 @@ export function ColumnHelperRegisteredExample() {
 	const [data] = useState(EMPLOYEE_DATA)
 
 	return (
-		<CustomDataGrid
+		<DataGrid
 			data={data}
+			// `columns` is typed `ColumnDef<TRow>[]` — i.e. `TCustom = never` — so a per-grid
+			// registered id does not survive the assignment even though `cellTypes` registers it.
+			// Columns built by a bundle's own `defineColumns` / `createColumnHelper` need no cast.
 			columns={registeredColumns as ColumnDef<Employee>[]}
+			cellTypes={RATING_CELL_TYPES}
 			sorting
 		/>
 	)
