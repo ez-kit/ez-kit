@@ -71,8 +71,8 @@ function UsersPage() {
 }
 
 function UsersTable() {
-	const filter = usersTable.useStore((s) => s.filter)
-	const setFilter = usersTable.useStore((s) => s.setFilter)
+	const filter = usersTable.useSelector((s) => s.filter)
+	const setFilter = usersTable.useSelector((s) => s.setFilter)
 	// reads/writes survive navigating away from UsersPage and back
 	return (
 		<FilterDropdown
@@ -83,7 +83,7 @@ function UsersTable() {
 }
 ```
 
-The read hooks (`useStore`, `useShallowStore`, `useContextStore`, `Item`) behave exactly like [`createContextStore`](./create-context-store).
+The hooks (`useSelector`, `useShallowSelector`, `useStore`, `Item`) behave exactly like [`createContextStore`](./create-context-store).
 
 ## How it stays alive
 
@@ -428,13 +428,13 @@ Returns a store group. `options.name` is the group's namespace (visible in `useC
 
 The returned group exposes:
 
-| Member                                                      | Purpose                                                                                        |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `Provider`                                                  | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.           |
-| `useStore` / `useShallowStore` / `useContextStore` / `Item` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`. |
-| `fromCache({ path?, id })`                                  | Imperative get-if-alive → `StoreApi` or `undefined`.                                           |
-| `useFromCache({ path?, id }, selector)`                     | Reactive, passive cross-tree read.                                                             |
-| `remove({ path?, id })`                                     | Drop one entry immediately.                                                                    |
+| Member                                                     | Purpose                                                                                        |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Provider`                                                 | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.           |
+| `useSelector` / `useShallowSelector` / `useStore` / `Item` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`. |
+| `fromCache({ path?, id })`                                 | Imperative get-if-alive → `StoreApi` or `undefined`.                                           |
+| `useFromCache({ path?, id }, selector)`                    | Reactive, passive cross-tree read.                                                             |
+| `remove({ path?, id })`                                    | Drop one entry immediately.                                                                    |
 
 ## Server-side rendering
 

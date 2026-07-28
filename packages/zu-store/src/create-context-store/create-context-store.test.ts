@@ -38,9 +38,9 @@ const createCounterStore = ({ defaultValue }: ContextStoreInit<CounterDefaultVal
 const counterContextStore = createContextStore(createCounterStore)
 
 describe('@ez-kit/zu-store', () => {
-	it('creates store in Provider and reads selected slice with useStore', () => {
+	it('creates store in Provider and reads selected slice with useSelector', () => {
 		function CountView() {
-			const count = counterContextStore.useStore((state) => state.count)
+			const count = counterContextStore.useSelector((state) => state.count)
 			return createElement('span', { 'data-testid': 'count' }, String(count))
 		}
 
@@ -55,14 +55,14 @@ describe('@ez-kit/zu-store', () => {
 		expect(screen.getByTestId('count')).toHaveTextContent('3')
 	})
 
-	it('updates state through actions selected by useStore', () => {
+	it('updates state through actions selected by useSelector', () => {
 		function CountView() {
-			const count = counterContextStore.useStore((state) => state.count)
+			const count = counterContextStore.useSelector((state) => state.count)
 			return createElement('span', { 'data-testid': 'count' }, String(count))
 		}
 
 		function IncrementButton() {
-			const increment = counterContextStore.useStore((state) => state.increment)
+			const increment = counterContextStore.useSelector((state) => state.increment)
 			return createElement('button', { type: 'button', onClick: increment }, 'Increment')
 		}
 
@@ -95,12 +95,12 @@ describe('@ez-kit/zu-store', () => {
 		expect(screen.getByTestId('item-count')).toHaveTextContent('5')
 	})
 
-	it('uses shallow comparison in useShallowStore', () => {
+	it('uses shallow comparison in useShallowSelector', () => {
 		let renderCount = 0
 
 		function ShallowCountView() {
 			renderCount += 1
-			const selected = counterContextStore.useShallowStore((state) => ({
+			const selected = counterContextStore.useShallowSelector((state) => ({
 				count: state.count,
 			}))
 
@@ -108,7 +108,7 @@ describe('@ez-kit/zu-store', () => {
 		}
 
 		function ChangeLabelButton() {
-			const setLabel = counterContextStore.useStore((state) => state.setLabel)
+			const setLabel = counterContextStore.useSelector((state) => state.setLabel)
 			return createElement(
 				'button',
 				{
@@ -122,7 +122,7 @@ describe('@ez-kit/zu-store', () => {
 		}
 
 		function IncrementButton() {
-			const increment = counterContextStore.useStore((state) => state.increment)
+			const increment = counterContextStore.useSelector((state) => state.increment)
 			return createElement('button', { type: 'button', onClick: increment }, 'Increment')
 		}
 
@@ -148,7 +148,7 @@ describe('@ez-kit/zu-store', () => {
 
 	it('throws when hook is used without Provider', () => {
 		function BrokenConsumer() {
-			counterContextStore.useStore((state) => state.count)
+			counterContextStore.useSelector((state) => state.count)
 			return createElement('div')
 		}
 

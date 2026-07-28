@@ -27,10 +27,10 @@ describe('default cache — top-level exports', () => {
 		const table = createCachedStore(tableFactory, { name: 'default-keepalive' })
 
 		function FilterView() {
-			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
+			return <span data-testid='r'>{table.useSelector((s) => s.filter)}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -78,7 +78,7 @@ describe('default cache — top-level exports', () => {
 		const custom = createStoreCache()
 
 		function Consumer() {
-			table.useStore((s) => s.filter)
+			table.useSelector((s) => s.filter)
 			return null
 		}
 

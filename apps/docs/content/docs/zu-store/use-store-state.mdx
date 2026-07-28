@@ -35,7 +35,7 @@ The return type is inferred from the key, so passing an unknown key is a compile
 
 ## Combining with `createContextStore`
 
-`useStoreState` accepts any `StoreApi`, so the natural pairing is `useContextStore()` followed by `useStoreState`:
+`useStoreState` accepts any `StoreApi`, so the natural pairing is `useStore()` followed by `useStoreState`:
 
 ```tsx
 import { createContextStore, useStoreState } from '@ez-kit/zu-store'
@@ -49,7 +49,7 @@ interface FormState {
 const formStore = createContextStore(() => createStore<FormState>()(() => ({ name: '', age: 0 })))
 
 function NameField() {
-	const store = formStore.useContextStore()
+	const store = formStore.useStore()
 	const [name, setName] = useStoreState(store, 'name')
 	return (
 		<input

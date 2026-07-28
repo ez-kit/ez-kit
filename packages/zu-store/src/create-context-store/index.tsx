@@ -27,9 +27,15 @@ type ItemProps<TStore extends StoreApi<unknown>, TSelected> = {
 
 export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultValue> = {
 	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
-	useContextStore: () => TStore
-	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
-	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
+	/**
+	 * Write path / escape hatch: the raw Zustand store handle. It does **not** subscribe the calling
+	 * component — pair it with `useSelector()` to render.
+	 */
+	useStore: () => TStore
+	/** Reactive read: subscribes to the value returned by `selector`, compared by reference. */
+	useSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
+	/** As `useSelector`, but compares the selected value shallowly — for object/array selections. */
+	useShallowSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	Item: <TSelected>(props: ItemProps<TStore, TSelected>) => ReactElement
 }
 
@@ -55,30 +61,30 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		return <StoreContext.Provider value={storeRef.current}>{children}</StoreContext.Provider>
 	}
 
-	function useContextStore(): TStore {
+	function useStore(): TStore {
 		const store = getStoreFromContext(useContext(StoreContext))
 		return store
 	}
 
-	function useStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
-		const store = useContextStore()
+	function useSelector<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+		const store = useStore()
 		return useZustandStore(store, selector)
 	}
 
-	function useShallowStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
-		const store = useContextStore()
+	function useShallowSelector<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+		const store = useStore()
 		return useZustandStore(store, useShallow(selector))
 	}
 
 	function Item<TSelected>({ selector, children }: ItemProps<TStore, TSelected>): ReactElement {
-		return children(useStore(selector))
+		return children(useSelector(selector))
 	}
 
 	return {
 		Provider,
-		useContextStore,
 		useStore,
-		useShallowStore,
+		useSelector,
+		useShallowSelector,
 		Item,
 	}
 }

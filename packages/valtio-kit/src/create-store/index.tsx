@@ -35,7 +35,7 @@ type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
 	? { defaultValue?: TDefaultValue }
 	: { defaultValue: TDefaultValue }
 
-/** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy, as from `useContextStore()`) for writes. */
+/** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy, as from `useStore()`) for writes. */
 export type ItemRenderArg<TState extends object> = {
 	snap: Snapshot<TState>
 	store: TState
@@ -43,6 +43,10 @@ export type ItemRenderArg<TState extends object> = {
 
 type ItemProps<TState extends object> = {
 	children: (arg: ItemRenderArg<TState>) => ReactElement
+}
+
+type StoreItemProps<TState extends object> = {
+	children: (store: TState) => ReactElement
 }
 
 export type CreateStoreResult<TState extends object, TDefaultValue> = {
@@ -53,8 +57,15 @@ export type CreateStoreResult<TState extends object, TDefaultValue> = {
 	 * Write path / escape hatch: the raw, mutable Valtio proxy. Mutate it directly (e.g. `state.count++`).
 	 * It does **not** subscribe the calling component — pair it with `useSnapshot()` to render.
 	 */
-	useContextStore: () => TState
+	useStore: () => TState
+	/** Reading slot: subscribes through `useSnapshot()`, so tracked mutations re-render its children. */
 	Item: (props: ItemProps<TState>) => ReactElement
+	/**
+	 * Write-only slot: hands the raw proxy from `useStore()` to its children without subscribing, so
+	 * store mutations never re-render them. It is **not** memoised — it still renders whenever its
+	 * parent does.
+	 */
+	StoreItem: (props: StoreItemProps<TState>) => ReactElement
 }
 
 function getStoreFromContext<TState extends object>(store: TState | null): TState {
@@ -69,7 +80,7 @@ function getStoreFromContext<TState extends object>(store: TState | null): TStat
  * ancestor `ServicesProvider`/`StoreProvider`. `createContextStore` is this factory with no plugins.
  *
  * Reads go through `useSnapshot()`, which returns the auto-tracked readonly snapshot. Writes go
- * through `useContextStore()`, which hands back the raw mutable proxy without subscribing.
+ * through `useStore()`, which hands back the raw mutable proxy without subscribing.
  */
 export function createStore<TState extends object, TDefaultValue = undefined>(
 	factory: StoreFactory<TState, TDefaultValue>,
@@ -105,17 +116,21 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 		return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
 	}
 
-	function useContextStore(): TState {
+	function useStore(): TState {
 		return getStoreFromContext(useContext(StoreContext))
 	}
 
 	function useSnapshot(snapshotOptions?: UseSnapshotOptions): Snapshot<TState> {
-		return useValtioSnapshot(useContextStore(), snapshotOptions)
+		return useValtioSnapshot(useStore(), snapshotOptions)
 	}
 
 	function Item({ children }: ItemProps<TState>): ReactElement {
-		return children({ snap: useSnapshot(), store: useContextStore() })
+		return children({ snap: useSnapshot(), store: useStore() })
 	}
 
-	return { Provider, useSnapshot, useContextStore, Item }
+	function StoreItem({ children }: StoreItemProps<TState>): ReactElement {
+		return children(useStore())
+	}
+
+	return { Provider, useSnapshot, useStore, Item, StoreItem }
 }

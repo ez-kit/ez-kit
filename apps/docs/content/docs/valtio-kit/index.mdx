@@ -29,12 +29,11 @@ A `proxy()` lives at module scope. Two `<Modal>` instances or two `<DataGrid>` i
 
 Both kits expose `createContextStore` for cross-kit familiarity, but the read/write model differs:
 
-|                     | `zu-store` (Zustand)                | `valtio-kit` (Valtio)                         |
-| ------------------- | ----------------------------------- | --------------------------------------------- |
-| Read                | `useStore(selector)` → slice        | `useSnapshot()` → tracked snapshot            |
-| Write               | actions call `set(...)`             | mutate the proxy: `state.count++`             |
-| `useContextStore()` | raw `StoreApi`                      | the raw mutable proxy                         |
-| `useStore()`        | selector-based read                 | **not available** — read with `useSnapshot()` |
-| Selectors           | yes (`useStore`, `useShallowStore`) | none — tracking is automatic                  |
+|              | `zu-store` (Zustand)                      | `valtio-kit` (Valtio)              |
+| ------------ | ----------------------------------------- | ---------------------------------- |
+| Read         | `useSelector(selector)` → slice           | `useSnapshot()` → tracked snapshot |
+| Write        | actions call `set(...)`                   | mutate the proxy: `state.count++`  |
+| `useStore()` | raw `StoreApi`                            | the raw mutable proxy              |
+| Selectors    | yes (`useSelector`, `useShallowSelector`) | none — tracking is automatic       |
 
-The raw handle carries the same name in both kits (`useContextStore()`); only the read hook differs, because selector-based reads and auto-tracked snapshots are genuinely different models.
+The raw handle carries the same name in both kits (`useStore()`); only the read hook differs, because selector-based reads and auto-tracked snapshots are genuinely different models.

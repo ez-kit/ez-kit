@@ -3,7 +3,7 @@ import { type ReactElement } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { createStore } from 'zustand/vanilla'
 
-import { RAW_SELECTOR, useRead } from './use-read'
+import { useRead } from './use-read'
 
 import type {
 	CacheAddress,
@@ -40,11 +40,11 @@ export type CachedItemProps<TStore extends AnyStore, TSelected> = {
 export type CachedStoreGroup<TStore extends AnyStore, TDefaultValue extends object> = {
 	Provider: (props: CachedProviderProps<TDefaultValue>) => ReactElement
 	/** Selector-based read of this group's entry. Re-renders when the selected value changes. */
-	useStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
-	/** As `useStore`, but compares the selected value shallowly — for object/array selections. */
-	useShallowStore: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
+	useSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
+	/** As `useSelector`, but compares the selected value shallowly — for object/array selections. */
+	useShallowSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	/** The raw store handle for this group's entry. Does not subscribe, so it never re-renders. */
-	useContextStore: () => TStore
+	useStore: () => TStore
 	/** Render-prop receiving the selected state, mirroring `createContextStore`'s `Item`. */
 	Item: <TSelected>(props: CachedItemProps<TStore, TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live store or `undefined`. Never creates. */
@@ -92,20 +92,20 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 	): CachedStoreGroup<TStore, TDefaultValue> {
 		const group = cache.createCachedStore<TDefaultValue>(factory, groupOptions)
 
-		function useStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
-			return group.useStore(selector as (snap: unknown) => TSelected)
+		function useSelector<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+			return group.useSelector(selector as (snap: unknown) => TSelected)
 		}
 
-		function useShallowStore<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
-			return group.useStore(useShallow(selector) as (snap: unknown) => TSelected)
+		function useShallowSelector<TSelected>(selector: (state: ExtractState<TStore>) => TSelected): TSelected {
+			return group.useSelector(useShallow(selector) as (snap: unknown) => TSelected)
 		}
 
-		function useContextStore(): TStore {
-			return group.useStore(RAW_SELECTOR) as TStore
+		function useStore(): TStore {
+			return group.useInstance() as TStore
 		}
 
 		function Item<TSelected>({ selector, children }: CachedItemProps<TStore, TSelected>): ReactElement {
-			return children(useStore(selector))
+			return children(useSelector(selector))
 		}
 
 		function fromCache(target: CacheAddress): TStore | undefined {
@@ -127,9 +127,9 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 
 		return {
 			Provider: group.Provider,
+			useSelector,
+			useShallowSelector,
 			useStore,
-			useShallowStore,
-			useContextStore,
 			Item,
 			fromCache,
 			useFromCache,

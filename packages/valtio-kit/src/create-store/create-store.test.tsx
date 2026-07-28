@@ -116,7 +116,7 @@ describe('createStore — base behavior without plugins', () => {
 			return <span data-testid='count'>{store.useSnapshot().count}</span>
 		}
 		function IncrementButton() {
-			const state = store.useContextStore()
+			const state = store.useStore()
 			return (
 				<button
 					type='button'
@@ -152,23 +152,23 @@ describe('createStore — base behavior without plugins', () => {
 		expect(() => render(<Broken />)).toThrowError('Missing Provider for createContextStore')
 	})
 
-	it('throws the createContextStore error message when useContextStore is used without a Provider', () => {
+	it('throws the createContextStore error message when useStore is used without a Provider', () => {
 		const store = createStore(counterFactory)
 		function Broken() {
-			store.useContextStore()
+			store.useStore()
 			return null
 		}
 		expect(() => render(<Broken />)).toThrowError('Missing Provider for createContextStore')
 	})
 
-	it('exposes useSnapshot as the reactive read alongside the raw useContextStore write path', async () => {
+	it('exposes useSnapshot as the reactive read alongside the raw useStore write path', async () => {
 		const store = createStore(counterFactory)
 
 		function CountView() {
 			return <span data-testid='count'>{store.useSnapshot().count}</span>
 		}
 		function IncrementButton() {
-			const state = store.useContextStore()
+			const state = store.useStore()
 			return (
 				<button
 					type='button'
@@ -193,5 +193,85 @@ describe('createStore — base behavior without plugins', () => {
 		await waitFor(() => {
 			expect(screen.getByTestId('count')).toHaveTextContent('2')
 		})
+	})
+})
+
+describe('createStore — StoreItem', () => {
+	it('hands the raw proxy to its child, and writes through it reach snapshot readers', async () => {
+		const store = createStore(counterFactory)
+
+		render(
+			<store.Provider defaultValue={{ count: 1 }}>
+				<store.Item>{({ snap }) => <span data-testid='count'>{snap.count}</span>}</store.Item>
+				<store.StoreItem>
+					{(state) => (
+						<button
+							type='button'
+							onClick={() => {
+								state.count += 1
+							}}
+						>
+							inc
+						</button>
+					)}
+				</store.StoreItem>
+			</store.Provider>,
+		)
+
+		expect(screen.getByTestId('count')).toHaveTextContent('1')
+		fireEvent.click(screen.getByRole('button', { name: 'inc' }))
+		await waitFor(() => {
+			expect(screen.getByTestId('count')).toHaveTextContent('2')
+		})
+	})
+
+	it('does not re-render its child on store mutations, unlike Item', async () => {
+		const store = createStore(counterFactory)
+		let storeItemRenders = 0
+		let itemRenders = 0
+
+		render(
+			<store.Provider defaultValue={{ count: 1 }}>
+				<store.Item>
+					{({ snap }) => {
+						itemRenders += 1
+						return <span data-testid='count'>{snap.count}</span>
+					}}
+				</store.Item>
+				<store.StoreItem>
+					{(state) => {
+						storeItemRenders += 1
+						return (
+							<button
+								type='button'
+								onClick={() => {
+									state.count += 1
+								}}
+							>
+								inc
+							</button>
+						)
+					}}
+				</store.StoreItem>
+			</store.Provider>,
+		)
+
+		const storeItemRendersAfterMount = storeItemRenders
+		const itemRendersAfterMount = itemRenders
+
+		fireEvent.click(screen.getByRole('button', { name: 'inc' }))
+		await waitFor(() => {
+			expect(screen.getByTestId('count')).toHaveTextContent('2')
+		})
+
+		expect(itemRenders).toBeGreaterThan(itemRendersAfterMount)
+		expect(storeItemRenders).toBe(storeItemRendersAfterMount)
+	})
+
+	it('throws the createContextStore error message when used without a Provider', () => {
+		const store = createStore(counterFactory)
+		expect(() => render(<store.StoreItem>{() => <span />}</store.StoreItem>)).toThrowError(
+			'Missing Provider for createContextStore',
+		)
 	})
 })

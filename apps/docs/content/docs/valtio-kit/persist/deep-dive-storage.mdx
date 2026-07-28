@@ -28,7 +28,7 @@ Storage can't be read synchronously in render without breaking SSR (server has n
 ```tsx
 import { useHydrated } from '@ez-kit/valtio-kit/persist'
 
-const store = prefsStore.useContextStore()
+const store = prefsStore.useStore()
 const hydrated = useHydrated(store) // standalone hook — pass the raw proxy
 if (!hydrated) return <Skeleton /> // or: defer the side-effect until `hydrated`
 ```

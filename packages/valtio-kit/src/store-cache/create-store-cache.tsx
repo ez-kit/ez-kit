@@ -2,7 +2,7 @@ import { createCacheReact } from '@ez-kit/store-core/cache'
 import { type ReactElement } from 'react'
 import { proxy, type Snapshot } from 'valtio'
 
-import { RAW_SELECTOR, useRead } from './use-read'
+import { useRead } from './use-read'
 
 import type {
 	CachedStoreFactory,
@@ -35,9 +35,13 @@ export type CachedItemProps<TState extends object> = {
 	children: (arg: CachedItemRenderArg<TState>) => ReactElement
 }
 
+export type CachedStoreItemProps<TState extends object> = {
+	children: (store: TState) => ReactElement
+}
+
 /**
  * A keep-alive group of Valtio proxies keyed by `(path, id)`. `useSnapshot()` returns the tracked
- * readonly snapshot; `useContextStore()` returns the raw mutable proxy to write to. Cache-hits return
+ * readonly snapshot; `useStore()` returns the raw mutable proxy to write to. Cache-hits return
  * the SAME proxy object, so in-progress mutations survive unmount/remount within `gcTime`.
  */
 export type CachedStoreGroup<TState extends object, TDefaultValue extends object> = {
@@ -45,9 +49,14 @@ export type CachedStoreGroup<TState extends object, TDefaultValue extends object
 	/** Returns the readonly, auto-tracked snapshot for this group's entry. Re-renders on read fields. */
 	useSnapshot: () => Snapshot<TState>
 	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never re-renders. */
-	useContextStore: () => TState
+	useStore: () => TState
 	/** Render-prop receiving `{ snap, store }`, mirroring `createContextStore`'s `Item`. */
 	Item: (props: CachedItemProps<TState>) => ReactElement
+	/**
+	 * Write-only render-prop receiving the raw proxy, mirroring `createContextStore`'s `StoreItem`.
+	 * Does not subscribe, so store mutations never re-render its children.
+	 */
+	StoreItem: (props: CachedStoreItemProps<TState>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live proxy or `undefined`. Never creates. */
 	fromCache: (target: CacheAddress) => TState | undefined
 	/**
@@ -95,15 +104,19 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 		const group = cache.createCachedStore<TDefaultValue>(factory, groupOptions)
 
 		function useSnapshot(): Snapshot<TState> {
-			return group.useStore((snap) => snap) as Snapshot<TState>
+			return group.useSelector((snap) => snap) as Snapshot<TState>
 		}
 
-		function useContextStore(): TState {
-			return group.useStore(RAW_SELECTOR) as TState
+		function useStore(): TState {
+			return group.useInstance() as TState
 		}
 
 		function Item({ children }: CachedItemProps<TState>): ReactElement {
-			return children({ snap: useSnapshot(), store: useContextStore() })
+			return children({ snap: useSnapshot(), store: useStore() })
+		}
+
+		function StoreItem({ children }: CachedStoreItemProps<TState>): ReactElement {
+			return children(useStore())
 		}
 
 		function fromCache(target: CacheAddress): TState | undefined {
@@ -124,8 +137,9 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 		return {
 			Provider: group.Provider,
 			useSnapshot,
-			useContextStore,
+			useStore,
 			Item,
+			StoreItem,
 			fromCache,
 			useFromCache,
 			remove,

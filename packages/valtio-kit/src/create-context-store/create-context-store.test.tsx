@@ -29,7 +29,7 @@ function CountView() {
 }
 
 function IncrementButton() {
-	const state = counter.useContextStore()
+	const state = counter.useStore()
 	return (
 		<button
 			type='button'
@@ -55,7 +55,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		expect(screen.getByTestId('count')).toHaveTextContent('3')
 	})
 
-	it('re-renders snapshot consumers when the proxy is mutated via useContextStore', async () => {
+	it('re-renders snapshot consumers when the proxy is mutated via useStore', async () => {
 		render(
 			<counter.Provider defaultValue={{ count: 1, label: 'boot' }}>
 				<CountView />
@@ -82,7 +82,7 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		}
 
 		function ChangeLabelButton() {
-			const state = counter.useContextStore()
+			const state = counter.useStore()
 			return (
 				<button
 					type='button'
@@ -199,9 +199,9 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for createContextStore')
 	})
 
-	it('throws when useContextStore is used without a Provider', () => {
+	it('throws when useStore is used without a Provider', () => {
 		function BrokenWriter() {
-			counter.useContextStore()
+			counter.useStore()
 			return <div />
 		}
 
@@ -230,11 +230,11 @@ describe('@ez-kit/valtio-kit createContextStore', () => {
 		})
 	})
 
-	it('does not subscribe a component that only calls useContextStore', async () => {
+	it('does not subscribe a component that only calls useStore', async () => {
 		let writerCommits = 0
 
 		function WriterOnly() {
-			const state = counter.useContextStore()
+			const state = counter.useStore()
 			useEffect(() => {
 				writerCommits += 1
 			})

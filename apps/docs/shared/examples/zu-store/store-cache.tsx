@@ -36,10 +36,10 @@ const tabClass = (active: boolean) =>
 	}`
 
 function TablePanel() {
-	const filter = tableStore.useStore((s) => s.filter)
-	const page = tableStore.useStore((s) => s.page)
-	const setFilter = tableStore.useStore((s) => s.setFilter)
-	const setPage = tableStore.useStore((s) => s.setPage)
+	const filter = tableStore.useSelector((s) => s.filter)
+	const page = tableStore.useSelector((s) => s.page)
+	const setFilter = tableStore.useSelector((s) => s.setFilter)
+	const setPage = tableStore.useSelector((s) => s.setPage)
 
 	return (
 		<div className='flex flex-col gap-3 rounded-lg border border-fd-border bg-fd-card p-4'>
