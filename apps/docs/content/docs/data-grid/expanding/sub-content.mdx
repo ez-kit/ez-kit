@@ -11,13 +11,13 @@ Click a row to reveal a sub-row of arbitrary content beneath it. Common uses: or
 
 <DataGridDocsExample exampleId='expanding-sub-content' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	enableExpanding: true,
-	renderSubRow: (row) => <OrderDetails order={row.original} />,
-})
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	enableExpanding
+	renderSubRow={(row) => <OrderDetails order={row.original} />}
+/>
 ```
 
 ## Options

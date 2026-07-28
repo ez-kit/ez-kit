@@ -13,13 +13,13 @@ Click checkboxes to select rows; the header checkbox toggles every row on the cu
 
 <DataGridDocsExample exampleId='base-selection' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	enableRowSelection: true,
-	enableMultiRowSelection: true,
-})
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	enableRowSelection
+	enableMultiRowSelection
+/>
 ```
 
 ## Options

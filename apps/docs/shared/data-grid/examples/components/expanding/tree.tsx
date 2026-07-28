@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type OrgNode = {
 	id: number
@@ -77,13 +77,13 @@ const columns = defineColumns<OrgNode>([
 ])
 
 export function ExpandingTreeExample() {
-	const table = useDataGrid({
-		data: ORG_DATA,
-		columns,
-		expanding: {
-			variant: 'tree',
-		},
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={ORG_DATA}
+			columns={columns}
+			expanding={{
+				variant: 'tree',
+			}}
+		/>
+	)
 }

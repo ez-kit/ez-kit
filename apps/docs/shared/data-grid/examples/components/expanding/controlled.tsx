@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import type { TableState } from '@ez-kit/data-grid-react'
 
@@ -58,23 +58,6 @@ export function ExpandingControlledExample() {
 	const allIds = EMPLOYEES.map((_, i) => String(i))
 	const allExpanded = allIds.every((id) => expanded[id])
 
-	const table = useDataGrid({
-		data: EMPLOYEES,
-		columns,
-		state: tableState,
-		onStateChange: (updater) => {
-			setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
-		},
-		expanding: {
-			renderExpanded: ({ row }) => (
-				<div>
-					<span style={{ fontWeight: 600 }}>Notes: </span>
-					{row.original.notes}
-				</div>
-			),
-		},
-	})
-
 	return (
 		<div>
 			<div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.5rem' }}>
@@ -100,7 +83,22 @@ export function ExpandingControlledExample() {
 					Collapse all
 				</button>
 			</div>
-			<DataGrid table={table} />
+			<DataGrid
+				data={EMPLOYEES}
+				columns={columns}
+				state={tableState}
+				onStateChange={(updater) => {
+					setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+				}}
+				expanding={{
+					renderExpanded: ({ row }) => (
+						<div>
+							<span style={{ fontWeight: 600 }}>Notes: </span>
+							{row.original.notes}
+						</div>
+					),
+				}}
+			/>
 		</div>
 	)
 }

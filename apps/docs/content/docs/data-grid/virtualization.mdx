@@ -11,17 +11,17 @@ For grids with thousands of rows, render only the rows currently in view. Memory
 
 <DataGridDocsExample exampleId='virtualized' />
 
-```ts
-const grid = useDataGrid({
-	data, // 10_000+ rows
-	columns,
-	virtualized: { row: { estimateSize: 44, overscan: 10 } },
-})
+```tsx
+<DataGrid
+	data={data} // 10_000+ rows
+	columns={columns}
+	virtualized={{ row: { estimateSize: 44, overscan: 10 } }}
+/>
 ```
 
 Virtualization is enabled entirely through this option — there is no separate component or prop to set on the body.
 
-When the defaults suit you, `virtualized: true` is shorthand for `virtualized: { row: true }`, which uses an `estimateSize` of 50 and an `overscan` of 5.
+When the defaults suit you, a bare `virtualized` prop is shorthand for `virtualized={{ row: true }}`, which uses an `estimateSize` of 50 and an `overscan` of 5.
 
 ## Options
 

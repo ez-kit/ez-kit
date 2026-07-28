@@ -1,6 +1,6 @@
 'use client'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Employee = {
 	id: number
@@ -70,46 +70,46 @@ const DATA: Employee[] = [
 ]
 
 export function ColumnVisibilityExample() {
-	const table = useDataGrid({
-		data: DATA,
-		columns: [
-			{
-				accessorKey: 'name',
-				header: 'Name',
-				// visibility: true — required column, always visible / locked (no Hide option in menu)
-				visibility: true,
-			},
-			{
-				accessorKey: 'email',
-				header: 'Email',
-			},
-			{
-				accessorKey: 'role',
-				header: 'Role',
-			},
-			{
-				accessorKey: 'department',
-				header: 'Department',
-			},
-			{
-				accessorKey: 'salary',
-				header: 'Salary',
-				cell: { type: 'number' },
-				// starts hidden, user can toggle it on via the Columns button
-				visibility: { defaultHidden: true },
-			},
-			{
-				accessorKey: 'startDate',
-				header: 'Start Date',
-				cell: { type: 'date' },
-				// starts hidden, user can toggle it on via the Columns button
-				visibility: { defaultHidden: true },
-			},
-		],
-		sorting: true,
-		// shows the "Columns" toggle button in the toolbar
-		columnVisibility: { toolbar: true },
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={[
+				{
+					accessorKey: 'name',
+					header: 'Name',
+					// visibility: true — required column, always visible / locked (no Hide option in menu)
+					visibility: true,
+				},
+				{
+					accessorKey: 'email',
+					header: 'Email',
+				},
+				{
+					accessorKey: 'role',
+					header: 'Role',
+				},
+				{
+					accessorKey: 'department',
+					header: 'Department',
+				},
+				{
+					accessorKey: 'salary',
+					header: 'Salary',
+					cell: { type: 'number' },
+					// starts hidden, user can toggle it on via the Columns button
+					visibility: { defaultHidden: true },
+				},
+				{
+					accessorKey: 'startDate',
+					header: 'Start Date',
+					cell: { type: 'date' },
+					// starts hidden, user can toggle it on via the Columns button
+					visibility: { defaultHidden: true },
+				},
+			]}
+			sorting
+			// shows the "Columns" toggle button in the toolbar
+			columnVisibility={{ toolbar: true }}
+		/>
+	)
 }

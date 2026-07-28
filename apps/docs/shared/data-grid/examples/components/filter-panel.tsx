@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Order = {
 	id: number
@@ -69,13 +69,12 @@ const COLUMNS = defineColumns<Order>([
 ])
 
 export function FilterPanelExample() {
-	const table = useDataGrid({
-		data: DATA,
-		columns: COLUMNS,
-		filtering: { variant: 'panel', faceted: true },
-	})
 	return (
-		<DataGrid table={table}>
+		<DataGrid
+			data={DATA}
+			columns={COLUMNS}
+			filtering={{ variant: 'panel', faceted: true }}
+		>
 			<DataGrid.Toolbar />
 			<DataGrid.FilterPanel />
 			<DataGrid.Table />

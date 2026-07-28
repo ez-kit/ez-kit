@@ -3,7 +3,7 @@
 import { createColumnHelper } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { CustomDataGrid, useDataGrid } from 'shared/data-grid/CustomGrid'
+import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
 import type { ColumnDef } from '@ez-kit/data-grid-react'
 
@@ -39,9 +39,14 @@ const baseColumns = [
 
 export function ColumnHelperBaseExample() {
 	const [data] = useState(EMPLOYEE_DATA)
-	const table = useDataGrid({ data, columns: baseColumns, sorting: true })
 
-	return <CustomDataGrid table={table} />
+	return (
+		<CustomDataGrid
+			data={data}
+			columns={baseColumns}
+			sorting
+		/>
+	)
 }
 
 // ── Example 2: custom() — inherit type, override view ────────────────────────
@@ -71,9 +76,14 @@ const customViewColumns = [
 
 export function ColumnHelperCustomViewExample() {
 	const [data] = useState(EMPLOYEE_DATA)
-	const table = useDataGrid({ data, columns: customViewColumns, sorting: true })
 
-	return <CustomDataGrid table={table} />
+	return (
+		<CustomDataGrid
+			data={data}
+			columns={customViewColumns}
+			sorting
+		/>
+	)
 }
 
 // ── Example 3: registered custom types (from extendDataGrid) ─────────────────
@@ -90,7 +100,12 @@ const registeredColumns = [
 
 export function ColumnHelperRegisteredExample() {
 	const [data] = useState(EMPLOYEE_DATA)
-	const table = useDataGrid({ data, columns: registeredColumns as ColumnDef<Employee>[], sorting: true })
 
-	return <CustomDataGrid table={table} />
+	return (
+		<CustomDataGrid
+			data={data}
+			columns={registeredColumns as ColumnDef<Employee>[]}
+			sorting
+		/>
+	)
 }

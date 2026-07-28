@@ -1,6 +1,6 @@
 'use client'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Task = {
 	id: number
@@ -37,63 +37,63 @@ const DATA: Task[] = [
 ]
 
 export function SortingExample() {
-	const table = useDataGrid({
-		data: DATA,
-		columns: [
-			{ accessorKey: 'title', header: 'Title' },
-			{
-				accessorKey: 'priority',
-				header: 'Priority',
-				sorting: {
-					// Custom sort function — refers to the table-level `sorting.fns` registry.
-					fn: 'priorityRank',
+	return (
+		<DataGrid
+			data={DATA}
+			columns={[
+				{ accessorKey: 'title', header: 'Title' },
+				{
+					accessorKey: 'priority',
+					header: 'Priority',
+					sorting: {
+						// Custom sort function — refers to the table-level `sorting.fns` registry.
+						fn: 'priorityRank',
+					},
 				},
-			},
-			{
-				accessorKey: 'rank',
-				header: 'Rank',
-				cell: { type: 'number' },
-				// Lower rank = better, but the header still shows the natural ↑/↓ arrow.
-				sorting: { invert: true },
-			},
-			{
-				accessorKey: 'dueDate',
-				header: 'Due',
-				cell: { type: 'date' },
-				sorting: { fn: 'datetime' },
-			},
-			{
-				accessorKey: 'assignee',
-				header: 'Assignee',
-				// Push unassigned tasks to the bottom regardless of direction.
-				sorting: { undefined: 'last' },
-			},
-		],
-		// Two-column initial sort: critical first, then earliest due date.
-		initialState: {
-			sorting: [
-				{ id: 'priority', desc: false },
-				{ id: 'dueDate', desc: false },
-			],
-		},
-		sorting: {
-			// Hold ⌘/Ctrl-click to extend; cap at 3 active sort columns.
-			multi: { max: 3, event: 'ctrl' },
-			// Custom comparator addressable from `column.sorting.fn = 'priorityRank'`.
-			fns: {
-				priorityRank: (rowA, rowB, columnId) => {
-					const a = (rowA as { getValue: (k: string) => Task['priority'] }).getValue(columnId)
-					const b = (rowB as { getValue: (k: string) => Task['priority'] }).getValue(columnId)
-					return PRIORITY_RANK[a] - PRIORITY_RANK[b]
+				{
+					accessorKey: 'rank',
+					header: 'Rank',
+					cell: { type: 'number' },
+					// Lower rank = better, but the header still shows the natural ↑/↓ arrow.
+					sorting: { invert: true },
 				},
-			},
-			// Mirror sort state into the URL (or a server query).
-			onChange: (sort) => {
-				if (typeof window !== 'undefined') console.info('[sorting]', sort)
-			},
-			toolbar: true,
-		},
-	})
-
-	return <DataGrid table={table} />
+				{
+					accessorKey: 'dueDate',
+					header: 'Due',
+					cell: { type: 'date' },
+					sorting: { fn: 'datetime' },
+				},
+				{
+					accessorKey: 'assignee',
+					header: 'Assignee',
+					// Push unassigned tasks to the bottom regardless of direction.
+					sorting: { undefined: 'last' },
+				},
+			]}
+			// Two-column initial sort: critical first, then earliest due date.
+			initialState={{
+				sorting: [
+					{ id: 'priority', desc: false },
+					{ id: 'dueDate', desc: false },
+				],
+			}}
+			sorting={{
+				// Hold ⌘/Ctrl-click to extend; cap at 3 active sort columns.
+				multi: { max: 3, event: 'ctrl' },
+				// Custom comparator addressable from `column.sorting.fn = 'priorityRank'`.
+				fns: {
+					priorityRank: (rowA, rowB, columnId) => {
+						const a = (rowA as { getValue: (k: string) => Task['priority'] }).getValue(columnId)
+						const b = (rowB as { getValue: (k: string) => Task['priority'] }).getValue(columnId)
+						return PRIORITY_RANK[a] - PRIORITY_RANK[b]
+					},
+				},
+				// Mirror sort state into the URL (or a server query).
+				onChange: (sort) => {
+					if (typeof window !== 'undefined') console.info('[sorting]', sort)
+				},
+				toolbar: true,
+			}}
+		/>
+	)
 }

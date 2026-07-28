@@ -19,15 +19,15 @@ Width updates only after release — no re-renders during drag.
 
 <DataGridDocsExample exampleId='resizing-on-end' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	sizing: { mode: 'onChange' }, // or 'onEnd'
-})
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	sizing={{ mode: 'onChange' }} // or 'onEnd'
+/>
 ```
 
-`sizing: true` enables resizing with the defaults.
+A bare `sizing` prop enables resizing with the defaults.
 
 ## Options
 

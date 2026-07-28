@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { INITIAL_DATA, type User } from '../_data'
 
@@ -39,14 +39,14 @@ const combinedColumns = defineColumns<User>([
 export function ColumnsCombinedExample() {
 	const [data] = useState<User[]>(INITIAL_DATA)
 
-	const table = useDataGrid({
-		data,
-		columns: combinedColumns,
-		sorting: true,
-		columnVisibility: { toolbar: true },
-		pinning: { column: true },
-		sizing: { mode: 'onEnd' },
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={combinedColumns}
+			sorting
+			columnVisibility={{ toolbar: true }}
+			pinning={{ column: true }}
+			sizing={{ mode: 'onEnd' }}
+		/>
+	)
 }

@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { makeUsers, type User } from './_data'
 
@@ -27,52 +27,56 @@ function makeUsersWithSecret(count: number) {
 
 export function GlobalFilteringBasicExample() {
 	const data = useMemo(() => makeUsers(50), [])
-	const table = useDataGrid({
-		data,
-		columns: baseColumns,
-		globalFiltering: true,
-		pagination: { pageSize: 10 },
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={baseColumns}
+			globalFiltering
+			pagination={{ pageSize: 10 }}
+		/>
+	)
 }
 
 export function GlobalFilteringCombinedExample() {
 	const data = useMemo(() => makeUsers(50), [])
-	const table = useDataGrid({
-		data,
-		columns: baseColumns,
-		filtering: true,
-		globalFiltering: { placeholder: 'Search users…' },
-		pagination: { pageSize: 10 },
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={baseColumns}
+			filtering
+			globalFiltering={{ placeholder: 'Search users…' }}
+			pagination={{ pageSize: 10 }}
+		/>
+	)
 }
 
 export function GlobalFilteringExcludedExample() {
 	const data = useMemo(() => makeUsersWithSecret(50), [])
-	const table = useDataGrid({
-		data,
-		columns: columnsWithSecret,
-		globalFiltering: { placeholder: 'Try searching for INT-00001…' },
-		pagination: { pageSize: 10 },
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columnsWithSecret}
+			globalFiltering={{ placeholder: 'Try searching for INT-00001…' }}
+			pagination={{ pageSize: 10 }}
+		/>
+	)
 }
 
 export function GlobalFilteringCustomFnExample() {
 	const data = useMemo(() => makeUsers(50), [])
-	const table = useDataGrid({
-		data,
-		columns: baseColumns,
-		globalFiltering: {
-			placeholder: 'Starts-with search…',
-			debounce: 0,
-			fn: (row, columnId, value) => {
-				const cell = String(row.getValue(columnId) ?? '').toLowerCase()
-				return cell.startsWith(String(value).toLowerCase())
-			},
-		},
-		pagination: { pageSize: 10 },
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={baseColumns}
+			globalFiltering={{
+				placeholder: 'Starts-with search…',
+				debounce: 0,
+				fn: (row, columnId, value) => {
+					const cell = String(row.getValue(columnId) ?? '').toLowerCase()
+					return cell.startsWith(String(value).toLowerCase())
+				},
+			}}
+			pagination={{ pageSize: 10 }}
+		/>
+	)
 }
