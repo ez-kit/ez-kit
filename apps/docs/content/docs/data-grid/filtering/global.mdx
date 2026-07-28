@@ -29,13 +29,13 @@ Provide your own `fn` to change the match semantics — this one does a starts-w
 <DataGrid.GlobalFilterInput placeholder='Search…' />
 ```
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	enableGlobalFilter: true,
-	globalFilterFn: 'includesString', // default
-})
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	enableGlobalFilter
+	globalFilterFn='includesString' // default
+/>
 ```
 
 ## Options

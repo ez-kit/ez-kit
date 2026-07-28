@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA } from './_data'
 
@@ -42,19 +42,6 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 export function FallbacksExample() {
 	const [mode, setMode] = useState<Mode>('loading')
 
-	const table = useDataGrid({
-		data: mode === 'empty' ? EMPTY_DATA : INITIAL_DATA,
-		columns,
-		sorting: true,
-		filtering: true,
-		pagination: { pageSize: 5 },
-		state: {
-			loading: { isPending: mode === 'loading', isFetching: false, isError: false, error: null },
-			// Reset column filters when leaving 'no-results' mode
-			...(mode !== 'no-results' ? { columnFilters: [] } : {}),
-		},
-	})
-
 	return (
 		<div>
 			<div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
@@ -77,7 +64,18 @@ export function FallbacksExample() {
 				</p>
 			)}
 
-			<DataGrid table={table} />
+			<DataGrid
+				data={mode === 'empty' ? EMPTY_DATA : INITIAL_DATA}
+				columns={columns}
+				sorting
+				filtering
+				pagination={{ pageSize: 5 }}
+				state={{
+					loading: { isPending: mode === 'loading', isFetching: false, isError: false, error: null },
+					// Reset column filters when leaving 'no-results' mode
+					...(mode !== 'no-results' ? { columnFilters: [] } : {}),
+				}}
+			/>
 		</div>
 	)
 }

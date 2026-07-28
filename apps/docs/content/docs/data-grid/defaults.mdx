@@ -36,15 +36,15 @@ library defaults  <  factory defaultOptions  <  provider defaults  <  instance c
 
 ### Per grid (instance config)
 
-The most direct override — pass the option at the `useDataGrid` call site. Instance config always wins.
+The most direct override — pass the option as a prop on the grid itself. Instance config always wins.
 
 ```tsx
-const table = useDataGrid({
-	data,
-	columns,
-	pagination: { pageSize: 25 }, // beats the default 10
-	globalFiltering: { placeholder: 'Find users…' }, // beats 'Search…'
-})
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{ pageSize: 25 }} // beats the default 10
+	globalFiltering={{ placeholder: 'Find users…' }} // beats 'Search…'
+/>
 ```
 
 ### Per subtree (`DataGridOptionsProvider`)

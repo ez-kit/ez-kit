@@ -11,14 +11,14 @@ Pinned columns stick to the table edge during horizontal scroll. Useful for keep
 
 <DataGridDocsExample exampleId='column-pinning' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	initialState: {
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	initialState={{
 		columnPinning: { left: ['id'], right: ['actions'] },
-	},
-})
+	}}
+/>
 ```
 
 ## Options

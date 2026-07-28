@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { columns, type User } from './_data'
 
@@ -21,13 +21,13 @@ function makeVirtualData(): User[] {
 export function VirtualizedExample() {
 	const data = useMemo(() => makeVirtualData(), [])
 
-	const table = useDataGrid({
-		data,
-		columns,
-		sorting: true,
-		stickyHeader: true,
-		virtualized: { row: { estimateSize: 49, overscan: 10 } },
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			sorting
+			stickyHeader
+			virtualized={{ row: { estimateSize: 49, overscan: 10 } }}
+		/>
+	)
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { columns } from '../_data'
 
@@ -14,14 +14,14 @@ import { usePagedUsers } from './_use-paged-users'
 export function InfiniteScrollVirtualizedExample() {
 	const { data, state, hasNextPage, onLoadMore } = usePagedUsers()
 
-	const table = useDataGrid({
-		data,
-		columns,
-		state,
-		stickyHeader: true,
-		virtualized: { row: { estimateSize: 49, overscan: 10 } },
-		pagination: { mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } },
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			state={state}
+			stickyHeader
+			virtualized={{ row: { estimateSize: 49, overscan: 10 } }}
+			pagination={{ mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } }}
+		/>
+	)
 }

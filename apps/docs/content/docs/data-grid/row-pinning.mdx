@@ -13,15 +13,15 @@ Pinning is demonstrated in a scrollable container with a sticky header — this 
 
 <DataGridDocsExample exampleId='row-pinning-sticky-header' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	enableRowPinning: true,
-	initialState: {
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	enableRowPinning
+	initialState={{
 		rowPinning: { top: ['row-1'], bottom: ['row-99'] },
-	},
-})
+	}}
+/>
 ```
 
 ## Options

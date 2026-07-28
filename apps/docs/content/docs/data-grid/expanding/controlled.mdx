@@ -11,16 +11,16 @@ Pass an external `expanded` state into the grid to drive expansion from outside 
 
 <DataGridDocsExample exampleId='expanding-controlled' />
 
-```ts
+```tsx
 const [expanded, setExpanded] = useState<ExpandedState>({})
 
-const grid = useDataGrid({
-	data,
-	columns,
-	enableExpanding: true,
-	state: { expanded },
-	onExpandedChange: setExpanded,
-})
+<DataGrid
+	data={data}
+	columns={columns}
+	enableExpanding
+	state={{ expanded }}
+	onExpandedChange={setExpanded}
+/>
 ```
 
 ## See also
