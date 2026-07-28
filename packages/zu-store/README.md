@@ -12,7 +12,9 @@ pnpm add @ez-kit/zu-store zustand
 
 ### `createContextStore(factory)`
 
-Wraps a Zustand store in React context. Returns `Provider`, `useStore`, `useShallowStore`, `useContextStore`, and `Item`. Multiple `Provider` instances are fully independent.
+Wraps a Zustand store in React context. Returns `Provider`, `useSelector`, `useShallowSelector`, `useStore`, and `Item`. Multiple `Provider` instances are fully independent.
+
+Reads go through `useSelector(selector)` (or `useShallowSelector` for object/array selections); `useStore()` hands back the raw `StoreApi` without subscribing the caller.
 
 ```tsx
 const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ count?: number }>) =>
@@ -27,7 +29,7 @@ const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ co
 </counterStore.Provider>
 
 // inside MyComponent:
-const count = counterStore.useStore((s) => s.count)
+const count = counterStore.useSelector((s) => s.count)
 ```
 
 → [Full docs](docs/create-context-store.md)

@@ -12,6 +12,8 @@ Breaking changes:
 - `@ez-kit/valtio-kit`: `useContextStore()` → `useStore()`, for both `createStore`/`createContextStore` and cached groups. `useSnapshot()` is unchanged.
 - `@ez-kit/store-core`: `CachedStoreGroup.useStore(selector)` → `useSelector(selector)`, so the low-level selector read no longer collides with the new meaning of `useStore()`.
 
+Also new on `@ez-kit/store-core`: `CachedStoreGroup.useInstance()`, a passive read of the raw group instance straight from context. Both kits' cached `useStore()` is now built on it, which fixes a real defect — the raw handle used to be served through a sentinel selector routed via the manager's read hook, so it registered a subscription and every mutation re-rendered the caller, contrary to the documented "never re-renders".
+
 New in `@ez-kit/valtio-kit`: `StoreItem`, a write-only render-prop slot next to `Item`. Its child receives the raw proxy and, because nothing subscribes to a snapshot, store mutations never re-render it — useful for controls that only write. It is available on `createStore`/`createContextStore` results and on cached groups. Note it is not memoised: it still re-renders with its parent.
 
 These packages are pre-1.0, so the break ships as a minor bump.

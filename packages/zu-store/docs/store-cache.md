@@ -43,9 +43,9 @@ A store-group handle from `createCachedStore` exposes:
 ```ts
 {
 	Provider // keyed observer: id + path? + defaultValue (+ gcTime / alwaysCache)
-	useStore // \
-	useShallowStore //  } same semantics as createContextStore, under the store-group Provider
-	useContextStore //  }
+	useSelector // \
+	useShallowSelector //  } same semantics as createContextStore, under the store-group Provider
+	useStore //  }
 	Item // /
 	fromCache({ path?, id }) // imperative get-if-alive → StoreApi | undefined (never creates)
 	useFromCache({ path?, id }, sel) // reactive, passive cross-tree read
@@ -121,7 +121,7 @@ function UsersPage() {
 
 // 4. Read like a normal context store.
 function UsersTable() {
-	const filter = usersTable.useStore((s) => s.filter)
+	const filter = usersTable.useSelector((s) => s.filter)
 	return <span>{filter}</span>
 }
 ```
