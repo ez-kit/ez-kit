@@ -14,10 +14,12 @@ on:
     types: [closed]
     branches: [develop, 'integration/**']
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: read
+# The repo keeps `default_workflow_permissions: read`, which caps GITHUB_TOKEN below the
+# `issues: write` this needs — a `permissions:` block cannot escalate past that ceiling.
+# Rather than widen the default for every workflow (ci.yml and release.yml declare no
+# permissions block and would silently inherit broad write), this job authenticates with
+# the CHANGESETS_TOKEN PAT, same as the version-PR bot.
+permissions: {}
 
 concurrency:
   group: close-linked-issues-${{ github.event.pull_request.number }}
@@ -31,6 +33,7 @@ jobs:
       - name: Close issues referenced by closing keywords
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.CHANGESETS_TOKEN }}
           script: |
             const { owner, repo } = context.repo
             const pr = context.payload.pull_request
