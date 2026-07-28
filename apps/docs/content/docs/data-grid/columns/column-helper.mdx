@@ -1,11 +1,11 @@
 ---
 title: Column Helper
-description: Define columns with full type inference, declarative meta, and registered cell types using the column helper.
+description: Define columns with full type inference, per-cell-type factories, and registered cell types using the column helper.
 ---
 
 # Column Helper
 
-`createColumnHelper<TRow>()` returns a builder that gives you typed column factories — you get autocomplete on accessor keys, inferred cell types, and a clean place to register meta/options.
+`createColumnHelper<TRow>()` returns a builder that gives you typed column factories — you get autocomplete on accessor keys, the right `cell.type` set for you, and a clean place to declare each column's config and options.
 
 ## Base usage
 
@@ -40,6 +40,9 @@ A cell type is an id mapped to its renderers. Register it and the helper gains a
 Per grid, via the `cellTypes` prop. This is what the example below does, which is why its source panel shows the registry and the columns together:
 
 ```tsx
+import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
+
+// StarRatingView / StarRatingInput are your own components — see the example's source below.
 const RATING_CELL_TYPES = {
 	rating: { view: StarRatingView, edit: StarRatingInput },
 } satisfies CellTypeRegistry
@@ -53,9 +56,11 @@ const RATING_CELL_TYPES = {
 />
 ```
 
-Or once for a whole grid module, via `extendDataGrid()` — the usual choice in an app, since every grid built from the returned bundle inherits the types:
+Or once for a whole grid module, via `extendDataGrid()` from your UI kit — the usual choice in an app, since every grid built from the returned bundle inherits the types:
 
 ```tsx
+import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
+
 const grid = extendDataGrid({
 	rating: { view: StarRatingView, edit: StarRatingInput },
 })
@@ -90,16 +95,16 @@ See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full re
 
 ## Options
 
-| Option                                     | Type         | Description                                                                                    |
-| ------------------------------------------ | ------------ | ---------------------------------------------------------------------------------------------- |
-| `helper.text(opts)`                        | builder      | Accessor column rendered by the `text` cell type. Same shape for `number`, `boolean`, `link`.  |
-| `helper.date(opts)`                        | builder      | As above, plus an optional `config: DateCellConfig`.                                           |
-| `helper.select(opts)` / `helper.badge()`   | builder      | Require `config` (`SelectCellConfig` / `BadgeCellConfig`).                                     |
-| `helper.image(opts)` / `helper.progress()` | builder      | Optional `config` (`ImageCellConfig` / `ProgressCellConfig`).                                  |
-| `helper.custom(opts)`                      | builder      | Escape hatch: set `type`, `config`, and/or your own `view` / `editing` / `creating` renderers. |
-| `helper.<registeredId>(opts)`              | builder      | One per registered cell type — present only when the helper knows that id (see above).         |
-| `opts.accessorKey`                         | `keyof TRow` | The row field the column reads.                                                                |
-| `opts.config`                              | `object`     | Cell-type configuration, forwarded to the renderer as `config`.                                |
+| Option                                     | Type                  | Description                                                                                    |
+| ------------------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------- |
+| `helper.text(opts)`                        | builder               | Accessor column rendered by the `text` cell type. Same shape for `number`, `boolean`, `link`.  |
+| `helper.date(opts)`                        | builder               | As above, plus an optional `config: DateCellConfig`.                                           |
+| `helper.select(opts)` / `helper.badge()`   | builder               | Require `config` (`SelectCellConfig` / `BadgeCellConfig`).                                     |
+| `helper.image(opts)` / `helper.progress()` | builder               | Optional `config` (`ImageCellConfig` / `ProgressCellConfig`).                                  |
+| `helper.custom(opts)`                      | builder               | Escape hatch: set `type`, `config`, and/or your own `view` / `editing` / `creating` renderers. |
+| `helper.<registeredId>(opts)`              | builder               | One per registered cell type — present only when the helper knows that id (see above).         |
+| `opts.accessorKey`                         | `keyof TRow & string` | The row field the column reads.                                                                |
+| `opts.config`                              | `object`              | Cell-type configuration, forwarded to the renderer as `config`.                                |
 
 `cell.type` is what the builders set for you; `meta.cellType` is the derived internal field the engine reads at render time, not something you author.
 

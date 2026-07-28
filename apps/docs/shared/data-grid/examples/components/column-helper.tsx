@@ -50,23 +50,27 @@ export function ColumnHelperBaseExample() {
 	)
 }
 
-// ── Example 2: custom() — inherit type, override view ────────────────────────
+// ── star renderers (shared by the custom-view and registered examples) ───────
 
 const MAX_RATING = 5
 const STAR_COLOR = '#f59e0b'
 const STAR_EMPTY_COLOR = '#d1d5db'
+const STAR_FILLED = '★'
+const STAR_EMPTY = '☆'
+const STAR_LETTER_SPACING = 2
+const STAR_BUTTON_SIZE = '1.25rem'
 
 function StarRatingView({ value }: { value: unknown }) {
 	const count = typeof value === 'number' ? value : 0
 	return (
-		<span style={{ color: STAR_COLOR, letterSpacing: 2 }}>
-			{'★'.repeat(count)}
-			{'☆'.repeat(MAX_RATING - count)}
+		<span style={{ color: STAR_COLOR, letterSpacing: STAR_LETTER_SPACING }}>
+			{STAR_FILLED.repeat(count)}
+			{STAR_EMPTY.repeat(MAX_RATING - count)}
 		</span>
 	)
 }
 
-/** Editing input for the `rating` cell type registered in example 3. */
+/** Editing input for the `rating` cell type registered below. */
 function StarRatingInput({ value, onChange }: FieldState) {
 	const count = typeof value === 'number' ? value : 0
 	return (
@@ -80,19 +84,21 @@ function StarRatingInput({ value, onChange }: FieldState) {
 					}}
 					style={{
 						color: index < count ? STAR_COLOR : STAR_EMPTY_COLOR,
-						fontSize: '1.25rem',
+						fontSize: STAR_BUTTON_SIZE,
 						cursor: 'pointer',
 						background: 'transparent',
 						border: 'none',
 						padding: 0,
 					}}
 				>
-					★
+					{STAR_FILLED}
 				</button>
 			))}
 		</span>
 	)
 }
+
+// ── Example 2: custom() — inherit type, override view ────────────────────────
 
 const customViewHelper = createColumnHelper<Employee>()
 
@@ -147,11 +153,19 @@ const registeredColumns = [
 ]
 
 export function ColumnHelperRegisteredExample() {
-	const [data] = useState(EMPLOYEE_DATA)
+	const [data, setData] = useState(EMPLOYEE_DATA)
 
 	return (
 		<DataGrid
 			data={data}
+			// Editing is on so the registry's `edit` renderer is reachable: click Edit on a
+			// row and the Rating cell becomes the star input.
+			editing={{
+				mode: 'row',
+				onSave: ({ rowId, values }) => {
+					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
+				},
+			}}
 			// `columns` is typed `ColumnDef<TRow>[]` — i.e. `TCustom = never` — so a per-grid
 			// registered id does not survive the assignment even though `cellTypes` registers it.
 			// Columns built by a bundle's own `defineColumns` / `createColumnHelper` need no cast.
