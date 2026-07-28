@@ -140,8 +140,8 @@ describe('StoreProvider — single writer for one source', () => {
 		})
 
 		function Editor(): ReactElement {
-			const a = storeA.useContextStore()
-			const b = storeB.useContextStore()
+			const a = storeA.useStore()
+			const b = storeB.useStore()
 			return (
 				<button
 					type='button'

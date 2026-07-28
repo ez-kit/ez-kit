@@ -9,22 +9,28 @@ Persistence is now a **plugin** on the base store, not a bespoke store factory. 
 
 **Everything else is unchanged** — `@persistUrl()` / `@persistLocalStorage()` / `@persistField()` decorators, the accessor builder (`urlField()`, `localStorageField()`, …), all codecs, every adapter (`localStorageAdapter`, `indexedDbAdapter`, the URL adapters), `useHydrated`, and the `$url` / `$persist` handles. Only the store factory and the top-level provider move.
 
-## `0.2.0` — `useStore()` is removed
+## The read/write split — one read hook, one write hook
 
-Separate from the plugin move, `0.2.0` splits the store surface into exactly one read hook and one write hook. `useStore()` — which used to return the raw mutable proxy — is **gone**, with no alias left behind:
+Separate from the plugin move, the store surface is split into exactly one read hook and one write hook. `useSnapshot()` is the only read (auto-tracked, re-renders on the fields you touch); `useStore()` is the only write path (the raw proxy, never subscribes the caller).
+
+Coming from **`0.2.x`**, where the write path was called `useContextStore()`, this is a rename:
 
 ```diff
-- const state = store.useStore()   // was: the write path
-+ const state = store.useContextStore()
+- const state = store.useContextStore()
++ const state = store.useStore()
   state.q = 'next'
 ```
+
+Coming from **before `0.2.0`**, `useStore()` is once again the write path, so only reads that went through it have to move:
 
 ```diff
 - const snap = store.useStore()    // if you were reading from it
 + const snap = store.useSnapshot()
 ```
 
-`useSnapshot()` is the only read (auto-tracked, re-renders on the fields you touch); `useContextStore()` is the only write path (the raw proxy, never subscribes the caller). Reads that already used `useSnapshot()` are unaffected, and `Item`'s `{ snap, store }` render argument keeps its meaning. The same split applies to cached groups from [`createCachedStore`](./valtio-kit/cache). The package is pre-1.0, so this ships as a `minor` bump.
+The rename is what makes the naming uniform across `@ez-kit`: `useStore()` is the raw handle everywhere, and only the read hook is manager-specific — `useSnapshot()` here, `useSelector()` in [`@ez-kit/zu-store`](./zu-store/create-context-store).
+
+`Item`'s `{ snap, store }` render argument keeps its meaning, and the new [`StoreItem`](./valtio-kit/create-context-store) is its write-only counterpart: it hands over the raw proxy without subscribing, so store mutations never re-render it. The same surface applies to cached groups from [`createCachedStore`](./valtio-kit/cache). The package is pre-1.0, so this ships as a `minor` bump.
 
 ## `createPersistStore` → `createStore` + `persist()`
 
@@ -45,7 +51,7 @@ import { persist } from '@ez-kit/valtio-kit/persist'
 const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
 ```
 
-The returned `{ Provider, useSnapshot, useContextStore, Item }` shape is identical, so component code that reads `useSnapshot()` and mutates `useContextStore()` needs no change.
+The returned `{ Provider, useSnapshot, useStore, Item }` shape is identical, so component code that reads `useSnapshot()` and mutates `useStore()` needs no change.
 
 ## `createPersistFields` → `persist({ fields })`
 
@@ -73,7 +79,7 @@ const store = createStore(() => proxy({ q: '', page: 1 }), {
 
 ## `useHydrated` is now a standalone hook
 
-The store result no longer exposes a `useHydrated()` method. Import the standalone hook and pass it the raw proxy from `useContextStore()`:
+The store result no longer exposes a `useHydrated()` method. Import the standalone hook and pass it the raw proxy from `useStore()`:
 
 ```tsx
 // Before
@@ -84,7 +90,7 @@ const hydrated = prefsStore.useHydrated()
 // After
 import { useHydrated } from '@ez-kit/valtio-kit/persist'
 
-const store = prefsStore.useContextStore()
+const store = prefsStore.useStore()
 const hydrated = useHydrated(store)
 ```
 
@@ -116,8 +122,8 @@ Omit `cache` for a persist-only tree (equivalent to `PersistProvider`), or omit 
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `createPersistStore(factory)`                                       | `createStore(factory, { plugins: [persist()] })`                                           |
 | `createPersistFields(factory, fields)`                              | `createStore(factory, { plugins: [persist({ fields })] })`                                 |
-| `store.useHydrated()`                                               | `useHydrated(store.useContextStore())`                                                     |
-| `store.useStore()` (write)                                          | `store.useContextStore()`                                                                  |
-| `store.useStore()` (read)                                           | `store.useSnapshot()`                                                                      |
+| `store.useHydrated()`                                               | `useHydrated(store.useStore())`                                                            |
+| `store.useContextStore()` (`0.2.x` write path)                      | `store.useStore()`                                                                         |
+| `store.useStore()` (read, pre-`0.2.0`)                              | `store.useSnapshot()`                                                                      |
 | `<PersistProvider adapters={[…]}>`                                  | `<StoreProvider persist={[…]} cache={cache}>` (or keep `PersistProvider` for persist-only) |
 | decorators, accessor builder, codecs, adapters, `$url` / `$persist` | unchanged                                                                                  |

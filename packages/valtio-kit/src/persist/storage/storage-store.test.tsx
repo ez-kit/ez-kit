@@ -43,7 +43,7 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 
 		function Editor(): ReactElement {
 			const snap = store.useSnapshot()
-			const state = store.useContextStore()
+			const state = store.useStore()
 			return (
 				<button
 					type='button'
@@ -94,7 +94,7 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 		)
 
 		function Editor(): ReactElement {
-			const state = store.useContextStore()
+			const state = store.useStore()
 			return (
 				<button
 					type='button'
@@ -129,7 +129,7 @@ describe('@ez-kit/valtio-kit persist storage adapters', () => {
 		)
 
 		function Editor(): ReactElement {
-			const state = store.useContextStore()
+			const state = store.useStore()
 			return (
 				<button
 					type='button'
@@ -194,7 +194,7 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 		const dualStore = makeDualStore()
 
 		function Editor(): ReactElement {
-			const state = dualStore.useContextStore()
+			const state = dualStore.useStore()
 			return (
 				<button
 					type='button'
@@ -227,7 +227,7 @@ describe('@ez-kit/valtio-kit persist dual-source (URL + storage)', () => {
 		let captured: Record<string, unknown> = {}
 
 		function Capture(): ReactElement {
-			captured = dualStore.useContextStore()
+			captured = dualStore.useStore()
 			return <span>ok</span>
 		}
 
@@ -259,7 +259,7 @@ describe('@ez-kit/valtio-kit persist useHydrated', () => {
 	it('is false on the server render', () => {
 		const store = makeStore()
 		function Gate(): ReactElement {
-			const hydrated = useHydrated(store.useContextStore())
+			const hydrated = useHydrated(store.useStore())
 			return <span data-testid='state'>{hydrated ? 'ready' : 'loading'}</span>
 		}
 		const html = renderToString(
@@ -276,7 +276,7 @@ describe('@ez-kit/valtio-kit persist useHydrated', () => {
 	it('flips to true after mount on the client', async () => {
 		const store = makeStore()
 		function Gate(): ReactElement {
-			const hydrated = useHydrated(store.useContextStore())
+			const hydrated = useHydrated(store.useStore())
 			return <span data-testid='state'>{hydrated ? 'ready' : 'loading'}</span>
 		}
 		render(

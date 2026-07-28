@@ -1,6 +1,6 @@
 'use client'
 
-/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useContextStore() */
+/* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
 import { createStore } from '@ez-kit/valtio-kit'
 import {
@@ -47,7 +47,7 @@ const ALL_TAGS = ['red', 'suede', 'sale', 'new']
 
 function SearchControls() {
 	const snap = searchStore.useSnapshot()
-	const store = searchStore.useContextStore()
+	const store = searchStore.useStore()
 	const search = useSearch()
 
 	return (

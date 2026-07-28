@@ -54,7 +54,7 @@ function UsersPage() {
 
 function UsersTable() {
 	const snap = usersTable.useSnapshot()
-	const store = usersTable.useContextStore() // the raw mutable proxy — mutate directly
+	const store = usersTable.useStore() // the raw mutable proxy — mutate directly
 	return (
 		<input
 			value={snap.filter}
@@ -66,7 +66,7 @@ function UsersTable() {
 }
 ```
 
-`useSnapshot()`, `useContextStore()`, and `Item` behave exactly like [`createContextStore`](./valtio-kit/create-context-store): read from the snapshot, mutate the proxy. There is no `useStore()` — reading is `useSnapshot()`, writing is `useContextStore()`.
+`useSnapshot()`, `useStore()`, `Item`, and `StoreItem` behave exactly like [`createContextStore`](./valtio-kit/create-context-store): read from the snapshot, mutate the proxy. There are no selectors — reading is `useSnapshot()`, writing is `useStore()`, and `StoreItem` is the write-only slot that never subscribes.
 
 ## How it stays alive
 

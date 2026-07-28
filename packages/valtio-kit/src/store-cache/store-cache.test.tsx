@@ -45,7 +45,7 @@ describe('valtio createStoreCache — surface', () => {
 			return <span data-testid='name'>{snap.name}</span>
 		}
 		function RenameButton() {
-			const store = form.useContextStore()
+			const store = form.useStore()
 			return (
 				<button
 					type='button'
@@ -77,7 +77,7 @@ describe('valtio createStoreCache — surface', () => {
 		})
 	})
 
-	it('useSnapshot() reads the snapshot while useContextStore() hands back the raw proxy', () => {
+	it('useSnapshot() reads the snapshot while useStore() hands back the raw proxy', () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'surface-semantics' })
 
@@ -85,7 +85,7 @@ describe('valtio createStoreCache — surface', () => {
 		let raw: FormState | undefined
 		function Probe() {
 			snapshot = form.useSnapshot()
-			raw = form.useContextStore()
+			raw = form.useStore()
 			return null
 		}
 
@@ -101,7 +101,7 @@ describe('valtio createStoreCache — surface', () => {
 		)
 
 		// `useSnapshot()` yields the readonly snapshot — a distinct object from the live cached proxy that
-		// `useContextStore()` returns. Under the old semantics `useStore()` handed back that same proxy.
+		// `useStore()` returns. Under the old semantics `useStore()` handed back that same proxy.
 		expect(raw).toBe(form.fromCache({ id: 'main' }))
 		expect(snapshot).not.toBe(raw)
 		expect(snapshot?.name).toBe('seed')
@@ -115,7 +115,7 @@ describe('valtio createStoreCache — surface', () => {
 			return <span data-testid='name'>{form.useSnapshot().name}</span>
 		}
 		function RenameButton() {
-			const store = form.useContextStore()
+			const store = form.useStore()
 			return (
 				<button
 					type='button'
@@ -166,6 +166,50 @@ describe('valtio createStoreCache — surface', () => {
 	})
 })
 
+describe('valtio createStoreCache — StoreItem', () => {
+	it('writes through the raw proxy without re-rendering its own child', async () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'store-item' })
+		let storeItemRenders = 0
+
+		render(
+			<cache.Provider>
+				<form.Provider
+					id='main'
+					defaultValue={{ name: 'seed' }}
+				>
+					<form.Item>{({ snap }) => <span data-testid='name'>{snap.name}</span>}</form.Item>
+					<form.StoreItem>
+						{(store) => {
+							storeItemRenders += 1
+							return (
+								<button
+									type='button'
+									onClick={() => {
+										store.name = 'Ann'
+									}}
+								>
+									rename
+								</button>
+							)
+						}}
+					</form.StoreItem>
+				</form.Provider>
+			</cache.Provider>,
+		)
+
+		const rendersAfterMount = storeItemRenders
+
+		expect(screen.getByTestId('name')).toHaveTextContent('seed')
+		fireEvent.click(screen.getByRole('button', { name: 'rename' }))
+		await waitFor(() => {
+			expect(screen.getByTestId('name')).toHaveTextContent('Ann')
+		})
+
+		expect(storeItemRenders).toBe(rendersAfterMount)
+	})
+})
+
 describe('valtio createStoreCache — cache-hit returns same live proxy', () => {
 	it('preserves in-progress mutations across unmount/remount within gcTime', async () => {
 		const cache = createStoreCache({ gcTime: 10_000 })
@@ -176,7 +220,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			return <span data-testid='name'>{`${snap.name}:${String(snap.dirty)}`}</span>
 		}
 		function DirtyButton() {
-			const store = form.useContextStore()
+			const store = form.useStore()
 			return (
 				<button
 					type='button'
@@ -348,7 +392,7 @@ describe('valtio createStoreCache — useFromCache', () => {
 			return <span data-testid='badge'>{name}</span>
 		}
 		function RenameButton() {
-			const store = form.useContextStore()
+			const store = form.useStore()
 			return (
 				<button
 					type='button'

@@ -94,7 +94,14 @@ export type CachedItemProps<TSelected> = {
 /** Handle returned by `createCachedStore` — a group of keep-alive instances keyed by `(path, id)`. */
 export type CachedStoreGroup<TInstance extends object, TDefaultValue extends object> = {
 	Provider: (props: CachedProviderProps<TDefaultValue>) => ReactElement
-	useStore: <TSelected>(selector: (snap: unknown) => TSelected) => TSelected
+	/** Reactive read: runs `selector` over the manager's snapshot of the group instance. */
+	useSelector: <TSelected>(selector: (snap: unknown) => TSelected) => TSelected
+	/**
+	 * The raw group instance, read straight from context. Unlike {@link CachedStoreGroup.useSelector}
+	 * it never goes through `useRead`, so it registers no subscription at all and a state change alone
+	 * can never re-render the caller.
+	 */
+	useInstance: () => TInstance
 	Item: <TSelected>(props: CachedItemProps<TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live instance or `undefined`. Never creates. */
 	fromCache: (target: CacheAddress) => TInstance | undefined
@@ -235,12 +242,12 @@ export function createCacheReact<TInstance extends object>(
 			return instance
 		}
 
-		function useStore<TSelected>(selector: (snap: unknown) => TSelected): TSelected {
+		function useSelector<TSelected>(selector: (snap: unknown) => TSelected): TSelected {
 			return useRead(useGroupInstance(), selector)
 		}
 
 		function Item<TSelected>({ selector, children }: CachedItemProps<TSelected>): ReactElement {
-			return children(useStore(selector))
+			return children(useSelector(selector))
 		}
 
 		type ProviderInnerProps = {
@@ -321,7 +328,7 @@ export function createCacheReact<TInstance extends object>(
 			activeCache.current?.remove(toStoreId(target, name))
 		}
 
-		return { Provider, useStore, Item, fromCache, useFromCache, remove }
+		return { Provider, useSelector, useInstance: useGroupInstance, Item, fromCache, useFromCache, remove }
 	}
 
 	return { Provider, Scope, useCache, useCacheKeys, createCachedStore }

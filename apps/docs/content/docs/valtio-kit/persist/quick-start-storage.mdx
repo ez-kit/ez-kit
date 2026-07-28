@@ -55,7 +55,7 @@ When the flash matters (layout shift, firing analytics on default values), gate 
 import { useHydrated } from '@ez-kit/valtio-kit/persist'
 
 function PrefControls() {
-	const store = prefsStore.useContextStore()
+	const store = prefsStore.useStore()
 	const snap = prefsStore.useSnapshot()
 	const hydrated = useHydrated(store) // false on server + first client render, then true
 

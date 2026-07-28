@@ -28,8 +28,8 @@ const FILTERS = ['all', 'active', 'archived']
 // Reusable table: it knows ONLY its own id, nothing about where it is mounted.
 // The enclosing <cache.Scope> decides its namespace, so two mounts never collide.
 function UserTable({ userId }: { userId: string }) {
-	const filter = userTable.useStore((s) => s.filter)
-	const setFilter = userTable.useStore((s) => s.setFilter)
+	const filter = userTable.useSelector((s) => s.filter)
+	const setFilter = userTable.useSelector((s) => s.setFilter)
 
 	return (
 		<div className='flex flex-wrap items-center gap-2'>

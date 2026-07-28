@@ -23,8 +23,8 @@ const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<Coun
 )
 
 function Counter({ label }: { label: string }) {
-	const count = counterStore.useStore((s) => s.count)
-	const increment = counterStore.useStore((s) => s.increment)
+	const count = counterStore.useSelector((s) => s.count)
+	const increment = counterStore.useSelector((s) => s.increment)
 
 	return (
 		<div className='flex items-center gap-3 rounded-md border border-fd-border bg-fd-card p-3'>
