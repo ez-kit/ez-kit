@@ -1,5 +1,13 @@
 # @ez-kit/docs
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [a7fbfac]
+  - @ez-kit/va-store@0.1.0
+  - @ez-kit/zu-store@0.5.1
+
 ## 0.0.3
 
 ### Patch Changes
