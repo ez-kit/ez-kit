@@ -31,7 +31,7 @@ export type CellTypeDefinition<TConfig = unknown> = {
 	 * Edit-mode input. Receives a {@link FieldState} with id/label/description/error/onBlur.
 	 * In inline contexts (cell-mode, creating-row, filter) `label`/`description` are
 	 * omitted so the composite can skip the corresponding chrome.
-	 * Falls back to `creating` when omitted.
+	 * No fallback — when omitted, edit mode renders the default input component.
 	 */
 	edit?: (props: FieldState<TConfig>) => ReactNode
 	/** Create-mode input. Same shape as `edit`. Falls back to `edit` when omitted. */
