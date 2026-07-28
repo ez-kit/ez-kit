@@ -74,7 +74,7 @@ export type StoreCache = {
 /**
  * Zustand-bound cache surface, built on `@ez-kit/store-core/cache` via `createCacheReact` with
  * `useRead = (store, selector) => useStore(store, selector)`. Returns the same
- * `{ Provider, Scope, useCache, useCacheKeys, createCachedStore }` shape as `@ez-kit/valtio-kit`.
+ * `{ Provider, Scope, useCache, useCacheKeys, createCachedStore }` shape as `@ez-kit/va-store`.
  */
 export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 	const cache = createCacheReact<AnyStore>(

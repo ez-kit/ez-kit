@@ -1,0 +1,72 @@
+---
+title: Quick start — storage
+description: Persist the same store to localStorage. One concept changes — the source — plus useHydrated() to avoid a flash.
+---
+
+# Quick start — storage
+
+Storage works exactly like the URL — same store shape, same fronts. Only the **source** changes: a field declares `@persistLocalStorage()` instead of `@persistUrl()`, and you mount `localStorageAdapter()` instead of a router adapter.
+
+<LivePreview
+	path='va-store/persist-storage'
+	title='localStorage-persisted preferences'
+/>
+
+<Callout type='warn'>
+	The demo uses the accessor API and an isolated in-memory store, so it neither reads nor writes your real
+	`localStorage`. The blob read-out shows the exact JSON the real adapter would persist.
+</Callout>
+
+## The three pieces
+
+```tsx
+import { createStore } from '@ez-kit/va-store'
+import { persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { localStorageAdapter, persistLocalStorage } from '@ez-kit/va-store/persist/storage'
+import { proxy } from 'valtio'
+
+class Prefs {
+	@persistLocalStorage() theme = 'light'
+	@persistLocalStorage() fontScale = 1
+}
+
+const prefsStore = createStore(() => proxy(new Prefs()), { plugins: [persist()] })
+
+function Page() {
+	return (
+		<PersistProvider adapters={[localStorageAdapter()]}>
+			<prefsStore.Provider>
+				<PrefControls />
+			</prefsStore.Provider>
+		</PersistProvider>
+	)
+}
+```
+
+Storage adapters are **client-only** and inert on the server (`get()` is empty, `set()` is a no-op), so they never break SSR. Swap `localStorageAdapter` for `sessionStorageAdapter` to scope persistence to the tab session.
+
+## The one new concept: hydration
+
+Reading storage synchronously during render would mismatch server HTML (the server has no `localStorage`), so a stored-but-non-default value can't appear in the very first paint — the proxy shows defaults, and the real value arrives a tick later. For the common case this _silent fill_ needs no code.
+
+When the flash matters (layout shift, firing analytics on default values), gate on `useHydrated()`:
+
+```tsx
+import { useHydrated } from '@ez-kit/va-store/persist'
+
+function PrefControls() {
+	const store = prefsStore.useStore()
+	const snap = prefsStore.useSnapshot()
+	const hydrated = useHydrated(store) // false on server + first client render, then true
+
+	if (!hydrated) return <Skeleton />
+	return <Theme value={snap.theme} />
+}
+```
+
+`useHydrated()` is a per-store aggregate: it flips to `true` once **every** mounted source has applied its first read. For a URL-only store it is effectively immediate; for async sources (IndexedDB) it waits for the resolve.
+
+## Where to go next
+
+- Combine this with the URL on one store: [Combined](./va-store/persist/combined).
+- Blob shape, schema `version`/`migrate`, and cross-tab sync: [storage deep dive](./va-store/persist/deep-dive-storage).
