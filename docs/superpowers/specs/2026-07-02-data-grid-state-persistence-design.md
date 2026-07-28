@@ -14,11 +14,11 @@ URL or `localStorage` so that a reload preserves the view and links are shareabl
 this is possible only by hand-wiring every controlled `state.*` slice and every
 `on*Change` handler — verbose and error-prone.
 
-The monorepo already ships `@ez-kit/valtio-kit/persist`, a mature storage engine, but it
+The monorepo already ships `@ez-kit/va-store/persist`, a mature storage engine, but it
 is built around a **Valtio proxy** as the source of truth. The data-grid's state lives in
 **TanStack Table** (controlled via `state` / `initialState` / `onStateChange`), not Valtio,
 so that engine is **not** reused here. The grid slices are already JSON-serializable, so
-the codec/substrate machinery valtio-kit needs does not apply.
+the codec/substrate machinery va-store needs does not apply.
 
 ## 2. Philosophy — three layers, "bring your own write"
 
@@ -233,5 +233,5 @@ useDataGrid({
 
 ## 11. Out of scope
 
-Everything under §8. No changes to the valtio-kit persist engine. No new package; utilities
+Everything under §8. No changes to the va-store persist engine. No new package; utilities
 live in `@ez-kit/data-grid-react`.

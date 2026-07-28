@@ -1,0 +1,119 @@
+---
+title: Decorators
+description: Declare persisted fields on class properties — @persistUrl / @persistLocalStorage — with auto-resolved parsers, composition, inheritance, and key placement.
+---
+
+# Decorators
+
+Decorate the fields you want synced with the wrapper for their source. The property name becomes the substrate key, and the parser is **auto-resolved from the field's value** — so primitives need no parser. This is the recommended path for anything shaped like an entity model.
+
+```tsx
+import { createStore } from '@ez-kit/va-store'
+import { persist } from '@ez-kit/va-store/persist'
+import { persistUrl } from '@ez-kit/va-store/persist/url'
+import { persistLocalStorage } from '@ez-kit/va-store/persist/storage'
+import { proxy } from 'valtio'
+
+class Filters {
+	@persistUrl() q = '' // string parser auto-resolved → ?q=
+	@persistUrl() page = 1 // number parser auto-resolved
+	@persistLocalStorage() pageSize = 25 // persisted to localStorage instead
+}
+
+// Request-scoped store with the `persist()` plugin. Omit `fields` → decorators are discovered on the instance.
+const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
+```
+
+Every wrapper is a thin shim over the base `persistField({ source, … })`. They add exactly two things: a `source` and a typed options bag — so a field can carry `@persistUrl()` **and** `@persistLocalStorage()` to sync to both at once (one descriptor per source).
+
+<Callout type='warn'>
+	The **interactive demos** in this section are declared with the equivalent [accessor API](./va-store/persist/fields) —
+	decorators need a build-time transform this in-browser sandbox doesn't run. Same engine, identical output; the code
+	blocks show the real decorator syntax.
+</Callout>
+
+## Parsers: auto vs explicit
+
+A primitive field needs nothing — the parser is read from its runtime value at bind time. Non-primitives (enums, arrays, JSON objects) take an explicit `parser`:
+
+```tsx
+import { paramEnum, paramJson } from '@ez-kit/va-store/persist'
+
+type Sort = 'asc' | 'desc'
+
+class Filters {
+	@persistUrl() q = '' // auto → string
+	@persistUrl() createdAt = new Date() // auto → Date
+	@persistUrl({ parser: paramEnum<Sort>(['asc', 'desc']) }) sort: Sort = 'asc'
+	@persistUrl({ parser: paramJson() }) coords = { lat: 0, lng: 0 }
+}
+```
+
+The full catalogue, auto-resolution rules, and Zod live on the [Parsers](./va-store/persist/parsers) page.
+
+## Composition
+
+Nested class instances are discovered automatically — **no decorator on the composed field needed.** Paths nest to match the shape.
+
+```tsx
+class Price {
+	@persistUrl() min = 0
+	@persistUrl() max = 100
+}
+class Filters {
+	@persistUrl() q = ''
+	price = new Price() // composed — auto-recursed
+}
+// keys: q, price.min, price.max
+```
+
+The walk recurses only into objects whose class declares persisted fields; `Date`, `Map`, `Set`, arrays, and plain objects are treated as leaves. Cyclic graphs terminate safely.
+
+## Inheritance
+
+Inherited fields come along via the prototype chain — a subclass adds its own synced fields on top of the parent's. Override is per `(field, source)`, so a subclass can re-declare a parent field for a different source.
+
+```tsx
+class Filters {
+	@persistUrl() q = ''
+	price = new Price()
+}
+class ProductFilters extends Filters {
+	@persistUrl() onSale = false // inherited q + price.* come too
+}
+// keys: q, price.min, price.max, onSale
+```
+
+Composition and inheritance compose freely:
+
+<LivePreview
+	path='va-store/persist-composition'
+	title='Composed Price + inherited onSale'
+/>
+
+## Key placement
+
+By default a field's key is its **joined path** (`price.min → price.min`) — collision-free across nested shapes. The source-agnostic naming options override that:
+
+| Option     | Effect                                                  | Example                                             |
+| ---------- | ------------------------------------------------------- | --------------------------------------------------- |
+| `key`      | rename the **leaf** segment (keeps the ancestor prefix) | `{ key: 'query' }` on `filters.q` → `filters.query` |
+| `prefix`   | prepend a namespace                                     | `{ prefix: 'a.' }` on `q` → `a.q`                   |
+| `absolute` | pin an **exact top-level** key, ignoring ancestors      | `{ key: 'q', absolute: true }` on `search.q` → `q`  |
+
+```tsx
+class Search {
+	@persistUrl({ key: 'q', absolute: true }) query = ''
+}
+// wherever Search is nested, it always writes ?q=…
+```
+
+These let a deeply-nested field own a short, shareable key regardless of where its class sits. The same options exist on the [accessor API](./va-store/persist/fields).
+
+## Imperative control
+
+The bound proxy carries per-source handles (`$url`, `$persist`) for source-specific commits — e.g. forcing a URL `push`. See [Deep dive — URL → imperative control](./va-store/persist/deep-dive-url#imperative-control).
+
+## Build setup
+
+Decorators need **Stage 3 decorators** + `Symbol.metadata` in your toolchain. If you can't enable them, the [accessor API](./va-store/persist/fields) is equivalent and needs no transpilation. Full configuration is on the [TypeScript](./va-store/persist/typescript) page.

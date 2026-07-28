@@ -16,7 +16,7 @@
     + <counter.Provider defaultValue={{ count: 3, label: 'x' }}>
     ```
 
-  **`@ez-kit/valtio-kit` only — BREAKING:** the `Item` render-prop child now receives `{ snap, store }` (read via `snap`, write via the raw `store` proxy) instead of just `snap`.
+  **`@ez-kit/va-store` only — BREAKING:** the `Item` render-prop child now receives `{ snap, store }` (read via `snap`, write via the raw `store` proxy) instead of just `snap`.
 
   ```diff
   - <counter.Item>{(snap) => <span>{snap.count}</span>}</counter.Item>
@@ -33,14 +33,14 @@
   + <usersTable.Provider id="users" defaultValue={{ filter: 'active' }} />
   ```
 
-- 2d36563: Add `@ez-kit/store-core` (shared cache + plugin core), give `@ez-kit/valtio-kit` a store cache, and turn persist into a plugin.
+- 2d36563: Add `@ez-kit/store-core` (shared cache + plugin core), give `@ez-kit/va-store` a store cache, and turn persist into a plugin.
 
   **New package `@ez-kit/store-core`** — a published, manager-agnostic core consumed by both store packages, with subpath exports:
   - `.` — the plugin/service contracts: `StoreId`, `StorePlugin`/`PluginContext`/`PluginCleanup`, `ServiceRegistry` (`get`/`safeGet`), `serviceKey`, and a React `ServicesProvider`/`useServices`.
   - `./cache` — a generic instance cache: `createInstanceCache` (`getOrCreate`/observers/`clear`) with a **create → reuse → clear** lifecycle that runs a per-instance `PluginCleanup` on clear, and `createCacheReact({ useRead })` (Provider/Scope/useCache/useCacheKeys/createCachedStore) parameterized by a single store-manager read primitive.
   - `./persist` — reserved for a future generic engine.
 
-  **`@ez-kit/valtio-kit`**
+  **`@ez-kit/va-store`**
   - New cache surface mirroring `@ez-kit/zu-store`: `createStoreCache`, `Scope`, `useCache`, `useCacheKeys`, `createCachedStore`, plus a default-cache surface. A cache-hit returns the **same live proxy**, so in-progress mutations survive unmount/remount within `gcTime`.
   - New plugin-capable base factory `createStore(factory, { plugins? })`; `createContextStore` is unchanged and now layered on top.
   - New app-level `StoreProvider({ persist?, cache? })` that mounts one persist engine per source and publishes them (plus the cache) as services for plugins to resolve.

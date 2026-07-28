@@ -25,7 +25,7 @@
 
 - Modify: `package.json` (root scripts)
 - Modify: `turbo.json` (remove format tasks)
-- Modify: `packages/zu-store/package.json`, `packages/valtio-kit/package.json`, `packages/store-core/package.json`, `packages/data-grid/core/package.json`, `packages/data-grid/react/react/package.json`, `packages/data-grid/react/shadcn/package.json`, `packages/data-grid/react/heroui/package.json`, `packages/data-grid/react/native/package.json`, `apps/docs/package.json` (remove per-package `format`/`format:check`)
+- Modify: `packages/zu-store/package.json`, `packages/va-store/package.json`, `packages/store-core/package.json`, `packages/data-grid/core/package.json`, `packages/data-grid/react/react/package.json`, `packages/data-grid/react/shadcn/package.json`, `packages/data-grid/react/heroui/package.json`, `packages/data-grid/react/native/package.json`, `apps/docs/package.json` (remove per-package `format`/`format:check`)
 
 **Interfaces:**
 

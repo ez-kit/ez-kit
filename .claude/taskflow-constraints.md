@@ -18,7 +18,7 @@ apps/docs                 depends on the flavours it documents  ← last
 
 store-core                shared foundation
   ├─ zu-store             Zustand-backed
-  └─ valtio-kit           Valtio-backed  (both depend on store-core, not on each other)
+  └─ va-store           Valtio-backed  (both depend on store-core, not on each other)
 ```
 
 `FullGridComponents` (`data-grid/react/react/src/contract.ts`) is the `satisfies`-enforced

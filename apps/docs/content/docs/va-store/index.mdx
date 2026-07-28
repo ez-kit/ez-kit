@@ -1,0 +1,39 @@
+---
+title: '@ez-kit/va-store'
+description: Valtio proxies wrapped in React context — multiple isolated instances with the same factory, no selectors needed.
+---
+
+# `@ez-kit/va-store`
+
+A tiny layer on top of [Valtio](https://github.com/pmndrs/valtio) that wraps a proxy in **React context**, so multiple isolated instances of the same state can coexist in one tree — scoped by `Provider`.
+
+Valtio already optimises re-renders per accessed property through `useSnapshot`, so unlike [`@ez-kit/zu-store`](./zu-store) there are **no selectors**. You read from snapshots and mutate the proxy.
+
+It exists because a plain `proxy()` is a module-level singleton — fine for app-wide state, awkward when you want a counter, modal, or form scoped to a subtree.
+
+→ **[Getting Started](./va-store/getting-started)** — install, your first store, and the read/write model.
+
+## What's in the box
+
+| Export                                                  | Purpose                                                                                                                                 |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| [Getting Started](./va-store/getting-started)           | Install, first store, read/write model, decorator TypeScript setup.                                                                     |
+| [`createContextStore`](./va-store/create-context-store) | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Item`.                                                    |
+| [Persist](./va-store/persist)                           | Sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate: typed codecs, decorators, hydration, cross-tab. |
+
+## Why not a plain Valtio proxy?
+
+A `proxy()` lives at module scope. Two `<Modal>` instances or two `<DataGrid>` instances would share one proxy and stomp on each other. `createContextStore` defers proxy creation to the `Provider`, so each mount gets its own instance — without drilling props through the tree.
+
+## Coming from `@ez-kit/zu-store`?
+
+Both kits expose `createContextStore` for cross-kit familiarity, but the read/write model differs:
+
+|              | `zu-store` (Zustand)                      | `va-store` (Valtio)                |
+| ------------ | ----------------------------------------- | ---------------------------------- |
+| Read         | `useSelector(selector)` → slice           | `useSnapshot()` → tracked snapshot |
+| Write        | actions call `set(...)`                   | mutate the proxy: `state.count++`  |
+| `useStore()` | raw `StoreApi`                            | the raw mutable proxy              |
+| Selectors    | yes (`useSelector`, `useShallowSelector`) | none — tracking is automatic       |
+
+The raw handle carries the same name in both kits (`useStore()`); only the read hook differs, because selector-based reads and auto-tracked snapshots are genuinely different models.

@@ -1,0 +1,101 @@
+---
+title: Custom adapter
+description: Teach the engine a new substrate by writing a SourcePort — get / set / subscribe over Keyed. Two shapes, ambient and render-scoped.
+---
+
+# Custom adapter
+
+Every source — URL, localStorage, IndexedDB — is just an adapter over the same `SourcePort`. Writing your own (a cookie, a REST endpoint, a WebSocket, a test double) is the same small contract. Every live demo in these docs runs on a custom in-memory adapter.
+
+## The interchange: `Keyed`
+
+The engine speaks exactly one language: `Keyed = Map<string, string>` — a logical key mapped to an **already-stringified** value. Parsers run inside the engine, so your adapter never sees typed values, Dates, or BigInts — only strings it can pack however the substrate needs.
+
+## The port
+
+```ts
+import type { CommitCtx, Keyed, SourcePort } from '@ez-kit/va-store/persist'
+
+type SourcePort = {
+	get(): Keyed | Promise<Keyed> // read the substrate (async allowed — IndexedDB)
+	set(desired: Keyed, ctx: CommitCtx): void | Promise<void> // commit the store's keys
+	subscribe?(onChange: () => void): () => void // external changes (ambient only)
+}
+```
+
+`CommitCtx` gives `set` what it needs beyond the values: `fields` (the descriptors, to read per-field `key`/`meta`), `diff` (`{ set, removed }` — which keys to touch or delete, useful for granular or async writes), and `meta` (per-commit data, e.g. `{ history }` for the URL).
+
+## Two shapes
+
+There are two adapter families, unified only at the port:
+
+|                  | Ambient (storage-like)       | Render-scoped (router-like)       |
+| ---------------- | ---------------------------- | --------------------------------- |
+| State location   | reachable anywhere           | only in render (hooks)            |
+| You ship         | a ready `port`               | a `usePort()` hook                |
+| External changes | `subscribe` (e.g. cross-tab) | provider re-renders → `changeKey` |
+
+### Ambient adapters
+
+Ship an object with `source` and a ready `port`. This complete in-memory adapter (one JSON blob) is what the storage demos use:
+
+```tsx
+import type { AmbientAdapter, CommitCtx, Keyed, SourcePort } from '@ez-kit/va-store/persist'
+
+function createMemoryStorageAdapter(source: string): AmbientAdapter {
+	let blob = ''
+	const port: SourcePort = {
+		get(): Keyed {
+			const keyed: Keyed = new Map()
+			if (blob) for (const [k, v] of Object.entries(JSON.parse(blob) as Record<string, string>)) keyed.set(k, v)
+			return keyed
+		},
+		set(desired: Keyed, _ctx: CommitCtx): void {
+			blob = desired.size === 0 ? '' : JSON.stringify(Object.fromEntries(desired))
+		},
+		// Report only EXTERNAL changes; never notify your own writes or they echo back as a pull.
+		subscribe: () => () => undefined,
+	}
+	return { source, port }
+}
+```
+
+Then mount it and target it from a field whose `source` matches:
+
+```tsx
+const memory = createMemoryStorageAdapter('localStorage')
+<PersistProvider adapters={[memory]}>…</PersistProvider>
+```
+
+### Render-scoped (URL) adapters
+
+When the substrate is only reachable through hooks (a router), ship a `usePort()` that returns a stable port plus a `changeKey` that changes when the substrate changes externally (so the provider knows to pull). The URL source provides `createUrlPort(driver)` so you only supply `read`/`commit`:
+
+```tsx
+import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '@ez-kit/va-store/persist/url'
+import type { RenderScopedAdapter, SyncSourcePort } from '@ez-kit/va-store/persist'
+
+const myRouterAdapter: RenderScopedAdapter = {
+	source: URL_SOURCE,
+	mergeMeta: urlMetaMerge, // any `push` in a coalesced batch wins
+	defaultMeta: { history: UrlHistory.Replace },
+	usePort() {
+		const router = useMyRouter()
+		const portRef = useRef<SyncSourcePort | null>(null)
+		portRef.current ??= createUrlPort({
+			read: () => new URLSearchParams(router.search),
+			commit: (next, history) => router.navigate(`?${next}`, { replace: history === UrlHistory.Replace }),
+		})
+		return { port: portRef.current, changeKey: router.search }
+	},
+}
+```
+
+Keep the port instance stable across renders (a `ref`); the provider reads `adapters` once, so its length and order must be stable too.
+
+## Checklist
+
+- `get()` returns the substrate as `Keyed`; unknown/foreign keys you don't own should be preserved on `set`.
+- `set()` honors `ctx.diff.removed` to delete keys, and is best-effort (never throw into render).
+- `subscribe` reports **external** changes only — the writing context must not notify itself.
+- Async (`Promise`) returns are fine; they keep that source's engine independent of the synchronous ones.

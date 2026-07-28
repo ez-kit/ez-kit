@@ -1,0 +1,163 @@
+---
+title: createCachedStore
+description: Keep a Valtio store alive across Provider unmount/remount — in memory, keyed by name — so filters, pagination, and in-progress edits survive navigation without persisting to storage.
+---
+
+# `createCachedStore`
+
+`createContextStore` (and the plugin-capable `createStore`) creates a fresh proxy on `Provider` mount and throws it away on unmount. That is exactly right for a modal or a one-off form — but not for a table whose filters and pagination should still be there when the user navigates away and back.
+
+`createCachedStore` is a **separate, opt-in** primitive that keeps the whole live proxy alive in an in-memory cache, keyed by a name you choose. Cache-hits return the **same** proxy object, so in-progress mutations survive unmount/remount within `gcTime`. `createContextStore` and `createStore` are unchanged.
+
+The cache surface mirrors [`@ez-kit/zu-store`](./zu-store/store-cache) name-for-name — `createStoreCache` / `createCachedStore` / `CacheProvider` / `CacheScope` / `useCache` / `useCacheKeys`. The package ships a **ready-made default cache**: import `CacheProvider` and `createCachedStore` directly and you are done; no instance to create.
+
+## Keep-alive in action
+
+Close the table (its `Provider` unmounts) and reopen it — the filter and page are exactly where you left them, because the proxy was kept alive in the cache.
+
+<LivePreview
+	path='va-store/cache-keep-alive'
+	title='State survives unmount/remount'
+/>
+
+## Quick start
+
+Two steps: define a named store group, then mount the cache boundary once.
+
+```tsx
+import { CacheProvider, createCachedStore } from '@ez-kit/va-store'
+import { proxy } from 'valtio'
+
+type TableState = { filter: string; page: number }
+
+// 1. Define a named store group against the default cache.
+const usersTable = createCachedStore<TableState>(() => proxy<TableState>({ filter: 'all', page: 1 }), {
+	name: 'users-table',
+})
+
+// 2. Mount the cache boundary once, high in the tree.
+function App({ children }: { children: React.ReactNode }) {
+	return <CacheProvider>{children}</CacheProvider>
+}
+```
+
+Then mount the keyed `Provider` wherever the table lives. It survives unmount and is reused on remount:
+
+```tsx
+function UsersPage() {
+	return (
+		<usersTable.Provider id='users'>
+			<UsersTable />
+		</usersTable.Provider>
+	)
+}
+
+function UsersTable() {
+	const snap = usersTable.useSnapshot()
+	const store = usersTable.useStore() // the raw mutable proxy — mutate directly
+	return (
+		<input
+			value={snap.filter}
+			onChange={(event) => {
+				store.filter = event.target.value // survives navigating away and back
+			}}
+		/>
+	)
+}
+```
+
+`useSnapshot()`, `useStore()`, `Item`, and `StoreItem` behave exactly like [`createContextStore`](./va-store/create-context-store): read from the snapshot, mutate the proxy. There are no selectors — reading is `useSnapshot()`, writing is `useStore()`, and `StoreItem` is the write-only slot that never subscribes.
+
+## How it stays alive
+
+Each `<Provider>` is counted as an observer. When the **last** one unmounts, the proxy is kept for `gcTime`, then evicted. Remount within that window and you get the same proxy back. `gcTime` and `alwaysCache` are **birth-config** — fixed by the first mount that creates the entry; later mounts attach to the existing proxy and ignore them.
+
+```tsx
+<usersTable.Provider id='users' />              // cache default gcTime
+<usersTable.Provider id='users' gcTime={30_000} /> // this entry: 30s after last unmount
+<usersTable.Provider id='users' alwaysCache />  // never auto-evict
+```
+
+## `defaultValue` seeds once
+
+`defaultValue` seeds the proxy **only when the key is first created**. On remount of a live entry it is ignored — that is the whole point of keep-alive. Type the factory's `init` parameter and read `init.defaultValue` to use it.
+
+## Reading from anywhere
+
+The group exposes two cross-tree reads at an address `({ path?, id })`. Neither ever **creates** an entry, and neither keeps one alive.
+
+### `fromCache({ path, id })` — imperative
+
+An imperative get-if-alive that returns the live proxy or `undefined`. Use it in event handlers or non-React code:
+
+```tsx
+function ResetButton() {
+	return (
+		<button
+			onClick={() => {
+				const live = usersTable.fromCache({ id: 'users' })
+				if (live) {
+					live.filter = 'all'
+					live.page = 1
+				}
+			}}
+		>
+			Reset
+		</button>
+	)
+}
+```
+
+### `useFromCache({ path, id }, selector)` — reactive
+
+Reactively read a cached entry from **anywhere** — even a badge that is not inside the table's `Provider`. The selector receives the entry's **snapshot**, or `undefined` when no entry is live, so the component re-renders only when the fields it actually reads change:
+
+```tsx
+function ActiveFilterBadge() {
+	const filter = usersTable.useFromCache({ id: 'users' }, (snap) => snap?.filter ?? 'none')
+	return <span>{filter}</span>
+}
+```
+
+`useFromCache` is **passive** — it reflects the cache but does not keep the entry alive. Once the owning `Provider` unmounts and `gcTime` elapses, the entry is evicted and the reader's selector sees `undefined` again. Use `alwaysCache` if a reader must outlive its writer.
+
+`remove({ path?, id })` drops one entry immediately (overriding `alwaysCache`).
+
+## Inspecting and clearing
+
+`useCache()` exposes the active cache (`keys(prefix?)`, `clear(prefix?)`). `useCacheKeys(prefix?)` is the reactive inspection hook — it re-renders only when cache **membership** changes (entries added or removed):
+
+```tsx
+import { useCache, useCacheKeys } from '@ez-kit/va-store'
+
+function CacheBadge() {
+	const records = useCacheKeys() // [{ path, name, id }, ...]
+	return <span>{records.length} cached</span>
+}
+```
+
+## Namespacing with `Scope`
+
+A cache entry's identity has three axes: a **`path`** (where in the app it lives), the **`name`** (the group name), and the **`id`** (which instance). `CacheScope` contributes inherited `path` segments to every descendant `Provider`, so a reusable component mounted on two pages never collides. Nested `Scope`s concatenate (outermost first); the `path` prop on a `Provider` is appended after the inherited scope. This works exactly as it does in [`@ez-kit/zu-store`](./zu-store/store-cache#namespacing-with-scope).
+
+## Custom or multiple caches
+
+The default cache covers the common "one cache per app" case. For an **isolated** cache, **several independent** caches, or a custom default `gcTime`, build your own with `createStoreCache()`; it returns the same surface as instance members instead of top-level exports:
+
+```tsx
+import { createStoreCache } from '@ez-kit/va-store'
+import { proxy } from 'valtio'
+
+const sessionCache = createStoreCache({ gcTime: 30_000 })
+const draft = sessionCache.createCachedStore(() => proxy({ title: '' }), { name: 'draft' })
+
+function App() {
+	return <sessionCache.Provider>{/* … */}</sessionCache.Provider>
+}
+```
+
+A store group is **bound to the cache that created it** — mount it under that cache's `Provider`.
+
+## Cached **and** persisted
+
+Because `createCachedStore` accepts the same `plugins` as `createStore`, a cached store can ALSO carry the [`persist()`](./va-store/persist) plugin — kept alive in memory **and** mirrored to the URL or storage at once, under one `StoreProvider`. See [Persist → Cached stores](./va-store/persist/cache).

@@ -1,0 +1,116 @@
+{
+	"name": "@ez-kit/va-store",
+	"version": "0.0.0",
+	"description": "Valtio-backed React context store with a source-agnostic persist engine.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/va-store"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/va-store#readme",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./persist": {
+			"types": "./dist/persist/index.d.ts",
+			"import": "./dist/persist/index.js"
+		},
+		"./persist/internals": {
+			"types": "./dist/persist/internals.d.ts",
+			"import": "./dist/persist/internals.js"
+		},
+		"./persist/storage": {
+			"types": "./dist/persist/storage/index.d.ts",
+			"import": "./dist/persist/storage/index.js"
+		},
+		"./persist/url": {
+			"types": "./dist/persist/url/index.d.ts",
+			"import": "./dist/persist/url/index.js"
+		},
+		"./persist/url/react-router": {
+			"types": "./dist/persist/url/react-router.d.ts",
+			"import": "./dist/persist/url/react-router.js"
+		},
+		"./persist/url/next": {
+			"types": "./dist/persist/url/next.d.ts",
+			"import": "./dist/persist/url/next.js"
+		},
+		"./persist/validators/zod": {
+			"types": "./dist/persist/validators/zod.d.ts",
+			"import": "./dist/persist/validators/zod.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"dependencies": {
+		"@ez-kit/store-core": "workspace:*"
+	},
+	"scripts": {
+		"build": "tsup",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "50 KB"
+		},
+		{
+			"path": "dist/persist/index.js",
+			"limit": "10 KB"
+		},
+		{
+			"path": "dist/persist/storage/index.js",
+			"limit": "3 KB"
+		},
+		{
+			"path": "dist/persist/url/index.js",
+			"limit": "3 KB"
+		},
+		{
+			"path": "dist/persist/url/react-router.js",
+			"limit": "2 KB"
+		}
+	],
+	"devDependencies": {
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"fake-indexeddb": "^6.2.5",
+		"next": "16.2.4",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4",
+		"react-router": "^7.9.0",
+		"valtio": "^2.3.2",
+		"zod": "^4.3.6"
+	},
+	"peerDependencies": {
+		"next": ">=14.0.0",
+		"react": ">=18.0.0",
+		"react-router": ">=6.0.0",
+		"valtio": ">=2.0.0",
+		"zod": ">=3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"next": {
+			"optional": true
+		},
+		"react-router": {
+			"optional": true
+		},
+		"zod": {
+			"optional": true
+		}
+	}
+}

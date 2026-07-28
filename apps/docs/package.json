@@ -30,7 +30,7 @@
 		"@ez-kit/form-react": "workspace:*",
 		"@ez-kit/form-shadcn": "workspace:*",
 		"@ez-kit/twc": "workspace:*",
-		"@ez-kit/valtio-kit": "workspace:*",
+		"@ez-kit/va-store": "workspace:*",
 		"@ez-kit/zu-store": "workspace:*",
 		"@heroui/react": "^3.0.3",
 		"@heroui/styles": "^3.0.3",
