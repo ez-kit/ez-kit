@@ -82,26 +82,28 @@ const q = useQuery({
 	placeholderData: keepPreviousData,
 })
 
-<DataGrid
-	data={q.data?.rows ?? []}
-	columns={columns}
-	state={{
-		loading: {
-			isPending: q.isPending,
-			isFetching: q.isFetching,
-			isError: q.isError,
-			error: q.error,
-		},
-		pagination: { pageIndex, pageSize },
-		sorting,
-		columnFilters,
-		globalFilter,
-	}}
-	pagination={{ manual: true, rowCount: q.data?.rowCount ?? 0, onChange }}
-	sorting={{ manual: true, onChange }}
-	filtering={{ manual: true, onChange }}
-	globalFiltering={{ onChange }}
-/>
+return (
+	<DataGrid
+		data={q.data?.rows ?? []}
+		columns={columns}
+		state={{
+			loading: {
+				isPending: q.isPending,
+				isFetching: q.isFetching,
+				isError: q.isError,
+				error: q.error,
+			},
+			pagination: { pageIndex, pageSize },
+			sorting,
+			columnFilters,
+			globalFilter,
+		}}
+		pagination={{ manual: true, rowCount: q.data?.rowCount ?? 0, onChange }}
+		sorting={{ manual: true, onChange }}
+		filtering={{ manual: true, onChange }}
+		globalFiltering={{ onChange }}
+	/>
+)
 ```
 
 React Query handles deduplication, caching, and background refetch — you only need to forward the status fields.
