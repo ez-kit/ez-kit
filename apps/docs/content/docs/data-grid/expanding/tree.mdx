@@ -11,13 +11,13 @@ When your data is hierarchical (folders, org charts, BOMs), render it as a tree.
 
 <DataGridDocsExample exampleId='expanding-tree' />
 
-```ts
-const grid = useDataGrid({
-	data, // each row has optional `children: TRow[]`
-	columns,
-	enableExpanding: true,
-	getSubRows: (row) => row.children,
-})
+```tsx
+<DataGrid
+	data={data} // each row has optional `children: TRow[]`
+	columns={columns}
+	enableExpanding
+	getSubRows={(row) => row.children}
+/>
 ```
 
 ## Options

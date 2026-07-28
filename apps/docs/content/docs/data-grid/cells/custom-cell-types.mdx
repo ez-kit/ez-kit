@@ -29,18 +29,18 @@ export const statusCell = defineCellType({
 
 Then extend the grid with it:
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns: defineColumns<Order>([
+```tsx
+<DataGrid
+	data={data}
+	columns={defineColumns<Order>([
 		{
 			id: 'status',
 			accessorKey: 'status',
 			meta: { cellType: 'status', toneMap: { active: 'positive', cancelled: 'critical' } },
 		},
-	]),
-	cellTypes: [statusCell],
-})
+	])}
+	cellTypes={[statusCell]}
+/>
 ```
 
 ## More examples

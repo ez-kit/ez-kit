@@ -1,11 +1,11 @@
 ---
 title: Default Options
-description: Set data grid options once — app-wide or baked into a kit — instead of repeating them at every useDataGrid call site. Instance config always wins.
+description: Set data grid options once — app-wide or baked into a kit — instead of repeating them on every grid. Instance config always wins.
 ---
 
 # Default Options
 
-By default every grid declares its own feature config at the `useDataGrid` call site. When most grids in an app share the same options — page size, sort behavior, fallbacks, sticky header — repeating them everywhere is noise. Default options let you set them **once** and override per-grid only where it matters.
+By default every grid declares its own feature config in its own props. When most grids in an app share the same options — page size, sort behavior, fallbacks, sticky header — repeating them everywhere is noise. Default options let you set them **once** and override per-grid only where it matters.
 
 Two layers supply defaults; both merge **under** each instance's own config, so **the instance always wins**:
 
@@ -14,7 +14,7 @@ Two layers supply defaults; both merge **under** each instance's own config, so 
 
 ## App-level: `DataGridOptionsProvider`
 
-Wrap any part of your tree. Every `useDataGrid` call beneath the provider inherits its `defaults`, merged under the grid's own config.
+Wrap any part of your tree. Every grid beneath the provider inherits its `defaults`, merged under the grid's own config.
 
 <DataGridDocsExample exampleId='default-options' />
 
@@ -34,14 +34,24 @@ function App() {
 }
 
 function UsersGrid() {
-	const table = useDataGrid({ data, columns })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+		/>
+	)
 }
 
 function AuditGrid() {
 	// Deep-merged over the defaults: pageSize wins, sorting is turned off.
-	const table = useDataGrid({ data, columns, sorting: false, pagination: { pageSize: 5 } })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			sorting={false}
+			pagination={{ pageSize: 5 }}
+		/>
+	)
 }
 ```
 
@@ -100,7 +110,7 @@ factory defaultOptions  <  provider defaults  <  instance config
 
 ### What can be defaulted
 
-`DataGridDefaultOptions<TRow>` is the mergeable subset of `useDataGrid` config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `columnVisibility`, `expanding`, `pinning`, `sizing`, `stickyHeader`, `fallbacks`, …).
+`DataGridDefaultOptions<TRow>` is the mergeable subset of a grid's config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `columnVisibility`, `expanding`, `pinning`, `sizing`, `stickyHeader`, `fallbacks`, …).
 
 It **excludes** the per-instance inputs that are meaningless as shared defaults:
 
@@ -113,12 +123,12 @@ It **excludes** the per-instance inputs that are meaningless as shared defaults:
 
 ## When to use which
 
-| Need                                              | Reach for                                |
-| ------------------------------------------------- | ---------------------------------------- |
-| App-wide defaults, set in your own app tree       | `DataGridOptionsProvider`                |
-| A subtree that refines app defaults               | Nested `DataGridOptionsProvider`         |
-| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaultOptions })`     |
-| One-off options for a single grid                 | Plain `useDataGrid` config (always wins) |
+| Need                                              | Reach for                              |
+| ------------------------------------------------- | -------------------------------------- |
+| App-wide defaults, set in your own app tree       | `DataGridOptionsProvider`              |
+| A subtree that refines app defaults               | Nested `DataGridOptionsProvider`       |
+| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaultOptions })`   |
+| One-off options for a single grid                 | Props on that `DataGrid` (always wins) |
 
 ## Source
 

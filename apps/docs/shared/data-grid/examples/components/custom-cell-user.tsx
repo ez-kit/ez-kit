@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { CustomDataGrid, useDataGrid } from 'shared/data-grid/CustomGrid'
+import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
 type Member = {
 	id: number
@@ -29,17 +29,17 @@ const memberColumns = defineColumns<Member>([
 export function CustomCellUserExample() {
 	const [data, setData] = useState(MEMBER_DATA)
 
-	const table = useDataGrid({
-		data,
-		columns: memberColumns,
-		sorting: true,
-		editing: {
-			mode: 'row',
-			onSave: ({ rowId, values }) => {
-				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
-			},
-		},
-	})
-
-	return <CustomDataGrid table={table} />
+	return (
+		<CustomDataGrid
+			data={data}
+			columns={memberColumns}
+			sorting
+			editing={{
+				mode: 'row',
+				onSave: ({ rowId, values }) => {
+					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
+				},
+			}}
+		/>
+	)
 }

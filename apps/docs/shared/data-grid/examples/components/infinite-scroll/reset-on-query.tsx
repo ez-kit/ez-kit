@@ -1,6 +1,6 @@
 'use client'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { columns } from '../_data'
 
@@ -15,20 +15,20 @@ import { usePagedUsers } from './_use-paged-users'
 export function InfiniteScrollResetExample() {
 	const { data, state, hasNextPage, onLoadMore, reset } = usePagedUsers()
 
-	const table = useDataGrid({
-		data,
-		columns,
-		state,
-		stickyHeader: true,
-		sorting: {
-			manual: true,
-			onChange: (sorting) => {
-				const first = sorting[0]
-				void reset(first ? { id: first.id, desc: first.desc } : undefined)
-			},
-		},
-		pagination: { mode: 'infinite', hasNextPage, onLoadMore },
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			state={state}
+			stickyHeader
+			sorting={{
+				manual: true,
+				onChange: (sorting) => {
+					const first = sorting[0]
+					void reset(first ? { id: first.id, desc: first.desc } : undefined)
+				},
+			}}
+			pagination={{ mode: 'infinite', hasNextPage, onLoadMore }}
+		/>
+	)
 }

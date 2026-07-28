@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { EMPLOYEE_DATA, type Employee } from './_data'
 
@@ -25,6 +25,11 @@ const columns = defineColumns<Employee>([
 ])
 
 export function FilterOperatorsBetweenSliderExample() {
-	const table = useDataGrid({ data: EMPLOYEE_DATA, columns, filtering: true })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={EMPLOYEE_DATA}
+			columns={columns}
+			filtering
+		/>
+	)
 }

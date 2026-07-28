@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { PRODUCT_DATA, type Product } from './_data'
 
@@ -45,12 +45,12 @@ const colPinColumns = defineColumns<Product>([
 export function ColumnPinningExample() {
 	const [data] = useState(PRODUCT_DATA)
 
-	const table = useDataGrid({
-		data,
-		columns: colPinColumns,
-		sorting: true,
-		pinning: { column: true },
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={colPinColumns}
+			sorting
+			pinning={{ column: true }}
+		/>
+	)
 }

@@ -17,35 +17,35 @@ Every data operation — sort, filter, global search, pagination — is delegate
 
 Enable `manual: true` on each feature you want to delegate. The grid will update its internal state immediately for instant UI feedback, then call the corresponding `onChange` handler so you can fire the matching API request.
 
-```ts
-const table = useDataGrid({
-	data,
-	columns,
-	pagination: {
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{
 		manual: true,
 		rowCount, // total rows — TanStack derives pageCount automatically
 		onChange: ({ pageIndex, pageSize }) => fetchPage({ pageIndex, pageSize }),
-	},
-	sorting: {
+	}}
+	sorting={{
 		manual: true,
 		onChange: (sorting) => fetchPage({ sorting }),
-	},
-	filtering: {
+	}}
+	filtering={{
 		manual: true,
 		onChange: (columnFilters) => fetchPage({ columnFilters }),
-	},
+	}}
 	// Global search is made server-side by `filtering.manual` above — there is
 	// no separate `globalFiltering.manual` flag.
-	globalFiltering: {
+	globalFiltering={{
 		onChange: (globalFilter) => fetchPage({ globalFilter }),
-	},
-	state: {
+	}}
+	state={{
 		pagination: { pageIndex, pageSize },
 		sorting,
 		columnFilters,
 		globalFilter,
-	},
-})
+	}}
+/>
 ```
 
 ## Loading status
@@ -82,10 +82,10 @@ const q = useQuery({
 	placeholderData: keepPreviousData,
 })
 
-const table = useDataGrid({
-	data: q.data?.rows ?? [],
-	columns,
-	state: {
+<DataGrid
+	data={q.data?.rows ?? []}
+	columns={columns}
+	state={{
 		loading: {
 			isPending: q.isPending,
 			isFetching: q.isFetching,
@@ -96,14 +96,12 @@ const table = useDataGrid({
 		sorting,
 		columnFilters,
 		globalFilter,
-	},
-	pagination: { manual: true, rowCount: q.data?.rowCount ?? 0, onChange },
-	sorting: { manual: true, onChange },
-	filtering: { manual: true, onChange },
-	globalFiltering: { onChange },
-})
-
-return <DataGrid table={table} />
+	}}
+	pagination={{ manual: true, rowCount: q.data?.rowCount ?? 0, onChange }}
+	sorting={{ manual: true, onChange }}
+	filtering={{ manual: true, onChange }}
+	globalFiltering={{ onChange }}
+/>
 ```
 
 React Query handles deduplication, caching, and background refetch — you only need to forward the status fields.
@@ -145,14 +143,16 @@ async function doFetch() {
 	}
 }
 
-const table = useDataGrid({
-	data: rows,
-	columns,
-	state: {
-		loading: { isPending, isFetching, isError, error },
-		/* … */
-	},
-})
+return (
+	<DataGrid
+		data={rows}
+		columns={columns}
+		state={{
+			loading: { isPending, isFetching, isError, error },
+			/* … */
+		}}
+	/>
+)
 ```
 
 ## Refetch overlay

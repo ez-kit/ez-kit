@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Employee = {
 	id: number
@@ -61,21 +61,23 @@ const withOperatorsColumns = defineColumns<Employee>([
 ])
 
 export function FilterPopoverBasicExample() {
-	const table = useDataGrid({
-		data: DATA,
-		columns: basicColumns,
-		filtering: { variant: 'popover' },
-		sorting: true,
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={basicColumns}
+			filtering={{ variant: 'popover' }}
+			sorting
+		/>
+	)
 }
 
 export function FilterPopoverOperatorsExample() {
-	const table = useDataGrid({
-		data: DATA,
-		columns: withOperatorsColumns,
-		filtering: { variant: 'popover' },
-		sorting: true,
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={withOperatorsColumns}
+			filtering={{ variant: 'popover' }}
+			sorting
+		/>
+	)
 }

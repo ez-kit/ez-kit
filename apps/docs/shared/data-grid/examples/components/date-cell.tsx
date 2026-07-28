@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Milestone = {
 	id: number
@@ -49,48 +49,55 @@ const baseColumns = defineColumns<Milestone>([
 ])
 
 export function DateCellViewExample() {
-	const table = useDataGrid({ data: INITIAL_DATA, columns: baseColumns, filtering: true })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={INITIAL_DATA}
+			columns={baseColumns}
+			filtering
+		/>
+	)
 }
 
 export function DateCellEditExample() {
 	const [rows, setRows] = useState<Milestone[]>(INITIAL_DATA)
-	const table = useDataGrid({
-		data: rows,
-		columns: baseColumns,
-		getRowId: (row) => String(row.id),
-		filtering: true,
-		editing: {
-			mode: 'cell',
-			onSave: ({ rowId, values }) => {
-				setRows((prev) => prev.map((row) => (String(row.id) === rowId ? { ...row, ...values } : row)))
-			},
-		},
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={rows}
+			columns={baseColumns}
+			getRowId={(row) => String(row.id)}
+			filtering
+			editing={{
+				mode: 'cell',
+				onSave: ({ rowId, values }) => {
+					setRows((prev) => prev.map((row) => (String(row.id) === rowId ? { ...row, ...values } : row)))
+				},
+			}}
+		/>
+	)
 }
 
 export function DateCellCreateExample() {
 	const [rows, setRows] = useState<Milestone[]>(INITIAL_DATA)
-	const table = useDataGrid({
-		data: rows,
-		columns: baseColumns,
-		getRowId: (row) => String(row.id),
-		creating: {
-			mode: 'row',
-			onSave: ({ values }) => {
-				const next = values as Partial<Omit<Milestone, 'id'>>
-				setRows((prev) => [
-					...prev,
-					{
-						id: prev.length + 1,
-						title: next.title ?? '',
-						dueDate: next.dueDate ?? '',
-						completedAt: next.completedAt,
-					},
-				])
-			},
-		},
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={rows}
+			columns={baseColumns}
+			getRowId={(row) => String(row.id)}
+			creating={{
+				mode: 'row',
+				onSave: ({ values }) => {
+					const next = values as Partial<Omit<Milestone, 'id'>>
+					setRows((prev) => [
+						...prev,
+						{
+							id: prev.length + 1,
+							title: next.title ?? '',
+							dueDate: next.dueDate ?? '',
+							completedAt: next.completedAt,
+						},
+					])
+				},
+			}}
+		/>
+	)
 }

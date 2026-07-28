@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import type { DateRangePreset } from '@ez-kit/data-grid-react'
 
@@ -88,16 +88,31 @@ const customPresetsColumns = defineColumns<Release>([
 ])
 
 export function FilterDateRangeBuiltInExample() {
-	const table = useDataGrid({ data: DATA, columns: presetsBuiltInColumns, filtering: true })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={presetsBuiltInColumns}
+			filtering
+		/>
+	)
 }
 
 export function FilterDateRangeCalendarExample() {
-	const table = useDataGrid({ data: DATA, columns: calendarColumns, filtering: true })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={calendarColumns}
+			filtering
+		/>
+	)
 }
 
 export function FilterDateRangeCustomExample() {
-	const table = useDataGrid({ data: DATA, columns: customPresetsColumns, filtering: true })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={customPresetsColumns}
+			filtering
+		/>
+	)
 }

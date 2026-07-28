@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { CustomDataGrid, useDataGrid } from 'shared/data-grid/CustomGrid'
+import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
 type LineItem = {
 	id: number
@@ -29,17 +29,17 @@ const lineItemColumns = defineColumns<LineItem>([
 export function CustomCellCurrencyExample() {
 	const [data, setData] = useState(LINE_ITEM_DATA)
 
-	const table = useDataGrid({
-		data,
-		columns: lineItemColumns,
-		sorting: true,
-		editing: {
-			mode: 'row',
-			onSave: ({ rowId, values }) => {
-				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
-			},
-		},
-	})
-
-	return <CustomDataGrid table={table} />
+	return (
+		<CustomDataGrid
+			data={data}
+			columns={lineItemColumns}
+			sorting
+			editing={{
+				mode: 'row',
+				onSave: ({ rowId, values }) => {
+					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
+				},
+			}}
+		/>
+	)
 }

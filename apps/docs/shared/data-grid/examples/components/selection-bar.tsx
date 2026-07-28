@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA } from './_data'
 
@@ -14,52 +14,50 @@ export function SelectionBarExample() {
 		setLog((prev) => [`${new Date().toLocaleTimeString()} — ${msg}`, ...prev].slice(0, 5))
 	}
 
-	const table = useDataGrid({
-		data,
-		columns,
-		sorting: true,
-		pagination: { pageSize: 10 },
-		selection: {
-			panel: {
-				onDelete: ({ selectedRows, clearSelection }) => {
-					const names = selectedRows.map((r) => r.original.name).join(', ')
-					setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
-					clearSelection()
-					addLog(`Deleted: ${names}`)
-				},
-				onClear: ({ clearSelection }) => {
-					clearSelection()
-					addLog('Selection cleared')
-				},
-				actions: (
-					<button
-						type='button'
-						onClick={() => {
-							addLog('Export triggered')
-						}}
-						style={{
-							padding: '0 10px',
-							height: 28,
-							fontSize: 12,
-							border: '1px solid #e2e8f0',
-							borderRadius: 6,
-							background: 'white',
-							// The background is hardcoded, so the text colour must be too — otherwise it
-							// inherits the bar's foreground and goes white-on-white in the dark theme.
-							color: '#0f172a',
-							cursor: 'pointer',
-						}}
-					>
-						Export
-					</button>
-				),
-			},
-		},
-	})
-
 	return (
 		<div>
-			<DataGrid table={table} />
+			<DataGrid
+				data={data}
+				columns={columns}
+				sorting
+				pagination={{ pageSize: 10 }}
+				selection={{
+					panel: {
+						onDelete: ({ selectedRows, clearSelection }) => {
+							const names = selectedRows.map((r) => r.original.name).join(', ')
+							setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
+							clearSelection()
+							addLog(`Deleted: ${names}`)
+						},
+						onClear: ({ clearSelection }) => {
+							clearSelection()
+							addLog('Selection cleared')
+						},
+						actions: (
+							<button
+								type='button'
+								onClick={() => {
+									addLog('Export triggered')
+								}}
+								style={{
+									padding: '0 10px',
+									height: 28,
+									fontSize: 12,
+									border: '1px solid #e2e8f0',
+									borderRadius: 6,
+									background: 'white',
+									// The background is hardcoded, so the text colour must be too — otherwise it
+									// inherits the bar's foreground and goes white-on-white in the dark theme.
+									color: '#0f172a',
+									cursor: 'pointer',
+								}}
+							>
+								Export
+							</button>
+						),
+					},
+				}}
+			/>
 
 			{log.length > 0 && (
 				<div
