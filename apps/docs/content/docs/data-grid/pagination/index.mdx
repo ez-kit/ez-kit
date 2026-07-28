@@ -13,14 +13,14 @@ The "full" example below demonstrates pagination alongside sort and filter:
 
 <DataGridDocsExample exampleId='base-full' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	initialState: {
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	initialState={{
 		pagination: { pageIndex: 0, pageSize: 10 },
-	},
-})
+	}}
+/>
 ```
 
 ```tsx
@@ -41,12 +41,12 @@ first and last pages, a window around the current page, and an ellipsis for each
 
 <DataGridDocsExample exampleId='pagination-variant-numbered' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	pagination: { pageSize: 10, variant: 'numbered' },
-})
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{ pageSize: 10, variant: 'numbered' }}
+/>
 ```
 
 Tune the window with `siblings` (pages either side of the current one) and `boundaries` (pages
@@ -115,19 +115,19 @@ applies to a **trusted** zero: a manual grid with an unknown total (neither `row
 
 Pass controlled pagination state, set `manualPagination: true`, and supply `rowCount`:
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	manualPagination: true,
-	rowCount: total,
-	state: { pagination: { pageIndex, pageSize } },
-	onPaginationChange: (updater) => {
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	manualPagination
+	rowCount={total}
+	state={{ pagination: { pageIndex, pageSize } }}
+	onPaginationChange={(updater) => {
 		const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater
 		setPagination(next)
 		fetchPage(next.pageIndex, next.pageSize)
-	},
-})
+	}}
+/>
 ```
 
 ## Options

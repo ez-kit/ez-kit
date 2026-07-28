@@ -19,25 +19,30 @@ Width updates only after release — no re-renders during drag.
 
 <DataGridDocsExample exampleId='resizing-on-end' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	enableColumnResizing: true,
-	columnResizeMode: 'onChange', // or 'onEnd'
-})
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	sizing={{ mode: 'onChange' }} // or 'onEnd'
+/>
 ```
+
+A bare `sizing` prop enables resizing with the defaults.
 
 ## Options
 
-| Option                                    | Type                     | Description                                                                                                                                               |
-| ----------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enableColumnResizing`                    | `boolean`                | Master switch. Default `false`.                                                                                                                           |
-| `columnResizeMode`                        | `'onChange' \| 'onEnd'`  | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters. |
-| Per-column `size` / `minSize` / `maxSize` | `number`                 | Constrain individual columns.                                                                                                                             |
-| `state.columnSizing`                      | `Record<string, number>` | Controlled sizing state.                                                                                                                                  |
-| `onColumnSizingChange`                    | `(updater) => void`      | Subscribe to size changes for persistence.                                                                                                                |
+| Option                                    | Type                      | Description                                                                                                                                               |
+| ----------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sizing`                                  | `boolean \| SizingConfig` | Master switch. Default off. `true` uses the defaults below.                                                                                               |
+| `sizing.mode`                             | `'onChange' \| 'onEnd'`   | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters. |
+| `sizing.direction`                        | `'ltr' \| 'rtl'`          | Text direction used for the resize calculation. Default `'ltr'`.                                                                                          |
+| Per-column `size` / `minSize` / `maxSize` | `number`                  | Constrain individual columns. Set `enableResizing: false` on a column to pin it.                                                                          |
+| `state.columnSizing`                      | `Record<string, number>`  | Controlled sizing state, as part of the grid's single controlled-state object.                                                                            |
+| `onStateChange`                           | `(updater) => void`       | Fires on every state change, including sizing. Apply the updater to your own state to persist sizes.                                                      |
+
+Sizing is controlled through the grid's one state object rather than a sizing-specific handler — see [controlled state](/docs/data-grid/controlled-state). `columnSizing` is also persisted by default, so [state persistence](/docs/data-grid/state-persistence) restores column widths without any wiring.
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/types.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/header.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/header.tsx)

@@ -21,15 +21,15 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 
 <DataGridDocsExample exampleId='filter-popover-operators' />
 
-```ts
-const grid = useDataGrid({
-	data,
-	columns,
-	enableColumnFilters: true,
-	initialState: {
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	enableColumnFilters
+	initialState={{
 		columnFilters: [{ id: 'status', value: 'active' }],
-	},
-})
+	}}
+/>
 ```
 
 ## Options

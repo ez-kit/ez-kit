@@ -1,11 +1,11 @@
 ---
 title: Column Helper
-description: Define columns with full type inference, declarative meta, and registered cell types using the column helper.
+description: Define columns with full type inference, per-cell-type factories, and registered cell types using the column helper.
 ---
 
 # Column Helper
 
-`createColumnHelper<TRow>()` returns a builder that gives you typed column factories — you get autocomplete on accessor keys, inferred cell types, and a clean place to register meta/options.
+`createColumnHelper<TRow>()` returns a builder that gives you typed column factories — you get autocomplete on accessor keys, the right `cell.type` set for you, and a clean place to declare each column's config and options.
 
 ## Base usage
 
@@ -14,14 +14,16 @@ description: Define columns with full type inference, declarative meta, and regi
 ```ts
 import { createColumnHelper } from '@ez-kit/data-grid-react'
 
-const helper = createColumnHelper<User>()
+const helper = createColumnHelper<Employee>()
 
 const columns = [
-	helper.accessor('name', { header: 'Name' }),
-	helper.accessor('email', { header: 'Email' }),
-	helper.display({ id: 'actions', cell: ({ row }) => <RowMenu row={row} /> }),
+	helper.text({ accessorKey: 'name', header: 'Name' }),
+	helper.progress({ accessorKey: 'score', header: 'Score %', config: { max: 100 } }),
+	helper.boolean({ accessorKey: 'active', header: 'Active' }),
 ]
 ```
+
+There is one factory per built-in cell type: `text`, `number`, `date`, `boolean`, `link`, `select`, `badge`, `image`, `progress`. Each returns a `ColumnDef` with `cell.type` already set, so you never write it by hand.
 
 ## Custom view
 
@@ -31,19 +33,81 @@ Use a custom cell renderer per column.
 
 ## Registered cell types
 
-When a column declares a registered cell-type id in `meta`, the engine resolves the renderer from the registry. See [Custom Cell Types](./data-grid/cells/custom-cell-types) for how to register one.
+A cell type is an id mapped to its renderers. Register it and the helper gains a method named after that id — `helper.rating({ … })` — which emits `cell: { type: 'rating' }` for you. Registration comes first: without it there is no method to call.
+
+### Step 1 — register the renderers
+
+Per grid, via the `cellTypes` prop. This is what the example below does, which is why its source panel shows the registry and the columns together:
+
+```tsx
+import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
+
+// StarRatingView / StarRatingInput are your own components — see the example's source below.
+const RATING_CELL_TYPES = {
+	rating: { view: StarRatingView, edit: StarRatingInput },
+} satisfies CellTypeRegistry
+```
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	cellTypes={RATING_CELL_TYPES}
+/>
+```
+
+Or once for a whole grid module, via `extendDataGrid()` from your UI kit — the usual choice in an app, since every grid built from the returned bundle inherits the types:
+
+```tsx
+import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
+
+const grid = extendDataGrid({
+	rating: { view: StarRatingView, edit: StarRatingInput },
+})
+
+export const { DataGrid, createColumnHelper, defineColumns } = grid
+```
+
+### Step 2 — build the columns
+
+The helper has to know which ids are registered. The bundle's own helper already does — it takes **no arguments** and is typed from the registry:
+
+```ts
+const helper = grid.createColumnHelper<Employee>()
+
+const columns = [
+	helper.text({ accessorKey: 'name', header: 'Name' }),
+	helper.rating({ accessorKey: 'rating', header: 'Rating' }),
+]
+```
+
+With the standalone `createColumnHelper` from `@ez-kit/data-grid-react` — as in the example, which registers per grid — pass the ids and the matching type parameter yourself. Derive both from the registry so they cannot drift apart:
+
+```ts
+type RatingCellType = keyof typeof RATING_CELL_TYPES
+
+const helper = createColumnHelper<Employee, RatingCellType>(Object.keys(RATING_CELL_TYPES) as RatingCellType[])
+```
 
 <DataGridDocsExample exampleId='column-helper-registered' />
 
+See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full renderer contract (`view` / `edit` / `creating` / `filter`).
+
 ## Options
 
-| Option                      | Type     | Description                                                              |
-| --------------------------- | -------- | ------------------------------------------------------------------------ |
-| `helper.accessor(key, def)` | builder  | Typed accessor column. `key` is `keyof TRow`.                            |
-| `helper.display(def)`       | builder  | Display-only column (no accessor); cell renderers are required.          |
-| `helper.group(def)`         | builder  | Header group containing nested columns.                                  |
-| `meta.cellType`             | `string` | If the column should be rendered by a registered cell type, set this id. |
+| Option                                     | Type                  | Description                                                                                    |
+| ------------------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------- |
+| `helper.text(opts)`                        | builder               | Accessor column rendered by the `text` cell type. Same shape for `number`, `boolean`, `link`.  |
+| `helper.date(opts)`                        | builder               | As above, plus an optional `config: DateCellConfig`.                                           |
+| `helper.select(opts)` / `helper.badge()`   | builder               | Require `config` (`SelectCellConfig` / `BadgeCellConfig`).                                     |
+| `helper.image(opts)` / `helper.progress()` | builder               | Optional `config` (`ImageCellConfig` / `ProgressCellConfig`).                                  |
+| `helper.custom(opts)`                      | builder               | Escape hatch: set `type`, `config`, and/or your own `view` / `editing` / `creating` renderers. |
+| `helper.<registeredId>(opts)`              | builder               | One per registered cell type — present only when the helper knows that id (see above).         |
+| `opts.accessorKey`                         | `keyof TRow & string` | The row field the column reads.                                                                |
+| `opts.config`                              | `object`              | Cell-type configuration, forwarded to the renderer as `config`.                                |
+
+`cell.type` is what the builders set for you; `meta.cellType` is the derived internal field the engine reads at render time, not something you author.
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/column-helper.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/column-helper.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/create-column-helper/create-column-helper.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/column/create-column-helper/create-column-helper.ts)

@@ -1,6 +1,6 @@
 'use client'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Employee = {
 	id: number
@@ -25,18 +25,18 @@ const DATA: Employee[] = [
 ]
 
 export function SortToolbarExample() {
-	const table = useDataGrid({
-		data: DATA,
-		columns: [
-			{ accessorKey: 'name', header: 'Name' },
-			{ accessorKey: 'department', header: 'Department' },
-			{ accessorKey: 'role', header: 'Role' },
-			{ accessorKey: 'salary', header: 'Salary', cell: { type: 'number' } },
-			{ accessorKey: 'startDate', header: 'Start Date', cell: { type: 'date' } },
-		],
-		// Enables Sort button in the toolbar — opens a popover to manage multi-sort
-		sorting: { toolbar: true },
-	})
-
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={[
+				{ accessorKey: 'name', header: 'Name' },
+				{ accessorKey: 'department', header: 'Department' },
+				{ accessorKey: 'role', header: 'Role' },
+				{ accessorKey: 'salary', header: 'Salary', cell: { type: 'number' } },
+				{ accessorKey: 'startDate', header: 'Start Date', cell: { type: 'date' } },
+			]}
+			// Enables Sort button in the toolbar — opens a popover to manage multi-sort
+			sorting={{ toolbar: true }}
+		/>
+	)
 }

@@ -29,10 +29,10 @@ const draftStore = createCachedStore(
 )
 
 function DraftForm() {
-	const title = draftStore.useStore((s) => s.title)
-	const body = draftStore.useStore((s) => s.body)
-	const setTitle = draftStore.useStore((s) => s.setTitle)
-	const setBody = draftStore.useStore((s) => s.setBody)
+	const title = draftStore.useSelector((s) => s.title)
+	const body = draftStore.useSelector((s) => s.body)
+	const setTitle = draftStore.useSelector((s) => s.setTitle)
+	const setBody = draftStore.useSelector((s) => s.setBody)
 
 	return (
 		<div className='flex flex-col gap-2 rounded-lg border border-fd-border bg-fd-card p-4'>

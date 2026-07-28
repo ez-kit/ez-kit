@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Employee = {
 	id: number
@@ -75,32 +75,32 @@ const columns = defineColumns<Employee>([
 ])
 
 export function ExpandingSubContentExample() {
-	const table = useDataGrid({
-		data: EMPLOYEES,
-		columns,
-		expanding: {
-			renderExpanded: ({ row }) => {
-				const emp = row.original
-				return (
-					<div className='gap-8 flex-wrap flex'>
-						<div>
-							<div className='mb-1 font-semibold'>Contact</div>
-							<div>{emp.email}</div>
-							<div>{emp.location}</div>
+	return (
+		<DataGrid
+			data={EMPLOYEES}
+			columns={columns}
+			expanding={{
+				renderExpanded: ({ row }) => {
+					const emp = row.original
+					return (
+						<div className='gap-8 flex-wrap flex'>
+							<div>
+								<div className='mb-1 font-semibold'>Contact</div>
+								<div>{emp.email}</div>
+								<div>{emp.location}</div>
+							</div>
+							<div>
+								<div className='mb-1 font-semibold'>Start Date</div>
+								<div>{emp.startDate}</div>
+							</div>
+							<div className='flex-1'>
+								<div className='mb-1 font-semibold'>Bio</div>
+								<div className='text-muted-foreground'>{emp.bio}</div>
+							</div>
 						</div>
-						<div>
-							<div className='mb-1 font-semibold'>Start Date</div>
-							<div>{emp.startDate}</div>
-						</div>
-						<div className='flex-1'>
-							<div className='mb-1 font-semibold'>Bio</div>
-							<div className='text-muted-foreground'>{emp.bio}</div>
-						</div>
-					</div>
-				)
-			},
-		},
-	})
-
-	return <DataGrid table={table} />
+					)
+				},
+			}}
+		/>
+	)
 }

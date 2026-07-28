@@ -11,7 +11,7 @@ Inline editing lets users update cells in place. Double-click a cell to enter ed
 
 <DataGridDocsExample exampleId='base-editing' />
 
-```ts
+```tsx
 const columns = defineColumns<User>([
 	{
 		id: 'email',
@@ -20,11 +20,11 @@ const columns = defineColumns<User>([
 	},
 ])
 
-const grid = useDataGrid({
-	data,
-	columns,
-	onCellEdit: ({ rowId, columnId, value }) => updateRow(rowId, { [columnId]: value }),
-})
+<DataGrid
+	data={data}
+	columns={columns}
+	onCellEdit={({ rowId, columnId, value }) => updateRow(rowId, { [columnId]: value })}
+/>
 ```
 
 ## Edit types

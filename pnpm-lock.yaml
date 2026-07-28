@@ -125,9 +125,9 @@ importers:
       '@ez-kit/twc':
         specifier: workspace:*
         version: link:../../packages/twc
-      '@ez-kit/valtio-kit':
+      '@ez-kit/va-store':
         specifier: workspace:*
-        version: link:../../packages/valtio-kit
+        version: link:../../packages/va-store
       '@ez-kit/zu-store':
         specifier: workspace:*
         version: link:../../packages/zu-store
@@ -309,7 +309,7 @@ importers:
         version: 3.0.3(@react-spectrum/provider@3.11.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tailwindcss@4.2.4)
       '@heroui/styles':
         specifier: ^3.0.3
-        version: 3.0.3(tailwind-merge@3.4.0)(tailwindcss@4.2.4)
+        version: 3.0.3(tailwind-merge@3.5.0)(tailwindcss@4.2.4)
       '@internationalized/date':
         specifier: ^3.5.0
         version: 3.12.1
@@ -589,7 +589,7 @@ importers:
         specifier: ^19.2.4
         version: 19.2.5(react@19.2.5)
 
-  packages/valtio-kit:
+  packages/va-store:
     dependencies:
       '@ez-kit/store-core':
         specifier: workspace:*

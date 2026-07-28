@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/docs",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"private": true,
 	"description": "Documentation site for ez-kit packages (Fumadocs + Next.js).",
 	"type": "module",
@@ -30,7 +30,7 @@
 		"@ez-kit/form-react": "workspace:*",
 		"@ez-kit/form-shadcn": "workspace:*",
 		"@ez-kit/twc": "workspace:*",
-		"@ez-kit/valtio-kit": "workspace:*",
+		"@ez-kit/va-store": "workspace:*",
 		"@ez-kit/zu-store": "workspace:*",
 		"@heroui/react": "^3.0.3",
 		"@heroui/styles": "^3.0.3",

@@ -36,11 +36,11 @@ describe('createStoreCache — provider & context', () => {
 		const table = cache.createCachedStore(tableFactory, { name: 'isolate-1' })
 
 		function Reader({ id }: { id: string }) {
-			const filter = table.useStore((s) => s.filter)
+			const filter = table.useSelector((s) => s.filter)
 			return <span data-testid={id}>{filter}</span>
 		}
 		function SetButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -85,7 +85,7 @@ describe('createStoreCache — provider & context', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'isolate-2' })
 		function Consumer() {
-			table.useStore((s) => s.filter)
+			table.useSelector((s) => s.filter)
 			return null
 		}
 		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrowError(
@@ -130,7 +130,7 @@ describe('createStoreCache — namespacing & seeding', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'seed-1' })
 		function Reader() {
-			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
+			return <span data-testid='r'>{table.useSelector((s) => s.filter)}</span>
 		}
 
 		render(
@@ -204,8 +204,8 @@ describe('createStoreCache — path namespacing via Scope', () => {
 		const table = cache.createCachedStore(tableFactory, { name: 'scope-collide' })
 
 		function UserTable({ id }: { id: string }) {
-			const filter = table.useStore((s) => s.filter)
-			const setFilter = table.useStore((s) => s.setFilter)
+			const filter = table.useSelector((s) => s.filter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -268,10 +268,10 @@ describe('createStoreCache — path namespacing via Scope', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'scope-reresolve' })
 		function FilterView() {
-			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
+			return <span data-testid='r'>{table.useSelector((s) => s.filter)}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -317,10 +317,10 @@ describe('createStoreCache — keep-alive', () => {
 		const table = cache.createCachedStore(tableFactory, { name: 'keepalive-1' })
 
 		function FilterView() {
-			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
+			return <span data-testid='r'>{table.useSelector((s) => s.filter)}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -381,10 +381,10 @@ describe('createStoreCache — keep-alive', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'keepalive-2' })
 		function FilterView({ id }: { id: string }) {
-			return <span data-testid={id}>{table.useStore((s) => s.filter)}</span>
+			return <span data-testid={id}>{table.useSelector((s) => s.filter)}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -418,10 +418,10 @@ describe('createStoreCache — keep-alive', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'keepalive-3' })
 		function FilterView() {
-			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
+			return <span data-testid='r'>{table.useSelector((s) => s.filter)}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -579,7 +579,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'imp-1' })
 		function PageView() {
-			return <span data-testid='p'>{table.useStore((s) => s.page)}</span>
+			return <span data-testid='p'>{table.useSelector((s) => s.page)}</span>
 		}
 
 		render(
@@ -622,7 +622,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 			return <span data-testid='badge'>{filter}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -718,14 +718,14 @@ describe('createStoreCache — imperative & reactive access', () => {
 	})
 })
 
-describe('createStoreCache — useContextStore', () => {
+describe('createStoreCache — useStore', () => {
 	it('returns the same live store instance the cache holds', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'ctx-1' })
-		const seen: ReturnType<typeof table.useContextStore>[] = []
+		const seen: ReturnType<typeof table.useStore>[] = []
 
 		function Reader() {
-			seen.push(table.useContextStore())
+			seen.push(table.useStore())
 			return null
 		}
 
@@ -747,12 +747,12 @@ describe('createStoreCache — useContextStore', () => {
 		let readerRenders = 0
 
 		function Reader() {
-			table.useContextStore()
+			table.useStore()
 			readerRenders += 1
 			return null
 		}
 		function FilterButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -842,7 +842,7 @@ describe('createStoreCache — reactive inspection (useCacheKeys + toTree)', () 
 			return null
 		}
 		function FilterButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -976,10 +976,10 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'strict-1' })
 		function FilterView() {
-			return <span data-testid='r'>{table.useStore((s) => s.filter)}</span>
+			return <span data-testid='r'>{table.useSelector((s) => s.filter)}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useStore((s) => s.setFilter)
+			const setFilter = table.useSelector((s) => s.setFilter)
 			return (
 				<button
 					type='button'
@@ -1022,7 +1022,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'ssr-1' })
 		function Reader() {
-			return <span>{table.useStore((s) => s.filter)}</span>
+			return <span>{table.useSelector((s) => s.filter)}</span>
 		}
 
 		const html = renderToString(
@@ -1046,7 +1046,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'ssr-2' })
 		function Reader() {
-			return <span>{table.useStore((s) => s.filter)}</span>
+			return <span>{table.useSelector((s) => s.filter)}</span>
 		}
 		const one = renderToString(
 			<cache.Provider>

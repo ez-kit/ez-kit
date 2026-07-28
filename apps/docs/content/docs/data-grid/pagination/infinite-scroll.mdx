@@ -24,10 +24,10 @@ const [data, setData] = useState<User[]>([])
 const [cursor, setCursor] = useState(0)
 const [hasNextPage, setHasNextPage] = useState(true)
 
-const table = useDataGrid({
-	data,
-	columns,
-	pagination: {
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{
 		mode: 'infinite',
 		hasNextPage, // controlled — only your API knows this
 		onLoadMore: async () => {
@@ -36,8 +36,8 @@ const table = useDataGrid({
 			setCursor((c) => c + page.rows.length)
 			setHasNextPage(page.nextCursor !== null)
 		},
-	},
-})
+	}}
+/>
 ```
 
 ## Manual (Load more)

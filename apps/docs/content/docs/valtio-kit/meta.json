@@ -1,7 +1,0 @@
-{
-	"title": "valtio-kit",
-	"description": "Valtio-powered React context proxies",
-	"icon": "Atom",
-	"root": true,
-	"pages": ["index", "getting-started", "create-context-store", "cache", "persist"]
-}

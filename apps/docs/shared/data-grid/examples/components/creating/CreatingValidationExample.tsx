@@ -4,7 +4,7 @@ import { ValidationError } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 import { z } from 'zod'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA, type User } from '../_data'
 
@@ -22,28 +22,6 @@ export function CreatingValidationExample() {
 	const [data, setData] = useState(INITIAL_DATA)
 	const [serverShouldFail, setServerShouldFail] = useState(false)
 
-	const table = useDataGrid<User>({
-		data,
-		columns,
-		creating: {
-			mode: 'modal',
-			validate: { schema: userSchema },
-			onSave: async ({ values }) => {
-				// Simulate latency so the spinner is visible.
-				await new Promise<void>((r) => {
-					setTimeout(r, 400)
-				})
-				if (serverShouldFail) {
-					throw new ValidationError({
-						errors: { email: ['email already in use'] },
-						formError: 'Could not save — try a different email',
-					})
-				}
-				setData((prev) => [...prev, { id: Date.now(), active: true, ...values } as User])
-			},
-		},
-	})
-
 	return (
 		<div>
 			<label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -56,7 +34,27 @@ export function CreatingValidationExample() {
 				/>
 				Simulate server-side rejection
 			</label>
-			<DataGrid<User> table={table} />
+			<DataGrid<User>
+				data={data}
+				columns={columns}
+				creating={{
+					mode: 'modal',
+					validate: { schema: userSchema },
+					onSave: async ({ values }) => {
+						// Simulate latency so the spinner is visible.
+						await new Promise<void>((r) => {
+							setTimeout(r, 400)
+						})
+						if (serverShouldFail) {
+							throw new ValidationError({
+								errors: { email: ['email already in use'] },
+								formError: 'Could not save — try a different email',
+							})
+						}
+						setData((prev) => [...prev, { id: Date.now(), active: true, ...values } as User])
+					},
+				}}
+			/>
 		</div>
 	)
 }

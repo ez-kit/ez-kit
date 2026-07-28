@@ -51,13 +51,13 @@ function NameField() {
 
 ## With createContextStore
 
-Combine with `useContextStore()` to bind a context-provided store:
+Combine with `useStore()` to bind a context-provided store:
 
 ```tsx
 const counterStore = createContextStore(...)
 
 function CountInput() {
-  const store = counterStore.useContextStore()
+  const store = counterStore.useStore()
   const [count, setCount] = useStoreState(store, 'count')
   return <input type="number" value={count} onChange={(e) => setCount(Number(e.target.value))} />
 }

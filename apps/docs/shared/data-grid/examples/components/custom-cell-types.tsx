@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
-import { CustomDataGrid, useDataGrid } from 'shared/data-grid/CustomGrid'
+import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
 type Employee = {
 	id: number
@@ -31,17 +31,17 @@ const employeeColumns = defineColumns<Employee>([
 export function CustomCellTypesExample() {
 	const [data, setData] = useState(EMPLOYEE_DATA)
 
-	const table = useDataGrid({
-		data,
-		columns: employeeColumns,
-		sorting: true,
-		editing: {
-			mode: 'row',
-			onSave: ({ rowId, values }) => {
-				setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
-			},
-		},
-	})
-
-	return <CustomDataGrid table={table} />
+	return (
+		<CustomDataGrid
+			data={data}
+			columns={employeeColumns}
+			sorting
+			editing={{
+				mode: 'row',
+				onSave: ({ rowId, values }) => {
+					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
+				},
+			}}
+		/>
+	)
 }

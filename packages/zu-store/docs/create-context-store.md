@@ -17,9 +17,9 @@ function createContextStore<TStore, TDefaultValue = undefined>(
   factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
 ): {
   Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
-  useContextStore: () => TStore
-  useStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
-  useShallowStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
+  useStore: () => TStore
+  useSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
+  useShallowSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
   Item: <T>(props: { selector: ..., children: (value: T) => ReactElement }) => ReactElement
 }
 ```
@@ -55,8 +55,8 @@ function App() {
 
 // Consume inside the tree
 function Counter() {
-	const count = counterStore.useStore((s) => s.count)
-	const increment = counterStore.useStore((s) => s.increment)
+	const count = counterStore.useSelector((s) => s.count)
+	const increment = counterStore.useSelector((s) => s.increment)
 	return <button onClick={increment}>{count}</button>
 }
 ```
@@ -67,28 +67,28 @@ function Counter() {
 
 Initialises the store once (via `useRef`) and provides it to the tree. Pass the seed through the single `defaultValue` prop.
 
-### `useStore(selector)`
+### `useSelector(selector)`
 
 Subscribes to a slice of state. Re-renders only when the selected value changes.
 
-### `useShallowStore(selector)`
+### `useShallowSelector(selector)`
 
-Same as `useStore` but uses shallow equality — useful when the selector returns an object.
+Same as `useSelector` but uses shallow equality — useful when the selector returns an object.
 
 ```tsx
-const { count, label } = counterStore.useShallowStore((s) => ({
+const { count, label } = counterStore.useShallowSelector((s) => ({
 	count: s.count,
 	label: s.label,
 }))
 ```
 
-### `useContextStore()`
+### `useStore()`
 
-Returns the raw `StoreApi` instance. Use when you need full store access (e.g. to call `getState()` outside of render).
+Returns the raw `StoreApi` instance without subscribing the caller. Use when you need full store access (e.g. to call `getState()` outside of render).
 
 ### `Item`
 
-Render-prop alternative to `useStore`. Useful in JSX-heavy code or when the consuming component should stay unaware of the store.
+Render-prop alternative to `useSelector`. Useful in JSX-heavy code or when the consuming component should stay unaware of the store.
 
 ```tsx
 <counterStore.Item selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Item>

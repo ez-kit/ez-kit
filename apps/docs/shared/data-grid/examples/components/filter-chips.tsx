@@ -3,7 +3,7 @@
 import { defineColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { makeUsers, type User } from './_data'
 
@@ -16,39 +16,40 @@ const columns = defineColumns<User>([
 
 export function FilterChipsAutoExample() {
 	const data = useMemo(() => makeUsers(50), [])
-	const table = useDataGrid({
-		data,
-		columns,
-		filtering: { chips: true, clearButton: true },
-		globalFiltering: { placeholder: 'Search…' },
-		pagination: { pageSize: 10 },
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			filtering={{ chips: true, clearButton: true }}
+			globalFiltering={{ placeholder: 'Search…' }}
+			pagination={{ pageSize: 10 }}
+		/>
+	)
 }
 
 export function FilterChipsAlwaysExample() {
 	const data = useMemo(() => makeUsers(50), [])
-	const table = useDataGrid({
-		data,
-		columns,
-		filtering: { chips: true, clearButton: { alwaysShow: true } },
-		globalFiltering: true,
-		pagination: { pageSize: 10 },
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			filtering={{ chips: true, clearButton: { alwaysShow: true } }}
+			globalFiltering
+			pagination={{ pageSize: 10 }}
+		/>
+	)
 }
 
 export function FilterChipsCustomExample() {
 	const data = useMemo(() => makeUsers(50), [])
-	const table = useDataGrid({
-		data,
-		columns,
-		filtering: true,
-		globalFiltering: true,
-		pagination: { pageSize: 10 },
-	})
 	return (
-		<DataGrid table={table}>
+		<DataGrid
+			data={data}
+			columns={columns}
+			filtering
+			globalFiltering
+			pagination={{ pageSize: 10 }}
+		>
 			<DataGrid.Toolbar>
 				<DataGrid.GlobalFilterInput />
 				<DataGrid.ClearFiltersButton>Reset</DataGrid.ClearFiltersButton>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 import { makeUsers, columns, type User } from './_data'
 
@@ -103,49 +103,6 @@ export function ServerDataExample() {
 	// response matching the latest counter is applied.
 	const fetchCountRef = useRef(0)
 
-	const table = useDataGrid({
-		data: rows,
-		columns,
-		pagination: {
-			manual: true,
-			rowCount,
-			onChange: ({ pageIndex: pi, pageSize: ps }) => {
-				setPageIndex(pi)
-				setPageSize(ps)
-			},
-		},
-		sorting: {
-			manual: true,
-			onChange: (next) => {
-				setSorting(next)
-				setPageIndex(0)
-			},
-		},
-		filtering: {
-			manual: true,
-			onChange: (next) => {
-				setColumnFilters(next)
-				setPageIndex(0)
-			},
-		},
-		// Global filtering is made server-side by `filtering.manual` above —
-		// TanStack's manual filtering covers the global filter too, so there is
-		// no separate `globalFiltering.manual` flag.
-		globalFiltering: {
-			onChange: (next) => {
-				setGlobalFilter(String(next ?? ''))
-				setPageIndex(0)
-			},
-		},
-		state: {
-			pagination: { pageIndex, pageSize },
-			sorting,
-			columnFilters,
-			globalFilter,
-			loading: { isPending, isFetching, isError, error },
-		},
-	})
-
 	const fetch = useCallback(async () => {
 		const id = ++fetchCountRef.current
 
@@ -188,5 +145,48 @@ export function ServerDataExample() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pageIndex, pageSize, sorting, columnFilters, globalFilter])
 
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={rows}
+			columns={columns}
+			pagination={{
+				manual: true,
+				rowCount,
+				onChange: ({ pageIndex: pi, pageSize: ps }) => {
+					setPageIndex(pi)
+					setPageSize(ps)
+				},
+			}}
+			sorting={{
+				manual: true,
+				onChange: (next) => {
+					setSorting(next)
+					setPageIndex(0)
+				},
+			}}
+			filtering={{
+				manual: true,
+				onChange: (next) => {
+					setColumnFilters(next)
+					setPageIndex(0)
+				},
+			}}
+			// Global filtering is made server-side by `filtering.manual` above —
+			// TanStack's manual filtering covers the global filter too, so there is
+			// no separate `globalFiltering.manual` flag.
+			globalFiltering={{
+				onChange: (next) => {
+					setGlobalFilter(String(next ?? ''))
+					setPageIndex(0)
+				},
+			}}
+			state={{
+				pagination: { pageIndex, pageSize },
+				sorting,
+				columnFilters,
+				globalFilter,
+				loading: { isPending, isFetching, isError, error },
+			}}
+		/>
+	)
 }

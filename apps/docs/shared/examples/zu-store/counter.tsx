@@ -31,10 +31,10 @@ const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<Coun
 })
 
 function CounterDisplay() {
-	const count = counterStore.useStore((s) => s.count)
-	const increment = counterStore.useStore((s) => s.increment)
-	const decrement = counterStore.useStore((s) => s.decrement)
-	const reset = counterStore.useStore((s) => s.reset)
+	const count = counterStore.useSelector((s) => s.count)
+	const increment = counterStore.useSelector((s) => s.increment)
+	const decrement = counterStore.useSelector((s) => s.decrement)
+	const reset = counterStore.useSelector((s) => s.reset)
 
 	return (
 		<div className='flex items-center gap-3'>

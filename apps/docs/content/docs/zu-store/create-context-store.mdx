@@ -16,9 +16,9 @@ function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = un
 	factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
 ): {
 	Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
-	useContextStore: () => TStore
-	useStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
-	useShallowStore: <T>(selector: (state: ExtractState<TStore>) => T) => T
+	useStore: () => TStore
+	useSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
+	useShallowSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
 	Item: <T>(props: {
 		selector: (state: ExtractState<TStore>) => T
 		children: (value: T) => ReactElement
@@ -47,40 +47,46 @@ Creates and provides the store. The factory runs **once per mount** (held in a `
 </counterStore.Provider>
 ```
 
-### `useStore(selector)`
+### `useSelector(selector)`
 
 Subscribes to a slice of state with strict equality. Re-renders only when the selected value changes.
 
 ```tsx
-const count = counterStore.useStore((s) => s.count)
+const count = counterStore.useSelector((s) => s.count)
 ```
 
-### `useShallowStore(selector)`
+### `useShallowSelector(selector)`
 
-Same as `useStore`, but compares with shallow equality. Use when the selector returns an object or array so you don't re-render on every state update.
+Same as `useSelector`, but compares with shallow equality. Use when the selector returns an object or array so you don't re-render on every state update.
 
 ```tsx
-const { count, label } = counterStore.useShallowStore((s) => ({
+const { count, label } = counterStore.useShallowSelector((s) => ({
 	count: s.count,
 	label: s.label,
 }))
 ```
 
-### `useContextStore()`
+### `useStore()`
 
-Returns the raw `StoreApi` instance. Use when you need direct access — for example, to read state outside of render or to feed the store into another hook (such as [`useStoreState`](./use-store-state)).
+Returns the raw `StoreApi` instance without subscribing the caller. Use when you need direct access — for example, to read state outside of render or to feed the store into another hook (such as [`useStoreState`](./use-store-state)).
 
 ```tsx
-const store = counterStore.useContextStore()
+const store = counterStore.useStore()
 
 const handleSubmit = () => {
 	console.log(store.getState().count)
 }
 ```
 
+<Callout type='warn'>
+	`useStore()` is the **raw handle**, not a read. Reading state is `useSelector()` / `useShallowSelector()` — the same
+	split as [`@ez-kit/va-store`](../va-store/create-context-store), where the raw handle is also `useStore()` and reads
+	go through `useSnapshot()`.
+</Callout>
+
 ### `Item`
 
-Render-prop alternative to `useStore`. Handy in JSX-heavy code, or to keep a consuming component oblivious to the store.
+Render-prop alternative to `useSelector`. Handy in JSX-heavy code, or to keep a consuming component oblivious to the store.
 
 ```tsx
 <counterStore.Item selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Item>
@@ -97,7 +103,7 @@ Each `Provider` creates its own store — state is never shared between siblings
 
 ## Errors
 
-Using `useStore`, `useShallowStore`, `useContextStore`, or `Item` outside a `Provider` throws:
+Using `useStore`, `useSelector`, `useShallowSelector`, or `Item` outside a `Provider` throws:
 
 ```
 Error: Missing Provider for createContextStore

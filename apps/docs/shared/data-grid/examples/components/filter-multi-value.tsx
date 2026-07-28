@@ -2,7 +2,7 @@
 
 import { defineColumns } from '@ez-kit/data-grid-react'
 
-import { DataGrid, useDataGrid } from 'shared/DataGrid'
+import { DataGrid } from 'shared/DataGrid'
 
 type Ticket = {
 	id: number
@@ -64,20 +64,31 @@ const notInColumns = defineColumns<Ticket>([
 ])
 
 export function FilterMultiValueInExample() {
-	const table = useDataGrid({ data: DATA, columns: baseColumns, filtering: true })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={baseColumns}
+			filtering
+		/>
+	)
 }
 
 export function FilterMultiValueFacetedExample() {
-	const table = useDataGrid({
-		data: DATA,
-		columns: baseColumns,
-		filtering: { faceted: true },
-	})
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={baseColumns}
+			filtering={{ faceted: true }}
+		/>
+	)
 }
 
 export function FilterMultiValueNotInExample() {
-	const table = useDataGrid({ data: DATA, columns: notInColumns, filtering: true })
-	return <DataGrid table={table} />
+	return (
+		<DataGrid
+			data={DATA}
+			columns={notInColumns}
+			filtering
+		/>
+	)
 }

@@ -1,0 +1,76 @@
+---
+title: Deep dive — storage
+description: The blob format, useHydrated() against flash/CLS, schema versioning and migrations, cross-tab sync, and graceful degradation.
+---
+
+# Deep dive — storage
+
+The storage sources (`localStorage`, `sessionStorage`, IndexedDB) persist a store under a single key. They're ambient — no React context required to read or write — and inert on the server.
+
+## The blob format
+
+A store's fields are packed into one JSON blob under one key:
+
+```jsonc
+// localStorage["va-store"]
+{ "v": 0, "s": { "theme": "dark", "fontScale": "1.25" } }
+```
+
+- `v` is the schema **version** (see below). `s` maps each field's substrate key to its already-stringified value.
+- Per-field values inside `s` still flow through the same codecs as the URL, so Date/BigInt/array round-trips hold.
+- Set the key with `storageKey`: `localStorageAdapter({ storageKey: 'my-app' })`.
+- A field returned to its default is omitted; when the blob empties, the key is removed.
+
+## `useHydrated()` — flash and CLS
+
+Storage can't be read synchronously in render without breaking SSR (server has no storage), so a stored non-default value appears one tick after mount. The default _silent fill_ is fine when the gap is invisible. When it isn't — a theme that would flash, a layout that would shift, analytics that shouldn't fire on defaults — gate on `useHydrated()`:
+
+```tsx
+import { useHydrated } from '@ez-kit/va-store/persist'
+
+const store = prefsStore.useStore()
+const hydrated = useHydrated(store) // standalone hook — pass the raw proxy
+if (!hydrated) return <Skeleton /> // or: defer the side-effect until `hydrated`
+```
+
+It is `false` on the server and the first client render (the standard "mounted" trick, which avoids a hydration mismatch), then flips to `true` once every source's first read has applied. It's a per-store aggregate — for a store mixing storage and async IndexedDB, it waits for both.
+
+## Schema versioning & migrations
+
+A durable substrate outlives your code, so storage adapters version the blob and migrate forward on read — entirely inside the adapter (the core and the URL source have no notion of schema version):
+
+```tsx
+localStorageAdapter({
+	version: 2,
+	migrate: (stored, fromVersion) => {
+		// `stored` is the old Keyed (Map<string,string>); return the new Keyed.
+		const next = new Map(stored)
+		if (fromVersion < 1) next.set('theme', next.get('mode') ?? 'light')
+		if (fromVersion < 2) next.delete('legacyFlag')
+		return next
+	},
+})
+```
+
+On `get()`, if the stored `v` is older than the configured `version`, the adapter runs `migrate` and **rewrites** the blob at the current version. Edge cases are handled for you:
+
+- A **thrown** `migrate` discards the stored data and hydrates defaults (the bad blob is still replaced) — never throws into render.
+- A missing or non-numeric `v` is treated as `v0`.
+- Data already at (or newer than) the current version passes through untouched.
+
+## Cross-tab sync
+
+`localStorage` writes in one tab fire a `storage` event in **other** tabs (never the writer), which the adapter subscribes to and turns into a `pull`. Edits propagate tab-to-tab automatically. The `pull` re-baselines the binding before re-flushing, so an A→B→A echo terminates. (Two proxies bound to the _same_ key within _one_ tab is unsupported.)
+
+## Graceful degradation
+
+Every read and write is guarded. Quota-exceeded, Safari private mode, a sandboxed iframe, or disabled storage warn **at most once** and never throw — the store keeps working, just without persistence. A corrupt blob falls back to defaults and clears the bad key so it can't poison future reads.
+
+## IndexedDB
+
+For larger or structured data, `indexedDbAdapter()` is the async sibling — same fronts (`@persistIndexedDb()` / `indexedDbField()`), same blob/version/migrate semantics. Its writes are serialized (last-write-wins; superseded queued writes are dropped) and, being async, it always resolves last — so first-present-wins guarantees it never clobbers a value the URL already set.
+
+```tsx
+import { indexedDbAdapter } from '@ez-kit/va-store/persist/storage'
+;<PersistProvider adapters={[indexedDbAdapter({ dbName: 'my-app', storeName: 'state' })]}>…</PersistProvider>
+```

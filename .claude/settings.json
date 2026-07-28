@@ -12,10 +12,10 @@
 			"Bash(pnpm --filter @ez-kit/zu-store typecheck:*)",
 			"Bash(pnpm --filter @ez-kit/zu-store lint:*)",
 			"Bash(pnpm --filter @ez-kit/zu-store test:*)",
-			"Bash(pnpm --filter @ez-kit/valtio-kit typecheck:*)",
-			"Bash(pnpm --filter @ez-kit/valtio-kit lint:*)",
-			"Bash(pnpm --filter @ez-kit/valtio-kit test:*)",
-			"Bash(pnpm --filter @ez-kit/valtio-kit size:*)",
+			"Bash(pnpm --filter @ez-kit/va-store typecheck:*)",
+			"Bash(pnpm --filter @ez-kit/va-store lint:*)",
+			"Bash(pnpm --filter @ez-kit/va-store test:*)",
+			"Bash(pnpm --filter @ez-kit/va-store size:*)",
 			"Bash(pnpm --filter @ez-kit/docs lint:*)",
 			"Bash(pnpm --filter @ez-kit/docs typecheck:*)"
 		]

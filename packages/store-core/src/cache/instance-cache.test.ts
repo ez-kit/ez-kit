@@ -6,6 +6,7 @@ import { createInstanceCache } from './instance-cache'
 
 import type { PluginContext, StorePlugin } from '../plugin'
 import type { StoreId } from '../store-id'
+import type { MockInstance } from 'vitest'
 
 const GC_TIME = 1000
 
@@ -176,5 +177,72 @@ describe('createInstanceCache', () => {
 		cache.clear()
 
 		expect(cleanup).toHaveBeenCalledTimes(1)
+	})
+})
+
+/**
+ * The eviction timer and the idle stamp read two different clocks: `setTimeout` runs on the
+ * runtime's monotonic timer clock, while `idleSince` is stamped from the wall clock (`Date.now`).
+ * They drift, so the timer can fire while the wall clock still reports slightly less than `gcTime`
+ * elapsed. These tests pin that the timer — not a wall-clock comparison — decides the deadline.
+ *
+ * Only `setTimeout`/`clearTimeout` are faked here; `Date.now` is stubbed separately so the two
+ * clocks can be moved independently, which is exactly what the shared fake-timer setup above hides.
+ */
+describe('createInstanceCache — eviction deadline under clock drift', () => {
+	/** Wall clock lags the timer clock by this much when the eviction timer fires. */
+	const DRIFT = 1
+	const START = 1_000_000
+
+	let wallClock: MockInstance<() => number>
+
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+		wallClock = vi.spyOn(Date, 'now').mockReturnValue(START)
+	})
+	afterEach(() => {
+		wallClock.mockRestore()
+		vi.useRealTimers()
+	})
+
+	it('evicts an idle entry when the timer fires marginally early on the wall clock', () => {
+		const cache = createInstanceCache()
+		const cleanup = vi.fn()
+		const id = idOf([], 'a')
+
+		cache.getOrCreate(id, () => ({}), {
+			gcTime: GC_TIME,
+			plugins: [{ name: 'a', setup: () => cleanup }],
+			context: ctxFor(id),
+		})
+		cache.addObserver(id)
+		cache.removeObserver(id)
+
+		// The timer clock reaches the deadline; the wall clock is still one tick short of it.
+		wallClock.mockReturnValue(START + GC_TIME - DRIFT)
+		vi.advanceTimersByTime(GC_TIME)
+
+		expect(cleanup).toHaveBeenCalledTimes(1)
+		expect(cache.getInstance(id)).toBeUndefined()
+	})
+
+	it('does not strand an entry forever when its eviction timer fires early', () => {
+		const cache = createInstanceCache()
+		const id = idOf([], 'a')
+
+		cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, plugins: [], context: ctxFor(id) })
+		cache.addObserver(id)
+		cache.removeObserver(id)
+
+		wallClock.mockReturnValue(START + GC_TIME - DRIFT)
+		vi.advanceTimersByTime(GC_TIME)
+
+		// Well past the deadline on both clocks: a missed eviction must not leave the entry
+		// permanently alive with no timer left to retry it.
+		wallClock.mockReturnValue(START + GC_TIME * 10)
+		vi.advanceTimersByTime(GC_TIME * 10)
+
+		expect(cache.getInstance(id)).toBeUndefined()
+		expect(cache.keys()).toEqual([])
 	})
 })
