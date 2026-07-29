@@ -8,7 +8,7 @@ import {
 	useLayoutEffect,
 	useRef,
 } from 'react'
-import { subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
+import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 
 import type { ControlledConfig, PluginCleanup, PluginContext, StoreId, StorePlugin } from '@ez-kit/store-core'
 
@@ -159,7 +159,13 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 		const isNewStore = storeRef.current === null
 		const hasSyncedInitialRef = useRef(false)
 		const previousValueRef = useRef<Partial<TState> | undefined>(undefined)
-		const syncingKeysRef = useRef<ReadonlySet<keyof TState>>(new Set())
+		/**
+		 * Controlled values already accounted for — either emitted upwards or just pushed down from
+		 * `value`. Anti-echo is a value baseline rather than an "is syncing" flag on purpose: Valtio
+		 * defers `subscribe` callbacks to a microtask, so any flag cleared synchronously after the
+		 * write is already clear by the time the callback runs, and the echo leaks out.
+		 */
+		const baselineRef = useRef<Partial<TState>>({})
 		const onValueChangeRef = useRef(onValueChange)
 		const valueRef = useRef(value)
 		onValueChangeRef.current = onValueChange
@@ -179,38 +185,50 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 		usePlugins(store, services)
 
 		useLayoutEffect(() => {
-			if (!hasSyncedInitialRef.current) {
-				hasSyncedInitialRef.current = true
-				previousValueRef.current = value
-				return
+			const isInitialSync = !hasSyncedInitialRef.current
+			hasSyncedInitialRef.current = true
+
+			if (!isInitialSync) {
+				const changed = getChangedControlledEntries<TState>(previousValueRef.current, value, controlled)
+				if (Object.keys(changed).length > 0) {
+					// Baseline the intended values *before* writing, so the anti-echo holds whether the
+					// store notifies synchronously or, as Valtio does, on a later microtask.
+					baselineRef.current = { ...baselineRef.current, ...changed }
+					try {
+						applyControlledEntries(store, changed, controlled)
+					} finally {
+						// Re-baselining even when a custom `set` threw keeps a failed write from
+						// permanently suppressing later real changes to those keys.
+						rebaselineControlledKeys()
+					}
+				}
 			}
 
-			const changed = getChangedControlledEntries<TState>(previousValueRef.current, value, controlled)
 			previousValueRef.current = value
-			if (Object.keys(changed).length === 0) return
+			// Keys that only just became controlled are baselined here, so entering `value` never
+			// looks like an internal write on the next store notification.
+			rebaselineControlledKeys()
 
-			syncingKeysRef.current = new Set(Object.keys(changed) as (keyof TState)[])
-			applyControlledEntries(store, changed, controlled)
-			syncingKeysRef.current = new Set()
+			function rebaselineControlledKeys(): void {
+				const keys = value ? (Object.keys(value) as (keyof TState)[]) : []
+				baselineRef.current = pickControlledKeys(snapshot(store) as TState, keys)
+			}
 			// eslint-disable-next-line react-hooks/exhaustive-deps
 		}, [value])
 
 		useLayoutEffect(() => {
-			const controlledKeys = valueRef.current ? (Object.keys(valueRef.current) as (keyof TState)[]) : []
-			let previousControlled: Partial<TState> = pickControlledKeys(store, controlledKeys)
-
 			return subscribeValtio(store, () => {
-				const currentControlledKeys = valueRef.current ? (Object.keys(valueRef.current) as (keyof TState)[]) : []
-				if (currentControlledKeys.length === 0) return
+				const controlledKeys = valueRef.current ? (Object.keys(valueRef.current) as (keyof TState)[]) : []
+				if (controlledKeys.length === 0) return
 
-				const currentControlled = pickControlledKeys(store, currentControlledKeys)
-				const changed = getChangedControlledEntries<TState>(previousControlled, currentControlled, controlled)
-				previousControlled = currentControlled
+				// Emit from the snapshot, never the live proxy: a parent must not receive a mutable
+				// handle that writes past the Provider's own write path.
+				const current = pickControlledKeys(snapshot(store) as TState, controlledKeys)
+				const changed = getChangedControlledEntries<TState>(baselineRef.current, current, controlled)
+				baselineRef.current = current
+				if (Object.keys(changed).length === 0) return
 
-				const emitKeys = (Object.keys(changed) as (keyof TState)[]).filter((key) => !syncingKeysRef.current.has(key))
-				if (emitKeys.length === 0) return
-
-				onValueChangeRef.current?.(pickControlledKeys(store, emitKeys))
+				onValueChangeRef.current?.(changed)
 			})
 		}, [store])
 

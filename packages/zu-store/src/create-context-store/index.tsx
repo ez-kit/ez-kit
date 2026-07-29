@@ -60,12 +60,17 @@ function getStoreFromContext<TStore extends StoreApi<unknown>>(store: TStore | n
 	return store
 }
 
-/** Writes `changed` into the store: `controlled[key].set` when declared, `setState` otherwise. */
+/**
+ * Writes `changed` into the store: `controlled[key].set` when declared, otherwise a single batched
+ * `setState` for all remaining keys, so one `value` update produces one store notification.
+ */
 function applyControlledEntries<TStore extends StoreApi<unknown>, TState extends ExtractState<TStore>>(
 	store: TStore,
 	changed: Partial<TState>,
 	controlled: ControlledConfig<TState>,
 ): void {
+	const direct: Partial<TState> = {}
+
 	for (const key of Object.keys(changed) as (keyof TState)[]) {
 		const value = changed[key] as TState[typeof key]
 		const set = controlled[key]?.set
@@ -73,8 +78,12 @@ function applyControlledEntries<TStore extends StoreApi<unknown>, TState extends
 		if (set) {
 			set(store.getState() as TState, value)
 		} else {
-			store.setState({ [key]: value })
+			direct[key] = value
 		}
+	}
+
+	if (Object.keys(direct).length > 0) {
+		store.setState(direct)
 	}
 }
 
@@ -96,7 +105,13 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		const isNewStore = storeRef.current === null
 		const hasSyncedInitialRef = useRef(false)
 		const previousValueRef = useRef<Partial<TState> | undefined>(undefined)
-		const syncingKeysRef = useRef<ReadonlySet<keyof TState>>(new Set())
+		/**
+		 * Controlled values already accounted for — either emitted upwards or just pushed down from
+		 * `value`. Anti-echo is a value baseline rather than an "is syncing" flag on purpose: the flag
+		 * would have to be cleared on a timer relative to when the store notifies, and a store that
+		 * batches its notifications fires after any synchronous clear, leaking the echo out.
+		 */
+		const baselineRef = useRef<Partial<TState>>({})
 		const onValueChangeRef = useRef(onValueChange)
 		const valueRef = useRef(value)
 		onValueChangeRef.current = onValueChange
@@ -114,36 +129,49 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		}
 
 		useLayoutEffect(() => {
-			if (!hasSyncedInitialRef.current) {
-				hasSyncedInitialRef.current = true
-				previousValueRef.current = value
-				return
+			const isInitialSync = !hasSyncedInitialRef.current
+			hasSyncedInitialRef.current = true
+
+			if (!isInitialSync) {
+				const changed = getChangedControlledEntries<TState>(previousValueRef.current, value, controlled)
+				if (Object.keys(changed).length > 0) {
+					// Baseline the intended values *before* writing: a store that notifies synchronously
+					// runs its subscriber inside `applyControlledEntries`, so a baseline set afterwards
+					// would arrive too late and the echo would escape.
+					baselineRef.current = { ...baselineRef.current, ...changed }
+					try {
+						applyControlledEntries(store, changed, controlled)
+					} finally {
+						// Re-baselining even when a custom `set` threw keeps a failed write from
+						// permanently suppressing later real changes to those keys.
+						rebaselineControlledKeys()
+					}
+				}
 			}
 
-			const changed = getChangedControlledEntries<TState>(previousValueRef.current, value, controlled)
 			previousValueRef.current = value
-			if (Object.keys(changed).length === 0) return
+			// Keys that only just became controlled are baselined here, so entering `value` never
+			// looks like an internal write on the next store notification.
+			rebaselineControlledKeys()
 
-			syncingKeysRef.current = new Set(Object.keys(changed) as (keyof TState)[])
-			applyControlledEntries(store, changed, controlled)
-			syncingKeysRef.current = new Set()
+			function rebaselineControlledKeys(): void {
+				const keys = value ? (Object.keys(value) as (keyof TState)[]) : []
+				baselineRef.current = pickControlledKeys(store.getState() as TState, keys)
+			}
 			// eslint-disable-next-line react-hooks/exhaustive-deps
 		}, [value])
 
 		useLayoutEffect(() => {
-			return store.subscribe((state, previousState) => {
+			return store.subscribe((state) => {
 				const controlledKeys = valueRef.current ? (Object.keys(valueRef.current) as (keyof TState)[]) : []
 				if (controlledKeys.length === 0) return
 
-				const changed = getChangedControlledEntries<TState>(
-					pickControlledKeys(previousState as TState, controlledKeys),
-					pickControlledKeys(state as TState, controlledKeys),
-					controlled,
-				)
-				const emitKeys = (Object.keys(changed) as (keyof TState)[]).filter((key) => !syncingKeysRef.current.has(key))
-				if (emitKeys.length === 0) return
+				const current = pickControlledKeys(state as TState, controlledKeys)
+				const changed = getChangedControlledEntries<TState>(baselineRef.current, current, controlled)
+				baselineRef.current = current
+				if (Object.keys(changed).length === 0) return
 
-				onValueChangeRef.current?.(pickControlledKeys(state as TState, emitKeys))
+				onValueChangeRef.current?.(changed)
 			})
 		}, [store])
 

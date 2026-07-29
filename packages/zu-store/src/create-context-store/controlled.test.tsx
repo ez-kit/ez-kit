@@ -296,7 +296,7 @@ describe('@ez-kit/zu-store — controlled value', () => {
 		expect(onValueChange).toHaveBeenCalledWith({ count: 2 })
 	})
 
-	it('does not call onValueChange for the sync it just applied from the value prop (anti-echo)', () => {
+	it('does not call onValueChange for the sync it just applied from the value prop (anti-echo)', async () => {
 		const onValueChange = vi.fn()
 		const store = createContextStore(createCounterStore)
 
@@ -326,7 +326,46 @@ describe('@ez-kit/zu-store — controlled value', () => {
 		)
 
 		expect(screen.getByTestId('count')).toHaveTextContent('9')
+
+		// Zustand notifies synchronously, but flush anyway so this test stays honest if the
+		// notification ever becomes deferred — the va-store sibling test is deferred by design.
+		await Promise.resolve()
+		await Promise.resolve()
+
 		expect(onValueChange).not.toHaveBeenCalled()
+	})
+
+	it('writes several changed keys in one store update rather than one per key', () => {
+		const store = createContextStore(createCounterStore)
+		let api: ReturnType<typeof createCounterStore> | undefined
+
+		function CaptureApi() {
+			api = store.useStore()
+			return null
+		}
+
+		const { rerender } = render(
+			<store.Provider
+				defaultValue={{ count: 1, label: 'boot' }}
+				value={{ count: 1, label: 'boot' }}
+			>
+				<CaptureApi />
+			</store.Provider>,
+		)
+		const setState = vi.spyOn(assertDefined(api), 'setState')
+
+		rerender(
+			<store.Provider
+				defaultValue={{ count: 1, label: 'boot' }}
+				value={{ count: 2, label: 'next' }}
+			>
+				<CaptureApi />
+			</store.Provider>,
+		)
+
+		expect(setState).toHaveBeenCalledTimes(1)
+		expect(assertDefined(api).getState().count).toBe(2)
+		expect(assertDefined(api).getState().label).toBe('next')
 	})
 
 	it('reflects a fresh callback passed via value after the parent re-renders (no stale closure)', () => {

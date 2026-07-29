@@ -305,7 +305,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 		expect(onValueChange).toHaveBeenCalledWith({ count: 2 })
 	})
 
-	it('does not call onValueChange for the sync it just applied from the value prop (anti-echo)', () => {
+	it('does not call onValueChange for the sync it just applied from the value prop (anti-echo)', async () => {
 		const onValueChange = vi.fn()
 		const store = createStore(counterFactory)
 
@@ -335,7 +335,56 @@ describe('@ez-kit/va-store — controlled value', () => {
 		)
 
 		expect(screen.getByTestId('count')).toHaveTextContent('9')
+
+		// Valtio defers subscribe callbacks to a microtask, so asserting synchronously here would
+		// pass even with anti-echo removed entirely. Flush before asserting.
+		await Promise.resolve()
+		await Promise.resolve()
+
 		expect(onValueChange).not.toHaveBeenCalled()
+	})
+
+	it('emits an object-typed controlled field as a snapshot, not the live mutable proxy', async () => {
+		const store = createStore(counterFactory)
+		const onValueChange = vi.fn()
+		let raw: CounterState | undefined
+
+		function View() {
+			const state = store.useStore()
+			raw = state
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						state.users = ['x', 'y']
+					}}
+				>
+					write
+				</button>
+			)
+		}
+
+		render(
+			<store.Provider
+				defaultValue={{ users: [] }}
+				value={{ users: [] }}
+				onValueChange={onValueChange}
+			>
+				<View />
+			</store.Provider>,
+		)
+
+		fireEvent.click(screen.getByRole('button', { name: 'write' }))
+
+		await waitFor(() => {
+			expect(onValueChange).toHaveBeenCalledTimes(1)
+		})
+
+		const emitted = onValueChange.mock.calls[0]?.[0] as { users: readonly string[] }
+		expect(emitted.users).toStrictEqual(['x', 'y'])
+		// The emitted value must not be the live proxy field, or a parent holding onto it could write
+		// past the Provider's own write path.
+		expect(emitted.users).not.toBe(assertDefined(raw).users)
 	})
 
 	it('reflects a fresh callback passed via value after the parent re-renders (no stale closure)', () => {
