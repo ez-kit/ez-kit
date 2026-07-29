@@ -34,9 +34,11 @@ import {
  */
 
 const DOCS_ROOT = resolve(__dirname, '..')
-/** Vitest's 5s default is not enough to build a `ts.Program` over the package `.d.ts` graph. */
-const PROGRAM_TIMEOUT_MS = 120_000
 
+// The `ts.Program` is built once here, at module scope — i.e. during Vitest's
+// collect phase, which no per-test timeout covers. The individual `it` blocks
+// only walk the already-resolved types and run in milliseconds, so none of them
+// needs a raised timeout.
 const resolver = OptionTypeResolver.create(
 	PAGE_ENTRIES.flatMap((entry) => entry.optionTables).flatMap((table) => table.roots),
 )
@@ -133,28 +135,44 @@ function checkTable(page: DocPage, table: OptionTable): TableCheck {
 }
 
 describe('data-grid docs option names', () => {
-	it(
-		'every mapped page maps every table it contains',
-		() => {
-			const unclassified: string[] = []
-			for (const entry of PAGE_ENTRIES) {
-				const classified = new Set([
-					...entry.optionTables.map((table) => table.heading),
-					...entry.nonOptionTables.map((table) => table.heading),
-				])
-				for (const table of tablesByPage.get(entry.page) ?? []) {
-					if (!classified.has(table.heading)) {
-						unclassified.push(
-							`${entry.page}:${String(table.headerLine)} — table under "${table.heading}" is in neither ` +
-								`optionTables nor nonOptionTables. Classify it in page-type-map.ts.`,
-						)
-					}
+	it('every mapped page maps every table it contains', () => {
+		const unclassified: string[] = []
+		for (const entry of PAGE_ENTRIES) {
+			const classified = new Set([
+				...entry.optionTables.map((table) => table.heading),
+				...entry.nonOptionTables.map((table) => table.heading),
+			])
+			for (const table of tablesByPage.get(entry.page) ?? []) {
+				if (!classified.has(table.heading)) {
+					unclassified.push(
+						`${entry.page}:${String(table.headerLine)} — table under "${table.heading}" is in neither ` +
+							`optionTables nor nonOptionTables. Classify it in page-type-map.ts.`,
+					)
 				}
 			}
-			expect(unclassified, `\n${unclassified.join('\n')}\n`).toEqual([])
-		},
-		PROGRAM_TIMEOUT_MS,
-	)
+		}
+		expect(unclassified, `\n${unclassified.join('\n')}\n`).toEqual([])
+	})
+
+	it('no page carries two tables under the same heading', () => {
+		// A heading addresses at most one table: `tableOf()` takes the first match
+		// and the unclassified-table check above matches by heading text, so a
+		// second table under a repeated heading would be silently never checked.
+		const duplicated: string[] = []
+		for (const entry of PAGE_ENTRIES) {
+			const seen = new Set<string>()
+			for (const table of tablesByPage.get(entry.page) ?? []) {
+				if (seen.has(table.heading)) {
+					duplicated.push(
+						`${entry.page}:${String(table.headerLine)} — a second table sits under the heading ` +
+							`"${table.heading}". Only the first is ever checked; give it a distinct heading.`,
+					)
+				}
+				seen.add(table.heading)
+			}
+		}
+		expect(duplicated, `\n${duplicated.join('\n')}\n`).toEqual([])
+	})
 
 	it('the map references no heading that does not exist on the page', () => {
 		const missing: string[] = []
@@ -170,33 +188,51 @@ describe('data-grid docs option names', () => {
 		expect(missing, `\n${missing.join('\n')}\n`).toEqual([])
 	})
 
-	it('every exception points at a mapped table', () => {
-		const orphaned = OPTION_EXCEPTIONS.filter((exception) => {
+	it('every exception points at a mapped table and at a row that still names it', () => {
+		// Both halves matter: an exception aimed at an unmapped table does
+		// nothing, and one whose row is gone silently pre-approves any future row
+		// that happens to reuse the name.
+		const orphaned: string[] = []
+		for (const exception of OPTION_EXCEPTIONS) {
 			const entry = PAGE_ENTRIES.find((candidate) => candidate.page === exception.page)
-			return entry?.optionTables.some((table) => table.heading === exception.heading) !== true
-		}).map((exception) => `${exception.page} — exception for "${exception.heading}" / \`${exception.name}\``)
+			if (entry?.optionTables.some((table) => table.heading === exception.heading) !== true) {
+				orphaned.push(
+					`${exception.page} — exception for "${exception.heading}" / \`${exception.name}\` names no mapped option table`,
+				)
+				continue
+			}
+			const table = tableOf(exception.page, exception.heading)
+			if (table?.rows.some((row) => row.codeSpans.includes(exception.name)) !== true) {
+				orphaned.push(
+					`${exception.page} — orphaned exception: no row under "${exception.heading}" names ` +
+						`\`${exception.name}\` any more. Delete the OPTION_EXCEPTIONS entry.`,
+				)
+			}
+		}
 		expect(orphaned, `\n${orphaned.join('\n')}\n`).toEqual([])
 	})
 
-	it('every mapped option table actually checks at least one name', () => {
-		// Without this, a parser regression (or a table that is entirely
-		// exceptions) would leave the suite vacuously green.
-		const empty = PAGE_ENTRIES.flatMap((entry) =>
+	it('every mapped option table checks exactly as many names as the map records', () => {
+		// A bare "checks at least one" guard would survive a parser regression
+		// that silently dropped most rows of a table; the pinned count would not.
+		const mismatched = PAGE_ENTRIES.flatMap((entry) =>
 			entry.optionTables
-				.filter((table) => checkTable(entry.page, table).checkedCount === 0)
-				.map((table) => `${entry.page} — table "${table.heading}" resolved zero option names`),
+				.map((table) => ({ table, checkedCount: checkTable(entry.page, table).checkedCount }))
+				.filter(({ table, checkedCount }) => checkedCount !== table.expectedCount)
+				.map(
+					({ table, checkedCount }) =>
+						`${entry.page} — table "${table.heading}" resolved ${String(checkedCount)} option names, ` +
+						`expected ${String(table.expectedCount)}. If the table really changed, update expectedCount ` +
+						`in page-type-map.ts; otherwise the parser dropped rows.`,
+				),
 		)
-		expect(empty, `\n${empty.join('\n')}\n`).toEqual([])
+		expect(mismatched, `\n${mismatched.join('\n')}\n`).toEqual([])
 	})
 
-	it(
-		'every documented option name is a real key of its type',
-		() => {
-			const failures = PAGE_ENTRIES.flatMap((entry) =>
-				entry.optionTables.flatMap((table) => checkTable(entry.page, table).failures),
-			)
-			expect(failures, `\n\n${failures.join('\n\n')}\n`).toEqual([])
-		},
-		PROGRAM_TIMEOUT_MS,
-	)
+	it('every documented option name is a real key of its type', () => {
+		const failures = PAGE_ENTRIES.flatMap((entry) =>
+			entry.optionTables.flatMap((table) => checkTable(entry.page, table).failures),
+		)
+		expect(failures, `\n\n${failures.join('\n\n')}\n`).toEqual([])
+	})
 })

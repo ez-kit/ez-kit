@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs'
 
+import type { OptionColumn } from './page-type-map'
+
 /**
  * Minimal reader for the GFM option tables in the data-grid docs.
  *
@@ -14,7 +16,12 @@ const TABLE_ROW_PATTERN = /^\s*\|/
 /** GFM delimiter row, e.g. `| ------ | :--- |`. Its presence is what makes a block a table. */
 const TABLE_DELIMITER_PATTERN = /^\s*\|(?:\s*:?-{2,}:?\s*\|)+\s*$/
 const CODE_SPAN_PATTERN = /`([^`]+)`/g
-const CELL_SEPARATOR = '|'
+/** Column separator: a `|` that is not escaped as `\|` (an escaped pipe is cell *content*). */
+const CELL_SEPARATOR_PATTERN = /(?<!\\)\|/
+const LEADING_EDGE_PATTERN = /^\|/
+const TRAILING_EDGE_PATTERN = /(?<!\\)\|$/
+/** Turns the GFM escape `\|` back into the literal pipe it stands for. */
+const ESCAPED_PIPE_PATTERN = /\\\|/g
 /** Heading text used for a table that sits before any heading on the page. */
 const NO_HEADING = '(page root)'
 
@@ -37,8 +44,8 @@ export type DocTable = {
 
 function splitCells(line: string): string[] {
 	const trimmed = line.trim()
-	const withoutEdges = trimmed.replace(/^\|/, '').replace(/\|$/, '')
-	return withoutEdges.split(CELL_SEPARATOR).map((cell) => cell.trim())
+	const withoutEdges = trimmed.replace(LEADING_EDGE_PATTERN, '').replace(TRAILING_EDGE_PATTERN, '')
+	return withoutEdges.split(CELL_SEPARATOR_PATTERN).map((cell) => cell.replace(ESCAPED_PIPE_PATTERN, '|').trim())
 }
 
 /** Extracts the `` `code spans` `` from a cell — the only thing that can name an option. */
@@ -53,7 +60,7 @@ function codeSpansOf(cell: string): readonly string[] {
  *   option, per heading. Defaults to the first column; `controlled-state.mdx`
  *   names its state keys in the second one.
  */
-export function readDocTables(filePath: string, columnIndexByHeading: (heading: string) => number): DocTable[] {
+export function readDocTables(filePath: string, columnIndexByHeading: (heading: string) => OptionColumn): DocTable[] {
 	const lines = readFileSync(filePath, 'utf8').split('\n')
 	const tables: DocTable[] = []
 	let heading = NO_HEADING

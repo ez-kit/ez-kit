@@ -102,6 +102,16 @@ export type OptionTable = {
 	readonly stripPrefix?: string
 	/** Which column names the option. Defaults to {@link OptionColumn.First}. */
 	readonly column?: OptionColumn
+	/**
+	 * How many option names this table is expected to resolve — i.e. its
+	 * non-excepted code spans in the addressed column, counted today.
+	 *
+	 * The test asserts the real count *equals* this. A bare "checks at least
+	 * one" guard would stay green through a parser regression that silently
+	 * dropped most rows; pinning the number makes any shrinkage loud. Update it
+	 * deliberately when the table gains or loses a documented option.
+	 */
+	readonly expectedCount: number
 }
 
 export type NonOptionTable = {
@@ -131,7 +141,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.CellsDateCell,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.DateCellConfig] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.DateCellConfig], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
 	{
@@ -141,18 +151,18 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// grid config, disambiguated in prose ("(column def)" / "(table)").
 			// `state.columnPinning` / `initialState.columnPinning` resolve as real
 			// `UseDataGridConfig` paths, so they need no exception.
-			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig] },
+			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.ColumnsColumnVisibility,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.ColumnsIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 12 }],
 		nonOptionTables: [],
 	},
 	{
@@ -161,7 +171,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// The option names live in the second column ("State key"); the first is
 			// a prose slot label ("Row selection"). The governing type is the
 			// TanStack `TableState` the grid augments.
-			{ heading: 'Every controllable slot', roots: [GRID_TYPE.TableState], column: OptionColumn.Second },
+			{
+				heading: 'Every controllable slot',
+				roots: [GRID_TYPE.TableState],
+				column: OptionColumn.Second,
+				expectedCount: 11,
+			},
 		],
 		nonOptionTables: [],
 	},
@@ -174,26 +189,31 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ExpandingSubContent,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.ExpandingTree,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 }],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.FilteringDateRange,
 		optionTables: [
-			{ heading: '`betweenOperator`', roots: [GRID_TYPE.BetweenOperatorConfig] },
-			{ heading: '`DateRangePreset`', roots: [GRID_TYPE.DateRangePreset] },
-			{ heading: '`cell` (date)', roots: [GRID_TYPE.DateCellConfig], stripPrefix: CELL_CONFIG_PREFIX },
+			{ heading: '`betweenOperator`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 2 },
+			{ heading: '`DateRangePreset`', roots: [GRID_TYPE.DateRangePreset], expectedCount: 3 },
+			{
+				heading: '`cell` (date)',
+				roots: [GRID_TYPE.DateCellConfig],
+				stripPrefix: CELL_CONFIG_PREFIX,
+				expectedCount: 3,
+			},
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.FilteringGlobal,
-		optionTables: [{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig] }],
+		optionTables: [{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig], expectedCount: 6 }],
 		nonOptionTables: [
 			{
 				heading: 'Per-column `globalFilter`',
@@ -205,8 +225,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringIndex,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig] },
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig] },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 8 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
 	},
@@ -217,17 +237,18 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 				heading: '`cell` (select / badge)',
 				roots: [GRID_TYPE.SelectCellConfig, GRID_TYPE.BadgeCellConfig],
 				stripPrefix: CELL_CONFIG_PREFIX,
+				expectedCount: 1,
 			},
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig] },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 4 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.FilteringOperators,
 		optionTables: [
-			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig] },
-			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig] },
-			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef] },
+			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
+			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 4 },
+			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 4 },
 		],
 		nonOptionTables: [
 			{
@@ -239,15 +260,15 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringPanel,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig] },
-			{ heading: '`FilterChipsConfig`', roots: [GRID_TYPE.FilterChipsConfig] },
-			{ heading: '`FilterClearButtonConfig`', roots: [GRID_TYPE.FilterClearButtonConfig] },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 4 },
+			{ heading: '`FilterChipsConfig`', roots: [GRID_TYPE.FilterChipsConfig], expectedCount: 1 },
+			{ heading: '`FilterClearButtonConfig`', roots: [GRID_TYPE.FilterClearButtonConfig], expectedCount: 1 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.PaginationIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 8 }],
 		nonOptionTables: [
 			{
 				heading: 'When the total is unknown',
@@ -258,20 +279,20 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.RowPinning,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.SelectionIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig] }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.Sorting,
 		optionTables: [
-			{ heading: '`sorting`', roots: [GRID_TYPE.SortingConfig] },
-			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig] },
-			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig] },
+			{ heading: '`sorting`', roots: [GRID_TYPE.SortingConfig], expectedCount: 7 },
+			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 3 },
+			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
 	},

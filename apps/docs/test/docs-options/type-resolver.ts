@@ -106,6 +106,12 @@ function createProbeProgram(source: string): ts.Program {
 		throw new Error(`Cannot read ${configPath}: ${ts.flattenDiagnosticMessageText(configFile.error.messageText, '\n')}`)
 	}
 	const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, DOCS_ROOT)
+	if (parsed.errors.length > 0) {
+		const messages = parsed.errors
+			.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+			.join('\n')
+		throw new Error(`Cannot parse ${configPath}: ${messages}`)
+	}
 
 	const host = ts.createCompilerHost(parsed.options, true)
 	const readFile = host.readFile.bind(host)
