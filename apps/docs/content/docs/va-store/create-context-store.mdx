@@ -236,6 +236,12 @@ The deciding question is simply: **does anything inside the store write this fie
 	Provider's own write path.
 </Callout>
 
+The payload is built by **key presence**, so a field that legitimately changed _to_ `undefined` or `null` arrives as a present key. The `next.count !== undefined` check above is fine for a non-nullable `count`; for a nullable controlled field, test presence instead:
+
+```ts
+if ('selectedId' in next) setSelectedId(next.selectedId)
+```
+
 ### This is not `<input value>`
 
 A controlled DOM input reasserts its `value` on every render. This Provider syncs when the **`value` prop actually changes**, per key — not on every render.
@@ -294,6 +300,13 @@ const store = createContextStore(createMyStore, {
 })
 ```
 
+<Callout type='info'>
+	`shallowEqual` and the `ControlledConfig` types live in `@ez-kit/store-core`, which this package depends on but does
+	not re-export. Under pnpm's strict `node_modules` layout a transitive dependency is not importable, so install it
+	explicitly (`pnpm add @ez-kit/store-core`) before using the snippet above. Any comparator of your own works just as
+	well and needs no extra install.
+</Callout>
+
 The architectural alternative is worth considering too: keep the **raw** source in the controlled field and derive `users` inside the store. Then the controlled value is a stable reference from the server and there is nothing to compare deeply.
 
 ### Callbacks in `value`
@@ -336,6 +349,8 @@ staleFilters.search = 'xyz' // writes to an orphan — the store is unaffected
 ### Removing a key from `value`
 
 A key that disappears from `value` simply stops being controlled. It keeps whatever value it last had — **there is no revert to `defaultValue`**.
+
+"Disappears" means the key is genuinely absent. `value={{ count: undefined }}` still **controls** `count` — the key is present, so it is written, and `count` becomes `undefined`. Drop the key rather than blanking it.
 
 ### Class-based stores
 

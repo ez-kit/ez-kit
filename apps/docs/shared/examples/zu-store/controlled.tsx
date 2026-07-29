@@ -88,9 +88,9 @@ export default function ControlledExample() {
 
 	// Memoised: a fresh identity every render would make the Provider re-run its sync every render.
 	const handleValueChange = useCallback((next: Partial<PanelState>) => {
-		// Only the controlled keys that actually changed arrive here.
+		// Only the controlled keys the store itself changed arrive here — so `count` can show up,
+		// but `theme` never can: it is a mirror, and nothing inside the store writes it.
 		if (next.count !== undefined) setCount(next.count)
-		if (next.theme !== undefined) setTheme(next.theme)
 	}, [])
 
 	return (
