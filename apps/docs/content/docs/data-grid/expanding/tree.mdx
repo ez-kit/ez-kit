@@ -15,18 +15,18 @@ When your data is hierarchical (folders, org charts, BOMs), render it as a tree.
 <DataGrid
 	data={data} // each row has optional `children: TRow[]`
 	columns={columns}
-	enableExpanding
-	getSubRows={(row) => row.children}
+	expanding={{ variant: 'tree' }}
 />
 ```
 
 ## Options
 
-| Option                  | Type                           | Description                              |
-| ----------------------- | ------------------------------ | ---------------------------------------- |
-| `getSubRows`            | `(row) => TRow[] \| undefined` | How to find child rows.                  |
-| `enableSubRowSelection` | `boolean`                      | Selecting a parent selects its children. |
+| Option                 | Type                                  | Description                                                  |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `expanding.variant`    | `'sub-content' \| 'tree'`             | Mode switch. Default `'sub-content'`.                        |
+| `expanding.getSubRows` | `(row, index) => TRow[] \| undefined` | Sub-row extractor. Auto-detects `row.children` when omitted. |
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/use-data-grid.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/use-data-grid.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/types.ts)

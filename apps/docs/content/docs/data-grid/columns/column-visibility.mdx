@@ -15,13 +15,13 @@ The grid exposes a `column-visibility-trigger` slot that renders the kit's menu 
 
 ```ts
 const grid = useDataGrid({ data, columns })
-grid.setColumnVisibility({ email: false })
+grid.table.setColumnVisibility({ email: false })
 ```
 
 For a minimal toggle without the menu, use the same control directly via column id:
 
 ```ts
-columns.find((c) => c.id === 'email')?.toggleVisibility(false)
+grid.table.getColumn('email')?.toggleVisibility(false)
 ```
 
 A simpler base example is also available:
@@ -36,7 +36,8 @@ A simpler base example is also available:
 | `enableHiding`                  | `boolean`                         | Per-column TanStack pass-through. Default `true`. `visibility: true` sets this to `false` under the hood.                                                                              |
 | `state.columnVisibility`        | `Record<string, boolean>`         | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                         |
 | `initialState.columnVisibility` | `Record<string, boolean>`         | Default hidden columns at mount.                                                                                                                                                       |
-| `onColumnVisibilityChange`      | `(updater) => void`               | Subscribe to visibility changes for persistence (e.g., to localStorage).                                                                                                               |
+
+Column visibility has no dedicated `onChange` — subscribe via the single `onStateChange` callback (see [Controlled State](./data-grid/controlled-state)).
 
 ## See also
 

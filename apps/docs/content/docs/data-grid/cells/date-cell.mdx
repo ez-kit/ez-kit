@@ -1,15 +1,15 @@
 ---
 title: Date Cell
-description: A built-in cell renderer for date values — locale-aware, configurable format, tooltip with the full timestamp.
+description: A built-in cell renderer for date values — locale-aware display, min/max bounds, and a date-picker editor.
 ---
 
 # Date Cell
 
-For date columns, the `'date'` cell type renders a locale-aware string and shows the full ISO timestamp on hover.
+For date columns, the `'date'` cell type renders the value with `Date.prototype.toLocaleDateString`.
 
 ## Usage
 
-The `date` cell type renders a locale-aware, formatted value and exposes date-aware filter operators (including a `between` range). Configure the display via `cell: { type: 'date', config: { format } }`.
+The `date` cell type renders a locale-aware, formatted value and exposes date-aware filter operators (including a `between` range). Configure the display via `cell: { type: 'date', config: { format } }`, where `format` is an `Intl.DateTimeFormatOptions` object.
 
 <DataGridDocsExample exampleId='date-cell-view' />
 
@@ -23,26 +23,29 @@ And it powers the new-row form when `creating` is enabled, so authored dates go 
 
 ```ts
 {
-	id: 'createdAt',
 	accessorKey: 'createdAt',
-	meta: {
-		cellType: 'date',
-		format: 'PPp',          // e.g., "Apr 29, 2026, 11:00 AM"
-		locale: 'en-US',
-		tooltipFormat: 'PPPPpp', // long ISO-ish; shown on hover
+	header: 'Created at',
+	cell: {
+		type: 'date',
+		config: {
+			format: { dateStyle: 'medium' }, // Intl.DateTimeFormatOptions
+			minValue: '2025-01-01',           // ISO 8601, hard minimum for the picker
+			maxValue: '2027-12-31',           // ISO 8601, hard maximum for the picker
+		},
 	},
 }
 ```
 
 ## Options
 
-| `meta.*`        | Type      | Description                                                                                           |
-| --------------- | --------- | ----------------------------------------------------------------------------------------------------- |
-| `format`        | string    | Display format. Default depends on the active flavor's locale lib (`date-fns`-compatible by default). |
-| `locale`        | string    | BCP-47 tag. Default reads from the browser.                                                           |
-| `tooltipFormat` | string    | Hover format. Default is the full ISO timestamp.                                                      |
-| `relative`      | `boolean` | When `true`, shows "2 days ago" instead of an absolute date.                                          |
+| `cell.config.*` | Type                         | Description                                                                            |
+| --------------- | ---------------------------- | -------------------------------------------------------------------------------------- |
+| `format`        | `Intl.DateTimeFormatOptions` | Forwarded to `Date.prototype.toLocaleDateString`. Omitted — locale-default formatting. |
+| `minValue`      | `string` (ISO 8601)          | Hard minimum forwarded to the date-picker editor as a disabled-before bound.           |
+| `maxValue`      | `string` (ISO 8601)          | Hard maximum forwarded to the date-picker editor as a disabled-after bound.            |
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cells/date-cell.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/cells/date-cell.tsx)
+- shadcn flavor — [`packages/data-grid/react/shadcn/src/blocks/cell-types/DateCell.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/blocks/cell-types/DateCell.tsx)
+- HeroUI flavor — [`packages/data-grid/react/heroui/src/blocks/cell-types/DateCell.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/blocks/cell-types/DateCell.tsx)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts) (`DateCellConfig`)

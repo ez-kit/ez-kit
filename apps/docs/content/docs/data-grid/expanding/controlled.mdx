@@ -5,21 +5,27 @@ description: Drive the expand state from outside the grid — open all, sync wit
 
 # Controlled Expanding
 
-Pass an external `expanded` state into the grid to drive expansion from outside — keyboard shortcuts, URL params, persisted across sessions.
+Expanding has no dedicated `expanding.onChange` — pass `expanded` through the general `state` /
+`onStateChange` mechanism, the same as every other controllable slot. See
+[Controlled state](./data-grid/controlled-state) for the full model.
 
 ## Usage
 
 <DataGridDocsExample exampleId='expanding-controlled' />
 
 ```tsx
-const [expanded, setExpanded] = useState<ExpandedState>({})
+const [tableState, setTableState] = useState<Partial<TableState>>({ expanded: {} })
 
 <DataGrid
 	data={data}
 	columns={columns}
-	enableExpanding
-	state={{ expanded }}
-	onExpandedChange={setExpanded}
+	expanding={{
+		renderExpanded: ({ row }) => <OrderDetails order={row.original} />,
+	}}
+	state={tableState}
+	onStateChange={(updater) => {
+		setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+	}}
 />
 ```
 
@@ -29,4 +35,5 @@ const [expanded, setExpanded] = useState<ExpandedState>({})
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/use-data-grid.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/use-data-grid.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/types.ts)

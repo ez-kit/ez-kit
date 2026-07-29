@@ -25,7 +25,7 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 <DataGrid
 	data={data}
 	columns={columns}
-	enableColumnFilters
+	filtering
 	initialState={{
 		columnFilters: [{ id: 'status', value: 'active' }],
 	}}
@@ -34,14 +34,31 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 
 ## Options
 
-| Option                          | Type                 | Description                                                                                  |
-| ------------------------------- | -------------------- | -------------------------------------------------------------------------------------------- |
-| `enableColumnFilters`           | `boolean`            | Master switch. Default `true`.                                                               |
-| `state.columnFilters`           | `ColumnFiltersState` | Controlled filter state.                                                                     |
-| `onColumnFiltersChange`         | `(updater) => void`  | Subscribe to filter changes.                                                                 |
-| Per-column `enableColumnFilter` | `boolean`            | Default `true`; turn off for non-filterable columns.                                         |
-| Per-column `filterFn`           | name \| custom       | Built-in: `'auto'`, `'includesString'`, `'equals'`, `'arrIncludes'`, `'inNumberRange'`, etc. |
-| Per-column `meta.filterVariant` | string               | Hint to the UI which input to render (text, number, select, date).                           |
+### `filtering`
+
+| Option        | Type                                          | Description                                                                                                                          |
+| ------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `variant`     | `'inline' \| 'popover' \| 'panel'`            | Display variant for column filter controls. Default `'inline'`.                                                                      |
+| `manual`      | `boolean`                                     | Disable client-side column filtering (and global filter). The grid calls `onChange` instead.                                         |
+| `operators`   | `FilterOperatorDef[]`                         | Table-level custom operators (or built-in overrides), referenced by column items — see [Operators](./data-grid/filtering/operators). |
+| `faceted`     | `boolean`                                     | Enable faceted row models (unique values + counts) for multi-select filters. Default `false`.                                        |
+| `debounce`    | `number`                                      | Commit debounce in milliseconds for column text filter inputs. Default `0` (commits every keystroke).                                |
+| `chips`       | `boolean \| FilterChipsConfig`                | Auto-mount a strip of removable chips for active filters — see [Filter panel](./data-grid/filtering/panel).                          |
+| `clearButton` | `boolean \| FilterClearButtonConfig`          | Auto-mount a Clear-all button into the toolbar — see [Filter panel](./data-grid/filtering/panel).                                    |
+| `onChange`    | `(columnFilters: ColumnFiltersState) => void` | Called when any column filter changes.                                                                                               |
+
+### Per-column `filtering`
+
+| Option            | Type                                      | Description                                                                                                                       |
+| ----------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `false`           | —                                         | Disable filtering for this column.                                                                                                |
+| `component`       | `(props: InputComponentProps) => unknown` | Custom filter input component for this column.                                                                                    |
+| `operators`       | `boolean \| ColumnOperatorsConfig`        | Operator configuration. `true` = default operators for the column's cell type — see [Operators](./data-grid/filtering/operators). |
+| `defaultOperator` | `string`                                  | Override the default selected operator for this column.                                                                           |
+| `options`         | `Array<{ label, value, count? }>`         | Explicit option list for multi-value (`in` / `notIn`) filters — see [Multi-value](./data-grid/filtering/multi-value).             |
+| `faceted`         | `boolean`                                 | Per-column override for the table-level `filtering.faceted` flag.                                                                 |
+
+Filterable columns pick their default operator set from `cell.type` (`'text'`, `'number'`, `'date'`, `'select'`, `'badge'`) — see [Operators](./data-grid/filtering/operators).
 
 ## See also
 
