@@ -23,12 +23,12 @@ Click a row to reveal a sub-row of arbitrary content beneath it. Common uses: or
 
 ## Options
 
-| Option                      | Type                            | Description                                                                         |
-| --------------------------- | ------------------------------- | ----------------------------------------------------------------------------------- |
-| `expanding`                 | `boolean \| ExpandingConfig`    | Master switch. Providing `renderExpanded` also enables it. Default `false`.         |
-| `expanding.renderExpanded`  | `ComponentType<{ row, table }>` | Renders the expanded content. Required for sub-content mode.                        |
-| `expanding.getRowCanExpand` | `(row) => boolean`              | Per-row expandability. All rows expandable when omitted.                            |
-| `state.expanded`            | `ExpandedState`                 | Controlled expand state — see [Controlled state](/docs/data-grid/controlled-state). |
+| Option                      | Type                            | Description                                                                     |
+| --------------------------- | ------------------------------- | ------------------------------------------------------------------------------- |
+| `expanding`                 | `boolean \| ExpandingConfig`    | Master switch. Providing `renderExpanded` also enables it. Default `false`.     |
+| `expanding.renderExpanded`  | `ComponentType<{ row, table }>` | Renders the expanded content. Required for sub-content mode.                    |
+| `expanding.getRowCanExpand` | `(row) => boolean`              | Per-row expandability. All rows expandable when omitted.                        |
+| `state.expanded`            | `ExpandedState`                 | Controlled expand state — see [Controlled state](./data-grid/controlled-state). |
 
 ## See also
 

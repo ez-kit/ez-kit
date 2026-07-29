@@ -109,7 +109,7 @@ applies to a **trusted** zero: a manual grid with an unknown total (neither `row
 
 ## Server-side pagination
 
-Set `pagination.manual: true` and supply `rowCount`. See [Server-side Data](/docs/data-grid/server-side)
+Set `pagination.manual: true` and supply `rowCount`. See [Server-side Data](./data-grid/server-side)
 for the full pattern, including loading state.
 
 ```tsx
@@ -136,7 +136,7 @@ for the full pattern, including loading state.
 | `pagination.rowCount`     | `number`                              | Server total rows. Derives `pageCount` automatically. Required when `manual` is `true`. |
 | `pagination.onChange`     | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                               |
 | `initialState.pagination` | `{ pageIndex, pageSize }`             | Defaults at mount.                                                                      |
-| `state.pagination`        | same                                  | Controlled state — see [Controlled state](/docs/data-grid/controlled-state).            |
+| `state.pagination`        | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                |
 
 ## Infinite scroll
 
