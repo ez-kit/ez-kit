@@ -15,19 +15,20 @@ Click a row to reveal a sub-row of arbitrary content beneath it. Common uses: or
 <DataGrid
 	data={data}
 	columns={columns}
-	enableExpanding
-	renderSubRow={(row) => <OrderDetails order={row.original} />}
+	expanding={{
+		renderExpanded: ({ row }) => <OrderDetails order={row.original} />,
+	}}
 />
 ```
 
 ## Options
 
-| Option             | Type                 | Description                                                  |
-| ------------------ | -------------------- | ------------------------------------------------------------ |
-| `enableExpanding`  | `boolean`            | Master switch. Default `false`.                              |
-| `renderSubRow`     | `(row) => ReactNode` | Renders the expanded content. Required when expanding is on. |
-| `state.expanded`   | `ExpandedState`      | Controlled expand state.                                     |
-| `onExpandedChange` | `(updater) => void`  | Subscribe.                                                   |
+| Option                      | Type                            | Description                                                                     |
+| --------------------------- | ------------------------------- | ------------------------------------------------------------------------------- |
+| `expanding`                 | `boolean \| ExpandingConfig`    | Master switch. Providing `renderExpanded` also enables it. Default `false`.     |
+| `expanding.renderExpanded`  | `ComponentType<{ row, table }>` | Renders the expanded content. Required for sub-content mode.                    |
+| `expanding.getRowCanExpand` | `(row) => boolean`              | Per-row expandability. All rows expandable when omitted.                        |
+| `state.expanded`            | `ExpandedState`                 | Controlled expand state — see [Controlled state](./data-grid/controlled-state). |
 
 ## See also
 
@@ -36,4 +37,5 @@ Click a row to reveal a sub-row of arbitrary content beneath it. Common uses: or
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/use-data-grid.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/use-data-grid.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/types.ts)
