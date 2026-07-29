@@ -49,11 +49,11 @@ const columns = defineColumns<Release>([
 
 ### `DateRangePreset`
 
-| Field      | Type                                   | Description                                                                      |
-| ---------- | -------------------------------------- | -------------------------------------------------------------------------------- |
-| `id`       | `string`                               | Preset id.                                                                       |
-| `label`    | `string`                               | Label shown in the preset list.                                                  |
-| `getRange` | `(now?: Date) => { from?: T; to?: T }` | Returns the `{ from, to }` bounds for the preset, in ISO-8601 date-only strings. |
+| Field      | Type                                             | Description                                                                      |
+| ---------- | ------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `id`       | `string`                                         | Preset id.                                                                       |
+| `label`    | `string`                                         | Label shown in the preset list.                                                  |
+| `getRange` | `(now?: Date) => { from?: string; to?: string }` | Returns the `{ from, to }` bounds for the preset, in ISO-8601 date-only strings. |
 
 Built-in preset ids: `'today'`, `'yesterday'`, `'last7'`, `'last30'`, `'thisMonth'`, `'lastMonth'`.
 
