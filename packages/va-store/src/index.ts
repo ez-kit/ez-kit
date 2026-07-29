@@ -23,6 +23,9 @@ export type {
 export { StoreProvider } from './store-provider'
 export type { StoreProviderProps } from './store-provider'
 
+export { shallowEqual } from '@ez-kit/store-core'
+export type { ControlledConfig, ControlledFieldConfig } from '@ez-kit/store-core'
+
 export { toTree } from '@ez-kit/store-core/cache'
 export type {
 	CacheAddress,

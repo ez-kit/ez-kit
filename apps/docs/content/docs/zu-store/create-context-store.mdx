@@ -235,22 +235,19 @@ This is the single most common trap:
 
 `transform(dto)` returns a **new reference every render**, so the default `Object.is` sees a change every time the parent renders and writes to the store on every one of them.
 
-The fix is a per-field comparator. `shallowEqual` is exported from `@ez-kit/store-core` for exactly this:
+The fix is a per-field comparator. `shallowEqual` is re-exported from this package for exactly this:
 
 ```ts
-import { shallowEqual } from '@ez-kit/store-core'
+import { createContextStore, shallowEqual } from '@ez-kit/zu-store'
 
 const store = createContextStore(createMyStore, {
 	controlled: { users: { equals: shallowEqual } },
 })
 ```
 
-<Callout type='info'>
-	`shallowEqual` and the `ControlledConfig` types live in `@ez-kit/store-core`, which this package depends on but does
-	not re-export. Under pnpm's strict `node_modules` layout a transitive dependency is not importable, so install it
-	explicitly (`pnpm add @ez-kit/store-core`) before using the snippet above. Any comparator of your own works just as
-	well and needs no extra install.
-</Callout>
+Any comparator of your own works just as well — `equals` is a plain `(a, b) => boolean`. The `ControlledConfig` and
+`ControlledFieldConfig` types are re-exported alongside it, so you can name the `controlled` option's type without
+reaching for `@ez-kit/store-core` directly.
 
 The architectural alternative is worth considering too: keep the **raw** source in the controlled field and derive `users` inside the store. Then the controlled value is a stable reference from the server and there is nothing to compare deeply.
 
