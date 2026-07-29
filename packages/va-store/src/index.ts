@@ -2,6 +2,7 @@ export { createContextStore } from './create-context-store'
 export type {
 	ContextStoreInit,
 	CreateContextStoreFactory,
+	CreateContextStoreOptions,
 	CreateContextStoreResult,
 	ItemRenderArg,
 	UseSnapshotOptions,
