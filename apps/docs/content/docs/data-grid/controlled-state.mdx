@@ -34,7 +34,7 @@ const grid = useDataGrid({
 - Server-side anything (sort, filter, pagination) needs controlled state so you can translate the user's input into your query.
 - URL state — keep sort/filter/page in `?` params so reload preserves view and links are shareable.
 - Cross-component coordination — e.g., a "clear all" button outside the grid that resets every controllable surface at once.
-- **Loading state** — `state.isLoading: true` lets the grid render its loading fallback while your data is fetching. Pass it from any data source — TanStack Query's `isFetching`, SWR's `isValidating`, or your own hook.
+- **Loading state** — `state.loading: { isPending, isFetching, isError, error }` lets the grid render its loading fallback while your data is fetching. Feed it from any data source — TanStack Query's `isPending`/`isFetching`, SWR's `isValidating`, or your own hook.
 
 ## One state, one subscription
 
@@ -63,7 +63,7 @@ not a `RowSelectionState` object.
 | Row pinning       | `rowPinning`       | — (`onStateChange` only)                                                         |
 | Expanded          | `expanded`         | — (`onStateChange` only)                                                         |
 | Column sizing     | `columnSizing`     | — (`onStateChange` only)                                                         |
-| Loading           | `isLoading`        | — (read-only — set via `state.isLoading`)                                        |
+| Loading           | `loading`          | — (read-only — set via `state.loading`)                                          |
 
 ## Source
 
