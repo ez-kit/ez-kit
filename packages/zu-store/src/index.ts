@@ -1,5 +1,10 @@
 export { createContextStore } from './create-context-store'
-export type { ContextStoreInit, CreateContextStoreFactory, CreateContextStoreResult } from './create-context-store'
+export type {
+	ContextStoreInit,
+	CreateContextStoreFactory,
+	CreateContextStoreOptions,
+	CreateContextStoreResult,
+} from './create-context-store'
 
 export { useStoreState } from './use-store-state'
 
