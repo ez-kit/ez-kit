@@ -12,10 +12,21 @@ Wraps a Zustand vanilla store in React context. Each `<Provider>` creates its ow
 ```ts
 type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
 
+type CreateContextStoreOptions<TState> = {
+	controlled?: ControlledConfig<TState>
+}
+
 function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = undefined>(
 	factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
+	options?: CreateContextStoreOptions<ExtractState<TStore>>,
 ): {
-	Provider: (props: PropsWithChildren<{ defaultValue: TDefaultValue }>) => ReactElement
+	Provider: (
+		props: PropsWithChildren<{
+			defaultValue: TDefaultValue
+			value?: Partial<ExtractState<TStore>>
+			onValueChange?: (value: Partial<ExtractState<TStore>>) => void
+		}>,
+	) => ReactElement
 	useStore: () => TStore
 	useSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
 	useShallowSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
@@ -27,6 +38,8 @@ function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = un
 ```
 
 The factory is seeded through a single `defaultValue` envelope — type its parameter with the exported `ContextStoreInit<T>` helper. `defaultValue` is required on the `Provider` when your seed has required fields, and optional otherwise.
+
+`value` / `onValueChange` and the `controlled` option make individual fields controllable from the outside — see [Controlled fields](#controlled-fields).
 
 ## Basic usage
 
@@ -46,6 +59,14 @@ Creates and provides the store. The factory runs **once per mount** (held in a `
 	<App />
 </counterStore.Provider>
 ```
+
+| Prop            | Type                               | Required                          | Description                                                                         |
+| --------------- | ---------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------- |
+| `defaultValue`  | `TDefaultValue`                    | when the seed has required fields | Seed handed to the factory. Applied **once**, at store creation.                    |
+| `value`         | `Partial<TState>`                  | no                                | The fields the parent controls. Applied on mount and on every real change.          |
+| `onValueChange` | `(value: Partial<TState>) => void` | no                                | Fired when the store itself changes a controlled field. Receives only what changed. |
+
+`TState` is your store's state — `ExtractState<TStore>` in the signature above.
 
 ### `useSelector(selector)`
 
@@ -91,6 +112,178 @@ Render-prop alternative to `useSelector`. Handy in JSX-heavy code, or to keep a 
 ```tsx
 <counterStore.Item selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Item>
 ```
+
+## Controlled fields
+
+By default a store is fully self-contained: `defaultValue` seeds it and nothing outside can reach in again. The `value` prop opens exactly as much of that up as you ask for — **the controlled fields are precisely the keys present in `value`**, nothing more.
+
+<LivePreview
+	path='zu-store/controlled'
+	title='Mirror and fully controlled fields side by side'
+/>
+
+### `defaultValue` vs `value`
+
+They answer different questions and are meant to be used together.
+
+|                     | `defaultValue`                    | `value`                                |
+| ------------------- | --------------------------------- | -------------------------------------- |
+| Question it answers | "what should this be built from?" | "what is this equal to right now?"     |
+| Owner               | the store                         | the parent                             |
+| Applied             | once, at creation                 | at creation, then on every real change |
+| Scope               | whatever the factory does with it | exactly the keys listed                |
+
+For a key present in both, `value` wins on mount. Keys absent from `value` still seed from `defaultValue` and then live their own life:
+
+```tsx
+<store.Provider
+	defaultValue={{ count: 1, label: 'boot' }}
+	value={{ count: 99 }}
+>
+	{/* count === 99 (value won), label === 'boot' (seeded, uncontrolled) */}
+</store.Provider>
+```
+
+### Two modes, and how to choose
+
+`value` alone is a **mirror**: the field flows in from outside and nothing inside the store writes it. This is the right shape for a theme, a locale, a `userId`, server data from react-query, or a router param.
+
+```tsx
+<store.Provider
+	defaultValue={{}}
+	value={{ theme, userId }}
+>
+	<App />
+</store.Provider>
+```
+
+`value` **plus** `onValueChange` is full two-way control: children write to the store, the callback hands the changed slice up, and the parent feeds a new `value` back down.
+
+```tsx
+const handleValueChange = useCallback((next: Partial<State>) => {
+	if (next.count !== undefined) setCount(next.count)
+}, [])
+
+<store.Provider
+	defaultValue={{}}
+	value={{ count }}
+	onValueChange={handleValueChange}
+>
+	<App />
+</store.Provider>
+```
+
+The deciding question is simply: **does anything inside the store write this field?** If it does and you did not pass `onValueChange`, the write still lands — the store just drifts away from `value` until the prop next changes, at which point it is overwritten. That is deliberate, not a bug, but it is rarely what you want.
+
+<Callout type='warn'>
+	`onValueChange` receives **only the controlled keys that actually changed**, not the whole state and not the whole
+	`value`. Writes the Provider itself just pushed down from `value` are not echoed back.
+</Callout>
+
+The payload is built by **key presence**, so a field that legitimately changed _to_ `undefined` or `null` arrives as a present key. The `next.count !== undefined` check above is fine for a non-nullable `count`; for a nullable controlled field, test presence instead:
+
+```ts
+if ('selectedId' in next) setSelectedId(next.selectedId)
+```
+
+### This is not `<input value>`
+
+A controlled DOM input reasserts its `value` on every render. This Provider syncs when the **`value` prop actually changes**, per key — not on every render.
+
+The difference matters. "The prop always wins" would clobber any local write on the very next parent render, which would make the mirror-only mode useless and turn every unrelated parent re-render into a store reset. Syncing on change instead lets a local write to a controlled field survive until the parent genuinely says otherwise.
+
+Passing an inline object literal (`value={{ count }}`) is therefore fine: the identity is fresh every render, but the Provider compares **key by key**, so an unchanged `count` writes nothing.
+
+### The `controlled` option
+
+Declared once, where you define the store — not at the call site. Every key is optional, and a key you never mention is still controllable; it just uses the defaults.
+
+```ts
+// TState here is your store's state — ExtractState<TStore> in the signature above.
+type ControlledFieldConfig<TState, K extends keyof TState> = {
+	equals?: (previous: TState[K], next: TState[K]) => boolean
+	set?: (store: TState, value: TState[K]) => void
+}
+```
+
+| Handle   | Answers              | Default                                        |
+| -------- | -------------------- | ---------------------------------------------- |
+| `equals` | "did this change?"   | `Object.is`                                    |
+| `set`    | "how do I write it?" | direct assignment, batched into one `setState` |
+
+`set` receives the current **state** (as from `store.getState()`), so it is the hook for stores whose writes must go through an action:
+
+```ts
+const store = createContextStore(createMyStore, {
+	controlled: {
+		users: {
+			set: (state, users) => {
+				state.replaceUsers(users)
+			},
+		},
+	},
+})
+```
+
+### Deriving `value` on the fly
+
+This is the single most common trap:
+
+```tsx
+<store.Provider value={{ users: transform(dto) }}>
+```
+
+`transform(dto)` returns a **new reference every render**, so the default `Object.is` sees a change every time the parent renders and writes to the store on every one of them.
+
+The fix is a per-field comparator. `shallowEqual` is re-exported from this package for exactly this:
+
+```ts
+import { createContextStore, shallowEqual } from '@ez-kit/zu-store'
+
+const store = createContextStore(createMyStore, {
+	controlled: { users: { equals: shallowEqual } },
+})
+```
+
+Any comparator of your own works just as well — `equals` is a plain `(a, b) => boolean`. The `ControlledConfig` and
+`ControlledFieldConfig` types are re-exported alongside it, so you can name the `controlled` option's type without
+reaching for `@ez-kit/store-core` directly.
+
+The architectural alternative is worth considering too: keep the **raw** source in the controlled field and derive `users` inside the store. Then the controlled value is a stable reference from the server and there is nothing to compare deeply.
+
+### Callbacks in `value`
+
+Passing a callback through `value` is supported on purpose. A callback handed in via `defaultValue` is captured on the first render and keeps that first render's closure forever — so a `handleSubmit` in a multi-step form will read stale props by the time it fires. Routing it through `value` keeps it fresh.
+
+The catch: **memoise it**, or a new function identity on every parent render will look like a real change and sync on every render.
+
+```tsx
+const handleSubmit = useCallback(() => {
+	submit(step, formData)
+}, [step, formData])
+
+<store.Provider
+	defaultValue={{}}
+	value={{ handleSubmit }}
+>
+```
+
+### The merge is shallow
+
+`value` replaces each controlled key **wholesale**. It does not merge into it.
+
+```tsx
+// This replaces `filters` entirely — a previously set `filters.sort` is gone.
+<store.Provider value={{ filters: { search: 'abc' } }}>
+```
+
+If you want to preserve the rest, build the whole object in the parent.
+
+### Removing a key from `value`
+
+A key that disappears from `value` simply stops being controlled. It keeps whatever value it last had — **there is no revert to `defaultValue`**.
+
+"Disappears" means the key is genuinely absent. `value={{ count: undefined }}` still **controls** `count` — the key is present, so it is written, and `count` becomes `undefined`. Drop the key rather than blanking it.
 
 ## Multiple independent instances
 
