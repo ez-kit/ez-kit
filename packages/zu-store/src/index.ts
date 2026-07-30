@@ -1,5 +1,10 @@
 export { createContextStore } from './create-context-store'
-export type { ContextStoreInit, CreateContextStoreFactory, CreateContextStoreResult } from './create-context-store'
+export type {
+	ContextStoreInit,
+	CreateContextStoreFactory,
+	CreateContextStoreOptions,
+	CreateContextStoreResult,
+} from './create-context-store'
 
 export { useStoreState } from './use-store-state'
 
@@ -8,6 +13,9 @@ export type { HistoryActionTag, HistoryOptions, HistoryState } from './middlewar
 
 export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore } from './store-cache'
 export type { StoreCache, CachedStoreGroup, CachedItemProps } from './store-cache'
+
+export { shallowEqual } from '@ez-kit/store-core'
+export type { ControlledConfig, ControlledFieldConfig } from '@ez-kit/store-core'
 
 export { toTree } from '@ez-kit/store-core/cache'
 export type {
