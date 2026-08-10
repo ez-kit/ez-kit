@@ -1,3 +1,5 @@
+'use client'
+
 export { createContextStore } from './create-context-store'
 export type {
 	ContextStoreInit,

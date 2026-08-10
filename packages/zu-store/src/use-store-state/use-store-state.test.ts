@@ -59,6 +59,16 @@ describe('useStoreState', () => {
 		expect(store.getState().active).toBe(true)
 	})
 
+	it('setValue keeps a stable identity across re-renders', () => {
+		const store = makeStore()
+		const { result, rerender } = renderHook(() => useStoreState(store, 'count'))
+
+		const firstSetValue = result.current[1]
+		rerender()
+
+		expect(result.current[1]).toBe(firstSetValue)
+	})
+
 	it('does not re-render when a different field changes', () => {
 		const store = makeStore()
 		const renderSpy = vi.fn()

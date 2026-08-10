@@ -1,7 +1,7 @@
 {
 	"name": "@ez-kit/zu-store",
 	"version": "0.5.1",
-	"description": "A reusable utility package for ez-kit.",
+	"description": "Zustand store factory bound to React context, with undo/redo history and a keep-alive store cache.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -34,7 +34,7 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "50 KB"
+			"limit": "5 KB"
 		}
 	],
 	"devDependencies": {

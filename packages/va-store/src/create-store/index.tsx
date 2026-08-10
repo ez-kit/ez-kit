@@ -1,4 +1,5 @@
-import { getChangedControlledEntries, pickControlledKeys, useServices } from '@ez-kit/store-core'
+import { getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
+import { useServices } from '@ez-kit/store-core/react'
 import {
 	createContext,
 	type PropsWithChildren,
@@ -12,7 +13,8 @@ import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapsho
 
 import type { ControlledConfig, PluginCleanup, PluginContext, StoreId, StorePlugin } from '@ez-kit/store-core'
 
-const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
+/** Names the store in the error, so `createStore(f, { name: 'filters' })` reports `filters`. */
+const missingProviderError = (name: string): string => `Missing Provider for ${name}`
 
 /** Synthetic id for a non-cached, singleton store. There is one entry per Provider, hence a fixed `id`. */
 const SINGLETON_ID = 'singleton'
@@ -84,8 +86,8 @@ export type CreateStoreResult<TState extends object, TDefaultValue> = {
 	StoreItem: (props: StoreItemProps<TState>) => ReactElement
 }
 
-function getStoreFromContext<TState extends object>(store: TState | null): TState {
-	if (!store) throw new Error(MISSING_PROVIDER_ERROR)
+function getStoreFromContext<TState extends object>(store: TState | null, name: string): TState {
+	if (!store) throw new Error(missingProviderError(name))
 	return store
 }
 
@@ -133,7 +135,8 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 	const StoreContext = createContext<TState | null>(null)
 	const plugins = options.plugins ?? []
 	const controlled: ControlledConfig<TState> = options.controlled ?? {}
-	const storeId: StoreId = { path: EMPTY_PATH, name: options.name ?? DEFAULT_STORE_NAME, id: SINGLETON_ID }
+	const name = options.name ?? DEFAULT_STORE_NAME
+	const storeId: StoreId = { path: EMPTY_PATH, name, id: SINGLETON_ID }
 
 	function usePlugins(store: TState, services: PluginContext['services']): void {
 		useEffect(() => {
@@ -236,7 +239,7 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 	}
 
 	function useStore(): TState {
-		return getStoreFromContext(useContext(StoreContext))
+		return getStoreFromContext(useContext(StoreContext), name)
 	}
 
 	function useSnapshot(snapshotOptions?: UseSnapshotOptions): Snapshot<TState> {

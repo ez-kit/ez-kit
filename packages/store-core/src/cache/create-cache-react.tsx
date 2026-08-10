@@ -11,7 +11,7 @@ import {
 	type ReactNode,
 } from 'react'
 
-import { useServices } from '../services-react'
+import { useServices } from '../react'
 import { serializeStoreId } from '../store-id'
 
 import { toStoreId } from './cache-utils'

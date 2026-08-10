@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Source-agnostic persist core. Binds a Valtio proxy to any external substrate through a
  * {@link SourcePort}; URL and storage are adapters layered on top (see `./url`, `./storage`).

@@ -8,6 +8,3 @@ export { serviceKey, createServiceRegistry, extendServiceRegistry } from './serv
 export type { ServiceKey, ServiceRegistry } from './service'
 
 export type { StorePlugin, PluginContext, PluginCleanup } from './plugin'
-
-export { ServicesProvider, useServices } from './services-react'
-export type { ServicesProviderProps } from './services-react'
