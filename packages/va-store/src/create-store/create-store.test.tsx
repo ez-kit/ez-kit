@@ -1,4 +1,5 @@
-import { createServiceRegistry, ServicesProvider, serviceKey } from '@ez-kit/store-core'
+import { createServiceRegistry, serviceKey } from '@ez-kit/store-core'
+import { ServicesProvider } from '@ez-kit/store-core/react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'

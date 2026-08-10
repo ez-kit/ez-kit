@@ -1,3 +1,5 @@
+'use client'
+
 import { createContext, useContext, type ReactElement, type ReactNode } from 'react'
 
 import { createServiceRegistry, type ServiceRegistry } from './service'

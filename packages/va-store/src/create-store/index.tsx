@@ -1,4 +1,4 @@
-import { useServices } from '@ez-kit/store-core'
+import { useServices } from '@ez-kit/store-core/react'
 import { createContext, type PropsWithChildren, type ReactElement, useContext, useEffect, useRef } from 'react'
 import { useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 

@@ -1,3 +1,5 @@
+'use client'
+
 export { createInstanceCache, DEFAULT_GC_TIME } from './instance-cache'
 export type { InstanceCache } from './instance-cache'
 
