@@ -17,6 +17,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/base/sticky.tsx': () => import('./components/base/sticky'),
 	'components/cell-types.tsx': () => import('./components/cell-types'),
 	'components/column-helper.tsx': () => import('./components/column-helper'),
+	'components/column-helper-registered.tsx': () => import('./components/column-helper-registered'),
 	'components/column-pinning.tsx': () => import('./components/column-pinning'),
 	'components/column-visibility.tsx': () => import('./components/column-visibility'),
 	'components/columns/combined.tsx': () => import('./components/columns/combined'),

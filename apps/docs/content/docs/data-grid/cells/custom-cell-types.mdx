@@ -90,7 +90,7 @@ A composite view that derives an initials avatar (color hashed from the name) ne
 
 ## Type-safety
 
-The registry's **keys** are the source of truth. `extendDataGrid()` returns a bundle whose `createColumnHelper` is typed to those keys, so the helper gains a matching `helper.status({ … })` method and a typo in the method name is a TS error.
+The registry's **keys** are the source of truth. `extendDataGrid()` returns a bundle whose `createColumnHelper` is typed to those keys, so the builder gains a matching `createColumn.status({ … })` method and a typo in the method name is a TS error.
 
 Hand-written `cell: { type: '…' }` is **not** id-checked — `CellType` keeps a `string & {}` tail so custom ids stay assignable. A typo there silently falls through to the raw, unstyled value instead of your renderer: no compile error, and no visibly broken cell to tip you off. One more reason to go through the helper.
 

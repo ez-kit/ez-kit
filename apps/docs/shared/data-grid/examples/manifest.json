@@ -348,7 +348,7 @@
 		"label": "Helper · Registered",
 		"group": "columns",
 		"groupLabel": "Columns",
-		"sourceFile": "components/column-helper.tsx",
+		"sourceFile": "components/column-helper-registered.tsx",
 		"exportName": "ColumnHelperRegisteredExample"
 	},
 	{
