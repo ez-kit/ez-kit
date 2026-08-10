@@ -1,7 +1,7 @@
 {
 	"name": "@ez-kit/store-core",
 	"version": "0.2.1",
-	"description": "A reusable utility package for ez-kit.",
+	"description": "Shared foundation for the @ez-kit store packages: store ids, service registry, plugin contract and the manager-agnostic instance cache.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -26,10 +26,6 @@
 		"./cache": {
 			"types": "./dist/cache/index.d.ts",
 			"import": "./dist/cache/index.js"
-		},
-		"./persist": {
-			"types": "./dist/persist/index.d.ts",
-			"import": "./dist/persist/index.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -46,19 +42,15 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "5 KB"
+			"limit": "1 KB"
 		},
 		{
 			"path": "dist/react.js",
-			"limit": "2 KB"
+			"limit": "1 KB"
 		},
 		{
 			"path": "dist/cache/index.js",
-			"limit": "10 KB"
-		},
-		{
-			"path": "dist/persist/index.js",
-			"limit": "2 KB"
+			"limit": "3 KB"
 		}
 	],
 	"devDependencies": {
