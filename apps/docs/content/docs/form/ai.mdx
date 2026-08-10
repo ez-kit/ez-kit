@@ -1,0 +1,33 @@
+---
+title: Use with AI
+description: Feed the form documentation to an LLM or coding agent — scoped llms.txt, full-text dump, and per-page Markdown.
+---
+
+# Use with AI
+
+The form documentation is served as plain Markdown, so an LLM or a coding agent can read it
+directly instead of scraping rendered HTML. These endpoints are scoped to this package —
+use them instead of the site-wide ones so the agent is not handed the whole documentation.
+
+| URL                                          | What it is                                              |
+| -------------------------------------------- | ------------------------------------------------------- |
+| [`/llms.txt/form`](/llms.txt/form)           | Index of every form page — title, link and description. |
+| [`/llms-full.txt/form`](/llms-full.txt/form) | Every form page as one Markdown file.                   |
+| `/llms.mdx/docs/form/<slug>`                 | A single page as raw Markdown.                          |
+
+The per-page route mirrors the docs URL: [Validation](./validation) is served as Markdown at
+[`/llms.mdx/docs/form/validation`](/llms.mdx/docs/form/validation).
+Every page also carries **Copy Markdown** and **View options** controls under its title.
+
+```text
+Read https://ez-kit.dev/llms-full.txt/form, then build a validated sign-up form
+with @ez-kit/form-shadcn and Zod.
+```
+
+```bash
+curl -O https://ez-kit.dev/llms-full.txt/form
+```
+
+Covers `@ez-kit/form-react`, `@ez-kit/form-shadcn` and `@ez-kit/form-heroui`.
+
+For the whole site — every package at once — see [Use with AI](/docs/ai).

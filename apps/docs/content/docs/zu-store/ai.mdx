@@ -1,0 +1,32 @@
+---
+title: Use with AI
+description: Feed the zu-store documentation to an LLM or coding agent — scoped llms.txt, full-text dump, and per-page Markdown.
+---
+
+# Use with AI
+
+The `@ez-kit/zu-store` documentation is served as plain Markdown, so an LLM or a coding agent can
+read it directly instead of scraping rendered HTML. These endpoints are scoped to this package —
+use them instead of the site-wide ones so the agent is not handed the whole documentation.
+
+| URL                                                  | What it is                                                  |
+| ---------------------------------------------------- | ----------------------------------------------------------- |
+| [`/llms.txt/zu-store`](/llms.txt/zu-store)           | Index of every zu-store page — title, link and description. |
+| [`/llms-full.txt/zu-store`](/llms-full.txt/zu-store) | Every zu-store page as one Markdown file.                   |
+| `/llms.mdx/docs/zu-store/<slug>`                     | A single page as raw Markdown.                              |
+
+The per-page route mirrors the docs URL: [createContextStore](./create-context-store) is served as
+Markdown at [`/llms.mdx/docs/zu-store/create-context-store`](/llms.mdx/docs/zu-store/create-context-store).
+Every page also carries **Copy Markdown** and **View options** controls under its title.
+
+```text
+Read https://ez-kit.dev/llms-full.txt/zu-store, then set up a context-scoped
+Zustand store with history for my editor component.
+```
+
+```bash
+curl -O https://ez-kit.dev/llms-full.txt/zu-store
+```
+
+Working with the Valtio binding instead? See [va-store → Use with AI](/docs/va-store/ai).
+For the whole site — every package at once — see [Use with AI](/docs/ai).

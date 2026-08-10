@@ -3,5 +3,5 @@
 	"description": "Zustand-powered React context stores",
 	"icon": "Boxes",
 	"root": true,
-	"pages": ["index", "create-context-store", "store-cache", "use-store-state", "with-history"]
+	"pages": ["index", "create-context-store", "store-cache", "use-store-state", "with-history", "ai"]
 }

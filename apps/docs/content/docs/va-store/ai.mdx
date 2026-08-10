@@ -1,0 +1,32 @@
+---
+title: Use with AI
+description: Feed the va-store documentation to an LLM or coding agent — scoped llms.txt, full-text dump, and per-page Markdown.
+---
+
+# Use with AI
+
+The `@ez-kit/va-store` documentation is served as plain Markdown, so an LLM or a coding agent can
+read it directly instead of scraping rendered HTML. These endpoints are scoped to this package —
+use them instead of the site-wide ones so the agent is not handed the whole documentation.
+
+| URL                                                  | What it is                                                  |
+| ---------------------------------------------------- | ----------------------------------------------------------- |
+| [`/llms.txt/va-store`](/llms.txt/va-store)           | Index of every va-store page — title, link and description. |
+| [`/llms-full.txt/va-store`](/llms-full.txt/va-store) | Every va-store page as one Markdown file.                   |
+| `/llms.mdx/docs/va-store/<slug>`                     | A single page as raw Markdown.                              |
+
+The per-page route mirrors the docs URL: [Persist](./persist) is served as Markdown at
+[`/llms.mdx/docs/va-store/persist`](/llms.mdx/docs/va-store/persist).
+Every page also carries **Copy Markdown** and **View options** controls under its title.
+
+```text
+Read https://ez-kit.dev/llms-full.txt/va-store, then persist my filter state
+to the URL with the va-store persist engine.
+```
+
+```bash
+curl -O https://ez-kit.dev/llms-full.txt/va-store
+```
+
+Working with the Zustand binding instead? See [zu-store → Use with AI](/docs/zu-store/ai).
+For the whole site — every package at once — see [Use with AI](/docs/ai).
