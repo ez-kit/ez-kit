@@ -247,7 +247,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')
 		fireEvent.click(columnsButton)
-		fireEvent.click(screen.getByRole('option', { name: 'Name' }))
+		fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Name' }))
 
 		expect(onToggle).toHaveBeenCalledTimes(1)
 	})

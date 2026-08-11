@@ -1,44 +1,53 @@
 'use client'
 
-import { ListBox, Popover } from '@heroui/react'
+import { Button, Dropdown, Label } from '@heroui/react'
 import { Columns2 } from 'lucide-react'
 
-import type { ColumnVisibilityMenuProps } from '@ez-kit/data-grid-react'
+import type { ColumnVisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
+import type { Selection } from '@heroui/react'
 
 export function ColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
-	const selectedColumns = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
+	const selectedKeys = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
+
+	/**
+	 * react-aria reports the whole next selection rather than the item that was pressed, so toggle
+	 * exactly the columns whose visibility flipped. `'all'` means every key is selected.
+	 */
+	const onSelectionChange = (keys: Selection) => {
+		for (const col of columns) {
+			const willBeVisible = keys === 'all' || keys.has(col.id)
+			if (willBeVisible !== col.isVisible) col.onToggle()
+		}
+	}
 
 	return (
-		<Popover>
-			<Popover.Trigger>
-				<span className='inline-flex items-center gap-1.5 cursor-pointer'>
-					<Columns2 size={16} />
-					Columns
-				</span>
-			</Popover.Trigger>
-			<Popover.Content>
-				<Popover.Dialog aria-label='Column visibility'>
-					<ListBox
-						aria-label='Column visibility'
-						selectionMode='multiple'
-						selectedKeys={selectedColumns}
-					>
-						{columns.map((col) => (
-							<ListBox.Item
-								key={col.id}
-								id={col.id}
-								textValue={col.label}
-								onPress={() => {
-									col.onToggle()
-								}}
-							>
-								{col.label}
-								<ListBox.ItemIndicator />
-							</ListBox.Item>
-						))}
-					</ListBox>
-				</Popover.Dialog>
-			</Popover.Content>
-		</Popover>
+		<Dropdown>
+			<Button
+				size='sm'
+				variant='outline'
+			>
+				<Columns2 size={16} />
+				Columns
+			</Button>
+			<Dropdown.Popover placement='bottom end'>
+				<Dropdown.Menu
+					aria-label='Column visibility'
+					items={columns}
+					selectedKeys={selectedKeys}
+					selectionMode='multiple'
+					onSelectionChange={onSelectionChange}
+				>
+					{(col: VisibilityColumnItem) => (
+						<Dropdown.Item
+							id={col.id}
+							textValue={col.label}
+						>
+							<Label>{col.label}</Label>
+							<Dropdown.ItemIndicator />
+						</Dropdown.Item>
+					)}
+				</Dropdown.Menu>
+			</Dropdown.Popover>
+		</Dropdown>
 	)
 }

@@ -131,4 +131,40 @@ describe('headless data-* contract', () => {
 		expect(overlay?.style.left).toBe('')
 		expect(overlay?.style.right).toBe('')
 	})
+
+	// Regression: the summed model widths are only the pre-measurement fallback. Whenever the
+	// DOM disagrees — a kit whose scroll container is inset from the wrapper (HeroUI insets it
+	// by 4px), or rendered column widths that drift from the model — the model offset puts the
+	// shadow's darkest pixels UNDER the sticky pinned cells, which paint above the overlay. The
+	// measured edge of the pinned block must win.
+	it('positions each pin shadow at the measured DOM edge of its pinned block', () => {
+		const COLS_MULTI = defineColumns<User>([
+			{ accessorKey: 'name', header: 'Name', size: 180, pinning: { pin: 'left' } },
+			{ accessorKey: 'age', header: 'Age', size: 120, pinning: { pin: 'left' } },
+			{ accessorKey: 'id', header: 'Id', size: 90, pinning: { pin: 'right' } },
+		])
+		const table = createTable<User>({ data: USERS, columns: COLS_MULTI, pinning: { column: true } })
+
+		// jsdom reports every rect as zero, so stand in a layout where the DOM edges sit 4px
+		// past the model ones — the exact drift HeroUI's inset scroll container produces.
+		const original = Object.getOwnPropertyDescriptor(Element.prototype, 'getBoundingClientRect')
+		Object.defineProperty(Element.prototype, 'getBoundingClientRect', {
+			configurable: true,
+			value: function rect(this: Element): DOMRect {
+				if (this.matches("[data-slot='pin-shadow-overlay']")) return { left: 0, right: 800, width: 800 } as DOMRect
+				if (this.matches("[data-slot='th'][data-pinned='left']")) return { right: 304 } as DOMRect
+				if (this.matches("[data-slot='th'][data-pinned='right']")) return { left: 706 } as DOMRect
+				// Everything else keeps jsdom's own answer, which is a zero rect.
+				return { left: 0, right: 0, width: 0 } as DOMRect
+			},
+		})
+
+		try {
+			const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
+			expect(container.querySelector<HTMLElement>("[data-pin-shadow='left']")?.style.left).toBe('304px')
+			expect(container.querySelector<HTMLElement>("[data-pin-shadow='right']")?.style.right).toBe('94px')
+		} finally {
+			if (original) Object.defineProperty(Element.prototype, 'getBoundingClientRect', original)
+		}
+	})
 })
