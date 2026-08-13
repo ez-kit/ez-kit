@@ -43,6 +43,7 @@ function SelectCellInput({
 			{label !== undefined && <Label htmlFor={id}>{label}</Label>}
 			<Select.Trigger id={id}>
 				<Select.Value />
+				<Select.Indicator />
 			</Select.Trigger>
 			<Select.Popover>
 				<ListBox>
