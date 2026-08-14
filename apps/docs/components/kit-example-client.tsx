@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 
 import { ExampleFrame } from '@/components/example-frame'
 import { ExamplePreview } from '@/components/example-preview'
+import { rewriteExampleImports } from '@/components/rewrite-example-imports'
 import { useUrlState } from '@/hooks/use-url-state'
 
 import type { DataGridDocsExampleFlavor } from './kit-example'
@@ -18,6 +19,10 @@ const FLAVORS: readonly { value: DataGridDocsExampleFlavor; label: string }[] = 
 ]
 
 const FLAVOR_VALUES: readonly DataGridDocsExampleFlavor[] = FLAVORS.map((flavor) => flavor.value)
+
+function rewriteFiles(files: readonly ExampleFile[], flavor: DataGridDocsExampleFlavor): ExampleFile[] {
+	return files.map((file) => ({ ...file, source: rewriteExampleImports(file.source, flavor) }))
+}
 
 type ClientProps = {
 	exampleId: string
@@ -40,7 +45,7 @@ export function KitExampleClient({ exampleId, files, defaultType, lockFlavor }: 
 						slug={exampleId}
 					/>
 				}
-				files={files}
+				files={rewriteFiles(files, defaultType)}
 			/>
 		)
 	}
@@ -106,7 +111,7 @@ function Switcher({
 					slug={exampleId}
 				/>
 			}
-			files={files}
+			files={rewriteFiles(files, flavor)}
 			header={
 				<FlavorTabs
 					active={flavor}

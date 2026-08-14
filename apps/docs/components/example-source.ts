@@ -1,20 +1,26 @@
 import 'server-only'
 
-import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
+import { collectExampleFiles } from '@/components/example-files'
 import { extractExampleSource } from '@/components/extract-example-source'
 import { EXAMPLE_SOURCE_DIRS, findExample } from '@/shared/examples-registry'
 
+import type { ExampleFile } from '@/components/example-file'
+
 /**
- * Source shown in the example's source panel. Some files hold several examples,
- * so the file is sliced down to the one `exampleId` names — see
- * `extractExampleSource`.
+ * Every file the example's source panel shows: the entry file first, sliced down to the
+ * one export `exampleId` names (some files hold several examples — see
+ * `extractExampleSource`), then the files it imports, whole.
  */
-export async function readExampleSource(exampleId: string): Promise<string> {
+export async function readExampleFiles(exampleId: string): Promise<ExampleFile[]> {
 	const entry = findExample(exampleId)
-	if (!entry) throw new Error(`readExampleSource: unknown example id "${exampleId}"`)
-	const examplesDir = path.join(process.cwd(), EXAMPLE_SOURCE_DIRS[entry.product])
-	const source = await readFile(path.join(examplesDir, entry.sourceFile), 'utf8')
-	return extractExampleSource(source.replace(/\s+$/u, '\n'), entry.exportName)
+	if (!entry) throw new Error(`readExampleFiles: unknown example id "${exampleId}"`)
+
+	const root = path.join(process.cwd(), EXAMPLE_SOURCE_DIRS[entry.product])
+	const [entryFile, ...dependencies] = await collectExampleFiles(path.join(root, entry.sourceFile), root)
+
+	if (!entryFile) throw new Error(`readExampleFiles: no source for example id "${exampleId}"`)
+
+	return [{ ...entryFile, source: extractExampleSource(entryFile.source, entry.exportName) }, ...dependencies]
 }
