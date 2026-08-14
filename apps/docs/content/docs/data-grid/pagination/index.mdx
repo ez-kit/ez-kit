@@ -23,10 +23,31 @@ The "full" example below demonstrates pagination alongside sort and filter:
 />
 ```
 
+The footer and the page-size selector are also available as compound slots when you lay the grid
+out by hand — both read their config from the grid, so neither takes props:
+
 ```tsx
 <DataGrid.Pagination />
-<DataGrid.PageSizer options={[10, 25, 50, 100]} />
+<DataGrid.PageSizer />
 ```
+
+## Page size selector
+
+`pagination.pageSizeOptions` lists the values a reader can switch `pageSize` to. Set it and a
+selector renders in the toolbar; omit it and the page size stays fixed at whatever `pageSize` (or
+`initialState.pagination.pageSize`) set.
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{ pageSize: 10, pageSizeOptions: [10, 25, 50, 100] }}
+/>
+```
+
+Picking a value calls `table.setPageSize`, so a server-paginated grid receives it through
+`pagination.onChange` like any other page change. The option applies to page-based mode only —
+infinite scroll has no page size to select, so it is ignored there.
 
 ## Variants
 
@@ -127,16 +148,17 @@ for the full pattern, including loading state.
 
 ## Options
 
-| Option                    | Type                                  | Description                                                                             |
-| ------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------- |
-| `pagination.variant`      | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only.         |
-| `pagination.siblings`     | `number`                              | `'numbered'` only. Pages kept either side of the current one. Default `1`.              |
-| `pagination.boundaries`   | `number`                              | `'numbered'` only. Pages kept at each end of the link strip. Default `1`.               |
-| `pagination.manual`       | `boolean`                             | Disable client-side paging. The grid calls `onChange` instead.                          |
-| `pagination.rowCount`     | `number`                              | Server total rows. Derives `pageCount` automatically. Required when `manual` is `true`. |
-| `pagination.onChange`     | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                               |
-| `initialState.pagination` | `{ pageIndex, pageSize }`             | Defaults at mount.                                                                      |
-| `state.pagination`        | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                |
+| Option                       | Type                                  | Description                                                                               |
+| ---------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `pagination.variant`         | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only.           |
+| `pagination.siblings`        | `number`                              | `'numbered'` only. Pages kept either side of the current one. Default `1`.                |
+| `pagination.boundaries`      | `number`                              | `'numbered'` only. Pages kept at each end of the link strip. Default `1`.                 |
+| `pagination.pageSizeOptions` | `number[]`                            | Selectable page sizes. Renders a page-size selector in the toolbar. Page-based mode only. |
+| `pagination.manual`          | `boolean`                             | Disable client-side paging. The grid calls `onChange` instead.                            |
+| `pagination.rowCount`        | `number`                              | Server total rows. Derives `pageCount` automatically. Required when `manual` is `true`.   |
+| `pagination.onChange`        | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                                 |
+| `initialState.pagination`    | `{ pageIndex, pageSize }`             | Defaults at mount.                                                                        |
+| `state.pagination`           | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                  |
 
 ## Infinite scroll
 

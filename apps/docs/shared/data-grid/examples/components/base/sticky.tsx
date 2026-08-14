@@ -14,8 +14,7 @@ export function BaseStickyExample() {
 			data={data}
 			columns={columns}
 			stickyHeader
-			pagination={{ pageSize: 25 }}
-			pageSizer={{ items: [10, 25, 50] }}
+			pagination={{ pageSize: 25, pageSizeOptions: [10, 25, 50] }}
 		/>
 	)
 }

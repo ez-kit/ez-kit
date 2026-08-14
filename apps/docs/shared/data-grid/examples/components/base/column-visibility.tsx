@@ -14,8 +14,7 @@ export function BaseColumnVisibilityExample() {
 			data={data}
 			columns={columns}
 			columnVisibility={{ toolbar: true }}
-			pagination={{ pageSize: 10 }}
-			pageSizer={{ items: [5, 10, 25] }}
+			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 25] }}
 		/>
 	)
 }

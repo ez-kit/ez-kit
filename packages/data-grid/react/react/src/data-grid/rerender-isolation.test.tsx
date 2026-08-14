@@ -162,7 +162,7 @@ describe('rerender isolation', () => {
 	})
 
 	it('start editing a row does NOT re-render PageSizer', () => {
-		const { counters, instance } = renderGrid({ pageSizer: { items: [10, 25] } })
+		const { counters, instance } = renderGrid({ pagination: { pageSizeOptions: [10, 25] } })
 		const before = counters.pageSizer
 
 		act(() => {
@@ -173,8 +173,8 @@ describe('rerender isolation', () => {
 	})
 
 	it('start editing a row does NOT re-render the Toolbar', () => {
-		// Toolbar needs at least one control to render; pageSizer suffices.
-		const { counters, instance } = renderGrid({ pageSizer: { items: [10, 25] } })
+		// Toolbar needs at least one control to render; the page sizer suffices.
+		const { counters, instance } = renderGrid({ pagination: { pageSizeOptions: [10, 25] } })
 		const toolbarBefore = counters.toolbar
 
 		act(() => {

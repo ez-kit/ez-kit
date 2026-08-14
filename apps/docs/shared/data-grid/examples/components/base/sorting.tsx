@@ -14,8 +14,7 @@ export function BaseSortingExample() {
 			data={data}
 			columns={columns}
 			sorting
-			pagination={{ pageSize: 10 }}
-			pageSizer={{ items: [5, 10, 25] }}
+			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 25] }}
 		/>
 	)
 }

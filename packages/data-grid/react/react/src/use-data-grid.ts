@@ -27,8 +27,8 @@ import type { ComponentType, ReactElement } from 'react'
 /** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
 export const CELL_TYPES_KEY = Symbol('cellTypes')
 
-/** Symbol used to carry pageSizer config on the table instance for PageSizer to read. */
-export const PAGE_SIZER_KEY = Symbol('pageSizer')
+/** Symbol used to carry `pagination.pageSizeOptions` on the table instance for PageSizer to read. */
+export const PAGE_SIZER_KEY = Symbol('pageSizeOptions')
 
 /** Symbol used to carry the page-based pagination variant on the table instance for Pagination to read. */
 export const PAGINATION_VARIANT_KEY = Symbol('paginationVariant')
@@ -232,6 +232,13 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 * is the IntersectionObserver `rootMargin` for the non-virtualized path.
 	 */
 	threshold?: { rows?: number } | { px?: number }
+	/**
+	 * Page-based mode only. Selectable values for {@link PaginationConfig.pageSize}. When
+	 * provided, a PageSizer control renders in the toolbar; omitted, the page size is fixed.
+	 * Changing the selection calls `table.setPageSize`, so it flows through
+	 * {@link PaginationConfig.onChange} like any other pagination change.
+	 */
+	pageSizeOptions?: number[]
 }
 
 /**
@@ -269,10 +276,6 @@ function normalizeInfinite(
 export type NormalizedPageWindowConfig = {
 	siblings: number
 	boundaries: number
-}
-
-export type PageSizerConfig = {
-	items: number[]
 }
 
 export type ColumnVisibilityUIConfig = {
@@ -423,8 +426,6 @@ export type UseDataGridConfig<TRow extends object> = {
 	globalFiltering?: boolean | ReactGlobalFilteringConfig
 	/** Custom cell type renderers. Merged with types passed directly to `DataGrid`. */
 	cellTypes?: CellTypeRegistry
-	/** Page size selector config. When provided, renders a PageSizer control. */
-	pageSizer?: PageSizerConfig
 	/**
 	 * Enable row selection.
 	 * - `false` / omitted — disabled
@@ -494,7 +495,6 @@ export function useDataGrid<TRow extends object>(
 	const config = mergeGridOptionLayers(factoryDefaults, providerDefaults, instanceConfig)
 	const {
 		cellTypes,
-		pageSizer,
 		selection: rawSelection,
 		columnVisibility,
 		fallbacks,
@@ -527,10 +527,15 @@ export function useDataGrid<TRow extends object>(
 					variant: _variant,
 					siblings: _siblings,
 					boundaries: _boundaries,
+					pageSizeOptions: _pageSizeOptions,
 					...rest
 				}) => rest)(rawPagination)
 			: rawPagination
 	const normalizedInfinite = normalizeInfinite(rawPagination)
+
+	// Page-based only: the selector drives `pageSize`, which infinite mode does not page by.
+	const pageSizeOptions: number[] | undefined =
+		typeof rawPagination === 'object' && rawPagination.mode !== 'infinite' ? rawPagination.pageSizeOptions : undefined
 
 	const paginationVariant: PaginationVariant =
 		typeof rawPagination === 'object'
@@ -686,10 +691,10 @@ export function useDataGrid<TRow extends object>(
 	cellTypesRef.current = cellTypes
 	tableAsSymbolMap[CELL_TYPES_KEY] = cellTypesRef.current
 
-	// Store pageSizer config on the table instance so PageSizer can read without an extra prop
-	const pageSizerRef = useRef(pageSizer)
-	pageSizerRef.current = pageSizer
-	tableAsSymbolMap[PAGE_SIZER_KEY] = pageSizerRef.current
+	// Store the page-size options on the table instance so PageSizer can read without an extra prop
+	const pageSizeOptionsRef = useRef(pageSizeOptions)
+	pageSizeOptionsRef.current = pageSizeOptions
+	tableAsSymbolMap[PAGE_SIZER_KEY] = pageSizeOptionsRef.current
 
 	// Store rowPinning config on the table instance so RowPinCell can read without an extra prop
 	const rowPinningRef = useRef(config.pinning)

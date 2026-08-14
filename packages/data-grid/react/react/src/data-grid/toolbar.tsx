@@ -19,7 +19,6 @@ import type {
 	ColumnVisibilityUIConfig,
 	NormalizedClearButtonConfig,
 	NormalizedGlobalFilteringConfig,
-	PageSizerConfig,
 } from '../use-data-grid'
 import type { SortingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
@@ -31,7 +30,7 @@ type ToolbarProps = {
 /**
  * Toolbar area above the table.
  * Renders default content when no children are provided:
- * - PageSizer on the left when `pageSizer` is configured
+ * - PageSizer on the left when `pagination.pageSizeOptions` is set
  * - "+ Add" create trigger and column visibility toggle on the right
  */
 export function Toolbar({ children }: ToolbarProps) {
@@ -54,7 +53,7 @@ export function Toolbar({ children }: ToolbarProps) {
 	const sortConfig = (table as unknown as Record<symbol, unknown>)[SORTING_KEY] as boolean | SortingConfig | undefined
 	const hasSortingToolbar = typeof sortConfig === 'object' && Boolean(sortConfig.toolbar)
 
-	const pageSizerConfig = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as PageSizerConfig | undefined
+	const pageSizeOptions = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as number[] | undefined
 
 	const globalFilteringConfig = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as
 		| NormalizedGlobalFilteringConfig
@@ -70,7 +69,7 @@ export function Toolbar({ children }: ToolbarProps) {
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
 	}
 
-	const left = pageSizerConfig ? <PageSizer /> : null
+	const left = pageSizeOptions ? <PageSizer /> : null
 	const right =
 		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar ? (
 			<>

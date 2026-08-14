@@ -15,8 +15,7 @@ export function CrudClientExample() {
 			getRowId={(row) => String(row.id)}
 			sorting
 			filtering={{ variant: 'popover' }}
-			pagination={{ pageSize: 10 }}
-			pageSizer={{ items: [5, 10, 20, 50] }}
+			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 20, 50] }}
 			columnVisibility={{ toolbar: true }}
 			pinning={{ column: true }}
 			selection={{

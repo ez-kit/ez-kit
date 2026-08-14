@@ -10,6 +10,7 @@ import {
 	FILTER_CHIPS_KEY,
 	FILTER_CLEAR_BUTTON_KEY,
 	GLOBAL_FILTERING_KEY,
+	PAGE_SIZER_KEY,
 	SELECTION_PANEL_KEY,
 	VIRTUALIZED_KEY,
 	useDataGrid,
@@ -484,6 +485,43 @@ describe('useDataGrid — virtualized', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: false }))
 		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
 		expect(key).toBeUndefined()
+	})
+})
+
+describe('useDataGrid — pagination.pageSizeOptions', () => {
+	it('PAGE_SIZER_KEY is undefined when pagination is not set', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		expect(key).toBeUndefined()
+	})
+
+	it('PAGE_SIZER_KEY is undefined when pagination carries no pageSizeOptions', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		expect(key).toBeUndefined()
+	})
+
+	it('PAGE_SIZER_KEY stores the options in page-based mode', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
+		)
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		expect(key).toEqual([5, 10, 25])
+	})
+
+	it('PAGE_SIZER_KEY is undefined in infinite mode — there is no page size to select', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', pageSizeOptions: [5, 10, 25] } }),
+		)
+		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		expect(key).toBeUndefined()
+	})
+
+	it('still applies the rest of the pagination config alongside pageSizeOptions', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
+		)
+		expect(result.current.table.getState().pagination.pageSize).toBe(5)
 	})
 })
 

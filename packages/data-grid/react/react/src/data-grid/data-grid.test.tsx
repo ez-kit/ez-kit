@@ -256,15 +256,15 @@ describe('<DataGrid>', () => {
 		expect(screen.getAllByTestId('money-cell')).toHaveLength(USERS.length)
 	})
 
-	it('does not render PageSizer when pageSizer config is not set', () => {
+	it('does not render PageSizer when pagination.pageSizeOptions is not set', () => {
 		const { instance } = makeTable({ pagination: { pageSize: 5 } })
 		renderWithComponents(<DataGrid table={instance} />)
 		expect(screen.queryByRole('combobox')).toBeNull()
 	})
 
-	it('renders PageSizer select with items when pageSizer config is set', () => {
+	it('renders PageSizer select with the pagination.pageSizeOptions values', () => {
 		const { instance } = makeTable({ pagination: { pageSize: 5 } })
-		;(instance.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] = { items: [5, 10, 25] }
+		;(instance.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] = [5, 10, 25]
 		renderWithComponents(<DataGrid table={instance} />)
 		const select = screen.getByRole('combobox')
 		expect(select).toBeInTheDocument()
