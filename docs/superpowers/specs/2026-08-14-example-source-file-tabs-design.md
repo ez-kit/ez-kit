@@ -39,6 +39,10 @@ Excluded by construction:
   installs, not files they write.
 - Anything resolving outside `rootDir`.
 - Anything that is not `.ts` / `.tsx` (JSON manifests in particular).
+- A dependency whose basename starts with `_` (`_data.ts`, `_memory-adapter.ts`) — in this repo
+  that prefix already marks a shared internal fixture pulled in by many unrelated examples, not a
+  file that belongs to the one being viewed. Its own imports are not traversed either. The entry
+  file is exempt from this rule: it is what the reader asked for, regardless of its name.
 
 An unresolvable relative import is skipped silently. The panel is display-only, exactly like
 `extractExampleSource`, so failing a docs build over it would be the worse trade.
@@ -82,8 +86,9 @@ package like the entry file does.
 
 `SourcePanel` takes `files: ExampleFile[]`.
 
-- One file → renders exactly as today, no tab bar. The ~77 existing single-file examples are
-  visually unchanged.
+- One file → renders exactly as today, no tab bar. Thanks to the `_`-prefix exclusion above, this
+  covers not just the examples that were single-file before this change but also the ~58 examples
+  that only ever imported a shared `_`-prefixed fixture — they too render unchanged.
 - More than one → a shadcn `Tabs` bar (`apps/docs/components/ui/tabs.tsx`, already vendored) above
   the code block. Tab label is `name`; `path` is used only when two files share a basename.
 - The entry file's tab is active on mount.

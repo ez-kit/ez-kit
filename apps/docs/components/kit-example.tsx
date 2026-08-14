@@ -1,4 +1,4 @@
-import { readExampleSource } from '@/components/example-source'
+import { readExampleFiles } from '@/components/example-source'
 
 import { KitExampleClient } from './kit-example-client'
 
@@ -21,12 +21,12 @@ export async function KitExample({ exampleId, defaultType, lockFlavor }: KitExam
 		throw new Error('<KitExample />: `lockFlavor` requires `defaultType` ("shadcn" or "heroui").')
 	}
 
-	const source = await readExampleSource(exampleId)
+	const files = await readExampleFiles(exampleId)
 
 	return (
 		<KitExampleClient
 			exampleId={exampleId}
-			source={source}
+			files={files}
 			defaultType={defaultType}
 			lockFlavor={lockFlavor ?? false}
 		/>

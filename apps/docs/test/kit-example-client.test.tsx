@@ -28,7 +28,7 @@ test('locked flavor renders that kit and hides the tab switcher', () => {
 	render(
 		<KitExampleClient
 			exampleId='base-sorting'
-			source={'const x = 1\n'}
+			files={[{ name: 'Example.tsx', path: 'Example.tsx', source: 'const x = 1\n', language: 'tsx' }]}
 			defaultType='heroui'
 			lockFlavor
 		/>,
@@ -47,7 +47,7 @@ test('switching tabs drives the ExampleFrame kit', () => {
 	render(
 		<KitExampleClient
 			exampleId='base-sorting'
-			source={'const x = 1\n'}
+			files={[{ name: 'Example.tsx', path: 'Example.tsx', source: 'const x = 1\n', language: 'tsx' }]}
 			defaultType='shadcn'
 			lockFlavor={false}
 		/>,
