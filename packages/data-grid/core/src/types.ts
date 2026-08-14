@@ -4,6 +4,8 @@ import type { CreatingConfig } from './features/creating'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
 import type { FilterOperatorDef } from './features/operators'
+import type { RowActionsConfig } from './features/row-actions'
+import type { SetStateOptions } from './store/store'
 import type {
 	Column,
 	ColumnFiltersState,
@@ -430,6 +432,13 @@ export type TableConfig<TRow extends object> = {
 	creating?: CreatingConfig<TRow>
 	editing?: EditingConfig<TRow>
 	deleting?: DeletingConfig<TRow>
+	/**
+	 * Layout of the per-row actions column (`__actions__`), which holds edit,
+	 * delete and the row-pin menu. The column is injected automatically as soon
+	 * as any of {@link TableConfig.editing}, {@link TableConfig.deleting} or row
+	 * pinning is enabled; this only controls how those actions are presented.
+	 */
+	rowActions?: RowActionsConfig
 	sizing?: boolean | SizingConfig
 	/**
 	 * Seed values for table state at construction (TanStack-style). Merged over the
@@ -489,8 +498,18 @@ export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
 	 * React `useDataGrid` hook). Calling `setState` instead would loop back
 	 * through `config.onStateChange` and risk an infinite update when the
 	 * consumer mirrors that callback into React state.
+	 *
+	 * Pass `{ silent: true }` when syncing from inside a React render pass: the
+	 * write still lands (so the very render that syncs reads the new values), but
+	 * subscribers are not woken mid-render — pair it with
+	 * {@link DataTable.notifyStateSubscribers} from a layout effect.
 	 */
-	syncControlledState: (partial: Partial<TableState>) => void
+	syncControlledState: (partial: Partial<TableState>, options?: SetStateOptions) => void
+	/**
+	 * Call every state subscriber with the current snapshot. Exists to flush a
+	 * {@link DataTable.syncControlledState} write made with `{ silent: true }`.
+	 */
+	notifyStateSubscribers: () => void
 }
 
 /** Public alias. */

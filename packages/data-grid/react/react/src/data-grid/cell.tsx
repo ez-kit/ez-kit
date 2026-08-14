@@ -1,4 +1,4 @@
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
@@ -6,7 +6,6 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
 import { flexRender } from './flex-render'
-import { RowPinCell } from './row-pin-cell'
 import { useDataGridInstance, useDataGridStore } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
@@ -92,18 +91,6 @@ function SystemCell({ cell, row }: CellProps) {
 				data-system-column='actions'
 			>
 				<ActionsCell row={row} />
-			</Td>
-		)
-	}
-	if (columnId === ROW_PIN_COLUMN_ID) {
-		return (
-			<Td
-				data-slot='td'
-				style={pin.pinVars}
-				pinned={pin.pinned}
-				{...pin.pinnedAttrs}
-			>
-				<RowPinCell row={row} />
 			</Td>
 		)
 	}

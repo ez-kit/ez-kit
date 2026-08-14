@@ -17,6 +17,7 @@ import { EditingFeature } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
 import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
+import { RowActionsVariant } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
 import { setIfDefined } from '../utils/set-if-defined'
@@ -153,12 +154,15 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		return fromRegistry ?? fn
 	})()
 
+	const rowActionsVariant = config.rowActions?.variant ?? RowActionsVariant.Inline
+
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
 		editing: hasEditing,
 		deleting: hasDeleting,
 		pinning: hasPinning,
+		rowActionsVariant,
 	})
 
 	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)
@@ -297,6 +301,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(config.creating ? { creating: config.creating } : {}),
 		...(config.editing ? { editing: config.editing } : {}),
 		...(config.deleting ? { deleting: config.deleting } : {}),
+		// Read by the React layer to lay out the actions cell (inline vs. menu).
+		rowActions: { variant: rowActionsVariant },
 		// Column resizing
 		...(config.sizing
 			? {
@@ -347,12 +353,16 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		store.setState((prev) => ({ ...prev }))
 	}
 
-	dataTable.syncControlledState = (partial) => {
+	dataTable.syncControlledState = (partial, options) => {
 		ref.table?.setOptions((prev) => ({
 			...prev,
 			state: { ...prev.state, ...partial },
 		}))
-		store.setState((prev) => ({ ...prev, ...partial }))
+		store.setState((prev) => ({ ...prev, ...partial }), options)
+	}
+
+	dataTable.notifyStateSubscribers = () => {
+		store.notify()
 	}
 
 	// Forward infinite scroll: append rows after current data. Immutable — builds a

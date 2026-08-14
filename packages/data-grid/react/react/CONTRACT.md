@@ -56,7 +56,7 @@ Every kit owes exactly two things:
 Opt into individual feature groups with the tier types
 (`GridCoreComponents`, `GridPaginationComponents`, `GridSortingComponents`,
 `GridFilteringComponents`, `GridEditingComponents`, `GridSelectionComponents`,
-`GridPinningComponents`, `GridResizingComponents`, `GridColumnVisibilityComponents`,
+`GridRowActionsComponents`, `GridResizingComponents`, `GridColumnVisibilityComponents`,
 `GridFallbackStateComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
 
 All of these — plus the flat `COMPONENT_FEATURE` lookup — are derived from a single
@@ -133,7 +133,6 @@ exported — read them for the exact shape.
 | --------------------- | ------------------------------------------------- |
 | `Modal`               | `ModalProps`                                      |
 | `FormShell`           | `FormShellProps` (creating / editing modal shell) |
-| `ActionsCell`         | `ActionsCellProps`                                |
 | `CreatingActionsCell` | `CreatingActionsCellProps`                        |
 | `ConfirmDialog`       | `ConfirmDialogProps` (delete confirmation)        |
 | `NumberInput`         | `NumberInputProps`                                |
@@ -144,12 +143,24 @@ exported — read them for the exact shape.
 | -------------- | ------------------------------------------- |
 | `SelectionBar` | `SelectionBarProps` (`floating` / `inline`) |
 
-### `pinning` / `resizing`
+### `row-actions`
 
-| Component    | Props             | Feature    |
-| ------------ | ----------------- | ---------- |
-| `RowPinMenu` | `RowPinMenuProps` | `pinning`  |
-| `Resizer`    | `ResizerProps`    | `resizing` |
+Per-row actions share one column: edit / delete buttons plus the row-pin menu.
+
+| Component        | Props                 |
+| ---------------- | --------------------- |
+| `ActionsCell`    | `ActionsCellProps`    |
+| `RowActionsMenu` | `RowActionsMenuProps` |
+
+`RowActionsMenu` is item-driven: it receives `RowActionItem[]` and renders each one,
+mapping `item.id` (a `RowActionId`) to the kit's own icon. It holds only the pin
+actions under the default `inline` variant, and every action under `menu`.
+
+### `resizing`
+
+| Component | Props          |
+| --------- | -------------- |
+| `Resizer` | `ResizerProps` |
 
 ### `column-visibility`
 

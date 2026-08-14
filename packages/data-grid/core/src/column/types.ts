@@ -363,7 +363,7 @@ declare module '@tanstack/table-core' {
 		creating?: false | ColumnCreatingConfig
 		visibility?: true | ColumnVisibilityDef
 		isSystemColumn?: boolean
-		systemColumnType?: 'selection' | 'expand' | 'actions' | 'row_pin'
+		systemColumnType?: 'selection' | 'expand' | 'actions'
 		/** Pre-resolved operator list for this column (set when filtering.operators is configured). */
 		resolvedOperators?: FilterOperatorDef[]
 		/** Between operator UI config passed from filtering.operators.betweenOperator. */

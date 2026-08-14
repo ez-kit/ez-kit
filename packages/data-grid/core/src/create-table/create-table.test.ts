@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { createTable, defineColumns } from '../index'
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
+import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
 
 type Row = {
 	id: number
@@ -505,13 +505,13 @@ describe('createTable — system columns', () => {
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('pinning: { row: { top: true } } appends __row_pin__ column last', () => {
+	it('pinning: { row: { top: true } } alone appends the __actions__ column', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true } } })
 		const ids = columnIds(table)
-		expect(ids.at(-1)).toBe(ROW_PIN_COLUMN_ID)
+		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('__row_pin__ comes after __actions__ when both editing and pinning are enabled', () => {
+	it('editing and pinning together share a single __actions__ column', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
@@ -519,13 +519,11 @@ describe('createTable — system columns', () => {
 			pinning: { row: { top: true } },
 		})
 		const ids = columnIds(table)
-		const actionsIdx = ids.indexOf(ACTIONS_COLUMN_ID)
-		const pinIdx = ids.indexOf(ROW_PIN_COLUMN_ID)
-		expect(actionsIdx).toBeGreaterThan(-1)
-		expect(pinIdx).toBe(actionsIdx + 1)
+		expect(ids.filter((id) => id === ACTIONS_COLUMN_ID)).toHaveLength(1)
+		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('full column order: __selection__, __expand__, user cols, __actions__, __row_pin__', () => {
+	it('full column order: __selection__, __expand__, user cols, __actions__', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
@@ -534,14 +532,7 @@ describe('createTable — system columns', () => {
 			editing: { mode: 'row', onSave: () => Promise.resolve() },
 			pinning: { row: { top: true } },
 		})
-		expect(columnIds(table)).toEqual([
-			SELECTION_COLUMN_ID,
-			EXPAND_COLUMN_ID,
-			'name',
-			'age',
-			ACTIONS_COLUMN_ID,
-			ROW_PIN_COLUMN_ID,
-		])
+		expect(columnIds(table)).toEqual([SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, 'name', 'age', ACTIONS_COLUMN_ID])
 	})
 
 	it('system columns have isSystemColumn: true in meta', () => {
@@ -552,9 +543,9 @@ describe('createTable — system columns', () => {
 			pinning: { row: { top: true } },
 		})
 		const selCol = table.getColumn(SELECTION_COLUMN_ID)
-		const pinCol = table.getColumn(ROW_PIN_COLUMN_ID)
+		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
 		expect(selCol?.columnDef.meta?.isSystemColumn).toBe(true)
-		expect(pinCol?.columnDef.meta?.isSystemColumn).toBe(true)
+		expect(actionsCol?.columnDef.meta?.isSystemColumn).toBe(true)
 	})
 
 	it('__actions__ column has columnPinning: { pin: "right" } in meta', () => {

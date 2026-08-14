@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { RowActionsVariant } from '../features/row-actions'
+
 import {
 	buildColumnList,
 	extractPinningState,
@@ -76,6 +78,54 @@ describe('buildColumnList', () => {
 		})
 		const actions = cols.find((c) => c.id === ACTIONS_COLUMN_ID)
 		expect(actions?.meta?.columnPinning).toEqual({ pin: 'right' })
+	})
+
+	it('appends __actions__ when only row pinning is enabled', () => {
+		const cols = buildColumnList([USER_COL], {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: false,
+			pinning: true,
+		})
+		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
+	})
+
+	it('actions column width grows with the number of inline actions', () => {
+		const sizeOf = (opts: { editing: boolean; deleting: boolean; pinning: boolean }) =>
+			buildColumnList([USER_COL], { selection: false, expanding: false, ...opts }).find(
+				(c) => c.id === ACTIONS_COLUMN_ID,
+			)?.size
+
+		const onePin = sizeOf({ editing: false, deleting: false, pinning: true })
+		const editDelete = sizeOf({ editing: true, deleting: true, pinning: false })
+		const all = sizeOf({ editing: true, deleting: true, pinning: true })
+
+		expect(onePin).toBeLessThan(editDelete ?? 0)
+		expect(editDelete).toBeLessThan(all ?? 0)
+		// Never TanStack's 150px default, which is far too wide for icon buttons.
+		expect(all).toBeLessThan(150)
+	})
+
+	it('menu variant collapses the actions column to a single trigger', () => {
+		const inline = buildColumnList([USER_COL], {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: true,
+			pinning: true,
+			rowActionsVariant: RowActionsVariant.Inline,
+		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
+		const menu = buildColumnList([USER_COL], {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: true,
+			pinning: true,
+			rowActionsVariant: RowActionsVariant.Menu,
+		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
+
+		expect(menu).toBeLessThan(inline ?? 0)
 	})
 
 	it('full order: [selection, expand, user..., actions]', () => {

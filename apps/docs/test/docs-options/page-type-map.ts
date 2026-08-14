@@ -41,6 +41,8 @@ export enum DocPage {
 	FilteringOperators = 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringPanel = 'content/docs/data-grid/filtering/panel.mdx',
 	PaginationIndex = 'content/docs/data-grid/pagination/index.mdx',
+	Production = 'content/docs/data-grid/production.mdx',
+	RowActions = 'content/docs/data-grid/row-actions.mdx',
 	RowPinning = 'content/docs/data-grid/row-pinning.mdx',
 	SelectionIndex = 'content/docs/data-grid/selection/index.mdx',
 	Sorting = 'content/docs/data-grid/sorting.mdx',
@@ -276,6 +278,22 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 					'Compares the three `pagination.variant` values against data availability; the rows are values, not keys.',
 			},
 		],
+	},
+	{
+		page: DocPage.Production,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'What is turned on',
+				reason:
+					'Prose inventory of which capabilities the showcase enables, grouped by area — the rows are feature names, not config keys.',
+			},
+		],
+	},
+	{
+		page: DocPage.RowActions,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		nonOptionTables: [],
 	},
 	{
 		page: DocPage.RowPinning,

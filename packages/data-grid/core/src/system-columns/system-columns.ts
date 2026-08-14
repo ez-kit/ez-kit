@@ -1,17 +1,21 @@
+import { getActionsColumnSize, RowActionsVariant } from '../features/row-actions'
+
 import type { TanStackColumnDef } from '../column/types'
 
 /** Identifier constants for auto-injected system columns. */
 export const SELECTION_COLUMN_ID = '__selection__'
 export const EXPAND_COLUMN_ID = '__expand__'
 export const ACTIONS_COLUMN_ID = '__actions__'
-export const ROW_PIN_COLUMN_ID = '__row_pin__'
 
 type SystemColumnsOptions = {
 	selection: boolean
 	expanding: boolean
 	editing: boolean
 	deleting: boolean
+	/** Row pinning — its menu lives in the actions column alongside edit / delete. */
 	pinning: boolean
+	/** Defaults to {@link RowActionsVariant.Inline}. */
+	rowActionsVariant?: RowActionsVariant
 }
 
 /**
@@ -20,6 +24,9 @@ type SystemColumnsOptions = {
  *
  * System columns contain no cell renderers (framework-agnostic stubs).
  * The React layer renders them based on meta.systemColumnType.
+ *
+ * Row pinning has no column of its own: its menu is one more action in the
+ * `__actions__` cell, so a pinning-only grid still gets that column.
  */
 export function buildColumnList<TRow extends object>(
 	userColumns: TanStackColumnDef<TRow>[],
@@ -60,32 +67,24 @@ export function buildColumnList<TRow extends object>(
 
 	result.push(...userColumns)
 
-	const needsActions = opts.editing || opts.deleting
+	const needsActions = opts.editing || opts.deleting || opts.pinning
 	if (needsActions) {
 		result.push({
 			id: ACTIONS_COLUMN_ID,
 			header: () => null,
 			cell: () => null,
+			size: getActionsColumnSize({
+				editing: opts.editing,
+				deleting: opts.deleting,
+				pinning: opts.pinning,
+				variant: opts.rowActionsVariant ?? RowActionsVariant.Inline,
+			}),
 			enableSorting: false,
 			enableColumnFilter: false,
 			meta: {
 				isSystemColumn: true,
 				systemColumnType: 'actions',
 				columnPinning: { pin: 'right' },
-			},
-		})
-	}
-
-	if (opts.pinning) {
-		result.push({
-			id: ROW_PIN_COLUMN_ID,
-			header: () => null,
-			cell: () => null,
-			enableSorting: false,
-			enableColumnFilter: false,
-			meta: {
-				isSystemColumn: true,
-				systemColumnType: 'row_pin',
 			},
 		})
 	}

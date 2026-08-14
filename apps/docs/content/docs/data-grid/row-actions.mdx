@@ -1,0 +1,64 @@
+---
+title: Row Actions
+description: The per-row actions column that holds edit, delete and the row-pin menu — inline buttons or a single overflow menu.
+---
+
+# Row Actions
+
+Edit, delete and row pinning all act on a single row, so they share one column at the right edge of
+the grid. The column is injected automatically as soon as any of them is enabled — you never declare
+it yourself.
+
+## Layout
+
+By default each action is its own icon button, side by side:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+	deleting={{ onDelete }}
+	pinning={{ row: { top: true, bottom: true } }}
+/>
+```
+
+Set `rowActions.variant` to `'menu'` to collapse them into one overflow menu instead:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+	deleting={{ onDelete }}
+	pinning={{ row: { top: true, bottom: true } }}
+	rowActions={{ variant: 'menu' }}
+/>
+```
+
+The pin actions always live behind a menu — inline or not — because there are up to three of them
+(`Pin Top`, `Pin Bottom`, `Unpin`) and only one applies at a time.
+
+While a row is in **inline** edit mode, save and cancel are rendered as buttons regardless of the
+variant: burying a pending commit inside a dropdown would hide it behind an extra click.
+
+## Column width
+
+The column sizes itself from the number of actions it renders, rather than falling back to the
+150px default width TanStack gives a column with no `size`. Resize it like any other column when
+`sizing` is enabled.
+
+## Options
+
+| Option               | Type                 | Description                                                                        |
+| -------------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| `rowActions.variant` | `'inline' \| 'menu'` | `inline` (default) — one button per action. `menu` — every action in one dropdown. |
+
+## See also
+
+- [Editing](./data-grid/editing)
+- [Row pinning](./data-grid/row-pinning)
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/row-actions/row-actions.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/features/row-actions/row-actions.ts)

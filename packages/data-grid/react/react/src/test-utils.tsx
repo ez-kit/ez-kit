@@ -31,7 +31,7 @@ import type {
 	PaginationProps,
 	RefetchOverlayProps,
 	ResizerProps,
-	RowPinMenuProps,
+	RowActionsMenuProps,
 	SelectionBarProps,
 	TbodyProps,
 	TdProps,
@@ -154,34 +154,19 @@ function TestResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerProps)
 		/>
 	)
 }
-function TestRowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinBottom, onUnpin }: RowPinMenuProps) {
-	if (isPinned)
-		return (
-			<button
-				type='button'
-				onClick={onUnpin}
-			>
-				Unpin
-			</button>
-		)
+function TestRowActionsMenu({ items }: RowActionsMenuProps) {
 	return (
 		<>
-			{canPinTop && (
+			{items.map((item) => (
 				<button
+					key={item.id}
 					type='button'
-					onClick={onPinTop}
+					disabled={item.disabled ?? false}
+					onClick={item.onSelect}
 				>
-					Pin Top
+					{item.label}
 				</button>
-			)}
-			{canPinBottom && (
-				<button
-					type='button'
-					onClick={onPinBottom}
-				>
-					Pin Bottom
-				</button>
-			)}
+			))}
 		</>
 	)
 }
@@ -785,7 +770,6 @@ export const testComponents: FullGridComponents = {
 	editing: {
 		Modal: TestModal,
 		FormShell: TestFormShell,
-		ActionsCell: TestActionsCell,
 		CreatingActionsCell: TestCreatingActionsCell,
 		ConfirmDialog: TestConfirmDialog,
 		NumberInput: TestNumberInput,
@@ -793,8 +777,9 @@ export const testComponents: FullGridComponents = {
 	selection: {
 		SelectionBar: TestSelectionBar,
 	},
-	pinning: {
-		RowPinMenu: TestRowPinMenu,
+	'row-actions': {
+		ActionsCell: TestActionsCell,
+		RowActionsMenu: TestRowActionsMenu,
 	},
 	resizing: {
 		Resizer: TestResizer,

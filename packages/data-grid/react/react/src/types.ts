@@ -183,13 +183,35 @@ export type ResizerProps = {
 	isResizing: boolean
 }
 
-export type RowPinMenuProps = {
-	isPinned: 'top' | 'bottom' | false
-	canPinTop: boolean
-	canPinBottom: boolean
-	onPinTop: () => void
-	onPinBottom: () => void
-	onUnpin: () => void
+/**
+ * Closed set of per-row actions the grid can offer. A kit maps each id to its own
+ * icon and wording — the shared layer only decides which ids are available.
+ */
+export enum RowActionId {
+	Edit = 'edit',
+	Delete = 'delete',
+	PinTop = 'pin-top',
+	PinBottom = 'pin-bottom',
+	Unpin = 'unpin',
+}
+
+export type RowActionItem = {
+	id: RowActionId
+	/** Default wording; a kit may localize or override it. */
+	label: string
+	disabled?: boolean
+	/** Destructive action — kits typically render it in a danger colour. */
+	danger?: boolean
+	onSelect: () => void
+}
+
+/**
+ * Overflow menu holding row actions. Rendered with the pin actions only when
+ * `rowActions.variant` is `inline`, and with every action when it is `menu`.
+ */
+export type RowActionsMenuProps = {
+	items: RowActionItem[]
+	'aria-label'?: string
 }
 
 export type ColPinSection = {
@@ -484,7 +506,7 @@ export type GridComponentRegistry = {
 	// data-grid specific
 	Resizer?: ComponentType<ResizerProps>
 	SortIndicator?: ComponentType<SortIndicatorProps>
-	RowPinMenu?: ComponentType<RowPinMenuProps>
+	RowActionsMenu?: ComponentType<RowActionsMenuProps>
 	ColumnMenu?: ComponentType<ColumnMenuProps>
 	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
 	SortMenu?: ComponentType<SortMenuProps>

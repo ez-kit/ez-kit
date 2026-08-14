@@ -63,7 +63,11 @@
 
 /* ── resizable th — resizer is absolutely positioned inside ──────────── */
 
-[data-slot='th'][data-resizable='true'] {
+/* Skip pinned headers: they are already `sticky`, which positions the resizer
+   just as well, and this rule would otherwise override that stickiness — a
+   pinned + resizable column would stop sticking and shift by its pin offset
+   instead, overlapping its neighbour. */
+[data-slot='th'][data-resizable='true']:not([data-pinned]) {
 	@apply relative;
 }
 

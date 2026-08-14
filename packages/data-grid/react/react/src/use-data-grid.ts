@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { createDataGridInstance } from './data-grid-instance'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridInstance } from './data-grid-instance'
@@ -35,9 +36,6 @@ export const PAGINATION_VARIANT_KEY = Symbol('paginationVariant')
 
 /** Symbol used to carry the resolved `numbered` page-link window on the table instance for Pagination to read. */
 export const PAGINATION_WINDOW_KEY = Symbol('paginationWindow')
-
-/** Symbol used to carry rowPinning config on the table instance for RowPinCell to read. */
-export const ROW_PINNING_KEY = Symbol('rowPinning')
 
 /** Symbol used to carry colPinning enabled flag on the table instance for Header to read. */
 export const COL_PINNING_KEY = Symbol('colPinning')
@@ -627,13 +625,12 @@ export function useDataGrid<TRow extends object>(
 	const coreGlobalFiltering: boolean | GlobalFilteringConfig | undefined = (() => {
 		if (rawGlobalFiltering === undefined || rawGlobalFiltering === false) return rawGlobalFiltering
 		if (rawGlobalFiltering === true) return true
-		const fn = rawGlobalFiltering.fn
-		const fns = rawGlobalFiltering.fns
-		if (fn === undefined && fns === undefined) return true
-		const cfg: GlobalFilteringConfig = {}
-		if (fn !== undefined) cfg.fn = fn
-		if (fns !== undefined) cfg.fns = fns
-		return cfg
+		// Strip the React-only UI fields and pass the rest through, rather than
+		// picking known core fields by name: an allowlist silently drops whatever it
+		// has not heard of — which is how `onChange` used to never reach the core and
+		// server-side global search never fired.
+		const { placeholder: _placeholder, debounce: _debounce, toolbar: _toolbar, ...coreFields } = rawGlobalFiltering
+		return Object.keys(coreFields).length > 0 ? coreFields : true
 	})()
 
 	// Stable ref so the table closure always calls the latest onStateChange without re-creating the table
@@ -669,13 +666,30 @@ export function useDataGrid<TRow extends object>(
 	//
 	// Skip the call when every supplied slice is referentially equal to the current
 	// snapshot — avoids redundant `store.setState` notifications on every render.
+	//
+	// The write is `silent`: it must happen during render so this very render reads
+	// the controlled values, but notifying here would run a subscribed child's
+	// `useSyncExternalStore` callback while this component is still rendering —
+	// React's "Cannot update a component while rendering a different component".
+	// Children re-render in this same pass and read the fresh snapshot themselves;
+	// the layout effect below wakes any subscriber that bailed out of the pass
+	// (a memoized subtree, a portal), before the browser paints.
+	const pendingNotifyRef = useRef(false)
 	if (state !== undefined) {
 		const snapshot = instanceRef.current.table.getSnapshot()
 		const hasChanges = (Object.keys(state) as (keyof TableState)[]).some((key) => snapshot[key] !== state[key])
 		if (hasChanges) {
-			instanceRef.current.table.syncControlledState(state)
+			instanceRef.current.table.syncControlledState(state, { silent: true })
+			pendingNotifyRef.current = true
 		}
 	}
+	useSafeLayoutEffect(() => {
+		if (!pendingNotifyRef.current) return
+		pendingNotifyRef.current = false
+		// Cannot loop: notifying does not mutate state, so the next render finds
+		// every controlled slice equal and syncs nothing.
+		table.notifyStateSubscribers()
+	})
 
 	// Re-sync feature configs every render so callbacks (e.g. creating.onSave)
 	// see the latest captured props/state instead of the closure from first mount.
@@ -695,11 +709,6 @@ export function useDataGrid<TRow extends object>(
 	const pageSizeOptionsRef = useRef(pageSizeOptions)
 	pageSizeOptionsRef.current = pageSizeOptions
 	tableAsSymbolMap[PAGE_SIZER_KEY] = pageSizeOptionsRef.current
-
-	// Store rowPinning config on the table instance so RowPinCell can read without an extra prop
-	const rowPinningRef = useRef(config.pinning)
-	rowPinningRef.current = config.pinning
-	tableAsSymbolMap[ROW_PINNING_KEY] = rowPinningRef.current
 
 	// Store colPinning enabled flag on the table instance so Header can read without an extra prop
 	const colPinEnabled =

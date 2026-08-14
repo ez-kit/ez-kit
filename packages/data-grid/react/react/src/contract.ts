@@ -27,7 +27,8 @@ export enum GridFeature {
 	Filtering = 'filtering',
 	Editing = 'editing',
 	Selection = 'selection',
-	Pinning = 'pinning',
+	/** Per-row actions column: edit / delete buttons plus the row-pin menu. */
+	RowActions = 'row-actions',
 	Resizing = 'resizing',
 	ColumnVisibility = 'column-visibility',
 	FallbackStates = 'fallback-states',
@@ -57,16 +58,9 @@ export const FEATURE_COMPONENTS = {
 		'BetweenInput',
 		'MultiSelectFilter',
 	] as const,
-	[GridFeature.Editing]: [
-		'Modal',
-		'FormShell',
-		'ActionsCell',
-		'CreatingActionsCell',
-		'ConfirmDialog',
-		'NumberInput',
-	] as const,
+	[GridFeature.Editing]: ['Modal', 'FormShell', 'CreatingActionsCell', 'ConfirmDialog', 'NumberInput'] as const,
 	[GridFeature.Selection]: ['SelectionBar'] as const,
-	[GridFeature.Pinning]: ['RowPinMenu'] as const,
+	[GridFeature.RowActions]: ['ActionsCell', 'RowActionsMenu'] as const,
 	[GridFeature.Resizing]: ['Resizer'] as const,
 	[GridFeature.ColumnVisibility]: ['ColumnVisibilityMenu'] as const,
 	[GridFeature.FallbackStates]: ['LoadingRow', 'EmptyState', 'NoResultsState', 'RefetchOverlay'] as const,
@@ -88,7 +82,7 @@ export type GridSortingComponents = ComponentsFor<GridFeature.Sorting>
 export type GridFilteringComponents = ComponentsFor<GridFeature.Filtering>
 export type GridEditingComponents = ComponentsFor<GridFeature.Editing>
 export type GridSelectionComponents = ComponentsFor<GridFeature.Selection>
-export type GridPinningComponents = ComponentsFor<GridFeature.Pinning>
+export type GridRowActionsComponents = ComponentsFor<GridFeature.RowActions>
 export type GridResizingComponents = ComponentsFor<GridFeature.Resizing>
 export type GridColumnVisibilityComponents = ComponentsFor<GridFeature.ColumnVisibility>
 export type GridFallbackStateComponents = ComponentsFor<GridFeature.FallbackStates>

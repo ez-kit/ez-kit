@@ -9,7 +9,6 @@ import { Th } from './blocks/core/Th'
 import { Thead } from './blocks/core/Thead'
 import { Toolbar } from './blocks/core/Toolbar'
 import { Tr } from './blocks/core/Tr'
-import { ActionsCell } from './blocks/editing/ActionsCell'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
 import { CreatingActionsCell } from './blocks/editing/CreatingActionsCell'
 import { FormShell } from './blocks/editing/FormShell'
@@ -32,8 +31,9 @@ import { OperatorSelect } from './blocks/filtering/OperatorSelect'
 import { LoadMoreRow } from './blocks/infinite/LoadMoreRow'
 import { PageSizer } from './blocks/pagination/PageSizer'
 import { Pagination } from './blocks/pagination/Pagination'
-import { RowPinMenu } from './blocks/pinning/RowPinMenu'
 import { Resizer } from './blocks/resizing/Resizer'
+import { ActionsCell } from './blocks/row-actions/ActionsCell'
+import { RowActionsMenu } from './blocks/row-actions/RowActionsMenu'
 import { SelectionBar } from './blocks/selection/SelectionBar'
 import { ColumnMenu } from './blocks/sorting/ColumnMenu'
 import { SortIndicator } from './blocks/sorting/SortIndicator'
@@ -56,9 +56,9 @@ export const nativeComponents: FullGridComponents = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell, ActionsCell, CreatingActionsCell, ConfirmDialog, NumberInput },
+	editing: { Modal, FormShell, CreatingActionsCell, ConfirmDialog, NumberInput },
 	selection: { SelectionBar },
-	pinning: { RowPinMenu },
+	'row-actions': { ActionsCell, RowActionsMenu },
 	resizing: { Resizer },
 	'column-visibility': { ColumnVisibilityMenu },
 	'fallback-states': { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },

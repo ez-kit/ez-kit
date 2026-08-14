@@ -710,6 +710,49 @@ describe('useDataGrid — globalFiltering normalization', () => {
 		expect(result.current.table.getFilteredRowModel().rows).toHaveLength(1)
 		expect(result.current.table.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
 	})
+
+	// The React layer splits this config into a UI half and a core half. Every
+	// non-UI field has to survive that split — dropping `onChange` silently
+	// disables server-side search, which no type error would have caught.
+	it('reports the new value through globalFiltering.onChange', () => {
+		const onChange = vi.fn()
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: { onChange } }))
+		act(() => {
+			result.current.table.setGlobalFilter('alice')
+		})
+		expect(onChange).toHaveBeenCalledWith('alice')
+	})
+
+	it('reports through onChange even when UI-only fields are also set', () => {
+		const onChange = vi.fn()
+		const { result } = renderHook(() =>
+			useDataGrid({
+				data: USERS,
+				columns: COLUMNS,
+				globalFiltering: { placeholder: 'Find users', debounce: 0, toolbar: false, onChange },
+			}),
+		)
+		act(() => {
+			result.current.table.setGlobalFilter('bob')
+		})
+		expect(onChange).toHaveBeenCalledWith('bob')
+	})
+
+	it('keeps a custom `fn` working alongside `onChange`', () => {
+		const onChange = vi.fn()
+		const { result } = renderHook(() =>
+			useDataGrid({
+				data: USERS,
+				columns: COLUMNS,
+				globalFiltering: { fn: (row, _columnId, value) => row.getValue<string>('name') === value, onChange },
+			}),
+		)
+		act(() => {
+			result.current.table.setGlobalFilter('Alice')
+		})
+		expect(onChange).toHaveBeenCalledWith('Alice')
+		expect(result.current.table.getFilteredRowModel().rows).toHaveLength(1)
+	})
 })
 
 // ── filtering.chips normalization ─────────────────────────────────────────────

@@ -15,7 +15,6 @@ export {
 	PAGE_SIZER_KEY,
 	PAGINATION_VARIANT_KEY,
 	PAGINATION_WINDOW_KEY,
-	ROW_PINNING_KEY,
 	SORTING_KEY,
 	VIRTUALIZED_KEY,
 } from './use-data-grid'
@@ -89,7 +88,7 @@ export type {
 	GridFilteringComponents,
 	GridEditingComponents,
 	GridSelectionComponents,
-	GridPinningComponents,
+	GridRowActionsComponents,
 	GridResizingComponents,
 	GridColumnVisibilityComponents,
 	GridFallbackStateComponents,
@@ -169,7 +168,8 @@ export type {
 	RefetchOverlayProps,
 	OperatorSelectProps,
 	ResizerProps,
-	RowPinMenuProps,
+	RowActionsMenuProps,
+	RowActionItem,
 	SelectionBarProps,
 	SortColumnOption,
 	SortDirection,
@@ -180,6 +180,8 @@ export type {
 // `PaginationVariants` is a const object (runtime value) — exported as a value, not a type.
 // Optional sugar: `pagination.variant` accepts the plain `PaginationVariant` string union.
 export { PaginationVariants } from './types'
+// `RowActionId` is an enum (runtime value) — kits map each id to their own icon.
+export { RowActionId } from './types'
 export type {
 	ButtonProps,
 	CheckboxProps,

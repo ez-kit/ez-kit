@@ -1,0 +1,131 @@
+---
+title: Production example
+description: One grid with every feature turned on at once, reading and writing against a simulated server.
+---
+
+# Production example
+
+Every other page in these docs isolates one feature. This one does the opposite: a single
+orders console with everything enabled at the same time, talking to a **simulated backend**.
+Nothing is filtered, sorted or paged in the browser — the grid sends a query, the fake server
+answers with one page plus a total, and mutations go back over the same wire.
+
+Use it to see how the features behave together, and copy the wiring rather than the feature list.
+
+<DataGridDocsExample exampleId='production-orders' />
+
+Things worth trying in the live preview above:
+
+- Sort by two columns — hold <kbd>Ctrl</kbd> (<kbd>⌘</kbd> on macOS) while clicking a second header.
+- Open the filter panel, filter **Status** by several values at once, then watch the chips above the table.
+- Change the page size, then page forward — the row count in the footer comes from the server, not from the loaded rows.
+- Edit or delete a row: the grid dims under a refetch overlay while the write and the follow-up query are in flight.
+- Drag the border of a column header to resize it, and unpin **Order** from its column menu.
+
+## What is turned on
+
+| Area      | Enabled here                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------------- |
+| Query     | Server-side pagination, sorting (multi, max 3) and filtering, plus global search — all `manual`    |
+| Filtering | Panel variant, faceted multi-value, operator filters (text / number / date / in), chips, clear-all |
+| Columns   | Pinning (`Order` starts pinned), visibility toggle (`Invoice` starts hidden), resizing on release  |
+| Rows      | Selection with a bulk-delete bar, row pinning top and bottom, sticky header                        |
+| Cells     | Badge, select, number, progress, date, boolean and link renderers                                  |
+| Mutations | Create and edit in a modal, delete with a confirmation dialog, bulk delete from the selection bar  |
+| Loading   | Skeleton on first load, refetch overlay on every load after it, error state                        |
+
+## How the server side is wired
+
+Three files, each with one job:
+
+- **`server.ts`** — the fake API. It owns the dataset, applies filters, sorting and paging itself,
+  and answers after a delay. The grid only ever receives one page.
+- **`use-orders.ts`** — owns the query state (page, sort, filters, search) and re-queries whenever
+  any of it changes. Mutations write, then refetch.
+- **`ProductionExample.tsx`** — the grid. Every server-owned slice is passed back down through
+  `state`, so the grid renders what the server confirmed rather than a local guess.
+
+### Manual mode is per feature
+
+Each feature that the server takes over is switched with its own `manual` flag and reports changes
+through `onChange`:
+
+```tsx
+pagination={{ manual: true, rowCount, onChange: ({ pageIndex, pageSize }) => { … } }}
+sorting={{ manual: true, onChange: (next) => { … } }}
+filtering={{ manual: true, onChange: (next) => { … } }}
+```
+
+Global search has no `manual` flag of its own — `filtering.manual` already routes it server-side —
+so it only needs an `onChange`.
+
+### Reset the page on every query change
+
+A new sort or filter invalidates the current page number: page 4 of the old result set is
+meaningless in the new one. Every non-paging `onChange` therefore resets `pageIndex` to `0`.
+
+```tsx
+sorting={{
+	manual: true,
+	onChange: (next) => {
+		setSorting(next)
+		setPageIndex(0)
+	},
+}}
+```
+
+### Last write wins
+
+Filters change faster than a network answers, so responses can arrive out of order. Each request
+takes a ticket and only the newest one is allowed to commit:
+
+```ts
+const requestId = ++requestIdRef.current
+const page = await queryOrders(queryRef.current)
+if (requestId !== requestIdRef.current) return // a newer query already started
+```
+
+Skip this and a slow response for an abandoned filter will overwrite the rows the user is looking at.
+
+### Loading is controlled, not inferred
+
+The grid cannot know whether a fetch is in flight, so it is told:
+
+```tsx
+state={{ loading: { isPending, isFetching, isError, error } }}
+```
+
+`isPending` means "no rows yet" and shows the skeleton; `isFetching` keeps the current page on
+screen under a dimming overlay. See [Fallbacks](/docs/data-grid/fallbacks) for how each state renders.
+
+## Deliberately not in the same grid
+
+Two features cannot share a grid with the one above, so they get their own example rather than a
+footnote:
+
+- **Infinite scroll** replaces the page footer — the two are mutually exclusive.
+- **Row virtualization** only pays off when a long list is rendered at once, which is exactly what
+  paging avoids.
+
+Same server, read as a feed instead:
+
+<DataGridDocsExample exampleId='production-feed' />
+
+```tsx
+<DataGrid
+	data={rows}
+	columns={orderColumns}
+	stickyHeader
+	virtualized={{ row: { estimateSize: 49, overscan: 10 } }}
+	pagination={{ mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } }}
+/>
+```
+
+Row grouping, drag reordering and CSV export are not here because they are not built yet — see
+[Features](/docs/data-grid/features) for the current status of each.
+
+## Where to go next
+
+- [Server-side Data](/docs/data-grid/server-side) — the minimal version of this wiring, one feature at a time.
+- [Controlled state](/docs/data-grid/controlled-state) — which slices you can own and what happens when you do.
+- [State persistence](/docs/data-grid/state-persistence) — put this grid's query into the URL so it survives a reload.

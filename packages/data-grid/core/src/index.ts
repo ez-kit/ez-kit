@@ -11,7 +11,11 @@ export { createColumnHelper } from './column/create-column-helper'
 export type { ColumnHelper } from './column/create-column-helper'
 
 // System column IDs
-export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
+
+// Row actions (edit / delete / row-pin menu share the `__actions__` column)
+export { RowActionsVariant } from './features/row-actions'
+export type { RowActionsConfig } from './features/row-actions'
 
 // Types
 export type {
