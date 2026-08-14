@@ -12,7 +12,6 @@ export function CrudClientExample() {
 		<DataGrid
 			data={data}
 			columns={crudColumns}
-			getRowId={(row) => String(row.id)}
 			sorting
 			filtering={{ variant: 'popover' }}
 			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 20, 50] }}

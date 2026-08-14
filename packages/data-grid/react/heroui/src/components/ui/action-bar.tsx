@@ -188,12 +188,26 @@ function ActionBar(props: ActionBarProps) {
 	// `sticky` (not `fixed`) + no portal: the bar belongs to the grid it acts on, so it
 	// tracks that grid's scrollport instead of floating over the whole viewport, which
 	// keeps several grids on one page (e.g. a docs page) from stacking bars on top of
-	// each other. This matches what the shadcn kit actually renders — its
-	// `blocks/selection/SelectionBar.tsx` builds the floating bar as a plain
-	// `sticky bottom-2 z-10 mx-auto w-fit` div. (Note that kit's own
-	// `components/ui/action-bar.tsx` is still `fixed` + portal, but nothing imports it.)
+	// each other.
+	//
+	// The sticky element is a **zero-height wrapper**, not the bar itself: `sticky` stays in
+	// flow, so a bar that mounts on selection would otherwise grow the grid by its own height
+	// and shift everything below it (#layout jump). The wrapper contributes 0px and the bar is
+	// positioned out of it absolutely, so it overlays the last rows instead of displacing them —
+	// which is what a floating bar is supposed to do. It is opaque (`bg-overlay` + border +
+	// shadow) precisely so the overlap reads correctly.
+	const wrapperClassName = cx('sticky z-10 h-0')
+
+	const wrapperStyle: React.CSSProperties = {
+		[side]: `${String(sideOffset)}px`,
+	}
+
 	const rootClassName = cx(
-		'sticky z-10 w-fit',
+		// Absolute against the zero-height sticky wrapper: `bottom-0` hangs the bar upwards off
+		// that line, `top-0` lets it hang down. `inset-x-0` gives the auto margins below a
+		// full-width containing box to align within.
+		'absolute inset-x-0 w-fit',
+		side === 'bottom' ? 'bottom-0' : 'top-0',
 		ALIGN_CLASSES[align],
 		'flex',
 		isHorizontal ? 'flex-row items-center gap-2 px-2 py-1.5' : 'flex-col items-start gap-2 px-1.5 py-2',
@@ -202,27 +216,28 @@ function ActionBar(props: ActionBarProps) {
 		rootProps.className,
 	)
 
-	const rootStyle: React.CSSProperties = {
-		[side]: `${String(sideOffset)}px`,
-		...style,
-	}
-
 	return (
 		<ActionBarContext.Provider value={contextValue}>
 			<div
-				role='toolbar'
-				aria-orientation={orientation}
-				data-slot='action-bar'
-				data-state='open'
-				data-side={side}
-				data-align={align}
-				data-orientation={orientation}
-				dir={dir}
-				{...rootProps}
-				ref={composedRef}
-				className={rootClassName}
-				style={rootStyle}
-			/>
+				data-slot='action-bar-anchor'
+				className={wrapperClassName}
+				style={wrapperStyle}
+			>
+				<div
+					role='toolbar'
+					aria-orientation={orientation}
+					data-slot='action-bar'
+					data-state='open'
+					data-side={side}
+					data-align={align}
+					data-orientation={orientation}
+					dir={dir}
+					{...rootProps}
+					ref={composedRef}
+					className={rootClassName}
+					style={style}
+				/>
+			</div>
 		</ActionBarContext.Provider>
 	)
 }

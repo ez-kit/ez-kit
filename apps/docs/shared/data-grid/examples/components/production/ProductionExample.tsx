@@ -12,9 +12,9 @@ export function ProductionExample() {
 		<DataGrid
 			data={orders.rows}
 			columns={orderColumns}
-			// A stable row id keyed on the server's primary key — required for
-			// selection, editing and row pinning to survive a refetch.
-			getRowId={(row) => String(row.id)}
+			// Row identity comes from the default `getRowId`, which keys on `row.id` —
+			// stable across refetches, so selection, editing and row pinning survive one.
+			// Only pass `getRowId` when the primary key is named something else.
 			// ── Server-driven query ────────────────────────────────────────────
 			pagination={{
 				manual: true,

@@ -25,12 +25,12 @@ The pin control lives in the row actions column, next to edit and delete — see
 
 ## Options
 
-| Option                    | Type                                             | Description                                                                                                                                 |
-| ------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pinning.row` (table)     | `boolean \| { top?: boolean, bottom?: boolean }` | Enables row pinning. `true` — top+bottom. `{ top: true }` — top only, etc. Once enabled, the grid renders a per-row pin control.            |
-| `state.rowPinning`        | `{ top?: string[], bottom?: string[] }`          | Controlled pinning state — pass alongside `onStateChange`. No per-feature `onChange`; see [Controlled State](./data-grid/controlled-state). |
-| `initialState.rowPinning` | same                                             | Uncontrolled seed for pinned rows at mount.                                                                                                 |
-| `getRowId`                | `(row: TRow, index: number) => string`           | Recommended for stable pinning across data refreshes.                                                                                       |
+| Option                    | Type                                             | Description                                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pinning.row` (table)     | `boolean \| { top?: boolean, bottom?: boolean }` | Enables row pinning. `true` — top+bottom. `{ top: true }` — top only, etc. Once enabled, the grid renders a per-row pin control.                                                    |
+| `state.rowPinning`        | `{ top?: string[], bottom?: string[] }`          | Controlled pinning state — pass alongside `onStateChange`. No per-feature `onChange`; see [Controlled State](./data-grid/controlled-state).                                         |
+| `initialState.rowPinning` | same                                             | Uncontrolled seed for pinned rows at mount.                                                                                                                                         |
+| `getRowId`                | `(row: TRow, index: number) => string`           | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so pinning survives a refetch out of the box. |
 
 ## See also
 

@@ -59,7 +59,6 @@ export function ProductionFeedExample() {
 		<DataGrid
 			data={rows}
 			columns={orderColumns}
-			getRowId={(row) => String(row.id)}
 			state={state}
 			stickyHeader
 			pinning={{ column: true }}

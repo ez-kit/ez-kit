@@ -64,7 +64,6 @@ export function DateCellEditExample() {
 		<DataGrid
 			data={rows}
 			columns={baseColumns}
-			getRowId={(row) => String(row.id)}
 			filtering
 			editing={{
 				mode: 'cell',
@@ -82,7 +81,6 @@ export function DateCellCreateExample() {
 		<DataGrid
 			data={rows}
 			columns={baseColumns}
-			getRowId={(row) => String(row.id)}
 			creating={{
 				mode: 'row',
 				onSave: ({ values }) => {

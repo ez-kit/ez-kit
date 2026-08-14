@@ -57,69 +57,79 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 	}
 
 	return (
+		// Zero-height sticky anchor. `sticky` stays in flow, so a bar sized inside it would
+		// reserve its own height under the grid permanently (and, if it only mounted on
+		// selection, would shift everything below it the moment a row is picked). The wrapper
+		// contributes 0px and the bar is positioned absolutely out of it, overlaying the last
+		// rows — hence the opaque `bg-card` + border + shadow.
 		<div
-			role='toolbar'
-			aria-orientation='horizontal'
-			data-slot='selection-bar'
-			data-variant='floating'
-			data-state={open ? 'open' : 'closed'}
-			className={cn(
-				'sticky bottom-2 z-10 mx-auto w-fit',
-				'flex flex-row items-center gap-2 rounded-lg border bg-card px-2 py-1.5 shadow-lg',
-				'transition-all duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]',
-				open ? 'animate-in fade-in-0 slide-in-from-bottom-4' : 'pointer-events-none translate-y-4 opacity-0',
-			)}
+			data-slot='selection-bar-anchor'
+			className='sticky bottom-2 z-10 h-0'
 		>
-			{/* Selected count badge */}
 			<div
-				data-slot='action-bar-selection'
-				className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-sm tabular-nums'
+				role='toolbar'
+				aria-orientation='horizontal'
+				data-slot='selection-bar'
+				data-variant='floating'
+				data-state={open ? 'open' : 'closed'}
+				className={cn(
+					'absolute inset-x-0 bottom-0 mx-auto w-fit',
+					'flex flex-row items-center gap-2 rounded-lg border bg-card px-2 py-1.5 shadow-lg',
+					'transition-all duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]',
+					open ? 'animate-in fade-in-0 slide-in-from-bottom-4' : 'pointer-events-none translate-y-4 opacity-0',
+				)}
 			>
-				{count} selected
-			</div>
+				{/* Selected count badge */}
+				<div
+					data-slot='action-bar-selection'
+					className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-sm tabular-nums'
+				>
+					{count} selected
+				</div>
 
-			{/* Separator — only when there are action buttons to divide from the count */}
-			{hasActions && (
+				{/* Separator — only when there are action buttons to divide from the count */}
+				{hasActions && (
+					<div
+						role='separator'
+						aria-orientation='horizontal'
+						aria-hidden='true'
+						className='h-6 w-px bg-border'
+					/>
+				)}
+
+				{/* Delete — only when handler provided */}
+				{onDelete && (
+					<Button
+						variant='destructive'
+						size='sm'
+						onClick={onDelete}
+					>
+						Delete
+					</Button>
+				)}
+
+				{/* Custom actions slot */}
+				{actions}
+
+				{/* Separator before Cancel */}
 				<div
 					role='separator'
 					aria-orientation='horizontal'
 					aria-hidden='true'
 					className='h-6 w-px bg-border'
 				/>
-			)}
 
-			{/* Delete — only when handler provided */}
-			{onDelete && (
+				{/* Cancel / Clear */}
 				<Button
-					variant='destructive'
-					size='sm'
-					onClick={onDelete}
+					variant='ghost'
+					size='icon'
+					data-slot='selection-bar-close'
+					onClick={onClear}
+					aria-label='Clear selection'
 				>
-					Delete
+					<X />
 				</Button>
-			)}
-
-			{/* Custom actions slot */}
-			{actions}
-
-			{/* Separator before Cancel */}
-			<div
-				role='separator'
-				aria-orientation='horizontal'
-				aria-hidden='true'
-				className='h-6 w-px bg-border'
-			/>
-
-			{/* Cancel / Clear */}
-			<Button
-				variant='ghost'
-				size='icon'
-				data-slot='selection-bar-close'
-				onClick={onClear}
-				aria-label='Clear selection'
-			>
-				<X />
-			</Button>
+			</div>
 		</div>
 	)
 }
