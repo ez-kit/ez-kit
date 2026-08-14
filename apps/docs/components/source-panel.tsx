@@ -3,24 +3,30 @@
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+import type { ExampleFile } from '@/components/example-file'
+
 const COLLAPSED_HEIGHT_PX = 100
 const COPY_FEEDBACK_MS = 2000
 const FALLBACK_EXPANDED_PX = 4000
 
-export const DEFAULT_EXAMPLE_LANGUAGE = 'tsx'
-
 export type SourcePanelProps = {
-	source: string
-	language?: string
+	/** Entry file first; a single file renders without a tab bar. */
+	files: readonly ExampleFile[]
 }
 
-export function SourcePanel({ source, language = DEFAULT_EXAMPLE_LANGUAGE }: SourcePanelProps) {
-	const code = source
+export function SourcePanel({ files }: SourcePanelProps) {
+	const first = files[0]
+	const [activePath, setActivePath] = useState(first?.path ?? '')
+	const active = files.find((file) => file.path === activePath) ?? first
 
 	const contentRef = useRef<HTMLDivElement>(null)
 	const [fullHeight, setFullHeight] = useState<number | null>(null)
 	const [expanded, setExpanded] = useState(false)
 	const [copied, setCopied] = useState(false)
+
+	const code = active?.source ?? ''
 
 	useEffect(() => {
 		const el = contentRef.current
@@ -62,15 +68,6 @@ export function SourcePanel({ source, language = DEFAULT_EXAMPLE_LANGUAGE }: Sou
 		}
 	}, [copied])
 
-	const overflowing = fullHeight !== null && fullHeight > COLLAPSED_HEIGHT_PX
-	const showControls = overflowing
-	const collapsedNow = showControls && !expanded
-	const maxHeight = expanded
-		? fullHeight !== null
-			? `${String(fullHeight)}px`
-			: `${String(FALLBACK_EXPANDED_PX)}px`
-		: `${String(COLLAPSED_HEIGHT_PX)}px`
-
 	const handleCopy = useCallback(async () => {
 		try {
 			await navigator.clipboard.writeText(code)
@@ -84,18 +81,19 @@ export function SourcePanel({ source, language = DEFAULT_EXAMPLE_LANGUAGE }: Sou
 		setExpanded((value) => !value)
 	}, [])
 
-	return (
-		<div className='not-prose relative overflow-hidden bg-fd-card text-sm'>
-			<button
-				type='button'
-				onClick={() => {
-					void handleCopy()
-				}}
-				aria-live='polite'
-				className='absolute right-2 top-2 z-20 rounded-md border border-fd-border bg-fd-card/90 px-2 py-1 text-xs font-medium text-fd-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-fd-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-fd-ring'
-			>
-				{copied ? 'Copied' : 'Copy'}
-			</button>
+	if (!active) return null
+
+	const overflowing = fullHeight !== null && fullHeight > COLLAPSED_HEIGHT_PX
+	const showControls = overflowing
+	const collapsedNow = showControls && !expanded
+	const maxHeight = expanded
+		? fullHeight !== null
+			? `${String(fullHeight)}px`
+			: `${String(FALLBACK_EXPANDED_PX)}px`
+		: `${String(COLLAPSED_HEIGHT_PX)}px`
+
+	const body = (
+		<>
 			<div
 				className='relative overflow-hidden transition-[max-height] duration-200 ease-out'
 				style={{ maxHeight }}
@@ -103,7 +101,7 @@ export function SourcePanel({ source, language = DEFAULT_EXAMPLE_LANGUAGE }: Sou
 				<div ref={contentRef}>
 					<DynamicCodeBlock
 						codeblock={{ className: 'border-none shadow-none rounded-none' }}
-						lang={language}
+						lang={active.language}
 						code={code.trimEnd()}
 					/>
 				</div>
@@ -126,6 +124,48 @@ export function SourcePanel({ source, language = DEFAULT_EXAMPLE_LANGUAGE }: Sou
 					</button>
 				</div>
 			) : null}
+		</>
+	)
+
+	return (
+		<div className='not-prose relative overflow-hidden bg-fd-card text-sm'>
+			<button
+				type='button'
+				onClick={() => {
+					void handleCopy()
+				}}
+				aria-live='polite'
+				className='absolute right-2 top-2 z-20 rounded-md border border-fd-border bg-fd-card/90 px-2 py-1 text-xs font-medium text-fd-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-fd-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-fd-ring'
+			>
+				{copied ? 'Copied' : 'Copy'}
+			</button>
+			{files.length > 1 ? (
+				<Tabs
+					value={active.path}
+					onValueChange={setActivePath}
+					className='gap-0'
+				>
+					<TabsList
+						variant='line'
+						aria-label='Example files'
+						className='h-auto w-full justify-start overflow-x-auto rounded-none border-b border-fd-border bg-fd-card px-2 py-1'
+					>
+						{files.map((file) => (
+							<TabsTrigger
+								key={file.path}
+								value={file.path}
+								title={file.path}
+								className='flex-none rounded-md px-2 py-1 text-xs'
+							>
+								{file.name}
+							</TabsTrigger>
+						))}
+					</TabsList>
+					<TabsContent value={active.path}>{body}</TabsContent>
+				</Tabs>
+			) : (
+				body
+			)}
 		</div>
 	)
 }

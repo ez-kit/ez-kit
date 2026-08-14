@@ -1,6 +1,9 @@
+import { DEFAULT_EXAMPLE_LANGUAGE } from '@/components/example-file'
 import { readExampleSource } from '@/components/example-source'
 
 import { KitExampleClient } from './kit-example-client'
+
+import type { ExampleFile } from '@/components/example-file'
 
 export type DataGridDocsExampleFlavor = 'shadcn' | 'heroui'
 
@@ -22,11 +25,19 @@ export async function KitExample({ exampleId, defaultType, lockFlavor }: KitExam
 	}
 
 	const source = await readExampleSource(exampleId)
+	const files: ExampleFile[] = [
+		{
+			name: `${exampleId}.tsx`,
+			path: `${exampleId}.tsx`,
+			source,
+			language: DEFAULT_EXAMPLE_LANGUAGE,
+		},
+	]
 
 	return (
 		<KitExampleClient
 			exampleId={exampleId}
-			source={source}
+			files={files}
 			defaultType={defaultType}
 			lockFlavor={lockFlavor ?? false}
 		/>

@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import { DEFAULT_EXAMPLE_LANGUAGE } from '@/components/example-file'
 import { ExamplePreview } from '@/components/example-preview'
-import { DEFAULT_EXAMPLE_LANGUAGE } from '@/components/source-panel'
 
 import type { ComponentType } from 'react'
 
@@ -22,8 +22,14 @@ export async function LivePreview({ path: examplePath, lang = DEFAULT_EXAMPLE_LA
 	return (
 		<ExamplePreview
 			view={<Component />}
-			source={source.trimEnd()}
-			language={lang}
+			files={[
+				{
+					name: `${path.basename(examplePath)}.tsx`,
+					path: `${examplePath}.tsx`,
+					source: source.trimEnd() + '\n',
+					language: lang,
+				},
+			]}
 			header={title ? <span className='text-xs text-fd-muted-foreground'>{title}</span> : null}
 		/>
 	)

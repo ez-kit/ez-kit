@@ -4,10 +4,10 @@ import { Suspense } from 'react'
 
 import { ExampleFrame } from '@/components/example-frame'
 import { ExamplePreview } from '@/components/example-preview'
-import { rewriteExampleImports } from '@/components/rewrite-example-imports'
 import { useUrlState } from '@/hooks/use-url-state'
 
 import type { DataGridDocsExampleFlavor } from './kit-example'
+import type { ExampleFile } from '@/components/example-file'
 
 const FLAVOR_PARAM = 'kit'
 const DEFAULT_FLAVOR: DataGridDocsExampleFlavor = 'shadcn'
@@ -21,12 +21,12 @@ const FLAVOR_VALUES: readonly DataGridDocsExampleFlavor[] = FLAVORS.map((flavor)
 
 type ClientProps = {
 	exampleId: string
-	source: string
+	files: readonly ExampleFile[]
 	defaultType?: DataGridDocsExampleFlavor | undefined
 	lockFlavor: boolean
 }
 
-export function KitExampleClient({ exampleId, source, defaultType, lockFlavor }: ClientProps) {
+export function KitExampleClient({ exampleId, files, defaultType, lockFlavor }: ClientProps) {
 	// Invariant: `lockFlavor` always arrives with a `defaultType`. The server
 	// wrapper in `data-grid-docs-example.tsx` throws when `lockFlavor` is set
 	// without one, so the `&& defaultType` guard here can never fall through to
@@ -40,7 +40,7 @@ export function KitExampleClient({ exampleId, source, defaultType, lockFlavor }:
 						slug={exampleId}
 					/>
 				}
-				source={rewriteExampleImports(source, defaultType)}
+				files={files}
 			/>
 		)
 	}
@@ -50,14 +50,14 @@ export function KitExampleClient({ exampleId, source, defaultType, lockFlavor }:
 			fallback={
 				<Switcher
 					exampleId={exampleId}
-					source={source}
+					files={files}
 					flavor={defaultType ?? DEFAULT_FLAVOR}
 				/>
 			}
 		>
 			<UrlSwitcher
 				exampleId={exampleId}
-				source={source}
+				files={files}
 				defaultType={defaultType ?? DEFAULT_FLAVOR}
 			/>
 		</Suspense>
@@ -66,11 +66,11 @@ export function KitExampleClient({ exampleId, source, defaultType, lockFlavor }:
 
 function UrlSwitcher({
 	exampleId,
-	source,
+	files,
 	defaultType,
 }: {
 	exampleId: string
-	source: string
+	files: readonly ExampleFile[]
 	defaultType: DataGridDocsExampleFlavor
 }) {
 	const [flavor, setFlavor] = useUrlState<DataGridDocsExampleFlavor>(FLAVOR_PARAM, {
@@ -80,7 +80,7 @@ function UrlSwitcher({
 	return (
 		<Switcher
 			exampleId={exampleId}
-			source={source}
+			files={files}
 			flavor={flavor}
 			onSelect={setFlavor}
 		/>
@@ -89,12 +89,12 @@ function UrlSwitcher({
 
 function Switcher({
 	exampleId,
-	source,
+	files,
 	flavor,
 	onSelect,
 }: {
 	exampleId: string
-	source: string
+	files: readonly ExampleFile[]
 	flavor: DataGridDocsExampleFlavor
 	onSelect?: ((flavor: DataGridDocsExampleFlavor) => void) | undefined
 }) {
@@ -106,7 +106,7 @@ function Switcher({
 					slug={exampleId}
 				/>
 			}
-			source={rewriteExampleImports(source, flavor)}
+			files={files}
 			header={
 				<FlavorTabs
 					active={flavor}
