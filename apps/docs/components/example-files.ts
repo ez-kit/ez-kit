@@ -31,6 +31,15 @@ const PARSE_FILE_NAME = 'example.tsx'
 const RELATIVE_SPECIFIER = /^\.{1,2}\//u
 
 /**
+ * In this repo an underscore-prefixed basename (`_data.ts`, `_memory-adapter.ts`) marks a shared
+ * internal fixture that several unrelated examples import from — not a file that belongs to any
+ * one of them. Showing it as "a file this example is built from" would be misleading, so a
+ * dependency matching this is excluded (its own imports are not traversed either). The entry file
+ * is exempt: it is what the reader asked for, regardless of its name.
+ */
+const SHARED_FIXTURE_PREFIX = '_'
+
+/**
  * The entry file followed by every file reachable from it through relative imports,
  * breadth-first, each listed once. Files resolving outside `rootDir` are left out.
  */
@@ -50,7 +59,9 @@ export async function collectExampleFiles(entryPath: string, rootDir: string): P
 
 		for (const specifier of relativeSpecifiers(source)) {
 			const resolved = await resolveSpecifier(path.dirname(filePath), specifier)
-			if (resolved !== undefined && isInside(root, resolved) && !visited.has(resolved)) queue.push(resolved)
+			if (resolved === undefined || !isInside(root, resolved) || visited.has(resolved)) continue
+			if (path.basename(resolved).startsWith(SHARED_FIXTURE_PREFIX)) continue
+			queue.push(resolved)
 		}
 	}
 

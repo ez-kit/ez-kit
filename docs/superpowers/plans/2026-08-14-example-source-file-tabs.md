@@ -1001,7 +1001,7 @@ Expected:
 
 - [ ] **Step 3: Check the single-file case is unchanged**
 
-Open `http://localhost:3585/docs/data-grid/sorting` (any single-file grid example) and one `LivePreview` page — `http://localhost:3585/docs/zu-store`.
+Open `http://localhost:3585/docs/data-grid/sorting` — the `sorting` example on that page (`components/sorting.tsx`) has no sibling files, unlike `base-sorting`, which imports the shared `../_data` fixture — and one `LivePreview` page — `http://localhost:3585/docs/zu-store`.
 
 Expected: no file tab bar, panel identical to before.
 

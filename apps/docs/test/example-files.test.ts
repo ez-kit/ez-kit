@@ -49,4 +49,22 @@ describe('collectExampleFiles', () => {
 
 		expect(files.map((file) => file.name)).toEqual(['broken.tsx'])
 	})
+
+	it('does not collect a dependency whose basename starts with an underscore', async () => {
+		const files = await collectExampleFiles(entry('entry-with-shared-fixture.tsx'), ROOT)
+
+		expect(files.map((file) => file.name)).not.toContain('_shared-fixture.ts')
+	})
+
+	it('does not traverse into a file reachable only through a skipped underscore-prefixed dependency', async () => {
+		const files = await collectExampleFiles(entry('entry-with-shared-fixture.tsx'), ROOT)
+
+		expect(files.map((file) => file.name)).not.toContain('only-reachable-via-underscore.ts')
+	})
+
+	it('still collects an underscore-prefixed entry file', async () => {
+		const files = await collectExampleFiles(entry('_underscore-entry.tsx'), ROOT)
+
+		expect(files.map((file) => file.name)).toEqual(['_underscore-entry.tsx'])
+	})
 })
