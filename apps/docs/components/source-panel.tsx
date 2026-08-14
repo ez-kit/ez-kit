@@ -10,6 +10,16 @@ import type { ExampleFile } from '@/components/example-file'
 const COLLAPSED_HEIGHT_PX = 100
 const COPY_FEEDBACK_MS = 2000
 const FALLBACK_EXPANDED_PX = 4000
+/**
+ * fumadocs' own code viewport (`DynamicCodeBlock` → `Pre`) renders with the class below and
+ * caps itself at 600px with its own internal scrollbar, regardless of how tall its content
+ * really is. This panel already owns clipping (`COLLAPSED_HEIGHT_PX` / "Show all"), so a second,
+ * independent 600px cap inside it both breaks the height we measure — `contentRef.scrollHeight`
+ * reports the viewport's *clamped* rendered box, not its true content height — and leaves a
+ * confusing nested scrollbar even once "Show all" is showing the "Hide" label. We neutralize the
+ * viewport's own clamp before measuring, so this panel's collapse/expand is the only one in play.
+ */
+const FUMADOCS_VIEWPORT_SELECTOR = '.fd-scroll-container'
 
 export type SourcePanelProps = {
 	/** Entry file first; a single file renders without a tab bar. */
@@ -36,6 +46,13 @@ export function SourcePanel({ files }: SourcePanelProps) {
 		}
 
 		const measure = () => {
+			const viewport = el.querySelector<HTMLElement>(FUMADOCS_VIEWPORT_SELECTOR)
+
+			if (viewport) {
+				viewport.style.maxHeight = 'none'
+				viewport.style.overflow = 'visible'
+			}
+
 			setFullHeight(el.scrollHeight)
 		}
 
