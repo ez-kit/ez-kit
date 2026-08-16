@@ -78,12 +78,21 @@ export function Th({ pinned, className, ...props }: ThProps) {
 }
 
 export function Td({ pinned, className, style, ...props }: TdProps) {
-	const resolvedStyle = pinned ? { backgroundColor: 'var(--dg-pin-cell-background)', ...style } : style
+	// Rows are CSS grids (see global.css "grid column model"), and `colSpan` means nothing to a
+	// grid item — a full-width fallback cell would sit in the first track. Span it explicitly,
+	// the same way the shadcn kit's Td does. `colSpan` itself stays on the element for a11y.
+	const { colSpan } = props
+	const spans = typeof colSpan === 'number' && colSpan > 1
+	const resolvedStyle = {
+		...(spans ? { gridColumn: `1 / span ${String(colSpan)}` } : {}),
+		...(pinned ? { backgroundColor: 'var(--dg-pin-cell-background)' } : {}),
+		...style,
+	}
 	return (
 		<HeroTable.Cell
 			{...(props as unknown as ComponentProps<typeof HeroTable.Cell>)}
 			className={cn(className) ?? ''}
-			{...(resolvedStyle ? { style: resolvedStyle } : {})}
+			style={resolvedStyle}
 		/>
 	)
 }

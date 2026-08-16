@@ -213,16 +213,19 @@
  * box, which shrink-wraps its rows instead of filling the width — the body would then be
  * narrower than the header. (Virtualized mode excluded: there the shared stylesheet makes
  * this the positioning context for the absolutely-placed virtual rows.) */
-[data-slot='table'] [data-slot='tbody']:not([data-virtualized='true']) {
+[data-slot='table'] tbody:not([data-virtualized='true']) {
 	display: block;
 }
-/* React Aria's TableHeader wraps the <th> columns in its own <tr> (no data-slot), so
- * that wrapper — not the thead — is the header's row box and carries the template. */
-[data-slot='table'] [data-slot='thead'] tr {
-	display: grid;
-	grid-template-columns: var(--grid-template-columns);
-}
-[data-slot='table'] [data-slot='tr'] {
+/* Keyed on the elements, not on `data-slot`: the react layer stamps `data-slot="tbody"` /
+ * `"tr"` on the regular body and rows, but the fallback bodies (empty state, no results)
+ * render a bare `<Tbody><Tr>` and keep HeroUI's own `table-body` / `table-row` slots. A
+ * slot-keyed rule skipped exactly those, so the fallback body fell back to an anonymous
+ * table box and its full-width cell shrink-wrapped into the first column.
+ *
+ * Child combinators on purpose: a consumer's own <table> inside an expanded row or a
+ * custom fallback must keep native table layout. */
+[data-slot='table'] thead > tr,
+[data-slot='table'] tbody > tr {
 	display: grid;
 	grid-template-columns: var(--grid-template-columns);
 }
