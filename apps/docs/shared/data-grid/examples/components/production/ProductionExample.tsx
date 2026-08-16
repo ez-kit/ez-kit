@@ -64,7 +64,7 @@ export function ProductionExample() {
 			// ── Layout ─────────────────────────────────────────────────────────
 			stickyHeader
 			pinning={{ column: true, row: { top: true, bottom: true } }}
-			sizing={{ mode: 'onEnd' }}
+			sizing={{ mode: 'onChange' }}
 			columnVisibility={{ toolbar: true }}
 			// ── Mutations ──────────────────────────────────────────────────────
 			creating={{

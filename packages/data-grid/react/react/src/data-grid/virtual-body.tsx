@@ -27,10 +27,13 @@ const LOAD_MORE_ALLOWANCE_PX = 56
  * `display: grid` / `position: relative` shape comes from the structural
  * stylesheet shipped with this package.
  *
- * Each virtual row receives a runtime `transform: translateY(start)` inline
- * style — values change every scroll frame and cannot move to CSS — plus a
- * `data-slot="virtual-row"` for the structural CSS that sets
- * `position: absolute; left: 0; top: 0; width: 100%`.
+ * Each virtual row receives runtime `transform: translateY(start)` and `height`
+ * inline styles — values come from the virtualizer and cannot move to CSS — plus
+ * a `data-slot="virtual-row"` for the structural CSS that sets
+ * `position: absolute; left: 0; top: 0; width: 100%`. The explicit height makes
+ * the row fill exactly the slot the virtualizer reserved for it: nothing measures
+ * the rows back, so a kit whose natural row height differs from `estimateSize`
+ * would otherwise leave a gap (or an overlap) between every pair of rows.
  *
  * Pinned rows (top / bottom) use the same data-attr + `--dg-row-pin-offset`
  * pattern as the non-virtual Body.
@@ -111,7 +114,7 @@ export function VirtualBody() {
 						key={row.id}
 						row={row}
 						data-virtual='row'
-						style={{ transform: `translateY(${String(virtualRow.start)}px)` }}
+						style={{ transform: `translateY(${String(virtualRow.start)}px)`, height: `${String(virtualRow.size)}px` }}
 					/>
 				)
 			})}

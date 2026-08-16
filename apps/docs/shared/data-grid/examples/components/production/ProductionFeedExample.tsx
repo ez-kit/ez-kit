@@ -21,20 +21,33 @@ function useOrdersFeed() {
 	const [isPending, setIsPending] = useState(true)
 	const [hasNextPage, setHasNextPage] = useState(true)
 	const nextPageRef = useRef(0)
+	const isLoadingRef = useRef(false)
 
 	const loadPage = useCallback(async () => {
-		const pageIndex = nextPageRef.current
-		const page = await queryOrders({
-			pageIndex,
-			pageSize: PAGE_SIZE,
-			sorting: [],
-			columnFilters: [],
-			globalFilter: '',
-		})
+		// A page must be claimed *before* the await, and only one request may be in
+		// flight: the first mount effect and the grid's own auto-load can both ask
+		// for a page in the same tick, and appending the same page twice puts two
+		// rows with the same id in `rows` — React then warns about duplicate keys.
+		if (isLoadingRef.current) return
+		isLoadingRef.current = true
 
+		const pageIndex = nextPageRef.current
 		nextPageRef.current = pageIndex + 1
-		setRows((prev) => [...prev, ...page.rows])
-		setHasNextPage((pageIndex + 1) * PAGE_SIZE < page.rowCount)
+
+		try {
+			const page = await queryOrders({
+				pageIndex,
+				pageSize: PAGE_SIZE,
+				sorting: [],
+				columnFilters: [],
+				globalFilter: '',
+			})
+
+			setRows((prev) => [...prev, ...page.rows])
+			setHasNextPage((pageIndex + 1) * PAGE_SIZE < page.rowCount)
+		} finally {
+			isLoadingRef.current = false
+		}
 	}, [])
 
 	useEffect(() => {

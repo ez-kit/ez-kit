@@ -87,6 +87,31 @@
 [data-slot='table-scroll'][data-virtualized='true'] [data-slot='table-scroll-container'] {
 	overflow: visible;
 }
+/* …but handing the horizontal axis to that outer div is only half the job here: HeroUI's
+ * `.table-root` sits between them and is `overflow: clip` over a `minmax(0, 1fr)` grid track.
+ * `clip` swallows the horizontal overflow before the scrollport ever sees it, so the outer div
+ * measured `scrollWidth === clientWidth` and there was nothing to scroll — the columns past the
+ * viewport edge (and the load-more row, which centres itself over the full table width) were
+ * simply unreachable. Vertical scroll was unaffected because nothing bounds `.table-root`'s
+ * height, so its content height propagates out untouched.
+ *
+ * Release the clip so the content width reaches the scrollport. Safe in virtualized mode: the
+ * scrollport itself is `overflow: auto`, so it clips what the root no longer does — and unlike
+ * the sticky-header case above, the scrollport cannot be moved inside `.table-root` instead,
+ * because it is the element the row virtualizer scrolls. */
+[data-slot='table-scroll'][data-virtualized='true'] > [data-slot='table'] {
+	overflow: visible;
+}
+
+/* HeroUI's `.table__row` is `height: 100%`, which in native table layout resolves against the row's
+ * own content. The virtualized load-more row is absolutely positioned inside the tbody instead
+ * (shared stylesheet), so that percentage resolves against the tbody's *total* virtual height — the
+ * loader became as tall as the whole scrollable list, an opaque box covering everything below its
+ * own top. (The virtual rows escape this because the shared component gives each one the explicit
+ * height of its virtualizer slot; the loader has no slot to take a height from.) */
+[data-slot='tbody'][data-virtualized='true'] > [data-slot='load-more-row'] {
+	height: auto;
+}
 
 :root {
 	--dg-pin-shadow-color: oklch(0 0 0 / 0.14);

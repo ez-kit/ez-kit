@@ -20,7 +20,8 @@ Things worth trying in the live preview above:
 - Open the filter panel, filter **Status** by several values at once, then watch the chips above the table.
 - Change the page size, then page forward — the row count in the footer comes from the server, not from the loaded rows.
 - Edit or delete a row: the grid dims under a refetch overlay while the write and the follow-up query are in flight.
-- Drag the border of a column header to resize it, and unpin **Order** from its column menu.
+- Drag the border of a column header to resize it — the width follows the cursor while you drag
+  (`sizing={{ mode: 'onChange' }}`) — and unpin **Order** from its column menu.
 
 ## What is turned on
 
@@ -28,7 +29,7 @@ Things worth trying in the live preview above:
 | --------- | -------------------------------------------------------------------------------------------------- |
 | Query     | Server-side pagination, sorting (multi, max 3) and filtering, plus global search — all `manual`    |
 | Filtering | Panel variant, faceted multi-value, operator filters (text / number / date / in), chips, clear-all |
-| Columns   | Pinning (`Order` starts pinned), visibility toggle (`Invoice` starts hidden), resizing on release  |
+| Columns   | Pinning (`Order` starts pinned), visibility toggle (`Invoice` starts hidden), live resizing        |
 | Rows      | Selection with a bulk-delete bar, row pinning top and bottom, sticky header                        |
 | Cells     | Badge, select, number, progress, date, boolean and link renderers                                  |
 | Mutations | Create and edit in a modal, delete with a confirmation dialog, bulk delete from the selection bar  |
