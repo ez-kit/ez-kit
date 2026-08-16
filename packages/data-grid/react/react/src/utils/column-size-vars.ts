@@ -5,6 +5,16 @@ import type { CSSProperties } from 'react'
  * Builds a CSS custom property map for all column widths.
  * Set these on `<table style={vars}>` so that `<th>` / `<td>` can read
  * widths via `calc(var(--header-{id}-size) * 1px)` without per-cell re-renders.
+ *
+ * Also emits `--dg-table-min-width` — the summed width of the visible leaf columns,
+ * i.e. the narrowest the row grid can ever be. The structural stylesheet floors the
+ * table box at it, which is load-bearing for column pinning: the rows carry the column
+ * grid but are laid out as *block* boxes, so without a floor the table box is only as
+ * wide as the scrollport while its grid tracks overflow it. `position: sticky` is
+ * clamped to its containing block — that too-narrow row — so past
+ * `scrollWidth − rowWidth` the browser drags every left-pinned cell out of the
+ * scrollport along with the content, leaving behind only the pin shadow (which sits on
+ * the wrapper and is never clamped).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
@@ -16,6 +26,9 @@ export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
 		vars[`--header-${colId}-size`] = String(header.getSize())
 		vars[`--col-${colId}-size`] = String(header.column.getSize())
 	}
+
+	const minWidth = table.getVisibleLeafColumns().reduce((acc, col) => acc + col.getSize(), 0)
+	vars['--dg-table-min-width'] = `${String(minWidth)}px`
 
 	return vars
 }

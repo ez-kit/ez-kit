@@ -15,6 +15,23 @@
 
 /* ── table layout ─────────────────────────────────────────────────────── */
 
+/* The rows carry the column grid, but the table / header / body around them are
+ * *block* boxes — so they take the scrollport's width, not the tracks' width, and
+ * the grid tracks simply overflow. That silently breaks column pinning: a sticky
+ * cell is clamped to its containing block, so once the row's right edge scrolls
+ * past a left-pinned cell, the browser drags that cell out of view with the
+ * content (only the pin shadow, which lives on the wrapper, stays behind).
+ * Flooring the box at the summed column widths keeps the containing block as wide
+ * as the content; `minmax(…, 1fr)` tracks still stretch past it when there's room.
+ *
+ * Keyed on the element, not on `data-slot` alone: a kit may stamp `data-slot="table"`
+ * on a wrapper around the real table (HeroUI's `.table-root`, which is also the element
+ * that clips and scrolls). Flooring *that* box would push the overflow out of its own
+ * scroller instead of into it. Such kits floor their inner table themselves. */
+table[data-slot='table'] {
+	min-width: var(--dg-table-min-width, 0px);
+}
+
 [data-slot='table'][data-virtualized='true'] {
 	@apply grid;
 }
