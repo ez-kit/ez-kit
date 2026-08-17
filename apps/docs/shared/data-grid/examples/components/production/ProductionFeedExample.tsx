@@ -10,12 +10,6 @@ import { queryOrders } from './server'
 const PAGE_SIZE = 25
 const ESTIMATED_ROW_HEIGHT_PX = 49
 
-/**
- * The same server, read as an endless feed instead of pages: rows accumulate as
- * the user scrolls and only the visible window renders. Paging is the one thing
- * this variant cannot share with the main grid — a page footer and infinite
- * scroll are mutually exclusive — so it lives as its own example.
- */
 function useOrdersFeed() {
 	const [rows, setRows] = useState<Order[]>([])
 	const [isPending, setIsPending] = useState(true)
@@ -24,10 +18,6 @@ function useOrdersFeed() {
 	const isLoadingRef = useRef(false)
 
 	const loadPage = useCallback(async () => {
-		// A page must be claimed *before* the await, and only one request may be in
-		// flight: the first mount effect and the grid's own auto-load can both ask
-		// for a page in the same tick, and appending the same page twice puts two
-		// rows with the same id in `rows` — React then warns about duplicate keys.
 		if (isLoadingRef.current) return
 		isLoadingRef.current = true
 

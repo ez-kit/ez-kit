@@ -9,11 +9,6 @@ import type { ColumnFiltersState, SortingState } from '@ez-kit/data-grid-react'
 
 const DEFAULT_PAGE_SIZE = 10
 
-/**
- * Owns every piece of state the server needs and re-queries whenever one changes.
- * Written with plain `useState` + `useEffect` so the example has no data-layer
- * dependency — in a real app this is one `useQuery` with the same query key.
- */
 export function useOrders() {
 	const [rows, setRows] = useState<Order[]>([])
 	const [rowCount, setRowCount] = useState(0)
@@ -29,21 +24,15 @@ export function useOrders() {
 	const [isError, setIsError] = useState(false)
 	const [error, setError] = useState<unknown>(null)
 
-	// The fetch closure reads the query from a ref, so it never goes stale and
-	// never needs to be re-created when a query param changes.
 	const queryRef = useRef<OrdersQuery>({ pageIndex, pageSize, sorting, columnFilters, globalFilter })
 	queryRef.current = { pageIndex, pageSize, sorting, columnFilters, globalFilter }
 
-	// Last-write-wins: a slow response for an older query must not overwrite a
-	// newer one. Every request takes a ticket; only the latest ticket may commit.
 	const requestIdRef = useRef(0)
 	const hasRowsRef = useRef(false)
 
 	const refetch = useCallback(async () => {
 		const requestId = ++requestIdRef.current
 
-		// First load has no rows to keep on screen → skeleton. Later loads keep the
-		// current page visible underneath the refetch overlay.
 		if (!hasRowsRef.current) setIsPending(true)
 		setIsFetching(true)
 		setIsError(false)
@@ -73,7 +62,6 @@ export function useOrders() {
 		void refetch()
 	}, [refetch, pageIndex, pageSize, sorting, columnFilters, globalFilter])
 
-	// Any query change other than paging invalidates the current page number.
 	const resetToFirstPage = useCallback(() => {
 		setPageIndex(0)
 	}, [])

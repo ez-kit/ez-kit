@@ -1,6 +1,5 @@
 import { createColumns } from '@ez-kit/data-grid-react'
 
-/** Fulfilment lifecycle of an order. Closed set → enum, referenced everywhere. */
 export enum OrderStatus {
 	Pending = 'pending',
 	Paid = 'paid',
@@ -9,7 +8,6 @@ export enum OrderStatus {
 	Cancelled = 'cancelled',
 }
 
-/** Where the order came from. */
 export enum SalesChannel {
 	Web = 'web',
 	Retail = 'retail',
@@ -43,10 +41,6 @@ export const CHANNEL_ITEMS = [
 	{ value: SalesChannel.Partner, label: 'Partner' },
 ]
 
-// ── Seed data ──────────────────────────────────────────────────────────────
-// Generated deterministically (no Math.random / new Date) so the example renders
-// the same rows on every reload — a moving dataset makes a docs example useless.
-
 const SEED_ROW_COUNT = 240
 const FIRST_NAMES = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Hank', 'Iris', 'Jonas']
 const LAST_NAMES = ['Johnson', 'Smith', 'White', 'Brown', 'Davis', 'Lee', 'Kim', 'Patel', 'Novak', 'Rossi']
@@ -65,7 +59,6 @@ const EPOCH_YEAR = 2026
 const DAYS_PER_MONTH = 28
 const MONTHS_PER_YEAR = 12
 
-/** `2026-04-17` from a day offset — avoids `new Date()` so the seed never drifts. */
 function isoDate(dayOffset: number): string {
 	const month = (Math.floor(dayOffset / DAYS_PER_MONTH) % MONTHS_PER_YEAR) + 1
 	const day = (dayOffset % DAYS_PER_MONTH) + 1
@@ -96,18 +89,12 @@ export function makeOrders(count: number = SEED_ROW_COUNT): Order[] {
 	return Array.from({ length: count }, (_, index) => makeOrder(index))
 }
 
-// ── Columns ────────────────────────────────────────────────────────────────
-
-// Sizes are deliberately generous: every header carries its title plus sort, filter
-// and menu buttons, and together the columns overflow the viewport — which is the
-// point. Without horizontal scrolling there is nothing for column pinning to hold.
 export const orderColumns = createColumns<Order>([
 	{
 		accessorKey: 'reference',
 		header: 'Order',
 		size: 170,
 		minSize: 140,
-		// Starts pinned left; the column menu still lets the user unpin it.
 		pinning: { defaultPin: 'left' },
 		filtering: { operators: true },
 		editing: false,
@@ -126,7 +113,6 @@ export const orderColumns = createColumns<Order>([
 		size: 170,
 		minSize: 140,
 		cell: { type: 'badge', config: { items: STATUS_ITEMS } },
-		// Multi-value: badge/select columns default to the `in` operator.
 		filtering: { operators: true },
 	},
 	{
@@ -174,7 +160,6 @@ export const orderColumns = createColumns<Order>([
 		size: 200,
 		minSize: 150,
 		cell: { type: 'link' },
-		// Off by default — the column picker in the toolbar brings it back.
 		visibility: { defaultHidden: true },
 		sorting: false,
 		editing: false,

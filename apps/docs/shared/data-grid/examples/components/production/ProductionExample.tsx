@@ -12,10 +12,6 @@ export function ProductionExample() {
 		<DataGrid
 			data={orders.rows}
 			columns={orderColumns}
-			// Row identity comes from the default `getRowId`, which keys on `row.id` —
-			// stable across refetches, so selection, editing and row pinning survive one.
-			// Only pass `getRowId` when the primary key is named something else.
-			// ── Server-driven query ────────────────────────────────────────────
 			pagination={{
 				manual: true,
 				rowCount: orders.rowCount,
@@ -38,9 +34,6 @@ export function ProductionExample() {
 			}}
 			filtering={{
 				manual: true,
-				// `popover` keeps a filter icon in every header and auto-mounts itself.
-				// The `panel` variant renders no trigger of its own — it needs the layout
-				// composed by hand (`<DataGrid.FilterPanel />`), see the Filtering docs.
 				variant: 'popover',
 				faceted: true,
 				debounce: 300,
@@ -51,8 +44,6 @@ export function ProductionExample() {
 					orders.resetToFirstPage()
 				},
 			}}
-			// `filtering.manual` covers global search too — TanStack routes both
-			// through the same manual-filtering switch.
 			globalFiltering={{
 				placeholder: 'Search orders…',
 				debounce: 300,
@@ -61,12 +52,10 @@ export function ProductionExample() {
 					orders.resetToFirstPage()
 				},
 			}}
-			// ── Layout ─────────────────────────────────────────────────────────
 			stickyHeader
 			pinning={{ column: true, row: { top: true, bottom: true } }}
 			sizing={{ mode: 'onChange' }}
 			columnVisibility={{ toolbar: true }}
-			// ── Mutations ──────────────────────────────────────────────────────
 			creating={{
 				mode: 'modal',
 				onSave: ({ values }) => orders.create(values),
@@ -89,9 +78,6 @@ export function ProductionExample() {
 					},
 				},
 			}}
-			// ── Controlled state ───────────────────────────────────────────────
-			// Every server-owned slice is controlled; `loading` drives the skeleton
-			// on first load and the dimming refetch overlay on every load after it.
 			state={{
 				pagination: { pageIndex: orders.pageIndex, pageSize: orders.pageSize },
 				sorting: orders.sorting,
