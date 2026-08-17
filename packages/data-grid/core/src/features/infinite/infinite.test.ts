@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createTable, defineColumns } from '../../index'
+import { createTable, createColumns } from '../../index'
 
 type Row = { id: number; name: string }
 
@@ -9,7 +9,7 @@ const DATA: Row[] = [
 	{ id: 2, name: 'Bob' },
 ]
 
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
 
 describe('InfiniteFeature — state (100% grid-owned)', () => {
 	it('seeds state.infinite with fetching flags false and error null', () => {

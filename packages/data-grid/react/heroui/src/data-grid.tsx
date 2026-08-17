@@ -71,7 +71,7 @@ const components = {
  * merging in additional custom cell types (return typed to the merged keys).
  *
  * @example
- * const { DataGrid, defineColumns } = extendDataGrid({
+ * const { DataGrid, createColumns } = extendDataGrid({
  *   rating: { view: RatingCellView, edit: RatingCellInput },
  * })
  */

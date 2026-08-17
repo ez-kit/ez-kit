@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { DataGrid, useDataGrid, createDataGrid, defineColumns } from './index'
+import { DataGrid, useDataGrid, createDataGrid, createColumns } from './index'
 
 describe('@ez-kit/data-grid-react', () => {
-	it('exports DataGrid, useDataGrid, createDataGrid, defineColumns', () => {
+	it('exports DataGrid, useDataGrid, createDataGrid, createColumns', () => {
 		expect(DataGrid).toBeTypeOf('function')
 		expect(useDataGrid).toBeTypeOf('function')
 		expect(createDataGrid).toBeTypeOf('function')
-		expect(defineColumns).toBeTypeOf('function')
+		expect(createColumns).toBeTypeOf('function')
 	})
 
 	it('DataGrid has compound sub-components', () => {

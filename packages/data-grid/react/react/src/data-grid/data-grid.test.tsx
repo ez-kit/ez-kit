@@ -1,4 +1,4 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -22,7 +22,7 @@ const USERS: User[] = [
 	{ id: 1, name: 'Alice', age: 30 },
 	{ id: 2, name: 'Bob', age: 25 },
 ]
-const COLUMNS = defineColumns<User>([
+const COLUMNS = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'age', header: 'Age' },
 ])
@@ -201,7 +201,7 @@ describe('<DataGrid>', () => {
 	})
 
 	it('renders custom cell.component output', () => {
-		const cols = defineColumns<User>([
+		const cols = createColumns<User>([
 			{
 				accessorKey: 'name',
 				header: 'Name',
@@ -220,7 +220,7 @@ describe('<DataGrid>', () => {
 			id: number
 			active: boolean
 		}
-		const boolCols = defineColumns<BoolRow>([{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } }])
+		const boolCols = createColumns<BoolRow>([{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } }])
 		const boolData: BoolRow[] = [
 			{ id: 1, active: true },
 			{ id: 2, active: false },
@@ -240,7 +240,7 @@ describe('<DataGrid>', () => {
 	})
 
 	it('uses registry view component for custom cell type', () => {
-		const cols = defineColumns<User>([{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } }])
+		const cols = createColumns<User>([{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } }])
 		const table = createTable<User>({ data: USERS, columns: cols })
 		const instance = createDataGridInstance(table)
 		renderWithComponents(
@@ -287,7 +287,7 @@ describe('<DataGrid>', () => {
 		})
 
 		it('does not render column-resizer for column with enableResizing: false', () => {
-			const cols = defineColumns<User>([
+			const cols = createColumns<User>([
 				{ accessorKey: 'name', header: 'Name', enableResizing: false },
 				{ accessorKey: 'age', header: 'Age' },
 			])
@@ -393,7 +393,7 @@ describe('<DataGrid>', () => {
 
 	it('registry creating falls back to edit component when creating not provided', () => {
 		const editFn = vi.fn(() => <input data-testid='registry-edit' />)
-		const cols = defineColumns<User>([
+		const cols = createColumns<User>([
 			{ accessorKey: 'name', header: 'Name', cell: { type: 'custom-type' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])

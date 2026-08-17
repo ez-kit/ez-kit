@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { defineColumns } from '../../column/define-columns'
+import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
 
 type Row = {
@@ -12,7 +12,7 @@ const DATA: Row[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },
 ]
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 
 describe('DeletingFeature', () => {
 	it('deleteRow calls onDelete with the correct row', async () => {

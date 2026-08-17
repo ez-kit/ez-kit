@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -26,7 +26,7 @@ beforeAll(() => {
 
 type Row = { id: number; name: string }
 const DATA: Row[] = Array.from({ length: 12 }, (_, index) => ({ id: index + 1, name: `Row ${String(index + 1)}` }))
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 
 const REACT_RENDER_PHASE_WARNING = 'Cannot update a component'
 

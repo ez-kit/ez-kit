@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -21,7 +21,7 @@ const INITIAL_DATA: Milestone[] = [
 	{ id: 6, title: 'Retrospective', dueDate: '2026-05-15', completedAt: undefined },
 ]
 
-const baseColumns = defineColumns<Milestone>([
+const baseColumns = createColumns<Milestone>([
 	{ accessorKey: 'title', header: 'Title' },
 	{
 		accessorKey: 'dueDate',

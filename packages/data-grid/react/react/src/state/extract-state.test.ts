@@ -1,10 +1,10 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
 import { extractState } from './extract-state'
 
 type Row = { id: number; name: string }
-const columns = defineColumns<Row>([{ accessorKey: 'name' }])
+const columns = createColumns<Row>([{ accessorKey: 'name' }])
 const data: Row[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },

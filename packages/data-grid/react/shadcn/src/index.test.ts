@@ -6,7 +6,7 @@ import {
 	createColumnHelper,
 	DataGrid,
 	DataGridOptionsProvider,
-	defineColumns,
+	createColumns,
 	extendDataGrid,
 	extractState,
 	GridComponentsProvider,
@@ -43,9 +43,9 @@ describe('@ez-kit/data-grid-shadcn', () => {
 	})
 
 	// The kit must carry the whole consumer surface on its own: installing a kit and also
-	// depending on `@ez-kit/data-grid-react` to reach `defineColumns` is the thing #66 removes.
+	// depending on `@ez-kit/data-grid-react` to reach `createColumns` is the thing #66 removes.
 	it('re-exports the adapter consumer surface', () => {
-		expect(defineColumns).toBeTypeOf('function')
+		expect(createColumns).toBeTypeOf('function')
 		expect(createColumnHelper).toBeTypeOf('function')
 		expect(extractState).toBeTypeOf('function')
 		expect(parseState).toBeTypeOf('function')
@@ -59,7 +59,7 @@ describe('@ez-kit/data-grid-shadcn', () => {
 	// Type-level half of the same guarantee: these annotations are the assertion — the test
 	// fails at `pnpm typecheck` if the kit stops carrying a type an example relies on.
 	it('types a consumer that imports from the kit alone', () => {
-		const columns: ColumnDef<User>[] = defineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+		const columns: ColumnDef<User>[] = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 		const helper: ColumnHelper<User> = createColumnHelper<User>()
 		const sorting: SortingState = [{ id: 'name', desc: false }]
 		const columnFilters: ColumnFiltersState = [{ id: 'name', value: 'Ada' }]

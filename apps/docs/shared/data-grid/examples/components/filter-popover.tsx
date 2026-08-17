@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -24,14 +24,14 @@ const DATA: Employee[] = [
 	{ id: 8, name: 'Hank Patel', department: 'Engineering', salary: 115000, joinedAt: '2018-06-25', active: true },
 ]
 
-const basicColumns = defineColumns<Employee>([
+const basicColumns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'department', header: 'Department' },
 	{ accessorKey: 'salary', header: 'Salary', cell: { type: 'number' } },
 	{ accessorKey: 'joinedAt', header: 'Joined', cell: { type: 'date' } },
 ])
 
-const withOperatorsColumns = defineColumns<Employee>([
+const withOperatorsColumns = createColumns<Employee>([
 	{
 		accessorKey: 'name',
 		header: 'Name',

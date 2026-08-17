@@ -11,14 +11,14 @@ function parseErrorCount(source: string): number {
 
 const MULTI_EXPORT = `'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { makeUsers, type User } from './_data'
 
-const columns = defineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+const columns = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 export function FilterChipsAutoExample() {
 	const data = useMemo(() => makeUsers(50), [])
@@ -92,9 +92,9 @@ describe('extractExampleSource', () => {
 		const result = extractExampleSource(MULTI_EXPORT, 'FilterChipsAlwaysExample')
 
 		// Assert
-		expect(result).toContain("import { defineColumns } from '@ez-kit/data-grid-react'")
+		expect(result).toContain("import { createColumns } from '@ez-kit/data-grid-react'")
 		expect(result).toContain("import { makeUsers, type User } from './_data'")
-		expect(result).toContain('const columns = defineColumns<User>')
+		expect(result).toContain('const columns = createColumns<User>')
 		expect(result).toContain("'use client'")
 	})
 
@@ -247,7 +247,7 @@ export function Target() {
 
 	it('keeps a trailing comment on a declaration it kept', () => {
 		// Arrange
-		const source = `const columns = defineColumns([]) // shared by both examples
+		const source = `const columns = createColumns([]) // shared by both examples
 
 export function Sibling() {
 	return <Grid columns={columns} />
@@ -268,7 +268,7 @@ export function Target() {
 	it('keeps a leading comment on the first statement of the file', () => {
 		// Arrange
 		const source = `// fixture shared by the examples below
-const columns = defineColumns([])
+const columns = createColumns([])
 
 export function Sibling() {
 	return <Grid columns={columns} />

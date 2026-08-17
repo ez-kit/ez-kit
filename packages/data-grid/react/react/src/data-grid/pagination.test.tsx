@@ -1,4 +1,4 @@
-import { defineColumns, UNKNOWN_PAGE_COUNT } from '@ez-kit/data-grid-core'
+import { createColumns, UNKNOWN_PAGE_COUNT } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -19,7 +19,7 @@ type User = { id: number; name: string }
 
 const PAGE_SIZE = 10
 const USERS: User[] = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `User ${String(i + 1)}` }))
-const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 /**
  * Render the real `Pagination` against a real grid instance and capture the props it hands to

@@ -115,7 +115,7 @@ export function ColumnHelperRegisteredExample() {
 			}}
 			// `columns` is typed `ColumnDef<TRow>[]` — i.e. `TCustom = never` — so a per-grid
 			// registered id does not survive the assignment even though `cellTypes` registers it.
-			// Columns built by a bundle's own `defineColumns` / `createColumnHelper` need no cast.
+			// Columns built by a bundle's own `createColumns` / `createColumnHelper` need no cast.
 			columns={registeredColumns as ColumnDef<Employee>[]}
 			cellTypes={RATING_CELL_TYPES}
 			sorting

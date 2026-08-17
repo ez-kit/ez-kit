@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { createTable, defineColumns } from '../index'
+import { createTable, createColumns } from '../index'
 
 type Row = {
 	id: number
 	name: string
 }
 
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
 
 const DATA: Row[] = [{ id: 1, name: 'Alice' }]
 
@@ -43,7 +43,7 @@ describe('createTable — sizing', () => {
 	})
 
 	it('column with enableResizing: false returns false from getCanResize()', () => {
-		const cols = defineColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
+		const cols = createColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
 		const table = createTable({ data: DATA, columns: cols, sizing: true })
 		const col = table.getColumn('name')
 		expect(col?.getCanResize()).toBe(false)

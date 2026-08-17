@@ -1,13 +1,13 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { makeUsers, type User } from './_data'
 
-const columns = defineColumns<User>([
+const columns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'email', header: 'Email' },
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },

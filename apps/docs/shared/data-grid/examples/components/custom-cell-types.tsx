@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
@@ -21,7 +21,7 @@ const EMPLOYEE_DATA: Employee[] = [
 	{ id: 5, name: 'Eve Davis', department: 'Sales', rating: 5, favoriteColor: '#3b82f6' },
 ]
 
-const employeeColumns = defineColumns<Employee>([
+const employeeColumns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'department', header: 'Department' },
 	{ accessorKey: 'rating', header: 'Rating', cell: { type: 'rating' } },

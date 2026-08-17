@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createTable, defineColumns } from './index'
+import { createTable, createColumns } from './index'
 
 type User = {
 	id: number
@@ -14,15 +14,15 @@ const USERS: User[] = [
 ]
 
 describe('@ez-kit/data-grid-core', () => {
-	it('exports createTable and defineColumns', () => {
+	it('exports createTable and createColumns', () => {
 		expect(createTable).toBeTypeOf('function')
-		expect(defineColumns).toBeTypeOf('function')
+		expect(createColumns).toBeTypeOf('function')
 	})
 
 	it('createTable returns a table with rows', () => {
 		const table = createTable({
 			data: USERS,
-			columns: defineColumns<User>([
+			columns: createColumns<User>([
 				{ accessorKey: 'name', header: 'Name' },
 				{ accessorKey: 'age', header: 'Age' },
 			]),
@@ -33,7 +33,7 @@ describe('@ez-kit/data-grid-core', () => {
 	it('setData updates the rows', () => {
 		const table = createTable({
 			data: USERS,
-			columns: defineColumns<User>([{ accessorKey: 'name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name' }]),
 		})
 		table.setData([{ id: 3, name: 'Carol', age: 28 }])
 		expect(table.getRowModel().rows).toHaveLength(1)
@@ -43,7 +43,7 @@ describe('@ez-kit/data-grid-core', () => {
 	it('default getRowId uses row.id field as row identifier', () => {
 		const table = createTable({
 			data: USERS,
-			columns: defineColumns<User>([{ accessorKey: 'name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name' }]),
 		})
 		const rows = table.getRowModel().rows
 		expect(rows[0]?.id).toBe('1')
@@ -57,7 +57,7 @@ describe('@ez-kit/data-grid-core', () => {
 		const data: NoIdRow[] = [{ name: 'Alice' }, { name: 'Bob' }]
 		const table = createTable({
 			data,
-			columns: defineColumns<NoIdRow>([{ accessorKey: 'name' }]),
+			columns: createColumns<NoIdRow>([{ accessorKey: 'name' }]),
 		})
 		const rows = table.getRowModel().rows
 		expect(rows[0]?.id).toBe('0')
@@ -67,7 +67,7 @@ describe('@ez-kit/data-grid-core', () => {
 	it('custom getRowId overrides default', () => {
 		const table = createTable({
 			data: USERS,
-			columns: defineColumns<User>([{ accessorKey: 'name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name' }]),
 			getRowId: (row) => `user-${String(row.id)}`,
 		})
 		const rows = table.getRowModel().rows
@@ -78,7 +78,7 @@ describe('@ez-kit/data-grid-core', () => {
 	it('subscribe/getSnapshot fire on state change', () => {
 		const table = createTable({
 			data: USERS,
-			columns: defineColumns<User>([{ accessorKey: 'name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name' }]),
 			creating: { onSave: () => Promise.resolve() },
 		})
 		const snap1 = table.getSnapshot()

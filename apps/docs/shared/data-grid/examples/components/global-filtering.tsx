@@ -1,20 +1,20 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { makeUsers, type User } from './_data'
 
-const columnsWithSecret = defineColumns<User & { internalId: string }>([
+const columnsWithSecret = createColumns<User & { internalId: string }>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'email', header: 'Email' },
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
 	{ accessorKey: 'internalId', header: 'Internal ID', globalFilter: false },
 ])
 
-const baseColumns = defineColumns<User>([
+const baseColumns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'email', header: 'Email' },
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },

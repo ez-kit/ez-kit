@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
@@ -20,7 +20,7 @@ const LINE_ITEM_DATA: LineItem[] = [
 	{ id: 5, product: 'Data export', category: 'Add-on', price: 0 },
 ]
 
-const lineItemColumns = defineColumns<LineItem>([
+const lineItemColumns = createColumns<LineItem>([
 	{ accessorKey: 'product', header: 'Product' },
 	{ accessorKey: 'category', header: 'Category' },
 	{ accessorKey: 'price', header: 'Price', cell: { type: 'currency' } },

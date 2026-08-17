@@ -211,13 +211,13 @@ three-layer model in depth, and decide where to extend.
 **Independent Test**: A reader unfamiliar with the source can read
 `advanced/core.mdx` and `advanced/react.mdx`, answer "which package owns
 which responsibility", and locate the symbols `createDataGrid`,
-`defineColumns`, and `useDataGrid` without grep (acceptance scenarios in
+`createColumns`, and `useDataGrid` without grep (acceptance scenarios in
 spec US3). All pages build clean.
 
 ### Implementation for User Story 3
 
 - [x] T064 [P] [US3] Author `apps/docs/content/docs/data-grid/advanced/core.mdx`. Frontmatter title "Core (advanced)". Body: the headless contract — what `@ez-kit/data-grid-core` exports, how it composes TanStack Table, and the rule that it MUST NOT import React. Per `contracts/docs-page.md`, this page has `appliesTo: 'core'` — NO `<DataGridDocsExample>`; use fenced code blocks for any code samples. Source bullets to `packages/data-grid/core/src/index.ts` and `packages/data-grid/core/README.md`.
-- [x] T065 [P] [US3] Author `apps/docs/content/docs/data-grid/advanced/react.mdx`. Frontmatter title "React adapter (advanced)". Body: how `@ez-kit/data-grid-react` adapts core, what `useDataGrid` / `defineColumns` / context surfaces look like, and how to build your own UI flavor (the "Build your own flavor" content from spec US3). Per `contracts/docs-page.md`, this page has `appliesTo: 'react'` — NO `<DataGridDocsExample>`. Source bullets to `packages/data-grid/react/react/src/index.ts` and the existing shadcn/heroui `createDataGrid` call sites as reference implementations.
+- [x] T065 [P] [US3] Author `apps/docs/content/docs/data-grid/advanced/react.mdx`. Frontmatter title "React adapter (advanced)". Body: how `@ez-kit/data-grid-react` adapts core, what `useDataGrid` / `createColumns` / context surfaces look like, and how to build your own UI flavor (the "Build your own flavor" content from spec US3). Per `contracts/docs-page.md`, this page has `appliesTo: 'react'` — NO `<DataGridDocsExample>`. Source bullets to `packages/data-grid/react/react/src/index.ts` and the existing shadcn/heroui `createDataGrid` call sites as reference implementations.
 - [x] T066 [US3] Create `apps/docs/content/docs/data-grid/advanced/meta.json` listing `["core", "react"]` with `title: "Advanced"`. (Depends on T064 and T065.)
 - [x] T067 [US3] Update `apps/docs/content/docs/data-grid/meta.json` `pages` array to insert `"advanced"` immediately before `"migration"` (per research.md Decision 6).
 - [ ] T068 [US3] Extend `apps/docs/tests/data-grid-docs.spec.ts` with one Playwright visual test for `advanced/react` in light theme. Regenerate baseline.

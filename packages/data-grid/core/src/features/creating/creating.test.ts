@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { defineColumns } from '../../column/define-columns'
+import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
 import { ValidationError } from '../validation'
 
@@ -14,7 +14,7 @@ type Row = {
 }
 
 const DATA: Row[] = [{ id: 1, name: 'Alice', email: 'a@b.co' }]
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email' }])
 
 const noop = (): void => {}
 
@@ -299,7 +299,7 @@ describe('CreatingFeature — validate config variants', () => {
 		type PwRow = { id: number; password: string }
 		const table = createTable<PwRow>({
 			data: [{ id: 1, password: '' }],
-			columns: defineColumns<PwRow>([{ accessorKey: 'password' }]),
+			columns: createColumns<PwRow>([{ accessorKey: 'password' }]),
 			creating: { validate: { schema }, onSave: () => Promise.resolve() },
 		})
 		table.creating.start()
@@ -332,7 +332,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 		)
 		const table = createTable({
 			data: DATA,
-			columns: defineColumns<Row>([
+			columns: createColumns<Row>([
 				{ accessorKey: 'name' },
 				{ accessorKey: 'email', validateOn: 'change', validateDebounceMs: 20 },
 			]),
@@ -376,7 +376,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 		const validate = vi.fn().mockReturnValue(null)
 		const table = createTable({
 			data: DATA,
-			columns: defineColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email', validateOn: 'blur' }]),
+			columns: createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email', validateOn: 'blur' }]),
 			creating: { validate, onSave: () => Promise.resolve() },
 		})
 		table.creating.start()

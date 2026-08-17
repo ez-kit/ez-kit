@@ -1,4 +1,4 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
@@ -23,7 +23,7 @@ const USERS: User[] = [
 	{ id: 2, name: 'Bob' },
 ]
 
-const COLUMNS = defineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 function makeTable() {
 	const table = createTable<User>({ data: USERS, columns: COLUMNS, filtering: true, globalFiltering: true })

@@ -12,7 +12,7 @@ Pinned columns stick to the table edge during horizontal scroll. Useful for keep
 <DataGridDocsExample exampleId='column-pinning' />
 
 ```tsx
-const columns = defineColumns<Row>([
+const columns = createColumns<Row>([
 	{ accessorKey: 'id', header: 'ID', pinning: { defaultPin: 'left' } },
 	{ accessorKey: 'actions', header: 'Actions', pinning: { defaultPin: 'right' } },
 ])

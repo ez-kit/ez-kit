@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createTable, defineColumns } from '../../index'
+import { createTable, createColumns } from '../../index'
 
 import { INITIAL_LOADING_STATE, LoadingFeature } from './loading'
 
@@ -11,7 +11,7 @@ const DATA: Row[] = [
 	{ id: 2, name: 'Bob' },
 ]
 
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
 
 describe('LoadingFeature — initial state', () => {
 	it('seeds state.loading with flags false and error null', () => {

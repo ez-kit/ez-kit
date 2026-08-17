@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { defineColumns } from '../../column/define-columns'
+import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
 import { ValidationError } from '../validation'
 
@@ -18,7 +18,7 @@ const DATA: Row[] = [
 	{ id: 1, name: 'Alice', password: 'old-pw', confirmPassword: 'old-pw' },
 	{ id: 2, name: 'Bob', password: 'old-pw', confirmPassword: 'old-pw' },
 ]
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{ accessorKey: 'name' },
 	{ accessorKey: 'password' },
 	{ accessorKey: 'confirmPassword' },
@@ -323,7 +323,7 @@ describe('EditingFeature — per-column validateOn', () => {
 		)
 		const table = createTable({
 			data: DATA,
-			columns: defineColumns<Row>([
+			columns: createColumns<Row>([
 				{ accessorKey: 'name', validateOn: 'change', validateDebounceMs: 20 },
 				{ accessorKey: 'password' },
 				{ accessorKey: 'confirmPassword' },
@@ -346,7 +346,7 @@ describe('EditingFeature — per-column validateOn', () => {
 		const validate = vi.fn().mockReturnValue(null)
 		const table = createTable({
 			data: DATA,
-			columns: defineColumns<Row>([
+			columns: createColumns<Row>([
 				{ accessorKey: 'name', validateOn: 'blur' },
 				{ accessorKey: 'password' },
 				{ accessorKey: 'confirmPassword' },

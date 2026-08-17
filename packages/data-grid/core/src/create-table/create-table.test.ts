@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createTable, defineColumns } from '../index'
+import { createTable, createColumns } from '../index'
 import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
 
 type Row = {
@@ -14,7 +14,7 @@ const DATA: Row[] = [
 	{ id: 2, name: 'Bob', age: 25 },
 ]
 
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'age', header: 'Age' },
 ])
@@ -749,7 +749,7 @@ describe('createTable — faceted', () => {
 	})
 
 	it('column-level faceted opt-in works even when table-level flag is off', () => {
-		const COLUMNS_WITH_FACET = defineColumns<Row>([
+		const COLUMNS_WITH_FACET = createColumns<Row>([
 			{ accessorKey: 'name', header: 'Name', filtering: { faceted: true } },
 			{ accessorKey: 'age', header: 'Age' },
 		])

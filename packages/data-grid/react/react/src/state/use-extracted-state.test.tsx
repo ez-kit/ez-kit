@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -10,7 +10,7 @@ import { useExtractedState } from './use-extracted-state'
 import type { PersistableStateKey } from './state-keys'
 
 type Row = { id: number; name: string }
-const columns = defineColumns<Row>([{ accessorKey: 'name' }])
+const columns = createColumns<Row>([{ accessorKey: 'name' }])
 const data: Row[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },

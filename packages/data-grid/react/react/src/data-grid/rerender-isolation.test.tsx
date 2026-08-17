@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -31,7 +31,7 @@ const DATA: Row[] = [
 	{ id: 2, name: 'Bob', email: 'b@x' },
 	{ id: 3, name: 'Carol', email: 'c@x' },
 ]
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{ accessorKey: 'name', editing: {} },
 	{ accessorKey: 'email', editing: {} },
 ])

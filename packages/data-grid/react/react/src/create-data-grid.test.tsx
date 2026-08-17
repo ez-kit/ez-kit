@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
@@ -11,7 +11,7 @@ const ROWS: Row[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },
 ]
-const ROW_COLUMNS = defineColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+const ROW_COLUMNS = createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
 
 describe('createDataGrid', () => {
 	it('returns DataGrid, useDataGrid, GridComponentsProvider', () => {
@@ -53,7 +53,7 @@ describe('extendDataGrid (folded into createDataGrid)', () => {
 		expect(extended.DataGrid).toBeTypeOf('function')
 		expect(extended.useDataGrid).toBeTypeOf('function')
 		expect(extended.GridComponentsProvider).toBeTypeOf('function')
-		expect(extended.defineColumns).toBeTypeOf('function')
+		expect(extended.createColumns).toBeTypeOf('function')
 		// The extended bundle can itself be extended again.
 		expect(extended.extendDataGrid).toBeTypeOf('function')
 	})

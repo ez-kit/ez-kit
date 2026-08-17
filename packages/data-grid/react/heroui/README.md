@@ -11,11 +11,11 @@ pnpm add @ez-kit/data-grid-heroui @ez-kit/data-grid-react @ez-kit/data-grid-core
 ## Usage
 
 ```tsx
-import { createTable, defineColumns } from '@ez-kit/data-grid-react'
+import { createTable, createColumns } from '@ez-kit/data-grid-react'
 import { DataGrid } from '@ez-kit/data-grid-heroui'
 import '@ez-kit/data-grid-heroui/global.css'
 
-const columns = defineColumns([
+const columns = createColumns([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'role', header: 'Role' },
 ])

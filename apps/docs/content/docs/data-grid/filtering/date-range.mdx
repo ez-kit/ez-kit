@@ -22,7 +22,7 @@ Supply your own `presets` array — quarterly ranges, year-long windows, or anyt
 <DataGridDocsExample exampleId='filter-date-range-custom' />
 
 ```ts
-const columns = defineColumns<Release>([
+const columns = createColumns<Release>([
 	{
 		accessorKey: 'releasedAt',
 		header: 'Released',

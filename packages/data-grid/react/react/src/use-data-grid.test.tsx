@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, render, renderHook } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -33,7 +33,7 @@ const USERS: User[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },
 ]
-const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 type ClampGridProps = {
 	rowCount: number

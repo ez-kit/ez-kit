@@ -1,13 +1,13 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { PRODUCT_DATA, type Product } from './_data'
 
-const columns = defineColumns<Product>([
+const columns = createColumns<Product>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'category', header: 'Category' },
 	{ accessorKey: 'status', header: 'Status' },

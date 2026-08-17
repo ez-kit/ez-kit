@@ -10,7 +10,7 @@ export {
 	DataGridOptionsProvider,
 	useDataGridOptions,
 	createColumnHelper,
-	defineColumns,
+	createColumns,
 	extractState,
 	parseState,
 	useExtractedState,

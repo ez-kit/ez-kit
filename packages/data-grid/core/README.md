@@ -21,9 +21,9 @@ pnpm add @ez-kit/data-grid-core @tanstack/table-core
 ## Usage
 
 ```ts
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 
-const columns = defineColumns([
+const columns = createColumns([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'role', header: 'Role' },
 ])

@@ -5,7 +5,7 @@ export { createTable } from './create-table'
 export { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from './defaults'
 
 // Column helpers
-export { defineColumns } from './column/define-columns'
+export { createColumns } from './column/create-columns'
 export { mapColumns } from './column/map-columns'
 export { createColumnHelper } from './column/create-column-helper'
 export type { ColumnHelper } from './column/create-column-helper'

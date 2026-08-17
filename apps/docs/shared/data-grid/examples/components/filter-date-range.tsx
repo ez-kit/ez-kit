@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -21,7 +21,7 @@ const DATA: Release[] = [
 	{ id: 6, title: 'v1.5.0 — date range presets', releasedAt: '2026-05-14' },
 ]
 
-const presetsBuiltInColumns = defineColumns<Release>([
+const presetsBuiltInColumns = createColumns<Release>([
 	{ accessorKey: 'title', header: 'Title' },
 	{
 		accessorKey: 'releasedAt',
@@ -37,7 +37,7 @@ const presetsBuiltInColumns = defineColumns<Release>([
 	},
 ])
 
-const calendarColumns = defineColumns<Release>([
+const calendarColumns = createColumns<Release>([
 	{ accessorKey: 'title', header: 'Title' },
 	{
 		accessorKey: 'releasedAt',
@@ -71,7 +71,7 @@ const customPresets: DateRangePreset[] = [
 	},
 ]
 
-const customPresetsColumns = defineColumns<Release>([
+const customPresetsColumns = createColumns<Release>([
 	{ accessorKey: 'title', header: 'Title' },
 	{
 		accessorKey: 'releasedAt',

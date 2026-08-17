@@ -1,13 +1,13 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { PRODUCT_DATA, type Product } from './_data'
 
-const colPinColumns = defineColumns<Product>([
+const colPinColumns = createColumns<Product>([
 	{ accessorKey: 'name', header: 'Name', size: 250, pinning: { defaultPin: 'left' } },
 	{
 		accessorKey: 'status',

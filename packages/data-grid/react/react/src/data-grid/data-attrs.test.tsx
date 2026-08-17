@@ -1,4 +1,4 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
 import { createDataGridInstance } from '../data-grid-instance'
@@ -15,7 +15,7 @@ const USERS: User[] = [
 	{ id: 1, name: 'Alice', age: 30 },
 	{ id: 2, name: 'Bob', age: 25 },
 ]
-const COLUMNS = defineColumns<User>([
+const COLUMNS = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'age', header: 'Age' },
 ])
@@ -85,7 +85,7 @@ describe('headless data-* contract', () => {
 	})
 
 	it('pinned columns emit data-pinned on th', () => {
-		const COLS_PINNED = defineColumns<User>([
+		const COLS_PINNED = createColumns<User>([
 			{ accessorKey: 'name', header: 'Name', pinning: { pin: 'left' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
@@ -95,7 +95,7 @@ describe('headless data-* contract', () => {
 	})
 
 	it('renders pin-shadow overlays via data-pin-shadow when columns are pinned', () => {
-		const COLS_PINNED = defineColumns<User>([
+		const COLS_PINNED = createColumns<User>([
 			{ accessorKey: 'name', header: 'Name', pinning: { pin: 'left' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
@@ -111,7 +111,7 @@ describe('headless data-* contract', () => {
 	// between the pinned blocks and `overflow: hidden`, so once the combined pinned width
 	// reached the viewport it collapsed to zero width and clipped BOTH shadows.
 	it('positions each pin shadow independently by the summed width of that side (>1 pinned column)', () => {
-		const COLS_MULTI = defineColumns<User>([
+		const COLS_MULTI = createColumns<User>([
 			{ accessorKey: 'name', header: 'Name', size: 180, pinning: { pin: 'left' } },
 			{ accessorKey: 'age', header: 'Age', size: 120, pinning: { pin: 'left' } },
 			{ accessorKey: 'id', header: 'Id', size: 90, pinning: { pin: 'right' } },
@@ -138,7 +138,7 @@ describe('headless data-* contract', () => {
 	// shadow's darkest pixels UNDER the sticky pinned cells, which paint above the overlay. The
 	// measured edge of the pinned block must win.
 	it('positions each pin shadow at the measured DOM edge of its pinned block', () => {
-		const COLS_MULTI = defineColumns<User>([
+		const COLS_MULTI = createColumns<User>([
 			{ accessorKey: 'name', header: 'Name', size: 180, pinning: { pin: 'left' } },
 			{ accessorKey: 'age', header: 'Age', size: 120, pinning: { pin: 'left' } },
 			{ accessorKey: 'id', header: 'Id', size: 90, pinning: { pin: 'right' } },

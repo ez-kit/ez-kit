@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -30,7 +30,7 @@ const STATUS_ITEMS = [
 	{ value: 'cancelled', label: 'Cancelled' },
 ]
 
-const COLUMNS = defineColumns<Order>([
+const COLUMNS = createColumns<Order>([
 	{
 		accessorKey: 'customer',
 		header: 'Customer',

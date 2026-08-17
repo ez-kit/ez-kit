@@ -121,7 +121,7 @@ return {
 	useDataGrid,
 	useDataGridStore,
 	GridComponentsProvider,
-	defineColumns,
+	createColumns,
 	createColumnHelper,
 	extendDataGrid,
 }
@@ -195,7 +195,7 @@ Each step is independently shippable and valuable on its own:
   equals `Required<GridComponents>` and that each tier is a subset of it. Migrated kits
   compiling under `satisfies FullGridComponents` is itself the completeness test.
 - **`extendDataGrid`:** unit test in `create-data-grid.test.tsx` — extending adds custom
-  cell types and the returned `defineColumns` is typed to the merged keys; the base bundle
+  cell types and the returned `createColumns` is typed to the merged keys; the base bundle
   still works.
 - **Dev-time guard:** unit test that rendering a feature with its component omitted throws
   the named error in dev and does **not** throw (guard stripped) when

@@ -1,4 +1,4 @@
-import { defineColumns, RowActionsVariant } from '@ez-kit/data-grid-core'
+import { createColumns, RowActionsVariant } from '@ez-kit/data-grid-core'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -24,7 +24,7 @@ beforeAll(() => {
 
 type Row = { id: number; name: string }
 const DATA: Row[] = [{ id: 1, name: 'Alice' }]
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 
 const EDIT_DELETE = {
 	editing: { mode: 'row', onSave: () => Promise.resolve() },

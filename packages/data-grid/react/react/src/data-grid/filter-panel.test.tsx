@@ -1,4 +1,4 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
@@ -24,7 +24,7 @@ const DATA: Row[] = [
 	{ id: 2, name: 'Bob', age: 22, role: 'member' },
 ]
 
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{ accessorKey: 'name', header: 'Name', filtering: { operators: true } },
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' }, filtering: { operators: true } },
 	{
@@ -136,7 +136,7 @@ describe('<FilterPanel>', () => {
 	})
 
 	it('truncates multi-value display when more than two values', () => {
-		const COLUMNS_WITH_MANY = defineColumns<Row>([
+		const COLUMNS_WITH_MANY = createColumns<Row>([
 			{
 				accessorKey: 'role',
 				header: 'Role',

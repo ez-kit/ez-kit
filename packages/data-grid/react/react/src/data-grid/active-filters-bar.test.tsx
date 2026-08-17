@@ -1,4 +1,4 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
@@ -27,7 +27,7 @@ const USERS: User[] = [
 	{ id: 2, name: 'Bob', age: 40 },
 ]
 
-const COLUMNS = defineColumns<User>([
+const COLUMNS = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name', filtering: { operators: true } },
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' }, filtering: { operators: true } },
 ])

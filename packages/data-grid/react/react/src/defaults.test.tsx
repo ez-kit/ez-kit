@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, defineColumns } from '@ez-kit/data-grid-core'
+import { DEFAULT_PAGE_SIZE, createColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -39,7 +39,7 @@ const USERS: User[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },
 ]
-const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 const symbols = (table: unknown) => table as Record<symbol, unknown>
 

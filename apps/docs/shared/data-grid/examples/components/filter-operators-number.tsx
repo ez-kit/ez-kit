@@ -1,12 +1,12 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { EMPLOYEE_DATA, type Employee } from './_data'
 
-const columns = defineColumns<Employee>([
+const columns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
 	{
 		accessorKey: 'salary',

@@ -243,7 +243,7 @@ export type {
 	VirtualizedConfig,
 } from '@ez-kit/data-grid-core'
 
-export { defineColumns, createTable, createColumnHelper } from '@ez-kit/data-grid-core'
+export { createColumns, createTable, createColumnHelper } from '@ez-kit/data-grid-core'
 export type { ColumnHelper } from '@ez-kit/data-grid-core'
 
 // TanStack state types used when typing manual server-side `onChange` handlers

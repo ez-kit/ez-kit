@@ -1,4 +1,4 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
@@ -20,7 +20,7 @@ const DATA: Row[] = [
 	{ id: 4, status: 'cancelled' },
 ]
 
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{
 		accessorKey: 'status',
 		header: 'Status',
@@ -112,7 +112,7 @@ const DATE_DATA: DateRow[] = [
 	{ id: 2, joinedAt: '2026-05-12' },
 ]
 
-const DATE_COLUMNS_WITH_PRESETS = defineColumns<DateRow>([
+const DATE_COLUMNS_WITH_PRESETS = createColumns<DateRow>([
 	{
 		accessorKey: 'joinedAt',
 		header: 'Joined',

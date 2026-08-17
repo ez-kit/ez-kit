@@ -4,14 +4,14 @@ import { rewriteExampleImports } from '../components/rewrite-example-imports'
 
 const EXAMPLE = `'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
 
 import { makeUsers, type User } from './_data'
 
-const columns = defineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+const columns = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 export function BasicExample() {
 	const data = useMemo(() => makeUsers(50), [])
@@ -42,7 +42,7 @@ describe('rewriteExampleImports', () => {
 	})
 
 	it('returns source unchanged when the example does not import the switcher', () => {
-		const source = "import { defineColumns } from '@ez-kit/data-grid-react'\n"
+		const source = "import { createColumns } from '@ez-kit/data-grid-react'\n"
 
 		expect(rewriteExampleImports(source, 'shadcn')).toBe(source)
 	})

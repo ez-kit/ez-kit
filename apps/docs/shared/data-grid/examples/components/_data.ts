@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 export type Product = {
 	id: number
@@ -67,7 +67,7 @@ export const PRODUCT_DATA: Product[] = [
 	},
 ]
 
-export const productColumns = defineColumns<Product>([
+export const productColumns = createColumns<Product>([
 	{ accessorKey: 'name', header: 'Name' },
 	{
 		accessorKey: 'status',
@@ -128,7 +128,7 @@ export function makeUsers(count: number): User[] {
 	}))
 }
 
-export const columns = defineColumns<User>([
+export const columns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{
 		accessorKey: 'email',
@@ -140,7 +140,7 @@ export const columns = defineColumns<User>([
 	{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } },
 ])
 
-export const resizableColumns = defineColumns<User>([
+export const resizableColumns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name', size: 200, minSize: 80, maxSize: 400 },
 	{ accessorKey: 'email', header: 'Email', size: 250, minSize: 120 },
 	{ accessorKey: 'age', header: 'Age', size: 80, minSize: 50, maxSize: 150, cell: { type: 'number' } },

@@ -22,7 +22,7 @@ Set the column's `filtering.defaultOperator` to `'notIn'` to exclude the selecte
 <DataGridDocsExample exampleId='filter-multi-value-not-in' />
 
 ```ts
-const columns = defineColumns<Order>([
+const columns = createColumns<Order>([
 	{
 		accessorKey: 'status',
 		header: 'Status',

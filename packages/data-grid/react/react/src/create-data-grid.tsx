@@ -39,7 +39,7 @@ export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
 	useDataGrid: typeof useDataGrid
 	useDataGridStore: typeof useDataGridStore
 	GridComponentsProvider: typeof GridComponentsProvider
-	defineColumns: <TRow extends object>(
+	createColumns: <TRow extends object>(
 		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],
 	) => ColumnDef<TRow, Extract<keyof TCellTypes, string>>[]
 	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, Extract<keyof TCellTypes, string>>
@@ -48,7 +48,7 @@ export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
 
 /**
  * Factory for creating a typed DataGrid bundle pre-configured with UI components
- * and optional cell types. Returns a `defineColumns` helper typed to the registered
+ * and optional cell types. Returns a `createColumns` helper typed to the registered
  * custom cell type keys so `type: 'my-type'` on columns is type-safe.
  *
  * This package contains **zero visual styling** — every visible primitive is
@@ -58,7 +58,7 @@ export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
  *
  * @example
  * // With custom cell types
- * export const { DataGrid, useDataGrid, defineColumns } = extendDataGrid({
+ * export const { DataGrid, useDataGrid, createColumns } = extendDataGrid({
  *   rating: { view: RatingCellView, edit: RatingCellInput },
  * })
  */
@@ -136,7 +136,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 		useDataGrid: useDataGridWithDefaults,
 		useDataGridStore,
 		GridComponentsProvider,
-		defineColumns: boundDefineColumns,
+		createColumns: boundDefineColumns,
 		createColumnHelper: boundCreateColumnHelper,
 		extendDataGrid: boundExtendDataGrid,
 	}

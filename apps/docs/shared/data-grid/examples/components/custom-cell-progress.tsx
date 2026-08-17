@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
@@ -20,7 +20,7 @@ const TASK_DATA: Task[] = [
 	{ id: 5, title: 'Docs refresh', owner: 'Eve', completion: 100 },
 ]
 
-const taskColumns = defineColumns<Task>([
+const taskColumns = createColumns<Task>([
 	{ accessorKey: 'title', header: 'Task' },
 	{ accessorKey: 'owner', header: 'Owner' },
 	{ accessorKey: 'completion', header: 'Progress', cell: { type: 'completion' } },

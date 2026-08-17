@@ -26,4 +26,4 @@ const customGrid = extendDataGrid({
 })
 
 export const DataGrid: typeof HeroUIDataGrid = customGrid.DataGrid
-export const { useDataGrid, defineColumns } = customGrid
+export const { useDataGrid, createColumns } = customGrid

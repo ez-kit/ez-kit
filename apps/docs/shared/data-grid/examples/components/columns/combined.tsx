@@ -1,13 +1,13 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { INITIAL_DATA, type User } from '../_data'
 
-const combinedColumns = defineColumns<User>([
+const combinedColumns = createColumns<User>([
 	{
 		accessorKey: 'name',
 		header: 'Name',

@@ -53,7 +53,7 @@ import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
 
 const grid = extendDataGrid(CELL_TYPES)
 
-export const { DataGrid, useDataGrid, defineColumns, createColumnHelper } = grid
+export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = grid
 ```
 
 …or per grid, with the `cellTypes` prop — registries nest, so this merges over the ones the kit already provides instead of replacing them:
@@ -61,7 +61,7 @@ export const { DataGrid, useDataGrid, defineColumns, createColumnHelper } = grid
 ```tsx
 <DataGrid
 	data={data}
-	columns={defineColumns<Order>([{ accessorKey: 'status', header: 'Status', cell: { type: 'status' } }])}
+	columns={createColumns<Order>([{ accessorKey: 'status', header: 'Status', cell: { type: 'status' } }])}
 	cellTypes={CELL_TYPES}
 />
 ```

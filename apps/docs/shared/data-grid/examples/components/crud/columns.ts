@@ -1,8 +1,8 @@
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import type { Employee } from './use-employee-store'
 
-export const crudColumns = defineColumns<Employee>([
+export const crudColumns = createColumns<Employee>([
 	{
 		accessorKey: 'name',
 		header: 'Name',

@@ -82,7 +82,7 @@ Rules:
   surface needs more than one demo, but each MUST reference a distinct
   manifest entry.
 - A page MAY use plain fenced code blocks for **isolated code fragments**
-  that illustrate a syntax or option (e.g., a `defineColumns` snippet);
+  that illustrate a syntax or option (e.g., a `createColumns` snippet);
   these do not count as "example embedding" and are not subject to
   manifest-only rules.
 

@@ -14,7 +14,7 @@ This grid mixes the select, badge, image, link, and progress cell types, with ed
 <DataGridDocsExample exampleId='cell-types' />
 
 ```ts
-const columns = defineColumns<Order>([
+const columns = createColumns<Order>([
 	{ id: 'price', accessorKey: 'price', meta: { cellType: 'currency', currency: 'USD' } },
 	{ id: 'status', accessorKey: 'status', meta: { cellType: 'badge', tone: 'auto' } },
 	{ id: 'createdAt', accessorKey: 'createdAt', meta: { cellType: 'date' } },

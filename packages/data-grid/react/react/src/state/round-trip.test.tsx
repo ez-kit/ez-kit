@@ -1,11 +1,11 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { extractState, parseState, useDataGrid } from '../index'
 
 type Row = { id: number; name: string }
-const columns = defineColumns<Row>([{ accessorKey: 'name' }])
+const columns = createColumns<Row>([{ accessorKey: 'name' }])
 const data: Row[] = [{ id: 1, name: 'Alice' }]
 
 describe('state persistence round-trip', () => {

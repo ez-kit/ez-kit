@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -26,7 +26,7 @@ beforeAll(() => {
 type Row = { id: number; name: string }
 const DATA: Row[] = [{ id: 1, name: 'Alice' }]
 const SPY_TYPE = 'spy' as const
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	// `cell.type` is loose — relies on the cellType registry passed via `cellTypes` prop.
 	{ accessorKey: 'name', cell: { type: SPY_TYPE }, editing: {}, creating: {} },
 ])

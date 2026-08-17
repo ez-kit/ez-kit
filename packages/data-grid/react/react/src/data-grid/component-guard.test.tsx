@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -8,7 +8,7 @@ import { DataGrid } from './data-grid'
 
 type Row = { id: number; name: string }
 const ROWS: Row[] = [{ id: 1, name: 'Alice' }]
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
 
 describe('ComponentGuard (dev-time completeness)', () => {
 	it('throws a named error when a required structural component is missing', () => {

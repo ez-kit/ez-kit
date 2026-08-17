@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 /** Fulfilment lifecycle of an order. Closed set → enum, referenced everywhere. */
 export enum OrderStatus {
@@ -101,7 +101,7 @@ export function makeOrders(count: number = SEED_ROW_COUNT): Order[] {
 // Sizes are deliberately generous: every header carries its title plus sort, filter
 // and menu buttons, and together the columns overflow the viewport — which is the
 // point. Without horizontal scrolling there is nothing for column pinning to hold.
-export const orderColumns = defineColumns<Order>([
+export const orderColumns = createColumns<Order>([
 	{
 		accessorKey: 'reference',
 		header: 'Order',

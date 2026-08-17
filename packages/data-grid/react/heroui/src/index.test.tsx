@@ -1,4 +1,4 @@
-import { createDataGridInstance, createTable, defineColumns } from '@ez-kit/data-grid-react'
+import { createDataGridInstance, createTable, createColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -13,7 +13,7 @@ import {
 	createColumnHelper,
 	DataGrid,
 	DataGridOptionsProvider,
-	defineColumns as kitDefineColumns,
+	createColumns as kitDefineColumns,
 	extractState,
 	GridComponentsProvider,
 	parseState,
@@ -44,7 +44,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 	})
 
 	// The kit must carry the whole consumer surface on its own: installing a kit and also
-	// depending on `@ez-kit/data-grid-react` to reach `defineColumns` is the thing #66 removes.
+	// depending on `@ez-kit/data-grid-react` to reach `createColumns` is the thing #66 removes.
 	it('re-exports the adapter consumer surface', () => {
 		expect(kitDefineColumns).toBeTypeOf('function')
 		expect(createColumnHelper).toBeTypeOf('function')
@@ -73,7 +73,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('renders a simple DataGrid', () => {
 		const table = createTable<User>({
 			data: [{ id: 1, name: 'Ada' }],
-			columns: defineColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 		})
 
 		render(<DataGrid table={createDataGridInstance(table)} />)
@@ -86,7 +86,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('selects rows through the grid checkbox', () => {
 		const table = createTable<User>({
 			data: [{ id: 1, name: 'Ada' }],
-			columns: defineColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 			selection: true,
 		})
 

@@ -16,9 +16,9 @@ This grid combines visibility, pinning, and resizing: drag column borders to res
 You define columns once and pass them to the grid's `columns` prop. Most columns are accessor columns — they read a row property by key and render a value.
 
 ```ts
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
-const columns = defineColumns<User>([
+const columns = createColumns<User>([
 	{ id: 'name', header: 'Name', accessorKey: 'name' },
 	{ id: 'email', header: 'Email', accessorKey: 'email' },
 	{ id: 'status', header: 'Status', accessorKey: 'status' },
