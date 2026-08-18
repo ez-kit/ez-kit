@@ -468,6 +468,44 @@ describe('createTable — loading', () => {
 	})
 })
 
+// ── initialState — type-level ────────────────────────────────────────────────
+// `editing`, `creating`, `pendingDeleteRowId` and `pendingBulkDelete` are transient UI
+// state that each feature hard-resets on its own initialization, so seeding them is
+// rejected at the type level rather than silently ignored at runtime — see
+// `InitialTableState` in `../types`.
+
+describe('createTable — initialState type constraints', () => {
+	it('rejects seeding transient editing/creating/deleting slices, allows loading', () => {
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			// @ts-expect-error — `editing` is transient per-open-form state, hard-reset by the feature
+			initialState: { editing: { rowId: '1', values: {}, errors: {}, commitStatus: 'idle' } },
+		})
+
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			// @ts-expect-error — `creating` is transient per-open-form state, hard-reset by the feature
+			initialState: { creating: { values: {}, errors: {}, commitStatus: 'idle' } },
+		})
+
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			// @ts-expect-error — `pendingDeleteRowId` is transient, hard-reset by the deleting feature
+			initialState: { pendingDeleteRowId: '1' },
+		})
+
+		// `loading` still deep-merges the consumer's value, so it stays allowed.
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } },
+		})
+	})
+})
+
 // ── system columns ────────────────────────────────────────────────────────────
 
 describe('createTable — system columns', () => {
@@ -761,5 +799,113 @@ describe('createTable — faceted', () => {
 		const nameCol = table.getColumn('name')
 		if (!nameCol) throw new Error('expected name column')
 		expect(nameCol.getFacetedUniqueValues().get('Alice')).toBe(2)
+	})
+})
+
+// ── initial state × column-derived defaults ───────────────────────────────────
+
+describe('createTable — initialState vs column-derived state', () => {
+	const PINNED_COLUMNS = createColumns<Row>([
+		{ accessorKey: 'name', header: 'Name', pinning: { pin: 'left' } },
+		{ accessorKey: 'age', header: 'Age' },
+	])
+
+	const DEFAULT_PINNED_COLUMNS = createColumns<Row>([
+		{ accessorKey: 'name', header: 'Name', pinning: { initialPin: 'left' } },
+		{ accessorKey: 'age', header: 'Age' },
+	])
+
+	const HIDDEN_COLUMNS = createColumns<Row>([
+		{ accessorKey: 'name', header: 'Name', visibility: { initialHidden: true } },
+		{ accessorKey: 'age', header: 'Age' },
+	])
+
+	it('column initialPin seeds columnPinning', () => {
+		const table = createTable({ data: DATA, columns: DEFAULT_PINNED_COLUMNS, pinning: { column: true } })
+		expect(table.getState().columnPinning.left).toContain('name')
+	})
+
+	it('consumer initialState.columnPinning wins over a initialPin it mentions', () => {
+		const table = createTable({
+			data: DATA,
+			columns: DEFAULT_PINNED_COLUMNS,
+			pinning: { column: true },
+			initialState: { columnPinning: { left: [], right: ['name'] } },
+		})
+		expect(table.getState().columnPinning.left).not.toContain('name')
+		expect(table.getState().columnPinning.right).toContain('name')
+	})
+
+	it('a initialPin the consumer never mentions keeps its seed', () => {
+		const table = createTable({
+			data: DATA,
+			columns: DEFAULT_PINNED_COLUMNS,
+			pinning: { column: true },
+			initialState: { columnPinning: { left: ['age'], right: [] } },
+		})
+		expect(table.getState().columnPinning.left).toEqual(['name', 'age'])
+	})
+
+	it('a static pin survives an initialState.columnPinning that omits it', () => {
+		const table = createTable({
+			data: DATA,
+			columns: PINNED_COLUMNS,
+			pinning: { column: true },
+			initialState: { columnPinning: { left: ['age'], right: [] } },
+		})
+		expect(table.getState().columnPinning.left).toContain('name')
+	})
+
+	it('initialState.columnPinning does not drop system column pins', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: () => {} },
+			initialState: { columnPinning: { left: [], right: [] } },
+		})
+		const { left, right } = table.getState().columnPinning
+		expect(left).toContain(SELECTION_COLUMN_ID)
+		expect(right).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('initialState cannot hide a system column', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: () => {} },
+			columnVisibility: true,
+			initialState: { columnVisibility: { [ACTIONS_COLUMN_ID]: false } },
+		})
+		expect(table.getVisibleLeafColumns().map((c) => c.id)).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('syncControlledState cannot hide a system column', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: () => {} },
+			columnVisibility: true,
+		})
+		table.syncControlledState({ columnVisibility: { [ACTIONS_COLUMN_ID]: false } })
+		expect(table.getVisibleLeafColumns().map((c) => c.id)).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('setState cannot unpin a system column', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: true, deleting: { onDelete: () => {} } })
+		table.setState((prev) => ({ ...prev, columnPinning: { left: [], right: [] } }))
+		const { left, right } = table.getState().columnPinning
+		expect(left).toContain(SELECTION_COLUMN_ID)
+		expect(right).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('columnVisibility merges per key — a initialHidden column stays hidden', () => {
+		const table = createTable({
+			data: DATA,
+			columns: HIDDEN_COLUMNS,
+			columnVisibility: true,
+			initialState: { columnVisibility: { age: true } },
+		})
+		expect(table.getState().columnVisibility).toMatchObject({ name: false, age: true })
 	})
 })

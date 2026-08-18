@@ -26,12 +26,72 @@ With per-field validation:
 <DataGridDocsExample exampleId='creating-validation' />
 
 ```tsx
-<DataGrid.CreateTrigger>New order</DataGrid.CreateTrigger>
-<DataGrid.CreatingModal
-	onSubmit={(draft) => api.create(draft)}
-	defaultValues={{ status: 'pending' }}
+<DataGrid
+	data={data}
+	columns={columns}
+	creating={{
+		mode: 'modal',
+		onSave: ({ values }) => api.create(values),
+	}}
+>
+	<DataGrid.CreateTrigger>New order</DataGrid.CreateTrigger>
+</DataGrid>
+```
+
+The modal itself is rendered by the grid when `creating.mode` is `'modal'` — `DataGrid.CreatingModal`
+takes no props, and everything about the form comes from `creating` and the column defs.
+
+## Default values
+
+The form opens empty unless you seed it. Two places do that, and they are resolved on **every**
+`creating.start()` — not once at mount — so a function form sees the table as it is at the moment
+the form opens.
+
+Per column, next to the column it seeds:
+
+```tsx
+const columns = createColumns<Order>([
+	{ accessorKey: 'status', header: 'Status', creating: { defaultValue: 'pending' } },
+	{
+		accessorKey: 'position',
+		header: 'Position',
+		creating: { defaultValue: ({ table }) => table.getRowCount() + 1 },
+	},
+])
+```
+
+Or at table level, for values that span columns:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	creating={{
+		mode: 'modal',
+		defaultValues: ({ table }) => ({ createdAt: new Date(), page: table.getState().pagination.pageIndex }),
+		onSave: ({ values }) => api.create(values),
+	}}
 />
 ```
+
+Both accept a plain value as well as a function. Rules:
+
+- Column defaults are resolved first, in column order; `creating.defaultValues` is then merged over
+  them, so the table level wins per key.
+- A column with no `defaultValue` contributes **no key** at all to `state.creating.values` — not a
+  key holding `undefined`.
+- Both forms must be **synchronous**. An async default would open the form empty and make the field
+  jump once the promise settled; load such values before calling `start()` and pass them through
+  `creating.defaultValues`.
+- The function form is detected with `typeof === 'function'`, so a default whose value is itself a
+  function has to be wrapped: `defaultValue: () => myFn`.
+- Column defaults receive only `{ table, columnId }` — not the values resolved before them. A
+  default that could read its neighbours would depend on the order the columns happen to sit in the
+  config. Cross-field seeding belongs in `creating.defaultValues`, which runs once, after all of
+  them.
+
+Seeding the create form through `initialState.creating` is a **type error** — see
+[State model](./data-grid/state-model).
 
 ## Validation
 
@@ -53,6 +113,7 @@ Validators run before submit. Show inline errors next to the offending field; th
 
 - [Validation](./data-grid/editing/validation) — full validation patterns
 - [Inline editing](./data-grid/editing) — once a row exists
+- [State model](./data-grid/state-model) — where a starting value can come from, and which one wins
 
 ## Source
 

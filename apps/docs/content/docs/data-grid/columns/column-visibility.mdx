@@ -32,12 +32,25 @@ A simpler base example is also available:
 
 | Option                          | Type                              | Description                                                                                                                                                                            |
 | ------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `visibility`                    | `true \| { defaultHidden: true }` | Per-column. `true` locks the column as always visible (no Hide option in its menu, absent from the Columns toggle). `{ defaultHidden: true }` starts the column hidden but toggleable. |
+| `visibility`                    | `true \| { initialHidden: true }` | Per-column. `true` locks the column as always visible (no Hide option in its menu, absent from the Columns toggle). `{ initialHidden: true }` starts the column hidden but toggleable. |
 | `enableHiding`                  | `boolean`                         | Per-column TanStack pass-through. Default `true`. `visibility: true` sets this to `false` under the hood.                                                                              |
 | `state.columnVisibility`        | `Record<string, boolean>`         | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                         |
-| `initialState.columnVisibility` | `Record<string, boolean>`         | Default hidden columns at mount.                                                                                                                                                       |
+| `initialState.columnVisibility` | `Record<string, boolean>`         | Hidden columns at mount. Merges with the column-level `initialHidden` seeds — see below.                                                                                               |
 
 Column visibility has no dedicated `onChange` — subscribe via the single `onStateChange` callback (see [Controlled State](./data-grid/controlled-state)).
+
+## Seeds and invariants
+
+`initialState.columnVisibility` **merges** with the `initialHidden` seeds from the column defs
+rather than replacing them: a column you do not mention stays hidden, one you do mention takes your
+value.
+
+`visibility: true` is an invariant, not a seed. Such a column can never be hidden — not by
+`initialState`, not by controlled `state`, not by `table.setState`. Its menu has no Hide option and
+it is absent from the Columns toggle, so a state that hid it could never be undone by the user. The
+system columns (`__selection__`, `__expand__`, `__actions__`) are covered by the same rule.
+
+See [State model](./data-grid/state-model) for the full precedence.
 
 ## See also
 

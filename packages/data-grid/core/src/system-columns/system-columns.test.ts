@@ -154,10 +154,10 @@ describe('extractPinningState', () => {
 		expect(left).not.toContain('c')
 	})
 
-	it('extracts columns with defaultPin position', () => {
+	it('extracts columns with initialPin position', () => {
 		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'd', meta: { columnPinning: { defaultPin: 'left' } } },
-			{ id: 'e', meta: { columnPinning: { defaultPin: 'right' } } },
+			{ id: 'd', meta: { columnPinning: { initialPin: 'left' } } },
+			{ id: 'e', meta: { columnPinning: { initialPin: 'right' } } },
 		]
 		const { left, right } = extractPinningState(cols)
 		expect(left).toContain('d')

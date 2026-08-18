@@ -423,3 +423,126 @@ describe('CreatingFeature — abort propagation', () => {
 		noop()
 	})
 })
+
+describe('CreatingFeature — default values', () => {
+	it('applies a column-level defaultValue on start()', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
+				{ accessorKey: 'email' },
+			]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Anonymous' })
+	})
+
+	it('columns without a defaultValue contribute no key', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
+				{ accessorKey: 'email', creating: { description: 'work address' } },
+			]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(Object.keys(table.creating.getState().values)).toEqual(['name'])
+	})
+
+	it('table-level defaultValues override column-level per key', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
+				{ accessorKey: 'email', creating: { defaultValue: 'none@example.com' } },
+			]),
+			creating: { defaultValues: { name: 'Bob' }, onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Bob', email: 'none@example.com' })
+	})
+
+	it('column-level function form receives { table, columnId } and its return lands in values', () => {
+		const defaultValue = vi.fn((ctx: { table: unknown; columnId: string }) => `row-${ctx.columnId}`)
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue } }, { accessorKey: 'email' }]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(defaultValue).toHaveBeenCalledTimes(1)
+		expect(defaultValue.mock.calls[0]?.[0].table).toBe(table)
+		expect(defaultValue.mock.calls[0]?.[0].columnId).toBe('name')
+		expect(table.creating.getState().values).toEqual({ name: 'row-name' })
+	})
+
+	it('table-level function form receives { table } and sees live table state', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			creating: {
+				defaultValues: (ctx) => ({ name: `Row ${String(ctx.table.getRowCount() + 1)}` }),
+				onSave: () => Promise.resolve(),
+			},
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Row 2' })
+	})
+
+	it('re-applies defaults on a second start() after cancel()', () => {
+		let calls = 0
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{
+					accessorKey: 'name',
+					creating: {
+						defaultValue: () => {
+							calls += 1
+							return `Draft ${String(calls)}`
+						},
+					},
+				},
+			]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Draft 1' })
+		table.creating.setValue('name', 'typed over')
+		table.creating.cancel()
+		expect(table.creating.getState().values).toEqual({})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Draft 2' })
+	})
+
+	it('system columns never contribute a key', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } }]),
+			selection: true,
+			expanding: true,
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(Object.keys(table.creating.getState().values)).toEqual(['name'])
+	})
+
+	it('errors, formError and commitStatus still reset on start()', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } }]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		table.creating.setErrors({ name: ['required'] })
+		table.creating.setFormError('boom')
+		table.creating.start()
+		const s = table.creating.getState()
+		expect(s.errors).toEqual({})
+		expect(s.formError).toBe(null)
+		expect(s.commitStatus).toBe('idle')
+		expect(s.values).toEqual({ name: 'Anonymous' })
+	})
+})

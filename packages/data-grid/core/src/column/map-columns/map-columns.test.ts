@@ -68,8 +68,8 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableHiding).toBe(false)
 	})
 
-	it('visibility: { defaultHidden: true } does not lock the column', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: { defaultHidden: true } }])
+	it('visibility: { initialHidden: true } does not lock the column', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: { initialHidden: true } }])
 		expect(result[0]?.enableHiding).toBeUndefined()
 	})
 
@@ -83,9 +83,9 @@ describe('mapColumns', () => {
 		expect(result[0]?.meta?.columnPinning).toEqual({ pin: 'left' })
 	})
 
-	it('pinning: { defaultPin: right } goes into meta.columnPinning', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { defaultPin: 'right' } }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ defaultPin: 'right' })
+	it('pinning: { initialPin: right } goes into meta.columnPinning', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { initialPin: 'right' } }])
+		expect(result[0]?.meta?.columnPinning).toEqual({ initialPin: 'right' })
 	})
 
 	it('pinning: false goes into meta.columnPinning as false', () => {

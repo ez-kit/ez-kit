@@ -97,14 +97,14 @@ export function ColumnVisibilityExample() {
 					header: 'Salary',
 					cell: { type: 'number' },
 					// starts hidden, user can toggle it on via the Columns button
-					visibility: { defaultHidden: true },
+					visibility: { initialHidden: true },
 				},
 				{
 					accessorKey: 'startDate',
 					header: 'Start Date',
 					cell: { type: 'date' },
 					// starts hidden, user can toggle it on via the Columns button
-					visibility: { defaultHidden: true },
+					visibility: { initialHidden: true },
 				},
 			]}
 			sorting

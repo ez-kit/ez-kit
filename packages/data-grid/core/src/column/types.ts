@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
+import type { CreateDefaultValueContext } from '../features/creating'
 import type {
 	BetweenOperatorConfig,
 	ColumnOperatorsConfig,
@@ -173,7 +174,7 @@ export type ColumnEditingConfig = {
 	description?: string
 }
 
-export type ColumnCreatingConfig = {
+export type ColumnCreatingConfig<TRow = unknown, TValue = unknown> = {
 	/**
 	 * Custom create input component for this column. Falls back to `editing.component` when omitted.
 	 * Receives a {@link FieldState} with the same shape as {@link ColumnEditingConfig.component}.
@@ -184,18 +185,37 @@ export type ColumnCreatingConfig = {
 	 * Forwarded to `FieldState.description`.
 	 */
 	description?: string
+	/**
+	 * Value this column's field is seeded with when the create form opens.
+	 *
+	 * Resolved on **every** `creating.start()`, not once at table construction — hence
+	 * `defaultValue` and not `initialValue` (unlike {@link ColumnPinningDef.initialPin} /
+	 * {@link ColumnVisibilityDef.initialHidden}, which seed `initialState` a single time).
+	 * The function form therefore sees the table as it is at the moment the form opens.
+	 *
+	 * Must be **synchronous**: an async default would open the form empty and then make the
+	 * field jump once the promise settled. Load async seeds before calling `start()` and pass
+	 * them through the table-level `creating.defaultValues` instead.
+	 *
+	 * A column that omits `defaultValue` contributes **no key** to `state.creating.values` —
+	 * not a key holding `undefined`.
+	 *
+	 * The function form is detected with `typeof === 'function'`. A value that is itself a
+	 * function can therefore not be passed directly; wrap it (`defaultValue: () => myFn`).
+	 */
+	defaultValue?: TValue | ((ctx: CreateDefaultValueContext<TRow>) => TValue)
 }
 
 export type ColumnPinningDef = {
 	/** Static pin — always pinned, no pin section in column menu. */
 	pin?: 'left' | 'right'
-	/** Dynamic default pin — starts pinned, user can change via column menu. */
-	defaultPin?: 'left' | 'right'
+	/** Seeds `initialState.columnPinning` — starts pinned, user can change via column menu. */
+	initialPin?: 'left' | 'right'
 }
 
 export type ColumnVisibilityDef = {
-	/** Column starts hidden but can be toggled by the user. */
-	defaultHidden?: boolean
+	/** Seeds `initialState.columnVisibility` — starts hidden, user can toggle it on. */
+	initialHidden?: boolean
 }
 
 /** Built-in TanStack sort functions. The `string & {}` tail keeps custom registry IDs valid. */
@@ -291,7 +311,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 * Column pinning configuration.
 	 * - `false` — pinning disabled, no pin section in column menu
 	 * - `{ pin: 'left' }` — always pinned left (static), no menu section
-	 * - `{ defaultPin: 'left' }` — starts pinned left, user can change via menu
+	 * - `{ initialPin: 'left' }` — starts pinned left, user can change via menu
 	 */
 	pinning?: false | ColumnPinningDef
 	/**
@@ -307,7 +327,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	/**
 	 * Column visibility configuration.
 	 * - `true` — column is always visible / locked (cannot be hidden, no Hide option in menu)
-	 * - `{ defaultHidden: true }` — starts hidden, user can toggle it on
+	 * - `{ initialHidden: true }` — starts hidden, user can toggle it on
 	 */
 	visibility?: true | ColumnVisibilityDef
 
@@ -326,7 +346,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	/** Column-level editing config. Set to false to disable. */
 	editing?: false | ColumnEditingConfig
 	/** Column-level creating config. Set to false to disable. */
-	creating?: false | ColumnCreatingConfig
+	creating?: false | ColumnCreatingConfig<TRow>
 
 	/**
 	 * Override the global `creating.validateOn` / `editing.validateOn` for this column.
@@ -351,7 +371,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 
 /** Augment TanStack's ColumnMeta with our custom fields. */
 declare module '@tanstack/table-core' {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface ColumnMeta<TData, TValue> {
 		columnPinning?: false | ColumnPinningDef
 		cellType?: CellType
@@ -360,7 +380,7 @@ declare module '@tanstack/table-core' {
 		cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
 		filtering?: false | ColumnFilteringConfig
 		editing?: false | ColumnEditingConfig
-		creating?: false | ColumnCreatingConfig
+		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: true | ColumnVisibilityDef
 		isSystemColumn?: boolean
 		systemColumnType?: 'selection' | 'expand' | 'actions'

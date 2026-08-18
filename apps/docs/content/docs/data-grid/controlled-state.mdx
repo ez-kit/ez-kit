@@ -29,6 +29,10 @@ const grid = useDataGrid({
 })
 ```
 
+`state` is one of four places a grid value can come from — the other three (`initialState`, feature
+config, column-level seeds) are uncontrolled and only set a starting point. [State
+model](./data-grid/state-model) lays out which one wins.
+
 ## Why this matters
 
 - Server-side anything (sort, filter, pagination) needs controlled state so you can translate the user's input into your query.

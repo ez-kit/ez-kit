@@ -8,7 +8,8 @@ import { ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
  * skipped, which is the only way coverage stays an honest number.
  *
  * Scope: the 19 data-grid pages whose option tables were hand-verified against
- * the real types in the #171-#174 audit slices. The remaining pages under
+ * the real types in the #171-#174 audit slices, plus `state-model.mdx`, which
+ * was written against those types from the start. The remaining pages under
  * `content/docs/data-grid/**` are intentionally absent — their types and
  * defaults were never verified, so adding them would make the suite red on
  * arrival.
@@ -46,6 +47,7 @@ export enum DocPage {
 	RowPinning = 'content/docs/data-grid/row-pinning.mdx',
 	SelectionIndex = 'content/docs/data-grid/selection/index.mdx',
 	Sorting = 'content/docs/data-grid/sorting.mdx',
+	StateModel = 'content/docs/data-grid/state-model.mdx',
 }
 
 /**
@@ -270,7 +272,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.PaginationIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 9 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 10 }],
 		nonOptionTables: [
 			{
 				heading: 'When the total is unknown',
@@ -303,6 +305,21 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.SelectionIndex,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.StateModel,
+		optionTables: [
+			// One table crossing both levels on purpose: the page's whole point is
+			// that a starting value can come from a column def *or* from the grid
+			// config, so the column-level rows resolve against `ColumnDef` and the
+			// grid-level ones against `UseDataGridConfig`.
+			{
+				heading: 'Where a starting value comes from',
+				roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig],
+				expectedCount: 8,
+			},
+		],
 		nonOptionTables: [],
 	},
 	{

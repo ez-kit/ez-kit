@@ -14,7 +14,7 @@ const combinedColumns = createColumns<User>([
 		size: 200,
 		minSize: 80,
 		maxSize: 400,
-		pinning: { defaultPin: 'left' },
+		pinning: { initialPin: 'left' },
 	},
 	{ accessorKey: 'email', header: 'Email', size: 250, minSize: 120 },
 	{
@@ -31,8 +31,8 @@ const combinedColumns = createColumns<User>([
 		size: 100,
 		enableResizing: false,
 		cell: { type: 'boolean' },
-		pinning: { defaultPin: 'right' },
-		visibility: { defaultHidden: true },
+		pinning: { initialPin: 'right' },
+		visibility: { initialHidden: true },
 	},
 ])
 

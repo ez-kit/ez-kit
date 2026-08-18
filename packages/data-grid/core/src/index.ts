@@ -67,7 +67,13 @@ export {
 	resolveColumnOperators,
 } from './features/operators'
 
-export type { CreatingConfig, CreatingSaveContext, CreatingState } from './features/creating'
+export type {
+	CreateDefaultValueContext,
+	CreateDefaultValuesContext,
+	CreatingConfig,
+	CreatingSaveContext,
+	CreatingState,
+} from './features/creating'
 export type { ConfirmationOptions, DeletingConfig, DeletingContext } from './features/deleting'
 export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
 // Sourced from the feature modules (not `./types`) so their
@@ -99,6 +105,7 @@ export type {
 	FilteringConfig,
 	GlobalFilterFn,
 	GlobalFilteringConfig,
+	InitialTableState,
 	LoadMoreDirection,
 	MultiSortConfig,
 	MultiSortEvent,

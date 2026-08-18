@@ -22,6 +22,35 @@ export type CreatingSaveContext<TData> = {
 	signal: AbortSignal
 }
 
+/**
+ * Context passed to the function form of a column's `creating.defaultValue`.
+ *
+ * Deliberately minimal: `table` already covers the real use cases
+ * (`table.getRowCount() + 1`, `table.getState().columnFilters`, `table.getRowModel().rows[0]`).
+ * The partially-accumulated `values` object is **not** passed — a default that could read the
+ * defaults resolved before it would silently depend on the order the columns happen to sit in
+ * the config. Cross-field seeding belongs in the table-level `creating.defaultValues`, which
+ * runs once after all column defaults.
+ *
+ * @typeParam TRow - row data type
+ */
+export type CreateDefaultValueContext<TRow> = {
+	table: Table<TRow>
+	/** Id of the column whose default is being resolved. */
+	columnId: string
+}
+
+/**
+ * Context passed to the function form of {@link CreatingConfig.defaultValues}.
+ *
+ * Minimal for the same reason as {@link CreateDefaultValueContext} — see its doc comment.
+ *
+ * @typeParam TRow - row data type
+ */
+export type CreateDefaultValuesContext<TRow> = {
+	table: Table<TRow>
+}
+
 const DEFAULT_VALIDATE_ON: ValidateOn = 'submit'
 const DEFAULT_DEBOUNCE_MS = 200
 const GENERIC_FORM_ERROR = 'Unexpected error'
@@ -39,6 +68,15 @@ export type CreatingConfig<TData> = {
 	validate?: ValidateConfig<TData>
 	validateOn?: ValidateOn
 	validateDebounceMs?: number
+	/**
+	 * Values the create form opens with, applied **over** the per-column
+	 * `creating.defaultValue` seeds (table level wins per key).
+	 *
+	 * Resolved on every `creating.start()`, and must be **synchronous** — see
+	 * {@link ColumnCreatingConfig.defaultValue} for the reasoning behind both.
+	 * The function form is detected with `typeof === 'function'`.
+	 */
+	defaultValues?: Partial<TData> | ((ctx: CreateDefaultValuesContext<TData>) => Partial<TData>)
 	/**
 	 * Called when the user commits the create form. Return nothing for
 	 * synchronous handlers, a `Promise` for async work. Throw
@@ -219,12 +257,46 @@ export const CreatingFeature: TableFeature<RowData> = {
 			})()
 		}
 
+		/**
+		 * Builds the seed for `state.creating.values`: column-level `creating.defaultValue`
+		 * first (in final column order, system columns skipped), then the table-level
+		 * `creating.defaultValues` shallow-merged over them so the table level wins per key.
+		 *
+		 * Runs on every start() — the resolved values are a snapshot of the table as it is
+		 * when the form opens, not of how it was constructed.
+		 */
+		const resolveDefaultValues = (): Record<string, unknown> => {
+			const fromColumns: Record<string, unknown> = {}
+			for (const col of table.getAllColumns()) {
+				const meta = col.columnDef.meta
+				if (!col.id || meta?.isSystemColumn) continue
+				const creating = meta?.creating
+				// A column without a default contributes no key at all — not a key set to undefined.
+				if (!creating || creating.defaultValue === undefined) continue
+				const defaultValue: unknown = creating.defaultValue
+				fromColumns[col.id] =
+					typeof defaultValue === 'function'
+						? (defaultValue as (ctx: CreateDefaultValueContext<RowData>) => unknown)({
+								table,
+								columnId: col.id,
+							})
+						: defaultValue
+			}
+
+			const fromTable = getConfig()?.defaultValues
+			if (fromTable === undefined) return fromColumns
+			// CreatingConfig is instantiated with RowData (= any) inside the feature, so the
+			// resolved patch widens to `any` here — narrow it back before merging.
+			const resolved = (typeof fromTable === 'function' ? fromTable({ table }) : fromTable) as Record<string, unknown>
+			return { ...fromColumns, ...resolved }
+		}
+
 		const api: CreatingApi = {
 			start: () => {
 				resetController()
 				writeState({
 					isOpen: true,
-					values: {},
+					values: resolveDefaultValues(),
 					errors: {},
 					formError: null,
 					commitStatus: 'idle',
@@ -234,6 +306,8 @@ export const CreatingFeature: TableFeature<RowData> = {
 			cancel: () => {
 				controller?.abort()
 				controller = undefined
+				// Values reset to empty, not to the defaults: the form is closed at this point
+				// and the next start() re-applies them.
 				writeState({
 					isOpen: false,
 					values: {},

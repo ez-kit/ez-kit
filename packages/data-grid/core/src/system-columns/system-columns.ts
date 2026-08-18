@@ -95,7 +95,7 @@ export function buildColumnList<TRow extends object>(
 /**
  * Extracts initial column pinning state from column defs.
  * Called before passing columns to TanStack so that
- * columns with `meta.columnPinning.pin` or `meta.columnPinning.defaultPin`
+ * columns with `meta.columnPinning.pin` or `meta.columnPinning.initialPin`
  * are registered in initial state.
  */
 export function extractPinningState<TRow extends object>(
@@ -107,7 +107,7 @@ export function extractPinningState<TRow extends object>(
 	for (const col of columns) {
 		const pinDef = col.meta?.columnPinning
 		if (!pinDef) continue
-		const position = pinDef.pin ?? pinDef.defaultPin
+		const position = pinDef.pin ?? pinDef.initialPin
 		const colId = col.id ?? (col as { accessorKey?: string }).accessorKey ?? undefined
 		if (!position || !colId) continue
 		if (position === 'left') left.push(colId)

@@ -10,6 +10,7 @@ import {
 } from '@tanstack/table-core'
 
 import { mapColumns } from '../column/map-columns'
+import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingFeature } from '../features/creating'
 import { DeletingFeature } from '../features/deleting'
@@ -45,15 +46,15 @@ function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string,
 	return opts
 }
 
-function collectDefaultHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
+function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
 	for (const def of defs) {
-		if (def.visibility && typeof def.visibility === 'object' && def.visibility.defaultHidden) {
+		if (def.visibility && typeof def.visibility === 'object' && def.visibility.initialHidden) {
 			const colId = def.id ?? def.accessorKey
 			if (colId !== undefined) acc[colId] = false
 		}
 		if (def.columns !== undefined) {
-			Object.assign(acc, collectDefaultHidden(def.columns))
+			Object.assign(acc, collectInitialHidden(def.columns))
 		}
 	}
 	return acc
@@ -171,15 +172,28 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const defaultPageSize =
 		typeof config.pagination === 'object' && config.pagination.pageSize ? config.pagination.pageSize : DEFAULT_PAGE_SIZE
 
-	const defaultHidden = collectDefaultHidden(config.columns)
+	const initialHidden = collectInitialHidden(config.columns)
 
-	const initialState: Partial<TableState> = {
-		columnPinning: { left: pinnedLeft, right: pinnedRight },
-		pagination: { pageIndex: 0, pageSize: defaultPageSize },
-		...(Object.keys(defaultHidden).length > 0 ? { columnVisibility: defaultHidden } : {}),
-		// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
-		...config.initialState,
-	}
+	// Column-derived rules that no state input may violate — see `../column-state`.
+	const columnInvariants = buildColumnInvariants(allColumns)
+
+	const userInitialState = config.initialState
+	// `columnPinning` / `columnVisibility` merge with the column-derived defaults instead of
+	// replacing them: a whole-slice spread would silently drop static pins, system-column pins
+	// and `initialHidden` columns the consumer never mentioned.
+	const seededPinning = mergePinningSeed({ left: pinnedLeft, right: pinnedRight }, userInitialState?.columnPinning)
+	const mergedVisibility = { ...initialHidden, ...userInitialState?.columnVisibility }
+
+	const initialState: Partial<TableState> = enforceColumnInvariants(
+		{
+			pagination: { pageIndex: 0, pageSize: defaultPageSize },
+			// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
+			...userInitialState,
+			columnPinning: seededPinning,
+			...(Object.keys(mergedVisibility).length > 0 ? { columnVisibility: mergedVisibility } : {}),
+		},
+		columnInvariants,
+	)
 
 	// We need a stable reference for the callback closure.
 	// Using a wrapper object allows const + mutation inside the closure.
@@ -189,7 +203,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 
 	const onStateChange = (updater: Updater<TableState>): void => {
 		const currentState = store.getState()
-		const next = typeof updater === 'function' ? updater(currentState) : updater
+		const requested = typeof updater === 'function' ? updater(currentState) : updater
+		const next = enforceColumnInvariants(requested, columnInvariants)
 		ref.table?.setOptions((prev) => ({ ...prev, state: next }))
 		store.setState(next)
 		config.onStateChange?.(updater)
@@ -354,11 +369,12 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	}
 
 	dataTable.syncControlledState = (partial, options) => {
+		const safe = enforceColumnInvariants(partial, columnInvariants)
 		ref.table?.setOptions((prev) => ({
 			...prev,
-			state: { ...prev.state, ...partial },
+			state: { ...prev.state, ...safe },
 		}))
-		store.setState((prev) => ({ ...prev, ...partial }), options)
+		store.setState((prev) => ({ ...prev, ...safe }), options)
 	}
 
 	dataTable.notifyStateSubscribers = () => {

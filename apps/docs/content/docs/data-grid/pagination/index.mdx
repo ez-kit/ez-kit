@@ -31,6 +31,24 @@ out by hand — both read their config from the grid, so neither takes props:
 <DataGrid.PageSizer />
 ```
 
+## Setting the page size — pick one
+
+The starting page size can come from either `pagination.pageSize` or
+`initialState.pagination.pageSize`. Both are legal; use one or the other, not both.
+
+```tsx
+// A — feature config
+<DataGrid data={data} columns={columns} pagination={{ pageSize: 25 }} />
+
+// B — initial state
+<DataGrid data={data} columns={columns} pagination initialState={{ pagination: { pageIndex: 0, pageSize: 25 } }} />
+```
+
+`initialState.pagination` replaces the whole pagination slice rather than merging into it, so when
+both are present `initialState` wins and `pagination.pageSize` is silently ignored. Prefer form A
+unless you also need a non-zero starting `pageIndex` — restoring a page from the URL, say, where you
+are writing the whole slice anyway. See [State model](./data-grid/state-model).
+
 ## Page size selector
 
 `pagination.pageSizeOptions` lists the values a reader can switch `pageSize` to. Set it and a
@@ -150,6 +168,7 @@ for the full pattern, including loading state.
 
 | Option                       | Type                                  | Description                                                                               |
 | ---------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `pagination.pageSize`        | `number`                              | Rows per page at mount. Ignored when `initialState.pagination` is also set.               |
 | `pagination.variant`         | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only.           |
 | `pagination.siblings`        | `number`                              | `'numbered'` only. Pages kept either side of the current one. Default `1`.                |
 | `pagination.boundaries`      | `number`                              | `'numbered'` only. Pages kept at each end of the link strip. Default `1`.                 |
@@ -157,7 +176,7 @@ for the full pattern, including loading state.
 | `pagination.manual`          | `boolean`                             | Disable client-side paging. The grid calls `onChange` instead.                            |
 | `pagination.rowCount`        | `number`                              | Server total rows. Derives `pageCount` automatically. Required when `manual` is `true`.   |
 | `pagination.onChange`        | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                                 |
-| `initialState.pagination`    | `{ pageIndex, pageSize }`             | Defaults at mount.                                                                        |
+| `initialState.pagination`    | `{ pageIndex, pageSize }`             | Defaults at mount. Replaces the whole slice, including `pagination.pageSize`.             |
 | `state.pagination`           | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                  |
 
 ## Infinite scroll

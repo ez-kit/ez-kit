@@ -377,6 +377,22 @@ export type SizingConfig = {
 	direction?: ColumnResizeDirection
 }
 
+/**
+ * Seedable subset of {@link TableState} for {@link TableConfig.initialState}.
+ *
+ * Excludes `editing`, `creating`, `pendingDeleteRowId` and `pendingBulkDelete` — these are
+ * transient per-open-form/dialog state that each feature re-initialises whenever it opens
+ * (`creating.start()`, an edit start, a delete request), hard-resetting to its own defaults and
+ * ignoring whatever was seeded. Seeding "start already editing/creating/deleting" is not a
+ * meaningful thing to express, so it's forbidden at the type level rather than silently ignored
+ * at runtime. To seed values for a create form, use {@link CreatingConfig.defaultValues} (table
+ * level) or a column's `creating.defaultValue` (per-column), not `initialState`.
+ */
+export type InitialTableState = Omit<
+	Partial<TableState>,
+	'editing' | 'creating' | 'pendingDeleteRowId' | 'pendingBulkDelete'
+>
+
 export type TableConfig<TRow extends object> = {
 	data: TRow[]
 	columns: ColumnDef<TRow>[]
@@ -445,8 +461,12 @@ export type TableConfig<TRow extends object> = {
 	 * grid's computed defaults; consumer values win. Use for uncontrolled initial
 	 * state, e.g. `initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } }`
 	 * or a default sort.
+	 *
+	 * Cannot seed `editing`, `creating`, `pendingDeleteRowId` or `pendingBulkDelete` — see
+	 * {@link InitialTableState} for why. To seed create-form values use
+	 * {@link TableConfig.creating}'s `defaultValues`, or a column's `creating.defaultValue`.
 	 */
-	initialState?: Partial<TableState>
+	initialState?: InitialTableState
 	/**
 	 * Called whenever the table state changes (sorting, filtering, pagination, etc.).
 	 * Receives the raw TanStack updater — apply it to your own state to implement controlled mode.
