@@ -92,7 +92,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 		<Popover>
 			<Popover.Trigger>
 				<Button
-					data-slot='sort-trigger'
+					data-slot='sort-menu-trigger'
 					size='sm'
 					variant='outline'
 				>

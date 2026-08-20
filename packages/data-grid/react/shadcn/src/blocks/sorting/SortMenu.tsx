@@ -90,7 +90,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 					variant='outline'
 					size='sm'
 					className='h-8 gap-1.5'
-					data-slot='sort-trigger'
+					data-slot='sort-menu-trigger'
 				>
 					<ArrowUpDown className='h-4 w-4' />
 					Sort
