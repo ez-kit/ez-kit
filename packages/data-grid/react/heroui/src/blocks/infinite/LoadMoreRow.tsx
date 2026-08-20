@@ -19,7 +19,7 @@ export function LoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, on
 			<div
 				data-slot='load-more'
 				data-state='error'
-				className='flex items-center justify-center gap-2 py-3 text-sm text-default-500'
+				className='dg-load-more flex items-center justify-center gap-2 py-3 text-sm'
 			>
 				<AlertCircle
 					className='size-4 text-danger'
@@ -42,7 +42,7 @@ export function LoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, on
 			<div
 				data-slot='load-more'
 				data-state='loading'
-				className='flex items-center justify-center gap-2 py-3 text-sm text-default-500'
+				className='dg-load-more flex items-center justify-center gap-2 py-3 text-sm'
 			>
 				<Spinner
 					size='sm'

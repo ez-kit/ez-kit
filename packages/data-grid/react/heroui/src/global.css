@@ -376,9 +376,14 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	border: 1px solid color-mix(in oklab, var(--color-danger) 40%, transparent);
 }
 
+/* HeroUI v3 has flat `--muted` / `--default` tokens — there is no `default-500` step, so a
+ * `text-default-500` utility compiles to nothing and the text silently keeps its inherited
+ * colour. Every muted surface in this kit goes through `var(--muted)` here instead. */
 .dg-page-sizer-label,
 .dg-empty-state,
-.dg-no-results-state {
+.dg-no-results-state,
+.dg-load-more,
+.dg-pagination-label {
 	color: var(--muted);
 }
 

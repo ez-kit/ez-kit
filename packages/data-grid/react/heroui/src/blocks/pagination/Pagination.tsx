@@ -5,7 +5,7 @@ import { Pagination as HeroPagination } from '@heroui/react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
-const LABEL_CLASS = 'px-2 text-sm text-default-500'
+const LABEL_CLASS = 'dg-pagination-label px-2 text-sm'
 const PREVIOUS_LABEL = 'Previous'
 const NEXT_LABEL = 'Next'
 const PAGINATION_ARIA_LABEL = 'Pagination'
