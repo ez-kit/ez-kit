@@ -1,11 +1,12 @@
 'use client'
 
+import { BetweenBranch, useBetweenValue } from '@ez-kit/data-grid-react'
 import { Button, Input, Popover, RangeCalendar, Slider } from '@heroui/react'
 import { parseDate } from '@internationalized/date'
 
 import { DateCellInput } from '../cell-types/DateCell'
 
-import type { BetweenInputProps, DateRangePreset } from '@ez-kit/data-grid-react'
+import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
 import type { CalendarDate } from '@internationalized/date'
 import type { ReactNode } from 'react'
 
@@ -24,25 +25,19 @@ function toCalendarDate(value: unknown): CalendarDate | null {
 	}
 }
 
-function PresetRow({
-	presets,
-	onPresetSelect,
-}: {
-	presets: DateRangePreset[]
-	onPresetSelect: (preset: DateRangePreset) => void
-}) {
+function PresetRow({ items, onSelect }: BetweenPresetsController) {
 	return (
 		<div
 			data-slot='between-presets'
 			className={PRESET_ROW_CLASS}
 		>
-			{presets.map((p) => (
+			{items.map((p) => (
 				<Button
 					key={p.id}
 					variant='tertiary'
 					size='sm'
 					onPress={() => {
-						onPresetSelect(p)
+						onSelect(p)
 					}}
 				>
 					{p.label}
@@ -62,21 +57,12 @@ function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode
 	)
 }
 
-export function BetweenInput({ value, onChange, variant, type, min, max, presets, onPresetSelect }: BetweenInputProps) {
-	const presetRow =
-		presets && presets.length > 0 && onPresetSelect ? (
-			<PresetRow
-				presets={presets}
-				onPresetSelect={onPresetSelect}
-			/>
-		) : null
+export function BetweenInput(props: BetweenInputProps) {
+	const { value, onChange } = props
+	const { branch, presets, slider, numbers, dates } = useBetweenValue(props)
+	const presetRow = presets ? <PresetRow {...presets} /> : null
 
-	if (variant === 'slider') {
-		const sliderMin = min ?? 0
-		const sliderMax = max ?? 100
-		const fromVal = typeof value.from === 'number' ? value.from : sliderMin
-		const toVal = typeof value.to === 'number' ? value.to : sliderMax
-
+	if (branch === BetweenBranch.Slider) {
 		return withPresets(
 			presetRow,
 			<div
@@ -84,17 +70,13 @@ export function BetweenInput({ value, onChange, variant, type, min, max, presets
 				aria-label='Range filter'
 				className='flex items-center gap-2 min-w-[220px]'
 			>
-				<span className={`${LABEL_CLASS} text-right`}>{fromVal}</span>
+				<span className={`${LABEL_CLASS} text-right`}>{slider.values[0]}</span>
 				<Slider
 					aria-label='Range'
-					minValue={sliderMin}
-					maxValue={sliderMax}
-					value={[fromVal, toVal]}
-					onChange={(vals) => {
-						if (!Array.isArray(vals)) return
-						const [nextFrom, nextTo] = vals
-						onChange({ from: nextFrom, to: nextTo })
-					}}
+					minValue={slider.min}
+					maxValue={slider.max}
+					value={slider.values}
+					onChange={slider.onChange}
 					className='flex-1'
 				>
 					<Slider.Track>
@@ -111,12 +93,12 @@ export function BetweenInput({ value, onChange, variant, type, min, max, presets
 						)}
 					</Slider.Track>
 				</Slider>
-				<span className={LABEL_CLASS}>{toVal}</span>
+				<span className={LABEL_CLASS}>{slider.values[1]}</span>
 			</div>,
 		)
 	}
 
-	if (variant === 'calendar' && type === 'date') {
+	if (branch === BetweenBranch.Calendar) {
 		const fromDate = toCalendarDate(value.from)
 		const toDateVal = toCalendarDate(value.to)
 		const rangeValue = fromDate && toDateVal ? { start: fromDate, end: toDateVal } : null
@@ -168,16 +150,14 @@ export function BetweenInput({ value, onChange, variant, type, min, max, presets
 		)
 	}
 
-	if (type === 'date') {
+	if (branch === BetweenBranch.DateInputs) {
 		return withPresets(
 			presetRow,
 			<div className={ROW_CLASS}>
 				<DateCellInput
 					id='between-from'
-					value={value.from}
-					onChange={(v) => {
-						onChange({ ...value, from: v })
-					}}
+					value={dates.from}
+					onChange={dates.onFromChange}
 					onBlur={() => {}}
 					error={undefined}
 					errors={[]}
@@ -186,10 +166,8 @@ export function BetweenInput({ value, onChange, variant, type, min, max, presets
 				<span aria-hidden>–</span>
 				<DateCellInput
 					id='between-to'
-					value={value.to}
-					onChange={(v) => {
-						onChange({ ...value, to: v })
-					}}
+					value={dates.to}
+					onChange={dates.onToChange}
 					onBlur={() => {}}
 					error={undefined}
 					errors={[]}
@@ -205,24 +183,22 @@ export function BetweenInput({ value, onChange, variant, type, min, max, presets
 			<Input
 				type='number'
 				placeholder='From'
-				value={(value.from as number | undefined) ?? ''}
-				{...(min !== undefined ? { min } : {})}
-				{...(max !== undefined ? { max } : {})}
+				value={numbers.from}
+				{...(numbers.min === undefined ? {} : { min: numbers.min })}
+				{...(numbers.max === undefined ? {} : { max: numbers.max })}
 				onChange={(e) => {
-					const next = Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber
-					onChange({ ...value, from: next })
+					numbers.onFromChange(e.target.valueAsNumber)
 				}}
 			/>
 			<span aria-hidden>–</span>
 			<Input
 				type='number'
 				placeholder='To'
-				value={(value.to as number | undefined) ?? ''}
-				{...(min !== undefined ? { min } : {})}
-				{...(max !== undefined ? { max } : {})}
+				value={numbers.to}
+				{...(numbers.min === undefined ? {} : { min: numbers.min })}
+				{...(numbers.max === undefined ? {} : { max: numbers.max })}
 				onChange={(e) => {
-					const next = Number.isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber
-					onChange({ ...value, to: next })
+					numbers.onToChange(e.target.valueAsNumber)
 				}}
 			/>
 		</div>,

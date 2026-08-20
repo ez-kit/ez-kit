@@ -2,6 +2,7 @@ import { ACTIONS_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { RowActionsMode } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { useTable } from './table-context'
@@ -22,7 +23,7 @@ export function CreatingRow() {
 	const table = useTable()
 	const gridComponents = useGridComponents()
 	const { Tr, Td, Input, Checkbox } = gridComponents.core
-	const { CreatingActionsCell } = gridComponents.editing
+	const { ActionsCell } = gridComponents['row-actions']
 	const cellTypes = useCellTypes()
 	const state = table.creating.getState()
 	const values = state.values
@@ -53,12 +54,13 @@ export function CreatingRow() {
 								pinned={pinned}
 								{...pinnedAttrs}
 							>
-								<CreatingActionsCell
+								<ActionsCell
+									mode={RowActionsMode.Creating}
 									onSave={() => table.creating.commit()}
 									onCancel={() => {
 										table.creating.cancel()
 									}}
-									isPinRow={isPinRow}
+									canCancel={!isPinRow}
 									isPending={isPending}
 								/>
 							</Td>

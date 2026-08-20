@@ -2,6 +2,7 @@ import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilit
 import { Button } from './blocks/core/Button'
 import { Checkbox } from './blocks/core/Checkbox'
 import { Input } from './blocks/core/Input'
+import { Menu } from './blocks/core/Menu'
 import { Table } from './blocks/core/Table'
 import { Tbody } from './blocks/core/Tbody'
 import { Td } from './blocks/core/Td'
@@ -10,7 +11,6 @@ import { Thead } from './blocks/core/Thead'
 import { Toolbar } from './blocks/core/Toolbar'
 import { Tr } from './blocks/core/Tr'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
-import { CreatingActionsCell } from './blocks/editing/CreatingActionsCell'
 import { FormShell } from './blocks/editing/FormShell'
 import { Modal } from './blocks/editing/Modal'
 import { NumberInput } from './blocks/editing/NumberInput'
@@ -33,18 +33,16 @@ import { PageSizer } from './blocks/pagination/PageSizer'
 import { Pagination } from './blocks/pagination/Pagination'
 import { Resizer } from './blocks/resizing/Resizer'
 import { ActionsCell } from './blocks/row-actions/ActionsCell'
-import { RowActionsMenu } from './blocks/row-actions/RowActionsMenu'
 import { SelectionBar } from './blocks/selection/SelectionBar'
-import { ColumnMenu } from './blocks/sorting/ColumnMenu'
 import { SortIndicator } from './blocks/sorting/SortIndicator'
 import { SortMenu } from './blocks/sorting/SortMenu'
 
 import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
 export const nativeComponents: FullGridComponents = {
-	core: { Table, Thead, Tbody, Tr, Th, Td, Button, Input, Checkbox, Toolbar },
+	core: { Table, Thead, Tbody, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu },
 	pagination: { Pagination, PageSizer },
-	sorting: { SortIndicator, SortMenu, ColumnMenu },
+	sorting: { SortIndicator, SortMenu },
 	filtering: {
 		FilterPopover,
 		FilterPanel,
@@ -56,9 +54,9 @@ export const nativeComponents: FullGridComponents = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell, CreatingActionsCell, ConfirmDialog, NumberInput },
+	editing: { Modal, FormShell, ConfirmDialog, NumberInput },
 	selection: { SelectionBar },
-	'row-actions': { ActionsCell, RowActionsMenu },
+	'row-actions': { ActionsCell },
 	resizing: { Resizer },
 	'column-visibility': { ColumnVisibilityMenu },
 	'fallback-states': { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },

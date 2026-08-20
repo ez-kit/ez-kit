@@ -1,44 +1,40 @@
 'use client'
 
+import { RowActionsMode } from '@ez-kit/data-grid-react'
 import { Button } from '@heroui/react'
-import { Check, Loader2, Pencil, Trash2, X } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
+
+import { SaveCancelButtons } from '../editing/SaveCancelButtons'
 
 import type { ActionsCellProps } from '@ez-kit/data-grid-react'
 
-export function ActionsCell({
-	isEditing,
-	editingMode,
-	hasEditing,
-	hasDeleting,
-	onEdit,
-	onDelete,
-	onSave,
-	onCancel,
-	isPending,
-}: ActionsCellProps) {
-	if (isEditing && editingMode !== 'modal') {
+/**
+ * The row-actions cell in all three row states. `Editing` and `Creating` both reduce to the
+ * same save / cancel pair — the creating row only differs in whether Cancel is offered.
+ */
+export function ActionsCell(props: ActionsCellProps) {
+	if (props.mode === RowActionsMode.Editing) {
 		return (
-			<>
-				<Button
-					variant='ghost'
-					size='sm'
-					isIconOnly
-					isDisabled={isPending}
-					onPress={() => void onSave()}
-				>
-					{isPending ? <Loader2 className='size-4 animate-spin' /> : <Check className='size-4' />}
-				</Button>
-				<Button
-					variant='ghost'
-					size='sm'
-					isIconOnly
-					onPress={onCancel}
-				>
-					<X className='size-4' />
-				</Button>
-			</>
+			<SaveCancelButtons
+				onSave={props.onSave}
+				onCancel={props.onCancel}
+				isPending={props.isPending}
+			/>
 		)
 	}
+
+	if (props.mode === RowActionsMode.Creating) {
+		return (
+			<SaveCancelButtons
+				onSave={props.onSave}
+				onCancel={props.onCancel}
+				isPending={props.isPending}
+				showCancel={props.canCancel}
+			/>
+		)
+	}
+
+	const { hasEditing, hasDeleting, onEdit, onDelete } = props
 
 	return (
 		<>

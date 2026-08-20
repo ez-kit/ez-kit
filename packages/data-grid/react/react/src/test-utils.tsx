@@ -2,17 +2,17 @@ import { render } from '@testing-library/react'
 import { useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
+import { RowActionsMode } from './types'
 
 import type { FullGridComponents } from './contract'
+import type { GridMenuProps } from './menu'
 import type {
 	ActionsCellProps,
 	BetweenInputProps,
 	ButtonProps,
 	CheckboxProps,
-	ColumnMenuProps,
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
-	CreatingActionsCellProps,
 	ClearFiltersButtonComponentProps,
 	EmptyStateProps,
 	FilterChipProps,
@@ -31,7 +31,6 @@ import type {
 	PaginationProps,
 	RefetchOverlayProps,
 	ResizerProps,
-	RowActionsMenuProps,
 	SelectionBarProps,
 	TbodyProps,
 	TdProps,
@@ -154,83 +153,31 @@ function TestResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerProps)
 		/>
 	)
 }
-function TestRowActionsMenu({ items }: RowActionsMenuProps) {
+/**
+ * Menus are stubbed *open*: every entry is a plain button labelled by its `label`, so a test
+ * can click "Pin Top" without first driving a popover. The trigger is still rendered so tests
+ * can assert the menu exists at all.
+ */
+function TestMenu({ sections, 'aria-label': ariaLabel }: GridMenuProps) {
 	return (
-		<>
-			{items.map((item) => (
-				<button
-					key={item.id}
-					type='button'
-					disabled={item.disabled ?? false}
-					onClick={item.onSelect}
-				>
-					{item.label}
-				</button>
-			))}
-		</>
-	)
-}
-function TestColumnMenu({ sections }: ColumnMenuProps) {
-	const [open, setOpen] = useState(false)
-	const { pin, visibility } = sections
-	if (!pin && !visibility) return null
-	return (
-		<div style={{ position: 'relative', display: 'inline-flex' }}>
+		<div style={{ display: 'inline-flex' }}>
 			<button
 				type='button'
-				onClick={() => {
-					setOpen((p) => !p)
-				}}
+				aria-label={ariaLabel}
 			>
 				⋮
 			</button>
-			{open && (
-				<div style={{ position: 'absolute', top: '100%', background: 'white', border: '1px solid #ccc', zIndex: 10 }}>
-					{pin?.canPinLeft && (
-						<button
-							type='button'
-							onClick={() => {
-								pin.onPinLeft()
-								setOpen(false)
-							}}
-						>
-							Pin Left
-						</button>
-					)}
-					{pin?.canPinRight && (
-						<button
-							type='button'
-							onClick={() => {
-								pin.onPinRight()
-								setOpen(false)
-							}}
-						>
-							Pin Right
-						</button>
-					)}
-					{pin?.isPinned && (
-						<button
-							type='button'
-							onClick={() => {
-								pin.onUnpin()
-								setOpen(false)
-							}}
-						>
-							Unpin
-						</button>
-					)}
-					{visibility && (
-						<button
-							type='button'
-							onClick={() => {
-								visibility.onHide()
-								setOpen(false)
-							}}
-						>
-							Hide
-						</button>
-					)}
-				</div>
+			{sections.flatMap((section) =>
+				section.items.map((item) => (
+					<button
+						key={item.id}
+						type='button'
+						disabled={item.disabled ?? false}
+						onClick={item.onSelect}
+					>
+						{item.label}
+					</button>
+				)),
 			)}
 		</div>
 	)
@@ -273,34 +220,54 @@ function TestToolbar({ children, left, right }: ToolbarProps) {
 		</div>
 	)
 }
-function TestActionsCell({
-	row,
-	isEditing,
-	hasEditing,
-	hasDeleting,
-	onEdit,
-	onDelete,
+function TestSaveCancel({
 	onSave,
 	onCancel,
-}: ActionsCellProps) {
-	if (isEditing) {
-		return (
-			<>
-				<button
-					type='button'
-					onClick={() => void onSave()}
-				>
-					Save
-				</button>
+	canCancel,
+}: {
+	onSave: () => Promise<void>
+	onCancel: () => void
+	canCancel: boolean
+}) {
+	return (
+		<>
+			<button
+				type='button'
+				onClick={() => void onSave()}
+			>
+				Save
+			</button>
+			{canCancel && (
 				<button
 					type='button'
 					onClick={onCancel}
 				>
 					Cancel
 				</button>
-			</>
+			)}
+		</>
+	)
+}
+function TestActionsCell(props: ActionsCellProps) {
+	if (props.mode === RowActionsMode.Editing) {
+		return (
+			<TestSaveCancel
+				onSave={props.onSave}
+				onCancel={props.onCancel}
+				canCancel
+			/>
 		)
 	}
+	if (props.mode === RowActionsMode.Creating) {
+		return (
+			<TestSaveCancel
+				onSave={props.onSave}
+				onCancel={props.onCancel}
+				canCancel={props.canCancel}
+			/>
+		)
+	}
+	const { row, hasEditing, hasDeleting, onEdit, onDelete } = props
 	return (
 		<>
 			{hasEditing && (
@@ -321,24 +288,6 @@ function TestActionsCell({
 					Delete
 				</button>
 			)}
-		</>
-	)
-}
-function TestCreatingActionsCell({ onSave, onCancel }: CreatingActionsCellProps) {
-	return (
-		<>
-			<button
-				type='button'
-				onClick={() => void onSave()}
-			>
-				Save
-			</button>
-			<button
-				type='button'
-				onClick={onCancel}
-			>
-				Cancel
-			</button>
 		</>
 	)
 }
@@ -737,6 +686,7 @@ export const testComponents: FullGridComponents = {
 		Input: TestInput,
 		Checkbox: TestCheckbox,
 		Toolbar: TestToolbar,
+		Menu: TestMenu,
 	},
 	pagination: {
 		Pagination: TestPagination,
@@ -745,7 +695,6 @@ export const testComponents: FullGridComponents = {
 	sorting: {
 		SortIndicator: () => null,
 		SortMenu: () => null,
-		ColumnMenu: TestColumnMenu,
 	},
 	filtering: {
 		FilterPopover: TestFilterPopover,
@@ -770,7 +719,6 @@ export const testComponents: FullGridComponents = {
 	editing: {
 		Modal: TestModal,
 		FormShell: TestFormShell,
-		CreatingActionsCell: TestCreatingActionsCell,
 		ConfirmDialog: TestConfirmDialog,
 		NumberInput: TestNumberInput,
 	},
@@ -779,7 +727,6 @@ export const testComponents: FullGridComponents = {
 	},
 	'row-actions': {
 		ActionsCell: TestActionsCell,
-		RowActionsMenu: TestRowActionsMenu,
 	},
 	resizing: {
 		Resizer: TestResizer,

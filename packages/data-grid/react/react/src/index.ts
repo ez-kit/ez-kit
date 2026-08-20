@@ -46,6 +46,12 @@ export type {
 	SelectionPanelVariant,
 } from './use-data-grid'
 
+// Grid overflow menu — one model for the column header menu and the row actions menu
+export { GridMenuIcon, GridMenuVariant, toMenuSections } from './menu'
+export type { GridMenuItem, GridMenuProps, GridMenuSection } from './menu'
+export { buildColumnMenuSections, ColumnActionId } from './data-grid/column-menu-sections'
+export type { ColumnMenuCapabilities } from './data-grid/column-menu-sections'
+
 // Pagination footer label (shared by every UI kit — content, not styling)
 export { buildPaginationLabel } from './data-grid/pagination-label'
 export type { PaginationLabelInput } from './data-grid/pagination-label'
@@ -53,6 +59,19 @@ export type { PaginationLabelInput } from './data-grid/pagination-label'
 // Numbered-pagination page window (shared by every UI kit — structure, not styling)
 export { buildPageWindow, PAGE_GAP, DEFAULT_PAGE_SIBLINGS, DEFAULT_PAGE_BOUNDARIES } from './data-grid/page-window'
 export type { PageWindowInput, PageWindowItem } from './data-grid/page-window'
+
+// Between-filter controller (shared by every UI kit — behaviour, not styling)
+export { useBetweenValue, BetweenBranch } from './data-grid/use-between-value'
+export type {
+	BetweenController,
+	BetweenDateController,
+	BetweenNumberController,
+	BetweenPresetsController,
+	BetweenSliderController,
+} from './data-grid/use-between-value'
+
+// Multi-select filter trigger label (shared by every UI kit — content, not styling)
+export { buildMultiSelectLabel } from './data-grid/multi-select-label'
 
 // Infinite scroll
 export { useInfiniteScroll } from './data-grid/use-infinite-scroll'
@@ -138,17 +157,11 @@ export type {
 // Types
 export type {
 	ActionsCellProps,
-	CreatingActionsCellProps,
 	FormShellProps,
 	BetweenInputProps,
 	DateRangePreset,
 	ChevronProps,
-	ColPinSection,
-	ColSortSection,
-	ColVisibilitySection,
 	SortIndicatorProps,
-	ColumnMenuProps,
-	ColumnMenuSections,
 	ColumnVisibilityMenuProps,
 	ClearFiltersButtonComponentProps,
 	ConfirmDialogProps,
@@ -168,8 +181,6 @@ export type {
 	RefetchOverlayProps,
 	OperatorSelectProps,
 	ResizerProps,
-	RowActionsMenuProps,
-	RowActionItem,
 	SelectionBarProps,
 	SortColumnOption,
 	SortDirection,
@@ -180,8 +191,9 @@ export type {
 // `PaginationVariants` is a const object (runtime value) — exported as a value, not a type.
 // Optional sugar: `pagination.variant` accepts the plain `PaginationVariant` string union.
 export { PaginationVariants } from './types'
-// `RowActionId` is an enum (runtime value) — kits map each id to their own icon.
-export { RowActionId } from './types'
+// Enums (runtime values). `RowActionId` names the row entries the grid can offer;
+// `RowActionsMode` is the discriminant a kit switches on inside `ActionsCell`.
+export { RowActionId, RowActionsMode } from './types'
 export type {
 	ButtonProps,
 	CheckboxProps,

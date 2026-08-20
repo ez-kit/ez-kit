@@ -1,5 +1,6 @@
 'use client'
 
+import { buildMultiSelectLabel } from '@ez-kit/data-grid-react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '../../components/ui/button'
@@ -31,12 +32,7 @@ export function MultiSelectFilter({ options, selectedValues, onChange, placehold
 		onChange([])
 	}
 
-	const triggerLabel =
-		selectedValues.length === 0
-			? (placeholder ?? 'Select…')
-			: selectedValues.length === 1
-				? (options.find((o) => o.value === selectedValues[0])?.label ?? selectedValues[0])
-				: `${String(selectedValues.length)} selected`
+	const triggerLabel = buildMultiSelectLabel(options, selectedValues, placeholder)
 
 	return (
 		<Popover>

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { GridMenuVariant } from '../menu'
 import {
 	COL_PINNING_KEY,
 	DEFAULT_FILTER_DEBOUNCE_MS,
@@ -11,11 +12,11 @@ import {
 } from '../use-data-grid'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
+import { buildColumnMenuSections } from './column-menu-sections'
 import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridInstance, useDataGridStore } from './table-context'
 
-import type { ColumnMenuSections } from '../types'
 import type { KeyboardEvent } from 'react'
 
 type HeaderProps = {
@@ -89,7 +90,8 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 	const gridComponents = useGridComponents()
 	const { Thead, Tr, Th, Input, Checkbox } = gridComponents.core
 	const { Resizer } = gridComponents.resizing
-	const { SortIndicator, ColumnMenu } = gridComponents.sorting
+	const { SortIndicator } = gridComponents.sorting
+	const { Menu } = gridComponents.core
 	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
@@ -133,56 +135,17 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 
 						const canResize = Boolean(table.options.enableColumnResizing) && header.column.getCanResize()
 
-						// Build column menu sections
-						const sections: ColumnMenuSections = {}
 						const colPinDef = meta?.columnPinning
 						const isStaticPin = typeof colPinDef === 'object' && colPinDef.pin !== undefined
 						const isPinningDisabled = colPinDef === false
+						const isMenuEligible = !meta?.isSystemColumn && !header.isPlaceholder
 
-						if (colPinEnabled && !meta?.isSystemColumn && !isPinningDisabled && !isStaticPin && !header.isPlaceholder) {
-							const isPinned = header.column.getIsPinned()
-							sections.pin = {
-								isPinned,
-								canPinLeft: isPinned !== 'left',
-								canPinRight: isPinned !== 'right',
-								onPinLeft: () => {
-									header.column.pin('left')
-								},
-								onPinRight: () => {
-									header.column.pin('right')
-								},
-								onUnpin: () => {
-									header.column.pin(false)
-								},
-							}
-						}
-
-						if (!meta?.isSystemColumn && !header.isPlaceholder && header.column.getCanHide()) {
-							sections.visibility = {
-								onHide: () => {
-									header.column.toggleVisibility(false)
-								},
-							}
-						}
-
-						if (canSort && !header.isPlaceholder) {
-							sections.sorting = {
-								currentSort: sortDir,
-								canAsc: sortDir !== 'asc',
-								canDesc: sortDir !== 'desc',
-								onSortAsc: () => {
-									header.column.toggleSorting(false)
-								},
-								onSortDesc: () => {
-									header.column.toggleSorting(true)
-								},
-								onClearSort: () => {
-									header.column.clearSorting()
-								},
-							}
-						}
-
-						const hasSections = Object.keys(sections).length > 0
+						const menuSections = buildColumnMenuSections(header, {
+							canSort: canSort && !header.isPlaceholder,
+							canPin: Boolean(colPinEnabled) && isMenuEligible && !isPinningDisabled && !isStaticPin,
+							canHide: isMenuEligible && header.column.getCanHide(),
+						})
+						const hasSections = menuSections.length > 0
 
 						// Selection column: render select-all checkbox
 						if (header.column.id === SELECTION_COLUMN_ID) {
@@ -271,9 +234,10 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 													</FilterPopover>
 												)}
 												{hasSections && (
-													<ColumnMenu
-														column={header.column}
-														sections={sections}
+													<Menu
+														variant={GridMenuVariant.Column}
+														sections={menuSections}
+														aria-label='Column options'
 													/>
 												)}
 											</div>

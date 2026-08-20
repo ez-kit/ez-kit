@@ -27,7 +27,7 @@ export enum GridFeature {
 	Filtering = 'filtering',
 	Editing = 'editing',
 	Selection = 'selection',
-	/** Per-row actions column: edit / delete buttons plus the row-pin menu. */
+	/** Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`). */
 	RowActions = 'row-actions',
 	Resizing = 'resizing',
 	ColumnVisibility = 'column-visibility',
@@ -44,9 +44,21 @@ export enum GridFeature {
  * nested component shapes, and the flat lookup below can all be derived from it.
  */
 export const FEATURE_COMPONENTS = {
-	[GridFeature.Core]: ['Table', 'Thead', 'Tbody', 'Tr', 'Th', 'Td', 'Button', 'Input', 'Checkbox', 'Toolbar'] as const,
+	[GridFeature.Core]: [
+		'Table',
+		'Thead',
+		'Tbody',
+		'Tr',
+		'Th',
+		'Td',
+		'Button',
+		'Input',
+		'Checkbox',
+		'Toolbar',
+		'Menu',
+	] as const,
 	[GridFeature.Pagination]: ['Pagination', 'PageSizer'] as const,
-	[GridFeature.Sorting]: ['SortIndicator', 'SortMenu', 'ColumnMenu'] as const,
+	[GridFeature.Sorting]: ['SortIndicator', 'SortMenu'] as const,
 	[GridFeature.Filtering]: [
 		'FilterPopover',
 		'FilterPanel',
@@ -58,9 +70,9 @@ export const FEATURE_COMPONENTS = {
 		'BetweenInput',
 		'MultiSelectFilter',
 	] as const,
-	[GridFeature.Editing]: ['Modal', 'FormShell', 'CreatingActionsCell', 'ConfirmDialog', 'NumberInput'] as const,
+	[GridFeature.Editing]: ['Modal', 'FormShell', 'ConfirmDialog', 'NumberInput'] as const,
 	[GridFeature.Selection]: ['SelectionBar'] as const,
-	[GridFeature.RowActions]: ['ActionsCell', 'RowActionsMenu'] as const,
+	[GridFeature.RowActions]: ['ActionsCell'] as const,
 	[GridFeature.Resizing]: ['Resizer'] as const,
 	[GridFeature.ColumnVisibility]: ['ColumnVisibilityMenu'] as const,
 	[GridFeature.FallbackStates]: ['LoadingRow', 'EmptyState', 'NoResultsState', 'RefetchOverlay'] as const,

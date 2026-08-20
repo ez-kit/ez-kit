@@ -1,11 +1,12 @@
 import { RowActionsVariant } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
-import { RowActionId } from '../types'
+import { GridMenuIcon, GridMenuVariant, toMenuSections } from '../menu'
+import { RowActionId, RowActionsMode } from '../types'
 
 import { useDataGridInstance, useDataGridStore } from './table-context'
 
-import type { RowActionItem } from '../types'
+import type { GridMenuItem, GridMenuSection } from '../menu'
 import type { RowPinningConfig } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 
@@ -22,6 +23,20 @@ const LABELS: Record<RowActionId, string> = {
 	[RowActionId.Unpin]: 'Unpin',
 }
 
+const ICONS: Record<RowActionId, GridMenuIcon> = {
+	[RowActionId.Edit]: GridMenuIcon.Edit,
+	[RowActionId.Delete]: GridMenuIcon.Delete,
+	[RowActionId.PinTop]: GridMenuIcon.PinTop,
+	[RowActionId.PinBottom]: GridMenuIcon.PinBottom,
+	[RowActionId.Unpin]: GridMenuIcon.Unpin,
+}
+
+const ACTIONS_SECTION = 'row-actions'
+const PIN_SECTION = 'row-pinning'
+
+const ROW_ACTIONS_LABEL = 'Row actions'
+const ROW_PINNING_LABEL = 'Row pinning'
+
 /**
  * Builds the pin entries for a row: the two pin directions the config allows,
  * plus `Unpin` once the row is pinned.
@@ -30,14 +45,15 @@ function buildPinItems(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>,
 	config: RowPinningConfig,
-): RowActionItem[] {
+): GridMenuItem[] {
 	const isPinned = row.getIsPinned()
-	const items: RowActionItem[] = []
+	const items: GridMenuItem[] = []
 
 	if (config.top) {
 		items.push({
 			id: RowActionId.PinTop,
 			label: LABELS[RowActionId.PinTop],
+			icon: ICONS[RowActionId.PinTop],
 			disabled: isPinned === 'top',
 			onSelect: () => {
 				row.pin('top', false, false)
@@ -48,6 +64,7 @@ function buildPinItems(
 		items.push({
 			id: RowActionId.PinBottom,
 			label: LABELS[RowActionId.PinBottom],
+			icon: ICONS[RowActionId.PinBottom],
 			disabled: isPinned === 'bottom',
 			onSelect: () => {
 				row.pin('bottom', false, false)
@@ -58,6 +75,7 @@ function buildPinItems(
 		items.push({
 			id: RowActionId.Unpin,
 			label: LABELS[RowActionId.Unpin],
+			icon: ICONS[RowActionId.Unpin],
 			onSelect: () => {
 				row.pin(false, false, false)
 			},
@@ -87,7 +105,8 @@ function buildPinItems(
 export function ActionsCell({ row }: ActionsCellProps) {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const { ActionsCell: Renderer, RowActionsMenu } = useGridComponents()['row-actions']
+	const { ActionsCell: Renderer } = useGridComponents()['row-actions']
+	const { Menu } = useGridComponents().core
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
 	const isEditing = useDataGridStore((s) => s.editing.rowId === row.id)
@@ -99,66 +118,73 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const hasDeleting = Boolean(table.options.deleting)
 	const editingMode = table.options.editing?.mode
 	const pinConfig = table.options.pinning
-	const isInlineEditing = isEditing && editingMode !== 'modal'
+
+	// Mid-edit: save / cancel only, whatever the variant.
+	if (isEditing && editingMode !== 'modal') {
+		return (
+			<Renderer
+				mode={RowActionsMode.Editing}
+				row={row}
+				onSave={() => table.editing.commit()}
+				onCancel={() => {
+					table.editing.cancel()
+				}}
+				isPending={isPending}
+			/>
+		)
+	}
 
 	const buttons = (
 		<Renderer
+			mode={RowActionsMode.Idle}
 			row={row}
-			isEditing={isEditing}
 			hasEditing={hasEditing}
 			hasDeleting={hasDeleting}
-			editingMode={editingMode}
 			onEdit={() => {
 				table.editing.start(row.id)
 			}}
 			onDelete={() => {
 				table.requestDeleteRow(row.id)
 			}}
-			onSave={() => table.editing.commit()}
-			onCancel={() => {
-				table.editing.cancel()
-			}}
-			isPending={isPending}
 		/>
 	)
-
-	// Mid-edit: save / cancel only, whatever the variant.
-	if (isInlineEditing) return buttons
 
 	const pinItems = pinConfig ? buildPinItems(row, pinConfig) : []
 	const variant = table.options.rowActions?.variant ?? RowActionsVariant.Inline
 
 	if (variant === RowActionsVariant.Menu) {
-		const items: RowActionItem[] = [
-			...(hasEditing
-				? [
-						{
-							id: RowActionId.Edit,
-							label: LABELS[RowActionId.Edit],
-							onSelect: () => {
-								table.editing.start(row.id)
-							},
-						},
-					]
-				: []),
-			...(hasDeleting
-				? [
-						{
-							id: RowActionId.Delete,
-							label: LABELS[RowActionId.Delete],
-							danger: true,
-							onSelect: () => {
-								table.requestDeleteRow(row.id)
-							},
-						},
-					]
-				: []),
-			...pinItems,
-		]
+		const actions: GridMenuItem[] = []
+		if (hasEditing) {
+			actions.push({
+				id: RowActionId.Edit,
+				label: LABELS[RowActionId.Edit],
+				icon: ICONS[RowActionId.Edit],
+				onSelect: () => {
+					table.editing.start(row.id)
+				},
+			})
+		}
+		if (hasDeleting) {
+			actions.push({
+				id: RowActionId.Delete,
+				label: LABELS[RowActionId.Delete],
+				icon: ICONS[RowActionId.Delete],
+				danger: true,
+				onSelect: () => {
+					table.requestDeleteRow(row.id)
+				},
+			})
+		}
+
+		const sections: GridMenuSection[] = toMenuSections([
+			{ id: ACTIONS_SECTION, items: actions },
+			{ id: PIN_SECTION, items: pinItems },
+		])
 		return (
-			<RowActionsMenu
-				items={items}
-				aria-label='Row actions'
+			<Menu
+				variant={GridMenuVariant.Row}
+				sections={sections}
+				aria-label={ROW_ACTIONS_LABEL}
 			/>
 		)
 	}
@@ -167,9 +193,10 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		<>
 			{buttons}
 			{pinItems.length > 0 && (
-				<RowActionsMenu
-					items={pinItems}
-					aria-label='Row pinning'
+				<Menu
+					variant={GridMenuVariant.Row}
+					sections={[{ id: PIN_SECTION, items: pinItems }]}
+					aria-label={ROW_PINNING_LABEL}
 				/>
 			)}
 		</>

@@ -1,5 +1,6 @@
 'use client'
 
+import { buildMultiSelectLabel } from '@ez-kit/data-grid-react'
 import { ListBox, Select } from '@heroui/react'
 
 import type { MultiSelectFilterProps } from '@ez-kit/data-grid-react'
@@ -40,10 +41,7 @@ export function MultiSelectFilter({ options, selectedValues, onChange, placehold
 				<Select.Value>
 					{({ defaultChildren, isPlaceholder }) => {
 						if (isPlaceholder || selectedValues.length === 0) return defaultChildren
-						if (selectedValues.length === 1) {
-							return options.find((o) => o.value === selectedValues[0])?.label ?? selectedValues[0]
-						}
-						return `${String(selectedValues.length)} selected`
+						return buildMultiSelectLabel(options, selectedValues, placeholder)
 					}}
 				</Select.Value>
 				<Select.Indicator />

@@ -5,10 +5,10 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 import { cellTypes } from './blocks/cell-types'
 import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilityMenu'
 import { Checkbox } from './blocks/core/Checkbox'
+import { Menu } from './blocks/core/Menu'
 import { Td } from './blocks/core/Td'
 import { Toolbar } from './blocks/core/Toolbar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
-import { CreatingActionsCell } from './blocks/editing/CreatingActionsCell'
 import { FormShell } from './blocks/editing/FormShell'
 import { Modal } from './blocks/editing/Modal'
 import { NumberInput } from './blocks/editing/NumberInput'
@@ -31,9 +31,7 @@ import { PageSizer } from './blocks/pagination/PageSizer'
 import { Pagination } from './blocks/pagination/pagination'
 import { Resizer } from './blocks/resizing/Resizer'
 import { ActionsCell } from './blocks/row-actions/ActionsCell'
-import { RowActionsMenu } from './blocks/row-actions/RowActionsMenu'
 import { SelectionBar } from './blocks/selection/SelectionBar'
-import { ColumnMenu } from './blocks/sorting/ColumnMenu'
 import { SortIndicator } from './blocks/sorting/SortIndicator'
 import { SortMenu } from './blocks/sorting/SortMenu'
 import { Button } from './components/ui/button'
@@ -54,9 +52,10 @@ const components = {
 		Input,
 		Checkbox,
 		Toolbar,
+		Menu,
 	},
 	pagination: { Pagination, PageSizer },
-	sorting: { SortIndicator, SortMenu, ColumnMenu },
+	sorting: { SortIndicator, SortMenu },
 	filtering: {
 		FilterPopover,
 		FilterPanel,
@@ -68,9 +67,9 @@ const components = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell, CreatingActionsCell, ConfirmDialog, NumberInput },
+	editing: { Modal, FormShell, ConfirmDialog, NumberInput },
 	selection: { SelectionBar },
-	'row-actions': { ActionsCell, RowActionsMenu },
+	'row-actions': { ActionsCell },
 	resizing: { Resizer },
 	'column-visibility': { ColumnVisibilityMenu },
 	'fallback-states': { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },

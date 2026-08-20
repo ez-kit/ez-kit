@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { COMPONENT_FEATURE, FEATURE_COMPONENTS, GridFeature } from './contract'
 
 describe('COMPONENT_FEATURE', () => {
-	it('maps every injectable component key to a feature (40 total)', () => {
-		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(40)
+	it('maps every injectable component key to a feature (38 total)', () => {
+		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(38)
 	})
 
 	it('groups the always-rendered structural primitives under core', () => {
-		for (const key of ['Table', 'Thead', 'Tbody', 'Tr', 'Th', 'Td'] as const) {
+		for (const key of ['Table', 'Thead', 'Tbody', 'Tr', 'Th', 'Td', 'Menu'] as const) {
 			expect(COMPONENT_FEATURE[key]).toBe(GridFeature.Core)
 		}
 	})

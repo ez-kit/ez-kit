@@ -1,3 +1,4 @@
+import type { GridMenuProps } from './menu'
 import type {
 	BetweenValue,
 	DateRangePreset,
@@ -5,7 +6,7 @@ import type {
 	LoadMoreDirection,
 	MultiSelectOption,
 } from '@ez-kit/data-grid-core'
-import type { Column, Row } from '@tanstack/table-core'
+import type { Row } from '@tanstack/table-core'
 import type {
 	ButtonHTMLAttributes,
 	ComponentType,
@@ -20,29 +21,54 @@ import type {
 	TouchEventHandler,
 } from 'react'
 
-export type CreatingActionsCellProps = {
+/** Which affordances the row-actions cell offers, and therefore which props it carries. */
+export enum RowActionsMode {
+	/** A settled row: edit / delete. */
+	Idle = 'idle',
+	/** A row being edited inline: save / cancel. */
+	Editing = 'editing',
+	/** The creating row: save, plus cancel unless it is the pinned creating row. */
+	Creating = 'creating',
+}
+
+type ActionsCellIdleProps = {
+	mode: RowActionsMode.Idle
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	row: Row<any>
+	hasEditing: boolean
+	hasDeleting: boolean
+	onEdit: () => void
+	onDelete: () => void
+}
+
+type ActionsCellEditingProps = {
+	mode: RowActionsMode.Editing
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	row: Row<any>
 	onSave: () => Promise<void>
 	onCancel: () => void
-	isPinRow: boolean
-	/** True while a commit is in flight (`commitStatus !== 'idle'`). */
+	/** True while the commit is in flight (`commitStatus !== 'idle'`). */
 	isPending: boolean
 }
 
-export type ActionsCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
-	isEditing: boolean
-	hasEditing: boolean
-	hasDeleting: boolean
-	/** The editing mode configured on the table. Undefined when editing is not configured. */
-	editingMode?: 'row' | 'modal' | 'cell' | undefined
-	onEdit: () => void
-	onDelete: () => void
+type ActionsCellCreatingProps = {
+	mode: RowActionsMode.Creating
 	onSave: () => Promise<void>
 	onCancel: () => void
-	/** True while an editing commit is in flight (`commitStatus !== 'idle'`). */
+	/** `false` on the pinned creating row, which has nothing to cancel back to. */
+	canCancel: boolean
 	isPending: boolean
 }
+
+/**
+ * The row-actions cell, in all three states a row can be in.
+ *
+ * A discriminated union rather than a bag of optional flags: each mode carries exactly the
+ * callbacks it can use, so a kit cannot render Save for a settled row or Delete mid-create.
+ * `Editing` and `Creating` used to be two separate injectable components whose bodies were
+ * the same save/cancel pair.
+ */
+export type ActionsCellProps = ActionsCellIdleProps | ActionsCellEditingProps | ActionsCellCreatingProps
 
 // ── primitive component props ─────────────────────────────────────────────
 
@@ -195,62 +221,9 @@ export enum RowActionId {
 	Unpin = 'unpin',
 }
 
-export type RowActionItem = {
-	id: RowActionId
-	/** Default wording; a kit may localize or override it. */
-	label: string
-	disabled?: boolean
-	/** Destructive action — kits typically render it in a danger colour. */
-	danger?: boolean
-	onSelect: () => void
-}
-
-/**
- * Overflow menu holding row actions. Rendered with the pin actions only when
- * `rowActions.variant` is `inline`, and with every action when it is `menu`.
- */
-export type RowActionsMenuProps = {
-	items: RowActionItem[]
-	'aria-label'?: string
-}
-
-export type ColPinSection = {
-	isPinned: 'left' | 'right' | false
-	canPinLeft: boolean
-	canPinRight: boolean
-	onPinLeft: () => void
-	onPinRight: () => void
-	onUnpin: () => void
-}
-
 export type SortIndicatorProps = {
 	sortDir: 'asc' | 'desc' | false
 	canSort: boolean
-}
-
-export type ColVisibilitySection = {
-	onHide: () => void
-}
-
-export type ColSortSection = {
-	currentSort: 'asc' | 'desc' | false
-	canAsc: boolean
-	canDesc: boolean
-	onSortAsc: () => void
-	onSortDesc: () => void
-	onClearSort: () => void
-}
-
-export type ColumnMenuSections = {
-	pin?: ColPinSection
-	visibility?: ColVisibilitySection
-	sorting?: ColSortSection
-}
-
-export type ColumnMenuProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<any>
-	sections: ColumnMenuSections
 }
 
 export type VisibilityColumnItem = {
@@ -506,8 +479,7 @@ export type GridComponentRegistry = {
 	// data-grid specific
 	Resizer?: ComponentType<ResizerProps>
 	SortIndicator?: ComponentType<SortIndicatorProps>
-	RowActionsMenu?: ComponentType<RowActionsMenuProps>
-	ColumnMenu?: ComponentType<ColumnMenuProps>
+	Menu?: ComponentType<GridMenuProps>
 	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
 	SortMenu?: ComponentType<SortMenuProps>
 	FilterPopover?: ComponentType<FilterPopoverProps>
@@ -530,7 +502,6 @@ export type GridComponentRegistry = {
 	LoadMoreRow?: ComponentType<LoadMoreRowProps>
 	// row actions
 	ActionsCell?: ComponentType<ActionsCellProps>
-	CreatingActionsCell?: ComponentType<CreatingActionsCellProps>
 	// form shell (creating / editing modal)
 	FormShell?: ComponentType<FormShellProps>
 	// expand
