@@ -75,6 +75,77 @@ sorting={{
 }}
 ```
 
+### Or: one handler for the whole state
+
+Per-feature `onChange` is the convenience layer. Underneath there is a single channel — pass a
+partial `TableState` to `state` and read every update back through one `onStateChange`, exactly as
+[Controlled state](/docs/data-grid/controlled-state) describes. Below is the grid from the top of
+this page — same features, same modals, same bulk delete — with only the state plumbing changed:
+`use-orders-state.ts` holds the state, the query and the mutations, and the component holds nothing
+but the grid.
+
+<DataGridDocsExample exampleId='production-one-handler' />
+
+```tsx
+const [tableState, setTableState] = useState<Partial<TableState>>(INITIAL_STATE)
+
+<DataGrid
+	data={rows}
+	columns={orderColumns}
+	pagination={{ manual: true, rowCount }}
+	sorting={{ manual: true }}
+	filtering={{ manual: true }}
+	state={{ ...tableState, loading }}
+	onStateChange={(updater) => {
+		setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+	}}
+/>
+```
+
+The `manual` flags stay — they decide _who_ sorts, filters and pages, which is a separate question
+from _how_ you hear about a change. What disappears is one callback per feature.
+
+Create, edit and delete are untouched: `creating.onSave`, `editing.onSave` and `deleting.onDelete`
+are writes, not state, so they never travel through `onStateChange` — they still call the server and
+refetch, exactly as above.
+
+Two things move from the grid into your handler in exchange:
+
+**Not every update is a query.** `onStateChange` fires for column sizing, pinning and visibility too.
+Derive the query from the slices you actually send, and let the rest pass through untouched:
+
+```tsx
+const query = useMemo(
+	() => toQuery(tableState),
+	[tableState.pagination, tableState.sorting, tableState.columnFilters, tableState.globalFilter],
+)
+```
+
+Key on the whole `tableState` object instead and every column drag refetches the page.
+
+**The page reset becomes a comparison.** With per-feature handlers you know a sort changed because
+`sorting.onChange` ran. With one handler you have to notice it:
+
+```tsx
+setTableState((prev) => {
+	const next = typeof updater === 'function' ? updater(prev as TableState) : updater
+
+	const invalidatesPage =
+		next.sorting !== prev.sorting ||
+		next.columnFilters !== prev.columnFilters ||
+		next.globalFilter !== prev.globalFilter
+
+	if (!invalidatesPage) return next
+	return { ...next, pagination: { pageIndex: 0, pageSize: next.pagination.pageSize } }
+})
+```
+
+Reference comparison is enough — each slice keeps its identity until it actually changes.
+
+Take this shape when the query is one object anyway (a URL, a `useQuery` key, a reducer); keep the
+per-feature `onChange` when only two or three slices are server-owned and each one maps to a
+different piece of your state.
+
 ### Last write wins
 
 Filters change faster than a network answers, so responses can arrive out of order. Each request

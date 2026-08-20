@@ -592,6 +592,14 @@
 		"exportName": "ProductionExample"
 	},
 	{
+		"id": "production-one-handler",
+		"label": "One state handler",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionOneHandlerExample.tsx",
+		"exportName": "ProductionOneHandlerExample"
+	},
+	{
 		"id": "production-feed",
 		"label": "Virtualized feed",
 		"group": "production",

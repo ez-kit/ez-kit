@@ -1,0 +1,62 @@
+'use client'
+
+import { DataGrid } from 'shared/DataGrid'
+
+import { orderColumns, type Order } from './data'
+import { useOrdersState } from './use-orders-state'
+
+export function ProductionOneHandlerExample() {
+	const orders = useOrdersState()
+
+	return (
+		<DataGrid
+			data={orders.rows}
+			columns={orderColumns}
+			pagination={{
+				manual: true,
+				rowCount: orders.rowCount,
+				pageSizeOptions: [10, 25, 50],
+				variant: 'numbered',
+				siblings: 1,
+			}}
+			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true }}
+			filtering={{
+				manual: true,
+				variant: 'popover',
+				faceted: true,
+				debounce: 300,
+				chips: { position: 'above' },
+				clearButton: true,
+			}}
+			globalFiltering={{ placeholder: 'Search orders…', debounce: 300 }}
+			stickyHeader
+			pinning={{ column: true, row: { top: true, bottom: true } }}
+			sizing={{ mode: 'onChange' }}
+			columnVisibility={{ toolbar: true }}
+			creating={{
+				mode: 'modal',
+				onSave: ({ values }) => orders.create(values),
+			}}
+			editing={{
+				mode: 'modal',
+				onSave: ({ rowId, values }) => orders.update(Number(rowId), values),
+			}}
+			deleting={{
+				onDelete: ({ row }) => orders.remove([row.original.id]),
+				confirmation: {
+					title: 'Delete order?',
+					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+				},
+			}}
+			selection={{
+				panel: {
+					onDelete: ({ selectedRows, clearSelection }) => {
+						void orders.remove(selectedRows.map((row) => row.original.id)).then(clearSelection)
+					},
+				},
+			}}
+			state={{ ...orders.tableState, loading: orders.loading }}
+			onStateChange={orders.onStateChange}
+		/>
+	)
+}

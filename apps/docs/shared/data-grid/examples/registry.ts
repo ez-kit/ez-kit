@@ -61,6 +61,8 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/row-pinning/sticky-header.tsx': () => import('./components/row-pinning/sticky-header'),
 	'components/production/ProductionExample.tsx': () => import('./components/production/ProductionExample'),
 	'components/production/ProductionFeedExample.tsx': () => import('./components/production/ProductionFeedExample'),
+	'components/production/ProductionOneHandlerExample.tsx': () =>
+		import('./components/production/ProductionOneHandlerExample'),
 	'components/selection-bar-inline.tsx': () => import('./components/selection-bar-inline'),
 	'components/selection-bar.tsx': () => import('./components/selection-bar'),
 	'components/server-data.tsx': () => import('./components/server-data'),
