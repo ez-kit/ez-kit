@@ -650,7 +650,7 @@ export function useDataGrid<TRow extends object>(
 			// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
 			// is layered separately via the COLUMN_VISIBILITY_KEY symbol.
 			columnVisibility,
-			onStateChange: (updater) => onStateChangeRef.current?.(updater),
+			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
 		} as TableConfig<TRow>),
 	)
 	const table = instanceRef.current.table

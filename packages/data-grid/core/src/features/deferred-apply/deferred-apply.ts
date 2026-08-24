@@ -66,6 +66,9 @@ function sameAxis(a: unknown, b: unknown): boolean {
 	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
 
+/** Key of the applied-snapshot slice on `TableState` — never part of an outward emission. */
+export const APPLIED_STATE_KEY = 'applied'
+
 export const DEFAULT_APPLIED_STATE: AppliedState = {
 	sorting: [],
 	columnFilters: [],

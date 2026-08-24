@@ -22,7 +22,6 @@ import type {
 	NormalizedGlobalFilteringConfig,
 } from './use-data-grid'
 import type { TableState } from '@ez-kit/data-grid-core'
-import type { Updater } from '@tanstack/table-core'
 
 type User = {
 	id: number
@@ -38,7 +37,7 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 type ClampGridProps = {
 	rowCount: number
 	tableState: Partial<TableState>
-	onStateChange: (updater: Updater<TableState>) => void
+	onStateChange: (state: TableState) => void
 }
 
 /** Renders the live `pageIndex` under fully controlled manual pagination. */
@@ -62,8 +61,8 @@ function ClampPage({ rowCount }: { rowCount: number }) {
 		<ClampGrid
 			rowCount={rowCount}
 			tableState={tableState}
-			onStateChange={(updater) => {
-				setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+			onStateChange={(nextState) => {
+				setTableState(nextState)
 			}}
 		/>
 	)

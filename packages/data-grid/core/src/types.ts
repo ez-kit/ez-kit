@@ -476,12 +476,18 @@ export type TableConfig<TRow extends object> = {
 	initialState?: InitialTableState
 	/**
 	 * Called whenever the table state changes (sorting, filtering, pagination, etc.).
-	 * Receives the raw TanStack updater — apply it to your own state to implement controlled mode.
+	 * Receives the **resolved** next state — assign it to your own state to implement
+	 * controlled mode.
+	 *
+	 * Under {@link TableConfig.deferredApply} this fires only when the query the consumer
+	 * is allowed to see actually changes: draft edits stay silent, and the state handed
+	 * over carries the applied snapshot on `sorting` / `columnFilters` / `globalFilter`
+	 * rather than the pending draft.
 	 * @example
 	 * const [tableState, setTableState] = useState<Partial<TableState>>({})
-	 * useDataGrid({ ..., state: tableState, onStateChange: (updater) => setTableState(prev => typeof updater === 'function' ? updater(prev as TableState) : updater) })
+	 * useDataGrid({ ..., state: tableState, onStateChange: (state) => setTableState(state) })
 	 */
-	onStateChange?: (updater: Updater<TableState>) => void
+	onStateChange?: (state: TableState) => void
 }
 
 /**

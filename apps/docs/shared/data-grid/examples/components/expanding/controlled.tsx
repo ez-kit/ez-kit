@@ -87,8 +87,8 @@ export function ExpandingControlledExample() {
 				data={EMPLOYEES}
 				columns={columns}
 				state={tableState}
-				onStateChange={(updater) => {
-					setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+				onStateChange={(nextState) => {
+					setTableState(nextState)
 				}}
 				expanding={{
 					renderExpanded: ({ row }) => (

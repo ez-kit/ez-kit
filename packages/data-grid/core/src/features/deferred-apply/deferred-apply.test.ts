@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createTable } from '../../create-table'
 
 import type { ColumnDef } from '../../column/types'
+import type { TableState } from '@tanstack/table-core'
 
 type Row = { id: string; name: string; age: number }
 
@@ -140,5 +141,97 @@ describe('deferredApply — apply / reset', () => {
 		expect(table.getState().globalFilter).toBe('bob')
 		expect(table.getState().applied.globalFilter).toBeUndefined()
 		expect(table.draft.isDirty()).toBe(true)
+	})
+})
+
+describe('deferredApply — emission gating', () => {
+	function makeSpyTable() {
+		const calls: { sorting: unknown[]; state: number } = { sorting: [], state: 0 }
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			sorting: { manual: true, onChange: (s) => calls.sorting.push(s) },
+			filtering: { manual: true },
+			globalFiltering: true,
+			pagination: { manual: true, pageSize: 10, rowCount: 100 },
+			deferredApply: true,
+			onStateChange: () => {
+				calls.state += 1
+			},
+		})
+		return { table, calls }
+	}
+
+	it('does not emit while the draft is only accumulating', () => {
+		const { table, calls } = makeSpyTable()
+
+		table.setSorting([{ id: 'age', desc: true }])
+		table.setColumnFilters([{ id: 'name', value: 'An' }])
+
+		expect(calls.state).toBe(0)
+		expect(calls.sorting).toEqual([])
+	})
+
+	it('emits exactly once on apply()', () => {
+		const { table, calls } = makeSpyTable()
+		table.setSorting([{ id: 'age', desc: true }])
+		table.setColumnFilters([{ id: 'name', value: 'An' }])
+
+		table.draft.apply()
+
+		expect(calls.state).toBe(1)
+		expect(calls.sorting).toEqual([[{ id: 'age', desc: true }]])
+	})
+
+	it('does not emit on reset()', () => {
+		const { table, calls } = makeSpyTable()
+		table.setSorting([{ id: 'age', desc: true }])
+
+		table.draft.reset()
+
+		expect(calls.state).toBe(0)
+	})
+
+	it('emits immediately for pagination, which is never deferred', () => {
+		const { table, calls } = makeSpyTable()
+
+		table.setPageIndex(2)
+
+		expect(calls.state).toBe(1)
+	})
+
+	it('emits the applied query, not the draft, when the page changes while dirty', () => {
+		const seen: TableState[] = []
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			sorting: { manual: true },
+			filtering: { manual: true },
+			pagination: { manual: true, pageSize: 10, rowCount: 100 },
+			deferredApply: true,
+			onStateChange: (state) => {
+				seen.push(state)
+			},
+		})
+		table.setSorting([{ id: 'age', desc: true }])
+
+		table.setPageIndex(1)
+
+		expect(seen.at(-1)?.sorting).toEqual([])
+	})
+
+	it('behaves exactly as today when deferredApply is off', () => {
+		const calls: number[] = []
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			sorting: { manual: true },
+			onStateChange: () => calls.push(1),
+		})
+
+		table.setSorting([{ id: 'age', desc: true }])
+
+		expect(calls).toHaveLength(1)
+		expect(table.draft.isDirty()).toBe(false)
 	})
 })

@@ -9,9 +9,6 @@ import type { TableState } from '@ez-kit/data-grid-react'
 
 const DEFAULT_PAGE_SIZE = 10
 
-/** What `onStateChange` hands back: the next state, or a function producing it. */
-type StateUpdater = TableState | ((prev: TableState) => TableState)
-
 const INITIAL_STATE: Partial<TableState> = {
 	pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
 	sorting: [],
@@ -90,10 +87,8 @@ export function useOrdersState() {
 		void refetch()
 	}, [refetch, query])
 
-	const onStateChange = useCallback((updater: StateUpdater) => {
+	const onStateChange = useCallback((next: TableState) => {
 		setTableState((prev) => {
-			const next = typeof updater === 'function' ? updater(prev as TableState) : updater
-
 			const invalidatesPage =
 				next.sorting !== prev.sorting ||
 				next.columnFilters !== prev.columnFilters ||

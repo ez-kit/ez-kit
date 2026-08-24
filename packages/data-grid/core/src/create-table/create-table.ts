@@ -13,7 +13,7 @@ import { mapColumns } from '../column/map-columns'
 import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingFeature } from '../features/creating'
-import { DeferredApplyFeature } from '../features/deferred-apply'
+import { APPLIED_STATE_KEY, DeferredApplyFeature } from '../features/deferred-apply'
 import { DeletingFeature } from '../features/deleting'
 import { EditingFeature } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
@@ -25,6 +25,7 @@ import { buildColumnList, extractPinningState } from '../system-columns'
 import { setIfDefined } from '../utils/set-if-defined'
 
 import type { ColumnDef } from '../column/types'
+import type { AppliedState } from '../features/deferred-apply'
 import type { DataTable, GlobalFilterFn, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
 import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
@@ -202,26 +203,101 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		table: null,
 	}
 
+	const deferred = config.deferredApply === true
+
+	/**
+	 * The snapshot the outside world is allowed to see: the three deferrable axes
+	 * replaced by the applied snapshot, and `applied` itself dropped. With
+	 * `deferredApply` off this is the identity function.
+	 *
+	 * The `applied` guard covers the window before the store is rebuilt from
+	 * `table.initialState` below, where a state change raised during construction
+	 * would otherwise read the slice off an empty snapshot.
+	 */
+	const toOutward = (state: TableState): TableState => {
+		if (!deferred) return state
+		const applied = state.applied as AppliedState | undefined
+		if (applied === undefined) return state
+		const { applied: _dropped, ...rest } = state
+		return {
+			...rest,
+			sorting: applied.sorting,
+			columnFilters: applied.columnFilters,
+			globalFilter: applied.globalFilter,
+		} as TableState
+	}
+
+	/**
+	 * Reference comparison across **every** slice the outward snapshot carries,
+	 * derived from the objects rather than a hand-written list. A slice omitted
+	 * from a fixed list would be a state change that silently never reaches the
+	 * consumer while `deferredApply` is on — a far worse failure than one extra
+	 * emission, and one that grows every time a feature adds a slice.
+	 */
+	const outwardUnchanged = (a: TableState, b: TableState): boolean => {
+		const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+		for (const key of keys) {
+			if (key === APPLIED_STATE_KEY) continue
+			if ((a as unknown as Record<string, unknown>)[key] !== (b as unknown as Record<string, unknown>)[key]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	/**
+	 * With `deferredApply` off there is no draft, so the applied snapshot must track
+	 * the live axes — otherwise `table.draft.isDirty()` would report a phantom draft
+	 * for every consumer that never opted in. Returns the same object when already
+	 * in sync so the funnel's reference comparisons stay meaningful.
+	 */
+	const syncApplied = (state: TableState): TableState => {
+		const applied = state.applied as AppliedState | undefined
+		if (
+			applied === undefined ||
+			(applied.sorting === state.sorting &&
+				applied.columnFilters === state.columnFilters &&
+				applied.globalFilter === state.globalFilter)
+		) {
+			return state
+		}
+		return {
+			...state,
+			applied: { sorting: state.sorting, columnFilters: state.columnFilters, globalFilter: state.globalFilter },
+		}
+	}
+
 	const onStateChange = (updater: Updater<TableState>): void => {
 		const currentState = store.getState()
 		const requested = typeof updater === 'function' ? updater(currentState) : updater
-		const next = enforceColumnInvariants(requested, columnInvariants)
+		const enforced = enforceColumnInvariants(requested, columnInvariants)
+		const next = deferred ? enforced : syncApplied(enforced)
 		ref.table?.setOptions((prev) => ({ ...prev, state: next }))
 		store.setState(next)
-		config.onStateChange?.(updater)
+
+		const outwardPrev = toOutward(currentState)
+		const outwardNext = toOutward(next)
+
+		// A draft edit changes nothing the consumer is allowed to see. Emitting an
+		// identical snapshot would be noise at best and a duplicate request at
+		// worst, so the funnel stays silent and "onStateChange fired" keeps meaning
+		// "the query changed".
+		if (deferred && outwardUnchanged(outwardPrev, outwardNext)) return
+
+		config.onStateChange?.(outwardNext)
 
 		// Per-feature onChange — fire only when the relevant sub-state reference actually changed
-		if (sortingOnChange && currentState.sorting !== next.sorting) {
-			sortingOnChange(next.sorting)
+		if (sortingOnChange && outwardPrev.sorting !== outwardNext.sorting) {
+			sortingOnChange(outwardNext.sorting)
 		}
-		if (filteringOnChange && currentState.columnFilters !== next.columnFilters) {
-			filteringOnChange(next.columnFilters)
+		if (filteringOnChange && outwardPrev.columnFilters !== outwardNext.columnFilters) {
+			filteringOnChange(outwardNext.columnFilters)
 		}
-		if (globalFilteringOnChange && currentState.globalFilter !== next.globalFilter) {
-			globalFilteringOnChange(next.globalFilter)
+		if (globalFilteringOnChange && outwardPrev.globalFilter !== outwardNext.globalFilter) {
+			globalFilteringOnChange(outwardNext.globalFilter)
 		}
-		if (paginationOnChange && currentState.pagination !== next.pagination) {
-			paginationOnChange(next.pagination)
+		if (paginationOnChange && outwardPrev.pagination !== outwardNext.pagination) {
+			paginationOnChange(outwardNext.pagination)
 		}
 	}
 
