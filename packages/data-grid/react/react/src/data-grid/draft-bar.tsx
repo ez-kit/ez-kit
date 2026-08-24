@@ -1,5 +1,6 @@
 import { useGridComponents } from '../components-context'
 
+import { resolveSelectionPanelVariant } from './selection-panel-variant'
 import { useTable } from './table-context'
 
 /**
@@ -27,6 +28,7 @@ export function DraftBar() {
 			open={open}
 			pending={table.draft.getPendingCount()}
 			selectedCount={Object.keys(table.getState().rowSelection).length}
+			variant={resolveSelectionPanelVariant(table)}
 			onApply={() => {
 				table.draft.apply()
 			}}

@@ -1,11 +1,7 @@
 import { useGridComponents } from '../components-context'
-import {
-	DEFAULT_SELECTION_PANEL_VARIANT,
-	SELECTION_PANEL_KEY,
-	type SelectionPanelCallbackArgs,
-	type SelectionPanelConfig,
-} from '../use-data-grid'
+import { SELECTION_PANEL_KEY, type SelectionPanelCallbackArgs, type SelectionPanelConfig } from '../use-data-grid'
 
+import { resolveSelectionPanelVariant } from './selection-panel-variant'
 import { useTable } from './table-context'
 
 import type { Table } from '@tanstack/table-core'
@@ -90,7 +86,7 @@ export function SelectionBar() {
 				? config.actions(callbackArgs)
 				: config.actions
 
-	const variant = config.variant ?? DEFAULT_SELECTION_PANEL_VARIANT
+	const variant = resolveSelectionPanelVariant(table)
 
 	return (
 		<SelectionBarComponent

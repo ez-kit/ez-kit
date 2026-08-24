@@ -31,6 +31,33 @@ describe('DraftBar', () => {
 		expect(screen.queryByTestId('selection-bar')).toBeNull()
 	})
 
+	it('renders the same variant the selection bar is configured with', async () => {
+		const { table } = renderGrid({
+			deferredApply: true,
+			sorting: { manual: true },
+			selection: { panel: { variant: 'inline' } },
+		})
+		table.setRowSelection({ '1': true })
+
+		// The selection bar owns the bar first — read the variant it actually rendered with.
+		const selectionBar = await screen.findByTestId('selection-bar')
+		expect(selectionBar).toHaveAttribute('data-variant', 'inline')
+
+		table.setSorting([{ id: 'age', desc: true }])
+
+		// The draft section takes over the same bar; it must not change shape doing so.
+		const draftBar = await screen.findByTestId('draft-bar')
+		expect(draftBar).toHaveAttribute('data-variant', 'inline')
+	})
+
+	it('falls back to the floating variant when the panel config omits one', async () => {
+		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true }, selection: true })
+
+		table.setSorting([{ id: 'age', desc: true }])
+
+		expect(await screen.findByTestId('draft-bar')).toHaveAttribute('data-variant', 'floating')
+	})
+
 	it('applies the draft when Apply is pressed', async () => {
 		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
 		table.setSorting([{ id: 'age', desc: true }])

@@ -622,13 +622,14 @@ function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: 
  * shadcn / heroui components must reproduce: the `draft-bar` test id, one `data-pending-*`
  * attribute per deferred axis, the `data-selected-count` context chip, and Apply / Reset.
  */
-function TestDraftBar({ open, pending, selectedCount, onApply, onReset }: DraftBarProps) {
+function TestDraftBar({ open, pending, selectedCount, variant, onApply, onReset }: DraftBarProps) {
 	if (!open) return null
 	return (
 		<div
 			role='toolbar'
 			data-slot='draft-bar'
 			data-testid='draft-bar'
+			data-variant={variant}
 			data-pending-sorting={String(pending.sorting)}
 			data-pending-filters={String(pending.filters)}
 			data-pending-search={pending.search ? 'true' : 'false'}

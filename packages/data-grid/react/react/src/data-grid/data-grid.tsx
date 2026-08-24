@@ -7,7 +7,6 @@ import {
 	FILTER_CHIPS_KEY,
 	SELECTION_PANEL_KEY,
 	SELECTION_PANEL_VARIANT,
-	DEFAULT_SELECTION_PANEL_VARIANT,
 	useDataGrid,
 	type NormalizedFilterChipsConfig,
 	type SelectionPanelConfig,
@@ -34,6 +33,7 @@ import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
 import { SelectionBar, buildSelectionPanelArgs } from './selection-bar'
+import { resolveSelectionPanelVariant } from './selection-panel-variant'
 import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useDataGridInstance, useDataGridStore } from './table-context'
@@ -211,11 +211,7 @@ function DefaultLayout() {
 	// state mutations the layout doesn't actually depend on.
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
-	const variant = (typeof rawConfig === 'object' ? rawConfig.variant : undefined) ?? DEFAULT_SELECTION_PANEL_VARIANT
+	const variant = resolveSelectionPanelVariant(table)
 
 	const chipsConfig = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as
 		| NormalizedFilterChipsConfig

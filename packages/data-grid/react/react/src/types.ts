@@ -463,6 +463,13 @@ export type DraftBarProps = {
 	pending: { sorting: number; filters: number; search: boolean }
 	/** Rendered as a non-interactive context chip when rows are selected. */
 	selectedCount: number
+	/**
+	 * Render mode the consumer requested — always the same value `SelectionBarProps.variant`
+	 * receives, because the two sections share one bar.
+	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
+	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
+	 */
+	variant: 'floating' | 'inline'
 	/** Apply the pending draft — emits one state change for the whole query. */
 	onApply: () => void
 	/** Discard the pending draft and restore the applied query. */
