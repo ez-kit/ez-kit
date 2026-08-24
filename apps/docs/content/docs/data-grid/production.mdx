@@ -221,10 +221,14 @@ that recomputes from _your_ state and reintroduces the draft you were never mean
 +onStateChange={(nextState) => setTableState(nextState)}
 ```
 
-**The draft is grid-owned.** Do not feed `sorting`, `columnFilters` or `globalFilter` back down
-through `state` while `deferredApply` is on — your copy holds the _applied_ query, so pushing it
-back would overwrite the draft the user is still composing. Pass down the slices the grid does not
-own (`loading` here) and reach the draft through `table.draft` instead:
+**The draft is grid-owned.** Mirroring `onStateChange`'s output straight back through `state` — the
+ordinary controlled loop, and what the diff above already does — stays safe with `deferredApply` on.
+Your copy only ever holds the _applied_ query, because `onStateChange` stays silent for draft edits,
+so on every re-render it is stale by construction for `sorting`, `columnFilters` and `globalFilter`.
+The grid knows this and ignores exactly those three slices out of what you pass back while a draft is
+pending, so it never clobbers what the user is still composing; the moment you call `table.draft.apply()`,
+the applied query becomes the new `state` your callback receives. You never need to special-case those
+three fields out of your own `state` — reach the draft itself through `table.draft`:
 
 ```ts
 table.draft.get() // the live values of the three deferred axes

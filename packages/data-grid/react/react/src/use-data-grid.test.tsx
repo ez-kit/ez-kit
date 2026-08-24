@@ -1,6 +1,6 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { act, render, renderHook } from '@testing-library/react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { buildPaginationLabel } from './data-grid/pagination-label'
@@ -815,5 +815,83 @@ describe('useDataGrid — filtering.clearButton normalization', () => {
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: false } }),
 		)
 		expect(getClearButtonConfig(result.current.table)).toBeUndefined()
+	})
+})
+
+// ── deferredApply — controlled `state` prop mirrored the same way a real consumer writes it ──
+//
+// Settles a documentation dispute: production.mdx claimed a controlled consumer must NOT mirror
+// `sorting` / `columnFilters` / `globalFilter` back through `state` while `deferredApply` is on,
+// because the render-time controlled-state sync would clobber the pending draft. `syncControlledState`
+// (packages/data-grid/core/src/create-table/create-table.ts) filters exactly those three axes out of
+// the incoming `partial` while `deferred && draft.isDirty()`, so a naive mirror-back should be safe.
+describe('useDataGrid — deferredApply with a mirrored controlled state prop', () => {
+	/** Render count for the enclosing hook body — proves re-syncing the stale prop does not spin. */
+	function useDeferredControlledGrid() {
+		const renderCountRef = useRef(0)
+		renderCountRef.current += 1
+
+		const [tableState, setTableState] = useState<Partial<TableState>>({})
+		const { table } = useDataGrid({
+			data: USERS,
+			columns: COLUMNS,
+			deferredApply: true,
+			sorting: { manual: true },
+			state: tableState,
+			// The exact pattern a real consumer writes: mirror the whole resolved state back in.
+			onStateChange: (nextState) => {
+				setTableState(nextState)
+			},
+		})
+		return { table, tableState, renderCount: renderCountRef.current }
+	}
+
+	it('keeps the draft alive across a re-render carrying the consumer stale mirrored state, then applies on demand', () => {
+		const { result, rerender } = renderHook(() => useDeferredControlledGrid())
+
+		// Seed an applied query so the mirrored `state` prop actually carries sorting/columnFilters/
+		// globalFilter afterwards — an empty `{}` would never exercise `hasChanges` on those axes.
+		act(() => {
+			result.current.table.setSorting([{ id: 'name', desc: true }])
+		})
+		act(() => {
+			result.current.table.draft.apply()
+		})
+		expect(result.current.tableState.sorting).toEqual([{ id: 'name', desc: true }])
+		expect(result.current.table.draft.isDirty()).toBe(false)
+
+		const renderCountAfterSeed = result.current.renderCount
+
+		// A new draft edit: outward state is unchanged while dirty, so `onStateChange` never fires —
+		// the consumer's mirrored `tableState` now holds the last APPLIED query, not this new draft.
+		act(() => {
+			result.current.table.setSorting([{ id: 'name', desc: false }])
+		})
+		expect(result.current.tableState.sorting).toEqual([{ id: 'name', desc: true }]) // still stale
+		expect(result.current.table.getState().sorting).toEqual([{ id: 'name', desc: false }]) // draft moved
+
+		// Force the render-time controlled-state sync to run again with that stale mirrored prop —
+		// simulates the parent re-rendering for any unrelated reason while the draft is pending.
+		rerender()
+		rerender()
+		rerender()
+
+		// The draft — not the consumer's stale mirror — is still what the grid shows.
+		expect(result.current.table.getState().sorting).toEqual([{ id: 'name', desc: false }])
+		expect(result.current.table.draft.isDirty()).toBe(true)
+		expect(result.current.table.getState().applied.sorting).toEqual([{ id: 'name', desc: true }])
+
+		// No spin: three manual re-renders produced exactly three additional render passes, not an
+		// unbounded cascade — `onStateChange` staying silent while dirty means the render-time sync
+		// can never itself trigger another render of this component.
+		expect(result.current.renderCount).toBe(renderCountAfterSeed + 3)
+
+		// Applying hands the consumer the new query in the very next mirrored state.
+		act(() => {
+			result.current.table.draft.apply()
+		})
+		expect(result.current.table.draft.isDirty()).toBe(false)
+		expect(result.current.tableState.sorting).toEqual([{ id: 'name', desc: false }])
+		expect(result.current.table.getState().applied.sorting).toEqual([{ id: 'name', desc: false }])
 	})
 })
