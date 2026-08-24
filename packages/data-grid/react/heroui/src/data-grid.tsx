@@ -10,6 +10,7 @@ import { Input } from './blocks/core/Input'
 import { Menu } from './blocks/core/Menu'
 import { Table, Tbody, Td, Th, Thead, Tr } from './blocks/core/table-adapters'
 import { Toolbar } from './blocks/core/Toolbar'
+import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
 import { FormShell } from './blocks/editing/FormShell'
 import { Modal } from './blocks/editing/Modal'
@@ -56,6 +57,7 @@ const components = {
 	},
 	editing: { Modal, FormShell, ConfirmDialog, NumberInput },
 	selection: { SelectionBar },
+	draft: { DraftBar },
 	'row-actions': { ActionsCell },
 	resizing: { Resizer },
 	'column-visibility': { ColumnVisibilityMenu },

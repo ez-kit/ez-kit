@@ -10,11 +10,12 @@ import type { FilterChipProps } from '@ez-kit/data-grid-react'
  * filter. Renders the column label, current display value, and a small remove
  * button bound to `onRemove`.
  */
-export function FilterChip({ label, value, onRemove, kind }: FilterChipProps) {
+export function FilterChip({ label, value, onRemove, kind, isDraft }: FilterChipProps) {
 	return (
 		<Chip
 			data-slot='filter-chip'
 			data-chip-kind={kind}
+			{...(isDraft ? { 'data-draft-filter': '' } : {})}
 			variant='soft'
 			size='sm'
 		>
