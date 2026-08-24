@@ -752,14 +752,16 @@ export const testComponents: FullGridComponents = {
 		FilterPanelChip: TestFilterPanelChip,
 		FilterChip: TestFilterChip,
 		ClearFiltersButton: TestClearFiltersButton,
-		GlobalFilterInput: ({ value, onChange, placeholder }) => (
+		GlobalFilterInput: ({ value, onChange, placeholder, onKeyDown }) => (
 			<input
 				data-slot='global-filter-input'
+				aria-label={placeholder}
 				value={value}
 				onChange={(e) => {
 					onChange(e.target.value)
 				}}
 				placeholder={placeholder}
+				{...(onKeyDown ? { onKeyDown } : {})}
 			/>
 		),
 		OperatorSelect: TestOperatorSelect,

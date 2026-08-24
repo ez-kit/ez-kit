@@ -13,7 +13,7 @@ import type { GlobalFilterInputProps } from '@ez-kit/data-grid-react'
  * `<DataGrid.GlobalFilterInput />` already holds the draft state and applies the
  * configured debounce — this component is purely visual.
  */
-export function GlobalFilterInput({ value, onChange, placeholder }: GlobalFilterInputProps) {
+export function GlobalFilterInput({ value, onChange, placeholder, onKeyDown }: GlobalFilterInputProps) {
 	return (
 		<div
 			className='relative w-56'
@@ -33,6 +33,7 @@ export function GlobalFilterInput({ value, onChange, placeholder }: GlobalFilter
 					onChange(event.target.value)
 				}}
 				className='pl-7'
+				{...(onKeyDown ? { onKeyDown } : {})}
 			/>
 		</div>
 	)

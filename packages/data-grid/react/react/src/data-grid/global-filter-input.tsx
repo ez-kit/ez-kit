@@ -61,6 +61,16 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilter
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [debouncedDraft])
 
+	// Enter applies the whole pending draft — sorting, filters and search commit together in
+	// one request — mirroring the column filter path. `undefined` under non-deferred tables
+	// so Enter keeps its default meaning (e.g. form submission).
+	const onEnterApply =
+		table.options.deferredApply === true
+			? () => {
+					table.draft.apply()
+				}
+			: undefined
+
 	return (
 		<Component
 			value={draft}
@@ -68,6 +78,15 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilter
 			placeholder={placeholder}
 			debounce={debounce}
 			data-slot='global-filter-input'
+			{...(onEnterApply
+				? {
+						onKeyDown: (e) => {
+							if (e.key !== 'Enter') return
+							e.preventDefault()
+							onEnterApply()
+						},
+					}
+				: {})}
 		/>
 	)
 }

@@ -11,7 +11,7 @@ import type { GlobalFilterInputProps } from '@ez-kit/data-grid-react'
  * `<DataGrid.GlobalFilterInput />` already holds the draft state and applies the
  * configured debounce — this component is purely visual.
  */
-export function GlobalFilterInput({ value, onChange, placeholder }: GlobalFilterInputProps) {
+export function GlobalFilterInput({ value, onChange, placeholder, onKeyDown }: GlobalFilterInputProps) {
 	return (
 		<SearchField
 			aria-label={placeholder ?? 'Search'}
@@ -24,6 +24,7 @@ export function GlobalFilterInput({ value, onChange, placeholder }: GlobalFilter
 				<SearchField.Input
 					className='w-56'
 					{...(placeholder !== undefined ? { placeholder } : {})}
+					{...(onKeyDown ? { onKeyDown } : {})}
 				/>
 			</SearchField.Group>
 		</SearchField>

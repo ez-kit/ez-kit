@@ -12,6 +12,7 @@ import type {
 	ComponentType,
 	HTMLAttributes,
 	InputHTMLAttributes,
+	KeyboardEventHandler,
 	MouseEventHandler,
 	ReactElement,
 	ReactNode,
@@ -125,12 +126,16 @@ export type ToolbarProps = {
  * - `debounce` is informational — the wrapper has already applied debounce; the
  *   UI-kit input does not need to debounce again. Exposed so kits can show
  *   pending state if desired.
+ * - `onKeyDown`, when present, must be forwarded to the underlying `<input>` verbatim —
+ *   the headless wrapper uses it to apply the whole pending draft on Enter under
+ *   `deferredApply`. `undefined` when there is nothing to wire (e.g. `deferredApply` off).
  */
 export type GlobalFilterInputProps = {
 	value: string
 	onChange: (value: string) => void
 	placeholder?: string
 	debounce?: number
+	onKeyDown?: KeyboardEventHandler<HTMLInputElement>
 }
 
 /**

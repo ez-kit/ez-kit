@@ -90,6 +90,34 @@ describe('DraftBar', () => {
 		expect(table.draft.isDirty()).toBe(false)
 		expect(table.getState().applied.sorting).toEqual([{ id: 'age', desc: true }])
 	})
+
+	it('applies the whole draft when Enter is pressed in the global search input', async () => {
+		const { table } = renderGrid({
+			deferredApply: true,
+			sorting: { manual: true },
+			globalFiltering: true,
+		})
+		table.setSorting([{ id: 'age', desc: true }])
+
+		const search = await screen.findByRole('textbox', { name: /search/i })
+		await userEvent.type(search, 'An{Enter}')
+
+		expect(table.draft.isDirty()).toBe(false)
+		expect(table.getState().applied.sorting).toEqual([{ id: 'age', desc: true }])
+	})
+
+	it('does nothing on Enter in a filter input when deferredApply is off', async () => {
+		renderGrid({
+			filtering: { manual: true },
+			globalFiltering: true,
+		})
+
+		const search = await screen.findByRole('textbox', { name: /search/i })
+		await userEvent.type(search, 'An{Enter}')
+
+		// No draft exists off deferredApply; the key is a no-op rather than throwing.
+		expect(search).toHaveValue('An')
+	})
 })
 
 describe('deferred-apply DOM marks', () => {
