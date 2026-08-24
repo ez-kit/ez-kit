@@ -78,7 +78,15 @@ function TestButton(props: ButtonProps) {
 	)
 }
 function TestInput(props: InputProps) {
-	return <input {...props} />
+	// Falls back to `placeholder` for the accessible name when the caller doesn't pass
+	// an explicit `aria-label` — real UI-kit inputs are expected to do the same, so tests
+	// can query column-filter inputs by their visible "Filter <column>…" placeholder text.
+	return (
+		<input
+			aria-label={props.placeholder}
+			{...props}
+		/>
+	)
 }
 function TestNumberInput({ value, onChange }: NumberInputProps) {
 	return (

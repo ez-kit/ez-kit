@@ -7,6 +7,7 @@ import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSel
 import type {
 	BadgeItem,
 	BetweenValue,
+	DataTable,
 	DateRangePreset,
 	FieldState,
 	MultiSelectOption,
@@ -27,6 +28,13 @@ export type RenderFilterInputArgs = {
 	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
 	/** Commit debounce (ms) for the fallback text inputs. `0` = commit on every keystroke. */
 	debounce: number
+	/**
+	 * The live table instance, used only to wire "Enter applies the whole draft" on the
+	 * fallback text inputs under `deferredApply`. Optional so existing callers/tests that
+	 * construct a minimal `header` stub need not also fabricate a table.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	table?: DataTable<any>
 }
 
 /**
@@ -122,8 +130,18 @@ export function renderFilterInput({
 	BetweenInput,
 	MultiSelectFilter,
 	debounce,
+	table,
 }: RenderFilterInputArgs): ReactNode {
 	const resolvedOperators = meta?.resolvedOperators
+	// Enter in a fallback text input applies the whole pending draft — sorting, filters and
+	// search commit together in one request. `undefined` under non-deferred tables so Enter
+	// keeps whatever meaning it has today (e.g. form submission).
+	const onEnterApply =
+		table?.options.deferredApply === true
+			? () => {
+					table.draft.apply()
+				}
+			: undefined
 
 	// ── operator-aware path ────────────────────────────────────────────────
 	if (resolvedOperators && resolvedOperators.length > 0) {
@@ -256,6 +274,7 @@ export function renderFilterInput({
 					value={(inputValue ?? '') as string}
 					onCommit={onValueChange}
 					debounce={debounce}
+					{...(onEnterApply ? { onEnterApply } : {})}
 				/>
 				{operatorSelect}
 			</>
@@ -304,6 +323,7 @@ export function renderFilterInput({
 			value={(filterValue ?? '') as string}
 			onCommit={onChange}
 			debounce={debounce}
+			{...(onEnterApply ? { onEnterApply } : {})}
 		/>
 	)
 }

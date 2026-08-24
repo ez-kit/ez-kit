@@ -138,6 +138,7 @@ export function FilterPanel() {
 			BetweenInput,
 			MultiSelectFilter,
 			debounce: filteringDebounce,
+			table,
 		})
 
 		const onClear = (): void => {

@@ -15,6 +15,12 @@ type FilterTextInputProps = {
 	placeholder: string
 	/** Commit debounce in milliseconds. `0` = pass-through (commit on every keystroke). */
 	debounce: number
+	/**
+	 * Pressing Enter in the input should apply the whole pending draft, not just this
+	 * filter — sorting, filters and search commit together in one request. Left
+	 * `undefined` when `deferredApply` is off, so Enter keeps its default meaning.
+	 */
+	onEnterApply?: () => void
 }
 
 /**
@@ -27,7 +33,7 @@ type FilterTextInputProps = {
  * With `debounce === 0` the hook is a pass-through, so commits fire on every
  * keystroke — identical to the previous non-debounced behaviour.
  */
-export function FilterTextInput({ Input, value, onCommit, placeholder, debounce }: FilterTextInputProps) {
+export function FilterTextInput({ Input, value, onCommit, placeholder, debounce, onEnterApply }: FilterTextInputProps) {
 	const [draft, setDraft] = useState(value)
 	const debouncedDraft = useDebouncedValue(draft, debounce)
 
@@ -60,6 +66,12 @@ export function FilterTextInput({ Input, value, onCommit, placeholder, debounce 
 			value={draft}
 			onChange={(e) => {
 				setDraft(e.target.value)
+			}}
+			onKeyDown={(e) => {
+				if (e.key !== 'Enter') return
+				if (!onEnterApply) return
+				e.preventDefault()
+				onEnterApply()
 			}}
 		/>
 	)

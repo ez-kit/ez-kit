@@ -75,6 +75,21 @@ describe('DraftBar', () => {
 
 		expect(table.getState().sorting).toEqual([])
 	})
+
+	it('applies the whole draft when Enter is pressed in a filter input', async () => {
+		const { table } = renderGrid({
+			deferredApply: true,
+			sorting: { manual: true },
+			filtering: { manual: true },
+		})
+		table.setSorting([{ id: 'age', desc: true }])
+
+		const input = await screen.findByRole('textbox', { name: /filter name/i })
+		await userEvent.type(input, 'An{Enter}')
+
+		expect(table.draft.isDirty()).toBe(false)
+		expect(table.getState().applied.sorting).toEqual([{ id: 'age', desc: true }])
+	})
 })
 
 describe('deferred-apply DOM marks', () => {

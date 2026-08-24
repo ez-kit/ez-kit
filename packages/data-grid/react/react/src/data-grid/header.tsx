@@ -230,6 +230,7 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 												BetweenInput,
 												MultiSelectFilter,
 												debounce: filteringDebounce,
+												table,
 											})
 										: null
 									const sortDirAttr: 'asc' | 'desc' | 'none' =
