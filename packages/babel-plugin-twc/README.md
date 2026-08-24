@@ -10,12 +10,68 @@ pnpm add -D @ez-kit/babel-plugin-twc
 
 ## Setup
 
+Anywhere Babel already runs, the plugin only has to be named:
+
 ```js
 // babel.config.js
 export default {
 	plugins: ['@ez-kit/babel-plugin-twc'],
 }
 ```
+
+### Vite
+
+Babel is not part of Vite's pipeline by default; `@vitejs/plugin-react` is what runs it:
+
+```ts
+// vite.config.ts
+import react from '@vitejs/plugin-react'
+import twc from '@ez-kit/babel-plugin-twc'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+	plugins: [react({ babel: { plugins: [twc] } })],
+})
+```
+
+Import the plugin instead of naming it. This package is ESM-only, so the string form leaves its
+resolution to Babel's `require`, which fails outside runtimes that support `require(esm)`;
+`vite.config.ts` is itself ESM, so the direct import always works.
+
+`@vitejs/plugin-react` transforms `/\.[tj]sx?$/` by default, so components declared in plain
+`.ts` files are covered. Widen `include` if yours live somewhere else (`.mdx`, say).
+
+**`@vitejs/plugin-react-swc` cannot run this plugin** — its `plugins` option takes Wasm plugins
+for SWC, not Babel ones. Either switch that app to `@vitejs/plugin-react`, or pass the name by
+hand: `twc.button({ base: 'px-4' }, 'Button')`.
+
+### webpack
+
+A project with a `babel.config.js` needs nothing beyond the entry above — `babel-loader` picks
+it up. Without a config file, put the plugin in the loader options:
+
+```js
+// webpack.config.js
+module.exports = {
+	module: {
+		rules: [
+			{
+				test: /\.[jt]sx?$/,
+				exclude: /node_modules/,
+				use: {
+					loader: 'babel-loader',
+					options: {
+						plugins: ['@ez-kit/babel-plugin-twc'],
+					},
+				},
+			},
+		],
+	},
+}
+```
+
+The same caveat as Vite applies to `swc-loader` and to Next.js with Turbopack: no Babel pass,
+no rewrite.
 
 ## What it does
 
