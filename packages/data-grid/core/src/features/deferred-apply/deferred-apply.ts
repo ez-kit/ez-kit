@@ -154,7 +154,13 @@ export const DeferredApplyFeature: TableFeature<RowData> = {
 		// snapshot move must land in a single state change, or the funnel emits twice
 		// and the consumer fires two requests — the exact thing this feature exists
 		// to prevent.
+		//
+		// A clean draft (nothing pending) is a no-op: the guard below returns before
+		// touching `pagination` / `rowSelection`, so a stray or double-clicked apply()
+		// neither re-emits an identical query nor silently clears the user's selection
+		// or jumps them back to page 1.
 		const apply = (): void => {
+			if (!isDirty()) return
 			table.setState((state) => ({
 				...state,
 				applied: {

@@ -38,7 +38,7 @@ A bare `sizing` prop enables resizing with the defaults.
 | `sizing.direction`                        | `'ltr' \| 'rtl'`          | Text direction used for the resize calculation. Default `'ltr'`.                                                                                          |
 | Per-column `size` / `minSize` / `maxSize` | `number`                  | Constrain individual columns. Set `enableResizing: false` on a column to pin it.                                                                          |
 | `state.columnSizing`                      | `Record<string, number>`  | Controlled sizing state, as part of the grid's single controlled-state object.                                                                            |
-| `onStateChange`                           | `(updater) => void`       | Fires on every state change, including sizing. Apply the updater to your own state to persist sizes.                                                      |
+| `onStateChange`                           | `(state) => void`         | Fires on every state change, including sizing, with the resolved state. Persist it to your own state to keep sizes.                                       |
 
 Sizing is controlled through the grid's one state object rather than a sizing-specific handler — see [controlled state](/docs/data-grid/controlled-state). `columnSizing` is also persisted by default, so [state persistence](/docs/data-grid/state-persistence) restores column widths without any wiring.
 

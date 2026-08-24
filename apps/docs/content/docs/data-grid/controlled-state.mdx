@@ -23,8 +23,8 @@ const grid = useDataGrid({
 	sorting: true,
 	pagination: true,
 	state: tableState,
-	onStateChange: (updater) => {
-		setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+	onStateChange: (nextState) => {
+		setTableState(nextState)
 	},
 })
 ```
@@ -43,8 +43,8 @@ model](./data-grid/state-model) lays out which one wins.
 ## One state, one subscription
 
 There is exactly one controlled-state mechanism: pass a partial `TableState` to `state`, and read every
-update back through the single `onStateChange` callback. `onStateChange` receives the raw TanStack
-updater for the **whole** table state, not a per-slot value — apply it to your own state as shown above.
+update back through the single `onStateChange` callback. `onStateChange` receives the resolved
+**whole** table state, not a per-slot value — apply it to your own state as shown above.
 
 Some features additionally expose their own `feature.onChange` (e.g. `sorting.onChange`,
 `pagination.onChange`) — these are convenience subscriptions layered on top of the same mechanism,

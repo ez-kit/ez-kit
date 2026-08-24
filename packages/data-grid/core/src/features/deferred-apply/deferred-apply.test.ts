@@ -207,6 +207,7 @@ describe('deferredApply — emission gating', () => {
 			columns: COLUMNS,
 			sorting: { manual: true },
 			filtering: { manual: true },
+			globalFiltering: true,
 			pagination: { manual: true, pageSize: 10, rowCount: 100 },
 			deferredApply: true,
 			onStateChange: (state) => {
@@ -214,10 +215,89 @@ describe('deferredApply — emission gating', () => {
 			},
 		})
 		table.setSorting([{ id: 'age', desc: true }])
+		table.setColumnFilters([{ id: 'name', value: 'An' }])
+		table.setGlobalFilter('an')
 
 		table.setPageIndex(1)
 
-		expect(seen.at(-1)?.sorting).toEqual([])
+		const last = seen.at(-1)
+		expect(last?.sorting).toEqual([])
+		expect(last?.columnFilters).toEqual([])
+		expect(last?.globalFilter).toBeUndefined()
+	})
+
+	it('still emits when columnVisibility changes while the draft is dirty', () => {
+		const { table, calls } = makeSpyTable()
+		table.setSorting([{ id: 'age', desc: true }])
+		expect(calls.state).toBe(0)
+
+		table.setColumnVisibility({ age: false })
+
+		expect(calls.state).toBe(1)
+	})
+
+	it('still emits when rowSelection changes while the draft is dirty', () => {
+		const { table, calls } = makeSpyTable()
+		table.setSorting([{ id: 'age', desc: true }])
+		expect(calls.state).toBe(0)
+
+		table.setRowSelection({ '1': true })
+
+		expect(calls.state).toBe(1)
+	})
+
+	it('still emits when expanded changes while the draft is dirty', () => {
+		const { table, calls } = makeSpyTable()
+		table.setSorting([{ id: 'age', desc: true }])
+		expect(calls.state).toBe(0)
+
+		table.setExpanded({ '1': true })
+
+		expect(calls.state).toBe(1)
+	})
+
+	it('apply() with a clean draft emits nothing', () => {
+		const { table, calls } = makeSpyTable()
+
+		table.draft.apply()
+
+		expect(calls.state).toBe(0)
+		expect(calls.sorting).toEqual([])
+	})
+
+	it('does not clear row selection or move the page when apply() runs on a clean draft', () => {
+		const { table } = makeSpyTable()
+		table.setRowSelection({ '1': true })
+		table.setPageIndex(2)
+
+		table.draft.apply()
+
+		expect(table.getState().rowSelection).toEqual({ '1': true })
+		expect(table.getState().pagination.pageIndex).toBe(2)
+	})
+
+	it('filtering.onChange and globalFiltering.onChange stay silent while accumulating and fire once on apply', () => {
+		const filterCalls: unknown[] = []
+		const globalCalls: unknown[] = []
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			sorting: { manual: true },
+			filtering: { manual: true, onChange: (f) => filterCalls.push(f) },
+			globalFiltering: { onChange: (g) => globalCalls.push(g) },
+			deferredApply: true,
+		})
+
+		table.setColumnFilters([{ id: 'name', value: 'An' }])
+		table.setGlobalFilter('an')
+
+		expect(filterCalls).toEqual([])
+		expect(globalCalls).toEqual([])
+
+		table.draft.apply()
+
+		expect(filterCalls).toEqual([[{ id: 'name', value: 'An' }]])
+		expect(globalCalls).toEqual(['an'])
 	})
 
 	it('behaves exactly as today when deferredApply is off', () => {

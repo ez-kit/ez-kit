@@ -96,8 +96,8 @@ const [tableState, setTableState] = useState<Partial<TableState>>(INITIAL_STATE)
 	sorting={{ manual: true }}
 	filtering={{ manual: true }}
 	state={{ ...tableState, loading }}
-	onStateChange={(updater) => {
-		setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+	onStateChange={(nextState) => {
+		setTableState(nextState)
 	}}
 />
 ```
@@ -127,17 +127,17 @@ Key on the whole `tableState` object instead and every column drag refetches the
 `sorting.onChange` ran. With one handler you have to notice it:
 
 ```tsx
-setTableState((prev) => {
-	const next = typeof updater === 'function' ? updater(prev as TableState) : updater
+const onStateChange = useCallback((next: TableState) => {
+	setTableState((prev) => {
+		const invalidatesPage =
+			next.sorting !== prev.sorting ||
+			next.columnFilters !== prev.columnFilters ||
+			next.globalFilter !== prev.globalFilter
 
-	const invalidatesPage =
-		next.sorting !== prev.sorting ||
-		next.columnFilters !== prev.columnFilters ||
-		next.globalFilter !== prev.globalFilter
-
-	if (!invalidatesPage) return next
-	return { ...next, pagination: { pageIndex: 0, pageSize: next.pagination.pageSize } }
-})
+		if (!invalidatesPage) return next
+		return { ...next, pagination: { pageIndex: 0, pageSize: next.pagination.pageSize } }
+	})
+}, [])
 ```
 
 Reference comparison is enough — each slice keeps its identity until it actually changes.
