@@ -1,10 +1,11 @@
 import type { FilterChipProps } from '@ez-kit/data-grid-react'
 
-export function FilterChip({ label, value, onRemove, kind }: FilterChipProps) {
+export function FilterChip({ label, value, onRemove, kind, isDraft }: FilterChipProps) {
 	return (
 		<span
 			data-slot='filter-chip'
 			data-chip-kind={kind}
+			{...(isDraft ? { 'data-draft-filter': '' } : {})}
 			style={{
 				display: 'inline-flex',
 				alignItems: 'center',

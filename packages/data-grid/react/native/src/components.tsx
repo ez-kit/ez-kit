@@ -10,6 +10,7 @@ import { Th } from './blocks/core/Th'
 import { Thead } from './blocks/core/Thead'
 import { Toolbar } from './blocks/core/Toolbar'
 import { Tr } from './blocks/core/Tr'
+import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
 import { FormShell } from './blocks/editing/FormShell'
 import { Modal } from './blocks/editing/Modal'
@@ -56,6 +57,7 @@ export const nativeComponents: FullGridComponents = {
 	},
 	editing: { Modal, FormShell, ConfirmDialog, NumberInput },
 	selection: { SelectionBar },
+	draft: { DraftBar },
 	'row-actions': { ActionsCell },
 	resizing: { Resizer },
 	'column-visibility': { ColumnVisibilityMenu },

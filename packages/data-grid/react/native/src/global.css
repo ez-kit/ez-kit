@@ -1,0 +1,54 @@
+/* ---- Deferred apply: the "not yet real" treatment ----
+ * This kit ships no design tokens, so the mark stays as plain as the rest of it: dashed instead
+ * of solid, dimmed instead of full contrast. It is deliberately the *same* idea in all three
+ * places a draft shows up — the drafted header cell, the drafted filter chip, and the pending
+ * segments in the draft bar — so "not applied yet" reads identically wherever it appears.
+ *
+ * `data-draft-sorting` is spread by `@ez-kit/data-grid-react` onto the `<th>` and carries the
+ * column's position in the *draft* sort order — the one thing the applied sort indicator cannot
+ * show yet, so it is printed rather than replaced by a second indicator. */
+
+[data-slot='th'][data-draft-sorting] {
+	opacity: 0.6;
+}
+
+[data-slot='th'][data-draft-sorting]::after {
+	content: attr(data-draft-sorting);
+	display: inline-block;
+	min-width: 1rem;
+	margin-inline-start: 0.375rem;
+	padding-inline: 0.25rem;
+	border: 1px dashed currentColor;
+	border-radius: 3px;
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+	line-height: 1.4;
+}
+
+[data-slot='filter-chip'][data-draft-filter] {
+	border-style: dashed;
+	opacity: 0.7;
+}
+
+[data-slot='draft-bar-label'] {
+	margin-inline-end: 0.375rem;
+	font-size: 0.6875rem;
+	letter-spacing: 0.06em;
+	opacity: 0.6;
+	text-transform: uppercase;
+}
+
+[data-slot='draft-bar-pending-part'] {
+	margin-inline-end: 0.25rem;
+	padding: 0 0.25rem;
+	border: 1px dashed #ccc;
+	border-radius: 3px;
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	opacity: 0.7;
+}
+
+/* Apply is the bar's only emphasised action — Reset stays quiet next to it. */
+[data-slot='draft-bar-apply'] {
+	font-weight: 600;
+}
