@@ -13,6 +13,7 @@ import { mapColumns } from '../column/map-columns'
 import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingFeature } from '../features/creating'
+import { DeferredApplyFeature } from '../features/deferred-apply'
 import { DeletingFeature } from '../features/deleting'
 import { EditingFeature } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
@@ -236,7 +237,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			: undefined
 
 	const options = {
-		_features: [CreatingFeature, EditingFeature, DeletingFeature, LoadingFeature, InfiniteFeature],
+		_features: [
+			CreatingFeature,
+			DeferredApplyFeature,
+			EditingFeature,
+			DeletingFeature,
+			LoadingFeature,
+			InfiniteFeature,
+		],
 		data: config.data,
 		columns: allColumns,
 		getRowId,

@@ -74,6 +74,7 @@ export type {
 	CreatingSaveContext,
 	CreatingState,
 } from './features/creating'
+export type { AppliedState, DraftApi, DraftAxis, PendingCount, QueryDraft } from './features/deferred-apply'
 export type { ConfirmationOptions, DeletingConfig, DeletingContext } from './features/deleting'
 export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
 // Sourced from the feature modules (not `./types`) so their

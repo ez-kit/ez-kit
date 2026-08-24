@@ -190,6 +190,13 @@ export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
  */
 export type GlobalFilteringConfig = {
 	/**
+	 * Server-side mode: the grid does not filter rows locally for global search —
+	 * it only tracks `state.globalFilter` and relies on externally filtered `data`.
+	 * Mirrors {@link SortingConfig.manual} / {@link FilteringConfig.manual}; required
+	 * on at least one axis when {@link TableConfig.deferredApply} is on.
+	 */
+	manual?: boolean
+	/**
 	 * Function applied during global search.
 	 * - `string` — resolved against {@link GlobalFilteringConfig.fns} registry first,
 	 *   then against TanStack's built-in filter fns (`'includesString'`, etc.).
@@ -448,6 +455,13 @@ export type TableConfig<TRow extends object> = {
 	creating?: CreatingConfig<TRow>
 	editing?: EditingConfig<TRow>
 	deleting?: DeletingConfig<TRow>
+	/**
+	 * Defer application of sorting, column filters and global search. While on,
+	 * those three axes accumulate as a draft and reach `onStateChange` only when
+	 * `table.draft.apply()` runs — one state change, one request, instead of one
+	 * per keystroke. Requires `manual: true` on at least one of the three.
+	 */
+	deferredApply?: boolean
 	/**
 	 * Layout of the per-row actions column (`__actions__`), which holds edit,
 	 * delete and the row-pin menu. The column is injected automatically as soon
