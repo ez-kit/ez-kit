@@ -170,6 +170,76 @@ state={{ loading: { isPending, isFetching, isError, error } }}
 `isPending` means "no rows yet" and shows the skeleton; `isFetching` keeps the current page on
 screen under a dimming overlay. See [Fallbacks](/docs/data-grid/fallbacks) for how each state renders.
 
+### Or: let the user compose the query, then send it once
+
+Every example above fetches the moment anything changes: a second sort level is a second request, a
+third filter a third. `deferredApply` turns that around. Sorting, column filters and global search
+stop leaving the grid on change — they accumulate as a **draft**, an action bar reports what is
+pending, and the whole query reaches you as **one** state change when the user presses Apply.
+
+<DataGridDocsExample exampleId='production-deferred-apply' />
+
+Add two sorts and a filter in the preview above and watch the network panel: nothing goes out until
+Apply, and then exactly one request does. Pressing <kbd>Enter</kbd> in a column filter or in the
+search box applies the whole draft, not just the field you are in.
+
+```tsx
+<DataGrid
+	data={rows}
+	columns={orderColumns}
+	deferredApply
+	pagination={{ manual: true, rowCount }}
+	sorting={{ manual: true, multi: { max: 3, event: 'ctrl' } }}
+	filtering={{ manual: true }}
+	selection
+	state={{ loading }}
+	onStateChange={(nextState) => {
+		setTableState(nextState)
+	}}
+/>
+```
+
+Four things to know before you turn it on:
+
+**It requires manual mode.** `deferredApply` needs `manual: true` on `sorting` or on `filtering` —
+deferring a query the browser answers locally would only add a click. Without it the grid **throws**
+at construction rather than quietly doing nothing.
+
+**Your fetch trigger does not change.** `onStateChange` is still what tells you to query, and it
+still means "the query changed" — it simply stops firing for draft edits. So do the per-feature
+`sorting.onChange` / `filtering.onChange` / `globalFiltering.onChange` callbacks: while a draft is
+pending, nothing is emitted at all. `table.draft.apply()` then emits once, with `pageIndex` reset to
+`0` and the row selection cleared in that same state change, because applying a new query can drop
+the selected rows out of the result set. Applying a clean draft is a no-op.
+
+**`onStateChange` receives a resolved state, not an updater.** This is a break from earlier versions
+across the whole grid, `deferredApply` or not: passing the updater through would hand you a function
+that recomputes from _your_ state and reintroduces the draft you were never meant to see.
+
+```diff
+-onStateChange={(updater) => setTableState((prev) => (typeof updater === 'function' ? updater(prev) : updater))}
++onStateChange={(nextState) => setTableState(nextState)}
+```
+
+**The draft is grid-owned.** Do not feed `sorting`, `columnFilters` or `globalFilter` back down
+through `state` while `deferredApply` is on — your copy holds the _applied_ query, so pushing it
+back would overwrite the draft the user is still composing. Pass down the slices the grid does not
+own (`loading` here) and reach the draft through `table.draft` instead:
+
+```ts
+table.draft.get() // the live values of the three deferred axes
+table.draft.set({ sorting }) // write into the draft
+table.draft.isDirty() // is anything pending?
+table.draft.getPendingCount() // { sorting, filters, search }
+table.draft.apply() // emit once
+table.draft.reset() // discard the draft
+table.draft.resetAxis('sorting') // discard one axis
+```
+
+To restore a draft that outlived a reload, seed it at construction with `initialState.draft` —
+`initialState.sorting` and friends seed the **applied** query, so a grid born with a default sort is
+not born dirty.
+
 ## Deliberately not in the same grid
 
 Two features cannot share a grid with the one above, so they get their own example rather than a

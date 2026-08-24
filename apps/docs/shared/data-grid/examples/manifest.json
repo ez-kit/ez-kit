@@ -600,6 +600,14 @@
 		"exportName": "ProductionOneHandlerExample"
 	},
 	{
+		"id": "production-deferred-apply",
+		"label": "Deferred apply",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionDeferredApplyExample.tsx",
+		"exportName": "ProductionDeferredApplyExample"
+	},
+	{
 		"id": "production-feed",
 		"label": "Virtualized feed",
 		"group": "production",

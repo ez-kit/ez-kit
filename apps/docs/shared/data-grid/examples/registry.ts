@@ -59,6 +59,8 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/infinite-scroll/virtualized.tsx': () => import('./components/infinite-scroll/virtualized'),
 	'components/pagination-variants.tsx': () => import('./components/pagination-variants'),
 	'components/row-pinning/sticky-header.tsx': () => import('./components/row-pinning/sticky-header'),
+	'components/production/ProductionDeferredApplyExample.tsx': () =>
+		import('./components/production/ProductionDeferredApplyExample'),
 	'components/production/ProductionExample.tsx': () => import('./components/production/ProductionExample'),
 	'components/production/ProductionFeedExample.tsx': () => import('./components/production/ProductionFeedExample'),
 	'components/production/ProductionOneHandlerExample.tsx': () =>
