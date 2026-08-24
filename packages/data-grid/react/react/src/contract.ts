@@ -27,6 +27,8 @@ export enum GridFeature {
 	Filtering = 'filtering',
 	Editing = 'editing',
 	Selection = 'selection',
+	/** Pending-draft section of the shared action bar (`deferredApply`). */
+	Draft = 'draft',
 	/** Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`). */
 	RowActions = 'row-actions',
 	Resizing = 'resizing',
@@ -72,6 +74,7 @@ export const FEATURE_COMPONENTS = {
 	] as const,
 	[GridFeature.Editing]: ['Modal', 'FormShell', 'ConfirmDialog', 'NumberInput'] as const,
 	[GridFeature.Selection]: ['SelectionBar'] as const,
+	[GridFeature.Draft]: ['DraftBar'] as const,
 	[GridFeature.RowActions]: ['ActionsCell'] as const,
 	[GridFeature.Resizing]: ['Resizer'] as const,
 	[GridFeature.ColumnVisibility]: ['ColumnVisibilityMenu'] as const,
@@ -94,6 +97,7 @@ export type GridSortingComponents = ComponentsFor<GridFeature.Sorting>
 export type GridFilteringComponents = ComponentsFor<GridFeature.Filtering>
 export type GridEditingComponents = ComponentsFor<GridFeature.Editing>
 export type GridSelectionComponents = ComponentsFor<GridFeature.Selection>
+export type GridDraftComponents = ComponentsFor<GridFeature.Draft>
 export type GridRowActionsComponents = ComponentsFor<GridFeature.RowActions>
 export type GridResizingComponents = ComponentsFor<GridFeature.Resizing>
 export type GridColumnVisibilityComponents = ComponentsFor<GridFeature.ColumnVisibility>

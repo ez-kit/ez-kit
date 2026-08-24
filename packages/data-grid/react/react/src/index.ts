@@ -107,6 +107,7 @@ export type {
 	GridFilteringComponents,
 	GridEditingComponents,
 	GridSelectionComponents,
+	GridDraftComponents,
 	GridRowActionsComponents,
 	GridResizingComponents,
 	GridColumnVisibilityComponents,
@@ -121,6 +122,7 @@ export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps 
 
 // Sub-components (also available as DataGrid.SelectionBar)
 export { SelectionBar } from './data-grid/selection-bar'
+export { DraftBar } from './data-grid/draft-bar'
 export { ActiveFiltersBar } from './data-grid/active-filters-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
@@ -165,6 +167,7 @@ export type {
 	ColumnVisibilityMenuProps,
 	ClearFiltersButtonComponentProps,
 	ConfirmDialogProps,
+	DraftBarProps,
 	EmptyStateProps,
 	FilterChipKind,
 	FilterChipProps,

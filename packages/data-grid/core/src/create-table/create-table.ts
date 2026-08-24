@@ -434,6 +434,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 					pinning: rowPinConfig,
 				}
 			: {}),
+		// Mirrored onto options so the React layer can gate the draft UI on the flag itself.
+		...(deferred ? { deferredApply: true } : {}),
 		// Virtualization config — stored for React layer to read; no TanStack core effect
 		...(config.virtualized !== undefined ? { virtualized: config.virtualized } : {}),
 	}

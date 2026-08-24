@@ -443,6 +443,26 @@ export type SelectionBarProps = {
 	actions?: ReactElement
 }
 
+/**
+ * Pending-draft section of the shared action bar (`deferredApply`).
+ *
+ * While a draft is pending this section owns the bar and the selection section
+ * stands down — see `<DraftBar>`. `selectedCount` is therefore rendered as a
+ * **non-interactive** context chip, never as a handle for bulk actions.
+ */
+export type DraftBarProps = {
+	/** False when nothing is pending — component should hide/animate out. */
+	open: boolean
+	/** How much is pending on each deferred axis. */
+	pending: { sorting: number; filters: number; search: boolean }
+	/** Rendered as a non-interactive context chip when rows are selected. */
+	selectedCount: number
+	/** Apply the pending draft — emits one state change for the whole query. */
+	onApply: () => void
+	/** Discard the pending draft and restore the applied query. */
+	onReset: () => void
+}
+
 export type ChevronProps = {
 	expanded: boolean
 	onClick: () => void
@@ -488,6 +508,7 @@ export type GridComponentRegistry = {
 	FilterChip?: ComponentType<FilterChipProps>
 	ClearFiltersButton?: ComponentType<ClearFiltersButtonComponentProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
+	DraftBar?: ComponentType<DraftBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>
 	OperatorSelect?: ComponentType<OperatorSelectProps>
 	BetweenInput?: ComponentType<BetweenInputProps>

@@ -58,6 +58,15 @@ declare module '@tanstack/table-core' {
 	interface Table<TData extends RowData> {
 		draft: DraftApi
 	}
+
+	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
+	interface TableOptionsResolved<TData extends RowData> {
+		/**
+		 * Mirrors `TableConfig.deferredApply`. Present only when deferral is on, so a
+		 * UI layer can gate on the option itself rather than inferring it from state.
+		 */
+		deferredApply?: boolean
+	}
 }
 
 /** Reference-and-value comparison good enough for the three axes we track. */

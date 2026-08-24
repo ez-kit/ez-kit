@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { COMPONENT_FEATURE, FEATURE_COMPONENTS, GridFeature } from './contract'
 
 describe('COMPONENT_FEATURE', () => {
-	it('maps every injectable component key to a feature (38 total)', () => {
-		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(38)
+	it('maps every injectable component key to a feature (39 total)', () => {
+		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(39)
 	})
 
 	it('groups the always-rendered structural primitives under core', () => {
@@ -29,6 +29,7 @@ describe('COMPONENT_FEATURE', () => {
 		expect(COMPONENT_FEATURE.FilterPanel).toBe(GridFeature.Filtering)
 		expect(COMPONENT_FEATURE.ConfirmDialog).toBe(GridFeature.Editing)
 		expect(COMPONENT_FEATURE.SelectionBar).toBe(GridFeature.Selection)
+		expect(COMPONENT_FEATURE.DraftBar).toBe(GridFeature.Draft)
 		expect(COMPONENT_FEATURE.Resizer).toBe(GridFeature.Resizing)
 		expect(COMPONENT_FEATURE.LoadMoreRow).toBe(GridFeature.Infinite)
 		expect(COMPONENT_FEATURE.Chevron).toBe(GridFeature.Expanding)

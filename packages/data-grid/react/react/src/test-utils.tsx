@@ -1,8 +1,11 @@
+import { createColumns } from '@ez-kit/data-grid-core'
 import { render } from '@testing-library/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
+import { DataGrid } from './data-grid/data-grid'
 import { RowActionsMode } from './types'
+import { useDataGrid } from './use-data-grid'
 
 import type { FullGridComponents } from './contract'
 import type { GridMenuProps } from './menu'
@@ -14,6 +17,7 @@ import type {
 	ColumnVisibilityMenuProps,
 	ConfirmDialogProps,
 	ClearFiltersButtonComponentProps,
+	DraftBarProps,
 	EmptyStateProps,
 	FilterChipProps,
 	FilterPanelChipProps,
@@ -40,6 +44,8 @@ import type {
 	TrProps,
 	ToolbarProps,
 } from './types'
+import type { UseDataGridConfig } from './use-data-grid'
+import type { DataTable } from '@ez-kit/data-grid-core'
 import type { RenderOptions } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 
@@ -587,6 +593,7 @@ function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: 
 		<div
 			role='toolbar'
 			data-slot='selection-bar'
+			data-testid='selection-bar'
 			data-variant={variant}
 			style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}
 		>
@@ -605,6 +612,39 @@ function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: 
 				onClick={onClear}
 			>
 				Cancel
+			</button>
+		</div>
+	)
+}
+/**
+ * Unstyled stand-in for the kits' `DraftBar`. Renders exactly the DOM contract the
+ * shadcn / heroui components must reproduce: the `draft-bar` test id, one `data-pending-*`
+ * attribute per deferred axis, the `data-selected-count` context chip, and Apply / Reset.
+ */
+function TestDraftBar({ open, pending, selectedCount, onApply, onReset }: DraftBarProps) {
+	if (!open) return null
+	return (
+		<div
+			role='toolbar'
+			data-slot='draft-bar'
+			data-testid='draft-bar'
+			data-pending-sorting={String(pending.sorting)}
+			data-pending-filters={String(pending.filters)}
+			data-pending-search={pending.search ? 'true' : 'false'}
+			data-selected-count={String(selectedCount)}
+		>
+			{selectedCount > 0 && <span data-slot='draft-bar-selected-chip'>{selectedCount} selected</span>}
+			<button
+				type='button'
+				onClick={onApply}
+			>
+				Apply
+			</button>
+			<button
+				type='button'
+				onClick={onReset}
+			>
+				Reset
 			</button>
 		</div>
 	)
@@ -725,6 +765,9 @@ export const testComponents: FullGridComponents = {
 	selection: {
 		SelectionBar: TestSelectionBar,
 	},
+	draft: {
+		DraftBar: TestDraftBar,
+	},
 	'row-actions': {
 		ActionsCell: TestActionsCell,
 	},
@@ -757,4 +800,53 @@ export function renderWithComponents(
 	options?: Omit<RenderOptions, 'wrapper'>,
 ): ReturnType<typeof render> {
 	return render(ui, { wrapper: TestWrapper, ...options })
+}
+
+// ── shared grid harness ───────────────────────────────────────────────────
+
+export type TestRow = {
+	id: number
+	name: string
+	age: number
+}
+
+export const TEST_ROWS: TestRow[] = [
+	{ id: 1, name: 'Alice', age: 30 },
+	{ id: 2, name: 'Bob', age: 24 },
+	{ id: 3, name: 'Carol', age: 41 },
+]
+
+export const TEST_COLUMNS = createColumns<TestRow>([
+	{ accessorKey: 'name', header: 'Name' },
+	{ accessorKey: 'age', header: 'Age' },
+])
+
+export type RenderGridResult = ReturnType<typeof render> & {
+	/** The live table — drive state from a test with `table.setSorting(…)` etc. */
+	table: DataTable<TestRow>
+}
+
+/**
+ * Render a full `<DataGrid>` over {@link TEST_ROWS} with the test component kit, and
+ * hand the test the live `DataTable` back so it can drive state directly.
+ */
+export function renderGrid(config: Partial<UseDataGridConfig<TestRow>> = {}): RenderGridResult {
+	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
+	// a side effect the react-hooks lint rule rejects.
+	const ref: { instance: ReturnType<typeof useDataGrid<TestRow>> | null } = { instance: null }
+
+	function Harness(): ReactElement {
+		const instance = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
+		// Handed out in an effect, not during render: writing to an outer object mid-render
+		// is a side effect. Effects flush inside `render`'s `act`, so the caller sees it.
+		useEffect(() => {
+			ref.instance = instance
+		}, [instance])
+		return <DataGrid<TestRow> table={instance} />
+	}
+
+	const result = renderWithComponents(<Harness />)
+	const table = ref.instance?.table
+	if (!table) throw new Error('renderGrid: the grid never mounted, so no table was captured.')
+	return { ...result, table }
 }

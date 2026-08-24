@@ -22,6 +22,7 @@ import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
+import { DraftBar } from './draft-bar'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
@@ -225,6 +226,7 @@ function DefaultLayout() {
 	if (variant === SELECTION_PANEL_VARIANT.Inline) {
 		return (
 			<>
+				<DraftBar />
 				<SelectionBar />
 				<Toolbar />
 				{chipsAbove}
@@ -242,6 +244,7 @@ function DefaultLayout() {
 			<DataGridTable />
 			{chipsBelow}
 			<Pagination />
+			<DraftBar />
 			<SelectionBar />
 		</>
 	)
@@ -364,6 +367,7 @@ type DataGridType = typeof DataGridRoot & {
 	Pagination: typeof Pagination
 	PageSizer: typeof PageSizer
 	SelectionBar: typeof SelectionBar
+	DraftBar: typeof DraftBar
 	CreateTrigger: typeof CreateTrigger
 	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
 	SortTrigger: typeof SortTrigger
@@ -388,6 +392,7 @@ DataGrid.Cell = DataGridCell
 DataGrid.Pagination = Pagination
 DataGrid.PageSizer = PageSizer
 DataGrid.SelectionBar = SelectionBar
+DataGrid.DraftBar = DraftBar
 DataGrid.CreateTrigger = CreateTrigger
 DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
 DataGrid.SortTrigger = SortTrigger

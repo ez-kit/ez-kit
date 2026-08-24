@@ -43,6 +43,9 @@ export function SelectionBar() {
 	const table = useTable()
 	const { SelectionBar: SelectionBarComponent } = useGridComponents().selection
 
+	// The draft section owns the bar while a query is pending — see DraftBar.
+	if (table.options.deferredApply === true && table.draft.isDirty()) return null
+
 	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
 		| boolean
 		| SelectionPanelConfig
