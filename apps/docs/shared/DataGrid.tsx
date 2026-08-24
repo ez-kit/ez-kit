@@ -46,6 +46,7 @@ export const DataGrid: typeof DataGridBase & typeof AdapterDataGrid = Object.ass
 	Pagination: AdapterDataGrid.Pagination,
 	PageSizer: AdapterDataGrid.PageSizer,
 	SelectionBar: AdapterDataGrid.SelectionBar,
+	DraftBar: AdapterDataGrid.DraftBar,
 	CreateTrigger: AdapterDataGrid.CreateTrigger,
 	ColumnVisibilityTrigger: AdapterDataGrid.ColumnVisibilityTrigger,
 	SortTrigger: AdapterDataGrid.SortTrigger,
