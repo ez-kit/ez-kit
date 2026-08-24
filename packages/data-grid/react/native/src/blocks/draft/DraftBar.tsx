@@ -41,11 +41,15 @@ function pendingParts(pending: DraftBarProps['pending']): PendingPart[] {
  * a query can drop the selected rows out of the result set, so a bulk action over that
  * selection would act on a stale set. The count stays as context only.
  *
+ * `variant` is the same value this kit's `SelectionBar` receives — one bar, one shape. Like that
+ * bar, this kit expresses the mode as a `data-variant` hook rather than two markup branches; the
+ * grid layout is what places it in flow or at the end.
+ *
  * `Apply` is the only emphasised button in the bar; the pending segments and `Reset` are drawn
  * with the dashed, muted "not yet real" treatment `global.css` also gives drafted headers and
  * filter chips.
  */
-export function DraftBar({ open, pending, selectedCount, onApply, onReset }: DraftBarProps) {
+export function DraftBar({ open, pending, selectedCount, variant, onApply, onReset }: DraftBarProps) {
 	if (!open) return null
 
 	const parts = pendingParts(pending)
@@ -56,6 +60,7 @@ export function DraftBar({ open, pending, selectedCount, onApply, onReset }: Dra
 			aria-label='Pending changes'
 			data-testid='draft-bar'
 			data-slot='draft-bar'
+			data-variant={variant}
 			data-pending-sorting={String(pending.sorting)}
 			data-pending-filters={String(pending.filters)}
 			data-pending-search={pending.search ? 'true' : 'false'}

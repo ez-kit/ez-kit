@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from '@heroui/react'
 import { Check, RotateCcw } from 'lucide-react'
 
 import {
@@ -64,11 +65,88 @@ function keepBarMounted(event: Event) {
  * applying a query can drop the selected rows out of the result set, so any bulk action
  * over that selection would act on a stale set. The count stays visible as context only.
  *
+ * `variant` is the same value this kit's `SelectionBar` receives — one bar, one shape — so an
+ * inline selection panel gets an in-flow draft bar (the `ActionBar` floating overlay is skipped
+ * entirely) and a floating one gets the sticky overlay.
+ *
  * `Apply` is the only primary button in the bar; `Reset` is secondary and also what the
  * bar's Escape handler runs — discarding the draft is the only way this bar can "close".
  */
-export function DraftBar({ open, pending, selectedCount, onApply, onReset }: DraftBarProps) {
+export function DraftBar({ open, pending, selectedCount, variant, onApply, onReset }: DraftBarProps) {
 	const parts = pendingParts(pending)
+
+	const pendingSummary = (
+		<div
+			data-slot='draft-bar-pending'
+			className='flex items-center gap-1.5 px-1'
+		>
+			<span className='dg-draft-bar-label font-medium text-[0.6875rem] uppercase tracking-wider'>Unapplied</span>
+
+			{parts.map((part) => (
+				<span
+					key={part.axis}
+					data-slot='draft-bar-pending-part'
+					data-axis={part.axis}
+					className='dg-draft-pill rounded-md px-1.5 py-0.5 text-xs tabular-nums'
+				>
+					{part.label}
+				</span>
+			))}
+		</div>
+	)
+
+	if (variant === 'inline') {
+		if (!open) return null
+
+		return (
+			<div
+				role='toolbar'
+				aria-orientation='horizontal'
+				aria-label='Pending changes'
+				data-testid='draft-bar'
+				data-slot='draft-bar'
+				data-variant='inline'
+				data-state='open'
+				data-pending-sorting={String(pending.sorting)}
+				data-pending-filters={String(pending.filters)}
+				data-pending-search={pending.search ? 'true' : 'false'}
+				data-selected-count={String(selectedCount)}
+				className='mb-2 flex w-full flex-row items-center gap-2 rounded-lg bg-surface-secondary px-3 py-2 text-surface-secondary-foreground text-sm'
+			>
+				{selectedCount > 0 && (
+					<span
+						data-slot='draft-bar-selected-chip'
+						className='dg-draft-bar-label font-medium tabular-nums'
+					>
+						{selectedCount} selected
+					</span>
+				)}
+
+				{pendingSummary}
+
+				<div className='ml-auto flex items-center gap-2'>
+					<Button
+						size='sm'
+						variant='ghost'
+						data-slot='draft-bar-reset'
+						onPress={onReset}
+					>
+						<RotateCcw size={16} />
+						Reset
+					</Button>
+					<Button
+						size='sm'
+						variant='primary'
+						data-slot='draft-bar-apply'
+						onPress={onApply}
+					>
+						<Check size={16} />
+						Apply
+					</Button>
+				</div>
+			</div>
+		)
+	}
 
 	return (
 		<ActionBar
@@ -82,6 +160,7 @@ export function DraftBar({ open, pending, selectedCount, onApply, onReset }: Dra
 			aria-label='Pending changes'
 			data-testid='draft-bar'
 			data-slot='draft-bar'
+			data-variant='floating'
 			data-pending-sorting={String(pending.sorting)}
 			data-pending-filters={String(pending.filters)}
 			data-pending-search={pending.search ? 'true' : 'false'}
@@ -100,23 +179,7 @@ export function DraftBar({ open, pending, selectedCount, onApply, onReset }: Dra
 					</>
 				)}
 
-				<div
-					data-slot='draft-bar-pending'
-					className='flex items-center gap-1.5 px-1'
-				>
-					<span className='dg-draft-bar-label font-medium text-[0.6875rem] uppercase tracking-wider'>Unapplied</span>
-
-					{parts.map((part) => (
-						<span
-							key={part.axis}
-							data-slot='draft-bar-pending-part'
-							data-axis={part.axis}
-							className='dg-draft-pill rounded-md px-1.5 py-0.5 text-xs tabular-nums'
-						>
-							{part.label}
-						</span>
-					))}
-				</div>
+				{pendingSummary}
 
 				<ActionBarItem
 					variant='ghost'

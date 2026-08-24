@@ -12,6 +12,7 @@ function makeProps(overrides: Partial<DraftBarProps> = {}): DraftBarProps {
 		open: true,
 		pending: { sorting: 1, filters: 2, search: false },
 		selectedCount: 3,
+		variant: 'floating',
 		onApply: vi.fn(),
 		onReset: vi.fn(),
 		...overrides,
@@ -43,6 +44,18 @@ describe('DraftBar (native)', () => {
 		expect(bar).toHaveAttribute('data-pending-filters', '2')
 		expect(bar).toHaveAttribute('data-pending-search', 'true')
 		expect(bar).toHaveAttribute('data-selected-count', '3')
+	})
+
+	it('renders the floating variant by default', () => {
+		render(<DraftBar {...makeProps()} />)
+
+		expect(screen.getByTestId('draft-bar')).toHaveAttribute('data-variant', 'floating')
+	})
+
+	it('passes the inline variant through', () => {
+		render(<DraftBar {...makeProps({ variant: 'inline' })} />)
+
+		expect(screen.getByTestId('draft-bar')).toHaveAttribute('data-variant', 'inline')
 	})
 
 	it('renders nothing when closed', () => {

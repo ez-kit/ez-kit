@@ -48,76 +48,57 @@ function pendingParts(pending: DraftBarProps['pending']): PendingPart[] {
  * applying a query can drop the selected rows out of the result set, so any bulk action
  * over that selection would act on a stale set. The count stays visible as context only.
  *
+ * `variant` is the same value the kit's `SelectionBar` receives — one bar, one shape — so an
+ * inline selection panel gets an inline draft bar and a floating one gets the sticky overlay.
+ *
  * `Apply` is the only primary button in the bar; `Reset` is secondary. The pending
  * segments are drawn with the same dashed, muted treatment as an unapplied filter chip,
  * so "not yet real" reads the same wherever it appears in the grid.
  */
-export function DraftBar({ open, pending, selectedCount, onApply, onReset }: DraftBarProps) {
+export function DraftBar({ open, pending, selectedCount, variant, onApply, onReset }: DraftBarProps) {
 	if (!open) return null
 
 	const parts = pendingParts(pending)
 
-	return (
-		// Zero-height sticky anchor, mirroring `SelectionBar` — see the note there for why
-		// the bar is positioned out of a 0px wrapper instead of sitting in flow.
-		<div
-			data-slot='draft-bar-anchor'
-			className='sticky bottom-2 z-10 h-0'
-		>
+	const content = (
+		<>
+			{selectedCount > 0 && (
+				<>
+					<span
+						data-slot='draft-bar-selected-chip'
+						className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-muted-foreground text-sm tabular-nums'
+					>
+						{selectedCount} selected
+					</span>
+
+					<div
+						role='separator'
+						aria-orientation='vertical'
+						aria-hidden='true'
+						className='h-6 w-px bg-border'
+					/>
+				</>
+			)}
+
 			<div
-				role='toolbar'
-				aria-orientation='horizontal'
-				aria-label='Pending changes'
-				data-testid='draft-bar'
-				data-slot='draft-bar'
-				data-state='open'
-				data-pending-sorting={String(pending.sorting)}
-				data-pending-filters={String(pending.filters)}
-				data-pending-search={pending.search ? 'true' : 'false'}
-				data-selected-count={String(selectedCount)}
-				className={cn(
-					'absolute inset-x-0 bottom-0 mx-auto w-fit',
-					'flex flex-row items-center gap-2 rounded-lg border bg-card px-2 py-1.5 shadow-lg',
-					'animate-in fade-in-0 slide-in-from-bottom-4',
-					'transition-all duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]',
-				)}
+				data-slot='draft-bar-pending'
+				className='flex items-center gap-1.5 pr-1 pl-1 text-sm'
 			>
-				{selectedCount > 0 && (
-					<>
-						<span
-							data-slot='draft-bar-selected-chip'
-							className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-muted-foreground text-sm tabular-nums'
-						>
-							{selectedCount} selected
-						</span>
+				<span className='font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wider'>Unapplied</span>
 
-						<div
-							role='separator'
-							aria-orientation='vertical'
-							aria-hidden='true'
-							className='h-6 w-px bg-border'
-						/>
-					</>
-				)}
+				{parts.map((part) => (
+					<span
+						key={part.axis}
+						data-slot='draft-bar-pending-part'
+						data-axis={part.axis}
+						className='rounded-sm border border-dashed px-1.5 py-0.5 text-muted-foreground text-xs tabular-nums'
+					>
+						{part.label}
+					</span>
+				))}
+			</div>
 
-				<div
-					data-slot='draft-bar-pending'
-					className='flex items-center gap-1.5 pr-1 pl-1 text-sm'
-				>
-					<span className='font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wider'>Unapplied</span>
-
-					{parts.map((part) => (
-						<span
-							key={part.axis}
-							data-slot='draft-bar-pending-part'
-							data-axis={part.axis}
-							className='rounded-sm border border-dashed px-1.5 py-0.5 text-muted-foreground text-xs tabular-nums'
-						>
-							{part.label}
-						</span>
-					))}
-				</div>
-
+			<div className={cn('flex items-center gap-2', variant === 'inline' && 'ml-auto')}>
 				<Button
 					variant='ghost'
 					size='sm'
@@ -137,6 +118,58 @@ export function DraftBar({ open, pending, selectedCount, onApply, onReset }: Dra
 					<Check />
 					Apply
 				</Button>
+			</div>
+		</>
+	)
+
+	if (variant === 'inline') {
+		return (
+			<div
+				role='toolbar'
+				aria-orientation='horizontal'
+				aria-label='Pending changes'
+				data-testid='draft-bar'
+				data-slot='draft-bar'
+				data-variant='inline'
+				data-state='open'
+				data-pending-sorting={String(pending.sorting)}
+				data-pending-filters={String(pending.filters)}
+				data-pending-search={pending.search ? 'true' : 'false'}
+				data-selected-count={String(selectedCount)}
+				className='mb-2 flex w-full flex-row items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm'
+			>
+				{content}
+			</div>
+		)
+	}
+
+	return (
+		// Zero-height sticky anchor, mirroring `SelectionBar` — see the note there for why
+		// the bar is positioned out of a 0px wrapper instead of sitting in flow.
+		<div
+			data-slot='draft-bar-anchor'
+			className='sticky bottom-2 z-10 h-0'
+		>
+			<div
+				role='toolbar'
+				aria-orientation='horizontal'
+				aria-label='Pending changes'
+				data-testid='draft-bar'
+				data-slot='draft-bar'
+				data-variant='floating'
+				data-state='open'
+				data-pending-sorting={String(pending.sorting)}
+				data-pending-filters={String(pending.filters)}
+				data-pending-search={pending.search ? 'true' : 'false'}
+				data-selected-count={String(selectedCount)}
+				className={cn(
+					'absolute inset-x-0 bottom-0 mx-auto w-fit',
+					'flex flex-row items-center gap-2 rounded-lg border bg-card px-2 py-1.5 shadow-lg',
+					'animate-in fade-in-0 slide-in-from-bottom-4',
+					'transition-all duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]',
+				)}
+			>
+				{content}
 			</div>
 		</div>
 	)

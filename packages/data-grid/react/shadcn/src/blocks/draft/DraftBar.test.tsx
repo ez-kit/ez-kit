@@ -12,6 +12,7 @@ function makeProps(overrides: Partial<DraftBarProps> = {}): DraftBarProps {
 		open: true,
 		pending: { sorting: 1, filters: 2, search: false },
 		selectedCount: 3,
+		variant: 'floating',
 		onApply: vi.fn(),
 		onReset: vi.fn(),
 		...overrides,
@@ -43,6 +44,20 @@ describe('DraftBar (shadcn)', () => {
 		expect(bar).toHaveAttribute('data-pending-filters', '2')
 		expect(bar).toHaveAttribute('data-pending-search', 'true')
 		expect(bar).toHaveAttribute('data-selected-count', '3')
+	})
+
+	it('renders the floating chrome by default', () => {
+		const { container } = render(<DraftBar {...makeProps()} />)
+
+		expect(screen.getByTestId('draft-bar')).toHaveAttribute('data-variant', 'floating')
+		expect(container.querySelector('[data-slot="draft-bar-anchor"]')).not.toBeNull()
+	})
+
+	it('renders in flow, without the floating anchor, under the inline variant', () => {
+		const { container } = render(<DraftBar {...makeProps({ variant: 'inline' })} />)
+
+		expect(screen.getByTestId('draft-bar')).toHaveAttribute('data-variant', 'inline')
+		expect(container.querySelector('[data-slot="draft-bar-anchor"]')).toBeNull()
 	})
 
 	it('renders nothing when closed', () => {
