@@ -18,7 +18,7 @@ function makeTable(overrides: Record<string, unknown> = {}) {
 		columns: COLUMNS,
 		sorting: { manual: true },
 		filtering: { manual: true },
-		globalFiltering: { manual: true },
+		globalFiltering: true,
 		deferredApply: true,
 		...overrides,
 	})

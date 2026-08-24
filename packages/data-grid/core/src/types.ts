@@ -190,13 +190,6 @@ export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
  */
 export type GlobalFilteringConfig = {
 	/**
-	 * Server-side mode: the grid does not filter rows locally for global search —
-	 * it only tracks `state.globalFilter` and relies on externally filtered `data`.
-	 * Mirrors {@link SortingConfig.manual} / {@link FilteringConfig.manual}; required
-	 * on at least one axis when {@link TableConfig.deferredApply} is on.
-	 */
-	manual?: boolean
-	/**
 	 * Function applied during global search.
 	 * - `string` — resolved against {@link GlobalFilteringConfig.fns} registry first,
 	 *   then against TanStack's built-in filter fns (`'includesString'`, etc.).
