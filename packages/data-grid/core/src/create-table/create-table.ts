@@ -84,7 +84,22 @@ function normalizePinning(pinning: boolean | PinningConfig | undefined): {
  * @example
  * const table = createTable({ data: users, columns, sorting: true })
  */
+/** Axes whose deferred draft `syncControlledState` must not let controlled input clobber. */
+const DRAFT_AXES = ['sorting', 'columnFilters', 'globalFilter'] as const
+
 export function createTable<TRow extends object>(config: TableConfig<TRow>): DataTable<TRow> {
+	if (config.deferredApply === true) {
+		const sortingManual = typeof config.sorting === 'object' && config.sorting.manual === true
+		const filteringManual = typeof config.filtering === 'object' && config.filtering.manual === true
+		if (!sortingManual && !filteringManual) {
+			throw new Error(
+				'deferredApply requires `manual: true` on at least one of `sorting` or `filtering`. ' +
+					'Client-side deferral is not supported: without manual mode the row models recompute ' +
+					'on every draft edit, so nothing is actually deferred.',
+			)
+		}
+	}
+
 	let store = createStore<TableState>({} as TableState)
 
 	// ── row identity ─────────────────────────────────────────────────────────
@@ -453,7 +468,16 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	}
 
 	dataTable.syncControlledState = (partial, options) => {
-		const safe = enforceColumnInvariants(partial, columnInvariants)
+		// While a draft is pending, the consumer only ever saw the last APPLIED query —
+		// what it mirrors back for the three deferrable axes is stale by construction.
+		// Accepting it would silently discard whatever the user is composing.
+		const incoming =
+			deferred && ref.table?.draft.isDirty() === true
+				? (Object.fromEntries(
+						Object.entries(partial).filter(([key]) => !(DRAFT_AXES as readonly string[]).includes(key)),
+					) as typeof partial)
+				: partial
+		const safe = enforceColumnInvariants(incoming, columnInvariants)
 		ref.table?.setOptions((prev) => ({
 			...prev,
 			state: { ...prev.state, ...safe },

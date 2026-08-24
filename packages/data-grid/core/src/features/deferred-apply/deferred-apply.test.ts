@@ -235,3 +235,39 @@ describe('deferredApply — emission gating', () => {
 		expect(table.draft.isDirty()).toBe(false)
 	})
 })
+
+describe('deferredApply — controlled input and misconfiguration', () => {
+	it('does not let controlled state clobber a pending draft', () => {
+		const table = makeTable()
+		table.setSorting([{ id: 'age', desc: true }])
+
+		// The consumer mirrors back what it last saw — the APPLIED query.
+		table.syncControlledState({ sorting: [] })
+
+		expect(table.getState().sorting).toEqual([{ id: 'age', desc: true }])
+	})
+
+	it('accepts controlled updates to non-deferred slices while dirty', () => {
+		const table = makeTable({ pagination: { manual: true, pageSize: 10, rowCount: 100 } })
+		table.setSorting([{ id: 'age', desc: true }])
+
+		table.syncControlledState({ pagination: { pageIndex: 2, pageSize: 10 } })
+
+		expect(table.getState().pagination.pageIndex).toBe(2)
+		expect(table.getState().sorting).toEqual([{ id: 'age', desc: true }])
+	})
+
+	it('accepts controlled updates to the deferred axes once clean', () => {
+		const table = makeTable()
+
+		table.syncControlledState({ sorting: [{ id: 'name', desc: false }] })
+
+		expect(table.getState().sorting).toEqual([{ id: 'name', desc: false }])
+	})
+
+	it('throws when deferredApply is set without a manual axis', () => {
+		expect(() => createTable({ data: DATA, columns: COLUMNS, sorting: true, deferredApply: true })).toThrow(
+			/deferredApply requires/,
+		)
+	})
+})
