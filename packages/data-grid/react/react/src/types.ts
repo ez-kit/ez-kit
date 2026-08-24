@@ -297,6 +297,12 @@ export type FilterChipProps = {
 	onRemove: () => void
 	/** Where the filter comes from. Kits may style column vs. global chips differently. */
 	kind: FilterChipKind
+	/**
+	 * True when this filter is part of the not-yet-applied draft under `deferredApply` — i.e.
+	 * it differs from (or is absent from) `table.getState().applied`. Kits render this as
+	 * `data-draft-filter=""` on the chip's root element.
+	 */
+	isDraft: boolean
 }
 
 export type ClearFiltersButtonComponentProps = {

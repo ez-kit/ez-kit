@@ -54,6 +54,12 @@ function renderValueDisplay(rawValue: unknown, operators?: FilterOperatorDef[]):
 	return renderInnerValue(rawValue)
 }
 
+/** Reference-and-value comparison good enough to detect a pending filter draft. */
+function sameFilterValue(a: unknown, b: unknown): boolean {
+	if (a === b) return true
+	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function columnLabel(column: Column<any>): string {
 	const header = column.columnDef.header
@@ -79,6 +85,8 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
 	const columnFilters = table.getState().columnFilters
 	const globalFilter = table.getState().globalFilter as unknown
+	const deferredApply = table.options.deferredApply === true
+	const applied = table.getState().applied
 
 	type ChipDescriptor = {
 		key: string
@@ -86,6 +94,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 		value: ReactNode
 		onRemove: () => void
 		kind: 'column' | 'global'
+		isDraft: boolean
 	}
 
 	const chips: ChipDescriptor[] = []
@@ -97,6 +106,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 			?.resolvedOperators
 		const display = renderValueDisplay(cf.value, operators)
 		if (display == null || display === '') continue
+		const appliedFilter = applied.columnFilters.find((a) => a.id === cf.id)
 		chips.push({
 			key: `column:${cf.id}`,
 			label: columnLabel(column),
@@ -105,6 +115,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 				column.setFilterValue(undefined)
 			},
 			kind: 'column',
+			isDraft: deferredApply && !sameFilterValue(appliedFilter?.value, cf.value),
 		})
 	}
 
@@ -117,6 +128,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 				table.setGlobalFilter(undefined)
 			},
 			kind: 'global',
+			isDraft: deferredApply && !sameFilterValue(applied.globalFilter, globalFilter),
 		})
 	}
 
@@ -134,6 +146,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 					value={c.value}
 					onRemove={c.onRemove}
 					kind={c.kind}
+					isDraft={c.isDraft}
 				/>
 			))}
 		</div>

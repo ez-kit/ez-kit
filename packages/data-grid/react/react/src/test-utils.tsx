@@ -532,11 +532,12 @@ function TestFilterPanelChip({ label, valueDisplay, hasValue, onClear, children 
 		</span>
 	)
 }
-function TestFilterChip({ label, value, onRemove, kind }: FilterChipProps) {
+function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipProps) {
 	return (
 		<span
 			data-slot='filter-chip'
 			data-chip-kind={kind}
+			{...(isDraft ? { 'data-draft-filter': '' } : {})}
 			style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', border: '1px solid #ccc' }}
 		>
 			<strong>{label}</strong>

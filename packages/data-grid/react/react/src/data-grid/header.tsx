@@ -17,11 +17,33 @@ import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridInstance, useDataGridStore } from './table-context'
 
+import type { DataTable } from '@ez-kit/data-grid-core'
 import type { KeyboardEvent } from 'react'
 
 type HeaderProps = {
 	/** When true, adds `data-sticky="true"` to the thead for structural CSS targeting. */
 	stickyHeader?: boolean
+}
+
+/**
+ * Position of `columnId` in the not-yet-applied sort under `deferredApply`, or `-1` when the
+ * column isn't part of a pending sort.
+ *
+ * Compares the draft entry at each index against the applied entry at the same index — not a
+ * global "something is dirty" check — so a column whose own sort is unchanged stays unmarked
+ * even while a sibling column's sort (or an unrelated filter) is pending.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function computeDraftSortIndex(table: DataTable<any>, columnId: string): number {
+	if (table.options.deferredApply !== true) return -1
+	const draftSorting = table.draft.get().sorting
+	const appliedSorting = table.getState().applied.sorting
+	const draftIndex = draftSorting.findIndex((s) => s.id === columnId)
+	if (draftIndex < 0) return -1
+	const draftEntry = draftSorting[draftIndex]
+	const appliedEntry = appliedSorting[draftIndex]
+	const unchanged = appliedEntry?.id === draftEntry?.id && appliedEntry?.desc === draftEntry?.desc
+	return unchanged ? -1 : draftIndex
 }
 
 /**
@@ -66,6 +88,8 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * - `data-slot="thead" | "tr" | "th" | "header-main" | "sort-trigger" | "header-extras"`
  * - `data-sticky="true"` on the thead when sticky header is on
  * - `data-sortable="true"` and `data-sort-direction="asc | desc | none"` on sortable headers
+ * - `data-draft-sorting="<index>"` on a `<th>` whose sort is pending under `deferredApply`
+ *   (the column's position in the not-yet-applied sort array)
  *
  * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
  * structural CSS reads them on `[data-pinned]` elements.
@@ -140,6 +164,9 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 						const isPinningDisabled = colPinDef === false
 						const isMenuEligible = !meta?.isSystemColumn && !header.isPlaceholder
 
+						const draftSortIndex = computeDraftSortIndex(table, header.column.id)
+						const draftSortAttrs = draftSortIndex >= 0 ? { 'data-draft-sorting': String(draftSortIndex) } : {}
+
 						const menuSections = buildColumnMenuSections(header, {
 							canSort: canSort && !header.isPlaceholder,
 							canPin: Boolean(colPinEnabled) && isMenuEligible && !isPinningDisabled && !isStaticPin,
@@ -184,6 +211,7 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 								pinned={pinned}
 								{...(pinned ? { 'data-pinned': pinned } : {})}
 								{...(canResize ? { 'data-resizable': 'true' } : {})}
+								{...draftSortAttrs}
 							>
 								{(() => {
 									const canFilter =

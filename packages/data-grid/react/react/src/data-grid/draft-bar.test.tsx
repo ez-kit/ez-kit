@@ -49,3 +49,77 @@ describe('DraftBar', () => {
 		expect(table.getState().sorting).toEqual([])
 	})
 })
+
+describe('deferred-apply DOM marks', () => {
+	it('marks an unapplied sort on the header cell', async () => {
+		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+
+		table.setSorting([{ id: 'age', desc: true }])
+
+		const header = await screen.findByRole('columnheader', { name: /age/i })
+		expect(header).toHaveAttribute('data-draft-sorting', '0')
+	})
+
+	it('drops the mark once the draft is applied', async () => {
+		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+		table.setSorting([{ id: 'age', desc: true }])
+
+		table.draft.apply()
+
+		const header = await screen.findByRole('columnheader', { name: /age/i })
+		expect(header).not.toHaveAttribute('data-draft-sorting')
+	})
+
+	it('leaves an untouched sortable header unmarked while another column is drafted', async () => {
+		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+
+		table.setSorting([{ id: 'name', desc: false }])
+		table.draft.apply()
+
+		table.setSorting([
+			{ id: 'name', desc: false },
+			{ id: 'age', desc: true },
+		])
+
+		const nameHeader = await screen.findByRole('columnheader', { name: /name/i })
+		const ageHeader = await screen.findByRole('columnheader', { name: /age/i })
+		expect(nameHeader).not.toHaveAttribute('data-draft-sorting')
+		expect(ageHeader).toHaveAttribute('data-draft-sorting', '1')
+	})
+
+	it('has no data-draft-sorting when deferredApply is off', async () => {
+		const { table } = renderGrid({ sorting: true })
+
+		table.setSorting([{ id: 'age', desc: true }])
+
+		const header = await screen.findByRole('columnheader', { name: /age/i })
+		expect(header).not.toHaveAttribute('data-draft-sorting')
+	})
+
+	it('marks an unapplied column filter chip with data-draft-filter', async () => {
+		const { table } = renderGrid({
+			deferredApply: true,
+			sorting: { manual: true },
+			filtering: { manual: true, chips: true },
+		})
+
+		table.getColumn('name')?.setFilterValue('ali')
+
+		const chip = await screen.findByText('ali')
+		expect(chip.closest("[data-slot='filter-chip']")).toHaveAttribute('data-draft-filter', '')
+	})
+
+	it('drops data-draft-filter once the filter draft is applied', async () => {
+		const { table } = renderGrid({
+			deferredApply: true,
+			sorting: { manual: true },
+			filtering: { manual: true, chips: true },
+		})
+
+		table.getColumn('name')?.setFilterValue('ali')
+		table.draft.apply()
+
+		const chip = await screen.findByText('ali')
+		expect(chip.closest("[data-slot='filter-chip']")).not.toHaveAttribute('data-draft-filter')
+	})
+})
