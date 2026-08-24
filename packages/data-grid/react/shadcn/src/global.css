@@ -270,3 +270,40 @@ tr[data-depth='5'] [data-system-column='expand'] {
 tr[data-depth='5'] [data-system-column='expand'] + td {
 	padding-left: 5rem;
 }
+
+/* ---- Deferred apply: the "not yet real" treatment ----
+ * Three surfaces carry it — a drafted sort on a header cell, a drafted filter chip, and
+ * the pending pills inside the draft bar — and they must read as one idea: outlined
+ * instead of filled, muted instead of foreground. A dashed outline over `--muted-foreground`
+ * inherits both themes from the token set, so nothing here needs a `.dark` twin.
+ *
+ * `data-draft-sorting` is spread by `@ez-kit/data-grid-react` onto the `<th>` and carries the
+ * column's position in the *draft* sort order, which is exactly the piece the applied sort
+ * indicator cannot show yet — so we print it rather than inventing a second indicator. */
+
+[data-slot='th'][data-draft-sorting] {
+	color: var(--muted-foreground);
+}
+
+[data-slot='th'][data-draft-sorting]::after {
+	content: attr(data-draft-sorting);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.125rem;
+	height: 1.125rem;
+	margin-inline-start: 0.375rem;
+	padding-inline: 0.25rem;
+	border: 1px dashed var(--border);
+	border-radius: calc(var(--radius) - 4px);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	vertical-align: middle;
+}
+
+[data-slot='filter-chip'][data-draft-filter] {
+	background-color: transparent;
+	border: 1px dashed var(--border);
+	color: var(--muted-foreground);
+}

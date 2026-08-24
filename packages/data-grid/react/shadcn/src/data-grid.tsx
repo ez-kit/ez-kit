@@ -8,6 +8,7 @@ import { Checkbox } from './blocks/core/Checkbox'
 import { Menu } from './blocks/core/Menu'
 import { Td } from './blocks/core/Td'
 import { Toolbar } from './blocks/core/Toolbar'
+import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
 import { FormShell } from './blocks/editing/FormShell'
 import { Modal } from './blocks/editing/Modal'
@@ -69,6 +70,7 @@ const components = {
 	},
 	editing: { Modal, FormShell, ConfirmDialog, NumberInput },
 	selection: { SelectionBar },
+	draft: { DraftBar },
 	'row-actions': { ActionsCell },
 	resizing: { Resizer },
 	'column-visibility': { ColumnVisibilityMenu },
