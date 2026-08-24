@@ -34,8 +34,12 @@ export type PendingCount = {
 
 export type DraftApi = {
 	get: () => QueryDraft
+	set: (next: Partial<QueryDraft>) => void
 	isDirty: () => boolean
 	getPendingCount: () => PendingCount
+	apply: () => void
+	reset: () => void
+	resetAxis: (axis: DraftAxis) => void
 }
 
 declare module '@tanstack/table-core' {
@@ -95,38 +99,75 @@ export const DeferredApplyFeature: TableFeature<RowData> = {
 			return { sorting: s.sorting, columnFilters: s.columnFilters, globalFilter: s.globalFilter }
 		}
 
-		table.draft = {
-			get,
-			isDirty: () => {
-				const { applied } = table.getState()
-				const live = get()
-				return (
-					!sameAxis(live.sorting, applied.sorting) ||
-					!sameAxis(live.columnFilters, applied.columnFilters) ||
-					!sameAxis(live.globalFilter, applied.globalFilter)
-				)
-			},
-			getPendingCount: () => {
-				const { applied } = table.getState()
-				const live = get()
-				const changedFilters = live.columnFilters.filter(
-					(f) =>
-						!sameAxis(
-							f,
-							applied.columnFilters.find((a) => a.id === f.id),
-						),
-				).length
-				const removedFilters = applied.columnFilters.filter(
-					(a) => !live.columnFilters.some((f) => f.id === a.id),
-				).length
-				const changedSorts = live.sorting.filter((s, i) => !sameAxis(s, applied.sorting[i])).length
-				const removedSorts = Math.max(applied.sorting.length - live.sorting.length, 0)
-				return {
-					sorting: changedSorts + removedSorts,
-					filters: changedFilters + removedFilters,
-					search: !sameAxis(live.globalFilter, applied.globalFilter),
-				}
-			},
+		const isDirty = (): boolean => {
+			const { applied } = table.getState()
+			const live = get()
+			return (
+				!sameAxis(live.sorting, applied.sorting) ||
+				!sameAxis(live.columnFilters, applied.columnFilters) ||
+				!sameAxis(live.globalFilter, applied.globalFilter)
+			)
 		}
+
+		const getPendingCount = (): PendingCount => {
+			const { applied } = table.getState()
+			const live = get()
+			const changedFilters = live.columnFilters.filter(
+				(f) =>
+					!sameAxis(
+						f,
+						applied.columnFilters.find((a) => a.id === f.id),
+					),
+			).length
+			const removedFilters = applied.columnFilters.filter((a) => !live.columnFilters.some((f) => f.id === a.id)).length
+			const changedSorts = live.sorting.filter((s, i) => !sameAxis(s, applied.sorting[i])).length
+			const removedSorts = Math.max(applied.sorting.length - live.sorting.length, 0)
+			return {
+				sorting: changedSorts + removedSorts,
+				filters: changedFilters + removedFilters,
+				search: !sameAxis(live.globalFilter, applied.globalFilter),
+			}
+		}
+
+		const set = (next: Partial<QueryDraft>): void => {
+			table.setState((state) => ({
+				...state,
+				...(next.sorting !== undefined ? { sorting: next.sorting } : {}),
+				...(next.columnFilters !== undefined ? { columnFilters: next.columnFilters } : {}),
+				...('globalFilter' in next ? { globalFilter: next.globalFilter } : {}),
+			}))
+		}
+
+		// One `setState` on purpose: the pageIndex reset, the selection clear and the
+		// snapshot move must land in a single state change, or the funnel emits twice
+		// and the consumer fires two requests — the exact thing this feature exists
+		// to prevent.
+		const apply = (): void => {
+			table.setState((state) => ({
+				...state,
+				applied: {
+					sorting: state.sorting,
+					columnFilters: state.columnFilters,
+					globalFilter: state.globalFilter,
+				},
+				pagination: { ...state.pagination, pageIndex: 0 },
+				rowSelection: {},
+			}))
+		}
+
+		const reset = (): void => {
+			table.setState((state) => ({
+				...state,
+				sorting: state.applied.sorting,
+				columnFilters: state.applied.columnFilters,
+				globalFilter: state.applied.globalFilter,
+			}))
+		}
+
+		const resetAxis = (axis: DraftAxis): void => {
+			table.setState((state) => ({ ...state, [axis]: state.applied[axis] }))
+		}
+
+		table.draft = { get, set, isDirty, getPendingCount, apply, reset, resetAxis }
 	},
 }

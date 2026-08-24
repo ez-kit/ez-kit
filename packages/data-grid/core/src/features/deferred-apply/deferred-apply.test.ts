@@ -76,3 +76,69 @@ describe('deferredApply — applied snapshot', () => {
 		expect(table.draft.isDirty()).toBe(true)
 	})
 })
+
+describe('deferredApply — apply / reset', () => {
+	it('apply() moves the draft into the applied snapshot and clears dirtiness', () => {
+		const table = makeTable()
+		table.setSorting([{ id: 'age', desc: true }])
+
+		table.draft.apply()
+
+		expect(table.draft.isDirty()).toBe(false)
+		expect(table.getState().applied.sorting).toEqual([{ id: 'age', desc: true }])
+	})
+
+	it('apply() resets pageIndex to 0 in the same state change', () => {
+		const table = makeTable({ pagination: { manual: true, pageSize: 10, rowCount: 100 } })
+		table.setPageIndex(3)
+		table.setColumnFilters([{ id: 'name', value: 'An' }])
+
+		table.draft.apply()
+
+		expect(table.getState().pagination.pageIndex).toBe(0)
+	})
+
+	it('apply() clears the row selection', () => {
+		const table = makeTable({ selection: true })
+		table.setRowSelection({ '1': true })
+		table.setSorting([{ id: 'age', desc: true }])
+
+		table.draft.apply()
+
+		expect(table.getState().rowSelection).toEqual({})
+	})
+
+	it('reset() restores the live axes from the applied snapshot', () => {
+		const table = makeTable()
+		table.setSorting([{ id: 'age', desc: true }])
+		table.setColumnFilters([{ id: 'name', value: 'An' }])
+
+		table.draft.reset()
+
+		expect(table.draft.isDirty()).toBe(false)
+		expect(table.getState().sorting).toEqual([])
+		expect(table.getState().columnFilters).toEqual([])
+	})
+
+	it('resetAxis() backs out one axis and leaves the others pending', () => {
+		const table = makeTable()
+		table.setSorting([{ id: 'age', desc: true }])
+		table.setColumnFilters([{ id: 'name', value: 'An' }])
+
+		table.draft.resetAxis('sorting')
+
+		expect(table.getState().sorting).toEqual([])
+		expect(table.getState().columnFilters).toEqual([{ id: 'name', value: 'An' }])
+		expect(table.draft.isDirty()).toBe(true)
+	})
+
+	it('set() writes draft values without touching the applied snapshot', () => {
+		const table = makeTable()
+
+		table.draft.set({ globalFilter: 'bob' })
+
+		expect(table.getState().globalFilter).toBe('bob')
+		expect(table.getState().applied.globalFilter).toBeUndefined()
+		expect(table.draft.isDirty()).toBe(true)
+	})
+})
