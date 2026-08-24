@@ -1,4 +1,4 @@
-# Data Grid — Draft Query (deferred filters & sorting)
+# Data Grid — Deferred Apply (batched filters & sorting)
 
 **Date:** 2026-08-24
 **Status:** Design approved, not implemented
@@ -35,7 +35,7 @@ exactly once, when the user applies them.
 ## Query axes
 
 Fixed by the feature, not configurable. There is no setting that selects "what counts
-as a query" — `query.draft` controls only _when_ these axes leave the grid.
+as a query" — `deferredApply` controls only _when_ these axes leave the grid.
 
 | Slice                                                                          | Part of the query | Deferrable                   |
 | ------------------------------------------------------------------------------ | ----------------- | ---------------------------- |
@@ -58,7 +58,7 @@ createDataGrid({
 	globalFiltering: { manual: true },
 	pagination: { manual: true, rowCount },
 
-	query: { draft: true },
+	deferredApply: true,
 
 	onStateChange: (updater) => {
 		setState(updater)
@@ -75,16 +75,27 @@ Turning the flag on changes only _when_ it fires.
 Table namespace:
 
 ```ts
-table.query.isDirty(): boolean
-table.query.getPendingCount(): { sorting: number; filters: number; search: boolean }
-table.query.getDraft(): QueryDraft
-table.query.setDraft(next: Partial<QueryDraft>): void
-table.query.apply(): void
-table.query.reset(): void
-table.query.resetAxis(axis: QueryAxis): void
+table.draft.isDirty(): boolean
+table.draft.getPendingCount(): { sorting: number; filters: number; search: boolean }
+table.draft.get(): QueryDraft
+table.draft.set(next: Partial<QueryDraft>): void
+table.draft.apply(): void
+table.draft.reset(): void
+table.draft.resetAxis(axis: QueryAxis): void
 ```
 
-`query: { draft: true }` without `manual: true` on at least one deferrable axis is a
+Two vocabularies on purpose. The config key names a **mode** — application is deferred.
+The runtime names the **object** that mode produces — what the user has typed but not
+yet applied is a draft. They are different kinds of thing, and the sentence binding them
+is self-evident: application is deferred, so until then what you typed is a draft.
+
+`draft` was rejected as the config key. Top-level keys in this config name capabilities
+(`sorting`, `filtering`, `selection`, `creating`, `editing`), and a bare `draft: true`
+sitting beside `creating` and `editing` reads as _draft rows_ — unsaved records — which
+is precisely the deferred-mutations feature listed as out of scope above. A name whose
+most likely misreading is a neighbouring roadmap item is the wrong name.
+
+`deferredApply` without `manual: true` on at least one deferrable axis is a
 **dev-time error** at table creation. Client-side deferral is out of scope, and failing
 loudly beats a flag that silently does nothing.
 
@@ -92,13 +103,13 @@ loudly beats a flag that silently does nothing.
 
 The grid owns the draft. This is the load-bearing decision; everything else follows.
 
-- `state.query.draft` holds the draft values for the three deferrable axes.
+- `state.draft` holds the draft values for the three deferrable axes.
 - `state.sorting` / `state.columnFilters` / `state.globalFilter` hold the **applied**
   values — the query the server has actually seen.
 - The state handed to TanStack merges the draft over the applied values, so headers,
   filter chips and the toolbar render the draft.
 - The state emitted through `onStateChange` carries the applied values, with
-  `state.query.draft` stripped. When that stripped state is unchanged — which is every
+  `state.draft` stripped. When that stripped state is unchanged — which is every
   draft edit — **`onStateChange` is not called at all.** Emitting an identical snapshot
   would be noise at best and a refetch at worst, and skipping it makes "`onStateChange`
   fires ⇒ the query changed" literally true rather than merely usually true.
@@ -110,7 +121,7 @@ draft was never theirs to lose.
 
 **Rejected alternative:** letting the draft ride in the ordinary state slices and
 distinguishing the two kinds of change with a meta argument
-(`onStateChange(updater, { query: 'draft' | 'applied' | 'unchanged' })`). Cheaper — no
+(`onStateChange(updater, { apply: 'draft' | 'applied' | 'unchanged' })`). Cheaper — no
 merge layer — but it leaks a transient, local value into every state snapshot, into URL
 sync and into any server cache keyed on state, and every consumer has to learn to
 ignore it. Rejected in favour of a smaller public surface at the cost of one internal
@@ -122,14 +133,14 @@ The draft does not participate in the controlled loop, but it is readable, seeda
 writable:
 
 ```ts
-const draft = useDataGridSelector(grid, (s) => s.query.draft)
+const draft = useDataGridSelector(grid, (s) => s.draft)
 
 createDataGrid({
-	query: { draft: true },
-	initialState: { query: { draft: restoredFromStorage } },
+	deferredApply: true,
+	initialState: { draft: restoredFromStorage },
 })
 
-table.query.setDraft({ columnFilters })
+table.draft.set({ columnFilters })
 ```
 
 Seed + observe + imperative write covers persistence (localStorage, IndexedDB, a
@@ -142,7 +153,7 @@ belongs in the applied query.
 ## Lifecycle
 
 ```
-header click     state.query.draft.sorting updated
+header click     state.draft.sorting updated
                  applied sorting untouched
                  outward state unchanged → onStateChange NOT called
                  action bar shows "Sorting 1 · Reset / Apply"
@@ -170,9 +181,9 @@ Two details that are easy to get wrong:
 - **`applied` is seeded from `initialState`** so a grid with an initial sort is not born
   dirty.
 
-With the flag off, `state.query.draft` is always empty and every query change is applied
+With the flag off, `state.draft` is always empty and every query change is applied
 on the spot. The feature's own tests must cover that path too: a table without
-`query.draft` must behave byte-for-byte as it does today.
+`deferredApply` must behave byte-for-byte as it does today.
 
 ## Reset semantics
 
@@ -194,7 +205,7 @@ The reason is behavioural, not visual: **applying a query invalidates the select
 Rows selected before a filter change may not survive it, so bulk actions over that
 selection are actions over a stale set.
 
-- `table.query.isDirty()` → the bar belongs to the query: a compact "3 selected" chip on
+- `table.draft.isDirty()` → the bar belongs to the query: a compact "3 selected" chip on
   the left for context with no actions of its own, `Reset` / `Apply` on the right.
 - Otherwise → the bar is the selection bar as it is today.
 - `apply()` clears the selection. Carrying a stale selection across a query change is
@@ -227,10 +238,10 @@ progress reaches the grid.
   `onStateChange` call; `apply()` emits exactly one
   state change carrying every axis plus the `pageIndex` reset; `reset()` and
   `resetAxis()` restore from applied; `applied` seeds from `initialState`; the flag off
-  is behaviourally identical to today; `query.draft` without any `manual` axis throws at
+  is behaviourally identical to today; `deferredApply` without any `manual` axis throws at
   creation.
 - **react** — controlled mode round-trips without the draft escaping; the draft survives
-  a re-render driven by a controlled state update; `setDraft` and `initialState` seeding;
+  a re-render driven by a controlled state update; `draft.set()` and `initialState` seeding;
   bar priority flips with `isDirty()`; `apply()` clears the selection.
 - **kits** — `data-draft-*` attributes reach the DOM and both kits style them; the bar
   renders each of its three shapes (selection only, query only, both).
