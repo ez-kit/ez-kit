@@ -12,6 +12,9 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { PaginationVariant } from './types'
 import type {
 	ConfirmationOptions,
+	CreatingConfig,
+	DeletingConfig,
+	EditingConfig,
 	ExpandingConfig,
 	FilteringConfig,
 	GlobalFilteringConfig,
@@ -464,6 +467,36 @@ export type UseDataGridConfig<TRow extends object> = {
 	}
 
 /**
+ * A write feature is enabled by its handler, not by its presence in the merged options.
+ *
+ * `creating`, `editing` and `deleting` can be described by a defaults layer
+ * ({@link DataGridOptionsProvider} or the kit factory) that has no handler to give — it only
+ * knows how a write should *look*. A grid that supplies no `onSave` / `onDelete` therefore
+ * resolves the feature away instead of rendering a trigger whose commit would call `undefined`.
+ */
+function enabledByHandler<TConfig extends object>(config: TConfig | undefined, handler: keyof TConfig) {
+	if (config === undefined) return undefined
+	return typeof config[handler] === 'function' ? config : undefined
+}
+
+/**
+ * Builds the write-feature slice of the table options, omitting every feature that resolved
+ * to `undefined` — the keys are optional under `exactOptionalPropertyTypes`, so they must be
+ * absent rather than set to `undefined`.
+ */
+function writeFeatureOptions<TRow extends object>(
+	creating: CreatingConfig<TRow> | undefined,
+	editing: EditingConfig<TRow> | undefined,
+	deleting: DeletingConfig<TRow> | undefined,
+) {
+	return {
+		...(creating !== undefined ? { creating } : {}),
+		...(editing !== undefined ? { editing } : {}),
+		...(deleting !== undefined ? { deleting } : {}),
+	}
+}
+
+/**
  * React hook that constructs a {@link DataGridInstance} once and returns it on
  * every render. The instance is stable across renders — the underlying table
  * is created exactly once.
@@ -491,6 +524,9 @@ export function useDataGrid<TRow extends object>(
 ): DataGridInstance<TRow> {
 	const providerDefaults = useDataGridOptions<TRow>()
 	const config = mergeGridOptionLayers(factoryDefaults, providerDefaults, instanceConfig)
+	const creating = enabledByHandler(config.creating, 'onSave')
+	const editing = enabledByHandler(config.editing, 'onSave')
+	const deleting = enabledByHandler(config.deleting, 'onDelete')
 	const {
 		cellTypes,
 		selection: rawSelection,
@@ -641,6 +677,7 @@ export function useDataGrid<TRow extends object>(
 	instanceRef.current ??= createDataGridInstance(
 		createTable({
 			...restConfig,
+			...writeFeatureOptions(creating, editing, deleting),
 			filtering: coreFiltering,
 			globalFiltering: coreGlobalFiltering,
 			expanding: coreExpanding,
@@ -693,12 +730,12 @@ export function useDataGrid<TRow extends object>(
 
 	// Re-sync feature configs every render so callbacks (e.g. creating.onSave)
 	// see the latest captured props/state instead of the closure from first mount.
-	table.setOptions((prev) => ({
-		...prev,
-		...(config.creating !== undefined ? { creating: config.creating } : {}),
-		...(config.editing !== undefined ? { editing: config.editing } : {}),
-		...(config.deleting !== undefined ? { deleting: config.deleting } : {}),
-	}))
+	// The three keys are dropped before being re-added so a grid that stops supplying a
+	// handler clears the feature instead of keeping the config the previous render set.
+	table.setOptions((prev) => {
+		const { creating: _creating, editing: _editing, deleting: _deleting, ...rest } = prev
+		return { ...rest, ...writeFeatureOptions(creating, editing, deleting) }
+	})
 
 	// Store cellTypes on the table instance so DataGrid can read without an extra prop
 	const cellTypesRef = useRef(cellTypes)

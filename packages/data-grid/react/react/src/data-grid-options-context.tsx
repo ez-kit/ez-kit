@@ -3,6 +3,7 @@ import { createContext, useContext, useMemo } from 'react'
 import { deepMerge } from './utils/deep-merge'
 
 import type { UseDataGridConfig } from './use-data-grid'
+import type { CreatingConfig, DeletingConfig, EditingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -15,14 +16,33 @@ import type { ReactNode } from 'react'
  *
  * Excludes the per-instance data inputs and controlled-state bindings — `data`, `columns`,
  * `state`, `onStateChange` — which are meaningless as shared application defaults.
+ *
+ * `creating`, `editing` and `deleting` keep their full shape except for the callback that
+ * makes them run: a defaults layer describes *how* a write looks (`mode`, `confirmation`)
+ * for every grid in the app, while the grid that supplies `onSave` / `onDelete` is the one
+ * that actually gets the feature. A grid left without a handler resolves the feature away
+ * rather than rendering a trigger that would throw on commit — see `useDataGrid`.
  */
 export type DataGridDefaultOptions<TRow extends object> = Omit<
 	UseDataGridConfig<TRow>,
-	'data' | 'columns' | 'state' | 'onStateChange'
->
+	'data' | 'columns' | 'state' | 'onStateChange' | 'creating' | 'editing' | 'deleting'
+> & {
+	/** How create looks. The grid that supplies `onSave` decides whether it exists at all. */
+	creating?: PartialBy<CreatingConfig<TRow>, 'onSave'>
+	/** How edit looks. The grid that supplies `onSave` decides whether it exists at all. */
+	editing?: PartialBy<EditingConfig<TRow>, 'onSave'>
+	/** How delete looks. The grid that supplies `onDelete` decides whether it exists at all. */
+	deleting?: PartialBy<DeletingConfig<TRow>, 'onDelete'>
+}
 
 /** Alias used at the context boundary where the row type is erased (mirrors the cell-type registry). */
 type AnyDefaultOptions = DataGridDefaultOptions<object>
+
+/**
+ * `TConfig` with `TKey` made optional — relaxes the callbacks that are required on an
+ * instance config but cannot be supplied by a shared defaults layer.
+ */
+type PartialBy<TConfig, TKey extends keyof TConfig> = Omit<TConfig, TKey> & Partial<Pick<TConfig, TKey>>
 
 /** Untyped record view used when handing options to the row-agnostic {@link deepMerge}. */
 type OptionsRecord = Record<string, unknown>

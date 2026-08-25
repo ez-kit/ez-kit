@@ -1,6 +1,6 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 import { COLUMN_VISIBILITY_KEY, SELECTION_PANEL_KEY, SORTING_KEY, useDataGrid } from './use-data-grid'
@@ -109,5 +109,80 @@ describe('useDataGrid without a provider', () => {
 	it('applies factory defaults passed as the base layer', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }, { sorting: true }))
 		expect(symbols(result.current.table)[SORTING_KEY]).toBe(true)
+	})
+})
+
+describe('write features are enabled by their callback', () => {
+	const makeWrapper = (defaults: DataGridDefaultOptions<User>) =>
+		function OptionsWrapper({ children }: { children: ReactNode }) {
+			return <DataGridOptionsProvider defaults={defaults}>{children}</DataGridOptionsProvider>
+		}
+
+	it('merges a provider-supplied creating.mode with the instance onSave', () => {
+		const onSave = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, creating: { onSave } }), {
+			wrapper: makeWrapper({ creating: { mode: 'modal' } }),
+		})
+		expect(result.current.table.options.creating).toEqual({ mode: 'modal', onSave })
+	})
+
+	it('leaves creating off for a grid that supplies no onSave', () => {
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
+			wrapper: makeWrapper({ creating: { mode: 'modal' } }),
+		})
+		expect(result.current.table.options.creating).toBeUndefined()
+	})
+
+	it('merges a provider-supplied editing.mode with the instance onSave', () => {
+		const onSave = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, editing: { onSave } }), {
+			wrapper: makeWrapper({ editing: { mode: 'modal' } }),
+		})
+		expect(result.current.table.options.editing).toEqual({ mode: 'modal', onSave })
+	})
+
+	it('leaves editing off for a grid that supplies no onSave', () => {
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
+			wrapper: makeWrapper({ editing: { mode: 'modal' } }),
+		})
+		expect(result.current.table.options.editing).toBeUndefined()
+	})
+
+	it('merges a provider-supplied deleting.confirmation with the instance onDelete', () => {
+		const onDelete = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, deleting: { onDelete } }), {
+			wrapper: makeWrapper({ deleting: { confirmation: { title: 'Delete?' } } }),
+		})
+		expect(result.current.table.options.deleting).toEqual({ confirmation: { title: 'Delete?' }, onDelete })
+	})
+
+	it('leaves deleting off for a grid that supplies no onDelete', () => {
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
+			wrapper: makeWrapper({ deleting: { confirmation: true } }),
+		})
+		expect(result.current.table.options.deleting).toBeUndefined()
+	})
+
+	it('keeps an instance-only write config untouched', () => {
+		const onDelete = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, deleting: { onDelete } }))
+		expect(result.current.table.options.deleting).toEqual({ onDelete })
+	})
+
+	it('drops the feature again when the grid stops supplying its callback', () => {
+		const onSave = vi.fn()
+		const { result, rerender } = renderHook(
+			({ withHandler }: { withHandler: boolean }) =>
+				useDataGrid<User>({
+					data: USERS,
+					columns: COLUMNS,
+					...(withHandler ? { creating: { onSave } } : {}),
+				}),
+			{ wrapper: makeWrapper({ creating: { mode: 'modal' } }), initialProps: { withHandler: true } },
+		)
+		expect(result.current.table.options.creating).toEqual({ mode: 'modal', onSave })
+
+		rerender({ withHandler: false })
+		expect(result.current.table.options.creating).toBeUndefined()
 	})
 })

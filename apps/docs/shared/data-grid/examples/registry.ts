@@ -65,6 +65,8 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/production/ProductionFeedExample.tsx': () => import('./components/production/ProductionFeedExample'),
 	'components/production/ProductionOneHandlerExample.tsx': () =>
 		import('./components/production/ProductionOneHandlerExample'),
+	'components/production/ProductionProviderExample.tsx': () =>
+		import('./components/production/ProductionProviderExample'),
 	'components/selection-bar-inline.tsx': () => import('./components/selection-bar-inline'),
 	'components/selection-bar.tsx': () => import('./components/selection-bar'),
 	'components/server-data.tsx': () => import('./components/server-data'),

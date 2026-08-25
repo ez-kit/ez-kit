@@ -146,6 +146,97 @@ Take this shape when the query is one object anyway (a URL, a `useQuery` key, a 
 per-feature `onChange` when only two or three slices are server-owned and each one maps to a
 different piece of your state.
 
+### Or: hoist the shared options into a provider
+
+Both grids above still declare _how the grid looks and behaves_ inline — the pagination variant, the
+filter panel, the debounces, sticky header, pinning, resizing. None of that is specific to orders:
+it is how every grid in the app is supposed to look. `DataGridOptionsProvider` takes those options
+once, and every grid beneath it inherits them, deep-merged **under** whatever the grid declares
+itself. Same features, same behaviour, and the `<DataGrid />` call shrinks to a third of its length:
+
+<DataGridDocsExample exampleId='production-provider' />
+
+Put the defaults in their own component and mount it as high as the grids go — the app shell, the
+route, the section:
+
+```tsx
+// DataGridOptions.tsx
+export function DataGridOptions({ children }: { children: ReactNode }) {
+	return (
+		<DataGridOptionsProvider<Order>
+			defaults={{
+				pagination: { manual: true, pageSizeOptions: [10, 25, 50], variant: 'numbered', siblings: 1 },
+				sorting: { manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true },
+				filtering: {
+					manual: true,
+					variant: 'popover',
+					faceted: true,
+					debounce: 300,
+					chips: { position: 'above' },
+					clearButton: true,
+				},
+				globalFiltering: { placeholder: 'Search orders…', debounce: 300 },
+				stickyHeader: true,
+				pinning: { column: true, row: { top: true, bottom: true } },
+				sizing: { mode: 'onChange' },
+				columnVisibility: { toolbar: true },
+				creating: { mode: 'modal' },
+				editing: { mode: 'modal' },
+				deleting: {
+					confirmation: {
+						title: 'Delete order?',
+						description: (row) => `Order ${row.original.reference} will be removed.`,
+					},
+				},
+			}}
+		>
+			{children}
+		</DataGridOptionsProvider>
+	)
+}
+```
+
+What is left at the call site is what only this grid can know — its rows, its columns, its state, and
+what a write actually does:
+
+```tsx
+<DataGridOptions>
+	<DataGrid
+		data={rows}
+		columns={orderColumns}
+		pagination={{ rowCount }}
+		creating={{ onSave: ({ values }) => create(values) }}
+		editing={{ onSave: ({ rowId, values }) => update(Number(rowId), values) }}
+		deleting={{ onDelete: ({ row }) => remove([row.original.id]) }}
+		state={{ ...tableState, loading }}
+		onStateChange={onStateChange}
+	/>
+</DataGridOptions>
+```
+
+Note `pagination={{ rowCount }}`: the provider's `manual`, `variant`, `siblings` and `pageSizeOptions`
+survive it. Merging is per field, not per feature — a grid overrides one nested value without
+restating the object around it, and turns a whole feature off with `sorting={false}`.
+
+Two kinds of option **cannot** move into the provider, and the type signature says so:
+
+- **`data`, `columns`, `state`, `onStateChange`** are excluded from `DataGridDefaultOptions` outright.
+  A shared default for them is meaningless.
+- **`pagination.rowCount`** is per query, not per app — it comes back from the server with the page.
+
+Writes are the interesting case. `creating`, `editing` and `deleting` **are** describable app-wide —
+the modal mode, the confirmation copy — but their `onSave` / `onDelete` handlers close over your data
+layer, so a defaults layer has none to give. It does not need one: **a write feature is enabled by its
+handler, not by the defaults that describe it.** The provider above says every create and edit in this
+app opens in a modal and every delete asks first; a grid gets create, edit or delete only by supplying
+the handler. A read-only grid under the same provider stays read-only without opting out of anything,
+and no trigger is ever rendered for a write that would have nothing to call.
+
+Providers nest, so a subtree can refine app-wide defaults without repeating them — a compact grid in a
+side panel wraps itself in a second provider with `pagination: { pageSize: 5 }` and inherits the rest.
+See [Default options](/docs/data-grid/default-options) for the full merge rules, including the
+kit-level `createDataGrid({ defaultOptions })` layer that sits **under** the provider.
+
 ### Last write wins
 
 Filters change faster than a network answers, so responses can arrive out of order. Each request

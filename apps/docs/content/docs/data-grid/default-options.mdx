@@ -121,6 +121,35 @@ It **excludes** the per-instance inputs that are meaningless as shared defaults:
 | `state`         | Controlled state belongs to the owning component. |
 | `onStateChange` | Its handler belongs to the owning component.      |
 
+### Writes are enabled by their handler
+
+`creating`, `editing` and `deleting` can be defaulted like any other feature — the modal mode, the
+confirmation copy — but their `onSave` / `onDelete` handlers close over your data layer, so a defaults
+layer has none to give. It does not need one: **a write feature is switched on by its handler, not by
+the defaults that describe it.**
+
+```tsx
+<DataGridOptionsProvider defaults={{ creating: { mode: 'modal' }, deleting: { confirmation: true } }}>
+	{/* Creates in a modal, asks before deleting — it supplied the handlers. */}
+	<DataGrid
+		data={orders}
+		columns={columns}
+		creating={{ onSave }}
+		deleting={{ onDelete }}
+	/>
+
+	{/* Read-only, and opts out of nothing: no handlers, so no create and no delete. */}
+	<DataGrid
+		data={auditLog}
+		columns={columns}
+	/>
+</DataGridOptionsProvider>
+```
+
+The grid resolves the feature away rather than rendering a trigger whose commit would have nothing to
+call, so a shared default can describe every write in the app without forcing one onto grids that have
+no business performing it.
+
 ## When to use which
 
 | Need                                              | Reach for                              |

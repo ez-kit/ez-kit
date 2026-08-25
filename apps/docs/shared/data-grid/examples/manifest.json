@@ -600,6 +600,14 @@
 		"exportName": "ProductionOneHandlerExample"
 	},
 	{
+		"id": "production-provider",
+		"label": "Shared options provider",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionProviderExample.tsx",
+		"exportName": "ProductionProviderExample"
+	},
+	{
 		"id": "production-deferred-apply",
 		"label": "Deferred apply",
 		"group": "production",
