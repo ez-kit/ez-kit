@@ -144,7 +144,7 @@ export const resizableColumns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name', size: 200, minSize: 80, maxSize: 400 },
 	{ accessorKey: 'email', header: 'Email', size: 250, minSize: 120 },
 	{ accessorKey: 'age', header: 'Age', size: 80, minSize: 50, maxSize: 150, cell: { type: 'number' } },
-	{ accessorKey: 'active', header: 'Active', size: 100, enableResizing: false, cell: { type: 'boolean' } },
+	{ accessorKey: 'active', header: 'Active', size: 100, resizing: false, cell: { type: 'boolean' } },
 ])
 
 export type Employee = {

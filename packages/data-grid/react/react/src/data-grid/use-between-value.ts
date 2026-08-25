@@ -5,12 +5,14 @@ import type { BetweenValue, DateRangePreset } from '@ez-kit/data-grid-core'
  * Which shape the between-filter renders. Derived from `variant` + `type` in one place so
  * every UI kit branches identically — the dispatch order is part of the behaviour, not styling.
  */
-export enum BetweenBranch {
-	Slider = 'slider',
-	Calendar = 'calendar',
-	DateInputs = 'date-inputs',
-	NumberInputs = 'number-inputs',
-}
+export const BetweenBranch = {
+	Slider: 'slider',
+	Calendar: 'calendar',
+	DateInputs: 'date-inputs',
+	NumberInputs: 'number-inputs',
+} as const
+
+export type BetweenBranch = (typeof BetweenBranch)[keyof typeof BetweenBranch]
 
 const DEFAULT_SLIDER_MIN = 0
 const DEFAULT_SLIDER_MAX = 100

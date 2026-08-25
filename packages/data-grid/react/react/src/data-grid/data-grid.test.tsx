@@ -130,14 +130,14 @@ describe('<DataGrid>', () => {
 		expect(screen.getByText('+ Add')).toBeInTheDocument()
 	})
 
-	it('does not render "+ Add" button when creating.mode is "pin-row"', () => {
-		const { instance } = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
+	it('does not render "+ Add" button when creating.variant is "pin-row"', () => {
+		const { instance } = makeTable({ creating: { variant: 'pin-row', onSave: () => Promise.resolve() } })
 		renderWithComponents(<DataGrid table={instance} />)
 		expect(screen.queryByText('+ Add')).toBeNull()
 	})
 
 	it('renders creating row without "+ Add" button when mode is "pin-row"', () => {
-		const { instance } = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
+		const { instance } = makeTable({ creating: { variant: 'pin-row', onSave: () => Promise.resolve() } })
 		renderWithComponents(<DataGrid table={instance} />)
 		expect(screen.queryByText('+ Add')).toBeNull()
 		// pin-row always renders creating row inputs
@@ -145,7 +145,7 @@ describe('<DataGrid>', () => {
 	})
 
 	it('shows creating row inputs when creating.start() is called', () => {
-		const { instance } = makeTable({ creating: { mode: 'row', onSave: () => Promise.resolve() } })
+		const { instance } = makeTable({ creating: { variant: 'row', onSave: () => Promise.resolve() } })
 		const { rerender } = renderWithComponents(<DataGrid table={instance} />)
 		// Before creating.start() there should be no inputs
 		expect(screen.queryAllByRole('textbox')).toHaveLength(0)
@@ -158,7 +158,7 @@ describe('<DataGrid>', () => {
 	})
 
 	it('renders Edit button in row editing mode', () => {
-		const { instance } = makeTable({ editing: { mode: 'row', onSave: () => Promise.resolve() } })
+		const { instance } = makeTable({ editing: { variant: 'row', onSave: () => Promise.resolve() } })
 		renderWithComponents(<DataGrid table={instance} />)
 		expect(screen.getAllByText('Edit')).toHaveLength(USERS.length)
 	})
@@ -286,15 +286,15 @@ describe('<DataGrid>', () => {
 			expect(document.querySelectorAll('[data-slot="column-resizer"]').length).toBeGreaterThan(0)
 		})
 
-		it('does not render column-resizer for column with enableResizing: false', () => {
+		it('does not render column-resizer for column with resizing: false', () => {
 			const cols = createColumns<User>([
-				{ accessorKey: 'name', header: 'Name', enableResizing: false },
+				{ accessorKey: 'name', header: 'Name', resizing: false },
 				{ accessorKey: 'age', header: 'Age' },
 			])
 			const table = createTable<User>({ data: USERS, columns: cols, sizing: true })
 			const instance = createDataGridInstance(table)
 			renderWithComponents(<DataGrid table={instance} />)
-			// only 'age' column should have a resizer (name has enableResizing: false)
+			// only 'age' column should have a resizer (name has resizing: false)
 			expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(1)
 		})
 
@@ -400,7 +400,7 @@ describe('<DataGrid>', () => {
 		const table = createTable<User>({
 			data: USERS,
 			columns: cols,
-			creating: { mode: 'row', onSave: () => Promise.resolve() },
+			creating: { variant: 'row', onSave: () => Promise.resolve() },
 		})
 		const instance = createDataGridInstance(table)
 		const { rerender } = renderWithComponents(

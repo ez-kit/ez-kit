@@ -42,7 +42,8 @@ export function ComponentGuard(): null {
 	const required = new Set<keyof GridComponentRegistry>(REQUIRED_STRUCTURAL)
 
 	if (table.options.deleting?.confirmation) required.add('ConfirmDialog')
-	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormShell')
+	if (table.options.creating?.variant === 'modal' || table.options.editing?.variant === 'modal')
+		required.add('FormShell')
 
 	const selectionPanel = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
 		| boolean

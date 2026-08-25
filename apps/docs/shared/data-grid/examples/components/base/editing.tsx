@@ -15,7 +15,7 @@ export function BaseEditingExample() {
 			columns={columns}
 			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 25] }}
 			editing={{
-				mode: 'row',
+				variant: 'row',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},

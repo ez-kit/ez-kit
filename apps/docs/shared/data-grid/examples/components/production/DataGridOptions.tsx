@@ -44,8 +44,8 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				pinning: { column: true, row: { top: true, bottom: true } },
 				sizing: { mode: 'onChange' },
 				columnVisibility: { toolbar: true },
-				creating: { mode: 'modal' },
-				editing: { mode: 'modal' },
+				creating: { variant: 'modal' },
+				editing: { variant: 'modal' },
 				deleting: {
 					confirmation: {
 						title: 'Delete order?',

@@ -16,13 +16,13 @@ export function CreatingRowExample() {
 			sorting
 			pagination={{ pageSize: 10 }}
 			creating={{
-				mode: 'row',
+				variant: 'row',
 				onSave: ({ values }) => {
 					setData((prev) => [...prev, { id: Date.now(), ...values } as User])
 				},
 			}}
 			editing={{
-				mode: 'row',
+				variant: 'row',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},

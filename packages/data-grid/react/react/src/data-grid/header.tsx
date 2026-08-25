@@ -9,6 +9,7 @@ import {
 	DEFAULT_FILTER_DEBOUNCE_MS,
 	FILTERING_DEBOUNCE_KEY,
 	FILTERING_VARIANT_KEY,
+	STICKY_HEADER_KEY,
 } from '../use-data-grid'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
@@ -20,8 +21,15 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { KeyboardEvent } from 'react'
 
-type HeaderProps = {
-	/** When true, adds `data-sticky="true"` to the thead for structural CSS targeting. */
+export type DataGridHeaderProps = {
+	/**
+	 * Adds `data-sticky="true"` to the thead for structural CSS targeting.
+	 *
+	 * Omit it — the default — and the flag is read from the grid's own `stickyHeader`
+	 * option. The prop exists only to force the value; without that fallback a
+	 * `<DataGrid.Header />` placed inside a custom `<DataGrid.Table>` body would
+	 * silently lose sticky positioning.
+	 */
 	stickyHeader?: boolean
 }
 
@@ -94,10 +102,11 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
  * structural CSS reads them on `[data-pinned]` elements.
  */
-export function Header({ stickyHeader }: HeaderProps = {}) {
-	const theadRef = useHeaderHeightVar(Boolean(stickyHeader))
+export function Header({ stickyHeader }: DataGridHeaderProps = {}) {
 	const instance = useDataGridInstance()
 	const table = instance.table
+	const isSticky = stickyHeader ?? Boolean((table as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY])
+	const theadRef = useHeaderHeightVar(isSticky)
 
 	// Narrow subscriptions: re-render only when slices the header actually
 	// reflects change. Editing, expanded, pagination, rowPinning do NOT
@@ -133,7 +142,7 @@ export function Header({ stickyHeader }: HeaderProps = {}) {
 		<Thead
 			ref={theadRef}
 			data-slot='thead'
-			{...(stickyHeader ? { 'data-sticky': 'true' } : {})}
+			{...(isSticky ? { 'data-sticky': 'true' } : {})}
 		>
 			{table.getHeaderGroups().map((headerGroup) => (
 				<Tr

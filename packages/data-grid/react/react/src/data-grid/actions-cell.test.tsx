@@ -27,7 +27,7 @@ const DATA: Row[] = [{ id: 1, name: 'Alice' }]
 const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 
 const EDIT_DELETE = {
-	editing: { mode: 'row', onSave: () => Promise.resolve() },
+	editing: { variant: 'row', onSave: () => Promise.resolve() },
 	deleting: { onDelete: () => {} },
 } satisfies Partial<UseDataGridConfig<Row>>
 

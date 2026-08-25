@@ -19,21 +19,43 @@ import type {
 	ColumnVisibilityUIConfig,
 	NormalizedClearButtonConfig,
 	NormalizedGlobalFilteringConfig,
+	ReactSortingConfig,
 } from '../use-data-grid'
-import type { SortingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
-type ToolbarProps = {
+export type DataGridToolbarProps = {
+	/**
+	 * Replaces the toolbar contents wholesale — the kit's `left` / `right` slots are not
+	 * used, so the whole bar is yours. Cannot be combined with `left` / `right`.
+	 */
 	children?: ReactNode
+	/**
+	 * Extra content for the toolbar's left slot, **appended after** the auto-mounted
+	 * controls (the PageSizer).
+	 *
+	 * This is the additive escape hatch: `children` replaces everything, `left` / `right`
+	 * keep the auto-mounted defaults and add to them, which is what "the default toolbar
+	 * plus one button of mine" needs.
+	 */
+	left?: ReactNode
+	/**
+	 * Extra content for the toolbar's right slot, appended after the auto-mounted controls
+	 * (global search, Clear filters, create trigger, sort builder, column visibility).
+	 */
+	right?: ReactNode
 }
 
 /**
  * Toolbar area above the table.
- * Renders default content when no children are provided:
+ *
+ * With no props it renders the auto-mounted defaults:
  * - PageSizer on the left when `pagination.pageSizeOptions` is set
- * - "+ Add" create trigger and column visibility toggle on the right
+ * - global search / Clear filters / "+ Add" / sort builder / column visibility on the right,
+ *   each gated by its own feature flag
+ *
+ * `left` / `right` append to those. `children` replaces them.
  */
-export function Toolbar({ children }: ToolbarProps) {
+export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGridToolbarProps = {}) {
 	const { Toolbar: ToolbarComponent } = useGridComponents().core
 	// Toolbar reads only symbol-keyed UI configs and `table.options.*` (refs,
 	// not state). No state subscription — editing / sorting / filtering
@@ -41,7 +63,7 @@ export function Toolbar({ children }: ToolbarProps) {
 	// own narrow subscriptions).
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== 'pin-row'
+	const hasCreating = Boolean(table.options.creating) && table.options.creating?.variant !== 'pin-row'
 
 	const colVisConfig = (table as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] as
 		| boolean
@@ -50,7 +72,10 @@ export function Toolbar({ children }: ToolbarProps) {
 	const hasVisibilityToolbar =
 		colVisConfig === true || (typeof colVisConfig === 'object' && Boolean(colVisConfig.toolbar))
 
-	const sortConfig = (table as unknown as Record<symbol, unknown>)[SORTING_KEY] as boolean | SortingConfig | undefined
+	const sortConfig = (table as unknown as Record<symbol, unknown>)[SORTING_KEY] as
+		| boolean
+		| ReactSortingConfig
+		| undefined
 	const hasSortingToolbar = typeof sortConfig === 'object' && Boolean(sortConfig.toolbar)
 
 	const pageSizeOptions = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as number[] | undefined
@@ -69,15 +94,27 @@ export function Toolbar({ children }: ToolbarProps) {
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
 	}
 
-	const left = pageSizeOptions ? <PageSizer /> : null
+	const hasAutoLeft = Boolean(pageSizeOptions)
+	const hasAutoRight =
+		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar
+
+	const left =
+		hasAutoLeft || extraLeft !== undefined ? (
+			<>
+				{hasAutoLeft && <PageSizer />}
+				{extraLeft}
+			</>
+		) : null
+
 	const right =
-		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar ? (
+		hasAutoRight || extraRight !== undefined ? (
 			<>
 				{hasGlobalFilterToolbar && <GlobalFilterInput />}
 				{hasClearButtonToolbar && <ClearFiltersButton />}
 				{hasCreating && <CreateTrigger />}
 				{hasSortingToolbar && <SortTrigger />}
 				{hasVisibilityToolbar && <ColumnVisibilityTrigger />}
+				{extraRight}
 			</>
 		) : null
 

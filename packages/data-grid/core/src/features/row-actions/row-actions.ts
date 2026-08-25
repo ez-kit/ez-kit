@@ -2,12 +2,14 @@ import type { RowPinningConfig } from '../../types'
 import type { RowData } from '@tanstack/table-core'
 
 /** How the per-row actions (edit / delete / pin) are laid out in the actions column. */
-export enum RowActionsVariant {
+export const RowActionsVariant = {
 	/** One icon button per action, side by side. Pin actions stay behind their own menu. */
-	Inline = 'inline',
+	Inline: 'inline',
 	/** A single overflow menu holding every action. */
-	Menu = 'menu',
-}
+	Menu: 'menu',
+} as const
+
+export type RowActionsVariant = (typeof RowActionsVariant)[keyof typeof RowActionsVariant]
 
 export type RowActionsConfig = {
 	/** Layout of the actions column. Default: {@link RowActionsVariant.Inline}. */

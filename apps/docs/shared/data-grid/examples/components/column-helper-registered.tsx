@@ -108,7 +108,7 @@ export function ColumnHelperRegisteredExample() {
 			// Editing is on so the registry's `edit` renderer is reachable: click Edit on a
 			// row and the Rating cell becomes the star input.
 			editing={{
-				mode: 'row',
+				variant: 'row',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},

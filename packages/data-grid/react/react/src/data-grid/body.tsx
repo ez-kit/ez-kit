@@ -17,7 +17,36 @@ import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
 import type { ExpandedRowProps, FallbacksConfig } from '../use-data-grid'
-import type { ComponentType } from 'react'
+import type { Row, Table } from '@tanstack/table-core'
+import type { ComponentType, ReactNode } from 'react'
+
+/** What a `<DataGrid.Body>` render function receives. */
+export type DataGridBodyRenderArgs = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	table: Table<any>
+	/** The rows of the current row model, already sorted / filtered / paginated. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	rows: Row<any>[]
+}
+
+export type DataGridBodyProps = {
+	/**
+	 * Custom body content, rendered inside the kit's `<Tbody>`.
+	 *
+	 * Omit it for the built-in body — pinned rows, the creating row, expanded panels, the
+	 * loading / empty / no-results fallbacks, the infinite-scroll footer and the refetch
+	 * overlay. Supplying `children` opts out of **all** of that in exchange for full control;
+	 * compose the rows yourself from `<DataGrid.Row>` (or anything else).
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.Body>
+	 *   {({ rows }) => rows.map((row) => <DataGrid.Row key={row.id} row={row} />)}
+	 * </DataGrid.Body>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridBodyRenderArgs) => ReactNode)
+}
 
 /**
  * Renders the table `<tbody>`.
@@ -33,7 +62,7 @@ import type { ComponentType } from 'react'
  * structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offset.
  */
-export function Body() {
+export function Body({ children }: DataGridBodyProps = {}) {
 	const { rowVirtualizer } = useVirtualContext()
 	const instance = useDataGridInstance()
 	const table = instance.table
@@ -67,6 +96,17 @@ export function Body() {
 		bottomRows.map((row) => row.id),
 	)
 
+	// Custom body: the consumer owns the whole `<tbody>`. Checked before every built-in
+	// branch (virtualization, fallbacks, pinned rows) — those all compose rows, which is
+	// precisely the job being taken over.
+	if (children !== undefined) {
+		return (
+			<Tbody data-slot='tbody'>
+				{typeof children === 'function' ? children({ table, rows: table.getRowModel().rows }) : children}
+			</Tbody>
+		)
+	}
+
 	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = (table as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] as FallbacksConfig | undefined
@@ -80,9 +120,9 @@ export function Body() {
 	}
 
 	const creatingConfig = table.options.creating
-	const creatingMode = creatingConfig?.mode ?? 'row'
+	const creatingVariant = creatingConfig?.variant ?? 'row'
 	const showCreatingRow =
-		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
+		creatingConfig !== undefined && (creatingVariant === 'pin-row' || (creatingVariant === 'row' && isCreatingOpen))
 
 	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
 	const allRows = table.getRowModel().rows

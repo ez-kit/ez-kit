@@ -169,7 +169,7 @@ function BodyDataCell({ cell, row }: CellProps) {
 	const meta = cell.column.columnDef.meta
 	const pin = getCellPinInfo(cell)
 
-	const editMode: 'row' | 'modal' | 'cell' = table.options.editing?.mode ?? 'row'
+	const editMode: 'row' | 'modal' | 'cell' = table.options.editing?.variant ?? 'row'
 	const cellId = `${row.id}_${columnId}`
 
 	// Narrow boolean subscription. For non-target rows this remains stably `false`

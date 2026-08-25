@@ -118,32 +118,32 @@ describe('write features are enabled by their callback', () => {
 			return <DataGridOptionsProvider defaults={defaults}>{children}</DataGridOptionsProvider>
 		}
 
-	it('merges a provider-supplied creating.mode with the instance onSave', () => {
+	it('merges a provider-supplied creating.variant with the instance onSave', () => {
 		const onSave = vi.fn()
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, creating: { onSave } }), {
-			wrapper: makeWrapper({ creating: { mode: 'modal' } }),
+			wrapper: makeWrapper({ creating: { variant: 'modal' } }),
 		})
-		expect(result.current.table.options.creating).toEqual({ mode: 'modal', onSave })
+		expect(result.current.table.options.creating).toEqual({ variant: 'modal', onSave })
 	})
 
 	it('leaves creating off for a grid that supplies no onSave', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
-			wrapper: makeWrapper({ creating: { mode: 'modal' } }),
+			wrapper: makeWrapper({ creating: { variant: 'modal' } }),
 		})
 		expect(result.current.table.options.creating).toBeUndefined()
 	})
 
-	it('merges a provider-supplied editing.mode with the instance onSave', () => {
+	it('merges a provider-supplied editing.variant with the instance onSave', () => {
 		const onSave = vi.fn()
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, editing: { onSave } }), {
-			wrapper: makeWrapper({ editing: { mode: 'modal' } }),
+			wrapper: makeWrapper({ editing: { variant: 'modal' } }),
 		})
-		expect(result.current.table.options.editing).toEqual({ mode: 'modal', onSave })
+		expect(result.current.table.options.editing).toEqual({ variant: 'modal', onSave })
 	})
 
 	it('leaves editing off for a grid that supplies no onSave', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
-			wrapper: makeWrapper({ editing: { mode: 'modal' } }),
+			wrapper: makeWrapper({ editing: { variant: 'modal' } }),
 		})
 		expect(result.current.table.options.editing).toBeUndefined()
 	})
@@ -178,9 +178,9 @@ describe('write features are enabled by their callback', () => {
 					columns: COLUMNS,
 					...(withHandler ? { creating: { onSave } } : {}),
 				}),
-			{ wrapper: makeWrapper({ creating: { mode: 'modal' } }), initialProps: { withHandler: true } },
+			{ wrapper: makeWrapper({ creating: { variant: 'modal' } }), initialProps: { withHandler: true } },
 		)
-		expect(result.current.table.options.creating).toEqual({ mode: 'modal', onSave })
+		expect(result.current.table.options.creating).toEqual({ variant: 'modal', onSave })
 
 		rerender({ withHandler: false })
 		expect(result.current.table.options.creating).toBeUndefined()

@@ -136,7 +136,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasExpanding = Boolean(config.expanding)
 
 	const expandingCfg = typeof config.expanding === 'object' ? config.expanding : undefined
-	const expandVariant = expandingCfg?.variant ?? 'sub-content'
+	const expandMode = expandingCfg?.mode ?? 'sub-content'
 	const normalizedPinning = normalizePinning(config.pinning)
 	const rowPinConfig = normalizedPinning.row
 	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
@@ -374,14 +374,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			? { getPaginationRowModel: getPaginationRowModel() }
 			: {}),
 		...(config.expanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
-		...(config.expanding && expandVariant === 'tree'
+		...(config.expanding && expandMode === 'tree'
 			? {
 					getSubRows:
 						expandingCfg?.getSubRows ??
 						((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
 				}
 			: {}),
-		...(config.expanding && expandVariant === 'sub-content' && expandingCfg?.getRowCanExpand
+		...(config.expanding && expandMode === 'sub-content' && expandingCfg?.getRowCanExpand
 			? { getRowCanExpand: expandingCfg.getRowCanExpand }
 			: {}),
 		// Row selection

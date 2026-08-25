@@ -1,29 +1,14 @@
 export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from './data-grid'
 export { cellTypes } from './blocks/cell-types'
 
-// Curated re-export of the consumer surface from the adapter, so a kit consumer never has to
-// add `@ez-kit/data-grid-react` as a second dependency. Deliberately not `export *`: the star
-// would re-export the adapter's unbound `DataGrid`/`useDataGrid`/`GridComponentsProvider` and
-// collide with the heroui-bound ones above.
-export {
-	CellTypesProvider,
-	DataGridOptionsProvider,
-	useDataGridOptions,
-	createColumnHelper,
-	createColumns,
-	extractState,
-	parseState,
-	useExtractedState,
-	ValidationError,
-} from '@ez-kit/data-grid-react'
-export type {
-	ColumnDef,
-	ColumnFiltersState,
-	ColumnHelper,
-	DataGridDefaultOptions,
-	DataGridOptionsProviderProps,
-	DataGridProps,
-	DateRangePreset,
-	SortingState,
-	TableState,
-} from '@ez-kit/data-grid-react'
+/**
+ * The whole adapter surface, so a kit consumer never needs `@ez-kit/data-grid-react` (or
+ * `@ez-kit/data-grid-core`) as a second dependency to name a type. Previously a curated list
+ * of nine values and nine types, which left most of the API — `ColumnSortingConfig`,
+ * `CellType`, `RowActionsVariant`, the UI-kit component contracts — unnameable from here.
+ *
+ * A star re-export is safe alongside the four bound names above: an explicit re-export
+ * shadows a star of the same name, so `DataGrid` / `useDataGrid` / `GridComponentsProvider` /
+ * `extendDataGrid` stay the heroui-bound ones.
+ */
+export * from '@ez-kit/data-grid-react'

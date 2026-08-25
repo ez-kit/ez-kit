@@ -52,11 +52,8 @@ function mapColumn<TRow extends object>(
 		accessorFn,
 		id,
 		footer,
-		enableColumnFilter,
-		enableGlobalFilter,
 		globalFilter,
-		enableHiding,
-		enableResizing,
+		resizing,
 		size,
 		minSize,
 		maxSize,
@@ -91,13 +88,13 @@ function mapColumn<TRow extends object>(
 	setIfDefined(result, 'id', id)
 	setIfDefined(result, 'header', header)
 	setIfDefined(result, 'footer', footer)
-	setIfDefined(result, 'enableColumnFilter', enableColumnFilter)
-	setIfDefined(result, 'enableGlobalFilter', enableGlobalFilter)
-	// Ez-kit friendlier alias: `globalFilter: false` excludes the column from global search.
-	// Wins over the raw `enableGlobalFilter` pass-through when both are provided.
+	// Every gate below is expressed once, through the ez-kit alias — there are no raw
+	// `enable*` pass-throughs on a public column def, so a column can never say the same
+	// thing twice and disagree with itself. `column.getCanFilter()` / `getCanHide()` /
+	// `getCanResize()` therefore always agree with the config the consumer wrote.
+	if (filtering === false) result.enableColumnFilter = false
 	if (globalFilter === false) result.enableGlobalFilter = false
-	setIfDefined(result, 'enableHiding', enableHiding)
-	setIfDefined(result, 'enableResizing', enableResizing)
+	if (resizing === false) result.enableResizing = false
 	setIfDefined(result, 'size', size)
 	setIfDefined(result, 'minSize', minSize)
 	setIfDefined(result, 'maxSize', maxSize)

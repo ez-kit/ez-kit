@@ -34,11 +34,11 @@ export function ProductionOneHandlerExample() {
 			sizing={{ mode: 'onChange' }}
 			columnVisibility={{ toolbar: true }}
 			creating={{
-				mode: 'modal',
+				variant: 'modal',
 				onSave: ({ values }) => orders.create(values),
 			}}
 			editing={{
-				mode: 'modal',
+				variant: 'modal',
 				onSave: ({ rowId, values }) => orders.update(Number(rowId), values),
 			}}
 			deleting={{

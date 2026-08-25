@@ -81,23 +81,13 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 			</GridComponentsProvider>
 		)
 	}
-	BoundDataGrid.Toolbar = DataGrid.Toolbar
-	BoundDataGrid.Table = DataGrid.Table
-	BoundDataGrid.Header = DataGrid.Header
-	BoundDataGrid.Body = DataGrid.Body
-	BoundDataGrid.Row = DataGrid.Row
-	BoundDataGrid.Cell = DataGrid.Cell
-	BoundDataGrid.Pagination = DataGrid.Pagination
-	BoundDataGrid.PageSizer = DataGrid.PageSizer
-	BoundDataGrid.CreateTrigger = DataGrid.CreateTrigger
-	BoundDataGrid.ActiveFiltersBar = DataGrid.ActiveFiltersBar
-	BoundDataGrid.ClearFiltersButton = DataGrid.ClearFiltersButton
-	BoundDataGrid.FilterPanel = DataGrid.FilterPanel
-	BoundDataGrid.CreatingModal = DataGrid.CreatingModal
-	BoundDataGrid.EditingModal = DataGrid.EditingModal
-	BoundDataGrid.LoadingBody = DataGrid.LoadingBody
-	BoundDataGrid.EmptyStateRow = DataGrid.EmptyStateRow
-	BoundDataGrid.NoResultsRow = DataGrid.NoResultsRow
+	// Copy the whole compound namespace rather than listing members by hand. The hand-written
+	// list had silently fallen five members behind `DataGrid` (SelectionBar, DraftBar,
+	// SortTrigger, GlobalFilterInput, ColumnVisibilityTrigger), and the `as typeof DataGrid`
+	// cast below hid it from the type checker — so `<DataGrid.SelectionBar />` from a kit was
+	// `undefined` at runtime with no compile error. Assigning the namespace wholesale makes
+	// that class of drift impossible.
+	Object.assign(BoundDataGrid, DataGrid)
 
 	function boundDefineColumns<TRow extends object>(
 		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],

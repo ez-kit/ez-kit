@@ -13,7 +13,8 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
 import type { NormalizedVirtualizedConfig } from '../use-data-grid'
-import type { CSSProperties } from 'react'
+import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
+import type { CSSProperties, ReactNode } from 'react'
 
 const DEFAULT_ESTIMATE_SIZE = 50
 const DEFAULT_OVERSCAN = 5
@@ -95,6 +96,40 @@ function resolveEstimateSize(
 	return () => size
 }
 
+/** What a `<DataGrid.Table>` render function receives. */
+export type DataGridTableRenderArgs = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	table: TanStackTable<any>
+	/** Header groups of the current column model — one entry per header row. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	headerGroups: HeaderGroup<any>[]
+	/** The rows of the current row model, already sorted / filtered / paginated. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	rows: Row<any>[]
+}
+
+export type DataGridTableProps = {
+	/**
+	 * Custom table content, rendered inside the kit's `<Table>` element and inside the
+	 * scroll / pin-shadow wrapper, so sticky headers, pinning and virtualization plumbing
+	 * still work.
+	 *
+	 * Omit it for the built-in `<DataGrid.Header /><DataGrid.Body />` pair. Supply it to
+	 * reorder, wrap, or replace either half — e.g. to add a `<tfoot>`, which the built-in
+	 * layout has no slot for.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.Table>
+	 *   <DataGrid.Header />
+	 *   <DataGrid.Body />
+	 *   <MyFooter />
+	 * </DataGrid.Table>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridTableRenderArgs) => ReactNode)
+}
+
 /**
  * Renders the full `<table>` with header and body.
  *
@@ -107,7 +142,7 @@ function resolveEstimateSize(
  * scroll container. CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow`
  * on the wrapper drive their opacity.
  */
-export function DataGridTable() {
+export function DataGridTable({ children }: DataGridTableProps = {}) {
 	const { Table } = useGridComponents().core
 	const instance = useDataGridInstance()
 	const table = instance.table
@@ -217,8 +252,16 @@ export function DataGridTable() {
 				} as CSSProperties
 			}
 		>
-			<Header stickyHeader={isStickyHeader} />
-			<Body />
+			{children === undefined ? (
+				<>
+					<Header />
+					<Body />
+				</>
+			) : typeof children === 'function' ? (
+				children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
+			) : (
+				children
+			)}
 		</Table>
 	)
 

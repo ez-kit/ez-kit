@@ -23,17 +23,19 @@ import type {
 } from 'react'
 
 /** Which affordances the row-actions cell offers, and therefore which props it carries. */
-export enum RowActionsMode {
+export const RowActionsMode = {
 	/** A settled row: edit / delete. */
-	Idle = 'idle',
+	Idle: 'idle',
 	/** A row being edited inline: save / cancel. */
-	Editing = 'editing',
+	Editing: 'editing',
 	/** The creating row: save, plus cancel unless it is the pinned creating row. */
-	Creating = 'creating',
-}
+	Creating: 'creating',
+} as const
+
+export type RowActionsMode = (typeof RowActionsMode)[keyof typeof RowActionsMode]
 
 type ActionsCellIdleProps = {
-	mode: RowActionsMode.Idle
+	mode: typeof RowActionsMode.Idle
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
 	hasEditing: boolean
@@ -43,7 +45,7 @@ type ActionsCellIdleProps = {
 }
 
 type ActionsCellEditingProps = {
-	mode: RowActionsMode.Editing
+	mode: typeof RowActionsMode.Editing
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
 	onSave: () => Promise<void>
@@ -53,7 +55,7 @@ type ActionsCellEditingProps = {
 }
 
 type ActionsCellCreatingProps = {
-	mode: RowActionsMode.Creating
+	mode: typeof RowActionsMode.Creating
 	onSave: () => Promise<void>
 	onCancel: () => void
 	/** `false` on the pinned creating row, which has nothing to cancel back to. */
@@ -148,7 +150,7 @@ export type GlobalFilterInputProps = {
  * holding the public union could not be compared against them
  * (`@typescript-eslint/no-unsafe-enum-comparison`).
  */
-export const PaginationVariants = {
+export const PaginationVariant = {
 	/** Prev/next plus a link per page. The default. */
 	Numbered: 'numbered',
 	/** Prev/next plus an "X–Y of N" range label; no page links. */
@@ -161,9 +163,9 @@ export const PaginationVariants = {
  * Presentation of the page-based pagination footer. A pure display concern —
  * the page-based logic is identical across variants, only the controls differ.
  *
- * Derived from {@link PaginationVariants} so the union and the members cannot drift apart.
+ * Derived from {@link PaginationVariant} so the union and the members cannot drift apart.
  */
-export type PaginationVariant = (typeof PaginationVariants)[keyof typeof PaginationVariants]
+export type PaginationVariant = (typeof PaginationVariant)[keyof typeof PaginationVariant]
 
 export type PaginationProps = {
 	pageIndex: number
@@ -218,13 +220,15 @@ export type ResizerProps = {
  * Closed set of per-row actions the grid can offer. A kit maps each id to its own
  * icon and wording — the shared layer only decides which ids are available.
  */
-export enum RowActionId {
-	Edit = 'edit',
-	Delete = 'delete',
-	PinTop = 'pin-top',
-	PinBottom = 'pin-bottom',
-	Unpin = 'unpin',
-}
+export const RowActionId = {
+	Edit: 'edit',
+	Delete: 'delete',
+	PinTop: 'pin-top',
+	PinBottom: 'pin-bottom',
+	Unpin: 'unpin',
+} as const
+
+export type RowActionId = (typeof RowActionId)[keyof typeof RowActionId]
 
 export type SortIndicatorProps = {
 	sortDir: 'asc' | 'desc' | false

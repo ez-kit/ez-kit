@@ -1,23 +1,26 @@
+/**
+ * Public surface of `@ez-kit/data-grid-react`.
+ *
+ * The **whole** headless surface is re-exported from `@ez-kit/data-grid-core` below, so a
+ * consumer — and a UI kit that re-exports this module — never needs `@ez-kit/data-grid-core`
+ * as a second dependency to name a type. Anything this layer supersedes (`sorting`,
+ * `filtering`, `pagination`, … configs that gain React-only UI fields) is exported here under
+ * a `React*` name and the headless original stays available alongside it.
+ *
+ * Internal plumbing is deliberately **not** exported: the `Symbol()` keys used to carry
+ * normalized config on the table instance are an implementation detail of this package, and
+ * nothing outside it may depend on them.
+ */
+
+// ── headless core, in full ────────────────────────────────────────────────
+// A single star re-export rather than a hand-maintained list: the previous list had drifted
+// to the point where 50 core exports — `CellType`, `ColumnSortingConfig`, `RowActionsConfig`,
+// `LoadingState`, `ACTIONS_COLUMN_ID`, … — were unreachable from this package, and therefore
+// from every UI kit built on it.
+export * from '@ez-kit/data-grid-core'
+
 // React hook
-export {
-	useDataGrid,
-	COL_PINNING_KEY,
-	COLUMN_VISIBILITY_KEY,
-	EXPAND_KEY,
-	FALLBACKS_KEY,
-	FILTER_CHIPS_KEY,
-	FILTER_CLEAR_BUTTON_KEY,
-	FILTERING_VARIANT_KEY,
-	FILTERING_DEBOUNCE_KEY,
-	DEFAULT_FILTER_DEBOUNCE_MS,
-	GLOBAL_FILTERING_KEY,
-	INFINITE_KEY,
-	PAGE_SIZER_KEY,
-	PAGINATION_VARIANT_KEY,
-	PAGINATION_WINDOW_KEY,
-	SORTING_KEY,
-	VIRTUALIZED_KEY,
-} from './use-data-grid'
+export { useDataGrid } from './use-data-grid'
 export type {
 	UseDataGridConfig,
 	ColumnVisibilityUIConfig,
@@ -41,10 +44,12 @@ export type {
 	ReactGlobalFilteringConfig,
 	ReactPaginationConfig,
 	ReactSelectionConfig,
+	ReactSortingConfig,
 	SelectionPanelCallbackArgs,
 	SelectionPanelConfig,
 	SelectionPanelVariant,
 } from './use-data-grid'
+export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Grid overflow menu — one model for the column header menu and the row actions menu
 export { GridMenuIcon, GridMenuVariant, toMenuSections } from './menu'
@@ -119,6 +124,9 @@ export type {
 // Compound component
 export { DataGrid } from './data-grid/data-grid'
 export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps } from './data-grid/data-grid'
+export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/table'
+export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
+export type { DataGridToolbarProps } from './data-grid/toolbar'
 
 // Sub-components (also available as DataGrid.SelectionBar)
 export { SelectionBar } from './data-grid/selection-bar'
@@ -141,27 +149,11 @@ export type { DataGridDefaultOptions, DataGridOptionsProviderProps } from './dat
 export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
 
-// Validation API (re-export from core for convenience)
-export { ValidationError, isValidationError, zodResolver } from '@ez-kit/data-grid-core'
-export type {
-	CommitStatus,
-	CreatingSaveContext,
-	EditingSaveContext,
-	FieldState,
-	ValidateConfig,
-	ValidateContext,
-	ValidateOn,
-	ValidationErrors,
-	ValidationProblems,
-	ValidationResult,
-} from '@ez-kit/data-grid-core'
-
-// Types
+// UI-kit component contracts
 export type {
 	ActionsCellProps,
 	FormShellProps,
 	BetweenInputProps,
-	DateRangePreset,
 	ChevronProps,
 	SortIndicatorProps,
 	ColumnVisibilityMenuProps,
@@ -179,7 +171,6 @@ export type {
 	LoadingRowProps,
 	LoadMoreRowProps,
 	MultiSelectFilterProps,
-	MultiSelectOption,
 	NoResultsStateProps,
 	RefetchOverlayProps,
 	OperatorSelectProps,
@@ -190,14 +181,6 @@ export type {
 	SortMenuItem,
 	SortMenuProps,
 	VisibilityColumnItem,
-} from './types'
-// `PaginationVariants` is a const object (runtime value) — exported as a value, not a type.
-// Optional sugar: `pagination.variant` accepts the plain `PaginationVariant` string union.
-export { PaginationVariants } from './types'
-// Enums (runtime values). `RowActionId` names the row entries the grid can offer;
-// `RowActionsMode` is the discriminant a kit switches on inside `ActionsCell`.
-export { RowActionId, RowActionsMode } from './types'
-export type {
 	ButtonProps,
 	CheckboxProps,
 	InputProps,
@@ -205,7 +188,6 @@ export type {
 	NumberInputProps,
 	PageSizerProps,
 	PaginationProps,
-	PaginationVariant,
 	TbodyProps,
 	TdProps,
 	ThProps,
@@ -215,53 +197,13 @@ export type {
 	TrProps,
 } from './types'
 
-// Re-export core types for convenience
-export type {
-	BetweenOperatorConfig,
-	BetweenValue,
-	ColumnOperatorsConfig,
-	FilterOperatorDef,
-	GlobalFilterFn,
-	GlobalFilteringConfig,
-	OperatorRegistry,
-	StructuredFilterValue,
-	TableState,
-} from '@ez-kit/data-grid-core'
+// Closed sets that a kit or a call site names. Each is a `const` object plus a same-named
+// string union, so `RowActionsMode.Idle` and the bare `'idle'` are both valid and no consumer
+// has to import anything to write an option value.
+export { PaginationVariant, RowActionId, RowActionsMode } from './types'
 
-export type {
-	BadgeCellConfig,
-	BadgeItem,
-	BadgeVariant,
-	ColumnDef,
-	ColumnPinningDef,
-	ColumnResizeDirection,
-	ColumnResizeMode,
-	ColumnVisibilityDef,
-	CreatingConfig,
-	DataTable,
-	ConfirmationOptions,
-	DateCellConfig,
-	DeletingConfig,
-	DeletingContext,
-	EditingConfig,
-	ImageCellConfig,
-	PinningConfig,
-	ProgressCellConfig,
-	RowPinningConfig,
-	RowVirtualOptions,
-	SelectCellConfig,
-	SelectItem,
-	SizingConfig,
-	Table,
-	TableConfig,
-	TableSnapshot,
-	VirtualizedConfig,
-} from '@ez-kit/data-grid-core'
-
-export { createColumns, createTable, createColumnHelper } from '@ez-kit/data-grid-core'
-export type { ColumnHelper } from '@ez-kit/data-grid-core'
-
-// TanStack state types used when typing manual server-side `onChange` handlers
-// (sorting/filtering/pagination). Re-exported so consumers depend only on the
-// public surface instead of reaching into `@tanstack/table-core` directly.
-export type { SortingState, ColumnFiltersState, PaginationState } from '@tanstack/table-core'
+// TanStack state types used when typing manual server-side `onChange` handlers.
+// Re-exported so consumers depend only on this package's surface. `SortingState` is not
+// re-exported here — the core one (`SortingStateEntry[]`) arrives via the star export above
+// and is structurally identical.
+export type { ColumnFiltersState, PaginationState } from '@tanstack/table-core'
