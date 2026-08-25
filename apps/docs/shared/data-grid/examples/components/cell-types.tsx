@@ -17,13 +17,13 @@ export function CellTypesExample() {
 			filtering
 			pagination={{ pageSize: 10 }}
 			editing={{
-				mode: 'row',
+				variant: 'row',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},
 			}}
 			creating={{
-				mode: 'pin-row',
+				variant: 'pin-row',
 				onSave: ({ values }) => {
 					setData((prev) => [...prev, values as Product])
 				},

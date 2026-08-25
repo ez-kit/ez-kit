@@ -16,12 +16,14 @@ import type {
 	DeletingConfig,
 	EditingConfig,
 	ExpandingConfig,
+	ExpandingMode,
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
 	PaginationConfig,
 	RowVirtualOptions,
 	SelectionConfig,
+	SortingConfig,
 	TableConfig,
 	VirtualizedConfig,
 } from '@ez-kit/data-grid-core'
@@ -91,8 +93,8 @@ export type ExpandedRowProps<TRow extends object> = {
 }
 
 export type ReactExpandingConfig<TRow extends object> = {
-	/** Mode switch. Default: 'sub-content'. */
-	variant?: 'sub-content' | 'tree'
+	/** What expanding does. Default: 'sub-content'. See {@link ExpandingMode}. */
+	mode?: ExpandingMode
 	/** Sub-content: component rendered in a full-width row below expanded rows. */
 	renderExpanded?: ComponentType<ExpandedRowProps<TRow>>
 	/**
@@ -208,7 +210,7 @@ function normalizeVirtualized(
 export type ReactPaginationConfig = PaginationConfig & {
 	/**
 	 * Page-based mode only. Which footer controls to render.
-	 * Default {@link PaginationVariants.Numbered}. Purely presentational — paging
+	 * Default {@link PaginationVariant.Numbered}. Purely presentational — paging
 	 * behaviour is identical across variants.
 	 */
 	variant?: PaginationVariant
@@ -403,6 +405,23 @@ export type NormalizedGlobalFilteringConfig = {
 	toolbar: boolean
 }
 
+/**
+ * React-layer config for sorting.
+ *
+ * Adds the UI-facing `toolbar` flag on top of the headless {@link SortingConfig}. The flag
+ * lives here and not in core for the same reason `globalFiltering.toolbar` and
+ * `columnVisibility.toolbar` do: core renders nothing, so an option core must document as
+ * "ignored by core" belongs to the layer that actually reads it.
+ */
+export type ReactSortingConfig = {
+	/**
+	 * Auto-mount the multi-sort builder button in the Toolbar. Default: false.
+	 * - `false` / omitted — no auto-mount. `<DataGrid.SortTrigger />` still works manually.
+	 * - `true` — auto-mount into `Toolbar.right`.
+	 */
+	toolbar?: boolean
+} & SortingConfig
+
 export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
@@ -459,12 +478,17 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * the headless {@link PaginationConfig}.
 	 */
 	pagination?: boolean | ReactPaginationConfig
+	/**
+	 * Sorting config. The React layer adds the `toolbar` auto-mount flag on top of the
+	 * headless {@link SortingConfig}.
+	 */
+	sorting?: boolean | ReactSortingConfig
+	/** Expanding config. See {@link ReactExpandingConfig}. */
+	expanding?: boolean | ReactExpandingConfig<TRow>
 } & Omit<
 	TableConfig<TRow>,
-	'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection'
-> & {
-		expanding?: boolean | ReactExpandingConfig<TRow>
-	}
+	'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection' | 'sorting'
+>
 
 /**
  * A write feature is enabled by its handler, not by its presence in the merged options.
@@ -598,7 +622,7 @@ export function useDataGrid<TRow extends object>(
 			: typeof rawExpanding === 'boolean'
 				? rawExpanding
 				: ({
-						...(rawExpanding.variant !== undefined ? { variant: rawExpanding.variant } : {}),
+						...(rawExpanding.mode !== undefined ? { mode: rawExpanding.mode } : {}),
 						...(rawExpanding.getSubRows !== undefined
 							? { getSubRows: rawExpanding.getSubRows as ExpandingConfig['getSubRows'] }
 							: {}),
@@ -683,10 +707,10 @@ export function useDataGrid<TRow extends object>(
 			expanding: coreExpanding,
 			pagination: corePagination,
 			selection: coreSelection,
-			// Pass columnVisibility presence to core so it can table-level-gate enableHiding.
-			// Core treats truthy as ON, falsy as OFF — the React UI config (toolbar etc.)
-			// is layered separately via the COLUMN_VISIBILITY_KEY symbol.
-			columnVisibility,
+			// Only the resolved on/off reaches core — its option is a plain `boolean`, so a
+			// misspelled UI key can never ride along unchecked. The React UI config
+			// (`toolbar` etc.) is layered separately via the COLUMN_VISIBILITY_KEY symbol.
+			columnVisibility: Boolean(columnVisibility),
 			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
 		} as TableConfig<TRow>),
 	)

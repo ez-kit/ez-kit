@@ -63,8 +63,27 @@ export type CreatingState = {
 	commitStatus: CommitStatus
 }
 
+/**
+ * Where the create form is presented. A pure display concern — the commit pipeline is
+ * identical for all three.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `variant: 'modal'` is equally valid and needs no import. See {@link CreatingVariant}.
+ */
+export const CreatingVariant = {
+	/** An extra row appended to the body while the form is open. */
+	Row: 'row',
+	/** A modal dialog opened from the toolbar's create trigger. */
+	Modal: 'modal',
+	/** A permanently pinned row at the top of the body; no create trigger is rendered. */
+	PinRow: 'pin-row',
+} as const
+
+export type CreatingVariant = (typeof CreatingVariant)[keyof typeof CreatingVariant]
+
 export type CreatingConfig<TData> = {
-	mode?: 'row' | 'modal' | 'pin-row'
+	/** How the create form is presented. Default: {@link CreatingVariant.Row}. */
+	variant?: CreatingVariant
 	validate?: ValidateConfig<TData>
 	validateOn?: ValidateOn
 	validateDebounceMs?: number

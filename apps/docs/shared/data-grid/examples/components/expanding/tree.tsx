@@ -82,7 +82,7 @@ export function ExpandingTreeExample() {
 			data={ORG_DATA}
 			columns={columns}
 			expanding={{
-				variant: 'tree',
+				mode: 'tree',
 			}}
 		/>
 	)

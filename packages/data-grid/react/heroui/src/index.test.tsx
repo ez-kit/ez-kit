@@ -252,3 +252,31 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(onToggle).toHaveBeenCalledTimes(1)
 	})
 })
+
+// ── surface parity with the adapter ───────────────────────────────────────
+
+describe('@ez-kit/data-grid-heroui — adapter surface parity', () => {
+	it('carries every runtime value the adapter exports', async () => {
+		const adapter = await import('@ez-kit/data-grid-react')
+		const kit = await import('./index')
+		const missing = Object.keys(adapter).filter((name) => !(name in kit))
+		expect(missing).toEqual([])
+	})
+
+	it('keeps the heroui-bound names, not the adapter ones', async () => {
+		const adapter = await import('@ez-kit/data-grid-react')
+		const kit = await import('./index')
+		// An explicit re-export shadows a star of the same name — this is what makes
+		// `export * from '@ez-kit/data-grid-react'` safe next to the bound exports.
+		expect(kit.DataGrid).not.toBe(adapter.DataGrid)
+		expect(kit.useDataGrid).not.toBe(adapter.useDataGrid)
+	})
+
+	it('the bound DataGrid carries the full compound namespace', async () => {
+		const adapter = await import('@ez-kit/data-grid-react')
+		const kit = await import('./index')
+		for (const member of Object.keys(adapter.DataGrid) as (keyof typeof adapter.DataGrid)[]) {
+			expect(kit.DataGrid[member], `DataGrid.${member} missing from the kit bundle`).toBeDefined()
+		}
+	})
+})

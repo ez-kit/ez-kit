@@ -20,23 +20,25 @@ import type { GridComponentRegistry } from './types'
  */
 
 /** Named, closed set of grid features that own UI-kit components. */
-export enum GridFeature {
-	Core = 'core',
-	Pagination = 'pagination',
-	Sorting = 'sorting',
-	Filtering = 'filtering',
-	Editing = 'editing',
-	Selection = 'selection',
+export const GridFeature = {
+	Core: 'core',
+	Pagination: 'pagination',
+	Sorting: 'sorting',
+	Filtering: 'filtering',
+	Editing: 'editing',
+	Selection: 'selection',
 	/** Pending-draft section of the shared action bar (`deferredApply`). */
-	Draft = 'draft',
+	Draft: 'draft',
 	/** Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`). */
-	RowActions = 'row-actions',
-	Resizing = 'resizing',
-	ColumnVisibility = 'column-visibility',
-	FallbackStates = 'fallback-states',
-	Infinite = 'infinite',
-	Expanding = 'expanding',
-}
+	RowActions: 'row-actions',
+	Resizing: 'resizing',
+	ColumnVisibility: 'column-visibility',
+	FallbackStates: 'fallback-states',
+	Infinite: 'infinite',
+	Expanding: 'expanding',
+} as const
+
+export type GridFeature = (typeof GridFeature)[keyof typeof GridFeature]
 
 // ── source of truth: feature → its components ────────────────────────────────
 
@@ -91,19 +93,19 @@ type ComponentsFor<F extends GridFeature> = Required<
 >
 
 /** Minimum to render a basic table. Always required whenever a grid mounts. */
-export type GridCoreComponents = ComponentsFor<GridFeature.Core>
-export type GridPaginationComponents = ComponentsFor<GridFeature.Pagination>
-export type GridSortingComponents = ComponentsFor<GridFeature.Sorting>
-export type GridFilteringComponents = ComponentsFor<GridFeature.Filtering>
-export type GridEditingComponents = ComponentsFor<GridFeature.Editing>
-export type GridSelectionComponents = ComponentsFor<GridFeature.Selection>
-export type GridDraftComponents = ComponentsFor<GridFeature.Draft>
-export type GridRowActionsComponents = ComponentsFor<GridFeature.RowActions>
-export type GridResizingComponents = ComponentsFor<GridFeature.Resizing>
-export type GridColumnVisibilityComponents = ComponentsFor<GridFeature.ColumnVisibility>
-export type GridFallbackStateComponents = ComponentsFor<GridFeature.FallbackStates>
-export type GridInfiniteComponents = ComponentsFor<GridFeature.Infinite>
-export type GridExpandingComponents = ComponentsFor<GridFeature.Expanding>
+export type GridCoreComponents = ComponentsFor<typeof GridFeature.Core>
+export type GridPaginationComponents = ComponentsFor<typeof GridFeature.Pagination>
+export type GridSortingComponents = ComponentsFor<typeof GridFeature.Sorting>
+export type GridFilteringComponents = ComponentsFor<typeof GridFeature.Filtering>
+export type GridEditingComponents = ComponentsFor<typeof GridFeature.Editing>
+export type GridSelectionComponents = ComponentsFor<typeof GridFeature.Selection>
+export type GridDraftComponents = ComponentsFor<typeof GridFeature.Draft>
+export type GridRowActionsComponents = ComponentsFor<typeof GridFeature.RowActions>
+export type GridResizingComponents = ComponentsFor<typeof GridFeature.Resizing>
+export type GridColumnVisibilityComponents = ComponentsFor<typeof GridFeature.ColumnVisibility>
+export type GridFallbackStateComponents = ComponentsFor<typeof GridFeature.FallbackStates>
+export type GridInfiniteComponents = ComponentsFor<typeof GridFeature.Infinite>
+export type GridExpandingComponents = ComponentsFor<typeof GridFeature.Expanding>
 
 // ── nested public shapes (derived from the tiers) ────────────────────────────
 

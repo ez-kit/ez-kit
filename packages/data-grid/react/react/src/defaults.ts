@@ -1,7 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '@ez-kit/data-grid-core'
 
 import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from './data-grid/page-window'
-import { PaginationVariants } from './types'
+import { PaginationVariant } from './types'
 
 /**
  * Default commit debounce (ms) for column text filter inputs.
@@ -26,7 +26,7 @@ export const DATA_GRID_DEFAULTS = {
 	/** Page-based pagination. `pageSize` mirrors the core default (one source across layers). */
 	pagination: {
 		pageSize: DEFAULT_PAGE_SIZE,
-		variant: PaginationVariants.Numbered,
+		variant: PaginationVariant.Numbered,
 		/** `numbered` page-link window; mirrors the `buildPageWindow` defaults. */
 		siblings: DEFAULT_PAGE_SIBLINGS,
 		boundaries: DEFAULT_PAGE_BOUNDARIES,

@@ -129,7 +129,7 @@ layer has none to give. It does not need one: **a write feature is switched on b
 the defaults that describe it.**
 
 ```tsx
-<DataGridOptionsProvider defaults={{ creating: { mode: 'modal' }, deleting: { confirmation: true } }}>
+<DataGridOptionsProvider defaults={{ creating: { variant: 'modal' }, deleting: { confirmation: true } }}>
 	{/* Creates in a modal, asks before deleting — it supplied the handlers. */}
 	<DataGrid
 		data={orders}

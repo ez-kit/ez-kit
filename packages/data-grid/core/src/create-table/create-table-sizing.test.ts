@@ -42,14 +42,14 @@ describe('createTable — sizing', () => {
 		expect(table.options.enableColumnResizing).toBeFalsy()
 	})
 
-	it('column with enableResizing: false returns false from getCanResize()', () => {
-		const cols = createColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
+	it('column with resizing: false returns false from getCanResize()', () => {
+		const cols = createColumns<Row>([{ accessorKey: 'name', resizing: false }])
 		const table = createTable({ data: DATA, columns: cols, sizing: true })
 		const col = table.getColumn('name')
 		expect(col?.getCanResize()).toBe(false)
 	})
 
-	it('column without enableResizing restriction returns true from getCanResize() when sizing enabled', () => {
+	it('column without resizing restriction returns true from getCanResize() when sizing enabled', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, sizing: true })
 		const col = table.getColumn('name')
 		expect(col?.getCanResize()).toBe(true)

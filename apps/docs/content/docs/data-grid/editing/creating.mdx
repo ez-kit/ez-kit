@@ -9,11 +9,11 @@ The grid ships a "creating" flow: a trigger renders a button; clicking it opens 
 
 ## Usage
 
-The creating flow supports three modes. The default `mode: 'row'` appends an inline draft row at the bottom of the table.
+The creating flow supports three variants. The default `variant: 'row'` appends an inline draft row at the bottom of the table.
 
 <DataGridDocsExample exampleId='creating-row' />
 
-`mode: 'modal'` collects the new row in a dialog prepared from the columns' edit types.
+`variant: 'modal'` collects the new row in a dialog prepared from the columns' edit types.
 
 <DataGridDocsExample exampleId='creating-modal' />
 
@@ -30,7 +30,7 @@ With per-field validation:
 	data={data}
 	columns={columns}
 	creating={{
-		mode: 'modal',
+		variant: 'modal',
 		onSave: ({ values }) => api.create(values),
 	}}
 >
@@ -38,7 +38,7 @@ With per-field validation:
 </DataGrid>
 ```
 
-The modal itself is rendered by the grid when `creating.mode` is `'modal'` — `DataGrid.CreatingModal`
+The modal itself is rendered by the grid when `creating.variant` is `'modal'` — `DataGrid.CreatingModal`
 takes no props, and everything about the form comes from `creating` and the column defs.
 
 ## Default values
@@ -67,7 +67,7 @@ Or at table level, for values that span columns:
 	data={data}
 	columns={columns}
 	creating={{
-		mode: 'modal',
+		variant: 'modal',
 		defaultValues: ({ table }) => ({ createdAt: new Date(), page: table.getState().pagination.pageIndex }),
 		onSave: ({ values }) => api.create(values),
 	}}

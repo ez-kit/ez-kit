@@ -116,11 +116,11 @@ export function ActionsCell({ row }: ActionsCellProps) {
 
 	const hasEditing = Boolean(table.options.editing)
 	const hasDeleting = Boolean(table.options.deleting)
-	const editingMode = table.options.editing?.mode
+	const editingVariant = table.options.editing?.variant
 	const pinConfig = table.options.pinning
 
 	// Mid-edit: save / cancel only, whatever the variant.
-	if (isEditing && editingMode !== 'modal') {
+	if (isEditing && editingVariant !== 'modal') {
 		return (
 			<Renderer
 				mode={RowActionsMode.Editing}

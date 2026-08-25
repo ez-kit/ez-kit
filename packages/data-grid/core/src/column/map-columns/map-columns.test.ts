@@ -104,6 +104,19 @@ describe('mapColumns', () => {
 		expect(result[0]?.meta?.filtering).toBe(false)
 	})
 
+	// Regression: `filtering: false` used to reach only `meta`, so `column.getCanFilter()`
+	// still reported true and any consumer-built toolbar reading the TanStack API disagreed
+	// with the config.
+	it('filtering: false also sets enableColumnFilter so getCanFilter() agrees', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: false }])
+		expect(result[0]?.enableColumnFilter).toBe(false)
+	})
+
+	it('filtering config object leaves enableColumnFilter untouched', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { defaultOperator: 'contains' } }])
+		expect(result[0]?.enableColumnFilter).toBeUndefined()
+	})
+
 	it('cell.type goes into meta.cellType', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'age', cell: { type: 'number' } }])
 		expect(result[0]?.meta?.cellType).toBe('number')
@@ -184,9 +197,14 @@ describe('mapColumns', () => {
 		expect(result[0]?.maxSize).toBe(500)
 	})
 
-	it('passes enableResizing: false to TanStack column', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
+	it('resizing: false → enableResizing: false on the TanStack column', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', resizing: false }])
 		expect(result[0]?.enableResizing).toBe(false)
+	})
+
+	it('resizing omitted → enableResizing untouched (column stays resizable)', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name' }])
+		expect(result[0]?.enableResizing).toBeUndefined()
 	})
 
 	it('filtering.options is forwarded to meta.filteringOptions', () => {
@@ -232,5 +250,26 @@ describe('mapColumns', () => {
 		const resolved = result[0]?.meta?.resolvedOperators
 		expect(resolved?.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
 		expect(result[0]?.meta?.defaultOperatorId).toBe('in')
+	})
+})
+
+describe('mapColumns — header/footer renderers', () => {
+	it('keeps a string header as-is', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+		expect(result[0]?.header).toBe('Name')
+	})
+
+	// The renderer path always worked (the adapter runs it through flexRender); only the
+	// public type forbade it, so `header: () => <b>Name</b>` failed to compile.
+	it('passes a header render function through untouched', () => {
+		const header = vi.fn(() => 'rendered')
+		const result = mapColumns<Row>([{ accessorKey: 'name', header }])
+		expect(result[0]?.header).toBe(header)
+	})
+
+	it('passes a footer render function through untouched', () => {
+		const footer = vi.fn(() => 'total')
+		const result = mapColumns<Row>([{ accessorKey: 'age', footer }])
+		expect(result[0]?.footer).toBe(footer)
 	})
 })

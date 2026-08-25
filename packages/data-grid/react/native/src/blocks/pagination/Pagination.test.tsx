@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariants } from '@ez-kit/data-grid-react'
+import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariant } from '@ez-kit/data-grid-react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -13,7 +13,7 @@ const GAP_GLYPH = '…'
 /** A known-total, mid-range page — overridden per case. */
 function makeProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
 	return {
-		variant: PaginationVariants.Numbered,
+		variant: PaginationVariant.Numbered,
 		pageIndex: 0,
 		pageSize: 10,
 		pageCount: 5,
@@ -109,21 +109,21 @@ describe('native Pagination — numbered with an unknown page count', () => {
 
 describe('native Pagination — simple / compact', () => {
 	it('simple shows the range label and no page links', () => {
-		render(<Pagination {...makeProps({ variant: PaginationVariants.Simple })} />)
+		render(<Pagination {...makeProps({ variant: PaginationVariant.Simple })} />)
 
 		expect(screen.getByText('1–10 of 50')).toBeDefined()
 		expect(pageLinks()).toEqual([])
 	})
 
 	it('compact shows the page label and no page links', () => {
-		render(<Pagination {...makeProps({ variant: PaginationVariants.Compact })} />)
+		render(<Pagination {...makeProps({ variant: PaginationVariant.Compact })} />)
 
 		expect(screen.getByText('Page 1 of 5')).toBeDefined()
 		expect(pageLinks()).toEqual([])
 	})
 
 	it('neither renders the first/last jumps', () => {
-		render(<Pagination {...makeProps({ variant: PaginationVariants.Simple })} />)
+		render(<Pagination {...makeProps({ variant: PaginationVariant.Simple })} />)
 
 		expect(screen.queryByText(FIRST_GLYPH)).toBeNull()
 		expect(screen.queryByText(LAST_GLYPH)).toBeNull()

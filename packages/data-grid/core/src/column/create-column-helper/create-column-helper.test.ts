@@ -62,14 +62,14 @@ describe('createColumnHelper', () => {
 				size: 200,
 				minSize: 50,
 				maxSize: 500,
-				enableResizing: false,
+				resizing: false,
 			})
 			expect(col.sorting).toBe(false)
 			expect(col.pinning).toEqual({ pin: 'left' })
 			expect(col.size).toBe(200)
 			expect(col.minSize).toBe(50)
 			expect(col.maxSize).toBe(500)
-			expect(col.enableResizing).toBe(false)
+			expect(col.resizing).toBe(false)
 		})
 	})
 

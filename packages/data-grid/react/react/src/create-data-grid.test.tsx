@@ -34,13 +34,26 @@ describe('createDataGrid', () => {
 		expect(screen.getByText('Bob')).toBeInTheDocument()
 	})
 
-	it('bound DataGrid has all compound sub-components', () => {
+	// Regression: the factory used to copy the compound members by hand and had fallen five
+	// behind (SelectionBar, DraftBar, SortTrigger, GlobalFilterInput, ColumnVisibilityTrigger).
+	// The `as typeof DataGrid` cast typed them as present, so a kit consumer writing
+	// `<DataGrid.SelectionBar />` got `undefined` at runtime and no compile error.
+	// Enumerating `DataGrid` itself means a newly added member cannot be forgotten.
+	it('bound DataGrid carries every compound sub-component the unbound one has', () => {
 		const { DataGrid: BoundDataGrid } = createDataGrid({ components: {} })
-		expect(BoundDataGrid.Toolbar).toBe(DataGrid.Toolbar)
-		expect(BoundDataGrid.Table).toBe(DataGrid.Table)
-		expect(BoundDataGrid.Pagination).toBe(DataGrid.Pagination)
-		expect(BoundDataGrid.PageSizer).toBe(DataGrid.PageSizer)
-		expect(BoundDataGrid.CreateTrigger).toBe(DataGrid.CreateTrigger)
+		const members = Object.keys(DataGrid) as (keyof typeof DataGrid)[]
+		expect(members.length).toBeGreaterThan(0)
+		for (const member of members) {
+			expect(BoundDataGrid[member], `DataGrid.${member} missing from the bound bundle`).toBe(DataGrid[member])
+		}
+	})
+
+	it('extendDataGrid carries the compound namespace too', () => {
+		const { extendDataGrid } = createDataGrid({ components: {} })
+		const { DataGrid: Extended } = extendDataGrid({ rating: { view: () => null } })
+		for (const member of Object.keys(DataGrid) as (keyof typeof DataGrid)[]) {
+			expect(Extended[member], `DataGrid.${member} missing from the extended bundle`).toBe(DataGrid[member])
+		}
 	})
 })
 

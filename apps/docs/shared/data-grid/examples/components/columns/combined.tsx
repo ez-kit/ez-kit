@@ -29,7 +29,7 @@ const combinedColumns = createColumns<User>([
 		accessorKey: 'active',
 		header: 'Active',
 		size: 100,
-		enableResizing: false,
+		resizing: false,
 		cell: { type: 'boolean' },
 		pinning: { initialPin: 'right' },
 		visibility: { initialHidden: true },

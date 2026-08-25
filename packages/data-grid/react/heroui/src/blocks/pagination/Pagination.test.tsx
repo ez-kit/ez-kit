@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariants } from '@ez-kit/data-grid-react'
+import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariant } from '@ez-kit/data-grid-react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -9,7 +9,7 @@ import type { PaginationProps } from '@ez-kit/data-grid-react'
 /** A known-total, mid-range page — overridden per case. */
 function makeProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
 	return {
-		variant: PaginationVariants.Numbered,
+		variant: PaginationVariant.Numbered,
 		pageIndex: 0,
 		pageSize: 10,
 		pageCount: 5,
@@ -85,7 +85,7 @@ describe('heroui Pagination — numbered', () => {
 
 describe('heroui Pagination — simple / compact', () => {
 	it('simple shows the range label and no page links', () => {
-		const { container } = render(<Pagination {...makeProps({ variant: PaginationVariants.Simple })} />)
+		const { container } = render(<Pagination {...makeProps({ variant: PaginationVariant.Simple })} />)
 
 		expect(screen.getByText('1–10 of 50')).toBeDefined()
 		expect(pageLinks(container)).toEqual([])
@@ -93,20 +93,20 @@ describe('heroui Pagination — simple / compact', () => {
 
 	// Regression: an unknown total under manual pagination produced the inverted "21–10 of 10".
 	it('simple falls back to the page label when the total is unknown', () => {
-		render(<Pagination {...makeUnknownRowCountProps({ variant: PaginationVariants.Simple, pageIndex: 2 })} />)
+		render(<Pagination {...makeUnknownRowCountProps({ variant: PaginationVariant.Simple, pageIndex: 2 })} />)
 
 		expect(screen.getByText('Page 3 of 5')).toBeDefined()
 	})
 
 	it('compact shows the page label', () => {
-		render(<Pagination {...makeProps({ variant: PaginationVariants.Compact })} />)
+		render(<Pagination {...makeProps({ variant: PaginationVariant.Compact })} />)
 
 		expect(screen.getByText('Page 1 of 5')).toBeDefined()
 	})
 
 	// Regression: the core -1 unknown-pageCount sentinel rendered as "Page 1 of -1".
 	it('compact omits the total when the page count is unknown', () => {
-		render(<Pagination {...makeUnknownTotalProps({ variant: PaginationVariants.Compact })} />)
+		render(<Pagination {...makeUnknownTotalProps({ variant: PaginationVariant.Compact })} />)
 
 		expect(screen.getByText('Page 1')).toBeDefined()
 	})

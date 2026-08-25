@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { renderWithComponents } from '../test-utils'
-import { PaginationVariants } from '../types'
+import { PaginationVariant } from '../types'
 import { useDataGrid } from '../use-data-grid'
 
 import { Pagination } from './pagination'
@@ -106,13 +106,13 @@ describe('Pagination — hides the footer on a known-empty grid', () => {
 
 describe('Pagination — variant plumbing', () => {
 	it('passes the configured variant through to the UI kit', () => {
-		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariants.Compact } })
-		expect(props.variant).toBe(PaginationVariants.Compact)
+		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Compact } })
+		expect(props.variant).toBe(PaginationVariant.Compact)
 	})
 
 	it('defaults to the numbered variant', () => {
 		const { props } = captureProps({ pagination: true })
-		expect(props.variant).toBe(PaginationVariants.Numbered)
+		expect(props.variant).toBe(PaginationVariant.Numbered)
 	})
 
 	it('passes the real pageSize, not one derived from rowCount ÷ pageCount', () => {

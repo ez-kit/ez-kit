@@ -38,8 +38,27 @@ export type EditingState = {
 	commitStatus: CommitStatus
 }
 
+/**
+ * Where the edit form is presented. A pure display concern — the commit pipeline is
+ * identical for all three.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `variant: 'modal'` is equally valid and needs no import. See {@link EditingVariant}.
+ */
+export const EditingVariant = {
+	/** The row itself swaps its cells for inputs. The default. */
+	Row: 'row',
+	/** A modal dialog holding the whole row's fields. */
+	Modal: 'modal',
+	/** Only the clicked cell becomes an input. */
+	Cell: 'cell',
+} as const
+
+export type EditingVariant = (typeof EditingVariant)[keyof typeof EditingVariant]
+
 export type EditingConfig<TData> = {
-	mode?: 'row' | 'modal' | 'cell'
+	/** How the edit form is presented. Default: {@link EditingVariant.Row}. */
+	variant?: EditingVariant
 	validate?: ValidateConfig<TData>
 	validateOn?: ValidateOn
 	validateDebounceMs?: number

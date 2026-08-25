@@ -147,13 +147,6 @@ describe('createTable — sorting', () => {
 		table.getRow('1').toggleSelected(true)
 		expect(onChange).not.toHaveBeenCalled()
 	})
-
-	it('sorting.toolbar is a UI-only flag, no TanStack option leaks', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { toolbar: true } })
-		// Just verify it doesn't crash and getSortedRowModel is enabled.
-		expect(table.options.getSortedRowModel).toBeDefined()
-		expect((table.options as unknown as { toolbar?: unknown }).toolbar).toBeUndefined()
-	})
 })
 
 // ── filtering ─────────────────────────────────────────────────────────────────
@@ -428,7 +421,7 @@ describe('createTable — creating / editing / deleting', () => {
 	})
 
 	it('editing config is stored in table options', () => {
-		const cfg = { mode: 'row' as const, onSave: () => Promise.resolve() }
+		const cfg = { variant: 'row' as const, onSave: () => Promise.resolve() }
 		const table = createTable({ data: DATA, columns: COLUMNS, editing: cfg })
 		expect(table.options.editing).toBe(cfg)
 	})
@@ -531,7 +524,7 @@ describe('createTable — system columns', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { mode: 'row', onSave: () => Promise.resolve() },
+			editing: { variant: 'row', onSave: () => Promise.resolve() },
 		})
 		const ids = columnIds(table)
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
@@ -553,7 +546,7 @@ describe('createTable — system columns', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { mode: 'row', onSave: () => Promise.resolve() },
+			editing: { variant: 'row', onSave: () => Promise.resolve() },
 			pinning: { row: { top: true } },
 		})
 		const ids = columnIds(table)
@@ -567,7 +560,7 @@ describe('createTable — system columns', () => {
 			columns: COLUMNS,
 			selection: true,
 			expanding: true,
-			editing: { mode: 'row', onSave: () => Promise.resolve() },
+			editing: { variant: 'row', onSave: () => Promise.resolve() },
 			pinning: { row: { top: true } },
 		})
 		expect(columnIds(table)).toEqual([SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, 'name', 'age', ACTIONS_COLUMN_ID])
@@ -590,7 +583,7 @@ describe('createTable — system columns', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { mode: 'row', onSave: () => Promise.resolve() },
+			editing: { variant: 'row', onSave: () => Promise.resolve() },
 		})
 		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
 		expect(actionsCol?.columnDef.meta?.columnPinning).toEqual({ pin: 'right' })

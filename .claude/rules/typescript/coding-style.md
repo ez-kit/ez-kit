@@ -224,27 +224,52 @@ const separator = options.separator ?? DEFAULT_SEPARATOR
 stringify: (value) => (value ? TRUE : FALSE)
 ```
 
-### Closed sets → `enum`
+### Closed sets → `const` object + same-named union
 
-When a value is one of a small, fixed, named set (history modes, value brands, kinds), model it
-as a TS `enum` and reference its members **everywhere** — declarations, comparisons, defaults,
-and tests — never the raw string.
+When a value is one of a small, fixed, named set (history modes, value brands, kinds), give it
+named members and reference them **everywhere** — declarations, comparisons, defaults, and
+tests — never the raw string.
+
+Model it as a `const` object plus a union type of the **same name**, never a TS `enum`:
 
 ```typescript
 // WRONG: the same closed set spelled as raw strings in many files
 type SearchParamsHistory = 'push' | 'replace'
 if (binding.history === 'push') return 'push'
 
-// CORRECT: one enum, referenced by member
+// WRONG: an enum — its members are a nominal type, so a plain string is not assignable
 export enum SearchParamsHistory {
 	Push = 'push',
-	Replace = 'replace',
 }
+
+// CORRECT: one const object + one union under one name
+export const SearchParamsHistory = {
+	Push: 'push',
+	Replace: 'replace',
+} as const
+
+export type SearchParamsHistory = (typeof SearchParamsHistory)[keyof typeof SearchParamsHistory]
+
 if (binding.history === SearchParamsHistory.Push) return SearchParamsHistory.Push
 ```
 
-Because `enum`s are runtime values, import them as values (not `import type`) and export them with
-`export { … }` (not `export type { … }`) under `verbatimModuleSyntax`.
+A value and a type may share a name in TypeScript, so this is a drop-in replacement for an
+enum: `SearchParamsHistory.Push` still works as a value and `SearchParamsHistory` still works
+as a type.
+
+**Why not `enum`:** enum members are a _nominal_ type, so `{ variant: 'menu' }` is a compile
+error against `variant?: SomeEnum` — a consumer must import the enum to write a value at all.
+For anything on a public API that makes the option effectively unusable (and, in this repo, it
+already had: `rowActions.variant` was documented as `'menu'` and did not compile). The const
+object keeps the named members for internal reference while the union keeps the bare string
+valid for callers.
+
+Because these are runtime values, import them as values (not `import type`) and export them
+with `export { … }` (not `export type { … }`) under `verbatimModuleSyntax` — the type comes
+along with the value export.
+
+An `enum` is acceptable only for a set that never crosses a package boundary, and even then the
+const-object form is preferred for consistency.
 
 ### Lookup map over `switch`
 

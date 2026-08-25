@@ -1,4 +1,4 @@
-import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariants } from '@ez-kit/data-grid-react'
+import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariant } from '@ez-kit/data-grid-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
@@ -25,7 +25,7 @@ export function Pagination({
 	onPageChange,
 }: PaginationProps) {
 	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
-	const isNumbered = variant === PaginationVariants.Numbered
+	const isNumbered = variant === PaginationVariant.Numbered
 	// Page links need a known page count; without one `numbered` degrades to the jumps + prev/next.
 	const showLinks = isNumbered && pageCount !== undefined
 	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.

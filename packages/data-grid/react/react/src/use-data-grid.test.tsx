@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { buildPaginationLabel } from './data-grid/pagination-label'
-import { PaginationVariants } from './types'
+import { PaginationVariant } from './types'
 import {
 	FILTERING_VARIANT_KEY,
 	FILTER_CHIPS_KEY,
@@ -136,7 +136,7 @@ describe('useDataGrid', () => {
 		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
 		expect(
 			buildPaginationLabel({
-				variant: PaginationVariants.Simple,
+				variant: PaginationVariant.Simple,
 				pageIndex: result.current.table.getState().pagination.pageIndex,
 				pageSize: 10,
 				rowCount: result.current.table.getRowCount(),

@@ -66,7 +66,7 @@ export function DateCellEditExample() {
 			columns={baseColumns}
 			filtering
 			editing={{
-				mode: 'cell',
+				variant: 'cell',
 				onSave: ({ rowId, values }) => {
 					setRows((prev) => prev.map((row) => (String(row.id) === rowId ? { ...row, ...values } : row)))
 				},
@@ -82,7 +82,7 @@ export function DateCellCreateExample() {
 			data={rows}
 			columns={baseColumns}
 			creating={{
-				mode: 'row',
+				variant: 'row',
 				onSave: ({ values }) => {
 					const next = values as Partial<Omit<Milestone, 'id'>>
 					setRows((prev) => [

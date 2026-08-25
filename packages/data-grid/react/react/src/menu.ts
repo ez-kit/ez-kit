@@ -11,19 +11,21 @@
  * Which glyph an entry carries. Semantic on purpose: the shared layer names the *meaning*,
  * each kit maps it to its own icon set and sizing (see each kit's `blocks/icons.tsx`).
  */
-export enum GridMenuIcon {
-	Edit = 'edit',
-	Delete = 'delete',
-	PinTop = 'pin-top',
-	PinBottom = 'pin-bottom',
-	PinLeft = 'pin-left',
-	PinRight = 'pin-right',
-	Unpin = 'unpin',
-	SortAsc = 'sort-asc',
-	SortDesc = 'sort-desc',
-	ClearSort = 'clear-sort',
-	Hide = 'hide',
-}
+export const GridMenuIcon = {
+	Edit: 'edit',
+	Delete: 'delete',
+	PinTop: 'pin-top',
+	PinBottom: 'pin-bottom',
+	PinLeft: 'pin-left',
+	PinRight: 'pin-right',
+	Unpin: 'unpin',
+	SortAsc: 'sort-asc',
+	SortDesc: 'sort-desc',
+	ClearSort: 'clear-sort',
+	Hide: 'hide',
+} as const
+
+export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]
 
 export type GridMenuItem = {
 	/** Stable within the menu — kits key their collection items on it. */
@@ -45,12 +47,14 @@ export type GridMenuSection = {
 }
 
 /** Where the menu sits, which is all that changes about its trigger. */
-export enum GridMenuVariant {
+export const GridMenuVariant = {
 	/** Column header overflow — a compact trigger sized to the header row. */
-	Column = 'column',
+	Column: 'column',
 	/** Row overflow — a trigger matching the inline row action buttons. */
-	Row = 'row',
-}
+	Row: 'row',
+} as const
+
+export type GridMenuVariant = (typeof GridMenuVariant)[keyof typeof GridMenuVariant]
 
 export type GridMenuProps = {
 	variant: GridMenuVariant

@@ -7,7 +7,12 @@ import type {
 	MultiSelectOption,
 } from '../features/operators'
 import type { FieldState, ValidateOn } from '../features/validation'
-import type { ColumnDef as TableCoreColumnDef, ColumnMeta as TableCoreColumnMeta, RowData } from '@tanstack/table-core'
+import type {
+	ColumnDef as TableCoreColumnDef,
+	ColumnMeta as TableCoreColumnMeta,
+	HeaderContext,
+	RowData,
+} from '@tanstack/table-core'
 
 /** Comparator signature for custom sort functions. Compatible with TanStack `SortingFn`. */
 export type SortingFn = (rowA: unknown, rowB: unknown, columnId: string) => number
@@ -303,8 +308,27 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	id?: string
 	accessorKey?: keyof TRow & string
 	accessorFn?: (row: TRow, index: number) => unknown
-	header?: string
-	footer?: string
+	/**
+	 * Column header. A plain string, or a render function for anything richer — an icon
+	 * beside the label, a tooltip, a badge.
+	 *
+	 * The return type is `unknown` because core is framework-agnostic: it never calls this,
+	 * it hands it to the adapter, which renders it (React: any `ReactNode`).
+	 *
+	 * @example
+	 * ```tsx
+	 * { accessorKey: 'total', header: () => <span>Total <InfoIcon /></span> }
+	 * ```
+	 */
+	header?: string | ((ctx: HeaderContext<TRow, unknown>) => unknown)
+	/**
+	 * Column footer, same shape as {@link ColumnDef.header}.
+	 *
+	 * Reaches TanStack (`table.getFooterGroups()`) but is **not** auto-rendered — the built-in
+	 * `<DataGrid.Table />` layout has no footer row. Read it yourself when composing a custom
+	 * body with `<DataGrid.Table>{…}</DataGrid.Table>`.
+	 */
+	footer?: string | ((ctx: HeaderContext<TRow, unknown>) => unknown)
 	columns?: ColumnDef<TRow, TCustomCellTypes>[]
 
 	/**
@@ -359,11 +383,17 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 */
 	validateDebounceMs?: number
 
+	/**
+	 * Column-level resizing. `false` pins the column's width — the resize handle is not
+	 * rendered and `column.getCanResize()` returns false.
+	 *
+	 * The alias for TanStack's `enableResizing`, matching the `sorting` / `filtering` /
+	 * `visibility` shape. There is deliberately no raw `enable*` pass-through on a column:
+	 * two spellings of one switch is how they drift.
+	 */
+	resizing?: false
+
 	// Pass-through TanStack options
-	enableColumnFilter?: boolean
-	enableGlobalFilter?: boolean
-	enableHiding?: boolean
-	enableResizing?: boolean
 	size?: number
 	minSize?: number
 	maxSize?: number

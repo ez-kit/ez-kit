@@ -4,15 +4,17 @@ import type { GridMenuSection } from '../menu'
 import type { Header } from '@tanstack/table-core'
 
 /** Entry ids for the column header menu. Unique within that menu, nothing more. */
-export enum ColumnActionId {
-	SortAsc = 'sort-asc',
-	SortDesc = 'sort-desc',
-	ClearSort = 'clear-sort',
-	PinLeft = 'pin-left',
-	PinRight = 'pin-right',
-	Unpin = 'unpin',
-	Hide = 'hide',
-}
+export const ColumnActionId = {
+	SortAsc: 'sort-asc',
+	SortDesc: 'sort-desc',
+	ClearSort: 'clear-sort',
+	PinLeft: 'pin-left',
+	PinRight: 'pin-right',
+	Unpin: 'unpin',
+	Hide: 'hide',
+} as const
+
+export type ColumnActionId = (typeof ColumnActionId)[keyof typeof ColumnActionId]
 
 const LABELS: Record<ColumnActionId, string> = {
 	[ColumnActionId.SortAsc]: 'Asc',

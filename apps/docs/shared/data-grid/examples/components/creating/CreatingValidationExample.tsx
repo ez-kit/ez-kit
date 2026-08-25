@@ -38,7 +38,7 @@ export function CreatingValidationExample() {
 				data={data}
 				columns={columns}
 				creating={{
-					mode: 'modal',
+					variant: 'modal',
 					validate: { schema: userSchema },
 					onSave: async ({ values }) => {
 						// Simulate latency so the spinner is visible.

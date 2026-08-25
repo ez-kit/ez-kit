@@ -17,7 +17,7 @@ By default each action is its own icon button, side by side:
 <DataGrid
 	data={data}
 	columns={columns}
-	editing={{ mode: 'modal', onSave }}
+	editing={{ variant: 'modal', onSave }}
 	deleting={{ onDelete }}
 	pinning={{ row: { top: true, bottom: true } }}
 />
@@ -29,7 +29,7 @@ Set `rowActions.variant` to `'menu'` to collapse them into one overflow menu ins
 <DataGrid
 	data={data}
 	columns={columns}
-	editing={{ mode: 'modal', onSave }}
+	editing={{ variant: 'modal', onSave }}
 	deleting={{ onDelete }}
 	pinning={{ row: { top: true, bottom: true } }}
 	rowActions={{ variant: 'menu' }}

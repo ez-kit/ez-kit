@@ -48,11 +48,11 @@ export type MultiSortConfig = {
 /**
  * Table-level sorting config.
  *
- * @example Multi-sort with toolbar builder, capped at 3 columns, ctrl-click
+ * @example Multi-sort capped at 3 columns, ctrl-click
  * ```ts
  * createTable({
  *   data, columns,
- *   sorting: { multi: { max: 3, event: 'ctrl' }, toolbar: true },
+ *   sorting: { multi: { max: 3, event: 'ctrl' } },
  * })
  * ```
  *
@@ -101,8 +101,6 @@ export type SortingConfig = {
 	 * ```
 	 */
 	multi?: boolean | MultiSortConfig
-	/** Show a multi-sort builder button in the toolbar. Default: false. UI-only flag, ignored by core. */
-	toolbar?: boolean
 	/**
 	 * Named sort functions, addressable from `column.sorting.fn` by id.
 	 *
@@ -328,18 +326,36 @@ export type SelectionConfig = {
 	multiple?: boolean
 }
 
-export type ExpandingVariant = 'sub-content' | 'tree'
+/**
+ * What expanding *does* — not how it looks, hence `mode` rather than `variant`.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'tree'` is equally valid and needs no import.
+ */
+export const ExpandingMode = {
+	/** Each row can open a detail panel rendered below it. The default. */
+	SubContent: 'sub-content',
+	/** Rows nest: sub-rows are extracted from the row itself and indented under their parent. */
+	Tree: 'tree',
+} as const
 
-export type ExpandingConfig = {
-	/** Mode switch. Default: 'sub-content'. */
-	variant?: ExpandingVariant
-	/** Tree mode: sub-row extractor. Auto-detects row.children when omitted. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	getSubRows?: (row: any, index: number) => any[] | undefined
-	/** Sub-content mode: per-row expandability callback. Provided by React layer. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	getRowCanExpand?: (row: any) => boolean
-	/** Sub-content mode: React component for detail panel. Provided by React layer. */
+export type ExpandingMode = (typeof ExpandingMode)[keyof typeof ExpandingMode]
+
+export type ExpandingConfig<TRow extends object = object> = {
+	/** What expanding does. Default: {@link ExpandingMode.SubContent}. */
+	mode?: ExpandingMode
+	/** Tree mode: sub-row extractor. Auto-detects `row.children` when omitted. */
+	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
+	/** Sub-content mode: per-row expandability callback. */
+	getRowCanExpand?: (row: Row<TRow>) => boolean
+	/**
+	 * Sub-content mode: the detail-panel renderer.
+	 *
+	 * Deliberately opaque here — core is framework-agnostic and never calls it, it only
+	 * carries it through to whichever adapter mounts the panel. The React adapter narrows
+	 * this to `ComponentType<ExpandedRowProps<TRow>>` on `ReactExpandingConfig`, which is
+	 * the type a React consumer actually writes against.
+	 */
 	renderExpanded?: unknown
 }
 
@@ -428,14 +444,18 @@ export type TableConfig<TRow extends object> = {
 	globalFiltering?: boolean | GlobalFilteringConfig
 	pagination?: boolean | PaginationConfig
 	selection?: boolean | SelectionConfig
-	expanding?: boolean | ExpandingConfig
+	expanding?: boolean | ExpandingConfig<TRow>
 	/**
-	 * Column visibility (hide/show columns). Falsy fully disables hiding for all
-	 * columns; truthy enables it (per-column `visibility` controls remain).
-	 * The detailed UI config (e.g. toolbar button) is layered on top in the
-	 * React package.
+	 * Column visibility (hide/show columns). `false` / omitted disables hiding for all
+	 * columns; `true` enables it (per-column `visibility` controls still apply).
+	 *
+	 * A plain boolean on purpose: core has no knobs of its own here, it only gates
+	 * `enableHiding`. The UI config (e.g. the toolbar button) is a React concern and
+	 * lives on the adapter's `ColumnVisibilityUIConfig`, which passes only the resolved
+	 * boolean down. Typing this `boolean | object` instead would let any misspelled key
+	 * through unchecked.
 	 */
-	columnVisibility?: boolean | object
+	columnVisibility?: boolean
 	/**
 	 * Pinning configuration. Column pinning and row pinning are gated independently:
 	 * - `true` — enable column menu UI + row pin top+bottom

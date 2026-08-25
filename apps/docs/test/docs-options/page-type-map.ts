@@ -67,6 +67,7 @@ export const GRID_TYPE = {
 	ColumnDef: { module: TypeModule.Core, name: 'ColumnDef', typeArgs: ROW_TYPE_ARGS },
 	TableState: { module: TypeModule.Core, name: 'TableState' },
 	SortingConfig: { module: TypeModule.Core, name: 'SortingConfig' },
+	ReactSortingConfig: { module: TypeModule.React, name: 'ReactSortingConfig' },
 	MultiSortConfig: { module: TypeModule.Core, name: 'MultiSortConfig' },
 	ColumnSortingConfig: { module: TypeModule.Core, name: 'ColumnSortingConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
@@ -161,12 +162,17 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ColumnsColumnVisibility,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
+		// 3, not 4: the `enableHiding` row is gone — it was the raw TanStack pass-through that
+		// duplicated `visibility`, and `ColumnDef` no longer accepts it.
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.ColumnsIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 12 }],
+		// 13, not 12: the raw `enableColumnFilter` / `enableHiding` pass-throughs were dropped
+		// from `ColumnDef` (each duplicated an ez-kit alias) and the three aliases the page now
+		// documents in their place — `filtering`, `visibility`, `resizing` — took their slots.
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 13 }],
 		nonOptionTables: [],
 	},
 	{
@@ -325,7 +331,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.Sorting,
 		optionTables: [
-			{ heading: '`sorting`', roots: [GRID_TYPE.SortingConfig], expectedCount: 7 },
+			{ heading: '`sorting`', roots: [GRID_TYPE.ReactSortingConfig], expectedCount: 7 },
 			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 3 },
 			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig], expectedCount: 5 },
 		],
