@@ -63,7 +63,7 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 	// own narrow subscriptions).
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const hasCreating = Boolean(table.options.creating) && table.options.creating?.variant !== 'pin-row'
+	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== 'pin-row'
 
 	const colVisConfig = (table as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] as
 		| boolean

@@ -67,7 +67,7 @@ export {
 	resolveColumnOperators,
 } from './features/operators'
 
-export { CreatingVariant } from './features/creating'
+export { CreatingMode } from './features/creating'
 export type {
 	CreateDefaultValueContext,
 	CreateDefaultValuesContext,
@@ -77,7 +77,7 @@ export type {
 } from './features/creating'
 export type { AppliedState, DraftApi, DraftAxis, PendingCount, QueryDraft } from './features/deferred-apply'
 export type { ConfirmationOptions, DeletingConfig, DeletingContext } from './features/deleting'
-export { EditingVariant } from './features/editing'
+export { EditingMode } from './features/editing'
 export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
 // Sourced from the feature modules (not `./types`) so their
 // `declare module '@tanstack/table-core'` augmentations (state.infinite /
@@ -116,7 +116,7 @@ export type {
 	PinningConfig,
 	RowPinningConfig,
 	SelectionConfig,
-	SizingConfig,
+	ResizingConfig,
 	SortingConfig,
 	SortingState,
 	SortingStateEntry,

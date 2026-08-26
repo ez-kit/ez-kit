@@ -179,7 +179,7 @@ describe('EditingFeature — cell mode', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { variant: 'cell', onSave },
+			editing: { mode: 'cell', onSave },
 		})
 		table.editing.startCell('1', 'name')
 		table.editing.setValue('name', 'Alice 2')
@@ -201,7 +201,7 @@ describe('EditingFeature — cell mode', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { variant: 'cell', validate, onSave },
+			editing: { mode: 'cell', validate, onSave },
 		})
 		table.editing.startCell('1', 'password')
 		table.editing.setValue('password', 'new-pw')
@@ -219,7 +219,7 @@ describe('EditingFeature — cell mode', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { variant: 'cell', validate, onSave },
+			editing: { mode: 'cell', validate, onSave },
 		})
 		table.editing.startCell('1', 'password')
 		table.editing.setValue('password', 'abc')
@@ -245,7 +245,7 @@ describe('EditingFeature — cell mode', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { variant: 'cell', validate, onSave },
+			editing: { mode: 'cell', validate, onSave },
 		})
 		table.editing.startCell('1', 'password')
 		table.editing.setValue('password', 'changed-only-here')
@@ -269,7 +269,7 @@ describe('EditingFeature — cell mode', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			editing: { variant: 'cell', onSave },
+			editing: { mode: 'cell', onSave },
 		})
 		table.editing.startCell('1', 'name')
 		table.editing.setValue('name', 'Alice 2')

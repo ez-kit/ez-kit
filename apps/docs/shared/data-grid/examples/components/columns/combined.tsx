@@ -46,7 +46,7 @@ export function ColumnsCombinedExample() {
 			sorting
 			columnVisibility={{ toolbar: true }}
 			pinning={{ column: true }}
-			sizing={{ mode: 'onEnd' }}
+			resizing={{ mode: 'onEnd' }}
 		/>
 	)
 }

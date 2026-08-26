@@ -120,9 +120,9 @@ export function Body({ children }: DataGridBodyProps = {}) {
 	}
 
 	const creatingConfig = table.options.creating
-	const creatingVariant = creatingConfig?.variant ?? 'row'
+	const creatingMode = creatingConfig?.mode ?? 'row'
 	const showCreatingRow =
-		creatingConfig !== undefined && (creatingVariant === 'pin-row' || (creatingVariant === 'row' && isCreatingOpen))
+		creatingConfig !== undefined && (creatingMode === 'pin-row' || (creatingMode === 'row' && isCreatingOpen))
 
 	const centerRows = hasPinning ? table.getCenterRows() : table.getRowModel().rows
 	const allRows = table.getRowModel().rows

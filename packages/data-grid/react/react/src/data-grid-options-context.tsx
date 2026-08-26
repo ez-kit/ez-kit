@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 /**
  * The mergeable subset of {@link UseDataGridConfig} — feature toggles and their config
  * objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`,
- * `columnVisibility`, `expanding`, `pinning`, `sizing`, `stickyHeader`,
+ * `columnVisibility`, `expanding`, `pinning`, `resizing`, `stickyHeader`,
  * `fallbacks`, …) that can be supplied once as defaults (app-level `DataGridOptionsProvider`
  * or kit-level `createDataGrid({ defaultOptions })`) and merged **under** each instance's own
  * config.

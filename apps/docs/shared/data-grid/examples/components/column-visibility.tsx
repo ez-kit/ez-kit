@@ -77,8 +77,8 @@ export function ColumnVisibilityExample() {
 				{
 					accessorKey: 'name',
 					header: 'Name',
-					// visibility: true — required column, always visible / locked (no Hide option in menu)
-					visibility: true,
+					// visibility: false — hiding disabled: always visible, no Hide option in menu
+					visibility: false,
 				},
 				{
 					accessorKey: 'email',

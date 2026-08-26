@@ -14,7 +14,7 @@ export function ResizingOnChangeExample() {
 			data={data}
 			columns={resizableColumns}
 			sorting
-			sizing={{ mode: 'onChange' }}
+			resizing={{ mode: 'onChange' }}
 		/>
 	)
 }

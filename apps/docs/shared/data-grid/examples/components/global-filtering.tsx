@@ -11,7 +11,7 @@ const columnsWithSecret = createColumns<User & { internalId: string }>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'email', header: 'Email' },
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
-	{ accessorKey: 'internalId', header: 'Internal ID', globalFilter: false },
+	{ accessorKey: 'internalId', header: 'Internal ID', globalFiltering: false },
 ])
 
 const baseColumns = createColumns<User>([

@@ -40,8 +40,8 @@ describe('buildColumnInvariants', () => {
 		expect(invariants.forcedRight).toEqual([])
 	})
 
-	it('treats a locked column (visibility: true) as always visible', () => {
-		const columns: TanStackColumnDef<Row>[] = [{ id: 'name', meta: { visibility: true } }]
+	it('treats a non-hideable column (visibility: false) as always visible', () => {
+		const columns: TanStackColumnDef<Row>[] = [{ id: 'name', meta: { visibility: false } }]
 		expect(buildColumnInvariants(columns).alwaysVisible).toEqual(['name'])
 	})
 })

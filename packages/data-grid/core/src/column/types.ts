@@ -350,23 +350,30 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 
 	/**
 	 * Column visibility configuration.
-	 * - `true` — column is always visible / locked (cannot be hidden, no Hide option in menu)
+	 * - `false` — hiding disabled for this column: it is always visible and gets no Hide
+	 *   option in the column menu
 	 * - `{ initialHidden: true }` — starts hidden, user can toggle it on
+	 *
+	 * `false` reads the same as every other per-column switch (`sorting: false`,
+	 * `filtering: false`, `editing: false`, `resizing: false`): it turns the feature off
+	 * for this column. Note that the *table*-level `columnVisibility` flag is the opposite
+	 * polarity by nature — it turns hiding on for the grid as a whole.
 	 */
-	visibility?: true | ColumnVisibilityDef
+	visibility?: false | ColumnVisibilityDef
 
 	/** Column-level filtering config. Set to false to disable. */
 	filtering?: false | ColumnFilteringConfig
 	/**
 	 * Whether this column participates in table-level global search.
 	 * - `false` — column is excluded from global search results
-	 * - omitted / `true` — column participates (default)
+	 * - omitted — column participates (default)
 	 *
-	 * Independent from {@link ColumnDef.filtering}: a column can have its own
-	 * filter popover disabled but still be searchable via global filter, or
-	 * vice versa.
+	 * Named for the table option it switches off ({@link TableConfig.globalFiltering}), the
+	 * way every other per-column switch is. Independent from {@link ColumnDef.filtering}: a
+	 * column can have its own filter popover disabled but still be searchable via global
+	 * search, or vice versa.
 	 */
-	globalFilter?: boolean
+	globalFiltering?: false
 	/** Column-level editing config. Set to false to disable. */
 	editing?: false | ColumnEditingConfig
 	/** Column-level creating config. Set to false to disable. */
@@ -411,7 +418,7 @@ declare module '@tanstack/table-core' {
 		filtering?: false | ColumnFilteringConfig
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig<TData, TValue>
-		visibility?: true | ColumnVisibilityDef
+		visibility?: false | ColumnVisibilityDef
 		isSystemColumn?: boolean
 		systemColumnType?: 'selection' | 'expand' | 'actions'
 		/** Pre-resolved operator list for this column (set when filtering.operators is configured). */

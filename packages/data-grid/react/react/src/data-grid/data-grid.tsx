@@ -268,8 +268,8 @@ function DataGridControlled<TRow extends object>({
 				<TableContext value={instance}>
 					{IS_DEV && <ComponentGuard />}
 					{children ?? <DefaultLayout />}
-					{table.options.creating?.variant === 'modal' && <CreatingModal />}
-					{table.options.editing?.variant === 'modal' && <EditingModal />}
+					{table.options.creating?.mode === 'modal' && <CreatingModal />}
+					{table.options.editing?.mode === 'modal' && <EditingModal />}
 					{hasConfirmDialog(table) && <ConfirmDialogRenderer />}
 				</TableContext>
 			</GridComponentsProvider>

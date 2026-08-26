@@ -16,8 +16,8 @@ import type {
 	ColumnEditingConfig,
 	ColumnFilteringConfig,
 	ColumnSortingConfig,
-	CreatingVariant,
-	EditingVariant,
+	CreatingMode,
+	EditingMode,
 	ExpandingConfig,
 	ExpandingMode,
 	FilteringConfig,
@@ -53,8 +53,8 @@ describe('public API surface', () => {
 		expect(publicApi.PaginationVariant.Simple).toBe('simple')
 		expect(publicApi.GridFeature.Core).toBe('core')
 		expect(publicApi.RowActionsVariant.Menu).toBe('menu')
-		expect(publicApi.CreatingVariant.PinRow).toBe('pin-row')
-		expect(publicApi.EditingVariant.Cell).toBe('cell')
+		expect(publicApi.CreatingMode.PinRow).toBe('pin-row')
+		expect(publicApi.EditingMode.Cell).toBe('cell')
 		expect(publicApi.ExpandingMode.Tree).toBe('tree')
 	})
 
@@ -79,8 +79,8 @@ describe('public API surface', () => {
 			'ColumnEditingConfig',
 			'ColumnFilteringConfig',
 			'ColumnSortingConfig',
-			'CreatingVariant',
-			'EditingVariant',
+			'CreatingMode',
+			'EditingMode',
 			'ExpandingConfig',
 			'ExpandingMode',
 			'FilteringConfig',
@@ -108,8 +108,8 @@ type _Assertions = [
 	ColumnEditingConfig,
 	ColumnFilteringConfig,
 	ColumnSortingConfig,
-	CreatingVariant,
-	EditingVariant,
+	CreatingMode,
+	EditingMode,
 	ExpandingConfig,
 	ExpandingMode,
 	FilteringConfig,

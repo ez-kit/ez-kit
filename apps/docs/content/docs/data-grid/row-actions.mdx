@@ -17,7 +17,7 @@ By default each action is its own icon button, side by side:
 <DataGrid
 	data={data}
 	columns={columns}
-	editing={{ variant: 'modal', onSave }}
+	editing={{ mode: 'modal', onSave }}
 	deleting={{ onDelete }}
 	pinning={{ row: { top: true, bottom: true } }}
 />
@@ -29,7 +29,7 @@ Set `rowActions.variant` to `'menu'` to collapse them into one overflow menu ins
 <DataGrid
 	data={data}
 	columns={columns}
-	editing={{ variant: 'modal', onSave }}
+	editing={{ mode: 'modal', onSave }}
 	deleting={{ onDelete }}
 	pinning={{ row: { top: true, bottom: true } }}
 	rowActions={{ variant: 'menu' }}
@@ -46,7 +46,7 @@ variant: burying a pending commit inside a dropdown would hide it behind an extr
 
 The column sizes itself from the number of actions it renders, rather than falling back to the
 150px default width TanStack gives a column with no `size`. Resize it like any other column when
-`sizing` is enabled.
+`resizing` is enabled.
 
 ## Options
 

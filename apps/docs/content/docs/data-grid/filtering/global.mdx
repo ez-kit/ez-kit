@@ -17,7 +17,7 @@ Global search and per-column filters coexist — enable both `filtering` and `gl
 
 <DataGridDocsExample exampleId='global-filtering-combined' />
 
-Set `globalFilter: false` on a column to exclude it from the global match (here the `Internal ID` column is never searched).
+Set `globalFiltering: false` on a column to exclude it from the global match (here the `Internal ID` column is never searched).
 
 <DataGridDocsExample exampleId='global-filtering-excluded' />
 
@@ -54,7 +54,7 @@ Global search has no `manual` flag of its own — setting `filtering.manual: tru
 | `fns`         | `Record<string, GlobalFilterFn>`            | Named global filter functions, addressable from `fn` by id.                                         |
 | `onChange`    | `(globalFilter: unknown) => void`           | Called when the global search value changes.                                                        |
 
-### Per-column `globalFilter`
+### Per-column `globalFiltering`
 
 | Option  | Type      | Description                                                              |
 | ------- | --------- | ------------------------------------------------------------------------ |

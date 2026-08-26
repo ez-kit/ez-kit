@@ -386,7 +386,7 @@ export type VirtualizedConfig = {
 export type ColumnResizeMode = 'onChange' | 'onEnd'
 export type ColumnResizeDirection = 'ltr' | 'rtl'
 
-export type SizingConfig = {
+export type ResizingConfig = {
 	/** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
 	mode?: ColumnResizeMode
 	/** Text direction for resize calculation. Default: 'ltr'. */
@@ -482,7 +482,11 @@ export type TableConfig<TRow extends object> = {
 	 * pinning is enabled; this only controls how those actions are presented.
 	 */
 	rowActions?: RowActionsConfig
-	sizing?: boolean | SizingConfig
+	/**
+	 * Column resizing. Named to match the per-column `resizing` switch — one feature, one
+	 * name at both levels.
+	 */
+	resizing?: boolean | ResizingConfig
 	/**
 	 * Seed values for table state at construction (TanStack-style). Merged over the
 	 * grid's computed defaults; consumer values win. Use for uncontrolled initial

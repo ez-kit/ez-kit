@@ -21,7 +21,7 @@ Things worth trying in the live preview above:
 - Change the page size, then page forward — the row count in the footer comes from the server, not from the loaded rows.
 - Edit or delete a row: the grid dims under a refetch overlay while the write and the follow-up query are in flight.
 - Drag the border of a column header to resize it — the width follows the cursor while you drag
-  (`sizing={{ mode: 'onChange' }}`) — and unpin **Order** from its column menu.
+  (`resizing={{ mode: 'onChange' }}`) — and unpin **Order** from its column menu.
 
 ## What is turned on
 
@@ -178,10 +178,10 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				globalFiltering: { placeholder: 'Search orders…', debounce: 300 },
 				stickyHeader: true,
 				pinning: { column: true, row: { top: true, bottom: true } },
-				sizing: { mode: 'onChange' },
+				resizing: { mode: 'onChange' },
 				columnVisibility: { toolbar: true },
-				creating: { variant: 'modal' },
-				editing: { variant: 'modal' },
+				creating: { mode: 'modal' },
+				editing: { mode: 'modal' },
 				deleting: {
 					confirmation: {
 						title: 'Delete order?',

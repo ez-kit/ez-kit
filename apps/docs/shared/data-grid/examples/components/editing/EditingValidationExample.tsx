@@ -24,7 +24,7 @@ export function EditingValidationExample() {
 			data={data}
 			columns={columns}
 			editing={{
-				variant: 'row',
+				mode: 'row',
 				validate: { schema: userSchema },
 				onSave: async ({ rowId, values }) => {
 					await new Promise<void>((r) => {

@@ -52,7 +52,7 @@ function mapColumn<TRow extends object>(
 		accessorFn,
 		id,
 		footer,
-		globalFilter,
+		globalFiltering,
 		resizing,
 		size,
 		minSize,
@@ -93,7 +93,7 @@ function mapColumn<TRow extends object>(
 	// thing twice and disagree with itself. `column.getCanFilter()` / `getCanHide()` /
 	// `getCanResize()` therefore always agree with the config the consumer wrote.
 	if (filtering === false) result.enableColumnFilter = false
-	if (globalFilter === false) result.enableGlobalFilter = false
+	if (globalFiltering === false) result.enableGlobalFilter = false
 	if (resizing === false) result.enableResizing = false
 	setIfDefined(result, 'size', size)
 	setIfDefined(result, 'minSize', minSize)
@@ -110,8 +110,8 @@ function mapColumn<TRow extends object>(
 		if (sorting.multi === false) result.enableMultiSort = false
 	}
 
-	// visibility: true → column is locked (always visible, cannot be hidden)
-	if (visibility === true) result.enableHiding = false
+	// visibility: false → hiding disabled for this column (always visible)
+	if (visibility === false) result.enableHiding = false
 
 	// cell.component (preferred) or cell.view → TanStack cell renderer
 	if (viewFn !== undefined) {

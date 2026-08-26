@@ -14,7 +14,7 @@ export function ResizingOnEndExample() {
 			data={data}
 			columns={resizableColumns}
 			sorting
-			sizing={{ mode: 'onEnd' }}
+			resizing={{ mode: 'onEnd' }}
 		/>
 	)
 }

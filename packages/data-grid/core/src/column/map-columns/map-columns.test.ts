@@ -63,12 +63,12 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableSorting).toBeUndefined()
 	})
 
-	it('visibility: true → enableHiding: false (column is locked)', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: true }])
+	it('visibility: false → enableHiding: false (hiding disabled for the column)', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: false }])
 		expect(result[0]?.enableHiding).toBe(false)
 	})
 
-	it('visibility: { initialHidden: true } does not lock the column', () => {
+	it('visibility: { initialHidden: true } leaves the column hideable', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: { initialHidden: true } }])
 		expect(result[0]?.enableHiding).toBeUndefined()
 	})

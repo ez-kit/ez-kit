@@ -418,12 +418,13 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Read by the React layer to lay out the actions cell (inline vs. menu).
 		rowActions: { variant: rowActionsVariant },
 		// Column resizing
-		...(config.sizing
+		...(config.resizing
 			? {
 					enableColumnResizing: true,
-					columnResizeMode: typeof config.sizing === 'object' && config.sizing.mode ? config.sizing.mode : 'onChange',
+					columnResizeMode:
+						typeof config.resizing === 'object' && config.resizing.mode ? config.resizing.mode : 'onChange',
 					columnResizeDirection:
-						typeof config.sizing === 'object' && config.sizing.direction ? config.sizing.direction : 'ltr',
+						typeof config.resizing === 'object' && config.resizing.direction ? config.resizing.direction : 'ltr',
 				}
 			: {}),
 		// Row pinning — built-in TanStack feature, no separate row model needed

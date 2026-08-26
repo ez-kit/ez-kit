@@ -42,10 +42,10 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				globalFiltering: { placeholder: 'Search orders…', debounce: 300 },
 				stickyHeader: true,
 				pinning: { column: true, row: { top: true, bottom: true } },
-				sizing: { mode: 'onChange' },
+				resizing: { mode: 'onChange' },
 				columnVisibility: { toolbar: true },
-				creating: { variant: 'modal' },
-				editing: { variant: 'modal' },
+				creating: { mode: 'modal' },
+				editing: { mode: 'modal' },
 				deleting: {
 					confirmation: {
 						title: 'Delete order?',

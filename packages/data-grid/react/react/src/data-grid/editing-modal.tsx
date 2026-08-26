@@ -4,7 +4,7 @@ import { AutoForm } from './auto-form'
 import { useTable } from './table-context'
 
 /**
- * Modal for editing a row (editing.variant = 'modal').
+ * Modal for editing a row (editing.mode = 'modal').
  * Prefers <FormShell> (renders form-level error banner + pending Save) when
  * registered; falls back to generic <Modal>. Throws if neither is provided.
  */
@@ -41,7 +41,7 @@ export function EditingModal() {
 	const ModalComponent = Modal as typeof Modal | undefined
 	if (!ModalComponent) {
 		throw new Error(
-			'[@ez-kit/data-grid] editing.variant is "modal" but no Modal or FormShell component was provided. ' +
+			'[@ez-kit/data-grid] editing.mode is "modal" but no Modal or FormShell component was provided. ' +
 				'Pass a FormShell (preferred) or Modal via <DataGrid components={{ FormShell }}>.',
 		)
 	}

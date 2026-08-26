@@ -54,14 +54,14 @@ export function ProductionExample() {
 			}}
 			stickyHeader
 			pinning={{ column: true, row: { top: true, bottom: true } }}
-			sizing={{ mode: 'onChange' }}
+			resizing={{ mode: 'onChange' }}
 			columnVisibility={{ toolbar: true }}
 			creating={{
-				variant: 'modal',
+				mode: 'modal',
 				onSave: ({ values }) => orders.create(values),
 			}}
 			editing={{
-				variant: 'modal',
+				mode: 'modal',
 				onSave: ({ rowId, values }) => orders.update(Number(rowId), values),
 			}}
 			deleting={{

@@ -64,13 +64,15 @@ export type CreatingState = {
 }
 
 /**
- * Where the create form is presented. A pure display concern — the commit pipeline is
- * identical for all three.
+ * How the create flow behaves. `mode` and not `variant` because the members differ in
+ * behaviour, not only in layout: `pin-row` keeps the form permanently open and renders no
+ * create trigger at all. The repo rule is `mode` = changes semantics, `variant` = changes
+ * layout only.
  *
  * Named members for internal reference; the option is typed as the plain string union, so
- * `variant: 'modal'` is equally valid and needs no import. See {@link CreatingVariant}.
+ * `mode: 'modal'` is equally valid and needs no import. See {@link CreatingMode}.
  */
-export const CreatingVariant = {
+export const CreatingMode = {
 	/** An extra row appended to the body while the form is open. */
 	Row: 'row',
 	/** A modal dialog opened from the toolbar's create trigger. */
@@ -79,11 +81,11 @@ export const CreatingVariant = {
 	PinRow: 'pin-row',
 } as const
 
-export type CreatingVariant = (typeof CreatingVariant)[keyof typeof CreatingVariant]
+export type CreatingMode = (typeof CreatingMode)[keyof typeof CreatingMode]
 
 export type CreatingConfig<TData> = {
-	/** How the create form is presented. Default: {@link CreatingVariant.Row}. */
-	variant?: CreatingVariant
+	/** How the create flow behaves. Default: {@link CreatingMode.Row}. */
+	mode?: CreatingMode
 	validate?: ValidateConfig<TData>
 	validateOn?: ValidateOn
 	validateDebounceMs?: number

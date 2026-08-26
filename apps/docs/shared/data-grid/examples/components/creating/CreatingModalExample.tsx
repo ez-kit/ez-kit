@@ -16,13 +16,13 @@ export function CreatingModalExample() {
 			sorting
 			pagination={{ pageSize: 10 }}
 			creating={{
-				variant: 'modal',
+				mode: 'modal',
 				onSave: ({ values }) => {
 					setData((prev) => [...prev, { id: Date.now(), ...values } as User])
 				},
 			}}
 			editing={{
-				variant: 'modal',
+				mode: 'modal',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},

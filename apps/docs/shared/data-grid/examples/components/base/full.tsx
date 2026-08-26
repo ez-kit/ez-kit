@@ -26,13 +26,13 @@ export function BaseFullExample() {
 				},
 			}}
 			editing={{
-				variant: 'row',
+				mode: 'row',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},
 			}}
 			creating={{
-				variant: 'pin-row',
+				mode: 'pin-row',
 				onSave: ({ values }) => {
 					setData((prev) => [...prev, values as User])
 				},

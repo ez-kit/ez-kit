@@ -26,13 +26,13 @@ export function CrudClientExample() {
 				},
 			}}
 			creating={{
-				variant: 'row',
+				mode: 'row',
 				onSave: ({ values }) => {
 					add(values)
 				},
 			}}
 			editing={{
-				variant: 'row',
+				mode: 'row',
 				onSave: ({ rowId, values }) => {
 					update(Number(rowId), values)
 				},

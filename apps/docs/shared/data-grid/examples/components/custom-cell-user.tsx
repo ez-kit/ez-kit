@@ -35,7 +35,7 @@ export function CustomCellUserExample() {
 			columns={memberColumns}
 			sorting
 			editing={{
-				variant: 'row',
+				mode: 'row',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},

@@ -16,7 +16,7 @@ import type { ChangeEvent, ComponentType, ReactNode } from 'react'
 /**
  * Inline creating row rendered inside <tbody>.
  * Renders an input cell for each non-system column.
- * Used for creating.variant = 'row' | 'pin-row'.
+ * Used for creating.mode = 'row' | 'pin-row'.
  * Edit-mode renderers receive a {@link FieldState} with `error` / `errors` / `onBlur`.
  */
 export function CreatingRow() {
@@ -31,7 +31,7 @@ export function CreatingRow() {
 	const isValidating = state.commitStatus === 'validating'
 	const isPending = state.commitStatus !== 'idle'
 	const creatingConfig = table.options.creating
-	const isPinRow = creatingConfig?.variant === 'pin-row'
+	const isPinRow = creatingConfig?.mode === 'pin-row'
 
 	return (
 		<Tr

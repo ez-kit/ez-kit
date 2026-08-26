@@ -39,13 +39,14 @@ export type EditingState = {
 }
 
 /**
- * Where the edit form is presented. A pure display concern — the commit pipeline is
- * identical for all three.
+ * How the edit flow behaves. `mode` and not `variant` because the members differ in
+ * behaviour, not only in layout: `cell` edits a single field while `row` / `modal` edit the
+ * whole row. The repo rule is `mode` = changes semantics, `variant` = changes layout only.
  *
  * Named members for internal reference; the option is typed as the plain string union, so
- * `variant: 'modal'` is equally valid and needs no import. See {@link EditingVariant}.
+ * `mode: 'modal'` is equally valid and needs no import. See {@link EditingMode}.
  */
-export const EditingVariant = {
+export const EditingMode = {
 	/** The row itself swaps its cells for inputs. The default. */
 	Row: 'row',
 	/** A modal dialog holding the whole row's fields. */
@@ -54,11 +55,11 @@ export const EditingVariant = {
 	Cell: 'cell',
 } as const
 
-export type EditingVariant = (typeof EditingVariant)[keyof typeof EditingVariant]
+export type EditingMode = (typeof EditingMode)[keyof typeof EditingMode]
 
 export type EditingConfig<TData> = {
-	/** How the edit form is presented. Default: {@link EditingVariant.Row}. */
-	variant?: EditingVariant
+	/** How the edit flow behaves. Default: {@link EditingMode.Row}. */
+	mode?: EditingMode
 	validate?: ValidateConfig<TData>
 	validateOn?: ValidateOn
 	validateDebounceMs?: number

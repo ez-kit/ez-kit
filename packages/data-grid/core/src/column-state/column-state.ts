@@ -33,7 +33,7 @@ function getColumnId<TRow extends object>(col: TanStackColumnDef<TRow>): string 
  *
  * - system columns → always visible, pinned where their meta says so
  * - `pinning: { pin }` → static pin, always kept
- * - `visibility: true` → locked column, can never be hidden
+ * - `visibility: false` → hiding disabled, the column can never be hidden
  *
  * `initialPin` is deliberately **not** an invariant: it is only a seed (see
  * {@link mergePinningSeed}) and the user may move or unpin such a column.
@@ -47,7 +47,7 @@ export function buildColumnInvariants<TRow extends object>(columns: TanStackColu
 		const colId = getColumnId(col)
 		if (colId === undefined) continue
 		const meta = col.meta
-		if (meta?.isSystemColumn === true || meta?.visibility === true) alwaysVisible.push(colId)
+		if (meta?.isSystemColumn === true || meta?.visibility === false) alwaysVisible.push(colId)
 		const pin = meta?.columnPinning === false ? undefined : meta?.columnPinning?.pin
 		if (pin === 'left') forcedLeft.push(colId)
 		else if (pin === 'right') forcedRight.push(colId)

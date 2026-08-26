@@ -16,13 +16,13 @@ export function CreatingPinRowExample() {
 			sorting
 			pagination={{ pageSize: 10 }}
 			creating={{
-				variant: 'pin-row',
+				mode: 'pin-row',
 				onSave: ({ values }) => {
 					setData((prev) => [...prev, { id: Date.now(), ...values } as User])
 				},
 			}}
 			editing={{
-				variant: 'row',
+				mode: 'row',
 				onSave: ({ rowId, values }) => {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},
