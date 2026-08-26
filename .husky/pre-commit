@@ -1,1 +1,2 @@
+pnpm --filter @ez-kit/docs exec next typegen
 pnpm exec lint-staged

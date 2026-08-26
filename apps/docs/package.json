@@ -12,7 +12,7 @@
 		"build": "pnpm build:deps && next build",
 		"build:deps": "turbo run build --filter=@ez-kit/docs^...",
 		"start": "next start",
-		"lint": "eslint .",
+		"lint": "next typegen && eslint .",
 		"typecheck": "next typegen && fumadocs-mdx && tsc --project tsconfig.json --noEmit",
 		"test": "vitest run --passWithNoTests",
 		"test:visual": "playwright test",
