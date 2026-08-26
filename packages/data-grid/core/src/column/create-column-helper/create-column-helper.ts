@@ -1,5 +1,7 @@
+import type { FieldState } from '../../features/validation'
 import type {
 	BadgeCellConfig,
+	ColumnRenderer,
 	CellDef,
 	CellType,
 	CellViewCtx,
@@ -11,42 +13,46 @@ import type {
 	SelectCellConfig,
 } from '../types'
 
-type FlexRenderable<TProps> = ((props: TProps) => unknown) | (new (props: TProps) => unknown)
+type FlexRenderable<TProps, TNode> = ColumnRenderer<TProps, TNode> | (new (props: TProps) => unknown)
 
-type BaseOptions<TRow extends object, TCustom extends string> = Omit<ColumnDef<TRow, TCustom>, 'cell'>
+type BaseOptions<TRow extends object, TCustom extends string, TNode> = Omit<ColumnDef<TRow, TCustom, TNode>, 'cell'>
 
-type CustomOptions<TRow extends object, TCustom extends string> = Omit<
-	ColumnDef<TRow, TCustom>,
+type CustomOptions<TRow extends object, TCustom extends string, TNode> = Omit<
+	ColumnDef<TRow, TCustom, TNode>,
 	'cell' | 'editing' | 'creating'
 > & {
 	type?: CellType | TCustom
 	config?: Record<string, unknown>
-	view?: FlexRenderable<CellViewCtx<TRow, unknown>>
-	editing?: false | FlexRenderable<InputComponentProps>
-	creating?: false | FlexRenderable<InputComponentProps>
+	view?: FlexRenderable<CellViewCtx<TRow, unknown>, TNode>
+	editing?: false | FlexRenderable<InputComponentProps, TNode>
+	creating?: false | FlexRenderable<InputComponentProps, TNode>
 }
 
-type BaseColumnHelper<TRow extends object, TCustom extends string> = {
-	text(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
-	number(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
-	date(opts: BaseOptions<TRow, TCustom> & { config?: DateCellConfig }): ColumnDef<TRow, TCustom>
-	boolean(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
-	link(opts: BaseOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
-	select(opts: BaseOptions<TRow, TCustom> & { config: SelectCellConfig }): ColumnDef<TRow, TCustom>
-	badge(opts: BaseOptions<TRow, TCustom> & { config: BadgeCellConfig }): ColumnDef<TRow, TCustom>
-	image(opts: BaseOptions<TRow, TCustom> & { config?: ImageCellConfig }): ColumnDef<TRow, TCustom>
-	progress(opts: BaseOptions<TRow, TCustom> & { config?: ProgressCellConfig }): ColumnDef<TRow, TCustom>
-	custom(opts: CustomOptions<TRow, TCustom>): ColumnDef<TRow, TCustom>
+type BaseColumnHelper<TRow extends object, TCustom extends string, TNode> = {
+	text(opts: BaseOptions<TRow, TCustom, TNode>): ColumnDef<TRow, TCustom, TNode>
+	number(opts: BaseOptions<TRow, TCustom, TNode>): ColumnDef<TRow, TCustom, TNode>
+	date(opts: BaseOptions<TRow, TCustom, TNode> & { config?: DateCellConfig }): ColumnDef<TRow, TCustom, TNode>
+	boolean(opts: BaseOptions<TRow, TCustom, TNode>): ColumnDef<TRow, TCustom, TNode>
+	link(opts: BaseOptions<TRow, TCustom, TNode>): ColumnDef<TRow, TCustom, TNode>
+	select(opts: BaseOptions<TRow, TCustom, TNode> & { config: SelectCellConfig }): ColumnDef<TRow, TCustom, TNode>
+	badge(opts: BaseOptions<TRow, TCustom, TNode> & { config: BadgeCellConfig }): ColumnDef<TRow, TCustom, TNode>
+	image(opts: BaseOptions<TRow, TCustom, TNode> & { config?: ImageCellConfig }): ColumnDef<TRow, TCustom, TNode>
+	progress(opts: BaseOptions<TRow, TCustom, TNode> & { config?: ProgressCellConfig }): ColumnDef<TRow, TCustom, TNode>
+	custom(opts: CustomOptions<TRow, TCustom, TNode>): ColumnDef<TRow, TCustom, TNode>
 }
 
-type RegisteredTypeHelpers<TRow extends object, TCustom extends string> = {
+type RegisteredTypeHelpers<TRow extends object, TCustom extends string, TNode> = {
 	[K in TCustom]: (
-		opts: Omit<ColumnDef<TRow, TCustom>, 'cell'> & { config?: Record<string, unknown> },
-	) => ColumnDef<TRow, TCustom>
+		opts: Omit<ColumnDef<TRow, TCustom, TNode>, 'cell'> & { config?: Record<string, unknown> },
+	) => ColumnDef<TRow, TCustom, TNode>
 }
 
-export type ColumnHelper<TRow extends object, TCustom extends string = never> = BaseColumnHelper<TRow, TCustom> &
-	([TCustom] extends [never] ? object : RegisteredTypeHelpers<TRow, TCustom>)
+export type ColumnHelper<TRow extends object, TCustom extends string = never, TNode = unknown> = BaseColumnHelper<
+	TRow,
+	TCustom,
+	TNode
+> &
+	([TCustom] extends [never] ? object : RegisteredTypeHelpers<TRow, TCustom, TNode>)
 
 /**
  * Contributes a `config` key only when there is one to contribute.
@@ -60,10 +66,10 @@ function withConfig<TConfig>(config: TConfig | undefined): { config?: TConfig } 
 	return config !== undefined ? { config } : {}
 }
 
-export function createColumnHelper<TRow extends object, TCustom extends string = never>(
+export function createColumnHelper<TRow extends object, TCustom extends string = never, TNode = unknown>(
 	customTypes?: TCustom[],
-): ColumnHelper<TRow, TCustom> {
-	const base: BaseColumnHelper<TRow, TCustom> = {
+): ColumnHelper<TRow, TCustom, TNode> {
+	const base: BaseColumnHelper<TRow, TCustom, TNode> = {
 		text: (opts) => ({ ...opts, cell: { type: 'text' } }),
 		number: (opts) => ({ ...opts, cell: { type: 'number' } }),
 		date: ({ config, ...opts }) => ({ ...opts, cell: { type: 'date', ...withConfig(config) } }),
@@ -75,27 +81,27 @@ export function createColumnHelper<TRow extends object, TCustom extends string =
 		progress: ({ config, ...opts }) => ({ ...opts, cell: { type: 'progress', ...withConfig(config) } }),
 
 		custom: ({ type, config, view, editing, creating, ...rest }) => {
-			const result: ColumnDef<TRow, TCustom> = { ...rest }
+			const result: ColumnDef<TRow, TCustom, TNode> = { ...rest }
 
 			if (type != null || view != null || config != null) {
 				// CellDef is a discriminated union; custom() is the intentionally loose escape hatch
 				result.cell = {
 					type,
 					...withConfig(config),
-					component: view as ((ctx: CellViewCtx<TRow, unknown>) => unknown) | undefined,
-				} as CellDef<TRow, unknown, TCustom>
+					component: view as ColumnRenderer<CellViewCtx<TRow, unknown>, TNode> | undefined,
+				} as CellDef<TRow, unknown, TCustom, TNode>
 			}
 
 			if (editing === false) {
 				result.editing = false
 			} else if (editing != null) {
-				result.editing = { component: editing as (props: InputComponentProps) => unknown }
+				result.editing = { component: editing as ColumnRenderer<FieldState, TNode> }
 			}
 
 			if (creating === false) {
 				result.creating = false
 			} else if (creating != null) {
-				result.creating = { component: creating as (props: InputComponentProps) => unknown }
+				result.creating = { component: creating as ColumnRenderer<FieldState, TNode> }
 			}
 
 			return result
@@ -104,7 +110,9 @@ export function createColumnHelper<TRow extends object, TCustom extends string =
 
 	const registered: Record<
 		string,
-		(opts: { config?: Record<string, unknown> } & Omit<ColumnDef<TRow, TCustom>, 'cell'>) => ColumnDef<TRow, TCustom>
+		(
+			opts: { config?: Record<string, unknown> } & Omit<ColumnDef<TRow, TCustom, TNode>, 'cell'>,
+		) => ColumnDef<TRow, TCustom, TNode>
 	> = {}
 	for (const typeName of customTypes ?? []) {
 		registered[typeName] = ({ config, ...opts }) => ({
@@ -112,9 +120,9 @@ export function createColumnHelper<TRow extends object, TCustom extends string =
 			// `TCustom` is still an unresolved type parameter here, so TS defers the
 			// `[TCustom] extends [never]` conditional in `CellDef` and cannot see that this
 			// literal matches its `CustomCellDef` arm. The runtime shape is exactly that arm.
-			cell: { type: typeName, ...withConfig(config) } as CellDef<TRow, unknown, TCustom>,
+			cell: { type: typeName, ...withConfig(config) } as CellDef<TRow, unknown, TCustom, TNode>,
 		})
 	}
 
-	return { ...base, ...registered } as ColumnHelper<TRow, TCustom>
+	return { ...base, ...registered } as ColumnHelper<TRow, TCustom, TNode>
 }

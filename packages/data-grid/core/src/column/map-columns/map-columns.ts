@@ -125,10 +125,17 @@ function mapColumn<TRow extends object>(
 	// visibility: false → hiding disabled for this column (always visible)
 	if (visibility === false) result.enableHiding = false
 
-	// cell.component (preferred) or cell.view → TanStack cell renderer
-	if (viewFn !== undefined) {
+	// cell.component (preferred) or cell.view → TanStack cell renderer.
+	//
+	// Only the callable form gets this shim, which exists to translate TanStack's `CellContext`
+	// into the `{ row, value, rowIndex }` a column renderer expects. An exotic renderer
+	// (`memo` / `forwardRef`) cannot be called at all, and does not need to be: it travels on
+	// `meta.cellView`, which is what the React adapter actually mounts. The shim is the fallback
+	// for anything reading `columnDef.cell` directly.
+	if (typeof viewFn === 'function') {
+		const callableView = viewFn
 		result.cell = (ctx: { row: { original: TRow; index: number }; getValue: () => unknown }) =>
-			viewFn({
+			callableView({
 				row: ctx.row.original,
 				value: ctx.getValue(),
 				rowIndex: ctx.row.index,

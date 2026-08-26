@@ -19,6 +19,13 @@
 // from every UI kit built on it.
 export * from '@ez-kit/data-grid-core'
 
+// ── React-bound column types ──────────────────────────────────────────────
+// These shadow the star-exported core names on purpose: an explicit re-export wins over a star
+// of the same name, so `ColumnDef` / `createColumns` / `createColumnHelper` reached from this
+// package are the ones whose renderer slots return `ReactNode`.
+export { createColumns, createColumnHelper } from './react-columns'
+export type { ColumnDef, CellDef, ColumnHelper } from './react-columns'
+
 // React hook
 export { useDataGrid } from './use-data-grid'
 export type {

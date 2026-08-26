@@ -1,19 +1,18 @@
 'use client'
 
-import { createColumnHelper } from '@ez-kit/data-grid-core'
-
 import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
 import { useDataGridStore } from './data-grid/table-context'
+import { createColumnHelper } from './react-columns'
 import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
 import type { DataGridInstance } from './data-grid-instance'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { UseDataGridConfig } from './use-data-grid'
-import type { ColumnDef, ColumnHelper } from '@ez-kit/data-grid-core'
 
 /** The custom cell-type keys a registry actually holds, as a string union. */
 type KitCellType<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTypes, string>

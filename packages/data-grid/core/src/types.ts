@@ -493,7 +493,7 @@ export type TableConfig<TRow extends object> = {
 	 * kit's registry by the **bound** `createColumns` / `createColumnHelper` that produced the
 	 * array, which is where the author writes it. This slot only has to accept the result.
 	 */
-	columns: ColumnDef<TRow, string>[]
+	columns: ColumnDef<TRow, string, unknown>[]
 
 	/**
 	 * Returns a stable string ID for a row.
