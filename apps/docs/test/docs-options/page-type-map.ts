@@ -226,9 +226,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig], expectedCount: 6 }],
 		nonOptionTables: [
 			{
-				heading: 'Per-column `globalFilter`',
+				heading: 'Per-column `globalFiltering`',
 				reason:
-					'Documents the one literal value the per-column `globalFilter` flag accepts (`false`), not keys of a config object.',
+					'Documents the one literal value the per-column `globalFiltering` flag accepts (`false`), not keys of a config object.',
 			},
 		],
 	},
