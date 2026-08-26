@@ -11,6 +11,7 @@ export type { SelectOption } from './select-option'
 export type {
 	AnyFieldApi,
 	AnyFormApi,
+	AnyFormOptions,
 	DeepKeysOfType,
 	FormAsyncValidateOrFn,
 	FormOptions,

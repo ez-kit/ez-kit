@@ -30,5 +30,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/native-api.tsx",
 		"exportName": "NativeApiExample"
+	},
+	{
+		"id": "form-dialog",
+		"label": "In a dialog",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/dialog.tsx",
+		"exportName": "DialogExample"
 	}
 ]

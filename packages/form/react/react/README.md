@@ -10,27 +10,49 @@ injects, plus `data-*` attributes for that kit's CSS to target. Install a kit pa
 
 ## The idea
 
-`createForm({ components })` returns a `useForm` that is a **superset** of TanStack Form's:
+`createForm({ components })` returns `{ useForm, Form }`. `<Form>` is the `<form>` element:
+give it the options TanStack's `useForm` takes and it hands you an instance that is a
+**superset** of TanStack's — flat fields on top, the whole native API untouched underneath.
 
 ```tsx
-const form = useForm({
-	defaultValues: { email: '', age: 0, role: 'user', agree: false },
-	validators: { onChange: zodSchema }, // native standard-schema, no custom resolver
-	onSubmit: ({ value }) => save(value),
-})
+<Form
+	defaultValues={{ email: '', age: 0, role: 'user', agree: false }}
+	validators={{ onChange: zodSchema }} // native standard-schema, no custom resolver
+	onSubmit={({ value }) => save(value)}
+>
+	{(form) => (
+		<>
+			<form.TextField
+				name='email'
+				label='Email'
+				placeholder='you@example.com'
+			/>
+			<form.NumberField
+				name='age'
+				label='Age'
+			/>
+			<form.SelectField
+				name='role'
+				label='Role'
+				options={[{ label: 'User', value: 'user' }]}
+			/>
+			<form.CheckboxField
+				name='agree'
+				label='I agree'
+			/>
+			<form.SubmitButton>Save</form.SubmitButton>
 
-<form.Form>
-	<form.TextField name='email' label='Email' placeholder='you@example.com' />
-	<form.NumberField name='age' label='Age' />
-	<form.SelectField name='role' label='Role' options={[{ label: 'User', value: 'user' }]} />
-	<form.CheckboxField name='agree' label='I agree' />
-	<form.SubmitButton>Save</form.SubmitButton>
-
-	{/* the native TanStack API is untouched on the same instance */}
-	<form.Field name='email'>{(field) => <input value={field.state.value} />}</form.Field>
-	<form.Subscribe selector={(s) => s.errors}>{(errors) => <pre>{errors.length}</pre>}</form.Subscribe>
-</form.Form>
+			{/* the native TanStack API is untouched on the same instance */}
+			<form.Field name='email'>{(field) => <input value={field.state.value} />}</form.Field>
+			<form.Subscribe selector={(s) => s.errors}>{(errors) => <pre>{errors.length}</pre>}</form.Subscribe>
+		</>
+	)}
+</Form>
 ```
+
+The form is created by mounting the element, so unmounting it — closing a dialog — takes the
+state with it. When the instance is needed outside the markup, call `useForm` yourself and
+pass it in: `<Form form={form}>` with plain JSX children.
 
 Each `*Field` renders label + input + description + error text itself. `name` is narrowed
 to the paths in your form data whose value type fits the field, so

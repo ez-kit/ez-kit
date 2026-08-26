@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Install a flavour, call useForm, render fields — the whole loop in one page.
+description: Install a flavour, render a Form, fill in fields — the whole loop in one page.
 ---
 
 # Getting started
@@ -29,42 +29,110 @@ file you already have so Tailwind v4 generates the kit's classes, since it does 
 
 Full per-kit details — Tailwind setup, theming, peer dependencies — live in [Installation](./form/installation/shadcn).
 
-## 2. Create a form
+## 2. Render a form
 
-`useForm` takes everything TanStack Form's `useForm` takes. `defaultValues` is what types the whole form.
+`<Form>` takes everything TanStack Form's `useForm` takes — `defaultValues` is what types the whole form — and hands the instance to its children. It **is** the `<form>` element: it calls `preventDefault` for you, so `onSubmit` here is TanStack's, called with the validated values.
 
 ```tsx
-import { useForm } from '@ez-kit/form-shadcn'
-
-const form = useForm({
-	defaultValues: { email: '', password: '' },
-	onSubmit: ({ value }) => {
+import { Form } from '@ez-kit/form-shadcn'
+;<Form
+	defaultValues={{ email: '', password: '' }}
+	onSubmit={async ({ value }) => {
 		await api.signUp(value)
-	},
-})
+	}}
+>
+	{(form) => (
+		<>
+			<form.TextField
+				name='email'
+				label='Email'
+				placeholder='you@example.com'
+			/>
+			<form.TextField
+				name='password'
+				label='Password'
+				type={TextInputType.Password}
+			/>
+			<form.SubmitButton>Create account</form.SubmitButton>
+		</>
+	)}
+</Form>
 ```
 
-## 3. Render fields
+`children` is a function, not plain JSX, and that is load-bearing: React context cannot carry the `TFormData` generic, so an instance passed down through context would degrade every `name` to a bare `string`. The render prop is what keeps the type checking below.
 
-`form.Form` is a `<form>` element already wired to `handleSubmit` — it calls `preventDefault` for you, so there is no `onSubmit` prop to pass.
+## 3. Mind the lifetime
+
+The form lives exactly as long as the element that created it. Unmount `<Form>` — close a dialog, switch a record — and its values, errors and submit state go with it; mount it again and you get a clean form, with no `reset` call anywhere.
+
+That is why a dialog belongs in this mode, with `<Form>` **inside** the dialog and wrapping both its body and its footer:
 
 ```tsx
-<form.Form>
+<Dialog
+	open={open}
+	onOpenChange={setOpen}
+>
+	<Dialog.Content>
+		<Form
+			defaultValues={{ email: '' }}
+			onSubmit={async ({ value }) => {
+				await save(value)
+				setOpen(false)
+			}}
+		>
+			{(form) => (
+				<>
+					<Dialog.Body>
+						<form.TextField
+							name='email'
+							label='Email'
+						/>
+					</Dialog.Body>
+					<Dialog.Footer>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</Dialog.Footer>
+				</>
+			)}
+		</Form>
+	</Dialog.Content>
+</Dialog>
+```
+
+The submit button sits in the footer and is still a native `type='submit'` inside its own `<form>`.
+
+<Callout type='warn'>
+	Whether reopening resets the form depends on your dialog: one that renders its content conditionally (`open && …`)
+	remounts `<Form>` and resets it for you, while one that keeps the content mounted and hides it with CSS does not. In
+	that second case give `<Form>` a `key` — `key={recordId}`, or a counter bumped on open — so React recreates the
+	instance.
+</Callout>
+
+<KitExample exampleId='form-dialog' />
+
+## Controlled: when the instance is needed outside
+
+Sometimes something outside the markup has to read the form — a parent guarding the close button with `form.state.isDirty`, a wizard step, a toolbar button. Then call `useForm` yourself and hand the instance to `<Form>`; `children` is plain JSX in this mode.
+
+```tsx
+import { Form, useForm } from '@ez-kit/form-shadcn'
+
+const form = useForm({ defaultValues: { email: '' }, onSubmit })
+
+;<Form
+	form={form}
+	className='space-y-4'
+>
 	<form.TextField
 		name='email'
 		label='Email'
-		placeholder='you@example.com'
 	/>
-	<form.TextField
-		name='password'
-		label='Password'
-		type={TextInputType.Password}
-	/>
-	<form.SubmitButton>Create account</form.SubmitButton>
-</form.Form>
+	<form.SubmitButton>Save</form.SubmitButton>
+</Form>
 ```
 
-That is the whole loop:
+The two modes are mutually exclusive — passing `form` together with `defaultValues` is a compile error — and the mode is fixed for the lifetime of the component, since switching remounts the form. Note the trade-off you take on here: the instance now lives as long as **the component that called the hook**, so inside a dialog you own the reset.
+
+## The whole loop, live
 
 <KitExample exampleId='form-basic' />
 
@@ -73,7 +141,7 @@ That is the whole loop:
 `name` is not a loose string. It is narrowed to the paths in your form data **whose value type matches the field**, so a mismatch is a compile error rather than a runtime surprise:
 
 ```tsx
-const form = useForm({ defaultValues: { email: '', age: 0 } })
+// inside <Form defaultValues={{ email: '', age: 0 }}>
 
 <form.TextField name='email' label='Email' />    // ✅
 <form.NumberField name='age' label='Age' />      // ✅
@@ -117,7 +185,7 @@ The `data-*` attributes are the styling hooks; the visible elements all come fro
 
 ## Next steps
 
-- [Fields](./form/fields) — the five base fields and their props.
+- [Fields](./form/fields) — the eight base fields and their props.
 - [Validation](./form/validation) — zod / valibot / arktype, straight through.
 - [Native API](./form/native-api) — everything TanStack Form gives you, still available.
 - [Custom kit](./form/custom-kit) — bind your own components.

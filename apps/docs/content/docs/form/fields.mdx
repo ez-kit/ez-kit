@@ -156,13 +156,25 @@ Subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself w
 <form.SubmitButton>Save</form.SubmitButton>
 ```
 
-## `form.Form`
+## `Form`
 
-A `<form>` element already wired to `handleSubmit`, with `noValidate` set so the browser's own bubbles stay out of the way. It accepts the usual `<form>` props **except `onSubmit`**, which it owns.
+The `<form>` element, already wired to `handleSubmit`, with `noValidate` set so the browser's own bubbles stay out of the way. It accepts the usual `<form>` props **except `onSubmit`**, which it owns — in uncontrolled mode `onSubmit` is TanStack's, called with the validated values.
 
 ```tsx
-<form.Form className='max-w-sm'>{/* fields */}</form.Form>
+<Form
+	defaultValues={{ email: '' }}
+	className='max-w-sm'
+>
+	{(form) => (
+		<form.TextField
+			name='email'
+			label='Email'
+		/>
+	)}
+</Form>
 ```
+
+See [Getting started](./form/getting-started) for both modes.
 
 ## Styling hooks
 

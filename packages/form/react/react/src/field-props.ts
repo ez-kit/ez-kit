@@ -1,6 +1,6 @@
 import type { TextInputType } from './contract'
 import type { DeepKeysOfType, SelectOption } from '@ez-kit/form-core'
-import type { ComponentPropsWithoutRef, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 /**
  * Consumer-facing props of the flat field components (`form.TextField`, …).
@@ -52,14 +52,6 @@ export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
 	step?: number
 }
 
-/**
- * Props of `form.Form`. `onSubmit` is omitted deliberately: the wrapper owns it and routes
- * it to `form.handleSubmit()`, which is the whole point of the component.
- */
-export type FormWrapperProps = Omit<ComponentPropsWithoutRef<'form'>, 'onSubmit'> & {
-	children: ReactNode
-}
-
 export type SubmitButtonProps = {
 	children: ReactNode
 	/** Forced-disabled regardless of form state; the form's own state can only add to this. */
@@ -70,6 +62,9 @@ export type SubmitButtonProps = {
  * The flat components attached to the form instance by `createForm`. They sit alongside —
  * never in place of — the native TanStack Form API (`Field`, `Subscribe`, `handleSubmit`,
  * `state`, `AppField`, …), which stays fully available on the same object.
+ *
+ * The `<form>` element is not among them: it lives in the standalone `<Form>` component,
+ * which is the single place that renders it in either mode.
  */
 export type FormFieldComponents<TFormData> = {
 	TextField: (props: TextFieldProps<TFormData>) => ReactNode
@@ -81,5 +76,4 @@ export type FormFieldComponents<TFormData> = {
 	RadioGroupField: (props: RadioGroupFieldProps<TFormData>) => ReactNode
 	SliderField: (props: SliderFieldProps<TFormData>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
-	Form: (props: FormWrapperProps) => ReactNode
 }

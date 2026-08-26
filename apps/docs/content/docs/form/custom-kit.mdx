@@ -22,13 +22,15 @@ const components = {
 	SelectField,
 	CheckboxField,
 	Button,
-	Form,
+	// your own `<form>` primitive, imported under another name so it does not
+	// collide with the `Form` component the factory returns below
+	Form: FormElement,
 } satisfies FormComponents
 
-export const { useForm } = createForm({ components })
+export const { useForm, Form } = createForm({ components })
 ```
 
-That is the whole kit. Export `useForm` and your consumers get the same `form.TextField` / `form.SubmitButton` / `form.Form` API.
+That is the whole kit. Export both — `Form` renders your `<form>` primitive, `useForm` gives the instance — and your consumers get the same `<Form>` / `form.TextField` / `form.SubmitButton` API as either shipped flavour.
 
 <Callout>
 	Use `satisfies FormComponents` rather than a type annotation. It turns a forgotten field into a compile error instead

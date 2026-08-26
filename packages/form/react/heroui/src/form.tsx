@@ -11,7 +11,7 @@ import {
 	TextareaField,
 	TextField,
 } from './blocks/fields'
-import { Button, Form } from './blocks/form-parts'
+import { Button, Form as FormElement } from './blocks/form-parts'
 import { SelectField } from './blocks/select'
 
 import type { FormComponents } from '@ez-kit/form-react'
@@ -31,9 +31,9 @@ const components = {
 	RadioGroupField,
 	SliderField,
 	Button,
-	Form,
+	Form: FormElement,
 } satisfies FormComponents
 
-const { useForm } = createForm({ components })
+const { useForm, Form } = createForm({ components })
 
-export { useForm }
+export { useForm, Form }

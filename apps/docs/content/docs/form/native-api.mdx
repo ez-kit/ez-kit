@@ -58,7 +58,7 @@ Read form state reactively. The selector's result is shallow-compared, so only r
 
 ## Submitting from elsewhere
 
-`form.Form` wires submission for you, but nothing stops you calling it yourself — from a toolbar button, a keyboard shortcut, a dialog footer:
+`<Form>` wires submission for you, but nothing stops you calling it yourself — from a toolbar button, a keyboard shortcut, a dialog footer that sits outside the element:
 
 ```tsx
 <button
@@ -69,7 +69,7 @@ Read form state reactively. The selector's result is shallow-compared, so only r
 </button>
 ```
 
-And if you would rather own the `<form>` element entirely, skip `form.Form`:
+And if you would rather own the `<form>` element entirely, skip `<Form>` — take the instance from `useForm` and render your own:
 
 ```tsx
 <form
