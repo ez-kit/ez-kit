@@ -3,7 +3,6 @@
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-shadcn': minor
 '@ez-kit/data-grid-heroui': minor
-'@ez-kit/data-grid-native': minor
 ---
 
 Settle the data-grid public API so it stops moving. Breaking, pre-1.0 so shipped as a minor.

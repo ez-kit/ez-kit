@@ -3,7 +3,6 @@
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-shadcn': minor
 '@ez-kit/data-grid-heroui': minor
-'@ez-kit/data-grid-native': minor
 ---
 
 Type-check what a column's renderers return.

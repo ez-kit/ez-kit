@@ -127,7 +127,6 @@ packages/
       react/          # @ez-kit/data-grid-react — framework-agnostic React adapter
       shadcn/         # @ez-kit/data-grid-shadcn — Shadcn UI flavour
       heroui/         # @ez-kit/data-grid-heroui — HeroUI flavour
-      native/         # @ez-kit/data-grid-native — plain/native UI flavour (ships its own global.css)
 turbo/
   generators/         # Plop-based package scaffolding (config.ts + templates/)
 ```

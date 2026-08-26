@@ -3,7 +3,6 @@
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-shadcn': minor
 '@ez-kit/data-grid-heroui': minor
-'@ez-kit/data-grid-native': minor
 ---
 
 One `onChange` rule for every feature, and a fix for the selection callback that disabled

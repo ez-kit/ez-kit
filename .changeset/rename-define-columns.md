@@ -3,7 +3,6 @@
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-shadcn': minor
 '@ez-kit/data-grid-heroui': minor
-'@ez-kit/data-grid-native': minor
 ---
 
 **Breaking:** `defineColumns` is renamed to `createColumns`. The signature and behaviour are unchanged — only the name differs, and there is no compatibility re-export.

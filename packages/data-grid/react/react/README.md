@@ -6,7 +6,6 @@ You usually don't install this directly. Pick a flavour, which depends on this p
 
 - [`@ez-kit/data-grid-shadcn`](../shadcn) — Shadcn UI
 - [`@ez-kit/data-grid-heroui`](../heroui) — HeroUI
-- [`@ez-kit/data-grid-native`](../native) — plain/native UI
 
 Install it directly only when building your own UI flavour with `createDataGrid`.
 
