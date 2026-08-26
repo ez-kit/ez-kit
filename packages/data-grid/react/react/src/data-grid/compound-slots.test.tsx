@@ -1,5 +1,6 @@
 import { createColumns, createTable } from '@ez-kit/data-grid-core'
-import { describe, expect, it } from 'vitest'
+import { fireEvent } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGridInstance } from '../data-grid-instance'
 import { renderWithComponents } from '../test-utils'
@@ -114,5 +115,132 @@ describe('<DataGrid.Header> children', () => {
 			</DataGrid>,
 		)
 		expect(container.querySelector('thead th')?.textContent).toBe('Custom')
+	})
+})
+
+/**
+ * The five slots whose derivation is expensive to repeat. Each hands its settled model to a
+ * render function so a custom control never has to re-derive it — the point being the parts
+ * that are easy to get subtly wrong: pagination's trusted-total rules, the selection bar's
+ * confirmation protocol, the per-entry sort column lists, the resolved filter inputs.
+ */
+describe('compound render-prop slots', () => {
+	it('<DataGrid.Pagination> hands over the settled page model', () => {
+		const instance = createDataGridInstance(
+			createTable<User>({ data: USERS, columns: COLUMNS, pagination: { pageSize: 1 } }),
+		)
+		const { container } = renderWithComponents(
+			<DataGrid table={instance}>
+				<DataGrid.Pagination>
+					{({ pageIndex, pageCount, rowCount, canPreviousPage, canNextPage }) => (
+						<p>{[pageIndex, pageCount, rowCount, canPreviousPage, canNextPage].join(' ')}</p>
+					)}
+				</DataGrid.Pagination>
+			</DataGrid>,
+		)
+		// Client-side pagination: both totals are trusted, so neither is undefined.
+		expect(container.querySelector('p')?.textContent).toBe('0 2 2 false true')
+	})
+
+	it('<DataGrid.Pagination> stays hidden in the states that hide the built-in footer', () => {
+		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS }))
+		const { container } = renderWithComponents(
+			<DataGrid table={instance}>
+				<DataGrid.Pagination>{() => <p>never</p>}</DataGrid.Pagination>
+			</DataGrid>,
+		)
+		// No pagination row model → no footer, and therefore no children either.
+		expect(container.querySelector('p')).toBeNull()
+	})
+
+	it('<DataGrid.SelectionBar> hands over a confirmation-aware onDelete', () => {
+		const onDelete = vi.fn()
+		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS, selection: true }))
+		instance.table.grid.selection.panel = { onDelete, confirmation: true }
+		instance.table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+
+		const { container } = renderWithComponents(
+			<DataGrid table={instance}>
+				<DataGrid.SelectionBar>
+					{({ count, open, onDelete: del }) => (
+						<button
+							type='button'
+							data-count={count}
+							data-open={String(open)}
+							onClick={del}
+						>
+							delete
+						</button>
+					)}
+				</DataGrid.SelectionBar>
+			</DataGrid>,
+		)
+		const button = container.querySelector('button')
+		expect(button).not.toBeNull()
+		expect(button?.getAttribute('data-count')).toBe('1')
+		expect(button?.getAttribute('data-open')).toBe('true')
+
+		// With `confirmation` on, the click stages a pending bulk delete rather than running
+		// the handler — the ConfirmDialog runs it on confirm.
+		if (button) fireEvent.click(button)
+		expect(onDelete).not.toHaveBeenCalled()
+		expect(instance.table.getState().pendingBulkDelete).toBe(true)
+	})
+
+	it('<DataGrid.SortTrigger> excludes already-used columns from each entry', () => {
+		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS, sorting: true }))
+		instance.table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+
+		const { container } = renderWithComponents(
+			<DataGrid table={instance}>
+				<DataGrid.SortTrigger>
+					{({ items, sortableColumns, canAddSort }) => (
+						<p>
+							{[items[0]?.availableColumns.map((c) => c.id).join(','), sortableColumns.length, canAddSort].join(' | ')}
+						</p>
+					)}
+				</DataGrid.SortTrigger>
+			</DataGrid>,
+		)
+		// 'name' is this entry's own column so it stays offered; 'amount' is still free.
+		expect(container.querySelector('p')?.textContent).toBe('name,amount | 2 | true')
+	})
+
+	it('<DataGrid.ColumnVisibilityTrigger> hands over the toggleable columns', () => {
+		const instance = createDataGridInstance(
+			createTable<User>({ data: USERS, columns: COLUMNS, columnVisibility: true }),
+		)
+		const { container } = renderWithComponents(
+			<DataGrid table={instance}>
+				<DataGrid.ColumnVisibilityTrigger>
+					{({ columns }) => <p>{columns.map((c) => `${c.id}:${String(c.isVisible)}`).join(' ')}</p>}
+				</DataGrid.ColumnVisibilityTrigger>
+			</DataGrid>,
+		)
+		expect(container.querySelector('p')?.textContent).toBe('name:true amount:true')
+	})
+
+	it('<DataGrid.FilterPanel> hands over a ready-made input per column', () => {
+		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS, filtering: true }))
+		const { container } = renderWithComponents(
+			<DataGrid table={instance}>
+				<DataGrid.FilterPanel>
+					{({ columns, hasActiveFilter }) => (
+						<div data-active={String(hasActiveFilter)}>
+							{columns.map(({ column, label, input }) => (
+								<label key={column.id}>
+									{label}
+									{input}
+								</label>
+							))}
+						</div>
+					)}
+				</DataGrid.FilterPanel>
+			</DataGrid>,
+		)
+		expect(container.querySelector('div[data-active]')?.getAttribute('data-active')).toBe('false')
+		expect(Array.from(container.querySelectorAll('label')).map((l) => l.textContent)).toEqual(['Name', 'Amount'])
+		// The resolved control, not a placeholder the caller would have to build.
+		expect(container.querySelectorAll('label input')).toHaveLength(2)
 	})
 })

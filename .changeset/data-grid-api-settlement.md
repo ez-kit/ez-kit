@@ -48,3 +48,13 @@ Settle the data-grid public API so it stops moving. Breaking, pre-1.0 so shipped
   no longer costs pinning, sticky positioning and virtualization.
 - `Tfoot` joins the core UI-kit contract — breaking for an external kit registered with
   `satisfies FullGridComponents`.
+- `Pagination`, `SelectionBar`, `SortTrigger`, `ColumnVisibilityTrigger` and `FilterPanel`
+  take `children` as a render function receiving the model each already derives — the page
+  totals with their trusted/unknown distinction, a confirmation-aware `onDelete`, the
+  per-entry sort column lists, and each column's ready-made filter input. These are the
+  derivations that are expensive to repeat and easy to get subtly wrong outside the grid.
+  The slots that only forward to a kit component (`PageSizer`, `DraftBar`, the modals, the
+  fallback rows) deliberately get nothing: they are already overridable through the kit
+  registry, and for the fallbacks through `fallbacks.*.content`.
+- `DataGridRowProps` and `DataGridCellProps` are exported — writing a wrapper around
+  `<DataGrid.Row>` was possible, naming its props was not.

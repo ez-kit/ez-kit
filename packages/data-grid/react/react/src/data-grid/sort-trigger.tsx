@@ -4,6 +4,7 @@ import { useTable } from './table-context'
 
 import type { SortColumnOption, SortMenuItem } from '../types'
 import type { ColumnSort } from '@tanstack/table-core'
+import type { ReactNode } from 'react'
 
 /**
  * Renders the SortMenu DI component populated with the current multi-sort state.
@@ -11,7 +12,46 @@ import type { ColumnSort } from '@tanstack/table-core'
  * - Maps current `table.getState().sorting` to SortMenuItem[] with per-row available columns (deduped)
  * - Wires Add Sort, Reset Sorting, change column/direction, and remove handlers
  */
-export function SortTrigger() {
+/**
+ * What a `<DataGrid.SortTrigger>` render function receives — the multi-sort builder model.
+ *
+ * `items[].availableColumns` is per-entry, not the global list: a column already used by
+ * another sort entry is excluded from it, so a custom builder cannot offer a duplicate.
+ */
+export type DataGridSortTriggerRenderArgs = {
+	/** One entry per active sort, in priority order, with its own change/remove handlers. */
+	items: SortMenuItem[]
+	/** Every sortable, non-system column. */
+	sortableColumns: SortColumnOption[]
+	/** False when every sortable column is already used. */
+	canAddSort: boolean
+	/** Appends the first still-unused column, ascending. No-op when `canAddSort` is false. */
+	onAddSort: () => void
+	onResetSorting: () => void
+}
+
+export type DataGridSortTriggerProps = {
+	/**
+	 * Custom sort-builder content, replacing the kit's `SortMenu` component.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.SortTrigger>
+	 *   {({ items, canAddSort, onAddSort }) => (
+	 *     <div>
+	 *       {items.map((item) => (
+	 *         <SortRow key={item.columnId} {...item} />
+	 *       ))}
+	 *       <button disabled={!canAddSort} onClick={onAddSort}>Add sort</button>
+	 *     </div>
+	 *   )}
+	 * </DataGrid.SortTrigger>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridSortTriggerRenderArgs) => ReactNode)
+}
+
+export function SortTrigger({ children }: DataGridSortTriggerProps = {}) {
 	const table = useTable()
 	const { SortMenu } = useGridComponents().sorting
 
@@ -51,17 +91,26 @@ export function SortTrigger() {
 	const firstFree = sortableColumns.find((c) => !used.has(c.id))
 	const canAddSort = Boolean(firstFree)
 
+	const onAddSort = () => {
+		if (!firstFree) return
+		table.setSorting([...sorting, { id: firstFree.id, desc: false }])
+	}
+	const onResetSorting = () => {
+		table.setSorting([])
+	}
+
+	if (children !== undefined) {
+		return typeof children === 'function'
+			? children({ items, sortableColumns, canAddSort, onAddSort, onResetSorting })
+			: children
+	}
+
 	return (
 		<SortMenu
 			items={items}
 			canAddSort={canAddSort}
-			onAddSort={() => {
-				if (!firstFree) return
-				table.setSorting([...sorting, { id: firstFree.id, desc: false }])
-			}}
-			onResetSorting={() => {
-				table.setSorting([])
-			}}
+			onAddSort={onAddSort}
+			onResetSorting={onResetSorting}
 		/>
 	)
 }

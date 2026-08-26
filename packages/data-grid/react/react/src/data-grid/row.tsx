@@ -5,7 +5,7 @@ import { DataGridCell } from './cell'
 import type { Row } from '@tanstack/table-core'
 import type { CSSProperties, Ref } from 'react'
 
-type RowProps = {
+export type DataGridRowProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
 	style?: CSSProperties
@@ -25,7 +25,13 @@ type RowProps = {
  * - `data-pinned="top" | "bottom"` for pinned rows (offset from `--dg-row-pin-offset`)
  * - `data-virtual="row"` for virtualized rows (positioned via runtime `transform`)
  */
-export function DataGridRow({ row, style, ref, 'data-pinned': dataPinned, 'data-virtual': dataVirtual }: RowProps) {
+export function DataGridRow({
+	row,
+	style,
+	ref,
+	'data-pinned': dataPinned,
+	'data-virtual': dataVirtual,
+}: DataGridRowProps) {
 	const { Tr } = useGridComponents().core
 	return (
 		<Tr

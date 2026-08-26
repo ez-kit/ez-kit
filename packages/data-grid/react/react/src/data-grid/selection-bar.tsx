@@ -1,10 +1,15 @@
 import { useGridComponents } from '../components-context'
-import { type SelectionPanelCallbackArgs, type SelectionPanelConfig } from '../use-data-grid'
+import {
+	type SelectionPanelCallbackArgs,
+	type SelectionPanelConfig,
+	type SelectionPanelVariant,
+} from '../use-data-grid'
 
 import { resolveSelectionPanelVariant } from './selection-panel-variant'
 import { useTable } from './table-context'
 
 import type { Table } from '@tanstack/table-core'
+import type { ReactElement, ReactNode } from 'react'
 
 /**
  * Build the `{ table, clearSelection, selectedRows }` argument passed to every
@@ -35,7 +40,57 @@ export function buildSelectionPanelArgs(
  * - `selection.panel: true`        → renders (no delete button)
  * - `selection.panel: { ... }`     → renders with config
  */
-export function SelectionBar() {
+/**
+ * What a `<DataGrid.SelectionBar>` render function receives.
+ *
+ * `onDelete` is the reason this is worth exposing: it already encodes the confirmation
+ * protocol. With `panel.confirmation` set it stages a pending bulk delete and the shared
+ * `ConfirmDialog` runs the handler on confirm; without it the handler fires immediately. A
+ * hand-rolled bar that called `panel.onDelete` directly would silently skip the prompt.
+ */
+export type DataGridSelectionBarRenderArgs<TRow extends object = object> = SelectionPanelCallbackArgs<TRow> & {
+	/** Number of selected rows. */
+	count: number
+	/** Whether the bar would normally be shown — i.e. at least one row is selected. */
+	open: boolean
+	/** Confirmation-aware delete. Absent when the panel has no `onDelete`. */
+	onDelete?: (() => void) | undefined
+	/** Runs the panel's `onClear` when set, otherwise resets the selection. */
+	onClear: () => void
+	/** Resolved `actions` slot content, if the panel config supplied one. */
+	actions?: ReactElement | undefined
+	/** Resolved render mode — `'floating'` or `'inline'`. */
+	variant: SelectionPanelVariant
+}
+
+export type DataGridSelectionBarProps = {
+	/**
+	 * Custom bar content, replacing the kit's `SelectionBar` component.
+	 *
+	 * The gates that hide the bar still apply — selection disabled, `panel: false`, or the
+	 * draft bar owning the slot while a deferred query is pending — so `children` are not
+	 * rendered in those states. `open` is passed through rather than gating, so a custom bar
+	 * can animate its own enter/exit instead of unmounting.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.SelectionBar>
+	 *   {({ count, open, onDelete, onClear }) =>
+	 *     open ? (
+	 *       <div>
+	 *         {count} selected
+	 *         {onDelete && <button onClick={onDelete}>Delete</button>}
+	 *         <button onClick={onClear}>Cancel</button>
+	 *       </div>
+	 *     ) : null
+	 *   }
+	 * </DataGrid.SelectionBar>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridSelectionBarRenderArgs) => ReactNode)
+}
+
+export function SelectionBar({ children }: DataGridSelectionBarProps = {}) {
 	const table = useTable()
 	const { SelectionBar: SelectionBarComponent } = useGridComponents().selection
 
@@ -84,6 +139,20 @@ export function SelectionBar() {
 				: config.actions
 
 	const variant = resolveSelectionPanelVariant(table)
+
+	if (children !== undefined) {
+		return typeof children === 'function'
+			? children({
+					...callbackArgs,
+					count,
+					open,
+					onDelete,
+					onClear,
+					actions,
+					variant,
+				})
+			: children
+	}
 
 	return (
 		<SelectionBarComponent

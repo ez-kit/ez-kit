@@ -13,7 +13,7 @@ import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
 
-type CellProps = {
+export type DataGridCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	cell: Cell<any, unknown>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,7 +40,7 @@ const EMPTY_ERRORS: readonly string[] = Object.freeze([])
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.
  */
-export function DataGridCell({ cell, row }: CellProps) {
+export function DataGridCell({ cell, row }: DataGridCellProps) {
 	const meta = cell.column.columnDef.meta
 	if (meta?.isSystemColumn) {
 		return (
@@ -60,7 +60,7 @@ export function DataGridCell({ cell, row }: CellProps) {
 
 // ── system columns ──────────────────────────────────────────────────────────
 
-function SystemCell({ cell, row }: CellProps) {
+function SystemCell({ cell, row }: DataGridCellProps) {
 	const columnId = cell.column.id
 	const pin = getCellPinInfo(cell)
 	const { Td } = useGridComponents().core
@@ -160,7 +160,7 @@ function ExpandCell({ row, pin }: SystemSubProps) {
 
 // ── data columns ────────────────────────────────────────────────────────────
 
-function BodyDataCell({ cell, row }: CellProps) {
+function BodyDataCell({ cell, row }: DataGridCellProps) {
 	const instance = useDataGridInstance()
 	const table = instance.table
 	const { Td } = useGridComponents().core
