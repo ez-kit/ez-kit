@@ -1,4 +1,11 @@
-export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } from './data-grid'
+export {
+	DataGrid,
+	GridComponentsProvider,
+	useDataGrid,
+	extendDataGrid,
+	createColumns,
+	createColumnHelper,
+} from './data-grid'
 export { cellTypes } from './blocks/cell-types'
 
 /**
@@ -7,8 +14,13 @@ export { cellTypes } from './blocks/cell-types'
  * of nine values and nine types, which left most of the API — `ColumnSortingConfig`,
  * `CellType`, `RowActionsVariant`, the UI-kit component contracts — unnameable from here.
  *
- * A star re-export is safe alongside the four bound names above: an explicit re-export
- * shadows a star of the same name, so `DataGrid` / `useDataGrid` / `GridComponentsProvider` /
- * `extendDataGrid` stay the shadcn-bound ones.
+ * A star re-export is safe alongside the bound names above: an explicit re-export shadows a
+ * star of the same name, so every one of them stays the kit-bound version.
+ *
+ * `createColumns` / `createColumnHelper` **must** be in that explicit list. Without them the
+ * star silently supplies the headless core versions, which are typed `TCustomCellTypes =
+ * never` — they compile, they run, and they quietly stop checking `cell: { type: '…' }`
+ * against the kit's registered cell types, which is the entire point of the factory.
+ * `src/index.test.ts` guards this.
  */
 export * from '@ez-kit/data-grid-react'

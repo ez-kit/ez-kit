@@ -88,9 +88,10 @@ const components = {
  *   rating: { view: RatingCellView, edit: RatingCellInput },
  * })
  */
-const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } = createDataGrid({
-	components,
-	cellTypes,
-})
+const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid, createColumns, createColumnHelper } =
+	createDataGrid({
+		components,
+		cellTypes,
+	})
 
-export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid }
+export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid, createColumns, createColumnHelper }

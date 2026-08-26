@@ -270,6 +270,11 @@ describe('@ez-kit/data-grid-heroui — adapter surface parity', () => {
 		// `export * from '@ez-kit/data-grid-react'` safe next to the bound exports.
 		expect(kit.DataGrid).not.toBe(adapter.DataGrid)
 		expect(kit.useDataGrid).not.toBe(adapter.useDataGrid)
+		// The two that used to slip through: with no explicit re-export the star supplied the
+		// headless core helpers, typed `TCustomCellTypes = never`, so a column's
+		// `cell: { type: 'my-type' }` silently stopped being checked against the kit registry.
+		expect(kit.createColumns).not.toBe(adapter.createColumns)
+		expect(kit.createColumnHelper).not.toBe(adapter.createColumnHelper)
 	})
 
 	it('the bound DataGrid carries the full compound namespace', async () => {
