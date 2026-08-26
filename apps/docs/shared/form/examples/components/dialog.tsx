@@ -2,15 +2,20 @@
 
 import { useState } from 'react'
 
+import { Dialog } from 'shared/form/Dialog'
 import { Form } from 'shared/form/FormKit'
 
 /**
  * A form inside a dialog — the case the uncontrolled mode exists for.
  *
- * The panel is rendered conditionally, so opening it mounts `<Form>` and closing it
- * unmounts the whole instance. Type something, close, reopen: the fields are empty again,
- * with no reset call anywhere. Had the hook been called in this component instead, the
- * values (and any validation errors) would still be there on the second open.
+ * `<Form>` sits inside the dialog and wraps both its body and its footer, so the dialog's
+ * own unmount-while-closed is what resets the form. Type something, close, reopen: the
+ * fields are empty again, with no reset call anywhere. Had the hook been called in this
+ * component instead, the values (and any validation errors) would still be there.
+ *
+ * `Dialog` here is the docs' kit switcher — a shadcn `Dialog` under the shadcn route, a
+ * HeroUI `Modal` under the HeroUI one. In an app it is whichever dialog you already have;
+ * only the arrangement matters.
  */
 export function DialogExample() {
 	const [open, setOpen] = useState(false)
@@ -18,18 +23,13 @@ export function DialogExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<button
-				type='button'
-				onClick={() => {
-					setOpen(true)
-				}}
-				className='self-start rounded-md bg-black px-3 py-1.5 text-sm text-white dark:bg-white dark:text-black'
+			<Dialog
+				open={open}
+				onOpenChange={setOpen}
 			>
-				Edit profile
-			</button>
+				<Dialog.Trigger>Edit profile</Dialog.Trigger>
 
-			{open ? (
-				<div className='rounded-lg border border-black/10 shadow-lg dark:border-white/15'>
+				<Dialog.Content title='Edit profile'>
 					<Form
 						defaultValues={{ name: '', title: '' }}
 						onSubmit={({ value }) => {
@@ -39,9 +39,7 @@ export function DialogExample() {
 					>
 						{(form) => (
 							<>
-								{/* body */}
-								<div className='flex flex-col gap-3 p-4'>
-									<p className='text-sm font-medium'>Edit profile</p>
+								<Dialog.Body>
 									<form.TextField
 										name='name'
 										label='Name'
@@ -52,26 +50,18 @@ export function DialogExample() {
 										label='Title'
 										placeholder='Mathematician'
 									/>
-								</div>
+								</Dialog.Body>
 
-								{/* footer — inside the same <form>, so this is a native submit button */}
-								<div className='flex justify-end gap-2 border-t border-black/10 p-3 dark:border-white/15'>
-									<button
-										type='button'
-										onClick={() => {
-											setOpen(false)
-										}}
-										className='rounded-md px-3 py-1.5 text-sm opacity-70'
-									>
-										Cancel
-									</button>
+								{/* Still inside the same <form>, so this is a native submit button. */}
+								<Dialog.Footer>
+									<Dialog.Close>Cancel</Dialog.Close>
 									<form.SubmitButton>Save</form.SubmitButton>
-								</div>
+								</Dialog.Footer>
 							</>
 						)}
 					</Form>
-				</div>
-			) : null}
+				</Dialog.Content>
+			</Dialog>
 
 			{saved ? <p className='text-sm opacity-70'>Saved {saved}</p> : null}
 		</div>
