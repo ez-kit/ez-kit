@@ -20,7 +20,7 @@ export function FilterChipsAutoExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			filtering={{ chips: true, clearButton: true }}
+			filtering={{ chips: true, toolbar: true }}
 			globalFiltering={{ placeholder: 'Search…' }}
 			pagination={{ pageSize: 10 }}
 		/>
@@ -33,7 +33,7 @@ export function FilterChipsAlwaysExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			filtering={{ chips: true, clearButton: { alwaysShow: true } }}
+			filtering={{ chips: true, toolbar: { alwaysShow: true } }}
 			globalFiltering
 			pagination={{ pageSize: 10 }}
 		/>

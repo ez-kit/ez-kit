@@ -4,6 +4,10 @@ export { createTable } from './create-table'
 // Default option values (single source; referenced by the React adapter + UI kits)
 export { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from './defaults'
 
+// Feature-toggle contract shared by every feature option
+export { featureConfig, isFeatureEnabled } from './utils/feature-flag'
+export type { FeatureOption, FeatureToggle } from './utils/feature-flag'
+
 // Column helpers
 export { createColumns } from './column/create-columns'
 export { mapColumns } from './column/map-columns'

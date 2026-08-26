@@ -6,13 +6,13 @@ import { describe, expect, it } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { createDataGridInstance } from '../data-grid-instance'
 import { testComponents } from '../test-utils'
-import { FILTER_CLEAR_BUTTON_KEY } from '../use-data-grid'
+import { FILTERING_TOOLBAR_KEY } from '../use-data-grid'
 
 import { ClearFiltersButton } from './clear-filters-button'
 import { TableContext } from './table-context'
 
 import type { DataGridInstance } from '../data-grid-instance'
-import type { NormalizedClearButtonConfig } from '../use-data-grid'
+import type { NormalizedFilteringToolbarConfig } from '../use-data-grid'
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -30,8 +30,8 @@ function makeTable() {
 	return { table, instance: createDataGridInstance(table) }
 }
 
-function setClearCfg(table: DataTable<User>, value: NormalizedClearButtonConfig | undefined) {
-	;(table as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] = value
+function setClearCfg(table: DataTable<User>, value: NormalizedFilteringToolbarConfig | undefined) {
+	;(table as unknown as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] = value
 }
 
 function Wrapper({ instance, children }: { instance: DataGridInstance<User>; children: ReactNode }) {
@@ -89,7 +89,7 @@ describe('<ClearFiltersButton>', () => {
 		expect(button).toBeDisabled()
 	})
 
-	it('alwaysShow via FILTER_CLEAR_BUTTON_KEY config renders a disabled button when no filter', () => {
+	it('alwaysShow via FILTERING_TOOLBAR_KEY config renders a disabled button when no filter', () => {
 		const { instance } = makeTable()
 		setClearCfg(instance.table, { alwaysShow: true })
 

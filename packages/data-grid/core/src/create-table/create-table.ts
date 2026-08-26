@@ -22,6 +22,7 @@ import { buildOperatorRegistry } from '../features/operators'
 import { RowActionsVariant } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
+import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
 import type { ColumnDef } from '../column/types'
@@ -88,9 +89,35 @@ function normalizePinning(pinning: boolean | PinningConfig | undefined): {
 const DRAFT_AXES = ['sorting', 'columnFilters', 'globalFilter'] as const
 
 export function createTable<TRow extends object>(config: TableConfig<TRow>): DataTable<TRow> {
+	// ── resolved feature options ─────────────────────────────────────────────
+	// Every feature is read through `isFeatureEnabled` / `featureConfig` exactly once, here.
+	// A config object means "on with these settings" unless it carries `enabled: false`, and
+	// `featureConfig` returns `undefined` for a feature that is off — so a disabled feature
+	// never contributes its `manual`, `onChange` or `fn` to the built table.
+	const sortingCfg = featureConfig(config.sorting)
+	const filteringCfg = featureConfig(config.filtering)
+	const globalFilteringCfg = featureConfig(config.globalFiltering)
+	const paginationCfg = featureConfig(config.pagination)
+	const selectionCfg = featureConfig(config.selection)
+	const expandingCfg = featureConfig(config.expanding)
+	const resizingCfg = featureConfig(config.resizing)
+	const creatingCfg = featureConfig(config.creating)
+	const editingCfg = featureConfig(config.editing)
+	const deletingCfg = featureConfig(config.deleting)
+
+	const hasSorting = isFeatureEnabled(config.sorting)
+	const hasColumnFiltering = isFeatureEnabled(config.filtering)
+	const hasGlobalFiltering = isFeatureEnabled(config.globalFiltering)
+	const hasPagination = isFeatureEnabled(config.pagination)
+	const hasSelection = isFeatureEnabled(config.selection)
+	const hasExpanding = isFeatureEnabled(config.expanding)
+	const hasResizing = isFeatureEnabled(config.resizing)
+	const hasEditing = isFeatureEnabled(config.editing)
+	const hasDeleting = isFeatureEnabled(config.deleting)
+
 	if (config.deferredApply === true) {
-		const sortingManual = typeof config.sorting === 'object' && config.sorting.manual === true
-		const filteringManual = typeof config.filtering === 'object' && config.filtering.manual === true
+		const sortingManual = sortingCfg?.manual === true
+		const filteringManual = filteringCfg?.manual === true
 		if (!sortingManual && !filteringManual) {
 			throw new Error(
 				'deferredApply requires `manual: true` on at least one of `sorting` or `filtering`. ' +
@@ -111,11 +138,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		})
 
 	// ── operator registry ────────────────────────────────────────────────────
-	const tableFilteringOperators = typeof config.filtering === 'object' ? config.filtering.operators : undefined
+	const tableFilteringOperators = filteringCfg?.operators
 	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
 
 	// ── faceted opt-in (table-level) ─────────────────────────────────────────
-	const tableFaceted = typeof config.filtering === 'object' && config.filtering.faceted === true
+	const tableFaceted = filteringCfg?.faceted === true
 
 	// Column-level opt-in: detect even when table-level flag is off so the row
 	// models still attach when any single column requests faceted data.
@@ -130,31 +157,18 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// ── map user columns → TanStack columns ──────────────────────────────────
 	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, { tableFaceted })
 
-	const hasEditing = Boolean(config.editing)
-	const hasDeleting = Boolean(config.deleting)
-	const hasSelection = Boolean(config.selection)
-	const hasExpanding = Boolean(config.expanding)
-
-	const expandingCfg = typeof config.expanding === 'object' ? config.expanding : undefined
 	const expandMode = expandingCfg?.mode ?? 'sub-content'
 	const normalizedPinning = normalizePinning(config.pinning)
 	const rowPinConfig = normalizedPinning.row
 	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
 
-	const sortingCfg = typeof config.sorting === 'object' ? config.sorting : undefined
 	const sortingOnChange = sortingCfg?.onChange
 
 	// ── filtering / global filter gating ─────────────────────────────────────
-	const hasColumnFiltering = Boolean(config.filtering)
-	const hasGlobalFiltering = Boolean(config.globalFiltering)
 	const hasAnyFiltering = hasColumnFiltering || hasGlobalFiltering
 
-	const filteringCfg = typeof config.filtering === 'object' ? config.filtering : undefined
 	const filteringOnChange = filteringCfg?.onChange
-	const globalFilteringCfg = typeof config.globalFiltering === 'object' ? config.globalFiltering : undefined
 	const globalFilteringOnChange = globalFilteringCfg?.onChange
-
-	const paginationCfg = typeof config.pagination === 'object' ? config.pagination : undefined
 	const paginationOnChange = paginationCfg?.onChange
 
 	// Resolve `globalFilterFn`:
@@ -186,8 +200,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)
 
 	// ── build TanStack options ────────────────────────────────────────────────
-	const defaultPageSize =
-		typeof config.pagination === 'object' && config.pagination.pageSize ? config.pagination.pageSize : DEFAULT_PAGE_SIZE
+	const defaultPageSize = paginationCfg?.pageSize ?? DEFAULT_PAGE_SIZE
 
 	const initialHidden = collectInitialHidden(config.columns)
 
@@ -318,14 +331,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 
 	// Build options without an explicit type annotation to avoid exactOptionalPropertyTypes
 	// conflicts — let TypeScript infer, then cast at the call site.
-	const onRowSelectionChange =
-		typeof config.selection === 'object' && config.selection.onChange
-			? (updater: Updater<RowSelectionState>): void => {
-					const next = typeof updater === 'function' ? updater(store.getState().rowSelection) : updater
-					const selectedIds = Object.keys(next).filter((k) => next[k])
-					;(config.selection as { onChange: (ids: string[]) => void }).onChange(selectedIds)
-				}
-			: undefined
+	const selectionOnChange = selectionCfg?.onChange
+	const onRowSelectionChange = selectionOnChange
+		? (updater: Updater<RowSelectionState>): void => {
+				const next = typeof updater === 'function' ? updater(store.getState().rowSelection) : updater
+				const selectedIds = Object.keys(next).filter((k) => next[k])
+				selectionOnChange(selectedIds)
+			}
+		: undefined
 
 	const options = {
 		_features: [
@@ -349,7 +362,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// return false for all columns regardless of per-column config, and the matching
 		// getXRowModel is not attached. Truthy config (true or object) leaves the
 		// TanStack default in place so per-column overrides keep working.
-		...(config.sorting ? { getSortedRowModel: getSortedRowModel() } : { enableSorting: false }),
+		...(hasSorting ? { getSortedRowModel: getSortedRowModel() } : { enableSorting: false }),
 		// Filtering: `getFilteredRowModel` is attached when either column filters
 		// or global search is enabled. Each axis is gated independently:
 		// - `filtering` falsy → enableColumnFilters: false (per-column UI disabled)
@@ -367,40 +380,38 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 				}
 			: {}),
 		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
-		...(config.columnVisibility ? {} : { enableHiding: false }),
+		...(config.columnVisibility === true ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
 		// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer.
-		...(config.pagination && paginationCfg?.mode !== 'infinite'
-			? { getPaginationRowModel: getPaginationRowModel() }
-			: {}),
-		...(config.expanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
-		...(config.expanding && expandMode === 'tree'
+		...(hasPagination && paginationCfg?.mode !== 'infinite' ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+		...(hasExpanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
+		...(hasExpanding && expandMode === 'tree'
 			? {
 					getSubRows:
 						expandingCfg?.getSubRows ??
 						((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
 				}
 			: {}),
-		...(config.expanding && expandMode === 'sub-content' && expandingCfg?.getRowCanExpand
+		...(hasExpanding && expandMode === 'sub-content' && expandingCfg?.getRowCanExpand
 			? { getRowCanExpand: expandingCfg.getRowCanExpand }
 			: {}),
 		// Row selection
 		enableRowSelection: hasSelection,
 		...(onRowSelectionChange ? { onRowSelectionChange } : {}),
 		// Pagination manual
-		...(typeof config.pagination === 'object' && config.pagination.manual
+		...(paginationCfg?.manual
 			? {
 					manualPagination: true,
 					// When rowCount is provided, omit pageCount so TanStack derives it
 					// automatically from rowCount ÷ pageSize. When only pageCount is
 					// given (or neither), fall back to the explicit value or -1 (unknown).
-					...(config.pagination.rowCount !== undefined
-						? { rowCount: config.pagination.rowCount }
-						: { pageCount: config.pagination.pageCount ?? UNKNOWN_PAGE_COUNT }),
+					...(paginationCfg.rowCount !== undefined
+						? { rowCount: paginationCfg.rowCount }
+						: { pageCount: paginationCfg.pageCount ?? UNKNOWN_PAGE_COUNT }),
 				}
 			: {}),
 		// Filtering manual
-		...(typeof config.filtering === 'object' && config.filtering.manual ? { manualFiltering: true } : {}),
+		...(filteringCfg?.manual ? { manualFiltering: true } : {}),
 		// Sorting manual
 		...(sortingCfg?.manual ? { manualSorting: true } : {}),
 		// Sorting: per-direction default
@@ -412,19 +423,17 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Sorting: named comparator registry, addressable from `column.sorting.fn`
 		...(sortingCfg?.fns ? { sortingFns: sortingCfg.fns } : {}),
 		// Feature configs
-		...(config.creating ? { creating: config.creating } : {}),
-		...(config.editing ? { editing: config.editing } : {}),
-		...(config.deleting ? { deleting: config.deleting } : {}),
+		...(creatingCfg ? { creating: creatingCfg } : {}),
+		...(editingCfg ? { editing: editingCfg } : {}),
+		...(deletingCfg ? { deleting: deletingCfg } : {}),
 		// Read by the React layer to lay out the actions cell (inline vs. menu).
 		rowActions: { variant: rowActionsVariant },
 		// Column resizing
-		...(config.resizing
+		...(hasResizing
 			? {
 					enableColumnResizing: true,
-					columnResizeMode:
-						typeof config.resizing === 'object' && config.resizing.mode ? config.resizing.mode : 'onChange',
-					columnResizeDirection:
-						typeof config.resizing === 'object' && config.resizing.direction ? config.resizing.direction : 'ltr',
+					columnResizeMode: resizingCfg?.mode ?? 'onChange',
+					columnResizeDirection: resizingCfg?.direction ?? 'ltr',
 				}
 			: {}),
 		// Row pinning — built-in TanStack feature, no separate row model needed
@@ -438,7 +447,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Mirrored onto options so the React layer can gate the draft UI on the flag itself.
 		...(deferred ? { deferredApply: true } : {}),
 		// Virtualization config — stored for React layer to read; no TanStack core effect
-		...(config.virtualized !== undefined ? { virtualized: config.virtualized } : {}),
+		...(isFeatureEnabled(config.virtualized) ? { virtualized: config.virtualized } : {}),
 	}
 
 	// Create the table. Features run getInitialState during this call.

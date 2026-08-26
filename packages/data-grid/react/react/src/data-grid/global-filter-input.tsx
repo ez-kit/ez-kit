@@ -31,7 +31,7 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilter
 		| NormalizedGlobalFilteringConfig
 		| undefined
 
-	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.globalFiltering.debounce
+	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.filtering.debounce
 	const placeholder = placeholderProp ?? cfg?.placeholder ?? DATA_GRID_DEFAULTS.globalFiltering.placeholder
 
 	const committed = String(table.getState().globalFilter ?? '')

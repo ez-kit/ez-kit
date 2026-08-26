@@ -1,9 +1,9 @@
 import { useGridComponents } from '../components-context'
-import { FILTER_CLEAR_BUTTON_KEY } from '../use-data-grid'
+import { FILTERING_TOOLBAR_KEY } from '../use-data-grid'
 
 import { useTable } from './table-context'
 
-import type { NormalizedClearButtonConfig } from '../use-data-grid'
+import type { NormalizedFilteringToolbarConfig } from '../use-data-grid'
 import type { ReactNode } from 'react'
 
 type ClearFiltersButtonProps = {
@@ -11,7 +11,7 @@ type ClearFiltersButtonProps = {
 	children?: ReactNode
 	/**
 	 * Override the default hidden-when-empty behaviour. If omitted, falls back
-	 * to the value normalized from `filtering.clearButton` on the table config.
+	 * to the value normalized from `filtering.toolbar` on the table config.
 	 */
 	alwaysShow?: boolean
 	/** Accessibility label. Defaults to "Clear filters" when omitted. */
@@ -22,11 +22,11 @@ type ClearFiltersButtonProps = {
  * Compound member: button that clears every active column filter AND the global filter.
  *
  * Hidden by default when no filter is active. Pass `alwaysShow={true}` (or set
- * `filtering: { clearButton: { alwaysShow: true } }` on the table config) to keep
+ * `filtering: { toolbar: { alwaysShow: true } }` on the table config) to keep
  * it visible in a disabled state.
  *
  * Auto-mounted by `<Toolbar>` into `Toolbar.right` after `<GlobalFilterInput>`
- * when `filtering.clearButton` is truthy. Can also be placed manually via
+ * when `filtering.toolbar` is truthy. Can also be placed manually via
  * `<DataGrid.ClearFiltersButton />`.
  *
  * The visual is owned by the UI kit via the `ClearFiltersButton` DI slot; the
@@ -36,8 +36,8 @@ export function ClearFiltersButton({ children, alwaysShow: alwaysShowProp, ariaL
 	const table = useTable()
 	const { ClearFiltersButton: Component } = useGridComponents().filtering
 
-	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] as
-		| NormalizedClearButtonConfig
+	const cfg = (table as unknown as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] as
+		| NormalizedFilteringToolbarConfig
 		| undefined
 
 	const alwaysShow = alwaysShowProp ?? cfg?.alwaysShow ?? false

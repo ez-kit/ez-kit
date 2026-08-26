@@ -4,10 +4,14 @@ import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from './data-grid/page
 import { PaginationVariant } from './types'
 
 /**
- * Default commit debounce (ms) for column text filter inputs.
- * `0` = commit on every keystroke (backward compatible).
+ * Default commit debounce (ms) for **every** text filter input — the per-column ones and the
+ * global search box alike. Typing into a filter is one gesture, so it debounces the same way
+ * wherever the box lives; a grid that wants otherwise sets `globalFiltering.debounce`, which
+ * overrides this for the search box only.
+ *
+ * `0` commits on every keystroke.
  */
-export const DEFAULT_FILTER_DEBOUNCE_MS = 0
+export const DEFAULT_FILTER_DEBOUNCE_MS = 250
 
 /**
  * Single source of truth for data-grid default option **values**.
@@ -26,22 +30,23 @@ export const DATA_GRID_DEFAULTS = {
 	/** Page-based pagination. `pageSize` mirrors the core default (one source across layers). */
 	pagination: {
 		pageSize: DEFAULT_PAGE_SIZE,
+		/** Offered by the PageSizer when `pagination.toolbar` is on and no list is supplied. */
+		pageSizeOptions: [10, 20, 50, 100],
 		variant: PaginationVariant.Numbered,
 		/** `numbered` page-link window; mirrors the `buildPageWindow` defaults. */
 		siblings: DEFAULT_PAGE_SIBLINGS,
 		boundaries: DEFAULT_PAGE_BOUNDARIES,
 	},
-	/** Cross-column global search input. */
+	/** Cross-column global search input. Debounce falls back to `filtering.debounce`. */
 	globalFiltering: {
 		placeholder: 'Search…',
-		debounce: 250,
 	},
 	/** Column filtering controls. */
 	filtering: {
 		variant: 'inline',
 		debounce: DEFAULT_FILTER_DEBOUNCE_MS,
 		chips: { position: 'above' },
-		clearButton: { alwaysShow: false },
+		toolbar: { alwaysShow: false },
 	},
 	/** Infinite-scroll edge detection tuning. */
 	infinite: {

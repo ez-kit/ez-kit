@@ -6,6 +6,7 @@ import type { EditingConfig } from './features/editing'
 import type { FilterOperatorDef } from './features/operators'
 import type { RowActionsConfig } from './features/row-actions'
 import type { SetStateOptions } from './store/store'
+import type { FeatureToggle } from './utils/feature-flag'
 import type {
 	Column,
 	ColumnFiltersState,
@@ -75,7 +76,7 @@ export type MultiSortConfig = {
  * })
  * ```
  */
-export type SortingConfig = {
+export type SortingConfig = FeatureToggle & {
 	/**
 	 * Server-side mode: skip TanStack's sorted row model and rely on externally sorted `data`.
 	 *
@@ -125,7 +126,7 @@ export type SortingConfig = {
 	onChange?: (sorting: SortingState) => void
 }
 
-export type FilteringConfig = {
+export type FilteringConfig = FeatureToggle & {
 	manual?: boolean
 	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
 	operators?: FilterOperatorDef[]
@@ -186,7 +187,7 @@ export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
  * })
  * ```
  */
-export type GlobalFilteringConfig = {
+export type GlobalFilteringConfig = FeatureToggle & {
 	/**
 	 * Function applied during global search.
 	 * - `string` — resolved against {@link GlobalFilteringConfig.fns} registry first,
@@ -260,7 +261,7 @@ export type LoadingState = {
 	error: unknown
 }
 
-export type PaginationConfig = {
+export type PaginationConfig = FeatureToggle & {
 	manual?: boolean
 	/**
 	 * Server total-rows descriptor. When set in manual pagination mode, TanStack
@@ -319,7 +320,7 @@ export type PaginationConfig = {
 	onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
 }
 
-export type SelectionConfig = {
+export type SelectionConfig = FeatureToggle & {
 	/** Called when row selection changes. */
 	onChange?: (rowIds: string[]) => void
 	/** Allow selecting multiple rows. Default: true. */
@@ -341,22 +342,32 @@ export const ExpandingMode = {
 
 export type ExpandingMode = (typeof ExpandingMode)[keyof typeof ExpandingMode]
 
-export type ExpandingConfig<TRow extends object = object> = {
+/**
+ * Expanding config, generic over the type of {@link ExpandingConfig.renderExpanded}.
+ *
+ * `TRenderExpanded` exists so an adapter can narrow the one framework-bound field without
+ * restating the rest of the config. The React adapter's `ReactExpandingConfig<TRow>` is
+ * nothing but `ExpandingConfig<TRow, ComponentType<ExpandedRowProps<TRow>>>`, so a field
+ * added here reaches React automatically — the hand-copied React twin this replaced could
+ * only ever drift.
+ */
+export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unknown> = FeatureToggle & {
 	/** What expanding does. Default: {@link ExpandingMode.SubContent}. */
 	mode?: ExpandingMode
 	/** Tree mode: sub-row extractor. Auto-detects `row.children` when omitted. */
 	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
-	/** Sub-content mode: per-row expandability callback. */
+	/**
+	 * Sub-content mode: per-row expandability callback.
+	 * When omitted and `renderExpanded` is provided, every row is expandable.
+	 */
 	getRowCanExpand?: (row: Row<TRow>) => boolean
 	/**
 	 * Sub-content mode: the detail-panel renderer.
 	 *
-	 * Deliberately opaque here — core is framework-agnostic and never calls it, it only
-	 * carries it through to whichever adapter mounts the panel. The React adapter narrows
-	 * this to `ComponentType<ExpandedRowProps<TRow>>` on `ReactExpandingConfig`, which is
-	 * the type a React consumer actually writes against.
+	 * Defaults to `unknown` here — core is framework-agnostic and never calls it, it only
+	 * carries it through to whichever adapter mounts the panel.
 	 */
-	renderExpanded?: unknown
+	renderExpanded?: TRenderExpanded
 }
 
 export type RowPinningConfig = {
@@ -364,7 +375,7 @@ export type RowPinningConfig = {
 	bottom?: boolean
 }
 
-export type PinningConfig = {
+export type PinningConfig = FeatureToggle & {
 	/** Enable column pin UI (ColumnMenu in headers). */
 	column?: boolean
 	/** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
@@ -378,7 +389,7 @@ export type RowVirtualOptions = {
 	overscan?: number
 }
 
-export type VirtualizedConfig = {
+export type VirtualizedConfig = FeatureToggle & {
 	row?: boolean | RowVirtualOptions
 	// column virtualization — reserved for future
 }
@@ -386,7 +397,7 @@ export type VirtualizedConfig = {
 export type ColumnResizeMode = 'onChange' | 'onEnd'
 export type ColumnResizeDirection = 'ltr' | 'rtl'
 
-export type ResizingConfig = {
+export type ResizingConfig = FeatureToggle & {
 	/** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
 	mode?: ColumnResizeMode
 	/** Text direction for resize calculation. Default: 'ltr'. */

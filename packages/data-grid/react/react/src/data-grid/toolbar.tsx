@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 import {
 	COLUMN_VISIBILITY_KEY,
-	FILTER_CLEAR_BUTTON_KEY,
+	FILTERING_TOOLBAR_KEY,
 	GLOBAL_FILTERING_KEY,
 	PAGE_SIZER_KEY,
 	SORTING_KEY,
@@ -17,7 +17,7 @@ import { useDataGridInstance } from './table-context'
 
 import type {
 	ColumnVisibilityUIConfig,
-	NormalizedClearButtonConfig,
+	NormalizedFilteringToolbarConfig,
 	NormalizedGlobalFilteringConfig,
 	ReactSortingConfig,
 } from '../use-data-grid'
@@ -85,10 +85,10 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 		| undefined
 	const hasGlobalFilterToolbar = Boolean(globalFilteringConfig?.toolbar)
 
-	const clearButtonConfig = (table as unknown as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] as
-		| NormalizedClearButtonConfig
+	const filteringToolbarConfig = (table as unknown as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] as
+		| NormalizedFilteringToolbarConfig
 		| undefined
-	const hasClearButtonToolbar = clearButtonConfig !== undefined
+	const hasClearButtonToolbar = filteringToolbarConfig !== undefined
 
 	if (children) {
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>

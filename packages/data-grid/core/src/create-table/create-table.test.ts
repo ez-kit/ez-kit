@@ -902,3 +902,48 @@ describe('createTable — initialState vs column-derived state', () => {
 		expect(table.getState().columnVisibility).toMatchObject({ name: false, age: true })
 	})
 })
+
+describe('createTable — enabled: false', () => {
+	const DATA = [{ name: 'Alice', age: 30 }]
+	const COLUMNS = createColumns<{ name: string; age: number }>([{ accessorKey: 'name' }, { accessorKey: 'age' }])
+
+	it('sorting: { enabled: false } disables sorting despite the config object', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { enabled: false, multi: true } })
+		expect(table.options.enableSorting).toBe(false)
+	})
+
+	it('a disabled feature does not contribute its manual flag', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: { enabled: false, manual: true } })
+		expect(table.options.manualFiltering).toBeUndefined()
+	})
+
+	it('a disabled feature does not contribute its onChange', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: { enabled: false, onChange },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '0': true } }))
+		expect(onChange).not.toHaveBeenCalled()
+	})
+
+	it('editing: { enabled: false } keeps the actions column out of the table', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { enabled: false, onSave: () => Promise.resolve() },
+		})
+		expect(table.getAllColumns().some((c) => c.id === ACTIONS_COLUMN_ID)).toBe(false)
+	})
+
+	it('resizing: { enabled: false } leaves column resizing off', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { enabled: false, mode: 'onEnd' } })
+		expect(table.options.enableColumnResizing).toBeFalsy()
+	})
+
+	it('an object without enabled turns the feature on', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { mode: 'onEnd' } })
+		expect(table.options.enableColumnResizing).toBe(true)
+	})
+})

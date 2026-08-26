@@ -37,7 +37,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 					faceted: true,
 					debounce: 300,
 					chips: { position: 'above' },
-					clearButton: true,
+					toolbar: true,
 				},
 				globalFiltering: { placeholder: 'Search orders…', debounce: 300 },
 				stickyHeader: true,

@@ -36,16 +36,16 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 
 ### `filtering`
 
-| Option        | Type                                          | Description                                                                                                                          |
-| ------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `variant`     | `'inline' \| 'popover' \| 'panel'`            | Display variant for column filter controls. Default `'inline'`.                                                                      |
-| `manual`      | `boolean`                                     | Disable client-side column filtering (and global filter). The grid calls `onChange` instead.                                         |
-| `operators`   | `FilterOperatorDef[]`                         | Table-level custom operators (or built-in overrides), referenced by column items — see [Operators](./data-grid/filtering/operators). |
-| `faceted`     | `boolean`                                     | Enable faceted row models (unique values + counts) for multi-select filters. Default `false`.                                        |
-| `debounce`    | `number`                                      | Commit debounce in milliseconds for column text filter inputs. Default `0` (commits every keystroke).                                |
-| `chips`       | `boolean \| FilterChipsConfig`                | Auto-mount a strip of removable chips for active filters — see [Filter panel](./data-grid/filtering/panel).                          |
-| `clearButton` | `boolean \| FilterClearButtonConfig`          | Auto-mount a Clear-all button into the toolbar — see [Filter panel](./data-grid/filtering/panel).                                    |
-| `onChange`    | `(columnFilters: ColumnFiltersState) => void` | Called when any column filter changes.                                                                                               |
+| Option      | Type                                          | Description                                                                                                                          |
+| ----------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `variant`   | `'inline' \| 'popover' \| 'panel'`            | Display variant for column filter controls. Default `'inline'`.                                                                      |
+| `manual`    | `boolean`                                     | Disable client-side column filtering (and global filter). The grid calls `onChange` instead.                                         |
+| `operators` | `FilterOperatorDef[]`                         | Table-level custom operators (or built-in overrides), referenced by column items — see [Operators](./data-grid/filtering/operators). |
+| `faceted`   | `boolean`                                     | Enable faceted row models (unique values + counts) for multi-select filters. Default `false`.                                        |
+| `debounce`  | `number`                                      | Commit debounce (ms) shared by every text filter input, the global search box included. Default `250`. `0` commits every keystroke.  |
+| `chips`     | `boolean \| FilterChipsConfig`                | Auto-mount a strip of removable chips for active filters — see [Filter panel](./data-grid/filtering/panel).                          |
+| `toolbar`   | `boolean \| FilteringToolbarConfig`           | Auto-mount filtering's toolbar control — the Clear-all button — see [Filter panel](./data-grid/filtering/panel).                     |
+| `onChange`  | `(columnFilters: ColumnFiltersState) => void` | Called when any column filter changes.                                                                                               |
 
 ### Per-column `filtering`
 

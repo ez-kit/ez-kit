@@ -8,7 +8,7 @@ import { PaginationVariant } from './types'
 import {
 	FILTERING_VARIANT_KEY,
 	FILTER_CHIPS_KEY,
-	FILTER_CLEAR_BUTTON_KEY,
+	FILTERING_TOOLBAR_KEY,
 	GLOBAL_FILTERING_KEY,
 	PAGE_SIZER_KEY,
 	SELECTION_PANEL_KEY,
@@ -17,7 +17,7 @@ import {
 } from './use-data-grid'
 
 import type {
-	NormalizedClearButtonConfig,
+	NormalizedFilteringToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedGlobalFilteringConfig,
 } from './use-data-grid'
@@ -784,37 +784,33 @@ describe('useDataGrid — filtering.chips normalization', () => {
 	})
 })
 
-// ── filtering.clearButton normalization ───────────────────────────────────────
+// ── filtering.toolbar (Clear-all button) normalization ────────────────────────
 
-function getClearButtonConfig(table: object): NormalizedClearButtonConfig | undefined {
-	return (table as Record<symbol, unknown>)[FILTER_CLEAR_BUTTON_KEY] as NormalizedClearButtonConfig | undefined
+function getFilteringToolbarConfig(table: object): NormalizedFilteringToolbarConfig | undefined {
+	return (table as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] as NormalizedFilteringToolbarConfig | undefined
 }
 
-describe('useDataGrid — filtering.clearButton normalization', () => {
-	it('omitted → FILTER_CLEAR_BUTTON_KEY is undefined', () => {
+describe('useDataGrid — filtering.toolbar normalization', () => {
+	it('omitted → FILTERING_TOOLBAR_KEY is undefined', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
-		expect(getClearButtonConfig(result.current.table)).toBeUndefined()
+		expect(getFilteringToolbarConfig(result.current.table)).toBeUndefined()
 	})
 
-	it('clearButton: true → alwaysShow defaults to false', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: true } }),
-		)
-		expect(getClearButtonConfig(result.current.table)).toEqual({ alwaysShow: false })
+	it('toolbar: true → alwaysShow defaults to false', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { toolbar: true } }))
+		expect(getFilteringToolbarConfig(result.current.table)).toEqual({ alwaysShow: false })
 	})
 
-	it('clearButton: { alwaysShow: true } → preserved', () => {
+	it('toolbar: { alwaysShow: true } → preserved', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: { alwaysShow: true } } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { toolbar: { alwaysShow: true } } }),
 		)
-		expect(getClearButtonConfig(result.current.table)).toEqual({ alwaysShow: true })
+		expect(getFilteringToolbarConfig(result.current.table)).toEqual({ alwaysShow: true })
 	})
 
-	it('clearButton: false → FILTER_CLEAR_BUTTON_KEY is undefined', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { clearButton: false } }),
-		)
-		expect(getClearButtonConfig(result.current.table)).toBeUndefined()
+	it('toolbar: false → FILTERING_TOOLBAR_KEY is undefined', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { toolbar: false } }))
+		expect(getFilteringToolbarConfig(result.current.table)).toBeUndefined()
 	})
 })
 

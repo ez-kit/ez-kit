@@ -1,3 +1,4 @@
+import type { FeatureToggle } from '../../utils/feature-flag'
 import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 export type ConfirmationOptions = {
@@ -19,7 +20,7 @@ export type DeletingContext<TData> = {
 	signal: AbortSignal
 }
 
-export type DeletingConfig<TData> = {
+export type DeletingConfig<TData> = FeatureToggle & {
 	onDelete: (ctx: DeletingContext<TData>) => void | Promise<void>
 	confirmation?: boolean | ConfirmationOptions
 }

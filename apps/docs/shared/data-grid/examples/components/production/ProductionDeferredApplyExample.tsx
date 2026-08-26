@@ -33,7 +33,7 @@ export function ProductionDeferredApplyExample() {
 				variant: 'popover',
 				faceted: true,
 				chips: { position: 'above' },
-				clearButton: true,
+				toolbar: true,
 			}}
 			globalFiltering={{ placeholder: 'Search orders…' }}
 			stickyHeader

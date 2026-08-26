@@ -81,7 +81,7 @@ export const GRID_TYPE = {
 	ReactFilteringConfig: { module: TypeModule.React, name: 'ReactFilteringConfig' },
 	ReactGlobalFilteringConfig: { module: TypeModule.React, name: 'ReactGlobalFilteringConfig' },
 	FilterChipsConfig: { module: TypeModule.React, name: 'FilterChipsConfig' },
-	FilterClearButtonConfig: { module: TypeModule.React, name: 'FilterClearButtonConfig' },
+	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -272,7 +272,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [
 			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 4 },
 			{ heading: '`FilterChipsConfig`', roots: [GRID_TYPE.FilterChipsConfig], expectedCount: 1 },
-			{ heading: '`FilterClearButtonConfig`', roots: [GRID_TYPE.FilterClearButtonConfig], expectedCount: 1 },
+			{ heading: '`FilteringToolbarConfig`', roots: [GRID_TYPE.FilteringToolbarConfig], expectedCount: 1 },
 		],
 		nonOptionTables: [],
 	},

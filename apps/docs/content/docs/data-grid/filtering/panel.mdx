@@ -28,11 +28,11 @@ The panel is a `<DataGrid.FilterPanel />` slot, enabled with `filtering: { varia
 </DataGrid>
 ```
 
-A complementary surface is the active-filters chip strip. With `filtering: { chips: true, clearButton: true }`, a chip appears per active filter and the clear button auto-mounts once at least one filter is set.
+A complementary surface is the active-filters chip strip. With `filtering: { chips: true, toolbar: true }`, a chip appears per active filter and the clear button auto-mounts once at least one filter is set.
 
 <DataGridDocsExample exampleId='filter-chips-auto' />
 
-Pass `clearButton: { alwaysShow: true }` to keep the clear button mounted even when no filter is active.
+Pass `toolbar: { alwaysShow: true }` to keep the clear button mounted even when no filter is active.
 
 <DataGridDocsExample exampleId='filter-chips-always' />
 
@@ -49,12 +49,12 @@ For full control, compose the toolbar yourself — drop `<DataGrid.ActiveFilters
 
 ### `filtering`
 
-| Option        | Type                                 | Description                                                                                                |
-| ------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `variant`     | `'inline' \| 'popover' \| 'panel'`   | `'panel'` renders every filterable column as a chip inside `<DataGrid.FilterPanel />`.                     |
-| `faceted`     | `boolean`                            | Enable faceted row models (unique values + counts) — see [Multi-value](./data-grid/filtering/multi-value). |
-| `chips`       | `boolean \| FilterChipsConfig`       | Auto-mount a strip of removable chips for active filters.                                                  |
-| `clearButton` | `boolean \| FilterClearButtonConfig` | Auto-mount a Clear-all button into the toolbar.                                                            |
+| Option    | Type                                | Description                                                                                                |
+| --------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `variant` | `'inline' \| 'popover' \| 'panel'`  | `'panel'` renders every filterable column as a chip inside `<DataGrid.FilterPanel />`.                     |
+| `faceted` | `boolean`                           | Enable faceted row models (unique values + counts) — see [Multi-value](./data-grid/filtering/multi-value). |
+| `chips`   | `boolean \| FilterChipsConfig`      | Auto-mount a strip of removable chips for active filters.                                                  |
+| `toolbar` | `boolean \| FilteringToolbarConfig` | Auto-mount filtering's toolbar control — the Clear-all button.                                             |
 
 ### `FilterChipsConfig`
 
@@ -62,7 +62,7 @@ For full control, compose the toolbar yourself — drop `<DataGrid.ActiveFilters
 | ---------- | -------------------- | -------------------------------------------------------------------------------------- |
 | `position` | `'above' \| 'below'` | Where to render the auto-mounted chips strip relative to the table. Default `'above'`. |
 
-### `FilterClearButtonConfig`
+### `FilteringToolbarConfig`
 
 | Option       | Type      | Description                                                                          |
 | ------------ | --------- | ------------------------------------------------------------------------------------ |

@@ -1,5 +1,6 @@
 import { isValidationError, zodSafeParseToResult } from '../validation'
 
+import type { FeatureToggle } from '../../utils/feature-flag'
 import type {
 	CommitStatus,
 	ValidateConfig,
@@ -57,7 +58,7 @@ export const EditingMode = {
 
 export type EditingMode = (typeof EditingMode)[keyof typeof EditingMode]
 
-export type EditingConfig<TData> = {
+export type EditingConfig<TData> = FeatureToggle & {
 	/** How the edit flow behaves. Default: {@link EditingMode.Row}. */
 	mode?: EditingMode
 	validate?: ValidateConfig<TData>

@@ -38,7 +38,7 @@ export function ProductionExample() {
 				faceted: true,
 				debounce: 300,
 				chips: { position: 'above' },
-				clearButton: true,
+				toolbar: true,
 				onChange: (next) => {
 					orders.setColumnFilters(next)
 					orders.resetToFirstPage()

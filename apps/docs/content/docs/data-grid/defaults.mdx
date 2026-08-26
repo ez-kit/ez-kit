@@ -11,18 +11,18 @@ These are **values only**. They never enable a feature; they only fill the gaps 
 
 ## Reference
 
-| Setting                                  | Default                         | Applies when                                 |
-| ---------------------------------------- | ------------------------------- | -------------------------------------------- |
-| `pagination.pageSize`                    | `10`                            | `pagination` is enabled without a `pageSize` |
-| `globalFiltering.placeholder`            | `'Search…'`                     | `globalFiltering` is enabled                 |
-| `globalFiltering.debounce`               | `250` (ms)                      | `globalFiltering` is enabled                 |
-| `filtering.variant`                      | `'inline'`                      | `filtering` is enabled without a `variant`   |
-| `filtering.debounce`                     | `0` (ms — commit per keystroke) | `filtering` text inputs, no `debounce` set   |
-| `filtering.chips.position`               | `'above'`                       | `filtering.chips` is enabled                 |
-| `filtering.clearButton.alwaysShow`       | `false`                         | `filtering.clearButton` is enabled           |
-| `pagination` (infinite) `trigger`        | `'auto'`                        | `pagination.mode: 'infinite'`                |
-| `pagination` (infinite) `threshold.rows` | `5`                             | infinite + virtualized rows                  |
-| `pagination` (infinite) `threshold.px`   | `200`                           | infinite + non-virtualized rows              |
+| Setting                                  | Default                                  | Applies when                                 |
+| ---------------------------------------- | ---------------------------------------- | -------------------------------------------- |
+| `pagination.pageSize`                    | `10`                                     | `pagination` is enabled without a `pageSize` |
+| `globalFiltering.placeholder`            | `'Search…'`                              | `globalFiltering` is enabled                 |
+| `globalFiltering.debounce`               | inherits `filtering.debounce`            | `globalFiltering` is enabled                 |
+| `filtering.variant`                      | `'inline'`                               | `filtering` is enabled without a `variant`   |
+| `filtering.debounce`                     | `250` (ms — shared by every text filter) | `filtering` text inputs, no `debounce` set   |
+| `filtering.chips.position`               | `'above'`                                | `filtering.chips` is enabled                 |
+| `filtering.toolbar.alwaysShow`           | `false`                                  | `filtering.toolbar` is enabled               |
+| `pagination` (infinite) `trigger`        | `'auto'`                                 | `pagination.mode: 'infinite'`                |
+| `pagination` (infinite) `threshold.rows` | `5`                                      | infinite + virtualized rows                  |
+| `pagination` (infinite) `threshold.px`   | `200`                                    | infinite + non-virtualized rows              |
 
 > These values are a refactor-safe single source, not a behavior change: enabling a feature resolves to exactly the same values it always did. `pageSize` lives in `@ez-kit/data-grid-core` (`DEFAULT_PAGE_SIZE`) so every layer references one number.
 
