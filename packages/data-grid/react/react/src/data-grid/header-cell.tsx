@@ -8,7 +8,7 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 import { buildColumnMenuSections } from './column-menu-sections'
 import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
-import { useDataGridInstance } from './table-context'
+import { useDataGridTable } from './table-context'
 
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
@@ -106,8 +106,7 @@ function isInteractiveTarget(event: MouseEvent | KeyboardEvent): boolean {
  * these cells read through.
  */
 export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu } = gridComponents.core
 	const { Resizer } = gridComponents.resizing

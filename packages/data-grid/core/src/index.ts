@@ -12,6 +12,7 @@ export type { FeatureOption, FeatureToggle } from './utils/feature-flag'
 export { createColumns } from './column/create-columns'
 export { mapColumns } from './column/map-columns'
 export { createColumnHelper } from './column/create-column-helper'
+export { BASE_CELL_TYPE_IDS } from './column/types'
 export type { ColumnHelper } from './column/create-column-helper'
 
 // System column IDs
@@ -27,9 +28,15 @@ export type {
 	BadgeItem,
 	BadgeVariant,
 	BuiltInSortingFn,
+	BaseCellTypes,
+	BooleanCellConfig,
 	CellDef,
+	CellTypeRegistryShape,
+	ConfigOf,
 	BuiltInCellType,
 	CellType,
+	NumberCellConfig,
+	TextCellConfig,
 	CellViewCtx,
 	ColumnCreatingConfig,
 	ColumnDef,

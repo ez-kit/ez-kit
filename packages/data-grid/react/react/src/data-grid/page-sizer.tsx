@@ -1,19 +1,19 @@
 import { useGridComponents } from '../components-context'
 
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 /**
- * Page size selector. Rendered only when `pagination.pageSizeOptions` is set in `useDataGrid`.
+ * Page size selector. Renders whenever page-based pagination is enabled — auto-mounted into
+ * the toolbar by `pagination.toolbar`, and equally placeable by hand under `toolbar: false`.
  *
  * Subscribes only to `state.pagination` — other state mutations leave it stable.
  */
 export function PageSizer() {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { PageSizer: PageSizerComponent } = useGridComponents().pagination
 	const options = table.grid.pagination.pageSizeOptions
 
-	const pagination = useDataGridStore((s) => s.pagination)
+	const pagination = useDataGridState((s) => s.pagination)
 
 	if (!options) return null
 

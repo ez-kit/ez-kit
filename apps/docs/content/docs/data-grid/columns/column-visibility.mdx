@@ -14,14 +14,14 @@ Let users toggle which columns are visible. Hidden columns retain their filter a
 The grid exposes a `column-visibility-trigger` slot that renders the kit's menu component. Hidden columns are computed from the engine's visibility state.
 
 ```ts
-const grid = useDataGrid({ data, columns })
-grid.table.setColumnVisibility({ email: false })
+const table = useDataGrid({ data, columns })
+table.setColumnVisibility({ email: false })
 ```
 
 For a minimal toggle without the menu, use the same control directly via column id:
 
 ```ts
-grid.table.getColumn('email')?.toggleVisibility(false)
+table.getColumn('email')?.toggleVisibility(false)
 ```
 
 A simpler base example is also available:

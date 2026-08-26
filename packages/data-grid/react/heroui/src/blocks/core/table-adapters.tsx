@@ -1,6 +1,6 @@
 'use client'
 
-import { useTable } from '@ez-kit/data-grid-react'
+import { useDataGridState, useDataGridTable } from '@ez-kit/data-grid-react'
 import { Table as HeroTable, cn } from '@heroui/react'
 import { createContext, useContext } from 'react'
 
@@ -119,7 +119,9 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
  * cannot be hidden behind a component boundary.
  */
 function useRowHeaderId(): string | undefined {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	for (const column of table.getVisibleLeafColumns()) {
 		if (column.columnDef.meta?.isSystemColumn === true) continue
 		return column.id

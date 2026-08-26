@@ -78,8 +78,14 @@ export type ResolvedGridOptions = {
 		variant: PaginationVariant
 		/** Resolved page-link window for the `numbered` variant. */
 		window: NormalizedPageWindowConfig
-		/** Sizes the PageSizer offers — present exactly when that control mounts. */
+		/**
+		 * Sizes the PageSizer offers. Present whenever page-based pagination is on, whether or
+		 * not the toolbar auto-mounts the control — a hand-placed `<DataGrid.PageSizer />`
+		 * reads it too.
+		 */
 		pageSizeOptions?: number[] | undefined
+		/** The toolbar auto-mounts the PageSizer. Governs mounting only, never the list above. */
+		pageSizer: boolean
 	}
 	/** Infinite-scroll detection config. `undefined` unless `pagination.mode` is `'infinite'`. */
 	infinite?: NormalizedInfiniteConfig | undefined
@@ -114,7 +120,7 @@ declare module '@tanstack/table-core' {
  * A grid with every feature off — the shape `table.grid` holds before (or without) a
  * `useDataGrid` call.
  *
- * `createDataGridInstance` seeds it, so `table.grid` is **always** an object and no reader
+ * `prepareDataGridTable` seeds it, so `table.grid` is **always** an object and no reader
  * needs to guard the property itself. That matters for a table built straight from
  * `createTable` — a headless test, or a consumer driving the compound components by hand —
  * which would otherwise crash the first component that read a nested field.
@@ -131,6 +137,7 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 				siblings: DATA_GRID_DEFAULTS.pagination.siblings,
 				boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
 			},
+			pageSizer: false,
 		},
 		selection: {},
 		expanding: {},

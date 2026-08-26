@@ -3,19 +3,19 @@
 import { CellTypesProvider } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
-import { useDataGridStore } from './data-grid/table-context'
+import { useDataGridState } from './data-grid/table-context'
 import { createColumnHelper } from './react-columns'
 import { useDataGrid } from './use-data-grid'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { GridComponents } from './contract'
-import type { DataGridInstance } from './data-grid-instance'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ColumnDef, ColumnHelper } from './react-columns'
 import type { UseDataGridConfig } from './use-data-grid'
+import type { DataTable } from '@ez-kit/data-grid-core'
 
-/** The custom cell-type keys a registry actually holds, as a string union. */
-type KitCellType<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTypes, string>
+/** The ids a registry actually holds, as a string union — what the runtime helper is built from. */
+type KitCellTypeId<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTypes, string>
 
 export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 	components: Partial<GridComponents>
@@ -39,12 +39,10 @@ export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
 	DataGrid: typeof DataGrid
 	useDataGrid: typeof useDataGrid
-	useDataGridStore: typeof useDataGridStore
+	useDataGridState: typeof useDataGridState
 	GridComponentsProvider: typeof GridComponentsProvider
-	createColumns: <TRow extends object>(
-		defs: ColumnDef<TRow, KitCellType<TCellTypes>>[],
-	) => ColumnDef<TRow, KitCellType<TCellTypes>>[]
-	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, KitCellType<TCellTypes>>
+	createColumns: <TRow extends object>(defs: ColumnDef<TRow, TCellTypes>[]) => ColumnDef<TRow, TCellTypes>[]
+	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, TCellTypes>
 	extendDataGrid: <TExtra extends CellTypeRegistry>(extraCellTypes: TExtra) => DataGridBundle<TCellTypes & TExtra>
 }
 
@@ -91,24 +89,24 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	// that class of drift impossible.
 	Object.assign(BoundDataGrid, DataGrid)
 
-	function boundDefineColumns<TRow extends object>(
-		defs: ColumnDef<TRow, KitCellType<TCellTypes>>[],
-	): ColumnDef<TRow, KitCellType<TCellTypes>>[] {
+	function boundDefineColumns<TRow extends object>(defs: ColumnDef<TRow, TCellTypes>[]): ColumnDef<TRow, TCellTypes>[] {
 		return defs
 	}
 
-	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, KitCellType<TCellTypes>> {
-		const customTypeKeys = Object.keys(cellTypes ?? {}) as KitCellType<TCellTypes>[]
-		return customTypeKeys.length > 0
-			? createColumnHelper<TRow, KitCellType<TCellTypes>>(customTypeKeys)
-			: (createColumnHelper<TRow>() as ColumnHelper<TRow, KitCellType<TCellTypes>>)
+	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, TCellTypes> {
+		const ids = Object.keys(cellTypes ?? {}) as KitCellTypeId<TCellTypes>[]
+		// No registry at all: fall back to the base contract's ids, so a bundle built without
+		// `cellTypes` still answers to `.text()` / `.select()` rather than to nothing.
+		return ids.length > 0
+			? createColumnHelper<TRow, TCellTypes>(ids)
+			: (createColumnHelper<TRow>() as unknown as ColumnHelper<TRow, TCellTypes>)
 	}
 
 	// Bind the kit-level `defaultOptions` as the base option layer for every call. The provider
 	// wraps the DataGrid render tree, but `useDataGrid` runs in the *consumer's* tree (the caller
 	// builds the instance, then passes it to `<DataGrid table={…} />`), so factory defaults must be
 	// threaded through the hook itself rather than via a wrapping provider.
-	function useDataGridWithDefaults<TRow extends object>(config: UseDataGridConfig<TRow>): DataGridInstance<TRow> {
+	function useDataGridWithDefaults<TRow extends object>(config: UseDataGridConfig<TRow>): DataTable<TRow> {
 		return useDataGrid<TRow>(config, defaultOptions as DataGridDefaultOptions<TRow> | undefined)
 	}
 
@@ -126,7 +124,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	return {
 		DataGrid: BoundDataGrid as typeof DataGrid,
 		useDataGrid: useDataGridWithDefaults,
-		useDataGridStore,
+		useDataGridState,
 		GridComponentsProvider,
 		createColumns: boundDefineColumns,
 		createColumnHelper: boundCreateColumnHelper,

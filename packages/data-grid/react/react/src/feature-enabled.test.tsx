@@ -20,21 +20,21 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: { enabled: false, toolbar: true } }),
 		)
-		expect(result.current.table.grid.globalFiltering).toBeUndefined()
+		expect(result.current.grid.globalFiltering).toBeUndefined()
 	})
 
 	it('does not publish the filter-chips config', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { enabled: false, chips: true } }),
 		)
-		expect(result.current.table.grid.filtering.chips).toBeUndefined()
+		expect(result.current.grid.filtering.chips).toBeUndefined()
 	})
 
 	it('does not publish the selection panel config', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, selection: { enabled: false, panel: true } }),
 		)
-		expect(result.current.table.grid.selection.panel).toBeUndefined()
+		expect(result.current.grid.selection.panel).toBeUndefined()
 	})
 
 	it('does not publish the infinite-scroll config', () => {
@@ -45,29 +45,29 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 				pagination: { enabled: false, mode: 'infinite', hasNextPage: true },
 			}),
 		)
-		expect(result.current.table.grid.infinite).toBeUndefined()
+		expect(result.current.grid.infinite).toBeUndefined()
 	})
 
 	it('does not publish the virtualization config', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { enabled: false, row: true } }),
 		)
-		expect(result.current.table.grid.virtualization).toBeUndefined()
+		expect(result.current.grid.virtualization).toBeUndefined()
 	})
 
 	it('keeps column hiding off in core and mounts no toolbar trigger', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, columnVisibility: { enabled: false, toolbar: true } }),
 		)
-		expect(result.current.table.options.enableHiding).toBe(false)
-		expect(result.current.table.grid.columnVisibility).toBeUndefined()
+		expect(result.current.options.enableHiding).toBe(false)
+		expect(result.current.grid.columnVisibility).toBeUndefined()
 	})
 
 	it('does not publish the sorting toolbar config', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, sorting: { enabled: false, toolbar: true } }),
 		)
-		expect(result.current.table.grid.sorting).toBeUndefined()
+		expect(result.current.grid.sorting).toBeUndefined()
 	})
 
 	it('resolves a write feature away when its config says enabled: false', () => {
@@ -78,14 +78,14 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 				editing: { enabled: false, onSave: () => Promise.resolve() },
 			}),
 		)
-		expect(result.current.table.options.editing).toBeUndefined()
+		expect(result.current.options.editing).toBeUndefined()
 	})
 
 	it('leaves a config object without `enabled` fully enabled', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: { toolbar: true } }),
 		)
-		expect(result.current.table.grid.globalFiltering).toBeDefined()
+		expect(result.current.grid.globalFiltering).toBeDefined()
 	})
 })
 
@@ -100,32 +100,40 @@ describe('useDataGrid — pagination.toolbar', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSizeOptions: [5, 10] } }),
 		)
-		expect(result.current.table.grid.pagination.pageSizeOptions).toEqual([5, 10])
+		expect(result.current.grid.pagination.pageSizer).toBe(true)
+		expect(result.current.grid.pagination.pageSizeOptions).toEqual([5, 10])
 	})
 
 	it('mounts nothing when pagination carries no size list', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.table.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.pageSizer).toBe(false)
+	})
+
+	it('resolves the default size list even when the control is not auto-mounted', () => {
+		// The list is data, not a mount switch: `<DataGrid.PageSizer />` placed by hand needs it.
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
+		expect(result.current.grid.pagination.pageSizeOptions).toEqual([...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
 	})
 
 	it('toolbar: true falls back to the named default size list', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: true } }))
-		expect(result.current.table.grid.pagination.pageSizeOptions).toEqual([
-			...DATA_GRID_DEFAULTS.pagination.pageSizeOptions,
-		])
+		expect(result.current.grid.pagination.pageSizer).toBe(true)
+		expect(result.current.grid.pagination.pageSizeOptions).toEqual([...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
 	})
 
 	it('toolbar: false keeps the size list as data without mounting the control', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: false, pageSizeOptions: [5, 10] } }),
 		)
-		expect(result.current.table.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.pageSizeOptions).toEqual([5, 10])
 	})
 
 	it('never mounts the PageSizer in infinite mode', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', toolbar: true } }),
 		)
-		expect(result.current.table.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
 	})
 })

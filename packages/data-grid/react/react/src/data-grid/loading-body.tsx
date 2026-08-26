@@ -1,12 +1,13 @@
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 const DEFAULT_LOADING_ROWS = 5
 
 export function LoadingBody() {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { LoadingRow } = gridComponents['fallback-states']

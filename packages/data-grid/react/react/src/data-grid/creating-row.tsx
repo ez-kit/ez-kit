@@ -6,7 +6,7 @@ import { RowActionsMode } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { InputProps } from '../types'
@@ -21,7 +21,10 @@ import type { ChangeEvent, ComponentType, ReactNode } from 'react'
  * Edit-mode renderers receive a {@link FieldState} with `error` / `errors` / `onBlur`.
  */
 export function CreatingRow() {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.creating)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Tr, Td, Input, Checkbox } = gridComponents.core
 	const { ActionsCell } = gridComponents['row-actions']

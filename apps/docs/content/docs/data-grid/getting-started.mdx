@@ -29,7 +29,7 @@ The example renders against the real published package surface — what you copy
 `DataGrid` works two ways. Pass a `table` instance you built with `useDataGrid` (**controlled**), or skip the hook and hand the same config to `DataGrid` directly (**uncontrolled**).
 
 ```tsx
-// Controlled — own the instance (needed to read state via useDataGridStore,
+// Controlled — own the instance (needed to read state via useDataGridState,
 // or to share one instance across several components)
 const table = useDataGrid({ data, columns, sorting: true })
 return <DataGrid table={table} />

@@ -2,75 +2,57 @@ import { createContext, useContext } from 'react'
 
 import { useDataGridSelector } from '../use-data-grid-selector'
 
-import type { DataGridInstance } from '../data-grid-instance'
 import type { DataTable, TableState } from '@ez-kit/data-grid-core'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TableContext = createContext<DataGridInstance<any> | null>(null)
+const TableContext = createContext<DataTable<any> | null>(null)
 
 export { TableContext }
 
 /**
- * Retrieve the {@link DataGridInstance} from context. Throws when called
- * outside `<DataGrid>`. Does NOT subscribe to state changes — pair with
- * `useDataGridStore` (or `useTable`) when the caller must re-render on state
- * updates.
+ * The live `DataTable` from context. **Does not subscribe**: reading the table is not the same
+ * as depending on its state, and the two used to be welded together — the old `useTable()`
+ * subscribed to the entire `TableState` by default, so every component that merely wanted
+ * `getVisibleLeafColumns()` re-rendered on every keystroke in a filter box.
+ *
+ * Pair it with {@link useDataGridState} for the slice the component actually reads.
+ *
+ * The row type cannot be recovered from context (one context serves grids of every row type),
+ * so it is a caller-supplied parameter: `useDataGridTable<User>()` types the table, and
+ * omitting it keeps the unchecked default.
+ *
+ * Throws when called outside `<DataGrid>`.
+ *
+ * @example
+ * const table = useDataGridTable<User>()
+ * useDataGridState((s) => s.columnVisibility) // re-render when columns appear/disappear
+ * const colSpan = table.getVisibleLeafColumns().length
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useDataGridInstance(): DataGridInstance<any> {
-	const ctx = useContext(TableContext)
-	if (!ctx) {
+export function useDataGridTable<TRow extends object = any>(): DataTable<TRow> {
+	const table = useContext(TableContext)
+	if (!table) {
 		throw new Error('This component must be rendered inside <DataGrid>.')
 	}
-	return ctx
+	return table as DataTable<TRow>
 }
 
 /**
- * Subscribe to a slice of the table state from context. Re-renders only when
- * the selected slice changes. Selector must return a referentially stable
- * value — see {@link useDataGridSelector} for the full contract.
+ * Subscribe to a slice of the table state from context. Re-renders only when the selected
+ * slice changes. The selector must return a referentially stable value — see
+ * {@link useDataGridSelector} for the full contract.
  *
  * @example Subscribe to a slice
- *   const sorting = useDataGridStore((s) => s.sorting)
+ *   const sorting = useDataGridState((s) => s.sorting)
  *
  * @example Row-targeted boolean (no re-render for unrelated rows)
  *   // Stably `false` while the user edits a different row; flips exactly
  *   // when this row enters / leaves edit mode.
- *   const isEditingThisRow = useDataGridStore((s) => s.editing.rowId === row.id)
+ *   const isEditingThisRow = useDataGridState((s) => s.editing.rowId === row.id)
+ *
+ * @example Deliberately broad — the snapshot itself is stable until something changes
+ *   useDataGridState((s) => s)
  */
-export function useDataGridStore<TSelected>(selector: (state: TableState) => TSelected): TSelected {
-	const instance = useDataGridInstance()
-	return useDataGridSelector(instance, selector)
+export function useDataGridState<TSelected>(selector: (state: TableState) => TSelected): TSelected {
+	return useDataGridSelector(useDataGridTable(), selector)
 }
-
-/**
- * Convenience hook that returns the live `DataTable` instance from context
- * and subscribes to state changes.
- *
- * - Without an argument — subscribes broadly: re-renders on **any**
- *   `TableState` change. Drop-in for the legacy `useTableContext()`.
- * - With a selector — re-renders only when the selected slice changes
- *   (same contract as {@link useDataGridSelector}: selector must return a
- *   referentially stable value when the underlying state hasn't changed).
- *
- * The return is always `instance.table` — call methods on it as before.
- * The selector is purely a subscription filter.
- *
- * @example Narrow a single subtree to sorting-only re-renders
- *   const table = useTable((s) => s.sorting)
- *   const headers = table.getHeaderGroups()
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useTable(selector: (state: TableState) => unknown = defaultSelector): DataTable<any> {
-	const instance = useDataGridInstance()
-	useDataGridSelector(instance, selector)
-	return instance.table
-}
-
-const defaultSelector = (state: TableState): TableState => state
-
-/**
- * @deprecated Use {@link useTable} (broad subscription, returns DataTable) or
- * {@link useDataGridInstance} (no subscription, returns DataGridInstance).
- */
-export const useTableContext = useTable

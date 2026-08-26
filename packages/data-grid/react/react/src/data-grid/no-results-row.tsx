@@ -1,10 +1,11 @@
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 export function NoResultsRow() {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { NoResultsState } = gridComponents['fallback-states']

@@ -1,6 +1,6 @@
 'use client'
 
-import { useDataGridInstance } from './data-grid/table-context'
+import { useDataGridTable } from './data-grid/table-context'
 
 import type { ResolvedGridOptions } from './resolved-options'
 
@@ -14,12 +14,12 @@ import type { ResolvedGridOptions } from './resolved-options'
  * `Symbol()` keys and a kit could only re-derive it from its own constants.
  *
  * Reads a ref, not state — it never triggers a re-render on its own. Subscribe to table state
- * with `useDataGridStore` when you need that.
+ * with `useDataGridState` when you need that.
  *
  * @example
  * const { filtering } = useGridOptions()
  * const debounced = useDebouncedValue(draft, filtering.debounce)
  */
 export function useGridOptions(): ResolvedGridOptions {
-	return useDataGridInstance().table.grid
+	return useDataGridTable().grid
 }

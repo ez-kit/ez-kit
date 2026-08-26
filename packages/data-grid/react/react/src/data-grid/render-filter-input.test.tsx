@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
-import { createDataGridInstance } from '../data-grid-instance'
+import { prepareDataGridTable } from '../prepare-table'
 import { testComponents } from '../test-utils'
 
 import type { DataTable, StructuredFilterValue } from '@ez-kit/data-grid-core'
@@ -43,11 +43,10 @@ const { DataGrid, GridComponentsProvider } = createDataGrid({
 })
 
 function setup(config?: Partial<Parameters<typeof createTable<Row>>[0]>): DataTable<Row> {
-	const table = createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config })
-	const instance = createDataGridInstance(table)
+	const table = prepareDataGridTable(createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config }))
 	render(
 		<GridComponentsProvider>
-			<DataGrid table={instance} />
+			<DataGrid table={table} />
 		</GridComponentsProvider>,
 	)
 	return table
@@ -128,11 +127,12 @@ const DATE_COLUMNS_WITH_PRESETS = createColumns<DateRow>([
 ])
 
 function setupDate(): DataTable<DateRow> {
-	const table = createTable<DateRow>({ data: DATE_DATA, columns: DATE_COLUMNS_WITH_PRESETS, filtering: true })
-	const instance = createDataGridInstance(table)
+	const table = prepareDataGridTable(
+		createTable<DateRow>({ data: DATE_DATA, columns: DATE_COLUMNS_WITH_PRESETS, filtering: true }),
+	)
 	render(
 		<GridComponentsProvider>
-			<DataGrid table={instance} />
+			<DataGrid table={table} />
 		</GridComponentsProvider>,
 	)
 	return table

@@ -9,6 +9,10 @@ import { setIfDefined } from '../../utils/set-if-defined'
 import type { OperatorRegistry } from '../../features/operators'
 import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
 
+/** Cell types unchecked: `mapColumns` runs over already-authored columns of any grid. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyCellTypes = any
+
 /**
  * `cellClassName` is declared per row type on the column and row-erased on the meta, exactly
  * like `cellView` beside it — the meta is read by renderers that have no `TRow`.
@@ -32,7 +36,7 @@ export type MapColumnsOptions = {
 }
 
 export function mapColumns<TRow extends object>(
-	defs: ColumnDef<TRow, string>[],
+	defs: ColumnDef<TRow, AnyCellTypes>[],
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow>[] {
@@ -40,7 +44,7 @@ export function mapColumns<TRow extends object>(
 }
 
 function mapColumn<TRow extends object>(
-	def: ColumnDef<TRow, string>,
+	def: ColumnDef<TRow, AnyCellTypes>,
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow> {
@@ -86,8 +90,10 @@ function mapColumn<TRow extends object>(
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.
 	meta.cellType = cell?.type ?? 'text'
-	if (cell !== undefined && 'config' in cell) {
-		meta.config = cell.config
+	if (cell !== undefined && 'config' in cell && cell.config !== undefined) {
+		// The declared config type is the cell type's business, not this mapper's — it only
+		// forwards whatever the column author wrote into `meta` for the renderer to read.
+		meta.config = cell.config as Record<string, unknown>
 	}
 	const viewFn = cell?.component
 	if (viewFn !== undefined) meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown

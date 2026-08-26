@@ -2,7 +2,7 @@ import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { createDataGridInstance } from '../data-grid-instance'
+import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
@@ -22,7 +22,7 @@ const COLUMNS = createColumns<Row>([
 ])
 
 /**
- * Builds an instance whose loading status is seeded into the controlled
+ * Builds an table whose loading status is seeded into the controlled
  * `state.loading` slice (RQ-mirror shape) via `initialState`. Visibility of the
  * refetch overlay is derived by the grid from these flags — there is no imperative
  * setter; the value is a static, fully controlled seed for each rendered case.
@@ -36,13 +36,13 @@ function makeInstance(overrides?: { loading?: Partial<LoadingState>; data?: Row[
 			loading: { isPending: false, isFetching: false, isError: false, error: null, ...loading },
 		},
 	})
-	return createDataGridInstance(table)
+	return prepareDataGridTable(table)
 }
 
 describe('RefetchOverlay visibility predicate', () => {
 	it('initial load (isPending=true) → shows loading skeleton, NOT the refetch overlay', () => {
-		const instance = makeInstance({ loading: { isPending: true, isFetching: false } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeInstance({ loading: { isPending: true, isFetching: false } })
+		renderWithComponents(<DataGrid table={table} />)
 
 		// Loading skeleton is present (LoadingRow renders "Loading…" via TestLoadingRow — 5 rows)
 		expect(screen.getAllByText('Loading…').length).toBeGreaterThan(0)
@@ -51,8 +51,8 @@ describe('RefetchOverlay visibility predicate', () => {
 	})
 
 	it('refetch with existing rows (isFetching=true, isPending=false, rows>0) → shows refetch overlay', () => {
-		const instance = makeInstance({ loading: { isFetching: true, isPending: false }, data: DATA })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeInstance({ loading: { isFetching: true, isPending: false }, data: DATA })
+		renderWithComponents(<DataGrid table={table} />)
 
 		// Overlay is shown; rows should still be in the DOM
 		expect(screen.getByTestId('refetch-overlay')).toBeInTheDocument()
@@ -60,8 +60,8 @@ describe('RefetchOverlay visibility predicate', () => {
 	})
 
 	it('idle (isFetching=false, isPending=false) → shows rows only, no overlay and no skeleton', () => {
-		const instance = makeInstance({ loading: { isFetching: false, isPending: false } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeInstance({ loading: { isFetching: false, isPending: false } })
+		renderWithComponents(<DataGrid table={table} />)
 
 		expect(screen.getByText('Alice')).toBeInTheDocument()
 		expect(screen.queryByTestId('refetch-overlay')).not.toBeInTheDocument()
@@ -70,16 +70,16 @@ describe('RefetchOverlay visibility predicate', () => {
 
 	it('isFetching with isPending=true → skeleton path wins (no overlay even with rows in data)', () => {
 		// Edge case: both flags true at once — isPending takes priority → skeleton, not overlay
-		const instance = makeInstance({ loading: { isFetching: true, isPending: true } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeInstance({ loading: { isFetching: true, isPending: true } })
+		renderWithComponents(<DataGrid table={table} />)
 
 		expect(screen.getAllByText('Loading…').length).toBeGreaterThan(0)
 		expect(screen.queryByTestId('refetch-overlay')).not.toBeInTheDocument()
 	})
 
 	it('refetch with empty rows → overlay NOT shown (no rows to dim)', () => {
-		const instance = makeInstance({ loading: { isFetching: true, isPending: false }, data: [] })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeInstance({ loading: { isFetching: true, isPending: false }, data: [] })
+		renderWithComponents(<DataGrid table={table} />)
 
 		// No rows → empty state shown, but no refetch overlay
 		expect(screen.queryByTestId('refetch-overlay')).not.toBeInTheDocument()

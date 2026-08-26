@@ -59,14 +59,59 @@ describe('@ez-kit/data-grid-shadcn', () => {
 	// Type-level half of the same guarantee: these annotations are the assertion — the test
 	// fails at `pnpm typecheck` if the kit stops carrying a type an example relies on.
 	//
-	// `KitCellType` is the point of the kit-bound helpers: they are typed to the cell types
-	// this kit registers, so `cell: { type: … }` is checked against them. The headless
-	// helpers the star export used to supply resolve `TCustomCellTypes` to `never`, and
-	// annotating with them here would compile while checking nothing.
+	// The defect this guards: a kit registers `select` / `number` / … under the same ids the
+	// shipped contract uses, and the old `CellDef` had an open `custom` arm that swallowed them.
+	// A kit-bound `createColumns` then accepted `{ type: 'select' }` with no `config` and
+	// `config: { anyTypoAtAll: 1 }` on every type — compiling, running, checking nothing.
+	//
+	// `@ts-expect-error` is the assertion: each line fails `pnpm typecheck` if it ever compiles
+	// again.
+	it('checks cell.config against the registered cell type', () => {
+		type Item = { id: number; name: string; qty: number; status: string }
+
+		const valid = createColumns<Item>([
+			{ accessorKey: 'qty', cell: { type: 'number', config: { decimals: 2, suffix: ' kg' } } },
+			{ accessorKey: 'status', cell: { type: 'select', config: { items: [{ value: 'a', label: 'A' }] } } },
+			{ accessorKey: 'name', cell: { type: 'link' } },
+		])
+		expect(valid).toHaveLength(3)
+
+		createColumns<Item>([
+			// @ts-expect-error — 'bogusKey' is not part of NumberCellConfig
+			{ accessorKey: 'qty', cell: { type: 'number', config: { bogusKey: 1 } } },
+		])
+		createColumns<Item>([
+			// @ts-expect-error — `select` declares a required `items`, so `config` is required
+			{ accessorKey: 'status', cell: { type: 'select' } },
+		])
+		createColumns<Item>([
+			// @ts-expect-error — 'raiting' is not a registered cell type
+			{ accessorKey: 'name', cell: { type: 'raiting' } },
+		])
+		createColumns<Item>([
+			// @ts-expect-error — `link` declares no config, so it takes none
+			{ accessorKey: 'name', cell: { type: 'link', config: { any: 1 } } },
+		])
+
+		const createColumn = createColumnHelper<Item>()
+		// @ts-expect-error — same rule through the builder: `select` needs its config
+		createColumn.select({ accessorKey: 'status' })
+		// @ts-expect-error — and a typo in a config key is caught there too
+		createColumn.number({ accessorKey: 'qty', config: { decimalz: 2 } })
+
+		expect(createColumn.badge({ accessorKey: 'status', config: { items: [] } }).cell).toEqual({
+			type: 'badge',
+			config: { items: [] },
+		})
+	})
+
+	// The kit-bound helpers are typed to the **registry** this kit registers, not merely to its
+	// key union: the registry is what carries each type's own `cell.config`. Annotating with the
+	// headless helpers here would compile while checking nothing.
 	it('types a consumer that imports from the kit alone', () => {
-		type KitCellType = Extract<keyof typeof cellTypes, string>
-		const columns: ColumnDef<User, KitCellType>[] = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
-		const helper: ColumnHelper<User, KitCellType> = createColumnHelper<User>()
+		type KitCellTypes = typeof cellTypes
+		const columns: ColumnDef<User, KitCellTypes>[] = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+		const helper: ColumnHelper<User, KitCellTypes> = createColumnHelper<User>()
 		const sorting: SortingState = [{ id: 'name', desc: false }]
 		const columnFilters: ColumnFiltersState = [{ id: 'name', value: 'Ada' }]
 		const state: Partial<TableState> = { sorting, columnFilters }

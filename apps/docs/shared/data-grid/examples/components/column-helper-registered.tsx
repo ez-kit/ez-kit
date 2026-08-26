@@ -1,11 +1,12 @@
 'use client'
 
-import { createColumnHelper } from '@ez-kit/data-grid-react'
+import { createColumnHelper, defineCellType } from '@ez-kit/data-grid-react'
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
-import type { CellTypeRegistry, FieldState } from '@ez-kit/data-grid-react'
+import type { FieldState } from '@ez-kit/data-grid-react'
 
 // ── data ─────────────────────────────────────────────────────────────────────
 
@@ -81,15 +82,22 @@ function StarRatingInput({ value, onChange }: FieldState) {
 // itself via the `cellTypes` prop below, so everything the example needs is in
 // this file. An app registers the same shape once for the whole grid module
 // instead — see `extendDataGrid()` on the docs page.
+// `defineCellType` is what records the config this type accepts. It takes none, so a column
+// of type 'rating' rejects `config` outright.
 const RATING_CELL_TYPES = {
-	rating: { view: StarRatingView, edit: StarRatingInput },
-} satisfies CellTypeRegistry
+	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
+}
 
-// Step 2 — the column builder. The registry is the single source of truth for
-// both the type parameter and the runtime ids, so the two can never drift apart.
-type RatingCellType = keyof typeof RATING_CELL_TYPES
+// Step 2 — the column builder. It is typed against the registry the *columns* may use, which
+// is the kit's base types plus this one; the grid itself only needs the new entry, since it
+// already has the kit's. Registry and runtime ids come from the same object, so the two
+// cannot drift apart.
+const HELPER_CELL_TYPES = { ...baseCellTypes, ...RATING_CELL_TYPES }
+type HelperCellTypes = typeof HELPER_CELL_TYPES
 
-const createColumn = createColumnHelper<Employee, RatingCellType>(Object.keys(RATING_CELL_TYPES) as RatingCellType[])
+const createColumn = createColumnHelper<Employee, HelperCellTypes>(
+	Object.keys(HELPER_CELL_TYPES) as (keyof HelperCellTypes)[],
+)
 
 // Step 3 — the column. `createColumn.rating` exists because 'rating' is a
 // key of the registry; it emits `cell: { type: 'rating' }` for you.
@@ -113,9 +121,12 @@ export function ColumnHelperRegisteredExample() {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},
 			}}
-			// `columns` infers its custom-cell-type parameter from the columns themselves, so
-			// the 'rating' id registered by `cellTypes` survives the assignment — no cast needed.
+			// `columns` infers its cell-type parameter from the columns themselves, so the
+			// 'rating' id registered by `cellTypes` survives the assignment — no cast needed.
 			columns={registeredColumns}
+			// Only the new type: `cellTypes` shallow-merges over the kit's registry, so passing
+			// the base entries here would replace the kit's renderers with the rendererless
+			// declarations they are built from.
 			cellTypes={RATING_CELL_TYPES}
 			sorting
 		/>

@@ -4,7 +4,7 @@ import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 
 import { DataGridRow } from './row'
-import { useDataGridInstance, useTable } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
 import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { useVirtualContext } from './virtual-context'
@@ -43,15 +43,14 @@ const LOAD_MORE_ALLOWANCE_PX = 56
  * below the spacer with extra height reserved.
  */
 export function VirtualBody() {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { LoadMoreRow } = gridComponents.infinite
 	const { rowVirtualizer } = useVirtualContext()
 	const controller = useInfiniteScroll()
 	// Subscribe to infinite slice so the loader row re-renders on status change.
-	useTable((s) => s.infinite)
+	useDataGridState((s) => s.infinite)
 
 	const virtualItems = rowVirtualizer?.getVirtualItems() ?? []
 	const lastIndex = virtualItems.length > 0 ? (virtualItems[virtualItems.length - 1]?.index ?? -1) : -1

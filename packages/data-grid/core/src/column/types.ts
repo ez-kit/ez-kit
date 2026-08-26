@@ -105,6 +105,37 @@ export type ImageCellConfig = {
 export type ProgressCellConfig = {
 	max?: number
 }
+export type TextCellConfig = {
+	/** Maximum character count for the rendered view. Longer values are truncated. */
+	maxLength?: number
+	/**
+	 * Suffix appended when truncated.
+	 * - `true` (default when `maxLength` set) → `'…'`
+	 * - `false` → no marker
+	 * - `string` → custom marker (e.g. `'...'`, `' ›'`)
+	 */
+	ellipsis?: boolean | string
+}
+export type NumberCellConfig = {
+	/** Fixed number of fraction digits (both min and max). */
+	decimals?: number
+	/** Override the locale's thousands separator (e.g. `' '`, `','`). */
+	thousandsSeparator?: string
+	/** Override the locale's decimal separator (e.g. `'.'`, `','`). */
+	decimalSeparator?: string
+	/** String prepended to the formatted value (e.g. `'$'`). */
+	prefix?: string
+	/** String appended to the formatted value (e.g. `' kg'`). */
+	suffix?: string
+	/** BCP 47 locale tag. Default: runtime/system locale. */
+	locale?: string | string[]
+}
+export type BooleanCellConfig = {
+	/** Label rendered (by the kit's view component) for `true`. */
+	trueLabel?: string
+	/** Label rendered (by the kit's view component) for `false`. */
+	falseLabel?: string
+}
 export type DateCellConfig = {
 	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard minimum. */
 	minValue?: string
@@ -114,71 +145,105 @@ export type DateCellConfig = {
 	format?: Intl.DateTimeFormatOptions
 }
 
-// ── cell definition (discriminated union) ─────────────────────────────────
+/**
+ * The cell types this package ships a contract for: their ids and the config each accepts.
+ *
+ * Only the **contract** — core is framework-agnostic and renders nothing. The React layer's
+ * `baseCellTypes` attaches renderers to these same ids, and a UI kit extends that. Declaring
+ * it here is what keeps the unbound `createColumns` / `createColumnHelper` usable without a
+ * kit, which is the documented standalone behaviour.
+ *
+ * A grid built through `createDataGrid` is typed against **its kit's** registry instead, so a
+ * kit that drops a type or adds one is reflected in what its columns accept.
+ */
+export type BaseCellTypes = {
+	text: { __config?: TextCellConfig }
+	number: { __config?: NumberCellConfig }
+	boolean: { __config?: BooleanCellConfig }
+	date: { __config?: DateCellConfig }
+	select: { __config?: SelectCellConfig }
+	badge: { __config?: BadgeCellConfig }
+	image: { __config?: ImageCellConfig }
+	link: Record<never, never>
+	progress: { __config?: ProgressCellConfig }
+}
+
+/** {@link BaseCellTypes}' ids at runtime — what the unbound column helper builds methods from. */
+export const BASE_CELL_TYPE_IDS = [
+	'text',
+	'number',
+	'boolean',
+	'date',
+	'select',
+	'badge',
+	'image',
+	'link',
+	'progress',
+] as const satisfies readonly (keyof BaseCellTypes)[]
+
+// ── cell definition (registry-driven) ─────────────────────────────────────
 
 /**
- * Built-in types that need no `config` block. Derived from {@link BuiltInCellType}, **not** from
- * {@link CellType}: the latter's `string & {}` tail would make this arm swallow every string, so
- * `cell: { type: 'raiting' }` typechecked no matter what the kit registered — which silently
- * defeated `CellDef`'s whole `TCustom` parameter.
+ * The framework-neutral shape a cell-type registry must have for a column to be typed against
+ * it: a map of type id to something carrying a phantom `__config`.
+ *
+ * Deliberately loose, and deliberately here rather than in the React adapter. The real registry
+ * (`CellTypeRegistry`) holds `ComponentType` slots, which core must never name; and any tighter
+ * bound rejects perfectly good registries, because `ComponentType`'s class branch makes its
+ * props invariant. Each entry is already validated against `CellTypeDefinition<TConfig>` where
+ * it is declared — by `defineCellType` — so nothing is lost by not re-checking it here.
  */
-type SimpleType = Exclude<BuiltInCellType, 'select' | 'badge' | 'image' | 'link' | 'progress' | 'date'>
+export type CellTypeRegistryShape = Record<string, { __config?: unknown }>
 
-type BasicCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type?: SimpleType
+/**
+ * The config type a registry entry declares, or `never` when it declares none.
+ *
+ * Reads the phantom `__config` that `defineCellType` attaches. Inferring from the renderer
+ * slots instead is not an option: `view`, `edit`, `creating` and `filter` are four independent
+ * inference sites for one type parameter, and they drift.
+ */
+export type ConfigOf<TDefinition> = TDefinition extends { __config?: infer TConfig } ? TConfig : never
+
+/**
+ * One arm of {@link CellDef}: a registered type id, plus the `config` that id declared.
+ *
+ * `config` is **required** when the declared config has a required field (`select` needs
+ * `items`), **optional** when every field is optional (`image`), and **forbidden** when the
+ * type declared no config at all. All three are derived from the registry rather than restated
+ * per type — which is exactly what the previous hand-written union of seven arms could not do.
+ * That union was defeated the moment a kit registered a type whose id matched a built-in: the
+ * open `custom` arm swallowed it, so a kit-bound `createColumns` accepted `cell: { type:
+ * 'select' }` with no `config`, and `config: { anyTypoAtAll: 1 }` on every type.
+ */
+type CellArm<TKey extends string, TDefinition, TRow, TValue, TNode> = {
 	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
+} & ([ConfigOf<TDefinition>] extends [never]
+	? { type: TKey; config?: undefined }
+	: object extends ConfigOf<TDefinition>
+		? { type: TKey; config?: ConfigOf<TDefinition> }
+		: { type: TKey; config: ConfigOf<TDefinition> })
 
-type SelectCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'select'
-	config: SelectCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type BadgeCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'badge'
-	config: BadgeCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type ImageCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'image'
-	config?: ImageCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type LinkCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'link'
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type ProgressCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'progress'
-	config?: ProgressCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type DateCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'date'
-	config?: DateCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type CustomCellDef<TRow, TValue, TCustom extends string, TNode = unknown> = {
-	type: TCustom
-	config?: Record<string, unknown>
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-export type CellDef<TRow extends object, TValue = unknown, TCustom extends string = never, TNode = unknown> =
-	| BasicCellDef<TRow, TValue, TNode>
-	| SelectCellDef<TRow, TValue, TNode>
-	| BadgeCellDef<TRow, TValue, TNode>
-	| ImageCellDef<TRow, TValue, TNode>
-	| LinkCellDef<TRow, TValue, TNode>
-	| ProgressCellDef<TRow, TValue, TNode>
-	| DateCellDef<TRow, TValue, TNode>
-	| ([TCustom] extends [never] ? never : CustomCellDef<TRow, TValue, TCustom, TNode>)
+/**
+ * A column's `cell` slot: either no type at all (just a `component`), or one of the types the
+ * grid's registry actually holds, carrying that type's own config.
+ *
+ * `TCellTypes` defaults to the empty registry, so the unbound core `createColumns` accepts no
+ * `type` — a cell type with no kit to render it is not a thing that exists.
+ */
+export type CellDef<
+	TRow extends object,
+	TValue = unknown,
+	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
+	TNode = unknown,
+> =
+	| {
+			type?: undefined
+			config?: undefined
+			component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
+	  }
+	| {
+			[TKey in keyof TCellTypes & string]: CellArm<TKey, TCellTypes[TKey], TRow, TValue, TNode>
+	  }[keyof TCellTypes & string]
 
 export type ColumnFilteringConfig<TNode = unknown> = {
 	/** Custom filter input component for this column. */
@@ -340,7 +405,11 @@ export type ColumnSortingConfig = {
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
  */
-export type ColumnDef<TRow extends object, TCustomCellTypes extends string = never, TNode = unknown> = {
+export type ColumnDef<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
+	TNode = unknown,
+> = {
 	id?: string
 	accessorKey?: keyof TRow & string
 	accessorFn?: (row: TRow, index: number) => unknown
@@ -365,7 +434,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 * body with `<DataGrid.Table>{…}</DataGrid.Table>`.
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
-	columns?: ColumnDef<TRow, TCustomCellTypes, TNode>[]
+	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
 
 	/**
 	 * Column pinning configuration.
@@ -382,7 +451,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	sorting?: false | ColumnSortingConfig
 
 	/** Cell display and input configuration. */
-	cell?: CellDef<TRow, unknown, TCustomCellTypes, TNode>
+	cell?: CellDef<TRow, unknown, TCellTypes, TNode>
 
 	/**
 	 * Column visibility configuration.

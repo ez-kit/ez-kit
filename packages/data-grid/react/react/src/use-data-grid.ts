@@ -1,24 +1,24 @@
 import { createTable, featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
 import { useEffect, useRef } from 'react'
 
-import { createDataGridInstance } from './data-grid-instance'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+import { prepareDataGridTable } from './prepare-table'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
-import type { DataGridInstance } from './data-grid-instance'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { PaginationVariant } from './types'
 import type {
 	ColumnVisibilityConfig,
 	ConfirmationOptions,
-	FeatureToggle,
 	CreatingConfig,
+	DataTable,
 	DeletingConfig,
 	EditingConfig,
 	ExpandingConfig,
+	FeatureToggle,
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
@@ -192,7 +192,9 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 * - omitted — mounted iff {@link ReactPaginationConfig.pageSizeOptions} is set
 	 * - `true` — mounted, falling back to
 	 *   {@link DATA_GRID_DEFAULTS.pagination.pageSizeOptions} when no list is given
-	 * - `false` — never mounted; `<DataGrid.PageSizer />` still works if placed by hand
+	 * - `false` — never auto-mounted; `<DataGrid.PageSizer />` still works if placed by hand,
+	 *   because this flag governs mounting only and never erases
+	 *   {@link ReactPaginationConfig.pageSizeOptions}
 	 *
 	 * Same name and meaning as `sorting.toolbar`, `globalFiltering.toolbar`,
 	 * `filtering.toolbar` and `columnVisibility.toolbar`: one word for "auto-mount my
@@ -549,13 +551,17 @@ function writeFeatureOptions<TRow extends object>(
 }
 
 /**
- * React hook that constructs a {@link DataGridInstance} once and returns it on
- * every render. The instance is stable across renders — the underlying table
- * is created exactly once.
+ * React hook that constructs the grid's `DataTable` once and returns it on every render. The
+ * reference is stable — the table is created exactly once.
+ *
+ * The table **is** the return value; there is no wrapper around it. Everything imperative is a
+ * method on it (`table.setPageIndex`, `table.creating.start()`, `table.setData`), the resolved
+ * React options live on `table.grid`, and `table.subscribe` / `getSnapshot` /
+ * `getInitialSnapshot` are what `useDataGridSelector` reads.
  *
  * `useDataGrid` itself does NOT subscribe to state changes. Components that
- * need to re-render on table state updates should call `useDataGridStore`
- * (or `useTable()`, which subscribes broadly for back-compat).
+ * need to re-render on table state updates should call `useDataGridState`
+ * (or `useDataGridState((s) => s)` for a deliberately broad subscription).
  *
  * Default options contributed by an ancestor {@link DataGridOptionsProvider} and by the
  * kit factory's `defaultOptions` are merged **under** the passed `config` (instance wins),
@@ -573,7 +579,7 @@ function writeFeatureOptions<TRow extends object>(
 export function useDataGrid<TRow extends object>(
 	instanceConfig: UseDataGridConfig<TRow>,
 	factoryDefaults?: DataGridDefaultOptions<TRow>,
-): DataGridInstance<TRow> {
+): DataTable<TRow> {
 	const providerDefaults = useDataGridOptions<TRow>()
 	const config = mergeGridOptionLayers(factoryDefaults, providerDefaults, instanceConfig)
 	const creating = enabledByHandler(config.creating, 'onSave')
@@ -623,14 +629,21 @@ export function useDataGrid<TRow extends object>(
 	// Page-based only: the selector drives `pageSize`, which infinite mode does not page by.
 	const paginationCfg = featureConfig(rawPagination)
 
-	// The resolved PageSizer options, present exactly when the control mounts. `toolbar`
-	// decides; it defaults to "on when a list was supplied" so the one-field case is unchanged.
-	const pageSizeOptions: number[] | undefined = (() => {
-		if (!paginationCfg || paginationCfg.mode === 'infinite') return undefined
-		const mounted = paginationCfg.toolbar ?? paginationCfg.pageSizeOptions !== undefined
-		if (!mounted) return undefined
-		return paginationCfg.pageSizeOptions ?? [...DATA_GRID_DEFAULTS.pagination.pageSizeOptions]
-	})()
+	// Which sizes the control offers. Resolved whenever page-based pagination is on, and
+	// deliberately independent of whether the toolbar auto-mounts it: `toolbar: false` means
+	// "do not mount it for me", not "there are no sizes" — a hand-placed
+	// `<DataGrid.PageSizer />` still needs the list.
+	// `featureConfig` yields `undefined` for the bare `pagination: true`, so the on/off decision
+	// reads `isFeatureEnabled` and only the *settings* come from `paginationCfg`.
+	const isPagedPagination = isFeatureEnabled(rawPagination) && paginationCfg?.mode !== 'infinite'
+	const pageSizeOptions: number[] | undefined = isPagedPagination
+		? (paginationCfg?.pageSizeOptions ?? [...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
+		: undefined
+
+	// Whether `<Toolbar>` mounts the PageSizer itself. Defaults to "yes when a list was
+	// supplied", so the one-field case is unchanged.
+	const pageSizerInToolbar: boolean =
+		isPagedPagination && (paginationCfg?.toolbar ?? paginationCfg?.pageSizeOptions !== undefined)
 
 	const paginationVariant: PaginationVariant = paginationCfg?.variant ?? DATA_GRID_DEFAULTS.pagination.variant
 
@@ -719,8 +732,8 @@ export function useDataGrid<TRow extends object>(
 	const onStateChangeRef = useRef(onStateChange)
 	onStateChangeRef.current = onStateChange
 
-	const instanceRef = useRef<DataGridInstance<TRow> | null>(null)
-	instanceRef.current ??= createDataGridInstance(
+	const tableRef = useRef<DataTable<TRow> | null>(null)
+	tableRef.current ??= prepareDataGridTable(
 		createTable({
 			...restConfig,
 			...writeFeatureOptions(creating, editing, deleting),
@@ -736,12 +749,12 @@ export function useDataGrid<TRow extends object>(
 			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
 		} as TableConfig<TRow>),
 	)
-	const table = instanceRef.current.table
+	const table = tableRef.current
 
 	// Sync controlled state on every render — external state portions override internal state.
 	//
 	// We must push the update into BOTH TanStack's `options.state` AND the external
-	// snapshot store the React layer subscribes to (`useDataGridStore`), otherwise
+	// snapshot store the React layer subscribes to (`useDataGridState`), otherwise
 	// components like Body never see the change. `syncControlledState` does both in
 	// one shot and skips `onStateChange` — the prop is the source of truth, so firing
 	// the callback would loop back through a consumer that mirrors it into React state.
@@ -758,10 +771,10 @@ export function useDataGrid<TRow extends object>(
 	// (a memoized subtree, a portal), before the browser paints.
 	const pendingNotifyRef = useRef(false)
 	if (state !== undefined) {
-		const snapshot = instanceRef.current.table.getSnapshot()
+		const snapshot = table.getSnapshot()
 		const hasChanges = (Object.keys(state) as (keyof TableState)[]).some((key) => snapshot[key] !== state[key])
 		if (hasChanges) {
-			instanceRef.current.table.syncControlledState(state, { silent: true })
+			table.syncControlledState(state, { silent: true })
 			pendingNotifyRef.current = true
 		}
 	}
@@ -810,7 +823,8 @@ export function useDataGrid<TRow extends object>(
 		pagination: {
 			variant: paginationVariant,
 			window: paginationWindow,
-			pageSizeOptions,
+			...(pageSizeOptions !== undefined ? { pageSizeOptions } : {}),
+			pageSizer: pageSizerInToolbar,
 		},
 		infinite: normalizedInfinite,
 		selection: { panel: selectionPanel as ResolvedGridOptions['selection']['panel'] },
@@ -823,7 +837,7 @@ export function useDataGrid<TRow extends object>(
 
 	// NOTE: useDataGrid no longer calls useSyncExternalStore. Components that
 	// need to re-render on state changes subscribe themselves via
-	// `useDataGridStore` (selective) or `useTable()` (broad, back-compat).
+	// `useDataGridState`, which always names the slice it depends on.
 
 	// Sync data synchronously during render — symmetrically with the other
 	// option-sync blocks above. Doing this in `useEffect` would update
@@ -833,7 +847,7 @@ export function useDataGrid<TRow extends object>(
 	const dataRef = useRef(config.data)
 	if (config.data !== dataRef.current) {
 		dataRef.current = config.data
-		instanceRef.current.table.setOptions((prev) => ({ ...prev, data: config.data }))
+		table.setOptions((prev) => ({ ...prev, data: config.data }))
 	}
 
 	// Re-sync the manual-pagination server-data descriptors (`rowCount` / `pageCount`)
@@ -856,7 +870,7 @@ export function useDataGrid<TRow extends object>(
 		paginationDescriptorRef.current.pageCount !== nextPageCount
 	) {
 		paginationDescriptorRef.current = { rowCount: nextRowCount, pageCount: nextPageCount }
-		instanceRef.current.table.setOptions((prev) => {
+		table.setOptions((prev) => {
 			// Assign only the defined descriptor and drop the other (both are optional
 			// options) — `exactOptionalPropertyTypes` forbids assigning `undefined`.
 			const next = { ...prev }
@@ -915,5 +929,5 @@ export function useDataGrid<TRow extends object>(
 	// pagination option read reactively from INFINITE_KEY by useInfiniteScroll. Neither
 	// needs a bespoke projection here.
 
-	return instanceRef.current
+	return table
 }

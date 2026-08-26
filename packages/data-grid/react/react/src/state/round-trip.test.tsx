@@ -21,11 +21,11 @@ describe('state persistence round-trip', () => {
 				},
 			}),
 		)
-		const wire = JSON.parse(JSON.stringify(extractState(source.current.table))) as unknown
+		const wire = JSON.parse(JSON.stringify(extractState(source.current))) as unknown
 		const restored = parseState(wire)
 
 		const { result: seeded } = renderHook(() => useDataGrid({ data, columns, sorting: true, initialState: restored }))
-		expect(seeded.current.table.getState().sorting).toEqual([{ id: 'name', desc: true }])
-		expect(seeded.current.table.getState().pagination).toEqual({ pageIndex: 3, pageSize: 50 })
+		expect(seeded.current.getState().sorting).toEqual([{ id: 'name', desc: true }])
+		expect(seeded.current.getState().pagination).toEqual({ pageIndex: 3, pageSize: 50 })
 	})
 })

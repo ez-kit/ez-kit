@@ -7,7 +7,7 @@ import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
 import { flexRender } from './flex-render'
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { FieldState } from '@ez-kit/data-grid-core'
@@ -168,7 +168,7 @@ function SelectionCell({ row, pin }: SystemSubProps) {
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
 	// re-derive correctly. Refining this to per-row keys breaks indeterminate
 	// state for parent rows (which depends on children).
-	useDataGridStore((s) => s.rowSelection)
+	useDataGridState((s) => s.rowSelection)
 	const isSelected = row.getIsSelected()
 	const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 	return (
@@ -195,7 +195,7 @@ function ExpandCell({ row, pin }: SystemSubProps) {
 	const { Td } = gridComponents.core
 	const { Chevron } = gridComponents.expanding
 	// Subscribe broadly to expanded so derived row.getIsExpanded() re-renders.
-	useDataGridStore((s) => s.expanded)
+	useDataGridState((s) => s.expanded)
 	const canExpand = row.getCanExpand()
 	const isExpanded = row.getIsExpanded()
 	return (
@@ -221,8 +221,7 @@ function ExpandCell({ row, pin }: SystemSubProps) {
 // ── data columns ────────────────────────────────────────────────────────────
 
 function BodyDataCell({ cell, row }: DataGridCellProps) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { Td } = useGridComponents().core
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
@@ -235,7 +234,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	// Narrow boolean subscription. For non-target rows this remains stably `false`
 	// across any `editing` mutation → no re-render. Flips exactly once on
 	// start / cancel / commit of THIS row (or cell in cell-mode).
-	const isEditing = useDataGridStore((s) =>
+	const isEditing = useDataGridState((s) =>
 		editMode === 'cell' ? s.editing.cellId === cellId : s.editing.rowId === row.id,
 	)
 
@@ -310,16 +309,15 @@ type EditingCellProps = {
  * only the one whose `values[columnId]` key actually changed re-renders.
  */
 function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { Td, Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
 
-	const value = useDataGridStore((s) => s.editing.values[columnId])
-	const rawErrors = useDataGridStore((s) => s.editing.errors[columnId])
-	const isValidating = useDataGridStore((s) => s.editing.commitStatus === 'validating')
+	const value = useDataGridState((s) => s.editing.values[columnId])
+	const rawErrors = useDataGridState((s) => s.editing.errors[columnId])
+	const isValidating = useDataGridState((s) => s.editing.commitStatus === 'validating')
 
 	const fieldErrors = rawErrors ?? EMPTY_ERRORS
 	const fieldError = fieldErrors[0]

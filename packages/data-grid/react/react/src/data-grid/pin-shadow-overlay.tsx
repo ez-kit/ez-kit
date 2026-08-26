@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 
 import { useSafeLayoutEffect } from '../utils/use-safe-layout-effect'
 
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 const LEFT_PINNED_CELL = "[data-slot='th'][data-pinned='left']"
 const RIGHT_PINNED_CELL = "[data-slot='th'][data-pinned='right']"
@@ -73,12 +73,11 @@ function measurePinnedEdges(overlay: HTMLElement): PinnedEdges {
  * (`columnSizing`). Editing / sorting / pagination etc. don't touch these.
  */
 export function PinShadowOverlay() {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 
-	useDataGridStore((s) => s.columnPinning)
-	useDataGridStore((s) => s.columnVisibility)
-	useDataGridStore((s) => s.columnSizing)
+	useDataGridState((s) => s.columnPinning)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnSizing)
 
 	const overlayRef = useRef<HTMLDivElement>(null)
 	const [edges, setEdges] = useState<PinnedEdges>(NO_EDGES)

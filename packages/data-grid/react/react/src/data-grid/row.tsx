@@ -2,7 +2,7 @@ import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
 
 import { DataGridCell } from './cell'
-import { useDataGridInstance } from './table-context'
+import { useDataGridTable } from './table-context'
 
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
@@ -64,11 +64,11 @@ export function DataGridRow({
 	children,
 }: DataGridRowProps) {
 	const { Tr } = useGridComponents().core
-	const instance = useDataGridInstance()
+	const table = useDataGridTable()
 	// `table.grid` is row-erased, so the stored resolver is typed `Row<never>`; the row we hold
 	// is the very one it was written against.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const resolveRowProps = instance.table.grid.rowProps as RowPropsResolver<any> | undefined
+	const resolveRowProps = table.grid.rowProps as RowPropsResolver<any> | undefined
 	const { className: consumerClassName, style: consumerStyle, ...consumerProps } = resolveRowProps?.(row) ?? {}
 	const cells = row.getVisibleCells()
 

@@ -30,13 +30,12 @@ import { SelectionBar, buildSelectionPanelArgs } from './selection-bar'
 import { resolveSelectionPanelVariant } from './selection-panel-variant'
 import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
-import { TableContext, useDataGridInstance, useDataGridStore } from './table-context'
+import { TableContext, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { DataGridInstance } from '../data-grid-instance'
-import type { ConfirmationOptions } from '@ez-kit/data-grid-core'
+import type { ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -49,13 +48,13 @@ type DataGridSharedProps = {
 }
 
 /**
- * Controlled usage: the caller owns the instance built by `useDataGrid` and
- * passes it in. Use this when several components need the same instance, or to
- * read state via `useDataGridStore` outside the grid.
+ * Controlled usage: the caller owns the table built by `useDataGrid` and passes it in.
+ * Use this when several components need the same table, or to read its state from outside
+ * the grid with `useDataGridSelector`.
  */
 export type DataGridControlledProps<TRow extends object> = DataGridSharedProps & {
 	/** Instance returned by `useDataGrid`. */
-	table: DataGridInstance<TRow>
+	table: DataTable<TRow>
 	/** Custom cell type renderers. Merged with types from `useDataGrid`. */
 	cellTypes?: CellTypeRegistry
 }
@@ -71,12 +70,12 @@ export type DataGridUncontrolledProps<TRow extends object> = DataGridSharedProps
 	}
 
 /**
- * `DataGrid` accepts **either** a ready `table` instance (controlled) **or** the
+ * `DataGrid` accepts **either** a ready `table` (controlled) **or** the
  * full `useDataGrid` config inline (uncontrolled). The two shapes are mutually
  * exclusive — pick one mode for the lifetime of the component, since switching
  * remounts the grid and resets its state.
  *
- * @example — controlled (explicit instance)
+ * @example — controlled (explicit table)
  * const table = useDataGrid({ data, columns, sorting: true })
  * return <DataGrid table={table} />
  *
@@ -135,13 +134,12 @@ function hasConfirmDialog(table: Table<any>): boolean {
 }
 
 function ConfirmDialogRenderer() {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { ConfirmDialog } = useGridComponents().editing
 	// Narrow: re-render only when a pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave these stable.
-	const pendingId = useDataGridStore((s) => s.pendingDeleteRowId)
-	const pendingBulk = useDataGridStore((s) => s.pendingBulkDelete)
+	const pendingId = useDataGridState((s) => s.pendingDeleteRowId)
+	const pendingBulk = useDataGridState((s) => s.pendingBulkDelete)
 
 	const panelConfig = table.grid.selection.panel
 	const panelConfigObj = typeof panelConfig === 'object' ? panelConfig : undefined
@@ -193,11 +191,10 @@ function ConfirmDialogRenderer() {
 }
 
 function DefaultLayout() {
-	// Reads only symbol-keyed config refs, no state — so we use the instance
+	// Reads only config refs, no state — so we use the table
 	// without subscribing. Avoids cascading re-renders to Body / Table on
 	// state mutations the layout doesn't actually depend on.
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const variant = resolveSelectionPanelVariant(table)
 
 	const chipsConfig = table.grid.filtering.chips
@@ -232,25 +229,40 @@ function DefaultLayout() {
 }
 
 /**
- * Shared core that mounts the provider tree around a ready instance. Both the
+ * Shared core that mounts the provider tree around a ready table. Both the
  * controlled and uncontrolled paths funnel through here, so every compound
  * child (`DataGrid.Table`, etc.) sees the same `TableContext`.
  */
 function DataGridControlled<TRow extends object>({
-	table: instance,
+	table,
 	components,
 	cellTypes,
 	children,
 }: DataGridControlledProps<TRow>) {
-	const table = instance.table
-	// Read cellTypes stored on the table instance by useDataGrid, merge with direct prop
+	// The one guarantee lost by returning the table itself rather than a wrapper type only
+	// `useDataGrid` could produce: a bare `createTable()` result now typechecks here. It has no
+	// `table.grid`, so the first compound child that reads a resolved option would crash on a
+	// property access. Say so instead.
+	// `grid` is declared non-optional on `DataTable`, because every table the React layer
+	// renders is meant to carry it — which is exactly the claim being checked here, so asking
+	// the question at all needs a cast.
+	const isPrepared = (table as { grid?: unknown }).grid !== undefined
+	if (IS_DEV && !isPrepared) {
+		throw new Error(
+			'<DataGrid table={…}> was given a table that has not been prepared for the React layer. ' +
+				'Build it with `useDataGrid(...)`, or pass a raw `createTable(...)` result through ' +
+				'`prepareDataGridTable(...)` first.',
+		)
+	}
+
+	// Read cellTypes stored on the table by useDataGrid, merge with direct prop
 	const tableCellTypes = table.grid.cellTypes
 	const resolvedCellTypes = { ...tableCellTypes, ...cellTypes }
 
 	return (
 		<CellTypesProvider types={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-				<TableContext value={instance}>
+				<TableContext value={table}>
 					{IS_DEV && <ComponentGuard />}
 					{children ?? <DefaultLayout />}
 					{table.options.creating?.mode === 'modal' && <CreatingModal />}
@@ -263,19 +275,19 @@ function DataGridControlled<TRow extends object>({
 }
 
 /**
- * Uncontrolled path: builds the instance with `useDataGrid` from inline config,
- * then renders the shared core. `cellTypes` (if any) flows through `config` into
- * the instance, so it is not forwarded a second time.
+ * Uncontrolled path: builds the table with `useDataGrid` from inline config, then renders
+ * the shared core. `cellTypes` (if any) flows through `config` into the table, so it is not
+ * forwarded a second time.
  */
 function DataGridUncontrolled<TRow extends object>({
 	components,
 	children,
 	...config
 }: DataGridUncontrolledProps<TRow>) {
-	const instance = useDataGrid<TRow>(config)
+	const table = useDataGrid<TRow>(config)
 	return (
 		<DataGridControlled
-			table={instance}
+			table={table}
 			{...(components !== undefined ? { components } : {})}
 		>
 			{children}

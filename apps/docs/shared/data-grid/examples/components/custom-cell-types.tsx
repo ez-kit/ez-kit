@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
-import type { CustomCellType } from 'shared/data-grid/custom-cell-types'
+import type { CustomCellTypes } from 'shared/data-grid/custom-cell-types'
 
 type Employee = {
 	id: number
@@ -23,7 +23,7 @@ const EMPLOYEE_DATA: Employee[] = [
 	{ id: 5, name: 'Eve Davis', department: 'Sales', rating: 5, favoriteColor: '#3b82f6' },
 ]
 
-const employeeColumns = createColumns<Employee, CustomCellType>([
+const employeeColumns = createColumns<Employee, CustomCellTypes>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'department', header: 'Department' },
 	{ accessorKey: 'rating', header: 'Rating', cell: { type: 'rating' } },

@@ -6,7 +6,7 @@ import { CreateTrigger } from './create-trigger'
 import { GlobalFilterInput } from './global-filter-input'
 import { PageSizer } from './page-sizer'
 import { SortTrigger } from './sort-trigger'
-import { useDataGridInstance } from './table-context'
+import { useDataGridTable } from './table-context'
 
 import type { ReactNode } from 'react'
 
@@ -36,7 +36,8 @@ export type DataGridToolbarProps = {
  * Toolbar area above the table.
  *
  * With no props it renders the auto-mounted defaults:
- * - PageSizer on the left when `pagination.pageSizeOptions` is set
+ * - PageSizer on the left when `pagination.toolbar` resolves on (which it does by default
+ *   as soon as `pagination.pageSizeOptions` is set)
  * - global search / Clear filters / "+ Add" / sort builder / column visibility on the right,
  *   each gated by its own feature flag
  *
@@ -48,8 +49,7 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 	// not state). No state subscription — editing / sorting / filtering
 	// mutations do NOT re-render this component (sub-controls manage their
 	// own narrow subscriptions).
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== 'pin-row'
 
 	const grid = table.grid
@@ -61,7 +61,7 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 	const sortConfig = grid.sorting
 	const hasSortingToolbar = typeof sortConfig === 'object' && Boolean(sortConfig.toolbar)
 
-	const pageSizeOptions = grid.pagination.pageSizeOptions
+	const hasPageSizerToolbar = grid.pagination.pageSizer
 	const hasGlobalFilterToolbar = Boolean(grid.globalFiltering?.toolbar)
 	const hasClearButtonToolbar = grid.filtering.toolbar !== undefined
 
@@ -69,7 +69,7 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
 	}
 
-	const hasAutoLeft = Boolean(pageSizeOptions)
+	const hasAutoLeft = hasPageSizerToolbar
 	const hasAutoRight =
 		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar
 

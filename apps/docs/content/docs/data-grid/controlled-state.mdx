@@ -17,7 +17,7 @@ const [tableState, setTableState] = useState<Partial<TableState>>({
 	pagination: { pageIndex: 0, pageSize: 3 },
 })
 
-const grid = useDataGrid({
+const table = useDataGrid({
 	data,
 	columns,
 	sorting: true,

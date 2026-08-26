@@ -1,4 +1,4 @@
-import { booleanCellType, numberCellType, textCellType } from '@ez-kit/data-grid-react/cell-types'
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 
 import { BadgeCellInput, BadgeCellView } from './cell-types/BadgeCell'
 import { BooleanCellInput, BooleanCellView, BooleanFilterInput } from './cell-types/BooleanCell'
@@ -14,33 +14,34 @@ import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
 
 export const cellTypes = {
 	text: {
-		...textCellType,
+		...baseCellTypes.text,
 		edit: TextCellInput,
 		creating: TextCellInput,
 		filter: TextCellInput,
 	},
 	number: {
-		...numberCellType,
+		...baseCellTypes.number,
 		edit: NumberCellInput,
 		creating: NumberCellInput,
 		filter: NumberCellInput,
 	},
 	boolean: {
-		...booleanCellType,
+		...baseCellTypes.boolean,
 		view: BooleanCellView,
 		edit: BooleanCellInput,
 		creating: BooleanCellInput,
 		filter: BooleanFilterInput,
 	},
 	date: {
+		...baseCellTypes.date,
 		view: DateCellView,
 		edit: DateCellInput,
 		creating: DateCellInput,
 		filter: DateCellInput,
 	},
-	select: { view: SelectCellView, edit: SelectCellInput, filter: SelectCellInput },
-	badge: { view: BadgeCellView, edit: BadgeCellInput, filter: BadgeCellInput },
-	image: { view: ImageCellView, edit: ImageCellInput },
-	link: { view: LinkCellView, edit: LinkCellInput },
-	progress: { view: ProgressCellView, edit: ProgressCellInput },
+	select: { ...baseCellTypes.select, view: SelectCellView, edit: SelectCellInput, filter: SelectCellInput },
+	badge: { ...baseCellTypes.badge, view: BadgeCellView, edit: BadgeCellInput, filter: BadgeCellInput },
+	image: { ...baseCellTypes.image, view: ImageCellView, edit: ImageCellInput },
+	link: { ...baseCellTypes.link, view: LinkCellView, edit: LinkCellInput },
+	progress: { ...baseCellTypes.progress, view: ProgressCellView, edit: ProgressCellInput },
 } satisfies CellTypeRegistry

@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { ReactNode } from 'react'
 
@@ -68,17 +68,16 @@ export type DataGridPaginationProps = {
  * touch any of these → no re-render.
  */
 export function Pagination({ children }: DataGridPaginationProps = {}) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { Pagination: PaginationComponent } = useGridComponents().pagination
 
-	useDataGridStore((s) => s.pagination)
-	const isPending = useDataGridStore((s) => s.loading.isPending)
+	useDataGridState((s) => s.pagination)
+	const isPending = useDataGridState((s) => s.loading.isPending)
 	// Row-model affecting slices (pageCount is derived from rowModel.length).
-	useDataGridStore((s) => s.sorting)
-	useDataGridStore((s) => s.columnFilters)
-	useDataGridStore<unknown>((s) => s.globalFilter)
-	useDataGridStore((s) => s.expanded)
+	useDataGridState((s) => s.sorting)
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState<unknown>((s) => s.globalFilter)
+	useDataGridState((s) => s.expanded)
 
 	// Hide only during the initial-load skeleton path (`isPending`); a background
 	// refetch (`isFetching`) keeps the footer mounted (the overlay dims rows instead).

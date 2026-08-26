@@ -6,8 +6,7 @@ import { pickState } from './extract-state'
 import { DEFAULT_STATE_KEYS } from './state-keys'
 
 import type { DataGridState, DataGridStateOptions, PersistableStateKey } from './state-keys'
-import type { DataGridInstance } from '../data-grid-instance'
-import type { TableState } from '@ez-kit/data-grid-core'
+import type { DataTable, TableState } from '@ez-kit/data-grid-core'
 
 type Cache = {
 	keys: readonly PersistableStateKey[]
@@ -35,7 +34,7 @@ function sameList(a: readonly unknown[], b: readonly unknown[]): boolean {
  * field until mutated — and rebuild only when an included reference changes.
  */
 export function useExtractedState<TRow extends object>(
-	instance: DataGridInstance<TRow>,
+	table: DataTable<TRow>,
 	options?: DataGridStateOptions,
 ): DataGridState {
 	const keys = options?.keys ?? DEFAULT_STATE_KEYS
@@ -53,8 +52,8 @@ export function useExtractedState<TRow extends object>(
 	}
 
 	return useSyncExternalStore(
-		instance.store.subscribe,
-		() => select(instance.store.getSnapshot()),
-		() => select(instance.store.getServerSnapshot()),
+		table.subscribe,
+		() => select(table.getSnapshot()),
+		() => select(table.getInitialSnapshot()),
 	)
 }

@@ -493,7 +493,8 @@ export type TableConfig<TRow extends object> = {
 	 * kit's registry by the **bound** `createColumns` / `createColumnHelper` that produced the
 	 * array, which is where the author writes it. This slot only has to accept the result.
 	 */
-	columns: ColumnDef<TRow, string, unknown>[]
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	columns: ColumnDef<TRow, any, unknown>[]
 
 	/**
 	 * Returns a stable string ID for a row.
@@ -613,6 +614,14 @@ export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
 	subscribe: (listener: () => void) => () => void
 	/** Returns a stable snapshot of current state for useSyncExternalStore. */
 	getSnapshot: () => TableState
+	/**
+	 * The snapshot as of construction, frozen.
+	 *
+	 * Sibling of {@link DataTable.getSnapshot}, and framework-neutral despite its one known
+	 * caller: React's `useSyncExternalStore` needs a server snapshot that never moves, and
+	 * "the state this table started with" is a fact about the table, not about React.
+	 */
+	getInitialSnapshot: () => TableState
 	/** Reactively replace the data array. */
 	setData: (data: TRow[]) => void
 	/**

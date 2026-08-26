@@ -2,7 +2,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { ColumnEditingConfig, ColumnCreatingConfig, FieldState } from '@ez-kit/data-grid-core'
@@ -28,7 +28,8 @@ type AutoFormProps = {
  * `errors` / `error`, `onBlur`, `isValidating`.
  */
 export function AutoForm({ mode }: AutoFormProps): ReactNode {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => (mode === 'creating' ? s.creating : s.editing))
 	const { Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 

@@ -57,7 +57,7 @@ state: {
 	loading: {
 		isPending: boolean // true on the very first load (no rows yet) → shows skeleton
 		isFetching: boolean // true while any fetch is in flight → drives refetch overlay
-		isError: boolean // available via useDataGridStore for custom error UI
+		isError: boolean // available via useDataGridState for custom error UI
 		error: unknown // last fetch error, or null
 	}
 }
@@ -69,7 +69,7 @@ What each field drives:
 | ---------------------------------------------- | ----------------------------------------------------------------- |
 | `isPending: true`                              | Full-body loading skeleton (no rows yet — initial load)           |
 | `isFetching: true` (rows present, not pending) | Semi-transparent refetch overlay over the grid body               |
-| `isError` / `error`                            | Readable via `useDataGridStore` — no built-in error component yet |
+| `isError` / `error`                            | Readable via `useDataGridState` — no built-in error component yet |
 
 ### React Query (recommended)
 

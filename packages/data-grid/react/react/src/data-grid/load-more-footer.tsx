@@ -4,7 +4,7 @@ import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 
 import { useInfiniteContext } from './infinite-context'
-import { useDataGridInstance } from './table-context'
+import { useDataGridTable } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
 import { useVirtualContext } from './virtual-context'
 
@@ -28,7 +28,7 @@ import { useVirtualContext } from './virtual-context'
  */
 export function LoadMoreFooter() {
 	const controller = useInfiniteScroll()
-	const instance = useDataGridInstance()
+	const table = useDataGridTable()
 	const gridComponents = useGridComponents()
 	const { Tr, Td } = gridComponents.core
 	const { LoadMoreRow } = gridComponents.infinite
@@ -85,7 +85,7 @@ export function LoadMoreFooter() {
 	if (!enabled) return null
 	if (!hasMore && !isFetching && controller.error == null) return null
 
-	const columnCount = instance.table.getVisibleLeafColumns().length
+	const columnCount = table.getVisibleLeafColumns().length
 
 	return (
 		<Tr

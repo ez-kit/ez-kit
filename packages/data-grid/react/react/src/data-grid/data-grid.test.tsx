@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { createDataGridInstance } from '../data-grid-instance'
+import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
@@ -29,46 +29,46 @@ const COLUMNS = createColumns<User>([
 
 function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
 	const table = createTable<User>({ data: USERS, columns: COLUMNS, ...config })
-	return { table, instance: createDataGridInstance(table) }
+	return prepareDataGridTable(table)
 }
 
 describe('<DataGrid>', () => {
 	it('renders table with rows', () => {
-		const { instance } = makeTable()
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable()
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getAllByRole('row')).toHaveLength(USERS.length + 1) // 1 header row + data rows
 	})
 
 	it('renders column headers', () => {
-		const { instance } = makeTable()
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable()
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getByText('Name')).toBeInTheDocument()
 		expect(screen.getByText('Age')).toBeInTheDocument()
 	})
 
 	it('renders cell values', () => {
-		const { instance } = makeTable()
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable()
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getByText('Alice')).toBeInTheDocument()
 		expect(screen.getByText('Bob')).toBeInTheDocument()
 	})
 
 	it('renders selection checkboxes when selection is enabled', () => {
-		const { instance } = makeTable({ selection: true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		renderWithComponents(<DataGrid table={table} />)
 		// 1 header checkbox + 1 per data row
 		expect(screen.getAllByRole('checkbox')).toHaveLength(USERS.length + 1)
 	})
 
 	it('renders select-all checkbox in header when selection is enabled', () => {
-		const { instance } = makeTable({ selection: true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getByRole('checkbox', { name: 'Select all rows' })).toBeInTheDocument()
 	})
 
 	it('header checkbox is unchecked and not indeterminate when no rows are selected', () => {
-		const { instance } = makeTable({ selection: true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		renderWithComponents(<DataGrid table={table} />)
 		const el = screen.getByRole('checkbox', { name: 'Select all rows' })
 		if (!(el instanceof HTMLInputElement)) throw new Error('expected HTMLInputElement')
 		expect(el.checked).toBe(false)
@@ -76,12 +76,12 @@ describe('<DataGrid>', () => {
 	})
 
 	it('header checkbox is indeterminate when some rows are selected', () => {
-		const { instance } = makeTable({ selection: true })
-		const { rerender } = renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		const { rerender } = renderWithComponents(<DataGrid table={table} />)
 		act(() => {
-			instance.table.setRowSelection({ 0: true })
+			table.setRowSelection({ 0: true })
 		})
-		rerender(<DataGrid table={instance} />)
+		rerender(<DataGrid table={table} />)
 		const el = screen.getByRole('checkbox', { name: 'Select all rows' })
 		if (!(el instanceof HTMLInputElement)) throw new Error('expected HTMLInputElement')
 		expect(el.indeterminate).toBe(true)
@@ -89,12 +89,12 @@ describe('<DataGrid>', () => {
 	})
 
 	it('header checkbox is checked when all rows are selected', () => {
-		const { instance } = makeTable({ selection: true })
-		const { rerender } = renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		const { rerender } = renderWithComponents(<DataGrid table={table} />)
 		act(() => {
-			instance.table.toggleAllRowsSelected(true)
+			table.toggleAllRowsSelected(true)
 		})
-		rerender(<DataGrid table={instance} />)
+		rerender(<DataGrid table={table} />)
 		const el = screen.getByRole('checkbox', { name: 'Select all rows' })
 		if (!(el instanceof HTMLInputElement)) throw new Error('expected HTMLInputElement')
 		expect(el.checked).toBe(true)
@@ -102,77 +102,77 @@ describe('<DataGrid>', () => {
 	})
 
 	it('clicking header checkbox selects all rows', async () => {
-		const { instance } = makeTable({ selection: true })
-		const { rerender } = renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		const { rerender } = renderWithComponents(<DataGrid table={table} />)
 		const headerCheckbox = screen.getByRole('checkbox', { name: 'Select all rows' })
 		await userEvent.click(headerCheckbox)
-		rerender(<DataGrid table={instance} />)
-		expect(instance.table.getIsAllRowsSelected()).toBe(true)
+		rerender(<DataGrid table={table} />)
+		expect(table.getIsAllRowsSelected()).toBe(true)
 	})
 
 	it('clicking header checkbox when all rows selected deselects all', async () => {
-		const { instance } = makeTable({ selection: true })
-		const { rerender } = renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		const { rerender } = renderWithComponents(<DataGrid table={table} />)
 		act(() => {
-			instance.table.toggleAllRowsSelected(true)
+			table.toggleAllRowsSelected(true)
 		})
-		rerender(<DataGrid table={instance} />)
+		rerender(<DataGrid table={table} />)
 		const headerCheckbox = screen.getByRole('checkbox', { name: 'Select all rows' })
 		await userEvent.click(headerCheckbox)
-		rerender(<DataGrid table={instance} />)
-		expect(instance.table.getIsAllRowsSelected()).toBe(false)
-		expect(instance.table.getIsSomeRowsSelected()).toBe(false)
+		rerender(<DataGrid table={table} />)
+		expect(table.getIsAllRowsSelected()).toBe(false)
+		expect(table.getIsSomeRowsSelected()).toBe(false)
 	})
 
 	it('renders "+ Add" button when creating is enabled', () => {
-		const { instance } = makeTable({ creating: { onSave: () => Promise.resolve() } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ creating: { onSave: () => Promise.resolve() } })
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getByText('+ Add')).toBeInTheDocument()
 	})
 
 	it('does not render "+ Add" button when creating.mode is "pin-row"', () => {
-		const { instance } = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.queryByText('+ Add')).toBeNull()
 	})
 
 	it('renders creating row without "+ Add" button when mode is "pin-row"', () => {
-		const { instance } = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ creating: { mode: 'pin-row', onSave: () => Promise.resolve() } })
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.queryByText('+ Add')).toBeNull()
 		// pin-row always renders creating row inputs
 		expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0)
 	})
 
 	it('shows creating row inputs when creating.start() is called', () => {
-		const { instance } = makeTable({ creating: { mode: 'row', onSave: () => Promise.resolve() } })
-		const { rerender } = renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ creating: { mode: 'row', onSave: () => Promise.resolve() } })
+		const { rerender } = renderWithComponents(<DataGrid table={table} />)
 		// Before creating.start() there should be no inputs
 		expect(screen.queryAllByRole('textbox')).toHaveLength(0)
 		act(() => {
-			instance.table.creating.start()
+			table.creating.start()
 		})
-		rerender(<DataGrid table={instance} />)
+		rerender(<DataGrid table={table} />)
 		// After creating.start(), input cells should appear for each non-system column
 		expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0)
 	})
 
 	it('renders Edit button in row editing mode', () => {
-		const { instance } = makeTable({ editing: { mode: 'row', onSave: () => Promise.resolve() } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ editing: { mode: 'row', onSave: () => Promise.resolve() } })
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getAllByText('Edit')).toHaveLength(USERS.length)
 	})
 
 	it('renders Delete button when deleting is enabled', () => {
-		const { instance } = makeTable({ deleting: { onDelete: vi.fn() } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ deleting: { onDelete: vi.fn() } })
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getAllByText('Delete')).toHaveLength(USERS.length)
 	})
 
 	it('calls onDelete when Delete is clicked', async () => {
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ deleting: { onDelete } })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ deleting: { onDelete } })
+		renderWithComponents(<DataGrid table={table} />)
 		const deleteButtons = screen.getAllByText('Delete')
 		if (!deleteButtons[0]) throw new Error('expected Delete button')
 		await userEvent.click(deleteButtons[0])
@@ -180,9 +180,9 @@ describe('<DataGrid>', () => {
 	})
 
 	it('renders compound children when provided', () => {
-		const { instance } = makeTable()
+		const table = makeTable()
 		renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<span data-testid='custom-child'>custom</span>
 			</DataGrid>,
 		)
@@ -190,9 +190,9 @@ describe('<DataGrid>', () => {
 	})
 
 	it('compound pattern renders sub-components correctly', () => {
-		const { instance } = makeTable({ pagination: true })
+		const table = makeTable({ pagination: true })
 		renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<DataGrid.Table />
 				<DataGrid.Pagination />
 			</DataGrid>,
@@ -209,9 +209,8 @@ describe('<DataGrid>', () => {
 			},
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = createTable<User>({ data: USERS, columns: cols })
-		const instance = createDataGridInstance(table)
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols }))
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.getAllByTestId('custom-cell')).toHaveLength(USERS.length)
 	})
 
@@ -225,11 +224,10 @@ describe('<DataGrid>', () => {
 			{ id: 1, active: true },
 			{ id: 2, active: false },
 		]
-		const table = createTable<BoolRow>({ data: boolData, columns: boolCols })
-		const instance = createDataGridInstance(table)
+		const table = prepareDataGridTable(createTable<BoolRow>({ data: boolData, columns: boolCols }))
 		renderWithComponents(
 			<DataGrid
-				table={instance}
+				table={table}
 				cellTypes={{
 					boolean: { view: ({ value }) => <>{value ? '✓' : '✗'}</> },
 				}}
@@ -240,12 +238,13 @@ describe('<DataGrid>', () => {
 	})
 
 	it('uses registry view component for custom cell type', () => {
-		const cols = createColumns<User, 'money'>([{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } }])
-		const table = createTable<User>({ data: USERS, columns: cols })
-		const instance = createDataGridInstance(table)
+		const cols = createColumns<User, { money: Record<never, never> }>([
+			{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } },
+		])
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols }))
 		renderWithComponents(
 			<DataGrid
-				table={instance}
+				table={table}
 				cellTypes={{
 					money: {
 						view: ({ value }) => <span data-testid='money-cell'>€{String(value)}</span>,
@@ -256,16 +255,33 @@ describe('<DataGrid>', () => {
 		expect(screen.getAllByTestId('money-cell')).toHaveLength(USERS.length)
 	})
 
-	it('does not render PageSizer when pagination.pageSizeOptions is not set', () => {
-		const { instance } = makeTable({ pagination: { pageSize: 5 } })
-		renderWithComponents(<DataGrid table={instance} />)
+	it('does not auto-mount PageSizer when pagination.pageSizeOptions is not set', () => {
+		const table = makeTable({ pagination: { pageSize: 5 } })
+		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.queryByRole('combobox')).toBeNull()
 	})
 
+	it('renders a hand-placed PageSizer even when the toolbar is told not to mount one', () => {
+		// `toolbar` governs auto-mounting only — it must not erase the size list the
+		// hand-placed control reads.
+		// `makeTable` builds a bare core table, so the resolved options are set directly here:
+		// sizes present, auto-mount off — exactly what `pagination: { toolbar: false }` resolves to.
+		const table = makeTable({ pagination: { pageSize: 5 } })
+		table.grid.pagination.pageSizeOptions = [5, 10, 25]
+		table.grid.pagination.pageSizer = false
+		renderWithComponents(
+			<DataGrid table={table}>
+				<DataGrid.PageSizer />
+			</DataGrid>,
+		)
+		expect(screen.getByRole('combobox')).toHaveValue('5')
+	})
+
 	it('renders PageSizer select with the pagination.pageSizeOptions values', () => {
-		const { instance } = makeTable({ pagination: { pageSize: 5 } })
-		instance.table.grid.pagination.pageSizeOptions = [5, 10, 25]
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ pagination: { pageSize: 5 } })
+		table.grid.pagination.pageSizeOptions = [5, 10, 25]
+		table.grid.pagination.pageSizer = true
+		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
 		expect(select).toBeInTheDocument()
 		expect(select).toHaveValue('5')
@@ -275,14 +291,14 @@ describe('<DataGrid>', () => {
 
 	describe('column sizing / resizing', () => {
 		it('does not render column-resizer when resizing is not set', () => {
-			const { instance } = makeTable()
-			renderWithComponents(<DataGrid table={instance} />)
+			const table = makeTable()
+			renderWithComponents(<DataGrid table={table} />)
 			expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(0)
 		})
 
 		it('renders column-resizer handles when resizing is enabled', () => {
-			const { instance } = makeTable({ resizing: true })
-			renderWithComponents(<DataGrid table={instance} />)
+			const table = makeTable({ resizing: true })
+			renderWithComponents(<DataGrid table={table} />)
 			expect(document.querySelectorAll('[data-slot="column-resizer"]').length).toBeGreaterThan(0)
 		})
 
@@ -291,16 +307,15 @@ describe('<DataGrid>', () => {
 				{ accessorKey: 'name', header: 'Name', resizing: false },
 				{ accessorKey: 'age', header: 'Age' },
 			])
-			const table = createTable<User>({ data: USERS, columns: cols, resizing: true })
-			const instance = createDataGridInstance(table)
-			renderWithComponents(<DataGrid table={instance} />)
+			const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: cols, resizing: true }))
+			renderWithComponents(<DataGrid table={table} />)
 			// only 'age' column should have a resizer (name has resizing: false)
 			expect(document.querySelectorAll('[data-slot="column-resizer"]')).toHaveLength(1)
 		})
 
 		it('sets CSS variables on <table> when resizing is enabled', () => {
-			const { instance } = makeTable({ resizing: true })
-			renderWithComponents(<DataGrid table={instance} />)
+			const table = makeTable({ resizing: true })
+			renderWithComponents(<DataGrid table={table} />)
 			const tableEl = document.querySelector('table')
 			const style = tableEl?.getAttribute('style') ?? ''
 			expect(style).toContain('--header-name-size')
@@ -314,10 +329,10 @@ describe('<DataGrid>', () => {
 					data-is-resizing={String(isResizing)}
 				/>
 			)
-			const { instance } = makeTable({ resizing: true })
+			const table = makeTable({ resizing: true })
 			renderWithComponents(
 				<GridComponentsProvider components={{ resizing: { Resizer: CustomResizer } }}>
-					<DataGrid table={instance} />
+					<DataGrid table={table} />
 				</GridComponentsProvider>,
 			)
 			expect(screen.getAllByTestId('custom-resizer').length).toBeGreaterThan(0)
@@ -330,10 +345,10 @@ describe('<DataGrid>', () => {
 					data-is-resizing={String(isResizing)}
 				/>
 			)
-			const { instance } = makeTable({ resizing: true })
+			const table = makeTable({ resizing: true })
 			renderWithComponents(
 				<GridComponentsProvider components={{ resizing: { Resizer: CustomResizer } }}>
-					<DataGrid table={instance} />
+					<DataGrid table={table} />
 				</GridComponentsProvider>,
 			)
 			const resizers = screen.getAllByTestId('custom-resizer')
@@ -341,8 +356,8 @@ describe('<DataGrid>', () => {
 		})
 
 		it('always sets CSS size variables and grid-template-columns on <table>', () => {
-			const { instance } = makeTable()
-			renderWithComponents(<DataGrid table={instance} />)
+			const table = makeTable()
+			renderWithComponents(<DataGrid table={table} />)
 			const tableEl = document.querySelector('table')
 			const style = tableEl?.getAttribute('style') ?? ''
 			expect(style).toContain('--header-name-size')
@@ -366,24 +381,24 @@ describe('<DataGrid>', () => {
 
 		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
-			const { instance } = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			instance.table.grid.selection.panel = { variant: 'inline' }
-			instance.table.setRowSelection({ '1': true })
-			renderWithComponents(<DataGrid table={instance} />)
+			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
+			table.grid.selection.panel = { variant: 'inline' }
+			table.setRowSelection({ '1': true })
+			renderWithComponents(<DataGrid table={table} />)
 
 			const { selectionBar, toolbar } = getBarAndToolbar()
 			expect(selectionBar.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 		})
 
 		it('renders floating SelectionBar after Table/Pagination by default', () => {
-			const { instance } = makeTable({
+			const table = makeTable({
 				selection: true,
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			instance.table.grid.selection.panel = true
-			instance.table.setRowSelection({ '1': true })
-			renderWithComponents(<DataGrid table={instance} />)
+			table.grid.selection.panel = true
+			table.setRowSelection({ '1': true })
+			renderWithComponents(<DataGrid table={table} />)
 
 			const { selectionBar, toolbar } = getBarAndToolbar()
 			// floating: toolbar precedes selectionBar
@@ -393,28 +408,29 @@ describe('<DataGrid>', () => {
 
 	it('registry creating falls back to edit component when creating not provided', () => {
 		const editFn = vi.fn(() => <input data-testid='registry-edit' />)
-		const cols = createColumns<User, 'custom-type'>([
+		const cols = createColumns<User, { 'custom-type': Record<never, never> }>([
 			{ accessorKey: 'name', header: 'Name', cell: { type: 'custom-type' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
-		const table = createTable<User>({
-			data: USERS,
-			columns: cols,
-			creating: { mode: 'row', onSave: () => Promise.resolve() },
-		})
-		const instance = createDataGridInstance(table)
+		const table = prepareDataGridTable(
+			createTable<User>({
+				data: USERS,
+				columns: cols,
+				creating: { mode: 'row', onSave: () => Promise.resolve() },
+			}),
+		)
 		const { rerender } = renderWithComponents(
 			<DataGrid
-				table={instance}
+				table={table}
 				cellTypes={{ 'custom-type': { edit: editFn } }}
 			/>,
 		)
 		act(() => {
-			instance.table.creating.start()
+			table.creating.start()
 		})
 		rerender(
 			<DataGrid
-				table={instance}
+				table={table}
 				cellTypes={{ 'custom-type': { edit: editFn } }}
 			/>,
 		)
@@ -423,11 +439,8 @@ describe('<DataGrid>', () => {
 })
 
 describe('<DataGrid> selection-bar delete confirmation', () => {
-	function setSelectionBar(
-		instance: ReturnType<typeof makeTable>['instance'],
-		value: ResolvedGridOptions['selection']['panel'],
-	) {
-		instance.table.grid.selection.panel = value
+	function setSelectionBar(table: ReturnType<typeof makeTable>, value: ResolvedGridOptions['selection']['panel']) {
+		table.grid.selection.panel = value
 	}
 
 	function getDialog(): HTMLElement {
@@ -439,10 +452,10 @@ describe('<DataGrid> selection-bar delete confirmation', () => {
 	it('runs onDelete instantly when confirmation is not set (no dialog)', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionBar(instance, { onDelete })
-		instance.table.setRowSelection({ '1': true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		setSelectionBar(table, { onDelete })
+		table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={table} />)
 
 		await user.click(screen.getByRole('button', { name: /delete/i }))
 		expect(onDelete).toHaveBeenCalledOnce()
@@ -452,14 +465,14 @@ describe('<DataGrid> selection-bar delete confirmation', () => {
 	it('opens the ConfirmDialog and defers onDelete when confirmation is set', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionBar(instance, { onDelete, confirmation: true })
-		instance.table.setRowSelection({ '1': true, '2': true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		setSelectionBar(table, { onDelete, confirmation: true })
+		table.setRowSelection({ '1': true, '2': true })
+		renderWithComponents(<DataGrid table={table} />)
 
 		await user.click(screen.getByRole('button', { name: /delete/i }))
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(instance.table.getState().pendingBulkDelete).toBe(true)
+		expect(table.getState().pendingBulkDelete).toBe(true)
 		// Count-aware default description for the two selected rows.
 		expect(screen.getByText(/delete 2 rows/i)).toBeInTheDocument()
 	})
@@ -467,10 +480,10 @@ describe('<DataGrid> selection-bar delete confirmation', () => {
 	it('runs onDelete and clears the pending flag on confirm', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionBar(instance, { onDelete, confirmation: true })
-		instance.table.setRowSelection({ '1': true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		setSelectionBar(table, { onDelete, confirmation: true })
+		table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={table} />)
 
 		await user.click(screen.getByRole('button', { name: /delete/i }))
 		await user.click(within(getDialog()).getByRole('button', { name: /confirm/i }))
@@ -479,33 +492,33 @@ describe('<DataGrid> selection-bar delete confirmation', () => {
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const args = onDelete.mock.calls.at(0)?.at(0)
 		expect((args as { selectedRows: unknown[] }).selectedRows).toHaveLength(1)
-		expect(instance.table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().pendingBulkDelete).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
 	it('leaves data intact and clears pending on cancel', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionBar(instance, { onDelete, confirmation: true })
-		instance.table.setRowSelection({ '1': true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		setSelectionBar(table, { onDelete, confirmation: true })
+		table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={table} />)
 
 		await user.click(screen.getByRole('button', { name: /delete/i }))
 		await user.click(within(getDialog()).getByRole('button', { name: /cancel/i }))
 
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(instance.table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().pendingBulkDelete).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
 	it('uses a custom confirmation title when provided', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionBar(instance, { onDelete, confirmation: { title: 'Remove these?' } })
-		instance.table.setRowSelection({ '1': true })
-		renderWithComponents(<DataGrid table={instance} />)
+		const table = makeTable({ selection: true })
+		setSelectionBar(table, { onDelete, confirmation: { title: 'Remove these?' } })
+		table.setRowSelection({ '1': true })
+		renderWithComponents(<DataGrid table={table} />)
 
 		await user.click(screen.getByRole('button', { name: /delete/i }))
 		expect(screen.getByText('Remove these?')).toBeInTheDocument()
@@ -523,7 +536,7 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 		expect(screen.getAllByRole('row')).toHaveLength(USERS.length + 1) // header + data rows
 	})
 
-	it('renders cell values without an explicit instance', () => {
+	it('renders cell values without an explicit table', () => {
 		renderWithComponents(
 			<DataGrid
 				data={USERS}
@@ -562,8 +575,8 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 	it('warns when a mounted grid switches between controlled and uncontrolled', () => {
 		const warn = vi.spyOn(console, 'error').mockImplementation(() => {})
 		try {
-			const { instance } = makeTable()
-			const { rerender } = renderWithComponents(<DataGrid table={instance} />)
+			const table = makeTable()
+			const { rerender } = renderWithComponents(<DataGrid table={table} />)
 			expect(warn).not.toHaveBeenCalled()
 			rerender(
 				<DataGrid
@@ -575,5 +588,18 @@ describe('<DataGrid> uncontrolled (no useDataGrid)', () => {
 		} finally {
 			warn.mockRestore()
 		}
+	})
+})
+
+describe('<DataGrid> unprepared table', () => {
+	it('names the problem instead of crashing on a missing resolved-options object', () => {
+		// `prepareDataGridTable` is what seeds `table.grid`; skipping it used to be impossible
+		// because the prop demanded a wrapper type only `useDataGrid` could build.
+		const raw = createTable<User>({ data: USERS, columns: COLUMNS })
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+		expect(() => renderWithComponents(<DataGrid table={raw} />)).toThrow(/has not been prepared/)
+
+		spy.mockRestore()
 	})
 })

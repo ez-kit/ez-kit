@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { HeaderGroup } from '@tanstack/table-core'
@@ -56,15 +56,14 @@ export type DataGridFooterProps = {
  * ```
  */
 export function Footer({ children }: DataGridFooterProps = {}) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { Tfoot, Tr, Td } = useGridComponents().core
 
 	// Narrow subscriptions: a footer reflects column layout and the rows it aggregates over,
 	// nothing else. Editing or selection mutations leave all of these stable.
-	useDataGridStore((s) => s.columnVisibility)
-	useDataGridStore((s) => s.columnPinning)
-	useDataGridStore((s) => s.columnOrder)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
+	useDataGridState((s) => s.columnOrder)
 
 	const footerGroups = table.getFooterGroups()
 

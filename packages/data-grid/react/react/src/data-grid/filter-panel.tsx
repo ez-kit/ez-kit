@@ -2,7 +2,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
 import { renderFilterInput } from './render-filter-input'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { BadgeItem, BetweenValue, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
@@ -141,7 +141,10 @@ export type DataGridFilterPanelProps = {
 }
 
 export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Input } = gridComponents.core
 	const {

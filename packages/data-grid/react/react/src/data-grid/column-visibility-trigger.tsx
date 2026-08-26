@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { VisibilityColumnItem } from '../types'
 import type { ReactNode } from 'react'
@@ -41,7 +41,9 @@ export type DataGridColumnVisibilityTriggerProps = {
 }
 
 export function ColumnVisibilityTrigger({ children }: DataGridColumnVisibilityTriggerProps = {}) {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	const { ColumnVisibilityMenu } = useGridComponents()['column-visibility']
 
 	const columns: VisibilityColumnItem[] = table

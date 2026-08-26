@@ -30,7 +30,7 @@ export function StatePersistenceExample() {
 		<div>
 			<DataGrid table={table} />
 			<pre>{JSON.stringify(persisted, null, 2)}</pre>
-			<p>Snapshot for storage: {JSON.stringify(extractState(table.table))}</p>
+			<p>Snapshot for storage: {JSON.stringify(extractState(table))}</p>
 		</div>
 	)
 }

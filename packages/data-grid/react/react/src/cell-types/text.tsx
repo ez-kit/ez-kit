@@ -1,20 +1,8 @@
+import { defineCellType } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
-import type { CellTypeDefinition } from '../cell-types-context'
-import type { FieldState } from '@ez-kit/data-grid-core'
+import type { TextCellConfig, FieldState } from '@ez-kit/data-grid-core'
 import type { ChangeEvent, ReactNode } from 'react'
-
-export type TextCellConfig = {
-	/** Maximum character count for the rendered view. Longer values are truncated. */
-	maxLength?: number
-	/**
-	 * Suffix appended when truncated.
-	 * - `true` (default when `maxLength` set) → `'…'`
-	 * - `false` → no marker
-	 * - `string` → custom marker (e.g. `'...'`, `' ›'`)
-	 */
-	ellipsis?: boolean | string
-}
 
 /** Pure formatter used by the view renderer. Exposed for testing. */
 export function truncateText(value: string, config?: TextCellConfig): string {
@@ -45,9 +33,9 @@ function TextCellInput(props: FieldState<TextCellConfig>): ReactNode {
  *
  * Zero visual choices — only data transforms. UI primitive comes from DI.
  */
-export const textCellType: CellTypeDefinition<TextCellConfig> = {
+export const textCellType = defineCellType<TextCellConfig>()({
 	view: ({ value, config }) => truncateText(String(value ?? ''), config),
 	edit: TextCellInput,
 	creating: TextCellInput,
 	filter: TextCellInput,
-}
+})

@@ -29,7 +29,7 @@ const SPY_TYPE = 'spy' as const
 // The registry arrives at runtime via the `cellTypes` prop, so the second type argument is
 // how this call site declares which custom types it means. Omitting it defaults to `never` —
 // the unbound helper cannot know a registry it was never given.
-const COLUMNS = createColumns<Row, typeof SPY_TYPE>([
+const COLUMNS = createColumns<Row, { [SPY_TYPE]: Record<never, never> }>([
 	{ accessorKey: 'name', cell: { type: SPY_TYPE }, editing: {}, creating: {} },
 ])
 
@@ -75,8 +75,8 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		if (!table) throw new Error('table not initialised')
 
 		act(() => {
-			table.table.creating.start()
-			table.table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
+			table.creating.start()
+			table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
 		})
 		view.rerender(
 			<DataGrid<Row>
@@ -120,7 +120,7 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		if (!table) throw new Error('table not initialised')
 
 		act(() => {
-			table.table.creating.start()
+			table.creating.start()
 		})
 		view.rerender(
 			<DataGrid<Row>

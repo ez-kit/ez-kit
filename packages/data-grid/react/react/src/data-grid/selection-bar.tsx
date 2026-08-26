@@ -6,7 +6,7 @@ import {
 } from '../use-data-grid'
 
 import { resolveSelectionPanelVariant } from './selection-panel-variant'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { Table } from '@tanstack/table-core'
 import type { ReactElement, ReactNode } from 'react'
@@ -91,7 +91,8 @@ export type DataGridSelectionBarProps = {
 }
 
 export function SelectionBar({ children }: DataGridSelectionBarProps = {}) {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.rowSelection)
 	const { SelectionBar: SelectionBarComponent } = useGridComponents().selection
 
 	// The draft section owns the bar while a query is pending — see DraftBar.

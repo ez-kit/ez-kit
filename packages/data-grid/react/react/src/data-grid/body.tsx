@@ -10,7 +10,7 @@ import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { RefetchOverlayHost } from './refetch-overlay'
 import { DataGridRow } from './row'
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
@@ -63,24 +63,23 @@ export type DataGridBodyProps = {
  */
 export function Body({ children }: DataGridBodyProps = {}) {
 	const { rowVirtualizer } = useVirtualContext()
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { Tbody } = useGridComponents().core
 
 	// Narrow subscriptions: each returns a referentially stable slice. Body
 	// re-renders only when one of these slices actually changes. Editing,
 	// columnVisibility, columnSizing, columnPinning, rowSelection updates do
 	// NOT touch any of these → no Body re-render.
-	const isPending = useDataGridStore((s) => s.loading.isPending)
-	const isFetching = useDataGridStore((s) => s.loading.isFetching)
-	const isCreatingOpen = useDataGridStore((s) => s.creating.isOpen)
+	const isPending = useDataGridState((s) => s.loading.isPending)
+	const isFetching = useDataGridState((s) => s.loading.isFetching)
+	const isCreatingOpen = useDataGridState((s) => s.creating.isOpen)
 	// Slices that affect getRowModel() / getTopRows() / getBottomRows() output:
-	useDataGridStore((s) => s.sorting)
-	useDataGridStore((s) => s.columnFilters)
-	useDataGridStore<unknown>((s) => s.globalFilter)
-	useDataGridStore((s) => s.pagination)
-	useDataGridStore((s) => s.expanded)
-	useDataGridStore((s) => s.rowPinning)
+	useDataGridState((s) => s.sorting)
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState<unknown>((s) => s.globalFilter)
+	useDataGridState((s) => s.pagination)
+	useDataGridState((s) => s.expanded)
+	useDataGridState((s) => s.rowPinning)
 
 	// Read before the early returns below: the offset hooks must run on every render.
 	const hasPinning = Boolean(table.options.enableRowPinning)

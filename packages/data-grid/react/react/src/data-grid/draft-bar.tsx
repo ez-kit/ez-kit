@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { resolveSelectionPanelVariant } from './selection-panel-variant'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 /**
  * Pending-draft section of the shared action bar.
@@ -15,7 +15,10 @@ import { useTable } from './table-context'
  */
 export function DraftBar() {
 	// Broad subscription — the bar must re-render as the draft accumulates.
-	const table = useTable()
+	const table = useDataGridTable()
+	// Deliberately broad: `draft.isDirty()` spans sorting, column filters,
+	// global search and `applied`, and the bar also reads `rowSelection`.
+	useDataGridState((s) => s)
 	const { DraftBar: DraftBarComponent } = useGridComponents().draft
 
 	if (table.options.deferredApply !== true) return null
