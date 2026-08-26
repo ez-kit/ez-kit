@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo } from 'react'
 
 import type { FieldState } from '@ez-kit/data-grid-core'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
 
@@ -25,22 +25,29 @@ export type CellInputProps<TConfig = unknown> = {
 // ── registry types ────────────────────────────────────────────────────────
 
 export type CellTypeDefinition<TConfig = unknown> = {
-	/** View-mode renderer. */
-	view?: (props: CellViewProps<TConfig>) => ReactNode
+	/**
+	 * View-mode renderer.
+	 *
+	 * Typed `ComponentType`, not `(props) => ReactNode`: renderers are **mounted**, so they get
+	 * their own fiber and may use hooks, and `memo(...)` / `forwardRef(...)` — objects rather
+	 * than functions — are accepted here as well as at runtime. Every plain function component
+	 * still fits.
+	 */
+	view?: ComponentType<CellViewProps<TConfig>>
 	/**
 	 * Edit-mode input. Receives a {@link FieldState} with id/label/description/error/onBlur.
 	 * In inline contexts (cell-mode, creating-row, filter) `label`/`description` are
 	 * omitted so the composite can skip the corresponding chrome.
 	 * No fallback — when omitted, edit mode renders the default input component.
 	 */
-	edit?: (props: FieldState<TConfig>) => ReactNode
+	edit?: ComponentType<FieldState<TConfig>>
 	/** Create-mode input. Same shape as `edit`. Falls back to `edit` when omitted. */
-	creating?: (props: FieldState<TConfig>) => ReactNode
+	creating?: ComponentType<FieldState<TConfig>>
 	/**
 	 * Filter-mode input. Receives a {@link FieldState} with `label`/`description`/`errors`
 	 * left empty (filters do not surface validation). Falls back to `edit` when omitted.
 	 */
-	filter?: (props: FieldState<TConfig>) => ReactNode
+	filter?: ComponentType<FieldState<TConfig>>
 	/** Default operator IDs for this cell type when `filtering.operators: true`. */
 	operators?: string[]
 	/** Default operator ID override for this cell type. */

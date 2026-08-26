@@ -1,6 +1,7 @@
 import { DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
 
 import { FilterTextInput } from './filter-text-input'
+import { flexRender } from './flex-render'
 
 import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
 import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSelectProps } from '../types'
@@ -231,7 +232,7 @@ export function renderFilterInput({
 			if (comp) {
 				return (
 					<>
-						{comp({
+						{flexRender(comp, {
 							value: inputValue,
 							onChange: onValueChange,
 							...(meta.config !== undefined ? { config: meta.config } : {}),
@@ -291,7 +292,7 @@ export function renderFilterInput({
 	if (filteringConfig !== false && filteringConfig !== undefined) {
 		const comp = (filteringConfig as { component?: (props: CellInputProps) => ReactNode }).component
 		if (comp)
-			return comp({
+			return flexRender(comp, {
 				value: filterValue,
 				onChange,
 				...(meta.config !== undefined ? { config: meta.config } : {}),

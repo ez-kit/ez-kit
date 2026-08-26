@@ -90,12 +90,7 @@ export function Footer({ children }: DataGridFooterProps = {}) {
 								colSpan={header.colSpan}
 								{...(pinned ? { pinned, 'data-pinned': pinned } : {})}
 							>
-								{header.isPlaceholder
-									? null
-									: flexRender(
-											header.column.columnDef.footer,
-											header.getContext() as unknown as Record<string, unknown>,
-										)}
+								{header.isPlaceholder ? null : flexRender(header.column.columnDef.footer, header.getContext())}
 							</Td>
 						)
 					})}

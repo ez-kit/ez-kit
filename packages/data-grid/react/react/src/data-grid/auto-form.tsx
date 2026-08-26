@@ -1,12 +1,13 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
+import { flexRender } from './flex-render'
 import { useTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { ColumnEditingConfig, ColumnCreatingConfig, FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta } from '@tanstack/table-core'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 type AutoFormProps = {
 	mode: 'creating' | 'editing'
@@ -89,13 +90,13 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				//    for rendering label/description/error from FieldState.
 				const customComp = resolveColumnComponent(colDef)
 				if (customComp) {
-					return <div key={col.id}>{customComp(field)}</div>
+					return <div key={col.id}>{flexRender(customComp, field)}</div>
 				}
 
 				// 2. registry by cellType — kit composite renders the full Field shell.
 				if (meta?.cellType) {
 					const regComp = resolveRegistryComponent(meta, mode, cellTypes)
-					if (regComp) return <div key={col.id}>{regComp(field)}</div>
+					if (regComp) return <div key={col.id}>{flexRender(regComp, field)}</div>
 				}
 
 				// 3. fallback: kits without a composite registry entry (e.g. native)
@@ -159,17 +160,17 @@ function resolveLabel(header: unknown, fallback: string): string {
 	return typeof header === 'string' ? header : fallback
 }
 
-function resolveColumnComponent(colDef: ColConfig): ((props: FieldState) => ReactNode) | undefined {
+function resolveColumnComponent(colDef: ColConfig): ComponentType<FieldState> | undefined {
 	if (!colDef) return undefined
 	const comp = colDef.component
-	return comp ? (comp as (props: FieldState) => ReactNode) : undefined
+	return comp ? (comp as ComponentType<FieldState>) : undefined
 }
 
 function resolveRegistryComponent(
 	meta: ColumnMeta<unknown, unknown>,
 	mode: 'creating' | 'editing',
 	cellTypes: CellTypeRegistry,
-): ((props: FieldState) => ReactNode) | undefined {
+): ComponentType<FieldState> | undefined {
 	if (!meta.cellType) return undefined
 	const def = cellTypes[meta.cellType]
 	if (!def) return undefined

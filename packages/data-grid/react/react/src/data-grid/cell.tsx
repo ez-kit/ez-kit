@@ -11,7 +11,7 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ComponentType, CSSProperties } from 'react'
 
 export type DataGridCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -209,13 +209,15 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp
-				? viewComp({
-						value: cell.getValue(),
-						row: cell.row.original,
+				? flexRender(viewComp, {
+						// `cell` is row-type-erased here, so `getValue()` and `row.original` are both
+						// `any`. The view contract says `unknown` — narrow once, at the boundary.
+						value: cell.getValue<unknown>(),
+						row: cell.row.original as unknown,
 						rowIndex: cell.row.index,
 						...(meta?.config !== undefined ? { config: meta.config } : {}),
 					})
-				: flexRender(cell.column.columnDef.cell, cell.getContext() as unknown as Record<string, unknown>)}
+				: flexRender(cell.column.columnDef.cell, cell.getContext())}
 		</Td>
 	)
 }
@@ -283,7 +285,7 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 			{...(fieldError ? { 'data-error': true } : {})}
 		>
 			{editComp ? (
-				editComp(fieldState)
+				flexRender(editComp, fieldState)
 			) : (
 				<Input
 					{...(editMode === 'cell' ? { autoFocus: true } : {})}
@@ -310,12 +312,12 @@ function getCellPinInfo(cell: Cell<unknown, unknown>): PinInfo {
 function resolveEditComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
-): ((props: FieldState) => ReactNode) | undefined {
+): ComponentType<FieldState> | undefined {
 	// 1. column-level editing.component
 	const editingConfig = meta?.editing
 	if (editingConfig !== false && editingConfig !== undefined) {
 		const comp = editingConfig.component
-		if (comp) return comp as (props: FieldState) => ReactNode
+		if (comp) return comp as ComponentType<FieldState>
 	}
 	// 2. registry by cellType
 	if (meta?.cellType) {
@@ -339,12 +341,12 @@ function resolveEditComponent(
 function resolveViewComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
-): ((props: CellViewProps) => ReactNode) | undefined {
-	if (meta?.cellView) {
-		const cellView = meta.cellView
-		return (props: CellViewProps) =>
-			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex }) as ReactNode
-	}
+): ComponentType<CellViewProps> | undefined {
+	// Returned as-is, never wrapped: `flexRender` mounts by component identity, so a wrapper
+	// allocated here would be a fresh component type on every render and remount the cell each
+	// time. `cell.component` takes `{ row, value, rowIndex }` and simply ignores the extra
+	// `config` that `CellViewProps` carries, so the shapes are already compatible.
+	if (meta?.cellView) return meta.cellView as ComponentType<CellViewProps>
 	if (meta?.cellType) {
 		const def = registry[meta.cellType]
 		if (def?.view) return def.view

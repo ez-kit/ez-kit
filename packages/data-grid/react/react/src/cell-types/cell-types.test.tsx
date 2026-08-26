@@ -7,8 +7,21 @@ import { booleanCellType } from './boolean'
 import { formatNumber, numberCellType } from './number'
 import { textCellType, truncateText } from './text'
 
+import type { CellViewProps } from '../cell-types-context'
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ComponentType } from 'react'
+
+/**
+ * Cell-type renderers are components, not formatting functions — mount and read the text.
+ * Calling one directly would smuggle its hooks into the caller's fiber, which is exactly what
+ * `flexRender` stopped doing.
+ */
+function renderView<TConfig>(
+	View: ComponentType<CellViewProps<TConfig>>,
+	props: CellViewProps<TConfig>,
+): string | null {
+	return renderWithComponents(<View {...props} />).container.textContent
+}
 
 function baseField<TConfig>(overrides: Partial<FieldState<TConfig>>): FieldState<TConfig> {
 	return {
@@ -71,13 +84,13 @@ describe('numberCellType', () => {
 	if (!view) throw new Error('numberCellType.view must be defined')
 
 	it('view: formats numeric values via config', () => {
-		const out = view({ value: 1500, row: {}, rowIndex: 0, config: { decimals: 2, locale: 'en-US' } })
+		const out = renderView(view, { value: 1500, row: {}, rowIndex: 0, config: { decimals: 2, locale: 'en-US' } })
 		expect(out).toBe('1,500.00')
 	})
 
 	it('view: stringifies non-number values', () => {
-		expect(view({ value: 'foo', row: {}, rowIndex: 0 })).toBe('foo')
-		expect(view({ value: null, row: {}, rowIndex: 0 })).toBe('')
+		expect(renderView(view, { value: 'foo', row: {}, rowIndex: 0 })).toBe('foo')
+		expect(renderView(view, { value: null, row: {}, rowIndex: 0 })).toBe('')
 	})
 
 	it('edit: forwards to DI NumberInput and onChange propagates a number', () => {
@@ -96,13 +109,13 @@ describe('textCellType', () => {
 	if (!view) throw new Error('textCellType.view must be defined')
 
 	it('view: truncates with ellipsis when needed', () => {
-		const out = view({ value: 'a long string', row: {}, rowIndex: 0, config: { maxLength: 5 } })
+		const out = renderView(view, { value: 'a long string', row: {}, rowIndex: 0, config: { maxLength: 5 } })
 		expect(out).toBe('a lon…')
 	})
 
 	it('view: stringifies undefined / null', () => {
-		expect(view({ value: undefined, row: {}, rowIndex: 0 })).toBe('')
-		expect(view({ value: null, row: {}, rowIndex: 0 })).toBe('')
+		expect(renderView(view, { value: undefined, row: {}, rowIndex: 0 })).toBe('')
+		expect(renderView(view, { value: null, row: {}, rowIndex: 0 })).toBe('')
 	})
 
 	it('edit: forwards to DI Input', () => {

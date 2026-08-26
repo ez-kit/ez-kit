@@ -287,10 +287,7 @@ export function Header({ stickyHeader, children }: DataGridHeaderProps = {}) {
 												>
 													{header.isPlaceholder
 														? null
-														: flexRender(
-																header.column.columnDef.header,
-																header.getContext() as unknown as Record<string, unknown>,
-															)}
+														: flexRender(header.column.columnDef.header, header.getContext())}
 													<SortIndicator
 														sortDir={sortDir}
 														canSort={canSort}
