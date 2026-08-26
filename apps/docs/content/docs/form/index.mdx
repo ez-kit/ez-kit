@@ -7,19 +7,26 @@ description: TanStack Form with fully-wired, dependency-injected fields — one 
 
 A thin layer over [TanStack Form](https://tanstack.com/form) that hands you **fields, not plumbing**.
 
-`useForm` here is a **superset** of TanStack Form's: the instance it returns carries flat, ready-wired field components, while the entire native API stays on that same object.
+`<Form>` runs TanStack Form for you and hands the instance to its children. That instance is a **superset** of what TanStack's `useForm` returns: it carries flat, ready-wired field components, while the entire native API stays on the same object.
 
 ```tsx
-const form = useForm({
-	defaultValues: { email: '', password: '' },
-	onSubmit: ({ value }) => save(value),
-})
-
-<form.Form>
-	<form.TextField name='email' label='Email' />
-	<form.SubmitButton>Save</form.SubmitButton>
-</form.Form>
+<Form
+	defaultValues={{ email: '', password: '' }}
+	onSubmit={({ value }) => save(value)}
+>
+	{(form) => (
+		<>
+			<form.TextField
+				name='email'
+				label='Email'
+			/>
+			<form.SubmitButton>Save</form.SubmitButton>
+		</>
+	)}
+</Form>
 ```
+
+The hook is still exported: `useForm` + `<Form form={form}>` is the [controlled mode](./form/getting-started#controlled-when-the-instance-is-needed-outside), for when something outside the markup reads the form.
 
 Each field renders its own label, description, input and error message. No `<Field>` render prop, no manual `value` / `onChange` / `onBlur` wiring, no error plumbing — unless you want it, in which case [the native API](./form/native-api) is right there.
 
@@ -44,10 +51,10 @@ You install exactly one of the two flavours; it pulls the rest in.
 
 | Export                                        | Purpose                                                            |
 | --------------------------------------------- | ------------------------------------------------------------------ |
-| [`useForm`](./form/getting-started)           | The extended hook. Everything below hangs off its result.          |
-| [`form.TextField` and friends](./form/fields) | Five base fields: text, number, textarea, select, checkbox.        |
+| [`Form`](./form/getting-started)              | The `<form>` element. Creates the instance, or takes yours.        |
+| [`useForm`](./form/getting-started)           | The extended hook, for when you need the instance yourself.        |
+| [`form.TextField` and friends](./form/fields) | Eight base fields: text, number, textarea, select, checkbox, …     |
 | `form.SubmitButton`                           | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself. |
-| `form.Form`                                   | A `<form>` wired to `handleSubmit`.                                |
 | [`createForm`](./form/custom-kit)             | The factory a UI kit calls to bind its own components.             |
 
 ## Validation

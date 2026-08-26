@@ -20,6 +20,11 @@ export type BoundFieldApi = {
 	}
 }
 
+/** The one member `<Form>` needs from an instance to wire the `<form>` element's submit. */
+export type SubmittableForm = {
+	handleSubmit: () => Promise<void>
+}
+
 /**
  * The slice of the TanStack Form instance the flat field components actually use.
  *
@@ -28,13 +33,12 @@ export type BoundFieldApi = {
  * touch these three members. So the instance is narrowed to this structural type once, at
  * the `createForm` boundary, and stays fully typed for the consumer.
  */
-export type BindableForm = {
+export type BindableForm = SubmittableForm & {
 	AppField: (props: { name: string; children: (field: BoundFieldApi) => ReactNode }) => ReactNode
 	Subscribe: <TSelected>(props: {
 		selector: (state: SubmitState) => TSelected
 		children: (selected: TSelected) => ReactNode
 	}) => ReactNode
-	handleSubmit: () => Promise<void>
 }
 
 /** The form-state members `SubmitButton` subscribes to. */

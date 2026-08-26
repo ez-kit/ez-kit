@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { useForm } from './form'
+import { Form } from './form'
 
 type Values = {
 	email: string
@@ -21,43 +21,46 @@ const ROLE_OPTIONS = [
 
 describe('@ez-kit/form-heroui smoke', () => {
 	function Case({ onSubmit }: { onSubmit?: (value: Values) => void }) {
-		const form = useForm({
-			defaultValues: DEFAULTS,
-			validators: {
-				onChange: ({ value }) => (value.email.includes('@') ? undefined : { fields: { email: 'Enter a valid email' } }),
-			},
-			onSubmit: ({ value }) => {
-				onSubmit?.(value)
-			},
-		})
-
 		return (
-			<form.Form>
-				<form.TextField
-					name='email'
-					label='Email'
-					description='Work address'
-				/>
-				<form.NumberField
-					name='age'
-					label='Age'
-				/>
-				<form.TextareaField
-					name='bio'
-					label='Bio'
-				/>
-				<form.SelectField
-					name='role'
-					label='Role'
-					options={ROLE_OPTIONS}
-					placeholder='Pick one'
-				/>
-				<form.CheckboxField
-					name='agree'
-					label='I agree'
-				/>
-				<form.SubmitButton>Save</form.SubmitButton>
-			</form.Form>
+			<Form
+				defaultValues={DEFAULTS}
+				validators={{
+					onChange: ({ value }) =>
+						value.email.includes('@') ? undefined : { fields: { email: 'Enter a valid email' } },
+				}}
+				onSubmit={({ value }) => {
+					onSubmit?.(value)
+				}}
+			>
+				{(form) => (
+					<>
+						<form.TextField
+							name='email'
+							label='Email'
+							description='Work address'
+						/>
+						<form.NumberField
+							name='age'
+							label='Age'
+						/>
+						<form.TextareaField
+							name='bio'
+							label='Bio'
+						/>
+						<form.SelectField
+							name='role'
+							label='Role'
+							options={ROLE_OPTIONS}
+							placeholder='Pick one'
+						/>
+						<form.CheckboxField
+							name='agree'
+							label='I agree'
+						/>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>
 		)
 	}
 

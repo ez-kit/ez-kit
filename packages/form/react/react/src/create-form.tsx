@@ -4,18 +4,16 @@ import { createFormHook, createFormHookContexts } from '@tanstack/react-form'
 import { useMemo } from 'react'
 
 import { buildFieldComponents } from './build-field-components'
+import { splitFormProps } from './form-options'
+import { FormShell } from './form-shell'
+import { NO_INJECTED_COMPONENTS } from './kit-form'
 
 import type { BindableForm } from './bindable-form'
 import type { FormComponents } from './contract'
-import type { FormFieldComponents } from './field-props'
+import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
+import type { KitFormApi } from './kit-form'
 import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
-
-/**
- * TanStack's own component slots stay empty: the kit's primitives are injected through
- * `createForm({ components })` and reach the fields by closure, so nothing has to travel
- * through `AppField` / `AppForm` context.
- */
-const NO_INJECTED_COMPONENTS = {} as const
+import type { ReactNode } from 'react'
 
 export type CreateFormOptions = {
 	/** The kit's implementation of the UI contract. Every primitive is required. */
@@ -23,28 +21,32 @@ export type CreateFormOptions = {
 }
 
 /**
- * Create a `useForm` hook bound to one UI kit's components — the `createDataGrid`
+ * Create the form bundle bound to one UI kit's components — the `createDataGrid`
  * analogue for forms.
  *
- * The returned hook is a **superset of TanStack Form's `useForm`**: the instance carries
- * flat, fully-wired field components (`form.TextField`, `form.NumberField`, …) plus
- * `form.SubmitButton` and `form.Form`, while the entire native API (`form.Field`,
- * `form.Subscribe`, `form.handleSubmit`, `form.state`, `form.AppField`, …) stays
- * untouched on the same object.
+ * `useForm` is a **superset of TanStack Form's `useForm`**: the instance carries flat,
+ * fully-wired field components (`form.TextField`, `form.NumberField`, …) plus
+ * `form.SubmitButton`, while the entire native API (`form.Field`, `form.Subscribe`,
+ * `form.handleSubmit`, `form.state`, `form.AppField`, …) stays untouched on the same
+ * object. `Form` renders the `<form>` element, either around a caller-owned instance or
+ * around one it creates itself.
  *
  * Validation is pure pass-through: hand TanStack's native standard-schema validators
  * (zod / valibot / arktype) via `validators.onChange` / `onBlur` / `onSubmit`.
  *
  * @example
  * // in a kit package
- * export const { useForm } = createForm({ components })
+ * export const { useForm, Form } = createForm({ components })
  *
- * // in an app
- * const form = useForm({ defaultValues: { email: '' }, onSubmit: ({ value }) => save(value) })
- * <form.Form>
- *   <form.TextField name="email" label="Email" />
- *   <form.SubmitButton>Save</form.SubmitButton>
- * </form.Form>
+ * // in an app — the form lives exactly as long as the element
+ * <Form defaultValues={{ email: '' }} onSubmit={({ value }) => save(value)}>
+ *   {(form) => (
+ *     <>
+ *       <form.TextField name='email' label='Email' />
+ *       <form.SubmitButton>Save</form.SubmitButton>
+ *     </>
+ *   )}
+ * </Form>
  */
 export function createForm({ components }: CreateFormOptions) {
 	const { fieldContext, formContext } = createFormHookContexts()
@@ -87,7 +89,20 @@ export function createForm({ components }: CreateFormOptions) {
 			TOnServer,
 			TSubmitMeta
 		>,
-	) {
+	): KitFormApi<
+		TFormData,
+		TOnMount,
+		TOnChange,
+		TOnChangeAsync,
+		TOnBlur,
+		TOnBlurAsync,
+		TOnSubmit,
+		TOnSubmitAsync,
+		TOnDynamic,
+		TOnDynamicAsync,
+		TOnServer,
+		TSubmitMeta
+	> {
 		const form = useAppForm(options)
 
 		const fields = useMemo(
@@ -102,11 +117,140 @@ export function createForm({ components }: CreateFormOptions) {
 		return useMemo(() => Object.assign(form, fields), [form, fields])
 	}
 
-	return { useForm }
+	/**
+	 * Uncontrolled mode, split out so the hook is called unconditionally.
+	 *
+	 * Mounting this element **is** creating the form, which is what makes the uncontrolled
+	 * mode correct inside a dialog: closing it unmounts the element and the state goes with
+	 * it, instead of surviving in a parent that happens to have called the hook.
+	 */
+	function UncontrolledForm<
+		TFormData,
+		TOnMount extends undefined | FormValidateOrFn<TFormData>,
+		TOnChange extends undefined | FormValidateOrFn<TFormData>,
+		TOnChangeAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnBlur extends undefined | FormValidateOrFn<TFormData>,
+		TOnBlurAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnSubmit extends undefined | FormValidateOrFn<TFormData>,
+		TOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnDynamic extends undefined | FormValidateOrFn<TFormData>,
+		TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TSubmitMeta,
+	>(
+		props: FormUncontrolledProps<
+			TFormData,
+			TOnMount,
+			TOnChange,
+			TOnChangeAsync,
+			TOnBlur,
+			TOnBlurAsync,
+			TOnSubmit,
+			TOnSubmitAsync,
+			TOnDynamic,
+			TOnDynamicAsync,
+			TOnServer,
+			TSubmitMeta
+		>,
+	): ReactNode {
+		const { children, form: _ignored, ...rest } = props
+		const { options, elementProps } = splitFormProps(rest)
+		const instance = useForm(
+			options as FormOptions<
+				TFormData,
+				TOnMount,
+				TOnChange,
+				TOnChangeAsync,
+				TOnBlur,
+				TOnBlurAsync,
+				TOnSubmit,
+				TOnSubmitAsync,
+				TOnDynamic,
+				TOnDynamicAsync,
+				TOnServer,
+				TSubmitMeta
+			>,
+		)
+
+		return (
+			<FormShell
+				form={instance}
+				FormElement={components.Form}
+				elementProps={elementProps}
+			>
+				{children(instance)}
+			</FormShell>
+		)
+	}
+
+	/**
+	 * The `<form>` element, in either mode. See {@link FormProps} for the two shapes.
+	 *
+	 * Two overloads rather than one union parameter: TypeScript does not infer generics
+	 * through a union target, so a single `FormProps` parameter would silently fall back to
+	 * the defaults and strip the types off `validators` and `onSubmit`.
+	 */
+	function Form(props: FormControlledProps): ReactNode
+	function Form<
+		TFormData,
+		TOnMount extends undefined | FormValidateOrFn<TFormData>,
+		TOnChange extends undefined | FormValidateOrFn<TFormData>,
+		TOnChangeAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnBlur extends undefined | FormValidateOrFn<TFormData>,
+		TOnBlurAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnSubmit extends undefined | FormValidateOrFn<TFormData>,
+		TOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnDynamic extends undefined | FormValidateOrFn<TFormData>,
+		TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TSubmitMeta,
+	>(
+		props: FormUncontrolledProps<
+			TFormData,
+			TOnMount,
+			TOnChange,
+			TOnChangeAsync,
+			TOnBlur,
+			TOnBlurAsync,
+			TOnSubmit,
+			TOnSubmitAsync,
+			TOnDynamic,
+			TOnDynamicAsync,
+			TOnServer,
+			TSubmitMeta
+		>,
+	): ReactNode
+	function Form(props: AnyFormProps): ReactNode {
+		if (isControlled(props)) {
+			const { form, children, ...elementProps } = props
+			return (
+				<FormShell
+					form={form}
+					FormElement={components.Form}
+					elementProps={elementProps}
+				>
+					{children}
+				</FormShell>
+			)
+		}
+
+		// Overload resolution has already checked the caller; the implementation signature is
+		// deliberately the loose one, so the shape is spelled out again for the inner component.
+		return <UncontrolledForm {...(props as FormUncontrolledImplProps)} />
+	}
+
+	return { useForm, Form }
+}
+
+/**
+ * Which mode the caller picked.
+ *
+ * `form` is the discriminant: the uncontrolled shape declares it as `form?: never`, so its
+ * only legal value there is `undefined`.
+ */
+function isControlled(props: { form?: unknown }): props is FormControlledProps {
+	return props.form !== undefined
 }
 
 /** The bundle `createForm` returns — mirrors `DataGridBundle` in the grid packages. */
 export type FormBundle = ReturnType<typeof createForm>
-
-/** A form instance carrying both the native TanStack API and the flat field components. */
-export type BoundForm<TForm, TFormData> = TForm & FormFieldComponents<TFormData>

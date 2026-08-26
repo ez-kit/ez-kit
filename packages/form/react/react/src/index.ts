@@ -1,7 +1,9 @@
 export { createForm } from './create-form'
 export { TextInputType } from './contract'
 
-export type { BoundForm, CreateFormOptions, FormBundle } from './create-form'
+export type { CreateFormOptions, FormBundle } from './create-form'
+export type { BoundForm, KitFormApi } from './kit-form'
+export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
 	ButtonProps,
 	CheckboxFieldRenderProps,
@@ -20,7 +22,6 @@ export type {
 	BaseFieldProps,
 	CheckboxFieldProps,
 	FormFieldComponents,
-	FormWrapperProps,
 	NumberFieldProps,
 	RadioGroupFieldProps,
 	SelectFieldProps,
