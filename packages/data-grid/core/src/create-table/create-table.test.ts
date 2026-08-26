@@ -87,12 +87,12 @@ describe('createTable — sorting', () => {
 		expect(table.options.sortDescFirst).toBe(true)
 	})
 
-	it('sorting.removable: false → enableSortingRemoval: false', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { removable: false } })
+	it('sorting.clearable: false → enableSortingRemoval: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { clearable: false } })
 		expect(table.options.enableSortingRemoval).toBe(false)
 	})
 
-	it('sorting.removable not set — enableSortingRemoval untouched', () => {
+	it('sorting.clearable not set — enableSortingRemoval untouched', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, sorting: true })
 		expect(table.options.enableSortingRemoval).toBeUndefined()
 	})
@@ -369,12 +369,77 @@ describe('createTable — selection', () => {
 		expect(table.options.enableRowSelection).toBe(false)
 	})
 
-	it('selection: { onChange } fires callback with selected row ids', () => {
+	it('selection: { onChange } fires with the slice first, then the selected ids', () => {
 		const onChange = vi.fn()
 		const table = createTable({ data: DATA, columns: COLUMNS, selection: { onChange } })
-		// Select first row
 		table.getRow('1').toggleSelected(true)
-		expect(onChange).toHaveBeenCalledWith(['1'])
+		expect(onChange).toHaveBeenCalledWith({ '1': true }, ['1'])
+	})
+
+	// The assertion this suite was missing. `selection.onChange` used to be carried by TanStack's
+	// `onRowSelectionChange`, which *replaces* the built-in state writer — so supplying a callback
+	// silently stopped the selection from ever being recorded, and every checkbox went dead. The
+	// old test passed throughout, because it only checked that the callback fired.
+	it('selection state is still recorded when onChange is supplied', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: { onChange: vi.fn() } })
+		table.getRow('1').toggleSelected(true)
+		expect(table.getState().rowSelection).toEqual({ '1': true })
+		expect(table.getRow('1').getIsSelected()).toBe(true)
+	})
+})
+
+// ── per-feature onChange ──────────────────────────────────────────────────────
+
+describe('createTable — per-feature onChange', () => {
+	it('columnVisibility.onChange fires with the visibility slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: { onChange } })
+		table.getColumn('name')?.toggleVisibility(false)
+		expect(onChange).toHaveBeenCalledWith({ name: false })
+		expect(table.getState().columnVisibility).toEqual({ name: false })
+	})
+
+	it('pinning.column.onChange fires with the column-pinning slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { column: { onChange } } })
+		table.getColumn('name')?.pin('left')
+		expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ left: ['name'] }))
+	})
+
+	it('pinning.row.onChange fires with the row-pinning slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true, onChange } } })
+		table.getRow('1').pin('top')
+		expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ top: ['1'] }))
+	})
+
+	it('resizing.onChange fires with the committed column sizes', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { onChange } })
+		table.setColumnSizing({ name: 240 })
+		expect(onChange).toHaveBeenCalledWith({ name: 240 })
+	})
+
+	it('expanding.onChange fires with the expanded slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			expanding: { onChange, getRowCanExpand: () => true },
+		})
+		table.getRow('1').toggleExpanded(true)
+		expect(onChange).toHaveBeenCalledWith({ '1': true })
+	})
+
+	it('a disabled feature contributes no onChange', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			columnVisibility: { enabled: false, onChange },
+		})
+		table.getColumn('name')?.toggleVisibility(false)
+		expect(onChange).not.toHaveBeenCalled()
 	})
 })
 

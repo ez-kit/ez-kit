@@ -10,8 +10,13 @@ import type { FeatureToggle } from './utils/feature-flag'
 import type {
 	Column,
 	ColumnFiltersState,
+	ColumnPinningState,
+	ColumnSizingState,
+	ExpandedState,
 	FilterFn,
 	PaginationState,
+	RowPinningState,
+	RowSelectionState,
 	Row,
 	RowData,
 	RowModel,
@@ -19,6 +24,7 @@ import type {
 	TableOptionsResolved,
 	TableState,
 	Updater,
+	VisibilityState,
 } from '@tanstack/table-core'
 
 export type { SortingFn } from './column/types'
@@ -91,8 +97,14 @@ export type SortingConfig = FeatureToggle & {
 	manual?: boolean
 	/** First click sorts descending. Default: false. */
 	descFirst?: boolean
-	/** Allow a third click to clear the sort. Default: true. */
-	removable?: boolean
+	/**
+	 * Allow a third click to clear the sort. Default: true.
+	 *
+	 * Named `clearable`, not `removable`: {@link MultiSortConfig.removable} nested one level
+	 * below means something else entirely — removing a *column* from the multi-sort set — and
+	 * one word for two behaviours is how a config gets misread.
+	 */
+	clearable?: boolean
 	/**
 	 * Multi-column sort. `false` (default) = single-column only. `true` = enabled with defaults.
 	 *
@@ -261,68 +273,79 @@ export type LoadingState = {
 	error: unknown
 }
 
-export type PaginationConfig = FeatureToggle & {
-	manual?: boolean
-	/**
-	 * Server total-rows descriptor. When set in manual pagination mode, TanStack
-	 * derives `pageCount` automatically from `rowCount` ÷ `pageSize` (ceiling).
-	 * `table.getRowCount()` returns this value.
-	 *
-	 * Supply EITHER `pageCount` (page total, already divided) OR `rowCount` (raw
-	 * server row total, let TanStack divide) — not both.
-	 */
-	rowCount?: number
-	pageCount?: number
-	pageSize?: number
-	/**
-	 * Called whenever the pagination state changes (page index or size). Receives
-	 * the resolved {@link PaginationState}. Use this to mirror state into the URL
-	 * or fetch the next page from the server.
-	 *
-	 * @example
-	 * ```ts
-	 * pagination: {
-	 *   manual: true,
-	 *   onChange: ({ pageIndex, pageSize }) => fetchPage({ pageIndex, pageSize }),
-	 * }
-	 * ```
-	 */
-	onChange?: (pagination: PaginationState) => void
-	/**
-	 * Pagination mode. `'pages'` (default) renders a classic page footer. `'infinite'`
-	 * enables infinite scroll — mutually exclusive with the page footer. In infinite
-	 * mode the grid is **event-only**: it calls {@link PaginationConfig.onLoadMore} when a
-	 * load edge is reached, and the consumer appends rows via `table.appendData(rows)`.
-	 */
-	mode?: 'pages' | 'infinite'
-	/**
-	 * Infinite mode only. Controlled flag declaring whether more rows can be loaded
-	 * forward (scroll down). A **server-data descriptor** (like `pageCount`/`rowCount`),
-	 * so it is an option, not table state — only the consumer's API knows it. The React
-	 * layer reads it reactively to drive the loader / load-more control.
-	 */
-	hasNextPage?: boolean
-	/**
-	 * Infinite mode only. **Reserved for v2** (backward / prepend). Inert in v1.
-	 */
-	hasPreviousPage?: boolean
-	/**
-	 * Infinite mode only. Called when a load edge is reached (auto trigger) or the
-	 * "Load more" control is activated (manual trigger). Fetch the page and append rows
-	 * with `table.appendData(rows)`. The returned promise drives `isFetchingNextPage`;
-	 * a rejection surfaces `state.infinite.error` with a retry affordance. v1 always
-	 * passes `direction: 'forward'`.
-	 *
-	 * Prefer returning a promise so the loading indicator tracks the real request.
-	 * A `void` return still flips `isFetchingNextPage` on, then off on the next
-	 * microtask — so a synchronous handler shows a brief spinner flash.
-	 */
-	onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
-}
+/**
+ * The server-total descriptor, as a genuine either/or.
+ *
+ * Both forms exist because both kinds of API exist: one returns how many rows match, the other
+ * only how many pages there are. `rowCount` is the better one where it is available — TanStack
+ * derives `pageCount` from it (`rowCount` ÷ `pageSize`, ceiling), `table.getRowCount()` returns
+ * it, and the footer can say "1–10 of 137" instead of just "page 1 of 14".
+ *
+ * Supplying both is a contradiction waiting to drift apart, so the union forbids it rather than
+ * leaving "not both" as a sentence in the docs.
+ */
+export type PaginationTotals = { rowCount?: number; pageCount?: never } | { pageCount?: number; rowCount?: never }
+
+export type PaginationConfig = FeatureToggle &
+	PaginationTotals & {
+		manual?: boolean
+		pageSize?: number
+		/**
+		 * Called whenever the pagination state changes (page index or size). Receives
+		 * the resolved {@link PaginationState}. Use this to mirror state into the URL
+		 * or fetch the next page from the server.
+		 *
+		 * @example
+		 * ```ts
+		 * pagination: {
+		 *   manual: true,
+		 *   onChange: ({ pageIndex, pageSize }) => fetchPage({ pageIndex, pageSize }),
+		 * }
+		 * ```
+		 */
+		onChange?: (pagination: PaginationState) => void
+		/**
+		 * Pagination mode. `'pages'` (default) renders a classic page footer. `'infinite'`
+		 * enables infinite scroll — mutually exclusive with the page footer. In infinite
+		 * mode the grid is **event-only**: it calls {@link PaginationConfig.onLoadMore} when a
+		 * load edge is reached, and the consumer appends rows via `table.appendData(rows)`.
+		 */
+		mode?: 'pages' | 'infinite'
+		/**
+		 * Infinite mode only. Controlled flag declaring whether more rows can be loaded
+		 * forward (scroll down). A **server-data descriptor** (like `pageCount`/`rowCount`),
+		 * so it is an option, not table state — only the consumer's API knows it. The React
+		 * layer reads it reactively to drive the loader / load-more control.
+		 */
+		hasNextPage?: boolean
+		/**
+		 * Infinite mode only. **Reserved for v2** (backward / prepend). Inert in v1.
+		 */
+		hasPreviousPage?: boolean
+		/**
+		 * Infinite mode only. Called when a load edge is reached (auto trigger) or the
+		 * "Load more" control is activated (manual trigger). Fetch the page and append rows
+		 * with `table.appendData(rows)`. The returned promise drives `isFetchingNextPage`;
+		 * a rejection surfaces `state.infinite.error` with a retry affordance. v1 always
+		 * passes `direction: 'forward'`.
+		 *
+		 * Prefer returning a promise so the loading indicator tracks the real request.
+		 * A `void` return still flips `isFetchingNextPage` on, then off on the next
+		 * microtask — so a synchronous handler shows a brief spinner flash.
+		 */
+		onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
+	}
 
 export type SelectionConfig = FeatureToggle & {
-	/** Called when row selection changes. */
-	onChange?: (rowIds: string[]) => void
+	/**
+	 * Called when row selection changes.
+	 *
+	 * The slice comes first, like every other feature's `onChange`, so a controlled grid can
+	 * hand it straight back through `state.rowSelection`. The selected ids follow as a
+	 * convenience — deriving them is the common case and `Object.keys(...).filter(...)` at every
+	 * call site is noise.
+	 */
+	onChange?: (rowSelection: RowSelectionState, rowIds: string[]) => void
 	/** Allow selecting multiple rows. Default: true. */
 	multiple?: boolean
 }
@@ -368,16 +391,37 @@ export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unkn
 	 * carries it through to whichever adapter mounts the panel.
 	 */
 	renderExpanded?: TRenderExpanded
+	/** Called whenever the expanded set changes. Receives the resolved {@link ExpandedState}. */
+	onChange?: (expanded: ExpandedState) => void
+}
+
+export type ColumnVisibilityConfig = FeatureToggle & {
+	/**
+	 * Called whenever column visibility changes. Receives the resolved {@link VisibilityState}.
+	 * Use it to persist which columns a user hid.
+	 */
+	onChange?: (columnVisibility: VisibilityState) => void
+}
+
+export type ColumnPinningFeatureConfig = {
+	/** Called whenever column pinning changes. Receives the resolved {@link ColumnPinningState}. */
+	onChange?: (columnPinning: ColumnPinningState) => void
 }
 
 export type RowPinningConfig = {
 	top?: boolean
 	bottom?: boolean
+	/** Called whenever row pinning changes. Receives the resolved {@link RowPinningState}. */
+	onChange?: (rowPinning: RowPinningState) => void
 }
 
+/**
+ * Pinning groups two independent features over two separate state slices, so each carries its
+ * own `onChange` rather than the group carrying one callback for both.
+ */
 export type PinningConfig = FeatureToggle & {
 	/** Enable column pin UI (ColumnMenu in headers). */
-	column?: boolean
+	column?: boolean | ColumnPinningFeatureConfig
 	/** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
 	row?: boolean | RowPinningConfig
 }
@@ -402,6 +446,11 @@ export type ResizingConfig = FeatureToggle & {
 	mode?: ColumnResizeMode
 	/** Text direction for resize calculation. Default: 'ltr'. */
 	direction?: ColumnResizeDirection
+	/**
+	 * Called whenever a column's width changes. Receives the resolved {@link ColumnSizingState}.
+	 * Fires on the committed sizes, not on the transient drag info.
+	 */
+	onChange?: (columnSizing: ColumnSizingState) => void
 }
 
 /**
@@ -482,13 +531,10 @@ export type TableConfig<TRow extends object> = {
 	 * Column visibility (hide/show columns). `false` / omitted disables hiding for all
 	 * columns; `true` enables it (per-column `visibility` controls still apply).
 	 *
-	 * A plain boolean on purpose: core has no knobs of its own here, it only gates
-	 * `enableHiding`. The UI config (e.g. the toolbar button) is a React concern and
-	 * lives on the adapter's `ColumnVisibilityUIConfig`, which passes only the resolved
-	 * boolean down. Typing this `boolean | object` instead would let any misspelled key
-	 * through unchecked.
+	 * The UI config (e.g. the toolbar button) is a React concern and lives on the adapter's
+	 * `ColumnVisibilityUIConfig`, which extends this one.
 	 */
-	columnVisibility?: boolean
+	columnVisibility?: boolean | ColumnVisibilityConfig
 	/**
 	 * Pinning configuration. Column pinning and row pinning are gated independently:
 	 * - `true` — enable column menu UI + row pin top+bottom

@@ -12,6 +12,7 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { PaginationVariant } from './types'
 import type {
+	ColumnVisibilityConfig,
 	ConfirmationOptions,
 	FeatureToggle,
 	CreatingConfig,
@@ -238,7 +239,12 @@ export type NormalizedPageWindowConfig = {
 	boundaries: number
 }
 
-export type ColumnVisibilityUIConfig = FeatureToggle & {
+/**
+ * The headless {@link ColumnVisibilityConfig} plus this layer's `toolbar` auto-mount flag —
+ * the same `React*` shape every other feature uses, so `onChange` is reachable from a grid
+ * that only ever imports the adapter.
+ */
+export type ColumnVisibilityUIConfig = ColumnVisibilityConfig & {
 	/** Show a column visibility toggle button in the toolbar. Default: false. */
 	toolbar?: boolean
 }
