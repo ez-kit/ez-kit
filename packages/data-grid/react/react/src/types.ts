@@ -83,6 +83,8 @@ export type TableProps = HTMLAttributes<HTMLTableElement>
  */
 export type TheadProps = HTMLAttributes<HTMLTableSectionElement> & RefAttributes<HTMLTableSectionElement>
 export type TbodyProps = HTMLAttributes<HTMLTableSectionElement>
+/** Table footer section. Same shape as {@link TbodyProps} — no ref, nothing is measured there. */
+export type TfootProps = HTMLAttributes<HTMLTableSectionElement>
 /** Like {@link TheadProps}, the ref must reach the rendered row: pinned rows are measured there. */
 export type TrProps = HTMLAttributes<HTMLTableRowElement> & RefAttributes<HTMLTableRowElement>
 export type ThProps = ThHTMLAttributes<HTMLTableCellElement> & { pinned?: 'left' | 'right' | false }
@@ -504,6 +506,7 @@ export type GridComponentRegistry = {
 	Table?: ComponentType<TableProps>
 	Thead?: ComponentType<TheadProps>
 	Tbody?: ComponentType<TbodyProps>
+	Tfoot?: ComponentType<TfootProps>
 	Tr?: ComponentType<TrProps>
 	Th?: ComponentType<ThProps>
 	Td?: ComponentType<TdProps>

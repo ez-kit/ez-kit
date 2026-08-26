@@ -37,7 +37,7 @@ import { SortIndicator } from './blocks/sorting/SortIndicator'
 import { SortMenu } from './blocks/sorting/SortMenu'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
-import { Table, TableBody, TableHead, TableHeader, TableRow } from './components/ui/table'
+import { Table, TableBody, TableFooter, TableHead, TableHeader, TableRow } from './components/ui/table'
 
 import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
@@ -46,6 +46,7 @@ const components = {
 		Table,
 		Thead: TableHeader,
 		Tbody: TableBody,
+		Tfoot: TableFooter,
 		Tr: TableRow,
 		Th: TableHead,
 		Td,

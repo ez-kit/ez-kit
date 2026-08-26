@@ -3,7 +3,7 @@
 import { Table as HeroTable, cn } from '@heroui/react'
 import { Children, createContext, isValidElement, useContext, useMemo } from 'react'
 
-import type { TableProps, TbodyProps, TdProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
+import type { TableProps, TbodyProps, TdProps, TfootProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
 import type { ComponentProps, Key } from 'react'
 
 const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>({ inHeader: false })
@@ -35,6 +35,14 @@ export function Thead({ children, ...props }: TheadProps) {
 
 export function Tbody(props: TbodyProps) {
 	return <HeroTable.Body {...(props as unknown as ComponentProps<typeof HeroTable.Body>)} />
+}
+
+/**
+ * HeroUI's table has no footer slot of its own, so this renders a plain `<tfoot>`. It carries
+ * no styling — visuals belong to whatever the consumer puts inside it.
+ */
+export function Tfoot(props: TfootProps) {
+	return <tfoot {...props} />
 }
 
 export function Tr({ children, ...props }: TrProps) {

@@ -16,6 +16,7 @@ import { DraftBar } from './draft-bar'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
+import { Footer } from './footer'
 import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
 import { LoadingBody } from './loading-body'
@@ -338,6 +339,7 @@ function DataGridRoot<TRow extends object>(props: DataGridProps<TRow>) {
 type DataGridType = typeof DataGridRoot & {
 	Toolbar: typeof Toolbar
 	Table: typeof DataGridTable
+	Footer: typeof Footer
 	Header: typeof Header
 	Body: typeof Body
 	Row: typeof DataGridRow
@@ -363,6 +365,7 @@ type DataGridType = typeof DataGridRoot & {
 export const DataGrid = DataGridRoot as DataGridType
 DataGrid.Toolbar = Toolbar
 DataGrid.Table = DataGridTable
+DataGrid.Footer = Footer
 DataGrid.Header = Header
 DataGrid.Body = Body
 DataGrid.Row = DataGridRow

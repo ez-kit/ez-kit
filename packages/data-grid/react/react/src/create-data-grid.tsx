@@ -15,6 +15,9 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { UseDataGridConfig } from './use-data-grid'
 import type { ColumnDef, ColumnHelper } from '@ez-kit/data-grid-core'
 
+/** The custom cell-type keys a registry actually holds, as a string union. */
+type KitCellType<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTypes, string>
+
 export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 	components: Partial<GridComponents>
 	cellTypes?: TCellTypes
@@ -40,9 +43,9 @@ export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
 	useDataGridStore: typeof useDataGridStore
 	GridComponentsProvider: typeof GridComponentsProvider
 	createColumns: <TRow extends object>(
-		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],
-	) => ColumnDef<TRow, Extract<keyof TCellTypes, string>>[]
-	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, Extract<keyof TCellTypes, string>>
+		defs: ColumnDef<TRow, KitCellType<TCellTypes>>[],
+	) => ColumnDef<TRow, KitCellType<TCellTypes>>[]
+	createColumnHelper: <TRow extends object>() => ColumnHelper<TRow, KitCellType<TCellTypes>>
 	extendDataGrid: <TExtra extends CellTypeRegistry>(extraCellTypes: TExtra) => DataGridBundle<TCellTypes & TExtra>
 }
 
@@ -67,8 +70,8 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	cellTypes,
 	defaultOptions,
 }: CreateDataGridOptions<TCellTypes>): DataGridBundle<TCellTypes> {
-	type DataGridProps = Parameters<typeof DataGrid>[0]
-	function BoundDataGrid(props: DataGridProps) {
+	type BoundProps = Parameters<typeof DataGrid>[0]
+	function BoundDataGrid(props: BoundProps) {
 		return (
 			<GridComponentsProvider components={components}>
 				{cellTypes != null ? (
@@ -90,16 +93,16 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	Object.assign(BoundDataGrid, DataGrid)
 
 	function boundDefineColumns<TRow extends object>(
-		defs: ColumnDef<TRow, Extract<keyof TCellTypes, string>>[],
-	): ColumnDef<TRow, Extract<keyof TCellTypes, string>>[] {
+		defs: ColumnDef<TRow, KitCellType<TCellTypes>>[],
+	): ColumnDef<TRow, KitCellType<TCellTypes>>[] {
 		return defs
 	}
 
-	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, Extract<keyof TCellTypes, string>> {
-		const customTypeKeys = Object.keys(cellTypes ?? {}) as Extract<keyof TCellTypes, string>[]
+	function boundCreateColumnHelper<TRow extends object>(): ColumnHelper<TRow, KitCellType<TCellTypes>> {
+		const customTypeKeys = Object.keys(cellTypes ?? {}) as KitCellType<TCellTypes>[]
 		return customTypeKeys.length > 0
-			? createColumnHelper<TRow, Extract<keyof TCellTypes, string>>(customTypeKeys)
-			: (createColumnHelper<TRow>() as ColumnHelper<TRow, Extract<keyof TCellTypes, string>>)
+			? createColumnHelper<TRow, KitCellType<TCellTypes>>(customTypeKeys)
+			: (createColumnHelper<TRow>() as ColumnHelper<TRow, KitCellType<TCellTypes>>)
 	}
 
 	// Bind the kit-level `defaultOptions` as the base option layer for every call. The provider

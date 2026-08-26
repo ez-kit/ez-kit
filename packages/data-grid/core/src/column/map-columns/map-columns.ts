@@ -26,7 +26,7 @@ export type MapColumnsOptions = {
 }
 
 export function mapColumns<TRow extends object>(
-	defs: ColumnDef<TRow>[],
+	defs: ColumnDef<TRow, string>[],
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow>[] {
@@ -34,7 +34,7 @@ export function mapColumns<TRow extends object>(
 }
 
 function mapColumn<TRow extends object>(
-	def: ColumnDef<TRow>,
+	def: ColumnDef<TRow, string>,
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow> {

@@ -37,6 +37,7 @@ import type {
 	ResizerProps,
 	SelectionBarProps,
 	TbodyProps,
+	TfootProps,
 	TdProps,
 	ThProps,
 	TheadProps,
@@ -59,6 +60,9 @@ function TestThead(props: TheadProps) {
 }
 function TestTbody(props: TbodyProps) {
 	return <tbody {...props} />
+}
+function TestTfoot(props: TfootProps) {
+	return <tfoot {...props} />
 }
 function TestTr(props: TrProps) {
 	return <tr {...props} />
@@ -729,6 +733,7 @@ export const testComponents: FullGridComponents = {
 		Table: TestTable,
 		Thead: TestThead,
 		Tbody: TestTbody,
+		Tfoot: TestTfoot,
 		Tr: TestTr,
 		Th: TestTh,
 		Td: TestTd,

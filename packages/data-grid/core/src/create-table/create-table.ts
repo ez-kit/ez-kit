@@ -49,7 +49,7 @@ function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string,
 	return opts
 }
 
-function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
+function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow, string>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
 	for (const def of defs) {
 		if (def.visibility && typeof def.visibility === 'object' && def.visibility.initialHidden) {

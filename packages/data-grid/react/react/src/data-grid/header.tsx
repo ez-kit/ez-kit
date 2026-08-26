@@ -12,7 +12,8 @@ import { renderFilterInput } from './render-filter-input'
 import { useDataGridInstance, useDataGridStore } from './table-context'
 
 import type { DataTable } from '@ez-kit/data-grid-core'
-import type { KeyboardEvent } from 'react'
+import type { HeaderGroup } from '@tanstack/table-core'
+import type { KeyboardEvent, ReactNode } from 'react'
 
 export type DataGridHeaderProps = {
 	/**
@@ -24,6 +25,36 @@ export type DataGridHeaderProps = {
 	 * silently lose sticky positioning.
 	 */
 	stickyHeader?: boolean
+	/**
+	 * Custom header content, rendered inside the kit's `<Thead>` — so sticky positioning and
+	 * the measured header-height CSS variable still apply.
+	 *
+	 * Omit it for the built-in header rows: sort affordances, the column menu, resize
+	 * handles and the inline / popover filter controls. Supplying `children` opts out of all
+	 * of that in exchange for full control over the markup.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.Header>
+	 *   {({ headerGroups }) =>
+	 *     headerGroups.map((group) => (
+	 *       <tr key={group.id}>
+	 *         {group.headers.map((header) => <th key={header.id}>{header.column.id}</th>)}
+	 *       </tr>
+	 *     ))
+	 *   }
+	 * </DataGrid.Header>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridHeaderRenderArgs) => ReactNode)
+}
+
+/** What a `<DataGrid.Header>` render function receives. */
+export type DataGridHeaderRenderArgs = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	table: DataTable<any>
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	headerGroups: HeaderGroup<any>[]
 }
 
 /**
@@ -95,7 +126,7 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
  * structural CSS reads them on `[data-pinned]` elements.
  */
-export function Header({ stickyHeader }: DataGridHeaderProps = {}) {
+export function Header({ stickyHeader, children }: DataGridHeaderProps = {}) {
 	const instance = useDataGridInstance()
 	const table = instance.table
 	const isSticky = stickyHeader ?? table.grid.stickyHeader
@@ -124,6 +155,18 @@ export function Header({ stickyHeader }: DataGridHeaderProps = {}) {
 	const colPinEnabled = table.grid.columnPinning
 	const filteringVariant = table.grid.filtering.variant
 	const filteringDebounce = table.grid.filtering.debounce
+
+	if (children !== undefined) {
+		return (
+			<Thead
+				ref={theadRef}
+				data-slot='thead'
+				{...(isSticky ? { 'data-sticky': 'true' } : {})}
+			>
+				{typeof children === 'function' ? children({ table, headerGroups: table.getHeaderGroups() }) : children}
+			</Thead>
+		)
+	}
 
 	return (
 		<Thead

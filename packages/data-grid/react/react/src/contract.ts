@@ -52,6 +52,7 @@ export const FEATURE_COMPONENTS = {
 		'Table',
 		'Thead',
 		'Tbody',
+		'Tfoot',
 		'Tr',
 		'Th',
 		'Td',

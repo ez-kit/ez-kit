@@ -58,9 +58,15 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 	// Type-level half of the same guarantee: these annotations are the assertion — the test
 	// fails at `pnpm typecheck` if the kit stops carrying a type an example relies on.
+	//
+	// `KitCellType` is the point of the kit-bound helpers: they are typed to the cell types
+	// this kit registers, so `cell: { type: … }` is checked against them. The headless
+	// helpers the star export used to supply resolve `TCustomCellTypes` to `never`, and
+	// annotating with them here would compile while checking nothing.
 	it('types a consumer that imports from the kit alone', () => {
-		const columns: ColumnDef<User>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
-		const helper: ColumnHelper<User> = createColumnHelper<User>()
+		type KitCellType = Extract<keyof typeof cellTypes, string>
+		const columns: ColumnDef<User, KitCellType>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+		const helper: ColumnHelper<User, KitCellType> = createColumnHelper<User>()
 		const sorting: SortingState = [{ id: 'name', desc: false }]
 		const props: DataGridProps<User> = { data: [{ id: 1, name: 'Ada' }], columns }
 

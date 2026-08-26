@@ -6,6 +6,7 @@ import { Menu } from './blocks/core/Menu'
 import { Table } from './blocks/core/Table'
 import { Tbody } from './blocks/core/Tbody'
 import { Td } from './blocks/core/Td'
+import { Tfoot } from './blocks/core/Tfoot'
 import { Th } from './blocks/core/Th'
 import { Thead } from './blocks/core/Thead'
 import { Toolbar } from './blocks/core/Toolbar'
@@ -41,7 +42,7 @@ import { SortMenu } from './blocks/sorting/SortMenu'
 import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
 export const nativeComponents: FullGridComponents = {
-	core: { Table, Thead, Tbody, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu },
+	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu },
 	pagination: { Pagination, PageSizer },
 	sorting: { SortIndicator, SortMenu },
 	filtering: {

@@ -422,7 +422,17 @@ export type InitialTableState = Omit<
 
 export type TableConfig<TRow extends object> = {
 	data: TRow[]
-	columns: ColumnDef<TRow>[]
+	/**
+	 * Columns, from `createColumns` / `createColumnHelper` or written inline.
+	 *
+	 * The cell-type parameter is deliberately widened to `string` here rather than threaded
+	 * through `TableConfig`: a second type parameter on this type destroys `TRow` inference
+	 * at every `useDataGrid({ data, columns })` call site, which is far more costly than what
+	 * it would buy. Nothing is lost — a custom `cell: { type: … }` is checked against the
+	 * kit's registry by the **bound** `createColumns` / `createColumnHelper` that produced the
+	 * array, which is where the author writes it. This slot only has to accept the result.
+	 */
+	columns: ColumnDef<TRow, string>[]
 
 	/**
 	 * Returns a stable string ID for a row.

@@ -130,6 +130,8 @@ export { DataGrid } from './data-grid/data-grid'
 export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps } from './data-grid/data-grid'
 export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/table'
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
+export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
+export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
 export type { DataGridToolbarProps } from './data-grid/toolbar'
 
 // Sub-components (also available as DataGrid.SelectionBar)
@@ -193,6 +195,7 @@ export type {
 	PageSizerProps,
 	PaginationProps,
 	TbodyProps,
+	TfootProps,
 	TdProps,
 	ThProps,
 	TheadProps,
