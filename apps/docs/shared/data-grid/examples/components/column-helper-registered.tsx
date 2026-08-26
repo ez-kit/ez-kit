@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
-import type { CellTypeRegistry, ColumnDef, FieldState } from '@ez-kit/data-grid-react'
+import type { CellTypeRegistry, FieldState } from '@ez-kit/data-grid-react'
 
 // ── data ─────────────────────────────────────────────────────────────────────
 
@@ -113,10 +113,9 @@ export function ColumnHelperRegisteredExample() {
 					setData((prev) => prev.map((row) => (row.id.toString() === rowId ? { ...row, ...values } : row)))
 				},
 			}}
-			// `columns` is typed `ColumnDef<TRow>[]` — i.e. `TCustom = never` — so a per-grid
-			// registered id does not survive the assignment even though `cellTypes` registers it.
-			// Columns built by a bundle's own `createColumns` / `createColumnHelper` need no cast.
-			columns={registeredColumns as ColumnDef<Employee>[]}
+			// `columns` infers its custom-cell-type parameter from the columns themselves, so
+			// the 'rating' id registered by `cellTypes` survives the assignment — no cast needed.
+			columns={registeredColumns}
 			cellTypes={RATING_CELL_TYPES}
 			sorting
 		/>
