@@ -29,7 +29,7 @@ import type {
 	VirtualizationConfig,
 } from '@ez-kit/data-grid-core'
 import type { Row, Table, TableState } from '@tanstack/table-core'
-import type { ComponentType, ReactElement } from 'react'
+import type { ComponentType, HTMLAttributes, ReactElement } from 'react'
 
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
@@ -415,6 +415,23 @@ export type LayoutConfig = {
 	maxHeight?: string
 }
 
+/**
+ * Per-row DOM props, resolved for every rendered row and forwarded to the kit's `Tr`.
+ *
+ * The one thing the grid could not express: "style rows whose status is failed". Replacing the
+ * `Tr` component reaches every row and knows nothing about the data; a `<DataGrid.Body>` render
+ * function reaches the data but gives up pinned rows, expanded panels, the creating row, the
+ * fallback states, the infinite footer and the refetch overlay along with it.
+ *
+ * Structural attributes the stylesheet depends on — `data-slot`, `data-row-id`, `data-depth`,
+ * `data-pinned`, `data-virtual` — are applied **after** this and win; `className` is appended to
+ * the kit's own rather than replacing it. Everything else (`title`, `onClick`, `aria-*`, `style`)
+ * lands as given.
+ *
+ * Called during render, once per visible row: keep it cheap and free of side effects.
+ */
+export type RowPropsResolver<TRow extends object> = (row: Row<TRow>) => HTMLAttributes<HTMLTableRowElement> | undefined
+
 export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
@@ -459,6 +476,15 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * Must be used together with `onStateChange` to reflect state updates back.
 	 */
 	state?: Partial<TableState>
+	/**
+	 * Per-row DOM props — see {@link RowPropsResolver}.
+	 *
+	 * @example
+	 * ```tsx
+	 * rowProps: (row) => (row.original.status === 'failed' ? { className: 'bg-red-50' } : undefined)
+	 * ```
+	 */
+	rowProps?: RowPropsResolver<TRow>
 	/**
 	 * Presentational layout of the grid shell — how tall it is and whether its header sticks.
 	 *
@@ -559,6 +585,7 @@ export function useDataGrid<TRow extends object>(
 		state,
 		onStateChange,
 		layout,
+		rowProps,
 		...restConfig
 	} = config
 
@@ -759,6 +786,7 @@ export function useDataGrid<TRow extends object>(
 
 	table.grid = {
 		cellTypes,
+		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),

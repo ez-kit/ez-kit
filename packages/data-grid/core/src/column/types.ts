@@ -417,6 +417,30 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 */
 	resizing?: false
 
+	/**
+	 * Class applied to this column's header cell (`<th>`).
+	 *
+	 * Deliberately three names rather than one `className`: a single field would have to mean
+	 * "header and cells alike", and that is almost never what a column wants — right-alignment
+	 * belongs to both, a value-driven highlight only to the cells.
+	 */
+	headerClassName?: string
+	/**
+	 * Class applied to this column's body cells (`<td>`).
+	 *
+	 * The function form runs per cell, so it can key off the value or the row — the common
+	 * "colour this cell by its status" case, which previously had no route that did not involve
+	 * rebuilding the whole body. Return `undefined` to add nothing.
+	 *
+	 * @example
+	 * ```ts
+	 * { accessorKey: 'balance', cellClassName: ({ value }) => (Number(value) < 0 ? 'text-red-600' : undefined) }
+	 * ```
+	 */
+	cellClassName?: string | ((ctx: CellViewCtx<TRow, unknown>) => string | undefined)
+	/** Class applied to this column's footer cell. Only rendered inside `<DataGrid.Footer />`. */
+	footerClassName?: string
+
 	// Pass-through TanStack options
 	size?: number
 	minSize?: number
@@ -430,6 +454,12 @@ declare module '@tanstack/table-core' {
 		columnPinning?: false | ColumnPinningDef
 		cellType?: CellType
 		config?: Record<string, unknown>
+		/** Class for this column's header cell, from `column.headerClassName`. */
+		headerClassName?: string
+		/** Class (or per-cell resolver) for this column's body cells, from `column.cellClassName`. */
+		cellClassName?: string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
+		/** Class for this column's footer cell, from `column.footerClassName`. */
+		footerClassName?: string
 		/** Resolved view renderer from `cell.component`. */
 		cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
 		filtering?: false | ColumnFilteringConfig

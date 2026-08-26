@@ -89,6 +89,9 @@ export function Footer({ children }: DataGridFooterProps = {}) {
 								key={header.id}
 								colSpan={header.colSpan}
 								{...(pinned ? { pinned, 'data-pinned': pinned } : {})}
+								{...(header.column.columnDef.meta?.footerClassName !== undefined
+									? { className: header.column.columnDef.meta.footerClassName }
+									: {})}
 							>
 								{header.isPlaceholder ? null : flexRender(header.column.columnDef.footer, header.getContext())}
 							</Td>

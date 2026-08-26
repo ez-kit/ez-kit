@@ -45,6 +45,8 @@ export type {
 	ReactPaginationConfig,
 	ReactSelectionConfig,
 	ReactSortingConfig,
+	RowPropsResolver,
+	LayoutConfig,
 	SelectionPanelCallbackArgs,
 	SelectionPanelConfig,
 	SelectionPanelVariant,
@@ -132,8 +134,8 @@ export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/ta
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
-export type { DataGridRowProps } from './data-grid/row'
-export type { DataGridCellProps } from './data-grid/cell'
+export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
+export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
 export type { DataGridSortTriggerProps, DataGridSortTriggerRenderArgs } from './data-grid/sort-trigger'

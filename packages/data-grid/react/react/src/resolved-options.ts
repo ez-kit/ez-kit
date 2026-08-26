@@ -13,6 +13,7 @@ import type {
 	NormalizedInfiniteConfig,
 	NormalizedPageWindowConfig,
 	NormalizedVirtualizationConfig,
+	RowPropsResolver,
 	SelectionPanelConfig,
 } from './use-data-grid'
 import type { RowData } from '@tanstack/table-core'
@@ -40,6 +41,11 @@ import type { ComponentType } from 'react'
 export type ResolvedGridOptions = {
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
+	/**
+	 * Per-row DOM props resolver. Row-erased here, like `renderExpanded` and the cell registry —
+	 * every reader of `table.grid` is a component with no `TRow` of its own.
+	 */
+	rowProps?: RowPropsResolver<never> | undefined
 	/** Resolved presentational layout of the grid shell. */
 	layout: {
 		/** The header sticks to the top of the scroll container. */

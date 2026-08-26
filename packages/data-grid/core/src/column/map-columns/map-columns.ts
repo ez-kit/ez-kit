@@ -10,6 +10,12 @@ import type { OperatorRegistry } from '../../features/operators'
 import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
 
 /**
+ * `cellClassName` is declared per row type on the column and row-erased on the meta, exactly
+ * like `cellView` beside it — the meta is read by renderers that have no `TRow`.
+ */
+type ColumnMetaClassName = string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
+
+/**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
  *
  * - pinning, filtering, editing, creating → column meta
@@ -59,6 +65,9 @@ function mapColumn<TRow extends object>(
 		maxSize,
 		validateOn,
 		validateDebounceMs,
+		headerClassName,
+		cellClassName,
+		footerClassName,
 	} = def
 
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
@@ -70,6 +79,9 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'creating', creating)
 	setIfDefined(meta, 'validateOn', validateOn)
 	setIfDefined(meta, 'validateDebounceMs', validateDebounceMs)
+	setIfDefined(meta, 'headerClassName', headerClassName)
+	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
+	setIfDefined(meta, 'footerClassName', footerClassName)
 	// Implicit cellType='text' when not provided so registry-driven form rendering
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.

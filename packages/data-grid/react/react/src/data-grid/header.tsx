@@ -248,6 +248,9 @@ export function Header({ stickyHeader, children }: DataGridHeaderProps = {}) {
 								colSpan={header.colSpan}
 								style={pinVars}
 								pinned={pinned}
+								{...(header.column.columnDef.meta?.headerClassName !== undefined
+									? { className: header.column.columnDef.meta.headerClassName }
+									: {})}
 								{...(pinned ? { 'data-pinned': pinned } : {})}
 								{...(canResize ? { 'data-resizable': 'true' } : {})}
 								{...draftSortAttrs}
