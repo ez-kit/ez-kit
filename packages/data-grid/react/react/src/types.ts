@@ -330,7 +330,7 @@ export type ClearFiltersButtonComponentProps = {
 	/** True when no filter is active; kit can render the button in a disabled state. */
 	disabled: boolean
 	/** Clear every column filter and the global filter. */
-	onPress: () => void
+	onClick: () => void
 	/** Optional custom contents. When absent the kit renders its default (icon-only). */
 	children?: ReactNode
 	/** Accessibility label. Defaults to "Clear filters" when omitted. */

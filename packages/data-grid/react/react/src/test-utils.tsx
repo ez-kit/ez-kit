@@ -564,14 +564,14 @@ function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipPro
 		</span>
 	)
 }
-function TestClearFiltersButton({ disabled, onPress, children, ariaLabel }: ClearFiltersButtonComponentProps) {
+function TestClearFiltersButton({ disabled, onClick, children, ariaLabel }: ClearFiltersButtonComponentProps) {
 	return (
 		<button
 			type='button'
 			data-slot='clear-filters-button'
 			aria-label={ariaLabel}
 			disabled={disabled}
-			onClick={onPress}
+			onClick={onClick}
 		>
 			{children ?? '⌫'}
 		</button>

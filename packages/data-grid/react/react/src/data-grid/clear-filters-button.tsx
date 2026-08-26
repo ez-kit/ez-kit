@@ -52,7 +52,7 @@ export function ClearFiltersButton({
 	return (
 		<Component
 			disabled={!hasAnyFilter}
-			onPress={() => {
+			onClick={() => {
 				table.resetColumnFilters()
 				table.setGlobalFilter(undefined)
 			}}

@@ -5,17 +5,18 @@ import { Button as HeroButton } from '@heroui/react'
 import type { ButtonProps } from '@ez-kit/data-grid-react'
 import type { ComponentProps } from 'react'
 
-export function Button({ disabled, type, onClick, children, ...props }: ButtonProps) {
-	const heroProps = props as unknown as ComponentProps<typeof HeroButton>
-
+/**
+ * `onClick` is forwarded as-is: react-aria accepts it as an official alias of `onPress`
+ * and hands the handler a real `MouseEvent`, so the contract's DOM handler gets the
+ * event it is typed for. The cast is `exactOptionalPropertyTypes` only — react-aria
+ * declares its optional props without `| undefined`.
+ */
+export function Button({ disabled, type, children, ...props }: ButtonProps) {
 	return (
 		<HeroButton
-			{...heroProps}
+			{...(props as ComponentProps<typeof HeroButton>)}
 			type={type ?? 'button'}
 			{...(disabled === undefined ? {} : { isDisabled: disabled })}
-			onPress={(e) => {
-				onClick?.(e as unknown as Parameters<NonNullable<ButtonProps['onClick']>>[0])
-			}}
 		>
 			{children}
 		</HeroButton>
