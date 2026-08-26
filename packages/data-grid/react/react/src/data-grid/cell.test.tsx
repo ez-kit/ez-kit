@@ -26,8 +26,10 @@ beforeAll(() => {
 type Row = { id: number; name: string }
 const DATA: Row[] = [{ id: 1, name: 'Alice' }]
 const SPY_TYPE = 'spy' as const
-const COLUMNS = createColumns<Row>([
-	// `cell.type` is loose — relies on the cellType registry passed via `cellTypes` prop.
+// The registry arrives at runtime via the `cellTypes` prop, so the second type argument is
+// how this call site declares which custom types it means. Omitting it defaults to `never` —
+// the unbound helper cannot know a registry it was never given.
+const COLUMNS = createColumns<Row, typeof SPY_TYPE>([
 	{ accessorKey: 'name', cell: { type: SPY_TYPE }, editing: {}, creating: {} },
 ])
 

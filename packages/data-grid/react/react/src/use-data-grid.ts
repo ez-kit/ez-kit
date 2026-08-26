@@ -26,7 +26,7 @@ import type {
 	SelectionConfig,
 	SortingConfig,
 	TableConfig,
-	VirtualizedConfig,
+	VirtualizationConfig,
 } from '@ez-kit/data-grid-core'
 import type { Row, Table, TableState } from '@tanstack/table-core'
 import type { ComponentType, ReactElement } from 'react'
@@ -105,16 +105,16 @@ export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig
 }
 
 /** Normalized virtualized config stored on the table instance. */
-export type NormalizedVirtualizedConfig = {
+export type NormalizedVirtualizationConfig = {
 	row: RowVirtualOptions
 }
 
-function normalizeVirtualized(
-	virtualized: boolean | VirtualizedConfig | undefined,
-): NormalizedVirtualizedConfig | undefined {
-	if (!isFeatureEnabled(virtualized)) return undefined
-	if (typeof virtualized !== 'object') return { row: {} }
-	const row = virtualized.row
+function normalizeVirtualization(
+	virtualization: boolean | VirtualizationConfig | undefined,
+): NormalizedVirtualizationConfig | undefined {
+	if (!isFeatureEnabled(virtualization)) return undefined
+	if (typeof virtualization !== 'object') return { row: {} }
+	const row = virtualization.row
 	if (!row) return undefined
 	if (row === true) return { row: {} }
 	return { row }
@@ -389,6 +389,32 @@ export type ReactSortingConfig = {
 	toolbar?: boolean
 } & SortingConfig
 
+/**
+ * Presentational layout of the grid shell. Purely visual — nothing here changes the row model.
+ */
+export type LayoutConfig = {
+	/**
+	 * Make the table header stick to the top while the body scrolls.
+	 *
+	 * Requires a bounded scroll container, which the structural stylesheet gives it:
+	 * {@link LayoutConfig.maxHeight}, or the `400px` fallback baked into
+	 * `--dg-table-max-height`.
+	 */
+	stickyHeader?: boolean
+	/**
+	 * Height of the scroll container, as any CSS length (`'32rem'`, `'60vh'`, `'500px'`).
+	 *
+	 * Writes the CSS custom properties the structural stylesheet already reads —
+	 * `--dg-table-max-height` normally, `--dg-virtual-height` under
+	 * {@link UseDataGridConfig.virtualization}, where the container needs a definite height
+	 * rather than a cap. Both were previously reachable only by setting the variable on a
+	 * parent by hand, which is not something an option list can document.
+	 *
+	 * Omitted, the stylesheet defaults apply: `400px` capped, `600px` virtualized.
+	 */
+	maxHeight?: string
+}
+
 export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
@@ -434,11 +460,14 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	state?: Partial<TableState>
 	/**
-	 * Make the table header stick to the top when the table scrolls vertically.
-	 * The scroll container height defaults to `400px`; override via the
-	 * `--dg-table-max-height` CSS variable on a parent element.
+	 * Presentational layout of the grid shell — how tall it is and whether its header sticks.
+	 *
+	 * Deliberately its own group rather than loose root flags: everything here is about the
+	 * chrome around the rows, not about a feature, and the group is where `density` /
+	 * `striped` / `borders` will land without each arriving as another root-level boolean
+	 * beside `sorting` and `editing`.
 	 */
-	stickyHeader?: boolean
+	layout?: LayoutConfig
 	/**
 	 * Pagination config. Page-based by default; set `mode: 'infinite'` for infinite
 	 * scroll. The React layer adds `trigger` / `threshold` detection tuning on top of
@@ -529,7 +558,7 @@ export function useDataGrid<TRow extends object>(
 		pagination: rawPagination,
 		state,
 		onStateChange,
-		stickyHeader,
+		layout,
 		...restConfig
 	} = config
 
@@ -725,12 +754,15 @@ export function useDataGrid<TRow extends object>(
 	// the freshest closures (notably `infinite.onLoadMore`). This replaced eighteen private
 	// `Symbol()` keys, each written and read through an untyped double cast.
 	const colPinEnabled = config.pinning === true || Boolean(featureConfig(config.pinning)?.column)
-	const virtualizedConfig = normalizeVirtualized(config.virtualized)
+	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
 	table.grid = {
 		cellTypes,
-		stickyHeader: stickyHeader ?? false,
+		layout: {
+			stickyHeader: layout?.stickyHeader ?? false,
+			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
+		},
 		columnPinning: colPinEnabled,
 		columnVisibility: isFeatureEnabled(columnVisibility) ? columnVisibility : undefined,
 		sorting: isFeatureEnabled(config.sorting) ? config.sorting : undefined,
@@ -752,7 +784,7 @@ export function useDataGrid<TRow extends object>(
 			renderExpanded: expandingCfg?.renderExpanded as ResolvedGridOptions['expanding']['renderExpanded'],
 		},
 		fallbacks,
-		virtualized: virtualizedConfig,
+		virtualization: virtualizationConfig,
 	}
 
 	// NOTE: useDataGrid no longer calls useSyncExternalStore. Components that

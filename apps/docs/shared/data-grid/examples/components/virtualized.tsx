@@ -26,8 +26,8 @@ export function VirtualizedExample() {
 			data={data}
 			columns={columns}
 			sorting
-			stickyHeader
-			virtualized={{ row: { estimateSize: 49, overscan: 10 } }}
+			layout={{ stickyHeader: true }}
+			virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
 		/>
 	)
 }

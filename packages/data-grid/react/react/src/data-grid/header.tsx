@@ -19,7 +19,7 @@ export type DataGridHeaderProps = {
 	/**
 	 * Adds `data-sticky="true"` to the thead for structural CSS targeting.
 	 *
-	 * Omit it — the default — and the flag is read from the grid's own `stickyHeader`
+	 * Omit it — the default — and the flag is read from the grid's own `layout.stickyHeader`
 	 * option. The prop exists only to force the value; without that fallback a
 	 * `<DataGrid.Header />` placed inside a custom `<DataGrid.Table>` body would
 	 * silently lose sticky positioning.
@@ -129,7 +129,7 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
 export function Header({ stickyHeader, children }: DataGridHeaderProps = {}) {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const isSticky = stickyHeader ?? table.grid.stickyHeader
+	const isSticky = stickyHeader ?? table.grid.layout.stickyHeader
 	const theadRef = useHeaderHeightVar(isSticky)
 
 	// Narrow subscriptions: re-render only when slices the header actually

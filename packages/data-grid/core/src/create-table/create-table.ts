@@ -213,12 +213,20 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// and `initialHidden` columns the consumer never mentioned.
 	const seededPinning = mergePinningSeed({ left: pinnedLeft, right: pinnedRight }, userInitialState?.columnPinning)
 	const mergedVisibility = { ...initialHidden, ...userInitialState?.columnVisibility }
+	// Same reason as the two above, and the one slice where it was missed: spreading
+	// `userInitialState` replaces `pagination` wholesale, so seeding only `pageIndex`
+	// (a deep link to page 3) dropped the resolved `pageSize` to `undefined`.
+	const mergedPagination = {
+		pageIndex: 0,
+		pageSize: defaultPageSize,
+		...userInitialState?.pagination,
+	}
 
 	const initialState: Partial<TableState> = enforceColumnInvariants(
 		{
-			pagination: { pageIndex: 0, pageSize: defaultPageSize },
 			// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
 			...userInitialState,
+			pagination: mergedPagination,
 			columnPinning: seededPinning,
 			...(Object.keys(mergedVisibility).length > 0 ? { columnVisibility: mergedVisibility } : {}),
 		},
@@ -447,7 +455,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Mirrored onto options so the React layer can gate the draft UI on the flag itself.
 		...(deferred ? { deferredApply: true } : {}),
 		// Virtualization config — stored for React layer to read; no TanStack core effect
-		...(isFeatureEnabled(config.virtualized) ? { virtualized: config.virtualized } : {}),
+		...(isFeatureEnabled(config.virtualization) ? { virtualization: config.virtualization } : {}),
 	}
 
 	// Create the table. Features run getInitialState during this call.

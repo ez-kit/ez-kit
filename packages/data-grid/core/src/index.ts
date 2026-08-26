@@ -28,6 +28,7 @@ export type {
 	BadgeVariant,
 	BuiltInSortingFn,
 	CellDef,
+	BuiltInCellType,
 	CellType,
 	CellViewCtx,
 	ColumnCreatingConfig,
@@ -128,5 +129,5 @@ export type {
 	TableConfig,
 	TableSnapshot,
 	RowVirtualOptions,
-	VirtualizedConfig,
+	VirtualizationConfig,
 } from './types'

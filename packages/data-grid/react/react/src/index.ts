@@ -38,7 +38,7 @@ export type {
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
 	NormalizedPageWindowConfig,
-	NormalizedVirtualizedConfig,
+	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
 	ReactGlobalFilteringConfig,

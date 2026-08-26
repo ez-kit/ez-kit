@@ -23,8 +23,11 @@ export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCor
 	meta?: TableCoreColumnMeta<TRow, TValue>
 }
 
-/** Built-in cell types. The `string & {}` tail allows custom type strings while preserving autocomplete. */
-export type CellType =
+/**
+ * The cell types this package implements. A closed union — the escape hatch for
+ * project-specific types is {@link CellType}'s tail, not this.
+ */
+export type BuiltInCellType =
 	| 'text'
 	| 'number'
 	| 'date'
@@ -34,7 +37,15 @@ export type CellType =
 	| 'image'
 	| 'link'
 	| 'progress'
-	| (string & {})
+
+/**
+ * A cell type as it may appear on a column or in `ColumnMeta`. The `string & {}` tail keeps
+ * a project-registered custom type assignable while preserving autocomplete for the built-ins.
+ *
+ * Deliberately **not** what `ColumnDef['cell'].type` accepts: there the type is checked against
+ * the kit's actual registry via `CellDef`'s `TCustom` parameter, so a typo is a compile error.
+ */
+export type CellType = BuiltInCellType | (string & {})
 
 export type CellViewCtx<TRow, TValue> = {
 	row: TRow
@@ -86,7 +97,13 @@ export type DateCellConfig = {
 
 // ── cell definition (discriminated union) ─────────────────────────────────
 
-type SimpleType = Exclude<CellType, 'select' | 'badge' | 'image' | 'link' | 'progress' | 'date'>
+/**
+ * Built-in types that need no `config` block. Derived from {@link BuiltInCellType}, **not** from
+ * {@link CellType}: the latter's `string & {}` tail would make this arm swallow every string, so
+ * `cell: { type: 'raiting' }` typechecked no matter what the kit registered — which silently
+ * defeated `CellDef`'s whole `TCustom` parameter.
+ */
+type SimpleType = Exclude<BuiltInCellType, 'select' | 'badge' | 'image' | 'link' | 'progress' | 'date'>
 
 type BasicCellDef<TRow, TValue = unknown> = {
 	type?: SimpleType

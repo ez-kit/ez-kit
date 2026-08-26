@@ -50,9 +50,9 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 
 	it('does not publish the virtualization config', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { enabled: false, row: true } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { enabled: false, row: true } }),
 		)
-		expect(result.current.table.grid.virtualized).toBeUndefined()
+		expect(result.current.table.grid.virtualization).toBeUndefined()
 	})
 
 	it('keeps column hiding off in core and mounts no toolbar trigger', () => {

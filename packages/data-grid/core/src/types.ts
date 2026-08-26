@@ -389,7 +389,7 @@ export type RowVirtualOptions = {
 	overscan?: number
 }
 
-export type VirtualizedConfig = FeatureToggle & {
+export type VirtualizationConfig = FeatureToggle & {
 	row?: boolean | RowVirtualOptions
 	// column virtualization — reserved for future
 }
@@ -417,8 +417,20 @@ export type ResizingConfig = FeatureToggle & {
  */
 export type InitialTableState = Omit<
 	Partial<TableState>,
-	'editing' | 'creating' | 'pendingDeleteRowId' | 'pendingBulkDelete'
->
+	'editing' | 'creating' | 'pendingDeleteRowId' | 'pendingBulkDelete' | 'pagination'
+> & {
+	/**
+	 * Seeded per key, unlike every other slice. `Partial<TableState>` only makes the slice
+	 * itself optional — TanStack's `PaginationState` still requires **both** `pageIndex` and
+	 * `pageSize`, so a deep link that only wants to open on page 3 had to restate a `pageSize`
+	 * it has no opinion about, and restating it wrong silently overrode
+	 * {@link PaginationConfig.pageSize}.
+	 *
+	 * Whichever key is omitted keeps its resolved default: `pageIndex: 0`, and `pageSize` from
+	 * {@link PaginationConfig.pageSize}.
+	 */
+	pagination?: Partial<PaginationState>
+}
 
 export type TableConfig<TRow extends object> = {
 	data: TRow[]
@@ -485,7 +497,7 @@ export type TableConfig<TRow extends object> = {
 	 * - `false` / omitted — no pinning at all
 	 */
 	pinning?: boolean | PinningConfig
-	virtualized?: boolean | VirtualizedConfig
+	virtualization?: boolean | VirtualizationConfig
 	creating?: CreatingConfig<TRow>
 	editing?: EditingConfig<TRow>
 	deleting?: DeletingConfig<TRow>

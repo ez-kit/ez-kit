@@ -20,7 +20,7 @@ export function InfiniteScrollResetExample() {
 			data={data}
 			columns={columns}
 			state={state}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 			sorting={{
 				manual: true,
 				onChange: (sorting) => {

@@ -48,19 +48,31 @@ type RegisteredTypeHelpers<TRow extends object, TCustom extends string> = {
 export type ColumnHelper<TRow extends object, TCustom extends string = never> = BaseColumnHelper<TRow, TCustom> &
 	([TCustom] extends [never] ? object : RegisteredTypeHelpers<TRow, TCustom>)
 
+/**
+ * Contributes a `config` key only when there is one to contribute.
+ *
+ * Under `exactOptionalPropertyTypes` an explicit `config: undefined` is **not** assignable to
+ * the optional `config?:` on `DateCellDef` / `ImageCellDef` / `ProgressCellDef`. It used to
+ * compile only because `BasicCellDef` still accepted any string as `type` and absorbed the
+ * shape; tightening that arm surfaced the real mismatch.
+ */
+function withConfig<TConfig>(config: TConfig | undefined): { config?: TConfig } {
+	return config !== undefined ? { config } : {}
+}
+
 export function createColumnHelper<TRow extends object, TCustom extends string = never>(
 	customTypes?: TCustom[],
 ): ColumnHelper<TRow, TCustom> {
 	const base: BaseColumnHelper<TRow, TCustom> = {
 		text: (opts) => ({ ...opts, cell: { type: 'text' } }),
 		number: (opts) => ({ ...opts, cell: { type: 'number' } }),
-		date: ({ config, ...opts }) => ({ ...opts, cell: { type: 'date', config } }),
+		date: ({ config, ...opts }) => ({ ...opts, cell: { type: 'date', ...withConfig(config) } }),
 		boolean: (opts) => ({ ...opts, cell: { type: 'boolean' } }),
 		link: (opts) => ({ ...opts, cell: { type: 'link' } }),
 		select: ({ config, ...opts }) => ({ ...opts, cell: { type: 'select', config } }),
 		badge: ({ config, ...opts }) => ({ ...opts, cell: { type: 'badge', config } }),
-		image: ({ config, ...opts }) => ({ ...opts, cell: { type: 'image', config } }),
-		progress: ({ config, ...opts }) => ({ ...opts, cell: { type: 'progress', config } }),
+		image: ({ config, ...opts }) => ({ ...opts, cell: { type: 'image', ...withConfig(config) } }),
+		progress: ({ config, ...opts }) => ({ ...opts, cell: { type: 'progress', ...withConfig(config) } }),
 
 		custom: ({ type, config, view, editing, creating, ...rest }) => {
 			const result: ColumnDef<TRow, TCustom> = { ...rest }
@@ -69,7 +81,7 @@ export function createColumnHelper<TRow extends object, TCustom extends string =
 				// CellDef is a discriminated union; custom() is the intentionally loose escape hatch
 				result.cell = {
 					type,
-					config,
+					...withConfig(config),
 					component: view as ((ctx: CellViewCtx<TRow, unknown>) => unknown) | undefined,
 				} as CellDef<TRow, unknown, TCustom>
 			}
@@ -97,7 +109,10 @@ export function createColumnHelper<TRow extends object, TCustom extends string =
 	for (const typeName of customTypes ?? []) {
 		registered[typeName] = ({ config, ...opts }) => ({
 			...opts,
-			cell: { type: typeName, config },
+			// `TCustom` is still an unresolved type parameter here, so TS defers the
+			// `[TCustom] extends [never]` conditional in `CellDef` and cannot see that this
+			// literal matches its `CustomCellDef` arm. The runtime shape is exactly that arm.
+			cell: { type: typeName, ...withConfig(config) } as CellDef<TRow, unknown, TCustom>,
 		})
 	}
 

@@ -29,7 +29,7 @@ export function ProductionOneHandlerExample() {
 				toolbar: true,
 			}}
 			globalFiltering={{ placeholder: 'Search orders…', debounce: 300 }}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 			pinning={{ column: true, row: { top: true, bottom: true } }}
 			resizing={{ mode: 'onChange' }}
 			columnVisibility={{ toolbar: true }}

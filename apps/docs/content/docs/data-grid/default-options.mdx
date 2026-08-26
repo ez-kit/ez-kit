@@ -60,10 +60,10 @@ function AuditGrid() {
 Providers compose. A child provider's `defaults` are deep-merged on top of its parent's, so a subtree can refine app-wide defaults without repeating them.
 
 ```tsx
-<DataGridOptionsProvider defaults={{ sorting: true, stickyHeader: true }}>
-	{/* inherits sorting + stickyHeader */}
+<DataGridOptionsProvider defaults={{ sorting: true, layout: { stickyHeader: true } }}>
+	{/* inherits sorting + layout.stickyHeader */}
 	<DataGridOptionsProvider defaults={{ pagination: { pageSize: 25 } }}>
-		{/* inherits sorting + stickyHeader + pageSize: 25 */}
+		{/* inherits sorting + layout.stickyHeader + pageSize: 25 */}
 	</DataGridOptionsProvider>
 </DataGridOptionsProvider>
 ```
@@ -110,7 +110,7 @@ factory defaultOptions  <  provider defaults  <  instance config
 
 ### What can be defaulted
 
-`DataGridDefaultOptions<TRow>` is the mergeable subset of a grid's config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `columnVisibility`, `expanding`, `pinning`, `resizing`, `stickyHeader`, `fallbacks`, …).
+`DataGridDefaultOptions<TRow>` is the mergeable subset of a grid's config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `columnVisibility`, `expanding`, `pinning`, `resizing`, `layout`, `fallbacks`, …).
 
 It **excludes** the per-instance inputs that are meaningless as shared defaults:
 

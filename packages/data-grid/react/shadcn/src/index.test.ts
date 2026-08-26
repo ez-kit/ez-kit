@@ -116,4 +116,20 @@ describe('@ez-kit/data-grid-shadcn — adapter surface parity', () => {
 			expect(kit.DataGrid[member], `DataGrid.${member} missing from the kit bundle`).toBeDefined()
 		}
 	})
+	// Type-level guard for the whole point of the bound factory: `cell.type` must be checked
+	// against the kit's own registry. Two things had to hold at once and neither did — the kit
+	// exported `cellTypes` under a widening `: CellTypeRegistry` annotation (so the key union
+	// collapsed to `string`), and `CellDef`'s basic arm was derived from `CellType`, whose
+	// `string & {}` tail accepted every string regardless. A typo compiled cleanly.
+	it('checks cell.type against the kit registry', () => {
+		type User = { id: number; name: string }
+
+		const ok = createColumns<User>([{ accessorKey: 'name', cell: { type: 'badge', config: { items: [] } } }])
+		expect(ok).toHaveLength(1)
+
+		createColumns<User>([
+			// @ts-expect-error 'raiting' is not a registered cell type — this must not compile
+			{ accessorKey: 'name', cell: { type: 'raiting' } },
+		])
+	})
 })

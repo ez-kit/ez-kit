@@ -12,7 +12,7 @@ import type {
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
 	NormalizedPageWindowConfig,
-	NormalizedVirtualizedConfig,
+	NormalizedVirtualizationConfig,
 	SelectionPanelConfig,
 } from './use-data-grid'
 import type { RowData } from '@tanstack/table-core'
@@ -40,8 +40,13 @@ import type { ComponentType } from 'react'
 export type ResolvedGridOptions = {
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
-	/** The header sticks to the top of the scroll container. */
-	stickyHeader: boolean
+	/** Resolved presentational layout of the grid shell. */
+	layout: {
+		/** The header sticks to the top of the scroll container. */
+		stickyHeader: boolean
+		/** Explicit scroll-container height, as a CSS length. `undefined` → stylesheet default. */
+		maxHeight?: string | undefined
+	}
 	/** Column pinning UI (the pin section of the column menu) is enabled. */
 	columnPinning: boolean
 	/** Column hiding. `undefined` when the feature is off. */
@@ -83,7 +88,7 @@ export type ResolvedGridOptions = {
 	/** Loading / empty / no-results fallback config. */
 	fallbacks?: FallbacksConfig | undefined
 	/** Row virtualization config. `undefined` when virtualization is off. */
-	virtualized?: NormalizedVirtualizedConfig | undefined
+	virtualization?: NormalizedVirtualizationConfig | undefined
 }
 
 declare module '@tanstack/table-core' {
@@ -111,7 +116,7 @@ declare module '@tanstack/table-core' {
 export function defaultResolvedGridOptions(): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
-		stickyHeader: false,
+		layout: { stickyHeader: false },
 		columnPinning: false,
 		filtering: { debounce: DATA_GRID_DEFAULTS.filtering.debounce },
 		pagination: {

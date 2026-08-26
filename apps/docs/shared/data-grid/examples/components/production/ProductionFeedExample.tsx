@@ -63,9 +63,9 @@ export function ProductionFeedExample() {
 			data={rows}
 			columns={orderColumns}
 			state={state}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 			pinning={{ column: true }}
-			virtualized={{ row: { estimateSize: ESTIMATED_ROW_HEIGHT_PX, overscan: 10 } }}
+			virtualization={{ row: { estimateSize: ESTIMATED_ROW_HEIGHT_PX, overscan: 10 } }}
 			pagination={{ mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } }}
 		/>
 	)
