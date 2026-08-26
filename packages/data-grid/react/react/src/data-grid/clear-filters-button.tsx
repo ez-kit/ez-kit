@@ -1,9 +1,7 @@
 import { useGridComponents } from '../components-context'
-import { FILTERING_TOOLBAR_KEY } from '../use-data-grid'
 
 import { useTable } from './table-context'
 
-import type { NormalizedFilteringToolbarConfig } from '../use-data-grid'
 import type { ReactNode } from 'react'
 
 type ClearFiltersButtonProps = {
@@ -36,9 +34,7 @@ export function ClearFiltersButton({ children, alwaysShow: alwaysShowProp, ariaL
 	const table = useTable()
 	const { ClearFiltersButton: Component } = useGridComponents().filtering
 
-	const cfg = (table as unknown as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] as
-		| NormalizedFilteringToolbarConfig
-		| undefined
+	const cfg = table.grid.filtering.toolbar
 
 	const alwaysShow = alwaysShowProp ?? cfg?.alwaysShow ?? false
 	const hasColumnFilters = table.getState().columnFilters.length > 0

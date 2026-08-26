@@ -5,20 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DataGridOptionsProvider, mergeGridOptionLayers } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { PaginationVariant } from './types'
-import {
-	FILTER_CHIPS_KEY,
-	GLOBAL_FILTERING_KEY,
-	INFINITE_KEY,
-	PAGINATION_VARIANT_KEY,
-	useDataGrid,
-} from './use-data-grid'
+import { useDataGrid } from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
-import type {
-	NormalizedFilterChipsConfig,
-	NormalizedGlobalFilteringConfig,
-	NormalizedInfiniteConfig,
-} from './use-data-grid'
 import type * as DataGridCore from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -40,8 +29,6 @@ const USERS: User[] = [
 	{ id: 2, name: 'Bob' },
 ]
 const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
-
-const symbols = (table: unknown) => table as Record<symbol, unknown>
 
 beforeEach(() => {
 	createTableSpy.mockClear()
@@ -91,14 +78,14 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 
 	it('pagination without a variant → resolves to the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(DATA_GRID_DEFAULTS.pagination.variant)
+		expect(result.current.table.grid.pagination.variant).toBe(DATA_GRID_DEFAULTS.pagination.variant)
 	})
 
 	it('pagination.variant → stored on the instance for Pagination to read', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariant.Simple } }),
 		)
-		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariant.Simple)
+		expect(result.current.table.grid.pagination.variant).toBe(PaginationVariant.Simple)
 	})
 
 	// The public option is the `PaginationVariant` string union — `PaginationVariant` is only
@@ -108,7 +95,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: 'simple' } }),
 		)
-		expect(symbols(result.current.table)[PAGINATION_VARIANT_KEY]).toBe(PaginationVariant.Simple)
+		expect(result.current.table.grid.pagination.variant).toBe(PaginationVariant.Simple)
 	})
 
 	// Asserting on `table.options` / `getState().pagination` would be unfalsifiable: core only
@@ -148,17 +135,17 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 
 	it('globalFiltering: true → placeholder/debounce are the named defaults', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
-		const cfg = symbols(result.current.table)[GLOBAL_FILTERING_KEY] as NormalizedGlobalFilteringConfig
-		expect(cfg.placeholder).toBe(DATA_GRID_DEFAULTS.globalFiltering.placeholder)
-		expect(cfg.debounce).toBe(DATA_GRID_DEFAULTS.filtering.debounce)
+		const cfg = result.current.table.grid.globalFiltering
+		expect(cfg?.placeholder).toBe(DATA_GRID_DEFAULTS.globalFiltering.placeholder)
+		expect(cfg?.debounce).toBe(DATA_GRID_DEFAULTS.filtering.debounce)
 	})
 
 	it('globalFiltering inherits an explicit filtering.debounce', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { debounce: 500 }, globalFiltering: true }),
 		)
-		const cfg = symbols(result.current.table)[GLOBAL_FILTERING_KEY] as NormalizedGlobalFilteringConfig
-		expect(cfg.debounce).toBe(500)
+		const cfg = result.current.table.grid.globalFiltering
+		expect(cfg?.debounce).toBe(500)
 	})
 
 	it('globalFiltering.debounce overrides the shared filtering.debounce', () => {
@@ -170,23 +157,23 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 				globalFiltering: { debounce: 0 },
 			}),
 		)
-		const cfg = symbols(result.current.table)[GLOBAL_FILTERING_KEY] as NormalizedGlobalFilteringConfig
-		expect(cfg.debounce).toBe(0)
+		const cfg = result.current.table.grid.globalFiltering
+		expect(cfg?.debounce).toBe(0)
 	})
 
 	it('filtering.chips: true → position is the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }))
-		const cfg = symbols(result.current.table)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig
-		expect(cfg.position).toBe(DATA_GRID_DEFAULTS.filtering.chips.position)
+		const cfg = result.current.table.grid.filtering.chips
+		expect(cfg?.position).toBe(DATA_GRID_DEFAULTS.filtering.chips.position)
 	})
 
 	it('pagination infinite → trigger/threshold are the named defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite' } }),
 		)
-		const cfg = symbols(result.current.table)[INFINITE_KEY] as NormalizedInfiniteConfig
-		expect(cfg.trigger).toBe(DATA_GRID_DEFAULTS.infinite.trigger)
-		expect(cfg.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.infinite.threshold.rows })
+		const cfg = result.current.table.grid.infinite
+		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.infinite.trigger)
+		expect(cfg?.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.infinite.threshold.rows })
 	})
 })
 

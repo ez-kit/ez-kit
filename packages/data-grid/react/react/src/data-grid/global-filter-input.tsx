@@ -2,12 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
-import { GLOBAL_FILTERING_KEY } from '../use-data-grid'
 import { useDebouncedValue } from '../utils/use-debounced-value'
 
 import { useTable } from './table-context'
-
-import type { NormalizedGlobalFilteringConfig } from '../use-data-grid'
 
 type GlobalFilterInputCompoundProps = {
 	/** Override the placeholder configured via `globalFiltering.placeholder`. */
@@ -27,9 +24,7 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilter
 	const table = useTable()
 	const { GlobalFilterInput: Component } = useGridComponents().filtering
 
-	const cfg = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as
-		| NormalizedGlobalFilteringConfig
-		| undefined
+	const cfg = table.grid.globalFiltering
 
 	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.filtering.debounce
 	const placeholder = placeholderProp ?? cfg?.placeholder ?? DATA_GRID_DEFAULTS.globalFiltering.placeholder

@@ -1,10 +1,7 @@
 import { useGridComponents } from '../components-context'
-import { FALLBACKS_KEY } from '../use-data-grid'
 
 import { flexRender } from './flex-render'
 import { useTable } from './table-context'
-
-import type { FallbacksConfig } from '../use-data-grid'
 
 export function NoResultsRow() {
 	const table = useTable()
@@ -12,7 +9,7 @@ export function NoResultsRow() {
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { NoResultsState } = gridComponents['fallback-states']
 
-	const fallbacks = (table as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] as FallbacksConfig | undefined
+	const fallbacks = table.grid.fallbacks
 	const noResultsConfig = fallbacks?.noResults
 
 	const columnCount = table.getVisibleLeafColumns().length

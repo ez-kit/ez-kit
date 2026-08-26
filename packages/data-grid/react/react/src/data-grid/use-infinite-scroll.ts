@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 
 import { DATA_GRID_DEFAULTS } from '../defaults'
-import { INFINITE_KEY } from '../use-data-grid'
 
 import { useDataGridInstance, useDataGridStore } from './table-context'
 
+import type { ResolvedGridOptions } from '../resolved-options'
 import type { NormalizedInfiniteConfig } from '../use-data-grid'
 import type { LoadMoreDirection } from '@ez-kit/data-grid-core'
 
@@ -38,15 +38,19 @@ export type InfiniteController = {
 	retry: () => void
 }
 
-function readConfig(table: { [k: symbol]: unknown }): NormalizedInfiniteConfig | undefined {
-	return (table as unknown as Record<symbol, unknown>)[INFINITE_KEY] as NormalizedInfiniteConfig | undefined
+/**
+ * Read at call time, never captured: the hook must use the freshest `onLoadMore` closure and
+ * `hasNextPage` value, both of which `useDataGrid` reassigns on every render.
+ */
+function readConfig(table: { grid: ResolvedGridOptions }): NormalizedInfiniteConfig | undefined {
+	return table.grid.infinite
 }
 
 export function useInfiniteScroll(): InfiniteController {
 	const instance = useDataGridInstance()
 	const table = instance.table
 
-	const config = readConfig(table as unknown as { [k: symbol]: unknown })
+	const config = readConfig(table)
 	const isFetchingNextPage = useDataGridStore((s) => s.infinite.isFetchingNextPage)
 	const errorState = useDataGridStore((s) => s.infinite.error)
 
@@ -54,7 +58,7 @@ export function useInfiniteScroll(): InfiniteController {
 		(direction: LoadMoreDirection = 'forward') => {
 			// Read the freshest config at call time so the latest onLoadMore closure +
 			// hasNextPage value are used.
-			const cfg = readConfig(table as unknown as { [k: symbol]: unknown })
+			const cfg = readConfig(table)
 			if (!cfg?.onLoadMore) return
 
 			// Guard: nothing more to load in this direction, or a fetch is already in flight.

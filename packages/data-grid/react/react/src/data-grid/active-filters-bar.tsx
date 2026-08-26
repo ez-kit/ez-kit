@@ -1,10 +1,9 @@
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
-import { FILTER_CHIPS_KEY } from '../use-data-grid'
 
 import { useTable } from './table-context'
 
-import type { FilterChipsPosition, NormalizedFilterChipsConfig } from '../use-data-grid'
+import type { FilterChipsPosition } from '../use-data-grid'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
@@ -80,7 +79,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 	const table = useTable()
 	const { FilterChip } = useGridComponents().filtering
 
-	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig | undefined
+	const cfg = table.grid.filtering.chips
 
 	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
 	const columnFilters = table.getState().columnFilters

@@ -1,5 +1,4 @@
 import { useGridComponents } from '../components-context'
-import { EXPAND_KEY } from '../use-data-grid'
 
 import { flexRender } from './flex-render'
 import { useTable } from './table-context'
@@ -19,14 +18,13 @@ type ExpandConfig = {
 
 /**
  * Renders a full-width row below an expanded row for the sub-content variant.
- * Reads `renderExpanded` from the EXPAND_KEY stored on the table instance.
+ * Reads `renderExpanded` from the grid's resolved options (`table.grid.expanding`).
  */
 export function ExpandedRow({ row }: ExpandedRowComponentProps) {
 	const table = useTable()
 	const { Tr, Td } = useGridComponents().core
 
-	const expandConfig = (table as unknown as Record<symbol, unknown>)[EXPAND_KEY] as ExpandConfig | undefined
-	const renderExpanded = expandConfig?.renderExpanded
+	const renderExpanded = table.grid.expanding.renderExpanded as ExpandConfig['renderExpanded']
 	if (!renderExpanded) return null
 
 	const colSpan = row.getVisibleCells().length

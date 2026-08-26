@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
-import { COLUMN_VISIBILITY_KEY, SELECTION_PANEL_KEY, SORTING_KEY, useDataGrid } from './use-data-grid'
+import { useDataGrid } from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { UseDataGridConfig } from './use-data-grid'
@@ -16,8 +16,6 @@ const USERS: User[] = [
 	{ id: 2, name: 'Bob' },
 ]
 const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
-
-const symbols = (table: unknown) => table as Record<symbol, unknown>
 
 describe('mergeGridOptionLayers', () => {
 	const config: UseDataGridConfig<User> = { data: USERS, columns: COLUMNS }
@@ -86,8 +84,8 @@ describe('DataGridOptionsProvider', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
 			wrapper: makeWrapper({ sorting: true, columnVisibility: true }),
 		})
-		expect(symbols(result.current.table)[SORTING_KEY]).toBe(true)
-		expect(symbols(result.current.table)[COLUMN_VISIBILITY_KEY]).toBe(true)
+		expect(result.current.table.grid.sorting).toBe(true)
+		expect(result.current.table.grid.columnVisibility).toBe(true)
 	})
 
 	it('lets an instance override provider defaults inside useDataGrid', () => {
@@ -95,20 +93,20 @@ describe('DataGridOptionsProvider', () => {
 			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { panel: false } }),
 			{ wrapper: makeWrapper({ selection: { panel: true } }) },
 		)
-		expect(symbols(result.current.table)[SELECTION_PANEL_KEY]).toBe(false)
+		expect(result.current.table.grid.selection.panel).toBe(false)
 	})
 })
 
 describe('useDataGrid without a provider', () => {
 	it('behaves identically to bare config (no defaults injected)', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }))
-		expect(symbols(result.current.table)[SORTING_KEY]).toBeUndefined()
+		expect(result.current.table.grid.sorting).toBeUndefined()
 		expect(result.current.table.getRowModel().rows).toHaveLength(2)
 	})
 
 	it('applies factory defaults passed as the base layer', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }, { sorting: true }))
-		expect(symbols(result.current.table)[SORTING_KEY]).toBe(true)
+		expect(result.current.table.grid.sorting).toBe(true)
 	})
 })
 

@@ -2,7 +2,6 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
-import { INFINITE_KEY, STICKY_HEADER_KEY, VIRTUALIZED_KEY } from '../use-data-grid'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
@@ -165,12 +164,10 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 	const sizeVars = getColumnSizeVars(table)
 	const gridTemplateColumns = getGridTemplateColumns(table)
 
-	const virtualizedConfig = (table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] as
-		| NormalizedVirtualizedConfig
-		| undefined
+	const virtualizedConfig = table.grid.virtualized
 
 	const isVirtualized = Boolean(virtualizedConfig)
-	const isStickyHeader = Boolean((table as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY])
+	const isStickyHeader = table.grid.stickyHeader
 
 	// wrapperRef — outer div; CSS pin-shadow vars are written here so the overlay reads them
 	const wrapperRef = useRef<HTMLDivElement>(null)
@@ -220,7 +217,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
-	const infiniteEnabled = Boolean((table as unknown as Record<symbol, unknown>)[INFINITE_KEY])
+	const infiniteEnabled = table.grid.infinite !== undefined
 
 	// Reset on query change: when sorting / column filters / global search / page size
 	// change in infinite mode, clear any error, re-arm detection (handled by the loader

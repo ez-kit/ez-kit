@@ -9,6 +9,7 @@ import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridInstance } from './data-grid-instance'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
+import type { ResolvedGridOptions } from './resolved-options'
 import type { PaginationVariant } from './types'
 import type {
 	ConfirmationOptions,
@@ -30,62 +31,8 @@ import type {
 import type { Row, Table, TableState } from '@tanstack/table-core'
 import type { ComponentType, ReactElement } from 'react'
 
-/** Symbol used to carry cellTypes on the table instance for DataGrid to read. */
-export const CELL_TYPES_KEY = Symbol('cellTypes')
-
-/** Symbol used to carry `pagination.pageSizeOptions` on the table instance for PageSizer to read. */
-export const PAGE_SIZER_KEY = Symbol('pageSizeOptions')
-
-/** Symbol used to carry the page-based pagination variant on the table instance for Pagination to read. */
-export const PAGINATION_VARIANT_KEY = Symbol('paginationVariant')
-
-/** Symbol used to carry the resolved `numbered` page-link window on the table instance for Pagination to read. */
-export const PAGINATION_WINDOW_KEY = Symbol('paginationWindow')
-
-/** Symbol used to carry colPinning enabled flag on the table instance for Header to read. */
-export const COL_PINNING_KEY = Symbol('colPinning')
-
-/** Symbol used to carry normalized virtualized config on the table instance for Body/Table to read. */
-export const VIRTUALIZED_KEY = Symbol('virtualized')
-
-/** Symbol used to carry the selection panel config on the table instance for SelectionBar to read. Internal — not part of the public API. */
-export const SELECTION_PANEL_KEY = Symbol('selectionPanel')
-
-/** Symbol used to carry columnVisibility UI config on the table instance for Toolbar to read. */
-export const COLUMN_VISIBILITY_KEY = Symbol('columnVisibility')
-
-/** Symbol used to carry sorting UI config on the table instance for Toolbar to read. */
-export const SORTING_KEY = Symbol('sorting')
-
-/** Symbol used to carry filtering variant on the table instance for Header to read. */
-export const FILTERING_VARIANT_KEY = Symbol('filteringVariant')
-
-/** Symbol used to carry the column filter commit debounce (ms) on the table instance for Header / FilterPanel to read. */
-export const FILTERING_DEBOUNCE_KEY = Symbol('filteringDebounce')
-
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
-
-/** Symbol used to carry normalized globalFiltering UI config on the table instance for Toolbar / GlobalFilterInput to read. */
-export const GLOBAL_FILTERING_KEY = Symbol('globalFiltering')
-
-/** Symbol used to carry normalized active filter chips config on the table instance. */
-export const FILTER_CHIPS_KEY = Symbol('filterChips')
-
-/** Symbol used to carry filtering's normalized toolbar (Clear-all button) config on the table instance. */
-export const FILTERING_TOOLBAR_KEY = Symbol('filteringToolbar')
-
-/** Symbol used to carry fallbacks config on the table instance for Body to read. */
-export const FALLBACKS_KEY = Symbol('fallbacks')
-
-/** Symbol used to carry stickyHeader flag on the table instance for DataGridTable to read. */
-export const STICKY_HEADER_KEY = Symbol('stickyHeader')
-
-/** Symbol used to carry expanding config on the table instance for Body/ExpandedRow to read. */
-export const EXPAND_KEY = Symbol('expanding')
-
-/** Symbol used to carry normalized infinite-scroll config on the table instance for the infinite hook to read. */
-export const INFINITE_KEY = Symbol('infinite')
 
 export type ExpandedRowProps<TRow extends object> = {
 	row: Row<TRow>
@@ -728,7 +675,6 @@ export function useDataGrid<TRow extends object>(
 		} as TableConfig<TRow>),
 	)
 	const table = instanceRef.current.table
-	const tableAsSymbolMap = table as unknown as Record<symbol, unknown>
 
 	// Sync controlled state on every render — external state portions override internal state.
 	//
@@ -774,78 +720,39 @@ export function useDataGrid<TRow extends object>(
 		return { ...rest, ...writeFeatureOptions(creating, editing, deleting) }
 	})
 
-	// Store cellTypes on the table instance so DataGrid can read without an extra prop
-	const cellTypesRef = useRef(cellTypes)
-	cellTypesRef.current = cellTypes
-	tableAsSymbolMap[CELL_TYPES_KEY] = cellTypesRef.current
-
-	// Store the page-size options on the table instance so PageSizer can read without an extra prop
-	const pageSizeOptionsRef = useRef(pageSizeOptions)
-	pageSizeOptionsRef.current = pageSizeOptions
-	tableAsSymbolMap[PAGE_SIZER_KEY] = pageSizeOptionsRef.current
-
-	// Store colPinning enabled flag on the table instance so Header can read without an extra prop
+	// ── publish the resolved options ─────────────────────────────────────────
+	// One typed object on the table instance, reassigned every render so every reader sees
+	// the freshest closures (notably `infinite.onLoadMore`). This replaced eighteen private
+	// `Symbol()` keys, each written and read through an untyped double cast.
 	const colPinEnabled = config.pinning === true || Boolean(featureConfig(config.pinning)?.column)
-	tableAsSymbolMap[COL_PINNING_KEY] = colPinEnabled
-
-	// Store the selection panel config on the table instance so SelectionBar can read without an extra prop
-	const selectionPanelRef = useRef(selectionPanel)
-	selectionPanelRef.current = selectionPanel
-	tableAsSymbolMap[SELECTION_PANEL_KEY] = selectionPanelRef.current
-
-	// Store columnVisibility UI config on the table instance so Toolbar can read without an extra prop
-	const colVisibilityRef = useRef(columnVisibility)
-	colVisibilityRef.current = isFeatureEnabled(columnVisibility) ? columnVisibility : undefined
-	tableAsSymbolMap[COLUMN_VISIBILITY_KEY] = colVisibilityRef.current
-
-	// Store sorting config on the table instance so Toolbar can read without an extra prop
-	const sortingRef = useRef(config.sorting)
-	sortingRef.current = isFeatureEnabled(config.sorting) ? config.sorting : undefined
-	tableAsSymbolMap[SORTING_KEY] = sortingRef.current
-
-	// Store filteringVariant on the table instance so Header can read without an extra prop
-	tableAsSymbolMap[FILTERING_VARIANT_KEY] = filteringVariant
-
-	// Store the resolved pagination variant so Pagination can read it without an extra prop
-	tableAsSymbolMap[PAGINATION_VARIANT_KEY] = paginationVariant
-
-	// Store the resolved page-link window alongside it, read by Pagination for `numbered`
-	tableAsSymbolMap[PAGINATION_WINDOW_KEY] = paginationWindow
-
-	// Store the column filter commit debounce on the table instance so Header / FilterPanel can read it
-	tableAsSymbolMap[FILTERING_DEBOUNCE_KEY] = filteringDebounce
-
-	// Store normalized globalFiltering UI config (placeholder, debounce, toolbar) on the
-	// table instance so Toolbar / GlobalFilterInput can read it without prop drilling.
-	tableAsSymbolMap[GLOBAL_FILTERING_KEY] = normalizedGlobalFiltering
-
-	// Store normalized filter chips/clear-button UI configs so DataGrid root and Toolbar
-	// can decide whether to auto-mount the corresponding compound components.
-	tableAsSymbolMap[FILTER_CHIPS_KEY] = normalizedChips
-	tableAsSymbolMap[FILTERING_TOOLBAR_KEY] = normalizedFilteringToolbar
-
-	// Store fallbacks config on the table instance so Body can read without an extra prop
-	const fallbacksRef = useRef(fallbacks)
-	fallbacksRef.current = fallbacks
-	tableAsSymbolMap[FALLBACKS_KEY] = fallbacksRef.current
-
-	// Store normalized virtualized config on the table instance so DataGridTable/Body can read without an extra prop
 	const virtualizedConfig = normalizeVirtualized(config.virtualized)
-	tableAsSymbolMap[VIRTUALIZED_KEY] = virtualizedConfig
+	const expandingCfg = featureConfig(rawExpanding)
 
-	// Store stickyHeader flag on the table instance so DataGridTable can read without an extra prop
-	tableAsSymbolMap[STICKY_HEADER_KEY] = stickyHeader ?? false
-
-	// Store normalized infinite-scroll config (trigger, threshold, latest onLoadMore) so
-	// useInfiniteScroll can read it without prop drilling. Reassigned every render so the
-	// hook always invokes the freshest onLoadMore closure.
-	tableAsSymbolMap[INFINITE_KEY] = normalizedInfinite
-
-	// Store renderExpanded on the table instance so Body/ExpandedRow can read without an extra prop
-	const expandRef = useRef(rawExpanding)
-	expandRef.current = rawExpanding
-	tableAsSymbolMap[EXPAND_KEY] = {
-		renderExpanded: typeof expandRef.current === 'object' ? expandRef.current.renderExpanded : undefined,
+	table.grid = {
+		cellTypes,
+		stickyHeader: stickyHeader ?? false,
+		columnPinning: colPinEnabled,
+		columnVisibility: isFeatureEnabled(columnVisibility) ? columnVisibility : undefined,
+		sorting: isFeatureEnabled(config.sorting) ? config.sorting : undefined,
+		filtering: {
+			variant: filteringVariant,
+			debounce: filteringDebounce,
+			chips: normalizedChips,
+			toolbar: normalizedFilteringToolbar,
+		},
+		globalFiltering: normalizedGlobalFiltering,
+		pagination: {
+			variant: paginationVariant,
+			window: paginationWindow,
+			pageSizeOptions,
+		},
+		infinite: normalizedInfinite,
+		selection: { panel: selectionPanel as ResolvedGridOptions['selection']['panel'] },
+		expanding: {
+			renderExpanded: expandingCfg?.renderExpanded as ResolvedGridOptions['expanding']['renderExpanded'],
+		},
+		fallbacks,
+		virtualized: virtualizedConfig,
 	}
 
 	// NOTE: useDataGrid no longer calls useSyncExternalStore. Components that

@@ -2,7 +2,6 @@
 
 import { useGridComponents } from '../components-context'
 import { COMPONENT_FEATURE } from '../contract'
-import { SELECTION_PANEL_KEY, type SelectionPanelConfig } from '../use-data-grid'
 
 import { useDataGridInstance } from './table-context'
 
@@ -44,10 +43,7 @@ export function ComponentGuard(): null {
 	if (table.options.deleting?.confirmation) required.add('ConfirmDialog')
 	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormShell')
 
-	const selectionPanel = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
+	const selectionPanel = table.grid.selection.panel
 	if (selectionPanel !== undefined && selectionPanel !== false) required.add('SelectionBar')
 
 	const missing = [...required].filter((key) => {

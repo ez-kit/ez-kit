@@ -5,23 +5,14 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { buildPaginationLabel } from './data-grid/pagination-label'
 import { PaginationVariant } from './types'
-import {
-	FILTERING_VARIANT_KEY,
-	FILTER_CHIPS_KEY,
-	FILTERING_TOOLBAR_KEY,
-	GLOBAL_FILTERING_KEY,
-	PAGE_SIZER_KEY,
-	SELECTION_PANEL_KEY,
-	VIRTUALIZED_KEY,
-	useDataGrid,
-} from './use-data-grid'
+import { useDataGrid } from './use-data-grid'
 
 import type {
 	NormalizedFilteringToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedGlobalFilteringConfig,
 } from './use-data-grid'
-import type { TableState } from '@ez-kit/data-grid-core'
+import type { DataTable, TableState } from '@ez-kit/data-grid-core'
 
 type User = {
 	id: number
@@ -456,19 +447,19 @@ describe('useDataGrid', () => {
 describe('useDataGrid — virtualized', () => {
 	it('VIRTUALIZED_KEY is undefined when virtualized not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = result.current.table.grid.virtualized
 		expect(key).toBeUndefined()
 	})
 
 	it('VIRTUALIZED_KEY stores normalized config when virtualized: true', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: true }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = result.current.table.grid.virtualized
 		expect(key).toEqual({ row: {} })
 	})
 
 	it('VIRTUALIZED_KEY stores normalized config when virtualized: { row: true }', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: true } }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = result.current.table.grid.virtualized
 		expect(key).toEqual({ row: {} })
 	})
 
@@ -476,13 +467,13 @@ describe('useDataGrid — virtualized', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: { overscan: 8 } } }),
 		)
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = result.current.table.grid.virtualized
 		expect(key).toEqual({ row: { overscan: 8 } })
 	})
 
 	it('VIRTUALIZED_KEY is undefined when virtualized: false', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: false }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY]
+		const key = result.current.table.grid.virtualized
 		expect(key).toBeUndefined()
 	})
 })
@@ -490,13 +481,13 @@ describe('useDataGrid — virtualized', () => {
 describe('useDataGrid — pagination.pageSizeOptions', () => {
 	it('PAGE_SIZER_KEY is undefined when pagination is not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		const key = result.current.table.grid.pagination.pageSizeOptions
 		expect(key).toBeUndefined()
 	})
 
 	it('PAGE_SIZER_KEY is undefined when pagination carries no pageSizeOptions', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		const key = result.current.table.grid.pagination.pageSizeOptions
 		expect(key).toBeUndefined()
 	})
 
@@ -504,7 +495,7 @@ describe('useDataGrid — pagination.pageSizeOptions', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
 		)
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		const key = result.current.table.grid.pagination.pageSizeOptions
 		expect(key).toEqual([5, 10, 25])
 	})
 
@@ -512,7 +503,7 @@ describe('useDataGrid — pagination.pageSizeOptions', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', pageSizeOptions: [5, 10, 25] } }),
 		)
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY]
+		const key = result.current.table.grid.pagination.pageSizeOptions
 		expect(key).toBeUndefined()
 	})
 
@@ -527,25 +518,25 @@ describe('useDataGrid — pagination.pageSizeOptions', () => {
 describe('useDataGrid — selection.panel', () => {
 	it('SELECTION_PANEL_KEY is undefined when selection not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+		const key = result.current.table.grid.selection.panel
 		expect(key).toBeUndefined()
 	})
 
 	it('SELECTION_PANEL_KEY is undefined when selection: true (boolean, no panel)', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: true }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+		const key = result.current.table.grid.selection.panel
 		expect(key).toBeUndefined()
 	})
 
 	it('SELECTION_PANEL_KEY stores true when selection: { panel: true }', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: true } }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+		const key = result.current.table.grid.selection.panel
 		expect(key).toBe(true)
 	})
 
 	it('SELECTION_PANEL_KEY stores false when selection: { panel: false }', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: false } }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+		const key = result.current.table.grid.selection.panel
 		expect(key).toBe(false)
 	})
 
@@ -554,7 +545,7 @@ describe('useDataGrid — selection.panel', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { onDelete } } }),
 		)
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+		const key = result.current.table.grid.selection.panel
 		expect(key).toEqual({ onDelete })
 	})
 
@@ -562,7 +553,7 @@ describe('useDataGrid — selection.panel', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { variant: 'inline' } } }),
 		)
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+		const key = result.current.table.grid.selection.panel
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
@@ -573,21 +564,21 @@ describe('useDataGrid — selection.panel', () => {
 		// The object `selection` (with only a React-only `panel`) still enables core row selection…
 		expect(result.current.table.options.enableRowSelection).toBe(true)
 		// …and the panel is lifted onto the instance for SelectionBar to read.
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
+		const key = result.current.table.grid.selection.panel
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
 	it('FILTERING_VARIANT_KEY accepts "panel" and writes it through to the table', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }))
-		const key = (result.current.table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]
+		const key = result.current.table.grid.filtering.variant
 		expect(key).toBe('panel')
 	})
 
 	it('FILTERING_VARIANT_KEY accepts "inline" and "popover" as before', () => {
 		const inline = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'inline' } }))
 		const popover = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }))
-		expect((inline.result.current.table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('inline')
-		expect((popover.result.current.table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY]).toBe('popover')
+		expect(inline.result.current.table.grid.filtering.variant).toBe('inline')
+		expect(popover.result.current.table.grid.filtering.variant).toBe('popover')
 	})
 })
 
@@ -667,8 +658,8 @@ describe('useDataGrid — controlled state', () => {
 
 // ── globalFiltering normalization ─────────────────────────────────────────────
 
-function getNormalizedGlobalFiltering(table: object): NormalizedGlobalFilteringConfig | undefined {
-	return (table as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as NormalizedGlobalFilteringConfig | undefined
+function getNormalizedGlobalFiltering(table: DataTable<User>): NormalizedGlobalFilteringConfig | undefined {
+	return table.grid.globalFiltering
 }
 
 describe('useDataGrid — globalFiltering normalization', () => {
@@ -756,8 +747,8 @@ describe('useDataGrid — globalFiltering normalization', () => {
 
 // ── filtering.chips normalization ─────────────────────────────────────────────
 
-function getChipsConfig(table: object): NormalizedFilterChipsConfig | undefined {
-	return (table as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig | undefined
+function getChipsConfig(table: DataTable<User>): NormalizedFilterChipsConfig | undefined {
+	return table.grid.filtering.chips
 }
 
 describe('useDataGrid — filtering.chips normalization', () => {
@@ -786,8 +777,8 @@ describe('useDataGrid — filtering.chips normalization', () => {
 
 // ── filtering.toolbar (Clear-all button) normalization ────────────────────────
 
-function getFilteringToolbarConfig(table: object): NormalizedFilteringToolbarConfig | undefined {
-	return (table as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] as NormalizedFilteringToolbarConfig | undefined
+function getFilteringToolbarConfig(table: DataTable<User>): NormalizedFilteringToolbarConfig | undefined {
+	return table.grid.filtering.toolbar
 }
 
 describe('useDataGrid — filtering.toolbar normalization', () => {

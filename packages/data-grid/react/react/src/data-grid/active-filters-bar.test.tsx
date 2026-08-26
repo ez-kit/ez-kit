@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { createDataGridInstance } from '../data-grid-instance'
 import { testComponents } from '../test-utils'
-import { FILTER_CHIPS_KEY } from '../use-data-grid'
 
 import { ActiveFiltersBar } from './active-filters-bar'
 import { TableContext } from './table-context'
@@ -44,7 +43,7 @@ function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
 }
 
 function setChipsCfg(table: DataTable<User>, value: NormalizedFilterChipsConfig | undefined) {
-	;(table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] = value
+	table.grid.filtering.chips = value
 }
 
 function Wrapper({ instance, children }: { instance: DataGridInstance<User>; children: ReactNode }) {

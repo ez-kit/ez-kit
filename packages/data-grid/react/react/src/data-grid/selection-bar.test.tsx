@@ -6,12 +6,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { createDataGridInstance } from '../data-grid-instance'
 import { testComponents } from '../test-utils'
-import { SELECTION_PANEL_KEY } from '../use-data-grid'
 
 import { SelectionBar } from './selection-bar'
 import { TableContext } from './table-context'
 
 import type { DataGridInstance } from '../data-grid-instance'
+import type { ResolvedGridOptions } from '../resolved-options'
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -31,8 +31,8 @@ function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
 	return { table, instance: createDataGridInstance(table) }
 }
 
-function setSelectionPanelKey(table: DataTable<User>, value: unknown) {
-	;(table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] = value
+function setSelectionPanelKey(table: DataTable<User>, value: ResolvedGridOptions['selection']['panel']) {
+	table.grid.selection.panel = value
 }
 
 function Wrapper({ instance, children }: { instance: DataGridInstance<User>; children: ReactNode }) {

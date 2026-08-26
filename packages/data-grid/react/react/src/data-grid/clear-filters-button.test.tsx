@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { createDataGridInstance } from '../data-grid-instance'
 import { testComponents } from '../test-utils'
-import { FILTERING_TOOLBAR_KEY } from '../use-data-grid'
 
 import { ClearFiltersButton } from './clear-filters-button'
 import { TableContext } from './table-context'
@@ -31,7 +30,7 @@ function makeTable() {
 }
 
 function setClearCfg(table: DataTable<User>, value: NormalizedFilteringToolbarConfig | undefined) {
-	;(table as unknown as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] = value
+	table.grid.filtering.toolbar = value
 }
 
 function Wrapper({ instance, children }: { instance: DataGridInstance<User>; children: ReactNode }) {

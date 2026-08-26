@@ -3,11 +3,10 @@ import { describe, expect, it } from 'vitest'
 
 import { createDataGridInstance } from '../data-grid-instance'
 import { renderWithComponents } from '../test-utils'
-import { STICKY_HEADER_KEY, VIRTUALIZED_KEY } from '../use-data-grid'
 
 import { DataGrid } from './data-grid'
 
-import type { DataTable } from '@ez-kit/data-grid-core'
+import type { ResolvedGridOptions } from '../resolved-options'
 
 type User = { id: number; name: string; age: number }
 
@@ -25,16 +24,18 @@ function makeTable() {
 }
 
 /**
- * Helpers to write the same symbols that `useDataGrid` would set when the
- * corresponding feature flag is on. Tests that don't go through `useDataGrid`
- * still need the table-level state for `<DataGridTable>` to read.
+ * Helpers that write the resolved options `useDataGrid` would produce with the corresponding
+ * feature flag on. These tests build the table directly, so they must go through the instance:
+ * `createDataGridInstance` seeds `table.grid`, and seeding it again would drop these writes.
  */
-function setSticky(table: DataTable<User>) {
-	;(table as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY] = true
+function makeInstance(mutate?: (options: ResolvedGridOptions) => void) {
+	const instance = createDataGridInstance(makeTable())
+	mutate?.(instance.table.grid)
+	return instance
 }
-function setVirtualized(table: DataTable<User>) {
-	;(table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] = { row: { estimateSize: 40, overscan: 5 } }
-}
+const withSticky = (options: ResolvedGridOptions) => (options.stickyHeader = true)
+const withVirtualized = (options: ResolvedGridOptions) =>
+	(options.virtualized = { row: { estimateSize: 40, overscan: 5 } })
 
 describe('headless data-* contract', () => {
 	it('table emits data-slot="table" without data-virtualized by default', () => {
@@ -46,17 +47,13 @@ describe('headless data-* contract', () => {
 	})
 
 	it('table + tbody emit data-virtualized="true" when virtualization is on', () => {
-		const table = makeTable()
-		setVirtualized(table)
-		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
+		const { container } = renderWithComponents(<DataGrid table={makeInstance(withVirtualized)} />)
 		expect(container.querySelector("[data-slot='table'][data-virtualized='true']")).not.toBeNull()
 		expect(container.querySelector("[data-slot='tbody'][data-virtualized='true']")).not.toBeNull()
 	})
 
 	it('thead emits data-sticky="true" when stickyHeader is enabled', () => {
-		const table = makeTable()
-		setSticky(table)
-		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
+		const { container } = renderWithComponents(<DataGrid table={makeInstance(withSticky)} />)
 		expect(container.querySelector("[data-slot='thead'][data-sticky='true']")).not.toBeNull()
 	})
 
@@ -68,9 +65,7 @@ describe('headless data-* contract', () => {
 	})
 
 	it('table-scroll emits data-sticky-header="true" when stickyHeader is enabled', () => {
-		const table = makeTable()
-		setSticky(table)
-		const { container } = renderWithComponents(<DataGrid table={createDataGridInstance(table)} />)
+		const { container } = renderWithComponents(<DataGrid table={makeInstance(withSticky)} />)
 		expect(container.querySelector("[data-slot='table-scroll'][data-sticky-header='true']")).not.toBeNull()
 	})
 

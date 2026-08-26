@@ -4,13 +4,6 @@ import { useEffect, useState } from 'react'
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
-import {
-	COL_PINNING_KEY,
-	DEFAULT_FILTER_DEBOUNCE_MS,
-	FILTERING_DEBOUNCE_KEY,
-	FILTERING_VARIANT_KEY,
-	STICKY_HEADER_KEY,
-} from '../use-data-grid'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { buildColumnMenuSections } from './column-menu-sections'
@@ -105,7 +98,7 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
 export function Header({ stickyHeader }: DataGridHeaderProps = {}) {
 	const instance = useDataGridInstance()
 	const table = instance.table
-	const isSticky = stickyHeader ?? Boolean((table as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY])
+	const isSticky = stickyHeader ?? table.grid.stickyHeader
 	const theadRef = useHeaderHeightVar(isSticky)
 
 	// Narrow subscriptions: re-render only when slices the header actually
@@ -128,15 +121,9 @@ export function Header({ stickyHeader }: DataGridHeaderProps = {}) {
 	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
-	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
-	const filteringVariant = (table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] as
-		| 'inline'
-		| 'popover'
-		| 'panel'
-		| undefined
-	const filteringDebounce =
-		((table as unknown as Record<symbol, unknown>)[FILTERING_DEBOUNCE_KEY] as number | undefined) ??
-		DEFAULT_FILTER_DEBOUNCE_MS
+	const colPinEnabled = table.grid.columnPinning
+	const filteringVariant = table.grid.filtering.variant
+	const filteringDebounce = table.grid.filtering.debounce
 
 	return (
 		<Thead
@@ -178,7 +165,7 @@ export function Header({ stickyHeader }: DataGridHeaderProps = {}) {
 
 						const menuSections = buildColumnMenuSections(header, {
 							canSort: canSort && !header.isPlaceholder,
-							canPin: Boolean(colPinEnabled) && isMenuEligible && !isPinningDisabled && !isStaticPin,
+							canPin: colPinEnabled && isMenuEligible && !isPinningDisabled && !isStaticPin,
 							canHide: isMenuEligible && header.column.getCanHide(),
 						})
 						const hasSections = menuSections.length > 0

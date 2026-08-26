@@ -2,16 +2,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import {
-	CELL_TYPES_KEY,
-	FILTER_CHIPS_KEY,
-	SELECTION_PANEL_KEY,
-	SELECTION_PANEL_VARIANT,
-	useDataGrid,
-	type NormalizedFilterChipsConfig,
-	type SelectionPanelConfig,
-	type UseDataGridConfig,
-} from '../use-data-grid'
+import { SELECTION_PANEL_VARIANT, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
@@ -136,12 +127,8 @@ function resolveBulkConfirmationText(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function hasConfirmDialog(table: Table<any>): boolean {
 	if (table.options.deleting?.confirmation) return true
-	const panelConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
-	return (
-		typeof panelConfig === 'object' &&
-		panelConfig !== null &&
-		Boolean((panelConfig as SelectionPanelConfig).confirmation)
-	)
+	const panelConfig = table.grid.selection.panel
+	return typeof panelConfig === 'object' && Boolean(panelConfig.confirmation)
 }
 
 function ConfirmDialogRenderer() {
@@ -153,10 +140,7 @@ function ConfirmDialogRenderer() {
 	const pendingId = useDataGridStore((s) => s.pendingDeleteRowId)
 	const pendingBulk = useDataGridStore((s) => s.pendingBulkDelete)
 
-	const panelConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
+	const panelConfig = table.grid.selection.panel
 	const panelConfigObj = typeof panelConfig === 'object' ? panelConfig : undefined
 	const bulkConfirmation = panelConfigObj?.confirmation
 	const bulkOnDelete = panelConfigObj?.onDelete
@@ -213,9 +197,7 @@ function DefaultLayout() {
 	const table = instance.table
 	const variant = resolveSelectionPanelVariant(table)
 
-	const chipsConfig = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as
-		| NormalizedFilterChipsConfig
-		| undefined
+	const chipsConfig = table.grid.filtering.chips
 	const chipsAbove = chipsConfig?.position === 'above' ? <ActiveFiltersBar /> : null
 	const chipsBelow = chipsConfig?.position === 'below' ? <ActiveFiltersBar /> : null
 
@@ -259,7 +241,7 @@ function DataGridControlled<TRow extends object>({
 }: DataGridControlledProps<TRow>) {
 	const table = instance.table
 	// Read cellTypes stored on the table instance by useDataGrid, merge with direct prop
-	const tableCellTypes = (table as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] as CellTypeRegistry | undefined
+	const tableCellTypes = table.grid.cellTypes
 	const resolvedCellTypes = { ...tableCellTypes, ...cellTypes }
 
 	return (

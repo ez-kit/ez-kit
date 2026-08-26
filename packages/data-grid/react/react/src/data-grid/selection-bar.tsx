@@ -1,5 +1,5 @@
 import { useGridComponents } from '../components-context'
-import { SELECTION_PANEL_KEY, type SelectionPanelCallbackArgs, type SelectionPanelConfig } from '../use-data-grid'
+import { type SelectionPanelCallbackArgs, type SelectionPanelConfig } from '../use-data-grid'
 
 import { resolveSelectionPanelVariant } from './selection-panel-variant'
 import { useTable } from './table-context'
@@ -42,10 +42,7 @@ export function SelectionBar() {
 	// The draft section owns the bar while a query is pending — see DraftBar.
 	if (table.options.deferredApply === true && table.draft.isDirty()) return null
 
-	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
+	const rawConfig = table.grid.selection.panel
 
 	const selectionEnabled = Boolean(table.options.enableRowSelection)
 	if (!selectionEnabled || rawConfig === false) return null

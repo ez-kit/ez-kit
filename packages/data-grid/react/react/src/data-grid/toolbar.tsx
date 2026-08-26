@@ -1,11 +1,4 @@
 import { useGridComponents } from '../components-context'
-import {
-	COLUMN_VISIBILITY_KEY,
-	FILTERING_TOOLBAR_KEY,
-	GLOBAL_FILTERING_KEY,
-	PAGE_SIZER_KEY,
-	SORTING_KEY,
-} from '../use-data-grid'
 
 import { ClearFiltersButton } from './clear-filters-button'
 import { ColumnVisibilityTrigger } from './column-visibility-trigger'
@@ -15,12 +8,6 @@ import { PageSizer } from './page-sizer'
 import { SortTrigger } from './sort-trigger'
 import { useDataGridInstance } from './table-context'
 
-import type {
-	ColumnVisibilityUIConfig,
-	NormalizedFilteringToolbarConfig,
-	NormalizedGlobalFilteringConfig,
-	ReactSortingConfig,
-} from '../use-data-grid'
 import type { ReactNode } from 'react'
 
 export type DataGridToolbarProps = {
@@ -65,30 +52,18 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 	const table = instance.table
 	const hasCreating = Boolean(table.options.creating) && table.options.creating?.mode !== 'pin-row'
 
-	const colVisConfig = (table as unknown as Record<symbol, unknown>)[COLUMN_VISIBILITY_KEY] as
-		| boolean
-		| ColumnVisibilityUIConfig
-		| undefined
+	const grid = table.grid
+
+	const colVisConfig = grid.columnVisibility
 	const hasVisibilityToolbar =
 		colVisConfig === true || (typeof colVisConfig === 'object' && Boolean(colVisConfig.toolbar))
 
-	const sortConfig = (table as unknown as Record<symbol, unknown>)[SORTING_KEY] as
-		| boolean
-		| ReactSortingConfig
-		| undefined
+	const sortConfig = grid.sorting
 	const hasSortingToolbar = typeof sortConfig === 'object' && Boolean(sortConfig.toolbar)
 
-	const pageSizeOptions = (table as unknown as Record<symbol, unknown>)[PAGE_SIZER_KEY] as number[] | undefined
-
-	const globalFilteringConfig = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as
-		| NormalizedGlobalFilteringConfig
-		| undefined
-	const hasGlobalFilterToolbar = Boolean(globalFilteringConfig?.toolbar)
-
-	const filteringToolbarConfig = (table as unknown as Record<symbol, unknown>)[FILTERING_TOOLBAR_KEY] as
-		| NormalizedFilteringToolbarConfig
-		| undefined
-	const hasClearButtonToolbar = filteringToolbarConfig !== undefined
+	const pageSizeOptions = grid.pagination.pageSizeOptions
+	const hasGlobalFilterToolbar = Boolean(grid.globalFiltering?.toolbar)
+	const hasClearButtonToolbar = grid.filtering.toolbar !== undefined
 
 	if (children) {
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>

@@ -1,9 +1,4 @@
-import {
-	DEFAULT_SELECTION_PANEL_VARIANT,
-	SELECTION_PANEL_KEY,
-	type SelectionPanelConfig,
-	type SelectionPanelVariant,
-} from '../use-data-grid'
+import { DEFAULT_SELECTION_PANEL_VARIANT, type SelectionPanelVariant } from '../use-data-grid'
 
 import type { Table } from '@tanstack/table-core'
 
@@ -19,10 +14,7 @@ export function resolveSelectionPanelVariant(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	table: Table<any>,
 ): SelectionPanelVariant {
-	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
+	const rawConfig = table.grid.selection.panel
 
 	const variant = typeof rawConfig === 'object' ? rawConfig.variant : undefined
 	return variant ?? DEFAULT_SELECTION_PANEL_VARIANT

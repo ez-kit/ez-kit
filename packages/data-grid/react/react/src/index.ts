@@ -51,6 +51,10 @@ export type {
 } from './use-data-grid'
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
+// Resolved options — what the grid decided, readable by any compound child or UI kit
+export { useGridOptions } from './use-grid-options'
+export type { ResolvedGridOptions } from './resolved-options'
+
 // Grid overflow menu — one model for the column header menu and the row actions menu
 export { GridMenuIcon, GridMenuVariant, toMenuSections } from './menu'
 export type { GridMenuItem, GridMenuProps, GridMenuSection } from './menu'

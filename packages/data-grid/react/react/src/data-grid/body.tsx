@@ -1,7 +1,6 @@
 import { Fragment } from 'react'
 
 import { useGridComponents } from '../components-context'
-import { EXPAND_KEY, FALLBACKS_KEY } from '../use-data-grid'
 
 import { CreatingRow } from './creating-row'
 import { EmptyStateRow } from './empty-state-row'
@@ -16,7 +15,7 @@ import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { VirtualBody } from './virtual-body'
 import { useVirtualContext } from './virtual-context'
 
-import type { ExpandedRowProps, FallbacksConfig } from '../use-data-grid'
+import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
@@ -109,11 +108,8 @@ export function Body({ children }: DataGridBodyProps = {}) {
 
 	if (rowVirtualizer) return <VirtualBody />
 
-	const fallbacks = (table as unknown as Record<symbol, unknown>)[FALLBACKS_KEY] as FallbacksConfig | undefined
-	const expandConfig = (table as unknown as Record<symbol, unknown>)[EXPAND_KEY] as
-		| { renderExpanded?: ComponentType<ExpandedRowProps<object>> }
-		| undefined
-	const renderExpanded = expandConfig?.renderExpanded
+	const fallbacks = table.grid.fallbacks
+	const renderExpanded = table.grid.expanding.renderExpanded as ComponentType<ExpandedRowProps<object>> | undefined
 
 	if (isPending && fallbacks?.loading !== false) {
 		return <LoadingBody />
