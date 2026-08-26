@@ -19,7 +19,7 @@ export function InfiniteScrollManualExample() {
 			data={data}
 			columns={columns}
 			state={state}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 			pagination={{ mode: 'infinite', trigger: 'manual', hasNextPage, onLoadMore }}
 		/>
 	)

@@ -19,6 +19,13 @@
 // from every UI kit built on it.
 export * from '@ez-kit/data-grid-core'
 
+// ── React-bound column types ──────────────────────────────────────────────
+// These shadow the star-exported core names on purpose: an explicit re-export wins over a star
+// of the same name, so `ColumnDef` / `createColumns` / `createColumnHelper` reached from this
+// package are the ones whose renderer slots return `ReactNode`.
+export { createColumns, createColumnHelper } from './react-columns'
+export type { ColumnDef, CellDef, ColumnHelper } from './react-columns'
+
 // React hook
 export { useDataGrid } from './use-data-grid'
 export type {
@@ -38,13 +45,15 @@ export type {
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
 	NormalizedPageWindowConfig,
-	NormalizedVirtualizedConfig,
+	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
 	ReactGlobalFilteringConfig,
 	ReactPaginationConfig,
 	ReactSelectionConfig,
 	ReactSortingConfig,
+	RowPropsResolver,
+	LayoutConfig,
 	SelectionPanelCallbackArgs,
 	SelectionPanelConfig,
 	SelectionPanelVariant,
@@ -131,9 +140,15 @@ export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps 
 export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/table'
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
+export type { DataGridHeaderRowProps, DataGridHeaderRowRenderArgs } from './data-grid/header-row'
+export type {
+	DataGridHeaderCellProps,
+	DataGridHeaderCellRenderArgs,
+	HeaderSortDirection,
+} from './data-grid/header-cell'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
-export type { DataGridRowProps } from './data-grid/row'
-export type { DataGridCellProps } from './data-grid/cell'
+export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
+export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
 export type { DataGridSortTriggerProps, DataGridSortTriggerRenderArgs } from './data-grid/sort-trigger'

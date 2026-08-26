@@ -62,7 +62,7 @@ last rendered index, so only visible rows mount while pages keep loading.
 useDataGrid({
 	data,
 	columns,
-	virtualized: { row: true },
+	virtualization: { row: true },
 	pagination: { mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } },
 })
 ```
@@ -123,7 +123,7 @@ while a fetch is in flight.
   `data-slot="load-more-row"` and renders the injected `LoadMoreRow`. The shadcn and HeroUI
   flavors provide the styled spinner / button / retry.
 - Auto detection measures the scroll container itself, so it needs a container that actually
-  scrolls vertically — give the grid a bounded height (`stickyHeader`, or your own
+  scrolls vertically — give the grid a bounded height (`layout.stickyHeader` / `layout.maxHeight`, or your own
   `--dg-table-max-height`). If the rows never overflow, there is no edge to reach and nothing
   auto-loads; use `trigger: 'manual'` for that case.
 - Infinite mode replaces the page footer — see [Pagination](/docs/data-grid/pagination).

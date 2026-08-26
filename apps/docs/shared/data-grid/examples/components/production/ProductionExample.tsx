@@ -52,7 +52,7 @@ export function ProductionExample() {
 					orders.resetToFirstPage()
 				},
 			}}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 			pinning={{ column: true, row: { top: true, bottom: true } }}
 			resizing={{ mode: 'onChange' }}
 			columnVisibility={{ toolbar: true }}

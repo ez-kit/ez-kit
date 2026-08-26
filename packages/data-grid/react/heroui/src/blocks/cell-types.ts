@@ -12,7 +12,7 @@ import { TextCellInput } from './cell-types/TextCell'
 
 import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
 
-export const cellTypes: CellTypeRegistry = {
+export const cellTypes = {
 	text: {
 		...textCellType,
 		edit: TextCellInput,
@@ -43,4 +43,4 @@ export const cellTypes: CellTypeRegistry = {
 	image: { view: ImageCellView, edit: ImageCellInput },
 	link: { view: LinkCellView, edit: LinkCellInput },
 	progress: { view: ProgressCellView, edit: ProgressCellInput },
-}
+} satisfies CellTypeRegistry

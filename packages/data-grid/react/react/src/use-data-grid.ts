@@ -12,6 +12,7 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { PaginationVariant } from './types'
 import type {
+	ColumnVisibilityConfig,
 	ConfirmationOptions,
 	FeatureToggle,
 	CreatingConfig,
@@ -26,10 +27,10 @@ import type {
 	SelectionConfig,
 	SortingConfig,
 	TableConfig,
-	VirtualizedConfig,
+	VirtualizationConfig,
 } from '@ez-kit/data-grid-core'
 import type { Row, Table, TableState } from '@tanstack/table-core'
-import type { ComponentType, ReactElement } from 'react'
+import type { ComponentType, HTMLAttributes, ReactElement } from 'react'
 
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
@@ -105,16 +106,16 @@ export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig
 }
 
 /** Normalized virtualized config stored on the table instance. */
-export type NormalizedVirtualizedConfig = {
+export type NormalizedVirtualizationConfig = {
 	row: RowVirtualOptions
 }
 
-function normalizeVirtualized(
-	virtualized: boolean | VirtualizedConfig | undefined,
-): NormalizedVirtualizedConfig | undefined {
-	if (!isFeatureEnabled(virtualized)) return undefined
-	if (typeof virtualized !== 'object') return { row: {} }
-	const row = virtualized.row
+function normalizeVirtualization(
+	virtualization: boolean | VirtualizationConfig | undefined,
+): NormalizedVirtualizationConfig | undefined {
+	if (!isFeatureEnabled(virtualization)) return undefined
+	if (typeof virtualization !== 'object') return { row: {} }
+	const row = virtualization.row
 	if (!row) return undefined
 	if (row === true) return { row: {} }
 	return { row }
@@ -238,7 +239,12 @@ export type NormalizedPageWindowConfig = {
 	boundaries: number
 }
 
-export type ColumnVisibilityUIConfig = FeatureToggle & {
+/**
+ * The headless {@link ColumnVisibilityConfig} plus this layer's `toolbar` auto-mount flag —
+ * the same `React*` shape every other feature uses, so `onChange` is reachable from a grid
+ * that only ever imports the adapter.
+ */
+export type ColumnVisibilityUIConfig = ColumnVisibilityConfig & {
 	/** Show a column visibility toggle button in the toolbar. Default: false. */
 	toolbar?: boolean
 }
@@ -389,6 +395,49 @@ export type ReactSortingConfig = {
 	toolbar?: boolean
 } & SortingConfig
 
+/**
+ * Presentational layout of the grid shell. Purely visual — nothing here changes the row model.
+ */
+export type LayoutConfig = {
+	/**
+	 * Make the table header stick to the top while the body scrolls.
+	 *
+	 * Requires a bounded scroll container, which the structural stylesheet gives it:
+	 * {@link LayoutConfig.maxHeight}, or the `400px` fallback baked into
+	 * `--dg-table-max-height`.
+	 */
+	stickyHeader?: boolean
+	/**
+	 * Height of the scroll container, as any CSS length (`'32rem'`, `'60vh'`, `'500px'`).
+	 *
+	 * Writes the CSS custom properties the structural stylesheet already reads —
+	 * `--dg-table-max-height` normally, `--dg-virtual-height` under
+	 * {@link UseDataGridConfig.virtualization}, where the container needs a definite height
+	 * rather than a cap. Both were previously reachable only by setting the variable on a
+	 * parent by hand, which is not something an option list can document.
+	 *
+	 * Omitted, the stylesheet defaults apply: `400px` capped, `600px` virtualized.
+	 */
+	maxHeight?: string
+}
+
+/**
+ * Per-row DOM props, resolved for every rendered row and forwarded to the kit's `Tr`.
+ *
+ * The one thing the grid could not express: "style rows whose status is failed". Replacing the
+ * `Tr` component reaches every row and knows nothing about the data; a `<DataGrid.Body>` render
+ * function reaches the data but gives up pinned rows, expanded panels, the creating row, the
+ * fallback states, the infinite footer and the refetch overlay along with it.
+ *
+ * Structural attributes the stylesheet depends on — `data-slot`, `data-row-id`, `data-depth`,
+ * `data-pinned`, `data-virtual` — are applied **after** this and win; `className` is appended to
+ * the kit's own rather than replacing it. Everything else (`title`, `onClick`, `aria-*`, `style`)
+ * lands as given.
+ *
+ * Called during render, once per visible row: keep it cheap and free of side effects.
+ */
+export type RowPropsResolver<TRow extends object> = (row: Row<TRow>) => HTMLAttributes<HTMLTableRowElement> | undefined
+
 export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Fallback states shown when the grid has no visible rows.
@@ -434,11 +483,23 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	state?: Partial<TableState>
 	/**
-	 * Make the table header stick to the top when the table scrolls vertically.
-	 * The scroll container height defaults to `400px`; override via the
-	 * `--dg-table-max-height` CSS variable on a parent element.
+	 * Per-row DOM props — see {@link RowPropsResolver}.
+	 *
+	 * @example
+	 * ```tsx
+	 * rowProps: (row) => (row.original.status === 'failed' ? { className: 'bg-red-50' } : undefined)
+	 * ```
 	 */
-	stickyHeader?: boolean
+	rowProps?: RowPropsResolver<TRow>
+	/**
+	 * Presentational layout of the grid shell — how tall it is and whether its header sticks.
+	 *
+	 * Deliberately its own group rather than loose root flags: everything here is about the
+	 * chrome around the rows, not about a feature, and the group is where `density` /
+	 * `striped` / `borders` will land without each arriving as another root-level boolean
+	 * beside `sorting` and `editing`.
+	 */
+	layout?: LayoutConfig
 	/**
 	 * Pagination config. Page-based by default; set `mode: 'infinite'` for infinite
 	 * scroll. The React layer adds `trigger` / `threshold` detection tuning on top of
@@ -529,7 +590,8 @@ export function useDataGrid<TRow extends object>(
 		pagination: rawPagination,
 		state,
 		onStateChange,
-		stickyHeader,
+		layout,
+		rowProps,
 		...restConfig
 	} = config
 
@@ -725,12 +787,16 @@ export function useDataGrid<TRow extends object>(
 	// the freshest closures (notably `infinite.onLoadMore`). This replaced eighteen private
 	// `Symbol()` keys, each written and read through an untyped double cast.
 	const colPinEnabled = config.pinning === true || Boolean(featureConfig(config.pinning)?.column)
-	const virtualizedConfig = normalizeVirtualized(config.virtualized)
+	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
 	table.grid = {
 		cellTypes,
-		stickyHeader: stickyHeader ?? false,
+		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
+		layout: {
+			stickyHeader: layout?.stickyHeader ?? false,
+			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
+		},
 		columnPinning: colPinEnabled,
 		columnVisibility: isFeatureEnabled(columnVisibility) ? columnVisibility : undefined,
 		sorting: isFeatureEnabled(config.sorting) ? config.sorting : undefined,
@@ -752,7 +818,7 @@ export function useDataGrid<TRow extends object>(
 			renderExpanded: expandingCfg?.renderExpanded as ResolvedGridOptions['expanding']['renderExpanded'],
 		},
 		fallbacks,
-		virtualized: virtualizedConfig,
+		virtualization: virtualizationConfig,
 	}
 
 	// NOTE: useDataGrid no longer calls useSyncExternalStore. Components that

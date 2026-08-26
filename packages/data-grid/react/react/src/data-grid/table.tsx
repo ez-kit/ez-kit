@@ -11,7 +11,7 @@ import { PinShadowOverlay } from './pin-shadow-overlay'
 import { useDataGridInstance, useDataGridStore } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
-import type { NormalizedVirtualizedConfig } from '../use-data-grid'
+import type { NormalizedVirtualizationConfig } from '../use-data-grid'
 import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
 
@@ -88,7 +88,7 @@ function useScrollShadows(
 }
 
 function resolveEstimateSize(
-	estimateSize: NormalizedVirtualizedConfig['row']['estimateSize'],
+	estimateSize: NormalizedVirtualizationConfig['row']['estimateSize'],
 ): (index: number) => number {
 	if (typeof estimateSize === 'function') return estimateSize
 	const size = estimateSize ?? DEFAULT_ESTIMATE_SIZE
@@ -164,10 +164,17 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 	const sizeVars = getColumnSizeVars(table)
 	const gridTemplateColumns = getGridTemplateColumns(table)
 
-	const virtualizedConfig = table.grid.virtualized
+	const virtualizationConfig = table.grid.virtualization
 
-	const isVirtualized = Boolean(virtualizedConfig)
-	const isStickyHeader = table.grid.stickyHeader
+	const isVirtualized = Boolean(virtualizationConfig)
+	const { stickyHeader: isStickyHeader, maxHeight } = table.grid.layout
+
+	// One option, two custom properties: capped height for the normal scroll container,
+	// definite height for the virtualized one (which cannot size itself from its content).
+	// The stylesheet already reads both; until now neither had a way in from the API.
+	const heightVars = (
+		maxHeight !== undefined ? { '--dg-table-max-height': maxHeight, '--dg-virtual-height': maxHeight } : undefined
+	) as CSSProperties | undefined
 
 	// wrapperRef — outer div; CSS pin-shadow vars are written here so the overlay reads them
 	const wrapperRef = useRef<HTMLDivElement>(null)
@@ -182,13 +189,13 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 	const rowVirtualizer = useVirtualizer({
 		count: isVirtualized ? rows.length : 0,
 		getScrollElement: () => containerRef.current,
-		estimateSize: resolveEstimateSize(virtualizedConfig?.row.estimateSize),
-		overscan: virtualizedConfig?.row.overscan ?? DEFAULT_OVERSCAN,
+		estimateSize: resolveEstimateSize(virtualizationConfig?.row.estimateSize),
+		overscan: virtualizationConfig?.row.overscan ?? DEFAULT_OVERSCAN,
 		enabled: isVirtualized,
 	})
 
 	// Virtualized: containerRef IS the scroll element; pass it directly to skip DOM traversal.
-	// Non-virtualized: resolveScrollElement finds the real scroll element inside wrapperRef
+	// Non-virtualization: resolveScrollElement finds the real scroll element inside wrapperRef
 	// (handles both shadcn's inner overflow div and HeroUI's inner ScrollContainer).
 	useScrollShadows(wrapperRef, isVirtualized ? containerRef : undefined)
 
@@ -270,6 +277,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 						ref={wrapperRef}
 						data-slot='table-wrapper'
 						data-virtualized='true'
+						style={heightVars}
 					>
 						<div
 							ref={containerRef}
@@ -290,6 +298,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 			<div
 				ref={wrapperRef}
 				data-slot='table-wrapper'
+				style={heightVars}
 			>
 				<div
 					ref={scrollRef}

@@ -55,19 +55,19 @@ not a `RowSelectionState` object.
 
 ## Every controllable slot
 
-| Slot              | State key          | Per-feature `onChange`                                                           |
-| ----------------- | ------------------ | -------------------------------------------------------------------------------- |
-| Sort              | `sorting`          | `sorting.onChange`                                                               |
-| Column filters    | `columnFilters`    | `filtering.onChange`                                                             |
-| Global filter     | `globalFilter`     | `globalFiltering.onChange`                                                       |
-| Pagination        | `pagination`       | `pagination.onChange`                                                            |
-| Row selection     | `rowSelection`     | `selection.onChange` — **`(rowIds: string[]) => void`**, not `RowSelectionState` |
-| Column visibility | `columnVisibility` | — (`onStateChange` only)                                                         |
-| Column pinning    | `columnPinning`    | — (`onStateChange` only)                                                         |
-| Row pinning       | `rowPinning`       | — (`onStateChange` only)                                                         |
-| Expanded          | `expanded`         | — (`onStateChange` only)                                                         |
-| Column sizing     | `columnSizing`     | — (`onStateChange` only)                                                         |
-| Loading           | `loading`          | — (read-only — set via `state.loading`)                                          |
+| Slot              | State key          | Per-feature `onChange`                                                               |
+| ----------------- | ------------------ | ------------------------------------------------------------------------------------ |
+| Sort              | `sorting`          | `sorting.onChange`                                                                   |
+| Column filters    | `columnFilters`    | `filtering.onChange`                                                                 |
+| Global filter     | `globalFilter`     | `globalFiltering.onChange`                                                           |
+| Pagination        | `pagination`       | `pagination.onChange`                                                                |
+| Row selection     | `rowSelection`     | `selection.onChange` — `(rowSelection: RowSelectionState, rowIds: string[]) => void` |
+| Column visibility | `columnVisibility` | — (`onStateChange` only)                                                             |
+| Column pinning    | `columnPinning`    | — (`onStateChange` only)                                                             |
+| Row pinning       | `rowPinning`       | — (`onStateChange` only)                                                             |
+| Expanded          | `expanded`         | — (`onStateChange` only)                                                             |
+| Column sizing     | `columnSizing`     | — (`onStateChange` only)                                                             |
+| Loading           | `loading`          | — (read-only — set via `state.loading`)                                              |
 
 ## Source
 

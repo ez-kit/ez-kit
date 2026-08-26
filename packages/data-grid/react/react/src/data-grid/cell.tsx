@@ -2,6 +2,7 @@ import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-ki
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { resolveCellClassName } from '../utils/class-names'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
@@ -11,13 +12,34 @@ import { useDataGridInstance, useDataGridStore } from './table-context'
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ComponentType, CSSProperties, ReactNode } from 'react'
+
+/** What a `<DataGrid.Cell>` render function receives. */
+export type DataGridCellRenderArgs = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	cell: Cell<any, unknown>
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	row: Row<any>
+	/** The cell's value, already resolved through the column's accessor. */
+	value: unknown
+}
 
 export type DataGridCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	cell: Cell<any, unknown>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
+	/**
+	 * Custom content for this one cell, rendered inside the kit's `Td` — so the cell keeps its
+	 * pinning offset, its `data-*` attributes and its `cellClassName`.
+	 *
+	 * Omit it for the built-in content: the cell-type renderer, the inline editor, the system
+	 * column controls. Supply it to replace just the content of one cell.
+	 *
+	 * A column-wide override belongs on the column instead (`cell.component`), which also feeds
+	 * the create and edit forms; this is for a single cell in a hand-composed row.
+	 */
+	children?: ReactNode | ((args: DataGridCellRenderArgs) => ReactNode)
 }
 
 type PinInfo = {
@@ -40,8 +62,18 @@ const EMPTY_ERRORS: readonly string[] = Object.freeze([])
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.
  */
-export function DataGridCell({ cell, row }: DataGridCellProps) {
+export function DataGridCell({ cell, row, children }: DataGridCellProps) {
 	const meta = cell.column.columnDef.meta
+	if (children !== undefined) {
+		return (
+			<CustomCell
+				cell={cell}
+				row={row}
+			>
+				{children}
+			</CustomCell>
+		)
+	}
 	if (meta?.isSystemColumn) {
 		return (
 			<SystemCell
@@ -55,6 +87,34 @@ export function DataGridCell({ cell, row }: DataGridCellProps) {
 			cell={cell}
 			row={row}
 		/>
+	)
+}
+
+/**
+ * A cell whose content the caller supplied. Keeps the `Td` shell — pinning vars, `data-slot`,
+ * `data-pinned` and the column's `cellClassName` — so a replaced cell still lines up with its
+ * neighbours and its pinned column still sticks.
+ */
+function CustomCell({ cell, row, children }: DataGridCellProps) {
+	const { Td } = useGridComponents().core
+	const meta = cell.column.columnDef.meta
+	const pin = getCellPinInfo(cell)
+	const cellClassName = resolveCellClassName(meta?.cellClassName, {
+		row: row.original as unknown,
+		value: cell.getValue<unknown>(),
+		rowIndex: row.index,
+	})
+
+	return (
+		<Td
+			data-slot='td'
+			style={pin.pinVars}
+			pinned={pin.pinned}
+			{...pin.pinnedAttrs}
+			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
+		>
+			{typeof children === 'function' ? children({ cell, row, value: cell.getValue<unknown>() }) : children}
+		</Td>
 	)
 }
 
@@ -199,6 +259,11 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 			: undefined
 
 	const viewComp = resolveViewComponent(meta, cellTypes)
+	const cellClassName = resolveCellClassName(meta?.cellClassName, {
+		row: cell.row.original as unknown,
+		value: cell.getValue<unknown>(),
+		rowIndex: cell.row.index,
+	})
 
 	return (
 		<Td
@@ -206,16 +271,19 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 			style={pin.pinVars}
 			pinned={pin.pinned}
 			{...pin.pinnedAttrs}
+			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp
-				? viewComp({
-						value: cell.getValue(),
-						row: cell.row.original,
+				? flexRender(viewComp, {
+						// `cell` is row-type-erased here, so `getValue()` and `row.original` are both
+						// `any`. The view contract says `unknown` — narrow once, at the boundary.
+						value: cell.getValue<unknown>(),
+						row: cell.row.original as unknown,
 						rowIndex: cell.row.index,
 						...(meta?.config !== undefined ? { config: meta.config } : {}),
 					})
-				: flexRender(cell.column.columnDef.cell, cell.getContext() as unknown as Record<string, unknown>)}
+				: flexRender(cell.column.columnDef.cell, cell.getContext())}
 		</Td>
 	)
 }
@@ -283,7 +351,7 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 			{...(fieldError ? { 'data-error': true } : {})}
 		>
 			{editComp ? (
-				editComp(fieldState)
+				flexRender(editComp, fieldState)
 			) : (
 				<Input
 					{...(editMode === 'cell' ? { autoFocus: true } : {})}
@@ -310,12 +378,12 @@ function getCellPinInfo(cell: Cell<unknown, unknown>): PinInfo {
 function resolveEditComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
-): ((props: FieldState) => ReactNode) | undefined {
+): ComponentType<FieldState> | undefined {
 	// 1. column-level editing.component
 	const editingConfig = meta?.editing
 	if (editingConfig !== false && editingConfig !== undefined) {
 		const comp = editingConfig.component
-		if (comp) return comp as (props: FieldState) => ReactNode
+		if (comp) return comp as ComponentType<FieldState>
 	}
 	// 2. registry by cellType
 	if (meta?.cellType) {
@@ -339,12 +407,12 @@ function resolveEditComponent(
 function resolveViewComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
-): ((props: CellViewProps) => ReactNode) | undefined {
-	if (meta?.cellView) {
-		const cellView = meta.cellView
-		return (props: CellViewProps) =>
-			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex }) as ReactNode
-	}
+): ComponentType<CellViewProps> | undefined {
+	// Returned as-is, never wrapped: `flexRender` mounts by component identity, so a wrapper
+	// allocated here would be a fresh component type on every render and remount the cell each
+	// time. `cell.component` takes `{ row, value, rowIndex }` and simply ignores the extra
+	// `config` that `CellViewProps` carries, so the shapes are already compatible.
+	if (meta?.cellView) return meta.cellView as ComponentType<CellViewProps>
 	if (meta?.cellType) {
 		const def = registry[meta.cellType]
 		if (def?.view) return def.view

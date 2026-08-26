@@ -33,9 +33,9 @@ function makeInstance(mutate?: (options: ResolvedGridOptions) => void) {
 	mutate?.(instance.table.grid)
 	return instance
 }
-const withSticky = (options: ResolvedGridOptions) => (options.stickyHeader = true)
+const withSticky = (options: ResolvedGridOptions) => (options.layout.stickyHeader = true)
 const withVirtualized = (options: ResolvedGridOptions) =>
-	(options.virtualized = { row: { estimateSize: 40, overscan: 5 } })
+	(options.virtualization = { row: { estimateSize: 40, overscan: 5 } })
 
 describe('headless data-* contract', () => {
 	it('table emits data-slot="table" without data-virtualized by default', () => {

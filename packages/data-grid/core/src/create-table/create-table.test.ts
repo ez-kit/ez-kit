@@ -57,17 +57,42 @@ describe('createTable — sorting', () => {
 		expect(table.getState().sorting).toEqual([{ id: 'name', desc: true }])
 	})
 
+	// `initialState` merges into the pagination slice instead of replacing it. Spreading the
+	// consumer seed over a whole `pagination` default used to wipe the sibling key, so a deep
+	// link that seeds only `pageIndex` left `pageSize` undefined and the first page rendered
+	// with no size at all.
+	it('initialState.pagination seeds one key without dropping the other', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { pageSize: 25 },
+			initialState: { pagination: { pageIndex: 3 } },
+		})
+		expect(table.initialState.pagination).toEqual({ pageIndex: 3, pageSize: 25 })
+		expect(table.getState().pagination).toEqual({ pageIndex: 3, pageSize: 25 })
+	})
+
+	it('initialState.pagination can override the configured pageSize', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { pageSize: 25 },
+			initialState: { pagination: { pageIndex: 0, pageSize: 50 } },
+		})
+		expect(table.getState().pagination).toEqual({ pageIndex: 0, pageSize: 50 })
+	})
+
 	it('sorting.descFirst → sortDescFirst', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { descFirst: true } })
 		expect(table.options.sortDescFirst).toBe(true)
 	})
 
-	it('sorting.removable: false → enableSortingRemoval: false', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { removable: false } })
+	it('sorting.clearable: false → enableSortingRemoval: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { clearable: false } })
 		expect(table.options.enableSortingRemoval).toBe(false)
 	})
 
-	it('sorting.removable not set — enableSortingRemoval untouched', () => {
+	it('sorting.clearable not set — enableSortingRemoval untouched', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, sorting: true })
 		expect(table.options.enableSortingRemoval).toBeUndefined()
 	})
@@ -344,12 +369,77 @@ describe('createTable — selection', () => {
 		expect(table.options.enableRowSelection).toBe(false)
 	})
 
-	it('selection: { onChange } fires callback with selected row ids', () => {
+	it('selection: { onChange } fires with the slice first, then the selected ids', () => {
 		const onChange = vi.fn()
 		const table = createTable({ data: DATA, columns: COLUMNS, selection: { onChange } })
-		// Select first row
 		table.getRow('1').toggleSelected(true)
-		expect(onChange).toHaveBeenCalledWith(['1'])
+		expect(onChange).toHaveBeenCalledWith({ '1': true }, ['1'])
+	})
+
+	// The assertion this suite was missing. `selection.onChange` used to be carried by TanStack's
+	// `onRowSelectionChange`, which *replaces* the built-in state writer — so supplying a callback
+	// silently stopped the selection from ever being recorded, and every checkbox went dead. The
+	// old test passed throughout, because it only checked that the callback fired.
+	it('selection state is still recorded when onChange is supplied', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: { onChange: vi.fn() } })
+		table.getRow('1').toggleSelected(true)
+		expect(table.getState().rowSelection).toEqual({ '1': true })
+		expect(table.getRow('1').getIsSelected()).toBe(true)
+	})
+})
+
+// ── per-feature onChange ──────────────────────────────────────────────────────
+
+describe('createTable — per-feature onChange', () => {
+	it('columnVisibility.onChange fires with the visibility slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: { onChange } })
+		table.getColumn('name')?.toggleVisibility(false)
+		expect(onChange).toHaveBeenCalledWith({ name: false })
+		expect(table.getState().columnVisibility).toEqual({ name: false })
+	})
+
+	it('pinning.column.onChange fires with the column-pinning slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { column: { onChange } } })
+		table.getColumn('name')?.pin('left')
+		expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ left: ['name'] }))
+	})
+
+	it('pinning.row.onChange fires with the row-pinning slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true, onChange } } })
+		table.getRow('1').pin('top')
+		expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ top: ['1'] }))
+	})
+
+	it('resizing.onChange fires with the committed column sizes', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { onChange } })
+		table.setColumnSizing({ name: 240 })
+		expect(onChange).toHaveBeenCalledWith({ name: 240 })
+	})
+
+	it('expanding.onChange fires with the expanded slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			expanding: { onChange, getRowCanExpand: () => true },
+		})
+		table.getRow('1').toggleExpanded(true)
+		expect(onChange).toHaveBeenCalledWith({ '1': true })
+	})
+
+	it('a disabled feature contributes no onChange', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			columnVisibility: { enabled: false, onChange },
+		})
+		table.getColumn('name')?.toggleVisibility(false)
+		expect(onChange).not.toHaveBeenCalled()
 	})
 })
 
@@ -593,30 +683,30 @@ describe('createTable — system columns', () => {
 // ── virtualized ───────────────────────────────────────────────────────────────
 
 describe('createTable — virtualized', () => {
-	it('virtualized not set — options.virtualized is undefined', () => {
+	it('virtualized not set — options.virtualization is undefined', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toBeUndefined()
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toBeUndefined()
 	})
 
-	it('virtualized: true — stored on options', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: true })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toBe(true)
+	it('virtualization: true — stored on options', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: true })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toBe(true)
 	})
 
-	it('virtualized: { row: true } — stored on options', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: true } })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: true })
+	it('virtualization: { row: true } — stored on options', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: { row: true } })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toEqual({ row: true })
 	})
 
-	it('virtualized: { row: { overscan: 10 } } — stored on options with custom options', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: { overscan: 10 } } })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: { overscan: 10 } })
+	it('virtualization: { row: { overscan: 10 } } — stored on options with custom options', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: { row: { overscan: 10 } } })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toEqual({ row: { overscan: 10 } })
 	})
 
-	it('virtualized: { row: { estimateSize: () => 64 } } — stored on options with custom estimateSize', () => {
+	it('virtualization: { row: { estimateSize: () => 64 } } — stored on options with custom estimateSize', () => {
 		const estimateSize = () => 64
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: { estimateSize } } })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: { estimateSize } })
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: { row: { estimateSize } } })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toEqual({ row: { estimateSize } })
 	})
 })
 

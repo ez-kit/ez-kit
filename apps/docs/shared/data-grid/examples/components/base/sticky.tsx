@@ -13,7 +13,7 @@ export function BaseStickyExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 			pagination={{ pageSize: 25, pageSizeOptions: [10, 25, 50] }}
 		/>
 	)

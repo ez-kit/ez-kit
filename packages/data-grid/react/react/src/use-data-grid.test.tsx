@@ -447,33 +447,33 @@ describe('useDataGrid', () => {
 describe('useDataGrid — virtualized', () => {
 	it('VIRTUALIZED_KEY is undefined when virtualized not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = result.current.table.grid.virtualized
+		const key = result.current.table.grid.virtualization
 		expect(key).toBeUndefined()
 	})
 
-	it('VIRTUALIZED_KEY stores normalized config when virtualized: true', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: true }))
-		const key = result.current.table.grid.virtualized
+	it('VIRTUALIZED_KEY stores normalized config when virtualization: true', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualization: true }))
+		const key = result.current.table.grid.virtualization
 		expect(key).toEqual({ row: {} })
 	})
 
-	it('VIRTUALIZED_KEY stores normalized config when virtualized: { row: true }', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: true } }))
-		const key = result.current.table.grid.virtualized
+	it('VIRTUALIZED_KEY stores normalized config when virtualization: { row: true }', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { row: true } }))
+		const key = result.current.table.grid.virtualization
 		expect(key).toEqual({ row: {} })
 	})
 
 	it('VIRTUALIZED_KEY stores RowVirtualOptions when provided', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, virtualized: { row: { overscan: 8 } } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { row: { overscan: 8 } } }),
 		)
-		const key = result.current.table.grid.virtualized
+		const key = result.current.table.grid.virtualization
 		expect(key).toEqual({ row: { overscan: 8 } })
 	})
 
-	it('VIRTUALIZED_KEY is undefined when virtualized: false', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualized: false }))
-		const key = result.current.table.grid.virtualized
+	it('VIRTUALIZED_KEY is undefined when virtualization: false', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualization: false }))
+		const key = result.current.table.grid.virtualization
 		expect(key).toBeUndefined()
 	})
 })

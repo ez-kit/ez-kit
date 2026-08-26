@@ -23,8 +23,11 @@ export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCor
 	meta?: TableCoreColumnMeta<TRow, TValue>
 }
 
-/** Built-in cell types. The `string & {}` tail allows custom type strings while preserving autocomplete. */
-export type CellType =
+/**
+ * The cell types this package implements. A closed union — the escape hatch for
+ * project-specific types is {@link CellType}'s tail, not this.
+ */
+export type BuiltInCellType =
 	| 'text'
 	| 'number'
 	| 'date'
@@ -34,7 +37,34 @@ export type CellType =
 	| 'image'
 	| 'link'
 	| 'progress'
-	| (string & {})
+
+/**
+ * A cell type as it may appear on a column or in `ColumnMeta`. The `string & {}` tail keeps
+ * a project-registered custom type assignable while preserving autocomplete for the built-ins.
+ *
+ * Deliberately **not** what `ColumnDef['cell'].type` accepts: there the type is checked against
+ * the kit's actual registry via `CellDef`'s `TCustom` parameter, so a typo is a compile error.
+ */
+export type CellType = BuiltInCellType | (string & {})
+
+/**
+ * The shape `React.memo(...)` / `React.forwardRef(...)` produce: an object tagged with a
+ * `$$typeof` symbol rather than a callable. Named structurally so core stays framework-agnostic
+ * while still accepting them — `flexRender` recognises exactly this tag at runtime.
+ */
+export type ExoticComponentLike = { $$typeof: symbol }
+
+/**
+ * A renderer slot on a column: a component taking `TProps` and returning the adapter's node
+ * type, or one of the exotic wrappers.
+ *
+ * `TNode` is what the adapter renders — `unknown` in core, which never calls these and only
+ * carries them through. The React adapter re-exports {@link ColumnDef} with `TNode` bound to
+ * `ReactNode`, so a column written against the adapter gets its JSX return type-checked. It is a
+ * type parameter rather than a hand-written React twin for the same reason `ExpandingConfig`
+ * takes `TRenderExpanded`: a copy can only drift.
+ */
+export type ColumnRenderer<TProps, TNode> = ((props: TProps) => TNode) | ExoticComponentLike
 
 export type CellViewCtx<TRow, TValue> = {
 	row: TRow
@@ -86,67 +116,73 @@ export type DateCellConfig = {
 
 // ── cell definition (discriminated union) ─────────────────────────────────
 
-type SimpleType = Exclude<CellType, 'select' | 'badge' | 'image' | 'link' | 'progress' | 'date'>
+/**
+ * Built-in types that need no `config` block. Derived from {@link BuiltInCellType}, **not** from
+ * {@link CellType}: the latter's `string & {}` tail would make this arm swallow every string, so
+ * `cell: { type: 'raiting' }` typechecked no matter what the kit registered — which silently
+ * defeated `CellDef`'s whole `TCustom` parameter.
+ */
+type SimpleType = Exclude<BuiltInCellType, 'select' | 'badge' | 'image' | 'link' | 'progress' | 'date'>
 
-type BasicCellDef<TRow, TValue = unknown> = {
+type BasicCellDef<TRow, TValue = unknown, TNode = unknown> = {
 	type?: SimpleType
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-type SelectCellDef<TRow, TValue = unknown> = {
+type SelectCellDef<TRow, TValue = unknown, TNode = unknown> = {
 	type: 'select'
 	config: SelectCellConfig
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-type BadgeCellDef<TRow, TValue = unknown> = {
+type BadgeCellDef<TRow, TValue = unknown, TNode = unknown> = {
 	type: 'badge'
 	config: BadgeCellConfig
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-type ImageCellDef<TRow, TValue = unknown> = {
+type ImageCellDef<TRow, TValue = unknown, TNode = unknown> = {
 	type: 'image'
 	config?: ImageCellConfig
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-type LinkCellDef<TRow, TValue = unknown> = {
+type LinkCellDef<TRow, TValue = unknown, TNode = unknown> = {
 	type: 'link'
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-type ProgressCellDef<TRow, TValue = unknown> = {
+type ProgressCellDef<TRow, TValue = unknown, TNode = unknown> = {
 	type: 'progress'
 	config?: ProgressCellConfig
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-type DateCellDef<TRow, TValue = unknown> = {
+type DateCellDef<TRow, TValue = unknown, TNode = unknown> = {
 	type: 'date'
 	config?: DateCellConfig
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-type CustomCellDef<TRow, TValue, TCustom extends string> = {
+type CustomCellDef<TRow, TValue, TCustom extends string, TNode = unknown> = {
 	type: TCustom
 	config?: Record<string, unknown>
-	component?: (ctx: CellViewCtx<TRow, TValue>) => unknown
+	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
 }
 
-export type CellDef<TRow extends object, TValue = unknown, TCustom extends string = never> =
-	| BasicCellDef<TRow, TValue>
-	| SelectCellDef<TRow, TValue>
-	| BadgeCellDef<TRow, TValue>
-	| ImageCellDef<TRow, TValue>
-	| LinkCellDef<TRow, TValue>
-	| ProgressCellDef<TRow, TValue>
-	| DateCellDef<TRow, TValue>
-	| ([TCustom] extends [never] ? never : CustomCellDef<TRow, TValue, TCustom>)
+export type CellDef<TRow extends object, TValue = unknown, TCustom extends string = never, TNode = unknown> =
+	| BasicCellDef<TRow, TValue, TNode>
+	| SelectCellDef<TRow, TValue, TNode>
+	| BadgeCellDef<TRow, TValue, TNode>
+	| ImageCellDef<TRow, TValue, TNode>
+	| LinkCellDef<TRow, TValue, TNode>
+	| ProgressCellDef<TRow, TValue, TNode>
+	| DateCellDef<TRow, TValue, TNode>
+	| ([TCustom] extends [never] ? never : CustomCellDef<TRow, TValue, TCustom, TNode>)
 
-export type ColumnFilteringConfig = {
+export type ColumnFilteringConfig<TNode = unknown> = {
 	/** Custom filter input component for this column. */
-	component?: (props: InputComponentProps) => unknown
+	component?: ColumnRenderer<InputComponentProps, TNode>
 	/** Operator configuration. `true` = default operators for the column's cell type. */
 	operators?: boolean | ColumnOperatorsConfig
 	/** Override the default selected operator for this column. */
@@ -165,12 +201,12 @@ export type ColumnFilteringConfig = {
 	faceted?: boolean
 }
 
-export type ColumnEditingConfig = {
+export type ColumnEditingConfig<TNode = unknown> = {
 	/**
 	 * Custom edit input component for this column.
 	 * Receives a {@link FieldState} with `value`, `onChange`, `onBlur`, `error`, `errors`, `isValidating`, `config`.
 	 */
-	component?: (props: FieldState) => unknown
+	component?: ColumnRenderer<FieldState, TNode>
 	/**
 	 * Help text rendered under the input in the edit form.
 	 * Forwarded to `FieldState.description` so composite cell types can show it
@@ -179,12 +215,12 @@ export type ColumnEditingConfig = {
 	description?: string
 }
 
-export type ColumnCreatingConfig<TRow = unknown, TValue = unknown> = {
+export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unknown> = {
 	/**
 	 * Custom create input component for this column. Falls back to `editing.component` when omitted.
 	 * Receives a {@link FieldState} with the same shape as {@link ColumnEditingConfig.component}.
 	 */
-	component?: (props: FieldState) => unknown
+	component?: ColumnRenderer<FieldState, TNode>
 	/**
 	 * Help text rendered under the input in the create form.
 	 * Forwarded to `FieldState.description`.
@@ -304,7 +340,7 @@ export type ColumnSortingConfig = {
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
  */
-export type ColumnDef<TRow extends object, TCustomCellTypes extends string = never> = {
+export type ColumnDef<TRow extends object, TCustomCellTypes extends string = never, TNode = unknown> = {
 	id?: string
 	accessorKey?: keyof TRow & string
 	accessorFn?: (row: TRow, index: number) => unknown
@@ -320,7 +356,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 * { accessorKey: 'total', header: () => <span>Total <InfoIcon /></span> }
 	 * ```
 	 */
-	header?: string | ((ctx: HeaderContext<TRow, unknown>) => unknown)
+	header?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
 	/**
 	 * Column footer, same shape as {@link ColumnDef.header}.
 	 *
@@ -328,8 +364,8 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 * `<DataGrid.Table />` layout has no footer row. Read it yourself when composing a custom
 	 * body with `<DataGrid.Table>{…}</DataGrid.Table>`.
 	 */
-	footer?: string | ((ctx: HeaderContext<TRow, unknown>) => unknown)
-	columns?: ColumnDef<TRow, TCustomCellTypes>[]
+	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	columns?: ColumnDef<TRow, TCustomCellTypes, TNode>[]
 
 	/**
 	 * Column pinning configuration.
@@ -346,7 +382,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	sorting?: false | ColumnSortingConfig
 
 	/** Cell display and input configuration. */
-	cell?: CellDef<TRow, unknown, TCustomCellTypes>
+	cell?: CellDef<TRow, unknown, TCustomCellTypes, TNode>
 
 	/**
 	 * Column visibility configuration.
@@ -362,7 +398,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	visibility?: false | ColumnVisibilityDef
 
 	/** Column-level filtering config. Set to false to disable. */
-	filtering?: false | ColumnFilteringConfig
+	filtering?: false | ColumnFilteringConfig<TNode>
 	/**
 	 * Whether this column participates in table-level global search.
 	 * - `false` — column is excluded from global search results
@@ -375,9 +411,9 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 */
 	globalFiltering?: false
 	/** Column-level editing config. Set to false to disable. */
-	editing?: false | ColumnEditingConfig
+	editing?: false | ColumnEditingConfig<TNode>
 	/** Column-level creating config. Set to false to disable. */
-	creating?: false | ColumnCreatingConfig<TRow>
+	creating?: false | ColumnCreatingConfig<TRow, unknown, TNode>
 
 	/**
 	 * Override the global `creating.validateOn` / `editing.validateOn` for this column.
@@ -400,6 +436,30 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 */
 	resizing?: false
 
+	/**
+	 * Class applied to this column's header cell (`<th>`).
+	 *
+	 * Deliberately three names rather than one `className`: a single field would have to mean
+	 * "header and cells alike", and that is almost never what a column wants — right-alignment
+	 * belongs to both, a value-driven highlight only to the cells.
+	 */
+	headerClassName?: string
+	/**
+	 * Class applied to this column's body cells (`<td>`).
+	 *
+	 * The function form runs per cell, so it can key off the value or the row — the common
+	 * "colour this cell by its status" case, which previously had no route that did not involve
+	 * rebuilding the whole body. Return `undefined` to add nothing.
+	 *
+	 * @example
+	 * ```ts
+	 * { accessorKey: 'balance', cellClassName: ({ value }) => (Number(value) < 0 ? 'text-red-600' : undefined) }
+	 * ```
+	 */
+	cellClassName?: string | ((ctx: CellViewCtx<TRow, unknown>) => string | undefined)
+	/** Class applied to this column's footer cell. Only rendered inside `<DataGrid.Footer />`. */
+	footerClassName?: string
+
 	// Pass-through TanStack options
 	size?: number
 	minSize?: number
@@ -413,6 +473,12 @@ declare module '@tanstack/table-core' {
 		columnPinning?: false | ColumnPinningDef
 		cellType?: CellType
 		config?: Record<string, unknown>
+		/** Class for this column's header cell, from `column.headerClassName`. */
+		headerClassName?: string
+		/** Class (or per-cell resolver) for this column's body cells, from `column.cellClassName`. */
+		cellClassName?: string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
+		/** Class for this column's footer cell, from `column.footerClassName`. */
+		footerClassName?: string
 		/** Resolved view renderer from `cell.component`. */
 		cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
 		filtering?: false | ColumnFilteringConfig

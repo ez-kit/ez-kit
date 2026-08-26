@@ -19,6 +19,8 @@ import { FilterPanel } from './filter-panel'
 import { Footer } from './footer'
 import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
+import { DataGridHeaderCell } from './header-cell'
+import { DataGridHeaderRow } from './header-row'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
@@ -341,6 +343,8 @@ type DataGridType = typeof DataGridRoot & {
 	Table: typeof DataGridTable
 	Footer: typeof Footer
 	Header: typeof Header
+	HeaderRow: typeof DataGridHeaderRow
+	HeaderCell: typeof DataGridHeaderCell
 	Body: typeof Body
 	Row: typeof DataGridRow
 	Cell: typeof DataGridCell
@@ -367,6 +371,8 @@ DataGrid.Toolbar = Toolbar
 DataGrid.Table = DataGridTable
 DataGrid.Footer = Footer
 DataGrid.Header = Header
+DataGrid.HeaderRow = DataGridHeaderRow
+DataGrid.HeaderCell = DataGridHeaderCell
 DataGrid.Body = Body
 DataGrid.Row = DataGridRow
 DataGrid.Cell = DataGridCell

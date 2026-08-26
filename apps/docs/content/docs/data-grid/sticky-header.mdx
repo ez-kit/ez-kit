@@ -14,8 +14,20 @@ Base sticky header:
 <DataGridDocsExample exampleId='base-sticky' />
 
 ```tsx
-<DataGrid.Table stickyHeader>{/* … */}</DataGrid.Table>
+<DataGrid
+	data={data}
+	columns={columns}
+	layout={{ stickyHeader: true, maxHeight: '32rem' }}
+/>
 ```
+
+`layout.maxHeight` bounds the scroll container — without a bound there is nothing for the header
+to stick against. Omit it and the structural stylesheet's `400px` default applies.
+
+`<DataGrid.Header />` reads `layout.stickyHeader` on its own, so a custom
+[composition](./composition) keeps the sticky header with no extra wiring. Its `stickyHeader` prop
+overrides the grid option for one header — useful when a hand-built `<DataGrid.Table>` body holds
+more than one.
 
 ## Notes
 

@@ -240,7 +240,7 @@ describe('<DataGrid>', () => {
 	})
 
 	it('uses registry view component for custom cell type', () => {
-		const cols = createColumns<User>([{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } }])
+		const cols = createColumns<User, 'money'>([{ accessorKey: 'age', header: 'Age', cell: { type: 'money' } }])
 		const table = createTable<User>({ data: USERS, columns: cols })
 		const instance = createDataGridInstance(table)
 		renderWithComponents(
@@ -393,7 +393,7 @@ describe('<DataGrid>', () => {
 
 	it('registry creating falls back to edit component when creating not provided', () => {
 		const editFn = vi.fn(() => <input data-testid='registry-edit' />)
-		const cols = createColumns<User>([
+		const cols = createColumns<User, 'custom-type'>([
 			{ accessorKey: 'name', header: 'Name', cell: { type: 'custom-type' } },
 			{ accessorKey: 'age', header: 'Age' },
 		])

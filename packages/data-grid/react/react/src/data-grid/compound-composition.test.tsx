@@ -138,7 +138,7 @@ describe('DataGrid.Header — sticky flag', () => {
 				<DataGrid.Header />
 				<DataGrid.Body />
 			</DataGrid.Table>,
-			{ stickyHeader: true },
+			{ layout: { stickyHeader: true } },
 		)
 		expect(container.querySelector('thead')).toHaveAttribute('data-sticky', 'true')
 	})

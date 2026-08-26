@@ -1,7 +1,8 @@
 'use client'
 
+import { useTable } from '@ez-kit/data-grid-react'
 import { Table as HeroTable, cn } from '@heroui/react'
-import { Children, createContext, isValidElement, useContext, useMemo } from 'react'
+import { createContext, useContext } from 'react'
 
 import type { TableProps, TbodyProps, TdProps, TfootProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
 import type { ComponentProps, Key } from 'react'
@@ -22,7 +23,7 @@ export function Table({ children, ...props }: TableProps) {
 
 export function Thead({ children, ...props }: TheadProps) {
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Header>
-	const rowHeaderId = useMemo(() => findRowHeaderId(children), [children])
+	const rowHeaderId = useRowHeaderId()
 
 	return (
 		<HeroTable.Header {...heroProps}>
@@ -105,19 +106,23 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
 	)
 }
 
-function findRowHeaderId(children: React.ReactNode): string | undefined {
-	for (const row of Children.toArray(children)) {
-		if (!isValidElement(row)) continue
-		const rowChildren = (row.props as { children?: React.ReactNode }).children
-
-		for (const column of Children.toArray(rowChildren)) {
-			if (!isValidElement(column)) continue
-			const columnProps = column.props as { 'data-column-id'?: string }
-			const columnId = columnProps['data-column-id']
-			if (columnId === undefined) continue
-			if (columnId.includes('__selection__')) continue
-			return columnId
-		}
+/**
+ * The column react-aria should treat as each row's header.
+ *
+ * Read from the table instance, not from the JSX. This walked `Thead`'s children looking for a
+ * `data-column-id` prop, which meant the kit depended on the exact element shape the shared layer
+ * happened to render — so `<DataGrid.HeaderRow>` / `<DataGrid.HeaderCell>` coming between `Thead`
+ * and `Th` hid every column from it, no column got `isRowHeader`, and react-aria threw
+ * "A table must have at least one Column with the isRowHeader prop set to true".
+ *
+ * The first visible non-system column is the same one the old scan found, and the column model
+ * cannot be hidden behind a component boundary.
+ */
+function useRowHeaderId(): string | undefined {
+	const table = useTable()
+	for (const column of table.getVisibleLeafColumns()) {
+		if (column.columnDef.meta?.isSystemColumn === true) continue
+		return column.id
 	}
 	return undefined
 }

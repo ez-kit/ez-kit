@@ -5,6 +5,7 @@ import { useGridComponents } from '../components-context'
 import { RowActionsMode } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
+import { flexRender } from './flex-render'
 import { useTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
@@ -164,14 +165,14 @@ function renderCreatingInput({ meta, field, cellTypes, Input, placeholder }: Cre
 	const creatingConfig = meta?.creating
 	if (creatingConfig !== false && creatingConfig !== undefined) {
 		const comp = creatingConfig.component
-		if (comp) return comp(field) as ReactNode
+		if (comp) return flexRender(comp, field)
 	}
 
 	// 2. registry creating → edit fallback by cellType
 	if (meta?.cellType) {
 		const def = cellTypes[meta.cellType]
 		const comp = def?.creating ?? def?.edit
-		if (comp) return comp(field)
+		if (comp) return flexRender(comp, field)
 	}
 
 	// 3. default Input

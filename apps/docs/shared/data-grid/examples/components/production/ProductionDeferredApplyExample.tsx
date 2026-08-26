@@ -36,7 +36,7 @@ export function ProductionDeferredApplyExample() {
 				toolbar: true,
 			}}
 			globalFiltering={{ placeholder: 'Search orders…' }}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 			columnVisibility={{ toolbar: true }}
 			deleting={{
 				onDelete: ({ row }) => orders.remove([row.original.id]),

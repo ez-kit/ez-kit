@@ -14,7 +14,7 @@ export function RowPinningStickyHeaderExample() {
 			data={data}
 			columns={columns}
 			pinning={{ row: { top: true, bottom: true } }}
-			stickyHeader
+			layout={{ stickyHeader: true }}
 		/>
 	)
 }

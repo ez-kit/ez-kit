@@ -28,7 +28,7 @@ import { setIfDefined } from '../utils/set-if-defined'
 import type { ColumnDef } from '../column/types'
 import type { AppliedState } from '../features/deferred-apply'
 import type { DataTable, GlobalFilterFn, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
-import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
+import type { TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
 /** Translate our `sorting.multi` shape into TanStack option flags. */
 function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string, unknown> {
@@ -170,6 +170,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const filteringOnChange = filteringCfg?.onChange
 	const globalFilteringOnChange = globalFilteringCfg?.onChange
 	const paginationOnChange = paginationCfg?.onChange
+	const selectionOnChange = selectionCfg?.onChange
+	const columnVisibilityOnChange = featureConfig(config.columnVisibility)?.onChange
+	const pinningCfgResolved = featureConfig(config.pinning)
+	const columnPinningOnChange =
+		typeof pinningCfgResolved?.column === 'object' ? pinningCfgResolved.column.onChange : undefined
+	const rowPinningOnChange = typeof pinningCfgResolved?.row === 'object' ? pinningCfgResolved.row.onChange : undefined
+	const resizingOnChange = featureConfig(config.resizing)?.onChange
+	const expandingOnChange = featureConfig(config.expanding)?.onChange
 
 	// Resolve `globalFilterFn`:
 	// - inline function → used as-is
@@ -213,12 +221,20 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// and `initialHidden` columns the consumer never mentioned.
 	const seededPinning = mergePinningSeed({ left: pinnedLeft, right: pinnedRight }, userInitialState?.columnPinning)
 	const mergedVisibility = { ...initialHidden, ...userInitialState?.columnVisibility }
+	// Same reason as the two above, and the one slice where it was missed: spreading
+	// `userInitialState` replaces `pagination` wholesale, so seeding only `pageIndex`
+	// (a deep link to page 3) dropped the resolved `pageSize` to `undefined`.
+	const mergedPagination = {
+		pageIndex: 0,
+		pageSize: defaultPageSize,
+		...userInitialState?.pagination,
+	}
 
 	const initialState: Partial<TableState> = enforceColumnInvariants(
 		{
-			pagination: { pageIndex: 0, pageSize: defaultPageSize },
 			// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
 			...userInitialState,
+			pagination: mergedPagination,
 			columnPinning: seededPinning,
 			...(Object.keys(mergedVisibility).length > 0 ? { columnVisibility: mergedVisibility } : {}),
 		},
@@ -327,19 +343,37 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		if (paginationOnChange && outwardPrev.pagination !== outwardNext.pagination) {
 			paginationOnChange(outwardNext.pagination)
 		}
+		// Selection goes through this funnel like the rest, and deliberately NOT through
+		// TanStack's `onRowSelectionChange`: that option *replaces* the built-in state writer
+		// (`makeStateUpdater`), so supplying it to carry a callback silently stopped the
+		// selection from ever being recorded — `selection: { onChange }` disabled the checkboxes.
+		if (selectionOnChange && outwardPrev.rowSelection !== outwardNext.rowSelection) {
+			const selection = outwardNext.rowSelection
+			selectionOnChange(
+				selection,
+				Object.keys(selection).filter((id) => selection[id]),
+			)
+		}
+		if (columnVisibilityOnChange && outwardPrev.columnVisibility !== outwardNext.columnVisibility) {
+			columnVisibilityOnChange(outwardNext.columnVisibility)
+		}
+		if (columnPinningOnChange && outwardPrev.columnPinning !== outwardNext.columnPinning) {
+			columnPinningOnChange(outwardNext.columnPinning)
+		}
+		if (rowPinningOnChange && outwardPrev.rowPinning !== outwardNext.rowPinning) {
+			rowPinningOnChange(outwardNext.rowPinning)
+		}
+		// `columnSizing` only — `columnSizingInfo` churns on every pointer move mid-drag.
+		if (resizingOnChange && outwardPrev.columnSizing !== outwardNext.columnSizing) {
+			resizingOnChange(outwardNext.columnSizing)
+		}
+		if (expandingOnChange && outwardPrev.expanded !== outwardNext.expanded) {
+			expandingOnChange(outwardNext.expanded)
+		}
 	}
 
 	// Build options without an explicit type annotation to avoid exactOptionalPropertyTypes
 	// conflicts — let TypeScript infer, then cast at the call site.
-	const selectionOnChange = selectionCfg?.onChange
-	const onRowSelectionChange = selectionOnChange
-		? (updater: Updater<RowSelectionState>): void => {
-				const next = typeof updater === 'function' ? updater(store.getState().rowSelection) : updater
-				const selectedIds = Object.keys(next).filter((k) => next[k])
-				selectionOnChange(selectedIds)
-			}
-		: undefined
-
 	const options = {
 		_features: [
 			CreatingFeature,
@@ -380,7 +414,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 				}
 			: {}),
 		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
-		...(config.columnVisibility === true ? {} : { enableHiding: false }),
+		// `isFeatureEnabled`, not `=== true`: the option grew a config object (for `onChange`),
+		// and a strict boolean check would have left `{ onChange }` reading as "off".
+		...(isFeatureEnabled(config.columnVisibility) ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
 		// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer.
 		...(hasPagination && paginationCfg?.mode !== 'infinite' ? { getPaginationRowModel: getPaginationRowModel() } : {}),
@@ -397,7 +433,6 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			: {}),
 		// Row selection
 		enableRowSelection: hasSelection,
-		...(onRowSelectionChange ? { onRowSelectionChange } : {}),
 		// Pagination manual
 		...(paginationCfg?.manual
 			? {
@@ -417,7 +452,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Sorting: per-direction default
 		...(sortingCfg?.descFirst !== undefined ? { sortDescFirst: sortingCfg.descFirst } : {}),
 		// Sorting: third-click removal
-		...(sortingCfg?.removable === false ? { enableSortingRemoval: false } : {}),
+		...(sortingCfg?.clearable === false ? { enableSortingRemoval: false } : {}),
 		// Sorting: multi-column
 		...(sortingCfg?.multi !== undefined ? buildMultiSortOptions(sortingCfg.multi) : {}),
 		// Sorting: named comparator registry, addressable from `column.sorting.fn`
@@ -447,7 +482,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Mirrored onto options so the React layer can gate the draft UI on the flag itself.
 		...(deferred ? { deferredApply: true } : {}),
 		// Virtualization config — stored for React layer to read; no TanStack core effect
-		...(isFeatureEnabled(config.virtualized) ? { virtualized: config.virtualized } : {}),
+		...(isFeatureEnabled(config.virtualization) ? { virtualization: config.virtualization } : {}),
 	}
 
 	// Create the table. Features run getInitialState during this call.
