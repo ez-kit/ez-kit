@@ -140,6 +140,12 @@ export type { DataGridProps, DataGridControlledProps, DataGridUncontrolledProps 
 export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/table'
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
+export type { DataGridHeaderRowProps, DataGridHeaderRowRenderArgs } from './data-grid/header-row'
+export type {
+	DataGridHeaderCellProps,
+	DataGridHeaderCellRenderArgs,
+	HeaderSortDirection,
+} from './data-grid/header-cell'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
