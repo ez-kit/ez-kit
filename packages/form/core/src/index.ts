@@ -1,6 +1,8 @@
+export { collectRuleFields, compileCondition, getValueAtPath } from './rules'
 export { FormFieldType, FORM_FIELD_TYPES } from './field-types'
 export { formatFieldErrors, hasFieldErrors } from './errors'
 
+export type { Condition, FieldRef, Rule } from './rules'
 export type { SelectOption } from './select-option'
 
 /**
