@@ -37,16 +37,31 @@ export type RendererForm<TValues> = SubmittableForm & FormFieldComponents<TValue
 /**
  * Controlled mode: the caller owns the instance and passes it in.
  *
- * There is deliberately no `keepHiddenValues` here — spec §6's stripping only happens for
- * uncontrolled `FormRenderer`. It wraps the caller's `onSubmit` before it is ever handed to
- * `useForm` (see `UncontrolledFormRenderer` in `../create-form.tsx`), which only works
- * because `FormRenderer` is the one calling `useForm`. In controlled mode `onSubmit` is
- * already closed over inside an instance the caller built themselves — by the time
- * `FormRenderer` sees `form`, there is no seam left to wrap, and the caller's own `useForm`
- * re-syncs its original, unwrapped options on every render (TanStack's own per-render
- * `formApi.update(opts)`), so even mutating the live instance from here would just lose the
- * race back to the caller's unwrapped `onSubmit`. A controlled caller who wants hidden values
- * stripped calls `stripHiddenValues(schema, value)` themselves inside their own `onSubmit`.
+ * In this mode `FormRenderer` cannot strip hidden values for you — you own `onSubmit`, not
+ * it — so there is deliberately no `keepHiddenValues` here (see
+ * `FormRendererUncontrolledProps`, the only mode that has it). Call `stripHiddenValues`
+ * yourself at the top of your own handler to get the same default the uncontrolled mode
+ * gives you for free:
+ *
+ * ```ts
+ * const form = useForm({
+ *   defaultValues,
+ *   onSubmit: ({ value }) => save(stripHiddenValues(schema, value)),
+ * })
+ * <FormRenderer form={form} schema={schema} />
+ * ```
+ *
+ * (`stripHiddenValues` is re-exported from `@ez-kit/form-react`'s root, so this needs no
+ * second dependency on `@ez-kit/form-core`.)
+ *
+ * Why `FormRenderer` can't do this itself: uncontrolled mode wraps `onSubmit` *before* it is
+ * ever handed to `useForm` (see `UncontrolledFormRenderer` in `../create-form.tsx`), which
+ * only works because `FormRenderer` is the one calling `useForm`. Here, `onSubmit` is already
+ * closed over inside an instance you built yourself — by the time `FormRenderer` sees `form`,
+ * there is no seam left to wrap. Reaching into the live instance from here wouldn't help
+ * either: TanStack's own `useForm` re-syncs your original, unwrapped options into it on every
+ * render (a per-render `formApi.update(opts)`), so any wrap `FormRenderer` applied would just
+ * lose that race back to your unwrapped `onSubmit`.
  */
 export type FormRendererControlledProps<TValues> = FormElementRest &
 	SharedRendererProps<TValues> & {

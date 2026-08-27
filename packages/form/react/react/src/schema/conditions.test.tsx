@@ -1,4 +1,4 @@
-import { FormFieldType } from '@ez-kit/form-core'
+import { FormFieldType, stripHiddenValues } from '@ez-kit/form-core'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
@@ -8,7 +8,7 @@ import { testComponents } from '../test-kit'
 
 import type { FormSchema } from '@ez-kit/form-core'
 
-const { FormRenderer } = createForm({ components: testComponents })
+const { FormRenderer, useForm } = createForm({ components: testComponents })
 
 type Values = { clientType: string; inn: string }
 
@@ -150,4 +150,56 @@ test('a value survives hiding and re-showing — stripping happens at submit, no
 	await user.clear(screen.getByLabelText('Type'))
 	await user.type(screen.getByLabelText('Type'), 'business')
 	expect(screen.getByLabelText('Tax ID')).toHaveValue('77')
+})
+
+test('a controlled caller composes stripHiddenValues themselves', async () => {
+	const user = userEvent.setup()
+	const onSubmit = vi.fn()
+
+	function Harness(): ReturnType<typeof FormRenderer> {
+		const form = useForm<
+			Values,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			unknown
+		>({
+			defaultValues: { clientType: 'business', inn: '' },
+			// The escape hatch documented on `FormRendererControlledProps`: a controlled
+			// caller applies `stripHiddenValues` themselves, since `FormRenderer` cannot do
+			// it for them.
+			onSubmit: ({ value }) => {
+				onSubmit(stripHiddenValues(conditionalSchema, value))
+			},
+		})
+		return (
+			<FormRenderer
+				form={form}
+				schema={conditionalSchema}
+			/>
+		)
+	}
+
+	const { container } = render(<Harness />)
+
+	await user.type(screen.getByLabelText('Tax ID'), '77')
+	await user.clear(screen.getByLabelText('Type'))
+	await user.type(screen.getByLabelText('Type'), 'individual')
+	expect(screen.queryByLabelText('Tax ID')).not.toBeInTheDocument()
+
+	submitForm(container)
+
+	await waitFor(() => {
+		expect(onSubmit).toHaveBeenCalledTimes(1)
+	})
+	const call = onSubmit.mock.calls[0] as [Values]
+	expect(call[0]).not.toHaveProperty('inn')
+	expect(call[0]).toHaveProperty('clientType', 'individual')
 })
