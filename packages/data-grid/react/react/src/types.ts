@@ -34,20 +34,20 @@ export const RowActionsMode = {
 
 export type RowActionsMode = (typeof RowActionsMode)[keyof typeof RowActionsMode]
 
-type ActionsCellIdleProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ActionsCellIdleProps<TRow extends object = any> = {
 	mode: typeof RowActionsMode.Idle
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+	row: Row<TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
 	onEdit: () => void
 	onDelete: () => void
 }
 
-type ActionsCellEditingProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ActionsCellEditingProps<TRow extends object = any> = {
 	mode: typeof RowActionsMode.Editing
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+	row: Row<TRow>
 	onSave: () => Promise<void>
 	onCancel: () => void
 	/** True while the commit is in flight (`commitStatus !== 'idle'`). */
@@ -71,7 +71,17 @@ type ActionsCellCreatingProps = {
  * `Editing` and `Creating` used to be two separate injectable components whose bodies were
  * the same save/cancel pair.
  */
-export type ActionsCellProps = ActionsCellIdleProps | ActionsCellEditingProps | ActionsCellCreatingProps
+/**
+ * `TRow` is a caller-supplied parameter, not something the registry can infer: the DI map holds
+ * one `ActionsCell` for grids of every row type. A kit that only ever renders one row shape
+ * writes `ActionsCellProps<Invoice>` and gets a typed `row.original`; omitting it keeps the
+ * unchecked default, and `any` stays mutually assignable so the registry accepts both.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ActionsCellProps<TRow extends object = any> =
+	| ActionsCellIdleProps<TRow>
+	| ActionsCellEditingProps<TRow>
+	| ActionsCellCreatingProps
 
 // ── primitive component props ─────────────────────────────────────────────
 
@@ -320,7 +330,7 @@ export type ClearFiltersButtonComponentProps = {
 	/** True when no filter is active; kit can render the button in a disabled state. */
 	disabled: boolean
 	/** Clear every column filter and the global filter. */
-	onPress: () => void
+	onClick: () => void
 	/** Optional custom contents. When absent the kit renders its default (icon-only). */
 	children?: ReactNode
 	/** Accessibility label. Defaults to "Clear filters" when omitted. */

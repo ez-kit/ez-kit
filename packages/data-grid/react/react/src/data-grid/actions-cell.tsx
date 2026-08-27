@@ -4,7 +4,7 @@ import { useGridComponents } from '../components-context'
 import { GridMenuIcon, GridMenuVariant, toMenuSections } from '../menu'
 import { RowActionId, RowActionsMode } from '../types'
 
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { GridMenuItem, GridMenuSection } from '../menu'
 import type { RowPinningConfig } from '@ez-kit/data-grid-core'
@@ -103,16 +103,15 @@ function buildPinItems(
  * the row enters / leaves edit mode and when the commit status leaves `idle`.
  */
 export function ActionsCell({ row }: ActionsCellProps) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const { ActionsCell: Renderer } = useGridComponents()['row-actions']
 	const { Menu } = useGridComponents().core
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
-	const isEditing = useDataGridStore((s) => s.editing.rowId === row.id)
-	const isPending = useDataGridStore((s) => s.editing.rowId === row.id && s.editing.commitStatus !== 'idle')
+	const isEditing = useDataGridState((s) => s.editing.rowId === row.id)
+	const isPending = useDataGridState((s) => s.editing.rowId === row.id && s.editing.commitStatus !== 'idle')
 	// Row pinning is derived state; subscribe so the menu re-derives on pin/unpin.
-	useDataGridStore((s) => s.rowPinning)
+	useDataGridState((s) => s.rowPinning)
 
 	const hasEditing = Boolean(table.options.editing)
 	const hasDeleting = Boolean(table.options.deleting)

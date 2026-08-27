@@ -97,10 +97,8 @@ export type { InfiniteController } from './data-grid/use-infinite-scroll'
 
 // Selector hook + store primitives
 export { useDataGridSelector } from './use-data-grid-selector'
-export { useDataGridInstance, useDataGridStore, useTable } from './data-grid/table-context'
-export { createDataGridInstance } from './data-grid-instance'
-export type { DataGridInstance } from './data-grid-instance'
-export type { TableStore } from './store/table-store'
+export { useDataGridState, useDataGridTable } from './data-grid/table-context'
+export { prepareDataGridTable } from './prepare-table'
 export { shallow } from './utils/shallow-equal'
 
 // State persistence (Layer 1 utilities + Layer 2 reactive hook)
@@ -162,6 +160,10 @@ export type {
 	DataGridFilterPanelRenderArgs,
 } from './data-grid/filter-panel'
 export type { DataGridToolbarProps } from './data-grid/toolbar'
+export type { DataGridActiveFiltersBarProps } from './data-grid/active-filters-bar'
+export type { DataGridClearFiltersButtonProps } from './data-grid/clear-filters-button'
+export type { DataGridCreateTriggerProps } from './data-grid/create-trigger'
+export type { DataGridGlobalFilterInputProps } from './data-grid/global-filter-input'
 
 // Sub-components (also available as DataGrid.SelectionBar)
 export { SelectionBar } from './data-grid/selection-bar'
@@ -173,7 +175,7 @@ export { ClearFiltersButton } from './data-grid/clear-filters-button'
 export { GridComponentsProvider, defaultComponents, useGridComponents } from './components-context'
 
 // Cell type registry
-export { CellTypesProvider, useCellTypes } from './cell-types-context'
+export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
 export type { CellTypeDefinition, CellTypeRegistry, CellViewProps, CellInputProps } from './cell-types-context'
 
 // Default options (app-level provider + kit-level factory `defaultOptions`)

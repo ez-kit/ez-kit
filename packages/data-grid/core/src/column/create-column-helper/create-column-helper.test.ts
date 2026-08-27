@@ -58,17 +58,13 @@ describe('createColumnHelper', () => {
 				accessorKey: 'name',
 				header: 'Name',
 				sorting: false,
-				pinning: { pin: 'left' },
-				size: 200,
-				minSize: 50,
-				maxSize: 500,
+				pinning: { side: 'left' },
+				width: { default: 200, min: 50, max: 500 },
 				resizing: false,
 			})
 			expect(col.sorting).toBe(false)
-			expect(col.pinning).toEqual({ pin: 'left' })
-			expect(col.size).toBe(200)
-			expect(col.minSize).toBe(50)
-			expect(col.maxSize).toBe(500)
+			expect(col.pinning).toEqual({ side: 'left' })
+			expect(col.width).toEqual({ default: 200, min: 50, max: 500 })
 			expect(col.resizing).toBe(false)
 		})
 	})
@@ -199,11 +195,11 @@ describe('createColumnHelper', () => {
 				accessorKey: 'name',
 				header: 'Name',
 				sorting: false,
-				size: 120,
+				width: 120,
 			})
 			expect(col.header).toBe('Name')
 			expect(col.sorting).toBe(false)
-			expect(col.size).toBe(120)
+			expect(col.width).toBe(120)
 		})
 
 		it('does not leak type/config/view/editing/creating to top-level ColumnDef', () => {
@@ -223,28 +219,38 @@ describe('createColumnHelper', () => {
 	})
 
 	describe('registered custom types', () => {
-		it('registers a helper for each custom type passed in', () => {
-			const column = createColumnHelper<Row, 'rating' | 'currency'>(['rating', 'currency'])
+		// A registry is now the second type parameter, not a union of ids: that is what carries
+		// each type's own config through to the generated method.
+		type RatingConfig = { max: number }
+		type Registry = {
+			rating: { __config?: RatingConfig }
+			currency: { __config?: { code: string } }
+		}
+
+		it('registers a helper for each registered type', () => {
+			const column = createColumnHelper<Row, Registry>(['rating', 'currency'])
 			expect(typeof column.rating).toBe('function')
 			expect(typeof column.currency).toBe('function')
 		})
 
 		it('registered helper produces cell with the right type and forwarded config', () => {
-			const column = createColumnHelper<Row, 'rating'>(['rating'])
+			const column = createColumnHelper<Row, Pick<Registry, 'rating'>>(['rating'])
 			const col = column.rating({ accessorKey: 'progress', config: { max: 5 } })
 			expect(col.cell).toEqual({ type: 'rating', config: { max: 5 } })
 		})
 
-		it('registered helper works without config', () => {
-			const column = createColumnHelper<Row, 'rating'>(['rating'])
-			const col = column.rating({ accessorKey: 'progress' })
-			expect(col.cell).toEqual({ type: 'rating', config: undefined })
+		it('omits the config key entirely when a type declares none', () => {
+			type NoConfig = { plain: Record<never, never> }
+			const column = createColumnHelper<Row, NoConfig>(['plain'])
+			const col = column.plain({ accessorKey: 'progress' })
+			expect(col.cell).toEqual({ type: 'plain' })
 		})
 
 		it('registered helper preserves pass-through options', () => {
-			const column = createColumnHelper<Row, 'rating'>(['rating'])
+			const column = createColumnHelper<Row, Pick<Registry, 'rating'>>(['rating'])
 			const col = column.rating({
 				accessorKey: 'progress',
+				config: { max: 5 },
 				header: 'Score',
 				sorting: false,
 			})
@@ -254,19 +260,22 @@ describe('createColumnHelper', () => {
 		})
 
 		it('registered helper does not leak config to top-level ColumnDef', () => {
-			const column = createColumnHelper<Row, 'rating'>(['rating'])
+			const column = createColumnHelper<Row, Pick<Registry, 'rating'>>(['rating'])
 			const col = column.rating({ accessorKey: 'progress', config: { max: 5 } })
 			expect((col as { config?: unknown }).config).toBeUndefined()
 		})
 
-		it('produces a helper-only object when customTypes is empty/undefined', () => {
-			const column = createColumnHelper<Row>()
-			expect(column).not.toHaveProperty('rating')
-			expect(typeof column.text).toBe('function')
+		it('offers exactly the registered ids — the base contract only when nothing is passed', () => {
+			const bound = createColumnHelper<Row, Pick<Registry, 'rating'>>(['rating'])
+			expect(bound).not.toHaveProperty('text')
+
+			const unbound = createColumnHelper<Row>()
+			expect(unbound).not.toHaveProperty('rating')
+			expect(typeof unbound.text).toBe('function')
 		})
 
 		it('each registered helper builds an independent ColumnDef per call (no shared state)', () => {
-			const column = createColumnHelper<Row, 'rating'>(['rating'])
+			const column = createColumnHelper<Row, Pick<Registry, 'rating'>>(['rating'])
 			const a = column.rating({ accessorKey: 'progress', config: { max: 5 } })
 			const b = column.rating({ accessorKey: 'progress', config: { max: 10 } })
 			expect(a.cell).toEqual({ type: 'rating', config: { max: 5 } })

@@ -141,10 +141,10 @@ export const columns = createColumns<User>([
 ])
 
 export const resizableColumns = createColumns<User>([
-	{ accessorKey: 'name', header: 'Name', size: 200, minSize: 80, maxSize: 400 },
-	{ accessorKey: 'email', header: 'Email', size: 250, minSize: 120 },
-	{ accessorKey: 'age', header: 'Age', size: 80, minSize: 50, maxSize: 150, cell: { type: 'number' } },
-	{ accessorKey: 'active', header: 'Active', size: 100, resizing: false, cell: { type: 'boolean' } },
+	{ accessorKey: 'name', header: 'Name', width: { default: 200, min: 80, max: 400 } },
+	{ accessorKey: 'email', header: 'Email', width: { default: 250, min: 120 } },
+	{ accessorKey: 'age', header: 'Age', width: { default: 80, min: 50, max: 150 }, cell: { type: 'number' } },
+	{ accessorKey: 'active', header: 'Active', width: 100, resizing: false, cell: { type: 'boolean' } },
 ])
 
 export type Employee = {

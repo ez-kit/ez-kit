@@ -31,14 +31,14 @@ A bare `sizing` prop enables resizing with the defaults.
 
 ## Options
 
-| Option                                    | Type                      | Description                                                                                                                                               |
-| ----------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sizing`                                  | `boolean \| SizingConfig` | Master switch. Default off. `true` uses the defaults below.                                                                                               |
-| `sizing.mode`                             | `'onChange' \| 'onEnd'`   | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters. |
-| `sizing.direction`                        | `'ltr' \| 'rtl'`          | Text direction used for the resize calculation. Default `'ltr'`.                                                                                          |
-| Per-column `size` / `minSize` / `maxSize` | `number`                  | Constrain individual columns. Set `resizing: false` on a column to pin it.                                                                                |
-| `state.columnSizing`                      | `Record<string, number>`  | Controlled sizing state, as part of the grid's single controlled-state object.                                                                            |
-| `onStateChange`                           | `(state) => void`         | Fires on every state change, including sizing, with the resolved state. Persist it to your own state to keep sizes.                                       |
+| Option               | Type                                 | Description                                                                                                                                               |
+| -------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sizing`             | `boolean \| SizingConfig`            | Master switch. Default off. `true` uses the defaults below.                                                                                               |
+| `sizing.mode`        | `'onChange' \| 'onEnd'`              | `'onChange'` (default) updates sizes during the drag; `'onEnd'` commits once on mouseup. Use `'onEnd'` for very wide tables where re-layout cost matters. |
+| `sizing.direction`   | `'ltr' \| 'rtl'`                     | Text direction used for the resize calculation. Default `'ltr'`.                                                                                          |
+| Per-column `width`   | `number \| { default?, min?, max? }` | Starting width, and the bounds a drag stays inside. Set `resizing: false` on a column to pin its width entirely.                                          |
+| `state.columnSizing` | `Record<string, number>`             | Controlled sizing state, as part of the grid's single controlled-state object.                                                                            |
+| `onStateChange`      | `(state) => void`                    | Fires on every state change, including sizing, with the resolved state. Persist it to your own state to keep sizes.                                       |
 
 Sizing is controlled through the grid's one state object rather than a sizing-specific handler — see [controlled state](/docs/data-grid/controlled-state). `columnSizing` is also persisted by default, so [state persistence](/docs/data-grid/state-persistence) restores column widths without any wiring.
 

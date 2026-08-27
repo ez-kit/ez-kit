@@ -22,7 +22,7 @@ const USERS: User[] = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `
 const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 /**
- * Render the real `Pagination` against a real grid instance and capture the props it hands to
+ * Render the real `Pagination` against a real grid table and capture the props it hands to
  * the UI kit — or `null` when the footer short-circuits to `return null` (a known-empty grid).
  * This is the seam the kits consume, so it is where the "unknown total" normalization and the
  * known-empty gate both have to hold.
@@ -38,17 +38,17 @@ function renderPagination(
 	}
 
 	const { result } = renderHook(() => useDataGrid<User>({ data, columns: COLUMNS, ...config }))
-	const instance = result.current
+	const table = result.current
 
 	renderWithComponents(
-		<TableContext value={instance}>
+		<TableContext value={table}>
 			<GridComponentsProvider components={{ pagination: { Pagination: Spy } }}>
 				<Pagination />
 			</GridComponentsProvider>
 		</TableContext>,
 	)
 
-	return { props: captured, table: instance.table }
+	return { props: captured, table: table }
 }
 
 /**

@@ -36,14 +36,14 @@ const REACT_RENDER_PHASE_WARNING = 'Cannot update a component'
  * `pagination.onChange` by mirroring the new page into its own React state.
  */
 function ControlledGrid({ pagination }: { pagination: PaginationState }): ReactElement {
-	const instance = useDataGrid<Row>({
+	const table = useDataGrid<Row>({
 		data: DATA,
 		columns: COLUMNS,
 		pagination: { pageSizeOptions: [5, 10] },
 		globalFiltering: true,
 		state: { pagination },
 	})
-	return <DataGrid<Row> table={instance} />
+	return <DataGrid<Row> table={table} />
 }
 
 function Harness(): ReactElement {

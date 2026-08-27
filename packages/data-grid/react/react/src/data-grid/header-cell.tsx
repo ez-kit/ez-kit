@@ -5,10 +5,11 @@ import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
+import { getAlignAttrs } from './align-attrs'
 import { buildColumnMenuSections } from './column-menu-sections'
 import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
-import { useDataGridInstance } from './table-context'
+import { useDataGridTable } from './table-context'
 
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
@@ -106,8 +107,7 @@ function isInteractiveTarget(event: MouseEvent | KeyboardEvent): boolean {
  * these cells read through.
  */
 export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu } = gridComponents.core
 	const { Resizer } = gridComponents.resizing
@@ -135,6 +135,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 				style={pinVars}
 				pinned={pinned}
 				{...(pinned ? { 'data-pinned': pinned } : {})}
+				{...getAlignAttrs(meta, 'header')}
 			>
 				<Checkbox
 					value={isAllSelected}
@@ -165,7 +166,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 		: undefined
 
 	const colPinDef = meta?.columnPinning
-	const isStaticPin = typeof colPinDef === 'object' && colPinDef.pin !== undefined
+	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
 	const isPinningDisabled = colPinDef === false
 	const isMenuEligible = !meta?.isSystemColumn && !header.isPlaceholder
 
@@ -278,6 +279,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 			pinned={pinned}
 			{...(meta?.headerClassName !== undefined ? { className: meta.headerClassName } : {})}
 			{...(pinned ? { 'data-pinned': pinned } : {})}
+			{...getAlignAttrs(meta, 'header')}
 			{...(canResize ? { 'data-resizable': 'true' } : {})}
 			{...draftSortAttrs}
 		>

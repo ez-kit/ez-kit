@@ -4,14 +4,14 @@ import { StrictMode, useRef } from 'react'
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createDataGridInstance } from './data-grid-instance'
+import { prepareDataGridTable } from './prepare-table'
 import { useDataGridSelector } from './use-data-grid-selector'
 
-import type { DataGridInstance } from './data-grid-instance'
+import type { DataTable } from '@ez-kit/data-grid-core'
 
 type Row = { id: string; name: string; age: number }
 
-function makeInstance(initial: Row[] = [{ id: '1', name: 'a', age: 20 }]): DataGridInstance<Row> {
+function makeTable(initial: Row[] = [{ id: '1', name: 'a', age: 20 }]): DataTable<Row> {
 	const table = createTable<Row>({
 		data: initial,
 		columns: [
@@ -19,29 +19,29 @@ function makeInstance(initial: Row[] = [{ id: '1', name: 'a', age: 20 }]): DataG
 			{ accessorKey: 'age', header: 'Age' },
 		],
 	})
-	return createDataGridInstance(table)
+	return prepareDataGridTable(table)
 }
 
 describe('useDataGridSelector', () => {
 	it('returns the current slice from table state', () => {
-		const instance = makeInstance()
+		const table = makeTable()
 
-		const { result } = renderHook(() => useDataGridSelector(instance, (s) => s.sorting))
+		const { result } = renderHook(() => useDataGridSelector(table, (s) => s.sorting))
 
 		expect(result.current).toEqual([])
 	})
 
 	it('re-renders when the selected slice changes', () => {
-		const instance = makeInstance()
+		const table = makeTable()
 		let renderCount = 0
 		const { result } = renderHook(() => {
 			renderCount++
-			return useDataGridSelector(instance, (s) => s.sorting)
+			return useDataGridSelector(table, (s) => s.sorting)
 		})
 		const baseline = renderCount
 
 		act(() => {
-			instance.table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+			table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
 		})
 
 		expect(renderCount).toBeGreaterThan(baseline)
@@ -49,38 +49,38 @@ describe('useDataGridSelector', () => {
 	})
 
 	it('does NOT re-render when an unrelated slice changes', () => {
-		const instance = makeInstance()
+		const table = makeTable()
 		let renderCount = 0
 		renderHook(() => {
 			renderCount++
-			return useDataGridSelector(instance, (s) => s.sorting)
+			return useDataGridSelector(table, (s) => s.sorting)
 		})
 		const baseline = renderCount
 
 		act(() => {
-			instance.table.setState((prev) => ({ ...prev, globalFilter: 'whatever' }))
+			table.setState((prev) => ({ ...prev, globalFilter: 'whatever' }))
 		})
 
 		expect(renderCount).toBe(baseline)
 	})
 
-	it('two independent selectors on the same instance update independently', () => {
-		const instance = makeInstance()
+	it('two independent selectors on the same table update independently', () => {
+		const table = makeTable()
 		let sortingRenders = 0
 		let filterRenders = 0
 		renderHook(() => {
 			sortingRenders++
-			return useDataGridSelector(instance, (s) => s.sorting)
+			return useDataGridSelector(table, (s) => s.sorting)
 		})
 		renderHook(() => {
 			filterRenders++
-			return useDataGridSelector(instance, (s) => s.columnFilters.length)
+			return useDataGridSelector(table, (s) => s.columnFilters.length)
 		})
 		const sortingBaseline = sortingRenders
 		const filterBaseline = filterRenders
 
 		act(() => {
-			instance.table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: true }] }))
+			table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: true }] }))
 		})
 
 		expect(sortingRenders).toBeGreaterThan(sortingBaseline)
@@ -88,19 +88,19 @@ describe('useDataGridSelector', () => {
 	})
 
 	it('survives StrictMode double-mount without losing subscription', () => {
-		const instance = makeInstance()
+		const table = makeTable()
 		let renderCount = 0
 		const { result } = renderHook(
 			() => {
 				renderCount++
-				return useDataGridSelector(instance, (s) => s.sorting)
+				return useDataGridSelector(table, (s) => s.sorting)
 			},
 			{ wrapper: ({ children }) => <StrictMode>{children}</StrictMode> },
 		)
 		expect(result.current).toEqual([])
 
 		act(() => {
-			instance.table.setState((prev) => ({ ...prev, sorting: [{ id: 'age', desc: false }] }))
+			table.setState((prev) => ({ ...prev, sorting: [{ id: 'age', desc: false }] }))
 		})
 
 		expect(result.current).toEqual([{ id: 'age', desc: false }])
@@ -108,10 +108,10 @@ describe('useDataGridSelector', () => {
 	})
 
 	it('renders deterministically via getServerSnapshot in SSR', () => {
-		const instance = makeInstance()
+		const table = makeTable()
 
 		function ServerView() {
-			const sorting = useDataGridSelector(instance, (s) => s.sorting)
+			const sorting = useDataGridSelector(table, (s) => s.sorting)
 			return <span data-testid='ssr'>{JSON.stringify(sorting)}</span>
 		}
 
@@ -120,11 +120,11 @@ describe('useDataGridSelector', () => {
 	})
 
 	it('mutating the table BEFORE mount does not corrupt the SSR snapshot', () => {
-		const instance = makeInstance()
-		instance.table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+		const table = makeTable()
+		table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
 
 		function ServerView() {
-			const sorting = useDataGridSelector(instance, (s) => s.sorting)
+			const sorting = useDataGridSelector(table, (s) => s.sorting)
 			return <span>{JSON.stringify(sorting)}</span>
 		}
 
@@ -135,11 +135,9 @@ describe('useDataGridSelector', () => {
 	})
 
 	it('latest selector wins when selector identity changes across renders', () => {
-		const instance = makeInstance()
+		const table = makeTable()
 		const Probe = ({ which }: { which: 'sorting' | 'filter' }) => {
-			const value = useDataGridSelector(instance, (s) =>
-				which === 'sorting' ? s.sorting.length : s.columnFilters.length,
-			)
+			const value = useDataGridSelector(table, (s) => (which === 'sorting' ? s.sorting.length : s.columnFilters.length))
 			return <span data-testid='value'>{value}</span>
 		}
 
@@ -147,7 +145,7 @@ describe('useDataGridSelector', () => {
 		expect(getByTestId('value').textContent).toBe('0')
 
 		act(() => {
-			instance.table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+			table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
 		})
 		expect(getByTestId('value').textContent).toBe('1')
 
@@ -156,12 +154,12 @@ describe('useDataGridSelector', () => {
 	})
 
 	it('component re-render alone does not trigger an extra subscribe', () => {
-		const instance = makeInstance()
-		const subscribeSpy = vi.spyOn(instance.store, 'subscribe')
+		const table = makeTable()
+		const subscribeSpy = vi.spyOn(table, 'subscribe')
 
 		const Probe = () => {
 			useRef(0).current++ // ensure a hook before our hook
-			useDataGridSelector(instance, (s) => s.sorting)
+			useDataGridSelector(table, (s) => s.sorting)
 			return null
 		}
 

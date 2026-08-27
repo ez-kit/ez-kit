@@ -75,8 +75,8 @@ afterEach(() => {
 })
 
 function InfiniteGrid(props: { config: UseDataGridConfig<User> }) {
-	const instance = useDataGrid<User>(props.config)
-	return <DataGrid table={instance} />
+	const table = useDataGrid<User>(props.config)
+	return <DataGrid table={table} />
 }
 
 describe('infinite scroll — auto trigger', () => {

@@ -105,6 +105,37 @@ export type ImageCellConfig = {
 export type ProgressCellConfig = {
 	max?: number
 }
+export type TextCellConfig = {
+	/** Maximum character count for the rendered view. Longer values are truncated. */
+	maxLength?: number
+	/**
+	 * Suffix appended when truncated.
+	 * - `true` (default when `maxLength` set) → `'…'`
+	 * - `false` → no marker
+	 * - `string` → custom marker (e.g. `'...'`, `' ›'`)
+	 */
+	ellipsis?: boolean | string
+}
+export type NumberCellConfig = {
+	/** Fixed number of fraction digits (both min and max). */
+	decimals?: number
+	/** Override the locale's thousands separator (e.g. `' '`, `','`). */
+	thousandsSeparator?: string
+	/** Override the locale's decimal separator (e.g. `'.'`, `','`). */
+	decimalSeparator?: string
+	/** String prepended to the formatted value (e.g. `'$'`). */
+	prefix?: string
+	/** String appended to the formatted value (e.g. `' kg'`). */
+	suffix?: string
+	/** BCP 47 locale tag. Default: runtime/system locale. */
+	locale?: string | string[]
+}
+export type BooleanCellConfig = {
+	/** Label rendered (by the kit's view component) for `true`. */
+	trueLabel?: string
+	/** Label rendered (by the kit's view component) for `false`. */
+	falseLabel?: string
+}
 export type DateCellConfig = {
 	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard minimum. */
 	minValue?: string
@@ -114,71 +145,105 @@ export type DateCellConfig = {
 	format?: Intl.DateTimeFormatOptions
 }
 
-// ── cell definition (discriminated union) ─────────────────────────────────
+/**
+ * The cell types this package ships a contract for: their ids and the config each accepts.
+ *
+ * Only the **contract** — core is framework-agnostic and renders nothing. The React layer's
+ * `baseCellTypes` attaches renderers to these same ids, and a UI kit extends that. Declaring
+ * it here is what keeps the unbound `createColumns` / `createColumnHelper` usable without a
+ * kit, which is the documented standalone behaviour.
+ *
+ * A grid built through `createDataGrid` is typed against **its kit's** registry instead, so a
+ * kit that drops a type or adds one is reflected in what its columns accept.
+ */
+export type BaseCellTypes = {
+	text: { __config?: TextCellConfig }
+	number: { __config?: NumberCellConfig }
+	boolean: { __config?: BooleanCellConfig }
+	date: { __config?: DateCellConfig }
+	select: { __config?: SelectCellConfig }
+	badge: { __config?: BadgeCellConfig }
+	image: { __config?: ImageCellConfig }
+	link: Record<never, never>
+	progress: { __config?: ProgressCellConfig }
+}
+
+/** {@link BaseCellTypes}' ids at runtime — what the unbound column helper builds methods from. */
+export const BASE_CELL_TYPE_IDS = [
+	'text',
+	'number',
+	'boolean',
+	'date',
+	'select',
+	'badge',
+	'image',
+	'link',
+	'progress',
+] as const satisfies readonly (keyof BaseCellTypes)[]
+
+// ── cell definition (registry-driven) ─────────────────────────────────────
 
 /**
- * Built-in types that need no `config` block. Derived from {@link BuiltInCellType}, **not** from
- * {@link CellType}: the latter's `string & {}` tail would make this arm swallow every string, so
- * `cell: { type: 'raiting' }` typechecked no matter what the kit registered — which silently
- * defeated `CellDef`'s whole `TCustom` parameter.
+ * The framework-neutral shape a cell-type registry must have for a column to be typed against
+ * it: a map of type id to something carrying a phantom `__config`.
+ *
+ * Deliberately loose, and deliberately here rather than in the React adapter. The real registry
+ * (`CellTypeRegistry`) holds `ComponentType` slots, which core must never name; and any tighter
+ * bound rejects perfectly good registries, because `ComponentType`'s class branch makes its
+ * props invariant. Each entry is already validated against `CellTypeDefinition<TConfig>` where
+ * it is declared — by `defineCellType` — so nothing is lost by not re-checking it here.
  */
-type SimpleType = Exclude<BuiltInCellType, 'select' | 'badge' | 'image' | 'link' | 'progress' | 'date'>
+export type CellTypeRegistryShape = Record<string, { __config?: unknown }>
 
-type BasicCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type?: SimpleType
+/**
+ * The config type a registry entry declares, or `never` when it declares none.
+ *
+ * Reads the phantom `__config` that `defineCellType` attaches. Inferring from the renderer
+ * slots instead is not an option: `view`, `edit`, `creating` and `filter` are four independent
+ * inference sites for one type parameter, and they drift.
+ */
+export type ConfigOf<TDefinition> = TDefinition extends { __config?: infer TConfig } ? TConfig : never
+
+/**
+ * One arm of {@link CellDef}: a registered type id, plus the `config` that id declared.
+ *
+ * `config` is **required** when the declared config has a required field (`select` needs
+ * `items`), **optional** when every field is optional (`image`), and **forbidden** when the
+ * type declared no config at all. All three are derived from the registry rather than restated
+ * per type — which is exactly what the previous hand-written union of seven arms could not do.
+ * That union was defeated the moment a kit registered a type whose id matched a built-in: the
+ * open `custom` arm swallowed it, so a kit-bound `createColumns` accepted `cell: { type:
+ * 'select' }` with no `config`, and `config: { anyTypoAtAll: 1 }` on every type.
+ */
+type CellArm<TKey extends string, TDefinition, TRow, TValue, TNode> = {
 	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
+} & ([ConfigOf<TDefinition>] extends [never]
+	? { type: TKey; config?: undefined }
+	: object extends ConfigOf<TDefinition>
+		? { type: TKey; config?: ConfigOf<TDefinition> }
+		: { type: TKey; config: ConfigOf<TDefinition> })
 
-type SelectCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'select'
-	config: SelectCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type BadgeCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'badge'
-	config: BadgeCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type ImageCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'image'
-	config?: ImageCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type LinkCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'link'
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type ProgressCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'progress'
-	config?: ProgressCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type DateCellDef<TRow, TValue = unknown, TNode = unknown> = {
-	type: 'date'
-	config?: DateCellConfig
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-type CustomCellDef<TRow, TValue, TCustom extends string, TNode = unknown> = {
-	type: TCustom
-	config?: Record<string, unknown>
-	component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
-}
-
-export type CellDef<TRow extends object, TValue = unknown, TCustom extends string = never, TNode = unknown> =
-	| BasicCellDef<TRow, TValue, TNode>
-	| SelectCellDef<TRow, TValue, TNode>
-	| BadgeCellDef<TRow, TValue, TNode>
-	| ImageCellDef<TRow, TValue, TNode>
-	| LinkCellDef<TRow, TValue, TNode>
-	| ProgressCellDef<TRow, TValue, TNode>
-	| DateCellDef<TRow, TValue, TNode>
-	| ([TCustom] extends [never] ? never : CustomCellDef<TRow, TValue, TCustom, TNode>)
+/**
+ * A column's `cell` slot: either no type at all (just a `component`), or one of the types the
+ * grid's registry actually holds, carrying that type's own config.
+ *
+ * `TCellTypes` defaults to the empty registry, so the unbound core `createColumns` accepts no
+ * `type` — a cell type with no kit to render it is not a thing that exists.
+ */
+export type CellDef<
+	TRow extends object,
+	TValue = unknown,
+	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
+	TNode = unknown,
+> =
+	| {
+			type?: undefined
+			config?: undefined
+			component?: ColumnRenderer<CellViewCtx<TRow, TValue>, TNode>
+	  }
+	| {
+			[TKey in keyof TCellTypes & string]: CellArm<TKey, TCellTypes[TKey], TRow, TValue, TNode>
+	  }[keyof TCellTypes & string]
 
 export type ColumnFilteringConfig<TNode = unknown> = {
 	/** Custom filter input component for this column. */
@@ -230,7 +295,7 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	 * Value this column's field is seeded with when the create form opens.
 	 *
 	 * Resolved on **every** `creating.start()`, not once at table construction — hence
-	 * `defaultValue` and not `initialValue` (unlike {@link ColumnPinningDef.initialPin} /
+	 * `defaultValue` and not `initialValue` (unlike {@link ColumnPinningDef.initialSide} /
 	 * {@link ColumnVisibilityDef.initialHidden}, which seed `initialState` a single time).
 	 * The function form therefore sees the table as it is at the moment the form opens.
 	 *
@@ -247,11 +312,44 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	defaultValue?: TValue | ((ctx: CreateDefaultValueContext<TRow>) => TValue)
 }
 
+/**
+ * Which edge a column is pinned to. Physical, not logical: unlike `align`, a pinned column
+ * sticks to a viewport edge, and that edge does not flip with the text direction.
+ */
+export const ColumnPinSide = {
+	Left: 'left',
+	Right: 'right',
+} as const
+
+export type ColumnPinSide = (typeof ColumnPinSide)[keyof typeof ColumnPinSide]
+
+/**
+ * Horizontal alignment of a column's contents. Logical, not physical: `'start'` is the left edge
+ * in LTR and the right edge in RTL.
+ */
+export const ColumnAlign = {
+	Start: 'start',
+	Center: 'center',
+	End: 'end',
+} as const
+
+export type ColumnAlign = (typeof ColumnAlign)[keyof typeof ColumnAlign]
+
+/** Per-part alignment override. Any part left out falls back to the grid's default. */
+export type ColumnAlignDef = {
+	/** Alignment of the header cell (`<th>`). */
+	header?: ColumnAlign
+	/** Alignment of the body cells (`<td>`). */
+	cell?: ColumnAlign
+	/** Alignment of the footer cell. */
+	footer?: ColumnAlign
+}
+
 export type ColumnPinningDef = {
-	/** Static pin — always pinned, no pin section in column menu. */
-	pin?: 'left' | 'right'
+	/** Static pin — always pinned to this side, no pin section in the column menu. */
+	side?: ColumnPinSide
 	/** Seeds `initialState.columnPinning` — starts pinned, user can change via column menu. */
-	initialPin?: 'left' | 'right'
+	initialSide?: ColumnPinSide
 }
 
 export type ColumnVisibilityDef = {
@@ -340,7 +438,11 @@ export type ColumnSortingConfig = {
  * User-facing column definition for @ez-kit/data-grid.
  * Converted to TanStack ColumnDef via mapColumns().
  */
-export type ColumnDef<TRow extends object, TCustomCellTypes extends string = never, TNode = unknown> = {
+export type ColumnDef<
+	TRow extends object,
+	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
+	TNode = unknown,
+> = {
 	id?: string
 	accessorKey?: keyof TRow & string
 	accessorFn?: (row: TRow, index: number) => unknown
@@ -365,15 +467,19 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	 * body with `<DataGrid.Table>{…}</DataGrid.Table>`.
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
-	columns?: ColumnDef<TRow, TCustomCellTypes, TNode>[]
+	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
 
 	/**
-	 * Column pinning configuration.
+	 * Column pinning.
+	 * - `'left'` / `'right'` — always pinned to that side (static), no menu section
 	 * - `false` — pinning disabled, no pin section in column menu
-	 * - `{ pin: 'left' }` — always pinned left (static), no menu section
-	 * - `{ initialPin: 'left' }` — starts pinned left, user can change via menu
+	 * - `{ initialSide: 'left' }` — starts pinned left, user can change via menu
+	 * - `{ side: 'left' }` — the long form of the scalar
+	 *
+	 * The scalar and the object are the same shape `align` and `width` use: the common case is
+	 * one word, the object exists for the case the scalar cannot express.
 	 */
-	pinning?: false | ColumnPinningDef
+	pinning?: false | ColumnPinSide | ColumnPinningDef
 	/**
 	 * Column-level sorting config.
 	 * - `false` — disable sorting for this column
@@ -382,7 +488,7 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	sorting?: false | ColumnSortingConfig
 
 	/** Cell display and input configuration. */
-	cell?: CellDef<TRow, unknown, TCustomCellTypes, TNode>
+	cell?: CellDef<TRow, unknown, TCellTypes, TNode>
 
 	/**
 	 * Column visibility configuration.
@@ -437,6 +543,27 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	resizing?: false
 
 	/**
+	 * Horizontal alignment of this column's contents.
+	 *
+	 * The scalar aligns the header, the body cells and the footer alike — the common case, since
+	 * a numeric column wants all three at the same edge. The object exists for the exception:
+	 *
+	 * ```ts
+	 * { accessorKey: 'total', align: 'end' }
+	 * { accessorKey: 'total', align: { cell: 'end', header: 'start' } }
+	 * ```
+	 *
+	 * `'start'` / `'end'` rather than `'left'` / `'right'`: this axis flips with the text
+	 * direction, and the grid already treats RTL as first-class (`sizing.direction`). Column
+	 * *pinning* keeps `'left'` / `'right'` — a pinned column sticks to a viewport edge, which
+	 * does not flip.
+	 *
+	 * The React layer emits this as `data-align` on the cell; the shared structural stylesheet
+	 * turns it into alignment. A kit needs to do nothing.
+	 */
+	align?: ColumnAlign | ColumnAlignDef
+
+	/**
 	 * Class applied to this column's header cell (`<th>`).
 	 *
 	 * Deliberately three names rather than one `className`: a single field would have to mean
@@ -460,10 +587,34 @@ export type ColumnDef<TRow extends object, TCustomCellTypes extends string = nev
 	/** Class applied to this column's footer cell. Only rendered inside `<DataGrid.Footer />`. */
 	footerClassName?: string
 
-	// Pass-through TanStack options
-	size?: number
-	minSize?: number
-	maxSize?: number
+	/**
+	 * Column width, in pixels.
+	 *
+	 * The scalar is the starting width: `width: 200` is the whole story for most columns.
+	 * The object adds the bounds a resizable column is dragged between:
+	 *
+	 * ```ts
+	 * { accessorKey: 'name', width: 200 }
+	 * { accessorKey: 'name', width: { default: 200, min: 80, max: 400 } }
+	 * ```
+	 *
+	 * Replaces the `size` / `minSize` / `maxSize` pass-throughs: three TanStack names, spelled in
+	 * TanStack's vocabulary rather than the grid's, for one property of a column.
+	 *
+	 * Whether the user may *change* the width is {@link ColumnDef.resizing}, not a field here —
+	 * it belongs with `sorting`, `filtering` and `visibility`, where every other per-column
+	 * feature switch lives.
+	 */
+	width?: number | ColumnWidthDef
+}
+
+export type ColumnWidthDef = {
+	/** Starting width in pixels. TanStack's `size`. */
+	default?: number
+	/** Lower bound while resizing, in pixels. TanStack's `minSize`. */
+	min?: number
+	/** Upper bound while resizing, in pixels. TanStack's `maxSize`. */
+	max?: number
 }
 
 /** Augment TanStack's ColumnMeta with our custom fields. */
@@ -471,6 +622,8 @@ declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface ColumnMeta<TData, TValue> {
 		columnPinning?: false | ColumnPinningDef
+		/** Resolved per-part alignment from `column.align`, normalized off the scalar form. */
+		columnAlign?: ColumnAlignDef
 		cellType?: CellType
 		config?: Record<string, unknown>
 		/** Class for this column's header cell, from `column.headerClassName`. */

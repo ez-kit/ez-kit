@@ -1,4 +1,4 @@
-import { createDataGridInstance, createTable, createColumns } from '@ez-kit/data-grid-react'
+import { prepareDataGridTable, createTable, createColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -64,9 +64,9 @@ describe('@ez-kit/data-grid-heroui', () => {
 	// helpers the star export used to supply resolve `TCustomCellTypes` to `never`, and
 	// annotating with them here would compile while checking nothing.
 	it('types a consumer that imports from the kit alone', () => {
-		type KitCellType = Extract<keyof typeof cellTypes, string>
-		const columns: ColumnDef<User, KitCellType>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
-		const helper: ColumnHelper<User, KitCellType> = createColumnHelper<User>()
+		type KitCellTypes = typeof cellTypes
+		const columns: ColumnDef<User, KitCellTypes>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+		const helper: ColumnHelper<User, KitCellTypes> = createColumnHelper<User>()
 		const sorting: SortingState = [{ id: 'name', desc: false }]
 		const props: DataGridProps<User> = { data: [{ id: 1, name: 'Ada' }], columns }
 
@@ -82,7 +82,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 			columns: createColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 		})
 
-		render(<DataGrid table={createDataGridInstance(table)} />)
+		render(<DataGrid table={prepareDataGridTable(table)} />)
 
 		expect(screen.getByRole('grid', { name: 'Data grid' })).toBeInTheDocument()
 		expect(screen.getByText('Name')).toBeInTheDocument()
@@ -96,7 +96,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 			selection: true,
 		})
 
-		render(<DataGrid table={createDataGridInstance(table)} />)
+		render(<DataGrid table={prepareDataGridTable(table)} />)
 
 		const checkbox = screen.getByRole('checkbox', { name: /Select row/i })
 		fireEvent.click(checkbox)

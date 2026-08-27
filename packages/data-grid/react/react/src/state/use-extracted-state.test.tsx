@@ -35,7 +35,7 @@ describe('useExtractedState', () => {
 		})
 		const before = result.current.state
 		act(() => {
-			result.current.grid.table.setSorting([{ id: 'name', desc: true }])
+			result.current.grid.setSorting([{ id: 'name', desc: true }])
 		})
 		expect(result.current.state).not.toBe(before)
 		expect(result.current.state.sorting).toEqual([{ id: 'name', desc: true }])
@@ -49,7 +49,7 @@ describe('useExtractedState', () => {
 		})
 		const before = result.current.state
 		act(() => {
-			result.current.grid.table.setPageIndex(3)
+			result.current.grid.setPageIndex(3)
 		})
 		expect(result.current.state).toBe(before)
 	})

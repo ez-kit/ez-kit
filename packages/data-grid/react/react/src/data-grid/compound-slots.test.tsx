@@ -2,7 +2,7 @@ import { createColumns, createTable } from '@ez-kit/data-grid-core'
 import { fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createDataGridInstance } from '../data-grid-instance'
+import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
 
 import { DataGrid } from './data-grid'
@@ -20,7 +20,7 @@ const COLUMNS = createColumns<User>([
 ])
 
 function makeInstance() {
-	return createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS }))
+	return prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS }))
 }
 
 /**
@@ -126,11 +126,11 @@ describe('<DataGrid.Header> children', () => {
  */
 describe('compound render-prop slots', () => {
 	it('<DataGrid.Pagination> hands over the settled page model', () => {
-		const instance = createDataGridInstance(
+		const table = prepareDataGridTable(
 			createTable<User>({ data: USERS, columns: COLUMNS, pagination: { pageSize: 1 } }),
 		)
 		const { container } = renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<DataGrid.Pagination>
 					{({ pageIndex, pageCount, rowCount, canPreviousPage, canNextPage }) => (
 						<p>{[pageIndex, pageCount, rowCount, canPreviousPage, canNextPage].join(' ')}</p>
@@ -143,9 +143,9 @@ describe('compound render-prop slots', () => {
 	})
 
 	it('<DataGrid.Pagination> stays hidden in the states that hide the built-in footer', () => {
-		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS }))
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS }))
 		const { container } = renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<DataGrid.Pagination>{() => <p>never</p>}</DataGrid.Pagination>
 			</DataGrid>,
 		)
@@ -155,12 +155,12 @@ describe('compound render-prop slots', () => {
 
 	it('<DataGrid.SelectionBar> hands over a confirmation-aware onDelete', () => {
 		const onDelete = vi.fn()
-		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS, selection: true }))
-		instance.table.grid.selection.panel = { onDelete, confirmation: true }
-		instance.table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, selection: true }))
+		table.grid.selection.panel = { onDelete, confirmation: true }
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 
 		const { container } = renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<DataGrid.SelectionBar>
 					{({ count, open, onDelete: del }) => (
 						<button
@@ -184,15 +184,15 @@ describe('compound render-prop slots', () => {
 		// the handler — the ConfirmDialog runs it on confirm.
 		if (button) fireEvent.click(button)
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(instance.table.getState().pendingBulkDelete).toBe(true)
+		expect(table.getState().pendingBulkDelete).toBe(true)
 	})
 
 	it('<DataGrid.SortTrigger> excludes already-used columns from each entry', () => {
-		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS, sorting: true }))
-		instance.table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, sorting: true }))
+		table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
 
 		const { container } = renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<DataGrid.SortTrigger>
 					{({ items, sortableColumns, canAddSort }) => (
 						<p>
@@ -207,11 +207,9 @@ describe('compound render-prop slots', () => {
 	})
 
 	it('<DataGrid.ColumnVisibilityTrigger> hands over the toggleable columns', () => {
-		const instance = createDataGridInstance(
-			createTable<User>({ data: USERS, columns: COLUMNS, columnVisibility: true }),
-		)
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, columnVisibility: true }))
 		const { container } = renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<DataGrid.ColumnVisibilityTrigger>
 					{({ columns }) => <p>{columns.map((c) => `${c.id}:${String(c.isVisible)}`).join(' ')}</p>}
 				</DataGrid.ColumnVisibilityTrigger>
@@ -221,9 +219,9 @@ describe('compound render-prop slots', () => {
 	})
 
 	it('<DataGrid.FilterPanel> hands over a ready-made input per column', () => {
-		const instance = createDataGridInstance(createTable<User>({ data: USERS, columns: COLUMNS, filtering: true }))
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, filtering: true }))
 		const { container } = renderWithComponents(
-			<DataGrid table={instance}>
+			<DataGrid table={table}>
 				<DataGrid.FilterPanel>
 					{({ columns, hasActiveFilter }) => (
 						<div data-active={String(hasActiveFilter)}>

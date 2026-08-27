@@ -13,15 +13,17 @@ This grid registers custom `rating` and `color` cell types via `extendDataGrid()
 
 <DataGridDocsExample exampleId='custom-cell-types' />
 
-A cell type is a `CellTypeDefinition` — up to four renderers, all optional:
+A cell type is declared with `defineCellType` — up to four renderers, all optional:
 
 ```tsx
-import type { CellTypeRegistry, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import { defineCellType } from '@ez-kit/data-grid-react'
+
+import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
 const TONE_MAP: Record<string, string> = { active: 'positive', cancelled: 'critical' }
 
 const CELL_TYPES = {
-	status: {
+	status: defineCellType()({
 		view: ({ value }: CellViewProps) => <span data-tone={TONE_MAP[String(value)] ?? 'neutral'}>{String(value)}</span>,
 		edit: ({ value, onChange }: FieldState) => (
 			<input
@@ -31,9 +33,38 @@ const CELL_TYPES = {
 				}}
 			/>
 		),
-	},
-} satisfies CellTypeRegistry
+	}),
+}
 ```
+
+### Declaring a config
+
+`defineCellType<TConfig>()` records the shape of `cell.config` for columns of that type. Give it one and the column must supply a matching config; omit it and `config` is rejected outright.
+
+```tsx
+type RatingConfig = { max: number }
+
+const CELL_TYPES = {
+	rating: defineCellType<RatingConfig>()({
+		view: ({ value, config }: CellViewProps<RatingConfig>) => (
+			<Stars
+				value={Number(value)}
+				max={config?.max ?? 5}
+			/>
+		),
+	}),
+}
+
+createColumns<Order>([
+	{ accessorKey: 'score', cell: { type: 'rating', config: { max: 10 } } }, // ✅
+	{ accessorKey: 'score', cell: { type: 'rating' } }, // ❌ config is required — `max` has no default
+	{ accessorKey: 'score', cell: { type: 'rating', config: { maks: 10 } } }, // ❌ did you mean 'max'?
+])
+```
+
+The config is required only when it has a required field. A config whose fields are all optional makes `config` optional too.
+
+The type parameter is explicit rather than inferred from the renderers because `view`, `edit`, `creating` and `filter` are four independent places the config appears — a type that registers only some of them would infer something arbitrary from the rest.
 
 | Renderer   | Receives        | Used for                                                                       |
 | ---------- | --------------- | ------------------------------------------------------------------------------ |
@@ -65,6 +96,10 @@ export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = grid
 	cellTypes={CELL_TYPES}
 />
 ```
+
+The merge runs **entry by entry**, not id by id: naming an id the kit already registered overrides
+only the keys you give it. `cellTypes={{ date: { view: MyDate } }}` swaps the date cell's view and
+keeps the kit's `edit`, `filter` and the config the type declared.
 
 ## More examples
 

@@ -3,7 +3,7 @@
 import { useGridComponents } from '../components-context'
 import { COMPONENT_FEATURE } from '../contract'
 
-import { useDataGridInstance } from './table-context'
+import { useDataGridTable } from './table-context'
 
 import type { GridComponentRegistry } from '../types'
 
@@ -36,7 +36,7 @@ const REQUIRED_STRUCTURAL = [
  */
 export function ComponentGuard(): null {
 	const components = useGridComponents()
-	const table = useDataGridInstance().table
+	const table = useDataGridTable()
 
 	const required = new Set<keyof GridComponentRegistry>(REQUIRED_STRUCTURAL)
 

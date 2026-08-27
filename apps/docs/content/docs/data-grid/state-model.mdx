@@ -8,7 +8,7 @@ description: Where a grid value comes from — column-level seeds, feature confi
 A grid value can be set in four places. They are not alternatives to each other: each one runs at a
 different moment, and the later one wins.
 
-1. **Column-level seeds** — `pinning.initialPin`, `visibility.initialHidden`,
+1. **Column-level seeds** — `pinning.initialSide`, `visibility.initialHidden`,
    `creating.defaultValue`. Written on the column def, next to the thing they seed.
 2. **Feature config** — `pagination.pageSize`, `creating.defaultValues`. Written on the grid config,
    for values that are not per-column.
@@ -21,8 +21,8 @@ different moment, and the later one wins.
 
 | Source                     | Level      | Applied                     | Overridable by                                                       |
 | -------------------------- | ---------- | --------------------------- | -------------------------------------------------------------------- |
-| `pinning.pin`              | column def | always                      | nothing — it is an invariant, see below                              |
-| `pinning.initialPin`       | column def | once, at mount              | `initialState.columnPinning` for that column id, then by the user    |
+| `pinning.side`             | column def | always                      | nothing — it is an invariant, see below                              |
+| `pinning.initialSide`      | column def | once, at mount              | `initialState.columnPinning` for that column id, then by the user    |
 | `visibility.initialHidden` | column def | once, at mount              | `initialState.columnVisibility` for that column id, then by the user |
 | `creating.defaultValue`    | column def | on every `creating.start()` | the table-level `creating.defaultValues` for the same key            |
 | `pagination.pageSize`      | grid       | once, at mount              | `initialState.pagination`, then by the page-size selector            |
@@ -38,7 +38,7 @@ mention is yours.
 
 ```tsx
 const columns = createColumns<Row>([
-	{ accessorKey: 'id', header: 'ID', pinning: { initialPin: 'left' } },
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'notes', header: 'Notes', visibility: { initialHidden: true } },
 ])
@@ -47,7 +47,7 @@ const columns = createColumns<Row>([
 	data={data}
 	columns={columns}
 	pinning={{ column: true }}
-	// `id` is not mentioned, so it keeps its `initialPin: 'left'`.
+	// `id` is not mentioned, so it keeps its `initialSide: 'left'`.
 	// `name` is added on the right. `notes` stays hidden.
 	initialState={{ columnPinning: { right: ['name'] } }}
 />
@@ -56,7 +56,7 @@ const columns = createColumns<Row>([
 Mentioning a column id in **either** array of `initialState.columnPinning` hands that column over to
 you — its seed is dropped and it sits exactly where you put it. Leaving it out of both arrays is the
 "not mentioned" case, which keeps the seed. There is therefore no way to start a seeded column
-unpinned from `initialState`; remove the `initialPin` from the column def instead.
+unpinned from `initialState`; remove the `initialSide` from the column def instead.
 
 Unmentioned left seeds are placed in front of your left ids and unmentioned right seeds after your
 right ids, so a pinned selection column stays leftmost and a pinned actions column stays rightmost.
@@ -94,13 +94,13 @@ table:
 - **System columns** (`__selection__`, `__expand__`, `__actions__`) are always visible, and keep the
   pins they were built with.
 - **`visibility: false`** columns are always visible — hiding is disabled for them.
-- **`pinning: { pin }`** columns keep that pin.
+- **`pinning: 'left'` / `pinning: { side }`** columns keep that pin.
 
 This is not defensiveness for its own sake: the column menu deliberately hides the pin section for
 statically pinned columns and skips system columns entirely, so a state that unpinned or hid one
 could never be undone by the user.
 
-`initialPin` and `initialHidden` are **not** invariants — they are seeds, and the user may change
+`initialSide` and `initialHidden` are **not** invariants — they are seeds, and the user may change
 them freely.
 
 ## What `initialState` cannot seed

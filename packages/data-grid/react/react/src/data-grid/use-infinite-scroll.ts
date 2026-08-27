@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 
 import { DATA_GRID_DEFAULTS } from '../defaults'
 
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { ResolvedGridOptions } from '../resolved-options'
 import type { NormalizedInfiniteConfig } from '../use-data-grid'
@@ -47,12 +47,11 @@ function readConfig(table: { grid: ResolvedGridOptions }): NormalizedInfiniteCon
 }
 
 export function useInfiniteScroll(): InfiniteController {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 
 	const config = readConfig(table)
-	const isFetchingNextPage = useDataGridStore((s) => s.infinite.isFetchingNextPage)
-	const errorState = useDataGridStore((s) => s.infinite.error)
+	const isFetchingNextPage = useDataGridState((s) => s.infinite.isFetchingNextPage)
+	const errorState = useDataGridState((s) => s.infinite.error)
 
 	const loadMore = useCallback(
 		(direction: LoadMoreDirection = 'forward') => {

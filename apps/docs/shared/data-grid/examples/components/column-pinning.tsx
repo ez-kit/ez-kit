@@ -8,12 +8,12 @@ import { DataGrid } from 'shared/DataGrid'
 import { PRODUCT_DATA, type Product } from './_data'
 
 const colPinColumns = createColumns<Product>([
-	{ accessorKey: 'name', header: 'Name', size: 250, pinning: { initialPin: 'left' } },
+	{ accessorKey: 'name', header: 'Name', width: 250, pinning: { initialSide: 'left' } },
 	{
 		accessorKey: 'status',
 		header: 'Status',
-		size: 120,
-		pinning: { initialPin: 'left' },
+		width: 120,
+		pinning: { initialSide: 'left' },
 		cell: {
 			type: 'badge',
 			config: {
@@ -25,20 +25,20 @@ const colPinColumns = createColumns<Product>([
 			},
 		},
 	},
-	{ accessorKey: 'category', header: 'Category', size: 200 },
+	{ accessorKey: 'category', header: 'Category', width: 200 },
 	{
 		accessorKey: 'image',
 		header: 'Image',
-		size: 80,
+		width: 80,
 		cell: { type: 'image', config: { width: 40, height: 40, alt: 'Product' } },
 	},
-	{ accessorKey: 'website', header: 'Website', size: 140, cell: { type: 'link' }, pinning: { initialPin: 'right' } },
+	{ accessorKey: 'website', header: 'Website', width: 140, cell: { type: 'link' }, pinning: { initialSide: 'right' } },
 	{
 		accessorKey: 'stock',
 		header: 'Stock %',
-		size: 180,
+		width: 180,
 		cell: { type: 'progress', config: { max: 100 } },
-		pinning: { initialPin: 'right' },
+		pinning: { initialSide: 'right' },
 	},
 ])
 

@@ -88,6 +88,44 @@ table[data-slot='table'] {
 	@apply relative;
 }
 
+/* ── column alignment ─────────────────────────────────────────────────── */
+
+/* `data-align` comes from a column's `align`, already resolved per part by the core.
+ *
+ * Selectors are qualified by `data-slot` on purpose: `data-align` is not ours alone — the kits'
+ * `input-group` and `action-bar` primitives set it too, with an unrelated vocabulary
+ * (`inline-start`, `block-end`). Scoping to the grid's own slots keeps the two apart.
+ *
+ * Alignment is layout, not decoration, so it belongs in this structural sheet: a column that asks
+ * to be right-aligned should look the same in both kits, and leaving it to them is what made
+ * `headerClassName` + `cellClassName` the only route to it. */
+[data-slot='td'][data-align='start'],
+[data-slot='th'][data-align='start'] {
+	@apply text-start;
+}
+[data-slot='td'][data-align='center'],
+[data-slot='th'][data-align='center'] {
+	@apply text-center;
+}
+[data-slot='td'][data-align='end'],
+[data-slot='th'][data-align='end'] {
+	@apply text-end;
+}
+
+/* The default header content is laid out by flex, and `[data-slot='sort-trigger']` — which holds
+ * the label — is `flex-1`, so it fills the row and `text-align` on the `<th>` has nothing left to
+ * move. The label follows the trigger's main axis instead. (The `<th>` rules above still carry
+ * alignment for a header composed by hand, where no sort-trigger exists.) */
+[data-slot='th'][data-align='start'] [data-slot='sort-trigger'] {
+	@apply justify-start;
+}
+[data-slot='th'][data-align='center'] [data-slot='sort-trigger'] {
+	@apply justify-center;
+}
+[data-slot='th'][data-align='end'] [data-slot='sort-trigger'] {
+	@apply justify-end;
+}
+
 /* ── header inner layout ──────────────────────────────────────────────── */
 
 [data-slot='header-main'] {

@@ -80,8 +80,9 @@ describe('truncateText', () => {
 })
 
 describe('numberCellType', () => {
+	// `defineCellType` keeps the definition's precise type, so `view` is known to be present —
+	// the runtime guard this used to need is now provably dead.
 	const view = numberCellType.view
-	if (!view) throw new Error('numberCellType.view must be defined')
 
 	it('view: formats numeric values via config', () => {
 		const out = renderView(view, { value: 1500, row: {}, rowIndex: 0, config: { decimals: 2, locale: 'en-US' } })
@@ -105,8 +106,9 @@ describe('numberCellType', () => {
 })
 
 describe('textCellType', () => {
+	// `defineCellType` keeps the definition's precise type, so `view` is known to be present —
+	// the runtime guard this used to need is now provably dead.
 	const view = textCellType.view
-	if (!view) throw new Error('textCellType.view must be defined')
 
 	it('view: truncates with ellipsis when needed', () => {
 		const out = renderView(view, { value: 'a long string', row: {}, rowIndex: 0, config: { maxLength: 5 } })
@@ -131,8 +133,10 @@ describe('textCellType', () => {
 
 describe('booleanCellType', () => {
 	it('does not ship a view or filter (kit-specific)', () => {
-		expect(booleanCellType.view).toBeUndefined()
-		expect(booleanCellType.filter).toBeUndefined()
+		// `defineCellType` keeps the definition's precise type, so the absence is now a type-level
+		// fact too — these slots are not on `booleanCellType` at all, not merely undefined.
+		expect(booleanCellType).not.toHaveProperty('view')
+		expect(booleanCellType).not.toHaveProperty('filter')
 	})
 
 	it('edit: forwards to DI Checkbox', () => {

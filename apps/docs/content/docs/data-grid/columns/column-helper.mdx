@@ -40,12 +40,12 @@ A cell type is an id mapped to its renderers. Register it and the helper gains a
 Per grid, via the `cellTypes` prop. This is what the example below does, which is why its source panel shows the registry and the columns together:
 
 ```tsx
-import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
+import { defineCellType } from '@ez-kit/data-grid-react'
 
 // StarRatingView / StarRatingInput are your own components — see the example's source below.
 const RATING_CELL_TYPES = {
-	rating: { view: StarRatingView, edit: StarRatingInput },
-} satisfies CellTypeRegistry
+	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
+}
 ```
 
 ```tsx
@@ -62,7 +62,7 @@ Or once for a whole grid module, via `extendDataGrid()` from your UI kit — the
 import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
 
 const grid = extendDataGrid({
-	rating: { view: StarRatingView, edit: StarRatingInput },
+	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
 })
 
 export const { DataGrid, createColumnHelper, createColumns } = grid
@@ -81,13 +81,19 @@ const columns = [
 ]
 ```
 
-With the standalone `createColumnHelper` from `@ez-kit/data-grid-react` — as in the example, which registers per grid — pass the ids and the matching type parameter yourself. Derive both from the registry so they cannot drift apart:
+With the standalone `createColumnHelper` from `@ez-kit/data-grid-react` — as in the example, which registers per grid — pass the registry and the matching runtime ids yourself. Derive both from one object so they cannot drift apart, and include `baseCellTypes` so the builder still offers `.text()` / `.select()` alongside your own:
 
 ```ts
-type RatingCellType = keyof typeof RATING_CELL_TYPES
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 
-const createColumn = createColumnHelper<Employee, RatingCellType>(Object.keys(RATING_CELL_TYPES) as RatingCellType[])
+const HELPER_CELL_TYPES = { ...baseCellTypes, ...RATING_CELL_TYPES }
+
+const createColumn = createColumnHelper<Employee, typeof HELPER_CELL_TYPES>(
+	Object.keys(HELPER_CELL_TYPES) as (keyof typeof HELPER_CELL_TYPES)[],
+)
 ```
+
+The second parameter is the **registry**, not a union of its ids: the ids alone cannot carry each type's `cell.config`, which is what makes `createColumn.rating({ config })` checked.
 
 <DataGridDocsExample exampleId='column-helper-registered' />
 

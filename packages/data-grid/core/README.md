@@ -6,7 +6,6 @@ Most apps should use a UI flavour instead:
 
 - [`@ez-kit/data-grid-shadcn`](../react/shadcn) — Shadcn UI
 - [`@ez-kit/data-grid-heroui`](../react/heroui) — HeroUI
-- [`@ez-kit/data-grid-native`](../react/native) — plain/native UI
 
 Use this package directly only when building your own adapter.
 

@@ -2,7 +2,6 @@
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-shadcn': minor
 '@ez-kit/data-grid-heroui': minor
-'@ez-kit/data-grid-native': minor
 ---
 
 Finish the composition ladder in the header, and stop interactive header content from sorting.

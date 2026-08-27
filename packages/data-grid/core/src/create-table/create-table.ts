@@ -49,7 +49,8 @@ function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string,
 	return opts
 }
 
-function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow, string>[]): Record<string, boolean> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow, any>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
 	for (const def of defs) {
 		if (def.visibility && typeof def.visibility === 'object' && def.visibility.initialHidden) {
@@ -500,6 +501,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	dataTable.subscribe = (listener) => store.subscribe(listener)
 
 	dataTable.getSnapshot = () => store.getState()
+	// Frozen at construction: a server render must produce the same tree on every call, so it
+	// cannot read a store that a client-side interaction may already have advanced.
+	const initialSnapshot = store.getState()
+	dataTable.getInitialSnapshot = () => initialSnapshot
 
 	dataTable.setData = (data) => {
 		ref.table?.setOptions((prev) => ({

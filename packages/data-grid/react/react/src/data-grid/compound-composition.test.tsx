@@ -17,8 +17,8 @@ type TestRow = (typeof TEST_ROWS)[number]
  */
 function renderComposed(children: ReactNode, config: Partial<UseDataGridConfig<TestRow>> = {}) {
 	function Harness(): ReactElement {
-		const instance = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
-		return <DataGrid<TestRow> table={instance}>{children}</DataGrid>
+		const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
+		return <DataGrid<TestRow> table={table}>{children}</DataGrid>
 	}
 	return renderWithComponents(<Harness />)
 }
@@ -197,10 +197,10 @@ describe('sorting.toolbar — the UI flag that moved out of core', () => {
 
 	function renderWithSortMenu(config: Partial<UseDataGridConfig<TestRow>>) {
 		function Harness(): ReactElement {
-			const instance = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
+			const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
 			return (
 				<DataGrid<TestRow>
-					table={instance}
+					table={table}
 					components={markerComponents}
 				>
 					<DataGrid.Toolbar />
@@ -220,7 +220,7 @@ describe('sorting.toolbar — the UI flag that moved out of core', () => {
 		expect(screen.queryByText('sort builder')).not.toBeInTheDocument()
 	})
 
-	it('a per-instance `components` override reaches the injected slot', () => {
+	it('a per-table `components` override reaches the injected slot', () => {
 		// The same test proves `<DataGrid components>` merges over the provider registry
 		// rather than replacing it — the rest of the kit still renders.
 		renderWithSortMenu({ sorting: { toolbar: true } })

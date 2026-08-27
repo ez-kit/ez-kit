@@ -4,9 +4,9 @@ import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { useDebouncedValue } from '../utils/use-debounced-value'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
-type GlobalFilterInputCompoundProps = {
+export type DataGridGlobalFilterInputProps = {
 	/** Override the placeholder configured via `globalFiltering.placeholder`. */
 	placeholder?: string
 }
@@ -20,8 +20,9 @@ type GlobalFilterInputCompoundProps = {
  * syncs back when external code mutates `state.globalFilter` (e.g. programmatic
  * reset, controlled mode).
  */
-export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilterInputCompoundProps = {}) {
-	const table = useTable()
+export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlobalFilterInputProps = {}) {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.globalFilter as unknown)
 	const { GlobalFilterInput: Component } = useGridComponents().filtering
 
 	const cfg = table.grid.globalFiltering

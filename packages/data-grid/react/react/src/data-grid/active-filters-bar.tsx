@@ -1,14 +1,14 @@
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { FilterChipsPosition } from '../use-data-grid'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-type ActiveFiltersBarProps = {
+export type DataGridActiveFiltersBarProps = {
 	/** Override the position data attribute. Defaults to the auto-mount config or `'above'`. */
 	position?: FilterChipsPosition
 }
@@ -75,8 +75,11 @@ function columnLabel(column: Column<any>): string {
  * Renders nothing when no filter is active. Reads chips position from
  * {@link FILTER_CHIPS_KEY} unless overridden via the `position` prop.
  */
-export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarProps = {}) {
-	const table = useTable()
+export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFiltersBarProps = {}) {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState((s) => s.globalFilter as unknown)
+	useDataGridState((s) => s.applied)
 	const { FilterChip } = useGridComponents().filtering
 
 	const cfg = table.grid.filtering.chips

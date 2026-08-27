@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { buildPaginationLabel } from './data-grid/pagination-label'
+import { DATA_GRID_DEFAULTS } from './defaults'
 import { PaginationVariant } from './types'
 import { useDataGrid } from './use-data-grid'
 
@@ -33,7 +34,7 @@ type ClampGridProps = {
 
 /** Renders the live `pageIndex` under fully controlled manual pagination. */
 function ClampGrid({ rowCount, tableState, onStateChange }: ClampGridProps) {
-	const { table } = useDataGrid({
+	const table = useDataGrid({
 		data: USERS,
 		columns: COLUMNS,
 		pagination: { manual: true, rowCount, pageSize: 10 },
@@ -60,12 +61,12 @@ function ClampPage({ rowCount }: { rowCount: number }) {
 }
 
 describe('useDataGrid', () => {
-	it('creates a table instance with initial data', () => {
+	it('creates a table table with initial data', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		expect(result.current.table.getRowModel().rows).toHaveLength(2)
+		expect(result.current.getRowModel().rows).toHaveLength(2)
 	})
 
-	it('instance is stable across re-renders', () => {
+	it('table is stable across re-renders', () => {
 		const { result, rerender } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
 		const instance1 = result.current
 		rerender()
@@ -78,8 +79,8 @@ describe('useDataGrid', () => {
 			initialProps: { data: USERS },
 		})
 		rerender({ data: newData })
-		expect(result.current.table.getRowModel().rows).toHaveLength(1)
-		expect(result.current.table.getRowModel().rows[0]?.getValue('name')).toBe('Carol')
+		expect(result.current.getRowModel().rows).toHaveLength(1)
+		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Carol')
 	})
 
 	it('re-syncs manual pagination rowCount when it changes', () => {
@@ -93,12 +94,12 @@ describe('useDataGrid', () => {
 				}),
 			{ initialProps: { rowCount: 0 } },
 		)
-		expect(result.current.table.getRowCount()).toBe(0)
-		expect(result.current.table.getPageCount()).toBe(0)
+		expect(result.current.getRowCount()).toBe(0)
+		expect(result.current.getPageCount()).toBe(0)
 
 		rerender({ rowCount: 1250 })
-		expect(result.current.table.getRowCount()).toBe(1250)
-		expect(result.current.table.getPageCount()).toBe(125)
+		expect(result.current.getRowCount()).toBe(1250)
+		expect(result.current.getPageCount()).toBe(125)
 	})
 
 	// Regression (#82): `autoResetPageIndex` defaults to `!manualPagination`, so TanStack never
@@ -117,20 +118,20 @@ describe('useDataGrid', () => {
 		)
 
 		act(() => {
-			result.current.table.setPageIndex(2)
+			result.current.setPageIndex(2)
 		})
-		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+		expect(result.current.getState().pagination.pageIndex).toBe(2)
 
 		// A server filter narrows 500 rows to 5 while the user sits on page 3.
 		rerender({ rowCount: 5 })
 
-		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+		expect(result.current.getState().pagination.pageIndex).toBe(0)
 		expect(
 			buildPaginationLabel({
 				variant: PaginationVariant.Simple,
-				pageIndex: result.current.table.getState().pagination.pageIndex,
+				pageIndex: result.current.getState().pagination.pageIndex,
 				pageSize: 10,
-				rowCount: result.current.table.getRowCount(),
+				rowCount: result.current.getRowCount(),
 			}),
 		).toBe('1–5 of 5')
 	})
@@ -147,12 +148,12 @@ describe('useDataGrid', () => {
 		)
 
 		act(() => {
-			result.current.table.setPageIndex(2)
+			result.current.setPageIndex(2)
 		})
 
 		rerender({ rowCount: 0 })
 
-		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+		expect(result.current.getState().pagination.pageIndex).toBe(0)
 	})
 
 	it('leaves pageIndex alone while it is still within a shrunken manual rowCount', () => {
@@ -167,13 +168,13 @@ describe('useDataGrid', () => {
 		)
 
 		act(() => {
-			result.current.table.setPageIndex(2)
+			result.current.setPageIndex(2)
 		})
 
 		// 50 rows still spans 5 pages — page 3 remains valid, so nothing to clamp.
 		rerender({ rowCount: 50 })
 
-		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+		expect(result.current.getState().pagination.pageIndex).toBe(2)
 	})
 
 	it('never clamps pageIndex when the manual total is unknown', () => {
@@ -189,12 +190,12 @@ describe('useDataGrid', () => {
 		)
 
 		act(() => {
-			result.current.table.setPageIndex(2)
+			result.current.setPageIndex(2)
 		})
 
 		rerender({ data: [{ id: 3, name: 'Carol' }] })
 
-		expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+		expect(result.current.getState().pagination.pageIndex).toBe(2)
 	})
 
 	// `rowCount: data?.rowCount ?? 0` is the canonical manual-pagination shape, so a `0` on the
@@ -333,10 +334,10 @@ describe('useDataGrid', () => {
 				}),
 			{ initialProps: { pageCount: -1 } },
 		)
-		expect(result.current.table.getPageCount()).toBe(-1)
+		expect(result.current.getPageCount()).toBe(-1)
 
 		rerender({ pageCount: 7 })
-		expect(result.current.table.getPageCount()).toBe(7)
+		expect(result.current.getPageCount()).toBe(7)
 	})
 
 	it('re-renders when table state changes', () => {
@@ -347,11 +348,11 @@ describe('useDataGrid', () => {
 				creating: { onSave: () => Promise.resolve() },
 			}),
 		)
-		expect(result.current.table.creating.getState().isOpen).toBe(false)
+		expect(result.current.creating.getState().isOpen).toBe(false)
 		act(() => {
-			result.current.table.creating.start()
+			result.current.creating.start()
 		})
-		expect(result.current.table.creating.getState().isOpen).toBe(true)
+		expect(result.current.creating.getState().isOpen).toBe(true)
 	})
 
 	it('seeds loading from initialState (uncontrolled default)', () => {
@@ -362,7 +363,7 @@ describe('useDataGrid', () => {
 				initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } },
 			}),
 		)
-		expect(result.current.table.getSnapshot().loading.isPending).toBe(true)
+		expect(result.current.getSnapshot().loading.isPending).toBe(true)
 	})
 
 	it('propagates state.loading into the external snapshot so subscribers see it', () => {
@@ -376,12 +377,12 @@ describe('useDataGrid', () => {
 			{ initialProps: { isPending: false } },
 		)
 		// Baseline: snapshot reflects initial state
-		expect(result.current.table.getSnapshot().loading.isPending).toBe(false)
+		expect(result.current.getSnapshot().loading.isPending).toBe(false)
 
 		// Flip via the controlled `state` prop — both options.state AND the external
 		// store must update so useSyncExternalStore subscribers (e.g. Body) re-read.
 		rerender({ isPending: true })
-		expect(result.current.table.getSnapshot().loading.isPending).toBe(true)
+		expect(result.current.getSnapshot().loading.isPending).toBe(true)
 	})
 
 	it('propagates state.columnFilters into the external snapshot', () => {
@@ -397,11 +398,11 @@ describe('useDataGrid', () => {
 				}),
 			{ initialProps: { filters: filtersA } },
 		)
-		expect(result.current.table.getSnapshot().columnFilters).toBe(filtersA)
+		expect(result.current.getSnapshot().columnFilters).toBe(filtersA)
 
 		rerender({ filters: filtersB })
-		expect(result.current.table.getSnapshot().columnFilters).toBe(filtersB)
-		expect(result.current.table.getState().columnFilters).toBe(filtersB)
+		expect(result.current.getSnapshot().columnFilters).toBe(filtersB)
+		expect(result.current.getState().columnFilters).toBe(filtersB)
 	})
 
 	it('does not invoke onStateChange when state prop is the source of the change', () => {
@@ -435,10 +436,10 @@ describe('useDataGrid', () => {
 				}),
 			{ initialProps: { tag: 0 } },
 		)
-		const snapshotBefore = result.current.table.getSnapshot()
+		const snapshotBefore = result.current.getSnapshot()
 		// Force a re-render where `state` still points at the same slice references.
 		rerender({ tag: 1 })
-		const snapshotAfter = result.current.table.getSnapshot()
+		const snapshotAfter = result.current.getSnapshot()
 		// No work was done → snapshot identity is preserved.
 		expect(snapshotAfter).toBe(snapshotBefore)
 	})
@@ -447,19 +448,19 @@ describe('useDataGrid', () => {
 describe('useDataGrid — virtualized', () => {
 	it('VIRTUALIZED_KEY is undefined when virtualized not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = result.current.table.grid.virtualization
+		const key = result.current.grid.virtualization
 		expect(key).toBeUndefined()
 	})
 
 	it('VIRTUALIZED_KEY stores normalized config when virtualization: true', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualization: true }))
-		const key = result.current.table.grid.virtualization
+		const key = result.current.grid.virtualization
 		expect(key).toEqual({ row: {} })
 	})
 
 	it('VIRTUALIZED_KEY stores normalized config when virtualization: { row: true }', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { row: true } }))
-		const key = result.current.table.grid.virtualization
+		const key = result.current.grid.virtualization
 		expect(key).toEqual({ row: {} })
 	})
 
@@ -467,76 +468,75 @@ describe('useDataGrid — virtualized', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { row: { overscan: 8 } } }),
 		)
-		const key = result.current.table.grid.virtualization
+		const key = result.current.grid.virtualization
 		expect(key).toEqual({ row: { overscan: 8 } })
 	})
 
 	it('VIRTUALIZED_KEY is undefined when virtualization: false', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, virtualization: false }))
-		const key = result.current.table.grid.virtualization
+		const key = result.current.grid.virtualization
 		expect(key).toBeUndefined()
 	})
 })
 
 describe('useDataGrid — pagination.pageSizeOptions', () => {
-	it('PAGE_SIZER_KEY is undefined when pagination is not set', () => {
+	it('is undefined when pagination is not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = result.current.table.grid.pagination.pageSizeOptions
-		expect(key).toBeUndefined()
+		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
 	})
 
-	it('PAGE_SIZER_KEY is undefined when pagination carries no pageSizeOptions', () => {
+	it('falls back to the default list when page-based pagination carries no explicit one', () => {
+		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the toolbar
+		// mounts the control is `pagination.pageSizer`, resolved separately.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
-		const key = result.current.table.grid.pagination.pageSizeOptions
-		expect(key).toBeUndefined()
+		expect(result.current.grid.pagination.pageSizeOptions).toEqual([...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
+		expect(result.current.grid.pagination.pageSizer).toBe(false)
 	})
 
-	it('PAGE_SIZER_KEY stores the options in page-based mode', () => {
+	it('stores the explicit options in page-based mode', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
 		)
-		const key = result.current.table.grid.pagination.pageSizeOptions
-		expect(key).toEqual([5, 10, 25])
+		expect(result.current.grid.pagination.pageSizeOptions).toEqual([5, 10, 25])
 	})
 
-	it('PAGE_SIZER_KEY is undefined in infinite mode — there is no page size to select', () => {
+	it('is undefined in infinite mode — there is no page size to select', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', pageSizeOptions: [5, 10, 25] } }),
 		)
-		const key = result.current.table.grid.pagination.pageSizeOptions
-		expect(key).toBeUndefined()
+		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
 	})
 
 	it('still applies the rest of the pagination config alongside pageSizeOptions', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
 		)
-		expect(result.current.table.getState().pagination.pageSize).toBe(5)
+		expect(result.current.getState().pagination.pageSize).toBe(5)
 	})
 })
 
 describe('useDataGrid — selection.panel', () => {
 	it('SELECTION_PANEL_KEY is undefined when selection not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = result.current.table.grid.selection.panel
+		const key = result.current.grid.selection.panel
 		expect(key).toBeUndefined()
 	})
 
 	it('SELECTION_PANEL_KEY is undefined when selection: true (boolean, no panel)', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: true }))
-		const key = result.current.table.grid.selection.panel
+		const key = result.current.grid.selection.panel
 		expect(key).toBeUndefined()
 	})
 
 	it('SELECTION_PANEL_KEY stores true when selection: { panel: true }', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: true } }))
-		const key = result.current.table.grid.selection.panel
+		const key = result.current.grid.selection.panel
 		expect(key).toBe(true)
 	})
 
 	it('SELECTION_PANEL_KEY stores false when selection: { panel: false }', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: false } }))
-		const key = result.current.table.grid.selection.panel
+		const key = result.current.grid.selection.panel
 		expect(key).toBe(false)
 	})
 
@@ -545,7 +545,7 @@ describe('useDataGrid — selection.panel', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { onDelete } } }),
 		)
-		const key = result.current.table.grid.selection.panel
+		const key = result.current.grid.selection.panel
 		expect(key).toEqual({ onDelete })
 	})
 
@@ -553,7 +553,7 @@ describe('useDataGrid — selection.panel', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { variant: 'inline' } } }),
 		)
-		const key = result.current.table.grid.selection.panel
+		const key = result.current.grid.selection.panel
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
@@ -562,23 +562,23 @@ describe('useDataGrid — selection.panel', () => {
 			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { variant: 'inline' } } }),
 		)
 		// The object `selection` (with only a React-only `panel`) still enables core row selection…
-		expect(result.current.table.options.enableRowSelection).toBe(true)
-		// …and the panel is lifted onto the instance for SelectionBar to read.
-		const key = result.current.table.grid.selection.panel
+		expect(result.current.options.enableRowSelection).toBe(true)
+		// …and the panel is lifted onto the table for SelectionBar to read.
+		const key = result.current.grid.selection.panel
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
 	it('FILTERING_VARIANT_KEY accepts "panel" and writes it through to the table', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }))
-		const key = result.current.table.grid.filtering.variant
+		const key = result.current.grid.filtering.variant
 		expect(key).toBe('panel')
 	})
 
 	it('FILTERING_VARIANT_KEY accepts "inline" and "popover" as before', () => {
 		const inline = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'inline' } }))
 		const popover = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }))
-		expect(inline.result.current.table.grid.filtering.variant).toBe('inline')
-		expect(popover.result.current.table.grid.filtering.variant).toBe('popover')
+		expect(inline.result.current.grid.filtering.variant).toBe('inline')
+		expect(popover.result.current.grid.filtering.variant).toBe('popover')
 	})
 })
 
@@ -590,7 +590,7 @@ describe('useDataGrid — controlled state', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, sorting: true, state: { sorting } }),
 		)
-		const rows = result.current.table.getRowModel().rows
+		const rows = result.current.getRowModel().rows
 		expect(rows[0]?.getValue('name')).toBe('Bob')
 		expect(rows[1]?.getValue('name')).toBe('Alice')
 	})
@@ -601,10 +601,10 @@ describe('useDataGrid — controlled state', () => {
 				useDataGrid({ data: USERS, columns: COLUMNS, sorting: true, state: { sorting } }),
 			{ initialProps: { sorting: [] as Sort[] } },
 		)
-		expect(result.current.table.getRowModel().rows[0]?.getValue('name')).toBe('Alice')
+		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Alice')
 
 		rerender({ sorting: [{ id: 'name', desc: true }] })
-		expect(result.current.table.getRowModel().rows[0]?.getValue('name')).toBe('Bob')
+		expect(result.current.getRowModel().rows[0]?.getValue('name')).toBe('Bob')
 	})
 
 	it('calls onStateChange when table state changes', () => {
@@ -613,7 +613,7 @@ describe('useDataGrid — controlled state', () => {
 			useDataGrid({ data: USERS, columns: COLUMNS, creating: { onSave: () => Promise.resolve() }, onStateChange }),
 		)
 		act(() => {
-			result.current.table.creating.start()
+			result.current.creating.start()
 		})
 		expect(onStateChange).toHaveBeenCalled()
 	})
@@ -633,7 +633,7 @@ describe('useDataGrid — controlled state', () => {
 		)
 		rerender({ cb: second })
 		act(() => {
-			result.current.table.creating.start()
+			result.current.creating.start()
 		})
 		expect(first).not.toHaveBeenCalled()
 		expect(second).toHaveBeenCalled()
@@ -650,9 +650,9 @@ describe('useDataGrid — controlled state', () => {
 			}),
 		)
 		// Pagination not controlled — internal default page index is 0
-		expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+		expect(result.current.getState().pagination.pageIndex).toBe(0)
 		// Sorting is controlled
-		expect(result.current.table.getState().sorting).toEqual([{ id: 'name', desc: true }])
+		expect(result.current.getState().sorting).toEqual([{ id: 'name', desc: true }])
 	})
 })
 
@@ -663,14 +663,14 @@ function getNormalizedGlobalFiltering(table: DataTable<User>): NormalizedGlobalF
 }
 
 describe('useDataGrid — globalFiltering normalization', () => {
-	it('globalFiltering omitted — nothing stored on instance', () => {
+	it('globalFiltering omitted — nothing stored on table', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		expect(getNormalizedGlobalFiltering(result.current.table)).toBeUndefined()
+		expect(getNormalizedGlobalFiltering(result.current)).toBeUndefined()
 	})
 
 	it('globalFiltering: true → defaults (placeholder, debounce: 250, toolbar: true)', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
-		const cfg = getNormalizedGlobalFiltering(result.current.table)
+		const cfg = getNormalizedGlobalFiltering(result.current)
 		expect(cfg).toEqual({ placeholder: 'Search…', debounce: 250, toolbar: true })
 	})
 
@@ -682,23 +682,23 @@ describe('useDataGrid — globalFiltering normalization', () => {
 				globalFiltering: { placeholder: 'Find users', debounce: 0, toolbar: false },
 			}),
 		)
-		const cfg = getNormalizedGlobalFiltering(result.current.table)
+		const cfg = getNormalizedGlobalFiltering(result.current)
 		expect(cfg).toEqual({ placeholder: 'Find users', debounce: 0, toolbar: false })
 	})
 
 	it('globalFiltering enables getFilteredRowModel even without column filtering', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
-		expect(result.current.table.options.getFilteredRowModel).toBeDefined()
-		expect(result.current.table.options.enableColumnFilters).toBe(false)
+		expect(result.current.options.getFilteredRowModel).toBeDefined()
+		expect(result.current.options.enableColumnFilters).toBe(false)
 	})
 
 	it('setGlobalFilter actually filters rows', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
 		act(() => {
-			result.current.table.setGlobalFilter('alice')
+			result.current.setGlobalFilter('alice')
 		})
-		expect(result.current.table.getFilteredRowModel().rows).toHaveLength(1)
-		expect(result.current.table.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
+		expect(result.current.getFilteredRowModel().rows).toHaveLength(1)
+		expect(result.current.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
 	})
 
 	// The React layer splits this config into a UI half and a core half. Every
@@ -708,7 +708,7 @@ describe('useDataGrid — globalFiltering normalization', () => {
 		const onChange = vi.fn()
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: { onChange } }))
 		act(() => {
-			result.current.table.setGlobalFilter('alice')
+			result.current.setGlobalFilter('alice')
 		})
 		expect(onChange).toHaveBeenCalledWith('alice')
 	})
@@ -723,7 +723,7 @@ describe('useDataGrid — globalFiltering normalization', () => {
 			}),
 		)
 		act(() => {
-			result.current.table.setGlobalFilter('bob')
+			result.current.setGlobalFilter('bob')
 		})
 		expect(onChange).toHaveBeenCalledWith('bob')
 	})
@@ -738,10 +738,10 @@ describe('useDataGrid — globalFiltering normalization', () => {
 			}),
 		)
 		act(() => {
-			result.current.table.setGlobalFilter('Alice')
+			result.current.setGlobalFilter('Alice')
 		})
 		expect(onChange).toHaveBeenCalledWith('Alice')
-		expect(result.current.table.getFilteredRowModel().rows).toHaveLength(1)
+		expect(result.current.getFilteredRowModel().rows).toHaveLength(1)
 	})
 })
 
@@ -754,24 +754,24 @@ function getChipsConfig(table: DataTable<User>): NormalizedFilterChipsConfig | u
 describe('useDataGrid — filtering.chips normalization', () => {
 	it('omitted → FILTER_CHIPS_KEY is undefined', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
-		expect(getChipsConfig(result.current.table)).toBeUndefined()
+		expect(getChipsConfig(result.current)).toBeUndefined()
 	})
 
 	it('chips: true → defaults to position "above"', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }))
-		expect(getChipsConfig(result.current.table)).toEqual({ position: 'above' })
+		expect(getChipsConfig(result.current)).toEqual({ position: 'above' })
 	})
 
 	it('chips: { position: "below" } → preserved', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: { position: 'below' } } }),
 		)
-		expect(getChipsConfig(result.current.table)).toEqual({ position: 'below' })
+		expect(getChipsConfig(result.current)).toEqual({ position: 'below' })
 	})
 
 	it('chips: false → FILTER_CHIPS_KEY is undefined', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: false } }))
-		expect(getChipsConfig(result.current.table)).toBeUndefined()
+		expect(getChipsConfig(result.current)).toBeUndefined()
 	})
 })
 
@@ -784,24 +784,24 @@ function getFilteringToolbarConfig(table: DataTable<User>): NormalizedFilteringT
 describe('useDataGrid — filtering.toolbar normalization', () => {
 	it('omitted → FILTERING_TOOLBAR_KEY is undefined', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
-		expect(getFilteringToolbarConfig(result.current.table)).toBeUndefined()
+		expect(getFilteringToolbarConfig(result.current)).toBeUndefined()
 	})
 
 	it('toolbar: true → alwaysShow defaults to false', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { toolbar: true } }))
-		expect(getFilteringToolbarConfig(result.current.table)).toEqual({ alwaysShow: false })
+		expect(getFilteringToolbarConfig(result.current)).toEqual({ alwaysShow: false })
 	})
 
 	it('toolbar: { alwaysShow: true } → preserved', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { toolbar: { alwaysShow: true } } }),
 		)
-		expect(getFilteringToolbarConfig(result.current.table)).toEqual({ alwaysShow: true })
+		expect(getFilteringToolbarConfig(result.current)).toEqual({ alwaysShow: true })
 	})
 
 	it('toolbar: false → FILTERING_TOOLBAR_KEY is undefined', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { toolbar: false } }))
-		expect(getFilteringToolbarConfig(result.current.table)).toBeUndefined()
+		expect(getFilteringToolbarConfig(result.current)).toBeUndefined()
 	})
 })
 
@@ -819,7 +819,7 @@ describe('useDataGrid — deferredApply with a mirrored controlled state prop', 
 		renderCountRef.current += 1
 
 		const [tableState, setTableState] = useState<Partial<TableState>>({})
-		const { table } = useDataGrid({
+		const table = useDataGrid({
 			data: USERS,
 			columns: COLUMNS,
 			deferredApply: true,

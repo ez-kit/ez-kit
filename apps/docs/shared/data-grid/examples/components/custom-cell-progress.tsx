@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
-import type { CustomCellType } from 'shared/data-grid/custom-cell-types'
+import type { CustomCellTypes } from 'shared/data-grid/custom-cell-types'
 
 type Task = {
 	id: number
@@ -22,7 +22,7 @@ const TASK_DATA: Task[] = [
 	{ id: 5, title: 'Docs refresh', owner: 'Eve', completion: 100 },
 ]
 
-const taskColumns = createColumns<Task, CustomCellType>([
+const taskColumns = createColumns<Task, CustomCellTypes>([
 	{ accessorKey: 'title', header: 'Task' },
 	{ accessorKey: 'owner', header: 'Owner' },
 	{ accessorKey: 'completion', header: 'Progress', cell: { type: 'completion' } },

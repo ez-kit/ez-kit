@@ -1,10 +1,10 @@
 import { useGridComponents } from '../components-context'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { ReactNode } from 'react'
 
-type ClearFiltersButtonProps = {
+export type DataGridClearFiltersButtonProps = {
 	/** Optional custom content. When omitted the kit renders its default (icon-only). */
 	children?: ReactNode
 	/**
@@ -30,8 +30,14 @@ type ClearFiltersButtonProps = {
  * The visual is owned by the UI kit via the `ClearFiltersButton` DI slot; the
  * default rendering is icon-only.
  */
-export function ClearFiltersButton({ children, alwaysShow: alwaysShowProp, ariaLabel }: ClearFiltersButtonProps = {}) {
-	const table = useTable()
+export function ClearFiltersButton({
+	children,
+	alwaysShow: alwaysShowProp,
+	ariaLabel,
+}: DataGridClearFiltersButtonProps = {}) {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState((s) => s.globalFilter as unknown)
 	const { ClearFiltersButton: Component } = useGridComponents().filtering
 
 	const cfg = table.grid.filtering.toolbar
@@ -46,7 +52,7 @@ export function ClearFiltersButton({ children, alwaysShow: alwaysShowProp, ariaL
 	return (
 		<Component
 			disabled={!hasAnyFilter}
-			onPress={() => {
+			onClick={() => {
 				table.resetColumnFilters()
 				table.setGlobalFilter(undefined)
 			}}

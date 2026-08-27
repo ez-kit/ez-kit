@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 /** data-slot value for the refetch overlay host row. */
 export const REFETCH_OVERLAY_SLOT = 'refetch-overlay' as const
@@ -24,7 +24,8 @@ export function RefetchOverlayHost({ columnCount }: { columnCount: number }) {
 	const gridComponents = useGridComponents()
 	const { Tr, Td } = gridComponents.core
 	const { RefetchOverlay } = gridComponents['fallback-states']
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnVisibility)
 	const visibleColumnCount = columnCount > 0 ? columnCount : table.getVisibleLeafColumns().length
 
 	return (

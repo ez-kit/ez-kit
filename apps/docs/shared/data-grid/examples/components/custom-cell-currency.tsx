@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
-import type { CustomCellType } from 'shared/data-grid/custom-cell-types'
+import type { CustomCellTypes } from 'shared/data-grid/custom-cell-types'
 
 type LineItem = {
 	id: number
@@ -22,7 +22,7 @@ const LINE_ITEM_DATA: LineItem[] = [
 	{ id: 5, product: 'Data export', category: 'Add-on', price: 0 },
 ]
 
-const lineItemColumns = createColumns<LineItem, CustomCellType>([
+const lineItemColumns = createColumns<LineItem, CustomCellTypes>([
 	{ accessorKey: 'product', header: 'Product' },
 	{ accessorKey: 'category', header: 'Category' },
 	{ accessorKey: 'price', header: 'Price', cell: { type: 'currency' } },

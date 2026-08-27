@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useGridComponents } from '../components-context'
 
 import { DataGridHeaderRow } from './header-row'
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { HeaderGroup } from '@tanstack/table-core'
@@ -100,8 +100,7 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * structural CSS reads them on `[data-pinned]` elements.
  */
 export function Header({ stickyHeader, children }: DataGridHeaderProps = {}) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const isSticky = stickyHeader ?? table.grid.layout.stickyHeader
 	const theadRef = useHeaderHeightVar(isSticky)
 
@@ -110,13 +109,13 @@ export function Header({ stickyHeader, children }: DataGridHeaderProps = {}) {
 	// row leaves the header untouched. They live here rather than in `DataGridHeaderCell`
 	// because one subscription per header beats one per column, and every cell re-renders with
 	// this component anyway.
-	useDataGridStore((s) => s.sorting)
-	useDataGridStore((s) => s.columnFilters)
-	useDataGridStore((s) => s.columnVisibility)
-	useDataGridStore((s) => s.columnPinning)
-	useDataGridStore((s) => s.columnSizing)
-	useDataGridStore((s) => s.columnSizingInfo)
-	useDataGridStore((s) => s.rowSelection)
+	useDataGridState((s) => s.sorting)
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
+	useDataGridState((s) => s.columnSizing)
+	useDataGridState((s) => s.columnSizingInfo)
+	useDataGridState((s) => s.rowSelection)
 
 	const { Thead } = useGridComponents().core
 	const headerGroups = table.getHeaderGroups()

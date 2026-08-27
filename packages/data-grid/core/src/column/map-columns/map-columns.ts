@@ -7,7 +7,19 @@ import {
 import { setIfDefined } from '../../utils/set-if-defined'
 
 import type { OperatorRegistry } from '../../features/operators'
-import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
+import type {
+	CellViewCtx,
+	ColumnAlign,
+	ColumnAlignDef,
+	ColumnDef,
+	ColumnPinningDef,
+	ColumnWidthDef,
+	TanStackColumnDef,
+} from '../types'
+
+/** Cell types unchecked: `mapColumns` runs over already-authored columns of any grid. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyCellTypes = any
 
 /**
  * `cellClassName` is declared per row type on the column and row-erased on the meta, exactly
@@ -32,15 +44,44 @@ export type MapColumnsOptions = {
 }
 
 export function mapColumns<TRow extends object>(
-	defs: ColumnDef<TRow, string>[],
+	defs: ColumnDef<TRow, AnyCellTypes>[],
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow>[] {
 	return defs.map((def) => mapColumn(def, registry, options))
 }
 
+/**
+ * Collapses the scalar pinning form onto the object one, so every reader downstream sees a
+ * single shape. `pinning: 'left'` is the long `{ side: 'left' }` — a static pin — not a seed.
+ */
+function normalizeColumnPinning(
+	pinning: ColumnDef<never, AnyCellTypes>['pinning'],
+): false | ColumnPinningDef | undefined {
+	if (pinning === undefined || pinning === false) return pinning
+	return typeof pinning === 'string' ? { side: pinning } : pinning
+}
+
+/**
+ * Collapses the scalar width form onto the object one. `width: 200` is the starting width —
+ * TanStack's `size` — with no bounds, which is what a bare number reads as.
+ */
+function normalizeColumnWidth(width: number | ColumnWidthDef | undefined): ColumnWidthDef | undefined {
+	if (width === undefined) return undefined
+	return typeof width === 'number' ? { default: width } : width
+}
+
+/**
+ * Collapses the scalar align form onto the object one. `align: 'end'` means all three parts,
+ * which is what the bare value reads as; the object names the parts that differ.
+ */
+function normalizeColumnAlign(align: ColumnAlign | ColumnAlignDef | undefined): ColumnAlignDef | undefined {
+	if (align === undefined) return undefined
+	return typeof align === 'string' ? { header: align, cell: align, footer: align } : align
+}
+
 function mapColumn<TRow extends object>(
-	def: ColumnDef<TRow, string>,
+	def: ColumnDef<TRow, AnyCellTypes>,
 	registry?: OperatorRegistry,
 	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow> {
@@ -60,9 +101,8 @@ function mapColumn<TRow extends object>(
 		footer,
 		globalFiltering,
 		resizing,
-		size,
-		minSize,
-		maxSize,
+		width,
+		align,
 		validateOn,
 		validateDebounceMs,
 		headerClassName,
@@ -72,7 +112,8 @@ function mapColumn<TRow extends object>(
 
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
 
-	setIfDefined(meta, 'columnPinning', pinning)
+	setIfDefined(meta, 'columnPinning', normalizeColumnPinning(pinning))
+	setIfDefined(meta, 'columnAlign', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'filtering', filtering)
 	setIfDefined(meta, 'editing', editing)
@@ -86,8 +127,10 @@ function mapColumn<TRow extends object>(
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.
 	meta.cellType = cell?.type ?? 'text'
-	if (cell !== undefined && 'config' in cell) {
-		meta.config = cell.config
+	if (cell !== undefined && 'config' in cell && cell.config !== undefined) {
+		// The declared config type is the cell type's business, not this mapper's — it only
+		// forwards whatever the column author wrote into `meta` for the renderer to read.
+		meta.config = cell.config as Record<string, unknown>
 	}
 	const viewFn = cell?.component
 	if (viewFn !== undefined) meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown
@@ -107,9 +150,10 @@ function mapColumn<TRow extends object>(
 	if (filtering === false) result.enableColumnFilter = false
 	if (globalFiltering === false) result.enableGlobalFilter = false
 	if (resizing === false) result.enableResizing = false
-	setIfDefined(result, 'size', size)
-	setIfDefined(result, 'minSize', minSize)
-	setIfDefined(result, 'maxSize', maxSize)
+	const widthDef = normalizeColumnWidth(width)
+	setIfDefined(result, 'size', widthDef?.default)
+	setIfDefined(result, 'minSize', widthDef?.min)
+	setIfDefined(result, 'maxSize', widthDef?.max)
 
 	// sorting: false → disable sorting for this column
 	if (sorting === false) {

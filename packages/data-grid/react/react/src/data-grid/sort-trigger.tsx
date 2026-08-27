@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { SortColumnOption, SortMenuItem } from '../types'
 import type { ColumnSort } from '@tanstack/table-core'
@@ -52,7 +52,8 @@ export type DataGridSortTriggerProps = {
 }
 
 export function SortTrigger({ children }: DataGridSortTriggerProps = {}) {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.sorting)
 	const { SortMenu } = useGridComponents().sorting
 
 	const sortableColumns: SortColumnOption[] = table

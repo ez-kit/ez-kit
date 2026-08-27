@@ -1,7 +1,7 @@
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
@@ -21,7 +21,8 @@ type ExpandConfig = {
  * Reads `renderExpanded` from the grid's resolved options (`table.grid.expanding`).
  */
 export function ExpandedRow({ row }: ExpandedRowComponentProps) {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnVisibility)
 	const { Tr, Td } = useGridComponents().core
 
 	const renderExpanded = table.grid.expanding.renderExpanded as ExpandConfig['renderExpanded']

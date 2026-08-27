@@ -4,13 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
-import { createDataGridInstance } from '../data-grid-instance'
+import { prepareDataGridTable } from '../prepare-table'
 import { testComponents } from '../test-utils'
 
 import { SelectionBar } from './selection-bar'
 import { TableContext } from './table-context'
 
-import type { DataGridInstance } from '../data-grid-instance'
 import type { ResolvedGridOptions } from '../resolved-options'
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
@@ -28,28 +27,28 @@ const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 function makeTable(config?: Partial<Parameters<typeof createTable<User>>[0]>) {
 	const table = createTable<User>({ data: USERS, columns: COLUMNS, ...config })
-	return { table, instance: createDataGridInstance(table) }
+	return prepareDataGridTable(table)
 }
 
 function setSelectionPanelKey(table: DataTable<User>, value: ResolvedGridOptions['selection']['panel']) {
 	table.grid.selection.panel = value
 }
 
-function Wrapper({ instance, children }: { instance: DataGridInstance<User>; children: ReactNode }) {
+function Wrapper({ table, children }: { table: DataTable<User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext value={instance}>{children}</TableContext>
+			<TableContext value={table}>{children}</TableContext>
 		</GridComponentsProvider>
 	)
 }
 
 describe('<SelectionBar>', () => {
 	it('renders nothing when selection is not enabled', () => {
-		const { instance } = makeTable()
-		setSelectionPanelKey(instance.table, undefined)
+		const table = makeTable()
+		setSelectionPanelKey(table, undefined)
 
 		const { container } = render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -57,11 +56,11 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('renders nothing when selection.panel: false even with selection enabled', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, false)
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, false)
 
 		const { container } = render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -69,11 +68,11 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('renders bar (closed) when selection enabled and no rows selected', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, true)
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, true)
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -82,12 +81,12 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('renders bar with count when rows are selected', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, true)
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, true)
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -96,12 +95,12 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('does NOT render Delete button when onDelete is not configured', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, true)
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, true)
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -110,12 +109,12 @@ describe('<SelectionBar>', () => {
 
 	it('renders Delete button when onDelete is configured', () => {
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, { onDelete })
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, { onDelete })
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -125,12 +124,12 @@ describe('<SelectionBar>', () => {
 	it('calls onDelete with correct args when Delete button is clicked', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, { onDelete })
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, { onDelete })
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -144,16 +143,16 @@ describe('<SelectionBar>', () => {
 		expect((args as { selectedRows: unknown[] }).selectedRows).toHaveLength(1)
 	})
 
-	it('Cancel button calls instance.table.resetRowSelection when onClear not configured', async () => {
+	it('Cancel button calls table.resetRowSelection when onClear not configured', async () => {
 		const user = userEvent.setup()
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, true)
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, true)
+		table.setRowSelection({ '1': true })
 
-		const resetSpy = vi.spyOn(instance.table, 'resetRowSelection')
+		const resetSpy = vi.spyOn(table, 'resetRowSelection')
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -165,12 +164,12 @@ describe('<SelectionBar>', () => {
 	it('calls custom onClear when configured', async () => {
 		const user = userEvent.setup()
 		const onClear = vi.fn()
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, { onClear })
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, { onClear })
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -182,14 +181,14 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('renders ReactElement actions when provided', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, {
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, {
 			actions: <button type='button'>Export</button>,
 		})
-		instance.table.setRowSelection({ '1': true })
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -197,14 +196,14 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('renders function actions when provided', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, {
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, {
 			actions: () => <button type='button'>Export</button>,
 		})
-		instance.table.setRowSelection({ '1': true })
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -212,12 +211,12 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('passes variant="floating" by default to DI component', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, true)
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, true)
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)
@@ -225,12 +224,12 @@ describe('<SelectionBar>', () => {
 	})
 
 	it('passes variant="inline" when configured', () => {
-		const { instance } = makeTable({ selection: true })
-		setSelectionPanelKey(instance.table, { variant: 'inline' })
-		instance.table.setRowSelection({ '1': true })
+		const table = makeTable({ selection: true })
+		setSelectionPanelKey(table, { variant: 'inline' })
+		table.setRowSelection({ '1': true })
 
 		render(
-			<Wrapper instance={instance}>
+			<Wrapper table={table}>
 				<SelectionBar />
 			</Wrapper>,
 		)

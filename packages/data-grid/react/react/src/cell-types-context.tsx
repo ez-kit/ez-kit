@@ -54,8 +54,65 @@ export type CellTypeDefinition<TConfig = unknown> = {
 	defaultOperator?: string
 }
 
+/**
+ * Declares a cell type and pins the shape of its `cell.config` in one place.
+ *
+ * The config type is recorded in a phantom `__config`, which is **type-only** — this returns
+ * the definition object unchanged, so nothing reaches the bundle. The marker exists because a
+ * config type cannot be recovered from the renderer slots: `view`, `edit`, `creating` and
+ * `filter` are four independent inference sites for one parameter, and a type that registers
+ * only some of them infers something arbitrary from the rest.
+ *
+ * The call is curried so `TConfig` can be given explicitly while `TDefinition` stays inferred —
+ * the definition keeps its precise type (which renderers it actually has) either way.
+ *
+ * A type that takes no config omits the parameter — it defaults to `never`, which is what makes
+ * `config` **rejected outright** on its columns rather than merely optional. An empty object
+ * would not: `{}` accepts any object literal, so `config: { anything: 1 }` would slip through.
+ *
+ * @example
+ * export const ratingCellType = defineCellType<{ max: number }>()({
+ *   view: RatingCellView,
+ *   edit: RatingCellInput,
+ * })
+ * // → its columns require `cell: { type: 'rating', config: { max } }`
+ */
+export function defineCellType<TConfig = never>() {
+	return <TDefinition extends CellTypeDefinition<TConfig>>(
+		definition: TDefinition,
+	): TDefinition & { __config?: TConfig } => definition
+}
+
+/**
+ * A map of cell type id to its definition, each carrying the config it declared.
+ *
+ * The value bound keeps `CellTypeDefinition<any>` so readers still see the renderer slots;
+ * `any` is what lets a definition whose renderers take `FieldState<SomeConfig>` satisfy it,
+ * since `ComponentType`'s class branch would otherwise make those props invariant.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type CellTypeRegistry = Record<string, CellTypeDefinition<any>>
+export type CellTypeRegistry = Record<string, CellTypeDefinition<any> & { __config?: unknown }>
+
+/**
+ * Layers one registry over another, **per entry** rather than per id.
+ *
+ * A shallow `{ ...base, ...override }` replaces a whole cell type whenever both sides name it,
+ * which is almost never what the caller means. `{ date: { view: MyDate } }` reads as "keep the
+ * kit's date cell, swap its view" and would instead drop its `edit`, `filter` and the config it
+ * declared; `baseCellTypes` — whose six renderer-less entries exist precisely so kits can spread
+ * them — would blank out every renderer the kit registered.
+ *
+ * Merging entry by entry makes both cases mean what they read as: keys the override omits keep
+ * the base's value. Full replacement is still available by spelling the whole definition out.
+ */
+export function mergeCellTypes(base: CellTypeRegistry, override: CellTypeRegistry): CellTypeRegistry {
+	const merged: CellTypeRegistry = { ...base }
+	for (const [id, definition] of Object.entries(override)) {
+		const existing = merged[id]
+		merged[id] = existing === undefined ? definition : { ...existing, ...definition }
+	}
+	return merged
+}
 
 // ── context ───────────────────────────────────────────────────────────────
 
@@ -87,7 +144,7 @@ export type CellTypesProviderProps = {
  */
 export function CellTypesProvider({ types, children }: CellTypesProviderProps) {
 	const parent = useContext(CellTypesContext)
-	const merged = useMemo(() => ({ ...parent, ...types }), [parent, types])
+	const merged = useMemo(() => mergeCellTypes(parent, types), [parent, types])
 	return <CellTypesContext value={merged}>{children}</CellTypesContext>
 }
 

@@ -6,7 +6,7 @@ import { Button } from '@grid-shadcn/components/ui/button'
 
 import type { ClearFiltersButtonComponentProps } from '@ez-kit/data-grid-react'
 
-export function ClearFiltersButton({ disabled, onPress, ariaLabel }: ClearFiltersButtonComponentProps) {
+export function ClearFiltersButton({ disabled, onClick, ariaLabel }: ClearFiltersButtonComponentProps) {
 	return (
 		<Button
 			type='button'
@@ -15,7 +15,7 @@ export function ClearFiltersButton({ disabled, onPress, ariaLabel }: ClearFilter
 			data-slot='clear-filters-button'
 			aria-label={ariaLabel}
 			disabled={disabled}
-			onClick={onPress}
+			onClick={onClick}
 			className='h-8'
 		>
 			<FilterX className='h-4 w-4' />

@@ -564,14 +564,14 @@ function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipPro
 		</span>
 	)
 }
-function TestClearFiltersButton({ disabled, onPress, children, ariaLabel }: ClearFiltersButtonComponentProps) {
+function TestClearFiltersButton({ disabled, onClick, children, ariaLabel }: ClearFiltersButtonComponentProps) {
 	return (
 		<button
 			type='button'
 			data-slot='clear-filters-button'
 			aria-label={ariaLabel}
 			disabled={disabled}
-			onClick={onPress}
+			onClick={onClick}
 		>
 			{children ?? '⌫'}
 		</button>
@@ -850,20 +850,20 @@ export type RenderGridResult = ReturnType<typeof render> & {
 export function renderGrid(config: Partial<UseDataGridConfig<TestRow>> = {}): RenderGridResult {
 	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
 	// a side effect the react-hooks lint rule rejects.
-	const ref: { instance: ReturnType<typeof useDataGrid<TestRow>> | null } = { instance: null }
+	const ref: { table: ReturnType<typeof useDataGrid<TestRow>> | null } = { table: null }
 
 	function Harness(): ReactElement {
-		const instance = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
+		const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
 		// Handed out in an effect, not during render: writing to an outer object mid-render
 		// is a side effect. Effects flush inside `render`'s `act`, so the caller sees it.
 		useEffect(() => {
-			ref.instance = instance
-		}, [instance])
-		return <DataGrid<TestRow> table={instance} />
+			ref.table = table
+		}, [table])
+		return <DataGrid<TestRow> table={table} />
 	}
 
 	const result = renderWithComponents(<Harness />)
-	const table = ref.instance?.table
+	const table = ref.table
 	if (!table) throw new Error('renderGrid: the grid never mounted, so no table was captured.')
 	return { ...result, table }
 }

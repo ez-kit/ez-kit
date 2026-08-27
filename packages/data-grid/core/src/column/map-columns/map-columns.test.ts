@@ -78,14 +78,19 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableHiding).toBeUndefined()
 	})
 
-	it('pinning: { pin: left } goes into meta.columnPinning', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { pin: 'left' } }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ pin: 'left' })
+	it('pinning: { side: left } goes into meta.columnPinning', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { side: 'left' } }])
+		expect(result[0]?.meta?.columnPinning).toEqual({ side: 'left' })
 	})
 
-	it('pinning: { initialPin: right } goes into meta.columnPinning', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { initialPin: 'right' } }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ initialPin: 'right' })
+	it('the scalar pinning form normalizes to a static side', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: 'left' }])
+		expect(result[0]?.meta?.columnPinning).toEqual({ side: 'left' })
+	})
+
+	it('pinning: { initialSide: right } goes into meta.columnPinning', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { initialSide: 'right' } }])
+		expect(result[0]?.meta?.columnPinning).toEqual({ initialSide: 'right' })
 	})
 
 	it('pinning: false goes into meta.columnPinning as false', () => {
@@ -190,11 +195,18 @@ describe('mapColumns', () => {
 		expect((result[0]?.meta?.creating as { component?: unknown } | undefined)?.component).toBe(component)
 	})
 
-	it('passes size, minSize, maxSize to TanStack column', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', size: 200, minSize: 50, maxSize: 500 }])
+	it('width object maps onto size / minSize / maxSize', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', width: { default: 200, min: 50, max: 500 } }])
 		expect(result[0]?.size).toBe(200)
 		expect(result[0]?.minSize).toBe(50)
 		expect(result[0]?.maxSize).toBe(500)
+	})
+
+	it('the scalar width form is the starting width, with no bounds', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', width: 200 }])
+		expect(result[0]?.size).toBe(200)
+		expect(result[0]?.minSize).toBeUndefined()
+		expect(result[0]?.maxSize).toBeUndefined()
 	})
 
 	it('resizing: false → enableResizing: false on the TanStack column', () => {

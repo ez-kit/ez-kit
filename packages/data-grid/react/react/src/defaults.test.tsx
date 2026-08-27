@@ -73,19 +73,19 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	it('pagination: true → pageSize is the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.table.getState().pagination.pageSize).toBe(DATA_GRID_DEFAULTS.pagination.pageSize)
+		expect(result.current.getState().pagination.pageSize).toBe(DATA_GRID_DEFAULTS.pagination.pageSize)
 	})
 
 	it('pagination without a variant → resolves to the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.table.grid.pagination.variant).toBe(DATA_GRID_DEFAULTS.pagination.variant)
+		expect(result.current.grid.pagination.variant).toBe(DATA_GRID_DEFAULTS.pagination.variant)
 	})
 
-	it('pagination.variant → stored on the instance for Pagination to read', () => {
+	it('pagination.variant → stored on the table for Pagination to read', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariant.Simple } }),
 		)
-		expect(result.current.table.grid.pagination.variant).toBe(PaginationVariant.Simple)
+		expect(result.current.grid.pagination.variant).toBe(PaginationVariant.Simple)
 	})
 
 	// The public option is the `PaginationVariant` string union — `PaginationVariant` is only
@@ -95,7 +95,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: 'simple' } }),
 		)
-		expect(result.current.table.grid.pagination.variant).toBe(PaginationVariant.Simple)
+		expect(result.current.grid.pagination.variant).toBe(PaginationVariant.Simple)
 	})
 
 	// Asserting on `table.options` / `getState().pagination` would be unfalsifiable: core only
@@ -135,7 +135,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 
 	it('globalFiltering: true → placeholder/debounce are the named defaults', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
-		const cfg = result.current.table.grid.globalFiltering
+		const cfg = result.current.grid.globalFiltering
 		expect(cfg?.placeholder).toBe(DATA_GRID_DEFAULTS.globalFiltering.placeholder)
 		expect(cfg?.debounce).toBe(DATA_GRID_DEFAULTS.filtering.debounce)
 	})
@@ -144,7 +144,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { debounce: 500 }, globalFiltering: true }),
 		)
-		const cfg = result.current.table.grid.globalFiltering
+		const cfg = result.current.grid.globalFiltering
 		expect(cfg?.debounce).toBe(500)
 	})
 
@@ -157,13 +157,13 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 				globalFiltering: { debounce: 0 },
 			}),
 		)
-		const cfg = result.current.table.grid.globalFiltering
+		const cfg = result.current.grid.globalFiltering
 		expect(cfg?.debounce).toBe(0)
 	})
 
 	it('filtering.chips: true → position is the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }))
-		const cfg = result.current.table.grid.filtering.chips
+		const cfg = result.current.grid.filtering.chips
 		expect(cfg?.position).toBe(DATA_GRID_DEFAULTS.filtering.chips.position)
 	})
 
@@ -171,7 +171,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite' } }),
 		)
-		const cfg = result.current.table.grid.infinite
+		const cfg = result.current.grid.infinite
 		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.infinite.trigger)
 		expect(cfg?.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.infinite.threshold.rows })
 	})
@@ -181,11 +181,11 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 describe('useDataGrid — overrides beat the named defaults', () => {
 	const OVERRIDE_PAGE_SIZE = 25
 
-	it('instance config wins', () => {
+	it('table config wins', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: OVERRIDE_PAGE_SIZE } }),
 		)
-		expect(result.current.table.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
+		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
 	it('provider defaults win over the floor', () => {
@@ -197,16 +197,16 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 			)
 		}
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }), { wrapper: Wrapper })
-		expect(result.current.table.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
+		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
 	it('factory defaultOptions win over the floor', () => {
 		const factory: DataGridDefaultOptions<User> = { pagination: { pageSize: OVERRIDE_PAGE_SIZE } }
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }, factory))
-		expect(result.current.table.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
+		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
-	it('precedence: instance beats provider beats factory', () => {
+	it('precedence: table beats provider beats factory', () => {
 		const merged = mergeGridOptionLayers<User>(
 			{ pagination: { pageSize: 5 } },
 			{ pagination: { pageSize: 15 } },
