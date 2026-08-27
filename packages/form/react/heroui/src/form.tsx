@@ -12,8 +12,8 @@ import {
 	TextField,
 } from './blocks/fields'
 import { Button, Form as FormElement } from './blocks/form-parts'
+import { GridItem, Section } from './blocks/layout'
 import { SelectField } from './blocks/select'
-import { GridItem, Section } from './components/ui/layout'
 
 import type { FormComponents } from '@ez-kit/form-react'
 

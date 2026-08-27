@@ -38,6 +38,10 @@ const SUPPORTED_VERSION = 1
 const RELATIVE_FIELD_PREFIX = './'
 const ROOT_PATH = 'root'
 
+/** The supported range for `section.columns` and any node's `colSpan` (spec §11). */
+const GRID_MIN = 1
+const GRID_MAX = 4
+
 type UnknownRecord = Record<string, unknown>
 
 function isPlainObject(value: unknown): value is UnknownRecord {
@@ -230,6 +234,21 @@ function assertLocalizedText(text: unknown, path: string, options: ParseOptions)
 	}
 }
 
+/**
+ * `columns` (section) and `colSpan` (any node) are part of the v1 format's supported range,
+ * not an undocumented kit detail — a document authored outside this codebase (BDUI, spec
+ * I2/I3) has no other way to learn that 6 columns silently becomes 1.
+ */
+function assertGridValue(value: unknown, propertyName: string, path: string): void {
+	if (value === undefined) return
+	if (typeof value !== 'number' || !Number.isInteger(value) || value < GRID_MIN || value > GRID_MAX) {
+		throw new FormSchemaError(
+			`"${propertyName}" must be an integer between ${String(GRID_MIN)} and ${String(GRID_MAX)}, got ${JSON.stringify(value)}`,
+			path,
+		)
+	}
+}
+
 function assertValidateMessages(validate: FieldValidate | undefined, path: string, options: ParseOptions): void {
 	if (!validate?.messages) return
 	for (const message of Object.values(validate.messages)) {
@@ -269,6 +288,11 @@ function validateNode(
 	} else if (node.type === 'section' || node.type === 'step') {
 		assertLocalizedText(node.title, path, options)
 	}
+
+	if (node.type === 'section') {
+		assertGridValue((node as unknown as UnknownRecord).columns, 'columns', path)
+	}
+	assertGridValue((node as unknown as UnknownRecord).colSpan, 'colSpan', path)
 
 	assertKnownCondition(node.when, path)
 	assertKnownCondition(node.disabledWhen, path)

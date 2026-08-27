@@ -13,7 +13,7 @@ type CommonProps<TValues> = {
 	description?: LocalizedText
 	when?: Condition<TValues>
 	disabledWhen?: Condition<TValues>
-	/** Grid columns this node spans inside its section. Default 1. */
+	/** Grid columns this node spans inside its section. Default 1. Must be an integer 1..4. */
 	colSpan?: number
 }
 
@@ -99,7 +99,7 @@ export type SectionNode<TValues, TCustom extends string = never> = CommonProps<T
 	type: 'section'
 	title?: LocalizedText
 	description?: LocalizedText
-	/** Grid columns for direct children. Default 1. */
+	/** Grid columns for direct children. Default 1. Must be an integer 1..4. */
 	columns?: number
 	children: FormNode<TValues, TCustom>[]
 }

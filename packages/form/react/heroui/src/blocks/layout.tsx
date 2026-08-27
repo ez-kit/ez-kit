@@ -1,18 +1,26 @@
-import { FieldDescription, FieldLegend, FieldSet } from '@form-shadcn/components/ui/field'
-import { cn } from '@form-shadcn/lib/utils'
-
 import type { GridItemRenderProps, SectionRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
 /**
- * The layout primitives of the shadcn kit: a headed `Section` grouping a column grid of
- * `GridItem`s. Both are `blocks/` adapters over the vendored `field` primitive, same as the
- * value-carrying fields.
+ * The layout primitives of the HeroUI kit: a headed `Section` grouping a column grid of
+ * `GridItem`s.
+ *
+ * HeroUI v3 ships no `Grid`/`Section` component, so — unlike the value-carrying fields in
+ * `fields.tsx`, which wrap real `@heroui/react` primitives — this is hand-written from plain
+ * elements. It still lives in `blocks/` alongside the rest of this kit's implementation
+ * (this package has no `components/ui/` layer; that convention is shadcn's, where it marks
+ * vendored files as immutable — see `packages/data-grid/react/heroui/CLAUDE.md` for why that
+ * rule is about provenance, not path, and doesn't extend here).
  *
  * Tailwind extracts class names statically, so a `grid-cols-${columns}` / `col-span-${n}`
  * template string would drop the utility from the build — these map the supported column
  * counts to literal class names instead.
  */
+
+/** Minimal class joiner — this package ships no `cn`/`tailwind-merge`. */
+function cx(...classNames: (string | false | undefined)[]) {
+	return classNames.filter(Boolean).join(' ')
+}
 
 /**
  * Supported grid widths — matches the 1..4 range `@ez-kit/form-core`'s `parseFormSchema`
@@ -59,16 +67,33 @@ function colSpanClassName(colSpan: number | undefined): string {
 
 export function Section({ title, description, columns, children }: SectionRenderProps): ReactNode {
 	return (
-		<FieldSet data-slot='form-section'>
-			{title !== undefined && <FieldLegend>{title}</FieldLegend>}
-			{description !== undefined && <FieldDescription>{description}</FieldDescription>}
+		<fieldset
+			data-slot='form-section'
+			className='flex flex-col gap-4 border-0 p-0'
+		>
+			{title !== undefined && (
+				<legend
+					data-slot='form-section-title'
+					className='text-foreground text-base font-medium'
+				>
+					{title}
+				</legend>
+			)}
+			{description !== undefined && (
+				<p
+					data-slot='form-section-description'
+					className='text-muted text-sm'
+				>
+					{description}
+				</p>
+			)}
 			<div
 				data-slot='form-section-grid'
-				className={cn('grid gap-4', columnsClassName(columns))}
+				className={cx('grid gap-4', columnsClassName(columns))}
 			>
 				{children}
 			</div>
-		</FieldSet>
+		</fieldset>
 	)
 }
 
