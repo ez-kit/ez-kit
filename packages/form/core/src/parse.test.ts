@@ -89,6 +89,48 @@ test('accepts a block naming a registered component', () => {
 	expect(parseFormSchema(schema, { blocks: ['promo-banner'] })).toEqual(schema)
 })
 
+test('rejects a null condition instead of crashing on the "in" operator check', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', when: null }] })).toThrow(
+		FormSchemaError,
+	)
+})
+
+test('rejects a primitive condition', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', when: 'bogus' }] })).toThrow(
+		FormSchemaError,
+	)
+})
+
+test('rejects an empty condition object', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', when: {} }] })).toThrow(
+		FormSchemaError,
+	)
+})
+
+test('rejects a condition object with no recognised operator key', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', when: { foo: 1 } }] })).toThrow(
+		FormSchemaError,
+	)
+})
+
+test('rejects a composite condition whose "and" is not an array', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', when: { and: 'nope' } }] })).toThrow(
+		FormSchemaError,
+	)
+})
+
+test('rejects a localized text value that is neither a string nor an object', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', label: 42 }] })).toThrow(
+		FormSchemaError,
+	)
+})
+
+test('rejects a localized text object with no string "key"', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', label: {} }] })).toThrow(
+		FormSchemaError,
+	)
+})
+
 test('the error names the offending node location', () => {
 	try {
 		parseFormSchema({ version: 1, children: [{ type: 'section', children: [{ type: 'zzz' }] }] })

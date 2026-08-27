@@ -3,7 +3,6 @@ import { collectRuleFields } from './rules'
 import { RESERVED_NODE_TYPES } from './schema'
 import { hasChildren, isFieldNode, walkNodes } from './walk'
 
-import type { LocalizedText } from './localized-text'
 import type { Condition } from './rules'
 import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
 
@@ -135,16 +134,74 @@ function assertKnownBlock(component: unknown, path: string, options: ParseOption
 }
 
 /**
+ * Structurally validates a raw `when` / `disabledWhen` value against the `Rule` union before
+ * `collectRuleFields` ever sees it — `collectRuleFields` (and `compileCondition`) assume a
+ * well-formed rule and throw a raw `TypeError` on anything else (`null`, a primitive, `{}`, an
+ * object with no recognised operator key, a composite arm that isn't an array). A caller
+ * catching only `FormSchemaError` must never see that `TypeError` escape.
+ */
+function assertRuleShape(value: unknown, path: string): void {
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError('Condition must be a rule object', path)
+	}
+	if ('and' in value || 'or' in value) {
+		const key = 'and' in value ? 'and' : 'or'
+		const rules = value[key]
+		if (!Array.isArray(rules)) {
+			throw new FormSchemaError(`Rule "${key}" must be an array of rules`, path)
+		}
+		rules.forEach((rule) => {
+			assertRuleShape(rule, path)
+		})
+		return
+	}
+	if ('not' in value) {
+		assertRuleShape(value.not, path)
+		return
+	}
+	if (typeof value.field !== 'string') {
+		throw new FormSchemaError('Rule is missing a "field" string', path)
+	}
+	if ('eq' in value) return
+	if ('in' in value) {
+		if (!Array.isArray(value.in)) {
+			throw new FormSchemaError('Rule "in" must be an array', path)
+		}
+		return
+	}
+	if ('gt' in value) {
+		if (typeof value.gt !== 'number') {
+			throw new FormSchemaError('Rule "gt" must be a number', path)
+		}
+		return
+	}
+	if ('lt' in value) {
+		if (typeof value.lt !== 'number') {
+			throw new FormSchemaError('Rule "lt" must be a number', path)
+		}
+		return
+	}
+	if ('truthy' in value) {
+		if (value.truthy !== true) {
+			throw new FormSchemaError('Rule "truthy" must be true', path)
+		}
+		return
+	}
+	throw new FormSchemaError('Rule must have one of "eq", "in", "gt", "lt" or "truthy"', path)
+}
+
+/**
  * Rejects a `when` / `disabledWhen` that cannot survive a trip through `JSON.parse`: a
  * function condition (never serialisable — this is what makes `parseFormSchema` the trust
- * boundary for BDUI payloads, spec I2/I3), and a relative field reference, reserved for array
- * items and not yet supported in v1.
+ * boundary for BDUI payloads, spec I2/I3), a value that isn't a well-formed `Rule`, and a
+ * relative field reference, reserved for array items and not yet supported in v1.
  */
 function assertKnownCondition(condition: Condition<unknown> | undefined, path: string): void {
 	if (condition === undefined) return
 	if (typeof condition === 'function') {
 		throw new FormSchemaError('Condition must be a serialisable rule object, not a function', path)
 	}
+	assertRuleShape(condition, path)
 	for (const field of collectRuleFields(condition)) {
 		if (field.startsWith(RELATIVE_FIELD_PREFIX)) {
 			throw new FormSchemaError(
@@ -155,8 +212,16 @@ function assertKnownCondition(condition: Condition<unknown> | undefined, path: s
 	}
 }
 
-function assertLocalizedText(text: LocalizedText | undefined, path: string, options: ParseOptions): void {
+/**
+ * A `LocalizedText` must be a string, or an object carrying a string `key` — anything else
+ * (a number, `{}`, an object whose `key` isn't a string) is garbage that would otherwise pass
+ * silently whenever `options.hasTranslate` happens to be true.
+ */
+function assertLocalizedText(text: unknown, path: string, options: ParseOptions): void {
 	if (text === undefined || typeof text === 'string') return
+	if (!isPlainObject(text) || typeof text.key !== 'string') {
+		throw new FormSchemaError('LocalizedText must be a string or an object with a string "key"', path)
+	}
 	if (!options.hasTranslate) {
 		throw new FormSchemaError(
 			`FormSchema uses the translation key "${text.key}" but no translate function is registered`,
