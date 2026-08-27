@@ -129,7 +129,7 @@ function assertKnownBlock(component: unknown, path: string, options: ParseOption
 	if (typeof component !== 'string' || component.length === 0) {
 		throw new FormSchemaError('Block node is missing a "component" string', path)
 	}
-	if (options.blocks && !options.blocks.includes(component)) {
+	if (!options.blocks?.includes(component)) {
 		throw new FormSchemaError(`Unknown block component "${component}"`, path)
 	}
 }

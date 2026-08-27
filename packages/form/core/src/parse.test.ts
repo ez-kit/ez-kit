@@ -74,6 +74,21 @@ test('rejects step nodes mixed with non-step siblings', () => {
 	).toThrow(/step/i)
 })
 
+test('rejects a registry key that collides with a reserved node type', () => {
+	expect(() => parseFormSchema({ version: 1, children: [] }, { fieldTypes: ['section'] })).toThrow(/reserved/i)
+})
+
+test('rejects a block naming a component that is not registered', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'block', component: 'promo-banner' }] })).toThrow(
+		/promo-banner/,
+	)
+})
+
+test('accepts a block naming a registered component', () => {
+	const schema = { version: 1, children: [{ type: 'block', component: 'promo-banner' }] }
+	expect(parseFormSchema(schema, { blocks: ['promo-banner'] })).toEqual(schema)
+})
+
 test('the error names the offending node location', () => {
 	try {
 		parseFormSchema({ version: 1, children: [{ type: 'section', children: [{ type: 'zzz' }] }] })
