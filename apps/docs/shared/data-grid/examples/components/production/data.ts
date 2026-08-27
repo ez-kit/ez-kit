@@ -95,7 +95,7 @@ export const orderColumns = createColumns<Order>([
 		header: 'Order',
 		size: 170,
 		minSize: 140,
-		pinning: { initialPin: 'left' },
+		pinning: { initialSide: 'left' },
 		filtering: { operators: true },
 		editing: false,
 	},

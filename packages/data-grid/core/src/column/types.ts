@@ -295,7 +295,7 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	 * Value this column's field is seeded with when the create form opens.
 	 *
 	 * Resolved on **every** `creating.start()`, not once at table construction — hence
-	 * `defaultValue` and not `initialValue` (unlike {@link ColumnPinningDef.initialPin} /
+	 * `defaultValue` and not `initialValue` (unlike {@link ColumnPinningDef.initialSide} /
 	 * {@link ColumnVisibilityDef.initialHidden}, which seed `initialState` a single time).
 	 * The function form therefore sees the table as it is at the moment the form opens.
 	 *
@@ -312,11 +312,22 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	defaultValue?: TValue | ((ctx: CreateDefaultValueContext<TRow>) => TValue)
 }
 
+/**
+ * Which edge a column is pinned to. Physical, not logical: unlike `align`, a pinned column
+ * sticks to a viewport edge, and that edge does not flip with the text direction.
+ */
+export const ColumnPinSide = {
+	Left: 'left',
+	Right: 'right',
+} as const
+
+export type ColumnPinSide = (typeof ColumnPinSide)[keyof typeof ColumnPinSide]
+
 export type ColumnPinningDef = {
-	/** Static pin — always pinned, no pin section in column menu. */
-	pin?: 'left' | 'right'
+	/** Static pin — always pinned to this side, no pin section in the column menu. */
+	side?: ColumnPinSide
 	/** Seeds `initialState.columnPinning` — starts pinned, user can change via column menu. */
-	initialPin?: 'left' | 'right'
+	initialSide?: ColumnPinSide
 }
 
 export type ColumnVisibilityDef = {
@@ -437,12 +448,16 @@ export type ColumnDef<
 	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
 
 	/**
-	 * Column pinning configuration.
+	 * Column pinning.
+	 * - `'left'` / `'right'` — always pinned to that side (static), no menu section
 	 * - `false` — pinning disabled, no pin section in column menu
-	 * - `{ pin: 'left' }` — always pinned left (static), no menu section
-	 * - `{ initialPin: 'left' }` — starts pinned left, user can change via menu
+	 * - `{ initialSide: 'left' }` — starts pinned left, user can change via menu
+	 * - `{ side: 'left' }` — the long form of the scalar
+	 *
+	 * The scalar and the object are the same shape `align` and `width` use: the common case is
+	 * one word, the object exists for the case the scalar cannot express.
 	 */
-	pinning?: false | ColumnPinningDef
+	pinning?: false | ColumnPinSide | ColumnPinningDef
 	/**
 	 * Column-level sorting config.
 	 * - `false` — disable sorting for this column

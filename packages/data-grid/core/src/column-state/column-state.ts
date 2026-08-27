@@ -18,7 +18,7 @@ export type ColumnInvariants = {
 	readonly alwaysVisible: readonly string[]
 }
 
-/** Seed pins derived from column defs — `pin` (static) and `initialPin` (dynamic). */
+/** Seed pins derived from column defs — `side` (static) and `initialSide` (dynamic). */
 export type PinningSeed = {
 	readonly left: readonly string[]
 	readonly right: readonly string[]
@@ -32,10 +32,10 @@ function getColumnId<TRow extends object>(col: TanStackColumnDef<TRow>): string 
  * Derives the invariants from the final column list (system columns included).
  *
  * - system columns → always visible, pinned where their meta says so
- * - `pinning: { pin }` → static pin, always kept
+ * - `pinning: 'left'` / `pinning: { side }` → static pin, always kept
  * - `visibility: false` → hiding disabled, the column can never be hidden
  *
- * `initialPin` is deliberately **not** an invariant: it is only a seed (see
+ * `initialSide` is deliberately **not** an invariant: it is only a seed (see
  * {@link mergePinningSeed}) and the user may move or unpin such a column.
  */
 export function buildColumnInvariants<TRow extends object>(columns: TanStackColumnDef<TRow>[]): ColumnInvariants {
@@ -48,7 +48,7 @@ export function buildColumnInvariants<TRow extends object>(columns: TanStackColu
 		if (colId === undefined) continue
 		const meta = col.meta
 		if (meta?.isSystemColumn === true || meta?.visibility === false) alwaysVisible.push(colId)
-		const pin = meta?.columnPinning === false ? undefined : meta?.columnPinning?.pin
+		const pin = meta?.columnPinning === false ? undefined : meta?.columnPinning?.side
 		if (pin === 'left') forcedLeft.push(colId)
 		else if (pin === 'right') forcedRight.push(colId)
 	}

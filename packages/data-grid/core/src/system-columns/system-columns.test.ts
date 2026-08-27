@@ -68,7 +68,7 @@ describe('buildColumnList', () => {
 		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('actions column has columnPinning: { pin: "right" } in meta', () => {
+	it('actions column has columnPinning: { side: "right" } in meta', () => {
 		const cols = buildColumnList([USER_COL], {
 			selection: false,
 			expanding: false,
@@ -77,7 +77,7 @@ describe('buildColumnList', () => {
 			pinning: false,
 		})
 		const actions = cols.find((c) => c.id === ACTIONS_COLUMN_ID)
-		expect(actions?.meta?.columnPinning).toEqual({ pin: 'right' })
+		expect(actions?.meta?.columnPinning).toEqual({ side: 'right' })
 	})
 
 	it('appends __actions__ when only row pinning is enabled', () => {
@@ -144,8 +144,8 @@ describe('buildColumnList', () => {
 describe('extractPinningState', () => {
 	it('extracts columns with static pin position', () => {
 		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'a', meta: { columnPinning: { pin: 'left' } } },
-			{ id: 'b', meta: { columnPinning: { pin: 'right' } } },
+			{ id: 'a', meta: { columnPinning: { side: 'left' } } },
+			{ id: 'b', meta: { columnPinning: { side: 'right' } } },
 			{ id: 'c', meta: {} },
 		]
 		const { left, right } = extractPinningState(cols)
@@ -154,10 +154,10 @@ describe('extractPinningState', () => {
 		expect(left).not.toContain('c')
 	})
 
-	it('extracts columns with initialPin position', () => {
+	it('extracts columns with initialSide position', () => {
 		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'd', meta: { columnPinning: { initialPin: 'left' } } },
-			{ id: 'e', meta: { columnPinning: { initialPin: 'right' } } },
+			{ id: 'd', meta: { columnPinning: { initialSide: 'left' } } },
+			{ id: 'e', meta: { columnPinning: { initialSide: 'right' } } },
 		]
 		const { left, right } = extractPinningState(cols)
 		expect(left).toContain('d')

@@ -669,14 +669,14 @@ describe('createTable — system columns', () => {
 		expect(actionsCol?.columnDef.meta?.isSystemColumn).toBe(true)
 	})
 
-	it('__actions__ column has columnPinning: { pin: "right" } in meta', () => {
+	it('__actions__ column has columnPinning: { side: "right" } in meta', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			editing: { mode: 'row', onSave: () => Promise.resolve() },
 		})
 		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
-		expect(actionsCol?.columnDef.meta?.columnPinning).toEqual({ pin: 'right' })
+		expect(actionsCol?.columnDef.meta?.columnPinning).toEqual({ side: 'right' })
 	})
 })
 
@@ -889,12 +889,12 @@ describe('createTable — faceted', () => {
 
 describe('createTable — initialState vs column-derived state', () => {
 	const PINNED_COLUMNS = createColumns<Row>([
-		{ accessorKey: 'name', header: 'Name', pinning: { pin: 'left' } },
+		{ accessorKey: 'name', header: 'Name', pinning: { side: 'left' } },
 		{ accessorKey: 'age', header: 'Age' },
 	])
 
 	const DEFAULT_PINNED_COLUMNS = createColumns<Row>([
-		{ accessorKey: 'name', header: 'Name', pinning: { initialPin: 'left' } },
+		{ accessorKey: 'name', header: 'Name', pinning: { initialSide: 'left' } },
 		{ accessorKey: 'age', header: 'Age' },
 	])
 
@@ -903,12 +903,12 @@ describe('createTable — initialState vs column-derived state', () => {
 		{ accessorKey: 'age', header: 'Age' },
 	])
 
-	it('column initialPin seeds columnPinning', () => {
+	it('column initialSide seeds columnPinning', () => {
 		const table = createTable({ data: DATA, columns: DEFAULT_PINNED_COLUMNS, pinning: { column: true } })
 		expect(table.getState().columnPinning.left).toContain('name')
 	})
 
-	it('consumer initialState.columnPinning wins over a initialPin it mentions', () => {
+	it('consumer initialState.columnPinning wins over a initialSide it mentions', () => {
 		const table = createTable({
 			data: DATA,
 			columns: DEFAULT_PINNED_COLUMNS,
@@ -919,7 +919,7 @@ describe('createTable — initialState vs column-derived state', () => {
 		expect(table.getState().columnPinning.right).toContain('name')
 	})
 
-	it('a initialPin the consumer never mentions keeps its seed', () => {
+	it('a initialSide the consumer never mentions keeps its seed', () => {
 		const table = createTable({
 			data: DATA,
 			columns: DEFAULT_PINNED_COLUMNS,

@@ -7,7 +7,7 @@ import {
 import { setIfDefined } from '../../utils/set-if-defined'
 
 import type { OperatorRegistry } from '../../features/operators'
-import type { CellViewCtx, ColumnDef, TanStackColumnDef } from '../types'
+import type { CellViewCtx, ColumnDef, ColumnPinningDef, TanStackColumnDef } from '../types'
 
 /** Cell types unchecked: `mapColumns` runs over already-authored columns of any grid. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,6 +43,17 @@ export function mapColumns<TRow extends object>(
 	return defs.map((def) => mapColumn(def, registry, options))
 }
 
+/**
+ * Collapses the scalar pinning form onto the object one, so every reader downstream sees a
+ * single shape. `pinning: 'left'` is the long `{ side: 'left' }` — a static pin — not a seed.
+ */
+function normalizeColumnPinning(
+	pinning: ColumnDef<never, AnyCellTypes>['pinning'],
+): false | ColumnPinningDef | undefined {
+	if (pinning === undefined || pinning === false) return pinning
+	return typeof pinning === 'string' ? { side: pinning } : pinning
+}
+
 function mapColumn<TRow extends object>(
 	def: ColumnDef<TRow, AnyCellTypes>,
 	registry?: OperatorRegistry,
@@ -76,7 +87,7 @@ function mapColumn<TRow extends object>(
 
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
 
-	setIfDefined(meta, 'columnPinning', pinning)
+	setIfDefined(meta, 'columnPinning', normalizeColumnPinning(pinning))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'filtering', filtering)
 	setIfDefined(meta, 'editing', editing)
