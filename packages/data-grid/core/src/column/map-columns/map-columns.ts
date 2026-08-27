@@ -7,7 +7,7 @@ import {
 import { setIfDefined } from '../../utils/set-if-defined'
 
 import type { OperatorRegistry } from '../../features/operators'
-import type { CellViewCtx, ColumnDef, ColumnPinningDef, TanStackColumnDef } from '../types'
+import type { CellViewCtx, ColumnDef, ColumnPinningDef, ColumnWidthDef, TanStackColumnDef } from '../types'
 
 /** Cell types unchecked: `mapColumns` runs over already-authored columns of any grid. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,6 +54,15 @@ function normalizeColumnPinning(
 	return typeof pinning === 'string' ? { side: pinning } : pinning
 }
 
+/**
+ * Collapses the scalar width form onto the object one. `width: 200` is the starting width —
+ * TanStack's `size` — with no bounds, which is what a bare number reads as.
+ */
+function normalizeColumnWidth(width: number | ColumnWidthDef | undefined): ColumnWidthDef | undefined {
+	if (width === undefined) return undefined
+	return typeof width === 'number' ? { default: width } : width
+}
+
 function mapColumn<TRow extends object>(
 	def: ColumnDef<TRow, AnyCellTypes>,
 	registry?: OperatorRegistry,
@@ -75,9 +84,7 @@ function mapColumn<TRow extends object>(
 		footer,
 		globalFiltering,
 		resizing,
-		size,
-		minSize,
-		maxSize,
+		width,
 		validateOn,
 		validateDebounceMs,
 		headerClassName,
@@ -124,9 +131,10 @@ function mapColumn<TRow extends object>(
 	if (filtering === false) result.enableColumnFilter = false
 	if (globalFiltering === false) result.enableGlobalFilter = false
 	if (resizing === false) result.enableResizing = false
-	setIfDefined(result, 'size', size)
-	setIfDefined(result, 'minSize', minSize)
-	setIfDefined(result, 'maxSize', maxSize)
+	const widthDef = normalizeColumnWidth(width)
+	setIfDefined(result, 'size', widthDef?.default)
+	setIfDefined(result, 'minSize', widthDef?.min)
+	setIfDefined(result, 'maxSize', widthDef?.max)
 
 	// sorting: false → disable sorting for this column
 	if (sorting === false) {

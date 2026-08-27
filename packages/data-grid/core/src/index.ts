@@ -43,6 +43,7 @@ export type {
 	ColumnEditingConfig,
 	ColumnFilteringConfig,
 	ColumnPinningDef,
+	ColumnWidthDef,
 	ColumnSortUndefined,
 	ColumnSortingConfig,
 	ColumnVisibilityDef,

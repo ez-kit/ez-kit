@@ -59,16 +59,12 @@ describe('createColumnHelper', () => {
 				header: 'Name',
 				sorting: false,
 				pinning: { side: 'left' },
-				size: 200,
-				minSize: 50,
-				maxSize: 500,
+				width: { default: 200, min: 50, max: 500 },
 				resizing: false,
 			})
 			expect(col.sorting).toBe(false)
 			expect(col.pinning).toEqual({ side: 'left' })
-			expect(col.size).toBe(200)
-			expect(col.minSize).toBe(50)
-			expect(col.maxSize).toBe(500)
+			expect(col.width).toEqual({ default: 200, min: 50, max: 500 })
 			expect(col.resizing).toBe(false)
 		})
 	})
@@ -199,11 +195,11 @@ describe('createColumnHelper', () => {
 				accessorKey: 'name',
 				header: 'Name',
 				sorting: false,
-				size: 120,
+				width: 120,
 			})
 			expect(col.header).toBe('Name')
 			expect(col.sorting).toBe(false)
-			expect(col.size).toBe(120)
+			expect(col.width).toBe(120)
 		})
 
 		it('does not leak type/config/view/editing/creating to top-level ColumnDef', () => {

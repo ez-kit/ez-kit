@@ -107,9 +107,9 @@ describe('headless data-* contract', () => {
 	// reached the viewport it collapsed to zero width and clipped BOTH shadows.
 	it('positions each pin shadow independently by the summed width of that side (>1 pinned column)', () => {
 		const COLS_MULTI = createColumns<User>([
-			{ accessorKey: 'name', header: 'Name', size: 180, pinning: { side: 'left' } },
-			{ accessorKey: 'age', header: 'Age', size: 120, pinning: { side: 'left' } },
-			{ accessorKey: 'id', header: 'Id', size: 90, pinning: { side: 'right' } },
+			{ accessorKey: 'name', header: 'Name', width: 180, pinning: { side: 'left' } },
+			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'left' } },
+			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'right' } },
 		])
 		const table = createTable<User>({ data: USERS, columns: COLS_MULTI, pinning: { column: true } })
 		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
@@ -134,9 +134,9 @@ describe('headless data-* contract', () => {
 	// measured edge of the pinned block must win.
 	it('positions each pin shadow at the measured DOM edge of its pinned block', () => {
 		const COLS_MULTI = createColumns<User>([
-			{ accessorKey: 'name', header: 'Name', size: 180, pinning: { side: 'left' } },
-			{ accessorKey: 'age', header: 'Age', size: 120, pinning: { side: 'left' } },
-			{ accessorKey: 'id', header: 'Id', size: 90, pinning: { side: 'right' } },
+			{ accessorKey: 'name', header: 'Name', width: 180, pinning: { side: 'left' } },
+			{ accessorKey: 'age', header: 'Age', width: 120, pinning: { side: 'left' } },
+			{ accessorKey: 'id', header: 'Id', width: 90, pinning: { side: 'right' } },
 		])
 		const table = createTable<User>({ data: USERS, columns: COLS_MULTI, pinning: { column: true } })
 

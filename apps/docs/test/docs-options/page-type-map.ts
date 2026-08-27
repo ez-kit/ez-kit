@@ -169,10 +169,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ColumnsIndex,
-		// 13, not 12: the raw `enableColumnFilter` / `enableHiding` pass-throughs were dropped
+		// 11, not 13: the raw `enableColumnFilter` / `enableHiding` pass-throughs were dropped
 		// from `ColumnDef` (each duplicated an ez-kit alias) and the three aliases the page now
 		// documents in their place — `filtering`, `visibility`, `resizing` — took their slots.
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 13 }],
+		// Then `size` / `minSize` / `maxSize` collapsed into the single `width` row, spending
+		// three of those slots to buy one.
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 11 }],
 		nonOptionTables: [],
 	},
 	{

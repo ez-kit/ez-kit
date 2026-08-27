@@ -544,10 +544,34 @@ export type ColumnDef<
 	/** Class applied to this column's footer cell. Only rendered inside `<DataGrid.Footer />`. */
 	footerClassName?: string
 
-	// Pass-through TanStack options
-	size?: number
-	minSize?: number
-	maxSize?: number
+	/**
+	 * Column width, in pixels.
+	 *
+	 * The scalar is the starting width: `width: 200` is the whole story for most columns.
+	 * The object adds the bounds a resizable column is dragged between:
+	 *
+	 * ```ts
+	 * { accessorKey: 'name', width: 200 }
+	 * { accessorKey: 'name', width: { default: 200, min: 80, max: 400 } }
+	 * ```
+	 *
+	 * Replaces the `size` / `minSize` / `maxSize` pass-throughs: three TanStack names, spelled in
+	 * TanStack's vocabulary rather than the grid's, for one property of a column.
+	 *
+	 * Whether the user may *change* the width is {@link ColumnDef.resizing}, not a field here —
+	 * it belongs with `sorting`, `filtering` and `visibility`, where every other per-column
+	 * feature switch lives.
+	 */
+	width?: number | ColumnWidthDef
+}
+
+export type ColumnWidthDef = {
+	/** Starting width in pixels. TanStack's `size`. */
+	default?: number
+	/** Lower bound while resizing, in pixels. TanStack's `minSize`. */
+	min?: number
+	/** Upper bound while resizing, in pixels. TanStack's `maxSize`. */
+	max?: number
 }
 
 /** Augment TanStack's ColumnMeta with our custom fields. */
