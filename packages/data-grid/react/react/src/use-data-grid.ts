@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
+import { SelectionPanelVariant } from './types'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
@@ -35,6 +36,10 @@ import type { ComponentType, HTMLAttributes, ReactElement } from 'react'
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
+// The closed set lives in `./types` next to the other ones; re-exported here because this is
+// where `SelectionPanelConfig` — the option that carries it — is declared.
+export { SelectionPanelVariant } from './types'
+
 export type ExpandedRowProps<TRow extends object> = {
 	row: Row<TRow>
 	table: Table<TRow>
@@ -53,16 +58,8 @@ export type SelectionPanelCallbackArgs<TRow extends object = object> = {
 	selectedRows: Row<TRow>[]
 }
 
-export type SelectionPanelVariant = 'floating' | 'inline'
-
-/** Named render modes for the selection panel — avoids scattering the raw literals. Internal. */
-export const SELECTION_PANEL_VARIANT = {
-	Floating: 'floating',
-	Inline: 'inline',
-} as const satisfies Record<string, SelectionPanelVariant>
-
 /** Render mode used when a panel config omits `variant`. Internal. */
-export const DEFAULT_SELECTION_PANEL_VARIANT: SelectionPanelVariant = SELECTION_PANEL_VARIANT.Floating
+export const DEFAULT_SELECTION_PANEL_VARIANT: SelectionPanelVariant = SelectionPanelVariant.Floating
 
 export type SelectionPanelConfig<TRow extends object = object> = {
 	/**
@@ -672,7 +669,7 @@ export function useDataGrid<TRow extends object>(
 
 	const filteringCfg = featureConfig(rawFiltering)
 
-	const filteringVariant: FilteringVariant | undefined = filteringCfg?.variant
+	const filteringVariant: FilteringVariant = filteringCfg?.variant ?? DATA_GRID_DEFAULTS.filtering.variant
 
 	const filteringDebounce: number = filteringCfg?.debounce ?? DEFAULT_FILTER_DEBOUNCE_MS
 

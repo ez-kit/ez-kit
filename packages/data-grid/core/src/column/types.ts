@@ -462,9 +462,10 @@ export type ColumnDef<
 	/**
 	 * Column footer, same shape as {@link ColumnDef.header}.
 	 *
-	 * Reaches TanStack (`table.getFooterGroups()`) but is **not** auto-rendered — the built-in
-	 * `<DataGrid.Table />` layout has no footer row. Read it yourself when composing a custom
-	 * body with `<DataGrid.Table>{…}</DataGrid.Table>`.
+	 * Not part of the **default** layout — a plain `<DataGrid />` renders no footer row. You do
+	 * not read it yourself, though: place `<DataGrid.Footer />` inside a custom
+	 * `<DataGrid.Table>` body and it renders every column's `footer` for you, with colSpan,
+	 * pinning, alignment and `footerClassName` handled.
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
 	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
@@ -554,7 +555,7 @@ export type ColumnDef<
 	 * ```
 	 *
 	 * `'start'` / `'end'` rather than `'left'` / `'right'`: this axis flips with the text
-	 * direction, and the grid already treats RTL as first-class (`sizing.direction`). Column
+	 * direction, and the grid already treats RTL as first-class (`resizing.direction`). Column
 	 * *pinning* keeps `'left'` / `'right'` — a pinned column sticks to a viewport edge, which
 	 * does not flip.
 	 *

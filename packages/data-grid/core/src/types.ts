@@ -139,6 +139,13 @@ export type SortingConfig = FeatureToggle & {
 }
 
 export type FilteringConfig = FeatureToggle & {
+	/**
+	 * Server-side column filtering: the grid stops filtering rows itself and hands
+	 * the filter state to {@link FilteringConfig.onChange}.
+	 *
+	 * Shares one TanStack switch with {@link GlobalFilteringConfig.manual} — setting
+	 * either one turns client-side filtering off for both axes.
+	 */
 	manual?: boolean
 	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
 	operators?: FilterOperatorDef[]
@@ -200,6 +207,17 @@ export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
  * ```
  */
 export type GlobalFilteringConfig = FeatureToggle & {
+	/**
+	 * Server-side global search: the grid stops filtering rows itself and hands the
+	 * search value to {@link GlobalFilteringConfig.onChange}, expecting the data it
+	 * receives back to already be filtered.
+	 *
+	 * TanStack exposes a **single** `manualFiltering` switch covering both column
+	 * filters and global search, so this option and {@link FilteringConfig.manual}
+	 * feed the same flag: setting either one turns client-side filtering off for
+	 * **both** axes. The two cannot be gated independently.
+	 */
+	manual?: boolean
 	/**
 	 * Function applied during global search.
 	 * - `string` — resolved against {@link GlobalFilteringConfig.fns} registry first,

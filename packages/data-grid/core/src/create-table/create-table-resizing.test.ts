@@ -54,4 +54,19 @@ describe('createTable — resizing', () => {
 		const col = table.getColumn('name')
 		expect(col?.getCanResize()).toBe(true)
 	})
+
+	it('resizing: false sets enableColumnResizing to false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: false })
+		expect(table.options.enableColumnResizing).toBe(false)
+	})
+
+	it('resizing: false makes getCanResize() false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: false })
+		expect(table.getColumn('name')?.getCanResize()).toBe(false)
+	})
+
+	it('resizing not set makes getCanResize() false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS })
+		expect(table.getColumn('name')?.getCanResize()).toBe(false)
+	})
 })

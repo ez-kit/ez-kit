@@ -274,6 +274,36 @@ describe('createTable — globalFiltering', () => {
 		expect(table.getFilteredRowModel().rows).toHaveLength(1)
 		expect(table.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
 	})
+
+	it('globalFiltering: { manual: true } sets manualFiltering', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: { manual: true } })
+		expect(table.options.manualFiltering).toBe(true)
+	})
+
+	it('globalFiltering: { manual: true } leaves rows untouched by client-side global search', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: { manual: true } })
+		table.setGlobalFilter('alice')
+		expect(table.getFilteredRowModel().rows).toHaveLength(DATA.length)
+	})
+
+	it('filtering: { manual: true } also stops client-side global search', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			filtering: { manual: true },
+			globalFiltering: true,
+		})
+		table.setGlobalFilter('alice')
+		expect(table.options.manualFiltering).toBe(true)
+		expect(table.getFilteredRowModel().rows).toHaveLength(DATA.length)
+	})
+
+	it('globalFiltering without manual still filters client-side', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: { onChange: vi.fn() } })
+		table.setGlobalFilter('alice')
+		expect(table.options.manualFiltering).toBeUndefined()
+		expect(table.getFilteredRowModel().rows).toHaveLength(1)
+	})
 })
 
 // ── pagination ────────────────────────────────────────────────────────────────

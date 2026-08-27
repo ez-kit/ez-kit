@@ -56,7 +56,6 @@ export type {
 	LayoutConfig,
 	SelectionPanelCallbackArgs,
 	SelectionPanelConfig,
-	SelectionPanelVariant,
 } from './use-data-grid'
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
@@ -238,7 +237,7 @@ export type {
 // Closed sets that a kit or a call site names. Each is a `const` object plus a same-named
 // string union, so `RowActionsMode.Idle` and the bare `'idle'` are both valid and no consumer
 // has to import anything to write an option value.
-export { PaginationVariant, RowActionId, RowActionsMode } from './types'
+export { PaginationVariant, RowActionId, RowActionsMode, SelectionPanelVariant } from './types'
 
 // TanStack state types used when typing manual server-side `onChange` handlers.
 // Re-exported so consumers depend only on this package's surface. `SortingState` is not

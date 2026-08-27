@@ -9,7 +9,12 @@ import { ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
  *
  * Scope: the 19 data-grid pages whose option tables were hand-verified against
  * the real types in the #171-#174 audit slices, plus `state-model.mdx`, which
- * was written against those types from the start. The remaining pages under
+ * was written against those types from the start, plus the five pages added in
+ * the follow-up audit (`columns/resizing.mdx`, `virtualization.mdx`,
+ * `pagination/infinite-scroll.mdx`, `selection/selection-bar.mdx`,
+ * `columns/column-helper.mdx`). `columns/resizing.mdx` is why that follow-up
+ * happened: it documented a `sizing` option that has never existed, and went on
+ * doing so precisely because the page was unmapped. The remaining pages under
  * `content/docs/data-grid/**` are intentionally absent — their types and
  * defaults were never verified, so adding them would make the suite red on
  * arrival.
@@ -28,9 +33,11 @@ import { ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
 export enum DocPage {
 	AdvancedReact = 'content/docs/data-grid/advanced/react.mdx',
 	CellsDateCell = 'content/docs/data-grid/cells/date-cell.mdx',
+	ColumnsColumnHelper = 'content/docs/data-grid/columns/column-helper.mdx',
 	ColumnsColumnPinning = 'content/docs/data-grid/columns/column-pinning.mdx',
 	ColumnsColumnVisibility = 'content/docs/data-grid/columns/column-visibility.mdx',
 	ColumnsIndex = 'content/docs/data-grid/columns/index.mdx',
+	ColumnsResizing = 'content/docs/data-grid/columns/resizing.mdx',
 	ControlledState = 'content/docs/data-grid/controlled-state.mdx',
 	ExpandingControlled = 'content/docs/data-grid/expanding/controlled.mdx',
 	ExpandingSubContent = 'content/docs/data-grid/expanding/sub-content.mdx',
@@ -41,13 +48,16 @@ export enum DocPage {
 	FilteringMultiValue = 'content/docs/data-grid/filtering/multi-value.mdx',
 	FilteringOperators = 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringPanel = 'content/docs/data-grid/filtering/panel.mdx',
+	PaginationInfiniteScroll = 'content/docs/data-grid/pagination/infinite-scroll.mdx',
 	PaginationIndex = 'content/docs/data-grid/pagination/index.mdx',
 	Production = 'content/docs/data-grid/production.mdx',
 	RowActions = 'content/docs/data-grid/row-actions.mdx',
 	RowPinning = 'content/docs/data-grid/row-pinning.mdx',
 	SelectionIndex = 'content/docs/data-grid/selection/index.mdx',
+	SelectionSelectionBar = 'content/docs/data-grid/selection/selection-bar.mdx',
 	Sorting = 'content/docs/data-grid/sorting.mdx',
 	StateModel = 'content/docs/data-grid/state-model.mdx',
+	Virtualization = 'content/docs/data-grid/virtualization.mdx',
 }
 
 /**
@@ -82,6 +92,8 @@ export const GRID_TYPE = {
 	ReactGlobalFilteringConfig: { module: TypeModule.React, name: 'ReactGlobalFilteringConfig' },
 	FilterChipsConfig: { module: TypeModule.React, name: 'FilterChipsConfig' },
 	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
+	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
+	SelectionPanelConfig: { module: TypeModule.React, name: 'SelectionPanelConfig', typeArgs: ROW_TYPE_ARGS },
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -169,12 +181,32 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ColumnsIndex,
-		// 11, not 13: the raw `enableColumnFilter` / `enableHiding` pass-throughs were dropped
-		// from `ColumnDef` (each duplicated an ez-kit alias) and the three aliases the page now
-		// documents in their place — `filtering`, `visibility`, `resizing` — took their slots.
-		// Then `size` / `minSize` / `maxSize` collapsed into the single `width` row, spending
-		// three of those slots to buy one, and `align` added one back.
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 12 }],
+		// 22, not 12: the table used to stop at the twelve options the original audit checked.
+		// The follow-up added the ten `ColumnDef` keys it had simply never listed — `footer`,
+		// `columns`, `globalFiltering`, `editing`, `creating`, `validateOn`,
+		// `validateDebounceMs` and the three `*ClassName` slots, of which `cellClassName` is
+		// the only public route to colouring a cell from its own value.
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 22 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.ColumnsColumnHelper,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Options',
+				reason:
+					'Documents the builder methods `createColumnHelper()` returns (`createColumn.text(opts)`, …) and the ' +
+					'shape of their argument, not keys of a config object. The column keys those builders produce are ' +
+					'checked on columns/index.mdx against `ColumnDef`.',
+			},
+		],
+	},
+	{
+		page: DocPage.ColumnsResizing,
+		// Two levels in one table on purpose: the feature config and the state/callback that
+		// carry it live on the grid, the `width` row on a column def.
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 7 }],
 		nonOptionTables: [],
 	},
 	{
@@ -279,6 +311,19 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		page: DocPage.PaginationInfiniteScroll,
+		optionTables: [{ heading: 'API', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
+		nonOptionTables: [
+			{
+				heading: 'Status, errors & retry',
+				reason:
+					'Contrasts the two fields of the grid-owned `state.infinite` slice with the user-owned ' +
+					'`pagination.hasNextPage` option — the table is about *ownership*, so its rows deliberately ' +
+					'come from two different types rather than naming keys of one.',
+			},
+		],
+	},
+	{
 		page: DocPage.PaginationIndex,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 10 }],
 		nonOptionTables: [
@@ -316,6 +361,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		page: DocPage.SelectionSelectionBar,
+		// The table's rows are bare keys of `selection.panel`, so the governing type is the
+		// panel config itself rather than the grid root.
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.SelectionPanelConfig], expectedCount: 5 }],
+		nonOptionTables: [],
+	},
+	{
 		page: DocPage.StateModel,
 		optionTables: [
 			// One table crossing both levels on purpose: the page's whole point is
@@ -327,6 +379,15 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 				roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig],
 				expectedCount: 8,
 			},
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.Virtualization,
+		// Two roots because the table addresses the option from two depths: the first two rows
+		// are full paths from the grid config, the last two are written relative to `row`.
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig, GRID_TYPE.VirtualizationConfig], expectedCount: 4 },
 		],
 		nonOptionTables: [],
 	},
@@ -356,6 +417,14 @@ export type OptionException = {
 }
 
 export const OPTION_EXCEPTIONS: readonly OptionException[] = [
+	{
+		page: DocPage.PaginationInfiniteScroll,
+		heading: 'API',
+		name: 'table.appendData(rows)',
+		reason:
+			'A method on the table instance, listed beside the `pagination` options it is used with. Not a config key — ' +
+			'it is called, not passed.',
+	},
 	{
 		page: DocPage.Sorting,
 		heading: 'Per-column `sorting`',

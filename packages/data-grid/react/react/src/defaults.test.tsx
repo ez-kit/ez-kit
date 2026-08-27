@@ -161,6 +161,24 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(cfg?.debounce).toBe(0)
 	})
 
+	it('filtering: true → variant is the named default', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
+		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
+		expect(result.current.grid.filtering.variant).toBe('inline')
+	})
+
+	it('filtering config without an explicit variant → variant is the named default', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { debounce: 500 } }))
+		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
+	})
+
+	it('an explicit filtering.variant wins over the default', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }),
+		)
+		expect(result.current.grid.filtering.variant).toBe('popover')
+	})
+
 	it('filtering.chips: true → position is the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }))
 		const cfg = result.current.grid.filtering.chips

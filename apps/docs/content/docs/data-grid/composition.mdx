@@ -63,13 +63,12 @@ plumbing:
 <DataGrid.Table>
 	<DataGrid.Header />
 	<DataGrid.Body />
-	<tfoot>
-		<tr>
-			<td colSpan={columns.length}>{total}</td>
-		</tr>
-	</tfoot>
+	<DataGrid.Footer />
 </DataGrid.Table>
 ```
+
+`<DataGrid.Footer />` is the footer row the default layout leaves out — see
+[Column footers](#column-footers).
 
 A render function gets the live table:
 
@@ -123,8 +122,57 @@ createColumns<Row>([
 ])
 ```
 
-`column.footer` accepts the same shape. It reaches TanStack (`table.getFooterGroups()`) but is
-not auto-rendered — read it inside a custom `<DataGrid.Table>` body.
+## Column footers
+
+`column.footer` accepts the same shape as `column.header`. It is not part of the **default**
+layout — a plain `<DataGrid />` renders no footer row — but you do not read it yourself either:
+place `<DataGrid.Footer />` inside a custom `<DataGrid.Table>` body and it renders every
+column's `footer`, in the same column order and with the same colSpan, pinning and alignment as
+the header. `column.footerClassName` lands on the footer cell.
+
+The archetypal case is a numeric column with a total. The render function gets the live table,
+so summing over the _filtered_ rows keeps the total honest while a filter is on:
+
+```tsx
+const columns = createColumns<Row>([
+	{ accessorKey: 'product', header: 'Product', footer: 'Total' },
+	{
+		accessorKey: 'amount',
+		header: 'Amount',
+		align: 'end',
+		footerClassName: 'font-medium',
+		footer: ({ table }) => table.getFilteredRowModel().rows.reduce((sum, row) => sum + row.original.amount, 0),
+	},
+])
+```
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+>
+	<DataGrid.Toolbar />
+	<DataGrid.Table>
+		<DataGrid.Header />
+		<DataGrid.Body />
+		<DataGrid.Footer />
+	</DataGrid.Table>
+	<DataGrid.Pagination />
+</DataGrid>
+```
+
+Giving `<DataGrid.Footer>` `children` replaces the per-column row with your own markup inside
+the kit's `<tfoot>` — a node, or a render function receiving `{ table, footerGroups }`:
+
+```tsx
+<DataGrid.Footer>
+	{({ table }) => (
+		<tr>
+			<td colSpan={table.getVisibleLeafColumns().length}>{table.getRowModel().rows.length} rows</td>
+		</tr>
+	)}
+</DataGrid.Footer>
+```
 
 ## Swapping a UI component for one grid
 

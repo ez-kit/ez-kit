@@ -60,8 +60,11 @@ export type ResolvedGridOptions = {
 	/** Sorting UI config. `undefined` when sorting is off. */
 	sorting?: (boolean | { toolbar?: boolean }) | undefined
 	filtering: {
-		/** Display variant for the per-column filter controls. `undefined` when off. */
-		variant?: FilteringVariant | undefined
+		/**
+		 * Display variant for the per-column filter controls. Always resolved, for the same
+		 * reason as `debounce` below: a UI kit switching on it must never hit a no-op branch.
+		 */
+		variant: FilteringVariant
 		/**
 		 * Commit debounce for text filter inputs. Always resolved, because the global search
 		 * box falls back to it even when column filtering is off.
@@ -130,7 +133,10 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 		cellTypes: undefined,
 		layout: { stickyHeader: false },
 		columnPinning: false,
-		filtering: { debounce: DATA_GRID_DEFAULTS.filtering.debounce },
+		filtering: {
+			variant: DATA_GRID_DEFAULTS.filtering.variant,
+			debounce: DATA_GRID_DEFAULTS.filtering.debounce,
+		},
 		pagination: {
 			variant: DATA_GRID_DEFAULTS.pagination.variant,
 			window: {

@@ -2,7 +2,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import { SELECTION_PANEL_VARIANT, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { SelectionPanelVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
@@ -201,7 +201,7 @@ function DefaultLayout() {
 	const chipsAbove = chipsConfig?.position === 'above' ? <ActiveFiltersBar /> : null
 	const chipsBelow = chipsConfig?.position === 'below' ? <ActiveFiltersBar /> : null
 
-	if (variant === SELECTION_PANEL_VARIANT.Inline) {
+	if (variant === SelectionPanelVariant.Inline) {
 		return (
 			<>
 				<DraftBar />

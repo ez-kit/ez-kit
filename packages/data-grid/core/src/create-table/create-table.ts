@@ -119,9 +119,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	if (config.deferredApply === true) {
 		const sortingManual = sortingCfg?.manual === true
 		const filteringManual = filteringCfg?.manual === true
-		if (!sortingManual && !filteringManual) {
+		const globalFilteringManual = globalFilteringCfg?.manual === true
+		if (!sortingManual && !filteringManual && !globalFilteringManual) {
 			throw new Error(
-				'deferredApply requires `manual: true` on at least one of `sorting` or `filtering`. ' +
+				'deferredApply requires `manual: true` on at least one of `sorting`, `filtering` or `globalFiltering`. ' +
 					'Client-side deferral is not supported: without manual mode the row models recompute ' +
 					'on every draft edit, so nothing is actually deferred.',
 			)
@@ -446,8 +447,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 						: { pageCount: paginationCfg.pageCount ?? UNKNOWN_PAGE_COUNT }),
 				}
 			: {}),
-		// Filtering manual
-		...(filteringCfg?.manual ? { manualFiltering: true } : {}),
+		// Filtering manual — TanStack has a single `manualFiltering` switch covering both column
+		// filters and global search, so either axis asking for manual mode turns it on for both.
+		...(filteringCfg?.manual || globalFilteringCfg?.manual ? { manualFiltering: true } : {}),
 		// Sorting manual
 		...(sortingCfg?.manual ? { manualSorting: true } : {}),
 		// Sorting: per-direction default
@@ -471,7 +473,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 					columnResizeMode: resizingCfg?.mode ?? 'onChange',
 					columnResizeDirection: resizingCfg?.direction ?? 'ltr',
 				}
-			: {}),
+			: // TanStack defaults `enableColumnResizing` to true, so the table-level gate has to be
+				// spelled out explicitly — otherwise `column.getCanResize()` stays true with the
+				// feature off. Same shape as the `enableHiding: false` gate above.
+				{ enableColumnResizing: false }),
 		// Row pinning — built-in TanStack feature, no separate row model needed
 		...(hasPinning
 			? {

@@ -443,6 +443,31 @@ export type LoadMoreRowProps = {
 	onRetry: () => void
 }
 
+/**
+ * Named members of {@link SelectionPanelVariant}. A convenience handle — the option and every
+ * prop are typed as the string union, so `variant: 'inline'` is equally valid and needs no
+ * import. Internal code (the panel resolver, the layout that positions the bar, kits)
+ * references the members instead of repeating the literals.
+ *
+ * A const object rather than an `enum` on purpose: enum members are a nominal type, so code
+ * holding the public union could not be compared against them
+ * (`@typescript-eslint/no-unsafe-enum-comparison`).
+ */
+export const SelectionPanelVariant = {
+	/** A positioned/sticky bar, typically overlaying the table area. The default. */
+	Floating: 'floating',
+	/** A normal block in the document flow, above the Toolbar. */
+	Inline: 'inline',
+} as const
+
+/**
+ * Render mode of the shared action bar — the selection section and the pending-draft section
+ * are one bar, so both read this single value.
+ *
+ * Derived from {@link SelectionPanelVariant} so the union and the members cannot drift apart.
+ */
+export type SelectionPanelVariant = (typeof SelectionPanelVariant)[keyof typeof SelectionPanelVariant]
+
 export type SelectionBarProps = {
 	/** False when 0 rows selected — component should hide/animate out. */
 	open: boolean
@@ -455,7 +480,7 @@ export type SelectionBarProps = {
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
 	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
 	 */
-	variant: 'floating' | 'inline'
+	variant: SelectionPanelVariant
 	/**
 	 * Pre-bound delete handler. Only present when `onDelete` was configured.
 	 * When absent — Delete button must NOT be rendered.
@@ -490,7 +515,7 @@ export type DraftBarProps = {
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
 	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
 	 */
-	variant: 'floating' | 'inline'
+	variant: SelectionPanelVariant
 	/** Apply the pending draft — emits one state change for the whole query. */
 	onApply: () => void
 	/** Discard the pending draft and restore the applied query. */

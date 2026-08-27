@@ -51,6 +51,7 @@ describe('public API surface', () => {
 	it('exports the closed sets as const objects usable as both value and type', () => {
 		expect(publicApi.RowActionsMode.Idle).toBe('idle')
 		expect(publicApi.PaginationVariant.Simple).toBe('simple')
+		expect(publicApi.SelectionPanelVariant.Inline).toBe('inline')
 		expect(publicApi.GridFeature.Core).toBe('core')
 		expect(publicApi.RowActionsVariant.Menu).toBe('menu')
 		expect(publicApi.CreatingMode.PinRow).toBe('pin-row')
