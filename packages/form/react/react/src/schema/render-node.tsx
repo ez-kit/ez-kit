@@ -1,7 +1,9 @@
 import { FormFieldType, resolveText } from '@ez-kit/form-core'
 
 import { renderChildren } from './render-children'
+import { useConditionValue } from './use-condition'
 
+import type { ConditionSubscribableForm } from './use-condition'
 import type { FormComponents } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type { FieldNode, SectionNode, Translate } from '@ez-kit/form-core'
@@ -37,6 +39,11 @@ export type RenderNodeArgs<TValues> = {
 /**
  * Turn one field or section node into the already-bound kit component for its kind.
  *
+ * A **component**, not a plain function, on purpose: it calls `useConditionValue` twice
+ * (`when`, `disabledWhen`) via the rules of hooks, which requires a component or custom hook
+ * — see `renderChildren`, which mounts one `RenderNode` per sibling instead of calling a
+ * plain function, so those hook calls land in a stable position across renders.
+ *
  * Every case forwards only that kind's own option keys — never `{...node}` — so `when`,
  * `validate` and `colSpan` (and every other schema-only key) never leak into the kit's
  * props, and an option the node genuinely omits stays omitted rather than becoming an
@@ -45,10 +52,25 @@ export type RenderNodeArgs<TValues> = {
  * A section contributes nothing to a field's `name` — it only groups children into a headed,
  * column-gridded block via `layout.Section` and recurses into them via `renderChildren`,
  * which is what wraps each child in `layout.GridItem` when the section declares `columns`.
+ *
+ * `node.when` false hides the node entirely (returns `null`, after both hooks have still
+ * run); `node.disabledWhen` true only disables it — spec §5 draws that line deliberately, so
+ * a disabled field's already-typed value stays visible and submitted rather than vanishing.
+ * `disabledWhen` only reaches built-in field kinds: a `section` has no `disabled` slot in the
+ * kit contract (`SectionRenderProps`), so it only ever hides via `when`, never disables.
  */
-export function renderNode<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
+export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
+	// `form` carries far more than `FormFieldComponents` at runtime — the real bound instance
+	// — so this narrows it to just the store shape `useConditionValue` needs, the same
+	// `as unknown` pattern `buildFieldComponents` uses for `BindableForm`.
+	const conditionForm = form as unknown as ConditionSubscribableForm<TValues>
+	const visible = useConditionValue(conditionForm, node.when, true)
+	const disabledByCondition = useConditionValue(conditionForm, node.disabledWhen, false)
+
 	const label = resolveText(node.label, context.translate)
 	const description = resolveText(node.description, context.translate)
+
+	if (!visible) return null
 
 	switch (node.type) {
 		case FormFieldType.Text:
@@ -57,6 +79,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 					{...(node.inputType !== undefined && { type: node.inputType })}
@@ -68,6 +91,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 					{...(node.min !== undefined && { min: node.min })}
@@ -81,6 +105,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 					{...(node.rows !== undefined && { rows: node.rows })}
@@ -92,6 +117,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					options={node.options}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
@@ -103,6 +129,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)
@@ -112,6 +139,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)
@@ -121,6 +149,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					options={node.options}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
@@ -131,6 +160,7 @@ export function renderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					name={node.name}
 					label={label}
 					description={description}
+					disabled={disabledByCondition}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.min !== undefined && { min: node.min })}
 					{...(node.max !== undefined && { max: node.max })}

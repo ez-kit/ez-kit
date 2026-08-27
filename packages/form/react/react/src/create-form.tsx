@@ -7,7 +7,12 @@ import { buildFieldComponents } from './build-field-components'
 import { splitFormProps } from './form-options'
 import { FormShell } from './form-shell'
 import { NO_INJECTED_COMPONENTS } from './kit-form'
-import { isRendererControlled, renderSchemaFields, schemaDefaultValues } from './schema/form-renderer'
+import {
+	isRendererControlled,
+	renderSchemaFields,
+	schemaDefaultValues,
+	stripHiddenValuesOnSubmit,
+} from './schema/form-renderer'
 
 import type { BindableForm } from './bindable-form'
 import type { FormComponents } from './contract'
@@ -279,7 +284,7 @@ export function createForm({ components }: CreateFormOptions) {
 			TSubmitMeta
 		>,
 	): ReactNode {
-		const { schema, translate, form: _ignored, ...rest } = props
+		const { schema, translate, keepHiddenValues, form: _ignored, ...rest } = props
 		const { options, elementProps } = splitFormProps(rest)
 		// Spec §4.6: the schema's own `defaultValue` entries seed the form when the caller
 		// supplies none — theirs wins whenever they do.
@@ -287,8 +292,13 @@ export function createForm({ components }: CreateFormOptions) {
 			...schemaDefaultValues(schema as AnyFormSchema<TFormData>),
 			...(options.defaultValues as Record<string, unknown> | undefined),
 		}
+		// Spec §6: strip fields the schema currently hides out of the submitted value, unless
+		// the caller opted out with `keepHiddenValues`. This only works because this component
+		// is the one calling `useForm` — see `stripHiddenValuesOnSubmit`'s doc comment on why
+		// the controlled overload below cannot do the same.
 		const instance = useForm({
 			...options,
+			onSubmit: stripHiddenValuesOnSubmit(schema as AnyFormSchema<TFormData>, options.onSubmit, keepHiddenValues),
 			defaultValues,
 		} as FormOptions<
 			TFormData,

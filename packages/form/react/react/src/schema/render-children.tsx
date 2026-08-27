@@ -1,7 +1,7 @@
 import { FORM_FIELD_TYPES, isFieldNode } from '@ez-kit/form-core'
 import { Fragment } from 'react'
 
-import { renderNode } from './render-node'
+import { RenderNode } from './render-node'
 
 import type { LayoutComponents, RenderNodeContext } from './render-node'
 import type { FormFieldComponents } from '../field-props'
@@ -36,13 +36,18 @@ export type RenderChildrenArgs<TValues> = {
 }
 
 /**
- * Render one sibling per node — a field through `renderNode`, a `section` recursively
- * through the very same `renderNode`/`renderChildren` pair — wrapping each in
+ * Render one sibling per node — a field through `RenderNode`, a `section` recursively
+ * through the very same `RenderNode`/`renderChildren` pair — wrapping each in
  * `layout.GridItem` when the parent section declares a `columns` grid.
  *
  * A container node contributes nothing to a field's `name`: nesting a field inside a
  * section only changes the JSX wrapped around it here, never the path its value lives at,
  * its validation, or the submitted payload.
+ *
+ * `RenderNode` is a component, not a plain function, precisely so a hidden node (`when`
+ * false) still calls its hooks: mapping straight to `<RenderNode key={key} .../>` here keeps
+ * one hook-call site per sibling, in the same order every render, regardless of which nodes
+ * currently evaluate visible.
  */
 export function renderChildren<TValues>(
 	nodes: FormNode<TValues, string>[],
@@ -61,12 +66,26 @@ export function renderChildren<TValues>(
 				)
 			}
 			key = node.name
-			rendered = renderNode({ node, form, layout, context })
+			rendered = (
+				<RenderNode
+					node={node}
+					form={form}
+					layout={layout}
+					context={context}
+				/>
+			)
 		} else if (node.type === 'section') {
 			// Sections have no `name` of their own — position in the schema is a stable
 			// enough key since the list itself is static, authored config.
 			key = `section-${String(index)}`
-			rendered = renderNode({ node, form, layout, context })
+			rendered = (
+				<RenderNode
+					node={node}
+					form={form}
+					layout={layout}
+					context={context}
+				/>
+			)
 		} else {
 			throw new Error(`Unknown node type "${node.type}".`)
 		}
