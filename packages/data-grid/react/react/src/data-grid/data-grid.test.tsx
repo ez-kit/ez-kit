@@ -205,7 +205,7 @@ describe('<DataGrid>', () => {
 			{
 				accessorKey: 'name',
 				header: 'Name',
-				cell: { component: ({ value }) => <span data-testid='custom-cell'>{String(value)}</span> },
+				cell: { component: ({ value }) => <span data-testid='custom-cell'>{value}</span> },
 			},
 			{ accessorKey: 'age', header: 'Age' },
 		])

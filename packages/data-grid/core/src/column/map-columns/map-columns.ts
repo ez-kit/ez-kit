@@ -177,7 +177,11 @@ function mapColumn<TRow extends object>(
 	// `meta.cellView`, which is what the React adapter actually mounts. The shim is the fallback
 	// for anything reading `columnDef.cell` directly.
 	if (typeof viewFn === 'function') {
-		const callableView = viewFn
+		// Value-erased, like `meta.cellView` just above and for the same reason: the renderer was
+		// typed against its own column's value, but all this shim can supply is `getValue()`,
+		// which is `unknown`. `mapColumns` runs over already-authored columns of any grid, so
+		// there is no value type left to recover here — only the author's site had one.
+		const callableView = viewFn as (ctx: CellViewCtx<TRow, unknown>) => unknown
 		result.cell = (ctx: { row: { original: TRow; index: number }; getValue: () => unknown }) =>
 			callableView({
 				row: ctx.row.original,

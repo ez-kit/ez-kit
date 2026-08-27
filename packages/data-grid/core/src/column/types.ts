@@ -485,16 +485,46 @@ export type ColumnSortingConfig = {
 }
 
 /**
- * User-facing column definition for @ez-kit/data-grid.
- * Converted to TanStack ColumnDef via mapColumns().
+ * Everything a column def carries except `accessorKey`, with the column's value type as a
+ * parameter. The shared body of {@link ColumnDef}'s arms — each arm pairs it with one
+ * `accessorKey` and the matching `TValue`.
+ *
+ * Exported because the column helper has to distribute over the same arms to build its own
+ * options type; `Omit` over the finished union cannot do it (see {@link ColumnDef}). Not part
+ * of the API anyone writes a column against — that is {@link ColumnDef}.
  */
-export type ColumnDef<
+export type ColumnDefCommon<
 	TRow extends object,
+	TValue,
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
 > = {
 	id?: string
-	accessorKey?: keyof TRow & string
+	/**
+	 * Derive this column's value from the row instead of reading a field.
+	 *
+	 * Give it an {@link ColumnDefCommon.id}. With no `accessorKey` to build one from, the table
+	 * falls back to the `header` when that is a plain string — so the column works, but its id
+	 * changes the moment someone rewords the header, invalidating any sorting, filtering or
+	 * visibility state keyed to it. With neither, it throws `Columns require an id when using an
+	 * accessorFn` on first column access, at render rather than at construction.
+	 *
+	 * **Written here, the column's `value` is `unknown`** — in `cellClassName`, in
+	 * `cell.component`, and in `creating.defaultValue`. `accessorKey` columns get a typed
+	 * `value` because each key is its own arm of {@link ColumnDef}'s union, binding the field's
+	 * type; a union arm has no inference variable to bind *this* function's return type to.
+	 *
+	 * For a typed value on a computed column, write it through the column helper's generic
+	 * `computed` method, which infers the value type from the function you pass:
+	 *
+	 * ```ts
+	 * col.computed({
+	 *   id: 'total',
+	 *   accessorFn: (row) => row.price * row.qty, // value: number
+	 *   cellClassName: ({ value }) => (value < 0 ? 'text-red-600' : undefined),
+	 * })
+	 * ```
+	 */
 	accessorFn?: (row: TRow, index: number) => unknown
 	/**
 	 * Column header. A plain string, or a render function for anything richer — an icon
@@ -540,7 +570,7 @@ export type ColumnDef<
 	sorting?: false | ColumnSortingConfig
 
 	/** Cell display and input configuration. */
-	cell?: CellDef<TRow, unknown, TCellTypes, TNode>
+	cell?: CellDef<TRow, TValue, TCellTypes, TNode>
 
 	/**
 	 * Column visibility configuration.
@@ -572,7 +602,7 @@ export type ColumnDef<
 	/** Column-level editing config. Set to false to disable. */
 	editing?: false | ColumnEditingConfig<TNode>
 	/** Column-level creating config. Set to false to disable. */
-	creating?: false | ColumnCreatingConfig<TRow, unknown, TNode>
+	creating?: false | ColumnCreatingConfig<TRow, TValue, TNode>
 
 	/**
 	 * Override the global `creating.validateOn` / `editing.validateOn` for this column.
@@ -633,10 +663,10 @@ export type ColumnDef<
 	 *
 	 * @example
 	 * ```ts
-	 * { accessorKey: 'balance', cellClassName: ({ value }) => (Number(value) < 0 ? 'text-red-600' : undefined) }
+	 * { accessorKey: 'balance', cellClassName: ({ value }) => (value < 0 ? 'text-red-600' : undefined) }
 	 * ```
 	 */
-	cellClassName?: string | ((ctx: CellViewCtx<TRow, unknown>) => string | undefined)
+	cellClassName?: string | ((ctx: CellViewCtx<TRow, TValue>) => string | undefined)
 	/** Class applied to this column's footer cell. Only rendered inside `<DataGrid.Footer />`. */
 	footerClassName?: string
 
@@ -660,6 +690,37 @@ export type ColumnDef<
 	 */
 	width?: number | ColumnWidthDef
 }
+
+/**
+ * User-facing column definition for @ez-kit/data-grid.
+ * Converted to TanStack ColumnDef via mapColumns().
+ *
+ * A **union with one member per field of `TRow`**, each binding that field's type as the
+ * column's value, plus one accessor-less member where `unknown` is the honest answer. So
+ * `{ accessorKey: 'total' }` on a `{ total: number }` row gives `value: number` in
+ * `cellClassName`, `cell.component` and `creating.defaultValue` — no cast, no annotation.
+ *
+ * TypeScript picks the member by the literal `accessorKey`, which is a plain discriminant, so
+ * it narrows before reporting: a mistake elsewhere in the column still produces the one-line
+ * error it did when this was a single object type, not a wall of union members.
+ *
+ * The union rides inside the existing type parameters — no new one is added. That is load-
+ * bearing: {@link TableConfig.columns} widens the cell-type parameter to `any` precisely so
+ * `useDataGrid({ data, columns })` keeps inferring `TRow` from `data`, and a second parameter
+ * here would destroy that at every call site.
+ *
+ * Note for anyone deriving from this type: `Omit<ColumnDef<…>, K>` does **not** work. `Omit`
+ * is not distributive and `keyof (A | B)` is the *intersection* of the members' keys, so the
+ * result collapses to the few properties every arm shares. Distribute over the arms instead —
+ * `create-column-helper.ts`'s `BaseOptions` is the worked example.
+ */
+export type ColumnDef<TRow extends object, TCellTypes extends CellTypeRegistryShape = BaseCellTypes, TNode = unknown> =
+	| {
+			[TKey in keyof TRow & string]: ColumnDefCommon<TRow, TRow[TKey], TCellTypes, TNode> & {
+				accessorKey: TKey
+			}
+	  }[keyof TRow & string]
+	| (ColumnDefCommon<TRow, unknown, TCellTypes, TNode> & { accessorKey?: undefined })
 
 export type ColumnWidthDef = {
 	/** Starting width in pixels. TanStack's `size`. */

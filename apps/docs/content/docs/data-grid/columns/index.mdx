@@ -64,12 +64,45 @@ const columns = createColumns<Account>([
 		accessorKey: 'balance',
 		header: 'Balance',
 		align: 'end',
-		cellClassName: ({ value }) => (Number(value) < 0 ? 'text-red-600' : undefined),
+		cellClassName: ({ value }) => (value < 0 ? 'text-red-600' : undefined),
 	},
 ])
 ```
 
 The context is `{ row, value, rowIndex }`. Return `undefined` to add no class.
+
+## Typed cell values
+
+`value` is typed from `accessorKey`: on a row of `{ balance: number }`, the `value` above is a
+`number`, so `value < 0` compiles with no cast and no annotation. The same applies in
+`cell.component` and in `creating.defaultValue` — seeding a `boolean` column with `'yes'` is a
+compile error, not a runtime surprise.
+
+The one exception is a **computed** column, which derives its value with `accessorFn` instead of
+naming a field. Written as a plain column object, its `value` is `unknown`:
+
+```tsx
+const columns = createColumns<Order>([
+	{ id: 'total', accessorFn: (row) => row.price * row.qty }, // value: unknown
+])
+```
+
+Reach for the column helper's `computed` method to get the value typed. It infers the value type
+from the function you pass:
+
+```tsx
+const col = createColumnHelper<Order>()
+
+const totalColumn = col.computed({
+	id: 'total',
+	accessorFn: (row) => row.price * row.qty, // value: number
+	cellClassName: ({ value }) => (value > 1000 ? 'font-semibold' : undefined),
+})
+```
+
+`computed` requires an `id`. A column with no `accessorKey` would otherwise take its id from a
+string `header`, which then changes whenever the header is reworded — see
+[Column Helper](./data-grid/columns/column-helper).
 
 ## See also
 

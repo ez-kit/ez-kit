@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { createColumnHelper } from './create-column-helper'
 
@@ -299,6 +299,94 @@ describe('createColumnHelper', () => {
 			expect(a.cell).toEqual({ type: 'rating', config: { max: 5 } })
 			expect(b.cell).toEqual({ type: 'rating', config: { max: 10 } })
 			expect(a).not.toBe(b)
+		})
+	})
+
+	describe('computed()', () => {
+		it('types the cell value from what accessorFn returns', () => {
+			const column = createColumnHelper<Row>()
+
+			column.computed({
+				id: 'ageInDays',
+				accessorFn: (row) => row.age * 365,
+				cellClassName: (ctx) => {
+					expectTypeOf(ctx.value).toEqualTypeOf<number>()
+					expectTypeOf(ctx.row).toEqualTypeOf<Row>()
+					return undefined
+				},
+				cell: {
+					component: (ctx) => {
+						expectTypeOf(ctx.value).toEqualTypeOf<number>()
+						return undefined
+					},
+				},
+			})
+
+			column.computed({
+				id: 'label',
+				accessorFn: (row) => `${row.name} (${row.tier})`,
+				cellClassName: (ctx) => {
+					expectTypeOf(ctx.value).toEqualTypeOf<string>()
+					return undefined
+				},
+			})
+		})
+
+		it('requires an id — there is no accessorKey to derive one from', () => {
+			const column = createColumnHelper<Row>()
+			// @ts-expect-error `id` is required on a computed column
+			column.computed({ accessorFn: (row) => row.age })
+		})
+
+		// The negative control for the two positive cases above. `expectTypeOf(...).toEqualTypeOf`
+		// is bidirectional, so it already rejects `unknown` and `any` — but an assertion that
+		// cannot fail is worse than none, so this pins that the inference is doing real work:
+		// a numeric accessorFn must NOT give the cell a string value.
+		it('does not widen or mistype the inferred value', () => {
+			const column = createColumnHelper<Row>()
+
+			column.computed({
+				id: 'ageInDays',
+				accessorFn: (row) => row.age * 365,
+				cellClassName: (ctx) => {
+					// @ts-expect-error accessorFn returns a number, so `value` is not a string
+					expectTypeOf(ctx.value).toEqualTypeOf<string>()
+					// @ts-expect-error nor is it left as unknown
+					expectTypeOf(ctx.value).toEqualTypeOf<unknown>()
+					return undefined
+				},
+			})
+		})
+
+		it('carries the accessorFn through to the ColumnDef', () => {
+			const column = createColumnHelper<Row>()
+			const accessorFn = (row: Row) => row.age * 2
+			const def = column.computed({ id: 'doubled', accessorFn })
+
+			expect(def.id).toBe('doubled')
+			expect(def.accessorFn).toBe(accessorFn)
+			expect(def.cell).toBeUndefined()
+		})
+
+		it('accepts the same loose type/config escape hatch custom() has', () => {
+			const column = createColumnHelper<Row>()
+			const def = column.computed({
+				id: 'score',
+				accessorFn: (row) => row.progress,
+				type: 'rating',
+				config: { max: 5 },
+			})
+
+			expect(def.cell).toEqual({ type: 'rating', config: { max: 5 } })
+		})
+
+		it('does not mutate the input opts object', () => {
+			const column = createColumnHelper<Row>()
+			const opts = { id: 'doubled', accessorFn: (row: Row) => row.age * 2, type: 'rating' }
+			const keys = Object.keys(opts).sort()
+			column.computed(opts)
+			expect(Object.keys(opts).sort()).toEqual(keys)
+			expect(opts.type).toBe('rating')
 		})
 	})
 

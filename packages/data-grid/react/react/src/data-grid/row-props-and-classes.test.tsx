@@ -17,7 +17,7 @@ const COLUMNS = createColumns<Payment>([
 	{
 		accessorKey: 'amount',
 		header: 'Amount',
-		cellClassName: ({ value }) => (Number(value) < 0 ? 'negative' : undefined),
+		cellClassName: ({ value }) => (value < 0 ? 'negative' : undefined),
 	},
 ])
 
