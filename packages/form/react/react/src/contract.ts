@@ -121,6 +121,22 @@ export type SliderFieldRenderProps = FieldRenderProps & {
 	step: number | undefined
 }
 
+// ── layout ───────────────────────────────────────────────────────────────────
+
+export type SectionRenderProps = {
+	title: ReactNode
+	description: ReactNode
+	/** Grid columns for the direct children. `undefined` means one column. */
+	columns: number | undefined
+	children: ReactNode
+}
+
+export type GridItemRenderProps = {
+	/** Columns this item spans. `undefined` means one. */
+	colSpan: number | undefined
+	children: ReactNode
+}
+
 // ── form level ───────────────────────────────────────────────────────────────
 
 export type ButtonProps = {
@@ -148,4 +164,6 @@ export type FormComponents = {
 	SliderField: (props: SliderFieldRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
+	Section: (props: SectionRenderProps) => ReactNode
+	GridItem: (props: GridItemRenderProps) => ReactNode
 }

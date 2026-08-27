@@ -12,6 +12,7 @@ import {
 	TextField,
 } from '@form-shadcn/blocks/fields'
 import { Button, Form as FormElement } from '@form-shadcn/blocks/form-parts'
+import { GridItem, Section } from '@form-shadcn/blocks/layout'
 import { SelectField } from '@form-shadcn/blocks/select'
 
 import type { FormComponents } from '@ez-kit/form-react'
@@ -34,6 +35,8 @@ const components = {
 	SliderField,
 	Button,
 	Form: FormElement,
+	Section,
+	GridItem,
 } satisfies FormComponents
 
 const { useForm, Form } = createForm({ components })

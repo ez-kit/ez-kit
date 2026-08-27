@@ -1,4 +1,4 @@
-import type { FieldRenderProps, FormComponents } from './contract'
+import type { FieldRenderProps, FormComponents, GridItemRenderProps, SectionRenderProps } from './contract'
 import type { ReactNode } from 'react'
 
 /**
@@ -68,6 +68,31 @@ function Shell({ id, label, description, errors, invalid, children, controlFirst
 					{errors.join(', ')}
 				</p>
 			)}
+		</div>
+	)
+}
+
+/** The layout half of the test kit — unstyled, marker attributes only. */
+function Section({ title, description, columns, children }: SectionRenderProps): ReactNode {
+	return (
+		<section
+			data-testid='section'
+			data-columns={columns}
+		>
+			{title !== undefined && <h3>{title}</h3>}
+			{description !== undefined && <p>{description}</p>}
+			{children}
+		</section>
+	)
+}
+
+function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
+	return (
+		<div
+			data-testid='grid-item'
+			data-col-span={colSpan}
+		>
+			{children}
 		</div>
 	)
 }
@@ -319,4 +344,6 @@ export const testComponents: FormComponents = {
 			{children}
 		</form>
 	),
+	Section,
+	GridItem,
 }

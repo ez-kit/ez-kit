@@ -13,6 +13,7 @@ import {
 } from './blocks/fields'
 import { Button, Form as FormElement } from './blocks/form-parts'
 import { SelectField } from './blocks/select'
+import { GridItem, Section } from './components/ui/layout'
 
 import type { FormComponents } from '@ez-kit/form-react'
 
@@ -32,6 +33,8 @@ const components = {
 	SliderField,
 	Button,
 	Form: FormElement,
+	Section,
+	GridItem,
 } satisfies FormComponents
 
 const { useForm, Form } = createForm({ components })
