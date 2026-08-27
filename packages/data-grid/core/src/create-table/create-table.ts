@@ -49,6 +49,30 @@ function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string,
 	return opts
 }
 
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
+/**
+ * Warn about a column seeded into a state the user can never leave.
+ *
+ * `visibility: { initialHidden }` and `pinning: { initialSide }` both say "starts this way, the
+ * user changes it from here" — but the affordance that lets them change it belongs to the
+ * *table*-level feature. With that feature off the seed still applies (a seed is what the
+ * developer wrote, and silently dropping it would be worse), so the column starts hidden or
+ * pinned with no route back: `initialSide` becomes indistinguishable from the static `side`,
+ * and an `initialHidden` column simply never appears.
+ *
+ * Both are legitimate configurations — a column can exist in the model without being shown, and
+ * its values still feed global search. So this is a warning, not an error, and it is stripped
+ * from production builds.
+ */
+function warnUnreachableSeed(columnId: string, seed: string, feature: string): void {
+	console.warn(
+		`[data-grid] Column "${columnId}" sets \`${seed}\`, but the table-level \`${feature}\` feature is off, ` +
+			`so nothing can change it back — the seed becomes permanent. ` +
+			`Enable \`${feature}\` on the table to give the user that control, or drop the seed.`,
+	)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow, any>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
@@ -59,6 +83,25 @@ function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow, any>[])
 		}
 		if (def.columns !== undefined) {
 			Object.assign(acc, collectInitialHidden(def.columns))
+		}
+	}
+	return acc
+}
+
+/**
+ * Ids of columns seeded with `pinning: { initialSide }`. Only the dynamic seed — a static
+ * `pinning: 'left'` / `{ side }` is meant to be unchangeable, so it has nothing to warn about.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function collectInitialPinned<TRow extends object>(defs: ColumnDef<TRow, any>[]): string[] {
+	const acc: string[] = []
+	for (const def of defs) {
+		if (def.pinning && typeof def.pinning === 'object' && def.pinning.initialSide !== undefined) {
+			const colId = def.id ?? def.accessorKey
+			if (colId !== undefined) acc.push(colId)
+		}
+		if (def.columns !== undefined) {
+			acc.push(...collectInitialPinned(def.columns))
 		}
 	}
 	return acc
@@ -197,6 +240,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	})()
 
 	const rowActionsVariant = config.rowActions?.variant ?? RowActionsVariant.Inline
+	const customRowActions = config.rowActions?.actions
 
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
@@ -205,6 +249,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		deleting: hasDeleting,
 		pinning: hasPinning,
 		rowActionsVariant,
+		customRowActions: customRowActions !== undefined,
 	})
 
 	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)
@@ -213,6 +258,20 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const defaultPageSize = paginationCfg?.pageSize ?? DEFAULT_PAGE_SIZE
 
 	const initialHidden = collectInitialHidden(config.columns)
+
+	// The seeds still apply with their feature off — see `warnUnreachableSeed` — but say so.
+	if (IS_DEV) {
+		if (!isFeatureEnabled(config.visibility)) {
+			for (const columnId of Object.keys(initialHidden)) {
+				warnUnreachableSeed(columnId, 'visibility.initialHidden', 'visibility')
+			}
+		}
+		if (!normalizedPinning.column) {
+			for (const columnId of collectInitialPinned(config.columns)) {
+				warnUnreachableSeed(columnId, 'pinning.initialSide', 'pinning')
+			}
+		}
+	}
 
 	// Column-derived rules that no state input may violate — see `../column-state`.
 	const columnInvariants = buildColumnInvariants(allColumns)
@@ -469,7 +528,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(editingCfg ? { editing: editingCfg } : {}),
 		...(deletingCfg ? { deleting: deletingCfg } : {}),
 		// Read by the React layer to lay out the actions cell (inline vs. menu).
-		rowActions: { variant: rowActionsVariant },
+		rowActions: {
+			variant: rowActionsVariant,
+			...(customRowActions ? { actions: customRowActions } : {}),
+		},
 		// Column resizing
 		...(hasResizing
 			? {

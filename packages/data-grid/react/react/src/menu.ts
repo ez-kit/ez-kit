@@ -27,12 +27,35 @@ export const GridMenuIcon = {
 
 export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]
 
+/**
+ * Whether a string names a glyph in the closed built-in set.
+ *
+ * Custom row actions arrive from core typed as a plain `string` — core is framework-agnostic
+ * and does not own the icon vocabulary — so the value is narrowed here rather than asserted,
+ * and an unrecognized name degrades to a label-only entry instead of an undefined lookup
+ * inside a kit's icon map.
+ */
+export function isGridMenuIcon(value: string): value is GridMenuIcon {
+	return (Object.values(GridMenuIcon) as string[]).includes(value)
+}
+
 export type GridMenuItem = {
 	/** Stable within the menu — kits key their collection items on it. */
 	id: string
 	/** Default wording; a kit may localize it. */
 	label: string
-	icon: GridMenuIcon
+	/**
+	 * Optional **for consumer-supplied row actions only**: the built-in glyphs name grid
+	 * affordances (edit / delete / pin / sort / hide), and a custom row action such as
+	 * "Duplicate" has no honest member of that set. An entry without one renders label-only.
+	 *
+	 * Every entry the grid itself builds — `buildColumnMenuSections` and the row-actions
+	 * builder — sets this unconditionally, so in practice only a custom action omits it. That
+	 * is a convention rather than a type: splitting `GridMenuItem` into built-in and custom
+	 * variants would fork the one model both menus render, which is the split this type
+	 * exists to have undone.
+	 */
+	icon?: GridMenuIcon
 	disabled?: boolean
 	/** Destructive entry — kits render it in a danger colour. */
 	danger?: boolean

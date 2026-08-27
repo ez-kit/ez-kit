@@ -20,7 +20,7 @@ export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './syst
 
 // Row actions (edit / delete / row-pin menu share the `__actions__` column)
 export { RowActionsVariant } from './features/row-actions'
-export type { RowActionsConfig } from './features/row-actions'
+export type { RowActionsConfig, RowActionsContext, RowActionItem } from './features/row-actions'
 
 // Types
 export type {

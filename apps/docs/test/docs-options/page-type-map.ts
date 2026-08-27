@@ -94,6 +94,7 @@ export const GRID_TYPE = {
 	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
 	SelectionPanelConfig: { module: TypeModule.React, name: 'SelectionPanelConfig', typeArgs: ROW_TYPE_ARGS },
+	RowActionItem: { module: TypeModule.Core, name: 'RowActionItem' },
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -347,7 +348,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.RowActions,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 },
+			// Rows are the fields of one custom entry, not keys of the grid config.
+			{ heading: 'Entry shape', roots: [GRID_TYPE.RowActionItem], expectedCount: 6 },
+		],
 		nonOptionTables: [],
 	},
 	{

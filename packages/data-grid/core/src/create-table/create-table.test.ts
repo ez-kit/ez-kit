@@ -388,6 +388,78 @@ describe('createTable — pagination', () => {
 
 // ── selection ─────────────────────────────────────────────────────────────────
 
+describe('createTable — unreachable seeds', () => {
+	// The seed is NOT dropped: it is what the author wrote, and silently ignoring config is
+	// worse than honouring it. But with the feature off there is no affordance to undo it, so
+	// the grid says so in development instead of leaving it silent.
+	it('visibility.initialHidden still applies when the table feature is off', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name' },
+				{ accessorKey: 'age', visibility: { initialHidden: true } },
+			]),
+		})
+		expect(table.getState().columnVisibility).toEqual({ age: false })
+		expect(table.getColumn('age')?.getCanHide()).toBe(false)
+		warn.mockRestore()
+	})
+
+	it('warns when visibility.initialHidden has no feature to undo it', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', visibility: { initialHidden: true } }]),
+		})
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn.mock.calls[0]?.[0]).toContain('visibility.initialHidden')
+		expect(warn.mock.calls[0]?.[0]).toContain('age')
+		warn.mockRestore()
+	})
+
+	it('does not warn when the visibility feature is on', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', visibility: { initialHidden: true } }]),
+			visibility: true,
+		})
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+
+	it('warns when pinning.initialSide has no column menu to undo it', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', pinning: { initialSide: 'left' } }]),
+		})
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn.mock.calls[0]?.[0]).toContain('pinning.initialSide')
+		warn.mockRestore()
+	})
+
+	// A static pin is meant to be unchangeable, so it has nothing to warn about.
+	it('does not warn for a static pin', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({ data: DATA, columns: createColumns<Row>([{ accessorKey: 'age', pinning: 'left' }]) })
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+
+	it('does not warn when the pinning feature is on', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', pinning: { initialSide: 'left' } }]),
+			pinning: { column: true },
+		})
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+})
+
 describe('createTable — selection', () => {
 	it('selection: true enables enableRowSelection', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, selection: true })

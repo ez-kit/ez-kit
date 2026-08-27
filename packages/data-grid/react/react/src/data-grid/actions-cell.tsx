@@ -1,14 +1,14 @@
 import { RowActionsVariant } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
-import { GridMenuIcon, GridMenuVariant, toMenuSections } from '../menu'
+import { GridMenuIcon, GridMenuVariant, isGridMenuIcon, toMenuSections } from '../menu'
 import { RowActionId, RowActionsMode } from '../types'
 
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { GridMenuItem, GridMenuSection } from '../menu'
-import type { RowPinningConfig } from '@ez-kit/data-grid-core'
-import type { Row } from '@tanstack/table-core'
+import type { RowActionItem, RowActionsContext, RowPinningConfig } from '@ez-kit/data-grid-core'
+import type { Row, Table } from '@tanstack/table-core'
 
 type ActionsCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +32,18 @@ const ICONS: Record<RowActionId, GridMenuIcon> = {
 }
 
 const ACTIONS_SECTION = 'row-actions'
+const CUSTOM_SECTION = 'row-actions-custom'
 const PIN_SECTION = 'row-pinning'
+
+/**
+ * Namespace for the ids of consumer-supplied entries.
+ *
+ * {@link RowActionId} is the closed set of built-in affordances and stays closed; a custom
+ * action named `edit` must not collide with the built-in Edit entry, whose id is what both
+ * kits dispatch a selection on (heroui looks the entry up by key, shadcn keys the React
+ * element on it). Prefixing keeps the two sets disjoint by construction.
+ */
+const CUSTOM_ACTION_PREFIX = 'custom:'
 
 const ROW_ACTIONS_LABEL = 'Row actions'
 const ROW_PINNING_LABEL = 'Row pinning'
@@ -86,12 +97,34 @@ function buildPinItems(
 }
 
 /**
+ * Turns the consumer's {@link RowActionItem}s into menu entries.
+ *
+ * Core types `icon` as a plain string because it does not own the icon vocabulary, so an
+ * unknown name is dropped rather than passed to a kit's icon map, leaving a label-only entry.
+ */
+export function buildCustomItems(items: RowActionItem[]): GridMenuItem[] {
+	return items.map((item) => ({
+		id: `${CUSTOM_ACTION_PREFIX}${item.id}`,
+		label: item.label,
+		...(item.icon !== undefined && isGridMenuIcon(item.icon) ? { icon: item.icon } : {}),
+		...(item.disabled !== undefined ? { disabled: item.disabled } : {}),
+		...(item.danger !== undefined ? { danger: item.danger } : {}),
+		onSelect: item.onSelect,
+	}))
+}
+
+/**
  * Renders the per-row actions column: edit / delete plus the row-pin menu.
  *
  * Two layouts, chosen by `rowActions.variant`:
  * - `inline` — one icon button per action side by side, pin actions behind
  *   their own overflow menu;
  * - `menu` — a single overflow menu holding every action.
+ *
+ * Custom entries from `rowActions.actions` join the overflow menu in both layouts: under
+ * `menu` there is only the one, and under `inline` they sit in the menu that already carries
+ * the pin entries. They are not promoted to inline buttons — the cell is a fixed width and an
+ * open-ended set of application actions has no icon budget there, nor a guaranteed icon.
  *
  * A row in inline edit mode always falls back to the inline save / cancel
  * buttons: burying a commit inside a dropdown would hide it behind an extra
@@ -149,6 +182,11 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	)
 
 	const pinItems = pinConfig ? buildPinItems(row, pinConfig) : []
+	const buildActions = table.options.rowActions?.actions
+	// The augmented option is `RowActionsConfig<object>` — `TableConfig` names no type argument
+	// for it — so the unchecked row/table this cell holds are narrowed at the call.
+	const actionsCtx: RowActionsContext = { row: row as Row<object>, table: table as Table<object> }
+	const customItems = buildActions ? buildCustomItems(buildActions(actionsCtx)) : []
 	const variant = table.options.rowActions?.variant ?? RowActionsVariant.Inline
 
 	if (variant === RowActionsVariant.Menu) {
@@ -177,6 +215,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 
 		const sections: GridMenuSection[] = toMenuSections([
 			{ id: ACTIONS_SECTION, items: actions },
+			{ id: CUSTOM_SECTION, items: customItems },
 			{ id: PIN_SECTION, items: pinItems },
 		])
 		return (
@@ -188,14 +227,21 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		)
 	}
 
+	// Inline: the built-ins stay icon buttons and the custom entries share the overflow menu
+	// with the pin entries — one trigger, whose width `getActionsColumnSize` reserves.
+	const overflowSections: GridMenuSection[] = toMenuSections([
+		{ id: CUSTOM_SECTION, items: customItems },
+		{ id: PIN_SECTION, items: pinItems },
+	])
+
 	return (
 		<>
 			{buttons}
-			{pinItems.length > 0 && (
+			{overflowSections.length > 0 && (
 				<Menu
 					variant={GridMenuVariant.Row}
-					sections={[{ id: PIN_SECTION, items: pinItems }]}
-					aria-label={ROW_PINNING_LABEL}
+					sections={overflowSections}
+					aria-label={customItems.length > 0 ? ROW_ACTIONS_LABEL : ROW_PINNING_LABEL}
 				/>
 			)}
 		</>

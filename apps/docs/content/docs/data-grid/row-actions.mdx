@@ -1,6 +1,6 @@
 ---
 title: Row Actions
-description: The per-row actions column that holds edit, delete and the row-pin menu — inline buttons or a single overflow menu.
+description: The per-row actions column that holds edit, delete, the row-pin menu and your own actions — inline buttons or a single overflow menu.
 ---
 
 # Row Actions
@@ -42,17 +42,73 @@ The pin actions always live behind a menu — inline or not — because there ar
 While a row is in **inline** edit mode, save and cancel are rendered as buttons regardless of the
 variant: burying a pending commit inside a dropdown would hide it behind an extra click.
 
+## Custom actions
+
+The built-in three are rarely the whole story — a row usually also wants a _Duplicate_, a _Send
+invoice_, a _View history_. `rowActions.actions` is that slot, the per-row counterpart of
+[`selection.panel.actions`](./data-grid/selection) for bulk operations. It is called per row, so a
+row's entries can depend on the row itself:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+	deleting={{ onDelete }}
+	rowActions={{
+		actions: ({ row }) => [
+			{
+				id: 'duplicate',
+				label: 'Duplicate',
+				disabled: !row.original.active,
+				onSelect: () => duplicate(row.original),
+			},
+		],
+	}}
+/>
+```
+
+Return `[]` for a row that offers nothing extra.
+
+<DataGridDocsExample exampleId='row-actions-custom' />
+
+Custom entries live in the **overflow menu** under both variants: with `variant: 'menu'` there is
+only the one menu, and with `variant: 'inline'` they join the menu that already carries the pin
+actions — so an inline grid with custom actions grows one trigger, not one button per action. They
+are not promoted to inline buttons on purpose: the cell is a fixed width, and an open-ended set of
+application actions has neither the room nor a guaranteed icon.
+
+### Entry shape
+
+| Field      | Type         | Description                                                                                           |
+| ---------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+| `id`       | `string`     | Required. Stable within the menu. Namespaced internally, so it cannot collide with a built-in action. |
+| `label`    | `string`     | Required. The wording rendered in the menu.                                                           |
+| `icon`     | `string`     | One of the grid's built-in glyph names (`'edit'`, `'delete'`, `'pin-top'`, …). Omit for label-only.   |
+| `disabled` | `boolean`    | Renders the entry inert.                                                                              |
+| `danger`   | `boolean`    | Renders the entry in the kit's destructive colour, like the built-in Delete.                          |
+| `onSelect` | `() => void` | Required. Runs when the entry is chosen.                                                              |
+
+`icon` is optional because the built-in vocabulary names grid affordances — edit, delete, pin, sort,
+hide — and an application action such as _Duplicate_ has no honest member of it. An unrecognized
+name is ignored rather than rendered as a broken glyph.
+
 ## Column width
 
 The column sizes itself from the number of actions it renders, rather than falling back to the
 150px default width TanStack gives a column with no `width`. Resize it like any other column when
 `resizing` is enabled.
 
+Supplying `rowActions.actions` reserves room for the overflow trigger, so an inline grid that had
+none before widens by one button — and one that already showed the pin menu does not widen at all,
+since the two share that trigger.
+
 ## Options
 
-| Option               | Type                 | Description                                                                        |
-| -------------------- | -------------------- | ---------------------------------------------------------------------------------- |
-| `rowActions.variant` | `'inline' \| 'menu'` | `inline` (default) — one button per action. `menu` — every action in one dropdown. |
+| Option               | Type                                  | Description                                                                                     |
+| -------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `rowActions.variant` | `'inline' \| 'menu'`                  | `inline` (default) — one button per action. `menu` — every action in one dropdown.              |
+| `rowActions.actions` | `({ row, table }) => RowActionItem[]` | Custom entries appended to the built-ins, built per row. See [Custom actions](#custom-actions). |
 
 ## See also
 

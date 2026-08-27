@@ -348,12 +348,28 @@ export type ColumnAlignDef = {
 export type ColumnPinningDef = {
 	/** Static pin — always pinned to this side, no pin section in the column menu. */
 	side?: ColumnPinSide
-	/** Seeds `initialState.columnPinning` — starts pinned, user can change via column menu. */
+	/**
+	 * Seeds `initialState.columnPinning` — starts pinned, and the user unpins or re-pins it
+	 * from the column menu.
+	 *
+	 * That menu belongs to the **table**-level `pinning` feature. With `pinning` off the seed
+	 * still applies — it is what the author wrote, and dropping it silently would be worse —
+	 * but there is no menu to change it from, so it behaves exactly like the static
+	 * {@link ColumnPinningDef.side}. `createTable` warns about that in development.
+	 */
 	initialSide?: ColumnPinSide
 }
 
 export type ColumnVisibilityDef = {
-	/** Seeds `initialState.columnVisibility` — starts hidden, user can toggle it on. */
+	/**
+	 * Seeds `initialState.columnVisibility` — starts hidden, and the user toggles it back on.
+	 *
+	 * That toggle belongs to the **table**-level `visibility` feature. With `visibility` off
+	 * the seed still applies, so the column starts hidden and stays hidden for good — a
+	 * legitimate way to keep a column in the model without showing it (its values still feed
+	 * global search), but rarely what someone writing `initialHidden` means. `createTable`
+	 * warns about that in development.
+	 */
 	initialHidden?: boolean
 }
 
@@ -474,7 +490,8 @@ export type ColumnDef<
 	 * Column pinning.
 	 * - `'left'` / `'right'` — always pinned to that side (static), no menu section
 	 * - `false` — pinning disabled, no pin section in column menu
-	 * - `{ initialSide: 'left' }` — starts pinned left, user can change via menu
+	 * - `{ initialSide: 'left' }` — starts pinned left, user can change via menu (which requires
+	 *   the table-level `pinning` feature — see {@link ColumnPinningDef.initialSide})
 	 * - `{ side: 'left' }` — the long form of the scalar
 	 *
 	 * The scalar and the object are the same shape `align` and `width` use: the common case is
@@ -495,7 +512,8 @@ export type ColumnDef<
 	 * Column visibility configuration.
 	 * - `false` — hiding disabled for this column: it is always visible and gets no Hide
 	 *   option in the column menu
-	 * - `{ initialHidden: true }` — starts hidden, user can toggle it on
+	 * - `{ initialHidden: true }` — starts hidden, user can toggle it on (which requires the
+	 *   table-level `visibility` feature — see {@link ColumnVisibilityDef.initialHidden})
 	 *
 	 * `false` reads the same as every other per-column switch (`sorting: false`,
 	 * `filtering: false`, `editing: false`, `resizing: false`): it turns the feature off

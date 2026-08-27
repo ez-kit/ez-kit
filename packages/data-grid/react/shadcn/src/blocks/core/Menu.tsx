@@ -12,7 +12,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
-import { GRID_MENU_ICONS } from '../icons'
+import { GRID_MENU_ICON_PLACEHOLDER, GRID_MENU_ICONS } from '../icons'
 
 import type { GridMenuProps } from '@ez-kit/data-grid-react'
 
@@ -48,7 +48,7 @@ export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuPro
 								disabled={item.disabled ?? false}
 								variant={item.danger ? 'destructive' : 'default'}
 							>
-								{GRID_MENU_ICONS[item.icon]}
+								{item.icon ? GRID_MENU_ICONS[item.icon] : GRID_MENU_ICON_PLACEHOLDER}
 								{item.label}
 							</DropdownMenuItem>
 						))}

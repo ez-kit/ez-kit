@@ -122,38 +122,54 @@ describe('createColumnHelper', () => {
 		})
 	})
 
+	describe('cell.component on a generated method', () => {
+		it('keeps the method-owned type and the typed config beside the view renderer', () => {
+			const column = createColumnHelper<Row>()
+			const component = vi.fn()
+			const col = column.number({ accessorKey: 'age', config: { decimals: 2 }, cell: { component } })
+			expect(col.cell).toEqual({ type: 'number', config: { decimals: 2 }, component })
+		})
+
+		it('does not leak the cell key twice — the type still wins over an omitted one', () => {
+			const column = createColumnHelper<Row>()
+			const component = vi.fn()
+			const col = column.text({ accessorKey: 'name', cell: { component } })
+			expect(col.cell).toEqual({ type: 'text', component })
+		})
+	})
+
 	describe('custom()', () => {
-		it('produces a bare ColumnDef when no type/view/config provided', () => {
+		it('produces a bare ColumnDef when no type/cell/config provided', () => {
 			const column = createColumnHelper<Row>()
 			const col = column.custom({ accessorKey: 'name', header: 'Name' })
 			expect(col).toEqual({ accessorKey: 'name', header: 'Name' })
 			expect(col.cell).toBeUndefined()
 		})
 
-		it('builds cell from type, config, and view', () => {
+		it('builds cell from type, config, and cell.component', () => {
 			const column = createColumnHelper<Row>()
-			const view = vi.fn().mockReturnValue('rendered')
+			const component = vi.fn().mockReturnValue('rendered')
 			const config = { foo: 'bar' }
 			const col = column.custom({
 				accessorKey: 'name',
 				type: 'rating',
 				config,
-				view,
+				cell: { component },
 			})
-			expect(col.cell).toEqual({ type: 'rating', config, component: view })
+			expect(col.cell).toEqual({ type: 'rating', config, component })
 		})
 
-		it('builds cell when only view is provided', () => {
+		it('builds cell when only cell.component is provided', () => {
 			const column = createColumnHelper<Row>()
-			const view = vi.fn()
-			const col = column.custom({ accessorKey: 'name', view })
-			expect(col.cell).toEqual({ type: undefined, config: undefined, component: view })
+			const component = vi.fn()
+			const col = column.custom({ accessorKey: 'name', cell: { component } })
+			expect(col.cell).toEqual({ component })
 		})
 
 		it('builds cell when only config is provided', () => {
 			const column = createColumnHelper<Row>()
 			const col = column.custom({ accessorKey: 'name', config: { foo: 1 } })
-			expect(col.cell).toEqual({ type: undefined, config: { foo: 1 }, component: undefined })
+			expect(col.cell).toEqual({ config: { foo: 1 } })
 		})
 
 		it('sets editing to false when editing === false', () => {
@@ -162,11 +178,14 @@ describe('createColumnHelper', () => {
 			expect(col.editing).toBe(false)
 		})
 
-		it('wraps editing component into { component }', () => {
+		it('passes an editing config through unchanged — same shape as ColumnDef', () => {
 			const column = createColumnHelper<Row>()
-			const editing = vi.fn()
-			const col = column.custom({ accessorKey: 'name', editing })
-			expect(col.editing).toEqual({ component: editing })
+			const component = vi.fn()
+			const col = column.custom({
+				accessorKey: 'name',
+				editing: { component, description: 'Two letters' },
+			})
+			expect(col.editing).toEqual({ component, description: 'Two letters' })
 		})
 
 		it('sets creating to false when creating === false', () => {
@@ -175,11 +194,11 @@ describe('createColumnHelper', () => {
 			expect(col.creating).toBe(false)
 		})
 
-		it('wraps creating component into { component }', () => {
+		it('passes a creating config through unchanged — same shape as ColumnDef', () => {
 			const column = createColumnHelper<Row>()
-			const creating = vi.fn()
-			const col = column.custom({ accessorKey: 'name', creating })
-			expect(col.creating).toEqual({ component: creating })
+			const component = vi.fn()
+			const col = column.custom({ accessorKey: 'name', creating: { component, defaultValue: 'x' } })
+			expect(col.creating).toEqual({ component, defaultValue: 'x' })
 		})
 
 		it('omits editing/creating when not provided', () => {
@@ -202,19 +221,18 @@ describe('createColumnHelper', () => {
 			expect(col.width).toBe(120)
 		})
 
-		it('does not leak type/config/view/editing/creating to top-level ColumnDef', () => {
+		it('does not leak type/config to top-level ColumnDef', () => {
 			const column = createColumnHelper<Row>()
 			const col = column.custom({
 				accessorKey: 'name',
 				type: 'rating',
 				config: { foo: 'bar' },
-				view: vi.fn(),
-				editing: vi.fn(),
-				creating: vi.fn(),
+				cell: { component: vi.fn() },
+				editing: { component: vi.fn() },
+				creating: { component: vi.fn() },
 			})
 			expect((col as { type?: unknown }).type).toBeUndefined()
 			expect((col as { config?: unknown }).config).toBeUndefined()
-			expect((col as { view?: unknown }).view).toBeUndefined()
 		})
 	})
 
@@ -299,9 +317,9 @@ describe('createColumnHelper', () => {
 				accessorKey: 'name' as const,
 				type: 'rating',
 				config: { foo: 'bar' },
-				view: vi.fn(),
-				editing: vi.fn(),
-				creating: vi.fn(),
+				cell: { component: vi.fn() },
+				editing: { component: vi.fn() },
+				creating: { component: vi.fn() },
 			}
 			const keys = Object.keys(opts).sort()
 			column.custom(opts)

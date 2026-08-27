@@ -128,6 +128,34 @@ describe('buildColumnList', () => {
 		expect(menu).toBeLessThan(inline ?? 0)
 	})
 
+	it('injects the actions column for a grid whose only action is a custom one', () => {
+		const cols = buildColumnList([USER_COL], {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: false,
+			pinning: false,
+			customRowActions: true,
+		})
+
+		expect(cols.map((c) => c.id)).toEqual(['name', ACTIONS_COLUMN_ID])
+	})
+
+	it('reserves the overflow trigger width for custom actions', () => {
+		const base = {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: true,
+			pinning: false,
+		}
+		const sizeOf = (customRowActions: boolean) =>
+			buildColumnList([USER_COL], { ...base, customRowActions }).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
+
+		// Delete button alone vs. delete button + the menu trigger the custom entries live behind.
+		expect(sizeOf(true)).toBeGreaterThan(sizeOf(false) ?? 0)
+	})
+
 	it('full order: [selection, expand, user..., actions]', () => {
 		const cols = buildColumnList([USER_COL], {
 			selection: true,

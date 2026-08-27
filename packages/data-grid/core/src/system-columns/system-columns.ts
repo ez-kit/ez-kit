@@ -16,6 +16,17 @@ type SystemColumnsOptions = {
 	pinning: boolean
 	/** Defaults to {@link RowActionsVariant.Inline}. */
 	rowActionsVariant?: RowActionsVariant
+	/**
+	 * Whether `rowActions.actions` was supplied.
+	 *
+	 * Required, like `editing` / `deleting` / `pinning` and unlike `rowActionsVariant?`: those
+	 * three decide whether the column exists at all and this is a fourth such feature — a grid
+	 * whose only per-row action is a custom one still needs the column, and its entries still
+	 * need the overflow trigger's width reserved. `rowActionsVariant` has an honest default
+	 * (Inline); "does the consumer supply actions?" has none, and silently defaulting it to
+	 * false is exactly how the option went missing before.
+	 */
+	customRowActions: boolean
 }
 
 /**
@@ -67,7 +78,7 @@ export function buildColumnList<TRow extends object>(
 
 	result.push(...userColumns)
 
-	const needsActions = opts.editing || opts.deleting || opts.pinning
+	const needsActions = opts.editing || opts.deleting || opts.pinning || opts.customRowActions
 	if (needsActions) {
 		result.push({
 			id: ACTIONS_COLUMN_ID,
@@ -77,6 +88,7 @@ export function buildColumnList<TRow extends object>(
 				editing: opts.editing,
 				deleting: opts.deleting,
 				pinning: opts.pinning,
+				custom: opts.customRowActions,
 				variant: opts.rowActionsVariant ?? RowActionsVariant.Inline,
 			}),
 			enableSorting: false,

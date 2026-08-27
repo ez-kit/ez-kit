@@ -24,3 +24,15 @@ export const GRID_MENU_ICONS: Record<GridMenuIcon, ReactNode> = {
 	[GridMenuIcon.ClearSort]: <X className={MENU_ICON} />,
 	[GridMenuIcon.Hide]: <EyeOff className={MENU_ICON} />,
 }
+
+/**
+ * Stand-in for an entry that carries no icon — only a consumer-supplied row action ever does,
+ * since every entry the grid builds sets one. It occupies the glyph's exact box and gutter so
+ * the label stays aligned with its icon-bearing siblings instead of sliding left.
+ */
+export const GRID_MENU_ICON_PLACEHOLDER: ReactNode = (
+	<span
+		className={MENU_ICON}
+		aria-hidden
+	/>
+)

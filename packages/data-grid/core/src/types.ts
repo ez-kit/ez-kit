@@ -583,12 +583,17 @@ export type TableConfig<TRow extends object> = {
 	 */
 	deferredApply?: boolean
 	/**
-	 * Layout of the per-row actions column (`__actions__`), which holds edit,
-	 * delete and the row-pin menu. The column is injected automatically as soon
-	 * as any of {@link TableConfig.editing}, {@link TableConfig.deleting} or row
-	 * pinning is enabled; this only controls how those actions are presented.
+	 * The per-row actions column (`__actions__`), which holds edit, delete and the row-pin
+	 * menu — how those are presented, and any application actions of your own.
+	 *
+	 * The column is injected automatically as soon as any of {@link TableConfig.editing},
+	 * {@link TableConfig.deleting}, row pinning or `rowActions.actions` is in play.
+	 *
+	 * Generic over `TRow` so `actions` receives a typed row. Without the argument the callback
+	 * would see `Row<object>` and every consumer would have to cast `row.original` back —
+	 * which is the same reason {@link TableConfig.deleting} and the rest are generic.
 	 */
-	rowActions?: RowActionsConfig
+	rowActions?: RowActionsConfig<TRow>
 	/**
 	 * Column resizing. Named to match the per-column `resizing` switch — one feature, one
 	 * name at both levels.

@@ -1,5 +1,5 @@
 import type { RowPinningConfig } from '../../types'
-import type { RowData } from '@tanstack/table-core'
+import type { Row, RowData, Table } from '@tanstack/table-core'
 
 /** How the per-row actions (edit / delete / pin) are laid out in the actions column. */
 export const RowActionsVariant = {
@@ -11,9 +11,56 @@ export const RowActionsVariant = {
 
 export type RowActionsVariant = (typeof RowActionsVariant)[keyof typeof RowActionsVariant]
 
-export type RowActionsConfig = {
+/** What {@link RowActionsConfig.actions} is handed when a row builds its entries. */
+export type RowActionsContext<TRow extends object = object> = {
+	row: Row<TRow>
+	table: Table<TRow>
+}
+
+/**
+ * One custom entry contributed through {@link RowActionsConfig.actions}.
+ *
+ * Structurally the React layer's `GridMenuItem`, minus its framework binding — core neither
+ * owns the icon vocabulary nor renders it, so `icon` stays a plain string here and each
+ * adapter narrows it (React: `GridMenuIcon`, whose names are `'edit'`, `'delete'`, `'pin-top'`,
+ * …; an unrecognized name degrades to a label-only entry).
+ *
+ * `icon` is optional because that vocabulary is a closed set of grid affordances an
+ * application action such as "Duplicate" has no honest member of.
+ */
+export type RowActionItem = {
+	/** Stable within the menu — kits key their collection items on it. */
+	id: string
+	label: string
+	icon?: string
+	disabled?: boolean
+	/** Destructive entry — kits render it in a danger colour. */
+	danger?: boolean
+	onSelect: () => void
+}
+
+/**
+ * Per-row actions config.
+ *
+ * `TRow` carries a default so a reference that names no argument still compiles — the
+ * `TableOptionsResolved` augmentation below is one such reference, and reads `actions` back
+ * only to invoke it.
+ */
+export type RowActionsConfig<TRow extends object = object> = {
 	/** Layout of the actions column. Default: {@link RowActionsVariant.Inline}. */
 	variant?: RowActionsVariant
+	/**
+	 * Custom entries appended to the built-in edit / delete / pin affordances, built per row.
+	 *
+	 * The counterpart of `selection.panel.actions` for bulk operations. Both variants honour
+	 * it: under {@link RowActionsVariant.Menu} the entries join the one overflow menu, and
+	 * under {@link RowActionsVariant.Inline} they go behind the overflow menu that already
+	 * carries the pin entries — a fixed-width cell has no icon budget for an open-ended set
+	 * of application actions, and an entry may legitimately carry no icon at all.
+	 *
+	 * Return `[]` for a row that offers nothing.
+	 */
+	actions?: (ctx: RowActionsContext<TRow>) => RowActionItem[]
 }
 
 /** Rendered width of one icon button in the actions cell. */
@@ -29,6 +76,8 @@ type ActionsColumnSizeInput = {
 	editing: boolean
 	deleting: boolean
 	pinning: boolean
+	/** Whether `rowActions.actions` was supplied — its entries share the overflow trigger. */
+	custom: boolean
 	variant: RowActionsVariant
 }
 
@@ -37,8 +86,11 @@ type ActionsColumnSizeInput = {
  * row state renders. Without this the column falls back to TanStack's 150px
  * default — far too wide for one or two icon buttons.
  */
-export function getActionsColumnSize({ editing, deleting, pinning, variant }: ActionsColumnSizeInput): number {
-	const actionCount = variant === RowActionsVariant.Menu ? 1 : Number(editing) + Number(deleting) + Number(pinning)
+export function getActionsColumnSize({ editing, deleting, pinning, custom, variant }: ActionsColumnSizeInput): number {
+	// Pin entries and custom entries share one overflow trigger, so they cost one button
+	// between them, not one each.
+	const hasOverflow = pinning || custom
+	const actionCount = variant === RowActionsVariant.Menu ? 1 : Number(editing) + Number(deleting) + Number(hasOverflow)
 	// A row in inline edit mode swaps its buttons for save + cancel, which can be
 	// wider than the resting state (e.g. delete-only grids).
 	const buttons = Math.max(actionCount, editing ? INLINE_EDITING_BUTTONS : 0)
