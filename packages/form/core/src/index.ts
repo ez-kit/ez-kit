@@ -3,6 +3,7 @@ export { FormFieldType, FORM_FIELD_TYPES } from './field-types'
 export { formatFieldErrors, hasFieldErrors } from './errors'
 export { resolveText } from './localized-text'
 export { defineFormSchema, RESERVED_NODE_TYPES } from './schema'
+export { TextInputType } from './text-input-type'
 export { isFieldNode, walkNodes } from './walk'
 
 export type { Condition, FieldRef, Rule } from './rules'

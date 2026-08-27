@@ -2,6 +2,7 @@ import type { FormFieldType } from './field-types'
 import type { LocalizedText } from './localized-text'
 import type { Condition } from './rules'
 import type { SelectOption } from './select-option'
+import type { TextInputType } from './text-input-type'
 import type { DeepKeys, DeepKeysOfType } from '@tanstack/form-core'
 
 /** Container `type` values, plus the two value-less leaves. Never usable as registry keys. */
@@ -44,7 +45,7 @@ export type FieldNode<TValues> =
 			name: DeepKeysOfType<TValues, string>
 			defaultValue?: string
 			placeholder?: string
-			inputType?: string
+			inputType?: TextInputType
 	  })
 	| (FieldCommon<TValues> & {
 			type: FormFieldType.Number

@@ -2,6 +2,7 @@ import { expectTypeOf, test } from 'vitest'
 
 import { FormFieldType } from './field-types'
 import { defineFormSchema } from './schema'
+import { TextInputType } from './text-input-type'
 
 type Values = { email: string; age: number }
 
@@ -20,6 +21,20 @@ test('a field name must match the field kind', () => {
 
 	// @ts-expect-error `nope` is not a path in Values
 	define({ version: 1, children: [{ type: FormFieldType.Text, name: 'nope' }] })
+
+	expectTypeOf(define).toBeFunction()
+})
+
+test('inputType is a closed set, not a bare string', () => {
+	const define = defineFormSchema<Values>()
+
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.Text, name: 'email', inputType: TextInputType.Email }],
+	})
+
+	// @ts-expect-error `inputType` is a TextInputType, not an arbitrary string
+	define({ version: 1, children: [{ type: FormFieldType.Text, name: 'email', inputType: 'nope' }] })
 
 	expectTypeOf(define).toBeFunction()
 })

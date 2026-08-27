@@ -1,5 +1,4 @@
-import type { TextInputType } from './contract'
-import type { DeepKeysOfType, SelectOption } from '@ez-kit/form-core'
+import type { DeepKeysOfType, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**

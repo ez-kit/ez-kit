@@ -1,4 +1,4 @@
-import type { FormFieldType, SelectOption } from '@ez-kit/form-core'
+import type { FormFieldType, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -21,16 +21,6 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * `satisfies FormComponents` so a forgotten field is a compile error rather than a runtime
  * crash.
  */
-
-/** The `type` attribute a text input may carry — a closed set, never a bare string. */
-export enum TextInputType {
-	Text = 'text',
-	Email = 'email',
-	Password = 'password',
-	Tel = 'tel',
-	Url = 'url',
-	Search = 'search',
-}
 
 /**
  * What every field receives, whatever its value type.
