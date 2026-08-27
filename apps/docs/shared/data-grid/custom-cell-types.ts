@@ -13,7 +13,7 @@ import {
 	UserCellView,
 } from './custom-cell-renderers'
 
-import type { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import type { baseCellTypes } from '@ez-kit/data-grid-react'
 
 /**
  * The custom cell types the docs register, in one place — both kit bundles extend from this

@@ -1,7 +1,6 @@
 'use client'
 
-import { createColumnHelper, defineCellType } from '@ez-kit/data-grid-react'
-import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import { createColumnHelper, defineCellType , baseCellTypes } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'

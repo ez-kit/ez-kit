@@ -172,6 +172,15 @@ export { GridComponentsProvider, defaultComponents, useGridComponents } from './
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
 export type { CellTypeDefinition, CellTypeRegistry, CellViewProps, CellInputProps } from './cell-types-context'
 
+// The nine base cell types a kit extends, and the two formatters their renderers use.
+//
+// Previously a `./cell-types` sub-export. Folded into the root so there is one entry point
+// and one import path: a kit already imports this module for `defineCellType` and the DI
+// primitives, so reaching the base it extends through a second specifier bought nothing but
+// a second thing to know about. The package is `sideEffects`-free, so a consumer that never
+// names `baseCellTypes` still does not ship it.
+export { baseCellTypes, booleanCellType, formatNumber, numberCellType, textCellType, truncateText } from './cell-types'
+
 // Default options (app-level provider + kit-level factory `defaultOptions`)
 export { DataGridOptionsProvider, useDataGridOptions } from './data-grid-options-context'
 export type { DataGridDefaultOptions, DataGridOptionsProviderProps } from './data-grid-options-context'

@@ -122,7 +122,7 @@ const columns = [
 With the standalone `createColumnHelper` from `@ez-kit/data-grid-react` — as in the example, which registers per grid — pass the registry and the matching runtime ids yourself. Derive both from one object so they cannot drift apart, and include `baseCellTypes` so the builder still offers `.text()` / `.select()` alongside your own:
 
 ```ts
-import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import { baseCellTypes } from '@ez-kit/data-grid-react'
 
 const HELPER_CELL_TYPES = { ...baseCellTypes, ...RATING_CELL_TYPES }
 
