@@ -6,6 +6,7 @@ export { FormSchemaError, parseFormSchema } from './parse'
 export { defineFormSchema, RESERVED_NODE_TYPES } from './schema'
 export { TextInputType } from './text-input-type'
 export { isFieldNode, walkNodes } from './walk'
+export { stripHiddenValues, visibleFieldNames } from './visibility'
 
 export type { Condition, FieldRef, Rule } from './rules'
 export type { SelectOption } from './select-option'
