@@ -173,7 +173,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const globalFilteringOnChange = globalFilteringCfg?.onChange
 	const paginationOnChange = paginationCfg?.onChange
 	const selectionOnChange = selectionCfg?.onChange
-	const columnVisibilityOnChange = featureConfig(config.columnVisibility)?.onChange
+	const visibilityOnChange = featureConfig(config.visibility)?.onChange
 	const pinningCfgResolved = featureConfig(config.pinning)
 	const columnPinningOnChange =
 		typeof pinningCfgResolved?.column === 'object' ? pinningCfgResolved.column.onChange : undefined
@@ -356,8 +356,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 				Object.keys(selection).filter((id) => selection[id]),
 			)
 		}
-		if (columnVisibilityOnChange && outwardPrev.columnVisibility !== outwardNext.columnVisibility) {
-			columnVisibilityOnChange(outwardNext.columnVisibility)
+		if (visibilityOnChange && outwardPrev.columnVisibility !== outwardNext.columnVisibility) {
+			visibilityOnChange(outwardNext.columnVisibility)
 		}
 		if (columnPinningOnChange && outwardPrev.columnPinning !== outwardNext.columnPinning) {
 			columnPinningOnChange(outwardNext.columnPinning)
@@ -418,7 +418,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
 		// `isFeatureEnabled`, not `=== true`: the option grew a config object (for `onChange`),
 		// and a strict boolean check would have left `{ onChange }` reading as "off".
-		...(isFeatureEnabled(config.columnVisibility) ? {} : { enableHiding: false }),
+		...(isFeatureEnabled(config.visibility) ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
 		// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer.
 		...(hasPagination && paginationCfg?.mode !== 'infinite' ? { getPaginationRowModel: getPaginationRowModel() } : {}),
@@ -435,6 +435,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			: {}),
 		// Row selection
 		enableRowSelection: hasSelection,
+		// Single-row selection. TanStack defaults `enableMultiRowSelection` to true, so the gate
+		// has to be spelled out — the same shape as the `enableHiding` / `enableColumnResizing`
+		// gates above.
+		...(selectionCfg?.multi === false ? { enableMultiRowSelection: false } : {}),
 		// Pagination manual
 		...(paginationCfg?.manual
 			? {

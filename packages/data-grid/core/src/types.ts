@@ -364,8 +364,17 @@ export type SelectionConfig = FeatureToggle & {
 	 * call site is noise.
 	 */
 	onChange?: (rowSelection: RowSelectionState, rowIds: string[]) => void
-	/** Allow selecting multiple rows. Default: true. */
-	multiple?: boolean
+	/**
+	 * Allow selecting more than one row. Default: true.
+	 *
+	 * Named `multi`, not `multiple`, to match {@link SortingConfig.multi} — "more than one of
+	 * this feature at a time" is one concept and gets one word across the config.
+	 *
+	 * `false` drops `enableMultiRowSelection`, so selecting a row clears the previous one, and
+	 * the React layer renders no select-all checkbox in the selection column's header — there
+	 * is nothing for it to select.
+	 */
+	multi?: boolean
 }
 
 /**
@@ -413,12 +422,12 @@ export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unkn
 	onChange?: (expanded: ExpandedState) => void
 }
 
-export type ColumnVisibilityConfig = FeatureToggle & {
+export type VisibilityConfig = FeatureToggle & {
 	/**
 	 * Called whenever column visibility changes. Receives the resolved {@link VisibilityState}.
 	 * Use it to persist which columns a user hid.
 	 */
-	onChange?: (columnVisibility: VisibilityState) => void
+	onChange?: (visibility: VisibilityState) => void
 }
 
 export type ColumnPinningFeatureConfig = {
@@ -551,9 +560,9 @@ export type TableConfig<TRow extends object> = {
 	 * columns; `true` enables it (per-column `visibility` controls still apply).
 	 *
 	 * The UI config (e.g. the toolbar button) is a React concern and lives on the adapter's
-	 * `ColumnVisibilityUIConfig`, which extends this one.
+	 * `VisibilityUIConfig`, which extends this one.
 	 */
-	columnVisibility?: boolean | ColumnVisibilityConfig
+	visibility?: boolean | VisibilityConfig
 	/**
 	 * Pinning configuration. Column pinning and row pinning are gated independently:
 	 * - `true` — enable column menu UI + row pin top+bottom

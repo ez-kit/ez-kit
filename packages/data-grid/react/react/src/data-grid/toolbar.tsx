@@ -54,7 +54,7 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 
 	const grid = table.grid
 
-	const colVisConfig = grid.columnVisibility
+	const colVisConfig = grid.visibility
 	const hasVisibilityToolbar =
 		colVisConfig === true || (typeof colVisConfig === 'object' && Boolean(colVisConfig.toolbar))
 

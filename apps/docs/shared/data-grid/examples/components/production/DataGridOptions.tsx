@@ -43,7 +43,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				layout: { stickyHeader: true },
 				pinning: { column: true, row: { top: true, bottom: true } },
 				resizing: { mode: 'onChange' },
-				columnVisibility: { toolbar: true },
+				visibility: { toolbar: true },
 				creating: { mode: 'modal' },
 				editing: { mode: 'modal' },
 				deleting: {

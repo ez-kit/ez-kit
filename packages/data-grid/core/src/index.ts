@@ -128,7 +128,7 @@ export type {
 	MultiSortEvent,
 	PaginationConfig,
 	ColumnPinningFeatureConfig,
-	ColumnVisibilityConfig,
+	VisibilityConfig,
 	PaginationTotals,
 	PinningConfig,
 	RowPinningConfig,

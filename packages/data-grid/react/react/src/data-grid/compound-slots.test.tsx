@@ -207,7 +207,7 @@ describe('compound render-prop slots', () => {
 	})
 
 	it('<DataGrid.ColumnVisibilityTrigger> hands over the toggleable columns', () => {
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, columnVisibility: true }))
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, visibility: true }))
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.ColumnVisibilityTrigger>

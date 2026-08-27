@@ -12,7 +12,7 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type { PaginationVariant } from './types'
 import type {
-	ColumnVisibilityConfig,
+	VisibilityConfig,
 	ConfirmationOptions,
 	CreatingConfig,
 	DataTable,
@@ -88,7 +88,7 @@ export type SelectionPanelConfig<TRow extends object = object> = {
 
 /**
  * React-layer selection config. Extends the headless core {@link SelectionConfig}
- * (`onChange`, `multiple`) with the React-only `panel` — a selection info bar that is
+ * (`onChange`, `multi`) with the React-only `panel` — a selection info bar that is
  * inherently React (its `actions` are `ReactElement`s), so it lives only in this layer
  * and is never passed down to the core `selection` config.
  */
@@ -194,7 +194,7 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 *   {@link ReactPaginationConfig.pageSizeOptions}
 	 *
 	 * Same name and meaning as `sorting.toolbar`, `globalFiltering.toolbar`,
-	 * `filtering.toolbar` and `columnVisibility.toolbar`: one word for "auto-mount my
+	 * `filtering.toolbar` and `visibility.toolbar`: one word for "auto-mount my
 	 * control into the toolbar", on every feature that has one.
 	 */
 	toolbar?: boolean
@@ -239,11 +239,11 @@ export type NormalizedPageWindowConfig = {
 }
 
 /**
- * The headless {@link ColumnVisibilityConfig} plus this layer's `toolbar` auto-mount flag —
+ * The headless {@link VisibilityConfig} plus this layer's `toolbar` auto-mount flag —
  * the same `React*` shape every other feature uses, so `onChange` is reachable from a grid
  * that only ever imports the adapter.
  */
-export type ColumnVisibilityUIConfig = ColumnVisibilityConfig & {
+export type VisibilityUIConfig = VisibilityConfig & {
 	/** Show a column visibility toggle button in the toolbar. Default: false. */
 	toolbar?: boolean
 }
@@ -382,7 +382,7 @@ export type NormalizedGlobalFilteringConfig = {
  *
  * Adds the UI-facing `toolbar` flag on top of the headless {@link SortingConfig}. The flag
  * lives here and not in core for the same reason `globalFiltering.toolbar` and
- * `columnVisibility.toolbar` do: core renders nothing, so an option core must document as
+ * `visibility.toolbar` do: core renders nothing, so an option core must document as
  * "ignored by core" belongs to the layer that actually reads it.
  */
 export type ReactSortingConfig = {
@@ -465,7 +465,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * Enable row selection.
 	 * - `false` / omitted — disabled
 	 * - `true` — enabled (multi-select) with no info panel
-	 * - {@link ReactSelectionConfig} — headless options (`onChange`, `multiple`) plus the
+	 * - {@link ReactSelectionConfig} — headless options (`onChange`, `multi`) plus the
 	 *   React-only `panel` (selection info bar). `panel` renders only when selection is enabled.
 	 */
 	selection?: boolean | ReactSelectionConfig<TRow>
@@ -474,7 +474,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * - `true` — enables column visibility (toolbar button shown)
 	 * - `{ toolbar: true }` — shows toggle button in toolbar
 	 */
-	columnVisibility?: boolean | ColumnVisibilityUIConfig
+	visibility?: boolean | VisibilityUIConfig
 	/**
 	 * Controlled table state. Pass a partial `TableState` to control specific portions
 	 * (e.g. only sorting) while leaving the rest internally managed.
@@ -514,7 +514,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	expanding?: boolean | ReactExpandingConfig<TRow>
 } & Omit<
 	TableConfig<TRow>,
-	'filtering' | 'globalFiltering' | 'expanding' | 'columnVisibility' | 'pagination' | 'selection' | 'sorting'
+	'filtering' | 'globalFiltering' | 'expanding' | 'visibility' | 'pagination' | 'selection' | 'sorting'
 >
 
 /**
@@ -585,7 +585,7 @@ export function useDataGrid<TRow extends object>(
 	const {
 		cellTypes,
 		selection: rawSelection,
-		columnVisibility,
+		visibility,
 		fallbacks,
 		filtering: rawFiltering,
 		globalFiltering: rawGlobalFiltering,
@@ -598,7 +598,7 @@ export function useDataGrid<TRow extends object>(
 		...restConfig
 	} = config
 
-	// Split `selection` into the headless core part (`onChange` / `multiple`) passed to
+	// Split `selection` into the headless core part (`onChange` / `multi`) passed to
 	// createTable and the React-only `panel` stored on the instance for SelectionBar to read.
 	// `panel` is stripped so the core `selection` config never carries React-specific fields.
 	const selectionPanel: boolean | SelectionPanelConfig<TRow> | undefined = featureConfig(rawSelection)?.panel
@@ -742,7 +742,7 @@ export function useDataGrid<TRow extends object>(
 			// Only the resolved on/off reaches core — its option is a plain `boolean`, so a
 			// misspelled UI key can never ride along unchecked. The React UI config
 			// (`toolbar` etc.) is layered separately via the COLUMN_VISIBILITY_KEY symbol.
-			columnVisibility: isFeatureEnabled(columnVisibility),
+			visibility: isFeatureEnabled(visibility),
 			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
 		} as TableConfig<TRow>),
 	)
@@ -808,7 +808,7 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
 		columnPinning: colPinEnabled,
-		columnVisibility: isFeatureEnabled(columnVisibility) ? columnVisibility : undefined,
+		visibility: isFeatureEnabled(visibility) ? visibility : undefined,
 		sorting: isFeatureEnabled(config.sorting) ? config.sorting : undefined,
 		filtering: {
 			variant: filteringVariant,

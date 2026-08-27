@@ -416,14 +416,36 @@ describe('createTable — selection', () => {
 		expect(table.getState().rowSelection).toEqual({ '1': true })
 		expect(table.getRow('1').getIsSelected()).toBe(true)
 	})
+
+	// `selection.multiple` was declared, documented ("Set `false` to allow only one selected
+	// row") and read by nothing at all: TanStack defaults `enableMultiRowSelection` to true, so
+	// the grid kept accumulating rows. Renamed to `multi` (matching `sorting.multi`) and wired.
+	it('selection: { multi: false } disables enableMultiRowSelection', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: { multi: false } })
+		expect(table.options.enableMultiRowSelection).toBe(false)
+	})
+
+	it('selection: { multi: false } — selecting a row replaces the previous one', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: { multi: false } })
+		table.getRow('1').toggleSelected(true)
+		table.getRow('2').toggleSelected(true)
+		expect(table.getState().rowSelection).toEqual({ '2': true })
+	})
+
+	it('selection: true — rows accumulate', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: true })
+		table.getRow('1').toggleSelected(true)
+		table.getRow('2').toggleSelected(true)
+		expect(table.getState().rowSelection).toEqual({ '1': true, '2': true })
+	})
 })
 
 // ── per-feature onChange ──────────────────────────────────────────────────────
 
 describe('createTable — per-feature onChange', () => {
-	it('columnVisibility.onChange fires with the visibility slice', () => {
+	it('visibility.onChange fires with the visibility slice', () => {
 		const onChange = vi.fn()
-		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: { onChange } })
+		const table = createTable({ data: DATA, columns: COLUMNS, visibility: { onChange } })
 		table.getColumn('name')?.toggleVisibility(false)
 		expect(onChange).toHaveBeenCalledWith({ name: false })
 		expect(table.getState().columnVisibility).toEqual({ name: false })
@@ -466,7 +488,7 @@ describe('createTable — per-feature onChange', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			columnVisibility: { enabled: false, onChange },
+			visibility: { enabled: false, onChange },
 		})
 		table.getColumn('name')?.toggleVisibility(false)
 		expect(onChange).not.toHaveBeenCalled()
@@ -833,20 +855,20 @@ describe('createTable — table-level off: filtering', () => {
 	})
 })
 
-describe('createTable — table-level off: columnVisibility', () => {
-	it('columnVisibility undefined → enableHiding: false, all user columns getCanHide() = false', () => {
+describe('createTable — table-level off: visibility', () => {
+	it('visibility undefined → enableHiding: false, all user columns getCanHide() = false', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
 		expect(table.options.enableHiding).toBe(false)
 		expect(userColumns(table).every((c) => !c.getCanHide())).toBe(true)
 	})
 
-	it('columnVisibility: false → enableHiding: false', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: false })
+	it('visibility: false → enableHiding: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, visibility: false })
 		expect(table.options.enableHiding).toBe(false)
 	})
 
-	it('columnVisibility: true → enableHiding untouched, user columns can hide', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: true })
+	it('visibility: true → enableHiding untouched, user columns can hide', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, visibility: true })
 		expect(table.options.enableHiding).toBeUndefined()
 		expect(userColumns(table).every((c) => c.getCanHide())).toBe(true)
 	})
@@ -987,7 +1009,7 @@ describe('createTable — initialState vs column-derived state', () => {
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: () => {} },
-			columnVisibility: true,
+			visibility: true,
 			initialState: { columnVisibility: { [ACTIONS_COLUMN_ID]: false } },
 		})
 		expect(table.getVisibleLeafColumns().map((c) => c.id)).toContain(ACTIONS_COLUMN_ID)
@@ -998,7 +1020,7 @@ describe('createTable — initialState vs column-derived state', () => {
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: () => {} },
-			columnVisibility: true,
+			visibility: true,
 		})
 		table.syncControlledState({ columnVisibility: { [ACTIONS_COLUMN_ID]: false } })
 		expect(table.getVisibleLeafColumns().map((c) => c.id)).toContain(ACTIONS_COLUMN_ID)
@@ -1016,7 +1038,7 @@ describe('createTable — initialState vs column-derived state', () => {
 		const table = createTable({
 			data: DATA,
 			columns: HIDDEN_COLUMNS,
-			columnVisibility: true,
+			visibility: true,
 			initialState: { columnVisibility: { age: true } },
 		})
 		expect(table.getState().columnVisibility).toMatchObject({ name: false, age: true })

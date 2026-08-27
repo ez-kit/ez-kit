@@ -499,7 +499,7 @@ export type ColumnDef<
 	 *
 	 * `false` reads the same as every other per-column switch (`sorting: false`,
 	 * `filtering: false`, `editing: false`, `resizing: false`): it turns the feature off
-	 * for this column. Note that the *table*-level `columnVisibility` flag is the opposite
+	 * for this column. Note that the *table*-level `visibility` flag is the opposite
 	 * polarity by nature — it turns hiding on for the grid as a whole.
 	 */
 	visibility?: false | ColumnVisibilityDef

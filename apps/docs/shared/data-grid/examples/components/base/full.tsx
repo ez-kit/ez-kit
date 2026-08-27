@@ -16,7 +16,7 @@ export function BaseFullExample() {
 			sorting
 			filtering
 			pagination={{ pageSize: 10, pageSizeOptions: [3, 5, 10] }}
-			columnVisibility
+			visibility
 			selection={{
 				panel: {
 					onDelete: ({ selectedRows, clearSelection }) => {

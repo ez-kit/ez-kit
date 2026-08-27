@@ -42,7 +42,7 @@ export function ColumnsCombinedExample() {
 			data={data}
 			columns={combinedColumns}
 			sorting
-			columnVisibility={{ toolbar: true }}
+			visibility={{ toolbar: true }}
 			pinning={{ column: true }}
 			resizing={{ mode: 'onEnd' }}
 		/>

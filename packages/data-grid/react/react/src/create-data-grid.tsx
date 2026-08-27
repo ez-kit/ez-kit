@@ -24,7 +24,7 @@ export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
 	 * under an app-level `DataGridOptionsProvider` and the per-call config
 	 * (factory `defaultOptions` < provider `defaults` < instance config). Lets a kit ship
-	 * opinionated defaults (e.g. `{ sorting: true, columnVisibility: true }`) so consumers
+	 * opinionated defaults (e.g. `{ sorting: true, visibility: true }`) so consumers
 	 * need not repeat them at every `useDataGrid` call site.
 	 */
 	defaultOptions?: DataGridDefaultOptions<object>

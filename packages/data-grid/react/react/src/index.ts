@@ -30,7 +30,7 @@ export type { ColumnDef, CellDef, ColumnHelper } from './react-columns'
 export { useDataGrid } from './use-data-grid'
 export type {
 	UseDataGridConfig,
-	ColumnVisibilityUIConfig,
+	VisibilityUIConfig,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,

@@ -57,10 +57,10 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 
 	it('keeps column hiding off in core and mounts no toolbar trigger', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, columnVisibility: { enabled: false, toolbar: true } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, visibility: { enabled: false, toolbar: true } }),
 		)
 		expect(result.current.options.enableHiding).toBe(false)
-		expect(result.current.grid.columnVisibility).toBeUndefined()
+		expect(result.current.grid.visibility).toBeUndefined()
 	})
 
 	it('does not publish the sorting toolbar config', () => {

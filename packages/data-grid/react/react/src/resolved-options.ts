@@ -3,7 +3,7 @@ import { DATA_GRID_DEFAULTS } from './defaults'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { PaginationVariant } from './types'
 import type {
-	ColumnVisibilityUIConfig,
+	VisibilityUIConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
 	FilteringVariant,
@@ -56,7 +56,7 @@ export type ResolvedGridOptions = {
 	/** Column pinning UI (the pin section of the column menu) is enabled. */
 	columnPinning: boolean
 	/** Column hiding. `undefined` when the feature is off. */
-	columnVisibility?: (boolean | ColumnVisibilityUIConfig) | undefined
+	visibility?: (boolean | VisibilityUIConfig) | undefined
 	/** Sorting UI config. `undefined` when sorting is off. */
 	sorting?: (boolean | { toolbar?: boolean }) | undefined
 	filtering: {

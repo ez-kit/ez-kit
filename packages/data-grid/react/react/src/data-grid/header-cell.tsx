@@ -120,12 +120,18 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 	const sortDir = header.column.getIsSorted()
 	const pinVars = getCommonPinStyles(header.column)
 	const pinned = header.column.getIsPinned()
-	const canResize = Boolean(table.options.enableColumnResizing) && header.column.getCanResize()
+	// One check, not two: `createTable` now emits `enableColumnResizing: false` when the feature
+	// is off, so `getCanResize()` accounts for the table-level gate as well as the column's own
+	// `resizing: false`. Anything composing its own header can rely on the same single call.
+	const canResize = header.column.getCanResize()
 
 	// Selection column: a select-all checkbox, and none of the rest.
 	if (header.column.id === SELECTION_COLUMN_ID) {
 		const isAllSelected = table.getIsAllRowsSelected()
 		const isSomeSelected = table.getIsSomeRowsSelected()
+		// Under `selection.multi: false` only one row can be selected at a time, so a select-all
+		// control has nothing to select — the header cell stays empty but keeps its width.
+		const canSelectAll = table.options.enableMultiRowSelection !== false
 		return (
 			<Th
 				data-slot='th'
@@ -137,14 +143,16 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 				{...(pinned ? { 'data-pinned': pinned } : {})}
 				{...getAlignAttrs(meta, 'header')}
 			>
-				<Checkbox
-					value={isAllSelected}
-					indeterminate={isSomeSelected && !isAllSelected}
-					onChange={() => {
-						table.toggleAllRowsSelected(!isAllSelected)
-					}}
-					aria-label='Select all rows'
-				/>
+				{canSelectAll && (
+					<Checkbox
+						value={isAllSelected}
+						indeterminate={isSomeSelected && !isAllSelected}
+						onChange={() => {
+							table.toggleAllRowsSelected(!isAllSelected)
+						}}
+						aria-label='Select all rows'
+					/>
+				)}
 			</Th>
 		)
 	}
