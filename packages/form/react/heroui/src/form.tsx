@@ -37,6 +37,6 @@ const components = {
 	GridItem,
 } satisfies FormComponents
 
-const { useForm, Form } = createForm({ components })
+const { useForm, Form, FormRenderer } = createForm({ components })
 
-export { useForm, Form }
+export { useForm, Form, FormRenderer }

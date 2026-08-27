@@ -4,6 +4,12 @@ export type { CreateFormOptions, FormBundle } from './create-form'
 export type { BoundForm, KitFormApi } from './kit-form'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
+	FormRendererControlledProps,
+	FormRendererUncontrolledProps,
+	RendererForm,
+	SharedRendererProps,
+} from './schema/form-renderer'
+export type {
 	ButtonProps,
 	CheckboxFieldRenderProps,
 	FieldRenderProps,

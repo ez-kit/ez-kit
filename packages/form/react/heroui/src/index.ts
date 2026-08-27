@@ -1,4 +1,4 @@
-export { useForm, Form } from './form'
+export { useForm, Form, FormRenderer } from './form'
 
 // Curated re-export of the consumer surface from the adapter, so a kit consumer never has
 // to add `@ez-kit/form-react` as a second dependency. Deliberately not `export *`: the star
@@ -12,9 +12,13 @@ export type {
 	CheckboxFieldProps,
 	FormFieldComponents,
 	FormProps,
+	FormRendererControlledProps,
+	FormRendererUncontrolledProps,
 	NumberFieldProps,
+	RendererForm,
 	SelectFieldProps,
 	SelectOption,
+	SharedRendererProps,
 	SubmitButtonProps,
 	TextareaFieldProps,
 	TextFieldProps,
