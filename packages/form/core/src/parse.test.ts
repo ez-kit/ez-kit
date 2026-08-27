@@ -133,11 +133,17 @@ test('rejects a localized text object with no string "key"', () => {
 
 test('rejects a section "columns" outside the supported 1..4 range', () => {
 	expect(() => parseFormSchema({ version: 1, children: [{ type: 'section', columns: 6, children: [] }] })).toThrow(
+		FormSchemaError,
+	)
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'section', columns: 6, children: [] }] })).toThrow(
 		/columns/i,
 	)
 })
 
 test('rejects a non-integer "colSpan"', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', colSpan: 1.5 }] })).toThrow(
+		FormSchemaError,
+	)
 	expect(() => parseFormSchema({ version: 1, children: [{ type: 'text', name: 'a', colSpan: 1.5 }] })).toThrow(
 		/colSpan/i,
 	)

@@ -1,6 +1,6 @@
 import { FORM_FIELD_TYPES } from './field-types'
 import { collectRuleFields } from './rules'
-import { RESERVED_NODE_TYPES } from './schema'
+import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
 import { hasChildren, isFieldNode, walkNodes } from './walk'
 
 import type { Condition } from './rules'
@@ -37,10 +37,6 @@ export class FormSchemaError extends Error {
 const SUPPORTED_VERSION = 1
 const RELATIVE_FIELD_PREFIX = './'
 const ROOT_PATH = 'root'
-
-/** The supported range for `section.columns` and any node's `colSpan` (spec §11). */
-const GRID_MIN = 1
-const GRID_MAX = 4
 
 type UnknownRecord = Record<string, unknown>
 

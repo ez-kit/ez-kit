@@ -8,6 +8,20 @@ import type { DeepKeys, DeepKeysOfType } from '@tanstack/form-core'
 /** Container `type` values, plus the two value-less leaves. Never usable as registry keys. */
 export const RESERVED_NODE_TYPES = ['section', 'step', 'submit', 'block'] as const
 
+/**
+ * The supported range for `SectionNode.columns` and any node's `colSpan` — part of the v1
+ * format, not a kit detail, so it is defined once here and consumed by both `parseFormSchema`
+ * (which rejects a document outside this range) and the kits (which clamp into it for a
+ * TS-authored schema that bypassed `parseFormSchema`).
+ */
+export const GRID_MIN = 1
+export const GRID_MAX = 4
+
+/** Rounds to the nearest integer, then clamps into `[GRID_MIN, GRID_MAX]`. */
+export function clampToGridRange(value: number): number {
+	return Math.min(GRID_MAX, Math.max(GRID_MIN, Math.round(value)))
+}
+
 type CommonProps<TValues> = {
 	label?: LocalizedText
 	description?: LocalizedText

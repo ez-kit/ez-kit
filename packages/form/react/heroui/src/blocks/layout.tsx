@@ -1,3 +1,5 @@
+import { clampToGridRange, GRID_MIN } from '@ez-kit/form-react'
+
 import type { GridItemRenderProps, SectionRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
@@ -15,23 +17,17 @@ import type { ReactNode } from 'react'
  * Tailwind extracts class names statically, so a `grid-cols-${columns}` / `col-span-${n}`
  * template string would drop the utility from the build — these map the supported column
  * counts to literal class names instead.
+ *
+ * `GRID_MIN`/`clampToGridRange` come from `@ez-kit/form-core` (re-exported through
+ * `@ez-kit/form-react`) rather than being redefined here: the 1..4 range is part of the v1
+ * format — `parseFormSchema` rejects a document outside it — so the format's own package owns
+ * the numbers. Only the Tailwind class strings below are kit-owned, since they're visual.
  */
 
 /** Minimal class joiner — this package ships no `cn`/`tailwind-merge`. */
 function cx(...classNames: (string | false | undefined)[]) {
 	return classNames.filter(Boolean).join(' ')
 }
-
-/**
- * Supported grid widths — matches the 1..4 range `@ez-kit/form-core`'s `parseFormSchema`
- * enforces on `section.columns` / `colSpan` (spec §11). A schema that went through
- * `parseFormSchema` can never carry a value outside this range; a TS-authored schema that
- * skipped it can, so an out-of-range value here is clamped to the nearest supported one
- * rather than collapsed to a single column — a caller asking for 6 columns should get the
- * widest grid this kit supports, not the narrowest.
- */
-const GRID_MIN = 1
-const GRID_MAX = 4
 
 const COLUMNS_CLASS: Record<number, string> = {
 	1: 'grid-cols-1',
@@ -45,11 +41,6 @@ const COL_SPAN_CLASS: Record<number, string> = {
 	2: 'col-span-2',
 	3: 'col-span-3',
 	4: 'col-span-4',
-}
-
-/** Rounds to the nearest integer, then clamps into `[GRID_MIN, GRID_MAX]`. */
-function clampToGridRange(value: number): number {
-	return Math.min(GRID_MAX, Math.max(GRID_MIN, Math.round(value)))
 }
 
 function columnsClassName(columns: number | undefined): string {
