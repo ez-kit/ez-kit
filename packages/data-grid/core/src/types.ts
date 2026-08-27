@@ -37,16 +37,25 @@ export type SortingState = SortingStateEntry[]
 
 /**
  * Gesture that engages multi-column sort.
- * - `'shift'` — shift+click adds the column (TanStack default)
- * - `'ctrl'`  — ctrl+click (or ⌘+click on macOS) adds the column
- * - `'always'` — every click extends the multi-sort set
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `event: 'ctrl'` is equally valid and needs no import.
  */
-export type MultiSortEvent = 'shift' | 'ctrl' | 'always'
+export const MultiSortEvent = {
+	/** Shift+click adds the column. The default, and TanStack's. */
+	Shift: 'shift',
+	/** Ctrl+click (or ⌘+click on macOS) adds the column. */
+	Ctrl: 'ctrl',
+	/** Every click extends the multi-sort set — no modifier needed. */
+	Always: 'always',
+} as const
+
+export type MultiSortEvent = (typeof MultiSortEvent)[keyof typeof MultiSortEvent]
 
 export type MultiSortConfig = {
 	/** Cap on simultaneously sorted columns. Unlimited by default. */
 	max?: number
-	/** Gesture that engages multi-sort. Default: `'shift'`. */
+	/** Gesture that engages multi-sort. Default: {@link MultiSortEvent.Shift}. */
 	event?: MultiSortEvent
 	/** Allow removing a single column from the multi-sort set. Default: true. */
 	removable?: boolean
@@ -246,12 +255,22 @@ export type GlobalFilteringConfig = FeatureToggle & {
 
 /**
  * Direction of an infinite-scroll load.
- * - `'forward'` — load the next page (scroll down / append). Implemented.
- * - `'backward'` — load the previous page (scroll up / prepend). **Reserved for v2**:
- *   the type exists so the API can grow without a breaking change; v1 only ever emits
- *   `'forward'` and performs no scroll-anchoring.
+ *
+ * Named members for internal reference; the plain string union is what callers see, so
+ * `direction === 'forward'` is equally valid and needs no import.
  */
-export type LoadMoreDirection = 'forward' | 'backward'
+export const LoadMoreDirection = {
+	/** Load the next page (scroll down / append). Implemented. */
+	Forward: 'forward',
+	/**
+	 * Load the previous page (scroll up / prepend). **Reserved for v2**: the member exists so
+	 * the API can grow without a breaking change; v1 only ever emits
+	 * {@link LoadMoreDirection.Forward} and performs no scroll-anchoring.
+	 */
+	Backward: 'backward',
+} as const
+
+export type LoadMoreDirection = (typeof LoadMoreDirection)[keyof typeof LoadMoreDirection]
 
 /**
  * Infinite-scroll request status, held in `state.infinite`. **100% grid-owned** —
@@ -304,6 +323,25 @@ export type LoadingState = {
  */
 export type PaginationTotals = { rowCount?: number; pageCount?: never } | { pageCount?: number; rowCount?: never }
 
+/**
+ * What pagination *does* — not how it looks, hence `mode` rather than `variant`. How the page
+ * footer *looks* is `PaginationVariant`, a separate option on the React adapter.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'infinite'` is equally valid and needs no import.
+ */
+export const PaginationMode = {
+	/** Classic page footer over a paged row model. The default. */
+	Pages: 'pages',
+	/**
+	 * Infinite scroll — mutually exclusive with the page footer. The grid is **event-only**:
+	 * it calls {@link PaginationConfig.onLoadMore} at a load edge and the consumer appends rows.
+	 */
+	Infinite: 'infinite',
+} as const
+
+export type PaginationMode = (typeof PaginationMode)[keyof typeof PaginationMode]
+
 export type PaginationConfig = FeatureToggle &
 	PaginationTotals & {
 		manual?: boolean
@@ -323,12 +361,12 @@ export type PaginationConfig = FeatureToggle &
 		 */
 		onChange?: (pagination: PaginationState) => void
 		/**
-		 * Pagination mode. `'pages'` (default) renders a classic page footer. `'infinite'`
-		 * enables infinite scroll — mutually exclusive with the page footer. In infinite
-		 * mode the grid is **event-only**: it calls {@link PaginationConfig.onLoadMore} when a
-		 * load edge is reached, and the consumer appends rows via `table.appendData(rows)`.
+		 * Pagination mode. Default: {@link PaginationMode.Pages}. In
+		 * {@link PaginationMode.Infinite} the grid is **event-only**: it calls
+		 * {@link PaginationConfig.onLoadMore} when a load edge is reached, and the consumer
+		 * appends rows via `table.appendData(rows)`.
 		 */
-		mode?: 'pages' | 'infinite'
+		mode?: PaginationMode
 		/**
 		 * Infinite mode only. Controlled flag declaring whether more rows can be loaded
 		 * forward (scroll down). A **server-data descriptor** (like `pageCount`/`rowCount`),
@@ -345,7 +383,7 @@ export type PaginationConfig = FeatureToggle &
 		 * "Load more" control is activated (manual trigger). Fetch the page and append rows
 		 * with `table.appendData(rows)`. The returned promise drives `isFetchingNextPage`;
 		 * a rejection surfaces `state.infinite.error` with a retry affordance. v1 always
-		 * passes `direction: 'forward'`.
+		 * passes {@link LoadMoreDirection.Forward}.
 		 *
 		 * Prefer returning a promise so the loading indicator tracks the real request.
 		 * A `void` return still flips `isFetchingNextPage` on, then off on the next
@@ -465,13 +503,40 @@ export type VirtualizationConfig = FeatureToggle & {
 	// column virtualization — reserved for future
 }
 
-export type ColumnResizeMode = 'onChange' | 'onEnd'
-export type ColumnResizeDirection = 'ltr' | 'rtl'
+/**
+ * When a resize drag commits the new width.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'onEnd'` is equally valid and needs no import.
+ */
+export const ColumnResizeMode = {
+	/** The width follows the pointer live, every frame of the drag. The default. */
+	OnChange: 'onChange',
+	/** The width updates once, on mouse release. */
+	OnEnd: 'onEnd',
+} as const
+
+export type ColumnResizeMode = (typeof ColumnResizeMode)[keyof typeof ColumnResizeMode]
+
+/**
+ * Text direction the resize delta is measured in — which way a drag makes a column wider.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `direction: 'rtl'` is equally valid and needs no import.
+ */
+export const ColumnResizeDirection = {
+	/** Left-to-right. The default. */
+	Ltr: 'ltr',
+	/** Right-to-left. */
+	Rtl: 'rtl',
+} as const
+
+export type ColumnResizeDirection = (typeof ColumnResizeDirection)[keyof typeof ColumnResizeDirection]
 
 export type ResizingConfig = FeatureToggle & {
-	/** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
+	/** Resize mode. Default: {@link ColumnResizeMode.OnChange}. */
 	mode?: ColumnResizeMode
-	/** Text direction for resize calculation. Default: 'ltr'. */
+	/** Text direction for resize calculation. Default: {@link ColumnResizeDirection.Ltr}. */
 	direction?: ColumnResizeDirection
 	/**
 	 * Called whenever a column's width changes. Receives the resolved {@link ColumnSizingState}.

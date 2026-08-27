@@ -4,6 +4,7 @@ import { joinClassNames } from '../utils/class-names'
 import { DataGridCell } from './cell'
 import { useDataGridTable } from './table-context'
 
+import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode, Ref } from 'react'
@@ -23,7 +24,7 @@ export type DataGridRowProps = {
 	style?: CSSProperties
 	/** Forwarded to the kit's `Tr`; pinned rows are measured through it (see `usePinnedRowOffsets`). */
 	ref?: Ref<HTMLTableRowElement>
-	'data-pinned'?: 'top' | 'bottom'
+	'data-pinned'?: PinSide
 	'data-virtual'?: 'row'
 	/**
 	 * Custom cell content for this row, rendered inside the kit's `Tr` — so the row keeps its

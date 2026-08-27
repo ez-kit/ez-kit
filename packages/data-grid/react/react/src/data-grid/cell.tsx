@@ -1,4 +1,10 @@
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import {
+	ACTIONS_COLUMN_ID,
+	CommitStatus,
+	EditingMode,
+	EXPAND_COLUMN_ID,
+	SELECTION_COLUMN_ID,
+} from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
@@ -11,7 +17,7 @@ import { flexRender } from './flex-render'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
-import type { ColumnAlign, FieldState } from '@ez-kit/data-grid-core'
+import type { ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
@@ -46,8 +52,8 @@ export type DataGridCellProps = {
 /** The chrome a body cell wears regardless of what it renders: pin offsets and alignment. */
 type CellChrome = {
 	pinVars: CSSProperties
-	pinned: false | 'left' | 'right'
-	pinnedAttrs: { 'data-pinned'?: 'left' | 'right' }
+	pinned: false | ColumnPinSide
+	pinnedAttrs: { 'data-pinned'?: ColumnPinSide }
 	alignAttrs: { 'data-align'?: ColumnAlign }
 }
 
@@ -235,7 +241,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	const meta = cell.column.columnDef.meta
 	const chrome = getCellChrome(cell)
 
-	const editMode: 'row' | 'modal' | 'cell' = table.options.editing?.mode ?? 'row'
+	const editMode: EditingMode = table.options.editing?.mode ?? EditingMode.Row
 	const cellId = `${row.id}_${columnId}`
 
 	// Narrow boolean subscription. For non-target rows this remains stably `false`
@@ -298,7 +304,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 type EditingCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	cell: Cell<any, unknown>
-	editMode: 'row' | 'modal' | 'cell'
+	editMode: EditingMode
 	cellId: string
 	chrome: CellChrome
 }
@@ -311,7 +317,7 @@ type EditingCellProps = {
  * - `value`: from `editing.values[columnId]` — primitive or stable ref
  * - `errors`: from `editing.errors[columnId]` — `undefined` when no errors
  *   (stable falsy), array when present (stable ref while content unchanged)
- * - `isValidating`: boolean from `commitStatus === 'validating'`
+ * - `isValidating`: boolean from `commitStatus === CommitStatus.Validating`
  *
  * As a result, `setValue` on a different column does not re-render this cell:
  * only the one whose `values[columnId]` key actually changed re-renders.
@@ -325,7 +331,7 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 
 	const value = useDataGridState((s) => s.editing.values[columnId])
 	const rawErrors = useDataGridState((s) => s.editing.errors[columnId])
-	const isValidating = useDataGridState((s) => s.editing.commitStatus === 'validating')
+	const isValidating = useDataGridState((s) => s.editing.commitStatus === CommitStatus.Validating)
 
 	const fieldErrors = rawErrors ?? EMPTY_ERRORS
 	const fieldError = fieldErrors[0]

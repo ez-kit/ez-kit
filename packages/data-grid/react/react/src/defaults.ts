@@ -1,7 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '@ez-kit/data-grid-core'
 
 import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from './data-grid/page-window'
-import { PaginationVariant } from './types'
+import { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, PaginationVariant } from './types'
 
 /**
  * Default commit debounce (ms) for **every** text filter input — the per-column ones and the
@@ -43,14 +43,14 @@ export const DATA_GRID_DEFAULTS = {
 	},
 	/** Column filtering controls. */
 	filtering: {
-		variant: 'inline',
+		variant: FilteringVariant.Inline,
 		debounce: DEFAULT_FILTER_DEBOUNCE_MS,
-		chips: { position: 'above' },
+		chips: { position: FilterChipsPosition.Above },
 		toolbar: { alwaysShow: false },
 	},
 	/** Infinite-scroll edge detection tuning. */
 	infinite: {
-		trigger: 'auto',
+		trigger: LoadMoreTrigger.Auto,
 		threshold: {
 			/** Row distance that triggers a load on the virtualized path. */
 			rows: 5,

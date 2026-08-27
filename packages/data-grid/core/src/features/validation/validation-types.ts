@@ -19,18 +19,41 @@ export type ValidateContext = {
 	cell?: { columnId: string }
 }
 
-export type ValidateOn = 'submit' | 'blur' | 'change'
+/**
+ * When a form field runs its validation.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `validateOn: 'blur'` is equally valid and needs no import.
+ */
+export const ValidateOn = {
+	/** Only when the form is submitted. */
+	Submit: 'submit',
+	/** When the field loses focus, then on every submit. */
+	Blur: 'blur',
+	/** On every keystroke (debounced by `validateDebounceMs`), then on every submit. */
+	Change: 'change',
+} as const
+
+export type ValidateOn = (typeof ValidateOn)[keyof typeof ValidateOn]
 
 /**
  * Single state machine for the commit pipeline (creating + editing).
  *
- * - `idle`     — нечего не происходит; форма принимает ввод
- * - `validating` — выполняется validate() (sync или async)
- * - `saving`     — выполняется onSave()
+ * UI invariant: Save stays disabled while `commitStatus !== CommitStatus.Idle`.
  *
- * UI-инвариант: Save disabled, пока `commitStatus !== 'idle'`.
+ * Named members for internal reference; the plain string union is what callers see, so
+ * `status === 'saving'` is equally valid and needs no import.
  */
-export type CommitStatus = 'idle' | 'validating' | 'saving'
+export const CommitStatus = {
+	/** Nothing in flight; the form accepts input. */
+	Idle: 'idle',
+	/** `validate()` is running (sync or async). */
+	Validating: 'validating',
+	/** `onSave()` is running. */
+	Saving: 'saving',
+} as const
+
+export type CommitStatus = (typeof CommitStatus)[keyof typeof CommitStatus]
 
 /**
  * Per-field state passed to custom cell renderers in `creating` / `editing` modes.

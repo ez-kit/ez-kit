@@ -22,6 +22,7 @@ import { buildOperatorRegistry } from '../features/operators'
 import { RowActionsVariant } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
+import { ColumnResizeDirection, ColumnResizeMode, ExpandingMode, MultiSortEvent, PaginationMode } from '../types'
 import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
@@ -37,15 +38,15 @@ function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string,
 	const opts: Record<string, unknown> = { enableMultiSort: true }
 	setIfDefined(opts, 'maxMultiSortColCount', multi.max)
 	if (multi.removable === false) opts.enableMultiRemove = false
-	if (multi.event === 'always') {
+	if (multi.event === MultiSortEvent.Always) {
 		opts.isMultiSortEvent = () => true
-	} else if (multi.event === 'ctrl') {
+	} else if (multi.event === MultiSortEvent.Ctrl) {
 		opts.isMultiSortEvent = (e: unknown) => {
 			const event = e as { ctrlKey?: boolean; metaKey?: boolean } | null | undefined
 			return Boolean(event?.ctrlKey) || Boolean(event?.metaKey)
 		}
 	}
-	// 'shift' (default) → omit; TanStack's built-in handler already requires shift.
+	// MultiSortEvent.Shift (default) → omit; TanStack's built-in handler already requires shift.
 	return opts
 }
 
@@ -202,7 +203,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// ── map user columns → TanStack columns ──────────────────────────────────
 	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, { tableFaceted })
 
-	const expandMode = expandingCfg?.mode ?? 'sub-content'
+	const expandMode = expandingCfg?.mode ?? ExpandingMode.SubContent
 	const normalizedPinning = normalizePinning(config.pinning)
 	const rowPinConfig = normalizedPinning.row
 	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
@@ -480,16 +481,18 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(isFeatureEnabled(config.visibility) ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
 		// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer.
-		...(hasPagination && paginationCfg?.mode !== 'infinite' ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+		...(hasPagination && paginationCfg?.mode !== PaginationMode.Infinite
+			? { getPaginationRowModel: getPaginationRowModel() }
+			: {}),
 		...(hasExpanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
-		...(hasExpanding && expandMode === 'tree'
+		...(hasExpanding && expandMode === ExpandingMode.Tree
 			? {
 					getSubRows:
 						expandingCfg?.getSubRows ??
 						((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
 				}
 			: {}),
-		...(hasExpanding && expandMode === 'sub-content' && expandingCfg?.getRowCanExpand
+		...(hasExpanding && expandMode === ExpandingMode.SubContent && expandingCfg?.getRowCanExpand
 			? { getRowCanExpand: expandingCfg.getRowCanExpand }
 			: {}),
 		// Row selection
@@ -536,8 +539,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(hasResizing
 			? {
 					enableColumnResizing: true,
-					columnResizeMode: resizingCfg?.mode ?? 'onChange',
-					columnResizeDirection: resizingCfg?.direction ?? 'ltr',
+					columnResizeMode: resizingCfg?.mode ?? ColumnResizeMode.OnChange,
+					columnResizeDirection: resizingCfg?.direction ?? ColumnResizeDirection.Ltr,
 				}
 			: // TanStack defaults `enableColumnResizing` to true, so the table-level gate has to be
 				// spelled out explicitly — otherwise `column.getCanResize()` stays true with the

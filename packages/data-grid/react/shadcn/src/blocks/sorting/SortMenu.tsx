@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 
-import type { SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
+import type { SortDirection, SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
 
 function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 	return (
@@ -42,7 +42,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 			<Select
 				value={item.direction}
 				onValueChange={(v) => {
-					item.onChangeDirection(v as 'asc' | 'desc')
+					item.onChangeDirection(v as SortDirection)
 				}}
 			>
 				<SelectTrigger

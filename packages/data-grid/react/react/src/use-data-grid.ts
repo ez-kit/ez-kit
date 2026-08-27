@@ -1,4 +1,4 @@
-import { createTable, featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
+import { createTable, featureConfig, isFeatureEnabled, PaginationMode } from '@ez-kit/data-grid-core'
 import { useEffect, useRef } from 'react'
 
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
@@ -10,7 +10,7 @@ import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
-import type { PaginationVariant } from './types'
+import type { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, PaginationVariant } from './types'
 import type {
 	VisibilityConfig,
 	ConfirmationOptions,
@@ -36,9 +36,10 @@ import type { ComponentType, HTMLAttributes, ReactElement } from 'react'
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
-// The closed set lives in `./types` next to the other ones; re-exported here because this is
-// where `SelectionPanelConfig` — the option that carries it — is declared.
-export { SelectionPanelVariant } from './types'
+// The closed sets live in `./types` next to the other ones; re-exported here because this is
+// where the options that carry them are declared — `SelectionPanelConfig`,
+// `ReactPaginationConfig`, `ReactFilteringConfig`.
+export { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, SelectionPanelVariant } from './types'
 
 export type ExpandedRowProps<TRow extends object> = {
 	row: Row<TRow>
@@ -163,10 +164,11 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 */
 	boundaries?: number
 	/**
-	 * Infinite mode only. `'auto'` (default) loads when the edge enters view;
-	 * `'manual'` suppresses auto detection and renders a "Load more" control.
+	 * Infinite mode only. Default: {@link LoadMoreTrigger.Auto} — loads when the edge enters
+	 * view. {@link LoadMoreTrigger.Manual} suppresses auto detection and renders a
+	 * "Load more" control.
 	 */
-	trigger?: 'auto' | 'manual'
+	trigger?: LoadMoreTrigger
 	/**
 	 * Infinite mode only. How close to the edge triggers a load.
 	 * `{ rows }` (default 5) drives the virtualized index path; `{ px }` (default 200)
@@ -206,7 +208,7 @@ export type ReactPaginationConfig = PaginationConfig & {
  * detection tuning — `state.infinite` stays 100% grid-owned.
  */
 export type NormalizedInfiniteConfig = {
-	trigger: 'auto' | 'manual'
+	trigger: LoadMoreTrigger
 	threshold: { rows?: number; px?: number }
 	hasNextPage: boolean
 	hasPreviousPage: boolean
@@ -217,7 +219,7 @@ function normalizeInfinite(
 	pagination: boolean | ReactPaginationConfig | undefined,
 ): NormalizedInfiniteConfig | undefined {
 	const cfg = featureConfig(pagination)
-	if (cfg?.mode !== 'infinite') return undefined
+	if (cfg?.mode !== PaginationMode.Infinite) return undefined
 	const threshold = cfg.threshold ?? { rows: DATA_GRID_DEFAULTS.infinite.threshold.rows }
 	return {
 		trigger: cfg.trigger ?? DATA_GRID_DEFAULTS.infinite.trigger,
@@ -287,12 +289,11 @@ export type FallbacksConfig = {
 	noResults?: NoResultsFallbackConfig | boolean
 }
 
-export type FilteringVariant = 'inline' | 'popover' | 'panel'
-
-export type FilterChipsPosition = 'above' | 'below'
-
 export type FilterChipsConfig = {
-	/** Where to render the auto-mounted chips strip relative to the table. Default: 'above'. */
+	/**
+	 * Where to render the auto-mounted chips strip relative to the table.
+	 * Default: {@link FilterChipsPosition.Above}.
+	 */
 	position?: FilterChipsPosition
 }
 
@@ -302,7 +303,7 @@ export type FilteringToolbarConfig = {
 }
 
 export type ReactFilteringConfig = {
-	/** Display variant for column filter controls. Default: 'inline'. */
+	/** Display variant for column filter controls. Default: {@link FilteringVariant.Inline}. */
 	variant?: FilteringVariant
 	/**
 	 * Commit debounce in milliseconds for text filter inputs. Default: 250.
@@ -318,7 +319,7 @@ export type ReactFilteringConfig = {
 	/**
 	 * Auto-mount a strip of removable chips for active filters.
 	 * - `false` / omitted — no auto-mount. `<DataGrid.ActiveFiltersBar />` still works manually.
-	 * - `true` — auto-mount with `position: 'above'`.
+	 * - `true` — auto-mount at {@link FilterChipsPosition.Above}.
 	 * - `FilterChipsConfig` — fine-grained.
 	 */
 	chips?: boolean | FilterChipsConfig
@@ -447,8 +448,8 @@ export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Enable filtering.
 	 * - `true` — inline filter inputs below each column header
-	 * - `{ variant: 'popover' }` — filter icon in header; click opens a popover with the filter input
-	 * - `{ variant: 'inline', ...opts }` — same as `true` with extra FilteringConfig options
+	 * - `{ variant: FilteringVariant.Popover }` — filter icon in header; click opens a popover with the filter input
+	 * - `{ variant: FilteringVariant.Inline, ...opts }` — same as `true` with extra FilteringConfig options
 	 */
 	filtering?: boolean | ReactFilteringConfig
 	/**
@@ -500,7 +501,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	layout?: LayoutConfig
 	/**
-	 * Pagination config. Page-based by default; set `mode: 'infinite'` for infinite
+	 * Pagination config. Page-based by default; set `mode: PaginationMode.Infinite` for infinite
 	 * scroll. The React layer adds `trigger` / `threshold` detection tuning on top of
 	 * the headless {@link PaginationConfig}.
 	 */
@@ -632,7 +633,7 @@ export function useDataGrid<TRow extends object>(
 	// `<DataGrid.PageSizer />` still needs the list.
 	// `featureConfig` yields `undefined` for the bare `pagination: true`, so the on/off decision
 	// reads `isFeatureEnabled` and only the *settings* come from `paginationCfg`.
-	const isPagedPagination = isFeatureEnabled(rawPagination) && paginationCfg?.mode !== 'infinite'
+	const isPagedPagination = isFeatureEnabled(rawPagination) && paginationCfg?.mode !== PaginationMode.Infinite
 	const pageSizeOptions: number[] | undefined = isPagedPagination
 		? (paginationCfg?.pageSizeOptions ?? [...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
 		: undefined

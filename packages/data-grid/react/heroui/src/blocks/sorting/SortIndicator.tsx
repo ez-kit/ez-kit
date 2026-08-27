@@ -1,12 +1,13 @@
 'use client'
 
+import { SortDirection } from '@ez-kit/data-grid-react'
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 
 import type { SortIndicatorProps } from '@ez-kit/data-grid-react'
 
 export function SortIndicator({ sortDir, canSort }: SortIndicatorProps) {
 	if (!canSort) return null
-	if (sortDir === 'asc')
+	if (sortDir === SortDirection.Asc)
 		return (
 			<ArrowUp
 				size={12}
@@ -14,7 +15,7 @@ export function SortIndicator({ sortDir, canSort }: SortIndicatorProps) {
 				aria-hidden
 			/>
 		)
-	if (sortDir === 'desc')
+	if (sortDir === SortDirection.Desc)
 		return (
 			<ArrowDown
 				size={12}

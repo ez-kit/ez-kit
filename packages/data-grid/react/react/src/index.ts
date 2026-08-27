@@ -35,9 +35,7 @@ export type {
 	ExpandedRowProps,
 	FallbacksConfig,
 	FilterChipsConfig,
-	FilterChipsPosition,
 	FilteringToolbarConfig,
-	FilteringVariant,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
 	NormalizedFilteringToolbarConfig,
@@ -138,11 +136,8 @@ export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/ta
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
 export type { DataGridHeaderRowProps, DataGridHeaderRowRenderArgs } from './data-grid/header-row'
-export type {
-	DataGridHeaderCellProps,
-	DataGridHeaderCellRenderArgs,
-	HeaderSortDirection,
-} from './data-grid/header-cell'
+export { HeaderSortDirection } from './data-grid/header-cell'
+export type { DataGridHeaderCellProps, DataGridHeaderCellRenderArgs } from './data-grid/header-cell'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
@@ -197,7 +192,6 @@ export type {
 	ConfirmDialogProps,
 	DraftBarProps,
 	EmptyStateProps,
-	FilterChipKind,
 	FilterChipProps,
 	FilterPanelChipProps,
 	FilterPanelProps,
@@ -213,7 +207,6 @@ export type {
 	ResizerProps,
 	SelectionBarProps,
 	SortColumnOption,
-	SortDirection,
 	SortMenuItem,
 	SortMenuProps,
 	VisibilityColumnItem,
@@ -237,7 +230,17 @@ export type {
 // Closed sets that a kit or a call site names. Each is a `const` object plus a same-named
 // string union, so `RowActionsMode.Idle` and the bare `'idle'` are both valid and no consumer
 // has to import anything to write an option value.
-export { PaginationVariant, RowActionId, RowActionsMode, SelectionPanelVariant } from './types'
+export {
+	FilterChipKind,
+	FilterChipsPosition,
+	FilteringVariant,
+	LoadMoreTrigger,
+	PaginationVariant,
+	RowActionId,
+	RowActionsMode,
+	SelectionPanelVariant,
+	SortDirection,
+} from './types'
 
 // TanStack state types used when typing manual server-side `onChange` handlers.
 // Re-exported so consumers depend only on this package's surface. `SortingState` is not

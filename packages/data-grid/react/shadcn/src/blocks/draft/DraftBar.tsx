@@ -1,5 +1,6 @@
 'use client'
 
+import { SelectionPanelVariant } from '@ez-kit/data-grid-react'
 import { Check, RotateCcw } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -98,7 +99,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 				))}
 			</div>
 
-			<div className={cn('flex items-center gap-2', variant === 'inline' && 'ml-auto')}>
+			<div className={cn('flex items-center gap-2', variant === SelectionPanelVariant.Inline && 'ml-auto')}>
 				<Button
 					variant='ghost'
 					size='sm'
@@ -122,7 +123,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 		</>
 	)
 
-	if (variant === 'inline') {
+	if (variant === SelectionPanelVariant.Inline) {
 		return (
 			<div
 				role='toolbar'

@@ -1,3 +1,4 @@
+import { ColumnPinSide, SystemColumnType } from '../column/types'
 import { getActionsColumnSize, RowActionsVariant } from '../features/row-actions'
 
 import type { TanStackColumnDef } from '../column/types'
@@ -55,8 +56,8 @@ export function buildColumnList<TRow extends object>(
 			enableColumnFilter: false,
 			meta: {
 				isSystemColumn: true,
-				systemColumnType: 'selection',
-				columnPinning: { side: 'left' },
+				systemColumnType: SystemColumnType.Selection,
+				columnPinning: { side: ColumnPinSide.Left },
 			},
 		})
 	}
@@ -71,7 +72,7 @@ export function buildColumnList<TRow extends object>(
 			enableColumnFilter: false,
 			meta: {
 				isSystemColumn: true,
-				systemColumnType: 'expand',
+				systemColumnType: SystemColumnType.Expand,
 			},
 		})
 	}
@@ -95,8 +96,8 @@ export function buildColumnList<TRow extends object>(
 			enableColumnFilter: false,
 			meta: {
 				isSystemColumn: true,
-				systemColumnType: 'actions',
-				columnPinning: { side: 'right' },
+				systemColumnType: SystemColumnType.Actions,
+				columnPinning: { side: ColumnPinSide.Right },
 			},
 		})
 	}
@@ -122,7 +123,7 @@ export function extractPinningState<TRow extends object>(
 		const position = pinDef.side ?? pinDef.initialSide
 		const colId = col.id ?? (col as { accessorKey?: string }).accessorKey ?? undefined
 		if (!position || !colId) continue
-		if (position === 'left') left.push(colId)
+		if (position === ColumnPinSide.Left) left.push(colId)
 		else right.push(colId)
 	}
 

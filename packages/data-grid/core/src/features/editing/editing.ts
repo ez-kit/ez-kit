@@ -1,14 +1,7 @@
-import { isValidationError, zodSafeParseToResult } from '../validation'
+import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
 
 import type { FeatureToggle } from '../../utils/feature-flag'
-import type {
-	CommitStatus,
-	ValidateConfig,
-	ValidateContext,
-	ValidateOn,
-	ValidationErrors,
-	ValidationResult,
-} from '../validation'
+import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 /**
@@ -25,7 +18,7 @@ export type EditingSaveContext<TData> = {
 	signal: AbortSignal
 }
 
-const DEFAULT_VALIDATE_ON: ValidateOn = 'submit'
+const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
 const DEFAULT_DEBOUNCE_MS = 200
 const GENERIC_FORM_ERROR = 'Unexpected error'
 
@@ -117,7 +110,7 @@ const INITIAL_STATE: EditingState = {
 	values: {},
 	errors: {},
 	formError: null,
-	commitStatus: 'idle',
+	commitStatus: CommitStatus.Idle,
 }
 
 function isAbortError(e: unknown): boolean {
@@ -213,7 +206,7 @@ export const EditingFeature: TableFeature<RowData> = {
 			const config = getConfig()
 			if (!config?.validate) return
 
-			writeState({ commitStatus: 'validating' })
+			writeState({ commitStatus: CommitStatus.Validating })
 			const values = getState().values
 			let result: ValidationResult
 			try {
@@ -222,7 +215,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (isAbortError(e)) return
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				if (signal.aborted) return
-				writeState({ commitStatus: 'idle' })
+				writeState({ commitStatus: CommitStatus.Idle })
 				throw e
 			}
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -234,7 +227,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
 				return {
 					...prev,
-					editing: { ...prev.editing, errors: nextErrors, commitStatus: 'idle' },
+					editing: { ...prev.editing, errors: nextErrors, commitStatus: CommitStatus.Idle },
 				}
 			})
 		}
@@ -275,7 +268,7 @@ export const EditingFeature: TableFeature<RowData> = {
 					values: snapshotRow(rowId),
 					errors: {},
 					formError: null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 			},
 
@@ -289,7 +282,7 @@ export const EditingFeature: TableFeature<RowData> = {
 					values: { [columnId]: initialValue },
 					errors: {},
 					formError: null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 			},
 
@@ -304,14 +297,14 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (!config) return
 				const { rowId, commitStatus, values } = getState()
 				if (!rowId) return
-				if (commitStatus !== 'idle') return // UI invariant
+				if (commitStatus !== CommitStatus.Idle) return // UI invariant
 
 				const c = resetController()
 
 				writeState({
 					errors: {},
 					formError: null,
-					commitStatus: 'validating',
+					commitStatus: CommitStatus.Validating,
 				})
 
 				if (config.validate) {
@@ -320,7 +313,7 @@ export const EditingFeature: TableFeature<RowData> = {
 						result = await runValidate(values, { signal: c.signal })
 					} catch (e) {
 						if (c.signal.aborted) return
-						writeState({ commitStatus: 'idle' })
+						writeState({ commitStatus: CommitStatus.Idle })
 						throw e
 					}
 					if (c.signal.aborted) return
@@ -328,13 +321,13 @@ export const EditingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: result.errors ?? {},
 							formError: result.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 				}
 
-				writeState({ commitStatus: 'saving' })
+				writeState({ commitStatus: CommitStatus.Saving })
 				try {
 					await config.onSave({ rowId, values, signal: c.signal })
 					if (c.signal.aborted) return
@@ -345,13 +338,13 @@ export const EditingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: e.errors,
 							formError: e.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 					writeState({
 						formError: GENERIC_FORM_ERROR,
-						commitStatus: 'idle',
+						commitStatus: CommitStatus.Idle,
 					})
 					throw e
 				}
@@ -362,7 +355,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (!config) return
 				const { rowId, cellId, commitStatus, values } = getState()
 				if (!rowId || !cellId) return
-				if (commitStatus !== 'idle') return
+				if (commitStatus !== CommitStatus.Idle) return
 
 				const columnId = extractColumnId(rowId, cellId)
 				const cellValues: Record<string, unknown> = { [columnId]: values[columnId] }
@@ -372,7 +365,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				writeState({
 					errors: {},
 					formError: null,
-					commitStatus: 'validating',
+					commitStatus: CommitStatus.Validating,
 				})
 
 				if (config.validate) {
@@ -381,7 +374,7 @@ export const EditingFeature: TableFeature<RowData> = {
 						result = await runValidate(cellValues, { signal: c.signal, cell: { columnId } })
 					} catch (e) {
 						if (c.signal.aborted) return
-						writeState({ commitStatus: 'idle' })
+						writeState({ commitStatus: CommitStatus.Idle })
 						throw e
 					}
 					if (c.signal.aborted) return
@@ -392,13 +385,13 @@ export const EditingFeature: TableFeature<RowData> = {
 							// cross-field refine errors land in `formError`-free zone (ignored).
 							errors: fieldErrs && fieldErrs.length > 0 ? { [columnId]: fieldErrs } : {},
 							formError: null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 				}
 
-				writeState({ commitStatus: 'saving' })
+				writeState({ commitStatus: CommitStatus.Saving })
 				try {
 					await config.onSave({ rowId, values: cellValues, signal: c.signal })
 					if (c.signal.aborted) return
@@ -409,13 +402,13 @@ export const EditingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: e.errors,
 							formError: e.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 					writeState({
 						formError: GENERIC_FORM_ERROR,
-						commitStatus: 'idle',
+						commitStatus: CommitStatus.Idle,
 					})
 					throw e
 				}
@@ -433,7 +426,7 @@ export const EditingFeature: TableFeature<RowData> = {
 						},
 					}
 				})
-				if (resolveValidateOn(key) === 'change' && getConfig()?.validate) {
+				if (resolveValidateOn(key) === ValidateOn.Change && getConfig()?.validate) {
 					scheduleChangeValidation(key)
 				}
 			},
@@ -461,20 +454,20 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (!config?.validate) return null
 				const c = resetController()
 				const values = getState().values
-				writeState({ commitStatus: 'validating' })
+				writeState({ commitStatus: CommitStatus.Validating })
 				let result: ValidationResult
 				try {
 					result = await runValidate(values, { signal: c.signal })
 				} catch (e) {
 					if (c.signal.aborted) return null
-					writeState({ commitStatus: 'idle' })
+					writeState({ commitStatus: CommitStatus.Idle })
 					throw e
 				}
 				if (c.signal.aborted) return null
 				writeState({
 					errors: result?.errors ?? {},
 					formError: result?.formError ?? null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 				return result
 			},

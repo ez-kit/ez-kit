@@ -1,5 +1,6 @@
 'use client'
 
+import { SelectionPanelVariant } from '@ez-kit/data-grid-react'
 import { X } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -10,7 +11,7 @@ import type { SelectionBarProps } from '@ez-kit/data-grid-react'
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
 	const hasActions = Boolean(onDelete) || Boolean(actions)
 
-	if (variant === 'inline') {
+	if (variant === SelectionPanelVariant.Inline) {
 		if (!open) return null
 
 		return (

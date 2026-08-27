@@ -1,4 +1,5 @@
 import { useGridComponents } from '../components-context'
+import { SortDirection } from '../types'
 
 import { useDataGridState, useDataGridTable } from './table-context'
 
@@ -72,14 +73,16 @@ export function SortTrigger({ children }: DataGridSortTriggerProps = {}) {
 
 		return {
 			columnId: entry.id,
-			direction: entry.desc ? 'desc' : 'asc',
+			direction: entry.desc ? SortDirection.Desc : SortDirection.Asc,
 			availableColumns,
 			onChangeColumn: (nextId: string) => {
 				const next: ColumnSort[] = sorting.map((s, i) => (i === index ? { id: nextId, desc: entry.desc } : s))
 				table.setSorting(next)
 			},
 			onChangeDirection: (dir) => {
-				const next: ColumnSort[] = sorting.map((s, i) => (i === index ? { id: entry.id, desc: dir === 'desc' } : s))
+				const next: ColumnSort[] = sorting.map((s, i) =>
+					i === index ? { id: entry.id, desc: dir === SortDirection.Desc } : s,
+				)
 				table.setSorting(next)
 			},
 			onRemove: () => {

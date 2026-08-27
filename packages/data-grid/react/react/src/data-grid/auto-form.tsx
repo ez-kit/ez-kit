@@ -1,3 +1,5 @@
+import { CommitStatus } from '@ez-kit/data-grid-core'
+
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
@@ -9,8 +11,19 @@ import type { ColumnEditingConfig, ColumnCreatingConfig, FieldState } from '@ez-
 import type { ColumnMeta } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
+/**
+ * Which feature's form `AutoForm` is rendering. Internal to this package — the two features
+ * differ only in which state slice and which per-column config the fields read.
+ */
+export const AutoFormMode = {
+	Creating: 'creating',
+	Editing: 'editing',
+} as const
+
+export type AutoFormMode = (typeof AutoFormMode)[keyof typeof AutoFormMode]
+
 type AutoFormProps = {
-	mode: 'creating' | 'editing'
+	mode: AutoFormMode
 }
 
 /**
@@ -29,17 +42,17 @@ type AutoFormProps = {
  */
 export function AutoForm({ mode }: AutoFormProps): ReactNode {
 	const table = useDataGridTable()
-	useDataGridState((s) => (mode === 'creating' ? s.creating : s.editing))
+	useDataGridState((s) => (mode === AutoFormMode.Creating ? s.creating : s.editing))
 	const { Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 
-	const state = mode === 'creating' ? table.creating.getState() : table.editing.getState()
+	const state = mode === AutoFormMode.Creating ? table.creating.getState() : table.editing.getState()
 	const values = state.values
 	const errors = state.errors
-	const isValidating = state.commitStatus === 'validating'
+	const isValidating = state.commitStatus === CommitStatus.Validating
 
 	const setValue = (key: string, value: unknown): void => {
-		if (mode === 'creating') {
+		if (mode === AutoFormMode.Creating) {
 			table.creating.setValue(key, value)
 		} else {
 			table.editing.setValue(key, value)
@@ -47,7 +60,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 	}
 
 	const validateField = (columnId: string): void => {
-		if (mode === 'creating') {
+		if (mode === AutoFormMode.Creating) {
 			void table.creating.validateField(columnId)
 		} else {
 			void table.editing.validateField(columnId)
@@ -60,7 +73,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				const meta = col.columnDef.meta
 				if (meta?.isSystemColumn) return null
 
-				const colDef = mode === 'creating' ? meta?.creating : meta?.editing
+				const colDef = mode === AutoFormMode.Creating ? meta?.creating : meta?.editing
 				if (colDef === false) return null
 
 				const value = values[col.id]
@@ -169,12 +182,12 @@ function resolveColumnComponent(colDef: ColConfig): ComponentType<FieldState> | 
 
 function resolveRegistryComponent(
 	meta: ColumnMeta<unknown, unknown>,
-	mode: 'creating' | 'editing',
+	mode: AutoFormMode,
 	cellTypes: CellTypeRegistry,
 ): ComponentType<FieldState> | undefined {
 	if (!meta.cellType) return undefined
 	const def = cellTypes[meta.cellType]
 	if (!def) return undefined
-	const comp = mode === 'creating' ? (def.creating ?? def.edit) : def.edit
+	const comp = mode === AutoFormMode.Creating ? (def.creating ?? def.edit) : def.edit
 	return comp
 }

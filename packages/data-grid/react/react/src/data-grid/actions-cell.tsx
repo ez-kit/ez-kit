@@ -1,4 +1,4 @@
-import { RowActionsVariant } from '@ez-kit/data-grid-core'
+import { CommitStatus, RowActionsVariant } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
 import { GridMenuIcon, GridMenuVariant, isGridMenuIcon, toMenuSections } from '../menu'
@@ -142,7 +142,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
 	const isEditing = useDataGridState((s) => s.editing.rowId === row.id)
-	const isPending = useDataGridState((s) => s.editing.rowId === row.id && s.editing.commitStatus !== 'idle')
+	const isPending = useDataGridState((s) => s.editing.rowId === row.id && s.editing.commitStatus !== CommitStatus.Idle)
 	// Row pinning is derived state; subscribe so the menu re-derives on pin/unpin.
 	useDataGridState((s) => s.rowPinning)
 

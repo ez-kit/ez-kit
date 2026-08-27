@@ -3,6 +3,7 @@ import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
+import { FilteringVariant, SortDirection } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { getAlignAttrs } from './align-attrs'
@@ -15,8 +16,22 @@ import type { DataTable } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 
-/** Sort direction as the header reports it — `'none'` rather than `false`, so it reads in JSX. */
-export type HeaderSortDirection = 'asc' | 'desc' | 'none'
+/**
+ * Sort direction as the header reports it — a third {@link HeaderSortDirection.None} member
+ * rather than `false`, so it reads in JSX and lands in `data-sort-direction` as a word.
+ *
+ * Named members for internal reference; the plain string union is what kits see.
+ */
+export const HeaderSortDirection = {
+	/** Ascending. Mirrors {@link SortDirection.Asc}. */
+	Asc: SortDirection.Asc,
+	/** Descending. Mirrors {@link SortDirection.Desc}. */
+	Desc: SortDirection.Desc,
+	/** The column carries no sort. */
+	None: 'none',
+} as const
+
+export type HeaderSortDirection = (typeof HeaderSortDirection)[keyof typeof HeaderSortDirection]
 
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
@@ -193,7 +208,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 		meta?.filtering !== false &&
 		!meta?.isSystemColumn &&
 		header.column.getCanFilter() &&
-		filteringVariant !== 'panel'
+		filteringVariant !== FilteringVariant.Panel
 	const filterContent = canFilter
 		? renderFilterInput({
 				header,
@@ -208,7 +223,8 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 			})
 		: null
 
-	const sortDirection: HeaderSortDirection = sortDir === 'asc' || sortDir === 'desc' ? sortDir : 'none'
+	const sortDirection: HeaderSortDirection =
+		sortDir === SortDirection.Asc || sortDir === SortDirection.Desc ? sortDir : HeaderSortDirection.None
 	const label = header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())
 
 	const sortTrigger = (
@@ -252,12 +268,14 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 		<>
 			<div data-slot='header-main'>
 				{sortTrigger}
-				{filteringVariant === 'popover' && canFilter && (
+				{filteringVariant === FilteringVariant.Popover && canFilter && (
 					<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>{filterContent}</FilterPopover>
 				)}
 				{menu}
 			</div>
-			{filteringVariant !== 'popover' && canFilter && <div data-slot='header-extras'>{filterContent}</div>}
+			{filteringVariant !== FilteringVariant.Popover && canFilter && (
+				<div data-slot='header-extras'>{filterContent}</div>
+			)}
 		</>
 	)
 

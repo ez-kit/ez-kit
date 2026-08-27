@@ -2,6 +2,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
+import { FilterChipsPosition } from '../types'
 import { SelectionPanelVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
 import { ActiveFiltersBar } from './active-filters-bar'
@@ -198,8 +199,8 @@ function DefaultLayout() {
 	const variant = resolveSelectionPanelVariant(table)
 
 	const chipsConfig = table.grid.filtering.chips
-	const chipsAbove = chipsConfig?.position === 'above' ? <ActiveFiltersBar /> : null
-	const chipsBelow = chipsConfig?.position === 'below' ? <ActiveFiltersBar /> : null
+	const chipsAbove = chipsConfig?.position === FilterChipsPosition.Above ? <ActiveFiltersBar /> : null
+	const chipsBelow = chipsConfig?.position === FilterChipsPosition.Below ? <ActiveFiltersBar /> : null
 
 	if (variant === SelectionPanelVariant.Inline) {
 		return (

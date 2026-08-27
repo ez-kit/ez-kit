@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
+import { LoadMoreTrigger } from '../types'
 
 import { DataGridRow } from './row'
 import { useDataGridTable, useDataGridState } from './table-context'
@@ -76,7 +77,7 @@ export function VirtualBody() {
 	// Skip while a fetch is in flight so we don't re-invoke the guarded no-op on
 	// every scroll frame; the effect re-runs once `isFetching` clears.
 	useEffect(() => {
-		if (!enabled || trigger !== 'auto' || !hasMore || isFetching) return
+		if (!enabled || trigger !== LoadMoreTrigger.Auto || !hasMore || isFetching) return
 		if (lastIndex < 0) return
 		if (lastIndex >= rowCount - thresholdRows) {
 			loadMore('forward')

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
+import { LoadMoreTrigger } from '../types'
 
 import { useInfiniteContext } from './infinite-context'
 import { useDataGridTable } from './table-context'
@@ -45,7 +46,7 @@ export function LoadMoreFooter() {
 	const wasWithinThresholdRef = useRef(false)
 
 	useEffect(() => {
-		if (!enabled || trigger !== 'auto' || isVirtualized || !hasMore) return
+		if (!enabled || trigger !== LoadMoreTrigger.Auto || isVirtualized || !hasMore) return
 		const root = getScrollElement()
 		if (!root) return
 

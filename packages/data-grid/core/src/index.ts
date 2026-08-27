@@ -12,7 +12,14 @@ export type { FeatureOption, FeatureToggle } from './utils/feature-flag'
 export { createColumns } from './column/create-columns'
 export { mapColumns } from './column/map-columns'
 export { createColumnHelper } from './column/create-column-helper'
-export { BASE_CELL_TYPE_IDS, ColumnAlign, ColumnPinSide } from './column/types'
+export {
+	BASE_CELL_TYPE_IDS,
+	BadgeVariant,
+	ColumnAlign,
+	ColumnPinSide,
+	ColumnSortUndefined,
+	SystemColumnType,
+} from './column/types'
 export type { ColumnHelper } from './column/create-column-helper'
 
 // System column IDs
@@ -26,7 +33,6 @@ export type { RowActionsConfig, RowActionsContext, RowActionItem } from './featu
 export type {
 	BadgeCellConfig,
 	BadgeItem,
-	BadgeVariant,
 	BuiltInSortingFn,
 	BaseCellTypes,
 	BooleanCellConfig,
@@ -45,7 +51,6 @@ export type {
 	ColumnAlignDef,
 	ColumnPinningDef,
 	ColumnWidthDef,
-	ColumnSortUndefined,
 	ColumnSortingConfig,
 	ColumnVisibilityDef,
 	DateCellConfig,
@@ -70,6 +75,8 @@ export type {
 	StructuredFilterValue,
 } from './features/operators'
 export {
+	BetweenInputType,
+	BetweenInputVariant,
 	DATE_OPERATORS,
 	DATE_RANGE_PRESETS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
@@ -89,7 +96,8 @@ export type {
 	CreatingSaveContext,
 	CreatingState,
 } from './features/creating'
-export type { AppliedState, DraftApi, DraftAxis, PendingCount, QueryDraft } from './features/deferred-apply'
+export { DraftAxis } from './features/deferred-apply'
+export type { AppliedState, DraftApi, PendingCount, QueryDraft } from './features/deferred-apply'
 export type { ConfirmationOptions, DeletingConfig, DeletingContext } from './features/deleting'
 export { EditingMode } from './features/editing'
 export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
@@ -100,32 +108,33 @@ export type { InfiniteState } from './features/infinite'
 export type { LoadingState } from './features/loading'
 
 // Validation API
-export { ValidationError, isValidationError, zodResolver } from './features/validation'
+export { CommitStatus, ValidateOn, ValidationError, isValidationError, zodResolver } from './features/validation'
 
 export type {
-	CommitStatus,
 	FieldState,
 	ValidateConfig,
 	ValidateContext,
-	ValidateOn,
 	ValidationErrors,
 	ValidationProblems,
 	ValidationResult,
 } from './features/validation'
 
-export { ExpandingMode } from './types'
-export type {
+export {
 	ColumnResizeDirection,
 	ColumnResizeMode,
+	ExpandingMode,
+	LoadMoreDirection,
+	MultiSortEvent,
+	PaginationMode,
+} from './types'
+export type {
 	DataTable,
 	ExpandingConfig,
 	FilteringConfig,
 	GlobalFilterFn,
 	GlobalFilteringConfig,
 	InitialTableState,
-	LoadMoreDirection,
 	MultiSortConfig,
-	MultiSortEvent,
 	PaginationConfig,
 	ColumnPinningFeatureConfig,
 	VisibilityConfig,

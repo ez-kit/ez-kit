@@ -1,4 +1,4 @@
-import { DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
+import { BetweenInputVariant, DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
 
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
@@ -14,6 +14,7 @@ import type {
 	MultiSelectOption,
 	SelectItem,
 	StructuredFilterValue,
+	BetweenInputType,
 } from '@ez-kit/data-grid-core'
 import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
@@ -105,7 +106,7 @@ function resolveMultiSelectOptions(
  */
 function resolveBetweenPresets(
 	configPresets: boolean | DateRangePreset[] | undefined,
-	betweenType: 'number' | 'date',
+	betweenType: BetweenInputType,
 ): DateRangePreset[] | undefined {
 	if (betweenType !== 'date') return undefined
 	if (configPresets === true) return DATE_RANGE_PRESETS
@@ -197,7 +198,7 @@ export function renderFilterInput({
 					<BetweenInput
 						value={(inputValue as BetweenValue | undefined) ?? {}}
 						onChange={onValueChange}
-						variant={betweenCfg?.variant ?? 'inputs'}
+						variant={betweenCfg?.variant ?? BetweenInputVariant.Inputs}
 						type={betweenType}
 						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
 						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}

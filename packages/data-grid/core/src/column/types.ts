@@ -84,7 +84,26 @@ export type SelectItem = {
 	value: string
 	label: string
 }
-export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+/**
+ * Visual variant of a badge rendered by the `badge` cell type. The names are the kits' shared
+ * badge vocabulary, not a colour — each kit maps them to its own palette.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `variant: 'destructive'` is equally valid and needs no import.
+ */
+export const BadgeVariant = {
+	/** The kit's primary/filled badge. */
+	Default: 'default',
+	/** Muted badge for supporting information. */
+	Secondary: 'secondary',
+	/** Error / danger badge. */
+	Destructive: 'destructive',
+	/** Outlined badge with no fill. */
+	Outline: 'outline',
+} as const
+
+export type BadgeVariant = (typeof BadgeVariant)[keyof typeof BadgeVariant]
+
 export type BadgeItem = {
 	value: string
 	label: string
@@ -383,10 +402,25 @@ export type BuiltInSortingFn =
 	| 'basic'
 
 /**
- * How undefined values are positioned during sort.
- * `false` (default) treats undefined as 0. Numeric variants directly forward to TanStack.
+ * Where `undefined` values land during a sort.
+ *
+ * The const object carries only the two **named** members. The other two arms of the union
+ * are not part of a named set and deliberately get no member: `-1` / `1` are TanStack's raw
+ * `sortUndefined` numbers, forwarded verbatim for anyone already writing them, and `false` is
+ * the absence of any special placement (treat `undefined` as `0`), not a third position. A
+ * member for either would be inventing a name for something that has none.
+ *
+ * Named members for internal reference; the option is typed as the plain union, so
+ * `undefined: 'last'` is equally valid and needs no import.
  */
-export type ColumnSortUndefined = 'first' | 'last' | -1 | 1 | false
+export const ColumnSortUndefined = {
+	/** `undefined` values sort to the top, whichever direction the column is sorted in. */
+	First: 'first',
+	/** `undefined` values sort to the bottom, whichever direction the column is sorted in. */
+	Last: 'last',
+} as const
+
+export type ColumnSortUndefined = (typeof ColumnSortUndefined)[keyof typeof ColumnSortUndefined] | -1 | 1 | false
 
 /**
  * Column-level sorting config.
@@ -636,6 +670,29 @@ export type ColumnWidthDef = {
 	max?: number
 }
 
+/**
+ * Which auto-injected system column a column def is.
+ *
+ * Distinct from the `SELECTION_COLUMN_ID` / `EXPAND_COLUMN_ID` / `ACTIONS_COLUMN_ID` constants,
+ * which are the columns' `id`s (`'__selection__'`, …). This is the *kind* the React layer
+ * switches on to decide what to render, and it is a shorter, stable vocabulary — the ids carry
+ * the `__…__` reserved-name convention and are matched against `column.id`, never against
+ * `meta.systemColumnType`. Reusing one for both would tie the rendered kind to the reserved-name
+ * spelling.
+ *
+ * Named members for internal reference; the field is typed as the plain string union.
+ */
+export const SystemColumnType = {
+	/** The row-selection checkbox column. */
+	Selection: 'selection',
+	/** The expand/collapse chevron column. */
+	Expand: 'expand',
+	/** The per-row actions column — edit, delete, row-pin menu, custom actions. */
+	Actions: 'actions',
+} as const
+
+export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColumnType]
+
 /** Augment TanStack's ColumnMeta with our custom fields. */
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -658,7 +715,7 @@ declare module '@tanstack/table-core' {
 		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: false | ColumnVisibilityDef
 		isSystemColumn?: boolean
-		systemColumnType?: 'selection' | 'expand' | 'actions'
+		systemColumnType?: SystemColumnType
 		/** Pre-resolved operator list for this column (set when filtering.operators is configured). */
 		resolvedOperators?: FilterOperatorDef[]
 		/** Between operator UI config passed from filtering.operators.betweenOperator. */

@@ -2,8 +2,20 @@ import { useCallback, useRef } from 'react'
 
 import { useSafeLayoutEffect } from '../utils/use-safe-layout-effect'
 
-/** Edge a pinned row sticks to — decides which neighbours stack between it and the viewport. */
-export type PinSide = 'top' | 'bottom'
+/**
+ * Edge a pinned row sticks to — decides which neighbours stack between it and the viewport.
+ *
+ * Named members for internal reference; the plain string union is what callers see. Distinct
+ * from the core `ColumnPinSide` (`left` / `right`): rows pin vertically, columns horizontally.
+ */
+export const PinSide = {
+	/** Stacked under the sticky header. */
+	Top: 'top',
+	/** Stacked above the table's bottom edge. */
+	Bottom: 'bottom',
+} as const
+
+export type PinSide = (typeof PinSide)[keyof typeof PinSide]
 
 /** CSS custom property consumed by the structural stylesheet to position a pinned row. */
 const PIN_OFFSET_VAR = '--dg-row-pin-offset'

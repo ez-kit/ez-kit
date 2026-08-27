@@ -8,8 +8,22 @@ import type {
 	TableState,
 } from '@tanstack/table-core'
 
-/** The three query axes whose application can be deferred. */
-export type DraftAxis = 'sorting' | 'columnFilters' | 'globalFilter'
+/**
+ * The three query axes whose application can be deferred. The members are the TanStack state
+ * slice names, so an axis doubles as the key into `AppliedState` / `PendingCount`.
+ *
+ * Named members for internal reference; the plain string union is what callers see.
+ */
+export const DraftAxis = {
+	/** Column sort order. */
+	Sorting: 'sorting',
+	/** Per-column filters. */
+	ColumnFilters: 'columnFilters',
+	/** The cross-column global search value. */
+	GlobalFilter: 'globalFilter',
+} as const
+
+export type DraftAxis = (typeof DraftAxis)[keyof typeof DraftAxis]
 
 /**
  * Snapshot of the query the consumer last saw. The live `sorting` /

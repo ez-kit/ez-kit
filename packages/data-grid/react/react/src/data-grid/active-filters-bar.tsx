@@ -1,5 +1,6 @@
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
+import { FilterChipKind } from '../types'
 
 import { useDataGridState, useDataGridTable } from './table-context'
 
@@ -95,7 +96,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 		label: string
 		value: ReactNode
 		onRemove: () => void
-		kind: 'column' | 'global'
+		kind: FilterChipKind
 		isDraft: boolean
 	}
 
@@ -116,7 +117,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 			onRemove: () => {
 				column.setFilterValue(undefined)
 			},
-			kind: 'column',
+			kind: FilterChipKind.Column,
 			isDraft: deferredApply && !sameFilterValue(appliedFilter?.value, cf.value),
 		})
 	}
@@ -129,7 +130,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 			onRemove: () => {
 				table.setGlobalFilter(undefined)
 			},
-			kind: 'global',
+			kind: FilterChipKind.Global,
 			isDraft: deferredApply && !sameFilterValue(applied.globalFilter, globalFilter),
 		})
 	}

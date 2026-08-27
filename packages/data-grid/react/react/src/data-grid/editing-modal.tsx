@@ -1,6 +1,8 @@
+import { CommitStatus } from '@ez-kit/data-grid-core'
+
 import { useGridComponents } from '../components-context'
 
-import { AutoForm } from './auto-form'
+import { AutoForm, AutoFormMode } from './auto-form'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 /**
@@ -30,11 +32,11 @@ export function EditingModal() {
 				open={isOpen}
 				title='Edit'
 				formError={state.formError}
-				isPending={state.commitStatus !== 'idle'}
+				isPending={state.commitStatus !== CommitStatus.Idle}
 				onSave={onSave}
 				onCancel={onCancel}
 			>
-				<AutoForm mode='editing' />
+				<AutoForm mode={AutoFormMode.Editing} />
 			</ShellComponent>
 		)
 	}
@@ -55,7 +57,7 @@ export function EditingModal() {
 			onCancel={onCancel}
 			title='Edit'
 		>
-			<AutoForm mode='editing' />
+			<AutoForm mode={AutoFormMode.Editing} />
 		</ModalComponent>
 	)
 }
