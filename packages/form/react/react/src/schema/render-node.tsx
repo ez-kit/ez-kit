@@ -1,7 +1,10 @@
 import { FormFieldType, resolveText } from '@ez-kit/form-core'
 
+import { renderChildren } from './render-children'
+
+import type { FormComponents } from '../contract'
 import type { FormFieldComponents } from '../field-props'
-import type { FieldNode, Translate } from '@ez-kit/form-core'
+import type { FieldNode, SectionNode, Translate } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -16,22 +19,34 @@ export type RenderNodeContext = {
 	translate: Translate | undefined
 }
 
+/**
+ * The two layout primitives from the raw kit contract — separate from `form` (the bound,
+ * per-field components attached to the form instance) because `Section` and `GridItem`
+ * carry no field state; they are wired straight from `createForm`'s `components`.
+ */
+export type LayoutComponents = Pick<FormComponents, 'Section' | 'GridItem'>
+
 export type RenderNodeArgs<TValues> = {
-	node: FieldNode<TValues>
+	node: FieldNode<TValues> | SectionNode<TValues, string>
 	/** The bound field components already attached to the form instance — see `createForm`. */
 	form: FormFieldComponents<TValues>
+	layout: LayoutComponents
 	context: RenderNodeContext
 }
 
 /**
- * Turn one field node into the already-bound kit component for its kind.
+ * Turn one field or section node into the already-bound kit component for its kind.
  *
  * Every case forwards only that kind's own option keys — never `{...node}` — so `when`,
  * `validate` and `colSpan` (and every other schema-only key) never leak into the kit's
  * props, and an option the node genuinely omits stays omitted rather than becoming an
  * explicit `undefined`, which React Aria and Radix reject under `exactOptionalPropertyTypes`.
+ *
+ * A section contributes nothing to a field's `name` — it only groups children into a headed,
+ * column-gridded block via `layout.Section` and recurses into them via `renderChildren`,
+ * which is what wraps each child in `layout.GridItem` when the section declares `columns`.
  */
-export function renderNode<TValues>({ node, form, context }: RenderNodeArgs<TValues>): ReactNode {
+export function renderNode<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
 	const label = resolveText(node.label, context.translate)
 	const description = resolveText(node.description, context.translate)
 
@@ -122,9 +137,23 @@ export function renderNode<TValues>({ node, form, context }: RenderNodeArgs<TVal
 					{...(node.step !== undefined && { step: node.step })}
 				/>
 			)
+		case 'section': {
+			const title = resolveText(node.title, context.translate)
+			return (
+				<layout.Section
+					title={title}
+					description={description}
+					columns={node.columns}
+				>
+					{renderChildren(node.children, { form, layout, context, parentColumns: node.columns })}
+				</layout.Section>
+			)
+		}
 		default: {
-			// Every FormFieldType is handled above; this only fires if the enum grows a
-			// member without a matching case, which is exactly what should throw.
+			// Every FormFieldType plus `section` is handled above; this only fires for a
+			// container kind not yet supported by this renderer (`step`, `submit`, `block`)
+			// or for a node type that grows a member without a matching case, which is
+			// exactly what should throw.
 			const unhandled: { type: string } = node
 			throw new Error(`Unknown node type "${unhandled.type}".`)
 		}

@@ -311,7 +311,7 @@ export function createForm({ components }: CreateFormOptions) {
 				FormElement={components.Form}
 				elementProps={elementProps}
 			>
-				{renderSchemaFields(schema, instance, translate)}
+				{renderSchemaFields(schema, instance, components, translate)}
 			</FormShell>
 		)
 	}
@@ -364,7 +364,7 @@ export function createForm({ components }: CreateFormOptions) {
 					FormElement={components.Form}
 					elementProps={elementProps}
 				>
-					{renderSchemaFields(schema, form, translate)}
+					{renderSchemaFields(schema, form, components, translate)}
 				</FormShell>
 			)
 		}

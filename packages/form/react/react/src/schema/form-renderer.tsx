@@ -1,15 +1,13 @@
-import { FORM_FIELD_TYPES, isFieldNode, walkNodes } from '@ez-kit/form-core'
-import { Fragment } from 'react'
+import { isFieldNode, walkNodes } from '@ez-kit/form-core'
 
-import { renderNode } from './render-node'
+import { renderChildren } from './render-children'
 
+import type { LayoutComponents } from './render-node'
 import type { SubmittableForm } from '../bindable-form'
 import type { FormElementProps } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type {
 	AnyFormSchema,
-	CustomFieldNode,
-	FieldNode,
 	FormAsyncValidateOrFn,
 	FormOptions,
 	FormSchema,
@@ -18,24 +16,11 @@ import type {
 } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
-/** Every built-in field kind, for narrowing `isFieldNode`'s result away from `CustomFieldNode`. */
-const BUILT_IN_FIELD_TYPES: readonly string[] = FORM_FIELD_TYPES
-
-/**
- * `isFieldNode` also matches a `CustomFieldNode` — a field kind supplied through a
- * registry, which is a later task (spec §9.3). This slice renders built-in kinds only.
- */
-function isBuiltInFieldNode<TValues>(
-	node: FieldNode<TValues> | CustomFieldNode<TValues, string>,
-): node is FieldNode<TValues> {
-	return BUILT_IN_FIELD_TYPES.includes(node.type)
-}
-
 /** The `<form>` element's own props, minus the two `FormRenderer` owns. */
 type FormElementRest = Omit<FormElementProps, 'onSubmit' | 'children'>
 
 export type SharedRendererProps<TValues> = {
-	/** The document `FormRenderer` walks — a flat list of field nodes in this slice. */
+	/** The document `FormRenderer` walks — field nodes, optionally grouped into `section`s. */
 	schema: FormSchema<TValues>
 	/** Resolves a `LocalizedText` translation key. Required only if the schema uses one. */
 	translate?: Translate
@@ -139,29 +124,27 @@ export function schemaDefaultValues<TValues>(schema: AnyFormSchema<TValues>): Re
 }
 
 /**
- * Walk the schema and render one already-bound field component per field node.
+ * Render the schema's top-level children — one already-bound field component per field
+ * node, a headed, column-gridded block per `section`, recursively — via `renderChildren`.
  *
- * Depth-first via `walkNodes`, filtered to field nodes: this slice supports a flat list, so
- * every node the test schemas declare is a direct child and a container simply has no
- * field nodes to skip over. Container node types themselves (`section`, `step`, `submit`,
- * `block`) are silently not rendered — they are out of scope for this slice. A custom field
- * kind (registry-supplied) is a hard error rather than a silent skip: unlike a container, a
- * schema author who reaches for one expects it to render.
+ * `layout` carries `Section`/`GridItem` straight from the kit's raw `components`, separate
+ * from `form`'s bound field components: unlike a field, a section has no form state of its
+ * own. There is no enclosing grid at the top level, so `parentColumns` starts `undefined`.
+ * Container node types not yet supported by this renderer (`step`, `submit`, `block`) throw
+ * via `renderNode`'s default case; a custom field kind (registry-supplied) throws with its
+ * own message — both are hard errors rather than a silent skip, since a schema author who
+ * reaches for one expects it to render.
  */
 export function renderSchemaFields<TValues>(
 	schema: FormSchema<TValues>,
 	form: FormFieldComponents<TValues>,
+	layout: LayoutComponents,
 	translate: Translate | undefined,
 ): ReactNode {
-	const nodes: ReactNode[] = []
-	walkNodes(schema, (node) => {
-		if (!isFieldNode(node)) return
-		if (!isBuiltInFieldNode(node)) {
-			throw new Error(
-				`Custom field type "${node.type}" needs a field-type registry, which this renderer does not support yet.`,
-			)
-		}
-		nodes.push(<Fragment key={node.name}>{renderNode({ node, form, context: { translate } })}</Fragment>)
+	return renderChildren(schema.children, {
+		form,
+		layout,
+		context: { translate },
+		parentColumns: undefined,
 	})
-	return nodes
 }
