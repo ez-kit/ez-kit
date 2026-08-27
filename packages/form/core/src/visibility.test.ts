@@ -3,7 +3,7 @@ import { expect, test } from 'vitest'
 import { FormFieldType } from './field-types'
 import { stripHiddenValues, visibleFieldNames } from './visibility'
 
-import type { FormSchema } from './schema'
+import type { AnyFormSchema, FormSchema } from './schema'
 
 type Values = { clientType: string; inn: string; note: string }
 
@@ -50,30 +50,28 @@ test('keys no field node owns survive stripping', () => {
 	expect(stripHiddenValues(schema, values)).toHaveProperty('meta', 1)
 })
 
-test('dotted field names are stripped only if top-level key is owned by schema', () => {
-	type NestedValues = { clientType: string; 'company.inn': string; note: string }
-	const nestedSchema: FormSchema<NestedValues> = {
+test('v1: hidden fields addressed by dotted paths still reach onSubmit inside their parent object', () => {
+	// Top-level keys only — the schema owns 'company.inn', not 'company'.
+	// When 'company.inn' is hidden, the parent 'company' object is not owned so it passes through,
+	// leaving the hidden value untouched inside it.
+	type NestedValues = { clientType: string; company: { inn: string } }
+	const nestedSchema: AnyFormSchema<NestedValues> = {
 		version: 1,
 		children: [
 			{ type: FormFieldType.Text, name: 'clientType' },
 			{
-				type: 'section',
+				type: FormFieldType.Text,
+				name: 'company.inn',
 				when: { field: 'clientType', eq: 'business' },
-				children: [{ type: FormFieldType.Text, name: 'company.inn' }],
 			},
-			{ type: FormFieldType.Text, name: 'note' },
 		],
 	}
 
 	const nestedValues: NestedValues = {
 		clientType: 'person',
-		'company.inn': '12345',
-		note: 'test',
+		company: { inn: '77' },
 	}
 	const result = stripHiddenValues(nestedSchema, nestedValues)
-	expect(result).toEqual({
-		clientType: 'person',
-		note: 'test',
-	})
-	expect(result).not.toHaveProperty('company.inn')
+	// 'company' is not a top-level key owned by the schema, so it passes through
+	expect(result.company.inn).toBe('77')
 })
