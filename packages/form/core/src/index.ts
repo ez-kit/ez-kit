@@ -1,9 +1,11 @@
 export { collectRuleFields, compileCondition, getValueAtPath } from './rules'
 export { FormFieldType, FORM_FIELD_TYPES } from './field-types'
 export { formatFieldErrors, hasFieldErrors } from './errors'
+export { resolveText } from './localized-text'
 
 export type { Condition, FieldRef, Rule } from './rules'
 export type { SelectOption } from './select-option'
+export type { LocalizedText, Translate } from './localized-text'
 
 /**
  * Curated re-exports of the framework-agnostic TanStack Form types the kits and the
