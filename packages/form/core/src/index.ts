@@ -5,6 +5,7 @@ export { resolveText } from './localized-text'
 export { FormSchemaError, parseFormSchema } from './parse'
 export { defineFormSchema, RESERVED_NODE_TYPES } from './schema'
 export { TextInputType } from './text-input-type'
+export { buildValidator } from './validate'
 export { isFieldNode, walkNodes } from './walk'
 export { stripHiddenValues, visibleFieldNames } from './visibility'
 
@@ -17,13 +18,13 @@ export type {
 	BlockNode,
 	CustomFieldNode,
 	FieldNode,
-	FieldValidate,
 	FormNode,
 	FormSchema,
 	SectionNode,
 	StepNode,
 	SubmitNode,
 } from './schema'
+export type { FieldValidate, NamedRule } from './validate'
 
 /**
  * Curated re-exports of the framework-agnostic TanStack Form types the kits and the
