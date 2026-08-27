@@ -93,6 +93,27 @@ export function defineCellType<TConfig = never>() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type CellTypeRegistry = Record<string, CellTypeDefinition<any> & { __config?: unknown }>
 
+/**
+ * Layers one registry over another, **per entry** rather than per id.
+ *
+ * A shallow `{ ...base, ...override }` replaces a whole cell type whenever both sides name it,
+ * which is almost never what the caller means. `{ date: { view: MyDate } }` reads as "keep the
+ * kit's date cell, swap its view" and would instead drop its `edit`, `filter` and the config it
+ * declared; `baseCellTypes` — whose six renderer-less entries exist precisely so kits can spread
+ * them — would blank out every renderer the kit registered.
+ *
+ * Merging entry by entry makes both cases mean what they read as: keys the override omits keep
+ * the base's value. Full replacement is still available by spelling the whole definition out.
+ */
+export function mergeCellTypes(base: CellTypeRegistry, override: CellTypeRegistry): CellTypeRegistry {
+	const merged: CellTypeRegistry = { ...base }
+	for (const [id, definition] of Object.entries(override)) {
+		const existing = merged[id]
+		merged[id] = existing === undefined ? definition : { ...existing, ...definition }
+	}
+	return merged
+}
+
 // ── context ───────────────────────────────────────────────────────────────
 
 /**
@@ -123,7 +144,7 @@ export type CellTypesProviderProps = {
  */
 export function CellTypesProvider({ types, children }: CellTypesProviderProps) {
 	const parent = useContext(CellTypesContext)
-	const merged = useMemo(() => ({ ...parent, ...types }), [parent, types])
+	const merged = useMemo(() => mergeCellTypes(parent, types), [parent, types])
 	return <CellTypesContext value={merged}>{children}</CellTypesContext>
 }
 

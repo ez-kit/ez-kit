@@ -97,6 +97,10 @@ export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = grid
 />
 ```
 
+The merge runs **entry by entry**, not id by id: naming an id the kit already registered overrides
+only the keys you give it. `cellTypes={{ date: { view: MyDate } }}` swaps the date cell's view and
+keeps the kit's `edit`, `filter` and the config the type declared.
+
 ## More examples
 
 Each custom type is just a docs-layer renderer registered via `extendDataGrid()`. The three below show different render strategies — a visual bar, a formatted value, and a composite view.

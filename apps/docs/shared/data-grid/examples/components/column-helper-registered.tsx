@@ -124,9 +124,9 @@ export function ColumnHelperRegisteredExample() {
 			// `columns` infers its cell-type parameter from the columns themselves, so the
 			// 'rating' id registered by `cellTypes` survives the assignment — no cast needed.
 			columns={registeredColumns}
-			// Only the new type: `cellTypes` shallow-merges over the kit's registry, so passing
-			// the base entries here would replace the kit's renderers with the rendererless
-			// declarations they are built from.
+			// Only the new type is needed here — the kit already registered the other nine.
+			// `cellTypes` layers entry by entry, so naming one of them would override just the
+			// keys given, not replace the kit's renderer.
 			cellTypes={RATING_CELL_TYPES}
 			sorting
 		/>

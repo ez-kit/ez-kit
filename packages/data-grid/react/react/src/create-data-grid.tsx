@@ -1,6 +1,6 @@
 'use client'
 
-import { CellTypesProvider } from './cell-types-context'
+import { CellTypesProvider, mergeCellTypes } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
 import { useDataGridState } from './data-grid/table-context'
@@ -113,7 +113,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(
 		extraCellTypes: TExtra,
 	): DataGridBundle<TCellTypes & TExtra> {
-		const mergedCellTypes = { ...cellTypes, ...extraCellTypes } as TCellTypes & TExtra
+		const mergedCellTypes = mergeCellTypes(cellTypes ?? {}, extraCellTypes) as TCellTypes & TExtra
 		return createDataGrid<TCellTypes & TExtra>({
 			components,
 			cellTypes: mergedCellTypes,

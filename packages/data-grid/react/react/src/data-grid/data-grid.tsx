@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-import { CellTypesProvider } from '../cell-types-context'
+import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
 import { SELECTION_PANEL_VARIANT, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
@@ -257,7 +257,7 @@ function DataGridControlled<TRow extends object>({
 
 	// Read cellTypes stored on the table by useDataGrid, merge with direct prop
 	const tableCellTypes = table.grid.cellTypes
-	const resolvedCellTypes = { ...tableCellTypes, ...cellTypes }
+	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
 
 	return (
 		<CellTypesProvider types={resolvedCellTypes}>
