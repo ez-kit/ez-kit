@@ -2,6 +2,7 @@ export { collectRuleFields, compileCondition, getValueAtPath } from './rules'
 export { FormFieldType, FORM_FIELD_TYPES } from './field-types'
 export { formatFieldErrors, hasFieldErrors } from './errors'
 export { resolveText } from './localized-text'
+export { FormSchemaError, parseFormSchema } from './parse'
 export { defineFormSchema, RESERVED_NODE_TYPES } from './schema'
 export { TextInputType } from './text-input-type'
 export { isFieldNode, walkNodes } from './walk'
@@ -9,6 +10,7 @@ export { isFieldNode, walkNodes } from './walk'
 export type { Condition, FieldRef, Rule } from './rules'
 export type { SelectOption } from './select-option'
 export type { LocalizedText, Translate } from './localized-text'
+export type { ParseOptions } from './parse'
 export type {
 	AnyFormSchema,
 	BlockNode,
