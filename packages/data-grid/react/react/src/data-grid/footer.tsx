@@ -1,5 +1,6 @@
 import { useGridComponents } from '../components-context'
 
+import { getAlignAttrs } from './align-attrs'
 import { flexRender } from './flex-render'
 import { useDataGridTable, useDataGridState } from './table-context'
 
@@ -88,6 +89,7 @@ export function Footer({ children }: DataGridFooterProps = {}) {
 								key={header.id}
 								colSpan={header.colSpan}
 								{...(pinned ? { pinned, 'data-pinned': pinned } : {})}
+								{...getAlignAttrs(header.column.columnDef.meta, 'footer')}
 								{...(header.column.columnDef.meta?.footerClassName !== undefined
 									? { className: header.column.columnDef.meta.footerClassName }
 									: {})}

@@ -12,7 +12,7 @@ export type { FeatureOption, FeatureToggle } from './utils/feature-flag'
 export { createColumns } from './column/create-columns'
 export { mapColumns } from './column/map-columns'
 export { createColumnHelper } from './column/create-column-helper'
-export { BASE_CELL_TYPE_IDS, ColumnPinSide } from './column/types'
+export { BASE_CELL_TYPE_IDS, ColumnAlign, ColumnPinSide } from './column/types'
 export type { ColumnHelper } from './column/create-column-helper'
 
 // System column IDs
@@ -42,6 +42,7 @@ export type {
 	ColumnDef,
 	ColumnEditingConfig,
 	ColumnFilteringConfig,
+	ColumnAlignDef,
 	ColumnPinningDef,
 	ColumnWidthDef,
 	ColumnSortUndefined,

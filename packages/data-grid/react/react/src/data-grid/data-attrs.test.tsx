@@ -163,3 +163,46 @@ describe('headless data-* contract', () => {
 		}
 	})
 })
+
+describe('column alignment data attributes', () => {
+	it('the scalar align form stamps header and body cells alike', () => {
+		const columns = createColumns<User>([
+			{ accessorKey: 'name', header: 'Name' },
+			{ accessorKey: 'age', header: 'Age', align: 'end' },
+		])
+		const table = createTable<User>({ data: USERS, columns })
+		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
+
+		const headers = container.querySelectorAll("[data-slot='th']")
+		expect(headers[0]?.getAttribute('data-align')).toBeNull()
+		expect(headers[1]?.getAttribute('data-align')).toBe('end')
+
+		const cells = container.querySelectorAll("[data-slot='td']")
+		expect(cells[0]?.getAttribute('data-align')).toBeNull()
+		expect(cells[1]?.getAttribute('data-align')).toBe('end')
+	})
+
+	it('the object form aligns each part on its own', () => {
+		const columns = createColumns<User>([
+			{ accessorKey: 'name', header: 'Name' },
+			{ accessorKey: 'age', header: 'Age', align: { cell: 'end', header: 'center' } },
+		])
+		const table = createTable<User>({ data: USERS, columns })
+		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
+
+		expect(container.querySelectorAll("[data-slot='th']")[1]?.getAttribute('data-align')).toBe('center')
+		expect(container.querySelectorAll("[data-slot='td']")[1]?.getAttribute('data-align')).toBe('end')
+	})
+
+	it('a part the object leaves out gets no attribute', () => {
+		const columns = createColumns<User>([
+			{ accessorKey: 'name', header: 'Name' },
+			{ accessorKey: 'age', header: 'Age', align: { cell: 'end' } },
+		])
+		const table = createTable<User>({ data: USERS, columns })
+		const { container } = renderWithComponents(<DataGrid table={prepareDataGridTable(table)} />)
+
+		expect(container.querySelectorAll("[data-slot='th']")[1]?.getAttribute('data-align')).toBeNull()
+		expect(container.querySelectorAll("[data-slot='td']")[1]?.getAttribute('data-align')).toBe('end')
+	})
+})

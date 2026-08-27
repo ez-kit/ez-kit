@@ -7,7 +7,15 @@ import {
 import { setIfDefined } from '../../utils/set-if-defined'
 
 import type { OperatorRegistry } from '../../features/operators'
-import type { CellViewCtx, ColumnDef, ColumnPinningDef, ColumnWidthDef, TanStackColumnDef } from '../types'
+import type {
+	CellViewCtx,
+	ColumnAlign,
+	ColumnAlignDef,
+	ColumnDef,
+	ColumnPinningDef,
+	ColumnWidthDef,
+	TanStackColumnDef,
+} from '../types'
 
 /** Cell types unchecked: `mapColumns` runs over already-authored columns of any grid. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +71,15 @@ function normalizeColumnWidth(width: number | ColumnWidthDef | undefined): Colum
 	return typeof width === 'number' ? { default: width } : width
 }
 
+/**
+ * Collapses the scalar align form onto the object one. `align: 'end'` means all three parts,
+ * which is what the bare value reads as; the object names the parts that differ.
+ */
+function normalizeColumnAlign(align: ColumnAlign | ColumnAlignDef | undefined): ColumnAlignDef | undefined {
+	if (align === undefined) return undefined
+	return typeof align === 'string' ? { header: align, cell: align, footer: align } : align
+}
+
 function mapColumn<TRow extends object>(
 	def: ColumnDef<TRow, AnyCellTypes>,
 	registry?: OperatorRegistry,
@@ -85,6 +102,7 @@ function mapColumn<TRow extends object>(
 		globalFiltering,
 		resizing,
 		width,
+		align,
 		validateOn,
 		validateDebounceMs,
 		headerClassName,
@@ -95,6 +113,7 @@ function mapColumn<TRow extends object>(
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
 
 	setIfDefined(meta, 'columnPinning', normalizeColumnPinning(pinning))
+	setIfDefined(meta, 'columnAlign', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'filtering', filtering)
 	setIfDefined(meta, 'editing', editing)

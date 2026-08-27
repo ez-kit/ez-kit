@@ -173,8 +173,8 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		// from `ColumnDef` (each duplicated an ez-kit alias) and the three aliases the page now
 		// documents in their place — `filtering`, `visibility`, `resizing` — took their slots.
 		// Then `size` / `minSize` / `maxSize` collapsed into the single `width` row, spending
-		// three of those slots to buy one.
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 11 }],
+		// three of those slots to buy one, and `align` added one back.
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 12 }],
 		nonOptionTables: [],
 	},
 	{

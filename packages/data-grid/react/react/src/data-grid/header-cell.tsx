@@ -5,6 +5,7 @@ import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
+import { getAlignAttrs } from './align-attrs'
 import { buildColumnMenuSections } from './column-menu-sections'
 import { flexRender } from './flex-render'
 import { renderFilterInput } from './render-filter-input'
@@ -134,6 +135,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 				style={pinVars}
 				pinned={pinned}
 				{...(pinned ? { 'data-pinned': pinned } : {})}
+				{...getAlignAttrs(meta, 'header')}
 			>
 				<Checkbox
 					value={isAllSelected}
@@ -277,6 +279,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 			pinned={pinned}
 			{...(meta?.headerClassName !== undefined ? { className: meta.headerClassName } : {})}
 			{...(pinned ? { 'data-pinned': pinned } : {})}
+			{...getAlignAttrs(meta, 'header')}
 			{...(canResize ? { 'data-resizable': 'true' } : {})}
 			{...draftSortAttrs}
 		>

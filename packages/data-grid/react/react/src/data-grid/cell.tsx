@@ -6,11 +6,12 @@ import { resolveCellClassName } from '../utils/class-names'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
+import { getAlignAttrs } from './align-attrs'
 import { flexRender } from './flex-render'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
-import type { FieldState } from '@ez-kit/data-grid-core'
+import type { ColumnAlign, FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
@@ -42,10 +43,12 @@ export type DataGridCellProps = {
 	children?: ReactNode | ((args: DataGridCellRenderArgs) => ReactNode)
 }
 
-type PinInfo = {
+/** The chrome a body cell wears regardless of what it renders: pin offsets and alignment. */
+type CellChrome = {
 	pinVars: CSSProperties
 	pinned: false | 'left' | 'right'
 	pinnedAttrs: { 'data-pinned'?: 'left' | 'right' }
+	alignAttrs: { 'data-align'?: ColumnAlign }
 }
 
 const EMPTY_ERRORS: readonly string[] = Object.freeze([])
@@ -98,7 +101,7 @@ export function DataGridCell({ cell, row, children }: DataGridCellProps) {
 function CustomCell({ cell, row, children }: DataGridCellProps) {
 	const { Td } = useGridComponents().core
 	const meta = cell.column.columnDef.meta
-	const pin = getCellPinInfo(cell)
+	const chrome = getCellChrome(cell)
 	const cellClassName = resolveCellClassName(meta?.cellClassName, {
 		row: row.original as unknown,
 		value: cell.getValue<unknown>(),
@@ -108,9 +111,10 @@ function CustomCell({ cell, row, children }: DataGridCellProps) {
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
 		>
 			{typeof children === 'function' ? children({ cell, row, value: cell.getValue<unknown>() }) : children}
@@ -122,14 +126,14 @@ function CustomCell({ cell, row, children }: DataGridCellProps) {
 
 function SystemCell({ cell, row }: DataGridCellProps) {
 	const columnId = cell.column.id
-	const pin = getCellPinInfo(cell)
+	const chrome = getCellChrome(cell)
 	const { Td } = useGridComponents().core
 
 	if (columnId === SELECTION_COLUMN_ID) {
 		return (
 			<SelectionCell
 				row={row}
-				pin={pin}
+				chrome={chrome}
 			/>
 		)
 	}
@@ -137,7 +141,7 @@ function SystemCell({ cell, row }: DataGridCellProps) {
 		return (
 			<ExpandCell
 				row={row}
-				pin={pin}
+				chrome={chrome}
 			/>
 		)
 	}
@@ -145,9 +149,10 @@ function SystemCell({ cell, row }: DataGridCellProps) {
 		return (
 			<Td
 				data-slot='td'
-				style={pin.pinVars}
-				pinned={pin.pinned}
-				{...pin.pinnedAttrs}
+				style={chrome.pinVars}
+				pinned={chrome.pinned}
+				{...chrome.pinnedAttrs}
+				{...chrome.alignAttrs}
 				data-system-column='actions'
 			>
 				<ActionsCell row={row} />
@@ -160,10 +165,10 @@ function SystemCell({ cell, row }: DataGridCellProps) {
 type SystemSubProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
-	pin: PinInfo
+	chrome: CellChrome
 }
 
-function SelectionCell({ row, pin }: SystemSubProps) {
+function SelectionCell({ row, chrome }: SystemSubProps) {
 	const { Td, Checkbox } = useGridComponents().core
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
 	// re-derive correctly. Refining this to per-row keys breaks indeterminate
@@ -174,9 +179,10 @@ function SelectionCell({ row, pin }: SystemSubProps) {
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 		>
 			<Checkbox
 				value={isSelected}
@@ -190,7 +196,7 @@ function SelectionCell({ row, pin }: SystemSubProps) {
 	)
 }
 
-function ExpandCell({ row, pin }: SystemSubProps) {
+function ExpandCell({ row, chrome }: SystemSubProps) {
 	const gridComponents = useGridComponents()
 	const { Td } = gridComponents.core
 	const { Chevron } = gridComponents.expanding
@@ -201,9 +207,10 @@ function ExpandCell({ row, pin }: SystemSubProps) {
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 			data-system-column='expand'
 			data-depth={row.depth}
 		>
@@ -226,7 +233,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
-	const pin = getCellPinInfo(cell)
+	const chrome = getCellChrome(cell)
 
 	const editMode: 'row' | 'modal' | 'cell' = table.options.editing?.mode ?? 'row'
 	const cellId = `${row.id}_${columnId}`
@@ -244,7 +251,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 				cell={cell}
 				editMode={editMode}
 				cellId={cellId}
-				pin={pin}
+				chrome={chrome}
 			/>
 		)
 	}
@@ -267,9 +274,10 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
 			onDoubleClick={handleDoubleClick}
 		>
@@ -292,7 +300,7 @@ type EditingCellProps = {
 	cell: Cell<any, unknown>
 	editMode: 'row' | 'modal' | 'cell'
 	cellId: string
-	pin: PinInfo
+	chrome: CellChrome
 }
 
 /**
@@ -308,7 +316,7 @@ type EditingCellProps = {
  * As a result, `setValue` on a different column does not re-render this cell:
  * only the one whose `values[columnId]` key actually changed re-renders.
  */
-function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
+function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 	const table = useDataGridTable()
 	const { Td, Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
@@ -343,9 +351,10 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 			{...(fieldError ? { 'data-error': true } : {})}
 		>
 			{editComp ? (
@@ -366,11 +375,11 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-function getCellPinInfo(cell: Cell<unknown, unknown>): PinInfo {
+function getCellChrome(cell: Cell<unknown, unknown>): CellChrome {
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
-	const pinnedAttrs: PinInfo['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
-	return { pinVars, pinned, pinnedAttrs }
+	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
+	return { pinVars, pinned, pinnedAttrs, alignAttrs: getAlignAttrs(cell.column.columnDef.meta, 'cell') }
 }
 
 function resolveEditComponent(

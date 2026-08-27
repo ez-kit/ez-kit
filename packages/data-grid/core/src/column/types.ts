@@ -323,6 +323,28 @@ export const ColumnPinSide = {
 
 export type ColumnPinSide = (typeof ColumnPinSide)[keyof typeof ColumnPinSide]
 
+/**
+ * Horizontal alignment of a column's contents. Logical, not physical: `'start'` is the left edge
+ * in LTR and the right edge in RTL.
+ */
+export const ColumnAlign = {
+	Start: 'start',
+	Center: 'center',
+	End: 'end',
+} as const
+
+export type ColumnAlign = (typeof ColumnAlign)[keyof typeof ColumnAlign]
+
+/** Per-part alignment override. Any part left out falls back to the grid's default. */
+export type ColumnAlignDef = {
+	/** Alignment of the header cell (`<th>`). */
+	header?: ColumnAlign
+	/** Alignment of the body cells (`<td>`). */
+	cell?: ColumnAlign
+	/** Alignment of the footer cell. */
+	footer?: ColumnAlign
+}
+
 export type ColumnPinningDef = {
 	/** Static pin — always pinned to this side, no pin section in the column menu. */
 	side?: ColumnPinSide
@@ -521,6 +543,27 @@ export type ColumnDef<
 	resizing?: false
 
 	/**
+	 * Horizontal alignment of this column's contents.
+	 *
+	 * The scalar aligns the header, the body cells and the footer alike — the common case, since
+	 * a numeric column wants all three at the same edge. The object exists for the exception:
+	 *
+	 * ```ts
+	 * { accessorKey: 'total', align: 'end' }
+	 * { accessorKey: 'total', align: { cell: 'end', header: 'start' } }
+	 * ```
+	 *
+	 * `'start'` / `'end'` rather than `'left'` / `'right'`: this axis flips with the text
+	 * direction, and the grid already treats RTL as first-class (`sizing.direction`). Column
+	 * *pinning* keeps `'left'` / `'right'` — a pinned column sticks to a viewport edge, which
+	 * does not flip.
+	 *
+	 * The React layer emits this as `data-align` on the cell; the shared structural stylesheet
+	 * turns it into alignment. A kit needs to do nothing.
+	 */
+	align?: ColumnAlign | ColumnAlignDef
+
+	/**
 	 * Class applied to this column's header cell (`<th>`).
 	 *
 	 * Deliberately three names rather than one `className`: a single field would have to mean
@@ -579,6 +622,8 @@ declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface ColumnMeta<TData, TValue> {
 		columnPinning?: false | ColumnPinningDef
+		/** Resolved per-part alignment from `column.align`, normalized off the scalar form. */
+		columnAlign?: ColumnAlignDef
 		cellType?: CellType
 		config?: Record<string, unknown>
 		/** Class for this column's header cell, from `column.headerClassName`. */
