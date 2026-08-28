@@ -299,7 +299,16 @@ export function createForm({ components }: CreateFormOptions) {
 		// `onSubmit`, or the caller's own `validators` are used verbatim — never both. This
 		// only works because this component is the one calling `useForm` — same reason
 		// `stripHiddenValuesOnSubmit` below only exists in this mode.
-		const validators = resolveSchemaValidators(schema, options.validators, rules, translate)
+		//
+		// Memoised: `resolveSchemaValidators` re-walks the whole schema tree, and when the
+		// schema declares constraints it builds a brand-new `buildValidator` instance and a
+		// brand-new `{ onChange, onSubmit }` object each call. Without this, `useForm` would
+		// receive a differently-identitied `validators` value on every render — the same
+		// reason `fields` and the merged instance below are memoised.
+		const validators = useMemo(
+			() => resolveSchemaValidators(schema, options.validators, rules, translate),
+			[schema, options.validators, rules, translate],
+		)
 		// Spec §6: strip fields the schema currently hides out of the submitted value, unless
 		// the caller opted out with `keepHiddenValues`. This only works because this component
 		// is the one calling `useForm` — see `stripHiddenValuesOnSubmit`'s doc comment on why

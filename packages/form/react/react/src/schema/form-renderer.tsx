@@ -210,7 +210,11 @@ export function stripHiddenValuesOnSubmit<TValues>(
 		})
 }
 
-/** Whether any field node in `schema` declares a `validate` block — walked once at mount. */
+/**
+ * Whether any field node in `schema` declares a `validate` block. Cheap on its own, but called
+ * from `resolveSchemaValidators`, which `UncontrolledFormRenderer` memoises — so in practice
+ * this only re-walks the tree when `schema` itself changes identity, not on every render.
+ */
 export function schemaHasValidateConstraints<TValues>(schema: AnyFormSchema<TValues>): boolean {
 	let hasConstraints = false
 	walkNodes(schema, (node) => {
@@ -232,6 +236,12 @@ export function schemaHasValidateConstraints<TValues>(schema: AnyFormSchema<TVal
  * Throws (rather than silently picking a winner) when the schema declares constraints *and*
  * the caller also supplied `validators` — the two would otherwise race for the same
  * `onChange`/`onSubmit` slot with no defined precedence.
+ *
+ * Not memoised here: this is a plain function so it stays trivially unit-testable. Its one
+ * call site (`UncontrolledFormRenderer`) wraps it in `useMemo` — every call otherwise re-walks
+ * the schema and, when constraints exist, builds a fresh `buildValidator` instance and a fresh
+ * `{ onChange, onSubmit }` object, which would hand `useForm` a differently-identitied
+ * `validators` value on every render.
  */
 export function resolveSchemaValidators<TValues>(
 	schema: AnyFormSchema<TValues>,
