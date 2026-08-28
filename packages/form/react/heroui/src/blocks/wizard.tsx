@@ -95,9 +95,12 @@ export function Wizard({
 					<Tabs.ListContainer>
 						<Tabs.List aria-label='Form steps'>
 							{steps.map((step) => (
+								// HeroUI's `Tabs.Tab` sets its own `data-slot="tabs-tab"` after spreading incoming
+								// props, so a `data-slot` passed here never survives — `data-wizard-slot` is a name
+								// HeroUI does not claim.
 								<Tabs.Tab
 									key={step.index}
-									data-slot='wizard-step'
+									data-wizard-slot='step'
 									data-status={step.status}
 									data-invalid={step.invalid || undefined}
 									id={stepKey(step.index)}
@@ -132,8 +135,10 @@ export function Wizard({
 						</Tabs.List>
 					</Tabs.ListContainer>
 					{currentStep !== undefined && (
+						// Same clobbering as `Tabs.Tab` above — HeroUI's `Tabs.Panel` sets its own
+						// `data-slot="tabs-panel"`, so `data-wizard-slot` is the hook that actually lands.
 						<Tabs.Panel
-							data-slot='wizard-body'
+							data-wizard-slot='body'
 							id={stepKey(currentStep.index)}
 						>
 							{children}
