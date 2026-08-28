@@ -14,16 +14,10 @@ import type { ReactNode } from 'react'
  * kit ships a stepper (see `AGENTS.md`/task brief), so this is hand-built in `blocks/` over
  * the vendored, immutable `components/ui/**` primitives, same as every other adapter here.
  *
- * `WizardStep.title`/`description` are `LocalizedText`, not `ReactNode`: the wizard step
- * machine hands this kit the raw value rather than a pre-resolved string, and no `translate`
- * reaches this layer. `stepText` shows the finished string when it has one and falls back to
- * the raw key otherwise, matching the test kit's approach in `@ez-kit/form-react`.
+ * `WizardStep.title`/`description` are `ReactNode`, already resolved by the adapter — same
+ * rule as `FieldRenderProps.label`/`description`. This kit renders what it is given; it never
+ * sees a `LocalizedText` or translates anything itself.
  */
-function stepText(text: WizardStep['title']): string | undefined {
-	if (text === undefined) return undefined
-	return typeof text === 'string' ? text : text.key
-}
-
 function StepIndicator({ step }: { step: WizardStep }): ReactNode {
 	if (step.status === 'complete') {
 		return (
@@ -37,7 +31,6 @@ function StepIndicator({ step }: { step: WizardStep }): ReactNode {
 }
 
 function StepTrigger({ step }: { step: WizardStep }): ReactNode {
-	const title = stepText(step.title)
 	return (
 		<li
 			data-slot='wizard-step'
@@ -72,7 +65,7 @@ function StepTrigger({ step }: { step: WizardStep }): ReactNode {
 				>
 					<StepIndicator step={step} />
 				</span>
-				{title !== undefined && <span data-slot='wizard-step-title'>{title}</span>}
+				{step.title !== undefined && <span data-slot='wizard-step-title'>{step.title}</span>}
 			</button>
 		</li>
 	)

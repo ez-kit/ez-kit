@@ -1,6 +1,6 @@
 import { Button as HeroButton, ProgressBar, Tabs } from '@heroui/react'
 
-import type { WizardRenderProps, WizardStep } from '@ez-kit/form-react'
+import type { WizardRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -14,15 +14,10 @@ import type { ReactNode } from 'react'
  * approximation: a disabled step is unfocusable and unclickable, exactly like the shadcn
  * kit's native `disabled` button.
  *
- * `WizardStep.title`/`description` are `LocalizedText`, not `ReactNode`: the wizard step
- * machine hands this kit the raw value rather than a pre-resolved string, and no `translate`
- * reaches this layer. `stepText` shows the finished string when it has one and falls back to
- * the raw key otherwise, matching the test kit's approach in `@ez-kit/form-react`.
+ * `WizardStep.title`/`description` are `ReactNode`, already resolved by the adapter — same
+ * rule as `FieldRenderProps.label`/`description`. This kit renders what it is given; it never
+ * sees a `LocalizedText` or translates anything itself.
  */
-function stepText(text: WizardStep['title']): string | undefined {
-	if (text === undefined) return undefined
-	return typeof text === 'string' ? text : text.key
-}
 
 /** Tabs keys are strings; step identity is its `index`. */
 function stepKey(index: number): string {
@@ -80,7 +75,7 @@ export function Wizard({
 									id={stepKey(step.index)}
 									isDisabled={step.disabled}
 								>
-									{stepText(step.title) ?? `Step ${String(step.index + 1)}`}
+									{step.title ?? `Step ${String(step.index + 1)}`}
 									<Tabs.Indicator />
 								</Tabs.Tab>
 							))}

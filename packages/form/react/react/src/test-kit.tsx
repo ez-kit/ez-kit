@@ -104,19 +104,6 @@ function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
 	)
 }
 
-/**
- * `WizardStep.title`/`description` are `LocalizedText`, not `ReactNode` — unlike the layout
- * contract, the wizard step machine hands the kit the raw value rather than a pre-resolved
- * string, and no `translate` function reaches this layer. A kit shows the finished string
- * when it has one, and falls back to the raw key when it doesn't (this test kit never
- * translates, so an app that wires translation keys through the wizard would see keys here —
- * a real kit that wants live translation asks its host app to resolve before render).
- */
-function displayLocalizedText(text: WizardStep['title']): string | undefined {
-	if (text === undefined) return undefined
-	return typeof text === 'string' ? text : text.key
-}
-
 function WizardStepTrigger({ index, title, status, invalid, disabled, goTo }: WizardStep): ReactNode {
 	return (
 		<li
@@ -131,7 +118,7 @@ function WizardStepTrigger({ index, title, status, invalid, disabled, goTo }: Wi
 				disabled={disabled}
 				onClick={goTo}
 			>
-				{displayLocalizedText(title) ?? `Step ${String(index + 1)}`}
+				{title ?? `Step ${String(index + 1)}`}
 			</button>
 		</li>
 	)

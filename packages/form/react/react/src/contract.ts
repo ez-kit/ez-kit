@@ -1,4 +1,4 @@
-import type { FormFieldType, LocalizedText, SelectOption, TextInputType } from '@ez-kit/form-core'
+import type { FormFieldType, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -141,8 +141,10 @@ export type GridItemRenderProps = {
 
 export type WizardStep = {
 	index: number
-	title: LocalizedText | undefined
-	description: LocalizedText | undefined
+	/** Already resolved by the adapter (`resolveText(step.title, translate)`) — same rule as `FieldRenderProps.label`. */
+	title: ReactNode
+	/** Already resolved by the adapter — same rule as `FieldRenderProps.description`. */
+	description: ReactNode
 	status: 'complete' | 'current' | 'upcoming'
 	/** Visited and failing validation. Never true for an unvisited step. */
 	invalid: boolean
