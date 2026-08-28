@@ -1,12 +1,16 @@
-import { FormFieldType, resolveText } from '@ez-kit/form-core'
+import { FORM_FIELD_TYPES, FormFieldType, resolveText } from '@ez-kit/form-core'
+
+import { fieldRenderProps } from '../field-render-props'
 
 import { renderChildren } from './render-children'
 import { useConditionValue } from './use-condition'
 
 import type { ConditionSubscribableForm } from './use-condition'
+import type { BindableForm, FieldValue } from '../bindable-form'
 import type { FormComponents } from '../contract'
 import type { FormFieldComponents } from '../field-props'
-import type { FieldNode, SectionNode, Translate } from '@ez-kit/form-core'
+import type { BlockRegistry, CustomFieldRegistry } from './registries'
+import type { BlockNode, CustomFieldNode, FieldNode, SectionNode, SubmitNode, Translate } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -15,10 +19,14 @@ import type { ReactNode } from 'react'
  * `translate` is a required key typed `Translate | undefined` — not `translate?:` — so a
  * caller who has no translator can still pass `{ translate: undefined }` without tripping
  * `exactOptionalPropertyTypes`; same reason the kit contract types its optional fields the
- * same way (see `FieldRenderProps` in `contract.ts`).
+ * same way (see `FieldRenderProps` in `contract.ts`). `fields` and `blocks` are the same
+ * shape: `undefined` when the caller registered none, rather than an empty object forced on
+ * every caller.
  */
 export type RenderNodeContext = {
 	translate: Translate | undefined
+	fields: CustomFieldRegistry | undefined
+	blocks: BlockRegistry | undefined
 }
 
 /**
@@ -29,11 +37,38 @@ export type RenderNodeContext = {
 export type LayoutComponents = Pick<FormComponents, 'Section' | 'GridItem'>
 
 export type RenderNodeArgs<TValues> = {
-	node: FieldNode<TValues> | SectionNode<TValues, string>
+	node:
+		| FieldNode<TValues>
+		| SectionNode<TValues, string>
+		| CustomFieldNode<TValues, string>
+		| BlockNode<TValues>
+		| SubmitNode<TValues>
 	/** The bound field components already attached to the form instance — see `createForm`. */
 	form: FormFieldComponents<TValues>
 	layout: LayoutComponents
 	context: RenderNodeContext
+}
+
+/** Every `type` the `switch` below handles by name, for narrowing a custom field kind away. */
+const BUILT_IN_OR_CONTAINER_TYPES: readonly string[] = [...FORM_FIELD_TYPES, 'section', 'block', 'submit']
+
+/**
+ * `CustomFieldNode<TValues, string>`'s own `type` is a bare `string`, not a literal — a
+ * registry key can be anything — so `switch (node.type)` below can never exclude it from any
+ * one case the way it excludes `SectionNode`/`BlockNode`/`SubmitNode` by their literal `type`.
+ * This runtime check does what the discriminant alone cannot: pull a custom (or genuinely
+ * unknown) node out of the union *before* the switch, so every case inside it keeps its own
+ * node's real shape instead of the whole five-member union.
+ */
+function isCustomFieldNode<TValues>(
+	node:
+		| FieldNode<TValues>
+		| SectionNode<TValues, string>
+		| CustomFieldNode<TValues, string>
+		| BlockNode<TValues>
+		| SubmitNode<TValues>,
+): node is CustomFieldNode<TValues, string> {
+	return !BUILT_IN_OR_CONTAINER_TYPES.includes(node.type)
 }
 
 /**
@@ -56,8 +91,17 @@ export type RenderNodeArgs<TValues> = {
  * `node.when` false hides the node entirely (returns `null`, after both hooks have still
  * run); `node.disabledWhen` true only disables it — spec §5 draws that line deliberately, so
  * a disabled field's already-typed value stays visible and submitted rather than vanishing.
- * `disabledWhen` only reaches built-in field kinds: a `section` has no `disabled` slot in the
- * kit contract (`SectionRenderProps`), so it only ever hides via `when`, never disables.
+ * `disabledWhen` only reaches built-in and custom field kinds: a `section` has no `disabled`
+ * slot in the kit contract (`SectionRenderProps`), and neither does a `block`, so those only
+ * ever hide via `when`, never disable.
+ *
+ * Resolution order for a node past the built-in kinds and `section` (spec §4.7, §8):
+ * `blocks[node.component]` for `type: 'block'` → `submit` → `fields[node.type]` for a custom
+ * field kind → throw naming the type. A custom field goes through `form.AppField` directly,
+ * the same TanStack primitive the built-in `create*Field` wrappers close over — see
+ * `fieldRenderProps`, reused here so a custom field gets byte-for-byte the same binding shape
+ * a built-in one does, not a hand-rolled subset of it. A block gets none of that: it has no
+ * `name` and holds no value, so it renders from `props` alone.
  */
 export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeArgs<TValues>): ReactNode {
 	// `form` carries far more than `FormFieldComponents` at runtime — the real bound instance
@@ -71,6 +115,40 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 	const description = resolveText(node.description, context.translate)
 
 	if (!visible) return null
+
+	if (isCustomFieldNode(node)) {
+		const CustomField = context.fields?.[node.type]
+		if (CustomField === undefined) {
+			throw new Error(`Unknown node type "${node.type}".`)
+		}
+
+		// A custom field has no `create*Field` wrapper (see `buildFieldComponents`), so it
+		// binds through `form.AppField` directly — the same primitive every built-in wrapper
+		// closes over. `form` carries far more than `FormFieldComponents` at runtime, exactly
+		// as `conditionForm` above narrows the same instance the other way; see
+		// `BindableForm`'s doc comment for why this stays a local cast rather than a wider
+		// `RenderNodeArgs['form']` type.
+		const bindableForm = form as unknown as BindableForm
+		return (
+			<bindableForm.AppField name={node.name}>
+				{(field) => (
+					<CustomField
+						{...fieldRenderProps(field, node.type as unknown as FormFieldType, {
+							label,
+							description,
+							disabled: disabledByCondition,
+							required: node.required,
+						})}
+						value={field.state.value}
+						onChange={(value: unknown) => {
+							field.handleChange(value as FieldValue)
+						}}
+						props={node.props ?? {}}
+					/>
+				)}
+			</bindableForm.AppField>
+		)
+	}
 
 	switch (node.type) {
 		case FormFieldType.Text:
@@ -179,11 +257,23 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 				</layout.Section>
 			)
 		}
+		case 'block': {
+			const Block = context.blocks?.[node.component]
+			if (Block === undefined) {
+				throw new Error(`Unknown block component "${node.component}".`)
+			}
+			return <Block props={node.props ?? {}} />
+		}
+		case 'submit': {
+			return (
+				<form.SubmitButton {...(node.disabled !== undefined && { disabled: node.disabled })}>{label}</form.SubmitButton>
+			)
+		}
 		default: {
-			// Every FormFieldType plus `section` is handled above; this only fires for a
-			// container kind not yet supported by this renderer (`step`, `submit`, `block`)
-			// or for a node type that grows a member without a matching case, which is
-			// exactly what should throw.
+			// Every FormFieldType plus `section`, `block` and `submit` is handled above, and
+			// `isCustomFieldNode` has already pulled out anything else — this only fires for a
+			// node type that grows a member without a matching case, which is exactly what
+			// should throw.
 			const unhandled: { type: string } = node
 			throw new Error(`Unknown node type "${unhandled.type}".`)
 		}

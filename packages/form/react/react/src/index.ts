@@ -9,6 +9,7 @@ export type {
 	RendererForm,
 	SharedRendererProps,
 } from './schema/form-renderer'
+export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
 export type {
 	ButtonProps,
 	CheckboxFieldRenderProps,

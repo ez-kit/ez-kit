@@ -13,6 +13,7 @@ import {
 	schemaDefaultValues,
 	stripHiddenValuesOnSubmit,
 } from './schema/form-renderer'
+import { assertNoReservedFieldKeyCollision } from './schema/registries'
 
 import type { BindableForm } from './bindable-form'
 import type { FormComponents } from './contract'
@@ -24,7 +25,7 @@ import type {
 	FormRendererUncontrolledImplProps,
 	FormRendererUncontrolledProps,
 } from './schema/form-renderer'
-import type { AnyFormSchema, FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
+import type { FormAsyncValidateOrFn, FormOptions, FormValidateOrFn } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 export type CreateFormOptions = {
@@ -284,12 +285,13 @@ export function createForm({ components }: CreateFormOptions) {
 			TSubmitMeta
 		>,
 	): ReactNode {
-		const { schema, translate, keepHiddenValues, form: _ignored, ...rest } = props
+		const { schema, translate, keepHiddenValues, fields, blocks, rules: _rules, form: _ignored, ...rest } = props
+		assertNoReservedFieldKeyCollision(fields, blocks)
 		const { options, elementProps } = splitFormProps(rest)
 		// Spec §4.6: the schema's own `defaultValue` entries seed the form when the caller
 		// supplies none — theirs wins whenever they do.
 		const defaultValues = {
-			...schemaDefaultValues(schema as AnyFormSchema<TFormData>),
+			...schemaDefaultValues(schema),
 			...(options.defaultValues as Record<string, unknown> | undefined),
 		}
 		// Spec §6: strip fields the schema currently hides out of the submitted value, unless
@@ -298,7 +300,7 @@ export function createForm({ components }: CreateFormOptions) {
 		// the controlled overload below cannot do the same.
 		const instance = useForm({
 			...options,
-			onSubmit: stripHiddenValuesOnSubmit(schema as AnyFormSchema<TFormData>, options.onSubmit, keepHiddenValues),
+			onSubmit: stripHiddenValuesOnSubmit(schema, options.onSubmit, keepHiddenValues),
 			defaultValues,
 		} as FormOptions<
 			TFormData,
@@ -321,7 +323,7 @@ export function createForm({ components }: CreateFormOptions) {
 				FormElement={components.Form}
 				elementProps={elementProps}
 			>
-				{renderSchemaFields(schema, instance, components, translate)}
+				{renderSchemaFields(schema, instance, components, translate, fields, blocks)}
 			</FormShell>
 		)
 	}
@@ -367,14 +369,15 @@ export function createForm({ components }: CreateFormOptions) {
 	): ReactNode
 	function FormRenderer(props: AnyFormRendererProps): ReactNode {
 		if (isRendererControlled(props)) {
-			const { form, schema, translate, ...elementProps } = props
+			const { form, schema, translate, fields, blocks, rules: _rules, ...elementProps } = props
+			assertNoReservedFieldKeyCollision(fields, blocks)
 			return (
 				<FormShell
 					form={form}
 					FormElement={components.Form}
 					elementProps={elementProps}
 				>
-					{renderSchemaFields(schema, form, components, translate)}
+					{renderSchemaFields(schema, form, components, translate, fields, blocks)}
 				</FormShell>
 			)
 		}

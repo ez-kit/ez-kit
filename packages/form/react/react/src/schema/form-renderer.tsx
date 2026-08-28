@@ -2,6 +2,7 @@ import { isFieldNode, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
 
 import { renderChildren } from './render-children'
 
+import type { BlockRegistry, CustomFieldRegistry } from './registries'
 import type { LayoutComponents } from './render-node'
 import type { SubmittableForm } from '../bindable-form'
 import type { FormElementProps } from '../contract'
@@ -10,8 +11,8 @@ import type {
 	AnyFormSchema,
 	FormAsyncValidateOrFn,
 	FormOptions,
-	FormSchema,
 	FormValidateOrFn,
+	NamedRule,
 	Translate,
 } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -20,10 +21,35 @@ import type { ReactNode } from 'react'
 type FormElementRest = Omit<FormElementProps, 'onSubmit' | 'children'>
 
 export type SharedRendererProps<TValues> = {
-	/** The document `FormRenderer` walks — field nodes, optionally grouped into `section`s. */
-	schema: FormSchema<TValues>
+	/**
+	 * The document `FormRenderer` walks — field nodes, optionally grouped into `section`s.
+	 * Typed `AnyFormSchema` (`FormSchema<TValues, string>`), not `FormSchema<TValues>`
+	 * (`TCustom` defaulting to `never`): a schema authored with `defineFormSchema<TValues,
+	 * TCustom>()` carries its own closed `TCustom` set, which would otherwise make it
+	 * unassignable here the moment it declares a single custom field type.
+	 */
+	schema: AnyFormSchema<TValues>
 	/** Resolves a `LocalizedText` translation key. Required only if the schema uses one. */
 	translate?: Translate
+	/**
+	 * Custom field kinds referenced from the schema by `type` (spec §4.7, §8) — a field with
+	 * a `name`, bound to a value, that receives the same binding a built-in field gets.
+	 * `FormRenderer` throws if a key here collides with a reserved node type (see
+	 * `assertNoReservedFieldKeyCollision`).
+	 */
+	fields?: CustomFieldRegistry
+	/**
+	 * Block components referenced from the schema by `component` (spec §4.7, §8) — markup
+	 * with no `name` and no value binding, rendered from its own `props` only.
+	 */
+	blocks?: BlockRegistry
+	/**
+	 * Named validation rules a `validate.rule` reference resolves against — the same shape
+	 * `@ez-kit/form-core`'s `buildValidator` consumes. Accepted and threaded through here;
+	 * compiling the schema's `validate` blocks into an actual validator is a later task's job,
+	 * not this one's.
+	 */
+	rules?: Record<string, NamedRule>
 }
 
 /**
@@ -189,21 +215,23 @@ export function stripHiddenValuesOnSubmit<TValues>(
  * `layout` carries `Section`/`GridItem` straight from the kit's raw `components`, separate
  * from `form`'s bound field components: unlike a field, a section has no form state of its
  * own. There is no enclosing grid at the top level, so `parentColumns` starts `undefined`.
- * Container node types not yet supported by this renderer (`step`, `submit`, `block`) throw
- * via `RenderNode`'s default case; a custom field kind (registry-supplied) throws with its
- * own message — both are hard errors rather than a silent skip, since a schema author who
- * reaches for one expects it to render.
+ * `fields` and `blocks` resolve `type: '<custom>'` and `type: 'block'` nodes respectively
+ * (spec §4.7, §8); `step` is not yet supported by this renderer and, like a genuinely unknown
+ * `type`, throws via `RenderNode`'s default case — a hard error rather than a silent skip,
+ * since a schema author who reaches for one expects it to render.
  */
 export function renderSchemaFields<TValues>(
-	schema: FormSchema<TValues>,
+	schema: AnyFormSchema<TValues>,
 	form: FormFieldComponents<TValues>,
 	layout: LayoutComponents,
 	translate: Translate | undefined,
+	fields: CustomFieldRegistry | undefined,
+	blocks: BlockRegistry | undefined,
 ): ReactNode {
 	return renderChildren(schema.children, {
 		form,
 		layout,
-		context: { translate },
+		context: { translate, fields, blocks },
 		parentColumns: undefined,
 	})
 }

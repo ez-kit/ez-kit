@@ -1,25 +1,12 @@
-import { FORM_FIELD_TYPES, isFieldNode } from '@ez-kit/form-core'
+import { isFieldNode } from '@ez-kit/form-core'
 import { Fragment } from 'react'
 
 import { RenderNode } from './render-node'
 
 import type { LayoutComponents, RenderNodeContext } from './render-node'
 import type { FormFieldComponents } from '../field-props'
-import type { CustomFieldNode, FieldNode, FormNode } from '@ez-kit/form-core'
+import type { FormNode } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
-
-/** Every built-in field kind, for narrowing `isFieldNode`'s result away from `CustomFieldNode`. */
-const BUILT_IN_FIELD_TYPES: readonly string[] = FORM_FIELD_TYPES
-
-/**
- * `isFieldNode` also matches a `CustomFieldNode` — a field kind supplied through a
- * registry, which is a later task (spec §9.3). This slice renders built-in kinds only.
- */
-function isBuiltInFieldNode<TValues>(
-	node: FieldNode<TValues> | CustomFieldNode<TValues, string>,
-): node is FieldNode<TValues> {
-	return BUILT_IN_FIELD_TYPES.includes(node.type)
-}
 
 export type RenderChildrenArgs<TValues> = {
 	/** The bound field components already attached to the form instance — see `createForm`. */
@@ -48,6 +35,12 @@ export type RenderChildrenArgs<TValues> = {
  * false) still calls its hooks: mapping straight to `<RenderNode key={key} .../>` here keeps
  * one hook-call site per sibling, in the same order every render, regardless of which nodes
  * currently evaluate visible.
+ *
+ * `isFieldNode` matches both a built-in `FieldNode` and a registry-supplied `CustomFieldNode`
+ * (spec §4.7) — both have a `name` and both go through the very same `RenderNode`, which is
+ * what tells them apart internally (its `switch` case vs. its registry-lookup default). A
+ * `block` and `submit` node have no `name` of their own, exactly like `section`, so they key
+ * off their position too.
  */
 export function renderChildren<TValues>(
 	nodes: FormNode<TValues, string>[],
@@ -60,11 +53,6 @@ export function renderChildren<TValues>(
 		let rendered: ReactNode
 
 		if (isFieldNode(node)) {
-			if (!isBuiltInFieldNode(node)) {
-				throw new Error(
-					`Custom field type "${node.type}" needs a field-type registry, which this renderer does not support yet.`,
-				)
-			}
 			key = node.name
 			rendered = (
 				<RenderNode
@@ -78,6 +66,26 @@ export function renderChildren<TValues>(
 			// Sections have no `name` of their own — position in the schema is a stable
 			// enough key since the list itself is static, authored config.
 			key = `section-${String(index)}`
+			rendered = (
+				<RenderNode
+					node={node}
+					form={form}
+					layout={layout}
+					context={context}
+				/>
+			)
+		} else if (node.type === 'block') {
+			key = `block-${String(index)}`
+			rendered = (
+				<RenderNode
+					node={node}
+					form={form}
+					layout={layout}
+					context={context}
+				/>
+			)
+		} else if (node.type === 'submit') {
+			key = `submit-${String(index)}`
 			rendered = (
 				<RenderNode
 					node={node}
