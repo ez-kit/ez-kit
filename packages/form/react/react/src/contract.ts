@@ -1,4 +1,4 @@
-import type { FormFieldType, SelectOption, TextInputType } from '@ez-kit/form-core'
+import type { SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -35,8 +35,16 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 export type FieldRenderProps = {
 	/** The field's `name`. Kits spread it onto their root so CSS and tests can find the field. */
 	'data-field': string
-	/** Which kind of field this is; also spread onto the kit's root. */
-	'data-field-type': FormFieldType
+	/**
+	 * Which kind of field this is; also spread onto the kit's root.
+	 *
+	 * `string`, not `FormFieldType`: a schema may declare a **custom** field kind under any
+	 * author-chosen `type`, and that node's binding goes through this very shape. Narrowing to
+	 * the enum made the contract claim something untrue and forced an `as unknown as` cast at
+	 * the custom-field call site; a kit that wants to branch on a built-in still compares
+	 * against `FormFieldType`, whose members are plain strings.
+	 */
+	'data-field-type': string
 	/**
 	 * The DOM id the kit must put on the focusable control, so `data-field` lookups and a
 	 * `<label for>` agree. React-Aria kits still let the library own its internal wiring —

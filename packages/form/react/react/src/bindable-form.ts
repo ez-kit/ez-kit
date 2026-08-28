@@ -16,7 +16,13 @@ export type BoundFieldApi = {
 	handleChange: (value: FieldValue) => void
 	state: {
 		value: unknown
-		meta: { errors: readonly unknown[] }
+		/**
+		 * `isTouched` gates whether the field's errors are *displayed* — see
+		 * `fieldRenderProps`. TanStack sets it on the field's first change (`setFieldValue`)
+		 * or blur, and on every field at submit, which is exactly the "has the user had a go
+		 * at this yet?" question error display has to ask.
+		 */
+		meta: { errors: readonly unknown[]; isTouched: boolean }
 	}
 }
 

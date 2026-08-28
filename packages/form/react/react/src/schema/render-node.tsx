@@ -133,7 +133,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 			<bindableForm.AppField name={node.name}>
 				{(field) => (
 					<CustomField
-						{...fieldRenderProps(field, node.type as unknown as FormFieldType, {
+						{...fieldRenderProps(field, node.type, {
 							label,
 							description,
 							disabled: disabledByCondition,

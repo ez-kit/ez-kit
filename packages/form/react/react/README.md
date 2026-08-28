@@ -160,15 +160,22 @@ siblings.
 Two attributes travel with every field for the kit to spread onto its root, plus one on the
 form:
 
-| Attribute         | Where          | Value                                                                                                             |
-| ----------------- | -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `data-field`      | the kit's root | the field's `name`                                                                                                |
-| `data-field-type` | the kit's root | the node's `FormFieldType` — `text`, `number`, `textarea`, `select`, `checkbox`, `switch`, `radiogroup`, `slider` |
-| `data-form`       | the `<form>`   | always present                                                                                                    |
+| Attribute         | Where          | Value                                                                                                                                  |
+| ----------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-field`      | the kit's root | the field's `name`                                                                                                                     |
+| `data-field-type` | the kit's root | the node's `type` — `text`, `number`, `textarea`, `select`, `checkbox`, `switch`, `radiogroup`, `slider`, or a custom field's own kind |
+| `data-form`       | the `<form>`   | always present                                                                                                                         |
 
 Accessibility is the kit's to wire, because only the kit knows its markup. The shared layer
 supplies the raw material: a stable `id`, the label and description nodes, and the
 normalised `errors`.
+
+`errors` and `invalid` are reported only once the field has been touched — changed, blurred,
+or swept up by a submit attempt. The schema's constraints compile into a single **form-level**
+validator, so it always runs against every field; without this gate the first keystroke
+anywhere would redden every empty required field in the document. Only display is gated: the
+validator still runs on every change, so `canSubmit` is unaffected, and a submit attempt marks
+every field touched and therefore surfaces everything.
 
 ## License
 

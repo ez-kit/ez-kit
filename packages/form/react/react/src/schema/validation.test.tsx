@@ -61,6 +61,57 @@ test('the same message from onChange and onSubmit renders exactly once', async (
 	expect(error).toHaveTextContent(/^This field is required$/)
 })
 
+type TwoFieldValues = { a: string; b: string }
+
+const twoRequiredFields: FormSchema<TwoFieldValues> = {
+	version: 1,
+	children: [
+		{ type: FormFieldType.Text, name: 'a', label: 'A', validate: { required: true } },
+		{ type: FormFieldType.Text, name: 'b', label: 'B', validate: { required: true } },
+		{ type: 'submit', label: 'Save' },
+	],
+}
+
+test('typing in one field does not redden the other required fields', async () => {
+	const user = userEvent.setup()
+
+	const { container } = render(
+		<FormRenderer
+			schema={twoRequiredFields}
+			defaultValues={{ a: '', b: '' }}
+			onSubmit={() => {}}
+		/>,
+	)
+
+	// The schema compiles to one *form-level* onChange validator (spec §7.2), so this keystroke
+	// computes "required" for `b` as well. Running it is right; showing it is not — the user has
+	// never touched `b`.
+	await user.type(screen.getByLabelText('A'), 'x')
+
+	const untouched = container.querySelector('[data-field="b"]')
+	expect(untouched).toBeInTheDocument()
+	expect(untouched).not.toHaveAttribute('data-invalid')
+	expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('a submit attempt still shows every untouched field its error', async () => {
+	const user = userEvent.setup()
+
+	render(
+		<FormRenderer
+			schema={twoRequiredFields}
+			defaultValues={{ a: '', b: '' }}
+			onSubmit={() => {}}
+		/>,
+	)
+
+	// The other half of the gate: submit marks every field touched, so nothing stays hidden
+	// once the user has actually tried to submit.
+	await user.click(screen.getByRole('button', { name: 'Save' }))
+
+	expect(await screen.findAllByRole('alert')).toHaveLength(2)
+})
+
 test('supplying both schema constraints and validators throws a descriptive error', () => {
 	const schema: FormSchema<EmailValues> = {
 		version: 1,

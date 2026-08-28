@@ -1,6 +1,6 @@
 import { compileCondition, resolveText } from '@ez-kit/form-core'
 import { useFormGroup, useSelector } from '@tanstack/react-form'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
 
 import { renderChildren } from './render-children'
 import { useStepFieldNames } from './use-step-fields'
@@ -25,11 +25,8 @@ const NO_CURRENT_INDEX = -1
 /** The slice of a field's meta the wizard reads — enough to ask "does this field error?". */
 type FieldMetaLike = { errors: unknown[] }
 
-/**
- * The slice of a field's *base* meta the wizard writes. `errors` is derived from `errorMap` by
- * `FormApi`, so clearing the map is what clears the errors.
- */
-type FieldMetaBaseLike = { errorMap?: unknown }
+/** The slice of a field's *base* meta the wizard writes — only ever `isTouched`. */
+type FieldMetaTouchLike = { isTouched?: boolean }
 
 /** The form-state snapshot the wizard subscribes to. */
 type WizardFormState<TValues> = {
@@ -57,10 +54,15 @@ type WizardForm<TValues> = {
 	validate: (cause: string, opts?: { filterFieldNames?: (fieldName: string) => boolean }) => unknown
 	getFieldMeta: (name: string) => FieldMetaLike | undefined
 	/**
-	 * Used for exactly one thing: dropping the errors the form-level validator wrote onto a step
-	 * the user had not reached yet, at the moment they first arrive on it.
+	 * Used for exactly one thing: marking a step's fields touched when the user tries to leave
+	 * it, so the errors `validateStep` just computed are actually shown.
+	 *
+	 * `FormApi.handleSubmit` runs the identical loop over every field before it validates —
+	 * trying to advance a wizard is the step-scoped equivalent of that attempt, and
+	 * `FormApi.validate(cause, { filterFieldNames })` is the one validation entry point that
+	 * does *not* mark touched on the caller's behalf.
 	 */
-	setFieldMeta: (name: string, updater: (meta: FieldMetaBaseLike) => FieldMetaBaseLike) => void
+	setFieldMeta: (name: string, updater: (meta: FieldMetaTouchLike) => FieldMetaTouchLike) => void
 }
 
 /**
@@ -300,6 +302,14 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 	const validateStep = useCallback(
 		async (step: KeyedStep<TValues>): Promise<boolean> => {
 			const names = stepFieldNames[step.key] ?? []
+			// Trying to leave a step is an attempt at its fields, exactly as a submit is an
+			// attempt at every field — and `fieldRenderProps` shows a field's errors only once
+			// it has been attempted. `FormApi.validate` is the one entry point that does not
+			// mark touched itself, so the wizard does it, the same way `handleSubmit` does.
+			// A new meta object rather than a mutation of the stored one.
+			for (const name of names) {
+				wizardForm.setFieldMeta(name, (meta) => ({ ...meta, isTouched: true }))
+			}
 			await wizardForm.validate(STEP_VALIDATION_CAUSE, { filterFieldNames: (name) => names.includes(name) })
 
 			return names.every((name) => (wizardForm.getFieldMeta(name)?.errors.length ?? 0) === 0)
@@ -307,46 +317,20 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 		[stepFieldNames, wizardForm],
 	)
 
-	/**
-	 * Drop the errors a step's fields are carrying before the user has ever seen the step.
+	/*
+	 * There is deliberately no "clear this step's errors on arrival" pass here.
 	 *
 	 * The schema's constraints compile into a **form-level** `onChange` validator, so one
-	 * keystroke on step one writes "this field is required" onto every empty required field in
-	 * the document — including fields on steps further along. Gating the step's `invalid` flag on
-	 * `visited` keeps the *stepper* from opening red (spec §10.2), but the fields themselves
-	 * render whatever meta they carry, so the step body would still open red on arrival. Clearing
-	 * the map here is the field-level half of the same rule; a later validation run repopulates it
-	 * the moment the values genuinely fail again.
-	 */
-	const clearStepErrors = useCallback(
-		(key: number) => {
-			for (const name of stepFieldNames[key] ?? []) {
-				// A new meta object rather than a mutation of the stored one.
-				wizardForm.setFieldMeta(name, (meta) => ({ ...meta, errorMap: {} }))
-			}
-		},
-		[stepFieldNames, wizardForm],
-	)
-
-	/**
-	 * Arrival at a step the user has never left clears that step's stale errors — whatever brought
-	 * them here.
+	 * keystroke on step one does compute "this field is required" for every empty required
+	 * field in the document, later steps included. That used to be scrubbed out of `errorMap`
+	 * when the user first arrived on a step, which destroyed state it had no business owning:
+	 * the map is where a field-level or `onServer` error also lives, and a form-level run
+	 * cannot put those back.
 	 *
-	 * Bound to *arrival*, not to `goNext`, because `goNext` is not the only way onto a step: when
-	 * the current step hides itself the wizard falls back to the nearest earlier one
-	 * (`resolveCurrentPosition`), which can be a step that was never visited, and that step would
-	 * otherwise open red — the exact defect this clear exists to prevent. `goBack` and `goTo` can
-	 * land on an unvisited step for the same reason.
-	 *
-	 * `currentKey` is a number, so this re-runs only when the user actually moves; errors the user
-	 * produces *while standing on* an unvisited step therefore survive. `visited` is in the deps
-	 * only so a failed `goNext` (which marks the current step) re-evaluates the guard rather than
-	 * clearing what it just computed.
+	 * `fieldRenderProps` now gates error *display* on the field's own `isTouched` instead, so
+	 * an untouched field on any step — wizard or not — stays quiet without anything being
+	 * erased. The stepper's own `invalid` flag stays gated on `visited` (spec §10.2).
 	 */
-	useEffect(() => {
-		if (currentKey === undefined || visited.has(currentKey)) return
-		clearStepErrors(currentKey)
-	}, [currentKey, visited, clearStepErrors])
 
 	/** Guards `goNext` against a second click landing while the first validation is in flight. */
 	const validatingRef = useRef(false)
