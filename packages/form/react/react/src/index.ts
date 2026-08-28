@@ -1,6 +1,7 @@
 export { createForm } from './create-form'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
+export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { BoundForm, KitFormApi } from './kit-form'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {
@@ -60,3 +61,8 @@ export {
 	TextInputType,
 } from '@ez-kit/form-core'
 export type { LocalizedText, SelectOption, Translate } from '@ez-kit/form-core'
+
+// Spec §12: the group hooks are re-exported verbatim — they yield a group API, which
+// correctly carries no injected field components, so unlike `withForm` they need no
+// retyping. Inside a group the fields are written with the native `form.Field` / `AppField`.
+export { useFieldGroup, useFormGroup } from '@tanstack/react-form'

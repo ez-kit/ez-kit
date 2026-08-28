@@ -17,6 +17,7 @@ import {
 import { assertNoReservedFieldKeyCollision } from './schema/registries'
 
 import type { BindableForm } from './bindable-form'
+import type { KitFormBlock, KitWithFormProps } from './composition'
 import type { FormComponents } from './contract'
 import type { FormControlledProps, AnyFormProps, FormUncontrolledImplProps, FormUncontrolledProps } from './form-props'
 import type { KitFormApi } from './kit-form'
@@ -64,7 +65,11 @@ export type CreateFormOptions = {
  */
 export function createForm({ components }: CreateFormOptions) {
 	const { fieldContext, formContext } = createFormHookContexts()
-	const { useAppForm } = createFormHook({
+	const {
+		useAppForm,
+		withForm: tanstackWithForm,
+		withFieldGroup,
+	} = createFormHook({
 		fieldContext,
 		formContext,
 		fieldComponents: NO_INJECTED_COMPONENTS,
@@ -403,7 +408,98 @@ export function createForm({ components }: CreateFormOptions) {
 		return <UncontrolledFormRenderer {...(props as FormRendererUncontrolledImplProps)} />
 	}
 
-	return { useForm, Form, FormRenderer }
+	/**
+	 * TanStack's `withForm`, retyped — spec §12.
+	 *
+	 * Zero runtime: this hands the options straight to TanStack, which only closes over
+	 * `render`. The single thing the wrapper changes is the declared type of the render
+	 * prop's `form`: TanStack types it as `AppFieldExtendedReactFormApi<…>` parameterised by
+	 * the components injected into `createFormHook` — and this adapter injects none, because
+	 * the kit's primitives reach the fields by closure — so `form.TextField` would fail to
+	 * compile inside a block while working perfectly at runtime. `KitFormApi` is the type
+	 * `useForm` already returns, so a block sees exactly the instance it is handed.
+	 *
+	 * The generic list mirrors `useForm` verbatim for the same reason it does there:
+	 * narrowing it would silently degrade validator and submit-meta inference.
+	 *
+	 * @example
+	 * const AddressBlock = withForm({
+	 *   defaultValues: { street: '' },
+	 *   render: ({ form }) => <form.TextField name='street' label='Street' />,
+	 * })
+	 */
+	function withForm<
+		TFormData,
+		TOnMount extends undefined | FormValidateOrFn<TFormData>,
+		TOnChange extends undefined | FormValidateOrFn<TFormData>,
+		TOnChangeAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnBlur extends undefined | FormValidateOrFn<TFormData>,
+		TOnBlurAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnSubmit extends undefined | FormValidateOrFn<TFormData>,
+		TOnSubmitAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnDynamic extends undefined | FormValidateOrFn<TFormData>,
+		TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
+		TSubmitMeta,
+		TRenderProps extends object = Record<string, never>,
+	>(
+		options: KitWithFormProps<
+			TFormData,
+			TOnMount,
+			TOnChange,
+			TOnChangeAsync,
+			TOnBlur,
+			TOnBlurAsync,
+			TOnSubmit,
+			TOnSubmitAsync,
+			TOnDynamic,
+			TOnDynamicAsync,
+			TOnServer,
+			TSubmitMeta,
+			TRenderProps
+		>,
+	): KitFormBlock<
+		TFormData,
+		TOnMount,
+		TOnChange,
+		TOnChangeAsync,
+		TOnBlur,
+		TOnBlurAsync,
+		TOnSubmit,
+		TOnSubmitAsync,
+		TOnDynamic,
+		TOnDynamicAsync,
+		TOnServer,
+		TSubmitMeta,
+		TRenderProps
+	> {
+		// The two shapes differ only in the `form` type discussed above, which no assignment
+		// can express: a component asking for the richer `KitFormApi` is not assignable to one
+		// asking for TanStack's plainer API, and vice versa. Hence the round trip.
+		const block: unknown = tanstackWithForm(options as never)
+
+		return block as KitFormBlock<
+			TFormData,
+			TOnMount,
+			TOnChange,
+			TOnChangeAsync,
+			TOnBlur,
+			TOnBlurAsync,
+			TOnSubmit,
+			TOnSubmitAsync,
+			TOnDynamic,
+			TOnDynamicAsync,
+			TOnServer,
+			TSubmitMeta,
+			TRenderProps
+		>
+	}
+
+	// `withFieldGroup` needs no retyping and is re-exported as TanStack builds it: its render
+	// prop receives a **group** API, which correctly carries no flat field components (spec
+	// §12 — native `form.Field` territory), and the parent `form` prop of the component it
+	// returns already accepts a `KitFormApi`, that type being an intersection over TanStack's.
+	return { useForm, Form, FormRenderer, withForm, withFieldGroup }
 }
 
 /**

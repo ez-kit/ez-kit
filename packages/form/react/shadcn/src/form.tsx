@@ -41,6 +41,6 @@ const components = {
 	Wizard,
 } satisfies FormComponents
 
-const { useForm, Form, FormRenderer } = createForm({ components })
+const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({ components })
 
-export { useForm, Form, FormRenderer }
+export { useForm, Form, FormRenderer, withForm, withFieldGroup }
