@@ -1,5 +1,6 @@
 import { buildValidator, isFieldNode, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
 
+import { FormWizard, isStepNode } from './form-wizard'
 import { renderChildren } from './render-children'
 
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
@@ -18,8 +19,15 @@ import type {
 } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
-/** The `<form>` element's own props, minus the two `FormRenderer` owns. */
-type FormElementRest = Omit<FormElementProps, 'onSubmit' | 'children'>
+/**
+ * The `<form>` element's own props, minus the ones `FormRenderer` owns.
+ *
+ * `translate` is dropped as well as `onSubmit`/`children`: `<form>` carries a DOM `translate`
+ * attribute typed `'yes' | 'no'`, and without this the two definitions intersect into
+ * `('yes' | 'no') & Translate` — a type nothing can satisfy, which made the renderer's own
+ * documented `translate` prop impossible to pass.
+ */
+type FormElementRest = Omit<FormElementProps, 'onSubmit' | 'children' | 'translate'>
 
 export type SharedRendererProps<TValues> = {
 	/**
@@ -267,16 +275,38 @@ export function resolveSchemaValidators<TValues>(
 }
 
 /**
+ * Whether the document is a wizard — its top-level children are `step` nodes.
+ *
+ * Spec §4.5 makes mixing `step` with non-`step` siblings a parse error, which `parseFormSchema`
+ * enforces for a delivered document. A TS-authored schema never goes through the parser, so
+ * the same rule is enforced here: a half-wizard would otherwise silently drop the loose nodes
+ * (they would never be rendered by any step) instead of telling the author.
+ */
+export function isWizardSchema<TValues>(schema: AnyFormSchema<TValues>): boolean {
+	const stepCount = schema.children.filter((node) => isStepNode(node)).length
+	if (stepCount === 0) return false
+	if (stepCount !== schema.children.length) {
+		throw new Error(
+			'A form schema may not mix `step` nodes with non-`step` siblings at the same level. ' +
+				'Move the loose nodes into a step, or drop the steps.',
+		)
+	}
+	return true
+}
+
+/**
  * Render the schema's top-level children — one already-bound field component per field
  * node, a headed, column-gridded block per `section`, recursively — via `renderChildren`.
  *
- * `layout` carries `Section`/`GridItem` straight from the kit's raw `components`, separate
- * from `form`'s bound field components: unlike a field, a section has no form state of its
- * own. There is no enclosing grid at the top level, so `parentColumns` starts `undefined`.
- * `fields` and `blocks` resolve `type: '<custom>'` and `type: 'block'` nodes respectively
- * (spec §4.7, §8); `step` is not yet supported by this renderer and, like a genuinely unknown
- * `type`, throws via `RenderNode`'s default case — a hard error rather than a silent skip,
- * since a schema author who reaches for one expects it to render.
+ * `layout` carries `Section`/`GridItem`/`Wizard` straight from the kit's raw `components`,
+ * separate from `form`'s bound field components: unlike a field, a container has no form state
+ * of its own. There is no enclosing grid at the top level, so `parentColumns` starts
+ * `undefined`. `fields` and `blocks` resolve `type: '<custom>'` and `type: 'block'` nodes
+ * respectively (spec §4.7, §8).
+ *
+ * A document whose top level is `step` nodes is a wizard and goes to `FormWizard` instead,
+ * which renders one step at a time through the kit's `Wizard` (spec §4.5, §10). A `step` found
+ * anywhere else still throws via `renderChildren`, exactly as a genuinely unknown `type` does.
  */
 export function renderSchemaFields<TValues>(
 	schema: AnyFormSchema<TValues>,
@@ -286,10 +316,18 @@ export function renderSchemaFields<TValues>(
 	fields: CustomFieldRegistry | undefined,
 	blocks: BlockRegistry | undefined,
 ): ReactNode {
-	return renderChildren(schema.children, {
-		form,
-		layout,
-		context: { translate, fields, blocks },
-		parentColumns: undefined,
-	})
+	const context = { translate, fields, blocks }
+
+	if (isWizardSchema(schema)) {
+		return (
+			<FormWizard
+				schema={schema}
+				form={form}
+				layout={layout}
+				context={context}
+			/>
+		)
+	}
+
+	return renderChildren(schema.children, { form, layout, context, parentColumns: undefined })
 }

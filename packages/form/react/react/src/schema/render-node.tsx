@@ -30,11 +30,11 @@ export type RenderNodeContext = {
 }
 
 /**
- * The two layout primitives from the raw kit contract — separate from `form` (the bound,
- * per-field components attached to the form instance) because `Section` and `GridItem`
- * carry no field state; they are wired straight from `createForm`'s `components`.
+ * The container primitives from the raw kit contract — separate from `form` (the bound,
+ * per-field components attached to the form instance) because `Section`, `GridItem` and
+ * `Wizard` carry no field state; they are wired straight from `createForm`'s `components`.
  */
-export type LayoutComponents = Pick<FormComponents, 'Section' | 'GridItem'>
+export type LayoutComponents = Pick<FormComponents, 'Section' | 'GridItem' | 'Wizard'>
 
 export type RenderNodeArgs<TValues> = {
 	node:
