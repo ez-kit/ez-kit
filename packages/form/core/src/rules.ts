@@ -26,6 +26,51 @@ export function getValueAtPath(values: unknown, path: string): unknown {
 	return current
 }
 
+/** Whether a normalised path segment addresses an array index rather than an object key. */
+function isIndexSegment(segment: string): boolean {
+	return /^\d+$/.test(segment)
+}
+
+/**
+ * Writes one segment of an already-normalised path, recursing into the rest.
+ *
+ * Never mutates `container`: every level is rebuilt as a fresh array or object, and a level
+ * whose existing value is not a suitable container (missing, `null`, a scalar, or the wrong
+ * kind for the segment) is replaced by a new empty one rather than written through.
+ */
+function writeAtSegments(container: unknown, segments: readonly string[], value: unknown): unknown {
+	const [segment, ...rest] = segments
+	if (segment === undefined) return value
+
+	const child =
+		container === null || typeof container !== 'object' ? undefined : (container as Record<string, unknown>)[segment]
+	const nextChild = writeAtSegments(child, rest, value)
+
+	if (isIndexSegment(segment)) {
+		const next = Array.isArray(container) ? [...(container as unknown[])] : []
+		next[Number(segment)] = nextChild
+		return next
+	}
+
+	const base =
+		container !== null && typeof container === 'object' && !Array.isArray(container)
+			? (container as Record<string, unknown>)
+			: {}
+	return { ...base, [segment]: nextChild }
+}
+
+/**
+ * Writes `a.b[0].c` into a **copy** of `values`, creating the intermediate containers it needs.
+ *
+ * The mirror image of `getValueAtPath`, down to the same `[n]` → `.n` normalisation, so a path
+ * that reads back through one writes through the other. Purely functional: `values` is never
+ * touched, and only the objects along the written path are re-created.
+ */
+export function setValueAtPath<TValues>(values: TValues, path: string, value: unknown): TValues {
+	const segments = path.replace(/\[(\d+)\]/g, '.$1').split('.')
+	return writeAtSegments(values, segments, value) as TValues
+}
+
 function assertAbsolute(field: FieldRef): void {
 	if (field.startsWith(RELATIVE_PREFIX)) {
 		throw new Error(

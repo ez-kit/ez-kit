@@ -1,4 +1,4 @@
-import { buildValidator, isFieldNode, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
+import { buildValidator, isFieldNode, setValueAtPath, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
 
 import { FormWizard, isStepNode } from './form-wizard'
 import { renderChildren } from './render-children'
@@ -177,17 +177,24 @@ export function isRendererControlled<TValues>(props: {
 }
 
 /**
- * Every field node's own `defaultValue`, keyed by its `name`.
+ * Every field node's own `defaultValue`, written at the path its `name` describes.
  *
  * Spec §4.6: a backend-delivered schema is the only thing that knows its own fields exist,
  * so a caller who supplies no `defaultValues` still gets one built from the schema — a
  * caller-supplied `defaultValues` always wins over this (see the caller of this function).
+ *
+ * `name` is a full root path, so `'company.inn'` must become `{ company: { inn } }` and not
+ * the literal key `"company.inn"`: TanStack binds the field to the nested path, so a flat key
+ * would leave the input empty, discard the author's default, and ship a phantom dotted key in
+ * the submitted payload that `stripHiddenValues` would then treat as a top-level name of its
+ * own. `setValueAtPath` is the exact inverse of the `getValueAtPath` conditions read through.
  */
 export function schemaDefaultValues<TValues>(schema: AnyFormSchema<TValues>): Record<string, unknown> {
-	const defaults: Record<string, unknown> = {}
+	// Rebound rather than mutated — `setValueAtPath` returns a new object each time.
+	let defaults: Record<string, unknown> = {}
 	walkNodes(schema, (node) => {
 		if (isFieldNode(node) && node.defaultValue !== undefined) {
-			defaults[node.name] = node.defaultValue
+			defaults = setValueAtPath(defaults, node.name, node.defaultValue)
 		}
 	})
 	return defaults

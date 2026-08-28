@@ -1,4 +1,4 @@
-export { collectRuleFields, compileCondition, getValueAtPath } from './rules'
+export { collectRuleFields, compileCondition, getValueAtPath, setValueAtPath } from './rules'
 export { FormFieldType, FORM_FIELD_TYPES } from './field-types'
 export { formatFieldErrors, hasFieldErrors } from './errors'
 export { resolveText } from './localized-text'

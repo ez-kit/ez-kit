@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { collectRuleFields, compileCondition, getValueAtPath } from './rules'
+import { collectRuleFields, compileCondition, getValueAtPath, setValueAtPath } from './rules'
 
 describe('getValueAtPath', () => {
 	test('reads a dotted path', () => {
@@ -9,6 +9,52 @@ describe('getValueAtPath', () => {
 
 	test('returns undefined for a missing path instead of throwing', () => {
 		expect(getValueAtPath({}, 'company.inn')).toBeUndefined()
+	})
+})
+
+describe('setValueAtPath', () => {
+	test('writes a flat key', () => {
+		expect(setValueAtPath({}, 'inn', '77')).toEqual({ inn: '77' })
+	})
+
+	test('builds the intermediate objects a dotted path needs', () => {
+		expect(setValueAtPath({}, 'company.inn', '77')).toEqual({ company: { inn: '77' } })
+	})
+
+	test('round-trips with getValueAtPath', () => {
+		const written = setValueAtPath({}, 'a.b.c', 1)
+		expect(getValueAtPath(written, 'a.b.c')).toBe(1)
+	})
+
+	test('keeps sibling keys at every level', () => {
+		const source = { company: { name: 'Acme' }, other: 1 }
+		expect(setValueAtPath(source, 'company.inn', '77')).toEqual({
+			company: { name: 'Acme', inn: '77' },
+			other: 1,
+		})
+	})
+
+	test('never mutates its input, at any level', () => {
+		const source = { company: { name: 'Acme' } }
+		const written = setValueAtPath(source, 'company.inn', '77')
+		expect(source).toEqual({ company: { name: 'Acme' } })
+		expect(written).not.toBe(source)
+		expect((written as { company: unknown }).company).not.toBe(source.company)
+	})
+
+	test('writes array indices, in both `[n]` and `.n` spellings', () => {
+		expect(setValueAtPath({}, 'items[1].sku', 'X')).toEqual({ items: [undefined, { sku: 'X' }] })
+		expect(setValueAtPath({}, 'items.0', 'A')).toEqual({ items: ['A'] })
+	})
+
+	test('preserves the other entries of an existing array', () => {
+		const source = { items: ['a', 'b'] }
+		expect(setValueAtPath(source, 'items[1]', 'B')).toEqual({ items: ['a', 'B'] })
+		expect(source.items).toEqual(['a', 'b'])
+	})
+
+	test('replaces a scalar standing where a container is needed', () => {
+		expect(setValueAtPath({ company: 'Acme' }, 'company.inn', '77')).toEqual({ company: { inn: '77' } })
 	})
 })
 

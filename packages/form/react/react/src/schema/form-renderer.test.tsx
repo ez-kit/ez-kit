@@ -1,6 +1,7 @@
 import { FormFieldType } from '@ez-kit/form-core'
 import { render, screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { expect, test, vi } from 'vitest'
 
 import { createForm } from '../create-form'
 import { testComponents } from '../test-kit'
@@ -86,6 +87,38 @@ test('a caller-supplied defaultValues wins over the schema default', () => {
 
 	expect(screen.getByLabelText('Email')).toHaveValue('override@b.com')
 	expect(screen.getByLabelText('Age')).toHaveValue(7)
+})
+
+test('a nested field name gets its default at the nested path, not under a dotted key', async () => {
+	const user = userEvent.setup()
+	const onSubmit = vi.fn()
+	type NestedValues = { company: { inn: string } }
+	const nestedSchema: FormSchema<NestedValues> = {
+		version: 1,
+		children: [
+			{ type: FormFieldType.Text, name: 'company.inn', label: 'INN', defaultValue: 'DEFAULT-42' },
+			{ type: 'submit', label: 'Save' },
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={nestedSchema}
+			onSubmit={onSubmit}
+		/>,
+	)
+
+	// (a) the author's default actually reaches the input the schema bound to `company.inn`
+	expect(screen.getByLabelText('INN')).toHaveValue('DEFAULT-42')
+
+	// (b) and the payload is the shape the value type declares — no phantom `"company.inn"` key
+	await user.click(screen.getByRole('button', { name: 'Save' }))
+
+	expect(onSubmit).toHaveBeenCalledOnce()
+	const [submitProps] = onSubmit.mock.calls[0] as [{ value: Record<string, unknown> }]
+	const { value } = submitProps
+	expect(value).toEqual({ company: { inn: 'DEFAULT-42' } })
+	expect(value).not.toHaveProperty(['company.inn'])
 })
 
 test('renders through a caller-owned form instance in controlled mode', () => {
