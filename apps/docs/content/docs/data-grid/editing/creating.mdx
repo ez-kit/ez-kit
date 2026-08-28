@@ -5,7 +5,9 @@ description: New-row workflow — a creating modal/inline row driven by the grid
 
 # Creating Rows
 
-The grid ships a "creating" flow: a trigger renders a button; clicking it opens a modal (or inline row) prepared with inputs derived from the columns' edit types.
+The grid ships a "creating" flow: `<DataGrid.CreateTrigger>` renders the button, and clicking it
+opens a draft row or a modal whose inputs come from the columns themselves — each field renders
+the input its column's `cell.type` implies.
 
 ## Usage
 
@@ -13,7 +15,7 @@ The creating flow supports three modes. The default `mode: 'row'` appends an inl
 
 <DataGridDocsExample exampleId='creating-row' />
 
-`mode: 'modal'` collects the new row in a dialog prepared from the columns' edit types.
+`mode: 'modal'` collects the new row in a dialog built from the same columns.
 
 <DataGridDocsExample exampleId='creating-modal' />
 
@@ -38,7 +40,7 @@ With per-field validation:
 </DataGrid>
 ```
 
-The modal itself is rendered by the grid when `creating.variant` is `'modal'` — `DataGrid.CreatingModal`
+The modal itself is mounted by the grid when `creating.mode` is `'modal'` — `DataGrid.CreatingModal`
 takes no props, and everything about the form comes from `creating` and the column defs.
 
 ## Default values
@@ -95,19 +97,34 @@ Seeding the create form through `initialState.creating` is a **type error** — 
 
 ## Validation
 
-Validators run before submit. Show inline errors next to the offending field; the modal will not close until validation passes.
+One validator for the whole form, exactly as in [editing](./data-grid/editing/validation) — a
+function, or `{ schema }` for zod. The modal stays open until it passes.
 
-```ts
-{
-	id: 'email',
-	accessorKey: 'email',
-	meta: {
-		editable: true,
-		editType: 'email',
-		validate: (value) => emailSchema.safeParse(value).error?.issues[0]?.message,
-	},
+<DataGridDocsExample exampleId='creating-validation' />
+
+```tsx
+creating: {
+	mode: 'modal',
+	validate: { schema: orderSchema },
+	// Per field: `{ accessorKey: 'email', creating: { validateOn: 'blur' } }`
+	onSave: ({ values }) => api.create(values),
 }
 ```
+
+Throw `ValidationError` from `onSave` to put a server's rejection back into the fields. Full
+details in [Validation](./data-grid/editing/validation).
+
+## Options
+
+| `creating` key       | Type                                            | Description                                                          |
+| -------------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `onSave`             | `({ values, signal }) => void \| Promise<void>` | Required. Persist the new row.                                       |
+| `mode`               | `'row' \| 'modal' \| 'pin-row'`                 | Where the draft appears. Default `'row'`.                            |
+| `defaultValues`      | `Partial<TRow> \| ((ctx) => Partial<TRow>)`     | Seeds that span columns. Merged over the per-column `defaultValue`s. |
+| `validate`           | `ValidateConfig`                                | The form's validator.                                                |
+| `validateOn`         | `'submit' \| 'blur' \| 'change'`                | When a field validates. Default `'submit'`.                          |
+| `validateDebounceMs` | `number`                                        | Debounce for `'change'`. Default `200`.                              |
+| `enabled`            | `boolean`                                       | Explicit off-switch for a config that came from a defaults layer.    |
 
 ## See also
 

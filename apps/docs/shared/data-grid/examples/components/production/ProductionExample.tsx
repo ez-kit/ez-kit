@@ -70,14 +70,12 @@ export function ProductionExample() {
 					title: 'Delete order?',
 					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
 				},
-			}}
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						void orders.remove(selectedRows.map((row) => row.original.id)).then(clearSelection)
-					},
+				bulk: {
+					onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)),
+					confirmation: { title: 'Delete orders?' },
 				},
 			}}
+			selection
 			state={{
 				pagination: { pageIndex: orders.pageIndex, pageSize: orders.pageSize },
 				sorting: orders.sorting,

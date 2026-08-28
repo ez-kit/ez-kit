@@ -43,7 +43,7 @@ export function ComponentGuard(): null {
 	if (table.options.deleting?.confirmation) required.add('ConfirmDialog')
 	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormShell')
 
-	const selectionPanel = table.grid.selection.panel
+	const selectionPanel = table.grid.selection.bar
 	if (selectionPanel !== undefined && selectionPanel !== false) required.add('SelectionBar')
 
 	const missing = [...required].filter((key) => {

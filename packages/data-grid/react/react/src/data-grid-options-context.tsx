@@ -11,7 +11,7 @@ import type { ReactNode } from 'react'
  * objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`,
  * `visibility`, `expanding`, `pinning`, `resizing`, `layout`,
  * `fallbacks`, …) that can be supplied once as defaults (app-level `DataGridOptionsProvider`
- * or kit-level `createDataGrid({ defaultOptions })`) and merged **under** each instance's own
+ * or kit-level `createDataGrid({ defaults })`) and merged **under** each instance's own
  * config.
  *
  * Excludes the per-instance data inputs and controlled-state bindings — `data`, `columns`,
@@ -50,7 +50,7 @@ type OptionsRecord = Record<string, unknown>
 const EMPTY_OPTIONS: AnyDefaultOptions = {}
 
 /**
- * Default is **empty** — with no provider and no factory `defaultOptions`, instance config
+ * Default is **empty** — with no provider and no factory `defaults`, instance config
  * flows through untouched and behaviour is identical to calling `useDataGrid` directly.
  */
 const DataGridOptionsContext = createContext<AnyDefaultOptions>(EMPTY_OPTIONS)
@@ -92,7 +92,7 @@ export function useDataGridOptions<TRow extends object>(): DataGridDefaultOption
 
 /**
  * Composes the three option layers into the final instance config.
- * Precedence, low → high: factory `defaultOptions` < provider `defaults` < instance `config`.
+ * Precedence, low → high: factory `defaults` < provider `defaults` < instance `config`.
  * Deep and immutable — nested feature settings combine; instance values win on conflict.
  */
 export function mergeGridOptionLayers<TRow extends object>(

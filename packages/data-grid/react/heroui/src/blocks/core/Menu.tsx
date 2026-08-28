@@ -4,7 +4,7 @@ import { GridMenuVariant } from '@ez-kit/data-grid-react'
 import { Button, Dropdown, Header } from '@heroui/react'
 import { EllipsisVertical, MoreHorizontal } from 'lucide-react'
 
-import { GRID_MENU_ICON_PLACEHOLDER, GRID_MENU_ICONS } from '../icons'
+import { renderGridMenuIcon } from '../icons'
 
 import type { GridMenuItem, GridMenuProps, GridMenuSection } from '@ez-kit/data-grid-react'
 import type { Key } from 'react'
@@ -71,7 +71,7 @@ export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuPro
 									textValue={item.label}
 									variant={item.danger ? 'danger' : 'default'}
 								>
-									{item.icon ? GRID_MENU_ICONS[item.icon] : GRID_MENU_ICON_PLACEHOLDER} {item.label}
+									{renderGridMenuIcon(item.icon)} {item.label}
 								</Dropdown.Item>
 							))}
 						</Dropdown.Section>

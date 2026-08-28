@@ -157,36 +157,88 @@ describe('DeletingFeature — confirmation flow', () => {
 		expect(table.getState().pendingBulkDelete).toBe(false)
 	})
 
-	it('requestBulkDelete stages a bulk delete', () => {
+	it('requestBulkDelete stages a bulk delete when bulk.confirmation is set', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			deleting: { onDelete: vi.fn() },
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { confirmation: true } },
 		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 		table.requestBulkDelete()
 		expect(table.getState().pendingBulkDelete).toBe(true)
 	})
 
-	it('confirmBulkDelete clears the staged bulk delete', () => {
+	it('requestBulkDelete deletes outright when bulk asks for no confirmation', async () => {
+		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			deleting: { onDelete: vi.fn() },
+			selection: true,
+			deleting: { onDelete, bulk: true },
 		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true, '2': true } }))
 		table.requestBulkDelete()
-		table.confirmBulkDelete()
+		await vi.waitFor(() => {
+			expect(onDelete).toHaveBeenCalledTimes(2)
+		})
 		expect(table.getState().pendingBulkDelete).toBe(false)
 	})
 
-	it('cancelBulkDelete clears the staged bulk delete', () => {
+	it('requestBulkDelete does nothing when bulk is off', () => {
+		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			deleting: { onDelete: vi.fn() },
+			selection: true,
+			deleting: { onDelete },
 		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.requestBulkDelete()
+		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(onDelete).not.toHaveBeenCalled()
+	})
+
+	it('confirmBulkDelete runs the bulk handler and clears the staged flag', async () => {
+		const bulkDelete = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: bulkDelete, confirmation: true } },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.requestBulkDelete()
+		await table.confirmBulkDelete()
+		expect(bulkDelete).toHaveBeenCalledOnce()
+		expect(table.getState().pendingBulkDelete).toBe(false)
+	})
+
+	it('deselects the deleted rows once the bulk handler resolves', async () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: vi.fn() } },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true, '2': true } }))
+		await table.deleteRows(['1'])
+		expect(table.getState().rowSelection).toEqual({ '2': true })
+	})
+
+	it('cancelBulkDelete clears the staged bulk delete without running the handler', () => {
+		const bulkDelete = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: bulkDelete, confirmation: true } },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 		table.requestBulkDelete()
 		table.cancelBulkDelete()
 		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(bulkDelete).not.toHaveBeenCalled()
 	})
 
 	it('cancelDeleteRow aborts the in-flight delete signal', () => {

@@ -7,7 +7,7 @@ import {
 	OPTION_EXCEPTIONS,
 	OptionColumn,
 	PAGE_ENTRIES,
-	type DocPage,
+	DocPage,
 	type OptionTable,
 	type PageEntry,
 } from './docs-options/page-type-map'
@@ -135,6 +135,18 @@ function checkTable(page: DocPage, table: OptionTable): TableCheck {
 }
 
 describe('data-grid docs option names', () => {
+	it('every page under content/docs/data-grid is mapped', () => {
+		// The guard that keeps coverage total. While the map held a subset, an unmapped page was
+		// checked by nothing at all — which is how `columns/resizing.mdx` documented a `sizing`
+		// option that never existed, and how the whole `editing/**` section documented a
+		// `meta.editType` API that never existed. Adding a page now fails here until it is
+		// classified, even when it carries no option table.
+		const mapped = new Set(PAGE_ENTRIES.map((entry) => entry.page))
+		const missing = Object.values(DocPage).filter((page) => !mapped.has(page))
+
+		expect(missing).toEqual([])
+	})
+
 	it('every mapped page maps every table it contains', () => {
 		const unclassified: string[] = []
 		for (const entry of PAGE_ENTRIES) {

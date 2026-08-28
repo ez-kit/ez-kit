@@ -7,37 +7,13 @@
  * implemented that twice, and the two drifted. One shape, one component, one icon map.
  */
 
-/**
- * Which glyph an entry carries. Semantic on purpose: the shared layer names the *meaning*,
- * each kit maps it to its own icon set and sizing (see each kit's `blocks/icons.tsx`).
- */
-export const GridMenuIcon = {
-	Edit: 'edit',
-	Delete: 'delete',
-	PinTop: 'pin-top',
-	PinBottom: 'pin-bottom',
-	PinLeft: 'pin-left',
-	PinRight: 'pin-right',
-	Unpin: 'unpin',
-	SortAsc: 'sort-asc',
-	SortDesc: 'sort-desc',
-	ClearSort: 'clear-sort',
-	Hide: 'hide',
-} as const
+import type { GridMenuIcon } from '@ez-kit/data-grid-core'
+import type { ReactElement } from 'react'
 
-export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]
-
-/**
- * Whether a string names a glyph in the closed built-in set.
- *
- * Custom row actions arrive from core typed as a plain `string` — core is framework-agnostic
- * and does not own the icon vocabulary — so the value is narrowed here rather than asserted,
- * and an unrecognized name degrades to a label-only entry instead of an undefined lookup
- * inside a kit's icon map.
- */
-export function isGridMenuIcon(value: string): value is GridMenuIcon {
-	return (Object.values(GridMenuIcon) as string[]).includes(value)
-}
+// The icon vocabulary itself lives in core: `RowActionsConfig` is a core option, so the set a
+// consumer writes an icon from has to be nameable there. Re-exported here because this is the
+// module that describes the menu model a kit renders.
+export { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-core'
 
 export type GridMenuItem = {
 	/** Stable within the menu — kits key their collection items on it. */
@@ -45,17 +21,17 @@ export type GridMenuItem = {
 	/** Default wording; a kit may localize it. */
 	label: string
 	/**
-	 * Optional **for consumer-supplied row actions only**: the built-in glyphs name grid
-	 * affordances (edit / delete / pin / sort / hide), and a custom row action such as
-	 * "Duplicate" has no honest member of that set. An entry without one renders label-only.
+	 * A member of the built-in {@link GridMenuIcon} set, which the kit maps to its own glyph
+	 * and sizing, or an element the consumer supplied for an action the set has no honest name
+	 * for. The built-in names cover grid affordances (edit / delete / pin / sort / hide); a
+	 * custom row action such as "Duplicate" brings its own `<Copy />`.
 	 *
 	 * Every entry the grid itself builds — `buildColumnMenuSections` and the row-actions
-	 * builder — sets this unconditionally, so in practice only a custom action omits it. That
-	 * is a convention rather than a type: splitting `GridMenuItem` into built-in and custom
-	 * variants would fork the one model both menus render, which is the split this type
-	 * exists to have undone.
+	 * builder — sets a named member unconditionally, so in practice only a custom action
+	 * reaches a kit carrying an element or nothing at all. Use `isGridMenuIcon` to tell the
+	 * two apart; an entry with neither renders label-only.
 	 */
-	icon?: GridMenuIcon
+	icon?: GridMenuIcon | ReactElement
 	disabled?: boolean
 	/** Destructive entry — kits render it in a danger colour. */
 	danger?: boolean

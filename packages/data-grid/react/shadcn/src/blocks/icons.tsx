@@ -1,6 +1,7 @@
-import { GridMenuIcon } from '@ez-kit/data-grid-react'
+import { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-react'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, EyeOff, Pencil, PinOff, Trash2, X } from 'lucide-react'
 
+import type { GridMenuItem } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 
 /** Every dropdown entry in this kit leads with a 16px icon and the same gutter. */
@@ -36,3 +37,13 @@ export const GRID_MENU_ICON_PLACEHOLDER: ReactNode = (
 		aria-hidden
 	/>
 )
+
+/**
+ * The glyph for a menu entry: a built-in name is looked up in this kit's map, anything else is
+ * the consumer's own element (a custom row action's `icon: <Copy />`) and is rendered as-is.
+ * An entry with no icon gets the placeholder so its label stays aligned with its siblings'.
+ */
+export function renderGridMenuIcon(icon: GridMenuItem['icon']): ReactNode {
+	if (icon === undefined) return GRID_MENU_ICON_PLACEHOLDER
+	return isGridMenuIcon(icon) ? GRID_MENU_ICONS[icon] : icon
+}

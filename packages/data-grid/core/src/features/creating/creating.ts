@@ -1,5 +1,6 @@
 import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
 
+import type { ColumnCreatingConfig, ColumnEditingConfig } from '../../column/types'
 import type { FeatureToggle } from '../../utils/feature-flag'
 import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
@@ -190,23 +191,29 @@ export const CreatingFeature: TableFeature<RowData> = {
 			return col?.columnDef.meta
 		}
 
+		/**
+		 * The column's create-form timing, falling back to its edit-form timing — the same
+		 * fallback `creating.component` makes to `editing.component`, so a column that states
+		 * how one form should behave does not have to restate it for the other.
+		 */
+		const resolveColumnForm = (columnId: string): ColumnCreatingConfig | ColumnEditingConfig | undefined => {
+			const meta = resolveColumnMeta(columnId)
+			const fromCreating = meta?.creating
+			if (fromCreating !== undefined && fromCreating !== false) return fromCreating
+			const fromEditing = meta?.editing
+			return fromEditing === false ? undefined : fromEditing
+		}
+
 		const resolveValidateOn = (columnId: string): ValidateOn => {
-			const fromColumn = resolveColumnMeta(columnId)?.validateOn
+			const fromColumn = resolveColumnForm(columnId)?.validateOn
 			if (fromColumn) return fromColumn
-			const config = getConfig()
-			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.validateOn) return validate.validateOn
-			return config?.validateOn ?? DEFAULT_VALIDATE_ON
+			return getConfig()?.validateOn ?? DEFAULT_VALIDATE_ON
 		}
 
 		const resolveDebounceMs = (columnId: string): number => {
-			const fromColumn = resolveColumnMeta(columnId)?.validateDebounceMs
+			const fromColumn = resolveColumnForm(columnId)?.validateDebounceMs
 			if (fromColumn !== undefined) return fromColumn
-			const config = getConfig()
-			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.validateDebounceMs !== undefined)
-				return validate.validateDebounceMs
-			return config?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
+			return getConfig()?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
 		}
 
 		const runValidate = async (values: Record<string, unknown>, ctx: ValidateContext): Promise<ValidationResult> => {

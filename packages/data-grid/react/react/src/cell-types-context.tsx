@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react'
 
-import type { FieldState } from '@ez-kit/data-grid-core'
+import type { FieldState, InputComponentProps } from '@ez-kit/data-grid-core'
 import type { ComponentType, ReactNode } from 'react'
 
 // ── prop types ────────────────────────────────────────────────────────────
@@ -15,12 +15,12 @@ export type CellViewProps<TConfig = unknown> = {
 /**
  * Loose input props for filter-mode renderers (no validation surface).
  * For `edit` / `creating` modes, renderers receive the richer {@link FieldState}.
+ *
+ * An alias of core's {@link InputComponentProps}, not a second declaration: the same shape is
+ * what a column's own `filtering.component` is handed, and two hand-written copies of one
+ * contract is how the two came to disagree about whether `config` is passed.
  */
-export type CellInputProps<TConfig = unknown> = {
-	value: unknown
-	onChange: (value: unknown) => void
-	config?: TConfig
-}
+export type CellInputProps<TConfig = unknown> = InputComponentProps<TConfig>
 
 // ── registry types ────────────────────────────────────────────────────────
 

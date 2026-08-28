@@ -3,7 +3,7 @@ import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
-import { FilteringVariant, SortDirection } from '../types'
+import { ColumnSortDirection, FilteringVariant, SortDirection } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { getAlignAttrs } from './align-attrs'
@@ -15,23 +15,6 @@ import { useDataGridTable } from './table-context'
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
-
-/**
- * Sort direction as the header reports it — a third {@link HeaderSortDirection.None} member
- * rather than `false`, so it reads in JSX and lands in `data-sort-direction` as a word.
- *
- * Named members for internal reference; the plain string union is what kits see.
- */
-export const HeaderSortDirection = {
-	/** Ascending. Mirrors {@link SortDirection.Asc}. */
-	Asc: SortDirection.Asc,
-	/** Descending. Mirrors {@link SortDirection.Desc}. */
-	Desc: SortDirection.Desc,
-	/** The column carries no sort. */
-	None: 'none',
-} as const
-
-export type HeaderSortDirection = (typeof HeaderSortDirection)[keyof typeof HeaderSortDirection]
 
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
@@ -47,7 +30,7 @@ export type DataGridHeaderCellRenderArgs = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	column: Column<any>
 	canSort: boolean
-	sortDirection: HeaderSortDirection
+	sortDirection: ColumnSortDirection
 	/** The column's own `header` content, with no sorting behaviour attached. */
 	label: ReactNode
 	/** `label` plus the sort indicator, wrapped in the clickable sort affordance. */
@@ -132,7 +115,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 
 	const meta = header.column.columnDef.meta
 	const canSort = header.column.getCanSort()
-	const sortDir = header.column.getIsSorted()
+	const rawSortDir = header.column.getIsSorted()
 	const pinVars = getCommonPinStyles(header.column)
 	const pinned = header.column.getIsPinned()
 	// One check, not two: `createTable` now emits `enableColumnResizing: false` when the feature
@@ -223,8 +206,8 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 			})
 		: null
 
-	const sortDirection: HeaderSortDirection =
-		sortDir === SortDirection.Asc || sortDir === SortDirection.Desc ? sortDir : HeaderSortDirection.None
+	const sortDirection: ColumnSortDirection =
+		rawSortDir === SortDirection.Asc || rawSortDir === SortDirection.Desc ? rawSortDir : ColumnSortDirection.None
 	const label = header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())
 
 	const sortTrigger = (
@@ -238,7 +221,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 		>
 			{label}
 			<SortIndicator
-				sortDir={sortDir}
+				sortDirection={sortDirection}
 				canSort={canSort}
 			/>
 		</div>

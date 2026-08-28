@@ -4,16 +4,21 @@ import { useEffect, useRef } from 'react'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
-import { SelectionPanelVariant } from './types'
+import { ActionBarVariant } from './types'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
-import type { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, PaginationVariant } from './types'
+import type {
+	FilterChipsPosition,
+	FilteringVariant,
+	LoadMoreThreshold,
+	LoadMoreTrigger,
+	PaginationVariant,
+} from './types'
 import type {
 	VisibilityConfig,
-	ConfirmationOptions,
 	CreatingConfig,
 	DataTable,
 	DeletingConfig,
@@ -24,6 +29,7 @@ import type {
 	GlobalFilteringConfig,
 	LoadMoreDirection,
 	PaginationConfig,
+	RowActionsConfig,
 	RowVirtualOptions,
 	SelectionConfig,
 	SortingConfig,
@@ -37,9 +43,9 @@ import type { ComponentType, HTMLAttributes, ReactElement } from 'react'
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // The closed sets live in `./types` next to the other ones; re-exported here because this is
-// where the options that carry them are declared — `SelectionPanelConfig`,
+// where the options that carry them are declared — `SelectionBarConfig`,
 // `ReactPaginationConfig`, `ReactFilteringConfig`.
-export { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, SelectionPanelVariant } from './types'
+export { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, ActionBarVariant } from './types'
 
 export type ExpandedRowProps<TRow extends object> = {
 	row: Row<TRow>
@@ -53,54 +59,56 @@ export type ExpandedRowProps<TRow extends object> = {
  */
 export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<TRow, ComponentType<ExpandedRowProps<TRow>>>
 
-export type SelectionPanelCallbackArgs<TRow extends object = object> = {
+/**
+ * The headless {@link RowActionsConfig} with its one framework-bound field narrowed: in React a
+ * custom action's `icon` may be a `ReactElement` as well as a named {@link GridMenuIcon}. Same
+ * shape as {@link ReactExpandingConfig} — the parameter is bound here, nothing is restated, so
+ * a field added to the core config reaches React the same day.
+ */
+export type ReactRowActionsConfig<TRow extends object = object> = RowActionsConfig<TRow, ReactElement>
+
+export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
 	clearSelection: () => void
 	selectedRows: Row<TRow>[]
 }
 
-/** Render mode used when a panel config omits `variant`. Internal. */
-export const DEFAULT_SELECTION_PANEL_VARIANT: SelectionPanelVariant = SelectionPanelVariant.Floating
+/** Render mode used when a bar config omits `variant`. Internal. */
+export const DEFAULT_ACTION_BAR_VARIANT: ActionBarVariant = ActionBarVariant.Floating
 
-export type SelectionPanelConfig<TRow extends object = object> = {
+export type SelectionBarConfig<TRow extends object = object> = {
 	/**
 	 * Render mode.
 	 * - `'floating'` (default) — rendered as a positioned/sticky bar, typically overlaying the table area.
 	 * - `'inline'` — rendered as a normal block in the document flow, above the Toolbar.
 	 */
-	variant?: SelectionPanelVariant
-	/** If provided — Delete button appears in the panel. */
-	onDelete?: (args: SelectionPanelCallbackArgs<TRow>) => void
-	/**
-	 * Prompt before running `onDelete`. When set, clicking Delete opens the shared
-	 * `ConfirmDialog` slot with count-aware text; `onDelete` runs only on confirm.
-	 * Omit (or `false`) for the default instant behaviour. Reuses the core
-	 * {@link ConfirmationOptions} shape from the per-row `deleting` feature.
-	 */
-	confirmation?: boolean | ConfirmationOptions
+	variant?: ActionBarVariant
 	/**
 	 * Replaces default clear behaviour.
 	 * `clearSelection` arg is the default reset — call it if needed.
 	 */
-	onClear?: (args: SelectionPanelCallbackArgs<TRow>) => void
+	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
 	/** Rendered between Delete and Cancel. ReactElement or render-function. */
-	actions?: ReactElement | ((args: SelectionPanelCallbackArgs<TRow>) => ReactElement)
+	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
 }
 
 /**
  * React-layer selection config. Extends the headless core {@link SelectionConfig}
- * (`onChange`, `multi`) with the React-only `panel` — a selection info bar that is
- * inherently React (its `actions` are `ReactElement`s), so it lives only in this layer
- * and is never passed down to the core `selection` config.
+ * (`onChange`, `multi`) with the React-only `bar` — a selection info bar that is inherently
+ * React (its `actions` are `ReactElement`s), so it lives only in this layer and is never passed
+ * down to the core `selection` config.
  */
 export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig & {
 	/**
-	 * Selection info panel config.
-	 * - `false` — panel never shown
-	 * - `undefined` | `true` — panel shown when ≥1 row selected (no delete button)
-	 * - {@link SelectionPanelConfig} — panel shown with config
+	 * Selection info bar config.
+	 * - `false` — bar never shown
+	 * - `undefined` | `true` — bar shown when ≥1 row is selected
+	 * - {@link SelectionBarConfig} — bar shown with config
+	 *
+	 * Presentational only. The bar's Delete button is not configured here — bulk deletion is
+	 * `deleting.bulk`, next to the per-row handler and prompt it shares its semantics with.
 	 */
-	panel?: boolean | SelectionPanelConfig<TRow>
+	bar?: boolean | SelectionBarConfig<TRow>
 }
 
 /** Normalized virtualized config stored on the table instance. */
@@ -174,7 +182,7 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 * `{ rows }` (default 5) drives the virtualized index path; `{ px }` (default 200)
 	 * is the IntersectionObserver `rootMargin` for the non-virtualized path.
 	 */
-	threshold?: { rows?: number } | { px?: number }
+	threshold?: LoadMoreThreshold
 	/**
 	 * Page-based mode only. Selectable values for {@link PaginationConfig.pageSize}.
 	 *
@@ -465,9 +473,9 @@ export type UseDataGridConfig<TRow extends object> = {
 	/**
 	 * Enable row selection.
 	 * - `false` / omitted — disabled
-	 * - `true` — enabled (multi-select) with no info panel
+	 * - `true` — enabled (multi-select), with the selection info bar
 	 * - {@link ReactSelectionConfig} — headless options (`onChange`, `multi`) plus the
-	 *   React-only `panel` (selection info bar). `panel` renders only when selection is enabled.
+	 *   React-only `bar` (selection info bar). The bar renders only when selection is enabled.
 	 */
 	selection?: boolean | ReactSelectionConfig<TRow>
 	/**
@@ -513,9 +521,14 @@ export type UseDataGridConfig<TRow extends object> = {
 	sorting?: boolean | ReactSortingConfig
 	/** Expanding config. See {@link ReactExpandingConfig}. */
 	expanding?: boolean | ReactExpandingConfig<TRow>
+	/**
+	 * Per-row actions column. See {@link ReactRowActionsConfig} — the headless config with a
+	 * custom action's `icon` widened to accept a React element.
+	 */
+	rowActions?: boolean | ReactRowActionsConfig<TRow>
 } & Omit<
 	TableConfig<TRow>,
-	'filtering' | 'globalFiltering' | 'expanding' | 'visibility' | 'pagination' | 'selection' | 'sorting'
+	'filtering' | 'globalFiltering' | 'expanding' | 'visibility' | 'pagination' | 'rowActions' | 'selection' | 'sorting'
 >
 
 /**
@@ -526,8 +539,12 @@ export type UseDataGridConfig<TRow extends object> = {
  * knows how a write should *look*. A grid that supplies no `onSave` / `onDelete` therefore
  * resolves the feature away instead of rendering a trigger whose commit would call `undefined`.
  */
-function enabledByHandler<TConfig extends FeatureToggle>(config: TConfig | undefined, handler: keyof TConfig) {
-	if (config === undefined || config.enabled === false) return undefined
+function enabledByHandler<TConfig extends FeatureToggle>(
+	option: boolean | TConfig | undefined,
+	handler: keyof TConfig,
+): TConfig | undefined {
+	const config = featureConfig(option)
+	if (config === undefined) return undefined
 	return typeof config[handler] === 'function' ? config : undefined
 }
 
@@ -562,12 +579,12 @@ function writeFeatureOptions<TRow extends object>(
  * (or `useDataGridState((s) => s)` for a deliberately broad subscription).
  *
  * Default options contributed by an ancestor {@link DataGridOptionsProvider} and by the
- * kit factory's `defaultOptions` are merged **under** the passed `config` (instance wins),
+ * kit factory's `defaults` are merged **under** the passed `config` (instance wins),
  * with a per-feature deep merge. Precedence, low → high:
- * factory `defaultOptions` < provider `defaults` < instance `config`.
+ * factory `defaults` < provider `defaults` < instance `config`.
  *
  * @param instanceConfig Per-call grid config; the highest-priority option layer.
- * @param factoryDefaults Base defaults bound by `createDataGrid({ defaultOptions })`.
+ * @param factoryDefaults Base defaults bound by `createDataGrid({ defaults })`.
  *   Internal — supplied by the kit factory, not by application call sites.
  *
  * @example
@@ -600,11 +617,11 @@ export function useDataGrid<TRow extends object>(
 	} = config
 
 	// Split `selection` into the headless core part (`onChange` / `multi`) passed to
-	// createTable and the React-only `panel` stored on the instance for SelectionBar to read.
-	// `panel` is stripped so the core `selection` config never carries React-specific fields.
-	const selectionPanel: boolean | SelectionPanelConfig<TRow> | undefined = featureConfig(rawSelection)?.panel
+	// createTable and the React-only `bar` stored on the instance for SelectionBar to read.
+	// `bar` is stripped so the core `selection` config never carries React-specific fields.
+	const selectionBar: boolean | SelectionBarConfig<TRow> | undefined = featureConfig(rawSelection)?.bar
 	const coreSelection: boolean | SelectionConfig | undefined =
-		typeof rawSelection === 'object' ? (({ panel: _panel, ...rest }) => rest)(rawSelection) : rawSelection
+		typeof rawSelection === 'object' ? (({ bar: _bar, ...rest }) => rest)(rawSelection) : rawSelection
 
 	// Split pagination into the headless core part (strip React-only detection tuning and
 	// the display-only `variant`) and the normalized infinite config stored on the instance
@@ -825,7 +842,7 @@ export function useDataGrid<TRow extends object>(
 			pageSizer: pageSizerInToolbar,
 		},
 		infinite: normalizedInfinite,
-		selection: { panel: selectionPanel as ResolvedGridOptions['selection']['panel'] },
+		selection: { bar: selectionBar as ResolvedGridOptions['selection']['bar'] },
 		expanding: {
 			renderExpanded: expandingCfg?.renderExpanded as ResolvedGridOptions['expanding']['renderExpanded'],
 		},

@@ -17,14 +17,7 @@ export function BaseFullExample() {
 			filtering
 			pagination={{ pageSize: 10, pageSizeOptions: [3, 5, 10] }}
 			visibility
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
-						clearSelection()
-					},
-				},
-			}}
+			selection
 			editing={{
 				mode: 'row',
 				onSave: ({ rowId, values }) => {
@@ -41,6 +34,8 @@ export function BaseFullExample() {
 				onDelete: ({ row }) => {
 					setData((prev) => prev.filter((r) => r.id !== row.original.id))
 				},
+				// One word: with no handler of its own, bulk delete loops `onDelete` over the selection.
+				bulk: true,
 			}}
 		/>
 	)

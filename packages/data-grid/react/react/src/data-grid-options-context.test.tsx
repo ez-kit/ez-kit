@@ -90,10 +90,10 @@ describe('DataGridOptionsProvider', () => {
 
 	it('lets an table override provider defaults inside useDataGrid', () => {
 		const { result } = renderHook(
-			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { panel: false } }),
-			{ wrapper: makeWrapper({ selection: { panel: true } }) },
+			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { bar: false } }),
+			{ wrapper: makeWrapper({ selection: { bar: true } }) },
 		)
-		expect(result.current.grid.selection.panel).toBe(false)
+		expect(result.current.grid.selection.bar).toBe(false)
 	})
 })
 

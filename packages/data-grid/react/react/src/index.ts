@@ -38,24 +38,23 @@ export type {
 	FilteringToolbarConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
-	NormalizedFilteringToolbarConfig,
-	NormalizedFilterChipsConfig,
-	NormalizedGlobalFilteringConfig,
-	NormalizedInfiniteConfig,
-	NormalizedPageWindowConfig,
-	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
 	ReactGlobalFilteringConfig,
 	ReactPaginationConfig,
+	ReactRowActionsConfig,
 	ReactSelectionConfig,
 	ReactSortingConfig,
 	RowPropsResolver,
 	LayoutConfig,
-	SelectionPanelCallbackArgs,
-	SelectionPanelConfig,
+	SelectionBarCallbackArgs,
+	SelectionBarConfig,
 } from './use-data-grid'
-export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+// Resolved default option **values** — the single table the docs' "Defaults" page describes,
+// and what a consumer reads to extend a default rather than restate it (e.g. appending to
+// `pagination.pageSizeOptions`). Referenced by `{@link DATA_GRID_DEFAULTS…}` throughout the
+// public JSDoc, which was pointing at something no consumer could import.
+export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'
@@ -136,7 +135,6 @@ export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/ta
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
 export type { DataGridHeaderRowProps, DataGridHeaderRowRenderArgs } from './data-grid/header-row'
-export { HeaderSortDirection } from './data-grid/header-cell'
 export type { DataGridHeaderCellProps, DataGridHeaderCellRenderArgs } from './data-grid/header-cell'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
@@ -166,7 +164,7 @@ export { ActiveFiltersBar } from './data-grid/active-filters-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
 // DI context
-export { GridComponentsProvider, defaultComponents, useGridComponents } from './components-context'
+export { GridComponentsProvider, useGridComponents } from './components-context'
 
 // Cell type registry
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
@@ -181,7 +179,7 @@ export type { CellTypeDefinition, CellTypeRegistry, CellViewProps, CellInputProp
 // names `baseCellTypes` still does not ship it.
 export { baseCellTypes, booleanCellType, formatNumber, numberCellType, textCellType, truncateText } from './cell-types'
 
-// Default options (app-level provider + kit-level factory `defaultOptions`)
+// Default options (app-level provider + kit-level factory `defaults`)
 export { DataGridOptionsProvider, useDataGridOptions } from './data-grid-options-context'
 export type { DataGridDefaultOptions, DataGridOptionsProviderProps } from './data-grid-options-context'
 
@@ -209,6 +207,7 @@ export type {
 	GridComponentRegistry,
 	LoadingRowProps,
 	LoadMoreRowProps,
+	LoadMoreThreshold,
 	MultiSelectFilterProps,
 	NoResultsStateProps,
 	RefetchOverlayProps,
@@ -247,7 +246,8 @@ export {
 	PaginationVariant,
 	RowActionId,
 	RowActionsMode,
-	SelectionPanelVariant,
+	ColumnSortDirection,
+	ActionBarVariant,
 	SortDirection,
 } from './types'
 

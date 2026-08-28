@@ -46,7 +46,7 @@ variant: burying a pending commit inside a dropdown would hide it behind an extr
 
 The built-in three are rarely the whole story — a row usually also wants a _Duplicate_, a _Send
 invoice_, a _View history_. `rowActions.actions` is that slot, the per-row counterpart of
-[`selection.panel.actions`](./data-grid/selection) for bulk operations. It is called per row, so a
+[`selection.bar.actions`](./data-grid/selection) for bulk operations. It is called per row, so a
 row's entries can depend on the row itself:
 
 ```tsx
@@ -80,18 +80,29 @@ application actions has neither the room nor a guaranteed icon.
 
 ### Entry shape
 
-| Field      | Type         | Description                                                                                           |
-| ---------- | ------------ | ----------------------------------------------------------------------------------------------------- |
-| `id`       | `string`     | Required. Stable within the menu. Namespaced internally, so it cannot collide with a built-in action. |
-| `label`    | `string`     | Required. The wording rendered in the menu.                                                           |
-| `icon`     | `string`     | One of the grid's built-in glyph names (`'edit'`, `'delete'`, `'pin-top'`, …). Omit for label-only.   |
-| `disabled` | `boolean`    | Renders the entry inert.                                                                              |
-| `danger`   | `boolean`    | Renders the entry in the kit's destructive colour, like the built-in Delete.                          |
-| `onSelect` | `() => void` | Required. Runs when the entry is chosen.                                                              |
+| Field      | Type                           | Description                                                                                                                          |
+| ---------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`       | `string`                       | Required. Stable within the menu. Namespaced internally, so it cannot collide with a built-in action.                                |
+| `label`    | `string`                       | Required. The wording rendered in the menu.                                                                                          |
+| `icon`     | `GridMenuIcon \| ReactElement` | A built-in glyph name (`'edit'`, `'delete'`, `'pin-top'`, …) the kit maps to its own icon, or your own element. Omit for label-only. |
+| `disabled` | `boolean`                      | Renders the entry inert.                                                                                                             |
+| `danger`   | `boolean`                      | Renders the entry in the kit's destructive colour, like the built-in Delete.                                                         |
+| `onSelect` | `() => void`                   | Required. Runs when the entry is chosen.                                                                                             |
 
-`icon` is optional because the built-in vocabulary names grid affordances — edit, delete, pin, sort,
-hide — and an application action such as _Duplicate_ has no honest member of it. An unrecognized
-name is ignored rather than rendered as a broken glyph.
+The built-in vocabulary names grid affordances — edit, delete, pin, sort, hide — so an application
+action such as _Duplicate_ has no honest member of it and brings its own element instead:
+
+```tsx
+rowActions: {
+	actions: ({ row }) => [
+		{ id: 'duplicate', label: 'Duplicate', icon: <Copy />, onSelect: () => duplicate(row.original) },
+		{ id: 'archive', label: 'Archive', icon: 'delete', onSelect: () => archive(row.original) },
+	],
+}
+```
+
+A name outside the built-in set is a **compile error**, not a silently missing glyph — which is
+what `icon: string` used to give you.
 
 ## Column width
 

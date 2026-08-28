@@ -1,4 +1,6 @@
+import type { GridMenuIcon } from '../../menu-icon'
 import type { RowPinningConfig } from '../../types'
+import type { FeatureToggle } from '../../utils/feature-flag'
 import type { Row, RowData, Table } from '@tanstack/table-core'
 
 /** How the per-row actions (edit / delete / pin) are laid out in the actions column. */
@@ -20,19 +22,26 @@ export type RowActionsContext<TRow extends object = object> = {
 /**
  * One custom entry contributed through {@link RowActionsConfig.actions}.
  *
- * Structurally the React layer's `GridMenuItem`, minus its framework binding — core neither
- * owns the icon vocabulary nor renders it, so `icon` stays a plain string here and each
- * adapter narrows it (React: `GridMenuIcon`, whose names are `'edit'`, `'delete'`, `'pin-top'`,
- * …; an unrecognized name degrades to a label-only entry).
- *
- * `icon` is optional because that vocabulary is a closed set of grid affordances an
- * application action such as "Duplicate" has no honest member of.
+ * Structurally the React layer's `GridMenuItem`. `TNode` is the adapter's node type — the same
+ * parameter {@link ColumnRenderer} and {@link ExpandingConfig} take, and for the same reason:
+ * core has to describe "a renderable thing" without naming React. It defaults to `never`, so a
+ * config written against bare core accepts only the named glyphs; the React adapter binds it to
+ * `ReactElement` (see `ReactRowActionsConfig`).
  */
-export type RowActionItem = {
+export type RowActionItem<TNode = never> = {
 	/** Stable within the menu — kits key their collection items on it. */
 	id: string
 	label: string
-	icon?: string
+	/**
+	 * The entry's glyph: either a member of the closed {@link GridMenuIcon} set, which the kit
+	 * maps to its own icon and sizing, or the adapter's own node for an application action the
+	 * set has no honest name for — React: `icon: <Copy />`.
+	 *
+	 * Deliberately **not** a bare `string`. It was one, and a kit silently dropped any value
+	 * that named no member, so `icon: 'copy'` compiled, ran, and rendered a label with no glyph
+	 * and no error anywhere. Omitting it entirely is still fine — the entry renders label-only.
+	 */
+	icon?: GridMenuIcon | TNode
 	disabled?: boolean
 	/** Destructive entry — kits render it in a danger colour. */
 	danger?: boolean
@@ -46,13 +55,13 @@ export type RowActionItem = {
  * `TableOptionsResolved` augmentation below is one such reference, and reads `actions` back
  * only to invoke it.
  */
-export type RowActionsConfig<TRow extends object = object> = {
+export type RowActionsConfig<TRow extends object = object, TNode = never> = FeatureToggle & {
 	/** Layout of the actions column. Default: {@link RowActionsVariant.Inline}. */
 	variant?: RowActionsVariant
 	/**
 	 * Custom entries appended to the built-in edit / delete / pin affordances, built per row.
 	 *
-	 * The counterpart of `selection.panel.actions` for bulk operations. Both variants honour
+	 * The counterpart of `selection.bar.actions` for bulk operations. Both variants honour
 	 * it: under {@link RowActionsVariant.Menu} the entries join the one overflow menu, and
 	 * under {@link RowActionsVariant.Inline} they go behind the overflow menu that already
 	 * carries the pin entries — a fixed-width cell has no icon budget for an open-ended set
@@ -60,7 +69,7 @@ export type RowActionsConfig<TRow extends object = object> = {
 	 *
 	 * Return `[]` for a row that offers nothing.
 	 */
-	actions?: (ctx: RowActionsContext<TRow>) => RowActionItem[]
+	actions?: (ctx: RowActionsContext<TRow>) => RowActionItem<TNode>[]
 }
 
 /** Rendered width of one icon button in the actions cell. */
@@ -101,7 +110,7 @@ declare module '@tanstack/table-core' {
 	// `TData` is unused here but must match the declaration being merged into.
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
 	interface TableOptionsResolved<TData extends RowData> {
-		rowActions?: RowActionsConfig
+		rowActions?: RowActionsConfig<object, unknown>
 		/** Normalized row-pinning config — `undefined` when row pinning is off. */
 		pinning?: RowPinningConfig | false
 	}

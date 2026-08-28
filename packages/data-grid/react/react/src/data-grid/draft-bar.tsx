@@ -1,6 +1,6 @@
 import { useGridComponents } from '../components-context'
 
-import { resolveSelectionPanelVariant } from './selection-panel-variant'
+import { resolveActionBarVariant } from './action-bar-variant'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 /**
@@ -31,7 +31,7 @@ export function DraftBar() {
 			open={open}
 			pending={table.draft.getPendingCount()}
 			selectedCount={Object.keys(table.getState().rowSelection).length}
-			variant={resolveSelectionPanelVariant(table)}
+			variant={resolveActionBarVariant(table)}
 			onApply={() => {
 				table.draft.apply()
 			}}

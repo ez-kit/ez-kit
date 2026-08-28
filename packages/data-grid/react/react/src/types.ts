@@ -247,8 +247,12 @@ export const RowActionId = {
 export type RowActionId = (typeof RowActionId)[keyof typeof RowActionId]
 
 export type SortIndicatorProps = {
-	/** The column's active direction, or `false` when it is not sorted. */
-	sortDir: SortDirection | false
+	/**
+	 * The column's active direction, or {@link ColumnSortDirection.None}. Same type and same
+	 * field name as `<DataGrid.HeaderCell>`'s render args, so a kit that renders both against
+	 * one helper does not have to translate between them.
+	 */
+	sortDirection: ColumnSortDirection
 	canSort: boolean
 }
 
@@ -277,6 +281,28 @@ export const SortDirection = {
 } as const
 
 export type SortDirection = (typeof SortDirection)[keyof typeof SortDirection]
+
+/**
+ * How a column is sorted **right now** — the two directions plus an explicit
+ * {@link ColumnSortDirection.None}, rather than `SortDirection | false`.
+ *
+ * A distinct set from {@link SortDirection} because it answers a distinct question:
+ * `SortDirection` is a direction someone *picks* (the multi-sort builder's per-row select,
+ * where "none" would mean nothing), this is a state the grid *reports*. Every public surface
+ * that reports it — `<DataGrid.HeaderCell>`'s render args and the kit's `SortIndicator` —
+ * uses this one type under the same field name, `sortDirection`. The `None` member rather
+ * than `false` so it reads in JSX and lands in `data-sort-direction` as a word.
+ */
+export const ColumnSortDirection = {
+	/** Ascending. Mirrors {@link SortDirection.Asc}. */
+	Asc: SortDirection.Asc,
+	/** Descending. Mirrors {@link SortDirection.Desc}. */
+	Desc: SortDirection.Desc,
+	/** The column carries no sort. */
+	None: 'none',
+} as const
+
+export type ColumnSortDirection = (typeof ColumnSortDirection)[keyof typeof ColumnSortDirection]
 
 export type SortColumnOption = {
 	id: string
@@ -502,6 +528,18 @@ export const LoadMoreTrigger = {
 
 export type LoadMoreTrigger = (typeof LoadMoreTrigger)[keyof typeof LoadMoreTrigger]
 
+/**
+ * How close to the load edge an infinite-scroll grid triggers the next page — a genuine
+ * either/or, in the same shape (and for the same reason) as core's `PaginationTotals`.
+ *
+ * The two units address two different detection paths: `rows` is a row-index distance read by
+ * the virtualized path, `px` is the `IntersectionObserver` `rootMargin` used when the body is
+ * not virtualized. Only one of them is ever consulted for a given grid, so supplying both is a
+ * setting that silently does nothing half the time. The `never` arms say so at the type level
+ * rather than leaving it as a sentence in the docs.
+ */
+export type LoadMoreThreshold = { rows?: number; px?: never } | { px?: number; rows?: never }
+
 export type LoadMoreRowProps = {
 	/** Visible leaf column count — for the host `<td colSpan>`, if the kit needs it. */
 	columnCount: number
@@ -522,7 +560,7 @@ export type LoadMoreRowProps = {
 }
 
 /**
- * Named members of {@link SelectionPanelVariant}. A convenience handle — the option and every
+ * Named members of {@link ActionBarVariant}. A convenience handle — the option and every
  * prop are typed as the string union, so `variant: 'inline'` is equally valid and needs no
  * import. Internal code (the panel resolver, the layout that positions the bar, kits)
  * references the members instead of repeating the literals.
@@ -531,7 +569,7 @@ export type LoadMoreRowProps = {
  * holding the public union could not be compared against them
  * (`@typescript-eslint/no-unsafe-enum-comparison`).
  */
-export const SelectionPanelVariant = {
+export const ActionBarVariant = {
 	/** A positioned/sticky bar, typically overlaying the table area. The default. */
 	Floating: 'floating',
 	/** A normal block in the document flow, above the Toolbar. */
@@ -542,9 +580,9 @@ export const SelectionPanelVariant = {
  * Render mode of the shared action bar — the selection section and the pending-draft section
  * are one bar, so both read this single value.
  *
- * Derived from {@link SelectionPanelVariant} so the union and the members cannot drift apart.
+ * Derived from {@link ActionBarVariant} so the union and the members cannot drift apart.
  */
-export type SelectionPanelVariant = (typeof SelectionPanelVariant)[keyof typeof SelectionPanelVariant]
+export type ActionBarVariant = (typeof ActionBarVariant)[keyof typeof ActionBarVariant]
 
 export type SelectionBarProps = {
 	/** False when 0 rows selected — component should hide/animate out. */
@@ -558,7 +596,7 @@ export type SelectionBarProps = {
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
 	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
 	 */
-	variant: SelectionPanelVariant
+	variant: ActionBarVariant
 	/**
 	 * Pre-bound delete handler. Only present when `onDelete` was configured.
 	 * When absent — Delete button must NOT be rendered.
@@ -593,7 +631,7 @@ export type DraftBarProps = {
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
 	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
 	 */
-	variant: SelectionPanelVariant
+	variant: ActionBarVariant
 	/** Apply the pending draft — emits one state change for the whole query. */
 	onApply: () => void
 	/** Discard the pending draft and restore the applied query. */

@@ -32,9 +32,9 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 
 	it('does not publish the selection panel config', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { enabled: false, panel: true } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, selection: { enabled: false, bar: true } }),
 		)
-		expect(result.current.grid.selection.panel).toBeUndefined()
+		expect(result.current.grid.selection.bar).toBeUndefined()
 	})
 
 	it('does not publish the infinite-scroll config', () => {

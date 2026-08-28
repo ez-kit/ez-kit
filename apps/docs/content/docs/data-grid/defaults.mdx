@@ -11,27 +11,27 @@ These are **values only**. They never enable a feature; they only fill the gaps 
 
 ## Reference
 
-| Setting                                  | Default                                  | Applies when                                 |
-| ---------------------------------------- | ---------------------------------------- | -------------------------------------------- |
-| `pagination.pageSize`                    | `10`                                     | `pagination` is enabled without a `pageSize` |
-| `globalFiltering.placeholder`            | `'Search…'`                              | `globalFiltering` is enabled                 |
-| `globalFiltering.debounce`               | inherits `filtering.debounce`            | `globalFiltering` is enabled                 |
-| `filtering.variant`                      | `'inline'`                               | `filtering` is enabled without a `variant`   |
-| `filtering.debounce`                     | `250` (ms — shared by every text filter) | `filtering` text inputs, no `debounce` set   |
-| `filtering.chips.position`               | `'above'`                                | `filtering.chips` is enabled                 |
-| `filtering.toolbar.alwaysShow`           | `false`                                  | `filtering.toolbar` is enabled               |
-| `pagination` (infinite) `trigger`        | `'auto'`                                 | `pagination.mode: 'infinite'`                |
-| `pagination` (infinite) `threshold.rows` | `5`                                      | infinite + virtualized rows                  |
-| `pagination` (infinite) `threshold.px`   | `200`                                    | infinite + non-virtualized rows              |
+| Setting                        | Default                                  | Applies when                                 |
+| ------------------------------ | ---------------------------------------- | -------------------------------------------- |
+| `pagination.pageSize`          | `10`                                     | `pagination` is enabled without a `pageSize` |
+| `globalFiltering.placeholder`  | `'Search…'`                              | `globalFiltering` is enabled                 |
+| `globalFiltering.debounce`     | inherits `filtering.debounce`            | `globalFiltering` is enabled                 |
+| `filtering.variant`            | `'inline'`                               | `filtering` is enabled without a `variant`   |
+| `filtering.debounce`           | `250` (ms — shared by every text filter) | `filtering` text inputs, no `debounce` set   |
+| `filtering.chips.position`     | `'above'`                                | `filtering.chips` is enabled                 |
+| `filtering.toolbar.alwaysShow` | `false`                                  | `filtering.toolbar` is enabled               |
+| `pagination.trigger`           | `'auto'`                                 | `pagination.mode: 'infinite'`                |
+| `pagination.threshold.rows`    | `5`                                      | infinite + virtualized rows                  |
+| `pagination.threshold.px`      | `200`                                    | infinite + non-virtualized rows              |
 
-> These values are a refactor-safe single source, not a behavior change: enabling a feature resolves to exactly the same values it always did. `pageSize` lives in `@ez-kit/data-grid-core` (`DEFAULT_PAGE_SIZE`) so every layer references one number.
+> Every one of these lives in the exported `DATA_GRID_DEFAULTS`, so a grid that wants to extend a default rather than restate it can read it. These values are a refactor-safe single source, not a behavior change: enabling a feature resolves to exactly the same values it always did. `pageSize` lives in `@ez-kit/data-grid-core` (`DEFAULT_PAGE_SIZE`) so every layer references one number.
 
 ## Overriding
 
 A default is only the **floor** — the lowest layer. Any value you supply wins over it, through the same three layers documented in [Default Options](./default-options):
 
 ```
-library defaults  <  factory defaultOptions  <  provider defaults  <  instance config
+library defaults  <  factory defaults  <  provider defaults  <  instance config
 ```
 
 ### Per grid (instance config)
@@ -57,14 +57,14 @@ Set a default once for every grid beneath a provider. See [Default Options → A
 </DataGridOptionsProvider>
 ```
 
-### Per kit (factory `defaultOptions`)
+### Per kit (factory `defaults`)
 
 Bake defaults into a custom kit so every grid built with it inherits them — no provider required. See [Default Options → Kit-level](./default-options#kit-level-factory-defaultoptions).
 
 ```tsx
 export const { DataGrid, useDataGrid } = createDataGrid({
 	components,
-	defaultOptions: { pagination: { pageSize: 20 } },
+	defaults: { pagination: { pageSize: 20 } },
 })
 ```
 

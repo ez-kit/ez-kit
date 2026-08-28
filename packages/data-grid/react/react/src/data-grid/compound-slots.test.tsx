@@ -155,8 +155,15 @@ describe('compound render-prop slots', () => {
 
 	it('<DataGrid.SelectionBar> hands over a confirmation-aware onDelete', () => {
 		const onDelete = vi.fn()
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, selection: true }))
-		table.grid.selection.panel = { onDelete, confirmation: true }
+		const table = prepareDataGridTable(
+			createTable<User>({
+				data: USERS,
+				columns: COLUMNS,
+				selection: true,
+				deleting: { onDelete: () => {}, bulk: { onDelete, confirmation: true } },
+			}),
+		)
+		table.grid.selection.bar = true
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 
 		const { container } = renderWithComponents(

@@ -1,62 +1,149 @@
 ---
-title: Editing Validation
-description: Field-level and form-level validation for editing and creating — sync, async, or schema-derived.
+title: Validation
+description: One validator per form — a function or a zod schema — plus when it runs and how server errors get back into the fields.
 ---
 
-# Editing Validation
+# Validation
 
-Validation runs on commit. Block the commit, show an error near the input, and don't close the modal.
+Validation belongs to the form, not to the field. `editing.validate` and `creating.validate`
+each take **one** validator for the whole row, because cross-field rules ("end after start") are
+the ones that have nowhere else to live, and per-field rules express fine inside a schema.
 
-## Usage
-
-Editing with per-field validation:
+## A zod schema
 
 <DataGridDocsExample exampleId='editing-validation' />
 
-Pair with [Creating with validation](./data-grid/editing/creating#with-per-field-validation) for the new-row case.
+```tsx
+const userSchema = z.object({
+	name: z.string().min(2, 'must be at least 2 chars'),
+	email: z.email('must be a valid email'),
+	age: z.number().int().min(18, 'must be 18 or older'),
+})
 
-## Patterns
-
-### Synchronous
-
-```ts
-meta: {
-	validate: (value) => (value.length < 3 ? 'Too short' : null),
-}
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{
+		mode: 'row',
+		validate: { schema: userSchema },
+		onSave: ({ rowId, values }) => save(rowId, values),
+	}}
+/>
 ```
 
-### Async
+Issues are mapped onto the fields by path, so each message lands under its own input. A field
+with several failing rules keeps all of them: `FieldState.error` is the first, `FieldState.errors`
+the full list.
+
+## A function
+
+For anything a schema cannot say — a cross-field rule, or a check that has to reach the network:
 
 ```ts
-meta: {
-	validate: async (value) => {
-		const taken = await api.isUsernameTaken(value)
-		return taken ? 'Already taken' : null
+editing: {
+	validate: async (values, { signal }) => {
+		if (values.end != null && values.start != null && values.end < values.start) {
+			return { errors: { end: ['must be after start'] } }
+		}
+		if (await api.isEmailTaken(values.email, { signal })) {
+			return { errors: { email: ['already in use'] } }
+		}
+		return null // null means OK
 	},
+	onSave: ({ rowId, values }) => save(rowId, values),
 }
 ```
 
-### Schema-derived (Zod)
+The return type is `ValidationResult`: `null`, or `{ errors?, formError? }` — `errors` keyed by
+column id, `formError` for a message about the form as a whole. `signal` aborts when the user
+cancels or types again, so an in-flight request never lands on a form that moved on.
+
+Prefer `zodResolver` when you have a schema but want a function anyway (to compose it with
+something else):
 
 ```ts
-const emailSchema = z.string().email()
+import { zodResolver } from '@ez-kit/data-grid-react'
 
-meta: {
-	validate: (value) => emailSchema.safeParse(value).error?.issues[0]?.message ?? null,
+const config = {
+	validate: zodResolver(userSchema),
+	onSave,
 }
 ```
 
-## Form-level validation
+## When it runs
 
-For cross-field rules (e.g., "end date must be after start date"), use the `CreatingModal`/`EditingModal` `onSubmit` to return a `{ errors }` object:
+`validateOn` decides, and it is the only place that decides — `validate` carries no timing of
+its own.
+
+| `validateOn` | Behaviour                                                                             |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `'submit'`   | The default. Only on commit.                                                          |
+| `'blur'`     | When a field loses focus, and on every commit.                                        |
+| `'change'`   | On every keystroke, debounced by `validateDebounceMs` (default `200`), and on commit. |
+
+Per column, under that column's `editing` / `creating` — the same place its `component` and
+`description` live:
+
+```tsx
+createColumns<User>([
+	{ accessorKey: 'email', editing: { validateOn: 'blur' } },
+	// A live strength meter wants every keystroke.
+	{ accessorKey: 'password', editing: { validateOn: 'change', validateDebounceMs: 100 } },
+])
+```
+
+A column's `creating.validateOn` falls back to its `editing.validateOn`, the same way
+`creating.component` falls back to `editing.component`.
+
+## Errors from the server
+
+Throw `ValidationError` from `onSave`. The grid catches it, writes the messages into the form,
+and leaves the modal open:
 
 ```ts
-onSubmit={(draft) => {
-	if (draft.end < draft.start) return { errors: { end: 'Must be after start' } }
-	return api.create(draft)
-}}
+import { ValidationError } from '@ez-kit/data-grid-react'
+
+onSave: async ({ values }) => {
+	const res = await api.save(values)
+	if (res.status === 409) {
+		throw new ValidationError({ errors: { email: ['already in use'] } })
+	}
+	if (!res.ok) {
+		throw new ValidationError({ formError: 'Could not save. Try again.' })
+	}
+}
 ```
+
+Use `isValidationError(e)` rather than `instanceof` when you need to detect one yourself — the
+class carries a `Symbol.for` brand so it survives duplicated module copies and foreign realms.
+Any **other** thrown error surfaces as a generic form error; it is not swallowed.
+
+## Commit status
+
+While a commit is in flight the form is busy, and the kits disable Save from a single flag:
+
+```ts
+table.editing.getState().commitStatus // 'idle' | 'validating' | 'saving'
+```
+
+`CommitStatus.Idle` is the only state that accepts input. `FieldState.isValidating` is the
+per-field counterpart, true while an async field-level check is running.
+
+## Options
+
+| Key                  | Type                                                              | Description                               |
+| -------------------- | ----------------------------------------------------------------- | ----------------------------------------- |
+| `validate`           | `(values, ctx) => ValidationResult \| Promise<…>` \| `{ schema }` | The form's validator. `null` means valid. |
+| `validateOn`         | `'submit' \| 'blur' \| 'change'`                                  | When it runs. Default `'submit'`.         |
+| `validateDebounceMs` | `number`                                                          | Debounce for `'change'`. Default `200`.   |
+
+The same three keys exist on `creating`, and the last two on a column's `editing` / `creating`.
+
+## See also
+
+- [Editing](./data-grid/editing) — the edit workflow itself
+- [Creating](./data-grid/editing/creating) — validating a new row
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/editing-modal.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/editing-modal.tsx)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/validation/validation-types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/features/validation/validation-types.ts)

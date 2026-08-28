@@ -218,7 +218,7 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
-	it('factory defaultOptions win over the floor', () => {
+	it('factory defaults win over the floor', () => {
 		const factory: DataGridDefaultOptions<User> = { pagination: { pageSize: OVERRIDE_PAGE_SIZE } }
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }, factory))
 		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)

@@ -637,9 +637,23 @@ export type TableConfig<TRow extends object> = {
 	 */
 	pinning?: boolean | PinningConfig
 	virtualization?: boolean | VirtualizationConfig
-	creating?: CreatingConfig<TRow>
-	editing?: EditingConfig<TRow>
-	deleting?: DeletingConfig<TRow>
+	/**
+	 * Row creation. `false` / omitted disables it; an object enables it **and** supplies the
+	 * `onSave` without which there is nothing to enable.
+	 *
+	 * `true` is accepted for one reason: a defaults layer
+	 * ({@link https://ez-kit.dev/docs/data-grid/default-options DataGridOptionsProvider} or
+	 * `createDataGrid({ defaults })`) can describe how creation *looks* for the whole app —
+	 * `mode`, `validateOn` — while only the grid that supplies `onSave` gets the feature.
+	 * `creating: true` at such a call site says "yes, this grid too", and the merge keeps the
+	 * shared object. Without a resolved `onSave` the feature stays off rather than mounting a
+	 * trigger whose commit would call `undefined`.
+	 */
+	creating?: boolean | CreatingConfig<TRow>
+	/** Row editing. Same three-way shape as {@link TableConfig.creating}. */
+	editing?: boolean | EditingConfig<TRow>
+	/** Row deletion. Same three-way shape as {@link TableConfig.creating}, keyed on `onDelete`. */
+	deleting?: boolean | DeletingConfig<TRow>
 	/**
 	 * Defer application of sorting, column filters and global search. While on,
 	 * those three axes accumulate as a draft and reach `onStateChange` only when
@@ -657,8 +671,13 @@ export type TableConfig<TRow extends object> = {
 	 * Generic over `TRow` so `actions` receives a typed row. Without the argument the callback
 	 * would see `Row<object>` and every consumer would have to cast `row.original` back —
 	 * which is the same reason {@link TableConfig.deleting} and the rest are generic.
+	 *
+	 * `false` suppresses the column outright, including the built-in edit / delete / pin
+	 * affordances — the read-only escape hatch for a single grid under a defaults layer that
+	 * configured row actions app-wide. Like every other feature switch on this config, and
+	 * unlike the object-only shape this had, which left such a grid no way to opt out at all.
 	 */
-	rowActions?: RowActionsConfig<TRow>
+	rowActions?: boolean | RowActionsConfig<TRow>
 	/**
 	 * Column resizing. Named to match the per-column `resizing` switch — one feature, one
 	 * name at both levels.

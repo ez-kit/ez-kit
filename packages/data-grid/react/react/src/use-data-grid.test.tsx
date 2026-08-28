@@ -515,56 +515,54 @@ describe('useDataGrid — pagination.pageSizeOptions', () => {
 	})
 })
 
-describe('useDataGrid — selection.panel', () => {
-	it('SELECTION_PANEL_KEY is undefined when selection not set', () => {
+describe('useDataGrid — selection.bar', () => {
+	it('SELECTION_BAR_KEY is undefined when selection not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = result.current.grid.selection.panel
+		const key = result.current.grid.selection.bar
 		expect(key).toBeUndefined()
 	})
 
-	it('SELECTION_PANEL_KEY is undefined when selection: true (boolean, no panel)', () => {
+	it('SELECTION_BAR_KEY is undefined when selection: true (boolean, no bar config)', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: true }))
-		const key = result.current.grid.selection.panel
+		const key = result.current.grid.selection.bar
 		expect(key).toBeUndefined()
 	})
 
-	it('SELECTION_PANEL_KEY stores true when selection: { panel: true }', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: true } }))
-		const key = result.current.grid.selection.panel
+	it('SELECTION_BAR_KEY stores true when selection: { bar: true }', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: true } }))
+		const key = result.current.grid.selection.bar
 		expect(key).toBe(true)
 	})
 
-	it('SELECTION_PANEL_KEY stores false when selection: { panel: false }', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: false } }))
-		const key = result.current.grid.selection.panel
+	it('SELECTION_BAR_KEY stores false when selection: { bar: false }', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: false } }))
+		const key = result.current.grid.selection.bar
 		expect(key).toBe(false)
 	})
 
-	it('SELECTION_PANEL_KEY stores config object when selection: { panel: { onDelete } }', () => {
-		const onDelete = vi.fn()
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { onDelete } } }),
-		)
-		const key = result.current.grid.selection.panel
-		expect(key).toEqual({ onDelete })
+	it('SELECTION_BAR_KEY stores config object when selection: { bar: { onClear } }', () => {
+		const onClear = vi.fn()
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { onClear } } }))
+		const key = result.current.grid.selection.bar
+		expect(key).toEqual({ onClear })
 	})
 
-	it('SELECTION_PANEL_KEY stores variant: "inline" when configured', () => {
+	it('SELECTION_BAR_KEY stores variant: "inline" when configured', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { variant: 'inline' } } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { variant: 'inline' } } }),
 		)
-		const key = result.current.grid.selection.panel
+		const key = result.current.grid.selection.bar
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
-	it('enables core row selection and extracts the React-only panel from an object selection', () => {
+	it('enables core row selection and extracts the React-only bar from an object selection', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { variant: 'inline' } } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { variant: 'inline' } } }),
 		)
-		// The object `selection` (with only a React-only `panel`) still enables core row selection…
+		// The object `selection` (with only a React-only `bar`) still enables core row selection…
 		expect(result.current.options.enableRowSelection).toBe(true)
-		// …and the panel is lifted onto the table for SelectionBar to read.
-		const key = result.current.grid.selection.panel
+		// …and the bar config is lifted onto the table for SelectionBar to read.
+		const key = result.current.grid.selection.bar
 		expect(key).toEqual({ variant: 'inline' })
 	})
 

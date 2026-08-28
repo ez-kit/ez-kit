@@ -1,4 +1,5 @@
 import { CommitStatus, RowActionsVariant } from '@ez-kit/data-grid-core'
+import { isValidElement } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { GridMenuIcon, GridMenuVariant, isGridMenuIcon, toMenuSections } from '../menu'
@@ -9,6 +10,7 @@ import { useDataGridTable, useDataGridState } from './table-context'
 import type { GridMenuItem, GridMenuSection } from '../menu'
 import type { RowActionItem, RowActionsContext, RowPinningConfig } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
+import type { ReactElement } from 'react'
 
 type ActionsCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,20 +99,32 @@ function buildPinItems(
 }
 
 /**
- * Turns the consumer's {@link RowActionItem}s into menu entries.
- *
- * Core types `icon` as a plain string because it does not own the icon vocabulary, so an
- * unknown name is dropped rather than passed to a kit's icon map, leaving a label-only entry.
+ * The icon slot as the kit's menu model accepts it: a named glyph, or the consumer's own
+ * element. The config the author writes is already typed to exactly this
+ * (`ReactRowActionsConfig` binds `RowActionItem`'s node parameter to `ReactElement`) — the
+ * check exists because the value reaches this layer through `table.options`, where the node
+ * type is erased back to `unknown`.
  */
-export function buildCustomItems(items: RowActionItem[]): GridMenuItem[] {
-	return items.map((item) => ({
-		id: `${CUSTOM_ACTION_PREFIX}${item.id}`,
-		label: item.label,
-		...(item.icon !== undefined && isGridMenuIcon(item.icon) ? { icon: item.icon } : {}),
-		...(item.disabled !== undefined ? { disabled: item.disabled } : {}),
-		...(item.danger !== undefined ? { danger: item.danger } : {}),
-		onSelect: item.onSelect,
-	}))
+function toMenuIcon(icon: unknown): GridMenuIcon | ReactElement | undefined {
+	if (isGridMenuIcon(icon)) return icon
+	return isValidElement(icon) ? icon : undefined
+}
+
+/**
+ * Turns the consumer's {@link RowActionItem}s into menu entries.
+ */
+export function buildCustomItems(items: RowActionItem<ReactElement>[]): GridMenuItem[] {
+	return items.map((item) => {
+		const icon = toMenuIcon(item.icon)
+		return {
+			id: `${CUSTOM_ACTION_PREFIX}${item.id}`,
+			label: item.label,
+			...(icon !== undefined ? { icon } : {}),
+			...(item.disabled !== undefined ? { disabled: item.disabled } : {}),
+			...(item.danger !== undefined ? { danger: item.danger } : {}),
+			onSelect: item.onSelect,
+		}
+	})
 }
 
 /**
@@ -183,10 +197,12 @@ export function ActionsCell({ row }: ActionsCellProps) {
 
 	const pinItems = pinConfig ? buildPinItems(row, pinConfig) : []
 	const buildActions = table.options.rowActions?.actions
-	// The augmented option is `RowActionsConfig<object>` — `TableConfig` names no type argument
-	// for it — so the unchecked row/table this cell holds are narrowed at the call.
+	// The augmented option is `RowActionsConfig<object, unknown>` — the row type and the node
+	// type are both erased at the `table.options` boundary — so the row/table this cell holds
+	// are narrowed at the call, and the returned items are re-bound to this layer's node type.
+	// `buildCustomItems` still checks each icon at runtime; see `toMenuIcon`.
 	const actionsCtx: RowActionsContext = { row: row as Row<object>, table: table as Table<object> }
-	const customItems = buildActions ? buildCustomItems(buildActions(actionsCtx)) : []
+	const customItems = buildActions ? buildCustomItems(buildActions(actionsCtx) as RowActionItem<ReactElement>[]) : []
 	const variant = table.options.rowActions?.variant ?? RowActionsVariant.Inline
 
 	if (variant === RowActionsVariant.Menu) {

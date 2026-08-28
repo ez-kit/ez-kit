@@ -240,17 +240,23 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		return fromRegistry ?? fn
 	})()
 
-	const rowActionsVariant = config.rowActions?.variant ?? RowActionsVariant.Inline
-	const customRowActions = config.rowActions?.actions
+	// `rowActions` defaults to on: omitting it must keep the actions column appearing as soon as
+	// editing / deleting / row pinning is in play, which is what it has always done. Only an
+	// explicit `false` (or `{ enabled: false }`) suppresses the column outright — the read-only
+	// escape hatch for one grid under a defaults layer that configured row actions app-wide.
+	const rowActionsEnabled = config.rowActions === undefined || isFeatureEnabled(config.rowActions)
+	const rowActionsCfg = featureConfig(config.rowActions)
+	const rowActionsVariant = rowActionsCfg?.variant ?? RowActionsVariant.Inline
+	const customRowActions = rowActionsCfg?.actions
 
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
-		editing: hasEditing,
-		deleting: hasDeleting,
-		pinning: hasPinning,
+		editing: rowActionsEnabled && hasEditing,
+		deleting: rowActionsEnabled && hasDeleting,
+		pinning: rowActionsEnabled && hasPinning,
 		rowActionsVariant,
-		customRowActions: customRowActions !== undefined,
+		customRowActions: rowActionsEnabled && customRowActions !== undefined,
 	})
 
 	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)
@@ -533,7 +539,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Read by the React layer to lay out the actions cell (inline vs. menu).
 		rowActions: {
 			variant: rowActionsVariant,
-			...(customRowActions ? { actions: customRowActions } : {}),
+			...(rowActionsEnabled && customRowActions ? { actions: customRowActions } : {}),
 		},
 		// Column resizing
 		...(hasResizing

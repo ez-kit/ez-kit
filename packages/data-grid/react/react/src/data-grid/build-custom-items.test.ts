@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { GridMenuIcon } from '../menu'
@@ -20,8 +21,19 @@ describe('buildCustomItems', () => {
 		expect(item?.icon).toBe(GridMenuIcon.Delete)
 	})
 
-	it('drops an icon name outside the built-in set rather than passing it to a kit', () => {
-		const [item] = buildCustomItems([{ id: 'send', label: 'Send invoice', icon: 'envelope', onSelect: () => {} }])
+	it('carries a consumer-supplied element through as the icon', () => {
+		const glyph = createElement('svg', { 'data-testid': 'envelope' })
+		const [item] = buildCustomItems([{ id: 'send', label: 'Send invoice', icon: glyph, onSelect: () => {} }])
+
+		expect(item?.icon).toBe(glyph)
+		expect(item?.label).toBe('Send invoice')
+	})
+
+	it('drops a value that is neither a built-in name nor an element', () => {
+		// Not reachable through the typed config — `icon` is `GridMenuIcon | ReactElement` there.
+		// This is the erased `table.options` boundary the runtime check exists for.
+		const items = [{ id: 'send', label: 'Send invoice', icon: 'envelope', onSelect: () => {} }]
+		const [item] = buildCustomItems(items as unknown as Parameters<typeof buildCustomItems>[0])
 
 		expect(item?.icon).toBeUndefined()
 		expect(item?.label).toBe('Send invoice')

@@ -35,7 +35,7 @@ describe('DraftBar', () => {
 		const { table } = renderGrid({
 			deferredApply: true,
 			sorting: { manual: true },
-			selection: { panel: { variant: 'inline' } },
+			selection: { bar: { variant: 'inline' } },
 		})
 		table.setRowSelection({ '1': true })
 

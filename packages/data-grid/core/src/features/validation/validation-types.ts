@@ -99,13 +99,18 @@ export type FieldState<TConfig = unknown> = {
 }
 
 /**
- * `validate` config — function form OR `{ schema }` shorthand for zod.
- * `validateOn` and `validateDebounceMs` on the shorthand override the global creating/editing
- * `validateOn` / `validateDebounceMs` for that specific call.
+ * `validate` config — a function, or the `{ schema }` shorthand for zod.
+ *
+ * **When** validation runs is not settable here. It is `editing.validateOn` /
+ * `creating.validateOn` (and the per-column override under `column.editing` /
+ * `column.creating`), full stop. The shorthand used to carry its own `validateOn` /
+ * `validateDebounceMs` that silently won over the feature-level ones — so the same setting had
+ * two spellings, only one of which existed when `validate` was written as a function, and
+ * adopting a zod schema from another example quietly re-timed the whole form.
  */
 export type ValidateConfig<TData> =
 	| ((values: Partial<TData>, ctx: ValidateContext) => ValidationResult | Promise<ValidationResult>)
-	| { schema: ZodType; validateOn?: ValidateOn; validateDebounceMs?: number }
+	| { schema: ZodType }
 
 const VALIDATION_ERROR_BRAND = Symbol.for('@ez-kit/validation-error')
 

@@ -235,7 +235,7 @@ and no trigger is ever rendered for a write that would have nothing to call.
 Providers nest, so a subtree can refine app-wide defaults without repeating them — a compact grid in a
 side panel wraps itself in a second provider with `pagination: { pageSize: 5 }` and inherits the rest.
 See [Default options](/docs/data-grid/default-options) for the full merge rules, including the
-kit-level `createDataGrid({ defaultOptions })` layer that sits **under** the provider.
+kit-level `createDataGrid({ defaults })` layer that sits **under** the provider.
 
 ### Last write wins
 

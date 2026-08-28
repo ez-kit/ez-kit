@@ -103,8 +103,6 @@ function mapColumn<TRow extends object>(
 		resizing,
 		width,
 		align,
-		validateOn,
-		validateDebounceMs,
 		headerClassName,
 		cellClassName,
 		footerClassName,
@@ -118,8 +116,6 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'filtering', filtering)
 	setIfDefined(meta, 'editing', editing)
 	setIfDefined(meta, 'creating', creating)
-	setIfDefined(meta, 'validateOn', validateOn)
-	setIfDefined(meta, 'validateDebounceMs', validateDebounceMs)
 	setIfDefined(meta, 'headerClassName', headerClassName)
 	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
 	setIfDefined(meta, 'footerClassName', footerClassName)

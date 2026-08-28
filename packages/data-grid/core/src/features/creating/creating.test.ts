@@ -326,7 +326,7 @@ describe('CreatingFeature — validate config variants', () => {
 })
 
 describe('CreatingFeature — per-column validateOn', () => {
-	it("meta.validateOn = 'change' triggers field-level validate after debounce", async () => {
+	it("column validateOn = 'change' triggers field-level validate after debounce", async () => {
 		const validate = vi.fn((values: Partial<Row>, _ctx: ValidateContext) =>
 			values.email === 'taken@x.co' ? { errors: { email: ['taken'] } } : null,
 		)
@@ -334,7 +334,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 			data: DATA,
 			columns: createColumns<Row>([
 				{ accessorKey: 'name' },
-				{ accessorKey: 'email', validateOn: 'change', validateDebounceMs: 20 },
+				{ accessorKey: 'email', creating: { validateOn: 'change', validateDebounceMs: 20 } },
 			]),
 			creating: { validate, onSave: () => Promise.resolve() },
 		})
@@ -372,11 +372,14 @@ describe('CreatingFeature — per-column validateOn', () => {
 		expect(s.errors.other).toEqual(['preserved']) // unrelated, kept
 	})
 
-	it("meta.validateOn = 'blur' does NOT auto-trigger on setValue", async () => {
+	it("column validateOn = 'blur' does NOT auto-trigger on setValue", async () => {
 		const validate = vi.fn().mockReturnValue(null)
 		const table = createTable({
 			data: DATA,
-			columns: createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email', validateOn: 'blur' }]),
+			columns: createColumns<Row>([
+				{ accessorKey: 'name' },
+				{ accessorKey: 'email', creating: { validateOn: 'blur' } },
+			]),
 			creating: { validate, onSave: () => Promise.resolve() },
 		})
 		table.creating.start()

@@ -10,7 +10,7 @@ import {
 	FilterChipKind,
 	FilterChipsPosition,
 	FilteringVariant,
-	HeaderSortDirection,
+	ColumnSortDirection,
 	LoadMoreDirection,
 	LoadMoreTrigger,
 	MultiSortEvent,
@@ -38,7 +38,7 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 				{
 					accessorKey: 'name',
 					sorting: { undefined: 'last' },
-					validateOn: 'blur',
+					editing: { validateOn: 'blur' },
 					cell: { type: 'badge', config: { items: [{ value: 'a', label: 'A', variant: 'destructive' }] } },
 				},
 			],
@@ -65,7 +65,7 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 		expect(ValidateOn.Blur).toBe('blur')
 		expect(SystemColumnType.Actions).toBe('actions')
 		expect(SortDirection.Asc).toBe('asc')
-		expect(HeaderSortDirection.None).toBe('none')
+		expect(ColumnSortDirection.None).toBe('none')
 		expect(FilterChipKind.Global).toBe('global')
 		expect(FilteringVariant.Popover).toBe('popover')
 		expect(FilterChipsPosition.Below).toBe('below')

@@ -15,12 +15,17 @@ export { createColumnHelper } from './column/create-column-helper'
 export {
 	BASE_CELL_TYPE_IDS,
 	BadgeVariant,
+	BuiltInCellType,
+	BuiltInSortingFn,
 	ColumnAlign,
 	ColumnPinSide,
 	ColumnSortUndefined,
 	SystemColumnType,
 } from './column/types'
 export type { ColumnHelper } from './column/create-column-helper'
+
+// Menu / row-action icon vocabulary — semantic names each UI kit maps to its own glyphs
+export { GridMenuIcon, isGridMenuIcon } from './menu-icon'
 
 // System column IDs
 export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
@@ -33,13 +38,11 @@ export type { RowActionsConfig, RowActionsContext, RowActionItem } from './featu
 export type {
 	BadgeCellConfig,
 	BadgeItem,
-	BuiltInSortingFn,
 	BaseCellTypes,
 	BooleanCellConfig,
 	CellDef,
 	CellTypeRegistryShape,
 	ConfigOf,
-	BuiltInCellType,
 	CellType,
 	NumberCellConfig,
 	TextCellConfig,
@@ -53,6 +56,11 @@ export type {
 	ColumnWidthDef,
 	ColumnSortingConfig,
 	ColumnVisibilityDef,
+	// The renderer slot itself. Every user-facing render point on a column (`header`,
+	// `footer`, `cell.component`, `filtering.component`, …) is typed with it, so a consumer
+	// factoring a shared renderer out into its own binding needs to be able to name it.
+	ColumnRenderer,
+	ExoticComponentLike,
 	DateCellConfig,
 	ImageCellConfig,
 	InputComponentProps,
@@ -98,7 +106,14 @@ export type {
 } from './features/creating'
 export { DraftAxis } from './features/deferred-apply'
 export type { AppliedState, DraftApi, PendingCount, QueryDraft } from './features/deferred-apply'
-export type { ConfirmationOptions, DeletingConfig, DeletingContext } from './features/deleting'
+export type {
+	BulkConfirmationOptions,
+	BulkDeletingConfig,
+	BulkDeletingContext,
+	ConfirmationOptions,
+	DeletingConfig,
+	DeletingContext,
+} from './features/deleting'
 export { EditingMode } from './features/editing'
 export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
 // Sourced from the feature modules (not `./types`) so their

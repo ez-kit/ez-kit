@@ -1,10 +1,12 @@
+import { featureConfig } from '@ez-kit/data-grid-core'
 import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
 import { FilterChipsPosition } from '../types'
-import { SelectionPanelVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
+import { resolveActionBarVariant } from './action-bar-variant'
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { DataGridCell } from './cell'
@@ -27,8 +29,7 @@ import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
-import { SelectionBar, buildSelectionPanelArgs } from './selection-bar'
-import { resolveSelectionPanelVariant } from './selection-panel-variant'
+import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
 import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useDataGridTable, useDataGridState } from './table-context'
@@ -36,7 +37,7 @@ import { Toolbar } from './toolbar'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
+import type { BulkConfirmationOptions, ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -112,26 +113,31 @@ function resolveConfirmationText(
 }
 
 /**
- * Bulk (selection-bar) confirmation text. Unlike the per-row resolver there is no
- * single `row`, so a `description` function is ignored in favour of a count-aware
- * default ("Delete N rows?").
+ * Bulk confirmation text. The `description` function is handed the whole selection rather than
+ * one row — see {@link BulkConfirmationOptions} — and falls back to count-aware default copy.
  */
 function resolveBulkConfirmationText(
-	options: ConfirmationOptions,
-	count: number,
+	options: BulkConfirmationOptions,
+	rows: Row<unknown>[],
 ): { title: string; description: string } {
 	const title = options.title ?? DEFAULT_BULK_CONFIRM_TITLE
 	const desc = options.description
-	const description = typeof desc === 'string' ? desc : defaultBulkConfirmDescription(count)
+	const description = typeof desc === 'function' ? desc(rows) : (desc ?? defaultBulkConfirmDescription(rows.length))
 	return { title, description }
 }
 
-/** Whether either the per-row or the bulk (selection-panel) confirmation dialog is configured. */
+/** The bulk-delete prompt's config, or `undefined` when bulk delete asks for no prompt. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function bulkConfirmationOptions(table: Table<any>): BulkConfirmationOptions | undefined {
+	const confirmation = featureConfig(table.options.deleting?.bulk)?.confirmation
+	if (!confirmation) return undefined
+	return confirmation === true ? {} : confirmation
+}
+
+/** Whether either the per-row or the bulk confirmation dialog is configured. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function hasConfirmDialog(table: Table<any>): boolean {
-	if (table.options.deleting?.confirmation) return true
-	const panelConfig = table.grid.selection.panel
-	return typeof panelConfig === 'object' && Boolean(panelConfig.confirmation)
+	return Boolean(table.options.deleting?.confirmation) || bulkConfirmationOptions(table) !== undefined
 }
 
 function ConfirmDialogRenderer() {
@@ -142,26 +148,18 @@ function ConfirmDialogRenderer() {
 	const pendingId = useDataGridState((s) => s.pendingDeleteRowId)
 	const pendingBulk = useDataGridState((s) => s.pendingBulkDelete)
 
-	const panelConfig = table.grid.selection.panel
-	const panelConfigObj = typeof panelConfig === 'object' ? panelConfig : undefined
-	const bulkConfirmation = panelConfigObj?.confirmation
-	const bulkOnDelete = panelConfigObj?.onDelete
-
-	// Bulk (selection-panel) confirmation takes precedence while staged. The handler
-	// lives outside core, so run it here on confirm, then clear the pending flag.
-	if (pendingBulk && bulkConfirmation && bulkOnDelete) {
-		const bulkOptions: ConfirmationOptions = bulkConfirmation === true ? {} : bulkConfirmation
-		const args = buildSelectionPanelArgs(table)
-		const { title, description } = resolveBulkConfirmationText(bulkOptions, args.selectedRows.length)
+	// A staged bulk delete takes precedence: it is the gesture the user just made. Core owns
+	// both the staging and the run, so this only renders the prompt and reports the answer.
+	const bulkOptions = bulkConfirmationOptions(table)
+	if (pendingBulk && bulkOptions) {
+		const { selectedRows } = buildSelectionBarArgs(table)
+		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows)
 		return (
 			<ConfirmDialog
 				open
 				title={title}
 				description={description}
-				onConfirm={() => {
-					bulkOnDelete(args)
-					table.confirmBulkDelete()
-				}}
+				onConfirm={() => void table.confirmBulkDelete()}
 				onCancel={() => {
 					table.cancelBulkDelete()
 				}}
@@ -196,13 +194,13 @@ function DefaultLayout() {
 	// without subscribing. Avoids cascading re-renders to Body / Table on
 	// state mutations the layout doesn't actually depend on.
 	const table = useDataGridTable()
-	const variant = resolveSelectionPanelVariant(table)
+	const variant = resolveActionBarVariant(table)
 
 	const chipsConfig = table.grid.filtering.chips
 	const chipsAbove = chipsConfig?.position === FilterChipsPosition.Above ? <ActiveFiltersBar /> : null
 	const chipsBelow = chipsConfig?.position === FilterChipsPosition.Below ? <ActiveFiltersBar /> : null
 
-	if (variant === SelectionPanelVariant.Inline) {
+	if (variant === ActionBarVariant.Inline) {
 		return (
 			<>
 				<DraftBar />

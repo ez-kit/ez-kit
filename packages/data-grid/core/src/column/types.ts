@@ -24,19 +24,34 @@ export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCor
 }
 
 /**
- * The cell types this package implements. A closed union — the escape hatch for
+ * The cell types this package implements. A closed set — the escape hatch for
  * project-specific types is {@link CellType}'s tail, not this.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `cell: { type: 'number' }` is equally valid and needs no import.
  */
-export type BuiltInCellType =
-	| 'text'
-	| 'number'
-	| 'date'
-	| 'boolean'
-	| 'select'
-	| 'badge'
-	| 'image'
-	| 'link'
-	| 'progress'
+export const BuiltInCellType = {
+	/** Plain text, optionally truncated — see {@link TextCellConfig}. */
+	Text: 'text',
+	/** Locale-formatted number — see {@link NumberCellConfig}. */
+	Number: 'number',
+	/** `Intl.DateTimeFormat`-rendered date — see {@link DateCellConfig}. */
+	Date: 'date',
+	/** Boolean with per-column labels — see {@link BooleanCellConfig}. */
+	Boolean: 'boolean',
+	/** Value picked from a fixed list — see {@link SelectCellConfig}. */
+	Select: 'select',
+	/** Value rendered as a coloured badge — see {@link BadgeCellConfig}. */
+	Badge: 'badge',
+	/** Avatar / thumbnail — see {@link ImageCellConfig}. */
+	Image: 'image',
+	/** Anchor rendered from the cell value. */
+	Link: 'link',
+	/** Progress bar — see {@link ProgressCellConfig}. */
+	Progress: 'progress',
+} as const
+
+export type BuiltInCellType = (typeof BuiltInCellType)[keyof typeof BuiltInCellType]
 
 /**
  * A cell type as it may appear on a column or in `ColumnMeta`. The `string & {}` tail keeps
@@ -72,10 +87,23 @@ export type CellViewCtx<TRow, TValue> = {
 	rowIndex: number
 }
 
-/** Props passed to column-level input components (filtering, editing, creating). */
-export type InputComponentProps = {
+/**
+ * Props passed to a column-level filter input (`column.filtering.component`).
+ *
+ * `config` is the column's own `cell.config`, forwarded verbatim — a custom filter for a
+ * `select` / `badge` column needs the very `items` the cell was declared with, and the grid
+ * has been passing them all along. The type omitted it, so the only way to read them was a
+ * cast or a second copy of the list in a closure.
+ *
+ * The React adapter's `CellInputProps` is this same type, re-exported: one shape, one name per
+ * layer, no drift between what the filter slot promises and what a registered cell type's
+ * `filter` renderer receives.
+ */
+export type InputComponentProps<TConfig = unknown> = {
 	value: unknown
 	onChange: (value: unknown) => void
+	/** The column's `cell.config`, when it declared one. */
+	config?: TConfig
 }
 
 // ── cell config types ─────────────────────────────────────────────────────
@@ -187,18 +215,26 @@ export type BaseCellTypes = {
 	progress: { __config?: ProgressCellConfig }
 }
 
-/** {@link BaseCellTypes}' ids at runtime — what the unbound column helper builds methods from. */
-export const BASE_CELL_TYPE_IDS = [
-	'text',
-	'number',
-	'boolean',
-	'date',
-	'select',
-	'badge',
-	'image',
-	'link',
-	'progress',
-] as const satisfies readonly (keyof BaseCellTypes)[]
+/**
+ * Compile-time proof that {@link BuiltInCellType}'s members and {@link BaseCellTypes}' keys are
+ * the *same* set, in both directions. `satisfies` on the array below only proves one of them —
+ * an id added to the contract and forgotten here would still compile.
+ */
+type _BuiltInCellTypeCoversContract = [BuiltInCellType] extends [keyof BaseCellTypes]
+	? [keyof BaseCellTypes] extends [BuiltInCellType]
+		? true
+		: never
+	: never
+const _builtInCellTypesMatchContract: _BuiltInCellTypeCoversContract = true
+void _builtInCellTypesMatchContract
+
+/**
+ * {@link BaseCellTypes}' ids at runtime — what the unbound column helper builds methods from.
+ *
+ * Derived from {@link BuiltInCellType} rather than re-listed, so the members, the union and
+ * this array cannot drift apart.
+ */
+export const BASE_CELL_TYPE_IDS: readonly (keyof BaseCellTypes)[] = Object.values(BuiltInCellType)
 
 // ── cell definition (registry-driven) ─────────────────────────────────────
 
@@ -297,6 +333,18 @@ export type ColumnEditingConfig<TNode = unknown> = {
 	 * via the kit's `<FieldDescription>` / `<Description>` slot.
 	 */
 	description?: string
+	/**
+	 * When this column's field validates, overriding the feature-level
+	 * `editing.validateOn`. Per-field UX: an email that validates on blur next to a password
+	 * that validates on change for a live strength meter.
+	 */
+	validateOn?: ValidateOn
+	/**
+	 * Debounce (ms) for this column's field, overriding the feature-level
+	 * `editing.validateDebounceMs`. Applies only when the resolved `validateOn` is
+	 * {@link ValidateOn.Change}.
+	 */
+	validateDebounceMs?: number
 }
 
 export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unknown> = {
@@ -329,6 +377,18 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	 * function can therefore not be passed directly; wrap it (`defaultValue: () => myFn`).
 	 */
 	defaultValue?: TValue | ((ctx: CreateDefaultValueContext<TRow>) => TValue)
+	/**
+	 * When this column's field validates, overriding the feature-level
+	 * `creating.validateOn`. Falls back to this column's `editing.validateOn` when omitted, the same way
+	 * `creating.component` falls back to `editing.component`.
+	 */
+	validateOn?: ValidateOn
+	/**
+	 * Debounce (ms) for this column's field, overriding the feature-level
+	 * `creating.validateDebounceMs`. Applies only when the resolved `validateOn` is
+	 * {@link ValidateOn.Change}.
+	 */
+	validateDebounceMs?: number
 }
 
 /**
@@ -392,14 +452,29 @@ export type ColumnVisibilityDef = {
 	initialHidden?: boolean
 }
 
-/** Built-in TanStack sort functions. The `string & {}` tail keeps custom registry IDs valid. */
-export type BuiltInSortingFn =
-	| 'alphanumeric'
-	| 'alphanumericCaseSensitive'
-	| 'text'
-	| 'textCaseSensitive'
-	| 'datetime'
-	| 'basic'
+/**
+ * The sort functions TanStack ships, addressable by name from `column.sorting.fn`.
+ *
+ * Named members for internal reference; the option is typed as the plain string union (with a
+ * `string & {}` tail for custom registry ids), so `sorting: { fn: 'datetime' }` is equally
+ * valid and needs no import.
+ */
+export const BuiltInSortingFn = {
+	/** Mixed text/number, case-insensitive. TanStack's default for string columns. */
+	Alphanumeric: 'alphanumeric',
+	/** As {@link BuiltInSortingFn.Alphanumeric}, case-sensitive. */
+	AlphanumericCaseSensitive: 'alphanumericCaseSensitive',
+	/** Pure text, case-insensitive. */
+	Text: 'text',
+	/** Pure text, case-sensitive. */
+	TextCaseSensitive: 'textCaseSensitive',
+	/** `Date` / date-like values by timestamp. */
+	Datetime: 'datetime',
+	/** Plain `<` / `>` comparison. */
+	Basic: 'basic',
+} as const
+
+export type BuiltInSortingFn = (typeof BuiltInSortingFn)[keyof typeof BuiltInSortingFn]
 
 /**
  * Where `undefined` values land during a sort.
@@ -605,17 +680,6 @@ export type ColumnDefCommon<
 	creating?: false | ColumnCreatingConfig<TRow, TValue, TNode>
 
 	/**
-	 * Override the global `creating.validateOn` / `editing.validateOn` for this column.
-	 * Useful for per-field UX (e.g. email validates onBlur, password onChange for live strength meter).
-	 */
-	validateOn?: ValidateOn
-	/**
-	 * Override the global `creating.validateDebounceMs` / `editing.validateDebounceMs` for this column.
-	 * Applies only when the resolved `validateOn` is `'change'`.
-	 */
-	validateDebounceMs?: number
-
-	/**
 	 * Column-level resizing. `false` pins the column's width — the resize handle is not
 	 * rendered and `column.getCanResize()` returns false.
 	 *
@@ -790,9 +854,5 @@ declare module '@tanstack/table-core' {
 		 * (table-level `filtering.faceted` or column-level `filtering.faceted`) opts in.
 		 */
 		facetedEnabled?: boolean
-		/** Per-column override for the global creating/editing `validateOn`. */
-		validateOn?: ValidateOn
-		/** Per-column override for the global creating/editing `validateDebounceMs`. */
-		validateDebounceMs?: number
 	}
 }

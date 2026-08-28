@@ -23,7 +23,7 @@ export const DEFAULT_FILTER_DEBOUNCE_MS = 250
  * the docs a single place to describe.
  *
  * Override precedence is unchanged and handled upstream by the option-layer merge
- * (factory `defaultOptions` < provider `defaults` < instance config); these values apply
+ * (factory `defaults` < provider `defaults` < instance config); these values apply
  * last, only where the merged config left a slot undefined.
  */
 export const DATA_GRID_DEFAULTS = {

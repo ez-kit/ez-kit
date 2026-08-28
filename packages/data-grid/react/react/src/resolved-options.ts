@@ -14,7 +14,7 @@ import type {
 	NormalizedPageWindowConfig,
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
-	SelectionPanelConfig,
+	SelectionBarConfig,
 } from './use-data-grid'
 import type { RowData } from '@tanstack/table-core'
 import type { ComponentType } from 'react'
@@ -93,8 +93,8 @@ export type ResolvedGridOptions = {
 	/** Infinite-scroll detection config. `undefined` unless `pagination.mode` is `'infinite'`. */
 	infinite?: NormalizedInfiniteConfig | undefined
 	selection: {
-		/** Selection info panel. `undefined` when selection is off or the panel is not configured. */
-		panel?: (boolean | SelectionPanelConfig) | undefined
+		/** Selection info bar. `undefined` when selection is off or the bar is not configured. */
+		bar?: (boolean | SelectionBarConfig) | undefined
 	}
 	expanding: {
 		/** Sub-content detail-panel renderer, if one was supplied. */
