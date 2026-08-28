@@ -14,6 +14,10 @@ These are **values only**. They never enable a feature; they only fill the gaps 
 | Setting                        | Default                                  | Applies when                                 |
 | ------------------------------ | ---------------------------------------- | -------------------------------------------- |
 | `pagination.pageSize`          | `10`                                     | `pagination` is enabled without a `pageSize` |
+| `pagination.pageSizeOptions`   | `[10, 20, 50, 100]`                      | the PageSizer renders with no list supplied  |
+| `pagination.variant`           | `'numbered'`                             | `pagination` is enabled without a `variant`  |
+| `pagination.siblings`          | `1`                                      | `pagination.variant: 'numbered'`             |
+| `pagination.boundaries`        | `1`                                      | `pagination.variant: 'numbered'`             |
 | `globalFiltering.placeholder`  | `'Search…'`                              | `globalFiltering` is enabled                 |
 | `globalFiltering.debounce`     | inherits `filtering.debounce`            | `globalFiltering` is enabled                 |
 | `filtering.variant`            | `'inline'`                               | `filtering` is enabled without a `variant`   |
@@ -24,7 +28,7 @@ These are **values only**. They never enable a feature; they only fill the gaps 
 | `pagination.threshold.rows`    | `5`                                      | infinite + virtualized rows                  |
 | `pagination.threshold.px`      | `200`                                    | infinite + non-virtualized rows              |
 
-> Every one of these lives in the exported `DATA_GRID_DEFAULTS`, so a grid that wants to extend a default rather than restate it can read it. These values are a refactor-safe single source, not a behavior change: enabling a feature resolves to exactly the same values it always did. `pageSize` lives in `@ez-kit/data-grid-core` (`DEFAULT_PAGE_SIZE`) so every layer references one number.
+> Every one of these lives in the exported `DATA_GRID_DEFAULTS`, under the very path the option has — `DATA_GRID_DEFAULTS.pagination.pageSizeOptions` defaults `pagination.pageSizeOptions` — so a grid that wants to extend a default rather than restate it can read it. These values are a refactor-safe single source, not a behavior change: enabling a feature resolves to exactly the same values it always did. `pageSize` lives in `@ez-kit/data-grid-core` (`DEFAULT_PAGE_SIZE`) so every layer references one number.
 
 ## Overriding
 

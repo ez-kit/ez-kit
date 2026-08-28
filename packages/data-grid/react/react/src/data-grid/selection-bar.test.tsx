@@ -142,7 +142,7 @@ describe('<SelectionBar>', () => {
 		expect((args as { rows: unknown[] }).rows).toHaveLength(1)
 	})
 
-	it('Cancel button calls table.resetRowSelection when onClear not configured', async () => {
+	it('Cancel button calls table.resetRowSelection when clear not configured', async () => {
 		const user = userEvent.setup()
 		const table = makeTable({ selection: true })
 		setSelectionBarKey(table, true)
@@ -160,11 +160,11 @@ describe('<SelectionBar>', () => {
 		expect(resetSpy).toHaveBeenCalledOnce()
 	})
 
-	it('calls custom onClear when configured', async () => {
+	it('calls the custom clear handler when configured', async () => {
 		const user = userEvent.setup()
-		const onClear = vi.fn()
+		const clear = vi.fn()
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, { onClear })
+		setSelectionBarKey(table, { clear })
 		table.setRowSelection({ '1': true })
 
 		render(
@@ -173,9 +173,9 @@ describe('<SelectionBar>', () => {
 			</Wrapper>,
 		)
 		await user.click(screen.getByRole('button', { name: /cancel/i }))
-		expect(onClear).toHaveBeenCalledOnce()
+		expect(clear).toHaveBeenCalledOnce()
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		const args = onClear.mock.calls.at(0)?.at(0)
+		const args = clear.mock.calls.at(0)?.at(0)
 		expect(args).toHaveProperty('clearSelection')
 	})
 

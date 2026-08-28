@@ -108,7 +108,7 @@ export function Body({ children }: DataGridBodyProps = {}) {
 	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = table.grid.fallbacks
-	const renderExpanded = table.grid.expanding.renderExpanded as ComponentType<ExpandedRowProps<object>> | undefined
+	const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
 
 	if (isPending && fallbacks?.loading !== false) {
 		return <LoadingBody />
@@ -145,13 +145,13 @@ export function Body({ children }: DataGridBodyProps = {}) {
 						data-pinned='top'
 						ref={registerTopRow(index)}
 					/>
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			{centerRows.map((row) => (
 				<Fragment key={row.id}>
 					<DataGridRow row={row} />
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			{bottomRows.map((row, index) => (
@@ -161,7 +161,7 @@ export function Body({ children }: DataGridBodyProps = {}) {
 						data-pinned='bottom'
 						ref={registerBottomRow(index)}
 					/>
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			<LoadMoreFooter />

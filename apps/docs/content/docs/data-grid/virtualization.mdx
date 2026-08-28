@@ -25,12 +25,13 @@ When the defaults suit you, a bare `virtualization` prop is shorthand for `virtu
 
 ## Options
 
-| Option               | Type                              | Description                                                                                       |
-| -------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `virtualization`     | `boolean \| VirtualizationConfig` | Master switch. Default off. `true` is shorthand for `{ row: true }`.                              |
-| `virtualization.row` | `boolean \| RowVirtualOptions`    | Row virtualization. `true` uses the defaults below. Column virtualization is not implemented yet. |
-| `row.estimateSize`   | `number \| (index) => number`     | Estimated row height in px. Default `50`. Pass a function when rows have variable heights.        |
-| `row.overscan`       | `number`                          | Extra rows rendered above/below the viewport. Default `5`.                                        |
+| Option                   | Type                                 | Description                                                                                                                    |
+| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `virtualization`         | `boolean \| VirtualizationConfig`    | Master switch. Default off. `true` is shorthand for `{ row: true }`.                                                           |
+| `virtualization.row`     | `boolean \| RowVirtualizationConfig` | Row virtualization. `true` uses the defaults below. Column virtualization is not implemented yet.                              |
+| `row.estimateSize`       | `number \| (index) => number`        | Estimated row height in px. Default `50`. Pass a function when rows have variable heights.                                     |
+| `row.overscan`           | `number`                             | Extra rows rendered above/below the viewport. Default `5`.                                                                     |
+| `virtualization.enabled` | `boolean`                            | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
 
 ## Notes
 

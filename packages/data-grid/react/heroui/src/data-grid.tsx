@@ -3,7 +3,6 @@
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { cellTypes } from './blocks/cell-types'
-import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilityMenu'
 import { Button } from './blocks/core/Button'
 import { Checkbox } from './blocks/core/Checkbox'
 import { Input } from './blocks/core/Input'
@@ -16,10 +15,10 @@ import { FormShell } from './blocks/editing/FormShell'
 import { Modal } from './blocks/editing/Modal'
 import { NumberInput } from './blocks/editing/NumberInput'
 import { Chevron } from './blocks/expanding/Chevron'
-import { EmptyState } from './blocks/fallback-states/EmptyState'
-import { LoadingRow } from './blocks/fallback-states/LoadingRow'
-import { NoResultsState } from './blocks/fallback-states/NoResultsState'
-import { RefetchOverlay } from './blocks/fallback-states/RefetchOverlay'
+import { EmptyState } from './blocks/fallbacks/EmptyState'
+import { LoadingRow } from './blocks/fallbacks/LoadingRow'
+import { NoResultsState } from './blocks/fallbacks/NoResultsState'
+import { RefetchOverlay } from './blocks/fallbacks/RefetchOverlay'
 import { BetweenInput } from './blocks/filtering/BetweenInput'
 import { ClearFiltersButton } from './blocks/filtering/ClearFiltersButton'
 import { FilterChip } from './blocks/filtering/FilterChip'
@@ -37,6 +36,7 @@ import { ActionsCell } from './blocks/row-actions/ActionsCell'
 import { SelectionBar } from './blocks/selection/SelectionBar'
 import { SortIndicator } from './blocks/sorting/SortIndicator'
 import { SortMenu } from './blocks/sorting/SortMenu'
+import { VisibilityMenu } from './blocks/visibility/VisibilityMenu'
 
 import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
@@ -60,8 +60,8 @@ const components = {
 	draft: { DraftBar },
 	'row-actions': { ActionsCell },
 	resizing: { Resizer },
-	'column-visibility': { ColumnVisibilityMenu },
-	'fallback-states': { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },
+	visibility: { VisibilityMenu },
+	fallbacks: { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },
 	infinite: { LoadMoreRow },
 	expanding: { Chevron },
 } satisfies FullGridComponents

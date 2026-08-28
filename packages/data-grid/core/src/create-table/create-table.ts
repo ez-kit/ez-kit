@@ -298,6 +298,19 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...userInitialState?.pagination,
 	}
 
+	// Two routes to one value, kept on purpose: `pagination.pageSize` is where an author states
+	// the size, `initialState.pagination.pageSize` is where a deep link restores the one the user
+	// picked. They only collide when both are written, and then the seed — the more specific,
+	// per-mount one — wins silently. Say so in development rather than leaving it to be found by
+	// a page that opens on a size nobody asked for.
+	if (IS_DEV && paginationCfg?.pageSize !== undefined && userInitialState?.pagination?.pageSize !== undefined) {
+		console.warn(
+			`[data-grid] Both \`pagination.pageSize\` (${String(paginationCfg.pageSize)}) and ` +
+				`\`initialState.pagination.pageSize\` (${String(userInitialState.pagination.pageSize)}) are set. ` +
+				`The seed wins; the option is ignored. Set one of them.`,
+		)
+	}
+
 	const initialState: Partial<TableState> = enforceColumnInvariants(
 		{
 			// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).

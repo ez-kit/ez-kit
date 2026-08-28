@@ -49,7 +49,7 @@ describe('public API surface', () => {
 	})
 
 	it('exports the closed sets as const objects usable as both value and type', () => {
-		expect(publicApi.RowActionsMode.Idle).toBe('idle')
+		expect(publicApi.ActionsCellState.Idle).toBe('idle')
 		expect(publicApi.PaginationVariant.Simple).toBe('simple')
 		expect(publicApi.ActionBarVariant.Inline).toBe('inline')
 		expect(publicApi.GridFeature.Core).toBe('core')

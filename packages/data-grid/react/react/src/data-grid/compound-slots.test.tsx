@@ -213,13 +213,13 @@ describe('compound render-prop slots', () => {
 		expect(container.querySelector('p')?.textContent).toBe('name,amount | 2 | true')
 	})
 
-	it('<DataGrid.ColumnVisibilityTrigger> hands over the toggleable columns', () => {
+	it('<DataGrid.VisibilityTrigger> hands over the toggleable columns', () => {
 		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, visibility: true }))
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
-				<DataGrid.ColumnVisibilityTrigger>
+				<DataGrid.VisibilityTrigger>
 					{({ columns }) => <p>{columns.map((c) => `${c.id}:${String(c.isVisible)}`).join(' ')}</p>}
-				</DataGrid.ColumnVisibilityTrigger>
+				</DataGrid.VisibilityTrigger>
 			</DataGrid>,
 		)
 		expect(container.querySelector('p')?.textContent).toBe('name:true amount:true')

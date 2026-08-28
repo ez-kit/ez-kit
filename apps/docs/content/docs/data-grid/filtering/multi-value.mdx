@@ -57,12 +57,12 @@ When `filtering.faceted` is `true` on the table (or the column overrides it to `
 
 ### Per-column `filtering`
 
-| Option            | Type                               | Description                                                                                        |
-| ----------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `operators`       | `boolean \| ColumnOperatorsConfig` | `true` enables the default `select`/`badge` operator set (`in`, `notIn`, `isEmpty`, `isNotEmpty`). |
-| `defaultOperator` | `string`                           | `'in'` (default) keeps selected values; `'notIn'` excludes them.                                   |
-| `options`         | `Array<{ label, value, count? }>`  | Explicit option list — overrides `cell.config.items` and faceted values for the filter input.      |
-| `faceted`         | `boolean`                          | Per-column override for the table-level `filtering.faceted` flag.                                  |
+| Option            | Type                                        | Description                                                                                        |
+| ----------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `operators`       | `boolean \| ColumnOperatorsConfig`          | `true` enables the default `select`/`badge` operator set (`in`, `notIn`, `isEmpty`, `isNotEmpty`). |
+| `defaultOperator` | `string`                                    | `'in'` (default) keeps selected values; `'notIn'` excludes them.                                   |
+| `items`           | `FilterItem[]` — `{ value, label, count? }` | Explicit value list — overrides `cell.config.items` and faceted values for the filter input.       |
+| `faceted`         | `boolean`                                   | Per-column override for the table-level `filtering.faceted` flag.                                  |
 
 ## Source
 

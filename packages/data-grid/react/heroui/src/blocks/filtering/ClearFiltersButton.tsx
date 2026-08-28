@@ -5,7 +5,7 @@ import { FilterX } from 'lucide-react'
 
 import type { ClearFiltersButtonComponentProps } from '@ez-kit/data-grid-react'
 
-export function ClearFiltersButton({ disabled, onClick, ariaLabel }: ClearFiltersButtonComponentProps) {
+export function ClearFiltersButton({ disabled, onClick, 'aria-label': ariaLabel }: ClearFiltersButtonComponentProps) {
 	return (
 		<Button
 			variant='ghost'

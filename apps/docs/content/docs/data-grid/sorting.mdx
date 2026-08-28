@@ -25,15 +25,16 @@ A toolbar-driven sort UI for selecting sort field + direction:
 
 ### `sorting`
 
-| Option      | Type                              | Description                                                                                                       |
-| ----------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `manual`    | `boolean`                         | Disable client-side sorting. The grid calls `onChange` instead — see [Server-side Data](./data-grid/server-side). |
-| `descFirst` | `boolean`                         | First click sorts descending. Default `false`.                                                                    |
-| `clearable` | `boolean`                         | Allow a third click to clear the sort. Default `true`.                                                            |
-| `multi`     | `boolean \| MultiSortConfig`      | Multi-column sort. `false` (default) = single-column only; `true` = enabled with defaults.                        |
-| `toolbar`   | `boolean`                         | Show a multi-sort builder button in the toolbar. Default `false`. UI-only, ignored by core.                       |
-| `fns`       | `Record<string, SortingFn>`       | Named sort functions, addressable from column `sorting.fn` by id.                                                 |
-| `onChange`  | `(sorting: SortingState) => void` | Called when sort state changes.                                                                                   |
+| Option      | Type                              | Description                                                                                                                    |
+| ----------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `manual`    | `boolean`                         | Disable client-side sorting. The grid calls `onChange` instead — see [Server-side Data](./data-grid/server-side).              |
+| `descFirst` | `boolean`                         | First click sorts descending. Default `false`.                                                                                 |
+| `clearable` | `boolean`                         | Allow a third click to clear the sort. Default `true`.                                                                         |
+| `multi`     | `boolean \| MultiSortConfig`      | Multi-column sort. `false` (default) = single-column only; `true` = enabled with defaults.                                     |
+| `toolbar`   | `boolean`                         | Show a multi-sort builder button in the toolbar. Default `false`. UI-only, ignored by core.                                    |
+| `fns`       | `Record<string, SortingFn>`       | Named sort functions, addressable from column `sorting.fn` by id.                                                              |
+| `onChange`  | `(sorting: SortingState) => void` | Called when sort state changes.                                                                                                |
+| `enabled`   | `boolean`                         | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
 
 ### `MultiSortConfig`
 

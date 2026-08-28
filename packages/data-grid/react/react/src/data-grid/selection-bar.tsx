@@ -43,7 +43,7 @@ export type DataGridSelectionBarRenderArgs<TRow extends object = object> = Selec
 	open: boolean
 	/** Confirmation-aware bulk delete. Absent when `deleting.bulk` is off. */
 	onDelete?: (() => void) | undefined
-	/** Runs the bar's `onClear` when set, otherwise resets the selection. */
+	/** Runs the bar's `clear` when set, otherwise resets the selection. */
 	onClear: () => void
 	/** Resolved `actions` slot content, if the bar config supplied one. */
 	actions?: ReactElement | undefined
@@ -100,21 +100,21 @@ export function SelectionBar({ children }: DataGridSelectionBarProps = {}) {
 	const open = count > 0
 	const clearSelection = callbackArgs.clearSelection
 
-	const { onClear: onClearHandler } = config
+	const { clear: clearHandler } = config
 
-	// One entry point for both paths: `requestBulkDelete` stages a pending delete when
+	// One entry point for both paths: `deleting.bulk.request` stages a pending delete when
 	// `deleting.bulk.confirmation` is set and runs it outright otherwise, so the bar never has
 	// to know which of the two it is looking at.
 	const onDelete =
 		table.options.deleting !== undefined && isFeatureEnabled(table.options.deleting.bulk)
 			? () => {
-					table.requestBulkDelete()
+					table.deleting.bulk.request()
 				}
 			: undefined
 
-	const onClear = onClearHandler
+	const onClear = clearHandler
 		? () => {
-				onClearHandler(callbackArgs)
+				clearHandler(callbackArgs)
 			}
 		: clearSelection
 

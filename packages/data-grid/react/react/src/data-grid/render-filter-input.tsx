@@ -11,7 +11,7 @@ import type {
 	DataTable,
 	DateRangePreset,
 	FieldState,
-	MultiSelectOption,
+	FilterItem,
 	SelectItem,
 	StructuredFilterValue,
 	BetweenInputType,
@@ -43,25 +43,25 @@ export type RenderFilterInputArgs = {
  * Resolves the option list for multi-value (`in` / `notIn`) filters.
  *
  * Priority:
- * 1. `column.filtering.options` (explicit, wins over both other sources).
+ * 1. `column.filtering.items` (explicit, wins over both other sources).
  * 2. `cell.config.items` for `select` / `badge` cell types.
- * 3. `column.getFacetedUniqueValues()` when faceted is enabled and no explicit options.
+ * 3. `column.getFacetedUniqueValues()` when faceted is enabled and no explicit items.
  *
  * Counts from `getFacetedUniqueValues()` are always merged onto whichever option set
  * is returned when faceted is enabled.
  */
-function resolveMultiSelectOptions(
+function resolveFilterItems(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	column: Column<any>,
 	meta: ColumnMeta<unknown, unknown>,
-): MultiSelectOption[] {
+): FilterItem[] {
 	const facetedEnabled = meta.facetedEnabled === true
 	const facetMap = facetedEnabled ? (column.getFacetedUniqueValues() as Map<unknown, number> | undefined) : undefined
 
-	const explicit = meta.filteringOptions
+	const explicit = meta.filteringItems
 	if (explicit && explicit.length > 0) {
 		return facetMap
-			? explicit.map((opt): MultiSelectOption => {
+			? explicit.map((opt): FilterItem => {
 					const count = facetMap.get(opt.value)
 					return count !== undefined ? { ...opt, count } : opt
 				})
@@ -72,18 +72,18 @@ function resolveMultiSelectOptions(
 		const items = (meta.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		if (items && items.length > 0) {
 			return facetMap
-				? items.map((item): MultiSelectOption => {
+				? items.map((item): FilterItem => {
 						const count = facetMap.get(item.value)
 						return count !== undefined
 							? { value: item.value, label: item.label, count }
 							: { value: item.value, label: item.label }
 					})
-				: items.map((item): MultiSelectOption => ({ value: item.value, label: item.label }))
+				: items.map((item): FilterItem => ({ value: item.value, label: item.label }))
 		}
 	}
 
 	if (facetMap) {
-		const out: MultiSelectOption[] = []
+		const out: FilterItem[] = []
 		facetMap.forEach((count, raw) => {
 			if (raw == null || raw === '') return
 			const value = String(raw)
@@ -211,12 +211,12 @@ export function renderFilterInput({
 		}
 
 		if ((currentOperatorId === 'in' || currentOperatorId === 'notIn') && MultiSelectFilter) {
-			const options = resolveMultiSelectOptions(header.column, meta)
+			const items = resolveFilterItems(header.column, meta)
 			const selectedValues = Array.isArray(inputValue) ? (inputValue as string[]) : []
 			return (
 				<>
 					<MultiSelectFilter
-						options={options}
+						items={items}
 						selectedValues={selectedValues}
 						onChange={onValueChange}
 						placeholder={`Filter ${header.column.id}…`}

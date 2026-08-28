@@ -62,9 +62,9 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 	})
 
 	it('infinite-scroll detection defaults', () => {
-		expect(DATA_GRID_DEFAULTS.infinite.trigger).toBe('auto')
-		expect(DATA_GRID_DEFAULTS.infinite.threshold.rows).toBe(5)
-		expect(DATA_GRID_DEFAULTS.infinite.threshold.px).toBe(200)
+		expect(DATA_GRID_DEFAULTS.pagination.trigger).toBe('auto')
+		expect(DATA_GRID_DEFAULTS.pagination.threshold.rows).toBe(5)
+		expect(DATA_GRID_DEFAULTS.pagination.threshold.px).toBe(200)
 	})
 })
 
@@ -190,8 +190,8 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite' } }),
 		)
 		const cfg = result.current.grid.infinite
-		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.infinite.trigger)
-		expect(cfg?.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.infinite.threshold.rows })
+		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.pagination.trigger)
+		expect(cfg?.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.pagination.threshold.rows })
 	})
 })
 

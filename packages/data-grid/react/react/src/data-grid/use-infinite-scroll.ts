@@ -101,8 +101,8 @@ export function useInfiniteScroll(): InfiniteController {
 
 	return {
 		enabled: Boolean(config),
-		trigger: config?.trigger ?? DATA_GRID_DEFAULTS.infinite.trigger,
-		threshold: config?.threshold ?? { rows: DATA_GRID_DEFAULTS.infinite.threshold.rows },
+		trigger: config?.trigger ?? DATA_GRID_DEFAULTS.pagination.trigger,
+		threshold: config?.threshold ?? { rows: DATA_GRID_DEFAULTS.pagination.threshold.rows },
 		isFetching: isFetchingNextPage,
 		hasMore: config?.hasNextPage ?? false,
 		error: errorState?.error ?? null,

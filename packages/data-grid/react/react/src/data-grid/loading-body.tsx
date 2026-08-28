@@ -10,13 +10,13 @@ export function LoadingBody() {
 	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
-	const { LoadingRow } = gridComponents['fallback-states']
+	const { LoadingRow } = gridComponents.fallbacks
 
 	const fallbacks = table.grid.fallbacks
 	const loadingConfig = fallbacks?.loading
 
 	const columnCount = table.getVisibleLeafColumns().length
-	const customContent = typeof loadingConfig === 'object' ? loadingConfig.content : undefined
+	const customContent = typeof loadingConfig === 'object' ? loadingConfig.component : undefined
 
 	if (customContent !== undefined) {
 		return (

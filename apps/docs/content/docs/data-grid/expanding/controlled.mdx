@@ -20,7 +20,7 @@ const [tableState, setTableState] = useState<Partial<TableState>>({ expanded: {}
 	data={data}
 	columns={columns}
 	expanding={{
-		renderExpanded: ({ row }) => <OrderDetails order={row.original} />,
+		component: ({ row }) => <OrderDetails order={row.original} />,
 	}}
 	state={tableState}
 	onStateChange={(nextState) => {

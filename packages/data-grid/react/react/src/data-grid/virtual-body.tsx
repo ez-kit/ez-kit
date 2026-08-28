@@ -70,7 +70,7 @@ export function VirtualBody() {
 	)
 
 	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
-	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.infinite.threshold.rows
+	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.pagination.threshold.rows
 	const rowCount = centerRows.length
 
 	// Index-based detection: load when the last rendered row nears the end.

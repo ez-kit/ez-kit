@@ -52,7 +52,7 @@ The loading fallback is **centered** in the body area — the constitution's "fa
 
 The grid picks between them automatically and there is no state override: **empty** renders when `data` itself is empty and nothing is loading, **no results** when filters reduce a non-empty data set to zero rows.
 
-What you can configure is each slot, via `fallbacks`. Pass `false` to disable one, or `{ content }` to replace what it renders — `content` takes a `ReactElement` (rendered as-is) or a `ComponentType` (called via `flexRender`):
+What you can configure is each slot, via `fallbacks`. Pass `false` to disable one, or `{ component }` to replace what it renders — `component` takes a `ReactElement` (rendered as-is) or a `ComponentType` (called via `flexRender`):
 
 ```tsx
 <DataGrid
@@ -60,7 +60,7 @@ What you can configure is each slot, via `fallbacks`. Pass `false` to disable on
 	columns={columns}
 	fallbacks={{
 		loading: true,
-		empty: { content: <p>No orders yet</p> },
+		empty: { component: <p>No orders yet</p> },
 		noResults: false,
 	}}
 />

@@ -109,6 +109,7 @@ export const GRID_TYPE = {
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
 	DateCellConfig: { module: TypeModule.Core, name: 'DateCellConfig' },
+	LinkCellConfig: { module: TypeModule.Core, name: 'LinkCellConfig' },
 	SelectCellConfig: { module: TypeModule.Core, name: 'SelectCellConfig' },
 	BadgeCellConfig: { module: TypeModule.Core, name: 'BadgeCellConfig' },
 	ReactFilteringConfig: { module: TypeModule.React, name: 'ReactFilteringConfig' },
@@ -146,7 +147,7 @@ export type OptionTable = {
 	readonly roots: readonly TypeRef[]
 	/**
 	 * Prefix the table writes in front of every path, stripped before
-	 * resolution (e.g. rows written as `config.minValue` against
+	 * resolution (e.g. rows written as `config.min` against
 	 * `DateCellConfig`). A row that lacks the prefix fails unless excepted.
 	 */
 	readonly stripPrefix?: string
@@ -254,7 +255,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.CellsCellTypes,
-		optionTables: [],
+		optionTables: [{ heading: "`'link'`", roots: [GRID_TYPE.LinkCellConfig], expectedCount: 3 }],
 		nonOptionTables: [
 			{
 				heading: 'Built-in cell types',
@@ -277,7 +278,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.Defaults,
-		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 10 }],
+		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 14 }],
 		nonOptionTables: [],
 	},
 	{
@@ -354,15 +355,15 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// grid config, disambiguated in prose ("(column def)" / "(table)").
 			// `state.columnPinning` / `initialState.columnPinning` resolve as real
 			// `UseDataGridConfig` paths, so they need no exception.
-			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
+			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.ColumnsColumnVisibility,
-		// 3, not 4: the `enableHiding` row is gone — it was the raw TanStack pass-through that
+		// The `enableHiding` row is gone — it was the raw TanStack pass-through that
 		// duplicated `visibility`, and `ColumnDef` no longer accepts it.
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
 		nonOptionTables: [],
 	},
 	{
@@ -394,7 +395,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.ColumnsResizing,
 		// Two levels in one table on purpose: the feature config and the state/callback that
 		// carry it live on the grid, the `width` row on a column def.
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 7 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 8 }],
 		nonOptionTables: [],
 	},
 	{
@@ -421,7 +422,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ExpandingSubContent,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
 	{
@@ -445,7 +446,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.FilteringGlobal,
-		optionTables: [{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig], expectedCount: 6 }],
+		optionTables: [{ heading: '`globalFiltering`', roots: [GRID_TYPE.ReactGlobalFilteringConfig], expectedCount: 7 }],
 		nonOptionTables: [
 			{
 				heading: 'Per-column `globalFiltering`',
@@ -457,7 +458,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringIndex,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 8 },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 9 },
 			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
@@ -513,7 +514,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.PaginationIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 10 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 11 }],
 		nonOptionTables: [
 			{
 				heading: 'When the total is unknown',
@@ -536,7 +537,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.RowActions,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 2 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 },
 			// Rows are the fields of one custom entry, not keys of the grid config.
 			{ heading: 'Entry shape', roots: [GRID_TYPE.RowActionItem], expectedCount: 6 },
 		],
@@ -549,7 +550,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.SelectionIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 7 }],
 		nonOptionTables: [],
 	},
 	{
@@ -579,14 +580,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		// Two roots because the table addresses the option from two depths: the first two rows
 		// are full paths from the grid config, the last two are written relative to `row`.
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig, GRID_TYPE.VirtualizationConfig], expectedCount: 4 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig, GRID_TYPE.VirtualizationConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.Sorting,
 		optionTables: [
-			{ heading: '`sorting`', roots: [GRID_TYPE.ReactSortingConfig], expectedCount: 7 },
+			{ heading: '`sorting`', roots: [GRID_TYPE.ReactSortingConfig], expectedCount: 8 },
 			{ heading: '`MultiSortConfig`', roots: [GRID_TYPE.MultiSortConfig], expectedCount: 3 },
 			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig], expectedCount: 5 },
 		],

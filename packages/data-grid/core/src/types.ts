@@ -431,7 +431,7 @@ export const ExpandingMode = {
 export type ExpandingMode = (typeof ExpandingMode)[keyof typeof ExpandingMode]
 
 /**
- * Expanding config, generic over the type of {@link ExpandingConfig.renderExpanded}.
+ * Expanding config, generic over the type of {@link ExpandingConfig.component}.
  *
  * `TRenderExpanded` exists so an adapter can narrow the one framework-bound field without
  * restating the rest of the config. The React adapter's `ReactExpandingConfig<TRow>` is
@@ -446,7 +446,7 @@ export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unkn
 	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
 	/**
 	 * Sub-content mode: per-row expandability callback.
-	 * When omitted and `renderExpanded` is provided, every row is expandable.
+	 * When omitted and `expanding.component` is provided, every row is expandable.
 	 */
 	getRowCanExpand?: (row: Row<TRow>) => boolean
 	/**
@@ -455,7 +455,7 @@ export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unkn
 	 * Defaults to `unknown` here — core is framework-agnostic and never calls it, it only
 	 * carries it through to whichever adapter mounts the panel.
 	 */
-	renderExpanded?: TRenderExpanded
+	component?: TRenderExpanded
 	/** Called whenever the expanded set changes. Receives the resolved {@link ExpandedState}. */
 	onChange?: (expanded: ExpandedState) => void
 }
@@ -468,7 +468,7 @@ export type VisibilityConfig = FeatureToggle & {
 	onChange?: (visibility: VisibilityState) => void
 }
 
-export type ColumnPinningFeatureConfig = {
+export type ColumnPinningConfig = {
 	/** Called whenever column pinning changes. Receives the resolved {@link ColumnPinningState}. */
 	onChange?: (columnPinning: ColumnPinningState) => void
 }
@@ -486,12 +486,12 @@ export type RowPinningConfig = {
  */
 export type PinningConfig = FeatureToggle & {
 	/** Enable column pin UI (ColumnMenu in headers). */
-	column?: boolean | ColumnPinningFeatureConfig
+	column?: boolean | ColumnPinningConfig
 	/** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
 	row?: boolean | RowPinningConfig
 }
 
-export type RowVirtualOptions = {
+export type RowVirtualizationConfig = {
 	/** Estimated row height in px used by the virtualizer. Default: 50. */
 	estimateSize?: number | ((index: number) => number)
 	/** Extra rows rendered outside the visible viewport. Default: 5. */
@@ -499,7 +499,7 @@ export type RowVirtualOptions = {
 }
 
 export type VirtualizationConfig = FeatureToggle & {
-	row?: boolean | RowVirtualOptions
+	row?: boolean | RowVirtualizationConfig
 	// column virtualization — reserved for future
 }
 
@@ -625,7 +625,7 @@ export type TableConfig<TRow extends object> = {
 	 * columns; `true` enables it (per-column `visibility` controls still apply).
 	 *
 	 * The UI config (e.g. the toolbar button) is a React concern and lives on the adapter's
-	 * `VisibilityUIConfig`, which extends this one.
+	 * `ReactVisibilityConfig`, which extends this one.
 	 */
 	visibility?: boolean | VisibilityConfig
 	/**

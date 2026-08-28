@@ -3,17 +3,17 @@ import { featureConfig, isFeatureEnabled } from '../../utils/feature-flag'
 import type { FeatureToggle } from '../../utils/feature-flag'
 import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
-export type ConfirmationOptions = {
+export type ConfirmationConfig = {
 	title?: string
 	description?: string | ((row: Row<unknown>) => string)
 }
 
 /**
- * Confirmation copy for a bulk delete. Separate from {@link ConfirmationOptions} for one
+ * Confirmation copy for a bulk delete. Separate from {@link ConfirmationConfig} for one
  * reason: `description` is handed the whole selection, not a row. A prompt that cannot say
  * "Delete 3 orders?" is not a prompt for deleting three orders.
  */
-export type BulkConfirmationOptions = {
+export type BulkConfirmationConfig = {
 	title?: string
 	description?: string | ((rows: Row<unknown>[]) => string)
 }
@@ -28,7 +28,7 @@ export type DeletingContext<TData> = {
 	rowId: string
 	/** Full TanStack row instance — access `row.original`, `row.getValue()`, etc. */
 	row: Row<TData>
-	/** Aborted when the user cancels deletion via cancelDeleteRow() or the table unmounts. */
+	/** Aborted when the user cancels deletion via deleting.cancel() or the table unmounts. */
 	signal: AbortSignal
 }
 
@@ -69,18 +69,18 @@ export type BulkDeletingConfig<TData> = FeatureToggle & {
 	onDelete?: (ctx: BulkDeletingContext<TData>) => void | Promise<void>
 	/**
 	 * Prompt before deleting. `true` uses count-aware default copy;
-	 * {@link BulkConfirmationOptions} overrides it. Independent of
+	 * {@link BulkConfirmationConfig} overrides it. Independent of
 	 * {@link DeletingConfig.confirmation} — deleting twelve rows at once may deserve a prompt
 	 * where deleting one does not.
 	 */
-	confirmation?: boolean | BulkConfirmationOptions
+	confirmation?: boolean | BulkConfirmationConfig
 }
 
 export type DeletingConfig<TData> = FeatureToggle & {
 	/** Delete one row. Required — it is what makes the feature exist at all. */
 	onDelete: (ctx: DeletingContext<TData>) => void | Promise<void>
 	/** Prompt before deleting one row. `true` uses default copy. */
-	confirmation?: boolean | ConfirmationOptions
+	confirmation?: boolean | ConfirmationConfig
 	/**
 	 * Delete the current selection in one gesture. `false` / omitted — no bulk affordance;
 	 * `true` — enabled, looping {@link DeletingConfig.onDelete} over the selected rows;
@@ -90,6 +90,45 @@ export type DeletingConfig<TData> = FeatureToggle & {
 	 * enabled — there is nothing to bulk-delete without a selection.
 	 */
 	bulk?: boolean | BulkDeletingConfig<TData>
+}
+
+/**
+ * The bulk half of {@link DeletingApi}, reached as `table.deleting.bulk`.
+ *
+ * Its own object rather than four `*Bulk*` methods beside the per-row four: the two halves take
+ * different arguments and are gated by different options, and nesting keeps `request` / `confirm`
+ * / `cancel` spelled the same on both.
+ */
+export type BulkDeletingApi = {
+	/** Delete the given rows — the bulk handler, or `onDelete` per row when there is none. */
+	delete: (rowIds: string[]) => Promise<void>
+	/** Delete the current selection, staging a confirmation first when one is configured. */
+	request: () => void
+	/** Run the staged bulk delete. */
+	confirm: () => Promise<void>
+	/** Drop the staged bulk delete without running it. */
+	cancel: () => void
+}
+
+/**
+ * Everything deleting can be told to do, reached as `table.deleting`.
+ *
+ * A namespace, like `table.creating`, `table.editing` and `table.draft` — the three write
+ * features now read the same way. It replaces eight flat methods on the table root
+ * (`requestDeleteRow`, `confirmBulkDelete`, … — now gone), which spelled one concept in two vocabularies
+ * and put eight names into the completion list for `table.`.
+ */
+export type DeletingApi = {
+	/** Delete one row now, skipping any confirmation. */
+	delete: (rowId: string) => Promise<void>
+	/** Delete one row, staging a confirmation first when one is configured. */
+	request: (rowId: string) => void
+	/** Run the staged per-row delete. */
+	confirm: () => Promise<void>
+	/** Drop the staged per-row delete without running it. */
+	cancel: () => void
+	/** Deleting the current selection in one gesture. */
+	bulk: BulkDeletingApi
 }
 
 declare module '@tanstack/table-core' {
@@ -107,18 +146,7 @@ declare module '@tanstack/table-core' {
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
 	interface Table<TData extends RowData> {
-		deleteRow: (rowId: string) => Promise<void>
-		requestDeleteRow: (rowId: string) => void
-		confirmDeleteRow: () => Promise<void>
-		cancelDeleteRow: () => void
-		/** Delete the given rows — the bulk handler, or `onDelete` per row when there is none. */
-		deleteRows: (rowIds: string[]) => Promise<void>
-		/** Delete the current selection, staging a confirmation first when one is configured. */
-		requestBulkDelete: () => void
-		/** Run the staged bulk delete. */
-		confirmBulkDelete: () => Promise<void>
-		/** Drop the staged bulk delete without running it. */
-		cancelBulkDelete: () => void
+		deleting: DeletingApi
 	}
 }
 
@@ -132,7 +160,7 @@ export const DeletingFeature: TableFeature<RowData> = {
 
 	createTable: (table: Table<RowData>) => {
 		// Single AbortController per table instance.
-		// Aborted on: new deleteRow, cancelDeleteRow.
+		// Aborted on: a new delete, deleting.cancel.
 		let controller: AbortController | undefined
 
 		const resetController = (): AbortController => {
@@ -142,36 +170,13 @@ export const DeletingFeature: TableFeature<RowData> = {
 			return c
 		}
 
-		table.deleteRow = async (rowId) => {
+		const deleteRow = async (rowId: string): Promise<void> => {
 			const config = table.options.deleting
 			if (!config) return
 			const row = table.getRowModel().rows.find((r) => r.id === rowId)
 			if (!row) return
 			const c = resetController()
 			await config.onDelete({ rowId, row, signal: c.signal })
-		}
-
-		table.requestDeleteRow = (rowId) => {
-			const config = table.options.deleting
-			if (!config) return
-			if (config.confirmation) {
-				table.setState((state) => ({ ...state, pendingDeleteRowId: rowId }))
-			} else {
-				void table.deleteRow(rowId)
-			}
-		}
-
-		table.confirmDeleteRow = async () => {
-			const pendingId = table.getState().pendingDeleteRowId
-			if (!pendingId) return
-			table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
-			await table.deleteRow(pendingId)
-		}
-
-		table.cancelDeleteRow = () => {
-			controller?.abort()
-			controller = undefined
-			table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
 		}
 
 		/**
@@ -188,7 +193,7 @@ export const DeletingFeature: TableFeature<RowData> = {
 			}))
 		}
 
-		table.deleteRows = async (rowIds) => {
+		const deleteRows = async (rowIds: string[]): Promise<void> => {
 			const config = table.options.deleting
 			if (!config) return
 			const bulk = featureConfig(config.bulk)
@@ -218,27 +223,58 @@ export const DeletingFeature: TableFeature<RowData> = {
 				.filter(([, isSelected]) => isSelected)
 				.map(([id]) => id)
 
-		table.requestBulkDelete = () => {
-			const config = table.options.deleting
-			if (!config || !isFeatureEnabled(config.bulk)) return
-			if (featureConfig(config.bulk)?.confirmation) {
-				table.setState((state) => ({ ...state, pendingBulkDelete: true }))
-				return
-			}
-			void table.deleteRows(selectedRowIds())
-		}
+		table.deleting = {
+			delete: deleteRow,
 
-		table.confirmBulkDelete = async () => {
-			if (!table.getState().pendingBulkDelete) return
-			const ids = selectedRowIds()
-			table.setState((state) => ({ ...state, pendingBulkDelete: false }))
-			await table.deleteRows(ids)
-		}
+			request: (rowId) => {
+				const config = table.options.deleting
+				if (!config) return
+				if (config.confirmation) {
+					table.setState((state) => ({ ...state, pendingDeleteRowId: rowId }))
+				} else {
+					void deleteRow(rowId)
+				}
+			},
 
-		table.cancelBulkDelete = () => {
-			controller?.abort()
-			controller = undefined
-			table.setState((state) => ({ ...state, pendingBulkDelete: false }))
+			confirm: async () => {
+				const pendingId = table.getState().pendingDeleteRowId
+				if (!pendingId) return
+				table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
+				await deleteRow(pendingId)
+			},
+
+			cancel: () => {
+				controller?.abort()
+				controller = undefined
+				table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
+			},
+
+			bulk: {
+				delete: deleteRows,
+
+				request: () => {
+					const config = table.options.deleting
+					if (!config || !isFeatureEnabled(config.bulk)) return
+					if (featureConfig(config.bulk)?.confirmation) {
+						table.setState((state) => ({ ...state, pendingBulkDelete: true }))
+						return
+					}
+					void deleteRows(selectedRowIds())
+				},
+
+				confirm: async () => {
+					if (!table.getState().pendingBulkDelete) return
+					const ids = selectedRowIds()
+					table.setState((state) => ({ ...state, pendingBulkDelete: false }))
+					await deleteRows(ids)
+				},
+
+				cancel: () => {
+					controller?.abort()
+					controller = undefined
+					table.setState((state) => ({ ...state, pendingBulkDelete: false }))
+				},
+			},
 		}
 	},
 }

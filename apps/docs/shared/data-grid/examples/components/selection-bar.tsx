@@ -36,7 +36,7 @@ export function SelectionBarExample() {
 				}}
 				selection={{
 					bar: {
-						onClear: ({ clearSelection }) => {
+						clear: ({ clearSelection }) => {
 							clearSelection()
 							addLog('Selection cleared')
 						},

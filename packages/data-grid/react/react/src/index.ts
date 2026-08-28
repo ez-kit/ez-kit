@@ -30,7 +30,7 @@ export type { ColumnDef, CellDef, ColumnHelper } from './react-columns'
 export { useDataGrid } from './use-data-grid'
 export type {
 	UseDataGridConfig,
-	VisibilityUIConfig,
+	ReactVisibilityConfig,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
@@ -122,8 +122,8 @@ export type {
 	GridDraftComponents,
 	GridRowActionsComponents,
 	GridResizingComponents,
-	GridColumnVisibilityComponents,
-	GridFallbackStateComponents,
+	GridVisibilityComponents,
+	GridFallbackComponents,
 	GridInfiniteComponents,
 	GridExpandingComponents,
 } from './contract'
@@ -143,9 +143,9 @@ export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './da
 export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
 export type { DataGridSortTriggerProps, DataGridSortTriggerRenderArgs } from './data-grid/sort-trigger'
 export type {
-	DataGridColumnVisibilityTriggerProps,
-	DataGridColumnVisibilityTriggerRenderArgs,
-} from './data-grid/column-visibility-trigger'
+	DataGridVisibilityTriggerProps,
+	DataGridVisibilityTriggerRenderArgs,
+} from './data-grid/visibility-trigger'
 export type {
 	DataGridFilterPanelColumn,
 	DataGridFilterPanelProps,
@@ -194,7 +194,7 @@ export type {
 	BetweenInputProps,
 	ChevronProps,
 	SortIndicatorProps,
-	ColumnVisibilityMenuProps,
+	VisibilityMenuProps,
 	ClearFiltersButtonComponentProps,
 	ConfirmDialogProps,
 	DraftBarProps,
@@ -236,7 +236,7 @@ export type {
 } from './types'
 
 // Closed sets that a kit or a call site names. Each is a `const` object plus a same-named
-// string union, so `RowActionsMode.Idle` and the bare `'idle'` are both valid and no consumer
+// string union, so `ActionsCellState.Idle` and the bare `'idle'` are both valid and no consumer
 // has to import anything to write an option value.
 export {
 	FilterChipKind,
@@ -245,14 +245,25 @@ export {
 	LoadMoreTrigger,
 	PaginationVariant,
 	RowActionId,
-	RowActionsMode,
+	ActionsCellState,
 	ColumnSortDirection,
 	ActionBarVariant,
 	SortDirection,
 } from './types'
 
-// TanStack state types used when typing manual server-side `onChange` handlers.
-// Re-exported so consumers depend only on this package's surface. `SortingState` is not
-// re-exported here — the core one (`SortingStateEntry[]`) arrives via the star export above
-// and is structurally identical.
-export type { ColumnFiltersState, PaginationState } from '@tanstack/table-core'
+// TanStack state slice types. Every feature's `onChange` is typed with one of these, so a
+// consumer that lifts a handler out of the JSX must be able to name it — without adding
+// `@tanstack/table-core` as a second dependency, which is exactly what this package (and each
+// UI kit re-exporting it) promises they never need. `SortingState` is not re-exported here —
+// the core one (`SortingStateEntry[]`) arrives via the star export above and is structurally
+// identical.
+export type {
+	ColumnFiltersState,
+	ColumnPinningState,
+	ColumnSizingState,
+	ExpandedState,
+	PaginationState,
+	RowPinningState,
+	RowSelectionState,
+	VisibilityState,
+} from '@tanstack/table-core'

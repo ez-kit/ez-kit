@@ -1,12 +1,12 @@
 import { useGridComponents } from '../components-context'
 
 import { ClearFiltersButton } from './clear-filters-button'
-import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { CreateTrigger } from './create-trigger'
 import { GlobalFilterInput } from './global-filter-input'
 import { PageSizer } from './page-sizer'
 import { SortTrigger } from './sort-trigger'
 import { useDataGridTable } from './table-context'
+import { VisibilityTrigger } from './visibility-trigger'
 
 import type { ReactNode } from 'react'
 
@@ -88,7 +88,7 @@ export function Toolbar({ children, left: extraLeft, right: extraRight }: DataGr
 				{hasClearButtonToolbar && <ClearFiltersButton />}
 				{hasCreating && <CreateTrigger />}
 				{hasSortingToolbar && <SortTrigger />}
-				{hasVisibilityToolbar && <ColumnVisibilityTrigger />}
+				{hasVisibilityToolbar && <VisibilityTrigger />}
 				{extraRight}
 			</>
 		) : null

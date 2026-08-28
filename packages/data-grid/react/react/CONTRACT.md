@@ -56,8 +56,8 @@ Every kit owes exactly two things:
 Opt into individual feature groups with the tier types
 (`GridCoreComponents`, `GridPaginationComponents`, `GridSortingComponents`,
 `GridFilteringComponents`, `GridEditingComponents`, `GridSelectionComponents`,
-`GridRowActionsComponents`, `GridResizingComponents`, `GridColumnVisibilityComponents`,
-`GridFallbackStateComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
+`GridRowActionsComponents`, `GridResizingComponents`, `GridVisibilityComponents`,
+`GridFallbackComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
 
 All of these — plus the flat `COMPONENT_FEATURE` lookup — are derived from a single
 exported map, `FEATURE_COMPONENTS: Record<GridFeature, readonly (keyof GridComponents)[]>`,
@@ -164,9 +164,9 @@ actions under the default `inline` variant, and every action under `menu`.
 
 ### `column-visibility`
 
-| Component              | Props                       |
-| ---------------------- | --------------------------- |
-| `ColumnVisibilityMenu` | `ColumnVisibilityMenuProps` |
+| Component        | Props                 |
+| ---------------- | --------------------- |
+| `VisibilityMenu` | `VisibilityMenuProps` |
 
 ### `fallback-states`
 

@@ -116,10 +116,11 @@ since the two share that trigger.
 
 ## Options
 
-| Option               | Type                                  | Description                                                                                     |
-| -------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `rowActions.variant` | `'inline' \| 'menu'`                  | `inline` (default) — one button per action. `menu` — every action in one dropdown.              |
-| `rowActions.actions` | `({ row, table }) => RowActionItem[]` | Custom entries appended to the built-ins, built per row. See [Custom actions](#custom-actions). |
+| Option               | Type                                  | Description                                                                                                                    |
+| -------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `rowActions.variant` | `'inline' \| 'menu'`                  | `inline` (default) — one button per action. `menu` — every action in one dropdown.                                             |
+| `rowActions.actions` | `({ row, table }) => RowActionItem[]` | Custom entries appended to the built-ins, built per row. See [Custom actions](#custom-actions).                                |
+| `rowActions.enabled` | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
 
 ## See also
 

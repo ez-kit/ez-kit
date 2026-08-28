@@ -32,8 +32,8 @@ export const GridFeature = {
 	/** Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`). */
 	RowActions: 'row-actions',
 	Resizing: 'resizing',
-	ColumnVisibility: 'column-visibility',
-	FallbackStates: 'fallback-states',
+	Visibility: 'visibility',
+	Fallbacks: 'fallbacks',
 	Infinite: 'infinite',
 	Expanding: 'expanding',
 } as const
@@ -80,8 +80,8 @@ export const FEATURE_COMPONENTS = {
 	[GridFeature.Draft]: ['DraftBar'] as const,
 	[GridFeature.RowActions]: ['ActionsCell'] as const,
 	[GridFeature.Resizing]: ['Resizer'] as const,
-	[GridFeature.ColumnVisibility]: ['ColumnVisibilityMenu'] as const,
-	[GridFeature.FallbackStates]: ['LoadingRow', 'EmptyState', 'NoResultsState', 'RefetchOverlay'] as const,
+	[GridFeature.Visibility]: ['VisibilityMenu'] as const,
+	[GridFeature.Fallbacks]: ['LoadingRow', 'EmptyState', 'NoResultsState', 'RefetchOverlay'] as const,
 	[GridFeature.Infinite]: ['LoadMoreRow'] as const,
 	[GridFeature.Expanding]: ['Chevron'] as const,
 } satisfies Record<GridFeature, readonly (keyof GridComponentRegistry)[]>
@@ -103,8 +103,8 @@ export type GridSelectionComponents = ComponentsFor<typeof GridFeature.Selection
 export type GridDraftComponents = ComponentsFor<typeof GridFeature.Draft>
 export type GridRowActionsComponents = ComponentsFor<typeof GridFeature.RowActions>
 export type GridResizingComponents = ComponentsFor<typeof GridFeature.Resizing>
-export type GridColumnVisibilityComponents = ComponentsFor<typeof GridFeature.ColumnVisibility>
-export type GridFallbackStateComponents = ComponentsFor<typeof GridFeature.FallbackStates>
+export type GridVisibilityComponents = ComponentsFor<typeof GridFeature.Visibility>
+export type GridFallbackComponents = ComponentsFor<typeof GridFeature.Fallbacks>
 export type GridInfiniteComponents = ComponentsFor<typeof GridFeature.Infinite>
 export type GridExpandingComponents = ComponentsFor<typeof GridFeature.Expanding>
 

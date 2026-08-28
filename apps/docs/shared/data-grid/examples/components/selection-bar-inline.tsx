@@ -37,7 +37,7 @@ export function SelectionBarInlineExample() {
 				selection={{
 					bar: {
 						variant: 'inline',
-						onClear: ({ clearSelection }) => {
+						clear: ({ clearSelection }) => {
 							clearSelection()
 							addLog('Selection cleared')
 						},

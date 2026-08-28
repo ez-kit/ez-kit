@@ -31,6 +31,7 @@ Click checkboxes to select rows; the header checkbox toggles every row on the cu
 | `selection.bar`      | `boolean \| SelectionBarConfig`                               | React-only. Presentational config for the selection info bar; shown when ≥1 row is selected. Its Delete button is `deleting.bulk`.                                                    |
 | `state.rowSelection` | `RowSelectionState`                                           | Controlled state — see [Controlled state](./data-grid/controlled-state).                                                                                                              |
 | `getRowId`           | `(row) => string`                                             | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so selection survives a refetch out of the box. |
+| `selection.enabled`  | `boolean`                                                     | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                        |
 
 ## See also
 

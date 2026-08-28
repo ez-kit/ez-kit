@@ -13,20 +13,20 @@ type ExpandedRowComponentProps = {
 }
 
 type ExpandConfig = {
-	renderExpanded?: ComponentType<ExpandedRowProps<object>>
+	component?: ComponentType<ExpandedRowProps<object>>
 }
 
 /**
  * Renders a full-width row below an expanded row for the sub-content variant.
- * Reads `renderExpanded` from the grid's resolved options (`table.grid.expanding`).
+ * Reads `expandedComponent` from the grid's resolved options (`table.grid.expanding`).
  */
 export function ExpandedRow({ row }: ExpandedRowComponentProps) {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnVisibility)
 	const { Tr, Td } = useGridComponents().core
 
-	const renderExpanded = table.grid.expanding.renderExpanded as ExpandConfig['renderExpanded']
-	if (!renderExpanded) return null
+	const expandedComponent = table.grid.expanding.component as ExpandConfig['component']
+	if (!expandedComponent) return null
 
 	const colSpan = row.getVisibleCells().length
 
@@ -36,7 +36,7 @@ export function ExpandedRow({ row }: ExpandedRowComponentProps) {
 				colSpan={colSpan}
 				pinned={false}
 			>
-				{flexRender(renderExpanded, { row, table })}
+				{flexRender(expandedComponent, { row, table })}
 			</Td>
 		</Tr>
 	)

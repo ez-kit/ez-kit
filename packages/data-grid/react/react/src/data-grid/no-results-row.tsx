@@ -8,13 +8,13 @@ export function NoResultsRow() {
 	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
-	const { NoResultsState } = gridComponents['fallback-states']
+	const { NoResultsState } = gridComponents.fallbacks
 
 	const fallbacks = table.grid.fallbacks
 	const noResultsConfig = fallbacks?.noResults
 
 	const columnCount = table.getVisibleLeafColumns().length
-	const customContent = typeof noResultsConfig === 'object' ? noResultsConfig.content : undefined
+	const customContent = typeof noResultsConfig === 'object' ? noResultsConfig.component : undefined
 
 	if (customContent !== undefined) {
 		return (

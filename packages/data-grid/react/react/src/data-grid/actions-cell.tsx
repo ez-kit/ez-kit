@@ -3,7 +3,7 @@ import { isValidElement } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { GridMenuIcon, GridMenuVariant, isGridMenuIcon, toMenuSections } from '../menu'
-import { RowActionId, RowActionsMode } from '../types'
+import { ActionsCellState, RowActionId } from '../types'
 
 import { useDataGridTable, useDataGridState } from './table-context'
 
@@ -169,7 +169,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	if (isEditing && editingMode !== 'modal') {
 		return (
 			<Renderer
-				mode={RowActionsMode.Editing}
+				state={ActionsCellState.Editing}
 				row={row}
 				onSave={() => table.editing.commit()}
 				onCancel={() => {
@@ -182,7 +182,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 
 	const buttons = (
 		<Renderer
-			mode={RowActionsMode.Idle}
+			state={ActionsCellState.Idle}
 			row={row}
 			hasEditing={hasEditing}
 			hasDeleting={hasDeleting}
@@ -190,7 +190,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				table.editing.start(row.id)
 			}}
 			onDelete={() => {
-				table.requestDeleteRow(row.id)
+				table.deleting.request(row.id)
 			}}
 		/>
 	)
@@ -224,7 +224,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				icon: ICONS[RowActionId.Delete],
 				danger: true,
 				onSelect: () => {
-					table.requestDeleteRow(row.id)
+					table.deleting.request(row.id)
 				},
 			})
 		}

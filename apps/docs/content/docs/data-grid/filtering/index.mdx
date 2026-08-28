@@ -46,6 +46,7 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 | `chips`     | `boolean \| FilterChipsConfig`                | Auto-mount a strip of removable chips for active filters — see [Filter panel](./data-grid/filtering/panel).                          |
 | `toolbar`   | `boolean \| FilteringToolbarConfig`           | Auto-mount filtering's toolbar control — the Clear-all button — see [Filter panel](./data-grid/filtering/panel).                     |
 | `onChange`  | `(columnFilters: ColumnFiltersState) => void` | Called when any column filter changes.                                                                                               |
+| `enabled`   | `boolean`                                     | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.       |
 
 ### Per-column `filtering`
 
@@ -55,7 +56,7 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 | `component`       | `(props: InputComponentProps) => unknown` | Custom filter input component for this column.                                                                                    |
 | `operators`       | `boolean \| ColumnOperatorsConfig`        | Operator configuration. `true` = default operators for the column's cell type — see [Operators](./data-grid/filtering/operators). |
 | `defaultOperator` | `string`                                  | Override the default selected operator for this column.                                                                           |
-| `options`         | `Array<{ label, value, count? }>`         | Explicit option list for multi-value (`in` / `notIn`) filters — see [Multi-value](./data-grid/filtering/multi-value).             |
+| `items`           | `FilterItem[]`                            | Explicit value list for multi-value (`in` / `notIn`) filters — see [Multi-value](./data-grid/filtering/multi-value).              |
 | `faceted`         | `boolean`                                 | Per-column override for the table-level `filtering.faceted` flag.                                                                 |
 
 Filterable columns pick their default operator set from `cell.type` (`'text'`, `'number'`, `'date'`, `'select'`, `'badge'`) — see [Operators](./data-grid/filtering/operators).

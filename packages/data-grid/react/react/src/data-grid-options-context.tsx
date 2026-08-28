@@ -27,12 +27,18 @@ export type DataGridDefaultOptions<TRow extends object> = Omit<
 	UseDataGridConfig<TRow>,
 	'data' | 'columns' | 'state' | 'onStateChange' | 'creating' | 'editing' | 'deleting'
 > & {
-	/** How create looks. The grid that supplies `onSave` decides whether it exists at all. */
-	creating?: PartialBy<CreatingConfig<TRow>, 'onSave'>
+	/**
+	 * How create looks. The grid that supplies `onSave` decides whether it exists at all.
+	 *
+	 * The `boolean` arm is kept, exactly as on every other feature: a defaults layer must be able
+	 * to say `creating: false` and switch the feature off for a whole subtree without restating
+	 * the settings, which is the same reason the instance config carries it.
+	 */
+	creating?: boolean | PartialBy<CreatingConfig<TRow>, 'onSave'>
 	/** How edit looks. The grid that supplies `onSave` decides whether it exists at all. */
-	editing?: PartialBy<EditingConfig<TRow>, 'onSave'>
+	editing?: boolean | PartialBy<EditingConfig<TRow>, 'onSave'>
 	/** How delete looks. The grid that supplies `onDelete` decides whether it exists at all. */
-	deleting?: PartialBy<DeletingConfig<TRow>, 'onDelete'>
+	deleting?: boolean | PartialBy<DeletingConfig<TRow>, 'onDelete'>
 }
 
 /** Alias used at the context boundary where the row type is erased (mirrors the cell-type registry). */

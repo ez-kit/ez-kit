@@ -8,13 +8,13 @@ export function EmptyStateRow() {
 	useDataGridState((s) => s.columnVisibility)
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
-	const { EmptyState } = gridComponents['fallback-states']
+	const { EmptyState } = gridComponents.fallbacks
 
 	const fallbacks = table.grid.fallbacks
 	const emptyConfig = fallbacks?.empty
 
 	const columnCount = table.getVisibleLeafColumns().length
-	const customContent = typeof emptyConfig === 'object' ? emptyConfig.content : undefined
+	const customContent = typeof emptyConfig === 'object' ? emptyConfig.component : undefined
 
 	if (customContent !== undefined) {
 		return (

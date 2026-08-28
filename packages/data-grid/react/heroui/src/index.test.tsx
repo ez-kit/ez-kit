@@ -2,10 +2,10 @@ import { prepareDataGridTable, createTable, createColumns } from '@ez-kit/data-g
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilityMenu'
 import { BetweenInput } from './blocks/filtering/BetweenInput'
 import { MultiSelectFilter } from './blocks/filtering/MultiSelectFilter'
 import { PageSizer } from './blocks/pagination/PageSizer'
+import { VisibilityMenu } from './blocks/visibility/VisibilityMenu'
 
 import {
 	CellTypesProvider,
@@ -146,7 +146,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 		const onChange = vi.fn()
 		const { rerender } = render(
 			<MultiSelectFilter
-				options={[
+				items={[
 					{ value: 'a', label: 'Apple' },
 					{ value: 'b', label: 'Banana' },
 				]}
@@ -164,7 +164,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 		rerender(
 			<MultiSelectFilter
-				options={[
+				items={[
 					{ value: 'a', label: 'Apple' },
 					{ value: 'b', label: 'Banana' },
 				]}
@@ -177,7 +177,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 		rerender(
 			<MultiSelectFilter
-				options={[
+				items={[
 					{ value: 'a', label: 'Apple' },
 					{ value: 'b', label: 'Banana' },
 				]}
@@ -248,7 +248,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('toggles column visibility items', () => {
 		const onToggle = vi.fn()
 
-		render(<ColumnVisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, onToggle }]} />)
+		render(<VisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, onToggle }]} />)
 
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')

@@ -37,7 +37,7 @@ export function LoadMoreFooter() {
 	const { getScrollElement } = useInfiniteContext()
 
 	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
-	const thresholdPx = controller.threshold.px ?? DATA_GRID_DEFAULTS.infinite.threshold.px
+	const thresholdPx = controller.threshold.px ?? DATA_GRID_DEFAULTS.pagination.threshold.px
 	const isVirtualized = rowVirtualizer !== null
 
 	// Whether the last measurement was already inside the trigger zone. Held in a ref so it

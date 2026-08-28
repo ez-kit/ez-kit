@@ -19,7 +19,9 @@ export {
 	BuiltInSortingFn,
 	ColumnAlign,
 	ColumnPinSide,
+	LinkTarget,
 	ColumnSortUndefined,
+	LINK_HREF_VALUE_TOKEN,
 	SystemColumnType,
 } from './column/types'
 export type { ColumnHelper } from './column/create-column-helper'
@@ -63,6 +65,7 @@ export type {
 	ExoticComponentLike,
 	DateCellConfig,
 	ImageCellConfig,
+	LinkCellConfig,
 	InputComponentProps,
 	ProgressCellConfig,
 	SelectCellConfig,
@@ -78,7 +81,7 @@ export type {
 	ColumnOperatorsConfig,
 	DateRangePreset,
 	FilterOperatorDef,
-	MultiSelectOption,
+	FilterItem,
 	OperatorRegistry,
 	StructuredFilterValue,
 } from './features/operators'
@@ -100,6 +103,7 @@ export { CreatingMode } from './features/creating'
 export type {
 	CreateDefaultValueContext,
 	CreateDefaultValuesContext,
+	CreatingApi,
 	CreatingConfig,
 	CreatingSaveContext,
 	CreatingState,
@@ -107,15 +111,17 @@ export type {
 export { DraftAxis } from './features/deferred-apply'
 export type { AppliedState, DraftApi, PendingCount, QueryDraft } from './features/deferred-apply'
 export type {
-	BulkConfirmationOptions,
+	BulkConfirmationConfig,
+	BulkDeletingApi,
 	BulkDeletingConfig,
 	BulkDeletingContext,
-	ConfirmationOptions,
+	ConfirmationConfig,
+	DeletingApi,
 	DeletingConfig,
 	DeletingContext,
 } from './features/deleting'
 export { EditingMode } from './features/editing'
-export type { EditingConfig, EditingSaveContext, EditingState } from './features/editing'
+export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from './features/editing'
 // Sourced from the feature modules (not `./types`) so their
 // `declare module '@tanstack/table-core'` augmentations (state.infinite /
 // setInfiniteStatus, state.loading) survive into the bundled `.d.ts`.
@@ -151,7 +157,7 @@ export type {
 	InitialTableState,
 	MultiSortConfig,
 	PaginationConfig,
-	ColumnPinningFeatureConfig,
+	ColumnPinningConfig,
 	VisibilityConfig,
 	PaginationTotals,
 	PinningConfig,
@@ -164,6 +170,6 @@ export type {
 	Table,
 	TableConfig,
 	TableSnapshot,
-	RowVirtualOptions,
+	RowVirtualizationConfig,
 	VirtualizationConfig,
 } from './types'

@@ -464,7 +464,7 @@ describe('useDataGrid — virtualized', () => {
 		expect(key).toEqual({ row: {} })
 	})
 
-	it('VIRTUALIZED_KEY stores RowVirtualOptions when provided', () => {
+	it('VIRTUALIZED_KEY stores RowVirtualizationConfig when provided', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { row: { overscan: 8 } } }),
 		)
@@ -540,11 +540,11 @@ describe('useDataGrid — selection.bar', () => {
 		expect(key).toBe(false)
 	})
 
-	it('SELECTION_BAR_KEY stores config object when selection: { bar: { onClear } }', () => {
-		const onClear = vi.fn()
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { onClear } } }))
+	it('SELECTION_BAR_KEY stores config object when selection: { bar: { clear } }', () => {
+		const clear = vi.fn()
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { clear } } }))
 		const key = result.current.grid.selection.bar
-		expect(key).toEqual({ onClear })
+		expect(key).toEqual({ clear })
 	})
 
 	it('SELECTION_BAR_KEY stores variant: "inline" when configured', () => {

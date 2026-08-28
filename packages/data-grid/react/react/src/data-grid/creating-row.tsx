@@ -2,7 +2,7 @@ import { ACTIONS_COLUMN_ID, CommitStatus, SELECTION_COLUMN_ID } from '@ez-kit/da
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { RowActionsMode } from '../types'
+import { ActionsCellState } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
@@ -59,7 +59,7 @@ export function CreatingRow() {
 								{...pinnedAttrs}
 							>
 								<ActionsCell
-									mode={RowActionsMode.Creating}
+									state={ActionsCellState.Creating}
 									onSave={() => table.creating.commit()}
 									onCancel={() => {
 										table.creating.cancel()

@@ -1,4 +1,4 @@
-import type { MultiSelectOption } from '@ez-kit/data-grid-core'
+import type { FilterItem } from '@ez-kit/data-grid-core'
 
 const DEFAULT_PLACEHOLDER = 'Select…'
 
@@ -8,13 +8,9 @@ const DEFAULT_PLACEHOLDER = 'Select…'
  *
  * Content, not styling — every kit shows the same words.
  */
-export function buildMultiSelectLabel(
-	options: MultiSelectOption[],
-	selectedValues: string[],
-	placeholder?: string,
-): string {
+export function buildMultiSelectLabel(items: FilterItem[], selectedValues: string[], placeholder?: string): string {
 	const [first] = selectedValues
 	if (first === undefined) return placeholder ?? DEFAULT_PLACEHOLDER
-	if (selectedValues.length === 1) return options.find((option) => option.value === first)?.label ?? first
+	if (selectedValues.length === 1) return items.find((option) => option.value === first)?.label ?? first
 	return `${String(selectedValues.length)} selected`
 }

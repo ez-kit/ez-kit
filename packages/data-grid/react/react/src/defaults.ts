@@ -27,8 +27,14 @@ export const DEFAULT_FILTER_DEBOUNCE_MS = 250
  * last, only where the merged config left a slot undefined.
  */
 export const DATA_GRID_DEFAULTS = {
-	/** Page-based pagination. `pageSize` mirrors the core default (one source across layers). */
+	/**
+	 * Pagination, both modes. Keyed by the **option path** it defaults, which is why the
+	 * infinite-scroll tuning sits here and not under a separate `infinite` key: the options are
+	 * `pagination.trigger` and `pagination.threshold`, and a constant a consumer reads to extend
+	 * a default is useless if its shape is not the shape of the config.
+	 */
 	pagination: {
+		/** `pageSize` mirrors the core default (one source across layers). */
 		pageSize: DEFAULT_PAGE_SIZE,
 		/** Offered by the PageSizer when `pagination.toolbar` is on and no list is supplied. */
 		pageSizeOptions: [10, 20, 50, 100],
@@ -36,6 +42,15 @@ export const DATA_GRID_DEFAULTS = {
 		/** `numbered` page-link window; mirrors the `buildPageWindow` defaults. */
 		siblings: DEFAULT_PAGE_SIBLINGS,
 		boundaries: DEFAULT_PAGE_BOUNDARIES,
+		/** Infinite mode only — what makes the grid load the next page. */
+		trigger: LoadMoreTrigger.Auto,
+		/** Infinite mode only — how close to the edge that happens. */
+		threshold: {
+			/** Row distance that triggers a load on the virtualized path. */
+			rows: 5,
+			/** `IntersectionObserver` `rootMargin` (px) for the non-virtualized path. */
+			px: 200,
+		},
 	},
 	/** Cross-column global search input. Debounce falls back to `filtering.debounce`. */
 	globalFiltering: {
@@ -47,15 +62,5 @@ export const DATA_GRID_DEFAULTS = {
 		debounce: DEFAULT_FILTER_DEBOUNCE_MS,
 		chips: { position: FilterChipsPosition.Above },
 		toolbar: { alwaysShow: false },
-	},
-	/** Infinite-scroll edge detection tuning. */
-	infinite: {
-		trigger: LoadMoreTrigger.Auto,
-		threshold: {
-			/** Row distance that triggers a load on the virtualized path. */
-			rows: 5,
-			/** `IntersectionObserver` `rootMargin` (px) for the non-virtualized path. */
-			px: 200,
-		},
 	},
 } as const

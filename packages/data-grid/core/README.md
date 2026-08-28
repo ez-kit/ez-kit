@@ -1,6 +1,6 @@
 # @ez-kit/data-grid-core
 
-Headless, UI-framework-agnostic data-grid core for **@ez-kit/data-grid**, built on top of [TanStack Table](https://tanstack.com/table) core. It owns columns, features (sorting, filtering, operators, pagination, selection, pinning, editing, creating, deleting, validation, infinite loading) and table state — with no React and no styling.
+Headless, UI-framework-agnostic data-grid core for **@ez-kit/data-grid**, built on top of [TanStack Table](https://tanstack.com/table) core. It owns columns, features (sorting, filtering, global search, operators, pagination, infinite loading, selection, expanding, visibility, pinning, resizing, virtualization, row actions, editing, creating, deleting, validation, deferred apply) and table state — with no React and no styling.
 
 Most apps should use a UI flavour instead:
 

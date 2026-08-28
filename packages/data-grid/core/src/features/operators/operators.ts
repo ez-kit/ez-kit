@@ -1,3 +1,5 @@
+import type { SelectItem } from '../../column/types'
+
 /** Defines a filter operator with its filtering logic. */
 export type FilterOperatorDef<TValue = unknown> = {
 	id: string
@@ -262,9 +264,15 @@ export const NUMBER_OPERATORS: FilterOperatorDef<number>[] = [
 // ── Built-in multi-value operators (in / notIn) ────────────────────────────
 
 /** Option shape used by multi-value (`in` / `notIn`) filter inputs. */
-export type MultiSelectOption = {
-	value: string
-	label: string
+/**
+ * One entry in a multi-value (`in` / `notIn`) filter's list.
+ *
+ * `SelectItem` plus the faceted count, and named `*Item` like every other "one of the values
+ * this column can take" list in the API — `cell.config.items`, `filtering.items`. The word
+ * `option` is spoken for: on this grid an option is something you configure, and one noun
+ * cannot be both.
+ */
+export type FilterItem = SelectItem & {
 	/** Optional faceted count — number of rows matching this value in current data. */
 	count?: number
 }

@@ -30,7 +30,7 @@ import type {
 	LoadMoreDirection,
 	PaginationConfig,
 	RowActionsConfig,
-	RowVirtualOptions,
+	RowVirtualizationConfig,
 	SelectionConfig,
 	SortingConfig,
 	TableConfig,
@@ -84,10 +84,11 @@ export type SelectionBarConfig<TRow extends object = object> = {
 	 */
 	variant?: ActionBarVariant
 	/**
-	 * Replaces default clear behaviour.
-	 * `clearSelection` arg is the default reset — call it if needed.
+	 * Replaces the bar's default clear behaviour — it does not observe it. Named `clear`, not
+	 * `onClear`: every `on*` in this API notifies, this one substitutes, and the `clearSelection`
+	 * argument is the default reset the replacement calls when it still wants it.
 	 */
-	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
 	/** Rendered between Delete and Cancel. ReactElement or render-function. */
 	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
 }
@@ -113,7 +114,7 @@ export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig
 
 /** Normalized virtualized config stored on the table instance. */
 export type NormalizedVirtualizationConfig = {
-	row: RowVirtualOptions
+	row: RowVirtualizationConfig
 }
 
 function normalizeVirtualization(
@@ -228,9 +229,9 @@ function normalizeInfinite(
 ): NormalizedInfiniteConfig | undefined {
 	const cfg = featureConfig(pagination)
 	if (cfg?.mode !== PaginationMode.Infinite) return undefined
-	const threshold = cfg.threshold ?? { rows: DATA_GRID_DEFAULTS.infinite.threshold.rows }
+	const threshold = cfg.threshold ?? { rows: DATA_GRID_DEFAULTS.pagination.threshold.rows }
 	return {
-		trigger: cfg.trigger ?? DATA_GRID_DEFAULTS.infinite.trigger,
+		trigger: cfg.trigger ?? DATA_GRID_DEFAULTS.pagination.trigger,
 		threshold,
 		hasNextPage: cfg.hasNextPage ?? false,
 		hasPreviousPage: cfg.hasPreviousPage ?? false,
@@ -253,24 +254,24 @@ export type NormalizedPageWindowConfig = {
  * the same `React*` shape every other feature uses, so `onChange` is reachable from a grid
  * that only ever imports the adapter.
  */
-export type VisibilityUIConfig = VisibilityConfig & {
+export type ReactVisibilityConfig = VisibilityConfig & {
 	/** Show a column visibility toggle button in the toolbar. Default: false. */
 	toolbar?: boolean
 }
 
 export type LoadingFallbackConfig = {
-	/** Override loading content. ReactElement rendered as-is; ComponentType called via flexRender. */
-	content?: ReactElement | ComponentType
+	/** Override the loading fallback. ReactElement rendered as-is; ComponentType called via flexRender. */
+	component?: ReactElement | ComponentType
 }
 
 export type EmptyFallbackConfig = {
-	/** Override empty content. ReactElement rendered as-is; ComponentType called via flexRender. */
-	content?: ReactElement | ComponentType
+	/** Override the empty fallback. ReactElement rendered as-is; ComponentType called via flexRender. */
+	component?: ReactElement | ComponentType
 }
 
 export type NoResultsFallbackConfig = {
-	/** Override no-results content. ReactElement rendered as-is; ComponentType called via flexRender. */
-	content?: ReactElement | ComponentType
+	/** Override the no-results fallback. ReactElement rendered as-is; ComponentType called via flexRender. */
+	component?: ReactElement | ComponentType
 }
 
 export type FallbacksConfig = {
@@ -483,7 +484,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * - `true` — enables column visibility (toolbar button shown)
 	 * - `{ toolbar: true }` — shows toggle button in toolbar
 	 */
-	visibility?: boolean | VisibilityUIConfig
+	visibility?: boolean | ReactVisibilityConfig
 	/**
 	 * Controlled table state. Pass a partial `TableState` to control specific portions
 	 * (e.g. only sorting) while leaving the rest internally managed.
@@ -671,7 +672,7 @@ export function useDataGrid<TRow extends object>(
 	// Build core-compatible expanding config (strip React-only fields)
 	const reactExpandingCfg = featureConfig(rawExpanding)
 	const coreGetRowCanExpand =
-		reactExpandingCfg?.getRowCanExpand ?? (reactExpandingCfg?.renderExpanded !== undefined ? () => true : undefined)
+		reactExpandingCfg?.getRowCanExpand ?? (reactExpandingCfg?.component !== undefined ? () => true : undefined)
 	const coreExpanding: boolean | ExpandingConfig | undefined =
 		rawExpanding === undefined
 			? undefined
@@ -844,7 +845,7 @@ export function useDataGrid<TRow extends object>(
 		infinite: normalizedInfinite,
 		selection: { bar: selectionBar as ResolvedGridOptions['selection']['bar'] },
 		expanding: {
-			renderExpanded: expandingCfg?.renderExpanded as ResolvedGridOptions['expanding']['renderExpanded'],
+			component: expandingCfg?.component as ResolvedGridOptions['expanding']['component'],
 		},
 		fallbacks,
 		virtualization: virtualizationConfig,

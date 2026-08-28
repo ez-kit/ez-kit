@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
-import { RowActionsMode } from './types'
+import { ActionsCellState } from './types'
 import { useDataGrid } from './use-data-grid'
 
 import type { FullGridComponents } from './contract'
@@ -14,7 +14,7 @@ import type {
 	BetweenInputProps,
 	ButtonProps,
 	CheckboxProps,
-	ColumnVisibilityMenuProps,
+	VisibilityMenuProps,
 	ConfirmDialogProps,
 	ClearFiltersButtonComponentProps,
 	DraftBarProps,
@@ -200,7 +200,7 @@ function TestMenu({ sections, 'aria-label': ariaLabel }: GridMenuProps) {
 		</div>
 	)
 }
-function TestColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
+function TestColumnVisibilityMenu({ columns }: VisibilityMenuProps) {
 	const [open, setOpen] = useState(false)
 	return (
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -267,7 +267,7 @@ function TestSaveCancel({
 	)
 }
 function TestActionsCell(props: ActionsCellProps) {
-	if (props.mode === RowActionsMode.Editing) {
+	if (props.state === ActionsCellState.Editing) {
 		return (
 			<TestSaveCancel
 				onSave={props.onSave}
@@ -276,7 +276,7 @@ function TestActionsCell(props: ActionsCellProps) {
 			/>
 		)
 	}
-	if (props.mode === RowActionsMode.Creating) {
+	if (props.state === ActionsCellState.Creating) {
 		return (
 			<TestSaveCancel
 				onSave={props.onSave}
@@ -434,7 +434,7 @@ function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: Be
 		</div>
 	)
 }
-function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+function TestMultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
 	const toggle = (value: string): void => {
 		const next = selectedValues.includes(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
 		onChange(next)
@@ -444,7 +444,7 @@ function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder 
 			role='group'
 			aria-label={placeholder ?? 'Filter'}
 		>
-			{options.map((opt) => (
+			{items.map((opt) => (
 				<label
 					key={opt.value}
 					style={{ display: 'flex', gap: 4, alignItems: 'center' }}
@@ -564,7 +564,12 @@ function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipPro
 		</span>
 	)
 }
-function TestClearFiltersButton({ disabled, onClick, children, ariaLabel }: ClearFiltersButtonComponentProps) {
+function TestClearFiltersButton({
+	disabled,
+	onClick,
+	children,
+	'aria-label': ariaLabel,
+}: ClearFiltersButtonComponentProps) {
 	return (
 		<button
 			type='button'
@@ -791,10 +796,10 @@ export const testComponents: FullGridComponents = {
 	resizing: {
 		Resizer: TestResizer,
 	},
-	'column-visibility': {
-		ColumnVisibilityMenu: TestColumnVisibilityMenu,
+	visibility: {
+		VisibilityMenu: TestColumnVisibilityMenu,
 	},
-	'fallback-states': {
+	fallbacks: {
 		LoadingRow: TestLoadingRow,
 		EmptyState: TestEmptyState,
 		NoResultsState: TestNoResultsState,

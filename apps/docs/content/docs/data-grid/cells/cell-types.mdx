@@ -21,6 +21,10 @@ const columns = createColumns<Order>([
 ])
 ```
 
+A cell type with nothing else to say can be written as the bare string — `cell: 'date'` is the
+same column as `cell: { type: 'date' }`. The object is for the exception that carries a `config`
+or a `component`, the same scalar-or-object shape `align`, `width` and `pinning` use.
+
 `cell.type` is checked against the registry of the kit whose `createColumns` built the array, so
 a typo is a compile error rather than a blank cell. `config` follows the type: it is **required**
 where the type declares a required field (`select` needs `items`), optional where every field is
@@ -39,13 +43,36 @@ filtering enabled.
 | ------------ | -------------- | ----------------------------------------------------------------------------------------------------- |
 | `'text'`     | `string`       | `maxLength`, `ellipsis` — truncation for the rendered view.                                           |
 | `'number'`   | `number`       | `decimals`, `thousandsSeparator`, `decimalSeparator`, `prefix`, `suffix`, `locale`.                   |
-| `'date'`     | `string`       | `minValue`, `maxValue` (ISO 8601, for the picker), `format` (`Intl.DateTimeFormatOptions`).           |
+| `'date'`     | `string`       | `min`, `max` (ISO 8601, for the picker), `format` (`Intl.DateTimeFormatOptions`).                     |
 | `'boolean'`  | `boolean`      | `trueLabel`, `falseLabel`.                                                                            |
 | `'select'`   | `string`       | `items: { value, label }[]` — **required**.                                                           |
 | `'badge'`    | `string`       | `items: { value, label, variant? }[]` — **required**. `variant` is the kits' shared badge vocabulary. |
 | `'image'`    | `string` (src) | `alt`, `width`, `height`.                                                                             |
-| `'link'`     | `string`       | none.                                                                                                 |
+| `'link'`     | `string`       | `label`, `href`, `target` — see below. All optional.                                                  |
 | `'progress'` | `number`       | `max`.                                                                                                |
+
+### `'link'`
+
+The anchor defaults to the cell value for both its `href` and its text, and opens in the current
+tab. Each part is overridable:
+
+| `cell.config` | Type                              | Description                                                                                 |
+| ------------- | --------------------------------- | ------------------------------------------------------------------------------------------- |
+| `label`       | `string`                          | Fixed anchor text. Defaults to the cell value.                                              |
+| `href`        | `` `${string}{value}${string}` `` | URL template; `{value}` is the cell value, URL-encoded. Omitted, the value **is** the href. |
+| `target`      | `'_self' \| '_blank'`             | Browsing context. Default `'_self'`; `'_blank'` adds `rel="noreferrer"`.                    |
+
+```ts
+{ accessorKey: 'customerId', cell: { type: 'link', config: { href: '/customers/{value}', label: 'Open' } } }
+```
+
+The token is required by the type, so a template that forgot it — and would point every row at the
+same page — is a compile error.
+
+Everything here is a plain value, not a callback. A cell type's config lives in the kit's registry,
+which is row-agnostic by construction, so a callback declared there would be handed `row: unknown`
+and every call site would open with a cast. Anchor text or a URL derived from **another field**
+belongs in `cell.component`, which is declared on the column and therefore sees the row's real type.
 
 The names are also available as `BuiltInCellType.Number` and friends, for code that would
 otherwise repeat the literal.

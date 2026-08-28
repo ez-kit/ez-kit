@@ -3,7 +3,7 @@ import { DATA_GRID_DEFAULTS } from './defaults'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { PaginationVariant } from './types'
 import type {
-	VisibilityUIConfig,
+	ReactVisibilityConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
 	FilteringVariant,
@@ -42,7 +42,7 @@ export type ResolvedGridOptions = {
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
 	/**
-	 * Per-row DOM props resolver. Row-erased here, like `renderExpanded` and the cell registry —
+	 * Per-row DOM props resolver. Row-erased here, like `expanding.component` and the cell registry —
 	 * every reader of `table.grid` is a component with no `TRow` of its own.
 	 */
 	rowProps?: RowPropsResolver<never> | undefined
@@ -56,7 +56,7 @@ export type ResolvedGridOptions = {
 	/** Column pinning UI (the pin section of the column menu) is enabled. */
 	columnPinning: boolean
 	/** Column hiding. `undefined` when the feature is off. */
-	visibility?: (boolean | VisibilityUIConfig) | undefined
+	visibility?: (boolean | ReactVisibilityConfig) | undefined
 	/** Sorting UI config. `undefined` when sorting is off. */
 	sorting?: (boolean | { toolbar?: boolean }) | undefined
 	filtering: {
@@ -98,7 +98,7 @@ export type ResolvedGridOptions = {
 	}
 	expanding: {
 		/** Sub-content detail-panel renderer, if one was supplied. */
-		renderExpanded?: ComponentType<ExpandedRowProps<never>> | undefined
+		component?: ComponentType<ExpandedRowProps<never>> | undefined
 	}
 	/** Loading / empty / no-results fallback config. */
 	fallbacks?: FallbacksConfig | undefined

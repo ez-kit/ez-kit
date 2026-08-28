@@ -6,11 +6,11 @@ import type { VisibilityColumnItem } from '../types'
 import type { ReactNode } from 'react'
 
 /**
- * Renders the ColumnVisibilityMenu DI component populated with all
+ * Renders the VisibilityMenu DI component populated with all
  * hideable (non-system, enableHiding !== false) leaf columns.
  */
-/** What a `<DataGrid.ColumnVisibilityTrigger>` render function receives. */
-export type DataGridColumnVisibilityTriggerRenderArgs = {
+/** What a `<DataGrid.VisibilityTrigger>` render function receives. */
+export type DataGridVisibilityTriggerRenderArgs = {
 	/**
 	 * Every hideable, non-system column with its current state and a ready `onToggle`.
 	 * System columns and those a `visibility: false` column def locked out are already
@@ -19,13 +19,13 @@ export type DataGridColumnVisibilityTriggerRenderArgs = {
 	columns: VisibilityColumnItem[]
 }
 
-export type DataGridColumnVisibilityTriggerProps = {
+export type DataGridVisibilityTriggerProps = {
 	/**
-	 * Custom content, replacing the kit's `ColumnVisibilityMenu` component.
+	 * Custom content, replacing the kit's `VisibilityMenu` component.
 	 *
 	 * @example
 	 * ```tsx
-	 * <DataGrid.ColumnVisibilityTrigger>
+	 * <DataGrid.VisibilityTrigger>
 	 *   {({ columns }) =>
 	 *     columns.map((column) => (
 	 *       <label key={column.id}>
@@ -34,17 +34,17 @@ export type DataGridColumnVisibilityTriggerProps = {
 	 *       </label>
 	 *     ))
 	 *   }
-	 * </DataGrid.ColumnVisibilityTrigger>
+	 * </DataGrid.VisibilityTrigger>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridColumnVisibilityTriggerRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridVisibilityTriggerRenderArgs) => ReactNode)
 }
 
-export function ColumnVisibilityTrigger({ children }: DataGridColumnVisibilityTriggerProps = {}) {
+export function VisibilityTrigger({ children }: DataGridVisibilityTriggerProps = {}) {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
-	const { ColumnVisibilityMenu } = useGridComponents()['column-visibility']
+	const { VisibilityMenu } = useGridComponents().visibility
 
 	const columns: VisibilityColumnItem[] = table
 		.getAllLeafColumns()
@@ -62,5 +62,5 @@ export function ColumnVisibilityTrigger({ children }: DataGridColumnVisibilityTr
 		return typeof children === 'function' ? children({ columns }) : children
 	}
 
-	return <ColumnVisibilityMenu columns={columns} />
+	return <VisibilityMenu columns={columns} />
 }

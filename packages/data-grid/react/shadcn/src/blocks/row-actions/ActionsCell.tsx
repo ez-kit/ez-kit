@@ -1,6 +1,6 @@
 'use client'
 
-import { RowActionsMode } from '@ez-kit/data-grid-react'
+import { ActionsCellState } from '@ez-kit/data-grid-react'
 import { Pencil, Trash2 } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -14,7 +14,7 @@ import type { ActionsCellProps } from '@ez-kit/data-grid-react'
  * same save / cancel pair — the creating row only differs in whether Cancel is offered.
  */
 export function ActionsCell(props: ActionsCellProps) {
-	if (props.mode === RowActionsMode.Editing) {
+	if (props.state === ActionsCellState.Editing) {
 		return (
 			<SaveCancelButtons
 				onSave={props.onSave}
@@ -24,7 +24,7 @@ export function ActionsCell(props: ActionsCellProps) {
 		)
 	}
 
-	if (props.mode === RowActionsMode.Creating) {
+	if (props.state === ActionsCellState.Creating) {
 		return (
 			<SaveCancelButtons
 				onSave={props.onSave}

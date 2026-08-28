@@ -75,11 +75,11 @@ no longer exist.
 The bar is configured under `selection.bar` — pass `true` for the default bar or an object with
 the keys below. It renders only while `selection` is enabled. Everything here is presentational.
 
-| `selection.bar` key | Type                                                | Description                                        |
-| ------------------- | --------------------------------------------------- | -------------------------------------------------- |
-| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                              |
-| `onClear`           | `({ table, selectedRows, clearSelection }) => void` | Overrides the default clear behaviour.             |
-| `actions`           | `ReactElement \| (args) => ReactElement`            | Extra controls rendered between Delete and Cancel. |
+| `selection.bar` key | Type                                                | Description                                                                                       |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                             |
+| `clear`             | `({ table, selectedRows, clearSelection }) => void` | Replaces the default clear behaviour (not a notification — call `clearSelection` to still reset). |
+| `actions`           | `ReactElement \| (args) => ReactElement`            | Extra controls rendered between Delete and Cancel.                                                |
 
 ## Source
 

@@ -7,7 +7,7 @@ import type {
 	DateRangePreset,
 	FilterOperatorDef,
 	LoadMoreDirection,
-	MultiSelectOption,
+	FilterItem,
 } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 import type {
@@ -26,7 +26,7 @@ import type {
 } from 'react'
 
 /** Which affordances the row-actions cell offers, and therefore which props it carries. */
-export const RowActionsMode = {
+export const ActionsCellState = {
 	/** A settled row: edit / delete. */
 	Idle: 'idle',
 	/** A row being edited inline: save / cancel. */
@@ -35,11 +35,11 @@ export const RowActionsMode = {
 	Creating: 'creating',
 } as const
 
-export type RowActionsMode = (typeof RowActionsMode)[keyof typeof RowActionsMode]
+export type ActionsCellState = (typeof ActionsCellState)[keyof typeof ActionsCellState]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ActionsCellIdleProps<TRow extends object = any> = {
-	mode: typeof RowActionsMode.Idle
+	state: typeof ActionsCellState.Idle
 	row: Row<TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
@@ -49,7 +49,7 @@ type ActionsCellIdleProps<TRow extends object = any> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ActionsCellEditingProps<TRow extends object = any> = {
-	mode: typeof RowActionsMode.Editing
+	state: typeof ActionsCellState.Editing
 	row: Row<TRow>
 	onSave: () => Promise<void>
 	onCancel: () => void
@@ -58,7 +58,7 @@ type ActionsCellEditingProps<TRow extends object = any> = {
 }
 
 type ActionsCellCreatingProps = {
-	mode: typeof RowActionsMode.Creating
+	state: typeof ActionsCellState.Creating
 	onSave: () => Promise<void>
 	onCancel: () => void
 	/** `false` on the pinned creating row, which has nothing to cancel back to. */
@@ -263,7 +263,7 @@ export type VisibilityColumnItem = {
 	onToggle: () => void
 }
 
-export type ColumnVisibilityMenuProps = {
+export type VisibilityMenuProps = {
 	columns: VisibilityColumnItem[]
 }
 
@@ -391,7 +391,7 @@ export type ClearFiltersButtonComponentProps = {
 	/** Optional custom contents. When absent the kit renders its default (icon-only). */
 	children?: ReactNode
 	/** Accessibility label. Defaults to "Clear filters" when omitted. */
-	ariaLabel?: string
+	'aria-label'?: string
 }
 
 export type OperatorSelectProps = {
@@ -413,12 +413,12 @@ export type BetweenInputProps = {
 	onPresetSelect?: (preset: DateRangePreset) => void
 }
 
-export type { DateRangePreset, MultiSelectOption }
+export type { DateRangePreset, FilterItem }
 
 export type MultiSelectFilterProps = {
-	/** Available options. Counts (when present) come from faceted unique values. */
-	options: MultiSelectOption[]
-	/** Currently selected option values. Empty array = no filter. */
+	/** The values on offer. Counts (when present) come from faceted unique values. */
+	items: FilterItem[]
+	/** Currently selected values. Empty array = no filter. */
 	selectedValues: string[]
 	/** Called with the next array of selected values. */
 	onChange: (next: string[]) => void
@@ -676,7 +676,7 @@ export type GridComponentRegistry = {
 	Resizer?: ComponentType<ResizerProps>
 	SortIndicator?: ComponentType<SortIndicatorProps>
 	Menu?: ComponentType<GridMenuProps>
-	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
+	VisibilityMenu?: ComponentType<VisibilityMenuProps>
 	SortMenu?: ComponentType<SortMenuProps>
 	FilterPopover?: ComponentType<FilterPopoverProps>
 	FilterPanel?: ComponentType<FilterPanelProps>

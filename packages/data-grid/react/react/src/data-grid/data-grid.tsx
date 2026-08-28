@@ -11,7 +11,6 @@ import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
-import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
@@ -34,10 +33,11 @@ import { SortTrigger } from './sort-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
+import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { BulkConfirmationOptions, ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
+import type { BulkConfirmationConfig, ConfirmationConfig, DataTable } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -98,7 +98,7 @@ function defaultBulkConfirmDescription(count: number): string {
 }
 
 function resolveConfirmationText(
-	options: ConfirmationOptions,
+	options: ConfirmationConfig,
 	row: Row<unknown> | undefined,
 ): { title: string; description: string } {
 	const title = options.title ?? DEFAULT_CONFIRM_TITLE
@@ -114,10 +114,10 @@ function resolveConfirmationText(
 
 /**
  * Bulk confirmation text. The `description` function is handed the whole selection rather than
- * one row — see {@link BulkConfirmationOptions} — and falls back to count-aware default copy.
+ * one row — see {@link BulkConfirmationConfig} — and falls back to count-aware default copy.
  */
 function resolveBulkConfirmationText(
-	options: BulkConfirmationOptions,
+	options: BulkConfirmationConfig,
 	rows: Row<unknown>[],
 ): { title: string; description: string } {
 	const title = options.title ?? DEFAULT_BULK_CONFIRM_TITLE
@@ -128,7 +128,7 @@ function resolveBulkConfirmationText(
 
 /** The bulk-delete prompt's config, or `undefined` when bulk delete asks for no prompt. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function bulkConfirmationOptions(table: Table<any>): BulkConfirmationOptions | undefined {
+function bulkConfirmationOptions(table: Table<any>): BulkConfirmationConfig | undefined {
 	const confirmation = featureConfig(table.options.deleting?.bulk)?.confirmation
 	if (!confirmation) return undefined
 	return confirmation === true ? {} : confirmation
@@ -159,9 +159,9 @@ function ConfirmDialogRenderer() {
 				open
 				title={title}
 				description={description}
-				onConfirm={() => void table.confirmBulkDelete()}
+				onConfirm={() => void table.deleting.bulk.confirm()}
 				onCancel={() => {
-					table.cancelBulkDelete()
+					table.deleting.bulk.cancel()
 				}}
 			/>
 		)
@@ -171,7 +171,7 @@ function ConfirmDialogRenderer() {
 
 	if (!confirmation) return null
 
-	const options: ConfirmationOptions = confirmation === true ? {} : confirmation
+	const options: ConfirmationConfig = confirmation === true ? {} : confirmation
 	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
 		pendingId !== null ? resolveConfirmationText(options, pendingRow) : { title: '', description: '' }
@@ -181,9 +181,9 @@ function ConfirmDialogRenderer() {
 			open={pendingId !== null}
 			title={title}
 			description={description}
-			onConfirm={() => void table.confirmDeleteRow()}
+			onConfirm={() => void table.deleting.confirm()}
 			onCancel={() => {
-				table.cancelDeleteRow()
+				table.deleting.cancel()
 			}}
 		/>
 	)
@@ -364,7 +364,7 @@ type DataGridType = typeof DataGridRoot & {
 	SelectionBar: typeof SelectionBar
 	DraftBar: typeof DraftBar
 	CreateTrigger: typeof CreateTrigger
-	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
+	VisibilityTrigger: typeof VisibilityTrigger
 	SortTrigger: typeof SortTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
@@ -392,7 +392,7 @@ DataGrid.PageSizer = PageSizer
 DataGrid.SelectionBar = SelectionBar
 DataGrid.DraftBar = DraftBar
 DataGrid.CreateTrigger = CreateTrigger
-DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
+DataGrid.VisibilityTrigger = VisibilityTrigger
 DataGrid.SortTrigger = SortTrigger
 DataGrid.GlobalFilterInput = GlobalFilterInput
 DataGrid.ActiveFiltersBar = ActiveFiltersBar

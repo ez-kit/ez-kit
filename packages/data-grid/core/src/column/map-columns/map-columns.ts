@@ -108,6 +108,10 @@ function mapColumn<TRow extends object>(
 		footerClassName,
 	} = def
 
+	// The scalar `cell: 'number'` is the same thing as `cell: { type: 'number' }`; normalize once
+	// here so nothing downstream has to know there are two spellings.
+	const cellDef = typeof cell === 'string' ? { type: cell } : cell
+
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
 
 	setIfDefined(meta, 'columnPinning', normalizeColumnPinning(pinning))
@@ -122,13 +126,13 @@ function mapColumn<TRow extends object>(
 	// Implicit cellType='text' when not provided so registry-driven form rendering
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.
-	meta.cellType = cell?.type ?? 'text'
-	if (cell !== undefined && 'config' in cell && cell.config !== undefined) {
+	meta.cellType = cellDef?.type ?? 'text'
+	if (cellDef !== undefined && 'config' in cellDef && cellDef.config !== undefined) {
 		// The declared config type is the cell type's business, not this mapper's — it only
 		// forwards whatever the column author wrote into `meta` for the renderer to read.
-		meta.config = cell.config as Record<string, unknown>
+		meta.config = cellDef.config as Record<string, unknown>
 	}
-	const viewFn = cell?.component
+	const viewFn = cellDef?.component
 	if (viewFn !== undefined) meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown
 
 	// Build a plain object and cast — TanStack's ColumnDef is a discriminated union
@@ -195,8 +199,8 @@ function mapColumn<TRow extends object>(
 
 	// Operator-aware filtering
 	const filteringCfg = filtering !== undefined && filtering !== false ? filtering : undefined
-	if (filteringCfg?.options) {
-		meta.filteringOptions = filteringCfg.options
+	if (filteringCfg?.items) {
+		meta.filteringItems = filteringCfg.items
 	}
 	const colFaceted = filteringCfg?.faceted
 	const tableFaceted = options?.tableFaceted ?? false
@@ -205,7 +209,7 @@ function mapColumn<TRow extends object>(
 		meta.facetedEnabled = true
 	}
 	if (filteringCfg?.operators && registry) {
-		const cellType = cell?.type
+		const cellType = cellDef?.type
 		const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
 		const resolved = resolveColumnOperators(filteringCfg.operators, registry, cellTypeOperators)
 

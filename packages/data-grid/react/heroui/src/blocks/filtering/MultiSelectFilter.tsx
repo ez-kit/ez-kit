@@ -19,7 +19,7 @@ const COUNT_STYLE = {
 	opacity: 0.6,
 }
 
-export function MultiSelectFilter({ options, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+export function MultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
 	const handleChange = (next: Key | Key[] | null): void => {
 		if (next == null) {
 			onChange([])
@@ -41,14 +41,14 @@ export function MultiSelectFilter({ options, selectedValues, onChange, placehold
 				<Select.Value>
 					{({ defaultChildren, isPlaceholder }) => {
 						if (isPlaceholder || selectedValues.length === 0) return defaultChildren
-						return buildMultiSelectLabel(options, selectedValues, placeholder)
+						return buildMultiSelectLabel(items, selectedValues, placeholder)
 					}}
 				</Select.Value>
 				<Select.Indicator />
 			</Select.Trigger>
 			<Select.Popover>
 				<ListBox selectionMode='multiple'>
-					{options.map((opt) => (
+					{items.map((opt) => (
 						<ListBox.Item
 							key={opt.value}
 							id={opt.value}

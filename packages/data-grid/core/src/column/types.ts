@@ -1,11 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { CreateDefaultValueContext } from '../features/creating'
-import type {
-	BetweenOperatorConfig,
-	ColumnOperatorsConfig,
-	FilterOperatorDef,
-	MultiSelectOption,
-} from '../features/operators'
+import type { BetweenOperatorConfig, ColumnOperatorsConfig, FilterOperatorDef, FilterItem } from '../features/operators'
 import type { FieldState, ValidateOn } from '../features/validation'
 import type {
 	ColumnDef as TableCoreColumnDef,
@@ -152,6 +147,65 @@ export type ImageCellConfig = {
 export type ProgressCellConfig = {
 	max?: number
 }
+
+/**
+ * Where a `link` cell's anchor opens.
+ *
+ * `_self` is the default because a grid links inside its own app far more often than out of it,
+ * and `_blank` — the previous hard-coded behaviour — is the exception you now have to ask for.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `target: '_blank'` is equally valid and needs no import.
+ */
+export const LinkTarget = {
+	/** Navigate in the current tab. The default. */
+	Self: '_self',
+	/** Open a new tab. Rendered with `rel="noreferrer"`. */
+	Blank: '_blank',
+} as const
+
+export type LinkTarget = (typeof LinkTarget)[keyof typeof LinkTarget]
+
+/** The placeholder {@link LinkCellConfig.href} substitutes the cell value into. */
+export const LINK_HREF_VALUE_TOKEN = '{value}'
+
+/**
+ * Config for the `link` cell type.
+ *
+ * It had none, so the anchor's text was always the raw URL and the target was always a new tab.
+ * "Customer name, linking to `/customers/:id`, in this tab" — the ordinary case — had to give up
+ * the cell type and write a `cell.component` instead.
+ *
+ * Everything here is a plain value rather than a callback on purpose. A cell type's config lives
+ * in the kit's registry, which is row-agnostic by construction, so a callback declared here would
+ * be handed `row: unknown` and every call site would open with a cast. The row-derived cases stay
+ * where the row is actually typed: `cell.component`.
+ */
+export type LinkCellConfig = {
+	/**
+	 * Fixed anchor text — `'Open'`, `'View invoice'`. Defaults to the cell value.
+	 *
+	 * For text derived from another field, use `cell.component`: that slot is declared on the
+	 * column, so it sees the row's real type.
+	 */
+	label?: string
+	/**
+	 * URL template. `{value}` is replaced by the cell value, so a column of ids becomes a column
+	 * of links without leaving the cell type:
+	 *
+	 * ```ts
+	 * { accessorKey: 'customerId', cell: { type: 'link', config: { href: '/customers/{value}' } } }
+	 * ```
+	 *
+	 * The template literal type requires the token, so a template that forgot it — and would
+	 * therefore point every row at the same page — does not compile. Omitted, the value is the
+	 * href, which is what a column that already holds URLs wants.
+	 */
+	href?: `${string}${typeof LINK_HREF_VALUE_TOKEN}${string}`
+	/** Browsing context to open in. Default: {@link LinkTarget.Self}. */
+	target?: LinkTarget
+}
+
 export type TextCellConfig = {
 	/** Maximum character count for the rendered view. Longer values are truncated. */
 	maxLength?: number
@@ -185,9 +239,9 @@ export type BooleanCellConfig = {
 }
 export type DateCellConfig = {
 	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard minimum. */
-	minValue?: string
+	min?: string
 	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard maximum. */
-	maxValue?: string
+	max?: string
 	/** Forwarded to `Intl.DateTimeFormat` by the view renderer. */
 	format?: Intl.DateTimeFormatOptions
 }
@@ -211,7 +265,7 @@ export type BaseCellTypes = {
 	select: { __config?: SelectCellConfig }
 	badge: { __config?: BadgeCellConfig }
 	image: { __config?: ImageCellConfig }
-	link: Record<never, never>
+	link: { __config?: LinkCellConfig }
 	progress: { __config?: ProgressCellConfig }
 }
 
@@ -291,6 +345,10 @@ export type CellDef<
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
 > =
+	// The scalar: a type id and nothing else, which is what most columns want. Same
+	// scalar-or-object shape as `align`, `width` and `pinning` — one word for the common case,
+	// the object for the exception that carries a `config` or a `component`.
+	| (keyof TCellTypes & string)
 	| {
 			type?: undefined
 			config?: undefined
@@ -308,10 +366,15 @@ export type ColumnFilteringConfig<TNode = unknown> = {
 	/** Override the default selected operator for this column. */
 	defaultOperator?: string
 	/**
-	 * Explicit option list for multi-value (`in` / `notIn`) filters. Wins over both
+	 * Explicit value list for multi-value (`in` / `notIn`) filters. Wins over both
 	 * `cell.config.items` (for `select` / `badge` cell types) and faceted values.
+	 *
+	 * Named `items`, like `cell.config.items` it overrides — one column, one word for "the
+	 * values this column can take". It was `options`, which forced an author writing both slots
+	 * on the same column to remember two spellings of one list, and which reused the word this
+	 * config already spends on everything you configure.
 	 */
-	options?: MultiSelectOption[]
+	items?: FilterItem[]
 	/**
 	 * Per-column override for faceted unique values / counts. When `true`, this
 	 * column reads `column.getFacetedUniqueValues()` regardless of the table-level
@@ -644,7 +707,13 @@ export type ColumnDefCommon<
 	 */
 	sorting?: false | ColumnSortingConfig
 
-	/** Cell display and input configuration. */
+	/**
+	 * Cell display and input configuration.
+	 *
+	 * - `'number'` — the scalar: a registered cell type, nothing else to say
+	 * - `{ type: 'number', config: { … } }` — the type plus its config
+	 * - `{ component }` — no type at all, just your own renderer
+	 */
 	cell?: CellDef<TRow, TValue, TCellTypes, TNode>
 
 	/**
@@ -847,8 +916,8 @@ declare module '@tanstack/table-core' {
 		betweenOperatorConfig?: BetweenOperatorConfig
 		/** Default operator ID for this column (derived from config or cell type default). */
 		defaultOperatorId?: string
-		/** Explicit multi-select option list from `column.filtering.options`. */
-		filteringOptions?: MultiSelectOption[]
+		/** Explicit multi-select value list from `column.filtering.items`. */
+		filteringItems?: FilterItem[]
 		/**
 		 * Effective faceted flag for this column. Set to true when the resolved config
 		 * (table-level `filtering.faceted` or column-level `filtering.faceted`) opts in.
