@@ -527,9 +527,16 @@ test('backing out of a step does not count as validating it, but failing to leav
 	expect(await screen.findByLabelText('Age')).toBeInTheDocument()
 	expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
-	// Back, then forward again. Step two was never *left*, so it is still unvisited and its stale
-	// errors are cleared on arrival exactly as they were the first time.
+	// Back out of step two without ever trying to leave it. Backing out must not mark it visited:
+	// the edit below re-runs the document-wide validator, which writes "required" back onto the
+	// still-empty `age`. If `goBack` had counted the back-out as validation, the stepper would now
+	// report a step the user has never been asked about as invalid.
 	await user.click(screen.getByRole('button', { name: /back/i }))
+	await user.type(screen.getByLabelText('Name'), 'a')
+	expect(screen.getAllByTestId(STEP_MARKER)[1]).not.toHaveAttribute('data-invalid')
+
+	// Forward again: step two is still unvisited, so its stale errors are cleared on arrival
+	// exactly as they were the first time.
 	await user.click(screen.getByRole('button', { name: /next/i }))
 	expect(await screen.findByLabelText('Age')).toBeInTheDocument()
 	expect(screen.queryByRole('alert')).not.toBeInTheDocument()
