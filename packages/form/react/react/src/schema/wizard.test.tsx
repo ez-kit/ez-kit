@@ -16,9 +16,9 @@ import type * as ReactForm from '@tanstack/react-form'
 const groupSpy = vi.hoisted(() => ({ names: [] as string[], validateCauses: [] as string[] }))
 
 // `useFormGroup` is the one piece of the `path` branch with no observable output of its own —
-// with the collected-names validation now running for *every* step, deleting `StepGroupBinding`
-// changes nothing a rendered DOM can show. Wrapping the real hook is what makes "the step's
-// group is actually bound, and actually validated" assertable.
+// the collected-names validation runs for *every* step, so deleting `StepGroupBinding` changes
+// nothing a rendered DOM can show. Wrapping the real hook is what makes "the step's group is
+// bound, and its `validate` is never called" assertable.
 vi.mock('@tanstack/react-form', async (importOriginal) => {
 	const actual = await importOriginal<typeof ReactForm>()
 	return {
@@ -224,12 +224,14 @@ test('invalid is false for a step that has never been visited', async () => {
 type GroupedValues = { contact: { email: string }; alias: string; note: string }
 
 /**
- * The step declares `path: 'contact'` **and** holds a required field outside that path. The two
- * halves pin the two halves of the ruling: the group is bound and validated (so group-level
- * validators on the path run), and step composition is still decided by the collected names (so
- * `alias`, which `FormGroupApi.validate` would never look at, still blocks "next").
+ * The step declares `path: 'contact'` **and** holds a required field outside that path. The three
+ * assertions pin the ruling: the group is *bound* (so `path` means something and group-level
+ * validators have somewhere to attach), its `validate` is never *called* (it could only redden
+ * fields under `path` that live on later steps), and step composition is still decided by the
+ * collected names — so `alias`, which `FormGroupApi.validate` would never look at, still blocks
+ * "next".
  */
-test('a step with `path` binds a form group and still validates fields outside the path', async () => {
+test('a step with `path` binds a form group, never calls its validate, and still validates fields outside the path', async () => {
 	const user = userEvent.setup()
 	const schema: FormSchema<GroupedValues> = {
 		version: 1,
@@ -260,8 +262,10 @@ test('a step with `path` binds a form group and still validates fields outside t
 
 	await user.click(screen.getByRole('button', { name: /next/i }))
 	expect(await screen.findAllByRole('alert')).toHaveLength(2)
-	// …and "next" ran the group's own validation on top of the step's collected names.
-	expect(groupSpy.validateCauses).toEqual(['submit'])
+	// …and "next" never reached for the group: `FormGroupApi.validate` re-runs the *form's*
+	// validators scoped by data path, which cannot change the verdict above and would redden
+	// `contact.*` fields sitting on later steps.
+	expect(groupSpy.validateCauses).toEqual([])
 
 	// Only the in-path field filled: the out-of-path one still blocks, which `group.validate`
 	// alone could never see.
@@ -423,4 +427,124 @@ test('`disabledWhen` disables an already-visited step and its goTo', async () =>
 	await user.click(trigger)
 	expect(screen.getByLabelText('Lock step one')).toBeInTheDocument()
 	expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+})
+
+type FallbackValues = { name: string; email: string; show: boolean; skip: boolean }
+
+/**
+ * The F5 fallback is a second way onto a step, and it can land the user on one they have never
+ * seen. Clearing the stale errors only inside `goNext` therefore left this arrival red.
+ */
+test('a step reached by the hidden-step fallback does not open red either', async () => {
+	const user = userEvent.setup()
+	const schema: FormSchema<FallbackValues> = {
+		version: 1,
+		children: [
+			{ type: 'step', title: 'One', children: [{ type: FormFieldType.Text, name: 'name', label: 'Name' }] },
+			{
+				type: 'step',
+				title: 'Two',
+				when: { field: 'show', eq: true },
+				children: [{ type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true } }],
+			},
+			{
+				type: 'step',
+				title: 'Three',
+				when: { field: 'skip', eq: false },
+				children: [
+					{ type: FormFieldType.Checkbox, name: 'show', label: 'Show step two' },
+					{ type: FormFieldType.Checkbox, name: 'skip', label: 'Skip step three' },
+				],
+			},
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={schema}
+			defaultValues={{ name: '', email: '', show: false, skip: false }}
+			onSubmit={() => {}}
+		/>,
+	)
+
+	// Step two is hidden, so "next" from step one lands on step three.
+	await user.click(screen.getByRole('button', { name: /next/i }))
+	expect(screen.getByLabelText('Skip step three')).toBeInTheDocument()
+
+	// Revealing step two runs the form-level validator, which writes "required" onto its empty
+	// field while the user is still standing on step three.
+	await user.click(screen.getByLabelText('Show step two'))
+	expect(screen.getAllByTestId(STEP_MARKER)).toHaveLength(3)
+
+	// Step three now hides itself: the wizard falls back onto step two, which the user has never
+	// visited and which `goNext` never got the chance to clear.
+	await user.click(screen.getByLabelText('Skip step three'))
+
+	expect(await screen.findByLabelText('Email')).toBeInTheDocument()
+	expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+	expect(screen.queryByText('This field is required')).not.toBeInTheDocument()
+	expect(screen.getAllByTestId(STEP_MARKER)[1]).not.toHaveAttribute('data-invalid')
+})
+
+type ThreeStepValues = { name: string; age: string; note: string }
+
+/**
+ * `visited` means "validated at least once", which is why only `goNext` writes to it. Both
+ * directions of spec §10.2 are pinned here: backing out of a step must not make it count as
+ * validated (or the errors it still carries would be reported as clean, and its stale errors
+ * would never be cleared again), and a step the user genuinely failed to leave must keep
+ * reporting `invalid` after they navigate away from it.
+ */
+test('backing out of a step does not count as validating it, but failing to leave one does', async () => {
+	const user = userEvent.setup()
+	const schema: FormSchema<ThreeStepValues> = {
+		version: 1,
+		children: [
+			{
+				type: 'step',
+				title: 'One',
+				children: [{ type: FormFieldType.Text, name: 'name', label: 'Name', validate: { required: true } }],
+			},
+			{
+				type: 'step',
+				title: 'Two',
+				children: [{ type: FormFieldType.Text, name: 'age', label: 'Age', validate: { required: true } }],
+			},
+			{ type: 'step', title: 'Three', children: [{ type: FormFieldType.Text, name: 'note', label: 'Note' }] },
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={schema}
+			defaultValues={{ name: '', age: '', note: '' }}
+			onSubmit={() => {}}
+		/>,
+	)
+
+	await user.type(screen.getByLabelText('Name'), 'Ann')
+	await user.click(screen.getByRole('button', { name: /next/i }))
+	expect(await screen.findByLabelText('Age')).toBeInTheDocument()
+	expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+	// Back, then forward again. Step two was never *left*, so it is still unvisited and its stale
+	// errors are cleared on arrival exactly as they were the first time.
+	await user.click(screen.getByRole('button', { name: /back/i }))
+	await user.click(screen.getByRole('button', { name: /next/i }))
+	expect(await screen.findByLabelText('Age')).toBeInTheDocument()
+	expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+	expect(screen.getAllByTestId(STEP_MARKER)[1]).not.toHaveAttribute('data-invalid')
+
+	// Trying to leave step two is what validates it. It fails, so it is visited *and* failing…
+	await user.click(screen.getByRole('button', { name: /next/i }))
+	expect(await screen.findByRole('alert')).toHaveTextContent('This field is required')
+	expect(screen.getAllByTestId(STEP_MARKER)[1]).toHaveAttribute('data-invalid', 'true')
+
+	// …and it must keep saying so once the user walks away from it (spec §10.2). Leaving a step
+	// unmounts its fields, which drops their meta, so the marker only has something to report
+	// again once any edit re-runs the document-wide validator — but `visited` must survive that
+	// round trip, or the stepper would call a step that blocks submission clean.
+	await user.click(screen.getByRole('button', { name: /back/i }))
+	await user.type(screen.getByLabelText('Name'), 'e')
+	expect(screen.getAllByTestId(STEP_MARKER)[1]).toHaveAttribute('data-invalid', 'true')
 })
