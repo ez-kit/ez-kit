@@ -14,6 +14,7 @@ import {
 import { Button, Form as FormElement } from '@form-shadcn/blocks/form-parts'
 import { GridItem, Section } from '@form-shadcn/blocks/layout'
 import { SelectField } from '@form-shadcn/blocks/select'
+import { Wizard } from '@form-shadcn/blocks/wizard'
 
 import type { FormComponents } from '@ez-kit/form-react'
 
@@ -37,6 +38,7 @@ const components = {
 	Form: FormElement,
 	Section,
 	GridItem,
+	Wizard,
 } satisfies FormComponents
 
 const { useForm, Form, FormRenderer } = createForm({ components })

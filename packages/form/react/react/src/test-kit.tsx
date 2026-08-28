@@ -1,4 +1,11 @@
-import type { FieldRenderProps, FormComponents, GridItemRenderProps, SectionRenderProps } from './contract'
+import type {
+	FieldRenderProps,
+	FormComponents,
+	GridItemRenderProps,
+	SectionRenderProps,
+	WizardRenderProps,
+	WizardStep,
+} from './contract'
 import type { ReactNode } from 'react'
 
 /**
@@ -93,6 +100,86 @@ function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
 			data-col-span={colSpan}
 		>
 			{children}
+		</div>
+	)
+}
+
+/**
+ * `WizardStep.title`/`description` are `LocalizedText`, not `ReactNode` — unlike the layout
+ * contract, the wizard step machine hands the kit the raw value rather than a pre-resolved
+ * string, and no `translate` function reaches this layer. A kit shows the finished string
+ * when it has one, and falls back to the raw key when it doesn't (this test kit never
+ * translates, so an app that wires translation keys through the wizard would see keys here —
+ * a real kit that wants live translation asks its host app to resolve before render).
+ */
+function displayLocalizedText(text: WizardStep['title']): string | undefined {
+	if (text === undefined) return undefined
+	return typeof text === 'string' ? text : text.key
+}
+
+function WizardStepTrigger({ index, title, status, invalid, disabled, goTo }: WizardStep): ReactNode {
+	return (
+		<li
+			data-testid='wizard-step'
+			data-status={status}
+			data-invalid={invalid || undefined}
+			aria-current={status === 'current' ? 'step' : undefined}
+		>
+			<button
+				data-testkit='wizard-step-trigger'
+				type='button'
+				disabled={disabled}
+				onClick={goTo}
+			>
+				{displayLocalizedText(title) ?? `Step ${String(index + 1)}`}
+			</button>
+		</li>
+	)
+}
+
+function Wizard({
+	steps,
+	currentIndex,
+	canGoBack,
+	canGoNext,
+	isLastStep,
+	goNext,
+	goBack,
+	submitting,
+	children,
+}: WizardRenderProps): ReactNode {
+	return (
+		<div
+			data-testkit='wizard'
+			data-current-index={currentIndex}
+		>
+			<ol data-testkit='wizard-steps'>
+				{steps.map((step) => (
+					<WizardStepTrigger
+						key={step.index}
+						{...step}
+					/>
+				))}
+			</ol>
+			<div data-testkit='wizard-body'>{children}</div>
+			<div data-testkit='wizard-nav'>
+				<button
+					data-testkit='wizard-back'
+					type='button'
+					disabled={!canGoBack || submitting}
+					onClick={goBack}
+				>
+					Back
+				</button>
+				<button
+					data-testkit='wizard-next'
+					type='button'
+					disabled={!canGoNext || submitting}
+					onClick={goNext}
+				>
+					{isLastStep ? 'Review' : 'Next'}
+				</button>
+			</div>
 		</div>
 	)
 }
@@ -346,4 +433,5 @@ export const testComponents: FormComponents = {
 	),
 	Section,
 	GridItem,
+	Wizard,
 }

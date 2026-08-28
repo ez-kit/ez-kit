@@ -1,4 +1,4 @@
-import type { FormFieldType, SelectOption, TextInputType } from '@ez-kit/form-core'
+import type { FormFieldType, LocalizedText, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -137,6 +137,34 @@ export type GridItemRenderProps = {
 	children: ReactNode
 }
 
+// ── wizard ───────────────────────────────────────────────────────────────────
+
+export type WizardStep = {
+	index: number
+	title: LocalizedText | undefined
+	description: LocalizedText | undefined
+	status: 'complete' | 'current' | 'upcoming'
+	/** Visited and failing validation. Never true for an unvisited step. */
+	invalid: boolean
+	/** Cannot be navigated to right now. */
+	disabled: boolean
+	goTo: () => void
+}
+
+export type WizardRenderProps = {
+	steps: WizardStep[]
+	currentIndex: number
+	canGoBack: boolean
+	canGoNext: boolean
+	isLastStep: boolean
+	/** Validates the current step's fields, advances only if they pass. */
+	goNext: () => void
+	goBack: () => void
+	submitting: boolean
+	/** The current step's fields. */
+	children: ReactNode
+}
+
 // ── form level ───────────────────────────────────────────────────────────────
 
 export type ButtonProps = {
@@ -166,4 +194,5 @@ export type FormComponents = {
 	Form: (props: FormElementProps) => ReactNode
 	Section: (props: SectionRenderProps) => ReactNode
 	GridItem: (props: GridItemRenderProps) => ReactNode
+	Wizard: (props: WizardRenderProps) => ReactNode
 }

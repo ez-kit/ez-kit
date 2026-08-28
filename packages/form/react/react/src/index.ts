@@ -25,6 +25,8 @@ export type {
 	SwitchFieldRenderProps,
 	TextareaFieldRenderProps,
 	TextFieldRenderProps,
+	WizardRenderProps,
+	WizardStep,
 } from './contract'
 export type {
 	BaseFieldProps,
@@ -57,4 +59,4 @@ export {
 	stripHiddenValues,
 	TextInputType,
 } from '@ez-kit/form-core'
-export type { SelectOption } from '@ez-kit/form-core'
+export type { LocalizedText, SelectOption } from '@ez-kit/form-core'
