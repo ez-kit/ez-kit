@@ -422,6 +422,14 @@ export function createForm({ components }: CreateFormOptions) {
 	 * The generic list mirrors `useForm` verbatim for the same reason it does there:
 	 * narrowing it would silently degrade validator and submit-meta inference.
 	 *
+	 * **The form options are required, not optional.** `defaultValues` (or another option
+	 * that pins the shape) is the only inference site for `TFormData`, so a block written as
+	 * `withForm({ render })` infers `TFormData = unknown`, which collapses `DeepKeys<unknown>`
+	 * to `never`: no field name is writable inside such a block, and no real form is
+	 * assignable to it from outside. TanStack keeps that shape alive with an internal
+	 * `UnwrapOrAny`, which cannot be mirrored here — it needs `any`, which lint bans. Always
+	 * declare the block against the form data it belongs to.
+	 *
 	 * @example
 	 * const AddressBlock = withForm({
 	 *   defaultValues: { street: '' },
@@ -441,7 +449,12 @@ export function createForm({ components }: CreateFormOptions) {
 		TOnDynamicAsync extends undefined | FormAsyncValidateOrFn<TFormData>,
 		TOnServer extends undefined | FormAsyncValidateOrFn<TFormData>,
 		TSubmitMeta,
-		TRenderProps extends object = Record<string, never>,
+		// `Record<never, never>`, deliberately not `Record<string, never>`: a block declared
+		// without the `props` option has no inference site for `TRenderProps`, so the default
+		// applies — and an index signature of `never` makes every prop of the returned
+		// component uninhabitable, `form` included, so it could not be rendered at all.
+		// (`{}` would do as well but trips `@typescript-eslint/no-empty-object-type`.)
+		TRenderProps extends object = Record<never, never>,
 	>(
 		options: KitWithFormProps<
 			TFormData,
