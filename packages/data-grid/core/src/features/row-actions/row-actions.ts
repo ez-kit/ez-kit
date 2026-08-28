@@ -43,8 +43,14 @@ export type RowActionItem<TNode = never> = {
 	 */
 	icon?: GridMenuIcon | TNode
 	disabled?: boolean
-	/** Destructive entry — kits render it in a danger colour. */
-	danger?: boolean
+	/**
+	 * Destructive entry — kits render it in their danger colour, like the built-in Delete.
+	 *
+	 * Named `destructive`, matching {@link BadgeVariant.Destructive}: one word for the
+	 * "this action destroys something" semantic across the whole API, rather than `danger`
+	 * here and `destructive` there.
+	 */
+	destructive?: boolean
 	onSelect: () => void
 }
 

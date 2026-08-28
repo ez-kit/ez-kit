@@ -46,7 +46,7 @@ export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuPro
 								key={item.id}
 								onClick={item.onSelect}
 								disabled={item.disabled ?? false}
-								variant={item.danger ? 'destructive' : 'default'}
+								variant={item.destructive ? 'destructive' : 'default'}
 							>
 								{renderGridMenuIcon(item.icon)}
 								{item.label}

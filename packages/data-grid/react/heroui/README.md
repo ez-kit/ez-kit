@@ -16,7 +16,7 @@ Import everything from the kit. Its `createColumns` / `createColumnHelper` are b
 
 ```tsx
 import { DataGrid, createColumns, useDataGrid } from '@ez-kit/data-grid-heroui'
-import '@ez-kit/data-grid-heroui/global.css'
+import '@ez-kit/data-grid-heroui/styles.css'
 
 type User = { name: string; role: string }
 

@@ -151,6 +151,14 @@ export type {
 	DataGridFilterPanelProps,
 	DataGridFilterPanelRenderArgs,
 } from './data-grid/filter-panel'
+export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
+export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
+export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
+export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
+export type { DataGridEditingModalProps } from './data-grid/editing-modal'
+export type { DataGridLoadingBodyProps, DataGridLoadingBodyRenderArgs } from './data-grid/loading-body'
+export type { DataGridEmptyStateRowProps, DataGridEmptyStateRowRenderArgs } from './data-grid/empty-state-row'
+export type { DataGridNoResultsRowProps, DataGridNoResultsRowRenderArgs } from './data-grid/no-results-row'
 export type { DataGridToolbarProps } from './data-grid/toolbar'
 export type { DataGridActiveFiltersBarProps } from './data-grid/active-filters-bar'
 export type { DataGridClearFiltersButtonProps } from './data-grid/clear-filters-button'

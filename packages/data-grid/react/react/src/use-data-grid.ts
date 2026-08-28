@@ -145,7 +145,7 @@ function normalizeVirtualization(
  * `rowCount: data?.rowCount ?? 0`, the initial `0` means "not loaded yet", and clamping it
  * would reset a deep-linked page mid-fetch. The trade-off is that a deep link to an
  * already-out-of-range page is left as-is — the server returns no rows for it, so the
- * `0–0 of N` footer matches the empty screen rather than contradicting it.
+ * `0–0 of N` pagination bar matches the empty screen rather than contradicting it.
  *
  * The clamp lands **after commit**, so the render in which `rowCount` shrinks still paints
  * the pre-clamp page for one frame before the corrected one. Notifying the consumer during
@@ -157,7 +157,7 @@ function normalizeVirtualization(
  */
 export type ReactPaginationConfig = PaginationConfig & {
 	/**
-	 * Page-based mode only. Which footer controls to render.
+	 * Page-based mode only. Which pagination-bar controls to render.
 	 * Default {@link PaginationVariant.Numbered}. Purely presentational — paging
 	 * behaviour is identical across variants.
 	 */

@@ -273,6 +273,10 @@ export const EditingFeature: TableFeature<RowData> = {
 			},
 
 			startCell: (rowId, columnId) => {
+				// A column that opted out with `editing: false` is not editable in any mode.
+				// The React layer already renders no double-click affordance for it; this
+				// makes the programmatic path agree rather than quietly opening an input.
+				if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
 				resetController()
 				const row = table.getRowModel().rows.find((r) => r.id === rowId)
 				const initialValue = row?.getValue(columnId)

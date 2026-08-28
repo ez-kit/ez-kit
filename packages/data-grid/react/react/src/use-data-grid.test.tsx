@@ -803,14 +803,14 @@ describe('useDataGrid — filtering.toolbar normalization', () => {
 	})
 })
 
-// ── deferredApply — controlled `state` prop mirrored the same way a real consumer writes it ──
+// ── draft — controlled `state` prop mirrored the same way a real consumer writes it ──
 //
 // Settles a documentation dispute: production.mdx claimed a controlled consumer must NOT mirror
-// `sorting` / `columnFilters` / `globalFilter` back through `state` while `deferredApply` is on,
+// `sorting` / `columnFilters` / `globalFilter` back through `state` while `draft` is on,
 // because the render-time controlled-state sync would clobber the pending draft. `syncControlledState`
 // (packages/data-grid/core/src/create-table/create-table.ts) filters exactly those three axes out of
 // the incoming `partial` while `deferred && draft.isDirty()`, so a naive mirror-back should be safe.
-describe('useDataGrid — deferredApply with a mirrored controlled state prop', () => {
+describe('useDataGrid — draft with a mirrored controlled state prop', () => {
 	/** Render count for the enclosing hook body — proves re-syncing the stale prop does not spin. */
 	function useDeferredControlledGrid() {
 		const renderCountRef = useRef(0)
@@ -820,7 +820,7 @@ describe('useDataGrid — deferredApply with a mirrored controlled state prop', 
 		const table = useDataGrid({
 			data: USERS,
 			columns: COLUMNS,
-			deferredApply: true,
+			draft: true,
 			sorting: { manual: true },
 			state: tableState,
 			// The exact pattern a real consumer writes: mirror the whole resolved state back in.

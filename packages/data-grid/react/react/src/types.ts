@@ -146,7 +146,7 @@ export type ToolbarProps = {
  *   pending state if desired.
  * - `onKeyDown`, when present, must be forwarded to the underlying `<input>` verbatim —
  *   the headless wrapper uses it to apply the whole pending draft on Enter under
- *   `deferredApply`. `undefined` when there is nothing to wire (e.g. `deferredApply` off).
+ *   `draft`. `undefined` when there is nothing to wire (e.g. `draft` off).
  */
 export type GlobalFilterInputProps = {
 	value: string
@@ -376,7 +376,7 @@ export type FilterChipProps = {
 	/** Where the filter comes from. Kits may style column vs. global chips differently. */
 	kind: FilterChipKind
 	/**
-	 * True when this filter is part of the not-yet-applied draft under `deferredApply` — i.e.
+	 * True when this filter is part of the not-yet-applied draft under `draft` — i.e.
 	 * it differs from (or is absent from) `table.getState().applied`. Kits render this as
 	 * `data-draft-filter=""` on the chip's root element.
 	 */
@@ -612,7 +612,7 @@ export type SelectionBarProps = {
 }
 
 /**
- * Pending-draft section of the shared action bar (`deferredApply`).
+ * Pending-draft section of the shared action bar (`draft`).
  *
  * While a draft is pending this section owns the bar and the selection section
  * stands down — see `<DraftBar>`. `selectedCount` is therefore rendered as a

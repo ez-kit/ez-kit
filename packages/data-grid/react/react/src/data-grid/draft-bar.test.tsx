@@ -6,13 +6,13 @@ import { renderGrid } from '../test-utils'
 
 describe('DraftBar', () => {
 	it('is closed when nothing is pending', () => {
-		renderGrid({ deferredApply: true, sorting: { manual: true } })
+		renderGrid({ draft: true, sorting: { manual: true } })
 
 		expect(screen.queryByTestId('draft-bar')).toBeNull()
 	})
 
 	it('opens with the pending counts once a sort is drafted', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
 
 		table.setSorting([{ id: 'age', desc: true }])
 
@@ -21,7 +21,7 @@ describe('DraftBar', () => {
 	})
 
 	it('takes over the bar from the selection section while pending', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true }, selection: true })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true }, selection: true })
 		table.setRowSelection({ '1': true })
 
 		table.setSorting([{ id: 'age', desc: true }])
@@ -33,7 +33,7 @@ describe('DraftBar', () => {
 
 	it('renders the same variant the selection bar is configured with', async () => {
 		const { table } = renderGrid({
-			deferredApply: true,
+			draft: true,
 			sorting: { manual: true },
 			selection: { bar: { variant: 'inline' } },
 		})
@@ -51,7 +51,7 @@ describe('DraftBar', () => {
 	})
 
 	it('falls back to the floating variant when the panel config omits one', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true }, selection: true })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true }, selection: true })
 
 		table.setSorting([{ id: 'age', desc: true }])
 
@@ -59,7 +59,7 @@ describe('DraftBar', () => {
 	})
 
 	it('applies the draft when Apply is pressed', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
 		table.setSorting([{ id: 'age', desc: true }])
 
 		await userEvent.click(await screen.findByRole('button', { name: /apply/i }))
@@ -68,7 +68,7 @@ describe('DraftBar', () => {
 	})
 
 	it('restores the applied query when Reset is pressed', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
 		table.setSorting([{ id: 'age', desc: true }])
 
 		await userEvent.click(await screen.findByRole('button', { name: /reset/i }))
@@ -78,7 +78,7 @@ describe('DraftBar', () => {
 
 	it('applies the whole draft when Enter is pressed in a filter input', async () => {
 		const { table } = renderGrid({
-			deferredApply: true,
+			draft: true,
 			sorting: { manual: true },
 			filtering: { manual: true },
 		})
@@ -93,7 +93,7 @@ describe('DraftBar', () => {
 
 	it('applies the whole draft when Enter is pressed in the global search input', async () => {
 		const { table } = renderGrid({
-			deferredApply: true,
+			draft: true,
 			sorting: { manual: true },
 			globalFiltering: true,
 		})
@@ -106,7 +106,7 @@ describe('DraftBar', () => {
 		expect(table.getState().applied.sorting).toEqual([{ id: 'age', desc: true }])
 	})
 
-	it('does nothing on Enter in a filter input when deferredApply is off', async () => {
+	it('does nothing on Enter in a filter input when draft is off', async () => {
 		renderGrid({
 			filtering: { manual: true },
 			globalFiltering: true,
@@ -115,14 +115,14 @@ describe('DraftBar', () => {
 		const search = await screen.findByRole('textbox', { name: /search/i })
 		await userEvent.type(search, 'An{Enter}')
 
-		// No draft exists off deferredApply; the key is a no-op rather than throwing.
+		// No draft exists off draft; the key is a no-op rather than throwing.
 		expect(search).toHaveValue('An')
 	})
 })
 
 describe('deferred-apply DOM marks', () => {
 	it('marks an unapplied sort on the header cell', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
 
 		table.setSorting([{ id: 'age', desc: true }])
 
@@ -131,7 +131,7 @@ describe('deferred-apply DOM marks', () => {
 	})
 
 	it('drops the mark once the draft is applied', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
 		table.setSorting([{ id: 'age', desc: true }])
 
 		table.draft.apply()
@@ -141,7 +141,7 @@ describe('deferred-apply DOM marks', () => {
 	})
 
 	it('leaves an untouched sortable header unmarked while another column is drafted', async () => {
-		const { table } = renderGrid({ deferredApply: true, sorting: { manual: true } })
+		const { table } = renderGrid({ draft: true, sorting: { manual: true } })
 
 		table.setSorting([{ id: 'name', desc: false }])
 		table.draft.apply()
@@ -157,7 +157,7 @@ describe('deferred-apply DOM marks', () => {
 		expect(ageHeader).toHaveAttribute('data-draft-sorting', '1')
 	})
 
-	it('has no data-draft-sorting when deferredApply is off', async () => {
+	it('has no data-draft-sorting when draft is off', async () => {
 		const { table } = renderGrid({ sorting: true })
 
 		table.setSorting([{ id: 'age', desc: true }])
@@ -168,7 +168,7 @@ describe('deferred-apply DOM marks', () => {
 
 	it('marks an unapplied column filter chip with data-draft-filter', async () => {
 		const { table } = renderGrid({
-			deferredApply: true,
+			draft: true,
 			sorting: { manual: true },
 			filtering: { manual: true, chips: true },
 		})
@@ -181,7 +181,7 @@ describe('deferred-apply DOM marks', () => {
 
 	it('drops data-draft-filter once the filter draft is applied', async () => {
 		const { table } = renderGrid({
-			deferredApply: true,
+			draft: true,
 			sorting: { manual: true },
 			filtering: { manual: true, chips: true },
 		})

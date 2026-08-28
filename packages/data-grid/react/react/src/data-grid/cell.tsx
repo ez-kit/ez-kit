@@ -251,7 +251,9 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 		editMode === 'cell' ? s.editing.cellId === cellId : s.editing.rowId === row.id,
 	)
 
-	if (isEditing && (editMode === 'cell' || meta?.editing !== false)) {
+	const isColumnEditable = meta?.editing !== false
+
+	if (isEditing && isColumnEditable) {
 		return (
 			<EditingCell
 				cell={cell}
@@ -263,8 +265,10 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	}
 
 	// ── normal view cell ───────────────────────────────────────────────────────
+	// `editing: false` opts a column out at every mode, cell mode included: it used to be
+	// bypassed here, so a read-only column still became an input on double-click.
 	const handleDoubleClick =
-		editMode === 'cell'
+		editMode === 'cell' && isColumnEditable
 			? () => {
 					table.editing.startCell(row.id, columnId)
 				}

@@ -58,7 +58,7 @@ export type DataGridHeaderCellProps = {
 }
 
 /**
- * Position of `columnId` in the not-yet-applied sort under `deferredApply`, or `-1` when the
+ * Position of `columnId` in the not-yet-applied sort under `draft`, or `-1` when the
  * column isn't part of a pending sort.
  *
  * Compares the draft entry at each index against the applied entry at the same index — not a
@@ -67,7 +67,7 @@ export type DataGridHeaderCellProps = {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function computeDraftSortIndex(table: DataTable<any>, columnId: string): number {
-	if (table.options.deferredApply !== true) return -1
+	if (table.options.draft !== true) return -1
 	const draftSorting = table.draft.get().sorting
 	const appliedSorting = table.getState().applied.sorting
 	const draftIndex = draftSorting.findIndex((s) => s.id === columnId)

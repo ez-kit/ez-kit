@@ -27,7 +27,7 @@ export const GridFeature = {
 	Filtering: 'filtering',
 	Editing: 'editing',
 	Selection: 'selection',
-	/** Pending-draft section of the shared action bar (`deferredApply`). */
+	/** Pending-draft section of the shared action bar (`draft`). */
 	Draft: 'draft',
 	/** Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`). */
 	RowActions: 'row-actions',

@@ -16,7 +16,7 @@ Import everything from the kit. Its `createColumns` / `createColumnHelper` are b
 
 ```tsx
 import { DataGrid, createColumns, useDataGrid } from '@ez-kit/data-grid-shadcn'
-import '@ez-kit/data-grid-shadcn/global.css'
+import '@ez-kit/data-grid-shadcn/styles.css'
 
 type User = { name: string; role: string }
 

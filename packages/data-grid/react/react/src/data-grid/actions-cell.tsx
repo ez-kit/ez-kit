@@ -121,7 +121,7 @@ export function buildCustomItems(items: RowActionItem<ReactElement>[]): GridMenu
 			label: item.label,
 			...(icon !== undefined ? { icon } : {}),
 			...(item.disabled !== undefined ? { disabled: item.disabled } : {}),
-			...(item.danger !== undefined ? { danger: item.danger } : {}),
+			...(item.destructive !== undefined ? { destructive: item.destructive } : {}),
 			onSelect: item.onSelect,
 		}
 	})
@@ -222,7 +222,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				id: RowActionId.Delete,
 				label: LABELS[RowActionId.Delete],
 				icon: ICONS[RowActionId.Delete],
-				danger: true,
+				destructive: true,
 				onSelect: () => {
 					table.deleting.request(row.id)
 				},

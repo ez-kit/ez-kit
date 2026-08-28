@@ -88,7 +88,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
 	const columnFilters = table.getState().columnFilters
 	const globalFilter = table.getState().globalFilter as unknown
-	const deferredApply = table.options.deferredApply === true
+	const isDrafting = table.options.draft === true
 	const applied = table.getState().applied
 
 	type ChipDescriptor = {
@@ -118,7 +118,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 				column.setFilterValue(undefined)
 			},
 			kind: FilterChipKind.Column,
-			isDraft: deferredApply && !sameFilterValue(appliedFilter?.value, cf.value),
+			isDraft: isDrafting && !sameFilterValue(appliedFilter?.value, cf.value),
 		})
 	}
 
@@ -131,7 +131,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 				table.setGlobalFilter(undefined)
 			},
 			kind: FilterChipKind.Global,
-			isDraft: deferredApply && !sameFilterValue(applied.globalFilter, globalFilter),
+			isDraft: isDrafting && !sameFilterValue(applied.globalFilter, globalFilter),
 		})
 	}
 

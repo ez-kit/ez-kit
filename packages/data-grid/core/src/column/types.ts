@@ -542,11 +542,16 @@ export type BuiltInSortingFn = (typeof BuiltInSortingFn)[keyof typeof BuiltInSor
 /**
  * Where `undefined` values land during a sort.
  *
- * The const object carries only the two **named** members. The other two arms of the union
- * are not part of a named set and deliberately get no member: `-1` / `1` are TanStack's raw
- * `sortUndefined` numbers, forwarded verbatim for anyone already writing them, and `false` is
- * the absence of any special placement (treat `undefined` as `0`), not a third position. A
- * member for either would be inventing a name for something that has none.
+ * The const object carries the two named positions. `false` — the absence of any special
+ * placement, i.e. treat `undefined` as `0` — is the union's third arm and deliberately gets
+ * no member: it is not a position, so naming it would invent a name for something that has
+ * none. It reads as the same `false` every other per-column switch takes.
+ *
+ * TanStack's raw `sortUndefined` numbers (`-1` / `1`) are **not** accepted. They were, and
+ * that left one concept with four spellings — `'first'` and `-1` meaning the same thing two
+ * columns apart — plus a raw pass-through of TanStack's vocabulary on a grid-level option.
+ * `'first'` / `'last'` say which end without anyone having to remember which way the sign
+ * points; the mapping to `sortUndefined` happens in `mapColumns`.
  *
  * Named members for internal reference; the option is typed as the plain union, so
  * `undefined: 'last'` is equally valid and needs no import.
@@ -558,7 +563,7 @@ export const ColumnSortUndefined = {
 	Last: 'last',
 } as const
 
-export type ColumnSortUndefined = (typeof ColumnSortUndefined)[keyof typeof ColumnSortUndefined] | -1 | 1 | false
+export type ColumnSortUndefined = (typeof ColumnSortUndefined)[keyof typeof ColumnSortUndefined] | false
 
 /**
  * Column-level sorting config.

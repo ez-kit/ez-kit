@@ -69,7 +69,7 @@ export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuPro
 									key={item.id}
 									id={item.id}
 									textValue={item.label}
-									variant={item.danger ? 'danger' : 'default'}
+									variant={item.destructive ? 'danger' : 'default'}
 								>
 									{renderGridMenuIcon(item.icon)} {item.label}
 								</Dropdown.Item>

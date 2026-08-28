@@ -20,12 +20,12 @@ function makeTable(overrides: Record<string, unknown> = {}) {
 		sorting: { manual: true },
 		filtering: { manual: true },
 		globalFiltering: true,
-		deferredApply: true,
+		draft: true,
 		...overrides,
 	})
 }
 
-describe('deferredApply — applied snapshot', () => {
+describe('draft — applied snapshot', () => {
 	it('is not dirty on a fresh table', () => {
 		expect(makeTable().draft.isDirty()).toBe(false)
 	})
@@ -78,7 +78,7 @@ describe('deferredApply — applied snapshot', () => {
 	})
 })
 
-describe('deferredApply — apply / reset', () => {
+describe('draft — apply / reset', () => {
 	it('apply() moves the draft into the applied snapshot and clears dirtiness', () => {
 		const table = makeTable()
 		table.setSorting([{ id: 'age', desc: true }])
@@ -144,7 +144,7 @@ describe('deferredApply — apply / reset', () => {
 	})
 })
 
-describe('deferredApply — emission gating', () => {
+describe('draft — emission gating', () => {
 	function makeSpyTable() {
 		const calls: { sorting: unknown[]; state: number } = { sorting: [], state: 0 }
 		const table = createTable({
@@ -154,7 +154,7 @@ describe('deferredApply — emission gating', () => {
 			filtering: { manual: true },
 			globalFiltering: true,
 			pagination: { manual: true, pageSize: 10, rowCount: 100 },
-			deferredApply: true,
+			draft: true,
 			onStateChange: () => {
 				calls.state += 1
 			},
@@ -209,7 +209,7 @@ describe('deferredApply — emission gating', () => {
 			filtering: { manual: true },
 			globalFiltering: true,
 			pagination: { manual: true, pageSize: 10, rowCount: 100 },
-			deferredApply: true,
+			draft: true,
 			onStateChange: (state) => {
 				seen.push(state)
 			},
@@ -285,7 +285,7 @@ describe('deferredApply — emission gating', () => {
 			sorting: { manual: true },
 			filtering: { manual: true, onChange: (f) => filterCalls.push(f) },
 			globalFiltering: { onChange: (g) => globalCalls.push(g) },
-			deferredApply: true,
+			draft: true,
 		})
 
 		table.setColumnFilters([{ id: 'name', value: 'An' }])
@@ -300,7 +300,7 @@ describe('deferredApply — emission gating', () => {
 		expect(globalCalls).toEqual(['an'])
 	})
 
-	it('behaves exactly as today when deferredApply is off', () => {
+	it('behaves exactly as today when draft is off', () => {
 		const calls: number[] = []
 		const table = createTable({
 			data: DATA,
@@ -316,7 +316,7 @@ describe('deferredApply — emission gating', () => {
 	})
 })
 
-describe('deferredApply — controlled input and misconfiguration', () => {
+describe('draft — controlled input and misconfiguration', () => {
 	it('does not let controlled state clobber a pending draft', () => {
 		const table = makeTable()
 		table.setSorting([{ id: 'age', desc: true }])
@@ -345,9 +345,7 @@ describe('deferredApply — controlled input and misconfiguration', () => {
 		expect(table.getState().sorting).toEqual([{ id: 'name', desc: false }])
 	})
 
-	it('throws when deferredApply is set without a manual axis', () => {
-		expect(() => createTable({ data: DATA, columns: COLUMNS, sorting: true, deferredApply: true })).toThrow(
-			/deferredApply requires/,
-		)
+	it('throws when draft is set without a manual axis', () => {
+		expect(() => createTable({ data: DATA, columns: COLUMNS, sorting: true, draft: true })).toThrow(/`draft` requires/)
 	})
 })

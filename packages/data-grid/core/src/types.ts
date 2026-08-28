@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { ColumnDef, SortingFn } from './column/types'
 import type { CreatingConfig } from './features/creating'
+import type { DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
 import type { FilterOperatorDef } from './features/operators'
@@ -324,17 +325,21 @@ export type LoadingState = {
 export type PaginationTotals = { rowCount?: number; pageCount?: never } | { pageCount?: number; rowCount?: never }
 
 /**
- * What pagination *does* — not how it looks, hence `mode` rather than `variant`. How the page
- * footer *looks* is `PaginationVariant`, a separate option on the React adapter.
+ * What pagination *does* — not how it looks, hence `mode` rather than `variant`. How the
+ * pagination bar *looks* is `PaginationVariant`, a separate option on the React adapter.
+ *
+ * "Footer" is deliberately not used for it anywhere in this API: that word belongs to the
+ * `<tfoot>` summary row — `column.footer`, `column.footerClassName`, `align.footer`,
+ * `<DataGrid.Footer />` — and one word for two rows is how a reader ends up in the wrong one.
  *
  * Named members for internal reference; the option is typed as the plain string union, so
  * `mode: 'infinite'` is equally valid and needs no import.
  */
 export const PaginationMode = {
-	/** Classic page footer over a paged row model. The default. */
+	/** Classic pagination bar over a paged row model. The default. */
 	Pages: 'pages',
 	/**
-	 * Infinite scroll — mutually exclusive with the page footer. The grid is **event-only**:
+	 * Infinite scroll — mutually exclusive with the pagination bar. The grid is **event-only**:
 	 * it calls {@link PaginationConfig.onLoadMore} at a load edge and the consumer appends rows.
 	 */
 	Infinite: 'infinite',
@@ -659,8 +664,16 @@ export type TableConfig<TRow extends object> = {
 	 * those three axes accumulate as a draft and reach `onStateChange` only when
 	 * `table.draft.apply()` runs — one state change, one request, instead of one
 	 * per keystroke. Requires `manual: true` on at least one of the three.
+	 *
+	 * Named for the thing it produces, like every other feature: the API it turns on is
+	 * `table.draft`, the state it seeds is `initialState.draft`, the bar that reports it is
+	 * `<DataGrid.DraftBar />`, and the axes are `DraftAxis`. It was `deferredApply`,
+	 * which left one feature answering to two words depending on where you touched it.
+	 *
+	 * The object form exists for the same reason every other feature has one — `enabled: false`
+	 * turns off a `draft` that arrived from a defaults layer.
 	 */
-	deferredApply?: boolean
+	draft?: boolean | DraftConfig
 	/**
 	 * The per-row actions column (`__actions__`), which holds edit, delete and the row-pin
 	 * menu — how those are presented, and any application actions of your own.
@@ -699,7 +712,7 @@ export type TableConfig<TRow extends object> = {
 	 * Receives the **resolved** next state — assign it to your own state to implement
 	 * controlled mode.
 	 *
-	 * Under {@link TableConfig.deferredApply} this fires only when the query the consumer
+	 * Under {@link TableConfig.draft} this fires only when the query the consumer
 	 * is allowed to see actually changes: draft edits stay silent, and the state handed
 	 * over carries the applied snapshot on `sorting` / `columnFilters` / `globalFilter`
 	 * rather than the pending draft.

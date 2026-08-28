@@ -22,12 +22,12 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
-		"./global.css": "./dist/global.css"
+		"./styles.css": "./dist/styles.css"
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/global.css dist/global.css",
+		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/styles.css dist/styles.css",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",

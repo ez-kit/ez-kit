@@ -160,13 +160,15 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasEditing = isFeatureEnabled(config.editing)
 	const hasDeleting = isFeatureEnabled(config.deleting)
 
-	if (config.deferredApply === true) {
+	const hasDraft = isFeatureEnabled(config.draft)
+
+	if (hasDraft) {
 		const sortingManual = sortingCfg?.manual === true
 		const filteringManual = filteringCfg?.manual === true
 		const globalFilteringManual = globalFilteringCfg?.manual === true
 		if (!sortingManual && !filteringManual && !globalFilteringManual) {
 			throw new Error(
-				'deferredApply requires `manual: true` on at least one of `sorting`, `filtering` or `globalFiltering`. ' +
+				'`draft` requires `manual: true` on at least one of `sorting`, `filtering` or `globalFiltering`. ' +
 					'Client-side deferral is not supported: without manual mode the row models recompute ' +
 					'on every draft edit, so nothing is actually deferred.',
 			)
@@ -328,12 +330,12 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		table: null,
 	}
 
-	const deferred = config.deferredApply === true
+	const deferred = hasDraft
 
 	/**
 	 * The snapshot the outside world is allowed to see: the three deferrable axes
 	 * replaced by the applied snapshot, and `applied` itself dropped. With
-	 * `deferredApply` off this is the identity function.
+	 * `draft` off this is the identity function.
 	 *
 	 * The `applied` guard covers the window before the store is rebuilt from
 	 * `table.initialState` below, where a state change raised during construction
@@ -356,7 +358,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	 * Reference comparison across **every** slice the outward snapshot carries,
 	 * derived from the objects rather than a hand-written list. A slice omitted
 	 * from a fixed list would be a state change that silently never reaches the
-	 * consumer while `deferredApply` is on — a far worse failure than one extra
+	 * consumer while `draft` is on — a far worse failure than one extra
 	 * emission, and one that grows every time a feature adds a slice.
 	 */
 	const outwardUnchanged = (a: TableState, b: TableState): boolean => {
@@ -371,7 +373,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	}
 
 	/**
-	 * With `deferredApply` off there is no draft, so the applied snapshot must track
+	 * With `draft` off there is no draft, so the applied snapshot must track
 	 * the live axes — otherwise `table.draft.isDirty()` would report a phantom draft
 	 * for every consumer that never opted in. Returns the same object when already
 	 * in sync so the funnel's reference comparisons stay meaningful.
@@ -574,7 +576,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 				}
 			: {}),
 		// Mirrored onto options so the React layer can gate the draft UI on the flag itself.
-		...(deferred ? { deferredApply: true } : {}),
+		...(deferred ? { draft: true } : {}),
 		// Virtualization config — stored for React layer to read; no TanStack core effect
 		...(isFeatureEnabled(config.virtualization) ? { virtualization: config.virtualization } : {}),
 	}

@@ -80,14 +80,14 @@ application actions has neither the room nor a guaranteed icon.
 
 ### Entry shape
 
-| Field      | Type                           | Description                                                                                                                          |
-| ---------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`       | `string`                       | Required. Stable within the menu. Namespaced internally, so it cannot collide with a built-in action.                                |
-| `label`    | `string`                       | Required. The wording rendered in the menu.                                                                                          |
-| `icon`     | `GridMenuIcon \| ReactElement` | A built-in glyph name (`'edit'`, `'delete'`, `'pin-top'`, …) the kit maps to its own icon, or your own element. Omit for label-only. |
-| `disabled` | `boolean`                      | Renders the entry inert.                                                                                                             |
-| `danger`   | `boolean`                      | Renders the entry in the kit's destructive colour, like the built-in Delete.                                                         |
-| `onSelect` | `() => void`                   | Required. Runs when the entry is chosen.                                                                                             |
+| Field         | Type                           | Description                                                                                                                          |
+| ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`          | `string`                       | Required. Stable within the menu. Namespaced internally, so it cannot collide with a built-in action.                                |
+| `label`       | `string`                       | Required. The wording rendered in the menu.                                                                                          |
+| `icon`        | `GridMenuIcon \| ReactElement` | A built-in glyph name (`'edit'`, `'delete'`, `'pin-top'`, …) the kit maps to its own icon, or your own element. Omit for label-only. |
+| `disabled`    | `boolean`                      | Renders the entry inert.                                                                                                             |
+| `destructive` | `boolean`                      | Renders the entry in the kit's destructive colour, like the built-in Delete.                                                         |
+| `onSelect`    | `() => void`                   | Required. Runs when the entry is chosen.                                                                                             |
 
 The built-in vocabulary names grid affordances — edit, delete, pin, sort, hide — so an application
 action such as _Duplicate_ has no honest member of it and brings its own element instead:

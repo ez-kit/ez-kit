@@ -109,7 +109,7 @@ export type {
 	CreatingState,
 } from './features/creating'
 export { DraftAxis } from './features/deferred-apply'
-export type { AppliedState, DraftApi, PendingCount, QueryDraft } from './features/deferred-apply'
+export type { AppliedState, DraftApi, DraftConfig, PendingCount, QueryDraft } from './features/deferred-apply'
 export type {
 	BulkConfirmationConfig,
 	BulkDeletingApi,

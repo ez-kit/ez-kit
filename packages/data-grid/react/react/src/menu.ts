@@ -3,7 +3,7 @@
  *
  * There used to be two: `ColumnMenu` (a `sections` object of pin / sorting / visibility
  * callbacks) and `RowActionsMenu` (a flat `items` array). Both rendered the same thing —
- * a trigger plus icon+label entries with danger and disabled states — so every kit
+ * a trigger plus icon+label entries with destructive and disabled states — so every kit
  * implemented that twice, and the two drifted. One shape, one component, one icon map.
  */
 
@@ -33,8 +33,8 @@ export type GridMenuItem = {
 	 */
 	icon?: GridMenuIcon | ReactElement
 	disabled?: boolean
-	/** Destructive entry — kits render it in a danger colour. */
-	danger?: boolean
+	/** Destructive entry — kits render it in their danger colour. */
+	destructive?: boolean
 	onSelect: () => void
 }
 

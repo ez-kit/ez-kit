@@ -264,7 +264,7 @@ screen under a dimming overlay. See [Fallbacks](/docs/data-grid/fallbacks) for h
 ### Or: let the user compose the query, then send it once
 
 Every example above fetches the moment anything changes: a second sort level is a second request, a
-third filter a third. `deferredApply` turns that around. Sorting, column filters and global search
+third filter a third. `draft` turns that around. Sorting, column filters and global search
 stop leaving the grid on change — they accumulate as a **draft**, an action bar reports what is
 pending, and the whole query reaches you as **one** state change when the user presses Apply.
 
@@ -278,7 +278,7 @@ search box applies the whole draft, not just the field you are in.
 <DataGrid
 	data={rows}
 	columns={orderColumns}
-	deferredApply
+	draft
 	pagination={{ manual: true, rowCount }}
 	sorting={{ manual: true, multi: { max: 3, event: 'ctrl' } }}
 	filtering={{ manual: true }}
@@ -292,7 +292,8 @@ search box applies the whole draft, not just the field you are in.
 
 Four things to know before you turn it on:
 
-**It requires manual mode.** `deferredApply` needs `manual: true` on `sorting` or on `filtering` —
+**It requires manual mode.** `draft` needs `manual: true` on `sorting`, `filtering` or
+`globalFiltering` —
 deferring a query the browser answers locally would only add a click. Without it the grid **throws**
 at construction rather than quietly doing nothing.
 
@@ -304,7 +305,7 @@ pending, nothing is emitted at all. `table.draft.apply()` then emits once, with 
 the selected rows out of the result set. Applying a clean draft is a no-op.
 
 **`onStateChange` receives a resolved state, not an updater.** This is a break from earlier versions
-across the whole grid, `deferredApply` or not: passing the updater through would hand you a function
+across the whole grid, `draft` or not: passing the updater through would hand you a function
 that recomputes from _your_ state and reintroduces the draft you were never meant to see.
 
 ```diff
@@ -313,7 +314,7 @@ that recomputes from _your_ state and reintroduces the draft you were never mean
 ```
 
 **The draft is grid-owned.** Mirroring `onStateChange`'s output straight back through `state` — the
-ordinary controlled loop, and what the diff above already does — stays safe with `deferredApply` on.
+ordinary controlled loop, and what the diff above already does — stays safe with `draft` on.
 Your copy only ever holds the _applied_ query, because `onStateChange` stays silent for draft edits,
 so on every re-render it is stale by construction for `sorting`, `columnFilters` and `globalFilter`.
 The grid knows this and ignores exactly those three slices out of what you pass back while a draft is

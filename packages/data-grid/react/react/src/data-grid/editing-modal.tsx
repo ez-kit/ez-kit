@@ -1,63 +1,36 @@
-import { CommitStatus } from '@ez-kit/data-grid-core'
-
-import { useGridComponents } from '../components-context'
-
-import { AutoForm, AutoFormMode } from './auto-form'
+import { AutoFormMode } from './auto-form'
+import { FormModalHost } from './form-modal'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { DataGridFormModalProps } from './form-modal'
+
+export type DataGridEditingModalProps = DataGridFormModalProps
+
 /**
- * Modal for editing a row (editing.mode = 'modal').
- * Prefers <FormShell> (renders form-level error banner + pending Save) when
- * registered; falls back to generic <Modal>. Throws if neither is provided.
+ * Modal for editing a row (`editing.mode: 'modal'`).
+ *
+ * Renders nothing while no row is being edited. See {@link DataGridFormModalProps} for
+ * replacing the dialog while keeping the generated fields.
  */
-export function EditingModal() {
+export function EditingModal({ children }: DataGridEditingModalProps = {}) {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.editing)
-	const { Modal, FormShell } = useGridComponents().editing
 	const state = table.editing.getState()
-	const isOpen = Boolean(state.rowId)
 
-	if (!isOpen) return null
-
-	const onSave = (): Promise<void> => table.editing.commit()
-	const onCancel = (): void => {
-		table.editing.cancel()
-	}
-
-	// FormShell may be overridden to undefined/null via components prop at runtime
-	const ShellComponent = FormShell as typeof FormShell | undefined
-	if (ShellComponent) {
-		return (
-			<ShellComponent
-				open={isOpen}
-				title='Edit'
-				formError={state.formError}
-				isPending={state.commitStatus !== CommitStatus.Idle}
-				onSave={onSave}
-				onCancel={onCancel}
-			>
-				<AutoForm mode={AutoFormMode.Editing} />
-			</ShellComponent>
-		)
-	}
-
-	const ModalComponent = Modal as typeof Modal | undefined
-	if (!ModalComponent) {
-		throw new Error(
-			'[@ez-kit/data-grid] editing.mode is "modal" but no Modal or FormShell component was provided. ' +
-				'Pass a FormShell (preferred) or Modal via <DataGrid components={{ FormShell }}>.',
-		)
-	}
+	if (!state.rowId) return null
 
 	return (
-		<ModalComponent
-			open={isOpen}
-			onClose={onCancel}
-			onSave={() => void onSave()}
-			onCancel={onCancel}
+		<FormModalHost
+			{...(children !== undefined ? { children } : {})}
+			mode={AutoFormMode.Editing}
+			feature='editing'
 			title='Edit'
-		>
-			<AutoForm mode={AutoFormMode.Editing} />
-		</ModalComponent>
+			formError={state.formError}
+			commitStatus={state.commitStatus}
+			onSave={() => table.editing.commit()}
+			onCancel={() => {
+				table.editing.cancel()
+			}}
+		/>
 	)
 }

@@ -32,7 +32,7 @@ export type RenderFilterInputArgs = {
 	debounce: number
 	/**
 	 * The live table instance, used only to wire "Enter applies the whole draft" on the
-	 * fallback text inputs under `deferredApply`. Optional so existing callers/tests that
+	 * fallback text inputs under `draft`. Optional so existing callers/tests that
 	 * construct a minimal `header` stub need not also fabricate a table.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -139,7 +139,7 @@ export function renderFilterInput({
 	// search commit together in one request. `undefined` under non-deferred tables so Enter
 	// keeps whatever meaning it has today (e.g. form submission).
 	const onEnterApply =
-		table?.options.deferredApply === true
+		table?.options.draft === true
 			? () => {
 					table.draft.apply()
 				}

@@ -84,7 +84,7 @@ export function SelectionBar({ children }: DataGridSelectionBarProps = {}) {
 	const { SelectionBar: SelectionBarComponent } = useGridComponents().selection
 
 	// The draft section owns the bar while a query is pending — see DraftBar.
-	if (table.options.deferredApply === true && table.draft.isDirty()) return null
+	if (table.options.draft === true && table.draft.isDirty()) return null
 
 	const rawConfig = table.grid.selection.bar
 

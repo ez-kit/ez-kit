@@ -19,7 +19,7 @@ export function ProductionDeferredApplyExample() {
 		<DataGrid
 			data={orders.rows}
 			columns={orderColumns}
-			deferredApply
+			draft
 			pagination={{
 				manual: true,
 				rowCount: orders.rowCount,

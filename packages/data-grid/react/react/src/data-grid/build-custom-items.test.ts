@@ -39,12 +39,12 @@ describe('buildCustomItems', () => {
 		expect(item?.label).toBe('Send invoice')
 	})
 
-	it('carries disabled, danger and onSelect through', () => {
+	it('carries disabled, destructive and onSelect through', () => {
 		const onSelect = () => {}
-		const [item] = buildCustomItems([{ id: 'purge', label: 'Purge', disabled: true, danger: true, onSelect }])
+		const [item] = buildCustomItems([{ id: 'purge', label: 'Purge', disabled: true, destructive: true, onSelect }])
 
 		expect(item?.disabled).toBe(true)
-		expect(item?.danger).toBe(true)
+		expect(item?.destructive).toBe(true)
 		expect(item?.onSelect).toBe(onSelect)
 	})
 })

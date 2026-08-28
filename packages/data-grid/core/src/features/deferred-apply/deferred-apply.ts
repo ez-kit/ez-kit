@@ -1,3 +1,4 @@
+import type { FeatureToggle } from '../../utils/feature-flag'
 import type {
 	ColumnFiltersState,
 	InitialTableState,
@@ -46,6 +47,17 @@ export type PendingCount = {
 	search: boolean
 }
 
+/**
+ * Table-level draft config.
+ *
+ * Carries nothing but the shared {@link FeatureToggle} today: the feature has no knobs, and
+ * inventing some to justify an object would be speculative. It exists so `draft` reads like
+ * every other feature switch — `draft: { enabled: false }` turns off a `draft` inherited from
+ * a defaults layer, which the bare boolean this replaced could not express — and so the first
+ * real option can be added without a breaking change.
+ */
+export type DraftConfig = FeatureToggle
+
 export type DraftApi = {
 	get: () => QueryDraft
 	set: (next: Partial<QueryDraft>) => void
@@ -76,10 +88,10 @@ declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
 	interface TableOptionsResolved<TData extends RowData> {
 		/**
-		 * Mirrors `TableConfig.deferredApply`. Present only when deferral is on, so a
-		 * UI layer can gate on the option itself rather than inferring it from state.
+		 * Mirrors `TableConfig.draft`, resolved to a plain boolean. Present only when deferral
+		 * is on, so a UI layer can gate on the option itself rather than inferring it from state.
 		 */
-		deferredApply?: boolean
+		draft?: boolean
 	}
 }
 

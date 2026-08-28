@@ -188,7 +188,18 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.Composition,
 		optionTables: [],
-		nonOptionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Header rows and cells: keep the chrome, change the markup',
+				reason:
+					'Names the render args `<DataGrid.HeaderCell>` hands its children (`label`, `sortTrigger`, `menu`, `filter`, …), not config keys — they are properties of a callback argument, not options anyone sets.',
+			},
+			{
+				heading: 'Fallbacks, modals and bars',
+				reason:
+					'Maps compound slots to the condition that mounts them and the render args they pass. The left column is JSX element names, not option keys.',
+			},
+		],
 	},
 	{
 		page: DocPage.EditingCrudClient,
