@@ -34,8 +34,15 @@
 	},
 	"size-limit": [
 		{
+			"name": "everything (JSX API + config layer)",
 			"path": "dist/index.js",
-			"limit": "20 KB"
+			"limit": "24 KB"
+		},
+		{
+			"name": "config-layer helpers alone (no createForm)",
+			"path": "dist/index.js",
+			"import": "{ stripHiddenValues, clampToGridRange, GRID_MIN, GRID_MAX, FormFieldType }",
+			"limit": "2 KB"
 		}
 	],
 	"dependencies": {

@@ -32,6 +32,22 @@
 		"exportName": "NativeApiExample"
 	},
 	{
+		"id": "form-schema-basic",
+		"label": "Schema: basic",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/schema-basic.tsx",
+		"exportName": "SchemaBasicExample"
+	},
+	{
+		"id": "form-schema-conditional",
+		"label": "Schema: conditions",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/schema-conditional.tsx",
+		"exportName": "SchemaConditionalExample"
+	},
+	{
 		"id": "form-dialog",
 		"label": "In a dialog",
 		"group": "form",

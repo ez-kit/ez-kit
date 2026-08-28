@@ -3,5 +3,15 @@
 	"description": "TanStack Form with dependency-injected shadcn and HeroUI fields",
 	"icon": "TextCursorInput",
 	"root": true,
-	"pages": ["index", "getting-started", "installation", "fields", "validation", "native-api", "custom-kit", "ai"]
+	"pages": [
+		"index",
+		"getting-started",
+		"installation",
+		"fields",
+		"validation",
+		"schema",
+		"native-api",
+		"custom-kit",
+		"ai"
+	]
 }

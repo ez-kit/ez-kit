@@ -5,7 +5,9 @@ import { createContext, useContext } from 'react'
 import type {
 	AnyFormProps,
 	FormControlledProps,
+	FormRendererControlledProps,
 	Form as ShadcnForm,
+	FormRenderer as ShadcnFormRenderer,
 	useForm as useShadcnForm,
 } from '@ez-kit/form-shadcn'
 import type { ReactNode } from 'react'
@@ -25,12 +27,13 @@ import type { ReactNode } from 'react'
  */
 // Re-exported so an example imports everything from this one specifier: the source panel
 // rewrites it to the kit package, and both kits re-export these from `@ez-kit/form-react`.
-export { TextInputType } from '@ez-kit/form-react'
+export { FormFieldType, TextInputType } from '@ez-kit/form-react'
 export type { SelectOption } from '@ez-kit/form-react'
 
 export type FormKit = {
 	useForm: typeof useShadcnForm
 	Form: typeof ShadcnForm
+	FormRenderer: typeof ShadcnFormRenderer
 }
 
 const FormKitContext = createContext<FormKit | null>(null)
@@ -65,3 +68,16 @@ export const Form = ((props: AnyFormProps) => {
 	// modes are one component, so forwarding through either signature is equivalent.
 	return <KitForm {...(props as FormControlledProps)} />
 }) as typeof ShadcnForm
+
+/**
+ * The kit's `<FormRenderer>` — the config-driven entry point — resolved the same way as
+ * `Form` above, and cast for the same reason: the two overloads (controlled / uncontrolled)
+ * would otherwise flatten and an example would lose the inferred value type of `onSubmit`.
+ */
+export const FormRenderer = ((props: FormRendererControlledProps<unknown>) => {
+	const { FormRenderer: KitFormRenderer } = useFormKit()
+
+	// Which overload the props satisfy was settled at the call site; at runtime the two
+	// modes are one component, so forwarding through either signature is equivalent.
+	return <KitFormRenderer {...props} />
+}) as typeof ShadcnFormRenderer

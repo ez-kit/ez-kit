@@ -90,4 +90,33 @@ The flat fields do not care which element they sit in — they bind to the form 
 
 ## Composition helpers
 
-`createFormHook`'s `withForm` and `withFieldGroup` are not re-exported. If you need them, build your own hook with [`createForm`](./form/custom-kit) alongside TanStack's `createFormHook` — the two coexist, since the flat fields are bound per instance rather than through context.
+All four of TanStack's composition helpers are shipped by your kit package.
+
+`withForm` extracts a chunk of a form into its own component. The kit's version is TanStack's, retyped so the flat fields compile inside the block — the `form` a block receives is exactly the instance `useForm` returns:
+
+```tsx
+import { withForm } from '@ez-kit/form-shadcn'
+
+const AddressBlock = withForm({
+	defaultValues: { street: '', city: '' },
+	render: ({ form }) => (
+		<>
+			<form.TextField
+				name='street'
+				label='Street'
+			/>
+			<form.TextField
+				name='city'
+				label='City'
+			/>
+		</>
+	),
+})
+
+// then, inside a form:
+;<AddressBlock form={form} />
+```
+
+**The options are required, not optional.** `defaultValues` (or another option that pins the shape) is the only inference site for the block's form data: `withForm({ render })` infers it as `unknown`, which collapses the legal field names to `never` — no field name is writable inside such a block, and no real form is assignable to it from outside. Always declare a block against the form data it belongs to.
+
+`withFieldGroup`, `useFormGroup` and `useFieldGroup` are re-exported verbatim. They yield a **group** API, which correctly carries no flat field components — inside a group, fields are written with the native `form.Field` / `form.AppField`.
