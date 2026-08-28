@@ -3,7 +3,7 @@ import { featureConfig, isFeatureEnabled } from '../../utils/feature-flag'
 import type { FeatureToggle } from '../../utils/feature-flag'
 import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
-export type ConfirmationConfig = {
+export type ConfirmationConfig = FeatureToggle & {
 	title?: string
 	description?: string | ((row: Row<unknown>) => string)
 }
@@ -13,7 +13,7 @@ export type ConfirmationConfig = {
  * reason: `description` is handed the whole selection, not a row. A prompt that cannot say
  * "Delete 3 orders?" is not a prompt for deleting three orders.
  */
-export type BulkConfirmationConfig = {
+export type BulkConfirmationConfig = FeatureToggle & {
 	title?: string
 	description?: string | ((rows: Row<unknown>[]) => string)
 }
@@ -229,7 +229,7 @@ export const DeletingFeature: TableFeature<RowData> = {
 			request: (rowId) => {
 				const config = table.options.deleting
 				if (!config) return
-				if (config.confirmation) {
+				if (isFeatureEnabled(config.confirmation)) {
 					table.setState((state) => ({ ...state, pendingDeleteRowId: rowId }))
 				} else {
 					void deleteRow(rowId)
@@ -255,7 +255,7 @@ export const DeletingFeature: TableFeature<RowData> = {
 				request: () => {
 					const config = table.options.deleting
 					if (!config || !isFeatureEnabled(config.bulk)) return
-					if (featureConfig(config.bulk)?.confirmation) {
+					if (isFeatureEnabled(featureConfig(config.bulk)?.confirmation)) {
 						table.setState((state) => ({ ...state, pendingBulkDelete: true }))
 						return
 					}

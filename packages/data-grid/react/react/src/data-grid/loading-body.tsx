@@ -1,3 +1,5 @@
+import { featureConfig } from '@ez-kit/data-grid-core'
+
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
@@ -40,7 +42,7 @@ export function LoadingBody({ children }: DataGridLoadingBodyProps = {}) {
 	const loadingConfig = fallbacks?.loading
 
 	const columnCount = table.getVisibleLeafColumns().length
-	const customContent = typeof loadingConfig === 'object' ? loadingConfig.component : undefined
+	const customContent = featureConfig(loadingConfig)?.component
 
 	const content =
 		children !== undefined

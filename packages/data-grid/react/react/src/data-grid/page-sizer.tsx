@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
 export type DataGridPageSizerRenderArgs = {
 	/** The page size currently in effect. */
 	pageSize: number
-	/** The offered sizes, from `pagination.pageSizeOptions`. */
+	/** The offered sizes, from `pagination.items`. */
 	items: number[]
 	/** Commits a new page size and resets to the first page. */
 	onPageSizeChange: (size: number) => void
@@ -19,7 +19,7 @@ export type DataGridPageSizerProps = {
 	 * Custom page-size control, replacing the kit's `PageSizer` component.
 	 *
 	 * Nothing is rendered — `children` included — when page-based pagination is off or
-	 * `pagination.pageSizeOptions` is empty, so a custom control never appears without a
+	 * `pagination.items` is empty, so a custom control never appears without a
 	 * choice to offer.
 	 *
 	 * @example
@@ -45,7 +45,7 @@ export type DataGridPageSizerProps = {
 export function PageSizer({ children }: DataGridPageSizerProps = {}) {
 	const table = useDataGridTable()
 	const { PageSizer: PageSizerComponent } = useGridComponents().pagination
-	const options = table.grid.pagination.pageSizeOptions
+	const options = table.grid.pagination.items
 
 	const pagination = useDataGridState((s) => s.pagination)
 

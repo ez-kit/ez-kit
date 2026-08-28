@@ -1,3 +1,4 @@
+import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
 
 import type { ColumnCreatingConfig, ColumnEditingConfig } from '../../column/types'
@@ -47,7 +48,6 @@ export type CreateDefaultValuesContext<TRow> = {
 }
 
 const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
-const DEFAULT_DEBOUNCE_MS = 200
 const GENERIC_FORM_ERROR = 'Unexpected error'
 
 export type CreatingState = {
@@ -82,8 +82,16 @@ export type CreatingConfig<TData> = FeatureToggle & {
 	/** How the create flow behaves. Default: {@link CreatingMode.Row}. */
 	mode?: CreatingMode
 	validate?: ValidateConfig<TData>
+	/** When a field validates. Default: {@link ValidateOn.Submit}. */
 	validateOn?: ValidateOn
-	validateDebounceMs?: number
+	/**
+	 * Debounce (ms) before validation runs while the user types. Applies only when the resolved
+	 * `validateOn` is {@link ValidateOn.Change}. Default:
+	 * {@link DEFAULT_VALIDATE_DEBOUNCE_MS} (200). Override per column with
+	 * `column.creating.debounce`. Same word and unit as `editing.debounce` and
+	 * `filtering.debounce`.
+	 */
+	debounce?: number
 	/**
 	 * Values the create form opens with, applied **over** the per-column
 	 * `creating.defaultValue` seeds (table level wins per key).
@@ -211,9 +219,9 @@ export const CreatingFeature: TableFeature<RowData> = {
 		}
 
 		const resolveDebounceMs = (columnId: string): number => {
-			const fromColumn = resolveColumnForm(columnId)?.validateDebounceMs
+			const fromColumn = resolveColumnForm(columnId)?.debounce
 			if (fromColumn !== undefined) return fromColumn
-			return getConfig()?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
+			return getConfig()?.debounce ?? DEFAULT_VALIDATE_DEBOUNCE_MS
 		}
 
 		const runValidate = async (values: Record<string, unknown>, ctx: ValidateContext): Promise<ValidationResult> => {

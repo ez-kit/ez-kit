@@ -23,7 +23,7 @@ export type DataGridClearFiltersButtonProps = {
  * `filtering: { toolbar: { alwaysShow: true } }` on the table config) to keep
  * it visible in a disabled state.
  *
- * Auto-mounted by `<Toolbar>` into `Toolbar.right` after `<GlobalFilterInput>`
+ * Auto-mounted by `<Toolbar>` into `Toolbar.end` after `<GlobalFilterInput>`
  * when `filtering.toolbar` is truthy. Can also be placed manually via
  * `<DataGrid.ClearFiltersButton />`.
  *

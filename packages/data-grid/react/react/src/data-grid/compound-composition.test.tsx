@@ -155,7 +155,7 @@ describe('DataGrid.Header — sticky flag', () => {
 
 describe('DataGrid.Toolbar — slots', () => {
 	it('appends `right` after the auto-mounted controls instead of replacing them', () => {
-		renderComposed(<DataGrid.Toolbar right={<button type='button'>Export</button>} />, {
+		renderComposed(<DataGrid.Toolbar end={<button type='button'>Export</button>} />, {
 			visibility: { toolbar: true },
 		})
 		const toolbar = screen.getByRole('toolbar')
@@ -165,8 +165,8 @@ describe('DataGrid.Toolbar — slots', () => {
 	})
 
 	it('appends `left` after the auto-mounted PageSizer', () => {
-		renderComposed(<DataGrid.Toolbar left={<span>Total: 3</span>} />, {
-			pagination: { pageSizeOptions: [5, 10] },
+		renderComposed(<DataGrid.Toolbar start={<span>Total: 3</span>} />, {
+			pagination: { items: [5, 10] },
 		})
 		const toolbar = screen.getByRole('toolbar')
 		expect(within(toolbar).getByText('Total: 3')).toBeInTheDocument()
@@ -175,7 +175,7 @@ describe('DataGrid.Toolbar — slots', () => {
 	})
 
 	it('renders a slot-only toolbar even when no feature auto-mounts anything', () => {
-		renderComposed(<DataGrid.Toolbar right={<button type='button'>Only mine</button>} />)
+		renderComposed(<DataGrid.Toolbar end={<button type='button'>Only mine</button>} />)
 		expect(within(screen.getByRole('toolbar')).getByText('Only mine')).toBeInTheDocument()
 	})
 

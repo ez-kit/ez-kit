@@ -16,7 +16,7 @@ import type {
 	CheckboxProps,
 	VisibilityMenuProps,
 	ConfirmDialogProps,
-	ClearFiltersButtonComponentProps,
+	ClearFiltersButtonProps,
 	DraftBarProps,
 	EmptyStateProps,
 	FilterChipProps,
@@ -229,12 +229,12 @@ function TestColumnVisibilityMenu({ columns }: VisibilityMenuProps) {
 		</div>
 	)
 }
-function TestToolbar({ children, left, right }: ToolbarProps) {
+function TestToolbar({ children, start, end }: ToolbarProps) {
 	return (
 		<div role='toolbar'>
-			{left}
+			{start}
 			{children}
-			{right}
+			{end}
 		</div>
 	)
 }
@@ -564,12 +564,7 @@ function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipPro
 		</span>
 	)
 }
-function TestClearFiltersButton({
-	disabled,
-	onClick,
-	children,
-	'aria-label': ariaLabel,
-}: ClearFiltersButtonComponentProps) {
+function TestClearFiltersButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
 	return (
 		<button
 			type='button'
@@ -689,7 +684,7 @@ function TestNoResultsState({ columnCount }: NoResultsStateProps) {
 		</tr>
 	)
 }
-function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
+function TestLoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
 	if (error != null) {
 		return (
 			<div data-slot='load-more-error'>
@@ -703,7 +698,7 @@ function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRet
 		)
 	}
 	if (isFetching) return <div data-slot='load-more-spinner'>Loading more…</div>
-	if (trigger === 'manual' && hasMore) {
+	if (trigger === 'manual' && hasNextPage) {
 		return (
 			<button
 				type='button'

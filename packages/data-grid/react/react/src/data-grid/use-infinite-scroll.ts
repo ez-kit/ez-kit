@@ -26,7 +26,7 @@ export type InfiniteController = {
 	/** A forward page request is in flight. */
 	isFetching: boolean
 	/** More rows can be loaded forward (controlled `pagination.hasNextPage`). */
-	hasMore: boolean
+	hasNextPage: boolean
 	/** Last forward error (unwrapped), or null. */
 	error: unknown
 	/**
@@ -104,7 +104,7 @@ export function useInfiniteScroll(): InfiniteController {
 		trigger: config?.trigger ?? DATA_GRID_DEFAULTS.pagination.trigger,
 		threshold: config?.threshold ?? { rows: DATA_GRID_DEFAULTS.pagination.threshold.rows },
 		isFetching: isFetchingNextPage,
-		hasMore: config?.hasNextPage ?? false,
+		hasNextPage: config?.hasNextPage ?? false,
 		error: errorState?.error ?? null,
 		loadMore,
 		retry,

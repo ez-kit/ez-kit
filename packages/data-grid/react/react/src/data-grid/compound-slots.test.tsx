@@ -194,19 +194,19 @@ describe('compound render-prop slots', () => {
 		expect(table.getState().pendingBulkDelete).toBe(true)
 	})
 
-	it('<DataGrid.SortTrigger> excludes already-used columns from each entry', () => {
+	it('<DataGrid.SortMenuTrigger> excludes already-used columns from each entry', () => {
 		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, sorting: true }))
 		table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
 
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
-				<DataGrid.SortTrigger>
+				<DataGrid.SortMenuTrigger>
 					{({ items, sortableColumns, canAddSort }) => (
 						<p>
 							{[items[0]?.availableColumns.map((c) => c.id).join(','), sortableColumns.length, canAddSort].join(' | ')}
 						</p>
 					)}
-				</DataGrid.SortTrigger>
+				</DataGrid.SortMenuTrigger>
 			</DataGrid>,
 		)
 		// 'name' is this entry's own column so it stays offered; 'amount' is still free.

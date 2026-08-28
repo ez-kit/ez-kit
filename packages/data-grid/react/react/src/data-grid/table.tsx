@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
+import { DATA_GRID_DEFAULTS } from '../defaults'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
@@ -14,9 +15,6 @@ import { VirtualProvider } from './virtual-context'
 import type { NormalizedVirtualizationConfig } from '../use-data-grid'
 import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
-
-const DEFAULT_ESTIMATE_SIZE = 50
-const DEFAULT_OVERSCAN = 5
 
 const SCROLLING_OVERFLOWS = ['auto', 'scroll']
 
@@ -91,7 +89,7 @@ function resolveEstimateSize(
 	estimateSize: NormalizedVirtualizationConfig['row']['estimateSize'],
 ): (index: number) => number {
 	if (typeof estimateSize === 'function') return estimateSize
-	const size = estimateSize ?? DEFAULT_ESTIMATE_SIZE
+	const size = estimateSize ?? DATA_GRID_DEFAULTS.virtualization.row.estimateSize
 	return () => size
 }
 
@@ -189,7 +187,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 		count: isVirtualized ? rows.length : 0,
 		getScrollElement: () => containerRef.current,
 		estimateSize: resolveEstimateSize(virtualizationConfig?.row.estimateSize),
-		overscan: virtualizationConfig?.row.overscan ?? DEFAULT_OVERSCAN,
+		overscan: virtualizationConfig?.row.overscan ?? DATA_GRID_DEFAULTS.virtualization.row.overscan,
 		enabled: isVirtualized,
 	})
 

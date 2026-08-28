@@ -35,7 +35,7 @@ describe('createDataGrid', () => {
 	})
 
 	// Regression: the factory used to copy the compound members by hand and had fallen five
-	// behind (SelectionBar, DraftBar, SortTrigger, GlobalFilterInput, VisibilityTrigger).
+	// behind (SelectionBar, DraftBar, SortMenuTrigger, GlobalFilterInput, VisibilityTrigger).
 	// The `as typeof DataGrid` cast typed them as present, so a kit consumer writing
 	// `<DataGrid.SelectionBar />` got `undefined` at runtime and no compile error.
 	// Enumerating `DataGrid` itself means a newly added member cannot be forgotten.

@@ -289,7 +289,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.Defaults,
-		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 14 }],
+		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 38 }],
 		nonOptionTables: [],
 	},
 	{
@@ -383,7 +383,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		// A follow-up added the `ColumnDef` keys it had simply never listed — `footer`,
 		// `columns`, `globalFiltering`, `editing`, `creating` and the three `*ClassName` slots,
 		// of which `cellClassName` is the only public route to colouring a cell from its own
-		// value. `validateOn` / `validateDebounceMs` left the column root again in the API
+		// value. `validateOn` / `debounce` left the column root again in the API
 		// audit: they configure one of `editing` / `creating`, so they are documented as keys
 		// of those, where every other per-feature column setting already lives.
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 20 }],
@@ -642,6 +642,21 @@ export const OPTION_EXCEPTIONS: readonly OptionException[] = [
 		name: 'false',
 		reason:
 			'A literal value the whole per-column `filtering` slot accepts (`filtering: false`), not a key of `ColumnFilteringConfig`.',
+	},
+	{
+		page: DocPage.Defaults,
+		heading: 'Reference',
+		name: 'cell.config.target',
+		reason:
+			'A per-column cell-type config default (`column.cell.config.target` on a `link` cell), listed on the ' +
+			'defaults page because that page is the complete list of default *values* — the table is rooted at the ' +
+			'grid config, and this one row belongs to a column def.',
+	},
+	{
+		page: DocPage.Defaults,
+		heading: 'Reference',
+		name: 'link',
+		reason: 'Not an option: the cell-type id in the "(`link` cells)" qualifier on the `cell.config.target` row above.',
 	},
 	{
 		page: DocPage.FilteringMultiValue,

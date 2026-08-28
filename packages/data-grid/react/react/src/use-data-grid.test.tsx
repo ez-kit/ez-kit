@@ -479,37 +479,37 @@ describe('useDataGrid — virtualized', () => {
 	})
 })
 
-describe('useDataGrid — pagination.pageSizeOptions', () => {
+describe('useDataGrid — pagination.items', () => {
 	it('is undefined when pagination is not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.items).toBeUndefined()
 	})
 
 	it('falls back to the default list when page-based pagination carries no explicit one', () => {
 		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the toolbar
 		// mounts the control is `pagination.pageSizer`, resolved separately.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
+		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 		expect(result.current.grid.pagination.pageSizer).toBe(false)
 	})
 
 	it('stores the explicit options in page-based mode', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, items: [5, 10, 25] } }),
 		)
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([5, 10, 25])
+		expect(result.current.grid.pagination.items).toEqual([5, 10, 25])
 	})
 
 	it('is undefined in infinite mode — there is no page size to select', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', pageSizeOptions: [5, 10, 25] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', items: [5, 10, 25] } }),
 		)
-		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.items).toBeUndefined()
 	})
 
-	it('still applies the rest of the pagination config alongside pageSizeOptions', () => {
+	it('still applies the rest of the pagination config alongside items', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, items: [5, 10, 25] } }),
 		)
 		expect(result.current.getState().pagination.pageSize).toBe(5)
 	})

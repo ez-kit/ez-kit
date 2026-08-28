@@ -76,7 +76,7 @@ export type SelectionBarCallbackArgs<TRow extends object = object> = {
 /** Render mode used when a bar config omits `variant`. Internal. */
 export const DEFAULT_ACTION_BAR_VARIANT: ActionBarVariant = ActionBarVariant.Floating
 
-export type SelectionBarConfig<TRow extends object = object> = {
+export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	/**
 	 * Render mode.
 	 * - `'floating'` (default) — rendered as a positioned/sticky bar, typically overlaying the table area.
@@ -123,9 +123,13 @@ function normalizeVirtualization(
 	if (!isFeatureEnabled(virtualization)) return undefined
 	if (typeof virtualization !== 'object') return { row: {} }
 	const row = virtualization.row
-	if (!row) return undefined
 	if (row === true) return { row: {} }
-	return { row }
+	// `row` takes the same `boolean | Config` shape as its parent, `enabled` included, so a
+	// defaults layer's row-virtualization settings can be switched off for one grid without
+	// being restated.
+	const rowConfig = featureConfig(row)
+	if (!rowConfig) return undefined
+	return { row: rowConfig }
 }
 
 /**
@@ -187,22 +191,27 @@ export type ReactPaginationConfig = PaginationConfig & {
 	/**
 	 * Page-based mode only. Selectable values for {@link PaginationConfig.pageSize}.
 	 *
+	 * Named `items`, the one word this API spends on "the values a control offers" —
+	 * `column.filtering.items`, `cell.config.items`, `MultiSelectFilterProps.items`, and the
+	 * `PageSizerProps.items` this very option feeds. It was `items`, which made one
+	 * value change its name on the way from the config to the kit.
+	 *
 	 * Pure data: supplying it no longer *implies* the control, it only says which sizes the
 	 * control offers. Whether the PageSizer mounts is {@link ReactPaginationConfig.toolbar}
 	 * — which defaults to "yes when this list is set", so the common case still needs one
 	 * field. Changing the selection calls `table.setPageSize`, so it flows through
 	 * {@link PaginationConfig.onChange} like any other pagination change.
 	 */
-	pageSizeOptions?: number[]
+	items?: number[]
 	/**
-	 * Page-based mode only. Auto-mount the PageSizer control in `Toolbar.left`.
+	 * Page-based mode only. Auto-mount the PageSizer control in `Toolbar.start`.
 	 *
-	 * - omitted — mounted iff {@link ReactPaginationConfig.pageSizeOptions} is set
+	 * - omitted — mounted iff {@link ReactPaginationConfig.items} is set
 	 * - `true` — mounted, falling back to
-	 *   {@link DATA_GRID_DEFAULTS.pagination.pageSizeOptions} when no list is given
+	 *   {@link DATA_GRID_DEFAULTS.pagination.items} when no list is given
 	 * - `false` — never auto-mounted; `<DataGrid.PageSizer />` still works if placed by hand,
 	 *   because this flag governs mounting only and never erases
-	 *   {@link ReactPaginationConfig.pageSizeOptions}
+	 *   {@link ReactPaginationConfig.items}
 	 *
 	 * Same name and meaning as `sorting.toolbar`, `globalFiltering.toolbar`,
 	 * `filtering.toolbar` and `visibility.toolbar`: one word for "auto-mount my
@@ -259,17 +268,17 @@ export type ReactVisibilityConfig = VisibilityConfig & {
 	toolbar?: boolean
 }
 
-export type LoadingFallbackConfig = {
+export type LoadingFallbackConfig = FeatureToggle & {
 	/** Override the loading fallback. ReactElement rendered as-is; ComponentType called via flexRender. */
 	component?: ReactElement | ComponentType
 }
 
-export type EmptyFallbackConfig = {
+export type EmptyFallbackConfig = FeatureToggle & {
 	/** Override the empty fallback. ReactElement rendered as-is; ComponentType called via flexRender. */
 	component?: ReactElement | ComponentType
 }
 
-export type NoResultsFallbackConfig = {
+export type NoResultsFallbackConfig = FeatureToggle & {
 	/** Override the no-results fallback. ReactElement rendered as-is; ComponentType called via flexRender. */
 	component?: ReactElement | ComponentType
 }
@@ -298,7 +307,21 @@ export type FallbacksConfig = {
 	noResults?: NoResultsFallbackConfig | boolean
 }
 
-export type FilterChipsConfig = {
+/**
+ * Whether a fallback state renders. Omitted means on — the three fallbacks are the one group of
+ * options that default to enabled, because a grid with nothing to show has to show something.
+ * `false` and `{ enabled: false }` both turn one off; the latter is what a grid reaches for when
+ * a defaults layer supplied the `component` and this grid wants neither.
+ *
+ * Not exported from the package — internal to the render layer.
+ */
+export function isFallbackOn(
+	fallback: boolean | LoadingFallbackConfig | EmptyFallbackConfig | NoResultsFallbackConfig | undefined,
+): boolean {
+	return fallback === undefined || isFeatureEnabled(fallback)
+}
+
+export type FilterChipsConfig = FeatureToggle & {
 	/**
 	 * Where to render the auto-mounted chips strip relative to the table.
 	 * Default: {@link FilterChipsPosition.Above}.
@@ -306,7 +329,7 @@ export type FilterChipsConfig = {
 	position?: FilterChipsPosition
 }
 
-export type FilteringToolbarConfig = {
+export type FilteringToolbarConfig = FeatureToggle & {
 	/** When true the Clear-all button is rendered (disabled) even with no active filters. Default: false. */
 	alwaysShow?: boolean
 }
@@ -329,11 +352,13 @@ export type ReactFilteringConfig = {
 	 * Auto-mount a strip of removable chips for active filters.
 	 * - `false` / omitted — no auto-mount. `<DataGrid.ActiveFiltersBar />` still works manually.
 	 * - `true` — auto-mount at {@link FilterChipsPosition.Above}.
-	 * - `FilterChipsConfig` — fine-grained.
+	 * - `'above'` / `'below'` — the scalar: auto-mount at that position, which is the whole of
+	 *   what this option has to say. Same shape as a column's `align`, `width` and `pinning`.
+	 * - {@link FilterChipsConfig} — the object, for when the position is not all you are setting.
 	 */
-	chips?: boolean | FilterChipsConfig
+	chips?: boolean | FilterChipsPosition | FilterChipsConfig
 	/**
-	 * Auto-mount filtering's toolbar control — the Clear-all button — into `Toolbar.right`
+	 * Auto-mount filtering's toolbar control — the Clear-all button — into `Toolbar.end`
 	 * after `GlobalFilterInput`. Hidden when no filter is active unless `alwaysShow: true`.
 	 *
 	 * - `false` / omitted — no auto-mount. `<DataGrid.ClearFiltersButton />` still works manually.
@@ -374,7 +399,7 @@ export type ReactGlobalFilteringConfig = {
 	debounce?: number
 	/**
 	 * Auto-mount control for the search input in the Toolbar.
-	 * - `true` / omitted — input is auto-mounted in `Toolbar.right`
+	 * - `true` / omitted — input is auto-mounted in `Toolbar.end`
 	 * - `false` — no auto-mount; place `<DataGrid.GlobalFilterInput />` yourself
 	 */
 	toolbar?: boolean
@@ -398,8 +423,8 @@ export type NormalizedGlobalFilteringConfig = {
 export type ReactSortingConfig = {
 	/**
 	 * Auto-mount the multi-sort builder button in the Toolbar. Default: false.
-	 * - `false` / omitted — no auto-mount. `<DataGrid.SortTrigger />` still works manually.
-	 * - `true` — auto-mount into `Toolbar.right`.
+	 * - `false` / omitted — no auto-mount. `<DataGrid.SortMenuTrigger />` still works manually.
+	 * - `true` — auto-mount into `Toolbar.end`.
 	 */
 	toolbar?: boolean
 } & SortingConfig
@@ -463,7 +488,7 @@ export type UseDataGridConfig<TRow extends object> = {
 	filtering?: boolean | ReactFilteringConfig
 	/**
 	 * Enable cross-column global search.
-	 * - `true` — auto-mounts a search input in Toolbar.right with defaults
+	 * - `true` — auto-mounts a search input in `Toolbar.end` with defaults
 	 *   (`placeholder: 'Search…'`, the shared `filtering.debounce`, `includesString` match)
 	 * - {@link ReactGlobalFilteringConfig} — fine-grained control over placeholder,
 	 *   debounce, filter function, registry, and auto-mount
@@ -635,7 +660,7 @@ export function useDataGrid<TRow extends object>(
 					variant: _variant,
 					siblings: _siblings,
 					boundaries: _boundaries,
-					pageSizeOptions: _pageSizeOptions,
+					items: _items,
 					toolbar: _toolbar,
 					...rest
 				}) => rest)(rawPagination)
@@ -652,14 +677,14 @@ export function useDataGrid<TRow extends object>(
 	// `featureConfig` yields `undefined` for the bare `pagination: true`, so the on/off decision
 	// reads `isFeatureEnabled` and only the *settings* come from `paginationCfg`.
 	const isPagedPagination = isFeatureEnabled(rawPagination) && paginationCfg?.mode !== PaginationMode.Infinite
-	const pageSizeOptions: number[] | undefined = isPagedPagination
-		? (paginationCfg?.pageSizeOptions ?? [...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
+	const paginationItems: number[] | undefined = isPagedPagination
+		? (paginationCfg?.items ?? [...DATA_GRID_DEFAULTS.pagination.items])
 		: undefined
 
 	// Whether `<Toolbar>` mounts the PageSizer itself. Defaults to "yes when a list was
 	// supplied", so the one-field case is unchanged.
 	const pageSizerInToolbar: boolean =
-		isPagedPagination && (paginationCfg?.toolbar ?? paginationCfg?.pageSizeOptions !== undefined)
+		isPagedPagination && (paginationCfg?.toolbar ?? paginationCfg?.items !== undefined)
 
 	const paginationVariant: PaginationVariant = paginationCfg?.variant ?? DATA_GRID_DEFAULTS.pagination.variant
 
@@ -696,14 +721,20 @@ export function useDataGrid<TRow extends object>(
 		const chips = filteringCfg?.chips
 		if (chips === undefined || chips === false) return undefined
 		if (chips === true) return { position: DATA_GRID_DEFAULTS.filtering.chips.position }
-		return { position: chips.position ?? DATA_GRID_DEFAULTS.filtering.chips.position }
+		// The scalar: a position and nothing else, which is all this option has ever had to say.
+		if (typeof chips === 'string') return { position: chips }
+		const config = featureConfig(chips)
+		if (!config) return undefined
+		return { position: config.position ?? DATA_GRID_DEFAULTS.filtering.chips.position }
 	})()
 
 	const normalizedFilteringToolbar: NormalizedFilteringToolbarConfig | undefined = (() => {
 		const toolbar = filteringCfg?.toolbar
 		if (toolbar === undefined || toolbar === false) return undefined
 		if (toolbar === true) return { alwaysShow: DATA_GRID_DEFAULTS.filtering.toolbar.alwaysShow }
-		return { alwaysShow: Boolean(toolbar.alwaysShow) }
+		const config = featureConfig(toolbar)
+		if (!config) return undefined
+		return { alwaysShow: config.alwaysShow ?? DATA_GRID_DEFAULTS.filtering.toolbar.alwaysShow }
 	})()
 
 	const coreFiltering: boolean | FilteringConfig | undefined =
@@ -839,7 +870,7 @@ export function useDataGrid<TRow extends object>(
 		pagination: {
 			variant: paginationVariant,
 			window: paginationWindow,
-			...(pageSizeOptions !== undefined ? { pageSizeOptions } : {}),
+			...(paginationItems !== undefined ? { items: paginationItems } : {}),
 			pageSizer: pageSizerInToolbar,
 		},
 		infinite: normalizedInfinite,

@@ -22,7 +22,7 @@ describe('createTable — resizing', () => {
 		expect(table.options.columnResizeMode).toBe('onChange')
 	})
 
-	it('resizing: true uses ltr as default direction', () => {
+	it('resizing: true uses ltr as the default grid direction', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, resizing: true })
 		expect(table.options.columnResizeDirection).toBe('ltr')
 	})
@@ -32,8 +32,13 @@ describe('createTable — resizing', () => {
 		expect(table.options.columnResizeMode).toBe('onEnd')
 	})
 
-	it('resizing: { direction: "rtl" } sets columnResizeDirection to rtl', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { direction: 'rtl' } })
+	it('root direction: "rtl" sets columnResizeDirection to rtl', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: true, direction: 'rtl' })
+		expect(table.options.columnResizeDirection).toBe('rtl')
+	})
+
+	it('root direction reaches the resize delta even with resizing left at its defaults', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, direction: 'rtl' })
 		expect(table.options.columnResizeDirection).toBe('rtl')
 	})
 

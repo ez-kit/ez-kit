@@ -15,6 +15,24 @@ The shared React package (`data-grid/react/react`) must contain **zero visual st
 
 This rule is **shadcn-specific** — it follows from those files being vendored, not from the `components/ui/` path. The heroui kit's `src/components/ui/action-bar.tsx` is hand-written and freely editable; see `packages/data-grid/react/heroui/CLAUDE.md`.
 
+### Settled data-grid API decisions — do not re-propose
+
+The data-grid public API has been audited several times. The following were **considered and
+deliberately kept**; re-proposing them is churn, so if a review turns one up, cite this section
+and move on.
+
+- **`resizing.mode: 'onChange' | 'onEnd'` keeps TanStack's vocabulary.** Unlike `size` /
+  `minSize` / `maxSize` (folded into `width`) or `sortUndefined`'s `-1` / `1` (replaced by
+  `'first'` / `'last'`), these two names are what every TanStack Table user already knows the
+  option by and they read correctly on their own. That `mode: 'onChange'` sits beside the
+  feature's own `onChange` callback is noted and accepted.
+- **`pagination.pageSize` and `initialState.pagination.pageSize` are both allowed.** The option
+  is where an author _states_ the size; the seed is where a deep link _restores_ the one the
+  user picked. Writing both is a mistake, and `createTable` warns about it in development.
+- **Column `align` is logical (`start` / `end`), column `pinning` is physical (`left` /
+  `right`).** The alignment axis flips under RTL; a pinned column sticks to a viewport edge and
+  does not. `Toolbar.start` / `Toolbar.end` follow the `align` rule, for the same reason.
+
 ## Branching & Release Flow
 
 - `develop` is the default integration branch — all feature branches fork from and merge into `develop`.

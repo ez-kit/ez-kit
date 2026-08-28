@@ -1,3 +1,4 @@
+import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
 import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
 
 import type { ColumnEditingConfig } from '../../column/types'
@@ -20,7 +21,6 @@ export type EditingSaveContext<TData> = {
 }
 
 const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
-const DEFAULT_DEBOUNCE_MS = 200
 const GENERIC_FORM_ERROR = 'Unexpected error'
 
 export type EditingState = {
@@ -56,8 +56,18 @@ export type EditingConfig<TData> = FeatureToggle & {
 	/** How the edit flow behaves. Default: {@link EditingMode.Row}. */
 	mode?: EditingMode
 	validate?: ValidateConfig<TData>
+	/** When a field validates. Default: {@link ValidateOn.Submit}. */
 	validateOn?: ValidateOn
-	validateDebounceMs?: number
+	/**
+	 * Debounce (ms) before validation runs while the user types. Applies only when the resolved
+	 * `validateOn` is {@link ValidateOn.Change}. Default:
+	 * {@link DEFAULT_VALIDATE_DEBOUNCE_MS} (200). Override per column with `column.editing.debounce`.
+	 *
+	 * Spelled `debounce`, like `filtering.debounce` and `globalFiltering.debounce` — one word for
+	 * "wait this long before acting on typing". The unit is milliseconds throughout the config, so
+	 * it stays out of the name.
+	 */
+	debounce?: number
 	/**
 	 * Called when the user commits the edit form (or cell). Return nothing for
 	 * synchronous handlers, a `Promise` for async work. Throw
@@ -180,9 +190,9 @@ export const EditingFeature: TableFeature<RowData> = {
 		}
 
 		const resolveDebounceMs = (columnId: string): number => {
-			const fromColumn = resolveColumnEditing(columnId)?.validateDebounceMs
+			const fromColumn = resolveColumnEditing(columnId)?.debounce
 			if (fromColumn !== undefined) return fromColumn
-			return getConfig()?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
+			return getConfig()?.debounce ?? DEFAULT_VALIDATE_DEBOUNCE_MS
 		}
 
 		const runValidate = async (values: Record<string, unknown>, ctx: ValidateContext): Promise<ValidationResult> => {

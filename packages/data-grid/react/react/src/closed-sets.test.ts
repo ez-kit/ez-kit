@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	BetweenInputType,
 	BetweenInputVariant,
-	ColumnResizeDirection,
+	GridDirection,
 	ColumnResizeMode,
 	ColumnSortUndefined,
 	CommitStatus,
@@ -43,7 +43,8 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 				},
 			],
 			sorting: { multi: { event: 'ctrl' } },
-			resizing: { mode: 'onEnd', direction: 'rtl' },
+			direction: 'rtl',
+			resizing: { mode: 'onEnd' },
 			filtering: { variant: 'popover', chips: { position: 'below' } },
 			pagination: { mode: 'infinite', trigger: 'manual' },
 			expanding: { mode: 'tree' },
@@ -55,7 +56,7 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 
 	it('exposes the named members, each equal to its bare literal', () => {
 		expect(ColumnResizeMode.OnEnd).toBe('onEnd')
-		expect(ColumnResizeDirection.Ltr).toBe('ltr')
+		expect(GridDirection.Ltr).toBe('ltr')
 		expect(ColumnSortUndefined.Last).toBe('last')
 		expect(CommitStatus.Validating).toBe('validating')
 		expect(MultiSortEvent.Ctrl).toBe('ctrl')

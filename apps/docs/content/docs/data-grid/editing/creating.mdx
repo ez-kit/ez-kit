@@ -116,15 +116,15 @@ details in [Validation](./data-grid/editing/validation).
 
 ## Options
 
-| `creating` key       | Type                                            | Description                                                          |
-| -------------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
-| `onSave`             | `({ values, signal }) => void \| Promise<void>` | Required. Persist the new row.                                       |
-| `mode`               | `'row' \| 'modal' \| 'pin-row'`                 | Where the draft appears. Default `'row'`.                            |
-| `defaultValues`      | `Partial<TRow> \| ((ctx) => Partial<TRow>)`     | Seeds that span columns. Merged over the per-column `defaultValue`s. |
-| `validate`           | `ValidateConfig`                                | The form's validator.                                                |
-| `validateOn`         | `'submit' \| 'blur' \| 'change'`                | When a field validates. Default `'submit'`.                          |
-| `validateDebounceMs` | `number`                                        | Debounce for `'change'`. Default `200`.                              |
-| `enabled`            | `boolean`                                       | Explicit off-switch for a config that came from a defaults layer.    |
+| `creating` key  | Type                                            | Description                                                          |
+| --------------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `onSave`        | `({ values, signal }) => void \| Promise<void>` | Required. Persist the new row.                                       |
+| `mode`          | `'row' \| 'modal' \| 'pin-row'`                 | Where the draft appears. Default `'row'`.                            |
+| `defaultValues` | `Partial<TRow> \| ((ctx) => Partial<TRow>)`     | Seeds that span columns. Merged over the per-column `defaultValue`s. |
+| `validate`      | `ValidateConfig`                                | The form's validator.                                                |
+| `validateOn`    | `'submit' \| 'blur' \| 'change'`                | When a field validates. Default `'submit'`.                          |
+| `debounce`      | `number`                                        | Debounce for `'change'`. Default `200`.                              |
+| `enabled`       | `boolean`                                       | Explicit off-switch for a config that came from a defaults layer.    |
 
 ## See also
 

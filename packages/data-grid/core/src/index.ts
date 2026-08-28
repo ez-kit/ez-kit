@@ -2,7 +2,13 @@
 export { createTable } from './create-table'
 
 // Default option values (single source; referenced by the React adapter + UI kits)
-export { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from './defaults'
+export {
+	DEFAULT_PAGE_SIZE,
+	DEFAULT_ROW_ESTIMATE_SIZE,
+	DEFAULT_ROW_OVERSCAN,
+	DEFAULT_VALIDATE_DEBOUNCE_MS,
+	UNKNOWN_PAGE_COUNT,
+} from './defaults'
 
 // Feature-toggle contract shared by every feature option
 export { featureConfig, isFeatureEnabled } from './utils/feature-flag'
@@ -141,7 +147,7 @@ export type {
 } from './features/validation'
 
 export {
-	ColumnResizeDirection,
+	GridDirection,
 	ColumnResizeMode,
 	ExpandingMode,
 	LoadMoreDirection,

@@ -473,12 +473,12 @@ export type VisibilityConfig = FeatureToggle & {
 	onChange?: (visibility: VisibilityState) => void
 }
 
-export type ColumnPinningConfig = {
+export type ColumnPinningConfig = FeatureToggle & {
 	/** Called whenever column pinning changes. Receives the resolved {@link ColumnPinningState}. */
 	onChange?: (columnPinning: ColumnPinningState) => void
 }
 
-export type RowPinningConfig = {
+export type RowPinningConfig = FeatureToggle & {
 	top?: boolean
 	bottom?: boolean
 	/** Called whenever row pinning changes. Receives the resolved {@link RowPinningState}. */
@@ -496,7 +496,7 @@ export type PinningConfig = FeatureToggle & {
 	row?: boolean | RowPinningConfig
 }
 
-export type RowVirtualizationConfig = {
+export type RowVirtualizationConfig = FeatureToggle & {
 	/** Estimated row height in px used by the virtualizer. Default: 50. */
 	estimateSize?: number | ((index: number) => number)
 	/** Extra rows rendered outside the visible viewport. Default: 5. */
@@ -511,6 +511,14 @@ export type VirtualizationConfig = FeatureToggle & {
 /**
  * When a resize drag commits the new width.
  *
+ * The two member values are `'onChange'` / `'onEnd'` — TanStack's `columnResizeMode` vocabulary,
+ * kept verbatim **on purpose**, unlike `size`/`minSize`/`maxSize` (folded into `width`) or
+ * `sortUndefined`'s `-1`/`1` (replaced by `'first'`/`'last'`). This is a **settled decision, not
+ * an oversight**: these two names are what every TanStack Table user already knows this option
+ * by, they read correctly on their own, and renaming them would buy a fresh vocabulary for a
+ * setting nobody has to translate. That it sits beside the feature's own `onChange` callback is
+ * noted and accepted — `mode` says which of the two you are reading.
+ *
  * Named members for internal reference; the option is typed as the plain string union, so
  * `mode: 'onEnd'` is equally valid and needs no import.
  */
@@ -524,25 +532,30 @@ export const ColumnResizeMode = {
 export type ColumnResizeMode = (typeof ColumnResizeMode)[keyof typeof ColumnResizeMode]
 
 /**
- * Text direction the resize delta is measured in — which way a drag makes a column wider.
+ * Text direction the grid is laid out in.
+ *
+ * A fact about the **whole grid**, so it lives once, at the root of {@link TableConfig}. It was
+ * `resizing.direction`, which made a grid-wide property look like a resize setting: column
+ * alignment already flips on its own (`align` is logical — `'start'` / `'end'` — and the
+ * structural stylesheet emits `text-start` / `text-end`), so an RTL grid that never enabled
+ * resizing had nowhere to say so, and one that did had to know that the resize drag was the
+ * single thing not inferring it.
  *
  * Named members for internal reference; the option is typed as the plain string union, so
  * `direction: 'rtl'` is equally valid and needs no import.
  */
-export const ColumnResizeDirection = {
+export const GridDirection = {
 	/** Left-to-right. The default. */
 	Ltr: 'ltr',
 	/** Right-to-left. */
 	Rtl: 'rtl',
 } as const
 
-export type ColumnResizeDirection = (typeof ColumnResizeDirection)[keyof typeof ColumnResizeDirection]
+export type GridDirection = (typeof GridDirection)[keyof typeof GridDirection]
 
 export type ResizingConfig = FeatureToggle & {
 	/** Resize mode. Default: {@link ColumnResizeMode.OnChange}. */
 	mode?: ColumnResizeMode
-	/** Text direction for resize calculation. Default: {@link ColumnResizeDirection.Ltr}. */
-	direction?: ColumnResizeDirection
 	/**
 	 * Called whenever a column's width changes. Receives the resolved {@link ColumnSizingState}.
 	 * Fires on the committed sizes, not on the transient drag info.
@@ -574,6 +587,12 @@ export type InitialTableState = Omit<
 	 *
 	 * Whichever key is omitted keeps its resolved default: `pageIndex: 0`, and `pageSize` from
 	 * {@link PaginationConfig.pageSize}.
+	 *
+	 * `pageSize` is therefore settable from two places, and that is deliberate:
+	 * {@link PaginationConfig.pageSize} is where an author *states* the size, this is where a
+	 * deep link *restores* the one the user picked. Write both and the seed wins — `createTable`
+	 * warns in development rather than leaving it to be noticed by a page that opens on a size
+	 * nobody asked for.
 	 */
 	pagination?: Partial<PaginationState>
 }
@@ -598,6 +617,16 @@ export type TableConfig<TRow extends object> = {
 	 * Defaults to `row.id` when present, otherwise falls back to the array index.
 	 */
 	getRowId?: (row: TRow, index: number) => string
+
+	/**
+	 * Text direction the grid is laid out in. Default: {@link GridDirection.Ltr}.
+	 *
+	 * A grid-wide fact, declared once. Column alignment is logical and flips on its own; this is
+	 * what the behaviours that cannot infer it read — today, the direction a resize drag widens a
+	 * column in. It was `resizing.direction`, where a grid with resizing off could not state it
+	 * at all.
+	 */
+	direction?: GridDirection
 
 	/**
 	 * Sorting configuration. Falsy (`undefined` or `false`) fully disables sorting:

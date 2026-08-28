@@ -52,7 +52,7 @@ export type {
 } from './use-data-grid'
 // Resolved default option **values** — the single table the docs' "Defaults" page describes,
 // and what a consumer reads to extend a default rather than restate it (e.g. appending to
-// `pagination.pageSizeOptions`). Referenced by `{@link DATA_GRID_DEFAULTS…}` throughout the
+// `pagination.items`). Referenced by `{@link DATA_GRID_DEFAULTS…}` throughout the
 // public JSDoc, which was pointing at something no consumer could import.
 export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
@@ -141,7 +141,7 @@ export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
-export type { DataGridSortTriggerProps, DataGridSortTriggerRenderArgs } from './data-grid/sort-trigger'
+export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
 export type {
 	DataGridVisibilityTriggerProps,
 	DataGridVisibilityTriggerRenderArgs,
@@ -176,7 +176,7 @@ export { GridComponentsProvider, useGridComponents } from './components-context'
 
 // Cell type registry
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
-export type { CellTypeDefinition, CellTypeRegistry, CellViewProps, CellInputProps } from './cell-types-context'
+export type { CellTypeDefinition, CellTypeRegistry, CellViewProps } from './cell-types-context'
 
 // The nine base cell types a kit extends, and the two formatters their renderers use.
 //
@@ -203,7 +203,7 @@ export type {
 	ChevronProps,
 	SortIndicatorProps,
 	VisibilityMenuProps,
-	ClearFiltersButtonComponentProps,
+	ClearFiltersButtonProps,
 	ConfirmDialogProps,
 	DraftBarProps,
 	EmptyStateProps,

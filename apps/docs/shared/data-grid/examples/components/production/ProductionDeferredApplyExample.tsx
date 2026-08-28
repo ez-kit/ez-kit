@@ -23,7 +23,7 @@ export function ProductionDeferredApplyExample() {
 			pagination={{
 				manual: true,
 				rowCount: orders.rowCount,
-				pageSizeOptions: [10, 25, 50],
+				items: [10, 25, 50],
 				variant: 'numbered',
 				siblings: 1,
 			}}

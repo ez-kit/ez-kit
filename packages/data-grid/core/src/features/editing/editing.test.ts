@@ -324,7 +324,7 @@ describe('EditingFeature — per-column validateOn', () => {
 		const table = createTable({
 			data: DATA,
 			columns: createColumns<Row>([
-				{ accessorKey: 'name', editing: { validateOn: 'change', validateDebounceMs: 20 } },
+				{ accessorKey: 'name', editing: { validateOn: 'change', debounce: 20 } },
 				{ accessorKey: 'password' },
 				{ accessorKey: 'confirmPassword' },
 			]),

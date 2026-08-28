@@ -30,7 +30,7 @@ export const ValidateOn = {
 	Submit: 'submit',
 	/** When the field loses focus, then on every submit. */
 	Blur: 'blur',
-	/** On every keystroke (debounced by `validateDebounceMs`), then on every submit. */
+	/** On every keystroke (debounced by `debounce`), then on every submit. */
 	Change: 'change',
 } as const
 
@@ -69,12 +69,16 @@ export type CommitStatus = (typeof CommitStatus)[keyof typeof CommitStatus]
  * input loses focus.
  *
  * @typeParam TConfig - column-level cell config (see `meta.config`)
+ * @typeParam TValue - the field's value type. Bound to the column's own value by
+ * `ColumnEditingConfig` / `ColumnCreatingConfig`, so an `accessorKey` column's edit input sees
+ * that field's type rather than `unknown`. Stays `unknown` for a cell type registered in the
+ * kit's registry, which is row-agnostic by construction.
  */
-export type FieldState<TConfig = unknown> = {
+export type FieldState<TConfig = unknown, TValue = unknown> = {
 	/** Stable id for `htmlFor` / aria wiring. Always present (defaults to columnId). */
 	id: string
-	value: unknown
-	onChange: (value: unknown) => void
+	value: TValue
+	onChange: (value: TValue) => void
 	/** Triggers field-level validation when the column's resolved `validateOn` is `'blur'`. */
 	onBlur: () => void
 	/** Optional column-level cell config (`meta.config`). */
@@ -104,7 +108,7 @@ export type FieldState<TConfig = unknown> = {
  * **When** validation runs is not settable here. It is `editing.validateOn` /
  * `creating.validateOn` (and the per-column override under `column.editing` /
  * `column.creating`), full stop. The shorthand used to carry its own `validateOn` /
- * `validateDebounceMs` that silently won over the feature-level ones — so the same setting had
+ * `debounce` that silently won over the feature-level ones — so the same setting had
  * two spellings, only one of which existed when `validate` was written as a function, and
  * adopting a zod schema from another example quietly re-timed the whole form.
  */

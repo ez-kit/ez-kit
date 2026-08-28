@@ -1,4 +1,4 @@
-import { isFeatureEnabled } from '@ez-kit/data-grid-core'
+import { featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
 import { type SelectionBarCallbackArgs, type SelectionBarConfig, type ActionBarVariant } from '../use-data-grid'
@@ -89,10 +89,13 @@ export function SelectionBar({ children }: DataGridSelectionBarProps = {}) {
 	const rawConfig = table.grid.selection.bar
 
 	const selectionEnabled = Boolean(table.options.enableRowSelection)
-	if (!selectionEnabled || rawConfig === false) return null
+	// `rawConfig === undefined` means "not configured", which for this bar reads as on — the
+	// documented default. Anything else goes through the shared toggle, so `bar: false` and
+	// `bar: { enabled: false }` both suppress it.
+	if (!selectionEnabled || (rawConfig !== undefined && !isFeatureEnabled(rawConfig))) return null
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const config: SelectionBarConfig<any> = typeof rawConfig === 'object' ? rawConfig : {}
+	const config: SelectionBarConfig<any> = featureConfig(rawConfig) ?? {}
 
 	const callbackArgs = buildSelectionBarArgs(table)
 	const { selectedRows } = callbackArgs

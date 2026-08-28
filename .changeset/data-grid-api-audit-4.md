@@ -5,48 +5,57 @@
 '@ez-kit/data-grid-heroui': minor
 ---
 
-One name per concept, props on every compound member, and a read-only column that stays read-only
+Close the gaps a fourth pass over the public API turned up. Breaking, and pre-1.0, so it ships
+as a minor.
 
-**`editing: false` is now honoured in `editing.mode: 'cell'`.** It was bypassed there — the render
-guard short-circuited on the mode and the double-click handler was attached unconditionally — so a
-column that opted out still became an input on double-click and its value reached `onSave`. Row and
-modal mode always honoured it, which meant changing `mode` silently changed the permission model.
-`table.editing.startCell()` now returns early for such a column too, so the programmatic path
-agrees with the rendered one.
+**A column's input slots now hand you a typed `config`.** `filtering.component` and
+`editing.component` / `creating.component` always received the column's `cell.config`, but the
+slot's type rejected the annotation that would name it — so reading `config.items` on a `select`
+column meant a cast. The slots are declared through the new `ColumnInputRenderer`, whose props
+compare bivariantly, so `(props: InputComponentProps<SelectCellConfig>) => …` is accepted.
+`FieldState` also gained a `TValue` parameter, bound from the column's `accessorKey`: an edit
+field on a `number` column sees `value: number`.
 
-**`deferredApply` → `draft`.** One feature answered to two words depending on where you touched it:
-the option was `deferredApply`, while everything it turns on is `draft` — `table.draft`,
-`initialState.draft`, `DraftApi`, `QueryDraft`, `DraftAxis`, `<DataGrid.DraftBar />`,
-`GridDraftComponents`. It also takes an object form now (`DraftConfig`), so `draft: { enabled: false }`
-can switch off a `draft` inherited from a defaults layer — the escape hatch every other feature has.
+**One name per prop shape.** `CellInputProps` is gone. It was exported, documented as the type a
+registered cell type's `filter` slot receives, and used by nothing — those slots take
+`FieldState`. A column's own `filtering.component` keeps the smaller `InputComponentProps`.
 
-**`sorting.undefined` no longer accepts TanStack's raw `-1` / `1`.** Two positions had four
-spellings, and the numeric pair was a raw pass-through of TanStack's vocabulary on a grid-level
-option. Write `'first'` / `'last'` (or `false`).
+**Renames, one concept one word:**
 
-**`RowActionItem.danger` / `GridMenuItem.danger` → `destructive`,** matching
-`BadgeVariant.Destructive`. One word for the "this action destroys something" semantic, instead of
-`danger` on a menu entry and `destructive` on a badge.
+- `Toolbar.left` / `Toolbar.right` → `Toolbar.start` / `Toolbar.end`. The bar is a flex row, so
+  the slots swap sides under RTL; `align`'s logical vocabulary applies, `pinning`'s physical one
+  does not.
+- `editing.validateDebounceMs` / `creating.validateDebounceMs` → `debounce`, at both the table
+  and the column level, matching `filtering.debounce` and `globalFiltering.debounce`.
+- `pagination.pageSizeOptions` → `pagination.items` — the word this API already spends on "the
+  values a control offers", and the name of the `PageSizerProps.items` it feeds.
+- `LoadMoreRowProps.hasMore` and `InfiniteController.hasMore` → `hasNextPage`, matching the
+  `pagination.hasNextPage` option they carry.
+- `ClearFiltersButtonComponentProps` → `ClearFiltersButtonProps`, matching every other kit
+  contract.
+- `<DataGrid.SortTrigger>` → `<DataGrid.SortMenuTrigger>` (with `DataGridSortMenuTriggerProps` /
+  `…RenderArgs`). It mounts the kit's `SortMenu`; the name now matches both that and the
+  `data-slot="sort-menu-trigger"` the kits already emit, and no longer collides with the header's
+  per-column `data-slot="sort-trigger"`.
+- `resizing.direction` → the root `direction` option, with `ColumnResizeDirection` renamed
+  `GridDirection`. Text direction is a fact about the grid, not a resize setting, and it now
+  applies whether or not resizing is enabled.
 
-**Every compound member now takes props.** `PageSizer`, `DraftBar`, `CreatingModal`,
-`EditingModal`, `LoadingBody`, `EmptyStateRow` and `NoResultsRow` took none at all — there was no
-way to restyle or reword them short of replacing the kit component globally. All seven now accept
-`children` (a node, or a render function receiving that slot's model) and export their
-`DataGrid<Name>Props` / `DataGrid<Name>RenderArgs` types. The two modals hand you `form` — the field
-set the columns already describe — so a custom dialog does not have to rebuild the inputs; the three
-row-level fallbacks render their children inside the kit's `<Tbody><Tr><Td colSpan>` scaffold, so
-the table markup stays valid.
+**`enabled` reaches nested configs.** `pinning.column`, `pinning.row`, `virtualization.row`,
+`deleting.confirmation`, `deleting.bulk.confirmation`, `selection.bar`, `filtering.chips`,
+`filtering.toolbar` and the three `fallbacks.*` entries all take the shared feature toggle, so a
+config that arrived from a defaults layer can be switched off for one grid without restating it.
 
-**`<DataGrid.Header stickyHeader>` → `<DataGrid.Header sticky>`.** The component already says
-"header", the way the neighbouring local overrides drop the prefix (`ActiveFiltersBar position`,
-`GlobalFilterInput placeholder`). The `layout.stickyHeader` option is unchanged.
+**`filtering.chips` takes the scalar form** — `chips: 'below'` alongside the object, the same
+shape as a column's `align`, `width` and `pinning`.
 
-**Kit stylesheets moved from `./global.css` to `./styles.css`,** matching
-`@ez-kit/data-grid-react/styles.css`. Update the import:
-`import '@ez-kit/data-grid-shadcn/styles.css'`.
+**`DATA_GRID_DEFAULTS` is complete.** It now carries every default value under its option path —
+sorting, selection, expanding, resizing, virtualization, row actions, editing, creating, layout,
+the `link` cell target and the grid direction — with the core-owned numbers re-exported from
+`@ez-kit/data-grid-core` (`DEFAULT_VALIDATE_DEBOUNCE_MS`, `DEFAULT_ROW_ESTIMATE_SIZE`,
+`DEFAULT_ROW_OVERSCAN`) rather than restated. The docs' "Default Values" page matches it.
 
-Also: `<DataGrid.CreateTrigger>`'s JSDoc promised an `asChild` prop that never existed; "footer" now
-means only the `<tfoot>` summary row, with the page controls called the pagination bar throughout;
-the shadcn kit drops two unused runtime dependencies (`input-otp`, `tw-animate-css`); and the docs
-gained the six compound members (`HeaderRow`, `HeaderCell`, `Cell`, `Footer`, `DraftBar`,
-`SortTrigger`/`VisibilityTrigger`) that appeared on no page.
+**`data-slot` on the fallback rows.** `EmptyStateRow` and `NoResultsRow` rendered
+`<Tbody><Tr><Td>` with no slot at all, so the structural stylesheet's rules applied to the
+loading body and not to them; both now mirror `LoadingBody`. The kits' `Pagination` and
+`PageSizer` gained `data-slot` too.

@@ -36,17 +36,17 @@ export function LoadMoreFooter() {
 	const { rowVirtualizer } = useVirtualContext()
 	const { getScrollElement } = useInfiniteContext()
 
-	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
+	const { enabled, trigger, hasNextPage, isFetching, loadMore } = controller
 	const thresholdPx = controller.threshold.px ?? DATA_GRID_DEFAULTS.pagination.threshold.px
 	const isVirtualized = rowVirtualizer !== null
 
 	// Whether the last measurement was already inside the trigger zone. Held in a ref so it
-	// survives re-arming (e.g. when `hasMore` changes) — a fresh `false` would re-fire a load
+	// survives re-arming (e.g. when `hasNextPage` changes) — a fresh `false` would re-fire a load
 	// for a bottom edge the user never crossed again.
 	const wasWithinThresholdRef = useRef(false)
 
 	useEffect(() => {
-		if (!enabled || trigger !== LoadMoreTrigger.Auto || isVirtualized || !hasMore) return
+		if (!enabled || trigger !== LoadMoreTrigger.Auto || isVirtualized || !hasNextPage) return
 		const root = getScrollElement()
 		if (!root) return
 
@@ -81,10 +81,10 @@ export function LoadMoreFooter() {
 			root.removeEventListener('scroll', check)
 			resizeObserver.disconnect()
 		}
-	}, [enabled, trigger, isVirtualized, hasMore, isFetching, thresholdPx, getScrollElement, loadMore])
+	}, [enabled, trigger, isVirtualized, hasNextPage, isFetching, thresholdPx, getScrollElement, loadMore])
 
 	if (!enabled) return null
-	if (!hasMore && !isFetching && controller.error == null) return null
+	if (!hasNextPage && !isFetching && controller.error == null) return null
 
 	const columnCount = table.getVisibleLeafColumns().length
 
@@ -98,7 +98,7 @@ export function LoadMoreFooter() {
 					columnCount={columnCount}
 					direction='forward'
 					isFetching={isFetching}
-					hasMore={hasMore}
+					hasNextPage={hasNextPage}
 					error={controller.error}
 					trigger={trigger}
 					onTrigger={() => {

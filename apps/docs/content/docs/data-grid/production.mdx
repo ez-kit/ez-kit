@@ -165,7 +165,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 	return (
 		<DataGridOptionsProvider<Order>
 			defaults={{
-				pagination: { manual: true, pageSizeOptions: [10, 25, 50], variant: 'numbered', siblings: 1 },
+				pagination: { manual: true, items: [10, 25, 50], variant: 'numbered', siblings: 1 },
 				sorting: { manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true },
 				filtering: {
 					manual: true,
@@ -214,7 +214,7 @@ what a write actually does:
 </DataGridOptions>
 ```
 
-Note `pagination={{ rowCount }}`: the provider's `manual`, `variant`, `siblings` and `pageSizeOptions`
+Note `pagination={{ rowCount }}`: the provider's `manual`, `variant`, `siblings` and `items`
 survive it. Merging is per field, not per feature — a grid overrides one nested value without
 restating the object around it, and turns a whole feature off with `sorting={false}`.
 

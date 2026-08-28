@@ -3,9 +3,9 @@
 import { Button } from '@heroui/react'
 import { FilterX } from 'lucide-react'
 
-import type { ClearFiltersButtonComponentProps } from '@ez-kit/data-grid-react'
+import type { ClearFiltersButtonProps } from '@ez-kit/data-grid-react'
 
-export function ClearFiltersButton({ disabled, onClick, 'aria-label': ariaLabel }: ClearFiltersButtonComponentProps) {
+export function ClearFiltersButton({ disabled, onClick, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
 	return (
 		<Button
 			variant='ghost'

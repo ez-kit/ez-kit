@@ -334,7 +334,7 @@ describe('CreatingFeature — per-column validateOn', () => {
 			data: DATA,
 			columns: createColumns<Row>([
 				{ accessorKey: 'name' },
-				{ accessorKey: 'email', creating: { validateOn: 'change', validateDebounceMs: 20 } },
+				{ accessorKey: 'email', creating: { validateOn: 'change', debounce: 20 } },
 			]),
 			creating: { validate, onSave: () => Promise.resolve() },
 		})

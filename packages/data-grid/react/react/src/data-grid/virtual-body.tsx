@@ -69,7 +69,7 @@ export function VirtualBody() {
 		bottomRows.map((row) => row.id),
 	)
 
-	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
+	const { enabled, trigger, hasNextPage, isFetching, loadMore } = controller
 	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.pagination.threshold.rows
 	const rowCount = centerRows.length
 
@@ -77,17 +77,17 @@ export function VirtualBody() {
 	// Skip while a fetch is in flight so we don't re-invoke the guarded no-op on
 	// every scroll frame; the effect re-runs once `isFetching` clears.
 	useEffect(() => {
-		if (!enabled || trigger !== LoadMoreTrigger.Auto || !hasMore || isFetching) return
+		if (!enabled || trigger !== LoadMoreTrigger.Auto || !hasNextPage || isFetching) return
 		if (lastIndex < 0) return
 		if (lastIndex >= rowCount - thresholdRows) {
 			loadMore('forward')
 		}
-	}, [enabled, trigger, hasMore, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
+	}, [enabled, trigger, hasNextPage, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
 
 	if (!rowVirtualizer) return null
 
 	const totalSize = rowVirtualizer.getTotalSize()
-	const showLoadMore = enabled && (hasMore || controller.isFetching || controller.error != null)
+	const showLoadMore = enabled && (hasNextPage || controller.isFetching || controller.error != null)
 	const tbodyHeight = totalSize + (showLoadMore ? LOAD_MORE_ALLOWANCE_PX : 0)
 	const columnCount = table.getVisibleLeafColumns().length
 
@@ -140,7 +140,7 @@ export function VirtualBody() {
 							columnCount={columnCount}
 							direction='forward'
 							isFetching={controller.isFetching}
-							hasMore={controller.hasMore}
+							hasNextPage={controller.hasNextPage}
 							error={controller.error}
 							trigger={controller.trigger}
 							onTrigger={() => {

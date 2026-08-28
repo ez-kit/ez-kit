@@ -83,7 +83,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	}
 	// Copy the whole compound namespace rather than listing members by hand. The hand-written
 	// list had silently fallen five members behind `DataGrid` (SelectionBar, DraftBar,
-	// SortTrigger, GlobalFilterInput, VisibilityTrigger), and the `as typeof DataGrid`
+	// SortMenuTrigger, GlobalFilterInput, VisibilityTrigger), and the `as typeof DataGrid`
 	// cast below hid it from the type checker — so `<DataGrid.SelectionBar />` from a kit was
 	// `undefined` at runtime with no compile error. Assigning the namespace wholesale makes
 	// that class of drift impossible.

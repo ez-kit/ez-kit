@@ -34,6 +34,7 @@ export function Pagination({
 		<HeroPagination
 			aria-label={PAGINATION_ARIA_LABEL}
 			className='mt-3'
+			data-slot='pagination'
 			data-variant={variant}
 		>
 			{label !== undefined && (

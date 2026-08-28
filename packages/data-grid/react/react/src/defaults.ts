@@ -1,7 +1,22 @@
-import { DEFAULT_PAGE_SIZE } from '@ez-kit/data-grid-core'
+import {
+	ColumnResizeMode,
+	CreatingMode,
+	DEFAULT_PAGE_SIZE,
+	DEFAULT_ROW_ESTIMATE_SIZE,
+	DEFAULT_ROW_OVERSCAN,
+	DEFAULT_VALIDATE_DEBOUNCE_MS,
+	EditingMode,
+	ExpandingMode,
+	GridDirection,
+	LinkTarget,
+	MultiSortEvent,
+	PaginationMode,
+	RowActionsVariant,
+	ValidateOn,
+} from '@ez-kit/data-grid-core'
 
 import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from './data-grid/page-window'
-import { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, PaginationVariant } from './types'
+import { ActionBarVariant, FilterChipsPosition, FilteringVariant, LoadMoreTrigger, PaginationVariant } from './types'
 
 /**
  * Default commit debounce (ms) for **every** text filter input — the per-column ones and the
@@ -14,13 +29,19 @@ import { FilterChipsPosition, FilteringVariant, LoadMoreTrigger, PaginationVaria
 export const DEFAULT_FILTER_DEBOUNCE_MS = 250
 
 /**
- * Single source of truth for data-grid default option **values**.
+ * Single source of truth for data-grid default option **values** — **every** one of them, which
+ * is the point. The docs' "Default Values" page is this table, and it promises completeness: a
+ * default that lives only as a literal at its use site is a default nobody can read, extend, or
+ * document, and for a long stretch that described most of them (`sorting.clearable`,
+ * `selection.multi`, `expanding.mode`, the resize mode, the virtualizer's row estimate …).
  *
  * These are values only — no feature is turned on by them. The grid stays fully opt-in;
  * each field is the floor a normalizer / consumer falls back to when the resolved config
- * enabled a feature but left that sub-option undefined. Centralizing the values here removes
- * the literals that were previously duplicated across normalizers and components and gives
- * the docs a single place to describe.
+ * enabled a feature but left that sub-option undefined.
+ *
+ * Keyed by the **option path** it defaults, so `DATA_GRID_DEFAULTS.pagination.items` is the
+ * floor under `pagination.items`. Values that core resolves are re-exported from core rather
+ * than restated here, so the two cannot drift.
  *
  * Override precedence is unchanged and handled upstream by the option-layer merge
  * (factory `defaults` < provider `defaults` < instance config); these values apply
@@ -37,7 +58,9 @@ export const DATA_GRID_DEFAULTS = {
 		/** `pageSize` mirrors the core default (one source across layers). */
 		pageSize: DEFAULT_PAGE_SIZE,
 		/** Offered by the PageSizer when `pagination.toolbar` is on and no list is supplied. */
-		pageSizeOptions: [10, 20, 50, 100],
+		items: [10, 20, 50, 100],
+		/** What pagination does. */
+		mode: PaginationMode.Pages,
 		variant: PaginationVariant.Numbered,
 		/** `numbered` page-link window; mirrors the `buildPageWindow` defaults. */
 		siblings: DEFAULT_PAGE_SIBLINGS,
@@ -55,6 +78,8 @@ export const DATA_GRID_DEFAULTS = {
 	/** Cross-column global search input. Debounce falls back to `filtering.debounce`. */
 	globalFiltering: {
 		placeholder: 'Search…',
+		/** Auto-mounted in the toolbar as soon as global search is enabled. */
+		toolbar: true,
 	},
 	/** Column filtering controls. */
 	filtering: {
@@ -62,5 +87,79 @@ export const DATA_GRID_DEFAULTS = {
 		debounce: DEFAULT_FILTER_DEBOUNCE_MS,
 		chips: { position: FilterChipsPosition.Above },
 		toolbar: { alwaysShow: false },
+		/** Faceted row models are opt-in — they cost a row model per column. */
+		faceted: false,
 	},
+	/** Column sorting. Multi-column sort is off until `sorting.multi` opts in. */
+	sorting: {
+		/** First click sorts ascending. */
+		descFirst: false,
+		/** A third click clears the sort. */
+		clearable: true,
+		/** The floors under `sorting.multi.*`, which apply once multi-sort is on. */
+		multi: {
+			/** Gesture that extends the multi-sort set. */
+			event: MultiSortEvent.Shift,
+			/** A column may be dropped from the set. */
+			removable: true,
+		},
+	},
+	/** Row selection. */
+	selection: {
+		/** More than one row at a time. */
+		multi: true,
+		/** The floors under `selection.bar.*`. */
+		bar: {
+			/** Render mode of the shared action bar. */
+			variant: ActionBarVariant.Floating,
+		},
+	},
+	/** Row expanding. */
+	expanding: {
+		mode: ExpandingMode.SubContent,
+	},
+	/** Column resizing. */
+	resizing: {
+		/** The width follows the pointer live. */
+		mode: ColumnResizeMode.OnChange,
+	},
+	/** Row virtualization. */
+	virtualization: {
+		row: {
+			estimateSize: DEFAULT_ROW_ESTIMATE_SIZE,
+			overscan: DEFAULT_ROW_OVERSCAN,
+		},
+	},
+	/** The per-row actions column. */
+	rowActions: {
+		variant: RowActionsVariant.Inline,
+	},
+	/** Row editing. */
+	editing: {
+		mode: EditingMode.Row,
+		validateOn: ValidateOn.Submit,
+		debounce: DEFAULT_VALIDATE_DEBOUNCE_MS,
+	},
+	/** Row creation. */
+	creating: {
+		mode: CreatingMode.Row,
+		validateOn: ValidateOn.Submit,
+		debounce: DEFAULT_VALIDATE_DEBOUNCE_MS,
+	},
+	/** Presentational shell. `maxHeight` is applied by the structural stylesheet, not by JS. */
+	layout: {
+		/** `--dg-table-max-height` when the body scrolls under a capped height. */
+		maxHeight: '400px',
+		/** `--dg-virtual-height` when the body is virtualized and needs a definite height. */
+		virtualHeight: '600px',
+	},
+	/** Cell-type config floors. */
+	cell: {
+		link: {
+			/** A grid links inside its own app far more often than out of it. */
+			target: LinkTarget.Self,
+		},
+	},
+	/** Text direction the grid is laid out in. */
+	direction: GridDirection.Ltr,
 } as const

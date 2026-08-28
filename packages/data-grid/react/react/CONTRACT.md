@@ -96,7 +96,7 @@ exported — read them for the exact shape.
 | `Button`   | `ButtonProps`   | Generic button used by triggers/actions.                       |
 | `Input`    | `InputProps`    | Generic text input.                                            |
 | `Checkbox` | `CheckboxProps` | Row/all selection. `indeterminate`, `onChange(checked)`.       |
-| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `left` / `right` / `children`.   |
+| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `start` / `end` / `children`.    |
 
 ### `pagination`
 
@@ -121,7 +121,7 @@ exported — read them for the exact shape.
 | `FilterPanel`        | `FilterPanelProps`                                     |
 | `FilterPanelChip`    | `FilterPanelChipProps`                                 |
 | `FilterChip`         | `FilterChipProps`                                      |
-| `ClearFiltersButton` | `ClearFiltersButtonComponentProps`                     |
+| `ClearFiltersButton` | `ClearFiltersButtonProps`                              |
 | `GlobalFilterInput`  | `GlobalFilterInputProps` (debounce applied upstream)   |
 | `OperatorSelect`     | `OperatorSelectProps`                                  |
 | `BetweenInput`       | `BetweenInputProps` (`inputs` / `slider` / `calendar`) |

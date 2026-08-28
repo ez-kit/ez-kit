@@ -76,6 +76,29 @@ export type ExoticComponentLike = { $$typeof: symbol }
  */
 export type ColumnRenderer<TProps, TNode> = ((props: TProps) => TNode) | ExoticComponentLike
 
+/**
+ * A renderer slot for a column's **input** components — the filter control, the edit field, the
+ * create field.
+ *
+ * Identical to {@link ColumnRenderer} except that its props are compared **bivariantly**, via the
+ * method-signature form. That is deliberate and load-bearing.
+ *
+ * These slots hand the component the column's `cell.config`, whose type is only known to the
+ * author: `filtering` and `cell` are sibling fields of one column object, and a union arm has no
+ * inference variable to carry a type from one to the other. So the only way to say "this filter
+ * reads a `SelectCellConfig`" is to annotate the component — and under `strictFunctionTypes` a
+ * property-position function type rejects exactly that annotation, because `config?: unknown` is
+ * not assignable to `config?: SelectCellConfig`. The result was that the `config` these slots have
+ * always been passed could only be read through a cast, which is the very thing
+ * {@link InputComponentProps} exists to remove.
+ *
+ * Bivariance is what React's own component types give props for the same reason. The narrowing an
+ * author writes here is a claim about their own column, not something the grid can check.
+ */
+export type ColumnInputRenderer<TProps, TNode> =
+	| { bivariantRender(props: TProps): TNode }['bivariantRender']
+	| ExoticComponentLike
+
 export type CellViewCtx<TRow, TValue> = {
 	row: TRow
 	value: TValue
@@ -87,12 +110,16 @@ export type CellViewCtx<TRow, TValue> = {
  *
  * `config` is the column's own `cell.config`, forwarded verbatim — a custom filter for a
  * `select` / `badge` column needs the very `items` the cell was declared with, and the grid
- * has been passing them all along. The type omitted it, so the only way to read them was a
- * cast or a second copy of the list in a closure.
+ * has been passing them all along.
  *
- * The React adapter's `CellInputProps` is this same type, re-exported: one shape, one name per
- * layer, no drift between what the filter slot promises and what a registered cell type's
- * `filter` renderer receives.
+ * Annotate the component to name that config — `(props: InputComponentProps<SelectCellConfig>)`
+ * — and the slot accepts it: {@link ColumnInputRenderer} compares these props bivariantly for
+ * precisely this reason. Left unannotated, `config` is `unknown`, as it must be.
+ *
+ * This is the shape of a **column's** `filtering.component`. A cell type registered in the kit's
+ * registry receives the richer `FieldState` in every one of its slots — `view` excepted — because
+ * a registered type also renders edit and create fields, where validation state is part of the
+ * job.
  */
 export type InputComponentProps<TConfig = unknown> = {
 	value: unknown
@@ -358,9 +385,15 @@ export type CellDef<
 			[TKey in keyof TCellTypes & string]: CellArm<TKey, TCellTypes[TKey], TRow, TValue, TNode>
 	  }[keyof TCellTypes & string]
 
-export type ColumnFilteringConfig<TNode = unknown> = {
-	/** Custom filter input component for this column. */
-	component?: ColumnRenderer<InputComponentProps, TNode>
+export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
+	/**
+	 * Custom filter input component for this column.
+	 *
+	 * Receives {@link InputComponentProps}, including the column's own `cell.config`. Annotate
+	 * the component with the config it expects — `(props: InputComponentProps<SelectCellConfig>)`
+	 * — to read it without a cast.
+	 */
+	component?: ColumnInputRenderer<InputComponentProps<TConfig>, TNode>
 	/** Operator configuration. `true` = default operators for the column's cell type. */
 	operators?: boolean | ColumnOperatorsConfig
 	/** Override the default selected operator for this column. */
@@ -384,12 +417,15 @@ export type ColumnFilteringConfig<TNode = unknown> = {
 	faceted?: boolean
 }
 
-export type ColumnEditingConfig<TNode = unknown> = {
+export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown> = {
 	/**
 	 * Custom edit input component for this column.
-	 * Receives a {@link FieldState} with `value`, `onChange`, `onBlur`, `error`, `errors`, `isValidating`, `config`.
+	 *
+	 * Receives a {@link FieldState} with `value`, `onChange`, `onBlur`, `error`, `errors`,
+	 * `isValidating`, `config`. On an `accessorKey` column `value` is that field's type; annotate
+	 * the component — `(props: FieldState<SelectCellConfig>)` — to name the `cell.config` it reads.
 	 */
-	component?: ColumnRenderer<FieldState, TNode>
+	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
 	/**
 	 * Help text rendered under the input in the edit form.
 	 * Forwarded to `FieldState.description` so composite cell types can show it
@@ -403,19 +439,23 @@ export type ColumnEditingConfig<TNode = unknown> = {
 	 */
 	validateOn?: ValidateOn
 	/**
-	 * Debounce (ms) for this column's field, overriding the feature-level
-	 * `editing.validateDebounceMs`. Applies only when the resolved `validateOn` is
+	 * Debounce (ms) for this column's validation, overriding the feature-level
+	 * `editing.debounce`. Applies only when the resolved `validateOn` is
 	 * {@link ValidateOn.Change}.
+	 *
+	 * One word for "how long we wait before acting on typing", the same one
+	 * `filtering.debounce` and `globalFiltering.debounce` use. The unit is milliseconds
+	 * everywhere, so it is not part of the name.
 	 */
-	validateDebounceMs?: number
+	debounce?: number
 }
 
-export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unknown> = {
+export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unknown, TConfig = unknown> = {
 	/**
 	 * Custom create input component for this column. Falls back to `editing.component` when omitted.
 	 * Receives a {@link FieldState} with the same shape as {@link ColumnEditingConfig.component}.
 	 */
-	component?: ColumnRenderer<FieldState, TNode>
+	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
 	/**
 	 * Help text rendered under the input in the create form.
 	 * Forwarded to `FieldState.description`.
@@ -447,11 +487,12 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	 */
 	validateOn?: ValidateOn
 	/**
-	 * Debounce (ms) for this column's field, overriding the feature-level
-	 * `creating.validateDebounceMs`. Applies only when the resolved `validateOn` is
-	 * {@link ValidateOn.Change}.
+	 * Debounce (ms) for this column's validation, overriding the feature-level
+	 * `creating.debounce`. Applies only when the resolved `validateOn` is
+	 * {@link ValidateOn.Change}. Same word, same unit, as `editing.debounce` and
+	 * `filtering.debounce`.
 	 */
-	validateDebounceMs?: number
+	debounce?: number
 }
 
 /**
@@ -749,7 +790,7 @@ export type ColumnDefCommon<
 	 */
 	globalFiltering?: false
 	/** Column-level editing config. Set to false to disable. */
-	editing?: false | ColumnEditingConfig<TNode>
+	editing?: false | ColumnEditingConfig<TNode, TValue>
 	/** Column-level creating config. Set to false to disable. */
 	creating?: false | ColumnCreatingConfig<TRow, TValue, TNode>
 
@@ -775,7 +816,7 @@ export type ColumnDefCommon<
 	 * ```
 	 *
 	 * `'start'` / `'end'` rather than `'left'` / `'right'`: this axis flips with the text
-	 * direction, and the grid already treats RTL as first-class (`resizing.direction`). Column
+	 * direction, and the grid already treats RTL as first-class (the root `direction` option). Column
 	 * *pinning* keeps `'left'` / `'right'` — a pinned column sticks to a viewport edge, which
 	 * does not flip.
 	 *

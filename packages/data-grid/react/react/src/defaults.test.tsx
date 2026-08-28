@@ -116,19 +116,19 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(config?.pagination).not.toHaveProperty('variant')
 	})
 
-	it('pagination.toolbar / pageSizeOptions are React-only → never reach createTable', () => {
+	it('pagination.toolbar / items are React-only → never reach createTable', () => {
 		renderHook(() =>
 			useDataGrid({
 				data: USERS,
 				columns: COLUMNS,
-				pagination: { toolbar: true, pageSizeOptions: [5, 10], pageSize: 10 },
+				pagination: { toolbar: true, items: [5, 10], pageSize: 10 },
 			}),
 		)
 
 		const config = createTableSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
 		expect(config?.pagination).toBeDefined()
 		expect(config?.pagination).not.toHaveProperty('toolbar')
-		expect(config?.pagination).not.toHaveProperty('pageSizeOptions')
+		expect(config?.pagination).not.toHaveProperty('items')
 		// Sanity: the spy sees a real config, so the assertion above can actually fail.
 		expect(config?.pagination).toHaveProperty('pageSize', 10)
 	})

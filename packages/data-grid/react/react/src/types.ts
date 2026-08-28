@@ -129,10 +129,17 @@ export type ModalProps = {
 	onCancel?: () => void
 }
 
+/**
+ * The kit's toolbar shell. `start` / `end` are logical, not physical: the bar is a flex row, so
+ * the two slots swap sides under RTL, and `left` / `right` named the wrong one half the time.
+ * Column pinning keeps `left` / `right` — a viewport edge does not flip.
+ */
 export type ToolbarProps = {
 	children?: ReactNode
-	left?: ReactNode
-	right?: ReactNode
+	/** Leading slot — rendered first in the reading direction. */
+	start?: ReactNode
+	/** Trailing slot — rendered last in the reading direction. */
+	end?: ReactNode
 }
 
 /**
@@ -383,7 +390,7 @@ export type FilterChipProps = {
 	isDraft: boolean
 }
 
-export type ClearFiltersButtonComponentProps = {
+export type ClearFiltersButtonProps = {
 	/** True when no filter is active; kit can render the button in a disabled state. */
 	disabled: boolean
 	/** Clear every column filter and the global filter. */
@@ -478,7 +485,7 @@ export type RefetchOverlayProps = {
  * the UI kit (`shadcn` / `heroui`); the react package only positions it inside a
  * full-width cell. The component should render:
  * - a spinner when `isFetching`
- * - a "Load more" button when `trigger` is {@link LoadMoreTrigger.Manual} and `hasMore` (calls `onTrigger`)
+ * - a "Load more" button when `trigger` is {@link LoadMoreTrigger.Manual} and `hasNextPage` (calls `onTrigger`)
  * - a "Retry" affordance when `error` is non-null (calls `onRetry`)
  */
 /**
@@ -547,8 +554,12 @@ export type LoadMoreRowProps = {
 	direction: LoadMoreDirection
 	/** A page request is in flight in this direction. */
 	isFetching: boolean
-	/** More rows can be loaded in this direction (controlled `hasNextPage`). */
-	hasMore: boolean
+	/**
+	 * More rows can be loaded in this direction — the resolved `pagination.hasNextPage`, under
+	 * the same name it has as an option. It was `hasNextPage`, so one flag changed its spelling on
+	 * the way from the config to the kit.
+	 */
+	hasNextPage: boolean
 	/** Last load error for this direction, or `null`. */
 	error: unknown
 	/** Active trigger mode. */
@@ -682,7 +693,7 @@ export type GridComponentRegistry = {
 	FilterPanel?: ComponentType<FilterPanelProps>
 	FilterPanelChip?: ComponentType<FilterPanelChipProps>
 	FilterChip?: ComponentType<FilterChipProps>
-	ClearFiltersButton?: ComponentType<ClearFiltersButtonComponentProps>
+	ClearFiltersButton?: ComponentType<ClearFiltersButtonProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	DraftBar?: ComponentType<DraftBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>

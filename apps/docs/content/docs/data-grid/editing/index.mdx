@@ -76,14 +76,14 @@ const columns = createColumns<User>([
 
 ## Options
 
-| `editing` key        | Type                                                   | Description                                                                                           |
-| -------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `onSave`             | `({ rowId, values, signal }) => void \| Promise<void>` | Required. Commit the edit. `signal` aborts when the user cancels or the table unmounts.               |
-| `mode`               | `'row' \| 'modal' \| 'cell'`                           | What editing does. Default `'row'`.                                                                   |
-| `validate`           | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](./data-grid/editing/validation).                |
-| `validateOn`         | `'submit' \| 'blur' \| 'change'`                       | When a field validates. Default `'submit'`. A column overrides it under its own `editing.validateOn`. |
-| `validateDebounceMs` | `number`                                               | Debounce for `validateOn: 'change'`. Default `200`.                                                   |
-| `enabled`            | `boolean`                                              | Explicit off-switch for a config that came from a defaults layer.                                     |
+| `editing` key | Type                                                   | Description                                                                                           |
+| ------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `onSave`      | `({ rowId, values, signal }) => void \| Promise<void>` | Required. Commit the edit. `signal` aborts when the user cancels or the table unmounts.               |
+| `mode`        | `'row' \| 'modal' \| 'cell'`                           | What editing does. Default `'row'`.                                                                   |
+| `validate`    | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](./data-grid/editing/validation).                |
+| `validateOn`  | `'submit' \| 'blur' \| 'change'`                       | When a field validates. Default `'submit'`. A column overrides it under its own `editing.validateOn`. |
+| `debounce`    | `number`                                               | Debounce for `validateOn: 'change'`. Default `200`.                                                   |
+| `enabled`     | `boolean`                                              | Explicit off-switch for a config that came from a defaults layer.                                     |
 
 ## Reading and driving it yourself
 

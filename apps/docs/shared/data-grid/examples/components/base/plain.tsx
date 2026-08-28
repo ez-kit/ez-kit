@@ -13,7 +13,7 @@ export function BasePlainExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 25] }}
+			pagination={{ pageSize: 10, items: [5, 10, 25] }}
 		/>
 	)
 }

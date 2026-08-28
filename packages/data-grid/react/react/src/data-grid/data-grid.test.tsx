@@ -255,7 +255,7 @@ describe('<DataGrid>', () => {
 		expect(screen.getAllByTestId('money-cell')).toHaveLength(USERS.length)
 	})
 
-	it('does not auto-mount PageSizer when pagination.pageSizeOptions is not set', () => {
+	it('does not auto-mount PageSizer when pagination.items is not set', () => {
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.queryByRole('combobox')).toBeNull()
@@ -267,7 +267,7 @@ describe('<DataGrid>', () => {
 		// `makeTable` builds a bare core table, so the resolved options are set directly here:
 		// sizes present, auto-mount off — exactly what `pagination: { toolbar: false }` resolves to.
 		const table = makeTable({ pagination: { pageSize: 5 } })
-		table.grid.pagination.pageSizeOptions = [5, 10, 25]
+		table.grid.pagination.items = [5, 10, 25]
 		table.grid.pagination.pageSizer = false
 		renderWithComponents(
 			<DataGrid table={table}>
@@ -277,9 +277,9 @@ describe('<DataGrid>', () => {
 		expect(screen.getByRole('combobox')).toHaveValue('5')
 	})
 
-	it('renders PageSizer select with the pagination.pageSizeOptions values', () => {
+	it('renders PageSizer select with the pagination.items values', () => {
 		const table = makeTable({ pagination: { pageSize: 5 } })
-		table.grid.pagination.pageSizeOptions = [5, 10, 25]
+		table.grid.pagination.items = [5, 10, 25]
 		table.grid.pagination.pageSizer = true
 		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')

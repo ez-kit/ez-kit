@@ -75,11 +75,11 @@ const config = {
 `validateOn` decides, and it is the only place that decides — `validate` carries no timing of
 its own.
 
-| `validateOn` | Behaviour                                                                             |
-| ------------ | ------------------------------------------------------------------------------------- |
-| `'submit'`   | The default. Only on commit.                                                          |
-| `'blur'`     | When a field loses focus, and on every commit.                                        |
-| `'change'`   | On every keystroke, debounced by `validateDebounceMs` (default `200`), and on commit. |
+| `validateOn` | Behaviour                                                                   |
+| ------------ | --------------------------------------------------------------------------- |
+| `'submit'`   | The default. Only on commit.                                                |
+| `'blur'`     | When a field loses focus, and on every commit.                              |
+| `'change'`   | On every keystroke, debounced by `debounce` (default `200`), and on commit. |
 
 Per column, under that column's `editing` / `creating` — the same place its `component` and
 `description` live:
@@ -88,7 +88,7 @@ Per column, under that column's `editing` / `creating` — the same place its `c
 createColumns<User>([
 	{ accessorKey: 'email', editing: { validateOn: 'blur' } },
 	// A live strength meter wants every keystroke.
-	{ accessorKey: 'password', editing: { validateOn: 'change', validateDebounceMs: 100 } },
+	{ accessorKey: 'password', editing: { validateOn: 'change', debounce: 100 } },
 ])
 ```
 
@@ -131,11 +131,11 @@ per-field counterpart, true while an async field-level check is running.
 
 ## Options
 
-| Key                  | Type                                                              | Description                               |
-| -------------------- | ----------------------------------------------------------------- | ----------------------------------------- |
-| `validate`           | `(values, ctx) => ValidationResult \| Promise<…>` \| `{ schema }` | The form's validator. `null` means valid. |
-| `validateOn`         | `'submit' \| 'blur' \| 'change'`                                  | When it runs. Default `'submit'`.         |
-| `validateDebounceMs` | `number`                                                          | Debounce for `'change'`. Default `200`.   |
+| Key          | Type                                                              | Description                               |
+| ------------ | ----------------------------------------------------------------- | ----------------------------------------- |
+| `validate`   | `(values, ctx) => ValidationResult \| Promise<…>` \| `{ schema }` | The form's validator. `null` means valid. |
+| `validateOn` | `'submit' \| 'blur' \| 'change'`                                  | When it runs. Default `'submit'`.         |
+| `debounce`   | `number`                                                          | Debounce for `'change'`. Default `200`.   |
 
 The same three keys exist on `creating`, and the last two on a column's `editing` / `creating`.
 

@@ -1,6 +1,6 @@
 'use client'
 
-import type { CellInputProps, CellViewProps } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
 // ── rating ────────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ export function RatingCellView({ value }: CellViewProps) {
 	)
 }
 
-export function RatingCellInput({ value, onChange }: CellInputProps) {
+export function RatingCellInput({ value, onChange }: FieldState) {
 	const n = Number(value)
 	return (
 		<span>
@@ -68,7 +68,7 @@ export function ColorCellView({ value }: CellViewProps) {
 	)
 }
 
-export function ColorCellInput({ value, onChange }: CellInputProps) {
+export function ColorCellInput({ value, onChange }: FieldState) {
 	return (
 		<input
 			type='color'
@@ -138,7 +138,7 @@ export function CompletionCellView({ value }: CellViewProps) {
 	)
 }
 
-export function CompletionCellInput({ value, onChange }: CellInputProps) {
+export function CompletionCellInput({ value, onChange }: FieldState) {
 	const pct = clampProgress(Number(value))
 	return (
 		<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -185,7 +185,7 @@ export function CurrencyCellView({ value }: CellViewProps) {
 	)
 }
 
-export function CurrencyCellInput({ value, onChange }: CellInputProps) {
+export function CurrencyCellInput({ value, onChange }: FieldState) {
 	const amount = Number(value)
 	return (
 		<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -255,7 +255,7 @@ export function UserCellView({ value }: CellViewProps) {
 	)
 }
 
-export function UserCellInput({ value, onChange }: CellInputProps) {
+export function UserCellInput({ value, onChange }: FieldState) {
 	return (
 		<input
 			type='text'

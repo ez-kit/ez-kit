@@ -11,7 +11,9 @@ import type {
 	CellViewCtx,
 	ColumnAlign,
 	ColumnAlignDef,
+	ColumnCreatingConfig,
 	ColumnDef,
+	ColumnEditingConfig,
 	ColumnPinningDef,
 	ColumnWidthDef,
 	TanStackColumnDef,
@@ -26,6 +28,16 @@ type AnyCellTypes = any
  * like `cellView` beside it — the meta is read by renderers that have no `TRow`.
  */
 type ColumnMetaClassName = string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
+
+/**
+ * `editing` / `creating` are declared with the **column's** value type so an `accessorKey`
+ * column's edit field sees it, and value-erased on the meta, exactly like `cellClassName` and
+ * `cellView` beside them — the meta is read by renderers that have no `TValue`. `FieldState`'s
+ * `value` and `onChange` point opposite ways, so no variance rule relates the two; the cast is
+ * the erasure, and it happens here once rather than at every reader.
+ */
+type ColumnMetaEditing = false | ColumnEditingConfig
+type ColumnMetaCreating<TRow> = false | ColumnCreatingConfig<TRow>
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
@@ -118,8 +130,8 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'columnAlign', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'filtering', filtering)
-	setIfDefined(meta, 'editing', editing)
-	setIfDefined(meta, 'creating', creating)
+	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)
+	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
 	setIfDefined(meta, 'headerClassName', headerClassName)
 	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
 	setIfDefined(meta, 'footerClassName', footerClassName)

@@ -14,7 +14,7 @@ export function CrudClientExample() {
 			columns={crudColumns}
 			sorting
 			filtering={{ variant: 'popover' }}
-			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 20, 50] }}
+			pagination={{ pageSize: 10, items: [5, 10, 20, 50] }}
 			visibility={{ toolbar: true }}
 			pinning={{ column: true }}
 			selection

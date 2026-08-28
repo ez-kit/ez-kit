@@ -3,9 +3,10 @@ import { BetweenInputVariant, DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
 
-import type { CellInputProps, CellTypeRegistry } from '../cell-types-context'
+import type { CellTypeRegistry } from '../cell-types-context'
 import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSelectProps } from '../types'
 import type {
+	InputComponentProps,
 	BadgeItem,
 	BetweenValue,
 	DataTable,
@@ -229,7 +230,7 @@ export function renderFilterInput({
 		// column-level filtering.component
 		const filteringCfg = meta.filtering
 		if (filteringCfg !== false && filteringCfg !== undefined) {
-			const comp = (filteringCfg as { component?: (props: CellInputProps) => ReactNode }).component
+			const comp = (filteringCfg as { component?: (props: InputComponentProps) => ReactNode }).component
 			if (comp) {
 				return (
 					<>
@@ -291,7 +292,7 @@ export function renderFilterInput({
 
 	const filteringConfig = meta?.filtering
 	if (filteringConfig !== false && filteringConfig !== undefined) {
-		const comp = (filteringConfig as { component?: (props: CellInputProps) => ReactNode }).component
+		const comp = (filteringConfig as { component?: (props: InputComponentProps) => ReactNode }).component
 		if (comp)
 			return flexRender(comp, {
 				value: filterValue,

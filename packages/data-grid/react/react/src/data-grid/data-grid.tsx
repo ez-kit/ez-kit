@@ -1,4 +1,4 @@
-import { featureConfig } from '@ez-kit/data-grid-core'
+import { featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
 import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
@@ -29,7 +29,7 @@ import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
 import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
-import { SortTrigger } from './sort-trigger'
+import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
@@ -130,14 +130,17 @@ function resolveBulkConfirmationText(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function bulkConfirmationOptions(table: Table<any>): BulkConfirmationConfig | undefined {
 	const confirmation = featureConfig(table.options.deleting?.bulk)?.confirmation
-	if (!confirmation) return undefined
-	return confirmation === true ? {} : confirmation
+	// `featureConfig` yields `undefined` for the bare `true`, which here means "prompt, with the
+	// default copy" — so the on/off decision reads `isFeatureEnabled` and only the copy comes
+	// from the object.
+	if (!isFeatureEnabled(confirmation)) return undefined
+	return featureConfig(confirmation) ?? {}
 }
 
 /** Whether either the per-row or the bulk confirmation dialog is configured. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function hasConfirmDialog(table: Table<any>): boolean {
-	return Boolean(table.options.deleting?.confirmation) || bulkConfirmationOptions(table) !== undefined
+	return isFeatureEnabled(table.options.deleting?.confirmation) || bulkConfirmationOptions(table) !== undefined
 }
 
 function ConfirmDialogRenderer() {
@@ -168,10 +171,8 @@ function ConfirmDialogRenderer() {
 	}
 
 	const confirmation = table.options.deleting?.confirmation
-
-	if (!confirmation) return null
-
-	const options: ConfirmationConfig = confirmation === true ? {} : confirmation
+	if (!isFeatureEnabled(confirmation)) return null
+	const options: ConfirmationConfig = featureConfig(confirmation) ?? {}
 	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
 		pendingId !== null ? resolveConfirmationText(options, pendingRow) : { title: '', description: '' }
@@ -365,7 +366,7 @@ type DataGridType = typeof DataGridRoot & {
 	DraftBar: typeof DraftBar
 	CreateTrigger: typeof CreateTrigger
 	VisibilityTrigger: typeof VisibilityTrigger
-	SortTrigger: typeof SortTrigger
+	SortMenuTrigger: typeof SortMenuTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
 	ClearFiltersButton: typeof ClearFiltersButton
@@ -393,7 +394,7 @@ DataGrid.SelectionBar = SelectionBar
 DataGrid.DraftBar = DraftBar
 DataGrid.CreateTrigger = CreateTrigger
 DataGrid.VisibilityTrigger = VisibilityTrigger
-DataGrid.SortTrigger = SortTrigger
+DataGrid.SortMenuTrigger = SortMenuTrigger
 DataGrid.GlobalFilterInput = GlobalFilterInput
 DataGrid.ActiveFiltersBar = ActiveFiltersBar
 DataGrid.ClearFiltersButton = ClearFiltersButton

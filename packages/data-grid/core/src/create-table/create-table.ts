@@ -22,7 +22,7 @@ import { buildOperatorRegistry } from '../features/operators'
 import { RowActionsVariant } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
-import { ColumnResizeDirection, ColumnResizeMode, ExpandingMode, MultiSortEvent, PaginationMode } from '../types'
+import { ColumnResizeMode, ExpandingMode, GridDirection, MultiSortEvent, PaginationMode } from '../types'
 import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
@@ -112,11 +112,16 @@ function normalizePinning(pinning: boolean | PinningConfig | undefined): {
 	column: boolean
 	row: RowPinningConfig | false
 } {
-	if (!pinning) return { column: false, row: false }
+	if (!isFeatureEnabled(pinning)) return { column: false, row: false }
 	if (pinning === true) return { column: true, row: { top: true, bottom: true } }
-	const rowCfg = pinning.row
-	const row: RowPinningConfig | false = rowCfg === true ? { top: true, bottom: true } : (rowCfg ?? false)
-	return { column: Boolean(pinning.column), row }
+	const config = featureConfig(pinning)
+	if (!config) return { column: false, row: false }
+	// Both halves take the same `boolean | Config` shape every feature option takes, `enabled`
+	// included: a defaults layer that configured row pinning app-wide is turned off for one grid
+	// with `pinning: { row: { enabled: false } }`, without restating its settings.
+	const rowCfg = config.row
+	const row: RowPinningConfig | false = rowCfg === true ? { top: true, bottom: true } : (featureConfig(rowCfg) ?? false)
+	return { column: isFeatureEnabled(config.column), row }
 }
 
 /**
@@ -556,12 +561,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			variant: rowActionsVariant,
 			...(rowActionsEnabled && customRowActions ? { actions: customRowActions } : {}),
 		},
+		// The grid's text direction, declared once at the root. Set unconditionally: it is a fact
+		// about the grid, not a resize setting, so it does not wait for `resizing` to be on.
+		columnResizeDirection: config.direction ?? GridDirection.Ltr,
 		// Column resizing
 		...(hasResizing
 			? {
 					enableColumnResizing: true,
 					columnResizeMode: resizingCfg?.mode ?? ColumnResizeMode.OnChange,
-					columnResizeDirection: resizingCfg?.direction ?? ColumnResizeDirection.Ltr,
 				}
 			: // TanStack defaults `enableColumnResizing` to true, so the table-level gate has to be
 				// spelled out explicitly — otherwise `column.getCanResize()` stays true with the

@@ -15,7 +15,7 @@ export function BaseFullExample() {
 			columns={columns}
 			sorting
 			filtering
-			pagination={{ pageSize: 10, pageSizeOptions: [3, 5, 10] }}
+			pagination={{ pageSize: 10, items: [3, 5, 10] }}
 			visibility
 			selection
 			editing={{

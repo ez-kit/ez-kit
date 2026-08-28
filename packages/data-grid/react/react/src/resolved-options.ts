@@ -86,7 +86,7 @@ export type ResolvedGridOptions = {
 		 * not the toolbar auto-mounts the control — a hand-placed `<DataGrid.PageSizer />`
 		 * reads it too.
 		 */
-		pageSizeOptions?: number[] | undefined
+		items?: number[] | undefined
 		/** The toolbar auto-mounts the PageSizer. Governs mounting only, never the list above. */
 		pageSizer: boolean
 	}

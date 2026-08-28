@@ -36,14 +36,14 @@ is equivalent to writing the tree out:
 The toolbar auto-mounts the controls the enabled features ask for — global search, Clear
 filters, the create trigger, the multi-sort builder, column visibility, the page sizer.
 
-`left` and `right` **append** to those, which is what "the default toolbar plus one button of
+`start` and `end` **append** to those, which is what "the default toolbar plus one button of
 mine" needs:
 
 ```tsx
-<DataGrid.Toolbar right={<ExportButton />} />
+<DataGrid.Toolbar end={<ExportButton />} />
 ```
 
-`children` **replaces** the whole bar — the kit's `left` / `right` slots go unused and nothing
+`children` **replaces** the whole bar — the kit's `start` / `end` slots go unused and nothing
 auto-mounts:
 
 ```tsx
