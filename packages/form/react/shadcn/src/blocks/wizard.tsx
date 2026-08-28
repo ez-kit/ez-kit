@@ -46,26 +46,36 @@ function StepTrigger({ step }: { step: WizardStep }): ReactNode {
 				onClick={step.goTo}
 				aria-current={step.status === 'current' ? 'step' : undefined}
 				className={cn(
-					'flex items-center gap-2 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors',
+					'flex flex-col items-start gap-0.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors',
 					'disabled:pointer-events-none disabled:opacity-50',
 					'not-disabled:hover:bg-muted not-disabled:hover:text-foreground',
 					step.status === 'current' && 'text-foreground',
 					step.invalid && 'text-destructive',
 				)}
 			>
-				<span
-					data-slot='wizard-step-badge'
-					className={cn(
-						'flex size-6 shrink-0 items-center justify-center rounded-full border text-xs',
-						step.status === 'complete' && 'border-primary bg-primary text-primary-foreground',
-						step.status === 'current' && 'border-primary text-primary',
-						step.status === 'upcoming' && 'border-border text-muted-foreground',
-						step.invalid && 'border-destructive text-destructive',
-					)}
-				>
-					<StepIndicator step={step} />
+				<span className='flex items-center gap-2'>
+					<span
+						data-slot='wizard-step-badge'
+						className={cn(
+							'flex size-6 shrink-0 items-center justify-center rounded-full border text-xs',
+							step.status === 'complete' && 'border-primary bg-primary text-primary-foreground',
+							step.status === 'current' && 'border-primary text-primary',
+							step.status === 'upcoming' && 'border-border text-muted-foreground',
+							step.invalid && 'border-destructive text-destructive',
+						)}
+					>
+						<StepIndicator step={step} />
+					</span>
+					{step.title !== undefined && <span data-slot='wizard-step-title'>{step.title}</span>}
 				</span>
-				{step.title !== undefined && <span data-slot='wizard-step-title'>{step.title}</span>}
+				{step.description !== undefined && (
+					<span
+						data-slot='wizard-step-description'
+						className='text-xs font-normal text-muted-foreground'
+					>
+						{step.description}
+					</span>
+				)}
 			</button>
 		</li>
 	)

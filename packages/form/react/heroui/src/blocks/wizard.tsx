@@ -1,6 +1,6 @@
 import { Button as HeroButton, ProgressBar, Tabs } from '@heroui/react'
 
-import type { WizardRenderProps } from '@ez-kit/form-react'
+import type { WizardRenderProps, WizardStep } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -17,11 +17,39 @@ import type { ReactNode } from 'react'
  * `WizardStep.title`/`description` are `ReactNode`, already resolved by the adapter — same
  * rule as `FieldRenderProps.label`/`description`. This kit renders what it is given; it never
  * sees a `LocalizedText` or translates anything itself.
+ *
+ * `data-status`/`data-invalid` on `Tabs.Tab` are CSS/test hooks, not styling by themselves —
+ * `stepBadgeClassName`/`stepLabelClassName` below are what actually paint a `complete` step
+ * differently from an `upcoming` one and make an `invalid` step visually distinct, the same
+ * job the shadcn kit does with `cn(...)` in its own `StepTrigger`.
  */
+
+/** Minimal class joiner — this package ships no `cn`/`tailwind-merge` (see `blocks/layout.tsx`). */
+function cx(...classNames: (string | false | undefined)[]) {
+	return classNames.filter(Boolean).join(' ')
+}
 
 /** Tabs keys are strings; step identity is its `index`. */
 function stepKey(index: number): string {
 	return String(index)
+}
+
+function stepBadgeClassName(step: WizardStep): string {
+	return cx(
+		'flex size-6 shrink-0 items-center justify-center rounded-full border text-xs',
+		step.status === 'complete' && 'border-accent bg-accent text-accent-foreground',
+		step.status === 'current' && 'border-accent text-accent',
+		step.status === 'upcoming' && 'border-border text-muted',
+		step.invalid && 'border-danger text-danger',
+	)
+}
+
+function stepLabelClassName(step: WizardStep): string {
+	return cx(
+		'text-sm font-medium text-muted',
+		step.status === 'current' && 'text-foreground',
+		step.invalid && 'text-danger',
+	)
 }
 
 export function Wizard({
@@ -74,8 +102,30 @@ export function Wizard({
 									data-invalid={step.invalid || undefined}
 									id={stepKey(step.index)}
 									isDisabled={step.disabled}
+									className='flex flex-col items-start gap-0.5'
 								>
-									{step.title ?? `Step ${String(step.index + 1)}`}
+									<span className='flex items-center gap-2'>
+										<span
+											data-slot='wizard-step-badge'
+											className={stepBadgeClassName(step)}
+										>
+											{step.status === 'complete' ? '✓' : step.index + 1}
+										</span>
+										<span
+											data-slot='wizard-step-title'
+											className={stepLabelClassName(step)}
+										>
+											{step.title ?? `Step ${String(step.index + 1)}`}
+										</span>
+									</span>
+									{step.description !== undefined && (
+										<span
+											data-slot='wizard-step-description'
+											className='text-xs text-muted'
+										>
+											{step.description}
+										</span>
+									)}
 									<Tabs.Indicator />
 								</Tabs.Tab>
 							))}

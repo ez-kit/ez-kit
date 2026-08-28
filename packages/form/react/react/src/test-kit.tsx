@@ -104,7 +104,7 @@ function GridItem({ colSpan, children }: GridItemRenderProps): ReactNode {
 	)
 }
 
-function WizardStepTrigger({ index, title, status, invalid, disabled, goTo }: WizardStep): ReactNode {
+function WizardStepTrigger({ index, title, description, status, invalid, disabled, goTo }: WizardStep): ReactNode {
 	return (
 		<li
 			data-testid='wizard-step'
@@ -120,6 +120,7 @@ function WizardStepTrigger({ index, title, status, invalid, disabled, goTo }: Wi
 			>
 				{title ?? `Step ${String(index + 1)}`}
 			</button>
+			{description !== undefined && <p data-testkit='wizard-step-description'>{description}</p>}
 		</li>
 	)
 }
