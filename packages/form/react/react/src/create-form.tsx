@@ -10,6 +10,7 @@ import { NO_INJECTED_COMPONENTS } from './kit-form'
 import {
 	isRendererControlled,
 	renderSchemaFields,
+	resolveSchemaValidators,
 	schemaDefaultValues,
 	stripHiddenValuesOnSubmit,
 } from './schema/form-renderer'
@@ -285,7 +286,7 @@ export function createForm({ components }: CreateFormOptions) {
 			TSubmitMeta
 		>,
 	): ReactNode {
-		const { schema, translate, keepHiddenValues, fields, blocks, rules: _rules, form: _ignored, ...rest } = props
+		const { schema, translate, keepHiddenValues, fields, blocks, rules, form: _ignored, ...rest } = props
 		assertNoReservedFieldKeyCollision(fields, blocks)
 		const { options, elementProps } = splitFormProps(rest)
 		// Spec §4.6: the schema's own `defaultValue` entries seed the form when the caller
@@ -294,12 +295,18 @@ export function createForm({ components }: CreateFormOptions) {
 			...schemaDefaultValues(schema),
 			...(options.defaultValues as Record<string, unknown> | undefined),
 		}
+		// Spec §7.4, §9.3: the schema's `validate` constraints drive `validators.onChange` /
+		// `onSubmit`, or the caller's own `validators` are used verbatim — never both. This
+		// only works because this component is the one calling `useForm` — same reason
+		// `stripHiddenValuesOnSubmit` below only exists in this mode.
+		const validators = resolveSchemaValidators(schema, options.validators, rules, translate)
 		// Spec §6: strip fields the schema currently hides out of the submitted value, unless
 		// the caller opted out with `keepHiddenValues`. This only works because this component
 		// is the one calling `useForm` — see `stripHiddenValuesOnSubmit`'s doc comment on why
 		// the controlled overload below cannot do the same.
 		const instance = useForm({
 			...options,
+			validators,
 			onSubmit: stripHiddenValuesOnSubmit(schema, options.onSubmit, keepHiddenValues),
 			defaultValues,
 		} as FormOptions<

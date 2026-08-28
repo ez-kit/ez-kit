@@ -1,4 +1,4 @@
-import { isFieldNode, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
+import { buildValidator, isFieldNode, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
 
 import { renderChildren } from './render-children'
 
@@ -13,6 +13,7 @@ import type {
 	FormOptions,
 	FormValidateOrFn,
 	NamedRule,
+	StandardSchemaV1,
 	Translate,
 } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
@@ -45,9 +46,10 @@ export type SharedRendererProps<TValues> = {
 	blocks?: BlockRegistry
 	/**
 	 * Named validation rules a `validate.rule` reference resolves against — the same shape
-	 * `@ez-kit/form-core`'s `buildValidator` consumes. Accepted and threaded through here;
-	 * compiling the schema's `validate` blocks into an actual validator is a later task's job,
-	 * not this one's.
+	 * `@ez-kit/form-core`'s `buildValidator` consumes. Only meaningful in uncontrolled mode,
+	 * where `FormRenderer` calls `buildValidator` itself (see `resolveSchemaValidators`); a
+	 * controlled caller builds its own instance and so builds its own validator too, the same
+	 * reason `keepHiddenValues` only exists on the uncontrolled props below.
 	 */
 	rules?: Record<string, NamedRule>
 }
@@ -206,6 +208,52 @@ export function stripHiddenValuesOnSubmit<TValues>(
 			...submitProps,
 			value: stripHiddenValues(schema, submitProps.value),
 		})
+}
+
+/** Whether any field node in `schema` declares a `validate` block — walked once at mount. */
+export function schemaHasValidateConstraints<TValues>(schema: AnyFormSchema<TValues>): boolean {
+	let hasConstraints = false
+	walkNodes(schema, (node) => {
+		if (isFieldNode(node) && node.validate !== undefined) hasConstraints = true
+	})
+	return hasConstraints
+}
+
+/**
+ * The `validators` option `UncontrolledFormRenderer` hands to `useForm` — either the schema's
+ * declarative constraints compiled by `buildValidator`, or the caller's own `validators`
+ * verbatim. Never both: TanStack Form accepts exactly one validator per trigger, a standard
+ * schema *or* a function, so there is no way to merge two issue sets onto one path without
+ * risking duplicated messages in an undefined order (spec §7.4, §9.3). A caller who needs both
+ * a schema and hand-written checks still has the documented escape hatch — field-level
+ * validators through the native `form.Field` compose with either mode, because TanStack runs
+ * field-level and form-level validators together.
+ *
+ * Throws (rather than silently picking a winner) when the schema declares constraints *and*
+ * the caller also supplied `validators` — the two would otherwise race for the same
+ * `onChange`/`onSubmit` slot with no defined precedence.
+ */
+export function resolveSchemaValidators<TValues>(
+	schema: AnyFormSchema<TValues>,
+	callerValidators: unknown,
+	rules: Record<string, NamedRule> | undefined,
+	translate: Translate | undefined,
+): unknown {
+	if (!schemaHasValidateConstraints(schema)) return callerValidators
+
+	if (callerValidators !== undefined) {
+		throw new Error(
+			'FormRenderer received both schema `validate` constraints and a `validators` prop. ' +
+				'Use either the schema constraints or your own `validators` — never both. ' +
+				'Field-level validators through `form.Field` still compose with either.',
+		)
+	}
+
+	const validator: StandardSchemaV1<TValues, TValues> = buildValidator(schema, {
+		...(rules !== undefined && { rules }),
+		...(translate !== undefined && { translate }),
+	})
+	return { onChange: validator, onSubmit: validator }
 }
 
 /**
