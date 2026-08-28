@@ -59,4 +59,4 @@ export {
 	stripHiddenValues,
 	TextInputType,
 } from '@ez-kit/form-core'
-export type { SelectOption } from '@ez-kit/form-core'
+export type { LocalizedText, SelectOption, Translate } from '@ez-kit/form-core'
