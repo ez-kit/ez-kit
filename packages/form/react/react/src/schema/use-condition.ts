@@ -1,4 +1,4 @@
-import { collectRuleFields, compileCondition } from '@ez-kit/form-core'
+import { compileCondition } from '@ez-kit/form-core'
 import { useSelector } from '@tanstack/react-form'
 import { useCallback, useMemo } from 'react'
 
@@ -22,9 +22,6 @@ export type ConditionSubscribableForm<TValues> = {
 	}
 }
 
-/** Joins the deduplicated field paths into `useConditionValue`'s selector memo key. */
-const FIELDS_KEY_SEPARATOR = ' '
-
 /**
  * Whether `condition` currently holds against the form's live values.
  *
@@ -33,14 +30,10 @@ const FIELDS_KEY_SEPARATOR = ' '
  * re-rendering on every form-state change: the selector derives a single boolean, so a
  * keystroke in an unrelated field only re-renders this node when that boolean actually flips.
  *
- * `collectRuleFields` reports the field paths `condition` reads, or an empty array when it
- * cannot see into it (a plain function condition) — that empty case is the "subscribe to the
- * whole values object" fallback the selector below always has to take anyway, since
- * `compileCondition`'s compiled function only ever accepts the full `TValues` shape. The
- * field list is still collected (deduplicated — `collectRuleFields` itself does not dedupe a
- * repeated ref) and folded into the selector's memo key, so the selector — and therefore the
- * store subscription `useSelector` builds around it — is rebuilt only when the set of fields
- * the rule actually reads changes, not on every render of the node that owns it.
+ * `compileCondition`'s compiled function always accepts the full `TValues` shape — it has no
+ * narrower signature for a rule that only reads one or two fields — so `useSelector` here
+ * always subscribes to the whole values object and relies on its own equality check (not a
+ * narrower subscription) to skip re-renders when the derived boolean does not change.
  *
  * Called unconditionally: a hidden node (`when` false) still must have called this hook, for
  * `disabledWhen`'s companion call and every other node's hooks to land in the same order on
@@ -54,24 +47,9 @@ export function useConditionValue<TValues>(
 ): boolean {
 	const evaluate = useMemo(() => (condition === undefined ? undefined : compileCondition(condition)), [condition])
 
-	const fieldsKey = useMemo(
-		() =>
-			condition === undefined
-				? ''
-				: Array.from(new Set(collectRuleFields(condition)))
-						.sort()
-						.join(FIELDS_KEY_SEPARATOR),
-		[condition],
-	)
-
 	const selector = useCallback(
 		(state: { values: TValues }): boolean => (evaluate === undefined ? fallback : evaluate(state.values)),
-		// `fieldsKey` is intentionally in the dependency list even though the selector body
-		// does not read it: it is the stable proxy for "the set of fields this rule reads",
-		// so the selector's identity — and the subscription `useSelector` builds from it — stays
-		// put across renders unless that set genuinely changes.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[evaluate, fallback, fieldsKey],
+		[evaluate, fallback],
 	)
 
 	return useSelector(form.store, selector)
