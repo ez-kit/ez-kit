@@ -1,6 +1,6 @@
 import { compileCondition, resolveText } from '@ez-kit/form-core'
 import { useFormGroup, useSelector } from '@tanstack/react-form'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { renderChildren } from './render-children'
 import { useStepFieldNames } from './use-step-fields'
@@ -16,11 +16,20 @@ const FLAGS_PER_STEP = 3
 const FLAG_ON = '1'
 const FLAG_OFF = '0'
 
-/** The `'submit'` validation cause both branches of `validateStep` run under. */
+/** The `'submit'` validation cause `validateStep` runs under. */
 const STEP_VALIDATION_CAUSE = 'submit'
+
+/** `currentIndex` for a wizard whose every step is hidden — "no step", not "the first one". */
+const NO_CURRENT_INDEX = -1
 
 /** The slice of a field's meta the wizard reads — enough to ask "does this field error?". */
 type FieldMetaLike = { errors: unknown[] }
+
+/**
+ * The slice of a field's *base* meta the wizard writes. `errors` is derived from `errorMap` by
+ * `FormApi`, so clearing the map is what clears the errors.
+ */
+type FieldMetaBaseLike = { errorMap?: unknown }
 
 /** The form-state snapshot the wizard subscribes to. */
 type WizardFormState<TValues> = {
@@ -47,6 +56,11 @@ type WizardForm<TValues> = {
 	 */
 	validate: (cause: string, opts?: { filterFieldNames?: (fieldName: string) => boolean }) => unknown
 	getFieldMeta: (name: string) => FieldMetaLike | undefined
+	/**
+	 * Used for exactly one thing: dropping the errors the form-level validator wrote onto a step
+	 * the user had not reached yet, at the moment they first arrive on it.
+	 */
+	setFieldMeta: (name: string, updater: (meta: FieldMetaBaseLike) => FieldMetaBaseLike) => void
 }
 
 /** The one member of `FormGroupApi` the wizard calls. */
@@ -103,6 +117,30 @@ type StepFlags = { visible: boolean; disabledByCondition: boolean; hasErrors: bo
 
 export function isStepNode<TValues>(node: { type: string }): node is StepNode<TValues, string> {
 	return node.type === 'step'
+}
+
+/**
+ * Where the wizard actually sits, given the step the user asked for.
+ *
+ * The requested step can disappear between renders — a condition flipped by a field on that
+ * very step is enough. Falling back to position 0 would throw the user to the *start* of the
+ * wizard; the nearest surviving step *before* the one that vanished is where they were heading
+ * from, so that is where they land. `visibleSteps` is ascending by authored key, so the last
+ * entry below `requestedKey` is the greatest one.
+ */
+function resolveCurrentPosition<TValues>(
+	visibleSteps: readonly KeyedStep<TValues>[],
+	requestedKey: number | undefined,
+): number {
+	if (requestedKey === undefined) return 0
+	const found = visibleSteps.findIndex(({ key }) => key === requestedKey)
+	if (found !== -1) return found
+
+	let fallback = 0
+	visibleSteps.forEach(({ key }, position) => {
+		if (key < requestedKey) fallback = position
+	})
+	return fallback
 }
 
 /**
@@ -177,8 +215,18 @@ export type FormWizardProps<TValues> = {
  *   is the one place a `when`-hidden node is dropped rather than rendered as `null` in place:
  *   inside a step's children `RenderNode` still returns `null` from its own position, keeping
  *   sibling keys and hook order stable;
- * - `invalid` is gated on a `visited` set, so an untouched wizard never opens red — the
- *   form-level `onChange` validator sees every value, including steps the user has not reached.
+ * - `invalid` is gated on a `visited` set, so a step never opens red on arrival — the
+ *   form-level `onChange` validator sees every value in the document, including fields on steps
+ *   the user has not reached, so their meta carries errors long before the user gets there. A
+ *   step becomes visited when the user tries to *leave* it, never by being shown.
+ *
+ * Step composition is **layout**, so which fields a step owns is always decided by the names
+ * collected from its subtree (invariant I1): `goNext` runs the form-level validators scoped to
+ * exactly those names. A step's optional `path` never replaces that — it adds a
+ * `FormGroupApi.validate` call on top, so group-level validators declared on the data path also
+ * run. `FormGroupApi.validate` scopes by data path, which is neither a superset nor a subset of
+ * the step: it would skip a field that sits in the step but outside `path`, and redden a field
+ * under `path` that lives on a later step.
  *
  * `title` and `description` are resolved here (`resolveText`) exactly as a field's `label` is
  * in `RenderNode`: `WizardStep` types them as `ReactNode`, so a kit must never be handed a
@@ -207,18 +255,28 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 	// stored position would silently point at a different step. `undefined` means "wherever the
 	// wizard starts", which resolves to the first visible step below.
 	const [requestedKey, setRequestedKey] = useState<number | undefined>(undefined)
-	const currentPosition = useMemo(() => {
-		const found = visibleSteps.findIndex(({ key }) => key === requestedKey)
-		return found === -1 ? 0 : found
-	}, [visibleSteps, requestedKey])
+	const currentPosition = useMemo(
+		() => resolveCurrentPosition(visibleSteps, requestedKey),
+		[visibleSteps, requestedKey],
+	)
 	const currentStep = visibleSteps[currentPosition]
 	const currentKey = currentStep?.key
 
+	// The requested step just vanished and the wizard fell back to an earlier one. Reconcile the
+	// stored request to where the user actually is, or re-showing the hidden step would yank them
+	// back to it. Adjusting state during render (rather than in an effect) is React's own
+	// documented pattern for deriving state from props/state that changed: the component
+	// re-renders immediately, before anything is committed, and `react-hooks` bans the effect
+	// form outright.
+	if (currentKey !== undefined && requestedKey !== undefined && currentKey !== requestedKey) {
+		setRequestedKey(currentKey)
+	}
+
 	/**
-	 * Which steps the user has actually reached, by authored index — the gate on `invalid`
+	 * Which steps the user has actually tried to leave, by authored index — the gate on `invalid`
 	 * (spec §10.2). Recorded by the navigation handlers rather than by an effect watching the
-	 * current step: the step being *shown* counts as visited without being stored (see
-	 * `isVisited`), so the only thing left to remember is the trail behind it.
+	 * current step: merely *arriving* on a step must not mark it visited, or it would open red
+	 * the moment the form-level validator has written errors onto its untouched fields.
 	 */
 	const [visited, setVisited] = useState<ReadonlySet<number>>(() => new Set<number>())
 	const markVisited = useCallback((...keys: (number | undefined)[]) => {
@@ -247,38 +305,78 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 	/**
 	 * Validate one step's fields and report whether they all pass.
 	 *
-	 * Both branches scope validation to the step and then read the verdict off the same field
-	 * meta, so a step that opts into `path` and one that does not behave identically. The
-	 * collected-names branch is the default because `useFormGroup` binds to a **data** path,
-	 * and requiring step-shaped data would put layout in charge of the payload (invariant I1).
+	 * The names collected from the step's subtree always decide the scope: a step is layout, and
+	 * layout may never be governed by a data path (invariant I1). A declared `path` therefore
+	 * adds a `FormGroupApi.validate` call — so group-level validators attached to that path run
+	 * too — instead of replacing the scoped form-level run. The verdict is read off the same
+	 * field meta either way.
 	 */
 	const validateStep = useCallback(
 		async (step: KeyedStep<TValues>): Promise<boolean> => {
 			const names = stepFieldNames[step.key] ?? []
-			const group = step.node.path === undefined ? undefined : groups.get(step.node.path)
+			await wizardForm.validate(STEP_VALIDATION_CAUSE, { filterFieldNames: (name) => names.includes(name) })
 
-			if (group === undefined) {
-				await wizardForm.validate(STEP_VALIDATION_CAUSE, { filterFieldNames: (name) => names.includes(name) })
-			} else {
-				await group.validate(STEP_VALIDATION_CAUSE)
-			}
+			const group = step.node.path === undefined ? undefined : groups.get(step.node.path)
+			if (group !== undefined) await group.validate(STEP_VALIDATION_CAUSE)
 
 			return names.every((name) => (wizardForm.getFieldMeta(name)?.errors.length ?? 0) === 0)
 		},
 		[groups, stepFieldNames, wizardForm],
 	)
 
+	/**
+	 * Drop the errors a step's fields are carrying before the user has ever seen the step.
+	 *
+	 * The schema's constraints compile into a **form-level** `onChange` validator, so one
+	 * keystroke on step one writes "this field is required" onto every empty required field in
+	 * the document — including fields on steps further along. Gating the step's `invalid` flag on
+	 * `visited` keeps the *stepper* from opening red (spec §10.2), but the fields themselves
+	 * render whatever meta they carry, so the step body would still open red on arrival. Clearing
+	 * the map here is the field-level half of the same rule; a later validation run repopulates it
+	 * the moment the values genuinely fail again.
+	 */
+	const clearUnvisitedStepErrors = useCallback(
+		(step: KeyedStep<TValues>) => {
+			for (const name of stepFieldNames[step.key] ?? []) {
+				// A new meta object rather than a mutation of the stored one.
+				wizardForm.setFieldMeta(name, (meta) => ({ ...meta, errorMap: {} }))
+			}
+		},
+		[stepFieldNames, wizardForm],
+	)
+
+	/** Guards `goNext` against a second click landing while the first validation is in flight. */
+	const validatingRef = useRef(false)
+
 	const goNext = useCallback(() => {
 		const next = visibleSteps[currentPosition + 1]
-		if (currentStep === undefined || next === undefined) return
+		if (currentStep === undefined || next === undefined || validatingRef.current) return
+
+		// The user is trying to leave this step — that, and not being shown it, is what makes a
+		// step "visited" and lets it report `invalid` (spec §10.2). Marked before validation so a
+		// step the user failed to leave still turns red.
+		markVisited(currentStep.key)
+
 		// Fire-and-forget: `goNext` is a `() => void` in the contract, because a kit renders a
 		// plain button and has no promise to await.
-		void validateStep(currentStep).then((valid) => {
-			if (!valid) return
-			markVisited(currentStep.key, next.key)
-			setRequestedKey(next.key)
-		})
-	}, [currentStep, currentPosition, visibleSteps, validateStep, markVisited])
+		validatingRef.current = true
+		void validateStep(currentStep)
+			.then((valid) => {
+				validatingRef.current = false
+				if (!valid) return
+				if (!visited.has(next.key)) clearUnvisitedStepErrors(next)
+				setRequestedKey(next.key)
+			})
+			.catch((error: unknown) => {
+				validatingRef.current = false
+				// A rejecting async validator is a bug in the app's schema, and the contract gives
+				// this callback nowhere to return it. Re-throwing on a fresh task surfaces it to
+				// the app's global error handling rather than swallowing it.
+				setTimeout(() => {
+					throw error
+				})
+			})
+	}, [currentStep, currentPosition, visibleSteps, validateStep, markVisited, visited, clearUnvisitedStepErrors])
 
 	const goBack = useCallback(() => {
 		const previous = visibleSteps[currentPosition - 1]
@@ -292,7 +390,13 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 		useCallback((state: WizardFormState<TValues>) => state.isSubmitting, []),
 	)
 
-	const isVisited = useCallback(
+	/**
+	 * A step the user may jump to: one they have already tried to leave, or the one on screen.
+	 *
+	 * Deliberately *not* the gate on `invalid` — the step on screen is navigable but not yet
+	 * visited, and conflating the two is what makes a wizard open red on arrival.
+	 */
+	const isReachable = useCallback(
 		(key: number, position: number) => visited.has(key) || position === currentPosition,
 		[visited, currentPosition],
 	)
@@ -302,11 +406,11 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 		title: resolveText(node.title, context.translate),
 		description: resolveText(node.description, context.translate),
 		status: index < currentPosition ? 'complete' : index === currentPosition ? 'current' : 'upcoming',
-		// Spec §10.2: never true for a step the user has not reached.
-		invalid: isVisited(key, index) && flags[key]?.hasErrors === true,
-		disabled: flags[key]?.disabledByCondition === true || !isVisited(key, index),
+		// Spec §10.2: never true for a step the user has not tried to leave.
+		invalid: visited.has(key) && flags[key]?.hasErrors === true,
+		disabled: flags[key]?.disabledByCondition === true || !isReachable(key, index),
 		goTo: () => {
-			if (flags[key]?.disabledByCondition === true || !isVisited(key, index)) return
+			if (flags[key]?.disabledByCondition === true || !isReachable(key, index)) return
 			markVisited(currentKey, key)
 			setRequestedKey(key)
 		},
@@ -326,7 +430,9 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 			))}
 			<layout.Wizard
 				steps={wizardSteps}
-				currentIndex={currentPosition}
+				// Every step hidden: there is no current step, and reporting 0 would tell the kit
+				// "step 1 of nothing".
+				currentIndex={currentStep === undefined ? NO_CURRENT_INDEX : currentPosition}
 				canGoBack={currentPosition > 0}
 				canGoNext={currentPosition < lastPosition}
 				isLastStep={currentPosition === lastPosition}
@@ -334,9 +440,15 @@ export function FormWizard<TValues>({ schema, form, layout, context }: FormWizar
 				goBack={goBack}
 				submitting={submitting}
 			>
-				{currentStep === undefined
-					? null
-					: renderChildren(currentStep.node.children, { form, layout, context, parentColumns: undefined })}
+				{currentStep === undefined ? null : (
+					// Keyed on the step: every step's children render into the same position inside
+					// `layout.Wizard`, and non-field nodes are keyed by position, so without this a
+					// step change would reuse the previous step's component instances — leaking
+					// kit-internal state (a collapsed section, an uncontrolled input) across steps.
+					<Fragment key={currentStep.key}>
+						{renderChildren(currentStep.node.children, { form, layout, context, parentColumns: undefined })}
+					</Fragment>
+				)}
 			</layout.Wizard>
 		</>
 	)
