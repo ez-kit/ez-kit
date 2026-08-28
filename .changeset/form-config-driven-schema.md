@@ -26,6 +26,10 @@ uncontrolled modes as `<Form>`, with registries for custom field kinds, value-le
 named validation rules; wizards, when the document's top-level children are `step` nodes; and
 the composition helpers `withForm`, `withFieldGroup`, `useFormGroup` and `useFieldGroup`.
 
-The UI-kit contract grows `Section`, `GridItem` and `Wizard`, and the built-in field kinds now
-include `switch`, `radiogroup` and `slider` — a breaking change for a hand-written kit, which
-must supply the new primitives.
+The UI-kit contract grows `Section`, `GridItem` and `Wizard` — a breaking change for a
+hand-written kit, which must supply the new primitives.
+
+Both kits now also re-export the schema-authoring API of `@ez-kit/form-core`
+(`defineFormSchema`, `parseFormSchema`, `FormSchemaError`, `buildValidator`,
+`stripHiddenValues` and the `FormSchema` / `FormNode` / `NamedRule` types), so a kit stays the
+only package a consumer installs.

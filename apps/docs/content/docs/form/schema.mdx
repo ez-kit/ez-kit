@@ -21,11 +21,10 @@ Why bother describing a form as data:
 
 <KitExample exampleId='form-schema-basic' />
 
-Everything a schema needs comes from two places — the renderer from your kit, the format itself from `@ez-kit/form-core`:
+Everything a schema needs — the renderer and the format alike — comes from your kit, which re-exports the schema-authoring API of `@ez-kit/form-core` so the kit stays the only package you install:
 
 ```ts
-import { FormFieldType, FormRenderer } from '@ez-kit/form-shadcn'
-import { defineFormSchema, parseFormSchema } from '@ez-kit/form-core'
+import { defineFormSchema, FormFieldType, FormRenderer, parseFormSchema } from '@ez-kit/form-shadcn'
 ```
 
 ## The document
@@ -195,7 +194,7 @@ Logic that cannot be expressed as data stays reachable from a delivered document
 
 A rule returns `true` when the value passes, or the message to show. A `validate.rule` with no registered implementation throws when the validator is built — on mount, not on the user's first keystroke.
 
-`rules` is meaningful in **uncontrolled** mode only, for the same reason `validate` is: the renderer builds the validator only when it is the one calling `useForm`. A controlled caller builds their own instance, so they build their own validator too — call `buildValidator(schema, { rules })` from `@ez-kit/form-core` and pass the result as `validators.onChange` / `validators.onSubmit`.
+`rules` is meaningful in **uncontrolled** mode only, for the same reason `validate` is: the renderer builds the validator only when it is the one calling `useForm`. A controlled caller builds their own instance, so they build their own validator too — call `buildValidator(schema, { rules })` — re-exported by your kit — and pass the result as `validators.onChange` / `validators.onSubmit`.
 
 ## Visibility and the submitted payload
 
@@ -213,7 +212,7 @@ Stripping happens _at submit time_, by filtering the values against the computed
 `keepHiddenValues` exists **only in uncontrolled mode**, and that asymmetry is not an oversight: in controlled mode you own `onSubmit`, and the renderer has no seam to wrap it in — TanStack's own `useForm` re-applies your original options into the instance on every render, so any wrapper would lose that race. The escape hatch is explicit instead:
 
 ```ts
-import { stripHiddenValues } from '@ez-kit/form-core'
+import { stripHiddenValues } from '@ez-kit/form-shadcn'
 
 const form = useForm({
 	defaultValues,
@@ -270,7 +269,7 @@ Four behaviours the renderer settles so no kit has to:
 A schema from your own bundle is trusted. A schema from anywhere else — a database, an API, an LLM — goes through `parseFormSchema` **first**:
 
 ```ts
-import { FormSchemaError, parseFormSchema } from '@ez-kit/form-core'
+import { FormSchemaError, parseFormSchema } from '@ez-kit/form-shadcn'
 
 try {
 	const schema = parseFormSchema<Values>(await res.json(), {

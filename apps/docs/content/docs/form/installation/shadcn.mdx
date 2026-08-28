@@ -11,7 +11,7 @@ description: Install the form kit for a shadcn-based React app — package, CSS 
 pnpm add @ez-kit/form-shadcn
 ```
 
-That is the only package you need at the call site — it re-exports the consumer surface of `@ez-kit/form-react` (field prop types, `TextInputType`, `SelectOption`, the error helpers). Add `@ez-kit/form-react` yourself only if you are [building your own kit](./form/custom-kit).
+That is the only package you need at the call site — it re-exports the consumer surface of `@ez-kit/form-react` (field prop types, `TextInputType`, `SelectOption`, the error helpers) and of `@ez-kit/form-core` (`defineFormSchema`, `parseFormSchema`, `FormSchemaError`, `buildValidator`, `stripHiddenValues` and the `FormSchema` / `FormNode` / `NamedRule` types). Add `@ez-kit/form-react` yourself only if you are [building your own kit](./form/custom-kit).
 
 `react` and `react-dom` (18 or 19) are peer dependencies.
 

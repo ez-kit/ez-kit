@@ -418,6 +418,9 @@ importers:
 
   packages/form/react/heroui:
     dependencies:
+      '@ez-kit/form-core':
+        specifier: workspace:*
+        version: link:../../core
       '@ez-kit/form-react':
         specifier: workspace:*
         version: link:../react
@@ -433,7 +436,7 @@ importers:
         version: 3.0.3(@react-spectrum/provider@3.11.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tailwindcss@4.2.4)
       '@heroui/styles':
         specifier: ^3.0.3
-        version: 3.0.3(tailwind-merge@3.5.0)(tailwindcss@4.2.4)
+        version: 3.0.3(tailwind-merge@3.4.0)(tailwindcss@4.2.4)
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -474,6 +477,9 @@ importers:
 
   packages/form/react/shadcn:
     dependencies:
+      '@ez-kit/form-core':
+        specifier: workspace:*
+        version: link:../../core
       '@ez-kit/form-react':
         specifier: workspace:*
         version: link:../react

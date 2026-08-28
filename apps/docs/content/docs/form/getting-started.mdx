@@ -7,7 +7,7 @@ description: Install a flavour, render a Form, fill in fields — the whole loop
 
 ## 1. Install a flavour
 
-Pick the UI kit you already use. It pulls in `@ez-kit/form-react` and `@ez-kit/form-core` for you.
+Pick the UI kit you already use. It is the only package you install: it depends on `@ez-kit/form-react` and `@ez-kit/form-core`, and re-exports the whole consumer surface of both — the field prop types, the error helpers, and the schema-authoring API (`defineFormSchema`, `parseFormSchema`, `buildValidator`, `stripHiddenValues`).
 
 ```bash
 # shadcn
