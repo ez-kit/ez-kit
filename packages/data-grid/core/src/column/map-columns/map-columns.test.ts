@@ -219,13 +219,13 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableResizing).toBeUndefined()
 	})
 
-	it('filtering.options is forwarded to meta.filteringOptions', () => {
-		const options = [
+	it('filtering.items is forwarded to meta.filteringItems', () => {
+		const items = [
 			{ value: 'a', label: 'A' },
 			{ value: 'b', label: 'B' },
 		]
-		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { options } }])
-		expect(result[0]?.meta?.filteringOptions).toEqual(options)
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { items } }])
+		expect(result[0]?.meta?.filteringItems).toEqual(items)
 	})
 
 	it('column.filtering.faceted: true → meta.facetedEnabled = true (overrides table flag)', () => {

@@ -91,7 +91,7 @@ export function ExpandingControlledExample() {
 					setTableState(nextState)
 				}}
 				expanding={{
-					renderExpanded: ({ row }) => (
+					component: ({ row }) => (
 						<div>
 							<span style={{ fontWeight: 600 }}>Notes: </span>
 							{row.original.notes}

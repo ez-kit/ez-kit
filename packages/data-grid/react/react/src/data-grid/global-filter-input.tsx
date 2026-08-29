@@ -61,7 +61,7 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlob
 	// one request — mirroring the column filter path. `undefined` under non-deferred tables
 	// so Enter keeps its default meaning (e.g. form submission).
 	const onEnterApply =
-		table.options.deferredApply === true
+		table.options.draft === true
 			? () => {
 					table.draft.apply()
 				}

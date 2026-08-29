@@ -19,7 +19,7 @@ import type { ReactNode } from 'react'
  * and `creating.component` with an open `TNode`, because it is framework-agnostic and never
  * calls them. Binding `TNode` to `ReactNode` here type-checks what those renderers return and
  * restores autocomplete inside them — the same trick `ReactExpandingConfig` already uses for
- * `renderExpanded`, and for the same reason: a hand-written React twin of the whole column def
+ * `expanding.component`, and for the same reason: a hand-written React twin of the whole column def
  * could only ever drift out of sync with core.
  *
  * A React column stays assignable to `TableConfig['columns']`, since a renderer returning

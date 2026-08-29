@@ -1,3 +1,5 @@
+import { ColumnPinSide } from '@ez-kit/data-grid-core'
+
 import type { Column, RowData } from '@tanstack/table-core'
 import type { CSSProperties } from 'react'
 
@@ -16,11 +18,11 @@ export function getCommonPinStyles<TData extends RowData>(column: Column<TData>)
 	const isPinned = column.getIsPinned()
 	if (!isPinned) return {}
 	const vars: CSSProperties = {}
-	if (isPinned === 'left') {
-		;(vars as Record<string, string>)['--dg-pin-left'] = `${String(column.getStart('left'))}px`
+	if (isPinned === ColumnPinSide.Left) {
+		;(vars as Record<string, string>)['--dg-pin-left'] = `${String(column.getStart(ColumnPinSide.Left))}px`
 	}
-	if (isPinned === 'right') {
-		;(vars as Record<string, string>)['--dg-pin-right'] = `${String(column.getAfter('right'))}px`
+	if (isPinned === ColumnPinSide.Right) {
+		;(vars as Record<string, string>)['--dg-pin-right'] = `${String(column.getAfter(ColumnPinSide.Right))}px`
 	}
 	return vars
 }

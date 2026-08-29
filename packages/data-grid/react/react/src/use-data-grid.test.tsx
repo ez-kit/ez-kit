@@ -464,7 +464,7 @@ describe('useDataGrid — virtualized', () => {
 		expect(key).toEqual({ row: {} })
 	})
 
-	it('VIRTUALIZED_KEY stores RowVirtualOptions when provided', () => {
+	it('VIRTUALIZED_KEY stores RowVirtualizationConfig when provided', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, virtualization: { row: { overscan: 8 } } }),
 		)
@@ -479,92 +479,90 @@ describe('useDataGrid — virtualized', () => {
 	})
 })
 
-describe('useDataGrid — pagination.pageSizeOptions', () => {
+describe('useDataGrid — pagination.items', () => {
 	it('is undefined when pagination is not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.items).toBeUndefined()
 	})
 
 	it('falls back to the default list when page-based pagination carries no explicit one', () => {
 		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the toolbar
 		// mounts the control is `pagination.pageSizer`, resolved separately.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
+		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 		expect(result.current.grid.pagination.pageSizer).toBe(false)
 	})
 
 	it('stores the explicit options in page-based mode', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, items: [5, 10, 25] } }),
 		)
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([5, 10, 25])
+		expect(result.current.grid.pagination.items).toEqual([5, 10, 25])
 	})
 
 	it('is undefined in infinite mode — there is no page size to select', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', pageSizeOptions: [5, 10, 25] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', items: [5, 10, 25] } }),
 		)
-		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.items).toBeUndefined()
 	})
 
-	it('still applies the rest of the pagination config alongside pageSizeOptions', () => {
+	it('still applies the rest of the pagination config alongside items', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, pageSizeOptions: [5, 10, 25] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5, items: [5, 10, 25] } }),
 		)
 		expect(result.current.getState().pagination.pageSize).toBe(5)
 	})
 })
 
-describe('useDataGrid — selection.panel', () => {
-	it('SELECTION_PANEL_KEY is undefined when selection not set', () => {
+describe('useDataGrid — selection.bar', () => {
+	it('SELECTION_BAR_KEY is undefined when selection not set', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
-		const key = result.current.grid.selection.panel
+		const key = result.current.grid.selection.bar
 		expect(key).toBeUndefined()
 	})
 
-	it('SELECTION_PANEL_KEY is undefined when selection: true (boolean, no panel)', () => {
+	it('SELECTION_BAR_KEY is undefined when selection: true (boolean, no bar config)', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: true }))
-		const key = result.current.grid.selection.panel
+		const key = result.current.grid.selection.bar
 		expect(key).toBeUndefined()
 	})
 
-	it('SELECTION_PANEL_KEY stores true when selection: { panel: true }', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: true } }))
-		const key = result.current.grid.selection.panel
+	it('SELECTION_BAR_KEY stores true when selection: { bar: true }', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: true } }))
+		const key = result.current.grid.selection.bar
 		expect(key).toBe(true)
 	})
 
-	it('SELECTION_PANEL_KEY stores false when selection: { panel: false }', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: false } }))
-		const key = result.current.grid.selection.panel
+	it('SELECTION_BAR_KEY stores false when selection: { bar: false }', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: false } }))
+		const key = result.current.grid.selection.bar
 		expect(key).toBe(false)
 	})
 
-	it('SELECTION_PANEL_KEY stores config object when selection: { panel: { onDelete } }', () => {
-		const onDelete = vi.fn()
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { onDelete } } }),
-		)
-		const key = result.current.grid.selection.panel
-		expect(key).toEqual({ onDelete })
+	it('SELECTION_BAR_KEY stores config object when selection: { bar: { clear } }', () => {
+		const clear = vi.fn()
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { clear } } }))
+		const key = result.current.grid.selection.bar
+		expect(key).toEqual({ clear })
 	})
 
-	it('SELECTION_PANEL_KEY stores variant: "inline" when configured', () => {
+	it('SELECTION_BAR_KEY stores variant: "inline" when configured', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { variant: 'inline' } } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { variant: 'inline' } } }),
 		)
-		const key = result.current.grid.selection.panel
+		const key = result.current.grid.selection.bar
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
-	it('enables core row selection and extracts the React-only panel from an object selection', () => {
+	it('enables core row selection and extracts the React-only bar from an object selection', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { panel: { variant: 'inline' } } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { variant: 'inline' } } }),
 		)
-		// The object `selection` (with only a React-only `panel`) still enables core row selection…
+		// The object `selection` (with only a React-only `bar`) still enables core row selection…
 		expect(result.current.options.enableRowSelection).toBe(true)
-		// …and the panel is lifted onto the table for SelectionBar to read.
-		const key = result.current.grid.selection.panel
+		// …and the bar config is lifted onto the table for SelectionBar to read.
+		const key = result.current.grid.selection.bar
 		expect(key).toEqual({ variant: 'inline' })
 	})
 
@@ -805,14 +803,14 @@ describe('useDataGrid — filtering.toolbar normalization', () => {
 	})
 })
 
-// ── deferredApply — controlled `state` prop mirrored the same way a real consumer writes it ──
+// ── draft — controlled `state` prop mirrored the same way a real consumer writes it ──
 //
 // Settles a documentation dispute: production.mdx claimed a controlled consumer must NOT mirror
-// `sorting` / `columnFilters` / `globalFilter` back through `state` while `deferredApply` is on,
+// `sorting` / `columnFilters` / `globalFilter` back through `state` while `draft` is on,
 // because the render-time controlled-state sync would clobber the pending draft. `syncControlledState`
 // (packages/data-grid/core/src/create-table/create-table.ts) filters exactly those three axes out of
 // the incoming `partial` while `deferred && draft.isDirty()`, so a naive mirror-back should be safe.
-describe('useDataGrid — deferredApply with a mirrored controlled state prop', () => {
+describe('useDataGrid — draft with a mirrored controlled state prop', () => {
 	/** Render count for the enclosing hook body — proves re-syncing the stale prop does not spin. */
 	function useDeferredControlledGrid() {
 		const renderCountRef = useRef(0)
@@ -822,7 +820,7 @@ describe('useDataGrid — deferredApply with a mirrored controlled state prop', 
 		const table = useDataGrid({
 			data: USERS,
 			columns: COLUMNS,
-			deferredApply: true,
+			draft: true,
 			sorting: { manual: true },
 			state: tableState,
 			// The exact pattern a real consumer writes: mirror the whole resolved state back in.

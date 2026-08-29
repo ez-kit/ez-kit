@@ -1,3 +1,4 @@
+import { ColumnPinSide, SystemColumnType } from '../column/types'
 import { getActionsColumnSize, RowActionsVariant } from '../features/row-actions'
 
 import type { TanStackColumnDef } from '../column/types'
@@ -16,6 +17,17 @@ type SystemColumnsOptions = {
 	pinning: boolean
 	/** Defaults to {@link RowActionsVariant.Inline}. */
 	rowActionsVariant?: RowActionsVariant
+	/**
+	 * Whether `rowActions.actions` was supplied.
+	 *
+	 * Required, like `editing` / `deleting` / `pinning` and unlike `rowActionsVariant?`: those
+	 * three decide whether the column exists at all and this is a fourth such feature — a grid
+	 * whose only per-row action is a custom one still needs the column, and its entries still
+	 * need the overflow trigger's width reserved. `rowActionsVariant` has an honest default
+	 * (Inline); "does the consumer supply actions?" has none, and silently defaulting it to
+	 * false is exactly how the option went missing before.
+	 */
+	customRowActions: boolean
 }
 
 /**
@@ -44,8 +56,8 @@ export function buildColumnList<TRow extends object>(
 			enableColumnFilter: false,
 			meta: {
 				isSystemColumn: true,
-				systemColumnType: 'selection',
-				columnPinning: { side: 'left' },
+				systemColumnType: SystemColumnType.Selection,
+				columnPinning: { side: ColumnPinSide.Left },
 			},
 		})
 	}
@@ -60,14 +72,14 @@ export function buildColumnList<TRow extends object>(
 			enableColumnFilter: false,
 			meta: {
 				isSystemColumn: true,
-				systemColumnType: 'expand',
+				systemColumnType: SystemColumnType.Expand,
 			},
 		})
 	}
 
 	result.push(...userColumns)
 
-	const needsActions = opts.editing || opts.deleting || opts.pinning
+	const needsActions = opts.editing || opts.deleting || opts.pinning || opts.customRowActions
 	if (needsActions) {
 		result.push({
 			id: ACTIONS_COLUMN_ID,
@@ -77,14 +89,15 @@ export function buildColumnList<TRow extends object>(
 				editing: opts.editing,
 				deleting: opts.deleting,
 				pinning: opts.pinning,
+				custom: opts.customRowActions,
 				variant: opts.rowActionsVariant ?? RowActionsVariant.Inline,
 			}),
 			enableSorting: false,
 			enableColumnFilter: false,
 			meta: {
 				isSystemColumn: true,
-				systemColumnType: 'actions',
-				columnPinning: { side: 'right' },
+				systemColumnType: SystemColumnType.Actions,
+				columnPinning: { side: ColumnPinSide.Right },
 			},
 		})
 	}
@@ -110,7 +123,7 @@ export function extractPinningState<TRow extends object>(
 		const position = pinDef.side ?? pinDef.initialSide
 		const colId = col.id ?? (col as { accessorKey?: string }).accessorKey ?? undefined
 		if (!position || !colId) continue
-		if (position === 'left') left.push(colId)
+		if (position === ColumnPinSide.Left) left.push(colId)
 		else right.push(colId)
 	}
 

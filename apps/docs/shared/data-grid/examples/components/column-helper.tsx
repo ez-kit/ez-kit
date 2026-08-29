@@ -68,11 +68,10 @@ function StarRatingView({ value }: { value: unknown }) {
 const customViewColumns = [
 	createColumn.text({ accessorKey: 'name', header: 'Name' }),
 	createColumn.text({ accessorKey: 'department', header: 'Department' }),
-	createColumn.custom({
+	createColumn.number({
 		accessorKey: 'rating',
 		header: 'Rating',
-		type: 'number',
-		view: StarRatingView,
+		cell: { component: StarRatingView },
 	}),
 ]
 

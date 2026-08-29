@@ -17,8 +17,12 @@ export type DataGridHeaderProps = {
 	 * option. The prop exists only to force the value; without that fallback a
 	 * `<DataGrid.Header />` placed inside a custom `<DataGrid.Table>` body would
 	 * silently lose sticky positioning.
+	 *
+	 * Named `sticky`, not `stickyHeader`: the component already says "header", the way the
+	 * neighbouring local overrides drop the prefix too (`<DataGrid.ActiveFiltersBar position>`,
+	 * `<DataGrid.GlobalFilterInput placeholder>`).
 	 */
-	stickyHeader?: boolean
+	sticky?: boolean
 	/**
 	 * Custom header content, rendered inside the kit's `<Thead>` — so sticky positioning and
 	 * the measured header-height CSS variable still apply.
@@ -93,15 +97,15 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * - `data-slot="thead" | "tr" | "th" | "header-main" | "sort-trigger" | "header-extras"`
  * - `data-sticky="true"` on the thead when sticky header is on
  * - `data-sortable="true"` and `data-sort-direction="asc | desc | none"` on sortable headers
- * - `data-draft-sorting="<index>"` on a `<th>` whose sort is pending under `deferredApply`
+ * - `data-draft-sorting="<index>"` on a `<th>` whose sort is pending under `draft`
  *   (the column's position in the not-yet-applied sort array)
  *
  * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
  * structural CSS reads them on `[data-pinned]` elements.
  */
-export function Header({ stickyHeader, children }: DataGridHeaderProps = {}) {
+export function Header({ sticky, children }: DataGridHeaderProps = {}) {
 	const table = useDataGridTable()
-	const isSticky = stickyHeader ?? table.grid.layout.stickyHeader
+	const isSticky = sticky ?? table.grid.layout.stickyHeader
 	const theadRef = useHeaderHeightVar(isSticky)
 
 	// Narrow subscriptions: re-render only when slices the header actually reflects change.

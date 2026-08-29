@@ -3,7 +3,7 @@ import { DATA_GRID_DEFAULTS } from './defaults'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { PaginationVariant } from './types'
 import type {
-	ColumnVisibilityUIConfig,
+	ReactVisibilityConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
 	FilteringVariant,
@@ -14,7 +14,7 @@ import type {
 	NormalizedPageWindowConfig,
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
-	SelectionPanelConfig,
+	SelectionBarConfig,
 } from './use-data-grid'
 import type { RowData } from '@tanstack/table-core'
 import type { ComponentType } from 'react'
@@ -42,7 +42,7 @@ export type ResolvedGridOptions = {
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
 	/**
-	 * Per-row DOM props resolver. Row-erased here, like `renderExpanded` and the cell registry —
+	 * Per-row DOM props resolver. Row-erased here, like `expanding.component` and the cell registry —
 	 * every reader of `table.grid` is a component with no `TRow` of its own.
 	 */
 	rowProps?: RowPropsResolver<never> | undefined
@@ -56,12 +56,15 @@ export type ResolvedGridOptions = {
 	/** Column pinning UI (the pin section of the column menu) is enabled. */
 	columnPinning: boolean
 	/** Column hiding. `undefined` when the feature is off. */
-	columnVisibility?: (boolean | ColumnVisibilityUIConfig) | undefined
+	visibility?: (boolean | ReactVisibilityConfig) | undefined
 	/** Sorting UI config. `undefined` when sorting is off. */
 	sorting?: (boolean | { toolbar?: boolean }) | undefined
 	filtering: {
-		/** Display variant for the per-column filter controls. `undefined` when off. */
-		variant?: FilteringVariant | undefined
+		/**
+		 * Display variant for the per-column filter controls. Always resolved, for the same
+		 * reason as `debounce` below: a UI kit switching on it must never hit a no-op branch.
+		 */
+		variant: FilteringVariant
 		/**
 		 * Commit debounce for text filter inputs. Always resolved, because the global search
 		 * box falls back to it even when column filtering is off.
@@ -83,19 +86,19 @@ export type ResolvedGridOptions = {
 		 * not the toolbar auto-mounts the control — a hand-placed `<DataGrid.PageSizer />`
 		 * reads it too.
 		 */
-		pageSizeOptions?: number[] | undefined
+		items?: number[] | undefined
 		/** The toolbar auto-mounts the PageSizer. Governs mounting only, never the list above. */
 		pageSizer: boolean
 	}
 	/** Infinite-scroll detection config. `undefined` unless `pagination.mode` is `'infinite'`. */
 	infinite?: NormalizedInfiniteConfig | undefined
 	selection: {
-		/** Selection info panel. `undefined` when selection is off or the panel is not configured. */
-		panel?: (boolean | SelectionPanelConfig) | undefined
+		/** Selection info bar. `undefined` when selection is off or the bar is not configured. */
+		bar?: (boolean | SelectionBarConfig) | undefined
 	}
 	expanding: {
 		/** Sub-content detail-panel renderer, if one was supplied. */
-		renderExpanded?: ComponentType<ExpandedRowProps<never>> | undefined
+		component?: ComponentType<ExpandedRowProps<never>> | undefined
 	}
 	/** Loading / empty / no-results fallback config. */
 	fallbacks?: FallbacksConfig | undefined
@@ -130,7 +133,10 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 		cellTypes: undefined,
 		layout: { stickyHeader: false },
 		columnPinning: false,
-		filtering: { debounce: DATA_GRID_DEFAULTS.filtering.debounce },
+		filtering: {
+			variant: DATA_GRID_DEFAULTS.filtering.variant,
+			debounce: DATA_GRID_DEFAULTS.filtering.debounce,
+		},
 		pagination: {
 			variant: DATA_GRID_DEFAULTS.pagination.variant,
 			window: {

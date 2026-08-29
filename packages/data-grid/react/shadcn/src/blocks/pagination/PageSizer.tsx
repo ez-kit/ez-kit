@@ -4,7 +4,10 @@ import type { PageSizerProps } from '@ez-kit/data-grid-react'
 
 export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
 	return (
-		<div className='flex items-center gap-2'>
+		<div
+			data-slot='page-sizer'
+			className='flex items-center gap-2'
+		>
 			<span className='text-sm text-muted-foreground whitespace-nowrap'>Rows per page</span>
 			<Select
 				value={String(pageSize)}

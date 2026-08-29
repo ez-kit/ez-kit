@@ -35,6 +35,7 @@ A simpler base example is also available:
 | `visibility`                    | `false \| { initialHidden: true }` | Per-column. `false` disables hiding — the column is always visible (no Hide option in its menu, absent from the Columns toggle). `{ initialHidden: true }` starts the column hidden but toggleable. |
 | `state.columnVisibility`        | `Record<string, boolean>`          | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                                      |
 | `initialState.columnVisibility` | `Record<string, boolean>`          | Hidden columns at mount. Merges with the column-level `initialHidden` seeds — see below.                                                                                                            |
+| `visibility.enabled`            | `boolean`                          | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                      |
 
 Column visibility has no dedicated `onChange` — subscribe via the single `onStateChange` callback (see [Controlled State](./data-grid/controlled-state)).
 
@@ -58,4 +59,4 @@ See [State model](./data-grid/state-model) for the full precedence.
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-gri./visibility-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-gri./visibility-trigger.tsx)

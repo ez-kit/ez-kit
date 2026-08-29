@@ -12,16 +12,6 @@ export type CellViewProps<TConfig = unknown> = {
 	config?: TConfig
 }
 
-/**
- * Loose input props for filter-mode renderers (no validation surface).
- * For `edit` / `creating` modes, renderers receive the richer {@link FieldState}.
- */
-export type CellInputProps<TConfig = unknown> = {
-	value: unknown
-	onChange: (value: unknown) => void
-	config?: TConfig
-}
-
 // ── registry types ────────────────────────────────────────────────────────
 
 export type CellTypeDefinition<TConfig = unknown> = {
@@ -120,7 +110,7 @@ export function mergeCellTypes(base: CellTypeRegistry, override: CellTypeRegistr
  * Default registry is **empty**. This package ships zero built-in cell types —
  * consumers/UI kits register renderers via {@link CellTypesProvider} or via
  * `createDataGrid({ cellTypes })`. Common cell types live under the
- * `@ez-kit/data-grid-react/cell-types` sub-export.
+ * `@ez-kit/data-grid-react`.
  */
 const CellTypesContext = createContext<CellTypeRegistry>({})
 
@@ -135,7 +125,7 @@ export type CellTypesProviderProps = {
  *
  * The headless package ships **no built-in cell types**. Common ones —
  * `numberCellType`, `textCellType`, `booleanCellType` — are available under
- * `@ez-kit/data-grid-react/cell-types` and compose with the DI primitives from
+ * `@ez-kit/data-grid-react` and compose with the DI primitives from
  * {@link GridComponentsProvider} (`NumberInput`, `Input`, `Checkbox`).
  *
  * Providers nest: children's registry is merged on top of the parent's, so

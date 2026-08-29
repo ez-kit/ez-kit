@@ -14,17 +14,10 @@ export function CrudClientExample() {
 			columns={crudColumns}
 			sorting
 			filtering={{ variant: 'popover' }}
-			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 20, 50] }}
-			columnVisibility={{ toolbar: true }}
+			pagination={{ pageSize: 10, items: [5, 10, 20, 50] }}
+			visibility={{ toolbar: true }}
 			pinning={{ column: true }}
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						removeMany(selectedRows.map((r) => r.original.id))
-						clearSelection()
-					},
-				},
-			}}
+			selection
 			creating={{
 				mode: 'row',
 				onSave: ({ values }) => {
@@ -45,6 +38,15 @@ export function CrudClientExample() {
 					title: 'Delete employee?',
 					description: (row) =>
 						`Are you sure you want to delete "${(row.original as Employee).name}"? This action cannot be undone.`,
+				},
+				bulk: {
+					onDelete: ({ rows }) => {
+						removeMany(rows.map((r) => r.original.id))
+					},
+					confirmation: {
+						title: 'Delete employees?',
+						description: (rows) => `${String(rows.length)} employees will be permanently removed.`,
+					},
 				},
 			}}
 		/>

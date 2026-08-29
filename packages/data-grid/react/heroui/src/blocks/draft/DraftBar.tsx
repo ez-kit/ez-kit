@@ -1,5 +1,6 @@
 'use client'
 
+import { ActionBarVariant } from '@ez-kit/data-grid-react'
 import { Button } from '@heroui/react'
 import { Check, RotateCcw } from 'lucide-react'
 
@@ -95,7 +96,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 		</div>
 	)
 
-	if (variant === 'inline') {
+	if (variant === ActionBarVariant.Inline) {
 		if (!open) return null
 
 		return (

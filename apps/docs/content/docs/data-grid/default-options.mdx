@@ -10,7 +10,7 @@ By default every grid declares its own feature config in its own props. When mos
 Two layers supply defaults; both merge **under** each instance's own config, so **the instance always wins**:
 
 - **App-level** — `DataGridOptionsProvider defaults={{…}}` wraps a React subtree.
-- **Kit-level** — `createDataGrid({ defaultOptions })` bakes defaults into a custom kit bundle.
+- **Kit-level** — `createDataGrid({ defaults })` bakes defaults into a custom kit bundle.
 
 ## App-level: `DataGridOptionsProvider`
 
@@ -78,16 +78,16 @@ import { useDataGridOptions } from '@ez-kit/data-grid-react'
 const defaults = useDataGridOptions() // { sorting: true, pagination: { pageSize: 3 } }
 ```
 
-## Kit-level: factory `defaultOptions`
+## Kit-level: factory `defaults`
 
-When you build a custom kit with `createDataGrid`, pass `defaultOptions` to bake defaults into the kit itself. Every grid built with that kit's `useDataGrid` inherits them — no provider required.
+When you build a custom kit with `createDataGrid`, pass `defaults` to bake defaults into the kit itself. Every grid built with that kit's `useDataGrid` inherits them — no provider required.
 
 ```tsx
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
 export const { DataGrid, useDataGrid } = createDataGrid({
 	components,
-	defaultOptions: {
+	defaults: {
 		pagination: { pageSize: 20 },
 		fallbacks: { empty: 'No records' },
 	},
@@ -105,12 +105,12 @@ Options are combined with an **immutable, per-feature deep merge** ([`utils/deep
 Precedence, low → high:
 
 ```
-factory defaultOptions  <  provider defaults  <  instance config
+factory defaults  <  provider defaults  <  instance config
 ```
 
 ### What can be defaulted
 
-`DataGridDefaultOptions<TRow>` is the mergeable subset of a grid's config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `columnVisibility`, `expanding`, `pinning`, `resizing`, `layout`, `fallbacks`, …).
+`DataGridDefaultOptions<TRow>` is the mergeable subset of a grid's config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `visibility`, `expanding`, `pinning`, `resizing`, `layout`, `fallbacks`, …).
 
 It **excludes** the per-instance inputs that are meaningless as shared defaults:
 
@@ -156,7 +156,7 @@ no business performing it.
 | ------------------------------------------------- | -------------------------------------- |
 | App-wide defaults, set in your own app tree       | `DataGridOptionsProvider`              |
 | A subtree that refines app defaults               | Nested `DataGridOptionsProvider`       |
-| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaultOptions })`   |
+| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaults })`         |
 | One-off options for a single grid                 | Props on that `DataGrid` (always wins) |
 
 ## Source

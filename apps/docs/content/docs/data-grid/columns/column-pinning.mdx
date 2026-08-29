@@ -38,6 +38,7 @@ A column that should stay pinned — one the user is not meant to move — takes
 | `pinning` (table)            | `boolean \| { column?: boolean, row?: … }`              | Table-level. `{ column: true }` enables the pin section in each column's ⋮ menu.                                                                                       |
 | `initialState.columnPinning` | `{ left?: string[], right?: string[] }`                 | Uncontrolled seed for pinned columns at mount. Merges with the column-level pins — see below.                                                                          |
 | `state.columnPinning`        | same                                                    | Controlled pinning state — pass alongside `onStateChange`. No per-feature `onChange`; see [Controlled State](./data-grid/controlled-state).                            |
+| `pinning.enabled`            | `boolean`                                               | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                         |
 
 ## Seeds and invariants
 

@@ -43,12 +43,12 @@ describe('mergeGridOptionLayers', () => {
 	})
 
 	it('orders precedence factory < provider < table', () => {
-		const factory: DataGridDefaultOptions<User> = { sorting: false, filtering: true, columnVisibility: true }
+		const factory: DataGridDefaultOptions<User> = { sorting: false, filtering: true, visibility: true }
 		const provider: DataGridDefaultOptions<User> = { sorting: true, filtering: false }
 		const merged = mergeGridOptionLayers<User>(factory, provider, { ...config, sorting: false })
 		expect(merged.sorting).toBe(false) // table wins
 		expect(merged.filtering).toBe(false) // provider beats factory
-		expect(merged.columnVisibility).toBe(true) // factory-only survives
+		expect(merged.visibility).toBe(true) // factory-only survives
 	})
 
 	it('leaves table config untouched when no defaults exist', () => {
@@ -82,18 +82,18 @@ describe('DataGridOptionsProvider', () => {
 
 	it('feeds provider defaults into a descendant useDataGrid', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
-			wrapper: makeWrapper({ sorting: true, columnVisibility: true }),
+			wrapper: makeWrapper({ sorting: true, visibility: true }),
 		})
 		expect(result.current.grid.sorting).toBe(true)
-		expect(result.current.grid.columnVisibility).toBe(true)
+		expect(result.current.grid.visibility).toBe(true)
 	})
 
 	it('lets an table override provider defaults inside useDataGrid', () => {
 		const { result } = renderHook(
-			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { panel: false } }),
-			{ wrapper: makeWrapper({ selection: { panel: true } }) },
+			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { bar: false } }),
+			{ wrapper: makeWrapper({ selection: { bar: true } }) },
 		)
-		expect(result.current.grid.selection.panel).toBe(false)
+		expect(result.current.grid.selection.bar).toBe(false)
 	})
 })
 

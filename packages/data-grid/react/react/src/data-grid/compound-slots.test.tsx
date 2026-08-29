@@ -155,8 +155,15 @@ describe('compound render-prop slots', () => {
 
 	it('<DataGrid.SelectionBar> hands over a confirmation-aware onDelete', () => {
 		const onDelete = vi.fn()
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, selection: true }))
-		table.grid.selection.panel = { onDelete, confirmation: true }
+		const table = prepareDataGridTable(
+			createTable<User>({
+				data: USERS,
+				columns: COLUMNS,
+				selection: true,
+				deleting: { onDelete: () => {}, bulk: { onDelete, confirmation: true } },
+			}),
+		)
+		table.grid.selection.bar = true
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 
 		const { container } = renderWithComponents(
@@ -187,32 +194,32 @@ describe('compound render-prop slots', () => {
 		expect(table.getState().pendingBulkDelete).toBe(true)
 	})
 
-	it('<DataGrid.SortTrigger> excludes already-used columns from each entry', () => {
+	it('<DataGrid.SortMenuTrigger> excludes already-used columns from each entry', () => {
 		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, sorting: true }))
 		table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
 
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
-				<DataGrid.SortTrigger>
+				<DataGrid.SortMenuTrigger>
 					{({ items, sortableColumns, canAddSort }) => (
 						<p>
 							{[items[0]?.availableColumns.map((c) => c.id).join(','), sortableColumns.length, canAddSort].join(' | ')}
 						</p>
 					)}
-				</DataGrid.SortTrigger>
+				</DataGrid.SortMenuTrigger>
 			</DataGrid>,
 		)
 		// 'name' is this entry's own column so it stays offered; 'amount' is still free.
 		expect(container.querySelector('p')?.textContent).toBe('name,amount | 2 | true')
 	})
 
-	it('<DataGrid.ColumnVisibilityTrigger> hands over the toggleable columns', () => {
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, columnVisibility: true }))
+	it('<DataGrid.VisibilityTrigger> hands over the toggleable columns', () => {
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, visibility: true }))
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
-				<DataGrid.ColumnVisibilityTrigger>
+				<DataGrid.VisibilityTrigger>
 					{({ columns }) => <p>{columns.map((c) => `${c.id}:${String(c.isVisible)}`).join(' ')}</p>}
-				</DataGrid.ColumnVisibilityTrigger>
+				</DataGrid.VisibilityTrigger>
 			</DataGrid>,
 		)
 		expect(container.querySelector('p')?.textContent).toBe('name:true amount:true')

@@ -1,3 +1,5 @@
+import { BetweenInputType, BetweenInputVariant } from '@ez-kit/data-grid-core'
+
 import type { BetweenInputProps } from '../types'
 import type { BetweenValue, DateRangePreset } from '@ez-kit/data-grid-core'
 
@@ -61,9 +63,9 @@ export type BetweenController = {
 }
 
 function resolveBranch(variant: BetweenInputProps['variant'], type: BetweenInputProps['type']): BetweenBranch {
-	if (variant === 'slider') return BetweenBranch.Slider
-	if (variant === 'calendar' && type === 'date') return BetweenBranch.Calendar
-	if (type === 'date') return BetweenBranch.DateInputs
+	if (variant === BetweenInputVariant.Slider) return BetweenBranch.Slider
+	if (variant === BetweenInputVariant.Calendar && type === BetweenInputType.Date) return BetweenBranch.Calendar
+	if (type === BetweenInputType.Date) return BetweenBranch.DateInputs
 	return BetweenBranch.NumberInputs
 }
 

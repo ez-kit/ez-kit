@@ -1,3 +1,5 @@
+import type { SelectItem } from '../../column/types'
+
 /** Defines a filter operator with its filtering logic. */
 export type FilterOperatorDef<TValue = unknown> = {
 	id: string
@@ -19,9 +21,42 @@ export type BetweenValue<T = unknown> = {
 	to?: T
 }
 
+/**
+ * How a between-range filter presents itself.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `variant: 'slider'` is equally valid and needs no import.
+ */
+export const BetweenInputVariant = {
+	/** Two plain bound inputs. The default. */
+	Inputs: 'inputs',
+	/** A two-handle range slider — requires resolved `min` / `max`. */
+	Slider: 'slider',
+	/** A date-range calendar. */
+	Calendar: 'calendar',
+} as const
+
+export type BetweenInputVariant = (typeof BetweenInputVariant)[keyof typeof BetweenInputVariant]
+
+/**
+ * What kind of value a between-range filter bounds — which decides how the kit parses and
+ * formats each bound. Derived from the column's cell type, not configured directly.
+ *
+ * Named members for internal reference; the plain string union is what kits see.
+ */
+export const BetweenInputType = {
+	/** Numeric bounds. */
+	Number: 'number',
+	/** Date bounds. */
+	Date: 'date',
+} as const
+
+export type BetweenInputType = (typeof BetweenInputType)[keyof typeof BetweenInputType]
+
 /** UI configuration for the between operator. */
 export type BetweenOperatorConfig = {
-	variant?: 'inputs' | 'slider' | 'calendar'
+	/** Presentation of the range control. Default: {@link BetweenInputVariant.Inputs}. */
+	variant?: BetweenInputVariant
 	/** Minimum value for slider variant. */
 	min?: number
 	/** Maximum value for slider variant. */
@@ -229,9 +264,15 @@ export const NUMBER_OPERATORS: FilterOperatorDef<number>[] = [
 // ── Built-in multi-value operators (in / notIn) ────────────────────────────
 
 /** Option shape used by multi-value (`in` / `notIn`) filter inputs. */
-export type MultiSelectOption = {
-	value: string
-	label: string
+/**
+ * One entry in a multi-value (`in` / `notIn`) filter's list.
+ *
+ * `SelectItem` plus the faceted count, and named `*Item` like every other "one of the values
+ * this column can take" list in the API — `cell.config.items`, `filtering.items`. The word
+ * `option` is spoken for: on this grid an option is something you configure, and one noun
+ * cannot be both.
+ */
+export type FilterItem = SelectItem & {
 	/** Optional faceted count — number of rows matching this value in current data. */
 	count?: number
 }

@@ -369,9 +369,6 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
-      input-otp:
-        specifier: ^1.4.2
-        version: 1.4.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.5)
@@ -390,9 +387,6 @@ importers:
       tailwindcss:
         specifier: ^4.1.18
         version: 4.2.4
-      tw-animate-css:
-        specifier: ^1.4.0
-        version: 1.4.0
     devDependencies:
       '@types/react':
         specifier: ^19.2.14

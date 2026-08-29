@@ -155,8 +155,8 @@ describe('DataGrid.Header — sticky flag', () => {
 
 describe('DataGrid.Toolbar — slots', () => {
 	it('appends `right` after the auto-mounted controls instead of replacing them', () => {
-		renderComposed(<DataGrid.Toolbar right={<button type='button'>Export</button>} />, {
-			columnVisibility: { toolbar: true },
+		renderComposed(<DataGrid.Toolbar end={<button type='button'>Export</button>} />, {
+			visibility: { toolbar: true },
 		})
 		const toolbar = screen.getByRole('toolbar')
 		// The auto-mounted column-visibility trigger ("Columns") survives alongside the slot.
@@ -165,8 +165,8 @@ describe('DataGrid.Toolbar — slots', () => {
 	})
 
 	it('appends `left` after the auto-mounted PageSizer', () => {
-		renderComposed(<DataGrid.Toolbar left={<span>Total: 3</span>} />, {
-			pagination: { pageSizeOptions: [5, 10] },
+		renderComposed(<DataGrid.Toolbar start={<span>Total: 3</span>} />, {
+			pagination: { items: [5, 10] },
 		})
 		const toolbar = screen.getByRole('toolbar')
 		expect(within(toolbar).getByText('Total: 3')).toBeInTheDocument()
@@ -175,13 +175,13 @@ describe('DataGrid.Toolbar — slots', () => {
 	})
 
 	it('renders a slot-only toolbar even when no feature auto-mounts anything', () => {
-		renderComposed(<DataGrid.Toolbar right={<button type='button'>Only mine</button>} />)
+		renderComposed(<DataGrid.Toolbar end={<button type='button'>Only mine</button>} />)
 		expect(within(screen.getByRole('toolbar')).getByText('Only mine')).toBeInTheDocument()
 	})
 
 	it('children still replace the whole bar', () => {
 		renderComposed(<DataGrid.Toolbar>{<span>everything mine</span>}</DataGrid.Toolbar>, {
-			columnVisibility: { toolbar: true },
+			visibility: { toolbar: true },
 		})
 		const toolbar = screen.getByRole('toolbar')
 		expect(within(toolbar).getByText('everything mine')).toBeInTheDocument()
@@ -192,7 +192,7 @@ describe('DataGrid.Toolbar — slots', () => {
 describe('sorting.toolbar — the UI flag that moved out of core', () => {
 	// `sorting.toolbar` used to sit on the headless `SortingConfig` with a doc comment saying
 	// "ignored by core". It now lives on `ReactSortingConfig`, next to `globalFiltering.toolbar`
-	// and `columnVisibility.toolbar`, and still drives the same auto-mount.
+	// and `visibility.toolbar`, and still drives the same auto-mount.
 	const markerComponents = { sorting: { SortMenu: () => <span>sort builder</span> } }
 
 	function renderWithSortMenu(config: Partial<UseDataGridConfig<TestRow>>) {

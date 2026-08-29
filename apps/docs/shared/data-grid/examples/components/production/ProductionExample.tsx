@@ -15,7 +15,7 @@ export function ProductionExample() {
 			pagination={{
 				manual: true,
 				rowCount: orders.rowCount,
-				pageSizeOptions: [10, 25, 50],
+				items: [10, 25, 50],
 				variant: 'numbered',
 				siblings: 1,
 				onChange: ({ pageIndex, pageSize }) => {
@@ -55,7 +55,7 @@ export function ProductionExample() {
 			layout={{ stickyHeader: true }}
 			pinning={{ column: true, row: { top: true, bottom: true } }}
 			resizing={{ mode: 'onChange' }}
-			columnVisibility={{ toolbar: true }}
+			visibility={{ toolbar: true }}
 			creating={{
 				mode: 'modal',
 				onSave: ({ values }) => orders.create(values),
@@ -70,14 +70,12 @@ export function ProductionExample() {
 					title: 'Delete order?',
 					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
 				},
-			}}
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						void orders.remove(selectedRows.map((row) => row.original.id)).then(clearSelection)
-					},
+				bulk: {
+					onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)),
+					confirmation: { title: 'Delete orders?' },
 				},
 			}}
+			selection
 			state={{
 				pagination: { pageIndex: orders.pageIndex, pageSize: orders.pageSize },
 				sorting: orders.sorting,

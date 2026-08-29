@@ -1,4 +1,4 @@
-import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import { baseCellTypes } from '@ez-kit/data-grid-react'
 
 import { BadgeCellInput, BadgeCellView } from './cell-types/BadgeCell'
 import { BooleanCellInput, BooleanCellView, BooleanFilterInput } from './cell-types/BooleanCell'

@@ -1,61 +1,36 @@
-import { useGridComponents } from '../components-context'
-
-import { AutoForm } from './auto-form'
+import { AutoFormMode } from './auto-form'
+import { FormModalHost } from './form-modal'
 import { useDataGridState, useDataGridTable } from './table-context'
 
+import type { DataGridFormModalProps } from './form-modal'
+
+export type DataGridCreatingModalProps = DataGridFormModalProps
+
 /**
- * Modal for creating a new row (creating.mode = 'modal').
- * Prefers <FormShell> (renders form-level error banner + pending Save) when
- * registered; falls back to generic <Modal>. Throws if neither is provided.
+ * Modal for creating a new row (`creating.mode: 'modal'`).
+ *
+ * Renders nothing while the create form is closed. See {@link DataGridFormModalProps} for
+ * replacing the dialog while keeping the generated fields.
  */
-export function CreatingModal() {
+export function CreatingModal({ children }: DataGridCreatingModalProps = {}) {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.creating)
-	const { Modal, FormShell } = useGridComponents().editing
 	const state = table.creating.getState()
-	const isOpen = state.isOpen
 
-	if (!isOpen) return null
-
-	const onSave = (): Promise<void> => table.creating.commit()
-	const onCancel = (): void => {
-		table.creating.cancel()
-	}
-
-	// FormShell may be overridden to undefined/null via components prop at runtime
-	const ShellComponent = FormShell as typeof FormShell | undefined
-	if (ShellComponent) {
-		return (
-			<ShellComponent
-				open={isOpen}
-				title='Create'
-				formError={state.formError}
-				isPending={state.commitStatus !== 'idle'}
-				onSave={onSave}
-				onCancel={onCancel}
-			>
-				<AutoForm mode='creating' />
-			</ShellComponent>
-		)
-	}
-
-	const ModalComponent = Modal as typeof Modal | undefined
-	if (!ModalComponent) {
-		throw new Error(
-			'[@ez-kit/data-grid] creating.mode is "modal" but no Modal or FormShell component was provided. ' +
-				'Pass a FormShell (preferred) or Modal via <DataGrid components={{ FormShell }}>.',
-		)
-	}
+	if (!state.isOpen) return null
 
 	return (
-		<ModalComponent
-			open={isOpen}
-			onClose={onCancel}
-			onSave={() => void onSave()}
-			onCancel={onCancel}
+		<FormModalHost
+			{...(children !== undefined ? { children } : {})}
+			mode={AutoFormMode.Creating}
+			feature='creating'
 			title='Create'
-		>
-			<AutoForm mode='creating' />
-		</ModalComponent>
+			formError={state.formError}
+			commitStatus={state.commitStatus}
+			onSave={() => table.creating.commit()}
+			onCancel={() => {
+				table.creating.cancel()
+			}}
+		/>
 	)
 }

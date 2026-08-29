@@ -21,7 +21,7 @@ function formatBetweenValue(value: BetweenValue): { display: string; hasValue: b
 }
 
 function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown> | undefined): string {
-	const explicit = meta?.filteringOptions
+	const explicit = meta?.filteringItems
 	if (explicit) {
 		const hit = explicit.find((o) => o.value === rawValue)
 		if (hit) return hit.label

@@ -1,8 +1,8 @@
-import { ACTIONS_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import { ACTIONS_COLUMN_ID, CommitStatus, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { RowActionsMode } from '../types'
+import { ActionsCellState } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
@@ -32,8 +32,8 @@ export function CreatingRow() {
 	const state = table.creating.getState()
 	const values = state.values
 	const errors = state.errors
-	const isValidating = state.commitStatus === 'validating'
-	const isPending = state.commitStatus !== 'idle'
+	const isValidating = state.commitStatus === CommitStatus.Validating
+	const isPending = state.commitStatus !== CommitStatus.Idle
 	const creatingConfig = table.options.creating
 	const isPinRow = creatingConfig?.mode === 'pin-row'
 
@@ -59,7 +59,7 @@ export function CreatingRow() {
 								{...pinnedAttrs}
 							>
 								<ActionsCell
-									mode={RowActionsMode.Creating}
+									state={ActionsCellState.Creating}
 									onSave={() => table.creating.commit()}
 									onCancel={() => {
 										table.creating.cancel()

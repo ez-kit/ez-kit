@@ -1,3 +1,4 @@
+import { LoadMoreDirection } from '@ez-kit/data-grid-core'
 import { useCallback } from 'react'
 
 import { DATA_GRID_DEFAULTS } from '../defaults'
@@ -5,8 +6,8 @@ import { DATA_GRID_DEFAULTS } from '../defaults'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { ResolvedGridOptions } from '../resolved-options'
+import type { LoadMoreTrigger } from '../types'
 import type { NormalizedInfiniteConfig } from '../use-data-grid'
-import type { LoadMoreDirection } from '@ez-kit/data-grid-core'
 
 /**
  * Infinite-scroll controller shared by the detection sites (sentinel observer,
@@ -20,12 +21,12 @@ import type { LoadMoreDirection } from '@ez-kit/data-grid-core'
 export type InfiniteController = {
 	/** Infinite mode is active. */
 	enabled: boolean
-	trigger: 'auto' | 'manual'
+	trigger: LoadMoreTrigger
 	threshold: { rows?: number; px?: number }
 	/** A forward page request is in flight. */
 	isFetching: boolean
 	/** More rows can be loaded forward (controlled `pagination.hasNextPage`). */
-	hasMore: boolean
+	hasNextPage: boolean
 	/** Last forward error (unwrapped), or null. */
 	error: unknown
 	/**
@@ -63,12 +64,12 @@ export function useInfiniteScroll(): InfiniteController {
 			// Guard: nothing more to load in this direction, or a fetch is already in flight.
 			const infinite = table.getSnapshot().infinite
 			const canLoad =
-				direction === 'forward'
+				direction === LoadMoreDirection.Forward
 					? cfg.hasNextPage && !infinite.isFetchingNextPage
 					: cfg.hasPreviousPage && !infinite.isFetchingPreviousPage
 			if (!canLoad) return
 
-			const fetchingKey = direction === 'forward' ? 'isFetchingNextPage' : 'isFetchingPreviousPage'
+			const fetchingKey = direction === LoadMoreDirection.Forward ? 'isFetchingNextPage' : 'isFetchingPreviousPage'
 			table.setInfiniteStatus({ [fetchingKey]: true, error: null })
 
 			// Invoke synchronously so callers (observer / button) trigger the fetch
@@ -94,16 +95,16 @@ export function useInfiniteScroll(): InfiniteController {
 	const retry = useCallback(() => {
 		// Read the failed direction imperatively so retry doesn't depend on the
 		// error snapshot closure (which loadMore clears as soon as it runs).
-		const direction = table.getSnapshot().infinite.error?.direction ?? 'forward'
+		const direction = table.getSnapshot().infinite.error?.direction ?? LoadMoreDirection.Forward
 		loadMore(direction)
 	}, [table, loadMore])
 
 	return {
 		enabled: Boolean(config),
-		trigger: config?.trigger ?? DATA_GRID_DEFAULTS.infinite.trigger,
-		threshold: config?.threshold ?? { rows: DATA_GRID_DEFAULTS.infinite.threshold.rows },
+		trigger: config?.trigger ?? DATA_GRID_DEFAULTS.pagination.trigger,
+		threshold: config?.threshold ?? { rows: DATA_GRID_DEFAULTS.pagination.threshold.rows },
 		isFetching: isFetchingNextPage,
-		hasMore: config?.hasNextPage ?? false,
+		hasNextPage: config?.hasNextPage ?? false,
 		error: errorState?.error ?? null,
 		loadMore,
 		retry,

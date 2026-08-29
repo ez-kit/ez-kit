@@ -23,11 +23,11 @@ export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
 	/**
 	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
 	 * under an app-level `DataGridOptionsProvider` and the per-call config
-	 * (factory `defaultOptions` < provider `defaults` < instance config). Lets a kit ship
-	 * opinionated defaults (e.g. `{ sorting: true, columnVisibility: true }`) so consumers
+	 * (factory `defaults` < provider `defaults` < instance config). Lets a kit ship
+	 * opinionated defaults (e.g. `{ sorting: true, visibility: true }`) so consumers
 	 * need not repeat them at every `useDataGrid` call site.
 	 */
-	defaultOptions?: DataGridDefaultOptions<object>
+	defaults?: DataGridDefaultOptions<object>
 }
 
 /**
@@ -65,7 +65,7 @@ export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
 export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeRegistry>({
 	components,
 	cellTypes,
-	defaultOptions,
+	defaults,
 }: CreateDataGridOptions<TCellTypes>): DataGridBundle<TCellTypes> {
 	type BoundProps = Parameters<typeof DataGrid>[0]
 	function BoundDataGrid(props: BoundProps) {
@@ -83,7 +83,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	}
 	// Copy the whole compound namespace rather than listing members by hand. The hand-written
 	// list had silently fallen five members behind `DataGrid` (SelectionBar, DraftBar,
-	// SortTrigger, GlobalFilterInput, ColumnVisibilityTrigger), and the `as typeof DataGrid`
+	// SortMenuTrigger, GlobalFilterInput, VisibilityTrigger), and the `as typeof DataGrid`
 	// cast below hid it from the type checker — so `<DataGrid.SelectionBar />` from a kit was
 	// `undefined` at runtime with no compile error. Assigning the namespace wholesale makes
 	// that class of drift impossible.
@@ -102,12 +102,12 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 			: (createColumnHelper<TRow>() as unknown as ColumnHelper<TRow, TCellTypes>)
 	}
 
-	// Bind the kit-level `defaultOptions` as the base option layer for every call. The provider
+	// Bind the kit-level `defaults` as the base option layer for every call. The provider
 	// wraps the DataGrid render tree, but `useDataGrid` runs in the *consumer's* tree (the caller
 	// builds the instance, then passes it to `<DataGrid table={…} />`), so factory defaults must be
 	// threaded through the hook itself rather than via a wrapping provider.
 	function useDataGridWithDefaults<TRow extends object>(config: UseDataGridConfig<TRow>): DataTable<TRow> {
-		return useDataGrid<TRow>(config, defaultOptions as DataGridDefaultOptions<TRow> | undefined)
+		return useDataGrid<TRow>(config, defaults as DataGridDefaultOptions<TRow> | undefined)
 	}
 
 	function boundExtendDataGrid<TExtra extends CellTypeRegistry>(
@@ -117,7 +117,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 		return createDataGrid<TCellTypes & TExtra>({
 			components,
 			cellTypes: mergedCellTypes,
-			...(defaultOptions !== undefined ? { defaultOptions } : {}),
+			...(defaults !== undefined ? { defaults } : {}),
 		})
 	}
 

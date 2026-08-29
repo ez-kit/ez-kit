@@ -42,8 +42,8 @@ function DateCellInput({
 }: FieldState<DateCellConfig>) {
 	const hasError = errors.length > 0
 	const calendarValue = toCalendarDate(value)
-	const minValue = toCalendarDate(config?.minValue)
-	const maxValue = toCalendarDate(config?.maxValue)
+	const minValue = toCalendarDate(config?.min)
+	const maxValue = toCalendarDate(config?.max)
 	return (
 		<DatePicker
 			value={calendarValue}

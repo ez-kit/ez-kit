@@ -18,7 +18,7 @@ pnpm add @ez-kit/data-grid-react @ez-kit/data-grid-core react
 ## Building a flavour
 
 ```tsx
-import { createDataGrid, defaultComponents } from '@ez-kit/data-grid-react'
+import { createDataGrid } from '@ez-kit/data-grid-react'
 import '@ez-kit/data-grid-react/styles.css'
 
 const { DataGrid, useDataGrid } = createDataGrid({

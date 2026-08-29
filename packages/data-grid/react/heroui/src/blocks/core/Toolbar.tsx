@@ -1,6 +1,6 @@
 import type { ToolbarProps } from '@ez-kit/data-grid-react'
 
-export function Toolbar({ children, left, right }: ToolbarProps) {
+export function Toolbar({ children, start, end }: ToolbarProps) {
 	if (children) {
 		return (
 			<div
@@ -17,8 +17,18 @@ export function Toolbar({ children, left, right }: ToolbarProps) {
 			role='toolbar'
 			className='flex items-center justify-between gap-2 mb-2'
 		>
-			<div className='flex items-center gap-2'>{left}</div>
-			<div className='flex items-center gap-2'>{right}</div>
+			<div
+				data-slot='toolbar-start'
+				className='flex items-center gap-2'
+			>
+				{start}
+			</div>
+			<div
+				data-slot='toolbar-end'
+				className='flex items-center gap-2'
+			>
+				{end}
+			</div>
 		</div>
 	)
 }

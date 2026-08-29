@@ -15,6 +15,24 @@ The shared React package (`data-grid/react/react`) must contain **zero visual st
 
 This rule is **shadcn-specific** — it follows from those files being vendored, not from the `components/ui/` path. The heroui kit's `src/components/ui/action-bar.tsx` is hand-written and freely editable; see `packages/data-grid/react/heroui/CLAUDE.md`.
 
+### Settled data-grid API decisions — do not re-propose
+
+The data-grid public API has been audited several times. The following were **considered and
+deliberately kept**; re-proposing them is churn, so if a review turns one up, cite this section
+and move on.
+
+- **`resizing.mode: 'onChange' | 'onEnd'` keeps TanStack's vocabulary.** Unlike `size` /
+  `minSize` / `maxSize` (folded into `width`) or `sortUndefined`'s `-1` / `1` (replaced by
+  `'first'` / `'last'`), these two names are what every TanStack Table user already knows the
+  option by and they read correctly on their own. That `mode: 'onChange'` sits beside the
+  feature's own `onChange` callback is noted and accepted.
+- **`pagination.pageSize` and `initialState.pagination.pageSize` are both allowed.** The option
+  is where an author _states_ the size; the seed is where a deep link _restores_ the one the
+  user picked. Writing both is a mistake, and `createTable` warns about it in development.
+- **Column `align` is logical (`start` / `end`), column `pinning` is physical (`left` /
+  `right`).** The alignment axis flips under RTL; a pinned column sticks to a viewport edge and
+  does not. `Toolbar.start` / `Toolbar.end` follow the `align` rule, for the same reason.
+
 ## Branching & Release Flow
 
 - `develop` is the default integration branch — all feature branches fork from and merge into `develop`.
@@ -160,7 +178,21 @@ copy is worse than no copy: it reads as authoritative while naming exports that 
 
 **Documented option names are type-checked** — `apps/docs/test/docs-option-names.test.ts` (helpers in `apps/docs/test/docs-options/`) resolves every option name in the data-grid docs' markdown option tables against the **real** exported types, via `ts.TypeChecker.getPropertiesOfType()` on a `ts.Program` built from `apps/docs/tsconfig.json`. Deliberately **not** a grep: `enableSorting`, `enableColumnFilters`, `enableRowSelection` and `manualPagination` all appear literally in `packages/data-grid/core/src/create-table.ts` (the core sets them as _internal_ TanStack options) while being illegal in the public config, so a substring check would bless exactly the defect class this test exists to catch. A fabricated name on a mapped page fails CI with file:line, the bogus name, the legal keys of the governing type, and a "did you mean". Package exports resolve to `./dist`, so the data-grid packages must be **built** before the test runs — the turbo `test` task's `dependsOn: ["^build"]` already enforces that.
 
-Coverage is the explicit page → type map in `apps/docs/test/docs-options/page-type-map.ts`, keyed by file path **plus the heading above each table** so multiple tables in one file map independently — currently 19 pages hand-verified in the docs API audit (2 of the 19 carry no option-key table today and check nothing yet; effective coverage is 17 pages / ~121 names). To add a page: verify its tables against the real types by hand, add the path to `DocPage`, and add a `PAGE_ENTRIES` entry classifying **every** table on the page as either an `optionTables` entry (governing type + expected name count) or a `nonOptionTables` entry (with a reason) — an unclassified table fails the test, as does a table whose checked-name count drifts from what's recorded. Rows that intentionally document a non-key (e.g. the literal `false` a per-column slot accepts) go in `OPTION_EXCEPTIONS`, each with its reason.
+Coverage is **total**: the explicit page → type map in `apps/docs/test/docs-options/page-type-map.ts`
+lists every page under `content/docs/data-grid/**`, keyed by file path **plus the heading above
+each table** so multiple tables in one file map independently. A page with no option table still
+gets an entry with two empty arrays — that is the point. While coverage was partial, an unmapped
+page was checked by nothing, and the two worst pages in the docs were unmapped ones:
+`columns/resizing.mdx` documented a `sizing` option that never existed, and the whole `editing/**`
+section documented a `meta.editType` / `onCellEdit` API that never existed. A `everyPageIsMapped`
+guard now fails the moment a page is added without being classified.
+
+To add a page: add its path to `DocPage`, and add a `PAGE_ENTRIES` entry classifying **every**
+table on the page as either an `optionTables` entry (governing type + expected name count) or a
+`nonOptionTables` entry (with a reason) — an unclassified table fails the test, as does a table
+whose checked-name count drifts from what's recorded. Rows that intentionally document a non-key
+(e.g. the literal `false` a per-column slot accepts) go in `OPTION_EXCEPTIONS`, each with its
+reason.
 
 **Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false` — the heroui bundle contains a dynamic `require` that RSC/Turbopack cannot run during SSR, so both kits deliberately share the one client-rendered path rather than letting shadcn SSR and heroui silently fall back.
 

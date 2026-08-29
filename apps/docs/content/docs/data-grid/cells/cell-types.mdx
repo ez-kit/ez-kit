@@ -1,44 +1,111 @@
 ---
 title: Cell Types
-description: Built-in cell renderers — text, number, badge, link, image, date, currency, boolean — picked by column meta.
+description: The nine built-in cell types — text, number, date, boolean, select, badge, image, link, progress — and the config each accepts.
 ---
 
 # Cell Types
 
-A "cell type" is a named renderer the engine uses when a column declares `meta.cellType`. Pick a built-in or register your own.
-
-## Usage
-
-This grid mixes the select, badge, image, link, and progress cell types, with editing and filtering enabled.
-
-<DataGridDocsExample exampleId='cell-types' />
+A cell type is a named bundle of renderers: how a value is **displayed**, what input it gets when
+**edited** or **created**, and what control **filters** it. A column picks one under `cell.type`,
+and passes that type's own options under `cell.config`.
 
 ```ts
 const columns = createColumns<Order>([
-	{ id: 'price', accessorKey: 'price', meta: { cellType: 'currency', currency: 'USD' } },
-	{ id: 'status', accessorKey: 'status', meta: { cellType: 'badge', tone: 'auto' } },
-	{ id: 'createdAt', accessorKey: 'createdAt', meta: { cellType: 'date' } },
+	{ accessorKey: 'price', header: 'Price', cell: { type: 'number', config: { prefix: '$', decimals: 2 } } },
+	{
+		accessorKey: 'status',
+		header: 'Status',
+		cell: { type: 'badge', config: { items: [{ value: 'paid', label: 'Paid', variant: 'default' }] } },
+	},
+	{ accessorKey: 'createdAt', header: 'Created', cell: { type: 'date' } },
 ])
 ```
 
+A cell type with nothing else to say can be written as the bare string — `cell: 'date'` is the
+same column as `cell: { type: 'date' }`. The object is for the exception that carries a `config`
+or a `component`, the same scalar-or-object shape `align`, `width` and `pinning` use.
+
+`cell.type` is checked against the registry of the kit whose `createColumns` built the array, so
+a typo is a compile error rather than a blank cell. `config` follows the type: it is **required**
+where the type declares a required field (`select` needs `items`), optional where every field is
+optional, and rejected outright for a type that declares none.
+
+## Usage
+
+This grid mixes the select, badge, image, link, and progress cell types, with editing and
+filtering enabled.
+
+<DataGridDocsExample exampleId='cell-types' />
+
 ## Built-in cell types
 
-| `meta.cellType` | Expected accessor             | Notes                                              |
-| --------------- | ----------------------------- | -------------------------------------------------- |
-| `'text'`        | `string`                      | Default for accessor columns.                      |
-| `'number'`      | `number`                      | Formatted by locale.                               |
-| `'currency'`    | `number`                      | Needs `meta.currency`.                             |
-| `'date'`        | `Date \| string`              | See also [Date cell](./data-grid/cells/date-cell). |
-| `'badge'`       | `string`                      | Picks tone by value or `meta.tones`.               |
-| `'link'`        | `{ href, label }` or `string` | `meta.target`, `meta.rel`.                         |
-| `'image'`       | `string`                      | Avatar / thumbnail.                                |
-| `'boolean'`     | `boolean`                     | Renders a check/cross icon.                        |
+| `cell.type`  | Value          | `cell.config`                                                                                         |
+| ------------ | -------------- | ----------------------------------------------------------------------------------------------------- |
+| `'text'`     | `string`       | `maxLength`, `ellipsis` — truncation for the rendered view.                                           |
+| `'number'`   | `number`       | `decimals`, `thousandsSeparator`, `decimalSeparator`, `prefix`, `suffix`, `locale`.                   |
+| `'date'`     | `string`       | `min`, `max` (ISO 8601, for the picker), `format` (`Intl.DateTimeFormatOptions`).                     |
+| `'boolean'`  | `boolean`      | `trueLabel`, `falseLabel`.                                                                            |
+| `'select'`   | `string`       | `items: { value, label }[]` — **required**.                                                           |
+| `'badge'`    | `string`       | `items: { value, label, variant? }[]` — **required**. `variant` is the kits' shared badge vocabulary. |
+| `'image'`    | `string` (src) | `alt`, `width`, `height`.                                                                             |
+| `'link'`     | `string`       | `label`, `href`, `target` — see below. All optional.                                                  |
+| `'progress'` | `number`       | `max`.                                                                                                |
+
+### `'link'`
+
+The anchor defaults to the cell value for both its `href` and its text, and opens in the current
+tab. Each part is overridable:
+
+| `cell.config` | Type                              | Description                                                                                 |
+| ------------- | --------------------------------- | ------------------------------------------------------------------------------------------- |
+| `label`       | `string`                          | Fixed anchor text. Defaults to the cell value.                                              |
+| `href`        | `` `${string}{value}${string}` `` | URL template; `{value}` is the cell value, URL-encoded. Omitted, the value **is** the href. |
+| `target`      | `'_self' \| '_blank'`             | Browsing context. Default `'_self'`; `'_blank'` adds `rel="noreferrer"`.                    |
+
+```ts
+{ accessorKey: 'customerId', cell: { type: 'link', config: { href: '/customers/{value}', label: 'Open' } } }
+```
+
+The token is required by the type, so a template that forgot it — and would point every row at the
+same page — is a compile error.
+
+Everything here is a plain value, not a callback. A cell type's config lives in the kit's registry,
+which is row-agnostic by construction, so a callback declared there would be handed `row: unknown`
+and every call site would open with a cast. Anchor text or a URL derived from **another field**
+belongs in `cell.component`, which is declared on the column and therefore sees the row's real type.
+
+The names are also available as `BuiltInCellType.Number` and friends, for code that would
+otherwise repeat the literal.
+
+`'currency'` is not a type: it is `'number'` with a `prefix` or `suffix` and a `locale`. One
+formatter, configured, rather than a second type that formats the same digits.
+
+## Overriding one part
+
+`cell.component` replaces the **view** while keeping the type's inputs, its filter and its
+config:
+
+```tsx
+{
+	accessorKey: 'score',
+	cell: {
+		type: 'number',
+		config: { decimals: 1 },
+		component: ({ value, row }) => <Score value={value} trend={row.trend} />,
+	},
+}
+```
+
+A column with a `component` and no `type` renders that component and nothing else — no built-in
+input, no filter control.
 
 ## See also
 
-- [Custom Cell Types](./data-grid/cells/custom-cell-types) — register your own
-- [Date Cell](./data-grid/cells/date-cell)
+- [Custom Cell Types](./data-grid/cells/custom-cell-types) — register your own with `defineCellType`
+- [Date Cell](./data-grid/cells/date-cell) — the date type in detail
+- [Columns](./data-grid/columns) — the rest of a column definition
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cells/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/cells/)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cell-types/`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/cell-types/)

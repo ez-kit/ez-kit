@@ -1,10 +1,13 @@
 import type { GridMenuProps } from './menu'
 import type {
+	BetweenInputType,
+	BetweenInputVariant,
 	BetweenValue,
+	ColumnPinSide,
 	DateRangePreset,
 	FilterOperatorDef,
 	LoadMoreDirection,
-	MultiSelectOption,
+	FilterItem,
 } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 import type {
@@ -23,7 +26,7 @@ import type {
 } from 'react'
 
 /** Which affordances the row-actions cell offers, and therefore which props it carries. */
-export const RowActionsMode = {
+export const ActionsCellState = {
 	/** A settled row: edit / delete. */
 	Idle: 'idle',
 	/** A row being edited inline: save / cancel. */
@@ -32,11 +35,11 @@ export const RowActionsMode = {
 	Creating: 'creating',
 } as const
 
-export type RowActionsMode = (typeof RowActionsMode)[keyof typeof RowActionsMode]
+export type ActionsCellState = (typeof ActionsCellState)[keyof typeof ActionsCellState]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ActionsCellIdleProps<TRow extends object = any> = {
-	mode: typeof RowActionsMode.Idle
+	state: typeof ActionsCellState.Idle
 	row: Row<TRow>
 	hasEditing: boolean
 	hasDeleting: boolean
@@ -46,7 +49,7 @@ type ActionsCellIdleProps<TRow extends object = any> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ActionsCellEditingProps<TRow extends object = any> = {
-	mode: typeof RowActionsMode.Editing
+	state: typeof ActionsCellState.Editing
 	row: Row<TRow>
 	onSave: () => Promise<void>
 	onCancel: () => void
@@ -55,7 +58,7 @@ type ActionsCellEditingProps<TRow extends object = any> = {
 }
 
 type ActionsCellCreatingProps = {
-	mode: typeof RowActionsMode.Creating
+	state: typeof ActionsCellState.Creating
 	onSave: () => Promise<void>
 	onCancel: () => void
 	/** `false` on the pinned creating row, which has nothing to cancel back to. */
@@ -97,8 +100,9 @@ export type TbodyProps = HTMLAttributes<HTMLTableSectionElement>
 export type TfootProps = HTMLAttributes<HTMLTableSectionElement>
 /** Like {@link TheadProps}, the ref must reach the rendered row: pinned rows are measured there. */
 export type TrProps = HTMLAttributes<HTMLTableRowElement> & RefAttributes<HTMLTableRowElement>
-export type ThProps = ThHTMLAttributes<HTMLTableCellElement> & { pinned?: 'left' | 'right' | false }
-export type TdProps = TdHTMLAttributes<HTMLTableCellElement> & { pinned?: 'left' | 'right' | false }
+/** `pinned` is the core `ColumnPinSide`, widened with `false` for the unpinned majority. */
+export type ThProps = ThHTMLAttributes<HTMLTableCellElement> & { pinned?: ColumnPinSide | false }
+export type TdProps = TdHTMLAttributes<HTMLTableCellElement> & { pinned?: ColumnPinSide | false }
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>
 export type InputProps = InputHTMLAttributes<HTMLInputElement>
 
@@ -125,10 +129,17 @@ export type ModalProps = {
 	onCancel?: () => void
 }
 
+/**
+ * The kit's toolbar shell. `start` / `end` are logical, not physical: the bar is a flex row, so
+ * the two slots swap sides under RTL, and `left` / `right` named the wrong one half the time.
+ * Column pinning keeps `left` / `right` — a viewport edge does not flip.
+ */
 export type ToolbarProps = {
 	children?: ReactNode
-	left?: ReactNode
-	right?: ReactNode
+	/** Leading slot — rendered first in the reading direction. */
+	start?: ReactNode
+	/** Trailing slot — rendered last in the reading direction. */
+	end?: ReactNode
 }
 
 /**
@@ -142,7 +153,7 @@ export type ToolbarProps = {
  *   pending state if desired.
  * - `onKeyDown`, when present, must be forwarded to the underlying `<input>` verbatim —
  *   the headless wrapper uses it to apply the whole pending draft on Enter under
- *   `deferredApply`. `undefined` when there is nothing to wire (e.g. `deferredApply` off).
+ *   `draft`. `undefined` when there is nothing to wire (e.g. `draft` off).
  */
 export type GlobalFilterInputProps = {
 	value: string
@@ -243,7 +254,12 @@ export const RowActionId = {
 export type RowActionId = (typeof RowActionId)[keyof typeof RowActionId]
 
 export type SortIndicatorProps = {
-	sortDir: 'asc' | 'desc' | false
+	/**
+	 * The column's active direction, or {@link ColumnSortDirection.None}. Same type and same
+	 * field name as `<DataGrid.HeaderCell>`'s render args, so a kit that renders both against
+	 * one helper does not have to translate between them.
+	 */
+	sortDirection: ColumnSortDirection
 	canSort: boolean
 }
 
@@ -254,11 +270,46 @@ export type VisibilityColumnItem = {
 	onToggle: () => void
 }
 
-export type ColumnVisibilityMenuProps = {
+export type VisibilityMenuProps = {
 	columns: VisibilityColumnItem[]
 }
 
-export type SortDirection = 'asc' | 'desc'
+/**
+ * Direction a column is sorted in.
+ *
+ * Named members for internal reference; the plain string union is what callers see, so
+ * `direction === 'asc'` is equally valid and needs no import.
+ */
+export const SortDirection = {
+	/** Ascending — A→Z, 0→9, oldest→newest. */
+	Asc: 'asc',
+	/** Descending — Z→A, 9→0, newest→oldest. */
+	Desc: 'desc',
+} as const
+
+export type SortDirection = (typeof SortDirection)[keyof typeof SortDirection]
+
+/**
+ * How a column is sorted **right now** — the two directions plus an explicit
+ * {@link ColumnSortDirection.None}, rather than `SortDirection | false`.
+ *
+ * A distinct set from {@link SortDirection} because it answers a distinct question:
+ * `SortDirection` is a direction someone *picks* (the multi-sort builder's per-row select,
+ * where "none" would mean nothing), this is a state the grid *reports*. Every public surface
+ * that reports it — `<DataGrid.HeaderCell>`'s render args and the kit's `SortIndicator` —
+ * uses this one type under the same field name, `sortDirection`. The `None` member rather
+ * than `false` so it reads in JSX and lands in `data-sort-direction` as a word.
+ */
+export const ColumnSortDirection = {
+	/** Ascending. Mirrors {@link SortDirection.Asc}. */
+	Asc: SortDirection.Asc,
+	/** Descending. Mirrors {@link SortDirection.Desc}. */
+	Desc: SortDirection.Desc,
+	/** The column carries no sort. */
+	None: 'none',
+} as const
+
+export type ColumnSortDirection = (typeof ColumnSortDirection)[keyof typeof ColumnSortDirection]
 
 export type SortColumnOption = {
 	id: string
@@ -307,7 +358,20 @@ export type FilterPanelChipProps = {
 	children: ReactNode
 }
 
-export type FilterChipKind = 'column' | 'global'
+/**
+ * Which filter a chip in the active-filters strip stands for. Kits may style the two differently.
+ *
+ * Named members for internal reference; the plain string union is what callers see, so
+ * `kind === 'global'` is equally valid and needs no import.
+ */
+export const FilterChipKind = {
+	/** A per-column filter. */
+	Column: 'column',
+	/** The cross-column global search value. */
+	Global: 'global',
+} as const
+
+export type FilterChipKind = (typeof FilterChipKind)[keyof typeof FilterChipKind]
 
 export type FilterChipProps = {
 	/** Human label for the chip — column header for `kind: 'column'`, "Search" for `kind: 'global'`. */
@@ -319,14 +383,14 @@ export type FilterChipProps = {
 	/** Where the filter comes from. Kits may style column vs. global chips differently. */
 	kind: FilterChipKind
 	/**
-	 * True when this filter is part of the not-yet-applied draft under `deferredApply` — i.e.
+	 * True when this filter is part of the not-yet-applied draft under `draft` — i.e.
 	 * it differs from (or is absent from) `table.getState().applied`. Kits render this as
 	 * `data-draft-filter=""` on the chip's root element.
 	 */
 	isDraft: boolean
 }
 
-export type ClearFiltersButtonComponentProps = {
+export type ClearFiltersButtonProps = {
 	/** True when no filter is active; kit can render the button in a disabled state. */
 	disabled: boolean
 	/** Clear every column filter and the global filter. */
@@ -334,7 +398,7 @@ export type ClearFiltersButtonComponentProps = {
 	/** Optional custom contents. When absent the kit renders its default (icon-only). */
 	children?: ReactNode
 	/** Accessibility label. Defaults to "Clear filters" when omitted. */
-	ariaLabel?: string
+	'aria-label'?: string
 }
 
 export type OperatorSelectProps = {
@@ -346,8 +410,8 @@ export type OperatorSelectProps = {
 export type BetweenInputProps = {
 	value: BetweenValue
 	onChange: (value: BetweenValue) => void
-	variant: 'inputs' | 'slider' | 'calendar'
-	type: 'number' | 'date'
+	variant: BetweenInputVariant
+	type: BetweenInputType
 	min?: number
 	max?: number
 	/** Preset list to render above the inputs/slider/calendar. Already resolved by the adapter. */
@@ -356,12 +420,12 @@ export type BetweenInputProps = {
 	onPresetSelect?: (preset: DateRangePreset) => void
 }
 
-export type { DateRangePreset, MultiSelectOption }
+export type { DateRangePreset, FilterItem }
 
 export type MultiSelectFilterProps = {
-	/** Available options. Counts (when present) come from faceted unique values. */
-	options: MultiSelectOption[]
-	/** Currently selected option values. Empty array = no filter. */
+	/** The values on offer. Counts (when present) come from faceted unique values. */
+	items: FilterItem[]
+	/** Currently selected values. Empty array = no filter. */
 	selectedValues: string[]
 	/** Called with the next array of selected values. */
 	onChange: (next: string[]) => void
@@ -421,27 +485,115 @@ export type RefetchOverlayProps = {
  * the UI kit (`shadcn` / `heroui`); the react package only positions it inside a
  * full-width cell. The component should render:
  * - a spinner when `isFetching`
- * - a "Load more" button when `trigger === 'manual'` and `hasMore` (calls `onTrigger`)
+ * - a "Load more" button when `trigger` is {@link LoadMoreTrigger.Manual} and `hasNextPage` (calls `onTrigger`)
  * - a "Retry" affordance when `error` is non-null (calls `onRetry`)
  */
+/**
+ * How a column's filter control is presented.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `variant: 'popover'` is equally valid and needs no import.
+ */
+export const FilteringVariant = {
+	/** The control sits in the header cell, under the column label. The default. */
+	Inline: 'inline',
+	/** The control opens from a per-column popover trigger in the header. */
+	Popover: 'popover',
+	/** Every column's control is collected into one filter panel. */
+	Panel: 'panel',
+} as const
+
+export type FilteringVariant = (typeof FilteringVariant)[keyof typeof FilteringVariant]
+
+/**
+ * Where the auto-mounted active-filter chips strip renders relative to the table.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `position: 'below'` is equally valid and needs no import.
+ */
+export const FilterChipsPosition = {
+	/** Between the toolbar and the table. The default. */
+	Above: 'above',
+	/** Under the table, before the pagination footer. */
+	Below: 'below',
+} as const
+
+export type FilterChipsPosition = (typeof FilterChipsPosition)[keyof typeof FilterChipsPosition]
+
+/**
+ * What makes an infinite-scroll grid load the next page.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `trigger: 'manual'` is equally valid and needs no import.
+ */
+export const LoadMoreTrigger = {
+	/** Load as soon as the edge enters view. The default. */
+	Auto: 'auto',
+	/** Suppress edge detection and render a "Load more" control instead. */
+	Manual: 'manual',
+} as const
+
+export type LoadMoreTrigger = (typeof LoadMoreTrigger)[keyof typeof LoadMoreTrigger]
+
+/**
+ * How close to the load edge an infinite-scroll grid triggers the next page — a genuine
+ * either/or, in the same shape (and for the same reason) as core's `PaginationTotals`.
+ *
+ * The two units address two different detection paths: `rows` is a row-index distance read by
+ * the virtualized path, `px` is the `IntersectionObserver` `rootMargin` used when the body is
+ * not virtualized. Only one of them is ever consulted for a given grid, so supplying both is a
+ * setting that silently does nothing half the time. The `never` arms say so at the type level
+ * rather than leaving it as a sentence in the docs.
+ */
+export type LoadMoreThreshold = { rows?: number; px?: never } | { px?: number; rows?: never }
+
 export type LoadMoreRowProps = {
 	/** Visible leaf column count — for the host `<td colSpan>`, if the kit needs it. */
 	columnCount: number
-	/** Load direction. v1 is always `'forward'`. */
+	/** Load direction. v1 is always {@link LoadMoreDirection.Forward}. */
 	direction: LoadMoreDirection
 	/** A page request is in flight in this direction. */
 	isFetching: boolean
-	/** More rows can be loaded in this direction (controlled `hasNextPage`). */
-	hasMore: boolean
+	/**
+	 * More rows can be loaded in this direction — the resolved `pagination.hasNextPage`, under
+	 * the same name it has as an option. It was `hasNextPage`, so one flag changed its spelling on
+	 * the way from the config to the kit.
+	 */
+	hasNextPage: boolean
 	/** Last load error for this direction, or `null`. */
 	error: unknown
 	/** Active trigger mode. */
-	trigger: 'auto' | 'manual'
+	trigger: LoadMoreTrigger
 	/** Invoke a load (used by the manual "Load more" control). */
 	onTrigger: () => void
 	/** Re-invoke the failed load and clear the error. */
 	onRetry: () => void
 }
+
+/**
+ * Named members of {@link ActionBarVariant}. A convenience handle — the option and every
+ * prop are typed as the string union, so `variant: 'inline'` is equally valid and needs no
+ * import. Internal code (the panel resolver, the layout that positions the bar, kits)
+ * references the members instead of repeating the literals.
+ *
+ * A const object rather than an `enum` on purpose: enum members are a nominal type, so code
+ * holding the public union could not be compared against them
+ * (`@typescript-eslint/no-unsafe-enum-comparison`).
+ */
+export const ActionBarVariant = {
+	/** A positioned/sticky bar, typically overlaying the table area. The default. */
+	Floating: 'floating',
+	/** A normal block in the document flow, above the Toolbar. */
+	Inline: 'inline',
+} as const
+
+/**
+ * Render mode of the shared action bar — the selection section and the pending-draft section
+ * are one bar, so both read this single value.
+ *
+ * Derived from {@link ActionBarVariant} so the union and the members cannot drift apart.
+ */
+export type ActionBarVariant = (typeof ActionBarVariant)[keyof typeof ActionBarVariant]
 
 export type SelectionBarProps = {
 	/** False when 0 rows selected — component should hide/animate out. */
@@ -455,7 +607,7 @@ export type SelectionBarProps = {
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
 	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
 	 */
-	variant: 'floating' | 'inline'
+	variant: ActionBarVariant
 	/**
 	 * Pre-bound delete handler. Only present when `onDelete` was configured.
 	 * When absent — Delete button must NOT be rendered.
@@ -471,7 +623,7 @@ export type SelectionBarProps = {
 }
 
 /**
- * Pending-draft section of the shared action bar (`deferredApply`).
+ * Pending-draft section of the shared action bar (`draft`).
  *
  * While a draft is pending this section owns the bar and the selection section
  * stands down — see `<DraftBar>`. `selectedCount` is therefore rendered as a
@@ -490,7 +642,7 @@ export type DraftBarProps = {
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.
 	 * - `'inline'` — rendered in normal document flow (between Toolbar and Table).
 	 */
-	variant: 'floating' | 'inline'
+	variant: ActionBarVariant
 	/** Apply the pending draft — emits one state change for the whole query. */
 	onApply: () => void
 	/** Discard the pending draft and restore the applied query. */
@@ -535,13 +687,13 @@ export type GridComponentRegistry = {
 	Resizer?: ComponentType<ResizerProps>
 	SortIndicator?: ComponentType<SortIndicatorProps>
 	Menu?: ComponentType<GridMenuProps>
-	ColumnVisibilityMenu?: ComponentType<ColumnVisibilityMenuProps>
+	VisibilityMenu?: ComponentType<VisibilityMenuProps>
 	SortMenu?: ComponentType<SortMenuProps>
 	FilterPopover?: ComponentType<FilterPopoverProps>
 	FilterPanel?: ComponentType<FilterPanelProps>
 	FilterPanelChip?: ComponentType<FilterPanelChipProps>
 	FilterChip?: ComponentType<FilterChipProps>
-	ClearFiltersButton?: ComponentType<ClearFiltersButtonComponentProps>
+	ClearFiltersButton?: ComponentType<ClearFiltersButtonProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	DraftBar?: ComponentType<DraftBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>

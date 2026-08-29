@@ -1,6 +1,6 @@
 ---
 title: Selection Bar
-description: Floating or inline action bar that appears when rows are selected — bulk delete, export, edit, custom actions.
+description: Floating or inline action bar that appears when rows are selected — bulk delete, export, custom actions.
 ---
 
 # Selection Bar
@@ -15,14 +15,19 @@ A bar floats at the bottom of the table while a selection is active:
 
 ```tsx
 <DataGrid.SelectionBar>
-	{({ selectedRows }) => (
+	{({ count, onDelete, onClear }) => (
 		<>
-			<span>{selectedRows.length} selected</span>
-			<button onClick={() => bulkDelete(selectedRows)}>Delete</button>
+			<span>{count} selected</span>
+			{onDelete && <button onClick={onDelete}>Delete</button>}
+			<button onClick={onClear}>Cancel</button>
 		</>
 	)}
 </DataGrid.SelectionBar>
 ```
+
+`onDelete` already encodes the confirmation protocol: with a prompt configured it stages the
+delete and opens the dialog, without one it deletes immediately. Reaching for your own handler
+instead silently skips the prompt.
 
 ## Inline
 
@@ -31,42 +36,50 @@ The same content can be rendered inline above the table — no portal, no z-inde
 <DataGridDocsExample exampleId='selection-bar-inline' />
 
 ```tsx
-<DataGrid.SelectionBar variant='inline'>{/* same content */}</DataGrid.SelectionBar>
+selection: {
+	bar: { variant: 'inline' },
+}
 ```
 
-## Delete confirmation
+## The Delete button
 
-Bulk delete is destructive. Set `confirmation` on the selection panel config to prompt before
-running `onDelete` — the shared `ConfirmDialog` slot opens with count-aware text ("Delete N rows?")
-and the handler fires only on confirm. Omit it (or pass `false`) for the default instant behaviour.
+The bar's Delete button is **not** configured here. Bulk delete is the `deleting` feature
+operating on more than one row, so its handler and its prompt live next to the per-row ones — see
+[Delete confirmation](./data-grid/editing/delete-confirmation). The bar renders the button
+whenever `deleting.bulk` resolves to on.
 
 ```tsx
-selection: {
-	panel: {
-		onDelete: ({ selectedRows, clearSelection }) => {
-			bulkDelete(selectedRows)
-			clearSelection()
-		},
-		// `true` uses the default copy; pass an object to customise it.
+deleting: {
+	onDelete: ({ row }) => remove(row.original.id),
+	// One word: with no handler of its own, bulk delete loops `onDelete` over the selection.
+	bulk: true,
+}
+```
+
+```tsx
+deleting: {
+	onDelete: ({ row }) => remove(row.original.id),
+	bulk: {
+		// One call for the whole set — what a "delete these ids" endpoint wants.
+		onDelete: ({ rowIds }) => api.removeMany(rowIds),
 		confirmation: { title: 'Delete selected products?' },
 	},
 }
 ```
 
-The dialog reuses the same `ConfirmDialog` component as per-row [delete confirmation](./data-grid/editing/delete-confirmation), so it renders in the active UI flavor (shadcn AlertDialog or HeroUI Modal) with no extra wiring.
+The deleted ids leave the selection once the handler resolves, so the bar never counts rows that
+no longer exist.
 
 ## Options
 
-The panel is configured under `selection.panel` — pass `true` for the default (read-only) panel or an
-object with the keys below. It renders only while `selection` is enabled.
+The bar is configured under `selection.bar` — pass `true` for the default bar or an object with
+the keys below. It renders only while `selection` is enabled. Everything here is presentational.
 
-| `selection.panel` key | Type                                                | Description                                                                   |
-| --------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `variant`             | `'floating' \| 'inline'`                            | Default `'floating'`.                                                         |
-| `onDelete`            | `({ table, selectedRows, clearSelection }) => void` | Adds a Delete button that runs this handler.                                  |
-| `confirmation`        | `boolean \| ConfirmationOptions`                    | Prompt before `onDelete`. `ConfirmationOptions` = `{ title?, description? }`. |
-| `onClear`             | `({ table, selectedRows, clearSelection }) => void` | Overrides the default clear behaviour.                                        |
-| `actions`             | `ReactElement \| (args) => ReactElement`            | Extra controls rendered between Delete and Cancel.                            |
+| `selection.bar` key | Type                                                | Description                                                                                       |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                             |
+| `clear`             | `({ table, selectedRows, clearSelection }) => void` | Replaces the default clear behaviour (not a notification — call `clearSelection` to still reset). |
+| `actions`           | `ReactElement \| (args) => ReactElement`            | Extra controls rendered between Delete and Cancel.                                                |
 
 ## Source
 

@@ -8,6 +8,7 @@ import type {
 	BadgeCellConfig,
 	DateCellConfig,
 	ImageCellConfig,
+	LinkCellConfig,
 	ProgressCellConfig,
 	SelectCellConfig,
 } from '@ez-kit/data-grid-core'
@@ -25,6 +26,7 @@ export type {
 	BooleanCellConfig,
 	DateCellConfig,
 	ImageCellConfig,
+	LinkCellConfig,
 	NumberCellConfig,
 	ProgressCellConfig,
 	SelectCellConfig,
@@ -57,6 +59,6 @@ export const baseCellTypes = {
 	select: defineCellType<SelectCellConfig>()({}),
 	badge: defineCellType<BadgeCellConfig>()({}),
 	image: defineCellType<ImageCellConfig>()({}),
-	link: defineCellType()({}),
+	link: defineCellType<LinkCellConfig>()({}),
 	progress: defineCellType<ProgressCellConfig>()({}),
 }

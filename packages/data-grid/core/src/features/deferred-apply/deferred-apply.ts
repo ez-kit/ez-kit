@@ -1,3 +1,4 @@
+import type { FeatureToggle } from '../../utils/feature-flag'
 import type {
 	ColumnFiltersState,
 	InitialTableState,
@@ -8,8 +9,22 @@ import type {
 	TableState,
 } from '@tanstack/table-core'
 
-/** The three query axes whose application can be deferred. */
-export type DraftAxis = 'sorting' | 'columnFilters' | 'globalFilter'
+/**
+ * The three query axes whose application can be deferred. The members are the TanStack state
+ * slice names, so an axis doubles as the key into `AppliedState` / `PendingCount`.
+ *
+ * Named members for internal reference; the plain string union is what callers see.
+ */
+export const DraftAxis = {
+	/** Column sort order. */
+	Sorting: 'sorting',
+	/** Per-column filters. */
+	ColumnFilters: 'columnFilters',
+	/** The cross-column global search value. */
+	GlobalFilter: 'globalFilter',
+} as const
+
+export type DraftAxis = (typeof DraftAxis)[keyof typeof DraftAxis]
 
 /**
  * Snapshot of the query the consumer last saw. The live `sorting` /
@@ -31,6 +46,17 @@ export type PendingCount = {
 	filters: number
 	search: boolean
 }
+
+/**
+ * Table-level draft config.
+ *
+ * Carries nothing but the shared {@link FeatureToggle} today: the feature has no knobs, and
+ * inventing some to justify an object would be speculative. It exists so `draft` reads like
+ * every other feature switch — `draft: { enabled: false }` turns off a `draft` inherited from
+ * a defaults layer, which the bare boolean this replaced could not express — and so the first
+ * real option can be added without a breaking change.
+ */
+export type DraftConfig = FeatureToggle
 
 export type DraftApi = {
 	get: () => QueryDraft
@@ -62,10 +88,10 @@ declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
 	interface TableOptionsResolved<TData extends RowData> {
 		/**
-		 * Mirrors `TableConfig.deferredApply`. Present only when deferral is on, so a
-		 * UI layer can gate on the option itself rather than inferring it from state.
+		 * Mirrors `TableConfig.draft`, resolved to a plain boolean. Present only when deferral
+		 * is on, so a UI layer can gate on the option itself rather than inferring it from state.
 		 */
-		deferredApply?: boolean
+		draft?: boolean
 	}
 }
 

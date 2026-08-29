@@ -109,7 +109,7 @@ export function ColumnVisibilityExample() {
 			]}
 			sorting
 			// shows the "Columns" toggle button in the toolbar
-			columnVisibility={{ toolbar: true }}
+			visibility={{ toolbar: true }}
 		/>
 	)
 }

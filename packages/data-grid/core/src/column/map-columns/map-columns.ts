@@ -11,7 +11,9 @@ import type {
 	CellViewCtx,
 	ColumnAlign,
 	ColumnAlignDef,
+	ColumnCreatingConfig,
 	ColumnDef,
+	ColumnEditingConfig,
 	ColumnPinningDef,
 	ColumnWidthDef,
 	TanStackColumnDef,
@@ -26,6 +28,16 @@ type AnyCellTypes = any
  * like `cellView` beside it — the meta is read by renderers that have no `TRow`.
  */
 type ColumnMetaClassName = string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
+
+/**
+ * `editing` / `creating` are declared with the **column's** value type so an `accessorKey`
+ * column's edit field sees it, and value-erased on the meta, exactly like `cellClassName` and
+ * `cellView` beside them — the meta is read by renderers that have no `TValue`. `FieldState`'s
+ * `value` and `onChange` point opposite ways, so no variance rule relates the two; the cast is
+ * the erasure, and it happens here once rather than at every reader.
+ */
+type ColumnMetaEditing = false | ColumnEditingConfig
+type ColumnMetaCreating<TRow> = false | ColumnCreatingConfig<TRow>
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
@@ -103,12 +115,14 @@ function mapColumn<TRow extends object>(
 		resizing,
 		width,
 		align,
-		validateOn,
-		validateDebounceMs,
 		headerClassName,
 		cellClassName,
 		footerClassName,
 	} = def
+
+	// The scalar `cell: 'number'` is the same thing as `cell: { type: 'number' }`; normalize once
+	// here so nothing downstream has to know there are two spellings.
+	const cellDef = typeof cell === 'string' ? { type: cell } : cell
 
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
 
@@ -116,23 +130,21 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'columnAlign', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'filtering', filtering)
-	setIfDefined(meta, 'editing', editing)
-	setIfDefined(meta, 'creating', creating)
-	setIfDefined(meta, 'validateOn', validateOn)
-	setIfDefined(meta, 'validateDebounceMs', validateDebounceMs)
+	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)
+	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
 	setIfDefined(meta, 'headerClassName', headerClassName)
 	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
 	setIfDefined(meta, 'footerClassName', footerClassName)
 	// Implicit cellType='text' when not provided so registry-driven form rendering
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.
-	meta.cellType = cell?.type ?? 'text'
-	if (cell !== undefined && 'config' in cell && cell.config !== undefined) {
+	meta.cellType = cellDef?.type ?? 'text'
+	if (cellDef !== undefined && 'config' in cellDef && cellDef.config !== undefined) {
 		// The declared config type is the cell type's business, not this mapper's — it only
 		// forwards whatever the column author wrote into `meta` for the renderer to read.
-		meta.config = cell.config as Record<string, unknown>
+		meta.config = cellDef.config as Record<string, unknown>
 	}
-	const viewFn = cell?.component
+	const viewFn = cellDef?.component
 	if (viewFn !== undefined) meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown
 
 	// Build a plain object and cast — TanStack's ColumnDef is a discriminated union
@@ -177,7 +189,11 @@ function mapColumn<TRow extends object>(
 	// `meta.cellView`, which is what the React adapter actually mounts. The shim is the fallback
 	// for anything reading `columnDef.cell` directly.
 	if (typeof viewFn === 'function') {
-		const callableView = viewFn
+		// Value-erased, like `meta.cellView` just above and for the same reason: the renderer was
+		// typed against its own column's value, but all this shim can supply is `getValue()`,
+		// which is `unknown`. `mapColumns` runs over already-authored columns of any grid, so
+		// there is no value type left to recover here — only the author's site had one.
+		const callableView = viewFn as (ctx: CellViewCtx<TRow, unknown>) => unknown
 		result.cell = (ctx: { row: { original: TRow; index: number }; getValue: () => unknown }) =>
 			callableView({
 				row: ctx.row.original,
@@ -195,8 +211,8 @@ function mapColumn<TRow extends object>(
 
 	// Operator-aware filtering
 	const filteringCfg = filtering !== undefined && filtering !== false ? filtering : undefined
-	if (filteringCfg?.options) {
-		meta.filteringOptions = filteringCfg.options
+	if (filteringCfg?.items) {
+		meta.filteringItems = filteringCfg.items
 	}
 	const colFaceted = filteringCfg?.faceted
 	const tableFaceted = options?.tableFaceted ?? false
@@ -205,7 +221,7 @@ function mapColumn<TRow extends object>(
 		meta.facetedEnabled = true
 	}
 	if (filteringCfg?.operators && registry) {
-		const cellType = cell?.type
+		const cellType = cellDef?.type
 		const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
 		const resolved = resolveColumnOperators(filteringCfg.operators, registry, cellTypeOperators)
 

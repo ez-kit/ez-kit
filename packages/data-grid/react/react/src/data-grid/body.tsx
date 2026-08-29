@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 
 import { useGridComponents } from '../components-context'
+import { isFallbackOn } from '../use-data-grid'
 
 import { CreatingRow } from './creating-row'
 import { EmptyStateRow } from './empty-state-row'
@@ -108,9 +109,9 @@ export function Body({ children }: DataGridBodyProps = {}) {
 	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = table.grid.fallbacks
-	const renderExpanded = table.grid.expanding.renderExpanded as ComponentType<ExpandedRowProps<object>> | undefined
+	const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
 
-	if (isPending && fallbacks?.loading !== false) {
+	if (isPending && isFallbackOn(fallbacks?.loading)) {
 		return <LoadingBody />
 	}
 
@@ -124,10 +125,10 @@ export function Body({ children }: DataGridBodyProps = {}) {
 	const rawDataLength = (table.options.data as unknown[]).length
 
 	if (!showCreatingRow && allRows.length === 0) {
-		if (rawDataLength === 0 && fallbacks?.empty !== false) {
+		if (rawDataLength === 0 && isFallbackOn(fallbacks?.empty)) {
 			return <EmptyStateRow />
 		}
-		if (rawDataLength > 0 && fallbacks?.noResults !== false) {
+		if (rawDataLength > 0 && isFallbackOn(fallbacks?.noResults)) {
 			return <NoResultsRow />
 		}
 	}
@@ -145,13 +146,13 @@ export function Body({ children }: DataGridBodyProps = {}) {
 						data-pinned='top'
 						ref={registerTopRow(index)}
 					/>
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			{centerRows.map((row) => (
 				<Fragment key={row.id}>
 					<DataGridRow row={row} />
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			{bottomRows.map((row, index) => (
@@ -161,7 +162,7 @@ export function Body({ children }: DataGridBodyProps = {}) {
 						data-pinned='bottom'
 						ref={registerBottomRow(index)}
 					/>
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			<LoadMoreFooter />

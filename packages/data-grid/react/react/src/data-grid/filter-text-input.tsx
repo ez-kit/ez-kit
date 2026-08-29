@@ -18,7 +18,7 @@ type FilterTextInputProps = {
 	/**
 	 * Pressing Enter in the input should apply the whole pending draft, not just this
 	 * filter — sorting, filters and search commit together in one request. Left
-	 * `undefined` when `deferredApply` is off, so Enter keeps its default meaning.
+	 * `undefined` when `draft` is off, so Enter keeps its default meaning.
 	 */
 	onEnterApply?: () => void
 }

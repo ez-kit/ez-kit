@@ -6,9 +6,9 @@ import { Button } from '../../components/ui/button'
 import { Checkbox } from '../../components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
 
-import type { ColumnVisibilityMenuProps } from '@ez-kit/data-grid-react'
+import type { VisibilityMenuProps } from '@ez-kit/data-grid-react'
 
-export function ColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
+export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
