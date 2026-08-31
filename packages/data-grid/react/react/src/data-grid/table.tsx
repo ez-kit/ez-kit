@@ -6,6 +6,7 @@ import { DATA_GRID_DEFAULTS } from '../defaults'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
+import { Footer } from './footer'
 import { Header } from './header'
 import { InfiniteProvider } from './infinite-context'
 import { PinShadowOverlay } from './pin-shadow-overlay'
@@ -164,7 +165,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 	const virtualizationConfig = table.grid.virtualization
 
 	const isVirtualized = Boolean(virtualizationConfig)
-	const { stickyHeader: isStickyHeader, maxHeight } = table.grid.layout
+	const { stickyHeader: isStickyHeader, footer: hasFooter, stickyFooter: isStickyFooter, maxHeight } = table.grid.layout
 
 	// One option, two custom properties: capped height for the normal scroll container,
 	// definite height for the virtualized one (which cannot size itself from its content).
@@ -257,6 +258,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 				<>
 					<Header />
 					<Body />
+					{hasFooter ? <Footer /> : null}
 				</>
 			) : typeof children === 'function' ? (
 				children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
@@ -301,6 +303,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 					ref={scrollRef}
 					data-slot='table-scroll'
 					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
+					{...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {})}
 				>
 					{tableEl}
 				</div>

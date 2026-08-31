@@ -50,6 +50,10 @@ export type ResolvedGridOptions = {
 	layout: {
 		/** The header sticks to the top of the scroll container. */
 		stickyHeader: boolean
+		/** The default layout mounts the `<tfoot>` built from each column's `footer`. */
+		footer: boolean
+		/** The footer sticks to the bottom of the scroll container. */
+		stickyFooter: boolean
 		/** Explicit scroll-container height, as a CSS length. `undefined` → stylesheet default. */
 		maxHeight?: string | undefined
 	}
@@ -148,7 +152,7 @@ declare module '@tanstack/table-core' {
 export function defaultResolvedGridOptions(): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
-		layout: { stickyHeader: false },
+		layout: { stickyHeader: false, footer: false, stickyFooter: false },
 		pinning: { column: false, row: false },
 		filtering: {
 			variant: DATA_GRID_DEFAULTS.filtering.variant,

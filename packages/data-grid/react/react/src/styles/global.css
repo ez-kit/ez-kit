@@ -49,7 +49,10 @@ table[data-slot='table'] {
 [data-slot='table-scroll'] {
 	@apply overflow-x-auto;
 }
-[data-slot='table-scroll'][data-sticky-header='true'] {
+/* One bound, two stickies: a sticky header and a sticky footer both need this div to be the
+ * bounded vertical scrollport, so either attribute opens it. */
+[data-slot='table-scroll'][data-sticky-header='true'],
+[data-slot='table-scroll'][data-sticky-footer='true'] {
 	@apply overflow-y-auto;
 	max-height: var(--dg-table-max-height, 400px);
 }
@@ -61,6 +64,15 @@ table[data-slot='table'] {
 
 [data-slot='thead'][data-sticky='true'] {
 	@apply sticky top-0 z-10;
+}
+
+/* ── sticky tfoot ─────────────────────────────────────────────────────── */
+
+/* `position: sticky` sits on the `<tfoot>` itself, mirroring the header. The kits paint its
+ * background off the same `[data-sticky='true']` hook the header uses — without an opaque
+ * background a sticky footer shows the rows sliding underneath it. */
+[data-slot='tfoot'][data-sticky='true'] {
+	@apply sticky bottom-0 z-10;
 }
 
 /* ── pinned columns ───────────────────────────────────────────────────── */

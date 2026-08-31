@@ -67,8 +67,8 @@ plumbing:
 </DataGrid.Table>
 ```
 
-`<DataGrid.Footer />` is the footer row the default layout leaves out — see
-[Column footers](#column-footers).
+`<DataGrid.Footer />` is the footer row — the default layout mounts it for you, a custom body
+does not. See [Column footers](#column-footers).
 
 A render function gets the live table:
 
@@ -227,12 +227,13 @@ createColumns<Row>([
 
 ## Column footers
 
-`column.footer` accepts the same shape as `column.header`. It is not part of the **default**
-layout — a plain `<DataGrid />` renders no footer row — but you do not read it yourself either:
-place `<DataGrid.Footer />` inside a custom `<DataGrid.Table>` body and it renders every
-column's `footer`, in the same column order and with the same colSpan, pinning and alignment as
-the header. `column.footerClassName` lands on the footer cell.
+`column.footer` accepts the same shape as `column.header`, and a plain `<DataGrid />` renders it:
+declaring it on any column mounts the footer row — see [Footer](./footer) for `layout.footer` and
+the sticky variant. This section is about the composed path, where `<DataGrid.Table>` children
+replace the built-in pair and nothing is mounted for you.
 
+`<DataGrid.Footer />` renders every column's `footer` in the same column order and with the same
+colSpan, pinning and alignment as the header; `column.footerClassName` lands on the footer cell.
 The archetypal case is a numeric column with a total. The render function gets the live table,
 so summing over the _filtered_ rows keeps the total honest while a filter is on:
 

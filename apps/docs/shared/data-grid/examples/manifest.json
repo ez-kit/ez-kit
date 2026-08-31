@@ -630,5 +630,21 @@
 		"groupLabel": "Production",
 		"sourceFile": "components/production/ProductionFeedExample.tsx",
 		"exportName": "ProductionFeedExample"
+	},
+	{
+		"id": "column-footers",
+		"label": "Column footers",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-footers.tsx",
+		"exportName": "ColumnFootersExample"
+	},
+	{
+		"id": "sticky-footer",
+		"label": "Sticky footer",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-footers.tsx",
+		"exportName": "StickyFooterExample"
 	}
 ]

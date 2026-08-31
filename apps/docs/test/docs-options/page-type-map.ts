@@ -44,6 +44,7 @@ export const DocPage = {
 	EditingIndex: 'content/docs/data-grid/editing/index.mdx',
 	EditingValidation: 'content/docs/data-grid/editing/validation.mdx',
 	Fallbacks: 'content/docs/data-grid/fallbacks.mdx',
+	Footer: 'content/docs/data-grid/footer.mdx',
 	Features: 'content/docs/data-grid/features.mdx',
 	GettingStarted: 'content/docs/data-grid/getting-started.mdx',
 	Index: 'content/docs/data-grid/index.mdx',
@@ -127,6 +128,7 @@ export const GRID_TYPE = {
 	DeletingConfig: { module: TypeModule.Core, name: 'DeletingConfig', typeArgs: ROW_TYPE_ARGS },
 	BulkDeletingConfig: { module: TypeModule.Core, name: 'BulkDeletingConfig', typeArgs: ROW_TYPE_ARGS },
 	CellTypeDefinition: { module: TypeModule.React, name: 'CellTypeDefinition' },
+	LayoutConfig: { module: TypeModule.React, name: 'LayoutConfig' },
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -223,6 +225,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.Fallbacks,
 		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.Footer,
+		optionTables: [
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 2 },
+			{ heading: 'Mounting', roots: [GRID_TYPE.LayoutConfig], expectedCount: 2 },
+		],
 		nonOptionTables: [],
 	},
 	{

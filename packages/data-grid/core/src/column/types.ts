@@ -790,10 +790,20 @@ export type ColumnDefCommon<
 	/**
 	 * Column footer, same shape as {@link ColumnDef.header}.
 	 *
-	 * Not part of the **default** layout — a plain `<DataGrid />` renders no footer row. You do
-	 * not read it yourself, though: place `<DataGrid.Footer />` inside a custom
-	 * `<DataGrid.Table>` body and it renders every column's `footer` for you, with colSpan,
-	 * pinning, alignment and `footerClassName` handled.
+	 * Declaring it on any column is enough: the default layout then renders a `<tfoot>` with
+	 * every column's `footer`, and handles colSpan, pinning, alignment and `footerClassName`.
+	 * `layout.footer: false` opts back out, `layout.stickyFooter` keeps the row in view down a
+	 * long table. A custom `<DataGrid.Table>` body mounts nothing for you — put
+	 * `<DataGrid.Footer />` in it yourself.
+	 *
+	 * The archetypal use is a total. The render function gets the live table, so summing the
+	 * *filtered* rows keeps the total honest while a filter is on:
+	 *
+	 * @example
+	 * ```tsx
+	 * { accessorKey: 'amount', align: 'end',
+	 *   footer: ({ table }) => table.getFilteredRowModel().rows.reduce((sum, r) => sum + r.original.amount, 0) }
+	 * ```
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
 	columns?: ColumnDef<TRow, TCellTypes, TNode>[]

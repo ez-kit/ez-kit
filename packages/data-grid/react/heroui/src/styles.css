@@ -62,7 +62,8 @@
  *
  * Kept in sync with `[data-slot='table-scroll'][data-sticky-header='true']` in
  * `@ez-kit/data-grid-react`'s structural stylesheet, whose bound this relocates. */
-[data-slot='table-scroll'][data-sticky-header='true'] {
+[data-slot='table-scroll'][data-sticky-header='true'],
+[data-slot='table-scroll'][data-sticky-footer='true'] {
 	/* Both axes must go to `visible`, not just `overflow-y`: leaving `overflow-x: auto`
 	 * (the shared stylesheet's default on this div) would make CSS Overflow 3 recompute
 	 * `overflow-y` back to `auto`, so this div would re-become a scroll container and
@@ -72,7 +73,8 @@
 	overflow: visible;
 	max-height: none;
 }
-[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='table-scroll-container'] {
+[data-slot='table-scroll'][data-sticky-header='true'] [data-slot='table-scroll-container'],
+[data-slot='table-scroll'][data-sticky-footer='true'] [data-slot='table-scroll-container'] {
 	overflow-y: auto;
 	max-height: var(--dg-table-max-height, 400px);
 }
@@ -111,6 +113,16 @@
  * height of its virtualizer slot; the loader has no slot to take a height from.) */
 [data-slot='tbody'][data-virtualized='true'] > [data-slot='load-more-row'] {
 	height: auto;
+}
+
+/* HeroUI has no footer slot of its own — the adapter renders a plain `<tfoot>` — so the kit
+ * gives it the table's own footer treatment here: the header's surface, a separating rule and
+ * the weight a totals row wants. The background is what makes the sticky variant work at all;
+ * without it the rows scroll through the footer. */
+[data-slot='tfoot'] {
+	background: var(--surface-secondary);
+	border-top: 1px solid var(--separator);
+	font-weight: 500;
 }
 
 :root {
@@ -250,9 +262,15 @@
  * Child combinators on purpose: a consumer's own <table> inside an expanded row or a
  * custom fallback must keep native table layout. */
 [data-slot='table'] thead > tr,
-[data-slot='table'] tbody > tr {
+[data-slot='table'] tbody > tr,
+[data-slot='table'] tfoot > tr {
 	display: grid;
 	grid-template-columns: var(--grid-template-columns);
+}
+/* Same reason as `tbody` above: a `table-row-group` inside a block parent shrink-wraps in an
+ * anonymous table box, and the footer would come out narrower than the rows it totals. */
+[data-slot='table'] tfoot {
+	display: block;
 }
 
 tr[data-expanded] {

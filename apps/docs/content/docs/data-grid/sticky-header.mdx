@@ -25,9 +25,12 @@ Base sticky header:
 to stick against. Omit it and the structural stylesheet's `400px` default applies.
 
 `<DataGrid.Header />` reads `layout.stickyHeader` on its own, so a custom
-[composition](./composition) keeps the sticky header with no extra wiring. Its `stickyHeader` prop
+[composition](./composition) keeps the sticky header with no extra wiring. Its `sticky` prop
 overrides the grid option for one header — useful when a hand-built `<DataGrid.Table>` body holds
 more than one.
+
+`layout.stickyFooter` is the same thing at the other edge, for a totals row that has to stay in
+view — see [Footer](./footer).
 
 ## Notes
 

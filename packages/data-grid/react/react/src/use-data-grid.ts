@@ -463,6 +463,29 @@ export type LayoutConfig = {
 	 */
 	stickyHeader?: boolean
 	/**
+	 * Mount the table footer — one `<tfoot>` row per footer group, built from each column's
+	 * `footer`.
+	 *
+	 * - omitted — mounted when at least one column declares a `footer`, on the same
+	 *   "declared it, so it works" rule the rest of the column options follow
+	 * - `true` — always mounted, even before any column declares one (the case for a
+	 *   `<DataGrid.Footer>` whose `children` supply the content)
+	 * - `false` — never mounted; the way a grid opts out of a `footer` a
+	 *   {@link DataGridDefaultOptions} layer put on its shared columns
+	 *
+	 * Only the **default** layout reads this. A hand-placed `<DataGrid.Footer />` inside a
+	 * custom `<DataGrid.Table>` body renders because it is there.
+	 */
+	footer?: boolean
+	/**
+	 * Make the table footer stick to the bottom while the body scrolls — the totals row stays
+	 * in view down a long table.
+	 *
+	 * Bounded scroll container required, exactly as {@link LayoutConfig.stickyHeader} needs
+	 * one; the two can be combined.
+	 */
+	stickyFooter?: boolean
+	/**
 	 * Height of the scroll container, as any CSS length (`'32rem'`, `'60vh'`, `'500px'`).
 	 *
 	 * Writes the CSS custom properties the structural stylesheet already reads —
@@ -894,6 +917,11 @@ export function useDataGrid<TRow extends object>(
 		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,
+			// Omitted means "auto": a column that declared a `footer` gets it rendered, the way
+			// declaring `align` or `pinning` is all those options need. `false` is what turns it
+			// back off under a defaults layer that declared one on shared columns.
+			footer: layout?.footer ?? table.getAllFlatColumns().some((column) => column.columnDef.footer !== undefined),
+			stickyFooter: layout?.stickyFooter ?? false,
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
