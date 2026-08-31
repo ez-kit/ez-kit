@@ -93,6 +93,24 @@ export type DeletingConfig<TData> = FeatureToggle & {
 }
 
 /**
+ * Deleting's state slice, held in `state.deleting`.
+ *
+ * One named slice, like {@link EditingState} and {@link CreatingState} — the three write
+ * features now hold their state the same way they expose their API. It was two flat keys on
+ * `TableState`, `pendingDeleteRowId` and `pendingBulkDelete`, so subscribing to "is a delete
+ * awaiting confirmation" meant knowing two names, neither of which was the feature's.
+ *
+ * Both fields are transient: the feature hard-resets them at construction, which is why
+ * `deleting` is one of the slices {@link InitialTableState} forbids seeding.
+ */
+export type DeletingState = {
+	/** Id of the row whose confirmation is staged, or `null`. */
+	pendingRowId: string | null
+	/** True while a bulk (selection-bar) delete is staged awaiting confirmation. */
+	pendingBulk: boolean
+}
+
+/**
  * The bulk half of {@link DeletingApi}, reached as `table.deleting.bulk`.
  *
  * Its own object rather than four `*Bulk*` methods beside the per-row four: the two halves take
@@ -129,6 +147,8 @@ export type DeletingApi = {
 	cancel: () => void
 	/** Deleting the current selection in one gesture. */
 	bulk: BulkDeletingApi
+	/** The current {@link DeletingState}. Sibling of `table.editing.getState()` / `table.creating.getState()`. */
+	getState: () => DeletingState
 }
 
 declare module '@tanstack/table-core' {
@@ -139,9 +159,7 @@ declare module '@tanstack/table-core' {
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface TableState {
-		pendingDeleteRowId: string | null
-		/** True while a bulk (selection-bar) delete is staged awaiting confirmation. */
-		pendingBulkDelete: boolean
+		deleting: DeletingState
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
@@ -150,12 +168,16 @@ declare module '@tanstack/table-core' {
 	}
 }
 
+const INITIAL_STATE: DeletingState = {
+	pendingRowId: null,
+	pendingBulk: false,
+}
+
 export const DeletingFeature: TableFeature<RowData> = {
 	getInitialState: (state?: InitialTableState) =>
 		({
 			...state,
-			pendingDeleteRowId: null,
-			pendingBulkDelete: false,
+			deleting: { ...INITIAL_STATE },
 		}) as Partial<TableState>,
 
 	createTable: (table: Table<RowData>) => {
@@ -223,6 +245,11 @@ export const DeletingFeature: TableFeature<RowData> = {
 				.filter(([, isSelected]) => isSelected)
 				.map(([id]) => id)
 
+		/** Immutable patch of the `deleting` slice — the one writer of it. */
+		const patch = (next: Partial<DeletingState>): void => {
+			table.setState((state) => ({ ...state, deleting: { ...state.deleting, ...next } }))
+		}
+
 		table.deleting = {
 			delete: deleteRow,
 
@@ -230,23 +257,23 @@ export const DeletingFeature: TableFeature<RowData> = {
 				const config = table.options.deleting
 				if (!config) return
 				if (isFeatureEnabled(config.confirmation)) {
-					table.setState((state) => ({ ...state, pendingDeleteRowId: rowId }))
+					patch({ pendingRowId: rowId })
 				} else {
 					void deleteRow(rowId)
 				}
 			},
 
 			confirm: async () => {
-				const pendingId = table.getState().pendingDeleteRowId
-				if (!pendingId) return
-				table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
-				await deleteRow(pendingId)
+				const { pendingRowId } = table.getState().deleting
+				if (!pendingRowId) return
+				patch({ pendingRowId: null })
+				await deleteRow(pendingRowId)
 			},
 
 			cancel: () => {
 				controller?.abort()
 				controller = undefined
-				table.setState((state) => ({ ...state, pendingDeleteRowId: null }))
+				patch({ pendingRowId: null })
 			},
 
 			bulk: {
@@ -256,25 +283,27 @@ export const DeletingFeature: TableFeature<RowData> = {
 					const config = table.options.deleting
 					if (!config || !isFeatureEnabled(config.bulk)) return
 					if (isFeatureEnabled(featureConfig(config.bulk)?.confirmation)) {
-						table.setState((state) => ({ ...state, pendingBulkDelete: true }))
+						patch({ pendingBulk: true })
 						return
 					}
 					void deleteRows(selectedRowIds())
 				},
 
 				confirm: async () => {
-					if (!table.getState().pendingBulkDelete) return
+					if (!table.getState().deleting.pendingBulk) return
 					const ids = selectedRowIds()
-					table.setState((state) => ({ ...state, pendingBulkDelete: false }))
+					patch({ pendingBulk: false })
 					await deleteRows(ids)
 				},
 
 				cancel: () => {
 					controller?.abort()
 					controller = undefined
-					table.setState((state) => ({ ...state, pendingBulkDelete: false }))
+					patch({ pendingBulk: false })
 				},
 			},
+
+			getState: () => table.getState().deleting,
 		}
 	},
 }

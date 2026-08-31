@@ -191,7 +191,7 @@ describe('compound render-prop slots', () => {
 		// the handler — the ConfirmDialog runs it on confirm.
 		if (button) fireEvent.click(button)
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingBulkDelete).toBe(true)
+		expect(table.getState().deleting.pendingBulk).toBe(true)
 	})
 
 	it('<DataGrid.SortMenuTrigger> excludes already-used columns from each entry', () => {

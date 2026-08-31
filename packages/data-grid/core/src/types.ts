@@ -566,7 +566,7 @@ export type ResizingConfig = FeatureToggle & {
 /**
  * Seedable subset of {@link TableState} for {@link TableConfig.initialState}.
  *
- * Excludes `editing`, `creating`, `pendingDeleteRowId` and `pendingBulkDelete` — these are
+ * Excludes the three write features' slices — `editing`, `creating` and `deleting` — these are
  * transient per-open-form/dialog state that each feature re-initialises whenever it opens
  * (`creating.start()`, an edit start, a delete request), hard-resetting to its own defaults and
  * ignoring whatever was seeded. Seeding "start already editing/creating/deleting" is not a
@@ -574,10 +574,7 @@ export type ResizingConfig = FeatureToggle & {
  * at runtime. To seed values for a create form, use {@link CreatingConfig.defaultValues} (table
  * level) or a column's `creating.defaultValue` (per-column), not `initialState`.
  */
-export type InitialTableState = Omit<
-	Partial<TableState>,
-	'editing' | 'creating' | 'pendingDeleteRowId' | 'pendingBulkDelete' | 'pagination'
-> & {
+export type InitialTableState = Omit<Partial<TableState>, 'editing' | 'creating' | 'deleting' | 'pagination'> & {
 	/**
 	 * Seeded per key, unlike every other slice. `Partial<TableState>` only makes the slice
 	 * itself optional — TanStack's `PaginationState` still requires **both** `pageIndex` and
@@ -731,7 +728,7 @@ export type TableConfig<TRow extends object> = {
 	 * state, e.g. `initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } }`
 	 * or a default sort.
 	 *
-	 * Cannot seed `editing`, `creating`, `pendingDeleteRowId` or `pendingBulkDelete` — see
+	 * Cannot seed `editing`, `creating` or `deleting` — see
 	 * {@link InitialTableState} for why. To seed create-form values use
 	 * {@link TableConfig.creating}'s `defaultValues`, or a column's `creating.defaultValue`.
 	 */

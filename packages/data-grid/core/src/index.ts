@@ -125,6 +125,7 @@ export type {
 	DeletingApi,
 	DeletingConfig,
 	DeletingContext,
+	DeletingState,
 } from './features/deleting'
 export { EditingMode } from './features/editing'
 export type { EditingApi, EditingConfig, EditingSaveContext, EditingState } from './features/editing'

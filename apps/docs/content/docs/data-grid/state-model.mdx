@@ -105,10 +105,10 @@ them freely.
 
 ## What `initialState` cannot seed
 
-`initialState` is typed as `InitialTableState`, which excludes `editing`, `creating`,
-`pendingDeleteRowId` and `pendingBulkDelete`. Each of those is transient per-form or per-dialog
-state that its feature re-initialises whenever it opens, so a seeded value would be discarded
-without a word. It is a type error instead.
+`initialState` is typed as `InitialTableState`, which excludes the three write features' slices —
+`editing`, `creating` and `deleting`. Each of those is transient per-form or per-dialog state that
+its feature re-initialises whenever it opens, so a seeded value would be discarded without a word.
+It is a type error instead.
 
 To seed the create form, use `creating.defaultValues` or a column's `creating.defaultValue` — see
 [Creating Rows](./data-grid/editing/creating).

@@ -490,7 +490,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 
 		await user.click(bulkDeleteButton())
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingBulkDelete).toBe(true)
+		expect(table.getState().deleting.pendingBulk).toBe(true)
 		// Count-aware default description for the two selected rows.
 		expect(screen.getByText(/delete 2 rows/i)).toBeInTheDocument()
 	})
@@ -510,7 +510,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		const args = onDelete.mock.calls.at(0)?.at(0)
 		expect((args as { rows: unknown[] }).rows).toHaveLength(1)
 		expect((args as { rowIds: string[] }).rowIds).toEqual(['1'])
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
@@ -525,7 +525,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		await user.click(within(getDialog()).getByRole('button', { name: /cancel/i }))
 
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 

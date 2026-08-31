@@ -676,7 +676,7 @@ describe('createTable — loading', () => {
 })
 
 // ── initialState — type-level ────────────────────────────────────────────────
-// `editing`, `creating`, `pendingDeleteRowId` and `pendingBulkDelete` are transient UI
+// `editing`, `creating` and `deleting` are transient UI
 // state that each feature hard-resets on its own initialization, so seeding them is
 // rejected at the type level rather than silently ignored at runtime — see
 // `InitialTableState` in `../types`.
@@ -700,8 +700,8 @@ describe('createTable — initialState type constraints', () => {
 		createTable({
 			data: DATA,
 			columns: COLUMNS,
-			// @ts-expect-error — `pendingDeleteRowId` is transient, hard-reset by the deleting feature
-			initialState: { pendingDeleteRowId: '1' },
+			// @ts-expect-error — `deleting` is transient per-dialog state, hard-reset by the feature
+			initialState: { deleting: { pendingRowId: '1', pendingBulk: false } },
 		})
 
 		// `loading` still deep-merges the consumer's value, so it stays allowed.

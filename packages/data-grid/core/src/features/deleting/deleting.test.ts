@@ -49,13 +49,13 @@ describe('DeletingFeature', () => {
 })
 
 describe('DeletingFeature — confirmation flow', () => {
-	it('initializes pendingDeleteRowId to null', () => {
+	it('initializes deleting.pendingRowId to null', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: vi.fn() },
 		})
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
 	it('deleting.request with confirmation stages the row without deleting', () => {
@@ -67,7 +67,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
 		table.deleting.request(rowId)
-		expect(table.getState().pendingDeleteRowId).toBe(rowId)
+		expect(table.getState().deleting.pendingRowId).toBe(rowId)
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
@@ -80,7 +80,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
 		table.deleting.request(rowId)
-		expect(table.getState().pendingDeleteRowId).toBe(rowId)
+		expect(table.getState().deleting.pendingRowId).toBe(rowId)
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
@@ -94,7 +94,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
 		table.deleting.request(rowId)
 		await Promise.resolve()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 		expect(onDelete).toHaveBeenCalledTimes(1)
 		expect((onDelete.mock.calls[0]?.[0] as { rowId: string }).rowId).toBe(rowId)
 	})
@@ -104,7 +104,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		expect(() => {
 			table.deleting.request('0')
 		}).not.toThrow()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
 	it('deleting.confirm deletes the staged row and clears pending state', async () => {
@@ -119,7 +119,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		await table.deleting.confirm()
 		expect(onDelete).toHaveBeenCalledTimes(1)
 		expect((onDelete.mock.calls[0]?.[0] as { rowId: string }).rowId).toBe(rowId)
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
 	it('deleting.confirm is a no-op when nothing is staged', async () => {
@@ -131,7 +131,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		})
 		await table.deleting.confirm()
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
 	it('deleting.cancel clears pending state without deleting', () => {
@@ -144,17 +144,36 @@ describe('DeletingFeature — confirmation flow', () => {
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
 		table.deleting.request(rowId)
 		table.deleting.cancel()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
-	it('initializes pendingBulkDelete to false', () => {
+	it('deleting.getState() reads the slice, like editing.getState() / creating.getState()', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), confirmation: true, bulk: { confirmation: true } },
+		})
+		expect(table.deleting.getState()).toEqual({ pendingRowId: null, pendingBulk: false })
+
+		const rowId = table.getRowModel().rows[0]?.id ?? '0'
+		table.deleting.request(rowId)
+		expect(table.deleting.getState()).toEqual({ pendingRowId: rowId, pendingBulk: false })
+
+		// Staging a bulk delete leaves the per-row half alone — one slice, two independent fields.
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.deleting.bulk.request()
+		expect(table.deleting.getState()).toEqual({ pendingRowId: rowId, pendingBulk: true })
+	})
+
+	it('initializes deleting.pendingBulk to false', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: vi.fn() },
 		})
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 	})
 
 	it('deleting.bulk.request stages a bulk delete when bulk.confirmation is set', () => {
@@ -166,7 +185,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		})
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 		table.deleting.bulk.request()
-		expect(table.getState().pendingBulkDelete).toBe(true)
+		expect(table.getState().deleting.pendingBulk).toBe(true)
 	})
 
 	it('deleting.bulk.request deletes outright when bulk asks for no confirmation', async () => {
@@ -182,7 +201,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		await vi.waitFor(() => {
 			expect(onDelete).toHaveBeenCalledTimes(2)
 		})
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 	})
 
 	it('deleting.bulk.request does nothing when bulk is off', () => {
@@ -195,7 +214,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		})
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 		table.deleting.bulk.request()
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
@@ -211,7 +230,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		table.deleting.bulk.request()
 		await table.deleting.bulk.confirm()
 		expect(bulkDelete).toHaveBeenCalledOnce()
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 	})
 
 	it('deselects the deleted rows once the bulk handler resolves', async () => {
@@ -237,7 +256,7 @@ describe('DeletingFeature — confirmation flow', () => {
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 		table.deleting.bulk.request()
 		table.deleting.bulk.cancel()
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 		expect(bulkDelete).not.toHaveBeenCalled()
 	})
 

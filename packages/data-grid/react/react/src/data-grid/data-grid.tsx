@@ -148,8 +148,8 @@ function ConfirmDialogRenderer() {
 	const { ConfirmDialog } = useGridComponents().editing
 	// Narrow: re-render only when a pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave these stable.
-	const pendingId = useDataGridState((s) => s.pendingDeleteRowId)
-	const pendingBulk = useDataGridState((s) => s.pendingBulkDelete)
+	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)
+	const pendingBulk = useDataGridState((s) => s.deleting.pendingBulk)
 
 	// A staged bulk delete takes precedence: it is the gesture the user just made. Core owns
 	// both the staging and the run, so this only renders the prompt and reports the answer.
