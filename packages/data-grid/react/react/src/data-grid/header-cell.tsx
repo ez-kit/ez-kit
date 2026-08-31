@@ -171,7 +171,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 			}
 		: undefined
 
-	const colPinDef = meta?.columnPinning
+	const colPinDef = meta?.pinning
 	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
 	const isPinningDisabled = colPinDef === false
 	const isMenuEligible = !meta?.isSystemColumn && !header.isPlaceholder

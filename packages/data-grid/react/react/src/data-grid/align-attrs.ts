@@ -15,6 +15,6 @@ export function getAlignAttrs(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	part: AlignPart,
 ): { 'data-align'?: ColumnAlign } {
-	const align = meta?.columnAlign?.[part]
+	const align = meta?.align?.[part]
 	return align === undefined ? {} : { 'data-align': align }
 }

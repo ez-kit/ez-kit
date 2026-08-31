@@ -72,7 +72,7 @@ describe('buildColumnList', () => {
 		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('actions column has columnPinning: { side: "right" } in meta', () => {
+	it('actions column has pinning: { side: "right" } in meta', () => {
 		const cols = buildColumnList([USER_COL], {
 			selection: false,
 			expanding: false,
@@ -82,7 +82,7 @@ describe('buildColumnList', () => {
 			customRowActions: false,
 		})
 		const actions = cols.find((c) => c.id === ACTIONS_COLUMN_ID)
-		expect(actions?.meta?.columnPinning).toEqual({ side: 'right' })
+		expect(actions?.meta?.pinning).toEqual({ side: 'right' })
 	})
 
 	it('appends __actions__ when only row pinning is enabled', () => {
@@ -182,8 +182,8 @@ describe('buildColumnList', () => {
 describe('extractPinningState', () => {
 	it('extracts columns with static pin position', () => {
 		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'a', meta: { columnPinning: { side: 'left' } } },
-			{ id: 'b', meta: { columnPinning: { side: 'right' } } },
+			{ id: 'a', meta: { pinning: { side: 'left' } } },
+			{ id: 'b', meta: { pinning: { side: 'right' } } },
 			{ id: 'c', meta: {} },
 		]
 		const { left, right } = extractPinningState(cols)
@@ -194,16 +194,16 @@ describe('extractPinningState', () => {
 
 	it('extracts columns with initialSide position', () => {
 		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'd', meta: { columnPinning: { initialSide: 'left' } } },
-			{ id: 'e', meta: { columnPinning: { initialSide: 'right' } } },
+			{ id: 'd', meta: { pinning: { initialSide: 'left' } } },
+			{ id: 'e', meta: { pinning: { initialSide: 'right' } } },
 		]
 		const { left, right } = extractPinningState(cols)
 		expect(left).toContain('d')
 		expect(right).toContain('e')
 	})
 
-	it('skips columns with columnPinning: false', () => {
-		const cols: TanStackColumnDef<Row>[] = [{ id: 'f', meta: { columnPinning: false } }]
+	it('skips columns with meta.pinning: false', () => {
+		const cols: TanStackColumnDef<Row>[] = [{ id: 'f', meta: { pinning: false } }]
 		const { left, right } = extractPinningState(cols)
 		expect(left).not.toContain('f')
 		expect(right).not.toContain('f')

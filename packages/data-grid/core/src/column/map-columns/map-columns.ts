@@ -126,8 +126,8 @@ function mapColumn<TRow extends object>(
 
 	const meta: TanStackColumnDef<TRow>['meta'] = {}
 
-	setIfDefined(meta, 'columnPinning', normalizeColumnPinning(pinning))
-	setIfDefined(meta, 'columnAlign', normalizeColumnAlign(align))
+	setIfDefined(meta, 'pinning', normalizeColumnPinning(pinning))
+	setIfDefined(meta, 'align', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
 	setIfDefined(meta, 'filtering', filtering)
 	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)

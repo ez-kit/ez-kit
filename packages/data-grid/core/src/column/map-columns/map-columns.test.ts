@@ -78,24 +78,24 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableHiding).toBeUndefined()
 	})
 
-	it('pinning: { side: left } goes into meta.columnPinning', () => {
+	it('pinning: { side: left } goes into meta.pinning', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { side: 'left' } }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ side: 'left' })
+		expect(result[0]?.meta?.pinning).toEqual({ side: 'left' })
 	})
 
 	it('the scalar pinning form normalizes to a static side', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: 'left' }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ side: 'left' })
+		expect(result[0]?.meta?.pinning).toEqual({ side: 'left' })
 	})
 
-	it('pinning: { initialSide: right } goes into meta.columnPinning', () => {
+	it('pinning: { initialSide: right } goes into meta.pinning', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { initialSide: 'right' } }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ initialSide: 'right' })
+		expect(result[0]?.meta?.pinning).toEqual({ initialSide: 'right' })
 	})
 
-	it('pinning: false goes into meta.columnPinning as false', () => {
+	it('pinning: false goes into meta.pinning as false', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: false }])
-		expect(result[0]?.meta?.columnPinning).toBe(false)
+		expect(result[0]?.meta?.pinning).toBe(false)
 	})
 
 	it('filtering goes into meta.filtering', () => {

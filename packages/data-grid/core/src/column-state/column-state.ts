@@ -48,7 +48,7 @@ export function buildColumnInvariants<TRow extends object>(columns: TanStackColu
 		if (colId === undefined) continue
 		const meta = col.meta
 		if (meta?.isSystemColumn === true || meta?.visibility === false) alwaysVisible.push(colId)
-		const pin = meta?.columnPinning === false ? undefined : meta?.columnPinning?.side
+		const pin = meta?.pinning === false ? undefined : meta?.pinning?.side
 		if (pin === 'left') forcedLeft.push(colId)
 		else if (pin === 'right') forcedRight.push(colId)
 	}

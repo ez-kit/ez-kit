@@ -17,9 +17,9 @@ const INVARIANTS: ColumnInvariants = {
 describe('buildColumnInvariants', () => {
 	it('collects system columns as always-visible and honours their static pins', () => {
 		const columns: TanStackColumnDef<Row>[] = [
-			{ id: '__selection__', meta: { isSystemColumn: true, columnPinning: { side: 'left' } } },
+			{ id: '__selection__', meta: { isSystemColumn: true, pinning: { side: 'left' } } },
 			{ id: 'name' },
-			{ id: '__actions__', meta: { isSystemColumn: true, columnPinning: { side: 'right' } } },
+			{ id: '__actions__', meta: { isSystemColumn: true, pinning: { side: 'right' } } },
 		]
 
 		expect(buildColumnInvariants(columns)).toEqual({
@@ -31,8 +31,8 @@ describe('buildColumnInvariants', () => {
 
 	it('treats a static pin as forced but a initialSide as free', () => {
 		const columns: TanStackColumnDef<Row>[] = [
-			{ id: 'name', meta: { columnPinning: { side: 'left' } } },
-			{ id: 'age', meta: { columnPinning: { initialSide: 'left' } } },
+			{ id: 'name', meta: { pinning: { side: 'left' } } },
+			{ id: 'age', meta: { pinning: { initialSide: 'left' } } },
 		]
 
 		const invariants = buildColumnInvariants(columns)

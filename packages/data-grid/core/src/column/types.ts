@@ -937,9 +937,17 @@ export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColu
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface ColumnMeta<TData, TValue> {
-		columnPinning?: false | ColumnPinningDef
+		/**
+		 * Resolved pinning from `column.pinning`, normalized off the scalar form.
+		 *
+		 * Named for the column option it carries, like every sibling here. It was
+		 * `columnPinning`, which made one concept answer to two words depending on whether you
+		 * were writing the column or reading its meta — and read as TanStack's
+		 * `state.columnPinning`, which is a different thing entirely (the pinned-id lists).
+		 */
+		pinning?: false | ColumnPinningDef
 		/** Resolved per-part alignment from `column.align`, normalized off the scalar form. */
-		columnAlign?: ColumnAlignDef
+		align?: ColumnAlignDef
 		cellType?: CellType
 		config?: Record<string, unknown>
 		/** Class for this column's header cell, from `column.headerClassName`. */

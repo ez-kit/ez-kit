@@ -793,14 +793,14 @@ describe('createTable — system columns', () => {
 		expect(actionsCol?.columnDef.meta?.isSystemColumn).toBe(true)
 	})
 
-	it('__actions__ column has columnPinning: { side: "right" } in meta', () => {
+	it('__actions__ column has meta.pinning: { side: "right" }', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			editing: { mode: 'row', onSave: () => Promise.resolve() },
 		})
 		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
-		expect(actionsCol?.columnDef.meta?.columnPinning).toEqual({ side: 'right' })
+		expect(actionsCol?.columnDef.meta?.pinning).toEqual({ side: 'right' })
 	})
 })
 
