@@ -268,7 +268,7 @@ describe('<DataGrid>', () => {
 		// sizes present, auto-mount off — exactly what `pagination: { toolbar: false }` resolves to.
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.pageSizer = false
+		table.grid.pagination.toolbar = false
 		renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.PageSizer />
@@ -280,7 +280,7 @@ describe('<DataGrid>', () => {
 	it('renders PageSizer select with the pagination.items values', () => {
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.pageSizer = true
+		table.grid.pagination.toolbar = true
 		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
 		expect(select).toBeInTheDocument()
@@ -422,7 +422,7 @@ describe('<DataGrid>', () => {
 		const { rerender } = renderWithComponents(
 			<DataGrid
 				table={table}
-				cellTypes={{ 'custom-type': { edit: editFn } }}
+				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
 		)
 		act(() => {
@@ -431,7 +431,7 @@ describe('<DataGrid>', () => {
 		rerender(
 			<DataGrid
 				table={table}
-				cellTypes={{ 'custom-type': { edit: editFn } }}
+				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
 		)
 		expect(screen.getAllByTestId('registry-edit').length).toBeGreaterThan(0)

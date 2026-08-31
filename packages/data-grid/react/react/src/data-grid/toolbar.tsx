@@ -64,7 +64,7 @@ export function Toolbar({ children, start: extraStart, end: extraEnd }: DataGrid
 	const hasVisibilityToolbar = Boolean(grid.visibility?.toolbar)
 	const hasSortingToolbar = Boolean(grid.sorting?.toolbar)
 
-	const hasPageSizerToolbar = grid.pagination.pageSizer
+	const hasPageSizerToolbar = grid.pagination.toolbar
 	const hasGlobalFilterToolbar = Boolean(grid.globalFiltering?.toolbar)
 	const hasClearButtonToolbar = grid.filtering.toolbar !== undefined
 

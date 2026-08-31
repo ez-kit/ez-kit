@@ -120,6 +120,7 @@ export const GRID_TYPE = {
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
 	SelectionBarConfig: { module: TypeModule.React, name: 'SelectionBarConfig', typeArgs: ROW_TYPE_ARGS },
 	RowActionItem: { module: TypeModule.Core, name: 'RowActionItem' },
+	SystemColumnDef: { module: TypeModule.Core, name: 'SystemColumnDef' },
 	EditingConfig: { module: TypeModule.Core, name: 'EditingConfig', typeArgs: ROW_TYPE_ARGS },
 	CreatingConfig: { module: TypeModule.Core, name: 'CreatingConfig', typeArgs: ROW_TYPE_ARGS },
 	LoadingState: { module: TypeModule.Core, name: 'LoadingState' },
@@ -433,7 +434,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ExpandingSubContent,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
 		nonOptionTables: [],
 	},
 	{
@@ -470,7 +471,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.FilteringIndex,
 		optionTables: [
 			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 9 },
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 5 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 6 },
 		],
 		nonOptionTables: [],
 	},
@@ -548,9 +549,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.RowActions,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
 			// Rows are the fields of one custom entry, not keys of the grid config.
 			{ heading: 'Entry shape', roots: [GRID_TYPE.RowActionItem], expectedCount: 6 },
+			// The shared shape `selection.column` / `expanding.column` / `rowActions.column` all
+			// take, documented once here and linked to from the other two pages.
+			{ heading: 'The column itself', roots: [GRID_TYPE.SystemColumnDef], expectedCount: 6 },
 		],
 		nonOptionTables: [],
 	},
@@ -561,7 +565,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.SelectionIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 7 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 8 }],
 		nonOptionTables: [],
 	},
 	{

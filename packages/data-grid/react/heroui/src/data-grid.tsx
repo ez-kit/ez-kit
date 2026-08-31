@@ -41,7 +41,7 @@ import { VisibilityMenu } from './blocks/visibility/VisibilityMenu'
 import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
 const components = {
-	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu },
+	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu, NumberInput },
 	pagination: { Pagination, PageSizer },
 	sorting: { SortIndicator, SortMenu },
 	filtering: {
@@ -55,10 +55,11 @@ const components = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell, ConfirmDialog, NumberInput },
+	editing: { Modal, FormShell },
+	deleting: { ConfirmDialog },
 	selection: { SelectionBar },
 	draft: { DraftBar },
-	'row-actions': { ActionsCell },
+	rowActions: { ActionsCell },
 	resizing: { Resizer },
 	visibility: { VisibilityMenu },
 	fallbacks: { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },

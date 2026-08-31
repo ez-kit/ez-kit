@@ -5,19 +5,19 @@ import {
 	resolveColumnOperators,
 } from '../../features/operators'
 import { setIfDefined } from '../../utils/set-if-defined'
+import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../normalize'
 
 import type { OperatorRegistry } from '../../features/operators'
 import type {
 	CellViewCtx,
-	ColumnAlign,
-	ColumnAlignDef,
+	ColumnCellMeta,
 	ColumnCreatingConfig,
 	ColumnDef,
 	ColumnEditingConfig,
-	ColumnPinningDef,
-	ColumnWidthDef,
 	TanStackColumnDef,
 } from '../types'
+
+const IS_DEV = process.env.NODE_ENV !== 'production'
 
 /** Cell types unchecked: `mapColumns` runs over already-authored columns of any grid. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,14 +25,14 @@ type AnyCellTypes = any
 
 /**
  * `cellClassName` is declared per row type on the column and row-erased on the meta, exactly
- * like `cellView` beside it — the meta is read by renderers that have no `TRow`.
+ * like the resolved `cell.view` beside it — the meta is read by renderers that have no `TRow`.
  */
 type ColumnMetaClassName = string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
 
 /**
  * `editing` / `creating` are declared with the **column's** value type so an `accessorKey`
  * column's edit field sees it, and value-erased on the meta, exactly like `cellClassName` and
- * `cellView` beside them — the meta is read by renderers that have no `TValue`. `FieldState`'s
+ * the resolved `cell.view` beside them — the meta is read by renderers that have no `TValue`. `FieldState`'s
  * `value` and `onChange` point opposite ways, so no variance rule relates the two; the cast is
  * the erasure, and it happens here once rather than at every reader.
  */
@@ -43,8 +43,8 @@ type ColumnMetaCreating<TRow> = false | ColumnCreatingConfig<TRow>
  * Converts our ColumnDef[] to TanStack ColumnDef[].
  *
  * - pinning, filtering, editing, creating → column meta
- * - cell.type → meta.cellType
- * - cell.component → TanStack cell renderer + meta.cellView
+ * - cell.type → meta.cell.type
+ * - cell.component → TanStack cell renderer + meta.cell.view
  * - sorting: false → enableSorting: false
  * - sorting: object → sortDescFirst / sortingFn / sortUndefined / invertSorting / enableMultiSort
  * - header string preserved as-is (TanStack accepts string | function)
@@ -61,35 +61,6 @@ export function mapColumns<TRow extends object>(
 	options?: MapColumnsOptions,
 ): TanStackColumnDef<TRow>[] {
 	return defs.map((def) => mapColumn(def, registry, options))
-}
-
-/**
- * Collapses the scalar pinning form onto the object one, so every reader downstream sees a
- * single shape. `pinning: 'left'` is the long `{ side: 'left' }` — a static pin — not a seed.
- */
-function normalizeColumnPinning(
-	pinning: ColumnDef<never, AnyCellTypes>['pinning'],
-): false | ColumnPinningDef | undefined {
-	if (pinning === undefined || pinning === false) return pinning
-	return typeof pinning === 'string' ? { side: pinning } : pinning
-}
-
-/**
- * Collapses the scalar width form onto the object one. `width: 200` is the starting width —
- * TanStack's `size` — with no bounds, which is what a bare number reads as.
- */
-function normalizeColumnWidth(width: number | ColumnWidthDef | undefined): ColumnWidthDef | undefined {
-	if (width === undefined) return undefined
-	return typeof width === 'number' ? { default: width } : width
-}
-
-/**
- * Collapses the scalar align form onto the object one. `align: 'end'` means all three parts,
- * which is what the bare value reads as; the object names the parts that differ.
- */
-function normalizeColumnAlign(align: ColumnAlign | ColumnAlignDef | undefined): ColumnAlignDef | undefined {
-	if (align === undefined) return undefined
-	return typeof align === 'string' ? { header: align, cell: align, footer: align } : align
 }
 
 function mapColumn<TRow extends object>(
@@ -135,17 +106,18 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'headerClassName', headerClassName)
 	setIfDefined(meta, 'cellClassName', cellClassName as ColumnMetaClassName)
 	setIfDefined(meta, 'footerClassName', footerClassName)
-	// Implicit cellType='text' when not provided so registry-driven form rendering
+	// Implicit type='text' when not provided so registry-driven form rendering
 	// always has a target. Built-in view rendering (cell.tsx builtInView) treats
 	// 'text' as the no-op default, so this does not change view output.
-	meta.cellType = cellDef?.type ?? 'text'
+	const cellMeta: ColumnCellMeta = { type: cellDef?.type ?? 'text' }
 	if (cellDef !== undefined && 'config' in cellDef && cellDef.config !== undefined) {
 		// The declared config type is the cell type's business, not this mapper's — it only
 		// forwards whatever the column author wrote into `meta` for the renderer to read.
-		meta.config = cellDef.config as Record<string, unknown>
+		cellMeta.config = cellDef.config as Record<string, unknown>
 	}
 	const viewFn = cellDef?.component
-	if (viewFn !== undefined) meta.cellView = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown
+	if (viewFn !== undefined) cellMeta.view = viewFn as (ctx: CellViewCtx<unknown, unknown>) => unknown
+	meta.cell = cellMeta
 
 	// Build a plain object and cast — TanStack's ColumnDef is a discriminated union
 	// so it can't be directly constructed via spread without type assertions.
@@ -186,10 +158,10 @@ function mapColumn<TRow extends object>(
 	// Only the callable form gets this shim, which exists to translate TanStack's `CellContext`
 	// into the `{ row, value, rowIndex }` a column renderer expects. An exotic renderer
 	// (`memo` / `forwardRef`) cannot be called at all, and does not need to be: it travels on
-	// `meta.cellView`, which is what the React adapter actually mounts. The shim is the fallback
+	// `meta.cell.view`, which is what the React adapter actually mounts. The shim is the fallback
 	// for anything reading `columnDef.cell` directly.
 	if (typeof viewFn === 'function') {
-		// Value-erased, like `meta.cellView` just above and for the same reason: the renderer was
+		// Value-erased, like `meta.cell.view` just above and for the same reason: the renderer was
 		// typed against its own column's value, but all this shim can supply is `getValue()`,
 		// which is `unknown`. `mapColumns` runs over already-authored columns of any grid, so
 		// there is no value type left to recover here — only the author's site had one.
@@ -222,10 +194,23 @@ function mapColumn<TRow extends object>(
 	}
 	if (filteringCfg?.operators && registry) {
 		const cellType = cellDef?.type
+		const columnId: string = id ?? accessorKey ?? '?'
 		const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
-		const resolved = resolveColumnOperators(filteringCfg.operators, registry, cellTypeOperators)
+		const resolved = resolveColumnOperators(filteringCfg.operators, registry, cellTypeOperators, columnId)
 
-		if (resolved.length > 0) {
+		if (resolved.length === 0) {
+			// `operators: true` on a cell type with no default set. Every built-in has one, so
+			// this can only be a project-registered type — which has to say which operators it
+			// offers, either through `defineCellType({ operators })` or per column.
+			if (IS_DEV) {
+				console.warn(
+					`[data-grid] Column "${columnId}" enables \`filtering.operators\`, but cell type ` +
+						`"${cellType ?? 'text'}" declares no operators, so the column falls back to a plain ` +
+						`filter input. List them on the column (\`operators: { items: [...] }\`) or on the cell ` +
+						`type (\`defineCellType({ operators })\`).`,
+				)
+			}
+		} else {
 			result.filterFn = createOperatorFilterFn(resolved)
 			meta.resolvedOperators = resolved
 
@@ -237,7 +222,19 @@ function mapColumn<TRow extends object>(
 				filteringCfg.defaultOperator ??
 				(cellType ? DEFAULT_OPERATOR_ID_BY_TYPE[cellType] : undefined) ??
 				resolved[0]?.id
-			if (defaultOpId) meta.defaultOperatorId = defaultOpId
+			if (defaultOpId) {
+				// An id the column does not actually offer selects nothing in the operator control
+				// and dispatches to no `filterFn` — the filter matches every row. Cheaper to catch
+				// here than in the browser.
+				if (IS_DEV && !resolved.some((op) => op.id === defaultOpId)) {
+					console.warn(
+						`[data-grid] Column "${columnId}" sets \`filtering.defaultOperator: "${defaultOpId}"\`, ` +
+							`which is not one of its operators (${resolved.map((op) => `"${op.id}"`).join(', ')}). ` +
+							`The filter would match every row.`,
+					)
+				}
+				meta.defaultOperatorId = defaultOpId
+			}
 		}
 	}
 

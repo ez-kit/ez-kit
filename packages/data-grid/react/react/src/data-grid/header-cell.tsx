@@ -141,7 +141,11 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 				{...(pinned ? { 'data-pinned': pinned } : {})}
 				{...getAlignAttrs(meta, 'header')}
 			>
-				{canSelectAll && (
+				{/* An explicit `selection.column.header` replaces the select-all checkbox — the
+				    only thing worth putting there instead, and what a grid with
+				    `selection.multi: false` (which renders no checkbox anyway) wants. */}
+				{meta?.systemHeader !== undefined && flexRender(meta.systemHeader, header.getContext())}
+				{meta?.systemHeader === undefined && canSelectAll && (
 					<Checkbox
 						value={isAllSelected}
 						indeterminate={isSomeSelected && !isAllSelected}
@@ -181,7 +185,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 
 	const menuSections = buildColumnMenuSections(header, {
 		canSort: canSort && !header.isPlaceholder,
-		canPin: table.grid.columnPinning && isMenuEligible && !isPinningDisabled && !isStaticPin,
+		canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
 		canHide: isMenuEligible && header.column.getCanHide(),
 	})
 
@@ -208,7 +212,11 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 
 	const sortDirection: ColumnSortDirection =
 		rawSortDir === SortDirection.Asc || rawSortDir === SortDirection.Desc ? rawSortDir : ColumnSortDirection.None
-	const label = header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())
+	// System columns carry their header on `meta.systemHeader` rather than TanStack's `header`,
+	// which the grid keeps for itself (the selection column renders a select-all checkbox
+	// there). Falling back to `columnDef.header` keeps every ordinary column unchanged.
+	const headerSlot = meta?.systemHeader ?? header.column.columnDef.header
+	const label = header.isPlaceholder ? null : flexRender(headerSlot, header.getContext())
 
 	const sortTrigger = (
 		<div

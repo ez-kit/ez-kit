@@ -4,7 +4,7 @@ import { useGridComponents } from '../components-context'
 
 import { AutoForm } from './auto-form'
 
-import type { AutoFormMode } from './auto-form'
+import type { ColumnFormMode } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -54,7 +54,7 @@ export type DataGridFormModalProps = {
 }
 
 type FormModalHostProps = DataGridFormModalProps & {
-	mode: AutoFormMode
+	mode: ColumnFormMode
 	title: string
 	formError: string | null
 	commitStatus: CommitStatus

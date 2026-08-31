@@ -27,7 +27,7 @@ describe('COMPONENT_FEATURE', () => {
 		expect(COMPONENT_FEATURE.Pagination).toBe(GridFeature.Pagination)
 		expect(COMPONENT_FEATURE.SortMenu).toBe(GridFeature.Sorting)
 		expect(COMPONENT_FEATURE.FilterPanel).toBe(GridFeature.Filtering)
-		expect(COMPONENT_FEATURE.ConfirmDialog).toBe(GridFeature.Editing)
+		expect(COMPONENT_FEATURE.ConfirmDialog).toBe(GridFeature.Deleting)
 		expect(COMPONENT_FEATURE.SelectionBar).toBe(GridFeature.Selection)
 		expect(COMPONENT_FEATURE.DraftBar).toBe(GridFeature.Draft)
 		expect(COMPONENT_FEATURE.Resizer).toBe(GridFeature.Resizing)

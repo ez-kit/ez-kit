@@ -26,7 +26,7 @@ import { ColumnResizeMode, ExpandingMode, GridDirection, MultiSortEvent, Paginat
 import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
-import type { ColumnDef } from '../column/types'
+import type { ColumnDef, SystemColumnDef } from '../column/types'
 import type { AppliedState } from '../features/deferred-apply'
 import type { DataTable, GlobalFilterFn, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
 import type { TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
@@ -256,6 +256,12 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const rowActionsVariant = rowActionsCfg?.variant ?? RowActionsVariant.Inline
 	const customRowActions = rowActionsCfg?.actions
 
+	// Row-erased on the way in, like every other structural setting the mapper carries: a system
+	// column renders no row value, so nothing downstream has a `TRow` left to keep.
+	const selectionColumn = selectionCfg?.column as SystemColumnDef | undefined
+	const expandingColumn = featureConfig(config.expanding)?.column as SystemColumnDef | undefined
+	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef | undefined
+
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
@@ -264,6 +270,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		pinning: rowActionsEnabled && hasPinning,
 		rowActionsVariant,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
+		...(selectionColumn !== undefined ? { selectionColumn } : {}),
+		...(expandingColumn !== undefined ? { expandingColumn } : {}),
+		...(rowActionsColumn !== undefined ? { rowActionsColumn } : {}),
 	})
 
 	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)

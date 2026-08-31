@@ -722,15 +722,15 @@ export function useDataGrid<TRow extends object>(
 	const reactExpandingCfg = featureConfig(rawExpanding)
 	const coreGetRowCanExpand =
 		reactExpandingCfg?.getRowCanExpand ?? (reactExpandingCfg?.component !== undefined ? () => true : undefined)
-	const coreExpanding: boolean | ExpandingConfig | undefined =
+	const coreExpanding: boolean | ExpandingConfig<TRow> | undefined =
 		rawExpanding === undefined
 			? undefined
 			: typeof rawExpanding === 'boolean'
 				? rawExpanding
-				: ({
+				: {
 						...(({ component: _component, ...rest }) => rest)(rawExpanding),
 						...(coreGetRowCanExpand !== undefined ? { getRowCanExpand: coreGetRowCanExpand } : {}),
-					} as ExpandingConfig)
+					}
 
 	// Split `visibility` the way `selection` and `globalFiltering` are split: the React-only
 	// `toolbar` is stripped for core and resolved separately for the UI. Collapsing the whole
@@ -880,7 +880,12 @@ export function useDataGrid<TRow extends object>(
 	// One typed object on the table instance, reassigned every render so every reader sees
 	// the freshest closures (notably `infinite.onLoadMore`). This replaced eighteen private
 	// `Symbol()` keys, each written and read through an untyped double cast.
-	const colPinEnabled = config.pinning === true || Boolean(featureConfig(config.pinning)?.column)
+	// Both halves of `pinning`, resolved the same way: the bare `true` turns on both axes, the
+	// object gates each on its own key. Row pinning was resolved nowhere on this object, so a
+	// kit had no way to read it back.
+	const pinningCfg = featureConfig(config.pinning)
+	const colPinEnabled = config.pinning === true || isFeatureEnabled(pinningCfg?.column)
+	const rowPinEnabled = config.pinning === true || isFeatureEnabled(pinningCfg?.row)
 	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
@@ -891,7 +896,7 @@ export function useDataGrid<TRow extends object>(
 			stickyHeader: layout?.stickyHeader ?? false,
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
-		columnPinning: colPinEnabled,
+		pinning: { column: colPinEnabled, row: rowPinEnabled },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {
@@ -905,7 +910,7 @@ export function useDataGrid<TRow extends object>(
 			variant: paginationVariant,
 			window: paginationWindow,
 			...(paginationItems !== undefined ? { items: paginationItems } : {}),
-			pageSizer: pageSizerInToolbar,
+			toolbar: pageSizerInToolbar,
 		},
 		infinite: normalizedInfinite,
 		selection: { bar: selectionBar as ResolvedGridOptions['selection']['bar'] },

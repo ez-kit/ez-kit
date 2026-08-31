@@ -45,7 +45,7 @@ Switch `betweenOperator.variant` to `'slider'` and provide `min`/`max` for a dra
 
 ### Date operators
 
-Date columns (`cell: { type: 'date' }`) get date-aware operators (`eq`, `before`, `onOrBefore`, `after`, `onOrAfter`, `between`) with a calendar picker. Enable them with `filtering: { operators: true }`.
+Date columns (`cell: { type: 'date' }`) get date-aware operators (`equals`, `lessThan`, `lessOrEqual`, `greaterThan`, `greaterOrEqual`, `between`) with a calendar picker. Enable them with `filtering: { operators: true }`.
 
 <DataGridDocsExample exampleId='filter-operators-date' />
 
@@ -57,20 +57,25 @@ Combine the date operators with `between` (`betweenOperator.variant: 'inputs'`) 
 
 ## Built-in operators
 
-| Operator                                               | Cell type           | Behavior                                                                         |
-| ------------------------------------------------------ | ------------------- | -------------------------------------------------------------------------------- |
-| `contains`                                             | text                | substring match (case-insensitive)                                               |
-| `equals`                                               | text                | case-insensitive equality                                                        |
-| `startsWith` / `endsWith`                              | text                | prefix / suffix (case-insensitive)                                               |
-| `isEmpty` / `isNotEmpty`                               | text, select, badge | null / undefined / empty string — renders no value input                         |
-| `eq` / `neq`                                           | number              | equals / not equals                                                              |
-| `gt` / `gte` / `lt` / `lte`                            | number              | comparison                                                                       |
-| `between`                                              | number, date        | inclusive range                                                                  |
-| `eq` / `before` / `onOrBefore` / `after` / `onOrAfter` | date                | date comparison, string-ordered                                                  |
-| `in`                                                   | select, badge       | row value is one of a set (see [Multi-value](./data-grid/filtering/multi-value)) |
-| `notIn`                                                | select, badge       | inverse of `in`                                                                  |
+One vocabulary across cell types: the same id always means the same comparison, and only the
+label changes — `greaterThan` reads "Greater than" on a number column and "After" on a date
+one. The ids are the `FilterOperator` members; the bare string is equally valid.
 
-There is no `notEquals` operator — use `neq` on `number` columns; text columns have no inequality operator.
+| Operator                         | Cell types                                         | Behavior                                                                         |
+| -------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `contains`                       | text, image, link                                  | substring match (case-insensitive)                                               |
+| `startsWith` / `endsWith`        | text, image, link                                  | prefix / suffix (case-insensitive)                                               |
+| `equals` / `notEquals`           | text, number, date, boolean, image, link, progress | equality, in the column's own terms                                              |
+| `greaterThan` / `lessThan`       | number, progress, date                             | strictly above / below. Labelled "After" / "Before" on date columns              |
+| `greaterOrEqual` / `lessOrEqual` | number, progress, date                             | at or above / below. Labelled "On or after" / "On or before" on date columns     |
+| `between`                        | number, progress, date                             | inclusive range                                                                  |
+| `in`                             | select, badge                                      | row value is one of a set (see [Multi-value](./data-grid/filtering/multi-value)) |
+| `notIn`                          | select, badge                                      | inverse of `in`                                                                  |
+| `isEmpty` / `isNotEmpty`         | every built-in except number and progress          | null / undefined / empty string — renders no value input                         |
+
+An id the column does not offer selects nothing in the operator control and dispatches to no
+`filterFn`, so the filter would match every row. `createTable` warns about that in development,
+for both `defaultOperator` and `operators.items`.
 
 ## Custom operators
 
@@ -84,10 +89,10 @@ filtering: {
 
 ## `ColumnOperatorsConfig`
 
-| Option            | Type                              | Description                                                                                                                           |
-| ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `items`           | `(string \| FilterOperatorDef)[]` | Operator ids referencing the registry, or inline operator definitions. Omit to use every default operator for the column's cell type. |
-| `betweenOperator` | `BetweenOperatorConfig`           | UI configuration for the `between` operator — see below.                                                                              |
+| Option            | Type                                        | Description                                                                                                                           |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `items`           | `(FilterOperatorId \| FilterOperatorDef)[]` | Operator ids referencing the registry, or inline operator definitions. Omit to use every default operator for the column's cell type. |
+| `betweenOperator` | `BetweenOperatorConfig`                     | UI configuration for the `between` operator — see below.                                                                              |
 
 ### `BetweenOperatorConfig`
 
@@ -100,12 +105,12 @@ filtering: {
 
 ### `FilterOperatorDef`
 
-| Field           | Type                                          | Description                                                                |
-| --------------- | --------------------------------------------- | -------------------------------------------------------------------------- |
-| `id`            | `string`                                      | Operator id, referenced from `items`.                                      |
-| `label`         | `string`                                      | Label shown in the operator selector.                                      |
-| `requiresInput` | `boolean`                                     | When `false`, no value input is rendered (e.g. `isEmpty`). Default `true`. |
-| `filterFn`      | `(rowValue: unknown, filterValue) => boolean` | Matching predicate.                                                        |
+| Field           | Type                                          | Description                                                                   |
+| --------------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `id`            | `FilterOperatorId`                            | Operator id, referenced from `items`. A `FilterOperator` member, or your own. |
+| `label`         | `string`                                      | Label shown in the operator selector.                                         |
+| `requiresInput` | `boolean`                                     | When `false`, no value input is rendered (e.g. `isEmpty`). Default `true`.    |
+| `filterFn`      | `(rowValue: unknown, filterValue) => boolean` | Matching predicate.                                                           |
 
 ## Source
 

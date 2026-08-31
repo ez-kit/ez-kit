@@ -128,6 +128,7 @@ export type {
 	GridSortingComponents,
 	GridFilteringComponents,
 	GridEditingComponents,
+	GridDeletingComponents,
 	GridSelectionComponents,
 	GridDraftComponents,
 	GridRowActionsComponents,

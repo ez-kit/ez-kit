@@ -145,7 +145,7 @@ function hasConfirmDialog(table: Table<any>): boolean {
 
 function ConfirmDialogRenderer() {
 	const table = useDataGridTable()
-	const { ConfirmDialog } = useGridComponents().editing
+	const { ConfirmDialog } = useGridComponents().deleting
 	// Narrow: re-render only when a pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave these stable.
 	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)

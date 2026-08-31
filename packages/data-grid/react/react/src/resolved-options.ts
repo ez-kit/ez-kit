@@ -53,8 +53,18 @@ export type ResolvedGridOptions = {
 		/** Explicit scroll-container height, as a CSS length. `undefined` → stylesheet default. */
 		maxHeight?: string | undefined
 	}
-	/** Column pinning UI (the pin section of the column menu) is enabled. */
-	columnPinning: boolean
+	/**
+	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names
+	 * the option gives them. It was a single flat `columnPinning: boolean`, which spelled
+	 * `pinning.column` a third way and left `pinning.row` unreadable from here at all, so a kit
+	 * that wanted to know whether row pinning was on had to go back to `table.options`.
+	 */
+	pinning: {
+		/** The column menu offers its pin section. */
+		column: boolean
+		/** Rows can be pinned to the top and/or bottom. */
+		row: boolean
+	}
 	/** Column hiding. `undefined` when the feature is off. */
 	visibility?: NormalizedFeatureToolbarConfig | undefined
 	/** Sorting UI config. `undefined` when sorting is off. */
@@ -87,8 +97,15 @@ export type ResolvedGridOptions = {
 		 * reads it too.
 		 */
 		items?: number[] | undefined
-		/** The toolbar auto-mounts the PageSizer. Governs mounting only, never the list above. */
-		pageSizer: boolean
+		/**
+		 * The toolbar auto-mounts the PageSizer. Governs mounting only, never the list above.
+		 *
+		 * `toolbar`, the one word every feature's resolved auto-mount flag uses — see
+		 * {@link NormalizedFeatureToolbarConfig}, `globalFiltering.toolbar`,
+		 * `filtering.toolbar`. It was `pageSizer`, so the built-in `Toolbar` read
+		 * `grid.pagination.pageSizer` on one line and `grid.globalFiltering?.toolbar` on the next.
+		 */
+		toolbar: boolean
 	}
 	/** Infinite-scroll detection config. `undefined` unless `pagination.mode` is `'infinite'`. */
 	infinite?: NormalizedInfiniteConfig | undefined
@@ -132,7 +149,7 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
 		layout: { stickyHeader: false },
-		columnPinning: false,
+		pinning: { column: false, row: false },
 		filtering: {
 			variant: DATA_GRID_DEFAULTS.filtering.variant,
 			debounce: DATA_GRID_DEFAULTS.filtering.debounce,
@@ -143,7 +160,7 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 				siblings: DATA_GRID_DEFAULTS.pagination.siblings,
 				boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
 			},
-			pageSizer: false,
+			toolbar: false,
 		},
 		selection: {},
 		expanding: {},

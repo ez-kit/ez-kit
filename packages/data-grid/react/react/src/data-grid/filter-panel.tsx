@@ -26,8 +26,8 @@ function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown>
 		const hit = explicit.find((o) => o.value === rawValue)
 		if (hit) return hit.label
 	}
-	if (meta?.cellType === 'select' || meta?.cellType === 'badge') {
-		const items = (meta.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
+	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
+		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		const hit = items?.find((o) => o.value === rawValue)
 		if (hit) return hit.label
 	}

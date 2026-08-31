@@ -55,11 +55,12 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 | `false`           | —                                           | Disable filtering for this column.                                                                                                                                                  |
 | `component`       | `(props: InputComponentProps) => ReactNode` | Custom filter input for this column. `props.config` is the column's own `cell.config` — annotate the component (`InputComponentProps<SelectCellConfig>`) to read it without a cast. |
 | `operators`       | `boolean \| ColumnOperatorsConfig`          | Operator configuration. `true` = default operators for the column's cell type — see [Operators](./data-grid/filtering/operators).                                                   |
-| `defaultOperator` | `string`                                    | Override the default selected operator for this column.                                                                                                                             |
+| `defaultOperator` | `FilterOperatorId`                          | Which operator the filter opens with. Must be one of the operators the column offers — `createTable` warns in development when it is not.                                           |
 | `items`           | `FilterItem[]`                              | Explicit value list for multi-value (`in` / `notIn`) filters — see [Multi-value](./data-grid/filtering/multi-value).                                                                |
 | `faceted`         | `boolean`                                   | Per-column override for the table-level `filtering.faceted` flag.                                                                                                                   |
+| `debounce`        | `number`                                    | Commit debounce (ms) for this column's text filter, overriding the table-level `filtering.debounce`. Discrete controls commit instantly and ignore it.                              |
 
-Filterable columns pick their default operator set from `cell.type` (`'text'`, `'number'`, `'date'`, `'select'`, `'badge'`) — see [Operators](./data-grid/filtering/operators).
+Filterable columns pick their default operator set from `cell.type` — every built-in type has one — see [Operators](./data-grid/filtering/operators).
 
 ## See also
 

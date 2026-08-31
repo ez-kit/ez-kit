@@ -487,10 +487,10 @@ describe('useDataGrid — pagination.items', () => {
 
 	it('falls back to the default list when page-based pagination carries no explicit one', () => {
 		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the toolbar
-		// mounts the control is `pagination.pageSizer`, resolved separately.
+		// mounts the control is `pagination.toolbar`, resolved separately.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.toolbar).toBe(false)
 	})
 
 	it('stores the explicit options in page-based mode', () => {
@@ -847,7 +847,7 @@ describe('useDataGrid — draft with a mirrored controlled state prop', () => {
 
 		const renderCountAfterSeed = result.current.renderCount
 
-		// A new draft edit: outward state is unchanged while dirty, so `onStateChange` never fires —
+		// A new draft editing: outward state is unchanged while dirty, so `onStateChange` never fires —
 		// the consumer's mirrored `tableState` now holds the last APPLIED query, not this new draft.
 		act(() => {
 			result.current.table.setSorting([{ id: 'name', desc: false }])

@@ -120,7 +120,32 @@ since the two share that trigger.
 | -------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `rowActions.variant` | `'inline' \| 'menu'`                  | `inline` (default) — one button per action. `menu` — every action in one dropdown.                                             |
 | `rowActions.actions` | `({ row, table }) => RowActionItem[]` | Custom entries appended to the built-ins, built per row. See [Custom actions](#custom-actions).                                |
+| `rowActions.column`  | `SystemColumnDef`                     | The actions column itself — its header, width, pinning. See [The column itself](#the-column-itself).                           |
 | `rowActions.enabled` | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
+
+## The column itself
+
+`selection`, `expanding` and `rowActions` each inject a column, and each takes a `column`
+option describing it — with the same names, and the same scalar-or-object forms, an ordinary
+column uses.
+
+| Option            | Type                                                          | Description                                                                                                                            |
+| ----------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `header`          | `string \| (ctx) => ReactNode`                                | Header content. Omitted, the column keeps its built-in header — the select-all checkbox for selection, nothing for expand and actions. |
+| `width`           | `number \| { default?, min?, max? }`                          | Width in pixels. Defaults: `44` for selection and expand, a derived width for actions.                                                 |
+| `pinning`         | `false \| 'left' \| 'right' \| { side?, initialSide? }`       | Which viewport edge it sticks to. Defaults: `'left'` for selection and expand, `'right'` for actions.                                  |
+| `align`           | `'start' \| 'center' \| 'end' \| { header?, cell?, footer? }` | Horizontal alignment. Logical, like a normal column's `align`.                                                                         |
+| `headerClassName` | `string`                                                      | Class applied to the header cell.                                                                                                      |
+| `cellClassName`   | `string`                                                      | Class applied to the body cells.                                                                                                       |
+
+```tsx
+<DataGrid
+	data={rows}
+	columns={columns}
+	deleting={{ onDelete }}
+	rowActions={{ column: { header: 'Actions', width: 120, pinning: false } }}
+/>
+```
 
 ## See also
 

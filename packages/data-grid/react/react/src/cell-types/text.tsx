@@ -35,7 +35,7 @@ function TextCellInput(props: FieldState<TextCellConfig>): ReactNode {
  */
 export const textCellType = defineCellType<TextCellConfig>()({
 	view: ({ value, config }) => truncateText(String(value ?? ''), config),
-	edit: TextCellInput,
+	editing: TextCellInput,
 	creating: TextCellInput,
-	filter: TextCellInput,
+	filtering: TextCellInput,
 })

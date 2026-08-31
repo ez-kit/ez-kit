@@ -48,7 +48,7 @@ const COLUMNS = createColumns<Order>([
 		cell: { type: 'number' },
 		filtering: {
 			operators: {
-				items: ['eq', 'between'],
+				items: ['equals', 'between'],
 				betweenOperator: { variant: 'slider', min: 0, max: 5000 },
 			},
 			defaultOperator: 'between',

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
-import type { ColumnDef, SortingFn } from './column/types'
+import type { ColumnDef, SortingFn, SystemColumnDef } from './column/types'
 import type { CreatingConfig } from './features/creating'
 import type { DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
@@ -187,6 +187,50 @@ export type FilteringConfig = FeatureToggle & {
 export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
 
 /**
+ * The match functions available to global search by name.
+ *
+ * A closed set, and one the grid was previously passing through as a bare `string`: the value
+ * is handed to TanStack, which resolves it against its own built-in filter functions, so a
+ * typo — `'includesStrings'` — compiled, silently fell back to TanStack's `'auto'`, and
+ * changed what the search box matched with no error anywhere.
+ *
+ * Named members for internal reference; the option is typed as {@link GlobalFilterFnId}, so
+ * `fn: 'includesString'` is equally valid and needs no import. The same shape
+ * `column.sorting.fn` uses for {@link BuiltInSortingFn}, and for the same reason.
+ */
+export const BuiltInGlobalFilterFn = {
+	/** Case-insensitive substring match. The default. */
+	IncludesString: 'includesString',
+	/** Case-sensitive substring match. */
+	IncludesStringSensitive: 'includesStringSensitive',
+	/** Case-insensitive whole-value equality. */
+	EqualsString: 'equalsString',
+	/** Case-sensitive whole-value equality. */
+	EqualsStringSensitive: 'equalsStringSensitive',
+	/** The row value is an array containing the search value. */
+	ArrIncludes: 'arrIncludes',
+	/** The row value is an array containing all of the search values. */
+	ArrIncludesAll: 'arrIncludesAll',
+	/** The row value is an array containing some of the search values. */
+	ArrIncludesSome: 'arrIncludesSome',
+	/** Strict `===` against the raw row value. */
+	Equals: 'equals',
+	/** Loose `==` against the raw row value. */
+	WeakEquals: 'weakEquals',
+	/** Numeric range — the search value is a `[min, max]` tuple. */
+	InNumberRange: 'inNumberRange',
+} as const
+
+export type BuiltInGlobalFilterFn = (typeof BuiltInGlobalFilterFn)[keyof typeof BuiltInGlobalFilterFn]
+
+/**
+ * A global-search match function by name: a built-in, or an id registered through
+ * {@link GlobalFilteringConfig.fns}. The `string & {}` tail keeps a registry id assignable
+ * while preserving autocomplete for the built-ins.
+ */
+export type GlobalFilterFnId = BuiltInGlobalFilterFn | (string & {})
+
+/**
  * Table-level global search (cross-column) config.
  *
  * @example Enable with default `includesString` substring match
@@ -230,13 +274,13 @@ export type GlobalFilteringConfig = FeatureToggle & {
 	manual?: boolean
 	/**
 	 * Function applied during global search.
-	 * - `string` — resolved against {@link GlobalFilteringConfig.fns} registry first,
-	 *   then against TanStack's built-in filter fns (`'includesString'`, etc.).
+	 * - {@link GlobalFilterFnId} — resolved against the {@link GlobalFilteringConfig.fns}
+	 *   registry first, then as a {@link BuiltInGlobalFilterFn}.
 	 * - {@link GlobalFilterFn} — used inline.
 	 *
-	 * Default: `'includesString'` (case-insensitive substring).
+	 * Default: {@link BuiltInGlobalFilterFn.IncludesString} (case-insensitive substring).
 	 */
-	fn?: string | GlobalFilterFn
+	fn?: GlobalFilterFnId | GlobalFilterFn
 	/**
 	 * Named global filter functions, addressable from {@link GlobalFilteringConfig.fn} by id.
 	 */
@@ -397,7 +441,7 @@ export type PaginationConfig = FeatureToggle &
 		onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
 	}
 
-export type SelectionConfig = FeatureToggle & {
+export type SelectionConfig<TRow extends object = object> = FeatureToggle & {
 	/**
 	 * Called when row selection changes.
 	 *
@@ -418,6 +462,11 @@ export type SelectionConfig = FeatureToggle & {
 	 * is nothing for it to select.
 	 */
 	multi?: boolean
+	/**
+	 * Presentation of the auto-injected `__selection__` column — its width, which edge it
+	 * pins to, its alignment. See {@link SystemColumnDef}.
+	 */
+	column?: SystemColumnDef<TRow>
 }
 
 /**
@@ -463,6 +512,11 @@ export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unkn
 	component?: TRenderExpanded
 	/** Called whenever the expanded set changes. Receives the resolved {@link ExpandedState}. */
 	onChange?: (expanded: ExpandedState) => void
+	/**
+	 * Presentation of the auto-injected `__expand__` chevron column — its width, which edge it
+	 * pins to, its alignment. See {@link SystemColumnDef}.
+	 */
+	column?: SystemColumnDef<TRow>
 }
 
 export type VisibilityConfig = FeatureToggle & {
@@ -649,7 +703,7 @@ export type TableConfig<TRow extends object> = {
 	 */
 	globalFiltering?: boolean | GlobalFilteringConfig
 	pagination?: boolean | PaginationConfig
-	selection?: boolean | SelectionConfig
+	selection?: boolean | SelectionConfig<TRow>
 	expanding?: boolean | ExpandingConfig<TRow>
 	/**
 	 * Column visibility (hide/show columns). `false` / omitted disables hiding for all

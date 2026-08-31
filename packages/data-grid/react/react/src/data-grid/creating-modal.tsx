@@ -1,4 +1,5 @@
-import { AutoFormMode } from './auto-form'
+import { ColumnFormMode } from '@ez-kit/data-grid-core'
+
 import { FormModalHost } from './form-modal'
 import { useDataGridState, useDataGridTable } from './table-context'
 
@@ -22,7 +23,7 @@ export function CreatingModal({ children }: DataGridCreatingModalProps = {}) {
 	return (
 		<FormModalHost
 			{...(children !== undefined ? { children } : {})}
-			mode={AutoFormMode.Creating}
+			mode={ColumnFormMode.Creating}
 			feature='creating'
 			title='Create'
 			formError={state.formError}

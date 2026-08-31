@@ -122,14 +122,14 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableColumnFilter).toBeUndefined()
 	})
 
-	it('cell.type goes into meta.cellType', () => {
+	it('cell.type goes into meta.cell.type', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'age', cell: { type: 'number' } }])
-		expect(result[0]?.meta?.cellType).toBe('number')
+		expect(result[0]?.meta?.cell?.type).toBe('number')
 	})
 
-	it('defaults meta.cellType to "text" when cell.type is omitted', () => {
+	it('defaults meta.cell.type to "text" when cell.type is omitted', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name' }])
-		expect(result[0]?.meta?.cellType).toBe('text')
+		expect(result[0]?.meta?.cell?.type).toBe('text')
 	})
 
 	it('forwards creating.description to meta.creating.description', () => {
@@ -157,11 +157,11 @@ describe('mapColumns', () => {
 		expect((result[0] as { columns?: unknown[] }).columns).toHaveLength(2)
 	})
 
-	it('cell.component maps to TanStack cell renderer and meta.cellView', () => {
+	it('cell.component maps to TanStack cell renderer and meta.cell.view', () => {
 		const component = vi.fn().mockReturnValue('custom')
 		const result = mapColumns<Row>([{ accessorKey: 'name', cell: { component } }])
 		expect(result[0]?.cell).toBeTypeOf('function')
-		expect(result[0]?.meta?.cellView).toBeTypeOf('function')
+		expect(result[0]?.meta?.cell?.view).toBeTypeOf('function')
 	})
 
 	it('cell.component invoked as TanStack cell renderer', () => {

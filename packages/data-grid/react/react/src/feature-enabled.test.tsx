@@ -98,13 +98,13 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 describe('useDataGrid — pagination.toolbar', () => {
 	it('mounts the PageSizer when a size list is supplied, with no extra flag', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { items: [5, 10] } }))
-		expect(result.current.grid.pagination.pageSizer).toBe(true)
+		expect(result.current.grid.pagination.toolbar).toBe(true)
 		expect(result.current.grid.pagination.items).toEqual([5, 10])
 	})
 
 	it('mounts nothing when pagination carries no size list', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.toolbar).toBe(false)
 	})
 
 	it('resolves the default size list even when the control is not auto-mounted', () => {
@@ -115,7 +115,7 @@ describe('useDataGrid — pagination.toolbar', () => {
 
 	it('toolbar: true falls back to the named default size list', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: true } }))
-		expect(result.current.grid.pagination.pageSizer).toBe(true)
+		expect(result.current.grid.pagination.toolbar).toBe(true)
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 	})
 
@@ -123,7 +123,7 @@ describe('useDataGrid — pagination.toolbar', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: false, items: [5, 10] } }),
 		)
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.toolbar).toBe(false)
 		expect(result.current.grid.pagination.items).toEqual([5, 10])
 	})
 
@@ -131,7 +131,7 @@ describe('useDataGrid — pagination.toolbar', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', toolbar: true } }),
 		)
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.toolbar).toBe(false)
 		expect(result.current.grid.pagination.items).toBeUndefined()
 	})
 })

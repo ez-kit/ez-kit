@@ -47,7 +47,7 @@ function makeSpyCellTypes(seen: FieldState[]): Record<string, CellTypeDefinition
 			/>
 		)
 	}
-	return { spy: { edit: renderer, creating: renderer } }
+	return { spy: { editing: renderer, creating: renderer } }
 }
 
 describe('<DataGridCell> — FieldState propagation', () => {

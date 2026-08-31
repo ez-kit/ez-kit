@@ -1,3 +1,4 @@
+import type { SystemColumnDef } from '../../column/types'
 import type { GridMenuIcon } from '../../menu-icon'
 import type { RowPinningConfig } from '../../types'
 import type { FeatureToggle } from '../../utils/feature-flag'
@@ -76,6 +77,15 @@ export type RowActionsConfig<TRow extends object = object, TNode = never> = Feat
 	 * Return `[]` for a row that offers nothing.
 	 */
 	actions?: (ctx: RowActionsContext<TRow>) => RowActionItem<TNode>[]
+	/**
+	 * Presentation of the auto-injected `__actions__` column — a label for its header, its
+	 * width, which edge it pins to. See {@link SystemColumnDef}.
+	 *
+	 * Named `column` rather than folded into this config's own fields because it configures a
+	 * *column*, with the column vocabulary (`header`, `width`, `pinning`, `align`), while
+	 * `variant` and `actions` configure what the cells inside it contain.
+	 */
+	column?: SystemColumnDef<TRow, TNode>
 }
 
 /** Rendered width of one icon button in the actions cell. */

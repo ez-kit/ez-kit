@@ -742,6 +742,7 @@ export const testComponents: FullGridComponents = {
 		Checkbox: TestCheckbox,
 		Toolbar: TestToolbar,
 		Menu: TestMenu,
+		NumberInput: TestNumberInput,
 	},
 	pagination: {
 		Pagination: TestPagination,
@@ -776,8 +777,9 @@ export const testComponents: FullGridComponents = {
 	editing: {
 		Modal: TestModal,
 		FormShell: TestFormShell,
+	},
+	deleting: {
 		ConfirmDialog: TestConfirmDialog,
-		NumberInput: TestNumberInput,
 	},
 	selection: {
 		SelectionBar: TestSelectionBar,
@@ -785,7 +787,7 @@ export const testComponents: FullGridComponents = {
 	draft: {
 		DraftBar: TestDraftBar,
 	},
-	'row-actions': {
+	rowActions: {
 		ActionsCell: TestActionsCell,
 	},
 	resizing: {

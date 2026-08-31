@@ -151,7 +151,7 @@ export function buildCustomItems(items: RowActionItem<ReactElement>[]): GridMenu
  */
 export function ActionsCell({ row }: ActionsCellProps) {
 	const table = useDataGridTable()
-	const { ActionsCell: Renderer } = useGridComponents()['row-actions']
+	const { ActionsCell: Renderer } = useGridComponents().rowActions
 	const { Menu } = useGridComponents().core
 
 	// Stable booleans — non-target rows stay `false` across any editing change.

@@ -44,7 +44,7 @@ export type {
  * ```ts
  * export const cellTypes = {
  *   ...baseCellTypes,
- *   date: { ...baseCellTypes.date, view: DateCellView, edit: DateCellInput },
+ *   date: { ...baseCellTypes.date, view: DateCellView, editing: DateCellInput },
  * }
  * ```
  *

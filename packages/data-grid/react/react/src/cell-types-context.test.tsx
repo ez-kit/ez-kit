@@ -39,22 +39,22 @@ describe('CellTypesContext', () => {
 		const childView = () => 'child-view'
 		let captured: CellTypeRegistry | undefined
 		renderWithComponents(
-			<CellTypesProvider types={{ date: { edit: parentEdit, operators: ['eq'] } }}>
+			<CellTypesProvider types={{ date: { editing: parentEdit, operators: ['equals'] } }}>
 				<CellTypesProvider types={{ date: { view: childView } }}>
 					<Probe onMount={(r) => (captured = r)} />
 				</CellTypesProvider>
 			</CellTypesProvider>,
 		)
 		expect(captured?.date?.view).toBe(childView)
-		expect(captured?.date?.edit).toBe(parentEdit)
-		expect(captured?.date?.operators).toEqual(['eq'])
+		expect(captured?.date?.editing).toBe(parentEdit)
+		expect(captured?.date?.operators).toEqual(['equals'])
 	})
 })
 
 describe('mergeCellTypes', () => {
 	const kitView = () => 'kit-view'
 	const kitEdit = () => 'kit-edit'
-	const kit: CellTypeRegistry = { date: { view: kitView, edit: kitEdit } }
+	const kit: CellTypeRegistry = { date: { view: kitView, editing: kitEdit } }
 
 	it('layers entry by entry — omitted keys keep the base value', () => {
 		const ownView = () => 'own-view'
@@ -62,7 +62,7 @@ describe('mergeCellTypes', () => {
 		const merged = mergeCellTypes(kit, { date: { view: ownView } })
 
 		expect(merged.date?.view).toBe(ownView)
-		expect(merged.date?.edit).toBe(kitEdit)
+		expect(merged.date?.editing).toBe(kitEdit)
 	})
 
 	it('a renderer-less declaration does not blank out the kit entry', () => {
@@ -70,7 +70,7 @@ describe('mergeCellTypes', () => {
 		const merged = mergeCellTypes(kit, { date: {} })
 
 		expect(merged.date?.view).toBe(kitView)
-		expect(merged.date?.edit).toBe(kitEdit)
+		expect(merged.date?.editing).toBe(kitEdit)
 	})
 
 	it('adds ids the base does not have', () => {
