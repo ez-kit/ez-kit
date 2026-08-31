@@ -643,8 +643,8 @@ function TestDraftBar({ open, pending, selectedCount, variant, onApply, onReset 
 			data-testid='draft-bar'
 			data-variant={variant}
 			data-pending-sorting={String(pending.sorting)}
-			data-pending-filters={String(pending.filters)}
-			data-pending-search={pending.search ? 'true' : 'false'}
+			data-pending-column-filters={String(pending.columnFilters)}
+			data-pending-global-filter={String(pending.globalFilter)}
 			data-selected-count={String(selectedCount)}
 		>
 			{selectedCount > 0 && <span data-slot='draft-bar-selected-chip'>{selectedCount} selected</span>}

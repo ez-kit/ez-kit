@@ -41,10 +41,20 @@ export type AppliedState = {
 /** What `table.draft.get()` returns — the live values of the three axes. */
 export type QueryDraft = AppliedState
 
+/**
+ * How much is pending on each of the three {@link DraftAxis} axes.
+ *
+ * Keyed by the axis, like {@link AppliedState} — so `getPendingCount()[axis]` is a legal thing
+ * to write, which is what {@link DraftAxis}'s contract has always claimed. The keys used to be
+ * `sorting` / `filters` / `search`, which gave one axis three spellings between the state slice,
+ * this count and the table option, and made `pending[DraftAxis.ColumnFilters]` a type error.
+ *
+ * `globalFilter` counts rather than flags, for the same reason: a field whose type changed from
+ * `number` to `boolean` halfway across a three-key object cannot be summed, compared or rendered
+ * by one branch. It is only ever `0` or `1`.
+ */
 export type PendingCount = {
-	sorting: number
-	filters: number
-	search: boolean
+	[TAxis in DraftAxis]: number
 }
 
 /**
@@ -162,8 +172,8 @@ export const DeferredApplyFeature: TableFeature<RowData> = {
 			const removedSorts = Math.max(applied.sorting.length - live.sorting.length, 0)
 			return {
 				sorting: changedSorts + removedSorts,
-				filters: changedFilters + removedFilters,
-				search: !sameAxis(live.globalFilter, applied.globalFilter),
+				columnFilters: changedFilters + removedFilters,
+				globalFilter: sameAxis(live.globalFilter, applied.globalFilter) ? 0 : 1,
 			}
 		}
 

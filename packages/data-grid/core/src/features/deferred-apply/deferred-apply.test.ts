@@ -53,7 +53,7 @@ describe('draft — applied snapshot', () => {
 		table.setSorting([{ id: 'age', desc: true }])
 		table.setColumnFilters([{ id: 'name', value: 'An' }])
 
-		expect(table.draft.getPendingCount()).toEqual({ sorting: 1, filters: 1, search: false })
+		expect(table.draft.getPendingCount()).toEqual({ sorting: 1, columnFilters: 1, globalFilter: 0 })
 	})
 
 	it('reports search as pending when the global filter differs from applied', () => {
@@ -61,7 +61,7 @@ describe('draft — applied snapshot', () => {
 
 		table.setGlobalFilter('bob')
 
-		expect(table.draft.getPendingCount()).toEqual({ sorting: 0, filters: 0, search: true })
+		expect(table.draft.getPendingCount()).toEqual({ sorting: 0, columnFilters: 0, globalFilter: 1 })
 	})
 
 	it('seeds a restored draft from initialState.draft, leaving applied at its own seed', () => {

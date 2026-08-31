@@ -8,6 +8,7 @@ import type {
 	FilterOperatorDef,
 	LoadMoreDirection,
 	FilterItem,
+	PendingCount,
 } from '@ez-kit/data-grid-core'
 import type { Row } from '@tanstack/table-core'
 import type {
@@ -556,7 +557,7 @@ export type LoadMoreRowProps = {
 	isFetching: boolean
 	/**
 	 * More rows can be loaded in this direction — the resolved `pagination.hasNextPage`, under
-	 * the same name it has as an option. It was `hasNextPage`, so one flag changed its spelling on
+	 * the same name it has as an option. It was `hasMore`, so one flag changed its spelling on
 	 * the way from the config to the kit.
 	 */
 	hasNextPage: boolean
@@ -632,8 +633,12 @@ export type SelectionBarProps = {
 export type DraftBarProps = {
 	/** False when nothing is pending — component should hide/animate out. */
 	open: boolean
-	/** How much is pending on each deferred axis. */
-	pending: { sorting: number; filters: number; search: boolean }
+	/**
+	 * How much is pending on each deferred axis, keyed by {@link DraftAxis}. The core
+	 * {@link PendingCount} verbatim, rather than a hand-written twin that spelled the same three
+	 * axes `sorting` / `filters` / `search`.
+	 */
+	pending: PendingCount
 	/** Rendered as a non-interactive context chip when rows are selected. */
 	selectedCount: number
 	/**

@@ -11,7 +11,7 @@ import type { DraftBarProps } from '@ez-kit/data-grid-react'
 /** Wording for each deferred axis, singular and plural. */
 const AXIS_LABELS = {
 	sorting: ['sort', 'sorts'],
-	filters: ['filter', 'filters'],
+	columnFilters: ['filter', 'filters'],
 } as const
 
 const SEARCH_LABEL = 'search'
@@ -26,14 +26,15 @@ type PendingPart = { axis: string; label: string }
 function pendingParts(pending: DraftBarProps['pending']): PendingPart[] {
 	const parts: PendingPart[] = []
 
-	for (const axis of ['sorting', 'filters'] as const) {
+	for (const axis of ['sorting', 'columnFilters'] as const) {
 		const count = pending[axis]
 		if (count <= 0) continue
 		const [one, many] = AXIS_LABELS[axis]
 		parts.push({ axis, label: `${String(count)} ${count === 1 ? one : many}` })
 	}
 
-	if (pending.search) parts.push({ axis: 'search', label: SEARCH_LABEL })
+	// Only ever 0 or 1 — a single value, so it lists as a bare word rather than "1 search".
+	if (pending.globalFilter > 0) parts.push({ axis: 'globalFilter', label: SEARCH_LABEL })
 
 	return parts
 }
@@ -134,8 +135,8 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 				data-variant='inline'
 				data-state='open'
 				data-pending-sorting={String(pending.sorting)}
-				data-pending-filters={String(pending.filters)}
-				data-pending-search={pending.search ? 'true' : 'false'}
+				data-pending-column-filters={String(pending.columnFilters)}
+				data-pending-global-filter={String(pending.globalFilter)}
 				data-selected-count={String(selectedCount)}
 				className='mb-2 flex w-full flex-row items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm'
 			>
@@ -160,8 +161,8 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 				data-variant='floating'
 				data-state='open'
 				data-pending-sorting={String(pending.sorting)}
-				data-pending-filters={String(pending.filters)}
-				data-pending-search={pending.search ? 'true' : 'false'}
+				data-pending-column-filters={String(pending.columnFilters)}
+				data-pending-global-filter={String(pending.globalFilter)}
 				data-selected-count={String(selectedCount)}
 				className={cn(
 					'absolute inset-x-0 bottom-0 mx-auto w-fit',
