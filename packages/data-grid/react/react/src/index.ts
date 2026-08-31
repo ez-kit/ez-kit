@@ -38,6 +38,16 @@ export type {
 	FilteringToolbarConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
+	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
+	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
+	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
+	NormalizedFeatureToolbarConfig,
+	NormalizedFilterChipsConfig,
+	NormalizedFilteringToolbarConfig,
+	NormalizedGlobalFilteringConfig,
+	NormalizedInfiniteConfig,
+	NormalizedPageWindowConfig,
+	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
 	ReactGlobalFilteringConfig,

@@ -84,8 +84,10 @@ describe('DataGridOptionsProvider', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
 			wrapper: makeWrapper({ sorting: true, visibility: true }),
 		})
-		expect(result.current.grid.sorting).toBe(true)
-		expect(result.current.grid.visibility).toBe(true)
+		// Both arrive resolved, not as the raw `boolean | Config` the provider was handed:
+		// `sorting: true` does not auto-mount its toolbar control, `visibility: true` does.
+		expect(result.current.grid.sorting).toEqual({ toolbar: false })
+		expect(result.current.grid.visibility).toEqual({ toolbar: true })
 	})
 
 	it('lets an table override provider defaults inside useDataGrid', () => {
@@ -106,7 +108,7 @@ describe('useDataGrid without a provider', () => {
 
 	it('applies factory defaults passed as the base layer', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }, { sorting: true }))
-		expect(result.current.grid.sorting).toBe(true)
+		expect(result.current.grid.sorting).toEqual({ toolbar: false })
 	})
 })
 

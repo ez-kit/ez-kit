@@ -193,7 +193,7 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 *
 	 * Named `items`, the one word this API spends on "the values a control offers" —
 	 * `column.filtering.items`, `cell.config.items`, `MultiSelectFilterProps.items`, and the
-	 * `PageSizerProps.items` this very option feeds. It was `items`, which made one
+	 * `PageSizerProps.items` this very option feeds. It was `pageSizeOptions`, which made one
 	 * value change its name on the way from the config to the kit.
 	 *
 	 * Pure data: supplying it no longer *implies* the control, it only says which sizes the
@@ -264,8 +264,29 @@ export type NormalizedPageWindowConfig = {
  * that only ever imports the adapter.
  */
 export type ReactVisibilityConfig = VisibilityConfig & {
-	/** Show a column visibility toggle button in the toolbar. Default: false. */
+	/**
+	 * Auto-mount the column-visibility toggle into `Toolbar.end`.
+	 *
+	 * - omitted on the object form — not mounted
+	 * - `visibility: true` — mounted (the bare `true` means "the feature with its toolbar control")
+	 * - `true` / `false` on the object form — mounted / not mounted
+	 */
 	toolbar?: boolean
+}
+
+/**
+ * The resolved auto-mount decision for a feature whose only UI option is `toolbar` — today
+ * `sorting` and `visibility`.
+ *
+ * They used to reach `table.grid` as the **raw** `boolean | Config` union, alone among the
+ * resolved options, so every reader — the built-in `Toolbar` and any UI kit calling
+ * `useGridOptions()` — had to re-derive `cfg === true || (typeof cfg === 'object' &&
+ * Boolean(cfg.toolbar))` for itself. {@link ResolvedGridOptions} exists precisely so nobody
+ * has to.
+ */
+export type NormalizedFeatureToolbarConfig = {
+	/** The toolbar auto-mounts this feature's control. */
+	toolbar: boolean
 }
 
 export type LoadingFallbackConfig = FeatureToggle & {
@@ -694,7 +715,10 @@ export function useDataGrid<TRow extends object>(
 		boundaries: paginationCfg?.boundaries ?? DATA_GRID_DEFAULTS.pagination.boundaries,
 	}
 
-	// Build core-compatible expanding config (strip React-only fields)
+	// Build core-compatible expanding config by **stripping** the one React-only field, never by
+	// picking known core fields by name: an allowlist silently drops whatever it has not heard of,
+	// which is how `expanding.onChange` never reached the core and a consumer's expand handler
+	// never fired. Same rule as `coreGlobalFiltering` and `coreSelection` below.
 	const reactExpandingCfg = featureConfig(rawExpanding)
 	const coreGetRowCanExpand =
 		reactExpandingCfg?.getRowCanExpand ?? (reactExpandingCfg?.component !== undefined ? () => true : undefined)
@@ -704,12 +728,25 @@ export function useDataGrid<TRow extends object>(
 			: typeof rawExpanding === 'boolean'
 				? rawExpanding
 				: ({
-						...(rawExpanding.mode !== undefined ? { mode: rawExpanding.mode } : {}),
-						...(rawExpanding.getSubRows !== undefined
-							? { getSubRows: rawExpanding.getSubRows as ExpandingConfig['getSubRows'] }
-							: {}),
+						...(({ component: _component, ...rest }) => rest)(rawExpanding),
 						...(coreGetRowCanExpand !== undefined ? { getRowCanExpand: coreGetRowCanExpand } : {}),
 					} as ExpandingConfig)
+
+	// Split `visibility` the way `selection` and `globalFiltering` are split: the React-only
+	// `toolbar` is stripped for core and resolved separately for the UI. Collapsing the whole
+	// option to `isFeatureEnabled(visibility)` — which is what this used to pass — threw away
+	// `visibility.onChange`, so a grid that asked to be told when a column was hidden never was.
+	const coreVisibility: boolean | VisibilityConfig | undefined =
+		typeof visibility === 'object' ? (({ toolbar: _toolbar, ...rest }) => rest)(visibility) : visibility
+	// `visibility: true` mounts the control, the object form only when it says `toolbar: true`.
+	// Preserved verbatim from the `Toolbar` that used to derive it inline.
+	const normalizedVisibility: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(visibility)
+		? { toolbar: visibility === true || (typeof visibility === 'object' && Boolean(visibility.toolbar)) }
+		: undefined
+
+	const normalizedSorting: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(config.sorting)
+		? { toolbar: typeof config.sorting === 'object' && Boolean(config.sorting.toolbar) }
+		: undefined
 
 	const filteringCfg = featureConfig(rawFiltering)
 
@@ -789,10 +826,7 @@ export function useDataGrid<TRow extends object>(
 			expanding: coreExpanding,
 			pagination: corePagination,
 			selection: coreSelection,
-			// Only the resolved on/off reaches core — its option is a plain `boolean`, so a
-			// misspelled UI key can never ride along unchecked. The React UI config
-			// (`toolbar` etc.) is layered separately via the COLUMN_VISIBILITY_KEY symbol.
-			visibility: isFeatureEnabled(visibility),
+			visibility: coreVisibility,
 			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
 		} as TableConfig<TRow>),
 	)
@@ -858,8 +892,8 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
 		columnPinning: colPinEnabled,
-		visibility: isFeatureEnabled(visibility) ? visibility : undefined,
-		sorting: isFeatureEnabled(config.sorting) ? config.sorting : undefined,
+		visibility: normalizedVisibility,
+		sorting: normalizedSorting,
 		filtering: {
 			variant: filteringVariant,
 			debounce: filteringDebounce,

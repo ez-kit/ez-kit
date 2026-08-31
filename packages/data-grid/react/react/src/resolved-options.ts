@@ -3,10 +3,10 @@ import { DATA_GRID_DEFAULTS } from './defaults'
 import type { CellTypeRegistry } from './cell-types-context'
 import type { PaginationVariant } from './types'
 import type {
-	ReactVisibilityConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
 	FilteringVariant,
+	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
 	NormalizedGlobalFilteringConfig,
@@ -56,9 +56,9 @@ export type ResolvedGridOptions = {
 	/** Column pinning UI (the pin section of the column menu) is enabled. */
 	columnPinning: boolean
 	/** Column hiding. `undefined` when the feature is off. */
-	visibility?: (boolean | ReactVisibilityConfig) | undefined
+	visibility?: NormalizedFeatureToolbarConfig | undefined
 	/** Sorting UI config. `undefined` when sorting is off. */
-	sorting?: (boolean | { toolbar?: boolean }) | undefined
+	sorting?: NormalizedFeatureToolbarConfig | undefined
 	filtering: {
 		/**
 		 * Display variant for the per-column filter controls. Always resolved, for the same
