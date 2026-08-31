@@ -49,8 +49,8 @@ const RESPONSE_BODY = `{
 					"colSpan": 2,
 					"defaultValue": "free",
 					"options": [
-						{ "value": "free", "label": "Free" },
-						{ "value": "pro", "label": "Pro" }
+						{ "value": "free", "label": { "key": "plan.free" } },
+						{ "value": "pro", "label": { "key": "plan.pro" } }
 					]
 				},
 				{
@@ -66,6 +66,16 @@ const RESPONSE_BODY = `{
 		{ "type": "submit", "label": "Save" }
 	]
 }`
+
+/**
+ * The app's own copy. An option's `label` is `LocalizedText` like every other label in the
+ * format, so the document above ships keys rather than English — which is the only way one
+ * stored form can serve more than one language.
+ */
+const COPY: Record<string, string> = {
+	'plan.free': 'Free',
+	'plan.pro': 'Pro',
+}
 
 /** Stands in for `await fetch('/api/forms/contact').then((res) => res.json())`. */
 async function fetchSchemaDocument(): Promise<unknown> {
@@ -88,7 +98,14 @@ export function SchemaFromJsonExample() {
 				// where it can be logged and fallen back from — not on every render, and never
 				// inside `FormRenderer`. Passing the registries' keys is what makes the parser
 				// check the document against *this* app's capabilities.
-				const parsed = parseFormSchema<Contact>(document, { fieldTypes: [], blocks: [], rules: [] })
+				// `hasTranslate` is part of the same check: a document may only name a
+				// translation key when the renderer will actually be given a `translate`.
+				const parsed = parseFormSchema<Contact>(document, {
+					fieldTypes: [],
+					blocks: [],
+					rules: [],
+					hasTranslate: true,
+				})
 
 				if (!cancelled) {
 					setSchema(parsed)
@@ -120,6 +137,7 @@ export function SchemaFromJsonExample() {
 		<div className='flex flex-col gap-4'>
 			<FormRenderer
 				schema={schema}
+				translate={(key) => COPY[key] ?? key}
 				onSubmit={({ value }) => {
 					setSaved(JSON.stringify(value, null, 2))
 				}}

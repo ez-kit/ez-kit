@@ -27,6 +27,7 @@ export type {
 	FormRendererUncontrolledProps,
 	KitFormBlock,
 	KitWithFormProps,
+	LocalizedSelectOption,
 	LocalizedText,
 	NumberFieldProps,
 	RendererForm,

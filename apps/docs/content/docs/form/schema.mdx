@@ -52,6 +52,8 @@ Every node may carry:
 | `disabledWhen` | rendered disabled when this condition holds                         |
 | `colSpan`      | grid columns the node spans inside its section — an integer **1–4** |
 
+A `select` or `radiogroup` node adds `options`: a `{ value, label, disabled? }` list whose `label` is `LocalizedText` like every other label in the format, so a delivered document can name a translation key instead of shipping copy in one language. The renderer resolves them before the kit sees them — a kit only ever receives finished strings.
+
 A field node adds `name` (the full path from the root of the form values — never affected by which section or step it sits in), its kind-specific options, an optional `defaultValue` and an optional `validate` block. It may also carry `required`, which is the _marker_ the kit renders next to the label — enforcement is `validate.required`, and the two are deliberately separate so a field can be marked without being checked, or checked without being marked.
 
 A `section` adds `title`, `description`, `columns` (an integer **1–4**, default 1) and `children`. A `step` adds `title`, `description`, `children` and an optional `path`. A `submit` node takes `label` and `disabled`.
@@ -334,6 +336,7 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 - a registry key colliding with a reserved node type;
 - a malformed rule, a `./` field reference, or a **function** condition — which cannot survive `JSON.parse` anyway, but a hand-built object must still be told it is not a serialisable document;
 - a `LocalizedText` that is neither a string nor `{ key }`, or a translation key with no `translate` registered;
+- a `select` / `radiogroup` with no `options` array, or an option missing its `value` or `label`;
 - `columns` / `colSpan` outside 1–4;
 - `step` nodes mixed with non-`step` siblings.
 
@@ -343,7 +346,7 @@ Passing the registries' keys in the options is what lets the parser check a deli
 
 ## Localisation
 
-`label`, `description`, `title` and `validate.messages` all take `LocalizedText`: a plain string is finished copy, an object `{ key, params }` is a translation key resolved by the `translate` prop.
+`label`, `description`, `title`, `validate.messages` and a select's **option labels** all take `LocalizedText`: a plain string is finished copy, an object `{ key, params }` is a translation key resolved by the `translate` prop.
 
 ```tsx
 <FormRenderer

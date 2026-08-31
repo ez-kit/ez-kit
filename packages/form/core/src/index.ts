@@ -2,6 +2,7 @@ export { collectRuleFields, compileCondition, getValueAtPath, setValueAtPath } f
 export { FormFieldType, FORM_FIELD_TYPES } from './field-types'
 export { formatFieldErrors, hasFieldErrors } from './errors'
 export { resolveText } from './localized-text'
+export { resolveSelectOptions } from './select-option'
 export { FormSchemaError, parseFormSchema } from './parse'
 export { clampToGridRange, defineFormSchema, GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
 export { TextInputType } from './text-input-type'
@@ -10,7 +11,7 @@ export { isFieldNode, walkNodes } from './walk'
 export { stripHiddenValues, visibleFieldNames } from './visibility'
 
 export type { Condition, FieldRef, Rule } from './rules'
-export type { SelectOption } from './select-option'
+export type { LocalizedSelectOption, SelectOption } from './select-option'
 export type { LocalizedText, Translate } from './localized-text'
 export type { ParseOptions } from './parse'
 export type {

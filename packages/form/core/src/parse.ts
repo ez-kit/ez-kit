@@ -1,4 +1,4 @@
-import { FORM_FIELD_TYPES } from './field-types'
+import { FORM_FIELD_TYPES, FormFieldType } from './field-types'
 import { collectRuleFields } from './rules'
 import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
 import { hasChildren, isFieldNode, walkNodes } from './walk'
@@ -33,6 +33,9 @@ export class FormSchemaError extends Error {
 		this.path = path
 	}
 }
+
+/** The field kinds whose nodes carry an `options` list. */
+const OPTION_FIELD_TYPES: readonly string[] = [FormFieldType.Select, FormFieldType.RadioGroup]
 
 const SUPPORTED_VERSION = 1
 const RELATIVE_FIELD_PREFIX = './'
@@ -231,6 +234,32 @@ function assertLocalizedText(text: unknown, path: string, options: ParseOptions)
 }
 
 /**
+ * A `select` / `radiogroup` node's `options`. The renderer would otherwise turn a missing or
+ * malformed list into an empty dropdown — a form that silently offers no choices is exactly
+ * the failure a trust boundary exists to catch — and each `label` is `LocalizedText`, so it
+ * needs the same check every other label gets.
+ */
+function assertOptions(node: FormNode<unknown, string>, path: string, options: ParseOptions): void {
+	// `node.type` is a bare `string` here (a custom field kind can be anything), so it is
+	// compared against the widened list rather than the enum members directly.
+	if (!OPTION_FIELD_TYPES.includes(node.type)) return
+
+	const list = (node as unknown as UnknownRecord).options
+	if (!Array.isArray(list)) {
+		throw new FormSchemaError(`"${node.type}" is missing an "options" array`, path)
+	}
+	for (const option of list as unknown[]) {
+		if (!isPlainObject(option) || !('value' in option)) {
+			throw new FormSchemaError('Each option must be an object with a "value"', path)
+		}
+		if (option.label === undefined) {
+			throw new FormSchemaError('Each option must carry a "label"', path)
+		}
+		assertLocalizedText(option.label, path, options)
+	}
+}
+
+/**
  * `columns` (section) and `colSpan` (any node) are part of the v1 format's supported range,
  * not an undocumented kit detail — a document authored outside this codebase (BDUI, spec
  * I2/I3) has no other way to learn that 6 columns silently becomes 1.
@@ -277,6 +306,7 @@ function validateNode(
 	if (isFieldNode(node)) {
 		assertKnownFieldType(node.type, path, options)
 		assertUniqueName((node as unknown as UnknownRecord).name, path, seenNames)
+		assertOptions(node, path, options)
 		assertKnownRule(node.validate, path, options)
 		assertValidateMessages(node.validate, path, options)
 	} else if (node.type === 'block') {

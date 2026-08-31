@@ -60,7 +60,7 @@ export {
 	stripHiddenValues,
 	TextInputType,
 } from '@ez-kit/form-core'
-export type { LocalizedText, SelectOption, Translate } from '@ez-kit/form-core'
+export type { LocalizedSelectOption, LocalizedText, SelectOption, Translate } from '@ez-kit/form-core'
 
 // Spec §12: the group hooks are re-exported verbatim — they yield a group API, which
 // correctly carries no injected field components, so unlike `withForm` they need no

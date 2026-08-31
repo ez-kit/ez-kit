@@ -155,3 +155,34 @@ test('renders through a caller-owned form instance in controlled mode', () => {
 	expect(screen.getByLabelText('Email')).toBeInTheDocument()
 	expect(screen.getByLabelText('Age')).toBeInTheDocument()
 })
+
+test('resolves a select option label through `translate`', () => {
+	const localizedSchema: FormSchema<{ country: string }> = {
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.Select,
+				name: 'country',
+				label: { key: 'country.label' },
+				options: [
+					{ value: 'RU', label: { key: 'country.ru' } },
+					// A plain string stays finished copy — `LocalizedText` is either spelling.
+					{ value: 'DE', label: 'Germany' },
+				],
+			},
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={localizedSchema}
+			defaultValues={{ country: 'RU' }}
+			translate={(key: string): string => (key === 'country.ru' ? 'Россия' : 'Страна')}
+			onSubmit={() => {}}
+		/>,
+	)
+
+	expect(screen.getByLabelText('Страна')).toBeInTheDocument()
+	expect(screen.getByRole('option', { name: 'Россия' })).toBeInTheDocument()
+	expect(screen.getByRole('option', { name: 'Germany' })).toBeInTheDocument()
+})

@@ -21,14 +21,18 @@ Most consumers do not install this directly — they use a UI-kit package
 
 ```ts
 import { FormFieldType, TextInputType, formatFieldErrors, hasFieldErrors } from '@ez-kit/form-core'
-import type { SelectOption } from '@ez-kit/form-core'
+import type { LocalizedSelectOption, SelectOption } from '@ez-kit/form-core'
 ```
 
 - **`FormFieldType`** / **`FORM_FIELD_TYPES`** — the built-in field kinds: `text`,
   `number`, `textarea`, `select`, `checkbox`, `switch`, `radiogroup`, `slider`.
 - **`TextInputType`** — the `inputType` a text field may ask for (`email`, `tel`, …).
-- **`SelectOption<TValue>`** — `{ label, value, disabled? }`, the option shape every
-  select-like field consumes.
+- **`SelectOption<TValue>`** — `{ label, value, disabled? }` with `label` already resolved
+  to a string, the option shape every select-like field consumes.
+- **`LocalizedSelectOption<TValue>`** — the same shape with `label: LocalizedText`, which is
+  what a `select` / `radiogroup` **node in a schema** carries, so a delivered document can
+  name a translation key. `resolveSelectOptions(options, translate)` turns one into the
+  other; `FormRenderer` calls it for you.
 - **`formatFieldErrors(errors)`** — normalises `field.state.meta.errors` (standard-schema
   issues, `Error` instances, plain strings) into `string[]`, dropping empty slots.
 - **`hasFieldErrors(errors)`** — the `invalid` / `aria-invalid` predicate.

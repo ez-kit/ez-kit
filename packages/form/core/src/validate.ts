@@ -49,7 +49,9 @@ function resolveMessage(
 ): string {
 	const override: LocalizedText | undefined = config.messages?.[key]
 	if (override === undefined) return fallback
-	return resolveText(override, translate) ?? fallback
+	// Past the guard `override` is a required `LocalizedText`, so `resolveText`'s
+	// non-optional overload applies and there is nothing left to fall back from.
+	return resolveText(override, translate)
 }
 
 /** Looks up `config.rule` in the registered rules, throwing at build time if it is unknown. */

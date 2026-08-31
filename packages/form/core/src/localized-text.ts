@@ -3,6 +3,13 @@ export type LocalizedText = string | { key: string; params?: Record<string, stri
 
 export type Translate = (key: string, params?: Record<string, string | number>) => string
 
+/**
+ * Overloaded so a *required* `LocalizedText` resolves to a plain `string` rather than
+ * `string | undefined` — the caller would otherwise have to invent a fallback for a case
+ * that cannot happen (`resolveSelectOptions`, whose labels are required, is the reason).
+ */
+export function resolveText(text: LocalizedText, translate?: Translate): string
+export function resolveText(text: LocalizedText | undefined, translate?: Translate): string | undefined
 export function resolveText(text: LocalizedText | undefined, translate?: Translate): string | undefined {
 	if (text === undefined) return undefined
 	if (typeof text === 'string') return text

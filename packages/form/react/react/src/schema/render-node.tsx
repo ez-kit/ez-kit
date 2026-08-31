@@ -1,4 +1,4 @@
-import { FORM_FIELD_TYPES, FormFieldType, resolveText } from '@ez-kit/form-core'
+import { FORM_FIELD_TYPES, FormFieldType, resolveSelectOptions, resolveText } from '@ez-kit/form-core'
 
 import { fieldRenderProps } from '../field-render-props'
 
@@ -196,7 +196,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={node.options}
+					options={resolveSelectOptions(node.options, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 				/>
@@ -228,7 +228,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={node.options}
+					options={resolveSelectOptions(node.options, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)

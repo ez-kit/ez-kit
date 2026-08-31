@@ -1,7 +1,7 @@
 import type { FormFieldType } from './field-types'
 import type { LocalizedText } from './localized-text'
 import type { Condition } from './rules'
-import type { SelectOption } from './select-option'
+import type { LocalizedSelectOption } from './select-option'
 import type { TextInputType } from './text-input-type'
 import type { DeepKeys, DeepKeysOfType } from '@tanstack/form-core'
 
@@ -81,7 +81,7 @@ export type FieldNode<TValues> =
 			type: FormFieldType.Select
 			name: DeepKeysOfType<TValues, string>
 			defaultValue?: string
-			options: readonly SelectOption[]
+			options: readonly LocalizedSelectOption[]
 			placeholder?: string
 	  })
 	| (FieldCommon<TValues> & {
@@ -98,7 +98,7 @@ export type FieldNode<TValues> =
 			type: FormFieldType.RadioGroup
 			name: DeepKeysOfType<TValues, string>
 			defaultValue?: string
-			options: readonly SelectOption[]
+			options: readonly LocalizedSelectOption[]
 	  })
 	| (FieldCommon<TValues> & {
 			type: FormFieldType.Slider

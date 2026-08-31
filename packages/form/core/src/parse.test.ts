@@ -158,3 +158,38 @@ test('the error names the offending node location', () => {
 		expect((error as FormSchemaError).path).toBe('children[0].children[0]')
 	}
 })
+
+test('accepts a select whose option labels are translation keys when a translator is registered', () => {
+	const document = {
+		version: 1,
+		children: [
+			{
+				type: 'select',
+				name: 'country',
+				options: [{ value: 'RU', label: { key: 'country.ru' } }],
+			},
+		],
+	}
+
+	expect(() => parseFormSchema(document, { hasTranslate: true })).not.toThrow()
+	expect(() => parseFormSchema(document)).toThrow(/country\.ru/)
+})
+
+test('rejects an option label that is neither a string nor a translation key', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [{ type: 'radiogroup', name: 'plan', options: [{ value: 'free', label: 42 }] }],
+		}),
+	).toThrow(FormSchemaError)
+})
+
+test('rejects a select with no options, and an option with no value or label', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'select', name: 'country' }] })).toThrow(/options/i)
+	expect(() =>
+		parseFormSchema({ version: 1, children: [{ type: 'select', name: 'country', options: [{ label: 'RU' }] }] }),
+	).toThrow(/value/i)
+	expect(() =>
+		parseFormSchema({ version: 1, children: [{ type: 'select', name: 'country', options: [{ value: 'RU' }] }] }),
+	).toThrow(/label/i)
+})
