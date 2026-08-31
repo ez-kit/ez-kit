@@ -12,5 +12,6 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/native-api.tsx': () => import('./components/native-api'),
 	'components/schema-basic.tsx': () => import('./components/schema-basic'),
 	'components/schema-conditional.tsx': () => import('./components/schema-conditional'),
+	'components/schema-from-json.tsx': () => import('./components/schema-from-json'),
 	'components/validation.tsx': () => import('./components/validation'),
 }

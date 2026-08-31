@@ -30,6 +30,12 @@ import type { ReactNode } from 'react'
 export { FormFieldType, TextInputType } from '@ez-kit/form-react'
 export type { SelectOption } from '@ez-kit/form-react'
 
+// The schema-authoring API, re-exported for the same reason — both kits re-export these
+// verbatim from `@ez-kit/form-core`, so an example that imports them from here displays
+// (and copies) as a single import from the kit the reader installed.
+export { buildValidator, defineFormSchema, FormSchemaError, parseFormSchema } from '@ez-kit/form-core'
+export type { AnyFormSchema, FormSchema } from '@ez-kit/form-core'
+
 export type FormKit = {
 	useForm: typeof useShadcnForm
 	Form: typeof ShadcnForm

@@ -110,6 +110,16 @@ The same document as JSON is character-for-character the same data — no functi
 
 This is the whole point of the format: authoring in TypeScript and delivering over the wire are the same thing, not two dialects.
 
+The TS spelling adds exactly one thing: compile-time checking. Everything else — conditions, validation, layout — is the same data either way, so a form you prototype in TypeScript can be moved into a database verbatim.
+
+### Rendering a document that arrived as JSON
+
+The full path, end to end: fetch, `parseFormSchema` at the boundary, render. The example below holds the raw response body as a string, so nothing about it is TypeScript-shaped — it is parsed with `JSON.parse` exactly as `res.json()` would.
+
+<KitExample exampleId='form-schema-from-json' />
+
+Two things worth reading off it: `parseFormSchema` runs **once**, where the document arrives — not on every render — and its `TValues` parameter is a claim about the payload, not a check of it. Runtime safety comes from the parser; `TValues` only types what you do with the values afterwards. See [Backend-driven UI](#backend-driven-ui) for the full list of what the parser rejects.
+
 ## Conditions
 
 `when` and `disabledWhen` take a **rule object**:
@@ -134,7 +144,35 @@ The operator set is closed on purpose — every operator added is one backends w
 
 <KitExample exampleId='form-schema-conditional' />
 
-A TypeScript-authored schema may use a plain predicate instead — `when: (values) => values.clientType === 'business'` — because that function comes from your own bundle. `parseFormSchema` rejects it, which is the line between the two modes.
+### A predicate instead of a rule
+
+A TypeScript-authored schema may write the condition as a plain function, because that function comes from your own bundle. Anywhere a rule object is accepted — `when` and `disabledWhen`, on a field, a `section` or a `step` — a `(values) => boolean` is accepted too:
+
+```ts
+const schema = defineFormSchema<Values>()({
+	version: 1,
+	children: [
+		{
+			type: 'section',
+			title: 'Company details',
+			// The rule spelling — serialisable, and what a backend would send:
+			// when: { and: [{ field: 'clientType', eq: 'business' }, { field: 'revenue', gt: 1_000_000 }] },
+			// The predicate spelling — `values` is typed as `Values`:
+			when: (values) => values.clientType === 'business' && values.revenue > 1_000_000,
+			children: [{ type: FormFieldType.Text, name: 'inn', label: 'Tax ID' }],
+		},
+	],
+})
+```
+
+Runtime behaviour is identical: the renderer subscribes to the form's values and re-evaluates the predicate on every change, exactly as it does a compiled rule, so visibility, the "hidden fields are never validated" rule and the stripping of hidden values all work the same way.
+
+What you give up is everything that depends on the schema being data:
+
+- **`parseFormSchema` rejects it** — `Condition must be a rule object`. That is the line between the two modes, and it is the reason a predicate is only ever reachable in a schema you authored yourself.
+- `JSON.stringify` silently drops the key, so a document with a predicate cannot be stored, sent, or round-tripped through a visual builder.
+
+Use a predicate for logic that is genuinely local and awkward as data; keep to rule objects for anything a backend might one day own.
 
 ### Why there is no JavaScript in the JSON
 

@@ -1,9 +1,8 @@
 'use client'
 
-import { defineFormSchema } from '@ez-kit/form-core'
 import { useState } from 'react'
 
-import { FormFieldType, FormRenderer } from 'shared/form/FormKit'
+import { defineFormSchema, FormFieldType, FormRenderer } from 'shared/form/FormKit'
 
 type Client = {
 	firstName: string

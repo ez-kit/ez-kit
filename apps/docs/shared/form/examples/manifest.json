@@ -48,6 +48,14 @@
 		"exportName": "SchemaConditionalExample"
 	},
 	{
+		"id": "form-schema-from-json",
+		"label": "Schema: from a JSON API",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/schema-from-json.tsx",
+		"exportName": "SchemaFromJsonExample"
+	},
+	{
 		"id": "form-dialog",
 		"label": "In a dialog",
 		"group": "form",
