@@ -31,16 +31,16 @@ import { defineFormSchema, FormFieldType, FormRenderer, parseFormSchema } from '
 
 `children` is a flat array of **nodes**, each discriminated by `type`:
 
-| `type`                                                                        | kind      | what it is                                          |
-| ----------------------------------------------------------------------------- | --------- | --------------------------------------------------- |
-| `text` `number` `textarea` `select` `checkbox` `switch` `radiogroup` `slider` | field     | one bound input; carries `name`                     |
-| `section`                                                                     | container | optional heading plus a column grid                 |
-| `step`                                                                        | container | one wizard step                                     |
-| `submit`                                                                      | leaf      | the submit button                                   |
-| `block`                                                                       | leaf      | value-less markup, resolved from the block registry |
-| any other string                                                              | field     | a custom field, resolved from the field registry    |
+| `type`                                                                                           | kind      | what it is                                          |
+| ------------------------------------------------------------------------------------------------ | --------- | --------------------------------------------------- |
+| `text` `number` `textarea` `select` `checkbox` `switch` `radiogroup` `slider` `date` `daterange` | field     | one bound input; carries `name`                     |
+| `section`                                                                                        | container | optional heading plus a column grid                 |
+| `step`                                                                                           | container | one wizard step                                     |
+| `submit`                                                                                         | leaf      | the submit button                                   |
+| `block`                                                                                          | leaf      | value-less markup, resolved from the block registry |
+| any other string                                                                                 | field     | a custom field, resolved from the field registry    |
 
-Those eight field strings are exactly the members of the `FormFieldType` enum, so `FormFieldType.Text` and `'text'` are the same value.
+Those ten field strings are exactly the members of the `FormFieldType` enum, so `FormFieldType.Text` and `'text'` are the same value.
 
 Every node may carry:
 
@@ -51,6 +51,8 @@ Every node may carry:
 | `when`         | rendered only when this condition holds                             |
 | `disabledWhen` | rendered disabled when this condition holds                         |
 | `colSpan`      | grid columns the node spans inside its section — an integer **1–4** |
+
+A `date` node carries `min`, `max` and `defaultValue` as `YYYY-MM-DD` strings; a `daterange` node's `defaultValue` is `{ start, end }` of two such strings, and its value reaches `onSubmit` in that same shape under one `name`. Dates are strings on purpose — a `Date` does not survive `JSON.stringify`, and a calendar date has no time zone to lose. See [Fields](./form/fields) for what each kit renders.
 
 A `select` or `radiogroup` node adds `options`: a `{ value, label, disabled? }` list whose `label` is `LocalizedText` like every other label in the format, so a delivered document can name a translation key instead of shipping copy in one language. The renderer resolves them before the kit sees them — a kit only ever receives finished strings.
 
@@ -194,14 +196,14 @@ Constraints live on the field node:
 { type: FormFieldType.Text, name: 'email', label: 'Email', validate: { required: true, format: 'email' } }
 ```
 
-| key                       | effect                                           |
-| ------------------------- | ------------------------------------------------ |
-| `required`                | empty (`undefined`, `null`, `''`, `false`) fails |
-| `min` / `max`             | numeric bounds                                   |
-| `minLength` / `maxLength` | string length bounds                             |
-| `format`                  | `'email'`, `'url'` or `'tel'`                    |
-| `rule`                    | key into the named-rule registry                 |
-| `messages`                | `LocalizedText` override per constraint key      |
+| key                       | effect                                            |
+| ------------------------- | ------------------------------------------------- |
+| `required`                | empty (`undefined`, `null`, `''`, `false`) fails  |
+| `min` / `max`             | numeric bounds, or `YYYY-MM-DD` bounds for a date |
+| `minLength` / `maxLength` | string length bounds                              |
+| `format`                  | `'email'`, `'url'` or `'tel'`                     |
+| `rule`                    | key into the named-rule registry                  |
+| `messages`                | `LocalizedText` override per constraint key       |
 
 Constraints are checked in that order and stop at the first failure, so a field reports one message rather than a pile.
 
@@ -337,6 +339,7 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 - a malformed rule, a `./` field reference, or a **function** condition — which cannot survive `JSON.parse` anyway, but a hand-built object must still be told it is not a serialisable document;
 - a `LocalizedText` that is neither a string nor `{ key }`, or a translation key with no `translate` registered;
 - a `select` / `radiogroup` with no `options` array, or an option missing its `value` or `label`;
+- a date `min` / `max` / `defaultValue` that is not a real `YYYY-MM-DD` day, or a `daterange` default missing an end;
 - `columns` / `colSpan` outside 1–4;
 - `step` nodes mixed with non-`step` siblings.
 

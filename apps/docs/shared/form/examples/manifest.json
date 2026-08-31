@@ -32,6 +32,14 @@
 		"exportName": "NativeApiExample"
 	},
 	{
+		"id": "form-dates",
+		"label": "Dates",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/dates.tsx",
+		"exportName": "DatesExample"
+	},
+	{
 		"id": "form-schema-basic",
 		"label": "Schema: basic",
 		"group": "form",

@@ -41,6 +41,22 @@ function isEmpty(value: unknown): boolean {
 	return value === undefined || value === null || value === '' || value === false
 }
 
+/**
+ * A bound only ever compares against a value of its own type: a numeric bound ignores a
+ * string value and vice versa, so a `min` meant for a date can never accidentally reject a
+ * number (or a half-typed string) somewhere else in the document. String comparison is the
+ * point for dates — `'2026-02-03' < '2026-08-31'` holds because ISO dates sort as text.
+ */
+function isBelow(value: unknown, bound: number | string): boolean {
+	if (typeof bound === 'number') return typeof value === 'number' && value < bound
+	return typeof value === 'string' && value.length > 0 && value < bound
+}
+
+function isAbove(value: unknown, bound: number | string): boolean {
+	if (typeof bound === 'number') return typeof value === 'number' && value > bound
+	return typeof value === 'string' && value.length > 0 && value > bound
+}
+
 function resolveMessage(
 	key: ConstraintKey,
 	config: FieldValidate,
@@ -84,10 +100,10 @@ function runConstraints(
 	// An optional, empty value has nothing left to check.
 	if (isEmpty(value)) return undefined
 
-	if (config.min !== undefined && typeof value === 'number' && value < config.min) {
+	if (config.min !== undefined && isBelow(value, config.min)) {
 		return resolveMessage('min', config, translate, `Must be at least ${String(config.min)}`)
 	}
-	if (config.max !== undefined && typeof value === 'number' && value > config.max) {
+	if (config.max !== undefined && isAbove(value, config.max)) {
 		return resolveMessage('max', config, translate, `Must be at most ${String(config.max)}`)
 	}
 	if (config.minLength !== undefined && typeof value === 'string' && value.length < config.minLength) {
@@ -144,7 +160,9 @@ function collectChecks<TValues>(schema: AnyFormSchema<TValues>, options: BuildVa
  */
 export function buildValidator<TValues>(
 	schema: AnyFormSchema<TValues>,
-	options: BuildValidatorOptions,
+	// Defaulted: a schema that names no rules and needs no translator has nothing to pass,
+	// and a missing argument would otherwise crash on `options.rules` rather than validate.
+	options: BuildValidatorOptions = {},
 ): StandardSchemaV1<TValues, TValues> {
 	const checks = collectChecks(schema, options)
 

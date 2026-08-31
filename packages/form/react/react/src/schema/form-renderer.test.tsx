@@ -186,3 +186,83 @@ test('resolves a select option label through `translate`', () => {
 	expect(screen.getByRole('option', { name: 'Россия' })).toBeInTheDocument()
 	expect(screen.getByRole('option', { name: 'Germany' })).toBeInTheDocument()
 })
+
+test('binds a date node to the kit input and submits the picked day', async () => {
+	const user = userEvent.setup()
+	const onSubmit = vi.fn()
+	const dateSchema: FormSchema<{ startsOn: string }> = {
+		version: 1,
+		children: [
+			{ type: FormFieldType.Date, name: 'startsOn', label: 'Starts on', min: '2026-01-01', max: '2026-12-31' },
+			{ type: 'submit', label: 'Save' },
+		],
+	}
+
+	const { container } = render(
+		<FormRenderer
+			schema={dateSchema}
+			defaultValues={{ startsOn: '' }}
+			onSubmit={onSubmit}
+		/>,
+	)
+
+	const input = screen.getByLabelText('Starts on')
+	expect(input).toHaveAttribute('min', '2026-01-01')
+	expect(input).toHaveAttribute('max', '2026-12-31')
+
+	await user.type(input, '2026-08-31')
+	await user.click(screen.getByRole('button', { name: 'Save' }))
+
+	expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ value: { startsOn: '2026-08-31' } }))
+	expect(container.querySelector('[data-testkit="date"]')).toBeInTheDocument()
+})
+
+test('a date range is one field holding one { start, end } value', async () => {
+	const user = userEvent.setup()
+	const onSubmit = vi.fn()
+	const rangeSchema: FormSchema<{ stay: { start: string; end: string } }> = {
+		version: 1,
+		children: [
+			{ type: FormFieldType.DateRange, name: 'stay', label: 'Stay' },
+			{ type: 'submit', label: 'Save' },
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={rangeSchema}
+			defaultValues={{ stay: { start: '2026-08-01', end: '2026-08-05' } }}
+			onSubmit={onSubmit}
+		/>,
+	)
+
+	await user.clear(screen.getByLabelText('end'))
+	await user.type(screen.getByLabelText('end'), '2026-08-09')
+	await user.click(screen.getByRole('button', { name: 'Save' }))
+
+	expect(onSubmit).toHaveBeenCalledWith(
+		expect.objectContaining({ value: { stay: { start: '2026-08-01', end: '2026-08-09' } } }),
+	)
+})
+
+test('a schema defaultValue seeds a date field, and a bad one never reaches the kit', () => {
+	const seeded: FormSchema<{ startsOn: string; brokenOn: string }> = {
+		version: 1,
+		children: [
+			{ type: FormFieldType.Date, name: 'startsOn', label: 'Starts on', defaultValue: '2026-08-31' },
+			// Only `parseFormSchema` rejects this; a TS-authored schema can still carry it, so the
+			// binding layer coerces rather than handing the kit something it cannot render.
+			{ type: FormFieldType.Date, name: 'brokenOn', label: 'Broken on', defaultValue: '31/08/2026' },
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={seeded}
+			onSubmit={() => {}}
+		/>,
+	)
+
+	expect(screen.getByLabelText('Starts on')).toHaveValue('2026-08-31')
+	expect(screen.getByLabelText('Broken on')).toHaveValue('')
+})

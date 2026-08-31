@@ -1,4 +1,4 @@
-import type { DeepKeysOfType, SelectOption, TextInputType } from '@ez-kit/form-core'
+import type { DateRangeValue, DeepKeysOfType, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -45,6 +45,19 @@ export type RadioGroupFieldProps<TFormData> = BaseFieldProps<TFormData, string> 
 	options: readonly SelectOption[]
 }
 
+/** `min` / `max` are `YYYY-MM-DD` bounds on what the picker offers, not validation. */
+export type DateFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
+	placeholder?: string
+	min?: string
+	max?: string
+}
+
+export type DateRangeFieldProps<TFormData> = BaseFieldProps<TFormData, DateRangeValue> & {
+	placeholder?: string
+	min?: string
+	max?: string
+}
+
 export type SliderFieldProps<TFormData> = BaseFieldProps<TFormData, number> & {
 	min?: number
 	max?: number
@@ -74,5 +87,7 @@ export type FormFieldComponents<TFormData> = {
 	SwitchField: (props: SwitchFieldProps<TFormData>) => ReactNode
 	RadioGroupField: (props: RadioGroupFieldProps<TFormData>) => ReactNode
 	SliderField: (props: SliderFieldProps<TFormData>) => ReactNode
+	DateField: (props: DateFieldProps<TFormData>) => ReactNode
+	DateRangeField: (props: DateRangeFieldProps<TFormData>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
 }

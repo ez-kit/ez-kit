@@ -193,3 +193,30 @@ test('rejects a select with no options, and an option with no value or label', (
 		parseFormSchema({ version: 1, children: [{ type: 'select', name: 'country', options: [{ value: 'RU' }] }] }),
 	).toThrow(/label/i)
 })
+
+test('rejects a date whose bounds or defaultValue are not YYYY-MM-DD', () => {
+	expect(() =>
+		parseFormSchema({ version: 1, children: [{ type: 'date', name: 'startsOn', min: '31/08/2026' }] }),
+	).toThrow(/YYYY-MM-DD/)
+	expect(() =>
+		parseFormSchema({ version: 1, children: [{ type: 'date', name: 'startsOn', defaultValue: '2026-02-31' }] }),
+	).toThrow(FormSchemaError)
+	expect(() =>
+		parseFormSchema({ version: 1, children: [{ type: 'date', name: 'startsOn', defaultValue: '2026-08-31' }] }),
+	).not.toThrow()
+})
+
+test('a date range defaultValue must carry both ends', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [{ type: 'daterange', name: 'stay', defaultValue: { start: '2026-08-01' } }],
+		}),
+	).toThrow(/start, end/)
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [{ type: 'daterange', name: 'stay', defaultValue: { start: '2026-08-01', end: '2026-08-05' } }],
+		}),
+	).not.toThrow()
+})

@@ -148,6 +148,47 @@ Binds to a `number`, like `form.NumberField`, but picks the value along a track 
 
 A slider has no "empty" position: when the form value is not yet a number the thumb rests at `min` (or `0` when `min` is omitted), so the control always shows a definite value. Both kits render a real slider widget with a draggable thumb (Radix for shadcn, React Aria for HeroUI).
 
+## `form.DateField`
+
+Binds to a **`YYYY-MM-DD` string**, never a `Date`. A calendar date has no time and no zone, and a string is the only representation that survives `JSON.stringify` — which is what lets the same field be described by a [schema](./form/schema) delivered from a backend.
+
+```tsx
+<form.DateField
+	name='startsOn'
+	label='Starts on'
+	min='2026-01-01'
+	max='2026-12-31'
+/>
+```
+
+| Prop          | Type     | Notes                                         |
+| ------------- | -------- | --------------------------------------------- |
+| `min`         | `string` | Earliest selectable day, `YYYY-MM-DD`.        |
+| `max`         | `string` | Latest selectable day.                        |
+| `placeholder` | `string` | Shown on the trigger while nothing is picked. |
+
+`min` / `max` bound what the picker _offers_; they are not validation. To reject an out-of-range value use `validate: { min, max }` in a schema — those constraints take the same `YYYY-MM-DD` strings, and ISO dates compare correctly as text.
+
+Each kit renders its own picker: shadcn a `Popover` holding its `Calendar` (react-day-picker), HeroUI its React Aria `DatePicker` with a segmented input. Both convert to and from the string at their own edge — no date library reaches your form state.
+
+## `form.DateRangeField`
+
+Binds to a **`{ start, end }` object** of two `YYYY-MM-DD` strings, under a single `name`:
+
+```tsx
+<form.DateRangeField
+	name='stay'
+	label='Stay'
+	min='2026-01-01'
+/>
+```
+
+A range is a separate field rather than a flag on `form.DateField` because its value has a different shape — which is what keeps `name` checked against your form's type in both cases.
+
+**The value appears only once both ends are picked.** A half-picked range lives inside the picker; form state holds either a complete range or nothing, so validation, `onSubmit` and a `when` rule never have to handle `{ start, end: undefined }`.
+
+<KitExample exampleId='form-dates' />
+
 ## `form.SubmitButton`
 
 Subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it.
@@ -180,12 +221,12 @@ See [Getting started](./form/getting-started) for both modes.
 
 The field layer emits these and styles none of them — that is the kit's job:
 
-| Attribute         | Where        | Value                                                                                       |
-| ----------------- | ------------ | ------------------------------------------------------------------------------------------- |
-| `data-field`      | field root   | the field's `name`                                                                          |
-| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `checkbox` / `switch` / `radiogroup` / `slider` |
-| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                         |
-| `data-form`       | the `<form>` | always present                                                                              |
+| Attribute         | Where        | Value                                                                                                              |
+| ----------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `data-field`      | field root   | the field's `name`                                                                                                 |
+| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `checkbox` / `switch` / `radiogroup` / `slider` / `date` / `daterange` |
+| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                                                |
+| `data-form`       | the `<form>` | always present                                                                                                     |
 
 So targeting one field, or every field of a kind, is plain CSS:
 

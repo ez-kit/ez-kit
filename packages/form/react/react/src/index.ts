@@ -14,6 +14,8 @@ export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from 
 export type {
 	ButtonProps,
 	CheckboxFieldRenderProps,
+	DateFieldRenderProps,
+	DateRangeFieldRenderProps,
 	FieldRenderProps,
 	FormComponents,
 	FormElementProps,
@@ -32,6 +34,8 @@ export type {
 export type {
 	BaseFieldProps,
 	CheckboxFieldProps,
+	DateFieldProps,
+	DateRangeFieldProps,
 	FormFieldComponents,
 	NumberFieldProps,
 	RadioGroupFieldProps,
@@ -60,7 +64,7 @@ export {
 	stripHiddenValues,
 	TextInputType,
 } from '@ez-kit/form-core'
-export type { LocalizedSelectOption, LocalizedText, SelectOption, Translate } from '@ez-kit/form-core'
+export type { DateRangeValue, LocalizedSelectOption, LocalizedText, SelectOption, Translate } from '@ez-kit/form-core'
 
 // Spec §12: the group hooks are re-exported verbatim — they yield a group API, which
 // correctly carries no injected field components, so unlike `withForm` they need no

@@ -424,6 +424,9 @@ importers:
       '@ez-kit/form-react':
         specifier: workspace:*
         version: link:../react
+      '@internationalized/date':
+        specifier: ^3.12.1
+        version: 3.12.1
       '@tanstack/form-core':
         specifier: ^1.33.2
         version: 1.33.2
@@ -436,7 +439,7 @@ importers:
         version: 3.0.3(@react-spectrum/provider@3.11.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tailwindcss@4.2.4)
       '@heroui/styles':
         specifier: ^3.0.3
-        version: 3.0.3(tailwind-merge@3.4.0)(tailwindcss@4.2.4)
+        version: 3.0.3(tailwind-merge@3.5.0)(tailwindcss@4.2.4)
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -495,12 +498,18 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.5)
       radix-ui:
         specifier: ^1.4.3
         version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      react-day-picker:
+        specifier: ^10.0.1
+        version: 10.0.1(@types/react@19.2.14)(react@19.2.5)
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -6221,6 +6230,16 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       react: '>=16.8.0'
+
+  react-day-picker@10.0.1:
+    resolution: {integrity: sha512-eNh6BlwcYInWaJtRv18mXQ06Ys/H6rdTZAnTaSdOYJuTpwP1JMCHNd1FDRadA+gbeinq+psdULN5Xnowy9mV8w==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/react': '>=16.8.0'
+      react: '>=16.8.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   react-dom@19.2.5:
     resolution: {integrity: sha512-J5bAZz+DXMMwW/wV3xzKke59Af6CHY7G4uYLN1OvBcKEsWOs4pQExj86BBKamxl/Ik5bx9whOrvBlSDfWzgSag==}
@@ -13429,6 +13448,14 @@ snapshots:
       '@date-fns/tz': 1.4.1
       date-fns: 4.1.0
       react: 19.2.5
+
+  react-day-picker@10.0.1(@types/react@19.2.14)(react@19.2.5):
+    dependencies:
+      '@date-fns/tz': 1.4.1
+      date-fns: 4.1.0
+      react: 19.2.5
+    optionalDependencies:
+      '@types/react': 19.2.14
 
   react-dom@19.2.5(react@19.2.5):
     dependencies:

@@ -41,6 +41,7 @@
 	"dependencies": {
 		"@ez-kit/form-core": "workspace:*",
 		"@ez-kit/form-react": "workspace:*",
+		"@internationalized/date": "^3.12.1",
 		"@tanstack/form-core": "^1.33.2",
 		"@tanstack/react-form": "^1.33.2"
 	},

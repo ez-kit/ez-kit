@@ -232,6 +232,32 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)
+		case FormFieldType.Date:
+			return (
+				<form.DateField
+					name={node.name}
+					label={label}
+					description={description}
+					disabled={disabledByCondition}
+					{...(node.required !== undefined && { required: node.required })}
+					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+					{...(node.min !== undefined && { min: node.min })}
+					{...(node.max !== undefined && { max: node.max })}
+				/>
+			)
+		case FormFieldType.DateRange:
+			return (
+				<form.DateRangeField
+					name={node.name}
+					label={label}
+					description={description}
+					disabled={disabledByCondition}
+					{...(node.required !== undefined && { required: node.required })}
+					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+					{...(node.min !== undefined && { min: node.min })}
+					{...(node.max !== undefined && { max: node.max })}
+				/>
+			)
 		case FormFieldType.Slider:
 			return (
 				<form.SliderField

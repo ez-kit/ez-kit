@@ -1,7 +1,14 @@
+import type { DateRangeValue } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
-/** The value types the v1 fields write back into form state. */
-export type FieldValue = string | number | boolean | undefined
+/**
+ * The value types the v1 fields write back into form state.
+ *
+ * `DateRangeValue` is the one composite among them: a range is a single field with a single
+ * `name`, so it writes one `{ start, end }` object rather than two sibling paths — see the
+ * `daterange` node in `@ez-kit/form-core`'s `schema.ts`.
+ */
+export type FieldValue = string | number | boolean | DateRangeValue | undefined
 
 /**
  * The slice of a TanStack field the flat wrappers read.

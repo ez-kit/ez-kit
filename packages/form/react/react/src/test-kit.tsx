@@ -1,4 +1,7 @@
+import { useState } from 'react'
+
 import type {
+	DateRangeFieldRenderProps,
 	FieldRenderProps,
 	FormComponents,
 	GridItemRenderProps,
@@ -169,6 +172,74 @@ function Wizard({
 				</button>
 			</div>
 		</div>
+	)
+}
+
+/**
+ * The range stand-in keeps its own half-picked state, exactly as the real kits do: the
+ * contract reports a range only once **both** ends are set, so the end a user has already
+ * typed has nowhere else to live while the other one is still empty.
+ */
+function TestDateRangeField({
+	value,
+	onChange,
+	min,
+	max,
+	id,
+	name,
+	onBlur,
+	disabled,
+	required,
+	...field
+}: DateRangeFieldRenderProps): ReactNode {
+	const [draft, setDraft] = useState<{ start: string; end: string }>({ start: '', end: '' })
+	const current = value ?? draft
+
+	const change = (next: { start: string; end: string }): void => {
+		setDraft(next)
+		onChange(next.start === '' || next.end === '' ? undefined : next)
+	}
+
+	return (
+		<Shell
+			id={id}
+			{...field}
+		>
+			{(aria) => (
+				<span data-testkit='date-range'>
+					<input
+						id={id}
+						name={`${name}.start`}
+						type='date'
+						aria-label='start'
+						min={min}
+						max={max}
+						disabled={disabled}
+						required={required}
+						aria-invalid={field.invalid}
+						value={current.start}
+						onBlur={onBlur}
+						onChange={(event) => {
+							change({ ...current, start: event.target.value })
+						}}
+						{...aria}
+					/>
+					<input
+						name={`${name}.end`}
+						type='date'
+						aria-label='end'
+						min={min}
+						max={max}
+						disabled={disabled}
+						value={current.end}
+						onBlur={onBlur}
+						onChange={(event) => {
+							change({ ...current, end: event.target.value })
+						}}
+					/>
+				</span>
+			)}
+		</Shell>
 	)
 }
 
@@ -402,6 +473,36 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
+	DateField: ({ value, onChange, placeholder, min, max, id, name, onBlur, disabled, required, ...field }) => (
+		<Shell
+			id={id}
+			{...field}
+		>
+			{(aria) => (
+				<input
+					data-testkit='date'
+					id={id}
+					name={name}
+					type='date'
+					placeholder={placeholder}
+					min={min}
+					max={max}
+					disabled={disabled}
+					required={required}
+					aria-invalid={field.invalid}
+					value={value ?? ''}
+					onBlur={onBlur}
+					onChange={(event) => {
+						onChange(event.target.value === '' ? undefined : event.target.value)
+					}}
+					{...aria}
+				/>
+			)}
+		</Shell>
+	),
+	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
+	// never depend on a real picker.
+	DateRangeField: (props) => <TestDateRangeField {...props} />,
 	Button: ({ type, disabled, children }) => (
 		<button
 			data-testkit='button'

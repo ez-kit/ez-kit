@@ -72,3 +72,19 @@ test('a hidden field is never validated', () => {
 test('an unregistered rule key throws when the validator is built', () => {
 	expect(() => buildValidator(schema, {})).toThrow(/ru-inn/)
 })
+
+test('min and max compare dates as ISO strings', () => {
+	const dateSchema: FormSchema<{ startsOn: string }> = {
+		version: 1,
+		children: [{ type: FormFieldType.Date, name: 'startsOn', validate: { min: '2026-01-01', max: '2026-12-31' } }],
+	}
+	const validate = (values: { startsOn: string }): string[] => {
+		const result = buildValidator(dateSchema)['~standard'].validate(values)
+		if (result instanceof Promise) throw new Error('the generated validator must be synchronous')
+		return (result.issues ?? []).map((issue) => issue.message)
+	}
+
+	expect(validate({ startsOn: '2025-12-31' })).toEqual(['Must be at least 2026-01-01'])
+	expect(validate({ startsOn: '2027-01-01' })).toEqual(['Must be at most 2026-12-31'])
+	expect(validate({ startsOn: '2026-08-31' })).toEqual([])
+})

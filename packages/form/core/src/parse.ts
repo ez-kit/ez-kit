@@ -1,3 +1,4 @@
+import { isDateRangeValue, isIsoDate } from './date-value'
 import { FORM_FIELD_TYPES, FormFieldType } from './field-types'
 import { collectRuleFields } from './rules'
 import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
@@ -36,6 +37,12 @@ export class FormSchemaError extends Error {
 
 /** The field kinds whose nodes carry an `options` list. */
 const OPTION_FIELD_TYPES: readonly string[] = [FormFieldType.Select, FormFieldType.RadioGroup]
+
+/** The field kinds whose `min` / `max` / `defaultValue` are calendar dates. */
+const DATE_FIELD_TYPES: readonly string[] = [FormFieldType.Date, FormFieldType.DateRange]
+
+/** Widened for the same reason as `DATE_FIELD_TYPES`: a node's `type` is a bare `string`. */
+const DATE_RANGE_TYPE: string = FormFieldType.DateRange
 
 const SUPPORTED_VERSION = 1
 const RELATIVE_FIELD_PREFIX = './'
@@ -260,6 +267,34 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 }
 
 /**
+ * A date field's own values. Every date the format carries is a `YYYY-MM-DD` calendar date
+ * string, so a document naming `01/02/2026` — or a `Date` that only looked like one before
+ * `JSON.stringify` flattened it — is rejected here rather than reaching a picker, which would
+ * either throw inside the kit or silently drift to a different day.
+ *
+ * `defaultValue` is checked against the kind: a `date` carries one date, a `daterange` carries
+ * `{ start, end }` with both ends present — a half-open range is picker state, never form state.
+ */
+function assertDateValues(node: FormNode<unknown, string>, path: string): void {
+	if (!DATE_FIELD_TYPES.includes(node.type)) return
+
+	const raw = node as unknown as UnknownRecord
+	for (const bound of ['min', 'max'] as const) {
+		if (raw[bound] !== undefined && !isIsoDate(raw[bound])) {
+			throw new FormSchemaError(`"${bound}" must be a YYYY-MM-DD date, got ${JSON.stringify(raw[bound])}`, path)
+		}
+	}
+
+	if (raw.defaultValue === undefined) return
+	const isRange = node.type === DATE_RANGE_TYPE
+	const isValid = isRange ? isDateRangeValue(raw.defaultValue) : isIsoDate(raw.defaultValue)
+	if (!isValid) {
+		const shape = isRange ? '{ start, end } of YYYY-MM-DD dates' : 'a YYYY-MM-DD date'
+		throw new FormSchemaError(`"defaultValue" must be ${shape}, got ${JSON.stringify(raw.defaultValue)}`, path)
+	}
+}
+
+/**
  * `columns` (section) and `colSpan` (any node) are part of the v1 format's supported range,
  * not an undocumented kit detail — a document authored outside this codebase (BDUI, spec
  * I2/I3) has no other way to learn that 6 columns silently becomes 1.
@@ -307,6 +342,7 @@ function validateNode(
 		assertKnownFieldType(node.type, path, options)
 		assertUniqueName((node as unknown as UnknownRecord).name, path, seenNames)
 		assertOptions(node, path, options)
+		assertDateValues(node, path)
 		assertKnownRule(node.validate, path, options)
 		assertValidateMessages(node.validate, path, options)
 	} else if (node.type === 'block') {

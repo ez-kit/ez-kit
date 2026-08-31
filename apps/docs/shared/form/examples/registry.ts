@@ -8,6 +8,7 @@ import type { ComponentType } from 'react'
 export const exampleModules: Record<string, () => Promise<Record<string, ComponentType>>> = {
 	'components/basic.tsx': () => import('./components/basic'),
 	'components/dialog.tsx': () => import('./components/dialog'),
+	'components/dates.tsx': () => import('./components/dates'),
 	'components/fields.tsx': () => import('./components/fields'),
 	'components/native-api.tsx': () => import('./components/native-api'),
 	'components/schema-basic.tsx': () => import('./components/schema-basic'),

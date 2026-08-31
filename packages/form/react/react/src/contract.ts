@@ -1,4 +1,4 @@
-import type { SelectOption, TextInputType } from '@ez-kit/form-core'
+import type { DateRangeValue, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -116,6 +116,34 @@ export type RadioGroupFieldRenderProps = FieldRenderProps & {
 	options: readonly SelectOption[]
 }
 
+/**
+ * Both dates are `YYYY-MM-DD` strings, never `Date` objects — see `date-value.ts` in
+ * `@ez-kit/form-core`. Converting to whatever the kit's picker wants (`CalendarDate` for
+ * HeroUI, `Date` for react-day-picker) is the kit's job, and it is the only place a date
+ * library is allowed to appear.
+ */
+export type DateFieldRenderProps = FieldRenderProps & {
+	/** `undefined` while nothing is picked — an empty date is genuinely "no date". */
+	value: string | undefined
+	onChange: (value: string | undefined) => void
+	placeholder: string | undefined
+	min: string | undefined
+	max: string | undefined
+}
+
+/**
+ * A range is reported only once **both** ends are chosen; a half-picked range stays inside
+ * the picker, so form state never holds `{ start, end: undefined }` and every consumer of
+ * the value — validation, submission, a `when` rule — sees one shape.
+ */
+export type DateRangeFieldRenderProps = FieldRenderProps & {
+	value: DateRangeValue | undefined
+	onChange: (value: DateRangeValue | undefined) => void
+	placeholder: string | undefined
+	min: string | undefined
+	max: string | undefined
+}
+
 export type SliderFieldRenderProps = FieldRenderProps & {
 	/**
 	 * A slider always sits at a concrete point on its track, so — unlike a numeric text input —
@@ -200,6 +228,8 @@ export type FormComponents = {
 	SwitchField: (props: SwitchFieldRenderProps) => ReactNode
 	RadioGroupField: (props: RadioGroupFieldRenderProps) => ReactNode
 	SliderField: (props: SliderFieldRenderProps) => ReactNode
+	DateField: (props: DateFieldRenderProps) => ReactNode
+	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
 	Section: (props: SectionRenderProps) => ReactNode

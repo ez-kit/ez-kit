@@ -1,4 +1,6 @@
 import { createCheckboxField } from './fields/checkbox-field'
+import { createDateField } from './fields/date-field'
+import { createDateRangeField } from './fields/date-range-field'
 import { createSubmitButton } from './fields/form-parts'
 import { createNumberField } from './fields/number-field'
 import { createRadioGroupField } from './fields/radio-group-field'
@@ -33,6 +35,8 @@ export function buildFieldComponents<TFormData>(
 		SwitchField: KitSwitchField,
 		RadioGroupField: KitRadioGroupField,
 		SliderField: KitSliderField,
+		DateField: KitDateField,
+		DateRangeField: KitDateRangeField,
 		Button,
 	} = components
 
@@ -45,6 +49,8 @@ export function buildFieldComponents<TFormData>(
 		SwitchField: createSwitchField<TFormData>(form, KitSwitchField),
 		RadioGroupField: createRadioGroupField<TFormData>(form, KitRadioGroupField),
 		SliderField: createSliderField<TFormData>(form, KitSliderField),
+		DateField: createDateField<TFormData>(form, KitDateField),
+		DateRangeField: createDateRangeField<TFormData>(form, KitDateRangeField),
 		SubmitButton: createSubmitButton(form, Button),
 	}
 }

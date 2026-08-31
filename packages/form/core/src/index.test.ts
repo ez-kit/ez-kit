@@ -18,6 +18,8 @@ describe('@ez-kit/form-core public surface', () => {
 			FormFieldType.Switch,
 			FormFieldType.RadioGroup,
 			FormFieldType.Slider,
+			FormFieldType.Date,
+			FormFieldType.DateRange,
 		])
 		expect(new Set(FORM_FIELD_TYPES).size).toBe(FORM_FIELD_TYPES.length)
 	})

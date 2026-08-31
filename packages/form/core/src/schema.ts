@@ -1,3 +1,4 @@
+import type { DateRangeValue } from './date-value'
 import type { FormFieldType } from './field-types'
 import type { LocalizedText } from './localized-text'
 import type { Condition } from './rules'
@@ -39,8 +40,13 @@ type CommonProps<TValues> = {
  */
 export type FieldValidate = {
 	required?: boolean
-	min?: number
-	max?: number
+	/**
+	 * A numeric bound for a number field, or a `YYYY-MM-DD` bound for a date one — ISO
+	 * calendar dates sort lexicographically, so one constraint covers both without a
+	 * date-only spelling a backend would have to learn separately.
+	 */
+	min?: number | string
+	max?: number | string
 	minLength?: number
 	maxLength?: number
 	format?: 'email' | 'url' | 'tel'
@@ -99,6 +105,25 @@ export type FieldNode<TValues> =
 			name: DeepKeysOfType<TValues, string>
 			defaultValue?: string
 			options: readonly LocalizedSelectOption[]
+	  })
+	| (FieldCommon<TValues> & {
+			type: FormFieldType.Date
+			name: DeepKeysOfType<TValues, string>
+			/** `YYYY-MM-DD`. */
+			defaultValue?: string
+			placeholder?: string
+			/** Earliest selectable day, `YYYY-MM-DD` — the picker's own bound, not a check. */
+			min?: string
+			/** Latest selectable day, `YYYY-MM-DD`. */
+			max?: string
+	  })
+	| (FieldCommon<TValues> & {
+			type: FormFieldType.DateRange
+			name: DeepKeysOfType<TValues, DateRangeValue>
+			defaultValue?: DateRangeValue
+			placeholder?: string
+			min?: string
+			max?: string
 	  })
 	| (FieldCommon<TValues> & {
 			type: FormFieldType.Slider
