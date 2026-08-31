@@ -374,7 +374,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.ColumnsColumnVisibility,
 		// The `enableHiding` row is gone — it was the raw TanStack pass-through that
 		// duplicated `visibility`, and `ColumnDef` no longer accepts it.
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
 		nonOptionTables: [],
 	},
 	{
@@ -525,7 +525,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.PaginationIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 11 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 }],
 		nonOptionTables: [
 			{
 				heading: 'When the total is unknown',

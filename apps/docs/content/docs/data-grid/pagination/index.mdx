@@ -41,13 +41,16 @@ The starting page size can come from either `pagination.pageSize` or
 <DataGrid data={data} columns={columns} pagination={{ pageSize: 25 }} />
 
 // B — initial state
-<DataGrid data={data} columns={columns} pagination initialState={{ pagination: { pageIndex: 0, pageSize: 25 } }} />
+<DataGrid data={data} columns={columns} pagination initialState={{ pagination: { pageSize: 25 } }} />
 ```
 
-`initialState.pagination` replaces the whole pagination slice rather than merging into it, so when
-both are present `initialState` wins and `pagination.pageSize` is silently ignored. Prefer form A
-unless you also need a non-zero starting `pageIndex` — restoring a page from the URL, say, where you
-are writing the whole slice anyway. See [State model](./data-grid/state-model).
+`initialState.pagination` seeds the slice **per key**: whichever key you leave out keeps its
+resolved default — `pageIndex: 0`, and `pageSize` from `pagination.pageSize`. So restoring a
+deep-linked page is `initialState={{ pagination: { pageIndex: 2 } }}` and nothing more; there is no
+`pageSize` to restate, and restating it wrong is exactly how a page opens on a size nobody asked
+for. Write both spellings of the size and the seed wins — `createTable` warns about it in
+development. Prefer form A for "this grid shows 25 rows" and form B for "restore the size this user
+picked". See [State model](./data-grid/state-model).
 
 ## Page size selector
 
@@ -166,19 +169,21 @@ for the full pattern, including loading state.
 
 ## Options
 
-| Option                    | Type                                  | Description                                                                                                                        |
-| ------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `pagination.pageSize`     | `number`                              | Rows per page at mount. Ignored when `initialState.pagination` is also set.                                                        |
-| `pagination.variant`      | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only.                                                    |
-| `pagination.siblings`     | `number`                              | `'numbered'` only. Pages kept either side of the current one. Default `1`.                                                         |
-| `pagination.boundaries`   | `number`                              | `'numbered'` only. Pages kept at each end of the link strip. Default `1`.                                                          |
-| `pagination.items`        | `number[]`                            | Selectable page sizes, fed to the kit's `PageSizerProps.items`. Renders a page-size selector in the toolbar. Page-based mode only. |
-| `pagination.manual`       | `boolean`                             | Disable client-side paging. The grid calls `onChange` instead.                                                                     |
-| `pagination.rowCount`     | `number`                              | Server total rows. Derives `pageCount` automatically. Required when `manual` is `true`.                                            |
-| `pagination.onChange`     | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                                                                          |
-| `initialState.pagination` | `{ pageIndex, pageSize }`             | Defaults at mount. Replaces the whole slice, including `pagination.pageSize`.                                                      |
-| `state.pagination`        | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                                                           |
-| `pagination.enabled`      | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.     |
+| Option                    | Type                                  | Description                                                                                                                                                                                                                     |
+| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pagination.pageSize`     | `number`                              | Rows per page at mount. `initialState.pagination.pageSize` overrides it when the seed names that key; a seed that only names `pageIndex` leaves it alone.                                                                       |
+| `pagination.variant`      | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only.                                                                                                                                                 |
+| `pagination.siblings`     | `number`                              | `'numbered'` only. Pages kept either side of the current one. Default `1`.                                                                                                                                                      |
+| `pagination.boundaries`   | `number`                              | `'numbered'` only. Pages kept at each end of the link strip. Default `1`.                                                                                                                                                       |
+| `pagination.items`        | `number[]`                            | Selectable page sizes, fed to the kit's `PageSizerProps.items`. Page-based mode only. Also turns `toolbar` on unless you set it yourself.                                                                                       |
+| `pagination.toolbar`      | `boolean`                             | Auto-mount the page-size selector into `Toolbar.start`. Omitted — mounted iff `items` is set; `true` — mounted with the default sizes; `false` — never (a hand-placed `<DataGrid.PageSizer />` still works).                    |
+| `pagination.manual`       | `boolean`                             | Disable client-side paging. The grid calls `onChange` instead.                                                                                                                                                                  |
+| `pagination.rowCount`     | `number`                              | Server total rows. Derives `pageCount` automatically, and lets the footer read `1–10 of 137`. The preferred total under `manual`.                                                                                               |
+| `pagination.pageCount`    | `number`                              | Server total **pages**, for an API that reports only that. Mutually exclusive with `rowCount` — the type forbids both. Under `manual`, supply one of the two; with neither the footer only knows which page it is on.           |
+| `pagination.onChange`     | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                                                                                                                                                                       |
+| `initialState.pagination` | `{ pageIndex?, pageSize? }`           | Seeds the slice **per key**, not wholesale: whichever key you omit keeps its resolved default — `pageIndex: 0`, and `pageSize` from `pagination.pageSize`. So a deep link to page 3 writes `{ pageIndex: 2 }` and nothing else. |
+| `state.pagination`        | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                                                                                                                                                        |
+| `pagination.enabled`      | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                                  |
 
 ## Infinite scroll
 
