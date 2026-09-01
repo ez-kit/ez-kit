@@ -20,7 +20,7 @@ import {
 } from './docs-options/type-resolver'
 
 /**
- * Guards the data-grid docs against fabricated option names.
+ * Guards the data-grid and form docs against fabricated option names.
  *
  * A documented option is legal only if it is a real key of the type that
  * governs its table, as answered by `ts.TypeChecker`. This is deliberately not
@@ -134,7 +134,7 @@ function checkTable(page: DocPage, table: OptionTable): TableCheck {
 	return { failures, checkedCount }
 }
 
-describe('data-grid docs option names', () => {
+describe('docs option names', () => {
 	it('every mapped page maps every table it contains', () => {
 		const unclassified: string[] = []
 		for (const entry of PAGE_ENTRIES) {

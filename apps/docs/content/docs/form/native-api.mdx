@@ -7,14 +7,14 @@ description: The flat fields are additive — form.Field, form.Subscribe, form.h
 
 The flat fields are **added to** the TanStack Form instance, not layered over it. Everything the native API gives you is on the same object, unchanged:
 
-| Member                 | Still there                                                     |
-| ---------------------- | --------------------------------------------------------------- |
-| `form.Field`           | The render-prop field, for markup the flat fields do not cover. |
-| `form.Subscribe`       | Selector-based subscription to form state.                      |
-| `form.handleSubmit()`  | Submit programmatically.                                        |
-| `form.state`           | The current snapshot (not reactive on its own — see below).     |
-| `form.setFieldValue()` | …and the rest of the imperative API.                            |
-| `form.AppField`        | TanStack's own component-bound field.                           |
+| Member               | Still there                                                     |
+| -------------------- | --------------------------------------------------------------- |
+| `form.Field`         | The render-prop field, for markup the flat fields do not cover. |
+| `form.Subscribe`     | Selector-based subscription to form state.                      |
+| `form.handleSubmit`  | Submit programmatically.                                        |
+| `form.state`         | The current snapshot (not reactive on its own — see below).     |
+| `form.setFieldValue` | …and the rest of the imperative API.                            |
+| `form.AppField`      | TanStack's own component-bound field.                           |
 
 So reaching for a custom control never means abandoning the fields you already wrote:
 

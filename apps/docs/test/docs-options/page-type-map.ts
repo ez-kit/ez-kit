@@ -1,4 +1,4 @@
-import { ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
+import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
 
 /**
  * The explicit page → type map behind `docs-option-names.test.ts`.
@@ -9,10 +9,13 @@ import { ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
  *
  * Scope: the 19 data-grid pages whose option tables were hand-verified against
  * the real types in the #171-#174 audit slices, plus `state-model.mdx`, which
- * was written against those types from the start. The remaining pages under
+ * was written against those types from the start, plus the four `form/` pages
+ * that carry at least one option table. The remaining pages under
  * `content/docs/data-grid/**` are intentionally absent — their types and
  * defaults were never verified, so adding them would make the suite red on
- * arrival.
+ * arrival. `form/index.mdx` and `form/ai.mdx` are absent for the opposite
+ * reason: every table on them documents exported symbols or URLs, so an entry
+ * would carry a maintenance obligation while checking nothing.
  *
  * ## Adding a page
  *
@@ -41,6 +44,10 @@ export enum DocPage {
 	FilteringMultiValue = 'content/docs/data-grid/filtering/multi-value.mdx',
 	FilteringOperators = 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringPanel = 'content/docs/data-grid/filtering/panel.mdx',
+	FormCustomKit = 'content/docs/form/custom-kit.mdx',
+	FormFields = 'content/docs/form/fields.mdx',
+	FormNativeApi = 'content/docs/form/native-api.mdx',
+	FormSchema = 'content/docs/form/schema.mdx',
 	PaginationIndex = 'content/docs/data-grid/pagination/index.mdx',
 	Production = 'content/docs/data-grid/production.mdx',
 	RowActions = 'content/docs/data-grid/row-actions.mdx',
@@ -82,6 +89,54 @@ export const GRID_TYPE = {
 	ReactGlobalFilteringConfig: { module: TypeModule.React, name: 'ReactGlobalFilteringConfig' },
 	FilterChipsConfig: { module: TypeModule.React, name: 'FilterChipsConfig' },
 	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
+} as const satisfies Record<string, TypeRef>
+
+/**
+ * Types that govern the mapped `form/` tables.
+ *
+ * The split mirrors the packages: `@ez-kit/form-core` owns the serialisable
+ * document (`SubmitNode`, `FieldValidate`), `@ez-kit/form-react` owns both
+ * halves of the React surface — the *consumer* props a caller writes
+ * (`BaseFieldProps`, `SliderFieldProps`, …) and the *kit contract* props a kit
+ * receives (`FieldRenderProps`, `FormComponents`).
+ */
+export const FORM_TYPE = {
+	/**
+	 * Governs "what every node may carry". `CommonProps` — the type that actually
+	 * declares those five keys — is internal to `@ez-kit/form-core`, so the
+	 * tightest exported stand-in is the leanest node built on it: `SubmitNode` is
+	 * `CommonProps` plus `type` and `disabled` and nothing else, so a name that
+	 * resolves here really is common to every node. A laxer choice such as
+	 * `FormNode` would also accept `columns`, `path` and `component`, which are
+	 * exactly the per-kind keys this table must not bless.
+	 */
+	SubmitNode: { module: TypeModule.FormCore, name: 'SubmitNode', typeArgs: ROW_TYPE_ARGS },
+	FieldValidate: { module: TypeModule.FormCore, name: 'FieldValidate' },
+	/**
+	 * The props every flat field shares. Written once as
+	 * `BaseFieldProps<TFormData, TValue>` and intersected into each field's own
+	 * props, so it is the exact governing type for the "Shared props" table —
+	 * `TextFieldProps` would additionally bless `placeholder` and `type`.
+	 */
+	BaseFieldProps: { module: TypeModule.FormReact, name: 'BaseFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
+	SliderFieldProps: { module: TypeModule.FormReact, name: 'SliderFieldProps', typeArgs: ROW_TYPE_ARGS },
+	DateFieldProps: { module: TypeModule.FormReact, name: 'DateFieldProps', typeArgs: ROW_TYPE_ARGS },
+	/** What a kit's field component receives — the base half of the `FormComponents` contract. */
+	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
+	/** The kit contract itself; its keys are the component slots a kit must supply. */
+	FormComponents: { module: TypeModule.FormReact, name: 'FormComponents' },
+	FormRendererControlledProps: {
+		module: TypeModule.FormReact,
+		name: 'FormRendererControlledProps',
+		typeArgs: ROW_TYPE_ARGS,
+	},
+	FormRendererUncontrolledProps: {
+		module: TypeModule.FormReact,
+		name: 'FormRendererUncontrolledProps',
+		typeArgs: FORM_API_TYPE_ARGS,
+	},
+	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
+	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -132,6 +187,8 @@ export type PageEntry = {
 }
 
 const CELL_CONFIG_PREFIX = 'config.'
+/** Receiver the native-API table writes in front of every member it documents. */
+const FORM_RECEIVER_PREFIX = 'form.'
 
 export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
@@ -277,6 +334,78 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`FilteringToolbarConfig`', roots: [GRID_TYPE.FilteringToolbarConfig], expectedCount: 1 },
 		],
 		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FormCustomKit,
+		optionTables: [
+			// The base-props table sits under "Fields"; the per-kind table under the
+			// "#### Per-kind props" subheading added for exactly this reason — a
+			// heading addresses at most one table.
+			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
+			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormComponents], expectedCount: 5 },
+			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FormFields,
+		optionTables: [
+			{ heading: 'Shared props', roots: [FORM_TYPE.BaseFieldProps], expectedCount: 5 },
+			{ heading: '`form.SliderField`', roots: [FORM_TYPE.SliderFieldProps], expectedCount: 3 },
+			{ heading: '`form.DateField`', roots: [FORM_TYPE.DateFieldProps], expectedCount: 3 },
+		],
+		nonOptionTables: [
+			{
+				heading: '`form.CheckboxGroupField`',
+				reason:
+					'A 2×2 grid placing the four selection fields by cardinality; its cells name components, and its first column is prose with no code span at all.',
+			},
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-*` attributes the field layer emits onto the DOM, not props of any field.',
+			},
+		],
+	},
+	{
+		page: DocPage.FormNativeApi,
+		optionTables: [
+			// Rows are written `form.Field`, so the receiver prefix is stripped and
+			// the remainder resolved against the instance `useForm` returns.
+			{
+				heading: 'Native API',
+				roots: [FORM_TYPE.KitFormApi],
+				stripPrefix: FORM_RECEIVER_PREFIX,
+				expectedCount: 6,
+			},
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FormSchema,
+		optionTables: [
+			{ heading: 'Common node properties', roots: [FORM_TYPE.SubmitNode], expectedCount: 5 },
+			{ heading: 'Validation', roots: [FORM_TYPE.FieldValidate], expectedCount: 8 },
+			// Two roots because the table documents both modes in one place and marks
+			// each row with the mode it belongs to: `form` exists only on the
+			// controlled props, `keepHiddenValues` and the `useForm` options only on
+			// the uncontrolled ones.
+			{
+				heading: 'Renderer props',
+				roots: [FORM_TYPE.FormRendererControlledProps, FORM_TYPE.FormRendererUncontrolledProps],
+				expectedCount: 10,
+			},
+		],
+		nonOptionTables: [
+			{
+				heading: 'The document',
+				reason: 'Lists the node `type` discriminant values (`text`, `section`, `submit`, …) — values, not keys.',
+			},
+			{
+				heading: 'Conditions',
+				reason:
+					'Documents the shape of a rule object (`{ field, eq: value }`, `{ and: [...] }`) — rule literals, not keys of a config type.',
+			},
+		],
 	},
 	{
 		page: DocPage.PaginationIndex,

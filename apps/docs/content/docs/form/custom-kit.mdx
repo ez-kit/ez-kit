@@ -67,9 +67,11 @@ Every field receives the same base props:
 | `data-field`, `data-field-type` | Spread onto your root so CSS, tests and e2e can find the field.   |
 | `id`, `name`                    | `id` goes on the focusable control.                               |
 | `label`, `description`          | `ReactNode`; `null`/`undefined` when the consumer passed none.    |
-| `errors: string[]`, `invalid`   | Already normalised display strings; `errors` is empty when valid. |
+| `errors`, `invalid`             | Already normalised display strings; `errors` is empty when valid. |
 | `onBlur`                        | Must reach the control — blur validation depends on it.           |
 | `disabled`, `required`          | `boolean \| undefined`.                                           |
+
+#### Per-kind props
 
 On top of that, per kind:
 
