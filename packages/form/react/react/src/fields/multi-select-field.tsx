@@ -1,7 +1,8 @@
 import { FormFieldType } from '@ez-kit/form-core'
 
-import { asStringArray } from '../coerce'
+import { asOptionValueTexts } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fromKitValues, toKitOptions } from '../option-values'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -22,16 +23,20 @@ export function createMultiSelectField<TFormData>(
 		options,
 		placeholder,
 	}: MultiSelectFieldProps<TFormData>): ReactNode {
+		// See `select-field.tsx` — the same string↔typed-value bridge, applied to the whole
+		// selection rather than one value.
+		const kitOptions = toKitOptions(options)
+
 		return (
 			<form.AppField name={name}>
 				{(field) => (
 					<KitMultiSelectField
 						{...fieldRenderProps(field, FormFieldType.MultiSelect, { label, description, disabled, required })}
-						options={options}
+						options={kitOptions}
 						placeholder={placeholder}
-						value={asStringArray(field.state.value)}
+						value={asOptionValueTexts(field.state.value)}
 						onChange={(value) => {
-							field.handleChange(value)
+							field.handleChange(fromKitValues(options, value))
 						}}
 					/>
 				)}

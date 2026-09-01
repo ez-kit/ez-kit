@@ -59,6 +59,50 @@ type FieldCommon<TValues> = CommonProps<TValues> & {
 	validate?: FieldValidate
 }
 
+/**
+ * The four select-like kinds, each generated once per option-value scalar (`string`,
+ * `number`) instead of being written once with a `string | number` value.
+ *
+ * That is what keeps `name` and `options` **correlated**: a field bound to a numeric path
+ * must be given numeric options, and one bound to a string path string options — a mixture
+ * is a compile error rather than a runtime lookup that silently finds nothing. Writing the
+ * members once with a widened value type would type-check both halves independently and lose
+ * exactly that guarantee. See `schema-types.test.ts`.
+ *
+ * There is no new node `type` for the numeric flavour: `select<string>` and `select<number>`
+ * are the same widget with the same value shape, and only the JSON scalar differs (unlike
+ * `date` vs `daterange`, where both the shape and the widget differ).
+ */
+type SelectMember<TValues, TValue> = FieldCommon<TValues> & {
+	type: FormFieldType.Select
+	name: DeepKeysOfType<TValues, TValue>
+	defaultValue?: TValue
+	options: readonly LocalizedSelectOption<TValue>[]
+	placeholder?: string
+}
+
+type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> & {
+	type: FormFieldType.MultiSelect
+	name: DeepKeysOfType<TValues, TValue[]>
+	defaultValue?: readonly TValue[]
+	options: readonly LocalizedSelectOption<TValue>[]
+	placeholder?: string
+}
+
+type CheckboxGroupMember<TValues, TValue> = FieldCommon<TValues> & {
+	type: FormFieldType.CheckboxGroup
+	name: DeepKeysOfType<TValues, TValue[]>
+	defaultValue?: readonly TValue[]
+	options: readonly LocalizedSelectOption<TValue>[]
+}
+
+type RadioGroupMember<TValues, TValue> = FieldCommon<TValues> & {
+	type: FormFieldType.RadioGroup
+	name: DeepKeysOfType<TValues, TValue>
+	defaultValue?: TValue
+	options: readonly LocalizedSelectOption<TValue>[]
+}
+
 export type FieldNode<TValues> =
 	| (FieldCommon<TValues> & {
 			type: FormFieldType.Text
@@ -83,26 +127,12 @@ export type FieldNode<TValues> =
 			placeholder?: string
 			rows?: number
 	  })
-	| (FieldCommon<TValues> & {
-			type: FormFieldType.Select
-			name: DeepKeysOfType<TValues, string>
-			defaultValue?: string
-			options: readonly LocalizedSelectOption[]
-			placeholder?: string
-	  })
-	| (FieldCommon<TValues> & {
-			type: FormFieldType.MultiSelect
-			name: DeepKeysOfType<TValues, string[]>
-			defaultValue?: readonly string[]
-			options: readonly LocalizedSelectOption[]
-			placeholder?: string
-	  })
-	| (FieldCommon<TValues> & {
-			type: FormFieldType.CheckboxGroup
-			name: DeepKeysOfType<TValues, string[]>
-			defaultValue?: readonly string[]
-			options: readonly LocalizedSelectOption[]
-	  })
+	| SelectMember<TValues, string>
+	| SelectMember<TValues, number>
+	| MultiSelectMember<TValues, string>
+	| MultiSelectMember<TValues, number>
+	| CheckboxGroupMember<TValues, string>
+	| CheckboxGroupMember<TValues, number>
 	| (FieldCommon<TValues> & {
 			type: FormFieldType.Checkbox
 			name: DeepKeysOfType<TValues, boolean>
@@ -113,12 +143,8 @@ export type FieldNode<TValues> =
 			name: DeepKeysOfType<TValues, boolean>
 			defaultValue?: boolean
 	  })
-	| (FieldCommon<TValues> & {
-			type: FormFieldType.RadioGroup
-			name: DeepKeysOfType<TValues, string>
-			defaultValue?: string
-			options: readonly LocalizedSelectOption[]
-	  })
+	| RadioGroupMember<TValues, string>
+	| RadioGroupMember<TValues, number>
 	| (FieldCommon<TValues> & {
 			type: FormFieldType.Date
 			name: DeepKeysOfType<TValues, string>

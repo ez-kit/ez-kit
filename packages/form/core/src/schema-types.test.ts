@@ -50,3 +50,84 @@ test('a registered custom type is accepted; an unregistered one is not', () => {
 
 	expectTypeOf(define).toBeFunction()
 })
+
+test('a select-like field correlates its option values with its name', () => {
+	type Entities = { country: string; countryId: number; tagIds: number[]; tags: string[] }
+	const define = defineFormSchema<Entities>()
+
+	// A numeric path takes numeric options…
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.Select, name: 'countryId', options: [{ label: 'Germany', value: 49 }] }],
+	})
+
+	// …and a string path string ones.
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.Select, name: 'country', options: [{ label: 'Germany', value: 'de' }] }],
+	})
+
+	define({
+		version: 1,
+		children: [
+			{ type: FormFieldType.MultiSelect, name: 'tagIds', options: [{ label: 'Design', value: 1 }], defaultValue: [1] },
+		],
+	})
+
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.CheckboxGroup, name: 'tags', options: [{ label: 'Design', value: 'design' }] }],
+	})
+
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.RadioGroup, name: 'countryId', options: [{ label: 'Germany', value: 49 }] }],
+	})
+
+	define({
+		version: 1,
+		children: [
+			// @ts-expect-error `countryId` is a number, so its options cannot carry string values
+			{ type: FormFieldType.Select, name: 'countryId', options: [{ label: 'Germany', value: 'de' }] },
+		],
+	})
+
+	define({
+		version: 1,
+		children: [
+			// @ts-expect-error `country` is a string, so its options cannot carry number values
+			{ type: FormFieldType.Select, name: 'country', options: [{ label: 'Germany', value: 49 }] },
+		],
+	})
+
+	define({
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.MultiSelect,
+				name: 'tagIds',
+				options: [{ label: 'Design', value: 1 }],
+				// @ts-expect-error `tagIds` is number[], so a string defaultValue entry is illegal
+				defaultValue: ['1'],
+			},
+		],
+	})
+
+	define({
+		version: 1,
+		children: [
+			// @ts-expect-error `tags` is string[], so its options cannot carry number values
+			{ type: FormFieldType.CheckboxGroup, name: 'tags', options: [{ label: 'Design', value: 1 }] },
+		],
+	})
+
+	define({
+		version: 1,
+		children: [
+			// @ts-expect-error `countryId` is a number, so a string defaultValue is illegal
+			{ type: FormFieldType.Select, name: 'countryId', options: [{ label: 'Germany', value: 49 }], defaultValue: 'de' },
+		],
+	})
+
+	expectTypeOf(define).toBeFunction()
+})

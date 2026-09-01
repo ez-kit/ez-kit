@@ -2,6 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 
 import { asText } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fromKitValue, toKitOptions } from '../option-values'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -21,15 +22,18 @@ export function createRadioGroupField<TFormData>(
 		required,
 		options,
 	}: RadioGroupFieldProps<TFormData>): ReactNode {
+		// See `select-field.tsx` — the same string↔typed-value bridge, for the expanded widget.
+		const kitOptions = toKitOptions(options)
+
 		return (
 			<form.AppField name={name}>
 				{(field) => (
 					<KitRadioGroupField
 						{...fieldRenderProps(field, FormFieldType.RadioGroup, { label, description, disabled, required })}
-						options={options}
+						options={kitOptions}
 						value={asText(field.state.value)}
 						onChange={(value) => {
-							field.handleChange(value)
+							field.handleChange(fromKitValue(options, value))
 						}}
 					/>
 				)}

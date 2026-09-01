@@ -42,11 +42,16 @@ export function asDateRange(value: unknown): DateRangeValue | undefined {
 /**
  * A multi-value control always holds a list: anything else in form state (a bare string a
  * consumer's `defaultValues` set, `undefined` before the field is touched) becomes `[]` rather
- * than reaching the kit as a value it would have to guess at. Non-string entries are dropped
- * for the same reason — an option value is a string.
+ * than reaching the kit as a value it would have to guess at. Entries that are not option
+ * values are dropped for the same reason, and the survivors are stringified — the kit contract
+ * is string-only at the DOM edge, and `fromKitValue` maps the strings back on the way up.
  */
-export function asStringArray(value: unknown): string[] {
-	return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
+export function asOptionValueTexts(value: unknown): string[] {
+	return Array.isArray(value)
+		? (value as unknown[])
+				.filter((entry) => typeof entry === 'string' || typeof entry === 'number')
+				.map((entry) => String(entry))
+		: []
 }
 
 export function asBoolean(value: unknown): boolean {

@@ -10,7 +10,17 @@ import type { BindableForm, FieldValue } from '../bindable-form'
 import type { FormComponents } from '../contract'
 import type { FormFieldComponents } from '../field-props'
 import type { BlockRegistry, CustomFieldRegistry } from './registries'
-import type { BlockNode, CustomFieldNode, FieldNode, SectionNode, SubmitNode, Translate } from '@ez-kit/form-core'
+import type {
+	BlockNode,
+	CustomFieldNode,
+	FieldNode,
+	LocalizedSelectOption,
+	OptionValue,
+	SectionNode,
+	SelectOption,
+	SubmitNode,
+	Translate,
+} from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -69,6 +79,26 @@ function isCustomFieldNode<TValues>(
 		| SubmitNode<TValues>,
 ): node is CustomFieldNode<TValues, string> {
 	return !BUILT_IN_OR_CONTAINER_TYPES.includes(node.type)
+}
+
+/**
+ * The one place the string/number option-value split needs a cast.
+ *
+ * A select-like node is a union of a string-valued and a number-valued arm, whose `name` and
+ * `options` are correlated by construction (see `SelectMember` in `@ez-kit/form-core`'s
+ * `schema.ts`). TypeScript checks a JSX call site against each arm **independently**, so it
+ * cannot see that the options being passed came from the same arm as the `name` beside them —
+ * a limitation of correlated unions, not a hole in the model. The intersection return type is
+ * assignable to either arm, which is exactly the "whichever arm this node is" the compiler
+ * cannot express; the correlation itself is still enforced everywhere it is authored.
+ */
+type CorrelatedOptions = readonly SelectOption[] & readonly SelectOption<number>[]
+
+function correlatedOptions(
+	options: readonly LocalizedSelectOption<OptionValue>[],
+	translate: Translate | undefined,
+): CorrelatedOptions {
+	return resolveSelectOptions(options, translate) as CorrelatedOptions
 }
 
 /**
@@ -196,7 +226,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={resolveSelectOptions(node.options, context.translate)}
+					options={correlatedOptions(node.options, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 				/>
@@ -228,7 +258,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={resolveSelectOptions(node.options, context.translate)}
+					options={correlatedOptions(node.options, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)
@@ -239,7 +269,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={resolveSelectOptions(node.options, context.translate)}
+					options={correlatedOptions(node.options, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 				/>
@@ -251,7 +281,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={resolveSelectOptions(node.options, context.translate)}
+					options={correlatedOptions(node.options, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)

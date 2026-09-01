@@ -12,6 +12,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/fields.tsx': () => import('./components/fields'),
 	'components/multi-value.tsx': () => import('./components/multi-value'),
 	'components/native-api.tsx': () => import('./components/native-api'),
+	'components/numeric-options.tsx': () => import('./components/numeric-options'),
 	'components/schema-basic.tsx': () => import('./components/schema-basic'),
 	'components/schema-conditional.tsx': () => import('./components/schema-conditional'),
 	'components/schema-from-json.tsx': () => import('./components/schema-from-json'),

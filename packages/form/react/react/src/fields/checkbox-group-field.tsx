@@ -1,7 +1,8 @@
 import { FormFieldType } from '@ez-kit/form-core'
 
-import { asStringArray } from '../coerce'
+import { asOptionValueTexts } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fromKitValues, toKitOptions } from '../option-values'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -21,15 +22,18 @@ export function createCheckboxGroupField<TFormData>(
 		required,
 		options,
 	}: CheckboxGroupFieldProps<TFormData>): ReactNode {
+		// See `select-field.tsx` — the same string↔typed-value bridge, for the expanded widget.
+		const kitOptions = toKitOptions(options)
+
 		return (
 			<form.AppField name={name}>
 				{(field) => (
 					<KitCheckboxGroupField
 						{...fieldRenderProps(field, FormFieldType.CheckboxGroup, { label, description, disabled, required })}
-						options={options}
-						value={asStringArray(field.state.value)}
+						options={kitOptions}
+						value={asOptionValueTexts(field.state.value)}
 						onChange={(value) => {
-							field.handleChange(value)
+							field.handleChange(fromKitValues(options, value))
 						}}
 					/>
 				)}

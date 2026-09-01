@@ -3,6 +3,16 @@ import { resolveText } from './localized-text'
 import type { LocalizedText, Translate } from './localized-text'
 
 /**
+ * The scalars a select-like option may carry as its `value`.
+ *
+ * A number is first class because the format's headline use case is a backend-authored
+ * document whose entity ids are integers — a select over `countryId: number` must be
+ * expressible without stringifying the id into form state. Booleans are deliberately absent:
+ * a two-state choice is a `checkbox` / `switch`, not a one-option-per-state list.
+ */
+export type OptionValue = string | number
+
+/**
  * A single choice offered by a select-like field, with its label already resolved to
  * finished copy — the shape a UI kit renders.
  *

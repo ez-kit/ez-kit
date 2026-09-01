@@ -32,27 +32,51 @@ export type TextareaFieldProps<TFormData> = BaseFieldProps<TFormData, string> & 
 	rows?: number
 }
 
-export type SelectFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	options: readonly SelectOption[]
+/**
+ * The select-like props, generated once per option-value scalar and unioned — the same split
+ * `FieldNode`'s `SelectMember` / `MultiSelectMember` / … make in `@ez-kit/form-core`, and for
+ * the same reason: it keeps `name` and `options` **correlated**, so
+ * `<form.SelectField name='countryId' options={[{ label: 'DE', value: 'de' }]} />` is a
+ * compile error when `countryId` is a number. One widened `string | number` value type would
+ * check the two halves independently and lose exactly that.
+ */
+type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> & {
+	options: readonly SelectOption<TValue>[]
 	placeholder?: string
 }
 
-export type MultiSelectFieldProps<TFormData> = BaseFieldProps<TFormData, string[]> & {
-	options: readonly SelectOption[]
+export type SelectFieldProps<TFormData> =
+	| SelectFieldPropsFor<TFormData, string>
+	| SelectFieldPropsFor<TFormData, number>
+
+type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> & {
+	options: readonly SelectOption<TValue>[]
 	placeholder?: string
 }
 
-export type CheckboxGroupFieldProps<TFormData> = BaseFieldProps<TFormData, string[]> & {
-	options: readonly SelectOption[]
+export type MultiSelectFieldProps<TFormData> =
+	| MultiSelectFieldPropsFor<TFormData, string>
+	| MultiSelectFieldPropsFor<TFormData, number>
+
+type CheckboxGroupFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> & {
+	options: readonly SelectOption<TValue>[]
 }
+
+export type CheckboxGroupFieldProps<TFormData> =
+	| CheckboxGroupFieldPropsFor<TFormData, string>
+	| CheckboxGroupFieldPropsFor<TFormData, number>
 
 export type CheckboxFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
 
 export type SwitchFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
 
-export type RadioGroupFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
-	options: readonly SelectOption[]
+type RadioGroupFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> & {
+	options: readonly SelectOption<TValue>[]
 }
+
+export type RadioGroupFieldProps<TFormData> =
+	| RadioGroupFieldPropsFor<TFormData, string>
+	| RadioGroupFieldPropsFor<TFormData, number>
 
 /** `min` / `max` are `YYYY-MM-DD` bounds on what the picker offers, not validation. */
 export type DateFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {

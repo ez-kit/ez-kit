@@ -239,3 +239,71 @@ test('a multi-value defaultValue must be an array of option values', () => {
 test('a multiselect needs options, exactly as a select does', () => {
 	expect(() => parseFormSchema({ version: 1, children: [{ type: 'multiselect', name: 'tags' }] })).toThrow(/options/i)
 })
+
+test('accepts numeric option values, and a numeric multi-value defaultValue', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [
+				{ type: 'select', name: 'countryId', options: [{ value: 49, label: 'Germany' }] },
+				{
+					type: 'multiselect',
+					name: 'tagIds',
+					options: [
+						{ value: 1, label: 'Design' },
+						{ value: 2, label: 'Engineering' },
+					],
+					defaultValue: [1, 2],
+				},
+				{ type: 'checkboxgroup', name: 'roleIds', options: [{ value: 7, label: 'Admin' }], defaultValue: [] },
+			],
+		}),
+	).not.toThrow()
+})
+
+test('rejects an options list that mixes string and number values', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [
+				{
+					type: 'select',
+					name: 'countryId',
+					options: [
+						{ value: 1, label: 'Germany' },
+						{ value: '1', label: 'Germany, again' },
+					],
+				},
+			],
+		}),
+	).toThrow(/cannot mix/i)
+})
+
+test('rejects an option value that is neither a string nor a number', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [{ type: 'select', name: 'active', options: [{ value: true, label: 'Yes' }] }],
+		}),
+	).toThrow(/string or a number/i)
+})
+
+test('rejects a multi-value defaultValue whose entries disagree with the option value type', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [
+				{ type: 'multiselect', name: 'tagIds', options: [{ value: 1, label: 'Design' }], defaultValue: ['1'] },
+			],
+		}),
+	).toThrow(/must all be number option values/i)
+
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [
+				{ type: 'checkboxgroup', name: 'tagIds', options: [{ value: 1, label: 'Design' }], defaultValue: [1, '2'] },
+			],
+		}),
+	).toThrow(/must all be number option values/i)
+})

@@ -56,6 +56,8 @@ A `date` node carries `min`, `max` and `defaultValue` as `YYYY-MM-DD` strings; a
 
 A `select`, `multiselect`, `radiogroup` or `checkboxgroup` node adds `options`: a `{ value, label, disabled? }` list whose `label` is `LocalizedText` like every other label in the format, so a delivered document can name a translation key instead of shipping copy in one language. The renderer resolves them before the kit sees them — a kit only ever receives finished strings.
 
+An option `value` is a **string or a number**, and the node's `name` is checked against it: a `number`-valued path takes numeric options (a `number[]` one for `multiselect` / `checkboxgroup`), a string-valued path string ones. That is what makes a backend-authored document over integer entity ids expressible — the id stays a number all the way into form state and back out of `onSubmit`. One list carries one scalar type; see [Numeric option values](/docs/form/fields#numeric-option-values).
+
 A field node adds `name` (the full path from the root of the form values — never affected by which section or step it sits in), its kind-specific options, an optional `defaultValue` and an optional `validate` block. It may also carry `required`, which is the _marker_ the kit renders next to the label — enforcement is `validate.required`, and the two are deliberately separate so a field can be marked without being checked, or checked without being marked.
 
 A `section` adds `title`, `description`, `columns` (an integer **1–4**, default 1) and `children`. A `step` adds `title`, `description`, `children` and an optional `path`. A `submit` node takes `label` and `disabled`.
@@ -338,8 +340,8 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 - a registry key colliding with a reserved node type;
 - a malformed rule, a `./` field reference, or a **function** condition — which cannot survive `JSON.parse` anyway, but a hand-built object must still be told it is not a serialisable document;
 - a `LocalizedText` that is neither a string nor `{ key }`, or a translation key with no `translate` registered;
-- an options-bearing node with no `options` array, or an option missing its `value` or `label`;
-- a `multiselect` / `checkboxgroup` `defaultValue` that is not an array of option values;
+- an options-bearing node with no `options` array, an option missing its `value` or `label`, an option `value` that is neither a string nor a number, or one list mixing the two;
+- a `multiselect` / `checkboxgroup` `defaultValue` that is not an array of option values, or whose entries disagree with the option value type;
 - a date `min` / `max` / `defaultValue` that is not a real `YYYY-MM-DD` day, or a `daterange` default missing an end;
 - `columns` / `colSpan` outside 1–4;
 - `step` nodes mixed with non-`step` siblings.

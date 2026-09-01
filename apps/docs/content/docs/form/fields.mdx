@@ -82,6 +82,28 @@ Each option is a `SelectOption`: `{ label, value, disabled? }`. Both kits render
 
 An empty string means "nothing selected", so the placeholder shows.
 
+### Numeric option values
+
+An option `value` may be a **string or a number**, and `name` is checked against it: a field bound to a `number` path takes numeric options, one bound to a `string` path string ones. Mixing the two is a compile error, not a lookup that quietly finds nothing.
+
+```tsx
+// `countryId: number` in the form values
+<form.SelectField
+	name='countryId'
+	label='Country'
+	options={[
+		{ label: 'Germany', value: 49 },
+		{ label: 'France', value: 33 },
+	]}
+/>
+```
+
+Form state holds the option's value **verbatim** — `49`, never `'49'` — so a submitted payload carries the entity id a backend expects. The kits themselves stay string-only at the DOM edge (Radix requires string item values, and reserves `''` for "nothing selected"); the binding layer stringifies the options on the way down and maps the string a kit reports back to the option it came from. That is a lookup, never `Number(value)`, so a string-valued `'42'` stays a string.
+
+The same holds for `form.RadioGroupField`, `form.MultiSelectField` (a `number[]` path) and `form.CheckboxGroupField`, and for the equivalent schema nodes. `parseFormSchema` rejects a delivered document that mixes string and number values in one list: `1` and `'1'` are distinct option values that collide the moment a kit renders them as keys.
+
+<KitExample exampleId='form-numeric-options' />
+
 ## `form.CheckboxField`
 
 Binds to a `boolean`.

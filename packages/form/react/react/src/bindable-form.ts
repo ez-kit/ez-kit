@@ -1,14 +1,15 @@
-import type { DateRangeValue } from '@ez-kit/form-core'
+import type { DateRangeValue, OptionValue } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
  * The value types the v1 fields write back into form state.
  *
- * Two of them are composite. A multi-select holds `string[]`, and a date range holds one
- * `{ start, end }` object: each is a single field under a single `name`, never a pair of
- * sibling paths — see the `daterange` node in `@ez-kit/form-core`'s `schema.ts`.
+ * Two of them are composite. A multi-select holds a list of option values (`string[]` or
+ * `number[]`), and a date range holds one `{ start, end }` object: each is a single field
+ * under a single `name`, never a pair of sibling paths — see the `daterange` node in
+ * `@ez-kit/form-core`'s `schema.ts`.
  */
-export type FieldValue = string | number | boolean | string[] | DateRangeValue | undefined
+export type FieldValue = string | number | boolean | OptionValue[] | DateRangeValue | undefined
 
 /**
  * The slice of a TanStack field the flat wrappers read.

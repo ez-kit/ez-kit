@@ -58,8 +58,30 @@ const ROOT_PATH = 'root'
 
 type UnknownRecord = Record<string, unknown>
 
+/** The `typeof` of a legal option value — the runtime face of `OptionValue`. */
+type OptionValueType = 'string' | 'number'
+
 function isPlainObject(value: unknown): value is UnknownRecord {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** The option-value scalar `value` is, or `undefined` if it is not a legal option value. */
+function optionValueTypeOf(value: unknown): OptionValueType | undefined {
+	if (typeof value === 'string') return 'string'
+	if (typeof value === 'number' && Number.isFinite(value)) return 'number'
+	return undefined
+}
+
+/**
+ * The scalar type this node's options carry, when the node has a usable list to read it from.
+ * `undefined` for an empty or malformed list — `assertOptions` has already rejected the cases
+ * that matter, so a caller only uses this to *tighten* a check it can otherwise skip.
+ */
+function declaredOptionValueType(node: FormNode<unknown, string>): OptionValueType | undefined {
+	const list = (node as unknown as UnknownRecord).options
+	if (!Array.isArray(list) || list.length === 0) return undefined
+	const first: unknown = list[0]
+	return isPlainObject(first) ? optionValueTypeOf(first.value) : undefined
 }
 
 /**
@@ -263,6 +285,7 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 	if (!Array.isArray(list)) {
 		throw new FormSchemaError(`"${node.type}" is missing an "options" array`, path)
 	}
+	let valueType: OptionValueType | undefined
 	for (const option of list as unknown[]) {
 		if (!isPlainObject(option) || !('value' in option)) {
 			throw new FormSchemaError('Each option must be an object with a "value"', path)
@@ -271,22 +294,54 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 			throw new FormSchemaError('Each option must carry a "label"', path)
 		}
 		assertLocalizedText(option.label, path, options)
+
+		const type = optionValueTypeOf(option.value)
+		if (type === undefined) {
+			throw new FormSchemaError(
+				`Each option "value" must be a string or a number, got ${JSON.stringify(option.value)}`,
+				path,
+			)
+		}
+		// One list, one scalar type. `1` and `'1'` are distinct option values but collide as
+		// DOM keys the moment a kit stringifies them, so the pair could never be told apart on
+		// the way back up — and the schema's own `name`↔`options` correlation already forbids
+		// the mixture in TypeScript. A delivered document gets told the same thing.
+		if (valueType !== undefined && valueType !== type) {
+			throw new FormSchemaError(`An "options" list cannot mix ${valueType} and ${type} values`, path)
+		}
+		valueType = type
 	}
 }
 
 /**
- * A multi-value field's `defaultValue`: a list of option values, never a bare string.
+ * A multi-value field's `defaultValue`: a list of option values, never a bare scalar.
  *
  * `[]` is legal and means "nothing selected" — that is the shape the field always holds, so a
  * document may seed it explicitly rather than leaving the key absent.
+ *
+ * Entries are strings or numbers, all of one type, and — when the node's `options` say which
+ * type that is — of *that* type: a numeric select seeded with `['7']` would render as nothing
+ * selected, since `'7'` is not on its list.
  */
 function assertMultiValueDefault(node: FormNode<unknown, string>, path: string): void {
 	if (!MULTI_VALUE_FIELD_TYPES.includes(node.type)) return
 
 	const value = (node as unknown as UnknownRecord).defaultValue
 	if (value === undefined) return
-	if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string')) {
+	if (!Array.isArray(value)) {
 		throw new FormSchemaError(`"defaultValue" must be an array of option values, got ${JSON.stringify(value)}`, path)
+	}
+
+	let expected = declaredOptionValueType(node)
+	for (const entry of value as unknown[]) {
+		const type = optionValueTypeOf(entry)
+		if (type === undefined) {
+			throw new FormSchemaError(`"defaultValue" must be an array of option values, got ${JSON.stringify(value)}`, path)
+		}
+		if (expected !== undefined && expected !== type) {
+			throw new FormSchemaError(`"defaultValue" entries must all be ${expected} option values`, path)
+		}
+		expected = type
 	}
 }
 

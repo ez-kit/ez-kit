@@ -78,5 +78,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/dialog.tsx",
 		"exportName": "DialogExample"
+	},
+	{
+		"id": "form-numeric-options",
+		"label": "Numeric options",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/numeric-options.tsx",
+		"exportName": "NumericOptionsExample"
 	}
 ]
