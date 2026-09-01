@@ -42,7 +42,7 @@
 			"name": "config-layer helpers alone (no createForm)",
 			"path": "dist/index.js",
 			"import": "{ stripHiddenValues, clampToGridRange, GRID_MIN, GRID_MAX, FormFieldType }",
-			"limit": "2 KB"
+			"limit": "1 KB"
 		}
 	],
 	"dependencies": {
