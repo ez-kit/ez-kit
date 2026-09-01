@@ -20,16 +20,23 @@ import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
-/** What a `<DataGrid.Body>` render function receives. */
-export type DataGridBodyRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: Table<any>
+/**
+ * What a `<DataGrid.Body>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Body<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
+ * It cannot be inferred, because a compound child reads the table from context rather than from
+ * a prop; this is the explicit-argument shape `useDataGridTable<Order>()` already uses.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridBodyRenderArgs<TRow extends object = any> = {
+	table: Table<TRow>
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	rows: Row<any>[]
+	rows: Row<TRow>[]
 }
 
-export type DataGridBodyProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridBodyProps<TRow extends object = any> = {
 	/**
 	 * Custom body content, rendered inside the kit's `<Tbody>`.
 	 *
@@ -45,7 +52,7 @@ export type DataGridBodyProps = {
 	 * </DataGrid.Body>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridBodyRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridBodyRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -62,9 +69,10 @@ export type DataGridBodyProps = {
  * structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offset.
  */
-export function Body({ children }: DataGridBodyProps = {}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function Body<TRow extends object = any>({ children }: DataGridBodyProps<TRow> = {}) {
 	const { rowVirtualizer } = useVirtualContext()
-	const table = useDataGridTable()
+	const table = useDataGridTable<TRow>()
 	const { Tbody } = useGridComponents().core
 
 	// Narrow subscriptions: each returns a referentially stable slice. Body

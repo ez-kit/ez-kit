@@ -2,7 +2,7 @@
 
 import { DataGrid } from 'shared/DataGrid'
 
-import { orderColumns, type Order } from './data'
+import { orderColumns } from './data'
 import { useOrders } from './use-orders'
 
 export function ProductionExample() {
@@ -68,7 +68,7 @@ export function ProductionExample() {
 				onDelete: ({ row }) => orders.remove([row.original.id]),
 				confirmation: {
 					title: 'Delete order?',
-					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+					description: (row) => `Order ${row.original.reference} will be permanently removed.`,
 				},
 				bulk: {
 					onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)),

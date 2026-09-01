@@ -85,7 +85,8 @@ describe('operator-aware filtering actually filters', () => {
 			filtering: true,
 		})
 
-		expect(table.getColumn('done')?.columnDef.meta?.resolvedOperators).toBeDefined()
+		const doneFiltering = table.getColumn('done')?.columnDef.meta?.filtering
+		expect(doneFiltering !== false ? doneFiltering?.operators : undefined).toBeDefined()
 		table.getColumn('done')?.setFilterValue({ operator: FilterOperator.GreaterThan, value: 50 })
 
 		expect(table.getRowModel().rows.map((r) => r.original.id)).toEqual(['2'])

@@ -23,12 +23,15 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
  * header's own parts, already wired. They exist so a custom header cell can keep the parts it
  * still wants instead of re-implementing sorting, the column menu and the filter control from
  * scratch — and so it can place its own controls **outside** `sortTrigger`.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.HeaderCell<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-export type DataGridHeaderCellRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
+	header: Header<TRow, unknown>
+	column: Column<TRow>
 	canSort: boolean
 	sortDirection: ColumnSortDirection
 	/** The column's own `header` content, with no sorting behaviour attached. */
@@ -43,9 +46,9 @@ export type DataGridHeaderCellRenderArgs = {
 	resizer: ReactNode
 }
 
-export type DataGridHeaderCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderCellProps<TRow extends object = any> = {
+	header: Header<TRow, unknown>
 	/**
 	 * Custom content for this one header cell, rendered inside the kit's `Th` — so the cell keeps
 	 * its pinning offset, its `data-*` attributes, its `headerClassName` and its resize handle.
@@ -54,7 +57,7 @@ export type DataGridHeaderCellProps = {
 	 * filter control. The render-function form hands back those same parts
 	 * ({@link DataGridHeaderCellRenderArgs}) so a custom cell can reuse the ones it still wants.
 	 */
-	children?: ReactNode | ((args: DataGridHeaderCellRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridHeaderCellRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -104,8 +107,9 @@ function isInteractiveTarget(event: MouseEvent | KeyboardEvent): boolean {
  * Rendering it requires the surrounding `<DataGrid.Header>`, which owns the state subscriptions
  * these cells read through.
  */
-export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps) {
-	const table = useDataGridTable()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridHeaderCell<TRow extends object = any>({ header, children }: DataGridHeaderCellProps<TRow>) {
+	const table = useDataGridTable<TRow>()
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu } = gridComponents.core
 	const { Resizer } = gridComponents.resizing

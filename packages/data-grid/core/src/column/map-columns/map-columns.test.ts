@@ -4,12 +4,18 @@ import { buildOperatorRegistry } from '../../features/operators'
 
 import { mapColumns } from './map-columns'
 
-import type { ColumnDef } from '../types'
+import type { ColumnDef, ColumnFilteringMeta, TanStackColumnDef } from '../types'
 
 type Row = {
 	id: number
 	name: string
 	age: number
+}
+
+/** `meta.filtering` narrowed past its `false` arm — the shape every assertion below wants. */
+function filteringMeta(def: TanStackColumnDef<Row> | undefined): ColumnFilteringMeta | undefined {
+	const filtering = def?.meta?.filtering
+	return filtering === false ? undefined : filtering
 }
 
 describe('mapColumns', () => {
@@ -219,32 +225,32 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableResizing).toBeUndefined()
 	})
 
-	it('filtering.items is forwarded to meta.filteringItems', () => {
+	it('filtering.items is forwarded to meta.filtering.items', () => {
 		const items = [
 			{ value: 'a', label: 'A' },
 			{ value: 'b', label: 'B' },
 		]
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { items } }])
-		expect(result[0]?.meta?.filteringItems).toEqual(items)
+		expect(filteringMeta(result[0])?.items).toEqual(items)
 	})
 
-	it('column.filtering.faceted: true → meta.facetedEnabled = true (overrides table flag)', () => {
+	it('column.filtering.faceted: true → meta.filtering.faceted = true (overrides table flag)', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: true } }], undefined, {
 			tableFaceted: false,
 		})
-		expect(result[0]?.meta?.facetedEnabled).toBe(true)
+		expect(filteringMeta(result[0])?.faceted).toBe(true)
 	})
 
-	it('column.filtering.faceted: false → meta.facetedEnabled is not set even when table-level is on', () => {
+	it('column.filtering.faceted: false → meta.filtering.faceted is not set even when table-level is on', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: false } }], undefined, {
 			tableFaceted: true,
 		})
-		expect(result[0]?.meta?.facetedEnabled).toBeUndefined()
+		expect(filteringMeta(result[0])?.faceted).toBeUndefined()
 	})
 
 	it('table-level tableFaceted: true inherits to column meta when column does not override', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: {} }], undefined, { tableFaceted: true })
-		expect(result[0]?.meta?.facetedEnabled).toBe(true)
+		expect(filteringMeta(result[0])?.faceted).toBe(true)
 	})
 
 	it('select cell with operators: true resolves to in/notIn defaults', () => {
@@ -259,9 +265,9 @@ describe('mapColumns', () => {
 			],
 			registry,
 		)
-		const resolved = result[0]?.meta?.resolvedOperators
+		const resolved = filteringMeta(result[0])?.operators
 		expect(resolved?.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
-		expect(result[0]?.meta?.defaultOperatorId).toBe('in')
+		expect(filteringMeta(result[0])?.defaultOperator).toBe('in')
 	})
 })
 

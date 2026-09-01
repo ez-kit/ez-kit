@@ -3,9 +3,16 @@ import { featureConfig, isFeatureEnabled } from '../../utils/feature-flag'
 import type { FeatureToggle } from '../../utils/feature-flag'
 import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
-export type ConfirmationConfig = FeatureToggle & {
+/**
+ * Confirmation copy for deleting one row.
+ *
+ * Generic over the row for the same reason {@link DeletingContext} is: the prompt worth writing
+ * names the thing being deleted — `Delete "${row.original.name}"?` — and with `Row<unknown>` the
+ * ordinary case opened with a cast.
+ */
+export type ConfirmationConfig<TData = unknown> = FeatureToggle & {
 	title?: string
-	description?: string | ((row: Row<unknown>) => string)
+	description?: string | ((row: Row<TData>) => string)
 }
 
 /**
@@ -13,9 +20,9 @@ export type ConfirmationConfig = FeatureToggle & {
  * reason: `description` is handed the whole selection, not a row. A prompt that cannot say
  * "Delete 3 orders?" is not a prompt for deleting three orders.
  */
-export type BulkConfirmationConfig = FeatureToggle & {
+export type BulkConfirmationConfig<TData = unknown> = FeatureToggle & {
 	title?: string
-	description?: string | ((rows: Row<unknown>[]) => string)
+	description?: string | ((rows: Row<TData>[]) => string)
 }
 
 /**
@@ -73,14 +80,14 @@ export type BulkDeletingConfig<TData> = FeatureToggle & {
 	 * {@link DeletingConfig.confirmation} — deleting twelve rows at once may deserve a prompt
 	 * where deleting one does not.
 	 */
-	confirmation?: boolean | BulkConfirmationConfig
+	confirmation?: boolean | BulkConfirmationConfig<TData>
 }
 
 export type DeletingConfig<TData> = FeatureToggle & {
 	/** Delete one row. Required — it is what makes the feature exist at all. */
 	onDelete: (ctx: DeletingContext<TData>) => void | Promise<void>
 	/** Prompt before deleting one row. `true` uses default copy. */
-	confirmation?: boolean | ConfirmationConfig
+	confirmation?: boolean | ConfirmationConfig<TData>
 	/**
 	 * Delete the current selection in one gesture. `false` / omitted — no bulk affordance;
 	 * `true` — enabled, looping {@link DeletingConfig.onDelete} over the selected rows;

@@ -19,6 +19,8 @@ import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
 import { Footer } from './footer'
+import { DataGridFooterCell } from './footer-cell'
+import { DataGridFooterRow } from './footer-row'
 import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
 import { DataGridHeaderCell } from './header-cell'
@@ -354,6 +356,8 @@ type DataGridType = typeof DataGridRoot & {
 	Toolbar: typeof Toolbar
 	Table: typeof DataGridTable
 	Footer: typeof Footer
+	FooterRow: typeof DataGridFooterRow
+	FooterCell: typeof DataGridFooterCell
 	Header: typeof Header
 	HeaderRow: typeof DataGridHeaderRow
 	HeaderCell: typeof DataGridHeaderCell
@@ -382,6 +386,8 @@ export const DataGrid = DataGridRoot as DataGridType
 DataGrid.Toolbar = Toolbar
 DataGrid.Table = DataGridTable
 DataGrid.Footer = Footer
+DataGrid.FooterRow = DataGridFooterRow
+DataGrid.FooterCell = DataGridFooterCell
 DataGrid.Header = Header
 DataGrid.HeaderRow = DataGridHeaderRow
 DataGrid.HeaderCell = DataGridHeaderCell

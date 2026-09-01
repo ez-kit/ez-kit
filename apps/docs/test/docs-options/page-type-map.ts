@@ -377,7 +377,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// grid config, disambiguated in prose ("(column def)" / "(table)").
 			// `state.columnPinning` / `initialState.columnPinning` resolve as real
 			// `UseDataGridConfig` paths, so they need no exception.
-			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 5 },
+			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
 		],
 		nonOptionTables: [],
 	},
@@ -570,7 +570,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.RowPinning,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
 	{

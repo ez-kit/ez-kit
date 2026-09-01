@@ -49,7 +49,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				deleting: {
 					confirmation: {
 						title: 'Delete order?',
-						description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+						description: (row) => `Order ${row.original.reference} will be permanently removed.`,
 					},
 				},
 			}}

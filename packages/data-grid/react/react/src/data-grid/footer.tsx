@@ -1,22 +1,27 @@
 import { useGridComponents } from '../components-context'
 
-import { getAlignAttrs } from './align-attrs'
-import { flexRender } from './flex-render'
+import { DataGridFooterRow } from './footer-row'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-/** What a `<DataGrid.Footer>` render function receives. */
-export type DataGridFooterRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: DataTable<any>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	footerGroups: HeaderGroup<any>[]
+/**
+ * What a `<DataGrid.Footer>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Footer<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridFooterRenderArgs<TRow extends object = any> = {
+	table: DataTable<TRow>
+	footerGroups: HeaderGroup<TRow>[]
 }
 
-export type DataGridFooterProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridFooterProps<TRow extends object = any> = {
 	/**
 	 * Stick the footer to the bottom of the scroll container for this footer only.
 	 *
@@ -46,7 +51,7 @@ export type DataGridFooterProps = {
 	 * </DataGrid.Footer>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridFooterRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridFooterRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -68,10 +73,11 @@ export type DataGridFooterProps = {
  * </DataGrid.Table>
  * ```
  */
-export function Footer({ sticky, children }: DataGridFooterProps = {}) {
-	const table = useDataGridTable()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function Footer<TRow extends object = any>({ sticky, children }: DataGridFooterProps<TRow> = {}) {
+	const table = useDataGridTable<TRow>()
 	const isSticky = sticky ?? table.grid.layout.stickyFooter
-	const { Tfoot, Tr, Td } = useGridComponents().core
+	const { Tfoot } = useGridComponents().core
 
 	// Narrow subscriptions: a footer reflects column layout and the rows it aggregates over,
 	// nothing else. Editing or selection mutations leave all of these stable.
@@ -100,28 +106,10 @@ export function Footer({ sticky, children }: DataGridFooterProps = {}) {
 			{...stickyAttr}
 		>
 			{footerGroups.map((footerGroup) => (
-				<Tr
-					data-slot='tr'
+				<DataGridFooterRow
 					key={footerGroup.id}
-				>
-					{footerGroup.headers.map((header) => {
-						const pinned = header.column.getIsPinned()
-						return (
-							<Td
-								data-slot='td'
-								key={header.id}
-								colSpan={header.colSpan}
-								{...(pinned ? { pinned, 'data-pinned': pinned } : {})}
-								{...getAlignAttrs(header.column.columnDef.meta, 'footer')}
-								{...(header.column.columnDef.meta?.footerClassName !== undefined
-									? { className: header.column.columnDef.meta.footerClassName }
-									: {})}
-							>
-								{header.isPlaceholder ? null : flexRender(header.column.columnDef.footer, header.getContext())}
-							</Td>
-						)
-					})}
-				</Tr>
+					footerGroup={footerGroup}
+				/>
 			))}
 		</Tfoot>
 	)

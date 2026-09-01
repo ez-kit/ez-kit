@@ -59,6 +59,7 @@ export type {
 	TextCellConfig,
 	CellViewCtx,
 	ColumnCellMeta,
+	ColumnFilteringMeta,
 	ColumnCreatingConfig,
 	ColumnDef,
 	ColumnEditingConfig,

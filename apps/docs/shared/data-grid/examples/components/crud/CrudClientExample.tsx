@@ -3,7 +3,7 @@
 import { DataGrid } from 'shared/DataGrid'
 
 import { crudColumns } from './columns'
-import { type Employee, useEmployeeStore } from './use-employee-store'
+import { useEmployeeStore } from './use-employee-store'
 
 export function CrudClientExample() {
 	const { data, add, update, remove, removeMany } = useEmployeeStore()
@@ -36,8 +36,7 @@ export function CrudClientExample() {
 				},
 				confirmation: {
 					title: 'Delete employee?',
-					description: (row) =>
-						`Are you sure you want to delete "${(row.original as Employee).name}"? This action cannot be undone.`,
+					description: (row) => `Are you sure you want to delete "${row.original.name}"? This action cannot be undone.`,
 				},
 				bulk: {
 					onDelete: ({ rows }) => {

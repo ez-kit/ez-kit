@@ -21,21 +21,25 @@ import type { ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-c
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
-/** What a `<DataGrid.Cell>` render function receives. */
-export type DataGridCellRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<any, unknown>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+/**
+ * What a `<DataGrid.Cell>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Cell<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
+ * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridCellRenderArgs<TRow extends object = any> = {
+	cell: Cell<TRow, unknown>
+	row: Row<TRow>
 	/** The cell's value, already resolved through the column's accessor. */
 	value: unknown
 }
 
-export type DataGridCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<any, unknown>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridCellProps<TRow extends object = any> = {
+	cell: Cell<TRow, unknown>
+	row: Row<TRow>
 	/**
 	 * Custom content for this one cell, rendered inside the kit's `Td` — so the cell keeps its
 	 * pinning offset, its `data-*` attributes and its `cellClassName`.
@@ -46,7 +50,7 @@ export type DataGridCellProps = {
 	 * A column-wide override belongs on the column instead (`cell.component`), which also feeds
 	 * the create and edit forms; this is for a single cell in a hand-composed row.
 	 */
-	children?: ReactNode | ((args: DataGridCellRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridCellRenderArgs<TRow>) => ReactNode)
 }
 
 /** The chrome a body cell wears regardless of what it renders: pin offsets and alignment. */
@@ -71,7 +75,8 @@ const EMPTY_ERRORS: readonly string[] = Object.freeze([])
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.
  */
-export function DataGridCell({ cell, row, children }: DataGridCellProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridCell<TRow extends object = any>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const meta = cell.column.columnDef.meta
 	if (children !== undefined) {
 		return (

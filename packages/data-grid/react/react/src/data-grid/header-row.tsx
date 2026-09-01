@@ -5,18 +5,23 @@ import { DataGridHeaderCell } from './header-cell'
 import type { Header, HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-/** What a `<DataGrid.HeaderRow>` render function receives. */
-export type DataGridHeaderRowRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	headerGroup: HeaderGroup<any>
+/**
+ * What a `<DataGrid.HeaderRow>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.HeaderRow<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderRowRenderArgs<TRow extends object = any> = {
+	headerGroup: HeaderGroup<TRow>
 	/** The group's headers, in column order — already reflecting visibility and pinning. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	headers: Header<any, unknown>[]
+	headers: Header<TRow, unknown>[]
 }
 
-export type DataGridHeaderRowProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	headerGroup: HeaderGroup<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderRowProps<TRow extends object = any> = {
+	headerGroup: HeaderGroup<TRow>
 	/**
 	 * Custom cells for this header row, rendered inside the kit's `Tr`.
 	 *
@@ -34,11 +39,12 @@ export type DataGridHeaderRowProps = {
 	 * </DataGrid.HeaderRow>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridHeaderRowRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridHeaderRowRenderArgs<TRow>) => ReactNode)
 }
 
 /** One `<tr>` of the table header. */
-export function DataGridHeaderRow({ headerGroup, children }: DataGridHeaderRowProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridHeaderRow<TRow extends object = any>({ headerGroup, children }: DataGridHeaderRowProps<TRow>) {
 	const { Tr } = useGridComponents().core
 	const headers = headerGroup.headers
 

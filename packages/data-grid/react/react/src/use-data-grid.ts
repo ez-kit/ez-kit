@@ -37,7 +37,7 @@ import type {
 	VirtualizationConfig,
 } from '@ez-kit/data-grid-core'
 import type { Row, Table, TableState } from '@tanstack/table-core'
-import type { ComponentType, HTMLAttributes, ReactElement } from 'react'
+import type { ComponentType, HTMLAttributes, ReactElement, ReactNode } from 'react'
 
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
@@ -57,7 +57,11 @@ export type ExpandedRowProps<TRow extends object> = {
  * the detail panel is a component, not an opaque value. Nothing else is restated, so a field
  * added to the core config is available here the same day.
  */
-export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<TRow, ComponentType<ExpandedRowProps<TRow>>>
+export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<
+	TRow,
+	ComponentType<ExpandedRowProps<TRow>>,
+	ReactNode
+>
 
 /**
  * The headless {@link RowActionsConfig} with its one framework-bound field narrowed: in React a
@@ -65,7 +69,7 @@ export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<TRow, Co
  * shape as {@link ReactExpandingConfig} — the parameter is bound here, nothing is restated, so
  * a field added to the core config reaches React the same day.
  */
-export type ReactRowActionsConfig<TRow extends object = object> = RowActionsConfig<TRow, ReactElement>
+export type ReactRowActionsConfig<TRow extends object = object> = RowActionsConfig<TRow, ReactElement, ReactNode>
 
 export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
@@ -99,7 +103,7 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
  * React (its `actions` are `ReactElement`s), so it lives only in this layer and is never passed
  * down to the core `selection` config.
  */
-export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig & {
+export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig<TRow, ReactNode> & {
 	/**
 	 * Selection info bar config.
 	 * - `false` — bar never shown
@@ -690,7 +694,10 @@ export function useDataGrid<TRow extends object>(
 	// createTable and the React-only `bar` stored on the instance for SelectionBar to read.
 	// `bar` is stripped so the core `selection` config never carries React-specific fields.
 	const selectionBar: boolean | SelectionBarConfig<TRow> | undefined = featureConfig(rawSelection)?.bar
-	const coreSelection: boolean | SelectionConfig | undefined =
+	// Typed at the React binding, not the core default: `selection.column.header` returns a
+	// `ReactNode` here, and `SelectionConfig` with its node parameter left to default would
+	// reject it.
+	const coreSelection: boolean | SelectionConfig<TRow, ReactNode> | undefined =
 		typeof rawSelection === 'object' ? (({ bar: _bar, ...rest }) => rest)(rawSelection) : rawSelection
 
 	// Split pagination into the headless core part (strip React-only detection tuning and

@@ -104,6 +104,20 @@ by hand.
 	full control in exchange for re-implementing what you still want. Omit `children` unless you need it.
 </Callout>
 
+### Typing the render arguments
+
+Every compound child reads the table from context rather than from a prop, so it has nothing to
+infer your row type from — `row.original` is `any` unless you say otherwise. Name the row type
+once, as a type argument, and the whole render function is typed:
+
+```tsx
+<DataGrid.Body<Order>>{({ rows }) => rows.map((row) => <td>{row.original.total}</td>)}</DataGrid.Body>
+```
+
+The same argument is available on `Table`, `Header`, `HeaderRow`, `HeaderCell`, `Row`, `Cell`,
+`Footer`, `FooterRow` and `FooterCell`, and on `useDataGridTable<Order>()` for a component of
+your own.
+
 ## Header rows and cells: keep the chrome, change the markup
 
 `<DataGrid.Header>` composes three slots below it. Reach for them when `column.header` is not
@@ -275,6 +289,35 @@ the kit's `<tfoot>` — a node, or a render function receiving `{ table, footerG
 			<td colSpan={table.getVisibleLeafColumns().length}>{table.getRowModel().rows.length} rows</td>
 		</tr>
 	)}
+</DataGrid.Footer>
+```
+
+`<DataGrid.FooterRow>` and `<DataGrid.FooterCell>` are the footer's counterparts to
+`<DataGrid.HeaderRow>` and `<DataGrid.HeaderCell>`, for when only _one_ cell should differ. A
+hand-written `<td>` would give up the `colSpan`, the pinning offset, the `align.footer` attribute
+and the `footerClassName` that the default footer applies for you; these keep all of it:
+
+```tsx
+<DataGrid.Footer>
+	{({ footerGroups }) =>
+		footerGroups.map((group) => (
+			<DataGrid.FooterRow
+				key={group.id}
+				footerGroup={group}
+			>
+				{({ headers }) =>
+					headers.map((header) => (
+						<DataGrid.FooterCell
+							key={header.id}
+							header={header}
+						>
+							{({ content }) => (header.column.id === 'amount' ? <strong>{content}</strong> : content)}
+						</DataGrid.FooterCell>
+					))
+				}
+			</DataGrid.FooterRow>
+		))
+	}
 </DataGrid.Footer>
 ```
 

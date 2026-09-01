@@ -148,6 +148,8 @@ export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/
 export type { DataGridHeaderRowProps, DataGridHeaderRowRenderArgs } from './data-grid/header-row'
 export type { DataGridHeaderCellProps, DataGridHeaderCellRenderArgs } from './data-grid/header-cell'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
+export type { DataGridFooterRowProps, DataGridFooterRowRenderArgs } from './data-grid/footer-row'
+export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './data-grid/footer-cell'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'

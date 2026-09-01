@@ -441,7 +441,16 @@ export type PaginationConfig = FeatureToggle &
 		onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
 	}
 
-export type SelectionConfig<TRow extends object = object> = FeatureToggle & {
+/**
+ * Selection config, generic over the adapter's node type.
+ *
+ * `TNode` is what {@link SystemColumnDef.header} may return — `unknown` in core, which renders
+ * nothing and only carries the def through. The React adapter binds it to `ReactNode`, so a
+ * replacement select-all header is checked like any other column header. The same parameter,
+ * under the same name and for the same reason, is on {@link ExpandingConfig} and
+ * {@link RowActionsConfig}: one system-column vocabulary, one node type across all three.
+ */
+export type SelectionConfig<TRow extends object = object, TNode = unknown> = FeatureToggle & {
 	/**
 	 * Called when row selection changes.
 	 *
@@ -466,7 +475,7 @@ export type SelectionConfig<TRow extends object = object> = FeatureToggle & {
 	 * Presentation of the auto-injected `__selection__` column — its width, which edge it
 	 * pins to, its alignment. See {@link SystemColumnDef}.
 	 */
-	column?: SystemColumnDef<TRow>
+	column?: SystemColumnDef<TRow, TNode>
 }
 
 /**
@@ -493,7 +502,11 @@ export type ExpandingMode = (typeof ExpandingMode)[keyof typeof ExpandingMode]
  * added here reaches React automatically — the hand-copied React twin this replaced could
  * only ever drift.
  */
-export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unknown> = FeatureToggle & {
+export type ExpandingConfig<
+	TRow extends object = object,
+	TRenderExpanded = unknown,
+	TNode = unknown,
+> = FeatureToggle & {
 	/** What expanding does. Default: {@link ExpandingMode.SubContent}. */
 	mode?: ExpandingMode
 	/** Tree mode: sub-row extractor. Auto-detects `row.children` when omitted. */
@@ -516,7 +529,7 @@ export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unkn
 	 * Presentation of the auto-injected `__expand__` chevron column — its width, which edge it
 	 * pins to, its alignment. See {@link SystemColumnDef}.
 	 */
-	column?: SystemColumnDef<TRow>
+	column?: SystemColumnDef<TRow, TNode>
 }
 
 export type VisibilityConfig = FeatureToggle & {

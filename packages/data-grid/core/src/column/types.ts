@@ -481,6 +481,44 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	faceted?: boolean
 }
 
+/**
+ * Resolved `column.filtering`, normalized off the raw config.
+ *
+ * Named `filtering` on the meta, for the column option it carries — like `pinning`, `align`,
+ * `cell` and every other sibling — and **every field named for the option it holds**. It was
+ * five flat keys beside it (`filteringItems`, `facetedEnabled`, `defaultOperatorId`,
+ * `resolvedOperators`, `betweenOperatorConfig`), so `filtering.items` was read back as
+ * `meta.filteringItems` and `filtering.faceted` as `meta.facetedEnabled` — one concept
+ * answering to two words depending on which side of the mapper you were standing on, which is
+ * the defect {@link ColumnCellMeta} already exists to have removed.
+ *
+ * The values here are **resolved**, not the raw config: `operators` is the settled list (not
+ * `true`), `faceted` folds in the table-level flag, and `defaultOperator` falls back to the
+ * cell type's default. `component` and `debounce` pass through unchanged.
+ */
+export type ColumnFilteringMeta = {
+	/** The column's own filter input, from `filtering.component`. Row-erased, so untyped here. */
+	component?: ColumnInputRenderer<InputComponentProps, unknown>
+	/** Commit debounce in ms, from `filtering.debounce`. */
+	debounce?: number
+	/** Explicit multi-select value list, from `filtering.items`. */
+	items?: FilterItem[]
+	/**
+	 * Whether this column reads faceted unique values — resolved from `filtering.faceted` and
+	 * the table-level `filtering.faceted`.
+	 */
+	faceted?: boolean
+	/** The settled operator list, resolved from `filtering.operators`. */
+	operators?: FilterOperatorDef[]
+	/** Between-operator UI config, from `filtering.operators.betweenOperator`. */
+	betweenOperator?: BetweenOperatorConfig
+	/**
+	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the one
+	 * its cell type declares, else the first of {@link ColumnFilteringMeta.operators}.
+	 */
+	defaultOperator?: FilterOperatorId
+}
+
 export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown> = {
 	/**
 	 * Custom edit input component for this column.
@@ -1054,6 +1092,15 @@ export type SystemColumnDef<TRow extends object = object, TNode = unknown> = {
 	headerClassName?: string
 	/** Class applied to the column's body cells. */
 	cellClassName?: string
+	/**
+	 * Class applied to the column's footer cell.
+	 *
+	 * The third of the three, like a normal column's — the default `<tfoot>` renders a cell for
+	 * every column, system columns included, and reads `align.footer` off this same def, so
+	 * there was no reason for the class to be the one part of a footer cell that could not be
+	 * set.
+	 */
+	footerClassName?: string
 }
 
 /** Augment TanStack's ColumnMeta with our custom fields. */
@@ -1079,7 +1126,8 @@ declare module '@tanstack/table-core' {
 		cellClassName?: string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
 		/** Class for this column's footer cell, from `column.footerClassName`. */
 		footerClassName?: string
-		filtering?: false | ColumnFilteringConfig
+		/** Resolved filtering config from `column.filtering`, normalized. */
+		filtering?: false | ColumnFilteringMeta
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: false | ColumnVisibilityDef
@@ -1098,18 +1146,5 @@ declare module '@tanstack/table-core' {
 		// concrete row type has to land here, and be readable back out.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		systemHeader?: string | ColumnRenderer<HeaderContext<any, unknown>, unknown>
-		/** Pre-resolved operator list for this column (set when filtering.operators is configured). */
-		resolvedOperators?: FilterOperatorDef[]
-		/** Between operator UI config passed from filtering.operators.betweenOperator. */
-		betweenOperatorConfig?: BetweenOperatorConfig
-		/** Default operator id for this column (derived from config or cell type default). */
-		defaultOperatorId?: FilterOperatorId
-		/** Explicit multi-select value list from `column.filtering.items`. */
-		filteringItems?: FilterItem[]
-		/**
-		 * Effective faceted flag for this column. Set to true when the resolved config
-		 * (table-level `filtering.faceted` or column-level `filtering.faceted`) opts in.
-		 */
-		facetedEnabled?: boolean
 	}
 }

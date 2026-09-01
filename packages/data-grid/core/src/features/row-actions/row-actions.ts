@@ -61,8 +61,17 @@ export type RowActionItem<TNode = never> = {
  * `TRow` carries a default so a reference that names no argument still compiles — the
  * `TableOptionsResolved` augmentation below is one such reference, and reads `actions` back
  * only to invoke it.
+ *
+ * Two node parameters, not one, because the config renders two unrelated things.
+ * {@link RowActionItem.icon} needs an element (React: `<Copy />`), while
+ * {@link SystemColumnDef.header} is column-header content and must accept everything a
+ * column's `header` accepts — a string included. Sharing one parameter made
+ * `rowActions.column.header: () => 'Actions'` a type error while leaving the same slot on
+ * `selection.column` and `expanding.column` unchecked. `TIcon` is the second parameter, where
+ * the single node parameter used to be, so `RowActionsConfig<Row, ReactElement>` still means
+ * what it meant.
  */
-export type RowActionsConfig<TRow extends object = object, TNode = never> = FeatureToggle & {
+export type RowActionsConfig<TRow extends object = object, TIcon = never, TNode = unknown> = FeatureToggle & {
 	/** Layout of the actions column. Default: {@link RowActionsVariant.Inline}. */
 	variant?: RowActionsVariant
 	/**
@@ -76,7 +85,7 @@ export type RowActionsConfig<TRow extends object = object, TNode = never> = Feat
 	 *
 	 * Return `[]` for a row that offers nothing.
 	 */
-	actions?: (ctx: RowActionsContext<TRow>) => RowActionItem<TNode>[]
+	actions?: (ctx: RowActionsContext<TRow>) => RowActionItem<TIcon>[]
 	/**
 	 * Presentation of the auto-injected `__actions__` column — a label for its header, its
 	 * width, which edge it pins to. See {@link SystemColumnDef}.

@@ -5,74 +5,43 @@
 '@ez-kit/data-grid-heroui': minor
 ---
 
-Sixth API audit pass over the data grid: one vocabulary per concept, and the options that were
-documented but not implemented.
+Close eight defects the sixth API audit turned up.
 
-**Filter operators are one closed set.** `FilterOperator` (const object + same-named union)
-replaces three overlapping vocabularies — text spelled equality `equals` while number and date
-spelled it `eq`; number spelled comparison `gt` / `gte` / `lt` / `lte` while date spelled it
-`after` / `onOrAfter` / `before` / `onOrBefore`. The same id now means the same comparison on
-every cell type and only the label changes ("Greater than" on a number column, "After" on a date
-one). `column.filtering.defaultOperator`, `ColumnOperatorsConfig.items`,
-`StructuredFilterValue.operator` and `CellTypeDefinition.operators` are typed `FilterOperatorId`
-instead of `string`. Renames: `eq` → `equals`, `neq` → `notEquals`, `gt` → `greaterThan`,
-`gte` → `greaterOrEqual`, `lt` → `lessThan`, `lte` → `lessOrEqual`, `after` → `greaterThan`,
-`onOrAfter` → `greaterOrEqual`, `before` → `lessThan`, `onOrBefore` → `lessOrEqual`. Text columns
-gain `notEquals`.
+**`selection.column` sees the real row type.** `ReactSelectionConfig` was declared as
+`SelectionConfig & { bar }`, dropping the type argument, so a replacement select-all header was
+handed `HeaderContext<object>` and `row.original.name` did not compile. `expanding.column` and
+`rowActions.column` had always passed it.
 
-An operator id that resolves to nothing made the filter match every row, silently — the
-dispatcher answers `true` for an operator it does not know. `createTable` now warns in
-development, both for `defaultOperator` and for an unknown id in `operators.items`.
+**One node vocabulary across the three system columns.** `RowActionsConfig` spent a single type
+parameter on two unrelated things — a menu entry's `icon`, which needs an element, and
+`column.header`, which is column-header content and must accept a string like any other header.
+It is now `RowActionsConfig<TRow, TIcon, TNode>`, with `TIcon` in the position the old single
+parameter held, and `SelectionConfig` / `ExpandingConfig` gained the same `TNode`. Under React
+all three now type `column.header` as `ReactNode`, where selection and expanding previously
+checked nothing at all and row actions rejected `() => 'Actions'`.
 
-**`filtering: { operators: true }` works on every built-in cell type.** `boolean`, `progress`,
-`image` and `link` had no default operator set, so the option attached no filter function,
-published no operator list and warned about nothing. `progress` now takes the number operators,
-`image` / `link` the text ones, and `boolean` gains its own equality pair. A `satisfies` clause
-keeps the two lookup tables exhaustive over `BaseCellTypes`.
+**Delete prompts see the row.** `ConfirmationConfig` / `BulkConfirmationConfig` are generic over
+the row type, so ``description: (row) => `Delete "${row.original.name}"?` `` needs no cast — the
+casts are gone from the docs examples.
 
-**`column.creating.component` falls back to `column.editing.component`,** as its own JSDoc and
-the validation docs have said in three places. The create form read `meta.creating` alone, so a
-column that declared only `editing.component` rendered its custom input while editing and the
-generic fallback input while creating. The fallback is now per **field** (`component`,
-`description`, `validateOn`, `debounce`) through one shared `resolveColumnFormConfig`, which the
-headless creating feature and the React form layer both use — the two timing fields used to fall
-back per object, so setting only `creating.description` dropped `editing.validateOn`.
+**Compound render arguments can be typed.** `<DataGrid.Body>`, `Table`, `Header`, `HeaderRow`,
+`HeaderCell`, `Row`, `Cell` and `Footer` take an optional row type argument —
+`<DataGrid.Body<Order>>` — and their `*Props` / `*RenderArgs` types are generic to match. The
+default is unchanged, so nothing has to be updated.
 
-**Cell-type registry slots are named for their features:** `edit` → `editing`,
-`filter` → `filtering` (`view` and `creating` unchanged). A column already spells the same four
-things `cell.component` / `editing.component` / `creating.component` / `filtering.component`.
+**`<DataGrid.FooterRow>` and `<DataGrid.FooterCell>`.** The footer had no per-row or per-cell
+slot, so changing one footer cell meant hand-writing a `<td>` and re-deriving `colSpan`, the
+pinning offset, `align.footer` and `footerClassName`. These are the footer's counterparts to
+`HeaderRow` / `HeaderCell`, and the default footer is now built from them.
 
-**`ColumnMeta.cell` replaces `cellType` / `config` / `cellView`,** so the resolved value carries
-the name of the column option it holds, like every sibling on that interface.
+**`SystemColumnDef.footerClassName`.** The three system columns could set `align.footer` but not
+the class beside it, though the default `<tfoot>` renders a cell for every column.
 
-**DI contract groups match the config vocabulary.** `'row-actions'` → `rowActions` (the one
-kebab key, and the one a kit had to quote); `ConfirmDialog` moves to a new `deleting` group,
-matching the feature that owns it; `NumberInput` moves to `core`, beside `Input` and `Checkbox`.
+**`ColumnMeta.filtering` carries the whole feature.** The resolved filtering config was five flat
+keys next to it — `filteringItems`, `facetedEnabled`, `defaultOperatorId`, `resolvedOperators`,
+`betweenOperatorConfig` — so `filtering.items` was read back as `meta.filteringItems`. They are
+now `meta.filtering.items` / `.faceted` / `.defaultOperator` / `.operators` / `.betweenOperator`,
+each named for the column option it holds, typed as the new `ColumnFilteringMeta`.
 
-**`globalFiltering.fn` is typed.** `BuiltInGlobalFilterFn` + `GlobalFilterFnId` replace the bare
-`string` that was passed straight through to TanStack, where a typo silently changed what the
-search box matched.
-
-**The three system columns are configurable.** `selection.column`, `expanding.column` and
-`rowActions.column` take a `SystemColumnDef` — `header`, `width`, `pinning`, `align`,
-`headerClassName`, `cellClassName` — in the column vocabulary and with the column
-scalar-or-object forms. Labelling the actions column, widening it or unpinning it on a narrow
-grid had no route through the public API. The expand column is now pinned left like the selection
-column beside it; it was the one system column pinned nowhere, so a horizontally scrolled grid
-kept the checkbox and lost the chevron of the same row.
-
-**`ResolvedGridOptions` stops inventing third names.** `pagination.pageSizer` →
-`pagination.toolbar`, the word every other feature's resolved auto-mount flag uses;
-`columnPinning: boolean` → `pinning: { column, row }`, so a kit can read the row axis at all.
-
-**Column-level `filtering.debounce`,** overriding the table-level one — `editing.debounce` and
-`creating.debounce` have always existed at both levels.
-
-**Exports.** `ColumnInputRenderer` (the slot type `filtering` / `editing` / `creating`
-components are declared with, whose JSDoc tells you to annotate them), `SystemColumnDef`,
-`ColumnCellMeta`, `FilterOperator`, `FilterOperatorId`, `SELECT_BADGE_OPERATORS`,
-`EMPTY_OPERATORS`, `BOOLEAN_OPERATORS`, `BuiltInGlobalFilterFn`, `GlobalFilterFnId`,
-`ColumnFormMode`, `resolveColumnFormConfig` and `GridDeletingComponents` are now public.
-`mapColumns`, `buildOperatorRegistry` and `resolveColumnOperators` are not — they are adapter
-internals. `CellViewProps` is now an alias of the core `CellViewCtx` rather than a second
-declaration of the same three fields.
+**Docs: column and row pinning do have an `onChange`.** Both pages stated they do not, while
+`pinning.column.onChange` and `pinning.row.onChange` are wired and fire.

@@ -14,6 +14,7 @@ import type {
 	ColumnCreatingConfig,
 	ColumnDef,
 	ColumnEditingConfig,
+	ColumnFilteringMeta,
 	TanStackColumnDef,
 } from '../types'
 
@@ -100,7 +101,6 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'pinning', normalizeColumnPinning(pinning))
 	setIfDefined(meta, 'align', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
-	setIfDefined(meta, 'filtering', filtering)
 	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)
 	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
 	setIfDefined(meta, 'headerClassName', headerClassName)
@@ -181,16 +181,18 @@ function mapColumn<TRow extends object>(
 		result.accessorFn = accessorFn
 	}
 
-	// Operator-aware filtering
+	// Operator-aware filtering. Everything resolved here lands on `meta.filtering` under the
+	// name of the column option it came from — see `ColumnFilteringMeta`.
 	const filteringCfg = filtering !== undefined && filtering !== false ? filtering : undefined
-	if (filteringCfg?.items) {
-		meta.filteringItems = filteringCfg.items
-	}
+	const filteringMeta: ColumnFilteringMeta = {}
+	setIfDefined(filteringMeta, 'component', filteringCfg?.component)
+	setIfDefined(filteringMeta, 'debounce', filteringCfg?.debounce)
+	setIfDefined(filteringMeta, 'items', filteringCfg?.items)
 	const colFaceted = filteringCfg?.faceted
 	const tableFaceted = options?.tableFaceted ?? false
 	const facetedEnabled = colFaceted === true || (colFaceted !== false && tableFaceted)
 	if (facetedEnabled) {
-		meta.facetedEnabled = true
+		filteringMeta.faceted = true
 	}
 	if (filteringCfg?.operators && registry) {
 		const cellType = cellDef?.type
@@ -212,10 +214,10 @@ function mapColumn<TRow extends object>(
 			}
 		} else {
 			result.filterFn = createOperatorFilterFn(resolved)
-			meta.resolvedOperators = resolved
+			filteringMeta.operators = resolved
 
 			if (typeof filteringCfg.operators === 'object' && filteringCfg.operators.betweenOperator) {
-				meta.betweenOperatorConfig = filteringCfg.operators.betweenOperator
+				filteringMeta.betweenOperator = filteringCfg.operators.betweenOperator
 			}
 
 			const defaultOpId =
@@ -233,9 +235,18 @@ function mapColumn<TRow extends object>(
 							`The filter would match every row.`,
 					)
 				}
-				meta.defaultOperatorId = defaultOpId
+				filteringMeta.defaultOperator = defaultOpId
 			}
 		}
+	}
+
+	// `false` is a distinct value, not an empty config: it is what turns the column's filter
+	// control off, and readers test for it. An enabled column with nothing configured
+	// contributes no key at all, exactly as before.
+	if (filtering === false) {
+		meta.filtering = false
+	} else if (Object.keys(filteringMeta).length > 0) {
+		meta.filtering = filteringMeta
 	}
 
 	// Nested columns (column groups)

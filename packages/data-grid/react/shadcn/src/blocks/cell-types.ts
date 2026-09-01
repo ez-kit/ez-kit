@@ -41,3 +41,12 @@ export const cellTypes = {
 	link: { ...baseCellTypes.link, view: LinkCellView, editing: LinkCellInput },
 	progress: { ...baseCellTypes.progress, view: ProgressCellView, editing: ProgressCellInput },
 } satisfies CellTypeRegistry
+
+/**
+ * The registry's type, under a name.
+ *
+ * `createDataGrid` is instantiated with this alias rather than letting `typeof cellTypes` be
+ * inferred, so the bundled `.d.ts` refers to the registry **by name** instead of re-printing
+ * all nine entries structurally at every use site.
+ */
+export type KitCellTypes = typeof cellTypes

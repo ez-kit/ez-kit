@@ -94,19 +94,24 @@ function resolveEstimateSize(
 	return () => size
 }
 
-/** What a `<DataGrid.Table>` render function receives. */
-export type DataGridTableRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: TanStackTable<any>
+/**
+ * What a `<DataGrid.Table>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Table<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridTableRenderArgs<TRow extends object = any> = {
+	table: TanStackTable<TRow>
 	/** Header groups of the current column model — one entry per header row. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	headerGroups: HeaderGroup<any>[]
+	headerGroups: HeaderGroup<TRow>[]
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	rows: Row<any>[]
+	rows: Row<TRow>[]
 }
 
-export type DataGridTableProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridTableProps<TRow extends object = any> = {
 	/**
 	 * Custom table content, rendered inside the kit's `<Table>` element and inside the
 	 * scroll / pin-shadow wrapper, so sticky headers, pinning and virtualization plumbing
@@ -125,7 +130,7 @@ export type DataGridTableProps = {
 	 * </DataGrid.Table>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridTableRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridTableRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -140,9 +145,10 @@ export type DataGridTableProps = {
  * scroll container. CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow`
  * on the wrapper drive their opacity.
  */
-export function DataGridTable({ children }: DataGridTableProps = {}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridTable<TRow extends object = any>({ children }: DataGridTableProps<TRow> = {}) {
 	const { Table } = useGridComponents().core
-	const table = useDataGridTable()
+	const table = useDataGridTable<TRow>()
 
 	// Narrow subscriptions: re-render only when slices that actually affect
 	// the table layout or row composition change. Editing / rowSelection /
