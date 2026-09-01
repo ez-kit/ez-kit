@@ -10,8 +10,8 @@ export type OptionSourceInput = {
 	 */
 	params: Record<string, unknown>
 	/**
-	 * The text currently typed into a `searchable` select, or `undefined` for a field that is
-	 * not searchable.
+	 * The text currently typed into a `searchable` select or multiselect, or `undefined` for a
+	 * field that is not searchable.
 	 *
 	 * Additive: a source written before this key existed simply ignores it, which is why
 	 * {@link OptionSource} could grow the searchable form without breaking anyone.
@@ -121,10 +121,11 @@ export type SimpleOptionSource = (input: OptionSourceInput) => OptionSourceResul
  * const optionSources = { cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue } }
  * ```
  *
- * `values` is a **readonly array** even though only a single-value `select` is searchable
- * today: it is what lets multiselect + search land later without changing this contract.
- * An empty array means nothing is selected — a source should report `loading: false` and an
- * empty list rather than issuing a request.
+ * `values` is a **readonly array**, which is what lets one source serve both searchable kinds
+ * unchanged: a `select` sends its single value as a one-element array, a `multiselect` sends
+ * its whole selection, and neither needs a different source. An empty array means nothing is
+ * selected — a source should report `loading: false` and an empty list rather than issuing a
+ * request.
  */
 export type SearchableOptionSource = {
 	useOptions: (input: OptionSourceInput) => OptionSourceResult

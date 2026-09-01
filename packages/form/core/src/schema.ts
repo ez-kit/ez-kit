@@ -110,9 +110,7 @@ type SelectMember<TValues, TValue> = FieldCommon<TValues> &
 		 * field has a static `options` list or a source that cannot resolve a selection.
 		 *
 		 * Deliberately absent from `radiogroup` and `checkboxgroup` — they render every option
-		 * inline, so there is nothing to search — and from `multiselect`, where it is not
-		 * supported *yet*: N selected values need chips carrying N resolved labels.
-		 * `parseFormSchema` rejects it on all three.
+		 * inline, so there is nothing to search. `parseFormSchema` rejects it on both.
 		 */
 		searchable?: boolean
 	}
@@ -123,6 +121,18 @@ type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &
 		name: DeepKeysOfType<TValues, TValue[]>
 		defaultValue?: readonly TValue[]
 		placeholder?: string
+		/**
+		 * Render this multi-select as a search box over its options, with the selection shown
+		 * as chips — the multi-value spelling of {@link SelectMember.searchable}, and subject
+		 * to the same two requirements: an `optionsFrom` source, in the two-hook form.
+		 *
+		 * The chips are what make it worth stating separately. With a server-side search the
+		 * selected cities are usually absent from the current page of results, so their labels
+		 * come from the source's `useSelectedOptions` — which receives the field's **whole
+		 * value array** and needs no change from a source already written for a searchable
+		 * `select`. Without it the chips would read as raw ids.
+		 */
+		searchable?: boolean
 	}
 
 type CheckboxGroupMember<TValues, TValue> = FieldCommon<TValues> &

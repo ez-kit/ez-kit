@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@form-shadcn/components
 
 import { FieldShell } from './field-shell'
 import { OptionListSkeleton, OptionSkeleton } from './option-skeleton'
+import { SearchableMultiSelectField } from './searchable-multi-select'
 
 import type { CheckboxGroupFieldRenderProps, MultiSelectFieldRenderProps, SelectOption } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
@@ -45,11 +46,28 @@ function toggle(value: readonly string[], option: string): string[] {
 	return value.includes(option) ? value.filter((entry) => entry !== option) : [...value, option]
 }
 
-export function MultiSelectField({
+export function MultiSelectField(props: MultiSelectFieldRenderProps): ReactNode {
+	// `search` present *is* the mode switch — see `MultiSelectFieldRenderProps`. The two are
+	// different primitives with different anatomy (a Radix popover of checkboxes vs the Base UI
+	// combobox), so they are separate components rather than one with branches inside it.
+	if (props.search !== undefined) {
+		return (
+			<SearchableMultiSelectField
+				{...props}
+				search={props.search}
+			/>
+		)
+	}
+
+	return <PlainMultiSelectField {...props} />
+}
+
+function PlainMultiSelectField({
 	value,
 	onChange,
 	options,
 	loading,
+	search: _search,
 	placeholder,
 	id,
 	name,

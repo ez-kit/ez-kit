@@ -91,8 +91,7 @@ type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> 
 		 * matching the last query, so the option for the value already in form state has to be
 		 * fetched separately — see {@link SearchableOptionSource}.
 		 *
-		 * `select` only: `multiselect` + search is not supported yet, and the two inline kinds
-		 * do not have the prop at all.
+		 * `select` and `multiselect` only; the two inline kinds do not have the prop at all.
 		 */
 		searchable?: boolean
 	}
@@ -104,6 +103,16 @@ export type SelectFieldProps<TFormData> =
 type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> &
 	OptionsProps<TValue> & {
 		placeholder?: string
+		/**
+		 * Render as a search over the options, with the selection shown as chips — the
+		 * multi-value spelling of {@link SelectFieldPropsFor.searchable}, with the same two
+		 * runtime requirements (an `optionsFrom` source, in the two-hook form) and the same
+		 * two throws naming the field when either is missing.
+		 *
+		 * The source needs no change to serve both: `useSelectedOptions` already takes the
+		 * values to resolve as an **array**, and here it simply receives more than one.
+		 */
+		searchable?: boolean
 	}
 
 export type MultiSelectFieldProps<TFormData> =

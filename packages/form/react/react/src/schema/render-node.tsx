@@ -308,6 +308,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+					{...(node.searchable !== undefined && { searchable: node.searchable })}
 				/>
 			)
 		case FormFieldType.CheckboxGroup:

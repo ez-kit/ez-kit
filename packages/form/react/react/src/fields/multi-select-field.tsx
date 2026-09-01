@@ -16,24 +16,28 @@ export function createMultiSelectField<TFormData>(
 	KitMultiSelectField: FormComponents['MultiSelectField'],
 ): (props: MultiSelectFieldProps<TFormData>) => ReactNode {
 	return function MultiSelectField(props: MultiSelectFieldProps<TFormData>): ReactNode {
-		const { name, label, description, disabled, required, placeholder } = props
+		const { name, label, description, disabled, required, placeholder, searchable } = props
 
-		// See `select-field.tsx` — the same string↔typed-value bridge and the same
-		// options-above-the-binding layering, applied to the whole selection.
+		// See `select-field.tsx` — the same string↔typed-value bridge, the same
+		// options-above-the-binding layering, and the same `searchable` plumbing, applied to
+		// the whole selection. `FieldOptions` hands `useSelectedOptions` every selected value,
+		// so each chip can be labelled even when the current page of results holds none of them.
 		return (
 			<FieldOptions
 				binding={props}
 				form={form}
 				name={name}
 				clearedValue={CLEARED_LIST}
+				searchable={searchable}
 			>
-				{({ options, loading }) => (
+				{({ options, loading, search }) => (
 					<form.AppField name={name}>
 						{(field) => (
 							<KitMultiSelectField
 								{...fieldRenderProps(field, FormFieldType.MultiSelect, { label, description, disabled, required })}
 								options={toKitOptions(options)}
 								loading={loading}
+								search={search}
 								placeholder={placeholder}
 								value={asOptionValueTexts(field.state.value)}
 								onChange={(value) => {

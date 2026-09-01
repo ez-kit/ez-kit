@@ -112,33 +112,41 @@ type OptionsRenderProps = {
 	loading: boolean
 }
 
+/**
+ * The query state of a `searchable` field, as the kit receives it — the one key `select` and
+ * `multiselect` grew for the feature, and they grew the identical one.
+ *
+ * One bundled key rather than three loose ones, because the three only ever make sense
+ * together — its presence *is* the mode switch, so a kit branches once (`search !== undefined`)
+ * instead of correlating a flag with two handlers it has to trust are there. `undefined` means
+ * a plain control, which is what every field that is not `searchable` gets.
+ *
+ * The **renderer** owns the query: it is what feeds the option source, which for a searchable
+ * field returns only the page matching the last query. So the kit is fully controlled here
+ * like everywhere else in this contract — report what was typed, render what `options` says,
+ * and never filter `options` yourself; that has already happened server-side.
+ *
+ * `options` always contains the option for everything currently selected, even when the
+ * search that produced the rest of the list did not return it — the renderer merges those in
+ * from a second query. From here it is still just "find the option whose value matches",
+ * which for a multi-select is what puts a **label** on each chip instead of a raw id.
+ *
+ * After a selection a kit is expected to clear the query (`onQueryChange('')`), so the next
+ * search starts fresh rather than leaving a stale term beside a chip that already consumed it.
+ *
+ * The query arrives **raw**, on every keystroke. Debouncing is the source's job for now and is
+ * not a kit concern.
+ */
+type SearchRenderProps = {
+	search: { query: string; onQueryChange: (query: string) => void } | undefined
+}
+
 export type SelectFieldRenderProps = FieldRenderProps &
-	OptionsRenderProps & {
+	OptionsRenderProps &
+	SearchRenderProps & {
 		value: string
 		onChange: (value: string) => void
 		placeholder: string | undefined
-		/**
-		 * Render a search box over the options instead of a plain dropdown; `undefined` means a
-		 * plain select, which is what every field that is not `searchable` gets.
-		 *
-		 * One bundled key rather than three loose ones, because the three only ever make sense
-		 * together — its presence *is* the mode switch, so a kit branches once (`search !== undefined`)
-		 * instead of correlating a flag with two handlers it has to trust are there.
-		 *
-		 * The **renderer** owns the query: it is what feeds the option source, which for a
-		 * searchable field returns only the page matching the last query. So the kit is fully
-		 * controlled here like everywhere else in this contract — report what was typed, render
-		 * what `options` says, and never filter `options` yourself; that has already happened
-		 * server-side.
-		 *
-		 * `options` always contains the option for the current `value`, even when the search
-		 * that produced the rest of the list did not return it — the renderer merges it in from
-		 * a second query. From here it is still just "find the option whose value matches".
-		 *
-		 * The query arrives **raw**, on every keystroke. Debouncing is the source's job for now
-		 * and is not a kit concern.
-		 */
-		search: { query: string; onQueryChange: (query: string) => void } | undefined
 	}
 
 /**
@@ -149,7 +157,8 @@ export type SelectFieldRenderProps = FieldRenderProps &
  * complete new selection rather than a toggle.
  */
 export type MultiSelectFieldRenderProps = FieldRenderProps &
-	OptionsRenderProps & {
+	OptionsRenderProps &
+	SearchRenderProps & {
 		value: readonly string[]
 		onChange: (value: string[]) => void
 		placeholder: string | undefined

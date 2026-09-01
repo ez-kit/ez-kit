@@ -73,8 +73,8 @@ export type FieldOptionsProps = {
 	name: string
 	clearedValue: FieldValue
 	/**
-	 * Render as a search over the source rather than a plain list. Only `select` passes it;
-	 * `parseFormSchema` rejects it on the other three option-bearing kinds.
+	 * Render as a search over the source rather than a plain list. `select` and `multiselect`
+	 * pass it; `parseFormSchema` rejects it on the two inline kinds.
 	 */
 	searchable?: boolean | undefined
 	children: (resolved: ResolvedFieldOptions) => ReactNode
@@ -231,9 +231,13 @@ function SourcedOptions({
  * The searchable branch: two hooks from one source, merged into the single list the kit sees.
  *
  * `useOptions` answers "what matches what the user just typed" and `useSelectedOptions`
- * answers "what is the option behind the value already in form state". Only the second can
+ * answers "what are the options behind the values already in form state". Only the second can
  * label a selection the current page of results does not contain, which — with server-side
- * search — is the normal case, not an edge one.
+ * search — is the normal case, not an edge one. It is what puts a real label on a
+ * multi-select's chips, where the whole selection is usually off the current page.
+ *
+ * Single- and multi-value fields share this one path: the difference between them is entirely
+ * in {@link useSelectedValues}, which reports one value or many through the same array.
  *
  * A separate component from {@link SourcedOptions} rather than a branch inside it: the two
  * call different numbers of hooks, and which one a field takes is fixed by its own
@@ -313,22 +317,36 @@ const NO_VALUES: readonly OptionValue[] = []
 /**
  * The field's current value, as the `values` array `useSelectedOptions` takes.
  *
- * An array for a single-value select because that is the shape multiselect will need, and
- * widening it later would be a breaking change for every source already written against it.
- * Read through a **narrow** `useSelector` subscription, exactly as `useOptionSourceParams`
- * reads its dependencies: this component sits above `AppField` and would otherwise have to
- * re-render on every change anywhere in the form.
+ * Always an array — for a single-value select too, which is what let searchable multiselect
+ * land without touching the source contract: a source written for one arm serves the other
+ * unchanged, it simply receives more than one value. Read through a **narrow** `useSelector`
+ * subscription, exactly as `useOptionSourceParams` reads its dependencies: this component
+ * sits above `AppField` and would otherwise have to re-render on every change anywhere in
+ * the form.
+ *
+ * A list value is filtered rather than passed through, so one bad entry cannot make a source
+ * ask for `undefined`; the identity of the result only changes when the values do, because
+ * the array is rebuilt from the same `value` reference the form holds.
  */
 function useSelectedValues(form: BindableForm, name: string): readonly OptionValue[] {
 	const store = (form as unknown as ConditionSubscribableForm<unknown>).store
 	const value = useSelector(store, (state: { values: unknown }) => getValueAtPath(state.values, name))
 
 	return useMemo(() => {
+		if (Array.isArray(value)) {
+			const values = (value as unknown[]).filter(isOptionValue)
+			return values.length === 0 ? NO_VALUES : values
+		}
 		if (typeof value === 'string') return value === '' ? NO_VALUES : [value]
 		if (typeof value === 'number') return [value]
 		// `undefined` (the cleared value), and anything a mis-bound field might hold.
 		return NO_VALUES
 	}, [value])
+}
+
+/** The scalar an option's value may be — the runtime face of `OptionValue`. */
+function isOptionValue(value: unknown): value is OptionValue {
+	return typeof value === 'string' ? value !== '' : typeof value === 'number'
 }
 
 /**

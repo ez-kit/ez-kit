@@ -447,28 +447,22 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 }
 
 /**
- * `searchable` is a `select`-only flag, and the two ways it can be wrong get different words.
+ * `searchable` belongs to the two kinds that have a trigger to type into.
  *
- * A `radiogroup` or a `checkboxgroup` renders every option inline; there is no trigger to
- * type into and no page of results to narrow, so the flag is meaningless there and always
- * will be. A `multiselect` is a different case entirely — the feature is coherent, it is
- * simply **not built yet**: N selected values need N resolved labels on N chips. Telling a
- * document author "not supported yet" rather than "cannot" is the difference between waiting
- * for a release and rewriting the form.
+ * `select` and `multiselect` both draw one control that stands for the selection and opens a
+ * list — a search box fits there, and for a `multiselect` the selection is chips carrying
+ * labels resolved through the source's `useSelectedOptions`. A `radiogroup` or a
+ * `checkboxgroup` renders every option inline instead; there is nothing to type into and no
+ * page of results to narrow, so the flag is meaningless there and always will be.
  */
 function assertSearchable(node: FormNode<unknown, string>, path: string): void {
 	const value = (node as unknown as UnknownRecord).searchable
 	if (value === undefined) return
 
-	if (node.type === MULTI_SELECT_TYPE) {
+	if (node.type !== SELECT_TYPE && node.type !== MULTI_SELECT_TYPE) {
 		throw new FormSchemaError(
-			'"multiselect" cannot be "searchable" yet; searchable multi-select is not supported in this version',
-			path,
-		)
-	}
-	if (node.type !== SELECT_TYPE) {
-		throw new FormSchemaError(
-			`"searchable" is only supported on "select", not on "${node.type}", which renders every option inline`,
+			`"searchable" is only supported on "select" and "multiselect", not on "${node.type}", ` +
+				'which renders every option inline',
 			path,
 		)
 	}

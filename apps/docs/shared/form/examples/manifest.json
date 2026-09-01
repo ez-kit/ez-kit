@@ -110,5 +110,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/searchable-select.tsx",
 		"exportName": "SearchableSelectExample"
+	},
+	{
+		"id": "form-searchable-multiselect",
+		"label": "Searchable multiselect",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/searchable-multiselect.tsx",
+		"exportName": "SearchableMultiSelectExample"
 	}
 ]

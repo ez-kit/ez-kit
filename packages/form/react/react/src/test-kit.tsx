@@ -536,6 +536,7 @@ export const testComponents: FormComponents = {
 		onChange,
 		options,
 		loading,
+		search,
 		placeholder,
 		id,
 		name,
@@ -549,36 +550,70 @@ export const testComponents: FormComponents = {
 			{...field}
 		>
 			{(aria) => (
-				<select
-					data-testkit='multiselect'
-					data-loading={loading || undefined}
-					multiple
-					id={id}
-					name={name}
-					disabled={disabled === true || loading}
-					required={required}
-					aria-invalid={field.invalid}
-					// A native multiple select has no placeholder slot, and `aria-placeholder` is
-					// illegal on its implicit listbox role — the real kits render one on their own
-					// trigger instead, so this stand-in only has to prove the prop reaches them.
-					data-placeholder={placeholder}
-					value={[...value]}
-					onBlur={onBlur}
-					onChange={(event) => {
-						onChange(Array.from(event.target.selectedOptions, (option) => option.value))
-					}}
-					{...aria}
-				>
-					{options.map((option) => (
-						<option
-							key={option.value}
-							value={option.value}
-							disabled={option.disabled}
-						>
-							{option.label}
-						</option>
-					))}
-				</select>
+				<>
+					{/* Both real kits draw the selection as chips beside a search box. The test kit
+					    keeps the native multiple `<select>` and adds the query input plus a plain
+					    list of chips, so a test can assert on the *contract* — what reaches
+					    `onQueryChange`, what `options` holds, and which label each selected value
+					    resolves to — without depending on either kit's combobox anatomy. */}
+					{search !== undefined && (
+						<>
+							<input
+								data-testkit='multiselect-search'
+								aria-label={`Search ${name}`}
+								value={search.query}
+								onChange={(event) => {
+									search.onQueryChange(event.target.value)
+								}}
+							/>
+							<ul data-testkit='multiselect-chips'>
+								{value.map((entry) => (
+									<li
+										key={entry}
+										data-testkit='multiselect-chip'
+										data-value={entry}
+									>
+										{options.find((option) => option.value === entry)?.label ?? entry}
+									</li>
+								))}
+							</ul>
+						</>
+					)}
+					<select
+						data-testkit='multiselect'
+						data-loading={loading || undefined}
+						multiple
+						id={id}
+						name={name}
+						disabled={disabled === true || loading}
+						required={required}
+						aria-invalid={field.invalid}
+						// A native multiple select has no placeholder slot, and `aria-placeholder` is
+						// illegal on its implicit listbox role — the real kits render one on their own
+						// trigger instead, so this stand-in only has to prove the prop reaches them.
+						data-placeholder={placeholder}
+						value={[...value]}
+						onBlur={onBlur}
+						onChange={(event) => {
+							onChange(Array.from(event.target.selectedOptions, (option) => option.value))
+							// Both kits clear the query once a selection lands; the stand-in does the
+							// same, so a test asserts the behaviour the contract asks for rather than
+							// one kit's implementation of it.
+							search?.onQueryChange('')
+						}}
+						{...aria}
+					>
+						{options.map((option) => (
+							<option
+								key={option.value}
+								value={option.value}
+								disabled={option.disabled}
+							>
+								{option.label}
+							</option>
+						))}
+					</select>
+				</>
 			)}
 		</Shell>
 	),

@@ -3,6 +3,7 @@ import { Checkbox, CheckboxGroup, ListBox, Select as HeroSelect } from '@heroui/
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
 import { OptionListSkeleton, OptionSkeleton } from './option-skeleton'
+import { SearchableMultiSelectField } from './searchable-multi-select'
 
 import type { CheckboxGroupFieldRenderProps, MultiSelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
@@ -23,11 +24,28 @@ function toValues(keys: Key | Key[] | null): string[] {
 	return (Array.isArray(keys) ? keys : [keys]).map(String)
 }
 
-export function MultiSelectField({
+export function MultiSelectField(props: MultiSelectFieldRenderProps): ReactNode {
+	// `search` present *is* the mode switch — see `MultiSelectFieldRenderProps`. The two are
+	// different React Aria widgets (`Select` vs `ComboBox`) with different anatomy, so they
+	// are separate components rather than one with branches inside it.
+	if (props.search !== undefined) {
+		return (
+			<SearchableMultiSelectField
+				{...props}
+				search={props.search}
+			/>
+		)
+	}
+
+	return <PlainMultiSelectField {...props} />
+}
+
+function PlainMultiSelectField({
 	value,
 	onChange,
 	options,
 	loading,
+	search: _search,
 	placeholder,
 	id,
 	name,
