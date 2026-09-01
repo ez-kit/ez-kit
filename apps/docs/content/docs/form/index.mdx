@@ -49,13 +49,14 @@ You install exactly one of the two flavours; it pulls the rest in.
 
 ## What's in the box
 
-| Export                                        | Purpose                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------ |
-| [`Form`](./form/getting-started)              | The `<form>` element. Creates the instance, or takes yours.        |
-| [`useForm`](./form/getting-started)           | The extended hook, for when you need the instance yourself.        |
-| [`form.TextField` and friends](./form/fields) | Eight base fields: text, number, textarea, select, checkbox, …     |
-| `form.SubmitButton`                           | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself. |
-| [`createForm`](./form/custom-kit)             | The factory a UI kit calls to bind its own components.             |
+| Export                                        | Purpose                                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [`Form`](./form/getting-started)              | The `<form>` element. Creates the instance, or takes yours.                                 |
+| [`useForm`](./form/getting-started)           | The extended hook, for when you need the instance yourself.                                 |
+| [`form.TextField` and friends](./form/fields) | Twelve base fields: text, number, textarea, select, multi-select, checkbox, switch, date, … |
+| `form.SubmitButton`                           | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself.                          |
+| [`FormRenderer`](./form/schema)               | Renders a serialisable document — the schema-driven mode.                                   |
+| [`createForm`](./form/custom-kit)             | The factory a UI kit calls to bind its own components.                                      |
 
 ## Validation
 
@@ -63,4 +64,6 @@ There is **no custom resolver**. Validation is pure pass-through of TanStack For
 
 ## Not included yet
 
-Switch, radio-group, date-picker and combobox fields, a schema-driven auto-form, and `extendForm` (registering your own field type) are planned but not shipped. Today, a field type we do not cover is written with [the native API](./form/native-api).
+Repeatable array fields are the notable gap: relative field references (`./`) are reserved in the format but not supported, so a list of addresses is written by hand today. Time and file inputs are not covered either, and a searchable field's debouncing is still its [option source](./form/option-sources)'s job rather than the package's.
+
+A field kind we do not cover is written with [the native API](./form/native-api), or — in a document — [registered as a custom field type](./form/schema#registries) and rendered like any built-in one.
