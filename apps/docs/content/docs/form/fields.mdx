@@ -126,6 +126,10 @@ Failure is deliberately not in the contract: there is no `error` or `onRetry` pr
 
 <KitExample exampleId='form-async-options' />
 
+### Options the app fetches by name
+
+`options` and `loading` cover a list the component computes. A **JSON document** has nowhere to put a `useQuery` call, so it names a list instead — `optionsFrom='cities'`, with the app deciding what that name fetches. The same prop works in TSX, and a cascade (city depends on country) works from either side. See [Option sources](/docs/form/option-sources).
+
 ## `form.CheckboxField`
 
 Binds to a `boolean`.

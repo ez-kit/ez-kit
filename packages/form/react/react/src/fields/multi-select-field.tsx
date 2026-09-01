@@ -3,6 +3,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 import { asOptionValueTexts } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
 import { fromKitValues, toKitOptions } from '../option-values'
+import { CLEARED_LIST, FieldOptions } from '../options/field-options'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -14,35 +15,35 @@ export function createMultiSelectField<TFormData>(
 	form: BindableForm,
 	KitMultiSelectField: FormComponents['MultiSelectField'],
 ): (props: MultiSelectFieldProps<TFormData>) => ReactNode {
-	return function MultiSelectField({
-		name,
-		label,
-		description,
-		disabled,
-		required,
-		options,
-		loading,
-		placeholder,
-	}: MultiSelectFieldProps<TFormData>): ReactNode {
-		// See `select-field.tsx` — the same string↔typed-value bridge, applied to the whole
-		// selection rather than one value.
-		const kitOptions = toKitOptions(options)
+	return function MultiSelectField(props: MultiSelectFieldProps<TFormData>): ReactNode {
+		const { name, label, description, disabled, required, placeholder } = props
 
+		// See `select-field.tsx` — the same string↔typed-value bridge and the same
+		// options-above-the-binding layering, applied to the whole selection.
 		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitMultiSelectField
-						{...fieldRenderProps(field, FormFieldType.MultiSelect, { label, description, disabled, required })}
-						options={kitOptions}
-						loading={loading ?? false}
-						placeholder={placeholder}
-						value={asOptionValueTexts(field.state.value)}
-						onChange={(value) => {
-							field.handleChange(fromKitValues(options, value))
-						}}
-					/>
+			<FieldOptions
+				binding={props}
+				form={form}
+				name={name}
+				clearedValue={CLEARED_LIST}
+			>
+				{({ options, loading }) => (
+					<form.AppField name={name}>
+						{(field) => (
+							<KitMultiSelectField
+								{...fieldRenderProps(field, FormFieldType.MultiSelect, { label, description, disabled, required })}
+								options={toKitOptions(options)}
+								loading={loading}
+								placeholder={placeholder}
+								value={asOptionValueTexts(field.state.value)}
+								onChange={(value) => {
+									field.handleChange(fromKitValues(options, value))
+								}}
+							/>
+						)}
+					</form.AppField>
 				)}
-			</form.AppField>
+			</FieldOptions>
 		)
 	}
 }

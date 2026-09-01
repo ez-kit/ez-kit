@@ -1,6 +1,7 @@
 import { FORM_FIELD_TYPES, FormFieldType, resolveSelectOptions, resolveText } from '@ez-kit/form-core'
 
 import { fieldRenderProps } from '../field-render-props'
+import { useOptionSourceParams } from '../options/use-source-params'
 
 import { renderChildren } from './render-children'
 import { useConditionValue } from './use-condition'
@@ -15,6 +16,7 @@ import type {
 	CustomFieldNode,
 	FieldNode,
 	LocalizedSelectOption,
+	OptionsSource,
 	OptionValue,
 	SectionNode,
 	SelectOption,
@@ -101,6 +103,34 @@ function correlatedOptions(
 	return resolveSelectOptions(options, translate) as CorrelatedOptions
 }
 
+/** The two shapes a select-like node's options can arrive in, as one node type to read. */
+type OptionBearingNode = {
+	options?: readonly LocalizedSelectOption<OptionValue>[] | undefined
+	optionsFrom?: string | OptionsSource | undefined
+}
+
+/**
+ * Whichever of `options` / `optionsFrom` the node carries, as the props the field takes.
+ *
+ * Both keys are optional on the field's props (see `OptionsProps` in `../field-props.ts` for
+ * why the mutual exclusion lives at runtime there), so one object spreads cleanly onto either
+ * arm of the correlated string/number union. `parseFormSchema` and `OptionsProvision` have
+ * already made "both" and "neither" impossible for anything that reaches here.
+ */
+function nodeOptionsProps(
+	node: OptionBearingNode,
+	params: Record<string, unknown> | undefined,
+	translate: Translate | undefined,
+): { options?: CorrelatedOptions; optionsFrom?: string; optionsParams?: Record<string, unknown> } {
+	if (node.optionsFrom !== undefined) {
+		return {
+			optionsFrom: typeof node.optionsFrom === 'string' ? node.optionsFrom : node.optionsFrom.source,
+			...(params !== undefined && { optionsParams: params }),
+		}
+	}
+	return { options: correlatedOptions(node.options ?? [], translate) }
+}
+
 /**
  * Turn one field or section node into the already-bound kit component for its kind.
  *
@@ -140,6 +170,11 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 	const conditionForm = form as unknown as ConditionSubscribableForm<TValues>
 	const visible = useConditionValue(conditionForm, node.when, true)
 	const disabledByCondition = useConditionValue(conditionForm, node.disabledWhen, false)
+	// Unconditional, exactly like the two above: only the four select-like kinds can carry
+	// `optionsFrom`, but every node has to have called this for the hook order to stay stable.
+	// `undefined` for every node that does not.
+	const optionsFrom = (node as OptionBearingNode).optionsFrom
+	const sourceParams = useOptionSourceParams(conditionForm, optionsFrom)
 
 	const label = resolveText(node.label, context.translate)
 	const description = resolveText(node.description, context.translate)
@@ -226,7 +261,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={correlatedOptions(node.options, context.translate)}
+					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 				/>
@@ -258,7 +293,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={correlatedOptions(node.options, context.translate)}
+					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)
@@ -269,7 +304,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={correlatedOptions(node.options, context.translate)}
+					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 				/>
@@ -281,7 +316,7 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					label={label}
 					description={description}
 					disabled={disabledByCondition}
-					options={correlatedOptions(node.options, context.translate)}
+					{...nodeOptionsProps(node, sourceParams, context.translate)}
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)

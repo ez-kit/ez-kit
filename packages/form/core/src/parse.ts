@@ -16,6 +16,13 @@ export type ParseOptions = {
 	fieldTypes?: readonly string[]
 	blocks?: readonly string[]
 	rules?: readonly string[]
+	/**
+	 * Option-source keys the app registered on `<FormOptionSources>`. A node's `optionsFrom`
+	 * naming anything else is rejected here, exactly as an unregistered `rule` or `block` is —
+	 * the parser can only ever confirm that *this* app knows the name, which is precisely why
+	 * the document carries a name and not a URL.
+	 */
+	optionSources?: readonly string[]
 	hasTranslate?: boolean
 }
 
@@ -270,6 +277,117 @@ function assertLocalizedText(text: unknown, path: string, options: ParseOptions)
 	}
 }
 
+/** How a rejected value is named back to the author, without `JSON.stringify`'s blind spots. */
+function describeValue(value: unknown): string {
+	if (value === undefined) return 'undefined'
+	if (typeof value === 'function') return 'a function'
+	if (value instanceof Date) return 'a Date'
+	if (typeof value === 'number' && !Number.isFinite(value)) return String(value)
+	// The three values `JSON.stringify` returns `undefined` for are all handled above.
+	if (typeof value === 'symbol') return 'a symbol'
+	return JSON.stringify(value)
+}
+
+/** A `JSON.parse` result — `Object.create(null)` included, which a reviver can produce. */
+function isJsonObject(value: unknown): value is UnknownRecord {
+	if (!isPlainObject(value)) return false
+	const prototype: unknown = Object.getPrototypeOf(value)
+	return prototype === Object.prototype || prototype === null
+}
+
+/**
+ * One `params` entry, recursively. `params` is the document's own static argument list, so it
+ * must survive `JSON.stringify` unchanged: a function, `undefined`, `NaN`/`Infinity` (which
+ * stringify to `null`) and a `Date` (which stringifies to a string the source would then have
+ * to parse back) are all rejected here rather than reaching a source as something other than
+ * what the author wrote.
+ */
+function assertJsonValue(value: unknown, label: string, path: string): void {
+	if (value === null || typeof value === 'string' || typeof value === 'boolean') return
+	if (typeof value === 'number') {
+		if (!Number.isFinite(value)) {
+			throw new FormSchemaError(`"${label}" must be a finite number, got ${describeValue(value)}`, path)
+		}
+		return
+	}
+	if (Array.isArray(value)) {
+		;(value as unknown[]).forEach((entry, index) => {
+			assertJsonValue(entry, `${label}[${String(index)}]`, path)
+		})
+		return
+	}
+	if (isJsonObject(value)) {
+		for (const [key, entry] of Object.entries(value)) {
+			assertJsonValue(entry, `${label}.${key}`, path)
+		}
+		return
+	}
+	throw new FormSchemaError(
+		`"${label}" must be a JSON value (string, number, boolean, null, array or plain object), got ${describeValue(value)}`,
+		path,
+	)
+}
+
+function assertKnownOptionSource(source: unknown, path: string, options: ParseOptions): void {
+	if (typeof source !== 'string' || source.length === 0) {
+		throw new FormSchemaError('"optionsFrom" is missing a "source" name', path)
+	}
+	if (!(options.optionSources?.includes(source) ?? false)) {
+		throw new FormSchemaError(`Unknown option source "${source}"`, path)
+	}
+}
+
+/**
+ * `dependsOn`'s values are field references, and are held to the same rule every other one in
+ * the format is: an absolute path from the root of the form values. `./` stays reserved for
+ * array items (see `assertKnownCondition`) and is not supported in v1.
+ */
+function assertDependsOn(value: unknown, path: string): void {
+	if (value === undefined) return
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError('"dependsOn" must map a parameter name to a field path', path)
+	}
+	for (const [parameter, ref] of Object.entries(value)) {
+		if (typeof ref !== 'string' || ref.length === 0) {
+			throw new FormSchemaError(`"dependsOn.${parameter}" must be a field path string, got ${describeValue(ref)}`, path)
+		}
+		if (ref.startsWith(RELATIVE_FIELD_PREFIX)) {
+			throw new FormSchemaError(
+				`Relative field reference "${ref}" is reserved for array items and is not supported in FormSchema v1`,
+				path,
+			)
+		}
+	}
+}
+
+/**
+ * A node's `optionsFrom`: a registered source name, or an object naming one plus the static
+ * `params` and the `dependsOn` map that together make up the argument object the source
+ * receives. A bare string is sugar for `{ source }`.
+ */
+function assertOptionsFrom(value: unknown, path: string, options: ParseOptions): void {
+	if (typeof value === 'string') {
+		assertKnownOptionSource(value, path, options)
+		return
+	}
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError(
+			`"optionsFrom" must be a source name or an object with a "source" name, got ${describeValue(value)}`,
+			path,
+		)
+	}
+	assertKnownOptionSource(value.source, path, options)
+	assertDependsOn(value.dependsOn, path)
+	if (value.params !== undefined) {
+		if (!isJsonObject(value.params)) {
+			throw new FormSchemaError(`"params" must be an object of JSON values, got ${describeValue(value.params)}`, path)
+		}
+		for (const [key, entry] of Object.entries(value.params)) {
+			assertJsonValue(entry, `params.${key}`, path)
+		}
+	}
+}
+
 /**
  * A `select` / `radiogroup` node's `options`. The renderer would otherwise turn a missing or
  * malformed list into an empty dropdown — a form that silently offers no choices is exactly
@@ -281,9 +399,20 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 	// compared against the widened list rather than the enum members directly.
 	if (!OPTION_FIELD_TYPES.includes(node.type)) return
 
-	const list = (node as unknown as UnknownRecord).options
+	const raw = node as unknown as UnknownRecord
+	const hasList = raw.options !== undefined
+	const hasSource = raw.optionsFrom !== undefined
+	if (hasList && hasSource) {
+		throw new FormSchemaError(`"${node.type}" cannot carry both "options" and "optionsFrom"`, path)
+	}
+	if (hasSource) {
+		assertOptionsFrom(raw.optionsFrom, path, options)
+		return
+	}
+
+	const list = raw.options
 	if (!Array.isArray(list)) {
-		throw new FormSchemaError(`"${node.type}" is missing an "options" array`, path)
+		throw new FormSchemaError(`"${node.type}" needs either an "options" array or an "optionsFrom" source`, path)
 	}
 	let valueType: OptionValueType | undefined
 	for (const option of list as unknown[]) {

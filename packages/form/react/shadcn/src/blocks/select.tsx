@@ -45,9 +45,13 @@ export function SelectField({
 				<SelectRoot
 					onValueChange={onChange}
 					name={name}
-					// Radix reserves `''` for "no selection", and under `exactOptionalPropertyTypes` an
-					// explicit `undefined` is rejected — so an empty form value omits the key entirely.
-					{...(value === '' ? {} : { value })}
+					// `''` is passed through rather than omitted: Radix reserves it for "no selection"
+					// on the *root* (only an item may not carry it), and its `shouldShowPlaceholder`
+					// reads it as exactly that. Omitting the key instead would drop the select into
+					// uncontrolled mode the moment the field is emptied — Radix would keep its own last
+					// value, and a select cleared by an option source (see `optionsFrom`) would render a
+					// blank trigger with no placeholder rather than an empty one.
+					value={value}
 					// Spread rather than pass: under `exactOptionalPropertyTypes` Radix's props reject an
 					// explicit `undefined`, and "not disabled" must mean the key is absent.
 					{...(controlDisabled !== undefined ? { disabled: controlDisabled } : {})}

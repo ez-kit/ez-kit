@@ -320,6 +320,7 @@ try {
 		fieldTypes: Object.keys(fields),
 		blocks: Object.keys(blocks),
 		rules: Object.keys(rules),
+		optionSources: Object.keys(optionSources),
 		hasTranslate: true,
 	})
 	// …render it
@@ -336,11 +337,12 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 - a non-object document, a missing `children` array, an unsupported `version`;
 - a node with no `type`, an unknown `type`, a container with no `children`;
 - a field with no `name`, or a `name` used twice in the tree (a duplicate is an error, not a supported "render twice");
-- a `validate.rule` or a block `component` that is not registered;
+- a `validate.rule`, a block `component` or an `optionsFrom` source that is not registered;
 - a registry key colliding with a reserved node type;
 - a malformed rule, a `./` field reference, or a **function** condition — which cannot survive `JSON.parse` anyway, but a hand-built object must still be told it is not a serialisable document;
 - a `LocalizedText` that is neither a string nor `{ key }`, or a translation key with no `translate` registered;
-- an options-bearing node with no `options` array, an option missing its `value` or `label`, an option `value` that is neither a string nor a number, or one list mixing the two;
+- an options-bearing node carrying neither `options` nor [`optionsFrom`](/docs/form/option-sources) — or both — an option missing its `value` or `label`, an option `value` that is neither a string nor a number, or one list mixing the two;
+- an `optionsFrom` whose `dependsOn` names a relative (`./`) field reference, or whose `params` carry something `JSON.stringify` would not survive (a function, `undefined`, `NaN`, a `Date`);
 - a `multiselect` / `checkboxgroup` `defaultValue` that is not an array of option values, or whose entries disagree with the option value type;
 - a date `min` / `max` / `defaultValue` that is not a real `YYYY-MM-DD` day, or a `daterange` default missing an end;
 - `columns` / `colSpan` outside 1–4;

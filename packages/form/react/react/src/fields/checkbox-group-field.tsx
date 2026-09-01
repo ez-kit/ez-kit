@@ -3,6 +3,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 import { asOptionValueTexts } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
 import { fromKitValues, toKitOptions } from '../option-values'
+import { CLEARED_LIST, FieldOptions } from '../options/field-options'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -14,32 +15,33 @@ export function createCheckboxGroupField<TFormData>(
 	form: BindableForm,
 	KitCheckboxGroupField: FormComponents['CheckboxGroupField'],
 ): (props: CheckboxGroupFieldProps<TFormData>) => ReactNode {
-	return function CheckboxGroupField({
-		name,
-		label,
-		description,
-		disabled,
-		required,
-		options,
-		loading,
-	}: CheckboxGroupFieldProps<TFormData>): ReactNode {
-		// See `select-field.tsx` — the same string↔typed-value bridge, for the expanded widget.
-		const kitOptions = toKitOptions(options)
+	return function CheckboxGroupField(props: CheckboxGroupFieldProps<TFormData>): ReactNode {
+		const { name, label, description, disabled, required } = props
 
+		// See `select-field.tsx` — the same bridge and layering, for the expanded widget.
 		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitCheckboxGroupField
-						{...fieldRenderProps(field, FormFieldType.CheckboxGroup, { label, description, disabled, required })}
-						options={kitOptions}
-						loading={loading ?? false}
-						value={asOptionValueTexts(field.state.value)}
-						onChange={(value) => {
-							field.handleChange(fromKitValues(options, value))
-						}}
-					/>
+			<FieldOptions
+				binding={props}
+				form={form}
+				name={name}
+				clearedValue={CLEARED_LIST}
+			>
+				{({ options, loading }) => (
+					<form.AppField name={name}>
+						{(field) => (
+							<KitCheckboxGroupField
+								{...fieldRenderProps(field, FormFieldType.CheckboxGroup, { label, description, disabled, required })}
+								options={toKitOptions(options)}
+								loading={loading}
+								value={asOptionValueTexts(field.state.value)}
+								onChange={(value) => {
+									field.handleChange(fromKitValues(options, value))
+								}}
+							/>
+						)}
+					</form.AppField>
 				)}
-			</form.AppField>
+			</FieldOptions>
 		)
 	}
 }

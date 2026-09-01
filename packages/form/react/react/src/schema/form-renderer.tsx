@@ -1,5 +1,7 @@
 import { buildValidator, isFieldNode, setValueAtPath, stripHiddenValues, walkNodes } from '@ez-kit/form-core'
 
+import { SchemaTranslate } from '../options/source-context'
+
 import { FormWizard, isStepNode } from './form-wizard'
 import { renderChildren } from './render-children'
 
@@ -325,16 +327,21 @@ export function renderSchemaFields<TValues>(
 ): ReactNode {
 	const context = { translate, fields, blocks }
 
-	if (isWizardSchema(schema)) {
-		return (
-			<FormWizard
-				schema={schema}
-				form={form}
-				layout={layout}
-				context={context}
-			/>
-		)
-	}
-
-	return renderChildren(schema.children, { form, layout, context, parentColumns: undefined })
+	// `SchemaTranslate` is the one thing the renderer publishes through context rather than
+	// through `RenderNode`'s props: an option source's labels are `LocalizedText` too, and the
+	// source is resolved inside the *field* component, which sees only the field's own props.
+	return (
+		<SchemaTranslate translate={translate}>
+			{isWizardSchema(schema) ? (
+				<FormWizard
+					schema={schema}
+					form={form}
+					layout={layout}
+					context={context}
+				/>
+			) : (
+				renderChildren(schema.children, { form, layout, context, parentColumns: undefined })
+			)}
+		</SchemaTranslate>
+	)
 }

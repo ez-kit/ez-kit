@@ -3,6 +3,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 import { asText } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
 import { fromKitValue, toKitOptions } from '../option-values'
+import { CLEARED_VALUE, FieldOptions } from '../options/field-options'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -14,32 +15,33 @@ export function createRadioGroupField<TFormData>(
 	form: BindableForm,
 	KitRadioGroupField: FormComponents['RadioGroupField'],
 ): (props: RadioGroupFieldProps<TFormData>) => ReactNode {
-	return function RadioGroupField({
-		name,
-		label,
-		description,
-		disabled,
-		required,
-		options,
-		loading,
-	}: RadioGroupFieldProps<TFormData>): ReactNode {
-		// See `select-field.tsx` — the same string↔typed-value bridge, for the expanded widget.
-		const kitOptions = toKitOptions(options)
+	return function RadioGroupField(props: RadioGroupFieldProps<TFormData>): ReactNode {
+		const { name, label, description, disabled, required } = props
 
+		// See `select-field.tsx` — the same bridge and layering, for the expanded widget.
 		return (
-			<form.AppField name={name}>
-				{(field) => (
-					<KitRadioGroupField
-						{...fieldRenderProps(field, FormFieldType.RadioGroup, { label, description, disabled, required })}
-						options={kitOptions}
-						loading={loading ?? false}
-						value={asText(field.state.value)}
-						onChange={(value) => {
-							field.handleChange(fromKitValue(options, value))
-						}}
-					/>
+			<FieldOptions
+				binding={props}
+				form={form}
+				name={name}
+				clearedValue={CLEARED_VALUE}
+			>
+				{({ options, loading }) => (
+					<form.AppField name={name}>
+						{(field) => (
+							<KitRadioGroupField
+								{...fieldRenderProps(field, FormFieldType.RadioGroup, { label, description, disabled, required })}
+								options={toKitOptions(options)}
+								loading={loading}
+								value={asText(field.state.value)}
+								onChange={(value) => {
+									field.handleChange(fromKitValue(options, value))
+								}}
+							/>
+						)}
+					</form.AppField>
 				)}
-			</form.AppField>
+			</FieldOptions>
 		)
 	}
 }

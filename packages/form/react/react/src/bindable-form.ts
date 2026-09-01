@@ -49,6 +49,13 @@ export type SubmittableForm = {
  */
 export type BindableForm = SubmittableForm & {
 	AppField: (props: { name: string; children: (field: BoundFieldApi) => ReactNode }) => ReactNode
+	/**
+	 * Writes a field's value from outside its `AppField` subtree. Used by one caller: the
+	 * option-source plumbing, which clears a dependent field when its source's parameters
+	 * change and lives above `AppField` (it is what decides which options that field even
+	 * has). Everything else writes through the `field.handleChange` it was handed.
+	 */
+	setFieldValue: (name: string, value: FieldValue) => void
 	Subscribe: <TSelected>(props: {
 		selector: (state: SubmitState) => TSelected
 		children: (selected: TSelected) => ReactNode

@@ -1,4 +1,5 @@
 export { createForm } from './create-form'
+export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
 export type { KitFormBlock, KitWithFormProps } from './composition'
@@ -11,6 +12,7 @@ export type {
 	SharedRendererProps,
 } from './schema/form-renderer'
 export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
+export type { OptionSource, OptionSourceInput, OptionSourceRegistry, OptionSourceResult } from './options/source-types'
 export type {
 	ButtonProps,
 	CheckboxFieldRenderProps,
@@ -68,7 +70,15 @@ export {
 	stripHiddenValues,
 	TextInputType,
 } from '@ez-kit/form-core'
-export type { DateRangeValue, LocalizedSelectOption, LocalizedText, SelectOption, Translate } from '@ez-kit/form-core'
+export type {
+	DateRangeValue,
+	JsonValue,
+	LocalizedSelectOption,
+	LocalizedText,
+	OptionsSource,
+	SelectOption,
+	Translate,
+} from '@ez-kit/form-core'
 
 // Spec §12: the group hooks are re-exported verbatim — they yield a group API, which
 // correctly carries no injected field components, so unlike `withForm` they need no

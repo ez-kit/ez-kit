@@ -94,5 +94,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/async-options.tsx",
 		"exportName": "AsyncOptionsExample"
+	},
+	{
+		"id": "form-option-sources",
+		"label": "Option sources",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/option-sources.tsx",
+		"exportName": "OptionSourcesExample"
 	}
 ]

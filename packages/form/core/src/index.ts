@@ -13,6 +13,7 @@ export { stripHiddenValues, visibleFieldNames } from './visibility'
 
 export type { DateRangeValue } from './date-value'
 export type { Condition, FieldRef, Rule } from './rules'
+export type { JsonValue, OptionsSource } from './options-source'
 export type { LocalizedSelectOption, OptionValue, SelectOption } from './select-option'
 export type { LocalizedText, Translate } from './localized-text'
 export type { ParseOptions } from './parse'

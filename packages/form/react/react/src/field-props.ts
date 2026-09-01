@@ -43,14 +43,39 @@ export type TextareaFieldProps<TFormData> = BaseFieldProps<TFormData, string> & 
 /**
  * What every option-bearing field accepts on top of {@link BaseFieldProps}.
  *
- * `loading` is how an app that fetches its options tells the kit that an empty `options` is
- * "not here yet" rather than "there is nothing to choose from" —
- * `<form.SelectField name='role' options={data ?? []} loading={isPending} />`. Omitted, it
- * is `false`; the kit contract sees a plain boolean either way.
+ * **Exactly one of `options` and `optionsFrom` must be given** — both, or neither, throws with
+ * the field's name when it renders. Deliberately not expressed as a union: these props are
+ * *already* a union over the string/number option-value split (see the note above), and a
+ * second two-arm union would multiply into four arms in which `name` could no longer be
+ * checked against `options` per arm — losing the correlation that split exists for. The
+ * schema side has no such conflict and does state it in the types (`OptionsProvision` in
+ * `@ez-kit/form-core`), and `parseFormSchema` enforces it for a delivered document.
+ *
+ * `loading` belongs to the `options` half: it is how an app that fetches its own options tells
+ * the kit that an empty list is "not here yet" rather than "there is nothing to choose from" —
+ * `<form.SelectField name='role' options={data ?? []} loading={isPending} />`. Omitted, it is
+ * `false`. With `optionsFrom` it is not yours to pass: the source reports its own `loading`,
+ * which flows into the same contract key.
  */
 type OptionsProps<TValue> = {
-	options: readonly SelectOption<TValue>[]
+	options?: readonly SelectOption<TValue>[]
 	loading?: boolean
+	/**
+	 * The name of a source registered on `<FormOptionSources>` — the JSX spelling of the
+	 * schema's `optionsFrom`. The source is a hook, so it may be any query the app already
+	 * has; see {@link OptionSource}.
+	 */
+	optionsFrom?: string
+	/**
+	 * The arguments handed to that source. Compared **by value**, so an inline literal is
+	 * fine — `optionsParams={{ country }}` re-created every render changes nothing until
+	 * `country` itself does.
+	 *
+	 * This is the live-value counterpart of the schema's `dependsOn`: JSON cannot hold a live
+	 * value, so a document names the path to read; here you pass the value straight in. Both
+	 * paths produce the identical object.
+	 */
+	optionsParams?: Record<string, unknown>
 }
 
 type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> &

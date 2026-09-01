@@ -131,3 +131,44 @@ test('a select-like field correlates its option values with its name', () => {
 
 	expectTypeOf(define).toBeFunction()
 })
+
+test('options and optionsFrom are mutually exclusive, and one of them is required', () => {
+	type SelectValues = { city: string }
+	const define = defineFormSchema<SelectValues>()
+
+	define({
+		version: 1,
+		children: [{ type: FormFieldType.Select, name: 'city', options: [{ label: 'Moscow', value: 'msk' }] }],
+	})
+
+	// The bare-string spelling and the object one are both accepted.
+	define({ version: 1, children: [{ type: FormFieldType.Select, name: 'city', optionsFrom: 'cities' }] })
+	define({
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.Select,
+				name: 'city',
+				optionsFrom: { source: 'dictionary', params: { domain: 'cities' }, dependsOn: { country: 'country' } },
+			},
+		],
+	})
+
+	define({
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.Select,
+				name: 'city',
+				options: [{ label: 'Moscow', value: 'msk' }],
+				// @ts-expect-error a node carries `options` or `optionsFrom`, never both
+				optionsFrom: 'cities',
+			},
+		],
+	})
+
+	// @ts-expect-error a select-like node needs one of the two
+	define({ version: 1, children: [{ type: FormFieldType.Select, name: 'city' }] })
+
+	expectTypeOf(define).toBeFunction()
+})

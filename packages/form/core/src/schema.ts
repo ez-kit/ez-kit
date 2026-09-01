@@ -1,6 +1,7 @@
 import type { DateRangeValue } from './date-value'
 import type { FormFieldType } from './field-types'
 import type { LocalizedText } from './localized-text'
+import type { OptionsSource } from './options-source'
 import type { Condition } from './rules'
 import type { LocalizedSelectOption } from './select-option'
 import type { TextInputType } from './text-input-type'
@@ -73,35 +74,50 @@ type FieldCommon<TValues> = CommonProps<TValues> & {
  * are the same widget with the same value shape, and only the JSON scalar differs (unlike
  * `date` vs `daterange`, where both the shape and the widget differ).
  */
-type SelectMember<TValues, TValue> = FieldCommon<TValues> & {
-	type: FormFieldType.Select
-	name: DeepKeysOfType<TValues, TValue>
-	defaultValue?: TValue
-	options: readonly LocalizedSelectOption<TValue>[]
-	placeholder?: string
-}
+/**
+ * Where a select-like member's choices come from: written into the document, or named.
+ *
+ * A two-arm union, not two optional keys, so "exactly one of the two" is a compile error
+ * rather than a runtime discovery — `parseFormSchema` enforces the same rule for a document
+ * that never went through TypeScript. The `?: never` arms are what make each side reject the
+ * other's key; the same spelling `FormRendererUncontrolledProps` uses for its `form?: never`.
+ *
+ * `optionsFrom: 'cities'` is sugar for `optionsFrom: { source: 'cities' }` — the bare-string
+ * spelling is the common case (no parameters, no dependencies) and reads better in JSON.
+ */
+type OptionsProvision<TValue> =
+	| { options: readonly LocalizedSelectOption<TValue>[]; optionsFrom?: never }
+	| { options?: never; optionsFrom: string | OptionsSource }
 
-type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> & {
-	type: FormFieldType.MultiSelect
-	name: DeepKeysOfType<TValues, TValue[]>
-	defaultValue?: readonly TValue[]
-	options: readonly LocalizedSelectOption<TValue>[]
-	placeholder?: string
-}
+type SelectMember<TValues, TValue> = FieldCommon<TValues> &
+	OptionsProvision<TValue> & {
+		type: FormFieldType.Select
+		name: DeepKeysOfType<TValues, TValue>
+		defaultValue?: TValue
+		placeholder?: string
+	}
 
-type CheckboxGroupMember<TValues, TValue> = FieldCommon<TValues> & {
-	type: FormFieldType.CheckboxGroup
-	name: DeepKeysOfType<TValues, TValue[]>
-	defaultValue?: readonly TValue[]
-	options: readonly LocalizedSelectOption<TValue>[]
-}
+type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &
+	OptionsProvision<TValue> & {
+		type: FormFieldType.MultiSelect
+		name: DeepKeysOfType<TValues, TValue[]>
+		defaultValue?: readonly TValue[]
+		placeholder?: string
+	}
 
-type RadioGroupMember<TValues, TValue> = FieldCommon<TValues> & {
-	type: FormFieldType.RadioGroup
-	name: DeepKeysOfType<TValues, TValue>
-	defaultValue?: TValue
-	options: readonly LocalizedSelectOption<TValue>[]
-}
+type CheckboxGroupMember<TValues, TValue> = FieldCommon<TValues> &
+	OptionsProvision<TValue> & {
+		type: FormFieldType.CheckboxGroup
+		name: DeepKeysOfType<TValues, TValue[]>
+		defaultValue?: readonly TValue[]
+	}
+
+type RadioGroupMember<TValues, TValue> = FieldCommon<TValues> &
+	OptionsProvision<TValue> & {
+		type: FormFieldType.RadioGroup
+		name: DeepKeysOfType<TValues, TValue>
+		defaultValue?: TValue
+	}
 
 export type FieldNode<TValues> =
 	| (FieldCommon<TValues> & {
