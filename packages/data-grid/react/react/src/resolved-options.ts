@@ -4,17 +4,16 @@ import type { CellTypeRegistry } from './cell-types-context'
 import type { PaginationVariant } from './types'
 import type {
 	ExpandedRowProps,
-	FallbacksConfig,
 	FilteringVariant,
+	NormalizedFallbacksConfig,
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageWindowConfig,
+	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
-	SelectionBarConfig,
 } from './use-data-grid'
 import type { RowData } from '@tanstack/table-core'
 import type { ComponentType } from 'react'
@@ -93,8 +92,17 @@ export type ResolvedGridOptions = {
 	globalFiltering?: NormalizedGlobalFilteringConfig | undefined
 	pagination: {
 		variant: PaginationVariant
-		/** Resolved page-link window for the `numbered` variant. */
-		window: NormalizedPageWindowConfig
+		/**
+		 * `numbered` variant: pages kept either side of the current one. Resolved.
+		 *
+		 * Flat, under the option's own name — it is `pagination.siblings` on the config and
+		 * `DATA_GRID_DEFAULTS.pagination.siblings` in the defaults table. It was nested under a
+		 * `window` key that exists nowhere else, which gave one value a third spelling, the same
+		 * way `pagination.pageSizer` gave one to `toolbar`.
+		 */
+		siblings: number
+		/** `numbered` variant: pages kept at each end of the strip. Resolved. */
+		boundaries: number
 		/**
 		 * Sizes the PageSizer offers. Present whenever page-based pagination is on, whether or
 		 * not the toolbar auto-mounts the control — a hand-placed `<DataGrid.PageSizer />`
@@ -110,19 +118,41 @@ export type ResolvedGridOptions = {
 		 * `grid.pagination.pageSizer` on one line and `grid.globalFiltering?.toolbar` on the next.
 		 */
 		toolbar: boolean
+		/**
+		 * Infinite-scroll detection config. `undefined` unless `pagination.mode` is
+		 * `'infinite'`.
+		 *
+		 * Under `pagination`, because that is where its options live — `pagination.mode`,
+		 * `pagination.trigger`, `pagination.threshold`, `pagination.onLoadMore` — and where
+		 * {@link DATA_GRID_DEFAULTS} keys their defaults. A top-level `infinite` was a second
+		 * home for one feature.
+		 */
+		infinite?: NormalizedInfiniteConfig | undefined
 	}
-	/** Infinite-scroll detection config. `undefined` unless `pagination.mode` is `'infinite'`. */
-	infinite?: NormalizedInfiniteConfig | undefined
 	selection: {
-		/** Selection info bar. `undefined` when selection is off or the bar is not configured. */
-		bar?: (boolean | SelectionBarConfig) | undefined
+		/**
+		 * Selection info bar, **resolved**: `variant` settled against the default, the scalar
+		 * form expanded, `undefined` when the bar does not render (selection off, or
+		 * `bar: false` / `enabled: false`).
+		 *
+		 * It used to be the raw `boolean | SelectionBarConfig` union — the one option on this
+		 * object that had not been resolved — so three components inside this package re-derived
+		 * it and a UI kit could not derive it at all, the default variant living in a constant
+		 * the package does not export.
+		 */
+		bar?: NormalizedSelectionBarConfig | undefined
 	}
 	expanding: {
 		/** Sub-content detail-panel renderer, if one was supplied. */
 		component?: ComponentType<ExpandedRowProps<never>> | undefined
 	}
-	/** Loading / empty / no-results fallback config. */
-	fallbacks?: FallbacksConfig | undefined
+	/**
+	 * Loading / empty / no-results fallbacks, **resolved** — all three present, each with a
+	 * settled `enabled` and the `component` override when one was given. It was the raw
+	 * `FallbacksConfig`, whose three `boolean | Config` unions four components had to put
+	 * through the same "omitted means on" helper.
+	 */
+	fallbacks: NormalizedFallbacksConfig
 	/** Row virtualization config. `undefined` when virtualization is off. */
 	virtualization?: NormalizedVirtualizationConfig | undefined
 }
@@ -160,13 +190,15 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 		},
 		pagination: {
 			variant: DATA_GRID_DEFAULTS.pagination.variant,
-			window: {
-				siblings: DATA_GRID_DEFAULTS.pagination.siblings,
-				boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
-			},
+			siblings: DATA_GRID_DEFAULTS.pagination.siblings,
+			boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
 			toolbar: false,
 		},
 		selection: {},
 		expanding: {},
+		// Every feature is off here, but a fallback is not a feature: a grid with nothing to
+		// show still has to show something, so the three states are on and readers can rely on
+		// the group being present.
+		fallbacks: { loading: { enabled: true }, empty: { enabled: true }, noResults: { enabled: true } },
 	}
 }

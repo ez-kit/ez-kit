@@ -189,7 +189,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite' } }),
 		)
-		const cfg = result.current.grid.infinite
+		const cfg = result.current.grid.pagination.infinite
 		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.pagination.trigger)
 		expect(cfg?.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.pagination.threshold.rows })
 	})

@@ -24,8 +24,8 @@ describe('CellTypesContext', () => {
 		const childView = () => 'child'
 		let captured: CellTypeRegistry | undefined
 		renderWithComponents(
-			<CellTypesProvider types={{ a: { view: parentView }, b: { view: parentView } }}>
-				<CellTypesProvider types={{ b: { view: childView } }}>
+			<CellTypesProvider cellTypes={{ a: { view: parentView }, b: { view: parentView } }}>
+				<CellTypesProvider cellTypes={{ b: { view: childView } }}>
 					<Probe onMount={(r) => (captured = r)} />
 				</CellTypesProvider>
 			</CellTypesProvider>,
@@ -39,8 +39,8 @@ describe('CellTypesContext', () => {
 		const childView = () => 'child-view'
 		let captured: CellTypeRegistry | undefined
 		renderWithComponents(
-			<CellTypesProvider types={{ date: { editing: parentEdit, operators: ['equals'] } }}>
-				<CellTypesProvider types={{ date: { view: childView } }}>
+			<CellTypesProvider cellTypes={{ date: { editing: parentEdit, operators: ['equals'] } }}>
+				<CellTypesProvider cellTypes={{ date: { view: childView } }}>
 					<Probe onMount={(r) => (captured = r)} />
 				</CellTypesProvider>
 			</CellTypesProvider>,

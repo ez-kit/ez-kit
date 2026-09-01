@@ -1,5 +1,3 @@
-import { featureConfig } from '@ez-kit/data-grid-core'
-
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
@@ -36,11 +34,8 @@ export function NoResultsRow({ children }: DataGridNoResultsRowProps = {}) {
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { NoResultsState } = gridComponents.fallbacks
 
-	const fallbacks = table.grid.fallbacks
-	const noResultsConfig = fallbacks?.noResults
-
 	const columnCount = table.getVisibleLeafColumns().length
-	const customContent = featureConfig(noResultsConfig)?.component
+	const customContent = table.grid.fallbacks.noResults.component
 
 	const content =
 		children !== undefined ? (

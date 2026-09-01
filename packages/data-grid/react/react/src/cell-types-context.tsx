@@ -132,7 +132,13 @@ export function mergeCellTypes(base: CellTypeRegistry, override: CellTypeRegistr
 const CellTypesContext = createContext<CellTypeRegistry>({})
 
 export type CellTypesProviderProps = {
-	types: CellTypeRegistry
+	/**
+	 * The registry to register. Spelled `cellTypes`, the one word this API spends on it —
+	 * `useDataGrid({ cellTypes })`, `<DataGrid cellTypes>`, `createDataGrid({ cellTypes })`,
+	 * `ResolvedGridOptions.cellTypes`. It was `types`, so one concept changed its name
+	 * depending on which of the four you were writing.
+	 */
+	cellTypes: CellTypeRegistry
 	children: ReactNode
 }
 
@@ -149,9 +155,9 @@ export type CellTypesProviderProps = {
  * apps can override a kit-provided cell type for a specific subtree without
  * forking the kit.
  */
-export function CellTypesProvider({ types, children }: CellTypesProviderProps) {
+export function CellTypesProvider({ cellTypes, children }: CellTypesProviderProps) {
 	const parent = useContext(CellTypesContext)
-	const merged = useMemo(() => mergeCellTypes(parent, types), [parent, types])
+	const merged = useMemo(() => mergeCellTypes(parent, cellTypes), [parent, cellTypes])
 	return <CellTypesContext value={merged}>{children}</CellTypesContext>
 }
 

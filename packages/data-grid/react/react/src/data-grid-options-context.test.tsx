@@ -95,7 +95,7 @@ describe('DataGridOptionsProvider', () => {
 			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { bar: false } }),
 			{ wrapper: makeWrapper({ selection: { bar: true } }) },
 		)
-		expect(result.current.grid.selection.bar).toBe(false)
+		expect(result.current.grid.selection.bar).toBeUndefined()
 	})
 })
 

@@ -228,7 +228,7 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
-	const infiniteEnabled = table.grid.infinite !== undefined
+	const infiniteEnabled = table.grid.pagination.infinite !== undefined
 
 	// Reset on query change: when sorting / column filters / global search / page size
 	// change in infinite mode, clear any error, re-arm detection (handled by the loader

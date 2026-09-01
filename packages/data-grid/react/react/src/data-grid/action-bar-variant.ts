@@ -15,8 +15,8 @@ export function resolveActionBarVariant(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	table: Table<any>,
 ): ActionBarVariant {
-	const rawConfig = table.grid.selection.bar
-
-	const variant = typeof rawConfig === 'object' ? rawConfig.variant : undefined
-	return variant ?? DEFAULT_ACTION_BAR_VARIANT
+	// Already settled by `useDataGrid`. The fallback covers the grid that renders the draft
+	// section of the bar with no row selection at all, where there is no `selection.bar` to
+	// have carried a mode.
+	return table.grid.selection.bar?.variant ?? DEFAULT_ACTION_BAR_VARIANT
 }

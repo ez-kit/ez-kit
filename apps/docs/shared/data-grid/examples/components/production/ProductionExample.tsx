@@ -55,7 +55,7 @@ export function ProductionExample() {
 			layout={{ stickyHeader: true }}
 			pinning={{ column: true, row: { top: true, bottom: true } }}
 			resizing={{ mode: 'onChange' }}
-			visibility={{ toolbar: true }}
+			visibility
 			creating={{
 				mode: 'modal',
 				onSave: ({ values }) => orders.create(values),

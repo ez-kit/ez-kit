@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -382,7 +383,7 @@ describe('<DataGrid>', () => {
 		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
 			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			table.grid.selection.bar = { variant: 'inline' }
+			table.grid.selection.bar = { variant: ActionBarVariant.Inline }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
 
@@ -396,7 +397,7 @@ describe('<DataGrid>', () => {
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			table.grid.selection.bar = true
+			table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
 
@@ -441,7 +442,7 @@ describe('<DataGrid>', () => {
 describe('<DataGrid> bulk delete confirmation', () => {
 	function makeBulkTable(bulk: NonNullable<DeletingConfig<User>['bulk']>, onDelete = vi.fn()) {
 		const table = makeTable({ selection: true, deleting: { onDelete: () => {}, bulk } })
-		table.grid.selection.bar = true
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		return { table, onDelete }
 	}
 
@@ -473,7 +474,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
 		const table = makeTable({ selection: true, deleting: { onDelete, bulk: true } })
-		table.grid.selection.bar = true
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		table.setRowSelection({ '1': true, '2': true })
 		renderWithComponents(<DataGrid table={table} />)
 

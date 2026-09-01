@@ -1,7 +1,6 @@
 import { Fragment } from 'react'
 
 import { useGridComponents } from '../components-context'
-import { isFallbackOn } from '../use-data-grid'
 
 import { CreatingRow } from './creating-row'
 import { EmptyStateRow } from './empty-state-row'
@@ -119,7 +118,7 @@ export function Body<TRow extends object = any>({ children }: DataGridBodyProps<
 	const fallbacks = table.grid.fallbacks
 	const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
 
-	if (isPending && isFallbackOn(fallbacks?.loading)) {
+	if (isPending && fallbacks.loading.enabled) {
 		return <LoadingBody />
 	}
 
@@ -133,10 +132,10 @@ export function Body<TRow extends object = any>({ children }: DataGridBodyProps<
 	const rawDataLength = (table.options.data as unknown[]).length
 
 	if (!showCreatingRow && allRows.length === 0) {
-		if (rawDataLength === 0 && isFallbackOn(fallbacks?.empty)) {
+		if (rawDataLength === 0 && fallbacks.empty.enabled) {
 			return <EmptyStateRow />
 		}
-		if (rawDataLength > 0 && isFallbackOn(fallbacks?.noResults)) {
+		if (rawDataLength > 0 && fallbacks.noResults.enabled) {
 			return <NoResultsRow />
 		}
 	}

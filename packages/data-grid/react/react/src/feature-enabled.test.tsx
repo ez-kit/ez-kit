@@ -45,7 +45,7 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 				pagination: { enabled: false, mode: 'infinite', hasNextPage: true },
 			}),
 		)
-		expect(result.current.grid.infinite).toBeUndefined()
+		expect(result.current.grid.pagination.infinite).toBeUndefined()
 	})
 
 	it('does not publish the virtualization config', () => {

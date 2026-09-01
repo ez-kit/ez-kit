@@ -262,7 +262,7 @@ function DataGridControlled<TRow extends object>({
 	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
 
 	return (
-		<CellTypesProvider types={resolvedCellTypes}>
+		<CellTypesProvider cellTypes={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
 				<TableContext value={table}>
 					{IS_DEV && <ComponentGuard />}

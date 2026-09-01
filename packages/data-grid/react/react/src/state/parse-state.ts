@@ -14,6 +14,7 @@ const SLICE_KIND: Record<PersistableStateKey, 'array' | 'object' | 'expanded' | 
 	rowPinning: 'object',
 	expanded: 'expanded',
 	columnSizing: 'object',
+	draft: 'object',
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -36,11 +37,12 @@ function isValidSlice(key: PersistableStateKey, value: unknown): boolean {
 
 /**
  * Assign a validated slice into the accumulator. `value` was structurally validated by
- * {@link isValidSlice}. Writing an `unknown` value through a union-typed key onto a Partial
- * is accepted by TypeScript, so no generic or cast is needed here.
+ * {@link isValidSlice}.
  */
 function assignSlice(out: DataGridState, key: PersistableStateKey, value: unknown): void {
-	out[key] = value
+	// One cast, at the single validated write: `DataGridState` is a `Partial<Pick<TableState,…>>`
+	// intersected with the seed-only `draft`, so its keys no longer share one value type.
+	;(out as Record<string, unknown>)[key] = value
 }
 
 /**

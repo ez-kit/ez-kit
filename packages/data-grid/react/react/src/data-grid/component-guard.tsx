@@ -45,8 +45,7 @@ export function ComponentGuard(): null {
 	if (isFeatureEnabled(table.options.deleting?.confirmation)) required.add('ConfirmDialog')
 	if (table.options.creating?.mode === 'modal' || table.options.editing?.mode === 'modal') required.add('FormShell')
 
-	const selectionPanel = table.grid.selection.bar
-	if (selectionPanel !== undefined && selectionPanel !== false) required.add('SelectionBar')
+	if (table.grid.selection.bar !== undefined) required.add('SelectionBar')
 
 	const missing = [...required].filter((key) => {
 		// Resolve the component through its feature group; a partial kit may omit the

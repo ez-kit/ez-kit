@@ -300,7 +300,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.Defaults,
-		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 38 }],
+		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 39 }],
 		nonOptionTables: [],
 	},
 	{

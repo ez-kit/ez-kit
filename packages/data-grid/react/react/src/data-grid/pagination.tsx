@@ -113,7 +113,7 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 
 	const canPrevious = table.getCanPreviousPage()
 	const canNext = table.getCanNextPage()
-	const { siblings, boundaries } = table.grid.pagination.window
+	const { siblings, boundaries } = table.grid.pagination
 
 	const previousPage = () => {
 		table.previousPage()

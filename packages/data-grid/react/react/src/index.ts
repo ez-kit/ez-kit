@@ -41,12 +41,14 @@ export type {
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
 	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
+	NormalizedFallbackConfig,
+	NormalizedFallbacksConfig,
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageWindowConfig,
+	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
@@ -186,10 +188,11 @@ export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
 // DI context
 export { GridComponentsProvider, useGridComponents } from './components-context'
+export type { GridComponentsProviderProps } from './components-context'
 
 // Cell type registry
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
-export type { CellTypeDefinition, CellTypeRegistry, CellViewProps } from './cell-types-context'
+export type { CellTypeDefinition, CellTypeRegistry, CellTypesProviderProps, CellViewProps } from './cell-types-context'
 
 // The nine base cell types a kit extends, and the two formatters their renderers use.
 //

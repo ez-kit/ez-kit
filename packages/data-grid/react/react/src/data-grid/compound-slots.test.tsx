@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -172,7 +173,7 @@ describe('compound render-prop slots', () => {
 				deleting: { onDelete: () => {}, bulk: { onDelete, confirmation: true } },
 			}),
 		)
-		table.grid.selection.bar = true
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 
 		const { container } = renderWithComponents(
