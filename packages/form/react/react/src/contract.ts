@@ -93,12 +93,31 @@ export type TextareaFieldRenderProps = FieldRenderProps & {
 	rows: number | undefined
 }
 
-export type SelectFieldRenderProps = FieldRenderProps & {
-	value: string
-	onChange: (value: string) => void
+/**
+ * What an option-bearing field adds on top of {@link FieldRenderProps}.
+ *
+ * `loading` is a plain `boolean`, not `boolean | undefined` like the optional consumer
+ * inputs above: absence and `false` would mean the same thing, and a kit that has to render
+ * *something* for every state should never have to collapse the two itself. The binding
+ * layer defaults an omitted consumer prop to `false`.
+ */
+type OptionsRenderProps = {
 	options: readonly SelectOption[]
-	placeholder: string | undefined
+	/**
+	 * The list is still loading; an empty `options` does not mean there is nothing to choose
+	 * from. Kits render a skeleton and keep the control non-interactive while it is true —
+	 * which is also what covers the edit-form case where a value arrives from the server
+	 * before the option it should be labelled by.
+	 */
+	loading: boolean
 }
+
+export type SelectFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps & {
+		value: string
+		onChange: (value: string) => void
+		placeholder: string | undefined
+	}
 
 /**
  * The multi-value counterparts of `SelectFieldRenderProps` / `RadioGroupFieldRenderProps`.
@@ -107,18 +126,18 @@ export type SelectFieldRenderProps = FieldRenderProps & {
  * never has to decide what "no selection yet" looks like, and `onChange` always reports the
  * complete new selection rather than a toggle.
  */
-export type MultiSelectFieldRenderProps = FieldRenderProps & {
-	value: readonly string[]
-	onChange: (value: string[]) => void
-	options: readonly SelectOption[]
-	placeholder: string | undefined
-}
+export type MultiSelectFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps & {
+		value: readonly string[]
+		onChange: (value: string[]) => void
+		placeholder: string | undefined
+	}
 
-export type CheckboxGroupFieldRenderProps = FieldRenderProps & {
-	value: readonly string[]
-	onChange: (value: string[]) => void
-	options: readonly SelectOption[]
-}
+export type CheckboxGroupFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps & {
+		value: readonly string[]
+		onChange: (value: string[]) => void
+	}
 
 export type CheckboxFieldRenderProps = FieldRenderProps & {
 	checked: boolean
@@ -130,11 +149,11 @@ export type SwitchFieldRenderProps = FieldRenderProps & {
 	onChange: (checked: boolean) => void
 }
 
-export type RadioGroupFieldRenderProps = FieldRenderProps & {
-	value: string
-	onChange: (value: string) => void
-	options: readonly SelectOption[]
-}
+export type RadioGroupFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps & {
+		value: string
+		onChange: (value: string) => void
+	}
 
 /**
  * Both dates are `YYYY-MM-DD` strings, never `Date` objects — see `date-value.ts` in

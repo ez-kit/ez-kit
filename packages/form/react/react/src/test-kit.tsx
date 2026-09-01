@@ -324,7 +324,7 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
-	SelectField: ({ value, onChange, options, placeholder, id, name, onBlur, disabled, required, ...field }) => (
+	SelectField: ({ value, onChange, options, loading, placeholder, id, name, onBlur, disabled, required, ...field }) => (
 		<Shell
 			id={id}
 			{...field}
@@ -332,9 +332,10 @@ export const testComponents: FormComponents = {
 			{(aria) => (
 				<select
 					data-testkit='select'
+					data-loading={loading || undefined}
 					id={id}
 					name={name}
-					disabled={disabled}
+					disabled={disabled === true || loading}
 					required={required}
 					aria-invalid={field.invalid}
 					value={value}
@@ -409,7 +410,7 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
-	RadioGroupField: ({ value, onChange, options, id, name, onBlur, disabled, required, ...field }) => (
+	RadioGroupField: ({ value, onChange, options, loading, id, name, onBlur, disabled, required, ...field }) => (
 		<Shell
 			id={id}
 			{...field}
@@ -417,6 +418,7 @@ export const testComponents: FormComponents = {
 			{(aria) => (
 				<div
 					data-testkit='radiogroup'
+					data-loading={loading || undefined}
 					id={id}
 					role='radiogroup'
 					aria-invalid={field.invalid}
@@ -431,7 +433,7 @@ export const testComponents: FormComponents = {
 								type='radio'
 								name={name}
 								value={option.value}
-								disabled={disabled === true || option.disabled === true}
+								disabled={disabled === true || loading || option.disabled === true}
 								required={required}
 								checked={value === option.value}
 								onBlur={onBlur}
@@ -500,7 +502,19 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
-	MultiSelectField: ({ value, onChange, options, placeholder, id, name, onBlur, disabled, required, ...field }) => (
+	MultiSelectField: ({
+		value,
+		onChange,
+		options,
+		loading,
+		placeholder,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}) => (
 		<Shell
 			id={id}
 			{...field}
@@ -508,10 +522,11 @@ export const testComponents: FormComponents = {
 			{(aria) => (
 				<select
 					data-testkit='multiselect'
+					data-loading={loading || undefined}
 					multiple
 					id={id}
 					name={name}
-					disabled={disabled}
+					disabled={disabled === true || loading}
 					required={required}
 					aria-invalid={field.invalid}
 					// A native multiple select has no placeholder slot, and `aria-placeholder` is
@@ -538,7 +553,7 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
-	CheckboxGroupField: ({ value, onChange, options, id, name, onBlur, disabled, required, ...field }) => (
+	CheckboxGroupField: ({ value, onChange, options, loading, id, name, onBlur, disabled, required, ...field }) => (
 		<Shell
 			id={id}
 			{...field}
@@ -546,6 +561,7 @@ export const testComponents: FormComponents = {
 			{(aria) => (
 				<fieldset
 					data-testkit='checkbox-group'
+					data-loading={loading || undefined}
 					aria-invalid={field.invalid}
 					{...aria}
 				>
@@ -555,7 +571,7 @@ export const testComponents: FormComponents = {
 								type='checkbox'
 								name={name}
 								value={option.value}
-								disabled={disabled === true || option.disabled === true}
+								disabled={disabled === true || loading || option.disabled === true}
 								required={required}
 								checked={value.includes(option.value)}
 								onBlur={onBlur}

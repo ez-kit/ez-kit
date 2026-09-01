@@ -104,6 +104,28 @@ The same holds for `form.RadioGroupField`, `form.MultiSelectField` (a `number[]`
 
 <KitExample exampleId='form-numeric-options' />
 
+### Options that arrive later
+
+When an app fetches its options, `options={data ?? []}` is ambiguous: an empty list can mean "still fetching" or "the backend genuinely offers nothing", and both render as an empty dropdown. Pass `loading` to say which:
+
+```tsx
+const { data, isPending } = useQuery({ queryKey: ['roles'], queryFn: fetchRoles })
+;<form.SelectField
+	name='role'
+	label='Role'
+	options={data ?? []}
+	loading={isPending}
+/>
+```
+
+While `loading` is true both kits disable the control and show a **skeleton** in place of its value — a single bar in a select or multi-select trigger, a short list of placeholder rows in a radio or checkbox group, which have no trigger to put one in. That is also what covers an edit form: a value loaded from the server (`role: 'admin'`) arrives before the option that carries its label, and a skeleton reads better than a blank trigger.
+
+`loading` is accepted by all four option-bearing fields — `form.SelectField`, `form.MultiSelectField`, `form.RadioGroupField`, `form.CheckboxGroupField` — and defaults to `false`. It is a **rendering** concern, not part of the schema: a statically authored `options` array in a `FormSchema` is never loading, and `@ez-kit/form-core` knows nothing about it.
+
+Failure is deliberately not in the contract: there is no `error` or `onRetry` prop. A retry button inside a select popover is awkward UI and multiplies badly across the four widgets, and the code that supplies the options is already the right place to surface a failed fetch — a toast from `onError`, an error boundary, a message beside the form.
+
+<KitExample exampleId='form-async-options' />
+
 ## `form.CheckboxField`
 
 Binds to a `boolean`.

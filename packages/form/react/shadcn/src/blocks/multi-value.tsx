@@ -8,6 +8,7 @@ import { Label } from '@form-shadcn/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@form-shadcn/components/ui/popover'
 
 import { FieldShell } from './field-shell'
+import { OptionListSkeleton, OptionSkeleton } from './option-skeleton'
 
 import type { CheckboxGroupFieldRenderProps, MultiSelectFieldRenderProps, SelectOption } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
@@ -48,6 +49,7 @@ export function MultiSelectField({
 	value,
 	onChange,
 	options,
+	loading,
 	placeholder,
 	id,
 	name,
@@ -83,16 +85,24 @@ export function MultiSelectField({
 								id={id}
 								type='button'
 								variant='outline'
-								disabled={disabled}
+								// While the list is arriving there is nothing to open the popover onto, and a
+								// selected value has no option to be labelled by — so: disabled, plus a skeleton.
+								disabled={disabled === true || loading}
+								data-loading={loading || undefined}
 								aria-invalid={field.invalid}
 								aria-required={required}
+								aria-busy={loading || undefined}
 								onBlur={onBlur}
 								className='w-full justify-between font-normal'
 								{...binding}
 							>
-								<span className={value.length === 0 ? 'text-muted-foreground' : undefined}>
-									{summarise(options, value, placeholder)}
-								</span>
+								{loading ? (
+									<OptionSkeleton className='h-4 w-24' />
+								) : (
+									<span className={value.length === 0 ? 'text-muted-foreground' : undefined}>
+										{summarise(options, value, placeholder)}
+									</span>
+								)}
 								<ChevronDownIcon className='opacity-50' />
 							</Button>
 						</PopoverTrigger>
@@ -133,6 +143,7 @@ export function CheckboxGroupField({
 	value,
 	onChange,
 	options,
+	loading,
 	id,
 	name,
 	onBlur,
@@ -150,11 +161,18 @@ export function CheckboxGroupField({
 				// its own `<label for>` — which is what makes every box clickable by its text.
 				<FieldSet
 					id={id}
+					data-loading={loading || undefined}
 					aria-invalid={field.invalid}
 					aria-required={required}
+					aria-busy={loading || undefined}
 					className='gap-2'
 					{...binding}
 				>
+					{/*
+					 * An expanded group has no trigger to put one skeleton in, so the loading state is
+					 * a short list of placeholder rows — the shape the real options will take.
+					 */}
+					{loading && <OptionListSkeleton />}
 					{options.map((option) => {
 						const optionId = `${id}${OPTION_ID_SEPARATOR}${option.value}`
 
@@ -167,7 +185,7 @@ export function CheckboxGroupField({
 									id={optionId}
 									name={name}
 									value={option.value}
-									disabled={disabled === true || option.disabled === true}
+									disabled={disabled === true || loading || option.disabled === true}
 									checked={value.includes(option.value)}
 									onBlur={onBlur}
 									onCheckedChange={() => {

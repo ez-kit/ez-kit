@@ -2,6 +2,7 @@ import { ListBox, Select as HeroSelect } from '@heroui/react'
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
+import { OptionSkeleton } from './option-skeleton'
 
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
@@ -28,6 +29,7 @@ export function SelectField({
 	value,
 	onChange,
 	options,
+	loading,
 	placeholder,
 	id,
 	name,
@@ -45,14 +47,18 @@ export function SelectField({
 			}}
 			name={name}
 			{...(placeholder !== undefined ? { placeholder } : {})}
-			{...fieldRoot(field)}
+			// A list that is still arriving cannot be chosen from, and a value that arrived before
+			// it has no option to be labelled by — so the field is disabled and the trigger shows a
+			// skeleton until the options land.
+			{...fieldRoot(loading ? { ...field, disabled: true } : field)}
 		>
 			<FieldLabel label={label} />
 			<HeroSelect.Trigger
 				id={id}
+				data-loading={loading || undefined}
 				onBlur={onBlur}
 			>
-				<HeroSelect.Value />
+				{loading ? <OptionSkeleton /> : <HeroSelect.Value />}
 				<HeroSelect.Indicator />
 			</HeroSelect.Trigger>
 			<HeroSelect.Popover>

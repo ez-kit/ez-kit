@@ -73,13 +73,13 @@ Every field receives the same base props:
 
 On top of that, per kind:
 
-| Component       | Value props                                                      |
-| --------------- | ---------------------------------------------------------------- |
-| `TextField`     | `value: string`, `onChange(value)`, `placeholder?`, `type?`      |
-| `NumberField`   | `value: number \| undefined`, `onChange(value)`, `min/max/step?` |
-| `TextareaField` | `value: string`, `onChange(value)`, `rows?`                      |
-| `SelectField`   | `value: string`, `onChange(value)`, `options: SelectOption[]`    |
-| `CheckboxField` | `checked: boolean`, `onChange(checked)`                          |
+| Component       | Value props                                                                       |
+| --------------- | --------------------------------------------------------------------------------- |
+| `TextField`     | `value: string`, `onChange(value)`, `placeholder?`, `type?`                       |
+| `NumberField`   | `value: number \| undefined`, `onChange(value)`, `min/max/step?`                  |
+| `TextareaField` | `value: string`, `onChange(value)`, `rows?`                                       |
+| `SelectField`   | `value: string`, `onChange(value)`, `options: SelectOption[]`, `loading: boolean` |
+| `CheckboxField` | `checked: boolean`, `onChange(checked)`                                           |
 
 <Callout type='warn'>
 	`onChange` receives **the value**, not a DOM event. That is what keeps the contract identical across kits whose
@@ -164,6 +164,7 @@ export function TextField({
 - **Put `id` on the focusable control** and make sure a click on the label focuses it — via `htmlFor`, or via your library's own labelling.
 - **Route `onBlur` to the control.** Dropping it silently disables `onBlur` validators.
 - **Render errors only when `invalid`.** `errors` is empty otherwise.
+- **Handle `loading` on the four option-bearing fields.** `SelectField`, `MultiSelectField`, `RadioGroupField` and `CheckboxGroupField` each receive `loading: boolean` — a plain boolean, never `undefined`, so there is no absent case to collapse. While it is true the list has not arrived and an empty `options` says nothing about what there will be to choose from: keep the control non-interactive and put a skeleton where its value would go. A widget with no trigger (radio group, checkbox group) has nowhere to put a single skeleton — the shipped kits render a short list of placeholder rows instead. There is intentionally **no** `error` or `onRetry` in the contract; a failed fetch is the consuming app's to report.
 - **Map `invalid` to whatever your system wants** — `aria-invalid`, `isInvalid`, a `data-` attribute.
 
 ## Boolean props and `exactOptionalPropertyTypes`

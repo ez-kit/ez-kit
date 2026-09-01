@@ -21,6 +21,7 @@ export function createRadioGroupField<TFormData>(
 		disabled,
 		required,
 		options,
+		loading,
 	}: RadioGroupFieldProps<TFormData>): ReactNode {
 		// See `select-field.tsx` — the same string↔typed-value bridge, for the expanded widget.
 		const kitOptions = toKitOptions(options)
@@ -31,6 +32,7 @@ export function createRadioGroupField<TFormData>(
 					<KitRadioGroupField
 						{...fieldRenderProps(field, FormFieldType.RadioGroup, { label, description, disabled, required })}
 						options={kitOptions}
+						loading={loading ?? false}
 						value={asText(field.state.value)}
 						onChange={(value) => {
 							field.handleChange(fromKitValue(options, value))

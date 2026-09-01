@@ -21,6 +21,7 @@ export function createMultiSelectField<TFormData>(
 		disabled,
 		required,
 		options,
+		loading,
 		placeholder,
 	}: MultiSelectFieldProps<TFormData>): ReactNode {
 		// See `select-field.tsx` — the same string↔typed-value bridge, applied to the whole
@@ -33,6 +34,7 @@ export function createMultiSelectField<TFormData>(
 					<KitMultiSelectField
 						{...fieldRenderProps(field, FormFieldType.MultiSelect, { label, description, disabled, required })}
 						options={kitOptions}
+						loading={loading ?? false}
 						placeholder={placeholder}
 						value={asOptionValueTexts(field.state.value)}
 						onChange={(value) => {

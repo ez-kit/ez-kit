@@ -21,6 +21,7 @@ export function createSelectField<TFormData>(
 		disabled,
 		required,
 		options,
+		loading,
 		placeholder,
 	}: SelectFieldProps<TFormData>): ReactNode {
 		// The kit contract is string-only at the DOM edge, so a numeric option list goes down
@@ -34,6 +35,7 @@ export function createSelectField<TFormData>(
 					<KitSelectField
 						{...fieldRenderProps(field, FormFieldType.Select, { label, description, disabled, required })}
 						options={kitOptions}
+						loading={loading ?? false}
 						placeholder={placeholder}
 						value={asText(field.state.value)}
 						onChange={(value) => {

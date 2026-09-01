@@ -2,6 +2,7 @@ import { Checkbox, CheckboxGroup, ListBox, Select as HeroSelect } from '@heroui/
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
+import { OptionListSkeleton, OptionSkeleton } from './option-skeleton'
 
 import type { CheckboxGroupFieldRenderProps, MultiSelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
@@ -26,6 +27,7 @@ export function MultiSelectField({
 	value,
 	onChange,
 	options,
+	loading,
 	placeholder,
 	id,
 	name,
@@ -45,14 +47,16 @@ export function MultiSelectField({
 			}}
 			name={name}
 			{...(placeholder !== undefined ? { placeholder } : {})}
-			{...fieldRoot(field)}
+			// See `select.tsx` — same reasoning, same treatment.
+			{...fieldRoot(loading ? { ...field, disabled: true } : field)}
 		>
 			<FieldLabel label={label} />
 			<HeroSelect.Trigger
 				id={id}
+				data-loading={loading || undefined}
 				onBlur={onBlur}
 			>
-				<HeroSelect.Value />
+				{loading ? <OptionSkeleton /> : <HeroSelect.Value />}
 				<HeroSelect.Indicator />
 			</HeroSelect.Trigger>
 			<HeroSelect.Popover>
@@ -83,6 +87,7 @@ export function CheckboxGroupField({
 	value,
 	onChange,
 	options,
+	loading,
 	id,
 	name,
 	onBlur,
@@ -98,10 +103,16 @@ export function CheckboxGroupField({
 			value={[...value]}
 			onChange={onChange}
 			onBlur={onBlur}
-			{...fieldRoot(field)}
+			data-loading={loading || undefined}
+			{...fieldRoot(loading ? { ...field, disabled: true } : field)}
 		>
 			<FieldLabel label={label} />
 			<FieldDescription description={description} />
+			{/*
+			 * An expanded group has no trigger to put one skeleton in, so the loading state is a
+			 * short list of placeholder rows — the shape the real options will take.
+			 */}
+			{loading && <OptionListSkeleton />}
 			{options.map((option) => (
 				<Checkbox
 					key={option.value}

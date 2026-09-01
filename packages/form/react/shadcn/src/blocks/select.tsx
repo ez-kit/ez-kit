@@ -7,6 +7,7 @@ import {
 } from '@form-shadcn/components/ui/select'
 
 import { FieldShell } from './field-shell'
+import { OptionSkeleton } from './option-skeleton'
 
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
@@ -22,6 +23,7 @@ export function SelectField({
 	value,
 	onChange,
 	options,
+	loading,
 	placeholder,
 	id,
 	name,
@@ -30,6 +32,10 @@ export function SelectField({
 	required,
 	...field
 }: SelectFieldRenderProps): ReactNode {
+	// A list that is still arriving cannot be chosen from, and the trigger has no option to
+	// draw a label from — so the field is disabled and shows a skeleton until it lands.
+	const controlDisabled = loading ? true : disabled
+
 	return (
 		<FieldShell
 			id={id}
@@ -44,17 +50,19 @@ export function SelectField({
 					{...(value === '' ? {} : { value })}
 					// Spread rather than pass: under `exactOptionalPropertyTypes` Radix's props reject an
 					// explicit `undefined`, and "not disabled" must mean the key is absent.
-					{...(disabled !== undefined ? { disabled } : {})}
+					{...(controlDisabled !== undefined ? { disabled: controlDisabled } : {})}
 					{...(required !== undefined ? { required } : {})}
 				>
 					<SelectTrigger
 						id={id}
+						data-loading={loading || undefined}
 						aria-invalid={field.invalid}
+						aria-busy={loading || undefined}
 						onBlur={onBlur}
 						className='w-full'
 						{...binding}
 					>
-						<SelectValue placeholder={placeholder} />
+						{loading ? <OptionSkeleton className='h-4 w-24' /> : <SelectValue placeholder={placeholder} />}
 					</SelectTrigger>
 					<SelectContent>
 						{options.map((option) => (

@@ -86,5 +86,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/numeric-options.tsx",
 		"exportName": "NumericOptionsExample"
+	},
+	{
+		"id": "form-async-options",
+		"label": "Async options",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/async-options.tsx",
+		"exportName": "AsyncOptionsExample"
 	}
 ]

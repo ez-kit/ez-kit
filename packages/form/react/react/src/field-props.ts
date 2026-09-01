@@ -40,27 +40,38 @@ export type TextareaFieldProps<TFormData> = BaseFieldProps<TFormData, string> & 
  * compile error when `countryId` is a number. One widened `string | number` value type would
  * check the two halves independently and lose exactly that.
  */
-type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> & {
+/**
+ * What every option-bearing field accepts on top of {@link BaseFieldProps}.
+ *
+ * `loading` is how an app that fetches its options tells the kit that an empty `options` is
+ * "not here yet" rather than "there is nothing to choose from" —
+ * `<form.SelectField name='role' options={data ?? []} loading={isPending} />`. Omitted, it
+ * is `false`; the kit contract sees a plain boolean either way.
+ */
+type OptionsProps<TValue> = {
 	options: readonly SelectOption<TValue>[]
-	placeholder?: string
+	loading?: boolean
 }
+
+type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> &
+	OptionsProps<TValue> & {
+		placeholder?: string
+	}
 
 export type SelectFieldProps<TFormData> =
 	| SelectFieldPropsFor<TFormData, string>
 	| SelectFieldPropsFor<TFormData, number>
 
-type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> & {
-	options: readonly SelectOption<TValue>[]
-	placeholder?: string
-}
+type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> &
+	OptionsProps<TValue> & {
+		placeholder?: string
+	}
 
 export type MultiSelectFieldProps<TFormData> =
 	| MultiSelectFieldPropsFor<TFormData, string>
 	| MultiSelectFieldPropsFor<TFormData, number>
 
-type CheckboxGroupFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> & {
-	options: readonly SelectOption<TValue>[]
-}
+type CheckboxGroupFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue[]> & OptionsProps<TValue>
 
 export type CheckboxGroupFieldProps<TFormData> =
 	| CheckboxGroupFieldPropsFor<TFormData, string>
@@ -70,9 +81,7 @@ export type CheckboxFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
 
 export type SwitchFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
 
-type RadioGroupFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> & {
-	options: readonly SelectOption<TValue>[]
-}
+type RadioGroupFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> & OptionsProps<TValue>
 
 export type RadioGroupFieldProps<TFormData> =
 	| RadioGroupFieldPropsFor<TFormData, string>

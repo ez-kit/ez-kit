@@ -6,6 +6,7 @@
 import type { ComponentType } from 'react'
 
 export const exampleModules: Record<string, () => Promise<Record<string, ComponentType>>> = {
+	'components/async-options.tsx': () => import('./components/async-options'),
 	'components/basic.tsx': () => import('./components/basic'),
 	'components/dialog.tsx': () => import('./components/dialog'),
 	'components/dates.tsx': () => import('./components/dates'),

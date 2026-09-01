@@ -21,6 +21,7 @@ export function createCheckboxGroupField<TFormData>(
 		disabled,
 		required,
 		options,
+		loading,
 	}: CheckboxGroupFieldProps<TFormData>): ReactNode {
 		// See `select-field.tsx` — the same string↔typed-value bridge, for the expanded widget.
 		const kitOptions = toKitOptions(options)
@@ -31,6 +32,7 @@ export function createCheckboxGroupField<TFormData>(
 					<KitCheckboxGroupField
 						{...fieldRenderProps(field, FormFieldType.CheckboxGroup, { label, description, disabled, required })}
 						options={kitOptions}
+						loading={loading ?? false}
 						value={asOptionValueTexts(field.state.value)}
 						onChange={(value) => {
 							field.handleChange(fromKitValues(options, value))
