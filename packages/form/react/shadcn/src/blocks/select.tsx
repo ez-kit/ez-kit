@@ -8,6 +8,7 @@ import {
 
 import { FieldShell } from './field-shell'
 import { OptionSkeleton } from './option-skeleton'
+import { SearchableSelectField } from './searchable-select'
 
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { ReactNode } from 'react'
@@ -19,11 +20,28 @@ import type { ReactNode } from 'react'
  * root would be read as "no selection". So an empty form value maps to `undefined`, and the
  * placeholder is rendered by `SelectValue` rather than as an option.
  */
-export function SelectField({
+export function SelectField(props: SelectFieldRenderProps): ReactNode {
+	// `search` present *is* the mode switch — see `SelectFieldRenderProps`. The two are
+	// different primitives with different anatomy (Radix `Select` vs the Base UI combobox), so
+	// they are separate components rather than one with branches inside it.
+	if (props.search !== undefined) {
+		return (
+			<SearchableSelectField
+				{...props}
+				search={props.search}
+			/>
+		)
+	}
+
+	return <PlainSelectField {...props} />
+}
+
+function PlainSelectField({
 	value,
 	onChange,
 	options,
 	loading,
+	search: _search,
 	placeholder,
 	id,
 	name,

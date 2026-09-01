@@ -16,7 +16,7 @@ export function createSelectField<TFormData>(
 	KitSelectField: FormComponents['SelectField'],
 ): (props: SelectFieldProps<TFormData>) => ReactNode {
 	return function SelectField(props: SelectFieldProps<TFormData>): ReactNode {
-		const { name, label, description, disabled, required, placeholder } = props
+		const { name, label, description, disabled, required, placeholder, searchable } = props
 
 		// `FieldOptions` sits *above* `AppField`: a named source decides what this field may
 		// hold, so it must be able to clear the field when its parameters change.
@@ -26,8 +26,9 @@ export function createSelectField<TFormData>(
 				form={form}
 				name={name}
 				clearedValue={CLEARED_VALUE}
+				searchable={searchable}
 			>
-				{({ options, loading }) => (
+				{({ options, loading, search }) => (
 					<form.AppField name={name}>
 						{(field) => (
 							<KitSelectField
@@ -37,6 +38,7 @@ export function createSelectField<TFormData>(
 								// — see `option-values.ts`.
 								options={toKitOptions(options)}
 								loading={loading}
+								search={search}
 								placeholder={placeholder}
 								value={asText(field.state.value)}
 								onChange={(value) => {

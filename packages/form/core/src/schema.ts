@@ -95,6 +95,26 @@ type SelectMember<TValues, TValue> = FieldCommon<TValues> &
 		name: DeepKeysOfType<TValues, TValue>
 		defaultValue?: TValue
 		placeholder?: string
+		/**
+		 * Render this select as a search box over its options rather than a plain dropdown.
+		 *
+		 * A flag, not a new node `type`: the value and its shape are unchanged and only the
+		 * presentation differs — the same reasoning that kept the numeric option flavour on
+		 * `select` instead of spawning a `numberselect`.
+		 *
+		 * It is only meaningful together with `optionsFrom`, and only with a source that
+		 * supplies `useSelectedOptions` (see `SearchableOptionSource` in `@ez-kit/form-react`):
+		 * a server-side search returns just the page matching the last query, so the option
+		 * carrying the value already in form state is usually absent and has to be fetched
+		 * separately for its label. The renderer throws, naming the field, when a `searchable`
+		 * field has a static `options` list or a source that cannot resolve a selection.
+		 *
+		 * Deliberately absent from `radiogroup` and `checkboxgroup` — they render every option
+		 * inline, so there is nothing to search — and from `multiselect`, where it is not
+		 * supported *yet*: N selected values need chips carrying N resolved labels.
+		 * `parseFormSchema` rejects it on all three.
+		 */
+		searchable?: boolean
 	}
 
 type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &

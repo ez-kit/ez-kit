@@ -102,5 +102,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/option-sources.tsx",
 		"exportName": "OptionSourcesExample"
+	},
+	{
+		"id": "form-searchable-select",
+		"label": "Searchable select",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/searchable-select.tsx",
+		"exportName": "SearchableSelectExample"
 	}
 ]

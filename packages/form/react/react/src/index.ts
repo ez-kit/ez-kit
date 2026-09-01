@@ -12,7 +12,14 @@ export type {
 	SharedRendererProps,
 } from './schema/form-renderer'
 export type { BlockRegistry, CustomFieldRegistry, CustomFieldRenderProps } from './schema/registries'
-export type { OptionSource, OptionSourceInput, OptionSourceRegistry, OptionSourceResult } from './options/source-types'
+export type {
+	OptionSource,
+	OptionSourceInput,
+	OptionSourceRegistry,
+	OptionSourceResult,
+	SearchableOptionSource,
+	SimpleOptionSource,
+} from './options/source-types'
 export type {
 	ButtonProps,
 	CheckboxFieldRenderProps,

@@ -35,10 +35,11 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "95 KB"
+			"limit": "135 KB"
 		}
 	],
 	"dependencies": {
+		"@base-ui/react": "^1.4.1",
 		"@ez-kit/form-core": "workspace:*",
 		"@ez-kit/form-react": "workspace:*",
 		"@tanstack/form-core": "^1.33.2",

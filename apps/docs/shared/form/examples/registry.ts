@@ -18,5 +18,6 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/schema-basic.tsx': () => import('./components/schema-basic'),
 	'components/schema-conditional.tsx': () => import('./components/schema-conditional'),
 	'components/schema-from-json.tsx': () => import('./components/schema-from-json'),
+	'components/searchable-select.tsx': () => import('./components/searchable-select'),
 	'components/validation.tsx': () => import('./components/validation'),
 }

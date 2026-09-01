@@ -312,7 +312,7 @@ importers:
         version: 3.0.3(@react-spectrum/provider@3.11.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tailwindcss@4.2.4)
       '@heroui/styles':
         specifier: ^3.0.3
-        version: 3.0.3(tailwind-merge@3.5.0)(tailwindcss@4.2.4)
+        version: 3.0.3(tailwind-merge@3.4.0)(tailwindcss@4.2.4)
       '@internationalized/date':
         specifier: ^3.5.0
         version: 3.12.1
@@ -480,6 +480,9 @@ importers:
 
   packages/form/react/shadcn:
     dependencies:
+      '@base-ui/react':
+        specifier: ^1.4.1
+        version: 1.4.1(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@ez-kit/form-core':
         specifier: workspace:*
         version: link:../../core

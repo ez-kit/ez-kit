@@ -59,6 +59,10 @@ const DATE_FIELD_TYPES: readonly string[] = [FormFieldType.Date, FormFieldType.D
 /** Widened for the same reason as `DATE_FIELD_TYPES`: a node's `type` is a bare `string`. */
 const DATE_RANGE_TYPE: string = FormFieldType.DateRange
 
+/** The same widening, for the two kinds `searchable` has to tell apart. */
+const SELECT_TYPE: string = FormFieldType.Select
+const MULTI_SELECT_TYPE: string = FormFieldType.MultiSelect
+
 const SUPPORTED_VERSION = 1
 const RELATIVE_FIELD_PREFIX = './'
 const ROOT_PATH = 'root'
@@ -443,6 +447,37 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 }
 
 /**
+ * `searchable` is a `select`-only flag, and the two ways it can be wrong get different words.
+ *
+ * A `radiogroup` or a `checkboxgroup` renders every option inline; there is no trigger to
+ * type into and no page of results to narrow, so the flag is meaningless there and always
+ * will be. A `multiselect` is a different case entirely — the feature is coherent, it is
+ * simply **not built yet**: N selected values need N resolved labels on N chips. Telling a
+ * document author "not supported yet" rather than "cannot" is the difference between waiting
+ * for a release and rewriting the form.
+ */
+function assertSearchable(node: FormNode<unknown, string>, path: string): void {
+	const value = (node as unknown as UnknownRecord).searchable
+	if (value === undefined) return
+
+	if (node.type === MULTI_SELECT_TYPE) {
+		throw new FormSchemaError(
+			'"multiselect" cannot be "searchable" yet; searchable multi-select is not supported in this version',
+			path,
+		)
+	}
+	if (node.type !== SELECT_TYPE) {
+		throw new FormSchemaError(
+			`"searchable" is only supported on "select", not on "${node.type}", which renders every option inline`,
+			path,
+		)
+	}
+	if (typeof value !== 'boolean') {
+		throw new FormSchemaError(`"searchable" must be a boolean, got ${describeValue(value)}`, path)
+	}
+}
+
+/**
  * A multi-value field's `defaultValue`: a list of option values, never a bare scalar.
  *
  * `[]` is legal and means "nothing selected" — that is the shape the field always holds, so a
@@ -550,6 +585,7 @@ function validateNode(
 		assertKnownFieldType(node.type, path, options)
 		assertUniqueName((node as unknown as UnknownRecord).name, path, seenNames)
 		assertOptions(node, path, options)
+		assertSearchable(node, path)
 		assertDateValues(node, path)
 		assertMultiValueDefault(node, path)
 		assertKnownRule(node.validate, path, options)

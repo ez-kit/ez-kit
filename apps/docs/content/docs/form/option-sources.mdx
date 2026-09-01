@@ -245,6 +245,6 @@ const optionSources = {
 
 `FormRenderer`'s `translate` resolves them, through the same `resolveSelectOptions` a written-out list goes through. The JSX API has no `translate`, so there a source's labels are plain strings.
 
-## Not in scope
+## Server-side search
 
-**Server-side search** — a combobox that queries as the user types — is deliberately out of scope for now. It needs a search term in the parameters, debouncing, and a "keep the selected option visible even though it is not in the current page of results" rule; none of that is expressible as "here is the list", and bolting it onto `optionsFrom` would blur a contract that is currently exactly one sentence long.
+A source that returns only the page matching a search term is a different contract — the option for the value already in form state is usually not on it. That is [Searchable select](/docs/form/searchable-select), which adds a second hook to a source rather than stretching this one.

@@ -81,6 +81,20 @@ type OptionsProps<TValue> = {
 type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> &
 	OptionsProps<TValue> & {
 		placeholder?: string
+		/**
+		 * Render as a search over the options rather than a plain dropdown — the JSX spelling of
+		 * the schema's `searchable`.
+		 *
+		 * Requires `optionsFrom`, and a source in the two-hook form (`useOptions` +
+		 * `useSelectedOptions`); both are runtime throws naming the field, for the same reason
+		 * the `options`/`optionsFrom` exclusion is. A server-side search returns only the page
+		 * matching the last query, so the option for the value already in form state has to be
+		 * fetched separately — see {@link SearchableOptionSource}.
+		 *
+		 * `select` only: `multiselect` + search is not supported yet, and the two inline kinds
+		 * do not have the prop at all.
+		 */
+		searchable?: boolean
 	}
 
 export type SelectFieldProps<TFormData> =

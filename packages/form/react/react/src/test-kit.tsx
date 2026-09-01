@@ -324,38 +324,67 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
-	SelectField: ({ value, onChange, options, loading, placeholder, id, name, onBlur, disabled, required, ...field }) => (
+	SelectField: ({
+		value,
+		onChange,
+		options,
+		loading,
+		search,
+		placeholder,
+		id,
+		name,
+		onBlur,
+		disabled,
+		required,
+		...field
+	}) => (
 		<Shell
 			id={id}
 			{...field}
 		>
 			{(aria) => (
-				<select
-					data-testkit='select'
-					data-loading={loading || undefined}
-					id={id}
-					name={name}
-					disabled={disabled === true || loading}
-					required={required}
-					aria-invalid={field.invalid}
-					value={value}
-					onBlur={onBlur}
-					onChange={(event) => {
-						onChange(event.target.value)
-					}}
-					{...aria}
-				>
-					{placeholder !== undefined && <option value=''>{placeholder}</option>}
-					{options.map((option) => (
-						<option
-							key={option.value}
-							value={option.value}
-							disabled={option.disabled}
-						>
-							{option.label}
-						</option>
-					))}
-				</select>
+				<>
+					{/* A searchable select is a combobox in both real kits; the test kit keeps the
+					    native `<select>` and puts the query in a plain sibling input, so a test can
+					    assert on the *contract* (what reaches `onQueryChange`, what `options` holds)
+					    without depending on either kit's popover anatomy. */}
+					{search !== undefined && (
+						<input
+							data-testkit='select-search'
+							aria-label={`Search ${name}`}
+							value={search.query}
+							onChange={(event) => {
+								search.onQueryChange(event.target.value)
+							}}
+						/>
+					)}
+					<select
+						data-testkit='select'
+						data-loading={loading || undefined}
+						id={id}
+						name={name}
+						disabled={disabled === true || loading}
+						required={required}
+						aria-invalid={field.invalid}
+						value={value}
+						onBlur={onBlur}
+						onChange={(event) => {
+							onChange(event.target.value)
+						}}
+						{...aria}
+					>
+						{placeholder !== undefined && <option value=''>{placeholder}</option>}
+						{options.map((option) => (
+							<option
+								key={option.value}
+								value={option.value}
+								disabled={option.disabled}
+							>
+								{option.label}
+							</option>
+						))}
+					</select>
+				</>
 			)}
 		</Shell>
 	),

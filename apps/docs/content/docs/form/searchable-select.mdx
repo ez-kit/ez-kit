@@ -1,0 +1,127 @@
+---
+title: Searchable select
+description: A select that queries as the user types — and still shows the label of a value the current results do not contain.
+---
+
+# Searchable select
+
+Everything in [Option sources](/docs/form/option-sources) assumes a source returns **the whole list**. That assumption is doing more work than it looks: because the list is complete, the option carrying the value in form state is always on it, so the kit can draw its label by finding the matching entry.
+
+Server-side search breaks that permanently. The source now returns only the **page matching the last query**. Form state holds `city: 4821`, the current results are Lisbon and Porto, and no option carries `4821` — so the control renders blank, forever. It is the transient "the value arrived before its option" case from [`loading`](/docs/form/option-sources) made permanent.
+
+Add `searchable` to a `select` that already names a source:
+
+```tsx
+<form.SelectField
+	name='address.city'
+	optionsFrom='cities'
+	optionsParams={{ country }}
+	searchable
+/>
+```
+
+```json
+{
+	"type": "select",
+	"name": "address.city",
+	"searchable": true,
+	"optionsFrom": { "source": "cities", "dependsOn": { "country": "address.country" } }
+}
+```
+
+There is no new node `type`. The value and its shape are unchanged and only the presentation differs — the same reasoning that kept numeric option values on `select` instead of spawning a second kind.
+
+<KitExample exampleId='form-searchable-select' />
+
+The example above **starts with a city already chosen**. Nothing has been typed, so the search has returned nothing at all — and the field still reads "Lisbon" rather than `4821` or an empty box. That is the entire feature.
+
+## Why a source grows a second hook
+
+A searchable source answers two questions instead of one:
+
+```tsx
+function useCitySearch({ params, query }) {
+	const results = useQuery({
+		queryKey: ['cities', params, query],
+		queryFn: () => api.searchCities(params, query),
+		enabled: (query?.length ?? 0) >= 2,
+	})
+	return { options: (results.data ?? []).map(toOption), loading: results.isPending }
+}
+
+function useCitiesByValue({ values }) {
+	const rows = useQuery({
+		queryKey: ['cities', 'byId', values],
+		queryFn: () => api.getCities(values),
+		enabled: values.length > 0,
+	})
+	return { options: (rows.data ?? []).map(toOption), loading: rows.isPending }
+}
+
+const optionSources = {
+	cities: { useOptions: useCitySearch, useSelectedOptions: useCitiesByValue },
+}
+```
+
+`useOptions` answers "what matches what was just typed". `useSelectedOptions` answers "what is the option behind the value already in form state" — the only one of the two that can label a selection the current page does not contain.
+
+This is not an invention: react-admin pays exactly the same price, with a `getMany(ids)` call alongside `getList`. Two questions genuinely need two answers, and a single endpoint that tried to serve both would have to guess which one it was being asked.
+
+`values` is an **array** even though only a single-value `select` is searchable today. That is deliberate: it is what lets multi-select land later without changing this contract.
+
+## The kit never learns there are two queries
+
+The renderer calls both hooks and merges their results — search results first, any selected option the search did not return appended, deduped by value — before handing one `options` list to the kit. `loading` is true while **either** hook is loading.
+
+So from a kit's side nothing changed: it is still "find the option whose value matches". A kit gets one new key on `SelectFieldRenderProps`:
+
+```ts
+/** Present only for a searchable select; `undefined` means a plain one. */
+search: { query: string; onQueryChange: (query: string) => void } | undefined
+```
+
+Its presence _is_ the mode switch. The renderer owns the query — it must, since it is what feeds the source — so the kit stays fully controlled, exactly as it is for every value in the contract. A kit must **never filter `options` itself**: that filtering already happened, server-side, and a second pass would hide rows the search deliberately returned.
+
+## Existing sources are unaffected
+
+The source type is now a union:
+
+```ts
+type OptionSource = ((input: OptionSourceInput) => OptionSourceResult) | SearchableOptionSource
+```
+
+Every source written against the plain function shape stays valid, and a plain function remains the right answer for any source that returns its whole list. `query` on the input is additive — a source that never reads it simply ignores it.
+
+Both members of the object form are **hooks**, so both must be named `use…` functions, for the same reason a plain source must be: React and `eslint-plugin-react-hooks` identify a hook by its name. Declare them as named functions and reference them in the registry literal; `source.useOptions(input)` as a member call is fine for the lint rule.
+
+A `searchable` field whose source is the plain function form throws at render, naming the field — it has no way to resolve a selected label, and a silent blank control is a worse answer than an error.
+
+## Debouncing and `minChars` are the source's job — for now
+
+The query reaches the source **raw**, on every keystroke, from the first character. This package contains no debounce option, no delay constant and no timer anywhere.
+
+That is not an oversight, and it is not permanent: this package intends to take debouncing over later. Until it does, both throttling and a minimum-length gate belong inside the source, next to the cache it already owns:
+
+```tsx
+function useCitySearch({ params, query }) {
+	const search = useDebouncedValue(query ?? '', 300)
+	const results = useQuery({
+		queryKey: ['cities', params, search],
+		queryFn: () => api.searchCities(params, search),
+		enabled: search.length >= 2,
+	})
+	return { options: (results.data ?? []).map(toOption), loading: results.isPending }
+}
+```
+
+## Scope
+
+`searchable` is legal on `select` only.
+
+- **`radiogroup` and `checkboxgroup`** render every option inline. There is no trigger to type into and no page to narrow, so the flag is meaningless there and always will be. `parseFormSchema` rejects it.
+- **`multiselect` + search is not supported yet.** The feature is coherent — it simply is not built: N selected values need N resolved labels on N chips, and both kits' multi-value blocks are heavier than the single-value ones. `parseFormSchema` rejects it with that wording, so a document author knows to wait for a release rather than to rewrite the form.
+- A `searchable` field with a **static `options` list** throws: a list already in memory has nothing to search against. Client-side filtering of a written-out list is a different feature.
+
+## What still holds
+
+Everything `optionsFrom` already did applies unchanged. Most visibly, **changing a parameter still clears the dependent field** — pick a country, pick a city, then change the country: the city goes, rather than lingering behind a control that looks empty and being submitted against the wrong country. The typed query is cleared with it, since "berl" is a search of the wrong catalogue once the country moved.
