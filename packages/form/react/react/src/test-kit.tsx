@@ -500,6 +500,78 @@ export const testComponents: FormComponents = {
 			)}
 		</Shell>
 	),
+	MultiSelectField: ({ value, onChange, options, placeholder, id, name, onBlur, disabled, required, ...field }) => (
+		<Shell
+			id={id}
+			{...field}
+		>
+			{(aria) => (
+				<select
+					data-testkit='multiselect'
+					multiple
+					id={id}
+					name={name}
+					disabled={disabled}
+					required={required}
+					aria-invalid={field.invalid}
+					// A native multiple select has no placeholder slot, and `aria-placeholder` is
+					// illegal on its implicit listbox role — the real kits render one on their own
+					// trigger instead, so this stand-in only has to prove the prop reaches them.
+					data-placeholder={placeholder}
+					value={[...value]}
+					onBlur={onBlur}
+					onChange={(event) => {
+						onChange(Array.from(event.target.selectedOptions, (option) => option.value))
+					}}
+					{...aria}
+				>
+					{options.map((option) => (
+						<option
+							key={option.value}
+							value={option.value}
+							disabled={option.disabled}
+						>
+							{option.label}
+						</option>
+					))}
+				</select>
+			)}
+		</Shell>
+	),
+	CheckboxGroupField: ({ value, onChange, options, id, name, onBlur, disabled, required, ...field }) => (
+		<Shell
+			id={id}
+			{...field}
+		>
+			{(aria) => (
+				<fieldset
+					data-testkit='checkbox-group'
+					aria-invalid={field.invalid}
+					{...aria}
+				>
+					{options.map((option) => (
+						<label key={option.value}>
+							<input
+								type='checkbox'
+								name={name}
+								value={option.value}
+								disabled={disabled === true || option.disabled === true}
+								required={required}
+								checked={value.includes(option.value)}
+								onBlur={onBlur}
+								onChange={(event) => {
+									onChange(
+										event.target.checked ? [...value, option.value] : value.filter((entry) => entry !== option.value),
+									)
+								}}
+							/>
+							{option.label}
+						</label>
+					))}
+				</fieldset>
+			)}
+		</Shell>
+	),
 	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
 	// never depend on a real picker.
 	DateRangeField: (props) => <TestDateRangeField {...props} />,

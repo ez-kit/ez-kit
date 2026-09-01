@@ -14,6 +14,7 @@ import {
 } from './blocks/fields'
 import { Button, Form as FormElement } from './blocks/form-parts'
 import { GridItem, Section } from './blocks/layout'
+import { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
 import { SelectField } from './blocks/select'
 import { Wizard } from './blocks/wizard'
 
@@ -33,6 +34,8 @@ const components = {
 	SwitchField,
 	RadioGroupField,
 	SliderField,
+	MultiSelectField,
+	CheckboxGroupField,
 	DateField,
 	DateRangeField,
 	Button,

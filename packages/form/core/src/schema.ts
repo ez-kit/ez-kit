@@ -91,6 +91,19 @@ export type FieldNode<TValues> =
 			placeholder?: string
 	  })
 	| (FieldCommon<TValues> & {
+			type: FormFieldType.MultiSelect
+			name: DeepKeysOfType<TValues, string[]>
+			defaultValue?: readonly string[]
+			options: readonly LocalizedSelectOption[]
+			placeholder?: string
+	  })
+	| (FieldCommon<TValues> & {
+			type: FormFieldType.CheckboxGroup
+			name: DeepKeysOfType<TValues, string[]>
+			defaultValue?: readonly string[]
+			options: readonly LocalizedSelectOption[]
+	  })
+	| (FieldCommon<TValues> & {
 			type: FormFieldType.Checkbox
 			name: DeepKeysOfType<TValues, boolean>
 			defaultValue?: boolean

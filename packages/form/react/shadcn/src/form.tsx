@@ -14,6 +14,7 @@ import {
 } from '@form-shadcn/blocks/fields'
 import { Button, Form as FormElement } from '@form-shadcn/blocks/form-parts'
 import { GridItem, Section } from '@form-shadcn/blocks/layout'
+import { CheckboxGroupField, MultiSelectField } from '@form-shadcn/blocks/multi-value'
 import { SelectField } from '@form-shadcn/blocks/select'
 import { Wizard } from '@form-shadcn/blocks/wizard'
 
@@ -35,6 +36,8 @@ const components = {
 	SwitchField,
 	RadioGroupField,
 	SliderField,
+	MultiSelectField,
+	CheckboxGroupField,
 	DateField,
 	DateRangeField,
 	Button,

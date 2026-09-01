@@ -100,6 +100,26 @@ export type SelectFieldRenderProps = FieldRenderProps & {
 	placeholder: string | undefined
 }
 
+/**
+ * The multi-value counterparts of `SelectFieldRenderProps` / `RadioGroupFieldRenderProps`.
+ *
+ * `value` is always a list — `[]` when nothing is selected, never `undefined` — so a kit
+ * never has to decide what "no selection yet" looks like, and `onChange` always reports the
+ * complete new selection rather than a toggle.
+ */
+export type MultiSelectFieldRenderProps = FieldRenderProps & {
+	value: readonly string[]
+	onChange: (value: string[]) => void
+	options: readonly SelectOption[]
+	placeholder: string | undefined
+}
+
+export type CheckboxGroupFieldRenderProps = FieldRenderProps & {
+	value: readonly string[]
+	onChange: (value: string[]) => void
+	options: readonly SelectOption[]
+}
+
 export type CheckboxFieldRenderProps = FieldRenderProps & {
 	checked: boolean
 	onChange: (checked: boolean) => void
@@ -228,6 +248,8 @@ export type FormComponents = {
 	SwitchField: (props: SwitchFieldRenderProps) => ReactNode
 	RadioGroupField: (props: RadioGroupFieldRenderProps) => ReactNode
 	SliderField: (props: SliderFieldRenderProps) => ReactNode
+	MultiSelectField: (props: MultiSelectFieldRenderProps) => ReactNode
+	CheckboxGroupField: (props: CheckboxGroupFieldRenderProps) => ReactNode
 	DateField: (props: DateFieldRenderProps) => ReactNode
 	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode

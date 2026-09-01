@@ -220,3 +220,22 @@ test('a date range defaultValue must carry both ends', () => {
 		}),
 	).not.toThrow()
 })
+
+test('a multi-value defaultValue must be an array of option values', () => {
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [{ type: 'multiselect', name: 'tags', options: [{ value: 'a', label: 'A' }], defaultValue: 'a' }],
+		}),
+	).toThrow(/array of option values/)
+	expect(() =>
+		parseFormSchema({
+			version: 1,
+			children: [{ type: 'checkboxgroup', name: 'tags', options: [{ value: 'a', label: 'A' }], defaultValue: ['a'] }],
+		}),
+	).not.toThrow()
+})
+
+test('a multiselect needs options, exactly as a select does', () => {
+	expect(() => parseFormSchema({ version: 1, children: [{ type: 'multiselect', name: 'tags' }] })).toThrow(/options/i)
+})

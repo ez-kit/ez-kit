@@ -125,6 +125,52 @@ Binds to a `string`. Like `form.SelectField` it takes a flat `options` list, but
 
 Each option is the same `SelectOption` shape as `form.SelectField`: `{ label, value, disabled? }`. The value in form state is the selected option's `value`; an empty string means nothing is selected.
 
+## `form.MultiSelectField`
+
+Binds to a **`string[]`** — the multi-value counterpart of `form.SelectField`, taking the same flat `options` list:
+
+```tsx
+<form.MultiSelectField
+	name='tags'
+	label='Tags'
+	placeholder='Pick a few'
+	options={[
+		{ label: 'Design', value: 'design' },
+		{ label: 'Engineering', value: 'engineering' },
+	]}
+/>
+```
+
+The value is always a list — `[]` when nothing is chosen, never `undefined` — and `onChange` reports the whole new selection rather than a toggle.
+
+**A separate field, not a `multiple` flag on `form.SelectField`.** Its value has a different type, and that is what keeps `name` narrowed to `string[]` paths here and to `string` paths there. The kits differ underneath and it does not matter: HeroUI uses its own `Select` in `selectionMode='multiple'`, shadcn a popover of checkboxes (Radix's select is single-selection only).
+
+## `form.CheckboxGroupField`
+
+Binds to a `string[]` as well, but lays every choice out at once — the multi-value counterpart of `form.RadioGroupField`:
+
+```tsx
+<form.CheckboxGroupField
+	name='interests'
+	label='Interests'
+	options={[
+		{ label: 'Code', value: 'code' },
+		{ label: 'Design', value: 'design' },
+	]}
+/>
+```
+
+It is **one field**, not one per box: a single `name` holding the list of checked values. A lone `form.CheckboxField` remains what it was — one boolean, for "I agree".
+
+The four selection fields line up as a grid — collapsed or expanded, one value or many:
+
+|                                   | one value         | many values          |
+| --------------------------------- | ----------------- | -------------------- |
+| collapsed (trigger plus a popup)  | `SelectField`     | `MultiSelectField`   |
+| expanded (every choice on screen) | `RadioGroupField` | `CheckboxGroupField` |
+
+<KitExample exampleId='form-multi-value' />
+
 ## `form.SliderField`
 
 Binds to a `number`, like `form.NumberField`, but picks the value along a track instead of typing it. Accepts `min`, `max`, `step` — reach for it when the range is bounded and the exact digit matters less than the feel of "more or less".
@@ -221,12 +267,12 @@ See [Getting started](./form/getting-started) for both modes.
 
 The field layer emits these and styles none of them — that is the kit's job:
 
-| Attribute         | Where        | Value                                                                                                              |
-| ----------------- | ------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `data-field`      | field root   | the field's `name`                                                                                                 |
-| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `checkbox` / `switch` / `radiogroup` / `slider` / `date` / `daterange` |
-| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                                                |
-| `data-form`       | the `<form>` | always present                                                                                                     |
+| Attribute         | Where        | Value                                                                                                                                                |
+| ----------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-field`      | field root   | the field's `name`                                                                                                                                   |
+| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `multiselect` / `checkbox` / `checkboxgroup` / `switch` / `radiogroup` / `slider` / `date` / `daterange` |
+| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                                                                                  |
+| `data-form`       | the `<form>` | always present                                                                                                                                       |
 
 So targeting one field, or every field of a kind, is plain CSS:
 

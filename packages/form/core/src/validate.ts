@@ -36,9 +36,20 @@ const FORMAT_PATTERNS: Record<NonNullable<FieldValidate['format']>, RegExp> = {
 	tel: /^\+?[0-9()\-.\s]{7,20}$/,
 }
 
-/** `undefined`, `null`, `''` and `false` (a checkbox-style boolean field) all count as empty. */
+/**
+ * `undefined`, `null`, `''`, `false` (a checkbox-style boolean field) and `[]` all count as
+ * empty. The empty array matters: a multi-select always *holds* a list, so without this a
+ * `required` multi-select would be satisfied by having selected nothing.
+ */
 function isEmpty(value: unknown): boolean {
+	if (Array.isArray(value)) return value.length === 0
 	return value === undefined || value === null || value === '' || value === false
+}
+
+/** The length `minLength` / `maxLength` measure: characters of a string, entries of a list. */
+function lengthOf(value: unknown): number | undefined {
+	if (typeof value === 'string') return value.length
+	return Array.isArray(value) ? value.length : undefined
 }
 
 /**
@@ -55,6 +66,17 @@ function isBelow(value: unknown, bound: number | string): boolean {
 function isAbove(value: unknown, bound: number | string): boolean {
 	if (typeof bound === 'number') return typeof value === 'number' && value > bound
 	return typeof value === 'string' && value.length > 0 && value > bound
+}
+
+/** "characters" for a string, "items" for a list — the same constraint, read the right way. */
+function minLengthMessage(value: unknown, bound: number): string {
+	const unit = Array.isArray(value) ? 'items' : 'characters'
+	return `Must be at least ${String(bound)} ${unit}`
+}
+
+function maxLengthMessage(value: unknown, bound: number): string {
+	const unit = Array.isArray(value) ? 'items' : 'characters'
+	return `Must be at most ${String(bound)} ${unit}`
 }
 
 function resolveMessage(
@@ -106,11 +128,12 @@ function runConstraints(
 	if (config.max !== undefined && isAbove(value, config.max)) {
 		return resolveMessage('max', config, translate, `Must be at most ${String(config.max)}`)
 	}
-	if (config.minLength !== undefined && typeof value === 'string' && value.length < config.minLength) {
-		return resolveMessage('minLength', config, translate, `Must be at least ${String(config.minLength)} characters`)
+	const length = lengthOf(value)
+	if (config.minLength !== undefined && length !== undefined && length < config.minLength) {
+		return resolveMessage('minLength', config, translate, minLengthMessage(value, config.minLength))
 	}
-	if (config.maxLength !== undefined && typeof value === 'string' && value.length > config.maxLength) {
-		return resolveMessage('maxLength', config, translate, `Must be at most ${String(config.maxLength)} characters`)
+	if (config.maxLength !== undefined && length !== undefined && length > config.maxLength) {
+		return resolveMessage('maxLength', config, translate, maxLengthMessage(value, config.maxLength))
 	}
 	if (config.format !== undefined && typeof value === 'string' && !FORMAT_PATTERNS[config.format].test(value)) {
 		return resolveMessage('format', config, translate, `Must be a valid ${config.format}`)

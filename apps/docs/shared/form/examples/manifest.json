@@ -32,6 +32,14 @@
 		"exportName": "NativeApiExample"
 	},
 	{
+		"id": "form-multi-value",
+		"label": "Multi-value",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/multi-value.tsx",
+		"exportName": "MultiValueExample"
+	},
+	{
 		"id": "form-dates",
 		"label": "Dates",
 		"group": "form",

@@ -37,6 +37,15 @@ export type SelectFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {
 	placeholder?: string
 }
 
+export type MultiSelectFieldProps<TFormData> = BaseFieldProps<TFormData, string[]> & {
+	options: readonly SelectOption[]
+	placeholder?: string
+}
+
+export type CheckboxGroupFieldProps<TFormData> = BaseFieldProps<TFormData, string[]> & {
+	options: readonly SelectOption[]
+}
+
 export type CheckboxFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
 
 export type SwitchFieldProps<TFormData> = BaseFieldProps<TFormData, boolean>
@@ -87,6 +96,8 @@ export type FormFieldComponents<TFormData> = {
 	SwitchField: (props: SwitchFieldProps<TFormData>) => ReactNode
 	RadioGroupField: (props: RadioGroupFieldProps<TFormData>) => ReactNode
 	SliderField: (props: SliderFieldProps<TFormData>) => ReactNode
+	MultiSelectField: (props: MultiSelectFieldProps<TFormData>) => ReactNode
+	CheckboxGroupField: (props: CheckboxGroupFieldProps<TFormData>) => ReactNode
 	DateField: (props: DateFieldProps<TFormData>) => ReactNode
 	DateRangeField: (props: DateRangeFieldProps<TFormData>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode

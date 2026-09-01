@@ -266,3 +266,69 @@ test('a schema defaultValue seeds a date field, and a bad one never reaches the 
 	expect(screen.getByLabelText('Starts on')).toHaveValue('2026-08-31')
 	expect(screen.getByLabelText('Broken on')).toHaveValue('')
 })
+
+test('a checkbox group holds one list under one name', async () => {
+	const user = userEvent.setup()
+	const onSubmit = vi.fn()
+	const listSchema: FormSchema<{ interests: string[] }> = {
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.CheckboxGroup,
+				name: 'interests',
+				label: 'Interests',
+				options: [
+					{ value: 'code', label: 'Code' },
+					{ value: 'design', label: 'Design' },
+				],
+				defaultValue: ['code'],
+			},
+			{ type: 'submit', label: 'Save' },
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={listSchema}
+			onSubmit={onSubmit}
+		/>,
+	)
+
+	expect(screen.getByRole('checkbox', { name: 'Code' })).toBeChecked()
+
+	await user.click(screen.getByRole('checkbox', { name: 'Design' }))
+	await user.click(screen.getByRole('button', { name: 'Save' }))
+
+	expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ value: { interests: ['code', 'design'] } }))
+})
+
+test('a required multi-select is not satisfied by an empty selection', async () => {
+	const user = userEvent.setup()
+	const onSubmit = vi.fn()
+	const listSchema: FormSchema<{ tags: string[] }> = {
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.MultiSelect,
+				name: 'tags',
+				label: 'Tags',
+				options: [{ value: 'a', label: 'A' }],
+				defaultValue: [],
+				validate: { required: true },
+			},
+			{ type: 'submit', label: 'Save' },
+		],
+	}
+
+	render(
+		<FormRenderer
+			schema={listSchema}
+			onSubmit={onSubmit}
+		/>,
+	)
+
+	await user.click(screen.getByRole('button', { name: 'Save' }))
+
+	expect(onSubmit).not.toHaveBeenCalled()
+	expect(screen.getByText('This field is required')).toBeInTheDocument()
+})

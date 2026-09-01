@@ -88,3 +88,31 @@ test('min and max compare dates as ISO strings', () => {
 	expect(validate({ startsOn: '2027-01-01' })).toEqual(['Must be at most 2026-12-31'])
 	expect(validate({ startsOn: '2026-08-31' })).toEqual([])
 })
+
+test('an empty selection fails required, and length constraints count items', () => {
+	const listSchema: FormSchema<{ tags: string[] }> = {
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.MultiSelect,
+				name: 'tags',
+				options: [
+					{ value: 'a', label: 'A' },
+					{ value: 'b', label: 'B' },
+					{ value: 'c', label: 'C' },
+				],
+				validate: { required: true, maxLength: 2 },
+			},
+		],
+	}
+	const validate = (values: { tags: string[] }): string[] => {
+		const result = buildValidator(listSchema)['~standard'].validate(values)
+		if (result instanceof Promise) throw new Error('the generated validator must be synchronous')
+		return (result.issues ?? []).map((issue) => issue.message)
+	}
+
+	// Without the array case in `isEmpty`, "nothing selected" would satisfy `required`.
+	expect(validate({ tags: [] })).toEqual(['This field is required'])
+	expect(validate({ tags: ['a', 'b', 'c'] })).toEqual(['Must be at most 2 items'])
+	expect(validate({ tags: ['a'] })).toEqual([])
+})

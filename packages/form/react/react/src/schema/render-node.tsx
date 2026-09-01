@@ -232,6 +232,29 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					{...(node.required !== undefined && { required: node.required })}
 				/>
 			)
+		case FormFieldType.MultiSelect:
+			return (
+				<form.MultiSelectField
+					name={node.name}
+					label={label}
+					description={description}
+					disabled={disabledByCondition}
+					options={resolveSelectOptions(node.options, context.translate)}
+					{...(node.required !== undefined && { required: node.required })}
+					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
+				/>
+			)
+		case FormFieldType.CheckboxGroup:
+			return (
+				<form.CheckboxGroupField
+					name={node.name}
+					label={label}
+					description={description}
+					disabled={disabledByCondition}
+					options={resolveSelectOptions(node.options, context.translate)}
+					{...(node.required !== undefined && { required: node.required })}
+				/>
+			)
 		case FormFieldType.Date:
 			return (
 				<form.DateField

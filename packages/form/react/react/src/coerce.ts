@@ -39,6 +39,16 @@ export function asDateRange(value: unknown): DateRangeValue | undefined {
 	return isDateRangeValue(value) ? value : undefined
 }
 
+/**
+ * A multi-value control always holds a list: anything else in form state (a bare string a
+ * consumer's `defaultValues` set, `undefined` before the field is touched) becomes `[]` rather
+ * than reaching the kit as a value it would have to guess at. Non-string entries are dropped
+ * for the same reason — an option value is a string.
+ */
+export function asStringArray(value: unknown): string[] {
+	return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
+}
+
 export function asBoolean(value: unknown): boolean {
 	return value === true
 }

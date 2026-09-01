@@ -36,7 +36,15 @@ export class FormSchemaError extends Error {
 }
 
 /** The field kinds whose nodes carry an `options` list. */
-const OPTION_FIELD_TYPES: readonly string[] = [FormFieldType.Select, FormFieldType.RadioGroup]
+const OPTION_FIELD_TYPES: readonly string[] = [
+	FormFieldType.Select,
+	FormFieldType.RadioGroup,
+	FormFieldType.MultiSelect,
+	FormFieldType.CheckboxGroup,
+]
+
+/** The field kinds whose value — and so whose `defaultValue` — is a list of option values. */
+const MULTI_VALUE_FIELD_TYPES: readonly string[] = [FormFieldType.MultiSelect, FormFieldType.CheckboxGroup]
 
 /** The field kinds whose `min` / `max` / `defaultValue` are calendar dates. */
 const DATE_FIELD_TYPES: readonly string[] = [FormFieldType.Date, FormFieldType.DateRange]
@@ -267,6 +275,22 @@ function assertOptions(node: FormNode<unknown, string>, path: string, options: P
 }
 
 /**
+ * A multi-value field's `defaultValue`: a list of option values, never a bare string.
+ *
+ * `[]` is legal and means "nothing selected" — that is the shape the field always holds, so a
+ * document may seed it explicitly rather than leaving the key absent.
+ */
+function assertMultiValueDefault(node: FormNode<unknown, string>, path: string): void {
+	if (!MULTI_VALUE_FIELD_TYPES.includes(node.type)) return
+
+	const value = (node as unknown as UnknownRecord).defaultValue
+	if (value === undefined) return
+	if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string')) {
+		throw new FormSchemaError(`"defaultValue" must be an array of option values, got ${JSON.stringify(value)}`, path)
+	}
+}
+
+/**
  * A date field's own values. Every date the format carries is a `YYYY-MM-DD` calendar date
  * string, so a document naming `01/02/2026` — or a `Date` that only looked like one before
  * `JSON.stringify` flattened it — is rejected here rather than reaching a picker, which would
@@ -343,6 +367,7 @@ function validateNode(
 		assertUniqueName((node as unknown as UnknownRecord).name, path, seenNames)
 		assertOptions(node, path, options)
 		assertDateValues(node, path)
+		assertMultiValueDefault(node, path)
 		assertKnownRule(node.validate, path, options)
 		assertValidateMessages(node.validate, path, options)
 	} else if (node.type === 'block') {
