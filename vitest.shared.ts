@@ -9,7 +9,14 @@ export const vitestSharedConfig: ViteUserConfig = {
 		environment: 'jsdom',
 		coverage: {
 			reporter: ['text', 'html'],
-			include: ['src/**/*.ts'],
+			/**
+			 * `.tsx` as well as `.ts`. The pattern used to name only `.ts`, which quietly excluded
+			 * every React component in the repo — the UI kits are almost entirely `.tsx`, so they
+			 * would have reported a near-empty file set and looked well covered.
+			 */
+			include: ['src/**/*.{ts,tsx}'],
+			/** A test file must not count itself, and the test kit is a fixture, not shipped code. */
+			exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test-kit.tsx'],
 		},
 	},
 }
