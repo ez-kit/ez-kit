@@ -82,6 +82,12 @@ The API is identical to `@ez-kit/form-shadcn` — the same example renders under
 `TextField`, `NumberField`, `TextareaField`, `SelectField`, `CheckboxField`, plus
 `SubmitButton` (subscribed to `canSubmit` / `isSubmitting`) and `Form`.
 
+### Layout
+
+`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
+`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
+`section` node and its `colSpan` — pure layout, binding no value.
+
 ## Notes on the HeroUI v3 mapping
 
 HeroUI v3 fields are React Aria **compositions**: a state-owning root wraps the control,

@@ -11,6 +11,7 @@
 		"examples",
 		"fields",
 		"select",
+		"layout",
 		"validation",
 		"submission",
 		"reactivity",
