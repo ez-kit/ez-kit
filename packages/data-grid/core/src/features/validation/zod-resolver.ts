@@ -1,5 +1,4 @@
-import type { ValidationErrors, ValidationResult } from './validation-types'
-import type { ZodType } from 'zod'
+import type { ValidationErrors, ValidationResult, ValidationSchema } from './validation-types'
 
 /**
  * Helper for users not using `validate: { schema }` shorthand.
@@ -8,12 +7,12 @@ import type { ZodType } from 'zod'
  * Strict: only top-level path is used as the error key — matches columnId.
  * Multi-issue per field is preserved as `string[]`.
  */
-export function zodResolver(schema: ZodType): (values: unknown) => ValidationResult {
+export function zodResolver(schema: ValidationSchema): (values: unknown) => ValidationResult {
 	return (values) => zodSafeParseToResult(schema, values)
 }
 
 /** @internal — used by runValidate dispatcher and by zodResolver. */
-export function zodSafeParseToResult(schema: ZodType, values: unknown): ValidationResult {
+export function zodSafeParseToResult(schema: ValidationSchema, values: unknown): ValidationResult {
 	const r = schema.safeParse(values)
 	if (r.success) return null
 	const errors: ValidationErrors = {}

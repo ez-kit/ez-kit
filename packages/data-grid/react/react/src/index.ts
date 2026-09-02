@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Public surface of `@ez-kit/data-grid-react`.
  *

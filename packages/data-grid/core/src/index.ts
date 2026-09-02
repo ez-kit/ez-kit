@@ -162,6 +162,8 @@ export type {
 	FieldState,
 	ValidateConfig,
 	ValidateContext,
+	ValidationIssue,
+	ValidationSchema,
 	ValidationErrors,
 	ValidationProblems,
 	ValidationResult,

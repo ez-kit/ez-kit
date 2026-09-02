@@ -1,4 +1,23 @@
-import type { ZodType } from 'zod'
+/**
+ * The `{ schema }` shorthand's contract, written structurally rather than as
+ * `import type { ZodType } from 'zod'`.
+ *
+ * zod is an **optional** peer dependency, but a bare `import` of it in this module ends up in
+ * the package's published `index.d.ts` unconditionally — so every consumer had to have zod
+ * installed for the type declarations to resolve at all, optional or not. Only `safeParse` and
+ * the issue shape are ever read (see `zodSafeParseToResult`), and every zod schema satisfies
+ * this by structure, so `validate: { schema }` keeps type-checking against a real zod schema
+ * with no import.
+ */
+export type ValidationSchema = {
+	safeParse(input: unknown): { success: true } | { success: false; error: { issues: readonly ValidationIssue[] } }
+}
+
+/** One problem reported by a {@link ValidationSchema}. The zod issue shape, structurally. */
+export type ValidationIssue = {
+	path: readonly PropertyKey[]
+	message: string
+}
 
 /**
  * Validation error map keyed by columnId.
@@ -114,7 +133,7 @@ export type FieldState<TConfig = unknown, TValue = unknown> = {
  */
 export type ValidateConfig<TData> =
 	| ((values: Partial<TData>, ctx: ValidateContext) => ValidationResult | Promise<ValidationResult>)
-	| { schema: ZodType }
+	| { schema: ValidationSchema }
 
 const VALIDATION_ERROR_BRAND = Symbol.for('@ez-kit/validation-error')
 

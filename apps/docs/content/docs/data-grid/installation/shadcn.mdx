@@ -8,10 +8,13 @@ description: Install the data grid for a shadcn-based React app — packages, CS
 ## 1. Install packages
 
 ```bash
-pnpm add @ez-kit/data-grid-shadcn @ez-kit/data-grid-react @ez-kit/data-grid-core
+pnpm add @ez-kit/data-grid-shadcn
 ```
 
-The flavor (`@ez-kit/data-grid-shadcn`) re-exports everything you need at the call site; you import `data-grid-react` and `data-grid-core` only when you reach for hooks/types directly.
+The kit is the only package you install. It depends on `@ez-kit/data-grid-react` and
+`@ez-kit/data-grid-core`, so both arrive with it, and it re-exports their whole surface — every
+hook, type and constant is importable from `@ez-kit/data-grid-shadcn` itself. Adding them to your own
+`package.json` buys nothing and lets their versions drift out of step with the kit's.
 
 ## 2. Import the stylesheet
 
