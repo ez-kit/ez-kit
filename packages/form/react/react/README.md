@@ -58,6 +58,12 @@ Each `*Field` renders label + input + description + error text itself. `name` is
 to the paths in your form data whose value type fits the field, so
 `<form.NumberField name='email' />` is a compile error.
 
+### Layout
+
+`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
+`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
+`section` node and its `colSpan` — pure layout, binding no value.
+
 ## Composition
 
 `withForm` extracts part of a form into its own component. It is TanStack's helper, retyped

@@ -3,6 +3,7 @@ import { createCheckboxGroupField } from './fields/checkbox-group-field'
 import { createDateField } from './fields/date-field'
 import { createDateRangeField } from './fields/date-range-field'
 import { createSubmitButton } from './fields/form-parts'
+import { createGridItem, createSection } from './fields/layout-parts'
 import { createMultiSelectField } from './fields/multi-select-field'
 import { createNumberField } from './fields/number-field'
 import { createRadioGroupField } from './fields/radio-group-field'
@@ -42,6 +43,8 @@ export function buildFieldComponents<TFormData>(
 		DateField: KitDateField,
 		DateRangeField: KitDateRangeField,
 		Button,
+		Section: KitSection,
+		GridItem: KitGridItem,
 	} = components
 
 	return {
@@ -58,5 +61,7 @@ export function buildFieldComponents<TFormData>(
 		DateField: createDateField<TFormData>(form, KitDateField),
 		DateRangeField: createDateRangeField<TFormData>(form, KitDateRangeField),
 		SubmitButton: createSubmitButton(form, Button),
+		Section: createSection(KitSection),
+		GridItem: createGridItem(KitGridItem),
 	}
 }

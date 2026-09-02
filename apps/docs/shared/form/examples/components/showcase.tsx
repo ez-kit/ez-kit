@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { Form, TextInputType } from 'shared/form/FormKit'
 
 import type { DateRangeValue } from '@ez-kit/form-react'
-import type { ReactNode } from 'react'
 
 type Registration = {
 	fullName: string
@@ -88,19 +87,6 @@ const validator = z.object({
 	terms: z.boolean(),
 })
 
-/** A headed group of fields on a two-column grid — what a `section` node renders as. */
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-	return (
-		<section className='flex flex-col gap-3'>
-			<div className='flex flex-col gap-1'>
-				<h3 className='text-sm font-medium'>{title}</h3>
-				{description === undefined ? null : <p className='text-xs opacity-70'>{description}</p>}
-			</div>
-			<div className='grid grid-cols-2 gap-4'>{children}</div>
-		</section>
-	)
-}
-
 /**
  * Every built-in field kind in one form, written in JSX.
  *
@@ -109,9 +95,10 @@ function Section({ title, description, children }: { title: string; description?
  * fields carry the same props under the same names in both, and what changes is only whether
  * they are written as elements or as data.
  *
- * The grouping is the one thing that has no counterpart. A document says `section` with
- * `columns`, and the kit draws the heading and the grid; the JSX API ships no `<Section>`, so
- * the same layout is your own markup — the local `Section` above, all six lines of it.
+ * The grouping has a counterpart too: a document says `section` with `columns` and a node
+ * carries `colSpan`, JSX writes `<form.Section columns>` and wraps a wide child in
+ * `<form.GridItem colSpan>`, and both reach the same kit components — see
+ * [Layout](/docs/form/layout).
  */
 export function ShowcaseExample() {
 	const [saved, setSaved] = useState<string | null>(null)
@@ -127,9 +114,10 @@ export function ShowcaseExample() {
 			>
 				{(form) => (
 					<>
-						<Section
+						<form.Section
 							title='Your details'
 							description='Two columns on the grid; the notes span both.'
+							columns={2}
 						>
 							<form.TextField
 								name='fullName'
@@ -144,17 +132,20 @@ export function ShowcaseExample() {
 								type={TextInputType.Email}
 								required
 							/>
-							<div className='col-span-2'>
+							<form.GridItem colSpan={2}>
 								<form.TextareaField
 									name='notes'
 									label='Anything we should know?'
 									rows={3}
 									placeholder='Optional.'
 								/>
-							</div>
-						</Section>
+							</form.GridItem>
+						</form.Section>
 
-						<Section title='Plan'>
+						<form.Section
+							title='Plan'
+							columns={2}
+						>
 							<form.SelectField
 								name='plan'
 								label='Plan'
@@ -181,17 +172,20 @@ export function ShowcaseExample() {
 								max={50}
 								step={1}
 							/>
-							<div className='col-span-2'>
+							<form.GridItem colSpan={2}>
 								<form.MultiSelectField
 									name='integrations'
 									label='Integrations'
 									options={INTEGRATIONS}
 									placeholder='Pick as many as you like'
 								/>
-							</div>
-						</Section>
+							</form.GridItem>
+						</form.Section>
 
-						<Section title='Schedule and preferences'>
+						<form.Section
+							title='Schedule and preferences'
+							columns={2}
+						>
 							<form.DateField
 								name='startOn'
 								label='Start on'
@@ -204,13 +198,13 @@ export function ShowcaseExample() {
 								min='2026-01-01'
 								max='2026-12-31'
 							/>
-							<div className='col-span-2'>
+							<form.GridItem colSpan={2}>
 								<form.CheckboxGroupField
 									name='topics'
 									label='Email me about'
 									options={TOPICS}
 								/>
-							</div>
+							</form.GridItem>
 							<form.SwitchField
 								name='notifications'
 								label='In-app notifications'
@@ -219,7 +213,7 @@ export function ShowcaseExample() {
 								name='terms'
 								label='I accept the terms'
 							/>
-						</Section>
+						</form.Section>
 
 						<form.SubmitButton>Create account</form.SubmitButton>
 					</>

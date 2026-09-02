@@ -76,6 +76,7 @@ export const DocPage = {
 	FilteringPanel: 'content/docs/data-grid/filtering/panel.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
+	FormLayout: 'content/docs/form/layout.mdx',
 	FormNativeApi: 'content/docs/form/native-api.mdx',
 	FormSchema: 'content/docs/form/schema.mdx',
 	PaginationInfiniteScroll: 'content/docs/data-grid/pagination/infinite-scroll.mdx',
@@ -168,6 +169,11 @@ export const FORM_TYPE = {
 	 */
 	BaseFieldProps: { module: TypeModule.FormReact, name: 'BaseFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
 	SliderFieldProps: { module: TypeModule.FormReact, name: 'SliderFieldProps', typeArgs: ROW_TYPE_ARGS },
+	/** The JSX layout pair — neither is generic, both are pure presentation. */
+	SectionProps: { module: TypeModule.FormReact, name: 'SectionProps' },
+	GridItemProps: { module: TypeModule.FormReact, name: 'GridItemProps' },
+	/** The `section` node — `CommonProps` (so `colSpan`) plus the grid's own keys. */
+	SectionNode: { module: TypeModule.FormCore, name: 'SectionNode', typeArgs: ROW_TYPE_ARGS },
 	DateFieldProps: { module: TypeModule.FormReact, name: 'DateFieldProps', typeArgs: ROW_TYPE_ARGS },
 	/** What a kit's field component receives — the base half of the `FormComponents` contract. */
 	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
@@ -607,6 +613,20 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{
 				heading: 'Styling hooks',
 				reason: 'Documents the `data-*` attributes the field layer emits onto the DOM, not props of any field.',
+			},
+		],
+	},
+	{
+		page: DocPage.FormLayout,
+		optionTables: [
+			{ heading: '`form.Section`', roots: [FORM_TYPE.SectionProps], expectedCount: 4 },
+			{ heading: '`form.GridItem`', roots: [FORM_TYPE.GridItemProps], expectedCount: 2 },
+			{ heading: 'The `section` node', roots: [FORM_TYPE.SectionNode], expectedCount: 6 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-slot` attributes both kits emit onto the DOM, not props of any type.',
 			},
 		],
 	},

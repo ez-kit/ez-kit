@@ -232,6 +232,22 @@
 		"exportName": "ShowcaseSchemaExample"
 	},
 	{
+		"id": "form-layout",
+		"label": "Layout",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/layout.tsx",
+		"exportName": "LayoutExample"
+	},
+	{
+		"id": "form-layout-schema",
+		"label": "Layout: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/layout-schema.tsx",
+		"exportName": "LayoutSchemaExample"
+	},
+	{
 		"id": "form-showcase",
 		"label": "Complete form",
 		"group": "form",

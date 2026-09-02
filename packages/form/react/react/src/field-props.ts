@@ -231,4 +231,53 @@ export type FormFieldComponents<TFormData> = {
 	DateField: (props: DateFieldProps<TFormData>) => ReactNode
 	DateRangeField: (props: DateRangeFieldProps<TFormData>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
+	Section: (props: SectionProps) => ReactNode
+	GridItem: (props: GridItemProps) => ReactNode
+}
+
+/**
+ * A headed group of fields on a column grid — the JSX spelling of a `section` node.
+ *
+ * The two entry points render the same kit component and therefore the same DOM: a document
+ * says `{ type: 'section', title, columns }`, JSX writes `<form.Section title columns>`, and
+ * both reach `FormComponents['Section']`. Sections are pure layout — nesting a field inside
+ * one changes neither its `name`, nor the path its value lives at, nor its validation.
+ *
+ * `columns` is the same 1..4 range the v1 format allows (`GRID_MIN`/`GRID_MAX`); the kit
+ * clamps anything outside it. Nest a section inside a section to build a different grid
+ * inside a grid.
+ *
+ * @example
+ * <form.Section title='Contact' columns={2}>
+ *   <form.TextField name='firstName' label='First name' />
+ *   <form.TextField name='lastName' label='Last name' />
+ *   <form.GridItem colSpan={2}>
+ *     <form.TextField name='email' label='Email' />
+ *   </form.GridItem>
+ * </form.Section>
+ */
+export type SectionProps = {
+	title?: ReactNode
+	description?: ReactNode
+	/** Grid columns for the direct children. Default 1. Must be an integer 1..4. */
+	columns?: number
+	children: ReactNode
+}
+
+/**
+ * One cell of a section's grid — the JSX spelling of a node's `colSpan`.
+ *
+ * Only needed to span more than one column: a child written straight into a `Section` is
+ * already a grid item of its own and occupies a single column. It wraps *anything*, a nested
+ * `Section` included, and carries no field binding — `colSpan` is geometry, not state.
+ *
+ * @example
+ * <form.GridItem colSpan={2}>
+ *   <form.TextareaField name='notes' label='Notes' />
+ * </form.GridItem>
+ */
+export type GridItemProps = {
+	/** Columns this item spans. Default 1. Must be an integer 1..4. */
+	colSpan?: number
+	children: ReactNode
 }
