@@ -49,7 +49,10 @@ table[data-slot='table'] {
 [data-slot='table-scroll'] {
 	@apply overflow-x-auto;
 }
-[data-slot='table-scroll'][data-sticky-header='true'] {
+/* One bound, two stickies: a sticky header and a sticky footer both need this div to be the
+ * bounded vertical scrollport, so either attribute opens it. */
+[data-slot='table-scroll'][data-sticky-header='true'],
+[data-slot='table-scroll'][data-sticky-footer='true'] {
 	@apply overflow-y-auto;
 	max-height: var(--dg-table-max-height, 400px);
 }
@@ -61,6 +64,15 @@ table[data-slot='table'] {
 
 [data-slot='thead'][data-sticky='true'] {
 	@apply sticky top-0 z-10;
+}
+
+/* ── sticky tfoot ─────────────────────────────────────────────────────── */
+
+/* `position: sticky` sits on the `<tfoot>` itself, mirroring the header. The kits paint its
+ * background off the same `[data-sticky='true']` hook the header uses — without an opaque
+ * background a sticky footer shows the rows sliding underneath it. */
+[data-slot='tfoot'][data-sticky='true'] {
+	@apply sticky bottom-0 z-10;
 }
 
 /* ── pinned columns ───────────────────────────────────────────────────── */
@@ -99,17 +111,24 @@ table[data-slot='table'] {
  * Alignment is layout, not decoration, so it belongs in this structural sheet: a column that asks
  * to be right-aligned should look the same in both kits, and leaving it to them is what made
  * `headerClassName` + `cellClassName` the only route to it. */
+/* Each rule carries `justify-*` beside `text-*` because a kit is free to lay its cells out with
+ * flex — shadcn's `<TableCell>` is `flex items-center`, so its content is a flex item and
+ * `text-align` has nothing left to move, exactly as it has nothing to move inside the header's
+ * `sort-trigger` below. `justify-content` is inert on a block box, so the kits that keep their
+ * cells as blocks (heroui) are unaffected. Without it the same `align: 'end'` right-aligned a
+ * column's header in both kits but its body and footer cells in only one of them — a numeric
+ * column with a total came out with the header at one edge and every value at the other. */
 [data-slot='td'][data-align='start'],
 [data-slot='th'][data-align='start'] {
-	@apply text-start;
+	@apply justify-start text-start;
 }
 [data-slot='td'][data-align='center'],
 [data-slot='th'][data-align='center'] {
-	@apply text-center;
+	@apply justify-center text-center;
 }
 [data-slot='td'][data-align='end'],
 [data-slot='th'][data-align='end'] {
-	@apply text-end;
+	@apply justify-end text-end;
 }
 
 /* The default header content is laid out by flex, and `[data-slot='sort-trigger']` — which holds

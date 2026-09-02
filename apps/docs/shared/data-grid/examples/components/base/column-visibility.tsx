@@ -13,7 +13,7 @@ export function BaseColumnVisibilityExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			visibility={{ toolbar: true }}
+			visibility
 			pagination={{ pageSize: 10, items: [5, 10, 25] }}
 		/>
 	)

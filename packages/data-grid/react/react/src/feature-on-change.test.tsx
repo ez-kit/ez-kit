@@ -49,6 +49,14 @@ describe('every feature onChange survives useDataGrid', () => {
 		expect(table.grid.visibility).toEqual({ toolbar: true })
 	})
 
+	it('mounts the visibility toolbar control for the object form too, as the bare `true` does', () => {
+		// The object form used to default `toolbar` off, so adding an `onChange` to a working
+		// `visibility: true` silently removed the only control the feature has.
+		expect(grid({ visibility: { onChange: vi.fn() } }).grid.visibility).toEqual({ toolbar: true })
+		expect(grid({ visibility: true }).grid.visibility).toEqual({ toolbar: true })
+		expect(grid({ visibility: { toolbar: false } }).grid.visibility).toEqual({ toolbar: false })
+	})
+
 	it('expanding.onChange fires when a row is expanded', () => {
 		const onChange = vi.fn()
 		const table = grid({ expanding: { onChange } })

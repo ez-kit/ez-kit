@@ -14,7 +14,7 @@ const columns = createColumns<Employee>([
 		cell: { type: 'number' },
 		filtering: {
 			operators: {
-				items: ['eq', 'between'],
+				items: ['equals', 'between'],
 				betweenOperator: { variant: 'inputs' },
 			},
 		},

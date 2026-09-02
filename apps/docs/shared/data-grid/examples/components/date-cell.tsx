@@ -41,7 +41,7 @@ const baseColumns = createColumns<Milestone>([
 		},
 		filtering: {
 			operators: {
-				items: ['eq', 'before', 'after', 'between'],
+				items: ['equals', 'lessThan', 'greaterThan', 'between'],
 				betweenOperator: { variant: 'inputs' },
 			},
 		},

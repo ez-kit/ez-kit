@@ -148,14 +148,27 @@ export const DATA_GRID_DEFAULTS = {
 	},
 	/** Presentational shell. `maxHeight` is applied by the structural stylesheet, not by JS. */
 	layout: {
-		/** `--dg-table-max-height` when the body scrolls under a capped height. */
-		maxHeight: '400px',
-		/** `--dg-virtual-height` when the body is virtualized and needs a definite height. */
-		virtualHeight: '600px',
+		/**
+		 * One option, two floors: the stylesheet reads `--dg-table-max-height` normally and
+		 * `--dg-virtual-height` when the body is virtualized (where the container needs a
+		 * definite height rather than a cap). Both are what `layout.maxHeight` falls back to,
+		 * so both sit under its name — a `layout.virtualHeight` key would be a default for an
+		 * option that does not exist.
+		 */
+		maxHeight: {
+			/** `--dg-table-max-height` when the body scrolls under a capped height. */
+			default: '400px',
+			/** `--dg-virtual-height` when the body is virtualized. */
+			virtualized: '600px',
+		},
 	},
-	/** Cell-type config floors. */
+	/**
+	 * Cell-type config floors, keyed by the option path they default: a `link` column writes
+	 * `cell: { type: 'link', config: { target } }`, so the floor under it is
+	 * `cell.config.target` — the path the docs' defaults table already prints.
+	 */
 	cell: {
-		link: {
+		config: {
 			/** A grid links inside its own app far more often than out of it. */
 			target: LinkTarget.Self,
 		},

@@ -29,7 +29,10 @@ export type RenderFilterInputArgs = {
 	OperatorSelect: ComponentType<OperatorSelectProps>
 	BetweenInput: ComponentType<BetweenInputProps>
 	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
-	/** Commit debounce (ms) for the fallback text inputs. `0` = commit on every keystroke. */
+	/**
+	 * Table-level commit debounce (ms) for the fallback text inputs. `0` = commit on every
+	 * keystroke. A column's own `filtering.debounce` overrides it.
+	 */
 	debounce: number
 	/**
 	 * The live table instance, used only to wire "Enter applies the whole draft" on the
@@ -54,12 +57,13 @@ export type RenderFilterInputArgs = {
 function resolveFilterItems(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	column: Column<any>,
-	meta: ColumnMeta<unknown, unknown>,
+	meta: ColumnMeta<unknown, unknown> | undefined,
 ): FilterItem[] {
-	const facetedEnabled = meta.facetedEnabled === true
+	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+	const facetedEnabled = filteringMeta?.faceted === true
 	const facetMap = facetedEnabled ? (column.getFacetedUniqueValues() as Map<unknown, number> | undefined) : undefined
 
-	const explicit = meta.filteringItems
+	const explicit = filteringMeta?.items
 	if (explicit && explicit.length > 0) {
 		return facetMap
 			? explicit.map((opt): FilterItem => {
@@ -69,8 +73,8 @@ function resolveFilterItems(
 			: explicit
 	}
 
-	if (meta.cellType === 'select' || meta.cellType === 'badge') {
-		const items = (meta.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
+	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
+		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		if (items && items.length > 0) {
 			return facetMap
 				? items.map((item): FilterItem => {
@@ -118,7 +122,7 @@ function resolveBetweenPresets(
 /**
  * Renders the input(s) for a column filter. Handles three layers, in order:
  *
- * 1. Operator-aware path — when `meta.resolvedOperators` is set, dispatches based
+ * 1. Operator-aware path — when `meta.filtering.operators` is set, dispatches based
  *    on the current operator id (between → BetweenInput, no-input operators →
  *    only the OperatorSelect, otherwise the column / cell-type / fallback input).
  * 2. Plain path — when there are no operators, uses `column.filtering.component`,
@@ -132,10 +136,16 @@ export function renderFilterInput({
 	OperatorSelect,
 	BetweenInput,
 	MultiSelectFilter,
-	debounce,
+	debounce: tableDebounce,
 	table,
 }: RenderFilterInputArgs): ReactNode {
-	const resolvedOperators = meta?.resolvedOperators
+	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+	const resolvedOperators = filteringMeta?.operators
+	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
+	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
+	// the rest of the grid stays responsive.
+	const columnDebounce = filteringMeta?.debounce
+	const debounce = columnDebounce ?? tableDebounce
 	// Enter in a fallback text input applies the whole pending draft — sorting, filters and
 	// search commit together in one request. `undefined` under non-deferred tables so Enter
 	// keeps whatever meaning it has today (e.g. form submission).
@@ -150,7 +160,7 @@ export function renderFilterInput({
 	if (resolvedOperators && resolvedOperators.length > 0) {
 		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
 		const currentOperatorId =
-			sv !== undefined ? sv.operator : (meta.defaultOperatorId ?? resolvedOperators.at(0)?.id ?? '')
+			sv !== undefined ? sv.operator : (filteringMeta.defaultOperator ?? resolvedOperators.at(0)?.id ?? '')
 		const currentOperator = resolvedOperators.find((op) => op.id === currentOperatorId)
 		const inputValue = sv?.value
 
@@ -186,8 +196,8 @@ export function renderFilterInput({
 		}
 
 		if (currentOperatorId === 'between') {
-			const betweenCfg = meta.betweenOperatorConfig
-			const betweenType = meta.cellType === 'date' ? 'date' : 'number'
+			const betweenCfg = filteringMeta.betweenOperator
+			const betweenType = meta?.cell?.type === 'date' ? 'date' : 'number'
 			const resolvedPresets = resolveBetweenPresets(betweenCfg?.presets, betweenType)
 			const onPresetSelect = resolvedPresets
 				? (preset: DateRangePreset) => {
@@ -228,34 +238,32 @@ export function renderFilterInput({
 		}
 
 		// column-level filtering.component
-		const filteringCfg = meta.filtering
-		if (filteringCfg !== false && filteringCfg !== undefined) {
-			const comp = (filteringCfg as { component?: (props: InputComponentProps) => ReactNode }).component
-			if (comp) {
-				return (
-					<>
-						{flexRender(comp, {
-							value: inputValue,
-							onChange: onValueChange,
-							...(meta.config !== undefined ? { config: meta.config } : {}),
-						})}
-						{operatorSelect}
-					</>
-				)
-			}
+		const columnFilterInput = filteringMeta.component as ((props: InputComponentProps) => ReactNode) | undefined
+		if (columnFilterInput) {
+			return (
+				<>
+					{flexRender(columnFilterInput, {
+						value: inputValue,
+						onChange: onValueChange,
+						...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+					})}
+					{operatorSelect}
+				</>
+			)
 		}
 
-		// registry by cellType
-		if (meta.cellType) {
-			const def = cellTypes[meta.cellType]
-			const comp = def?.filter ?? def?.edit
+		// registry by cell type
+		const cellTypeId = meta?.cell?.type
+		if (cellTypeId) {
+			const def = cellTypes[cellTypeId]
+			const comp = def?.filtering ?? def?.editing
 			if (comp) {
 				const field: FieldState = {
 					id: `filter-${header.column.id}`,
 					value: inputValue,
 					onChange: onValueChange,
 					onBlur: () => {},
-					...(meta.config !== undefined ? { config: meta.config } : {}),
+					...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 					error: undefined,
 					errors: [],
 					isValidating: false,
@@ -290,27 +298,27 @@ export function renderFilterInput({
 		header.column.setFilterValue(v)
 	}
 
-	const filteringConfig = meta?.filtering
-	if (filteringConfig !== false && filteringConfig !== undefined) {
-		const comp = (filteringConfig as { component?: (props: InputComponentProps) => ReactNode }).component
+	if (filteringMeta !== undefined) {
+		const comp = filteringMeta.component as ((props: InputComponentProps) => ReactNode) | undefined
 		if (comp)
 			return flexRender(comp, {
 				value: filterValue,
 				onChange,
-				...(meta.config !== undefined ? { config: meta.config } : {}),
+				...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 			})
 	}
 
-	if (meta?.cellType) {
-		const def = cellTypes[meta.cellType]
-		const comp = def?.filter ?? def?.edit
+	const plainCellTypeId = meta?.cell?.type
+	if (plainCellTypeId) {
+		const def = cellTypes[plainCellTypeId]
+		const comp = def?.filtering ?? def?.editing
 		if (comp) {
 			const field: FieldState = {
 				id: `filter-${header.column.id}`,
 				value: filterValue,
 				onChange,
 				onBlur: () => {},
-				...(meta.config !== undefined ? { config: meta.config } : {}),
+				...(meta.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 				error: undefined,
 				errors: [],
 				isValidating: false,

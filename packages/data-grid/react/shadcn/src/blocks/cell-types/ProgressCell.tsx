@@ -25,7 +25,7 @@ function ProgressCellView({ value, config }: CellViewProps<ProgressCellConfig>) 
 
 /** Progress (numeric) cell input. Wraps shadcn Field/NumberInput. */
 function ProgressCellInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
-	const { NumberInput } = useGridComponents().editing
+	const { NumberInput } = useGridComponents().core
 	const hasError = errors.length > 0
 	return (
 		<Field data-error={hasError || undefined}>

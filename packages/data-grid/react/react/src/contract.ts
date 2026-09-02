@@ -25,12 +25,22 @@ export const GridFeature = {
 	Pagination: 'pagination',
 	Sorting: 'sorting',
 	Filtering: 'filtering',
+	/** The two write forms — the modal shell they share, and the number input they field. */
 	Editing: 'editing',
+	/** Row deletion: the confirmation dialog. */
+	Deleting: 'deleting',
 	Selection: 'selection',
 	/** Pending-draft section of the shared action bar (`draft`). */
 	Draft: 'draft',
-	/** Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`). */
-	RowActions: 'row-actions',
+	/**
+	 * Per-row actions column: edit / delete buttons (the row-pin menu uses `core.Menu`).
+	 *
+	 * `rowActions`, matching the option of the same name. It was `'row-actions'` — the one
+	 * kebab-cased key in the set, so it was also the one a kit had to write in quotes, and one
+	 * feature answered to two spellings depending on whether you were configuring it or
+	 * supplying its components.
+	 */
+	RowActions: 'rowActions',
 	Resizing: 'resizing',
 	Visibility: 'visibility',
 	Fallbacks: 'fallbacks',
@@ -61,6 +71,10 @@ export const FEATURE_COMPONENTS = {
 		'Checkbox',
 		'Toolbar',
 		'Menu',
+		// A primitive, beside `Input` and `Checkbox`, not a write-form component: the number
+		// filter and any cell type that fields a number reach for it, none of which involves
+		// editing.
+		'NumberInput',
 	] as const,
 	[GridFeature.Pagination]: ['Pagination', 'PageSizer'] as const,
 	[GridFeature.Sorting]: ['SortIndicator', 'SortMenu'] as const,
@@ -75,7 +89,11 @@ export const FEATURE_COMPONENTS = {
 		'BetweenInput',
 		'MultiSelectFilter',
 	] as const,
-	[GridFeature.Editing]: ['Modal', 'FormShell', 'ConfirmDialog', 'NumberInput'] as const,
+	// `Modal` and `FormShell` are shared by editing **and** creating — one modal shell serves
+	// both forms (`DataGridFormModalProps` is one type), so they stay in the one group rather
+	// than being duplicated into a `creating` one.
+	[GridFeature.Editing]: ['Modal', 'FormShell'] as const,
+	[GridFeature.Deleting]: ['ConfirmDialog'] as const,
 	[GridFeature.Selection]: ['SelectionBar'] as const,
 	[GridFeature.Draft]: ['DraftBar'] as const,
 	[GridFeature.RowActions]: ['ActionsCell'] as const,
@@ -99,6 +117,7 @@ export type GridPaginationComponents = ComponentsFor<typeof GridFeature.Paginati
 export type GridSortingComponents = ComponentsFor<typeof GridFeature.Sorting>
 export type GridFilteringComponents = ComponentsFor<typeof GridFeature.Filtering>
 export type GridEditingComponents = ComponentsFor<typeof GridFeature.Editing>
+export type GridDeletingComponents = ComponentsFor<typeof GridFeature.Deleting>
 export type GridSelectionComponents = ComponentsFor<typeof GridFeature.Selection>
 export type GridDraftComponents = ComponentsFor<typeof GridFeature.Draft>
 export type GridRowActionsComponents = ComponentsFor<typeof GridFeature.RowActions>

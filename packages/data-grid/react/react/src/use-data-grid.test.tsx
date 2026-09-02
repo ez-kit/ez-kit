@@ -487,10 +487,10 @@ describe('useDataGrid — pagination.items', () => {
 
 	it('falls back to the default list when page-based pagination carries no explicit one', () => {
 		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the toolbar
-		// mounts the control is `pagination.pageSizer`, resolved separately.
+		// mounts the control is `pagination.toolbar`, resolved separately.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.toolbar).toBe(false)
 	})
 
 	it('stores the explicit options in page-based mode', () => {
@@ -516,35 +516,40 @@ describe('useDataGrid — pagination.items', () => {
 })
 
 describe('useDataGrid — selection.bar', () => {
-	it('SELECTION_BAR_KEY is undefined when selection not set', () => {
+	it('resolves to undefined when selection is not enabled', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }))
 		const key = result.current.grid.selection.bar
 		expect(key).toBeUndefined()
 	})
 
-	it('SELECTION_BAR_KEY is undefined when selection: true (boolean, no bar config)', () => {
+	it('resolves to the default variant when selection: true (the bar is on by default)', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: true }))
+		const key = result.current.grid.selection.bar
+		expect(key).toEqual({ variant: 'floating' })
+	})
+
+	it('resolves the default variant when selection: { bar: true }', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: true } }))
+		const key = result.current.grid.selection.bar
+		expect(key).toEqual({ variant: 'floating' })
+	})
+
+	it('resolves to undefined when selection: { bar: false }', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: false } }))
 		const key = result.current.grid.selection.bar
 		expect(key).toBeUndefined()
 	})
 
-	it('SELECTION_BAR_KEY stores true when selection: { bar: true }', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: true } }))
-		const key = result.current.grid.selection.bar
-		expect(key).toBe(true)
-	})
-
-	it('SELECTION_BAR_KEY stores false when selection: { bar: false }', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: false } }))
-		const key = result.current.grid.selection.bar
-		expect(key).toBe(false)
-	})
-
-	it('SELECTION_BAR_KEY stores config object when selection: { bar: { clear } }', () => {
+	it('carries the callbacks through, with the variant settled', () => {
 		const clear = vi.fn()
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { clear } } }))
 		const key = result.current.grid.selection.bar
-		expect(key).toEqual({ clear })
+		expect(key).toEqual({ variant: 'floating', clear })
+	})
+
+	it('takes the render mode as a scalar', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: 'inline' } }))
+		expect(result.current.grid.selection.bar).toEqual({ variant: 'inline' })
 	})
 
 	it('SELECTION_BAR_KEY stores variant: "inline" when configured', () => {
@@ -847,7 +852,7 @@ describe('useDataGrid — draft with a mirrored controlled state prop', () => {
 
 		const renderCountAfterSeed = result.current.renderCount
 
-		// A new draft edit: outward state is unchanged while dirty, so `onStateChange` never fires —
+		// A new draft editing: outward state is unchanged while dirty, so `onStateChange` never fires —
 		// the consumer's mirrored `tableState` now holds the last APPLIED query, not this new draft.
 		act(() => {
 			result.current.table.setSorting([{ id: 'name', desc: false }])

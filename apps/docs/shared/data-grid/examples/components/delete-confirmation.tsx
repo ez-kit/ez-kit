@@ -30,8 +30,7 @@ export function DeleteConfirmationExample() {
 				},
 				confirmation: {
 					title: 'Delete product?',
-					description: (row) =>
-						`Are you sure you want to delete "${(row.original as Product).name}"? This action cannot be undone.`,
+					description: (row) => `Are you sure you want to delete "${row.original.name}"? This action cannot be undone.`,
 				},
 				bulk: {
 					onDelete: ({ rowIds }) => {

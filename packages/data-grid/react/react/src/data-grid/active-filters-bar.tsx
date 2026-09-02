@@ -105,8 +105,8 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	for (const cf of columnFilters) {
 		const column = table.getColumn(cf.id)
 		if (!column) continue
-		const operators = (column.columnDef.meta as { resolvedOperators?: FilterOperatorDef[] } | undefined)
-			?.resolvedOperators
+		const filteringMeta = column.columnDef.meta?.filtering
+		const operators = filteringMeta === false ? undefined : filteringMeta?.operators
 		const display = renderValueDisplay(cf.value, operators)
 		if (display == null || display === '') continue
 		const appliedFilter = applied.columnFilters.find((a) => a.id === cf.id)

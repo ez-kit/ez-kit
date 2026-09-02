@@ -18,7 +18,12 @@ import type { DataTable } from '@ez-kit/data-grid-core'
 type KitCellTypeId<TCellTypes extends CellTypeRegistry> = Extract<keyof TCellTypes, string>
 
 export type CreateDataGridOptions<TCellTypes extends CellTypeRegistry> = {
-	components: Partial<GridComponents>
+	/**
+	 * The kit's components, feature-grouped. Every group and every member is already optional
+	 * — `GridComponents` *is* the partial shape a kit implements — so it is spelled the same
+	 * way here as on `<GridComponentsProvider components>` and `<DataGrid components>`.
+	 */
+	components: GridComponents
 	cellTypes?: TCellTypes
 	/**
 	 * Kit-level default grid options baked into the bundle. Merged as the **base** layer
@@ -59,7 +64,7 @@ export type DataGridBundle<TCellTypes extends CellTypeRegistry> = {
  * @example
  * // With custom cell types
  * export const { DataGrid, useDataGrid, createColumns } = extendDataGrid({
- *   rating: { view: RatingCellView, edit: RatingCellInput },
+ *   rating: defineCellType<{ max: number }>()({ view: RatingCellView, editing: RatingCellInput }),
  * })
  */
 export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeRegistry>({
@@ -72,7 +77,7 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 		return (
 			<GridComponentsProvider components={components}>
 				{cellTypes != null ? (
-					<CellTypesProvider types={cellTypes}>
+					<CellTypesProvider cellTypes={cellTypes}>
 						<DataGrid {...props} />
 					</CellTypesProvider>
 				) : (

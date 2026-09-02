@@ -9,7 +9,8 @@ import type { DataTable } from '@ez-kit/data-grid-core'
 import type { HeaderGroup } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-export type DataGridHeaderProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderProps<TRow extends object = any> = {
 	/**
 	 * Adds `data-sticky="true"` to the thead for structural CSS targeting.
 	 *
@@ -44,15 +45,20 @@ export type DataGridHeaderProps = {
 	 * </DataGrid.Header>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridHeaderRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridHeaderRenderArgs<TRow>) => ReactNode)
 }
 
-/** What a `<DataGrid.Header>` render function receives. */
-export type DataGridHeaderRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: DataTable<any>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	headerGroups: HeaderGroup<any>[]
+/**
+ * What a `<DataGrid.Header>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Header<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderRenderArgs<TRow extends object = any> = {
+	table: DataTable<TRow>
+	headerGroups: HeaderGroup<TRow>[]
 }
 
 /**
@@ -103,8 +109,9 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
  * structural CSS reads them on `[data-pinned]` elements.
  */
-export function Header({ sticky, children }: DataGridHeaderProps = {}) {
-	const table = useDataGridTable()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function Header<TRow extends object = any>({ sticky, children }: DataGridHeaderProps<TRow> = {}) {
+	const table = useDataGridTable<TRow>()
 	const isSticky = sticky ?? table.grid.layout.stickyHeader
 	const theadRef = useHeaderHeightVar(isSticky)
 

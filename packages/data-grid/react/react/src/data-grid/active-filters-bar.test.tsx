@@ -98,7 +98,7 @@ describe('<ActiveFiltersBar>', () => {
 		const table = makeTable()
 		table.setColumnFilters([
 			{ id: 'name', value: { operator: 'contains', value: 'ali' } },
-			{ id: 'age', value: { operator: 'eq', value: 30 } },
+			{ id: 'age', value: { operator: 'equals', value: 30 } },
 		])
 
 		render(
@@ -107,7 +107,7 @@ describe('<ActiveFiltersBar>', () => {
 			</Wrapper>,
 		)
 		await user.click(screen.getByRole('button', { name: /remove name filter/i }))
-		expect(table.getState().columnFilters).toEqual([{ id: 'age', value: { operator: 'eq', value: 30 } }])
+		expect(table.getState().columnFilters).toEqual([{ id: 'age', value: { operator: 'equals', value: 30 } }])
 	})
 
 	it('clicking remove on the global chip clears state.globalFilter', async () => {

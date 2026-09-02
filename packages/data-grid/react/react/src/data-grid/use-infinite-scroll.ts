@@ -44,7 +44,7 @@ export type InfiniteController = {
  * `hasNextPage` value, both of which `useDataGrid` reassigns on every render.
  */
 function readConfig(table: { grid: ResolvedGridOptions }): NormalizedInfiniteConfig | undefined {
-	return table.grid.infinite
+	return table.grid.pagination.infinite
 }
 
 export function useInfiniteScroll(): InfiniteController {

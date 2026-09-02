@@ -67,8 +67,8 @@ plumbing:
 </DataGrid.Table>
 ```
 
-`<DataGrid.Footer />` is the footer row the default layout leaves out — see
-[Column footers](#column-footers).
+`<DataGrid.Footer />` is the footer row — the default layout mounts it for you, a custom body
+does not. See [Column footers](#column-footers).
 
 A render function gets the live table:
 
@@ -103,6 +103,20 @@ by hand.
 	the loading / empty / no-results fallbacks, the infinite-scroll footer and the refetch overlay. That is the trade —
 	full control in exchange for re-implementing what you still want. Omit `children` unless you need it.
 </Callout>
+
+### Typing the render arguments
+
+Every compound child reads the table from context rather than from a prop, so it has nothing to
+infer your row type from — `row.original` is `any` unless you say otherwise. Name the row type
+once, as a type argument, and the whole render function is typed:
+
+```tsx
+<DataGrid.Body<Order>>{({ rows }) => rows.map((row) => <td>{row.original.total}</td>)}</DataGrid.Body>
+```
+
+The same argument is available on `Table`, `Header`, `HeaderRow`, `HeaderCell`, `Row`, `Cell`,
+`Footer`, `FooterRow` and `FooterCell`, and on `useDataGridTable<Order>()` for a component of
+your own.
 
 ## Header rows and cells: keep the chrome, change the markup
 
@@ -147,6 +161,7 @@ rearrange them without rebuilding any of them:
 | `sortTrigger`              | `label` plus the sort indicator, wrapped in the clickable sort affordance.        |
 | `menu`                     | The column overflow menu (sort / pin / hide), or `null` when it has no sections.  |
 | `filter`                   | The column's filter control, or `null` when the column is not filterable.         |
+| `resizer`                  | The resize handle, or `null` when the column cannot be resized.                   |
 | `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`). |
 | `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.           |
 
@@ -174,14 +189,14 @@ offsets and `cellClassName`, and lets you replace only what goes inside.
 The remaining slots are auto-mounted by their feature and take `children` for the same reason —
 replace the content, keep the placement and the conditions under which it appears.
 
-| Slot                                                   | Renders when                         | `children` receives                                       |
-| ------------------------------------------------------ | ------------------------------------ | --------------------------------------------------------- |
-| `<DataGrid.LoadingBody>`                               | `loading.isPending`                  | `{ columnCount }`                                         |
-| `<DataGrid.EmptyStateRow>`                             | the data array is empty              | `{ columnCount }`                                         |
-| `<DataGrid.NoResultsRow>`                              | filters match nothing                | `{ columnCount }`                                         |
-| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open | `{ form, title, formError, isPending, onSave, onCancel }` |
-| `<DataGrid.DraftBar>`                                  | `draft` is on and the draft is dirty | `{ pending, selectedCount, variant, onApply, onReset }`   |
-| `<DataGrid.PageSizer>`                                 | page-based pagination is on          | `{ pageSize, items, onPageSizeChange }`                   |
+| Slot                                                   | Renders when                         | `children` receives                                             |
+| ------------------------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |
+| `<DataGrid.LoadingBody>`                               | `loading.isPending`                  | `{ columnCount }`                                               |
+| `<DataGrid.EmptyStateRow>`                             | the data array is empty              | `{ columnCount }`                                               |
+| `<DataGrid.NoResultsRow>`                              | filters match nothing                | `{ columnCount }`                                               |
+| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open | `{ open, form, title, formError, isPending, onSave, onCancel }` |
+| `<DataGrid.DraftBar>`                                  | `draft` is on and the draft is dirty | `{ pending, selectedCount, variant, onApply, onReset }`         |
+| `<DataGrid.PageSizer>`                                 | page-based pagination is on          | `{ pageSize, items, onPageSizeChange }`                         |
 
 The three row-level fallbacks render their `children` **inside** the kit's
 `<Tbody><Tr><Td colSpan>` scaffold, so the table markup stays valid and you supply only the
@@ -227,12 +242,13 @@ createColumns<Row>([
 
 ## Column footers
 
-`column.footer` accepts the same shape as `column.header`. It is not part of the **default**
-layout — a plain `<DataGrid />` renders no footer row — but you do not read it yourself either:
-place `<DataGrid.Footer />` inside a custom `<DataGrid.Table>` body and it renders every
-column's `footer`, in the same column order and with the same colSpan, pinning and alignment as
-the header. `column.footerClassName` lands on the footer cell.
+`column.footer` accepts the same shape as `column.header`, and a plain `<DataGrid />` renders it:
+declaring it on any column mounts the footer row — see [Footer](./footer) for `layout.footer` and
+the sticky variant. This section is about the composed path, where `<DataGrid.Table>` children
+replace the built-in pair and nothing is mounted for you.
 
+`<DataGrid.Footer />` renders every column's `footer` in the same column order and with the same
+colSpan, pinning and alignment as the header; `column.footerClassName` lands on the footer cell.
 The archetypal case is a numeric column with a total. The render function gets the live table,
 so summing over the _filtered_ rows keeps the total honest while a filter is on:
 
@@ -274,6 +290,35 @@ the kit's `<tfoot>` — a node, or a render function receiving `{ table, footerG
 			<td colSpan={table.getVisibleLeafColumns().length}>{table.getRowModel().rows.length} rows</td>
 		</tr>
 	)}
+</DataGrid.Footer>
+```
+
+`<DataGrid.FooterRow>` and `<DataGrid.FooterCell>` are the footer's counterparts to
+`<DataGrid.HeaderRow>` and `<DataGrid.HeaderCell>`, for when only _one_ cell should differ. A
+hand-written `<td>` would give up the `colSpan`, the pinning offset, the `align.footer` attribute
+and the `footerClassName` that the default footer applies for you; these keep all of it:
+
+```tsx
+<DataGrid.Footer>
+	{({ footerGroups }) =>
+		footerGroups.map((group) => (
+			<DataGrid.FooterRow
+				key={group.id}
+				footerGroup={group}
+			>
+				{({ headers }) =>
+					headers.map((header) => (
+						<DataGrid.FooterCell
+							key={header.id}
+							header={header}
+						>
+							{({ content }) => (header.column.id === 'amount' ? <strong>{content}</strong> : content)}
+						</DataGrid.FooterCell>
+					))
+				}
+			</DataGrid.FooterRow>
+		))
+	}
 </DataGrid.Footer>
 ```
 

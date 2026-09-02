@@ -6,6 +6,7 @@ import { cellTypes } from './blocks/cell-types'
 import { Checkbox } from './blocks/core/Checkbox'
 import { Menu } from './blocks/core/Menu'
 import { Td } from './blocks/core/Td'
+import { Tfoot } from './blocks/core/Tfoot'
 import { Toolbar } from './blocks/core/Toolbar'
 import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
@@ -37,16 +38,17 @@ import { SortMenu } from './blocks/sorting/SortMenu'
 import { VisibilityMenu } from './blocks/visibility/VisibilityMenu'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
-import { Table, TableBody, TableFooter, TableHead, TableHeader, TableRow } from './components/ui/table'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from './components/ui/table'
 
-import type { FullGridComponents } from '@ez-kit/data-grid-react'
+import type { KitCellTypes } from './blocks/cell-types'
+import type { DataGridBundle, FullGridComponents } from '@ez-kit/data-grid-react'
 
 const components = {
 	core: {
 		Table,
 		Thead: TableHeader,
 		Tbody: TableBody,
-		Tfoot: TableFooter,
+		Tfoot,
 		Tr: TableRow,
 		Th: TableHead,
 		Td,
@@ -55,6 +57,7 @@ const components = {
 		Checkbox,
 		Toolbar,
 		Menu,
+		NumberInput,
 	},
 	pagination: { Pagination, PageSizer },
 	sorting: { SortIndicator, SortMenu },
@@ -69,10 +72,11 @@ const components = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell, ConfirmDialog, NumberInput },
+	editing: { Modal, FormShell },
+	deleting: { ConfirmDialog },
 	selection: { SelectionBar },
 	draft: { DraftBar },
-	'row-actions': { ActionsCell },
+	rowActions: { ActionsCell },
 	resizing: { Resizer },
 	visibility: { VisibilityMenu },
 	fallbacks: { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },
@@ -89,10 +93,22 @@ const components = {
  *   rating: { view: RatingCellView, edit: RatingCellInput },
  * })
  */
-const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid, createColumns, createColumnHelper } =
-	createDataGrid({
-		components,
-		cellTypes,
-	})
+// Annotated, not inferred. The declaration emitter prints an *inferred* type structurally, so
+// without this the bundled `.d.ts` re-printed all nine registry entries into every signature that
+// mentions them — and a `CellDef` union built over that blob is large enough that TypeScript
+// stops contextually typing `cell.component` and hands its parameter back as an implicit `any`.
+// Naming the bundle's type keeps the registry a *name* in the emitted signatures.
+const bundle: DataGridBundle<KitCellTypes> = createDataGrid<KitCellTypes>({
+	components,
+	cellTypes,
+})
+
+const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } = bundle
+
+// Annotated one by one rather than destructured: a destructured binding is re-inferred by the
+// declaration emitter, which prints the registry structurally again. Indexing the bundle's type
+// keeps `KitCellTypes` a name in the two signatures that carry a `CellDef` union.
+const createColumns: DataGridBundle<KitCellTypes>['createColumns'] = bundle.createColumns
+const createColumnHelper: DataGridBundle<KitCellTypes>['createColumnHelper'] = bundle.createColumnHelper
 
 export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid, createColumns, createColumnHelper }

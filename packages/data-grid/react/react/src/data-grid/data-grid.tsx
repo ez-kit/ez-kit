@@ -19,6 +19,8 @@ import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
 import { Footer } from './footer'
+import { DataGridFooterCell } from './footer-cell'
+import { DataGridFooterRow } from './footer-row'
 import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
 import { DataGridHeaderCell } from './header-cell'
@@ -145,7 +147,7 @@ function hasConfirmDialog(table: Table<any>): boolean {
 
 function ConfirmDialogRenderer() {
 	const table = useDataGridTable()
-	const { ConfirmDialog } = useGridComponents().editing
+	const { ConfirmDialog } = useGridComponents().deleting
 	// Narrow: re-render only when a pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave these stable.
 	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)
@@ -260,7 +262,7 @@ function DataGridControlled<TRow extends object>({
 	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
 
 	return (
-		<CellTypesProvider types={resolvedCellTypes}>
+		<CellTypesProvider cellTypes={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
 				<TableContext value={table}>
 					{IS_DEV && <ComponentGuard />}
@@ -354,6 +356,8 @@ type DataGridType = typeof DataGridRoot & {
 	Toolbar: typeof Toolbar
 	Table: typeof DataGridTable
 	Footer: typeof Footer
+	FooterRow: typeof DataGridFooterRow
+	FooterCell: typeof DataGridFooterCell
 	Header: typeof Header
 	HeaderRow: typeof DataGridHeaderRow
 	HeaderCell: typeof DataGridHeaderCell
@@ -382,6 +386,8 @@ export const DataGrid = DataGridRoot as DataGridType
 DataGrid.Toolbar = Toolbar
 DataGrid.Table = DataGridTable
 DataGrid.Footer = Footer
+DataGrid.FooterRow = DataGridFooterRow
+DataGrid.FooterCell = DataGridFooterCell
 DataGrid.Header = Header
 DataGrid.HeaderRow = DataGridHeaderRow
 DataGrid.HeaderCell = DataGridHeaderCell

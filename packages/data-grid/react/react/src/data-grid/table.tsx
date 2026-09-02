@@ -6,6 +6,7 @@ import { DATA_GRID_DEFAULTS } from '../defaults'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
+import { Footer } from './footer'
 import { Header } from './header'
 import { InfiniteProvider } from './infinite-context'
 import { PinShadowOverlay } from './pin-shadow-overlay'
@@ -93,19 +94,24 @@ function resolveEstimateSize(
 	return () => size
 }
 
-/** What a `<DataGrid.Table>` render function receives. */
-export type DataGridTableRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: TanStackTable<any>
+/**
+ * What a `<DataGrid.Table>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Table<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridTableRenderArgs<TRow extends object = any> = {
+	table: TanStackTable<TRow>
 	/** Header groups of the current column model — one entry per header row. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	headerGroups: HeaderGroup<any>[]
+	headerGroups: HeaderGroup<TRow>[]
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	rows: Row<any>[]
+	rows: Row<TRow>[]
 }
 
-export type DataGridTableProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridTableProps<TRow extends object = any> = {
 	/**
 	 * Custom table content, rendered inside the kit's `<Table>` element and inside the
 	 * scroll / pin-shadow wrapper, so sticky headers, pinning and virtualization plumbing
@@ -124,7 +130,7 @@ export type DataGridTableProps = {
 	 * </DataGrid.Table>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridTableRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridTableRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -139,9 +145,10 @@ export type DataGridTableProps = {
  * scroll container. CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow`
  * on the wrapper drive their opacity.
  */
-export function DataGridTable({ children }: DataGridTableProps = {}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridTable<TRow extends object = any>({ children }: DataGridTableProps<TRow> = {}) {
 	const { Table } = useGridComponents().core
-	const table = useDataGridTable()
+	const table = useDataGridTable<TRow>()
 
 	// Narrow subscriptions: re-render only when slices that actually affect
 	// the table layout or row composition change. Editing / rowSelection /
@@ -164,7 +171,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 	const virtualizationConfig = table.grid.virtualization
 
 	const isVirtualized = Boolean(virtualizationConfig)
-	const { stickyHeader: isStickyHeader, maxHeight } = table.grid.layout
+	const { stickyHeader: isStickyHeader, footer: hasFooter, stickyFooter: isStickyFooter, maxHeight } = table.grid.layout
 
 	// One option, two custom properties: capped height for the normal scroll container,
 	// definite height for the virtualized one (which cannot size itself from its content).
@@ -221,7 +228,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
-	const infiniteEnabled = table.grid.infinite !== undefined
+	const infiniteEnabled = table.grid.pagination.infinite !== undefined
 
 	// Reset on query change: when sorting / column filters / global search / page size
 	// change in infinite mode, clear any error, re-arm detection (handled by the loader
@@ -257,6 +264,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 				<>
 					<Header />
 					<Body />
+					{hasFooter ? <Footer /> : null}
 				</>
 			) : typeof children === 'function' ? (
 				children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
@@ -301,6 +309,7 @@ export function DataGridTable({ children }: DataGridTableProps = {}) {
 					ref={scrollRef}
 					data-slot='table-scroll'
 					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
+					{...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {})}
 				>
 					{tableEl}
 				</div>

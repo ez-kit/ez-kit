@@ -2,7 +2,7 @@
 
 import { DataGrid } from 'shared/DataGrid'
 
-import { orderColumns, type Order } from './data'
+import { orderColumns } from './data'
 import { useOrdersState } from './use-orders-state'
 
 /**
@@ -37,12 +37,12 @@ export function ProductionDeferredApplyExample() {
 			}}
 			globalFiltering={{ placeholder: 'Search orders…' }}
 			layout={{ stickyHeader: true }}
-			visibility={{ toolbar: true }}
+			visibility
 			deleting={{
 				onDelete: ({ row }) => orders.remove([row.original.id]),
 				confirmation: {
 					title: 'Delete order?',
-					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+					description: (row) => `Order ${row.original.reference} will be permanently removed.`,
 				},
 				bulk: {
 					onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)),

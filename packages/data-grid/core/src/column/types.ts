@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 import type { CreateDefaultValueContext } from '../features/creating'
-import type { BetweenOperatorConfig, ColumnOperatorsConfig, FilterOperatorDef, FilterItem } from '../features/operators'
+import type {
+	BetweenOperatorConfig,
+	ColumnOperatorsConfig,
+	FilterOperatorDef,
+	FilterOperatorId,
+	FilterItem,
+} from '../features/operators'
 import type { FieldState, ValidateOn } from '../features/validation'
 import type {
 	ColumnDef as TableCoreColumnDef,
@@ -99,10 +105,47 @@ export type ColumnInputRenderer<TProps, TNode> =
 	| { bivariantRender(props: TProps): TNode }['bivariantRender']
 	| ExoticComponentLike
 
-export type CellViewCtx<TRow, TValue> = {
+/**
+ * What every view-mode cell renderer is handed — a column's own `cell.component` and a
+ * registered cell type's `view` alike.
+ *
+ * `TConfig` is the cell type's `cell.config`. It is `never` on a column's `cell.component`,
+ * which is written next to the `config` it would read and has no use for it, and the declared
+ * config type on a registered cell type's `view`, which is written once for every column that
+ * uses the type. The React adapter's `CellViewProps<TConfig>` is this type with `TRow` and
+ * `TValue` erased — a registry entry serves grids of every row shape.
+ *
+ * One type rather than the two near-identical ones this replaced (`CellViewCtx` here,
+ * `CellViewProps` in the adapter, differing only by `config`): an author writing both slots on
+ * one cell type had to know both names for the same three fields.
+ */
+export type CellViewCtx<TRow, TValue, TConfig = never> = {
 	row: TRow
 	value: TValue
 	rowIndex: number
+	/**
+	 * The cell type's config. `never` by default, so a column's own `cell.component` — written
+	 * beside the config it would read — cannot take one, while a registered type's `view` gets
+	 * the type it declared.
+	 */
+	config?: TConfig
+}
+
+/**
+ * Resolved `column.cell`, normalized off the scalar form.
+ *
+ * Named `cell` on the meta, for the column option it carries — like `pinning`, `align`,
+ * `filtering`, `editing` and every other sibling. It was three flat fields under three
+ * different names (`cellType`, `config`, `cellView`), so `cell.type` was read back as
+ * `meta.cellType` and `cell.component` as `meta.cellView`.
+ */
+export type ColumnCellMeta = {
+	/** The registered cell type id, from `cell.type` (or the `cell` scalar). */
+	type?: CellType
+	/** The type's config, from `cell.config`. Row-erased, so untyped here. */
+	config?: Record<string, unknown>
+	/** The column's own view renderer, from `cell.component`. */
+	view?: (ctx: CellViewCtx<unknown, unknown>) => unknown
 }
 
 /**
@@ -396,8 +439,29 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	component?: ColumnInputRenderer<InputComponentProps<TConfig>, TNode>
 	/** Operator configuration. `true` = default operators for the column's cell type. */
 	operators?: boolean | ColumnOperatorsConfig
-	/** Override the default selected operator for this column. */
-	defaultOperator?: string
+	/**
+	 * Which operator this column's filter opens with. Defaults to the one its cell type
+	 * declares (`contains` for text, `equals` for number / date / boolean, `in` for
+	 * select / badge).
+	 *
+	 * Typed {@link FilterOperatorId} rather than `string`: the value has to be one of the
+	 * operators this column actually offers, and an id that is not selects nothing in the
+	 * operator control and dispatches to no `filterFn`, so the filter matches every row.
+	 * `createTable` warns about that in development.
+	 */
+	defaultOperator?: FilterOperatorId
+	/**
+	 * Commit debounce (ms) for this column's text filter input, overriding the table-level
+	 * {@link ReactFilteringConfig.debounce}. `0` commits on every keystroke.
+	 *
+	 * One word for "how long we wait before acting on typing", the same one
+	 * `editing.debounce` and `creating.debounce` use at both the table and the column level.
+	 * The unit is milliseconds everywhere, so it is not part of the name.
+	 *
+	 * Discrete controls (between, multi-select, select / badge, a custom `component`) commit
+	 * instantly and ignore this, exactly as they ignore the table-level option.
+	 */
+	debounce?: number
 	/**
 	 * Explicit value list for multi-value (`in` / `notIn`) filters. Wins over both
 	 * `cell.config.items` (for `select` / `badge` cell types) and faceted values.
@@ -415,6 +479,44 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	 * even if the table-level flag is on.
 	 */
 	faceted?: boolean
+}
+
+/**
+ * Resolved `column.filtering`, normalized off the raw config.
+ *
+ * Named `filtering` on the meta, for the column option it carries — like `pinning`, `align`,
+ * `cell` and every other sibling — and **every field named for the option it holds**. It was
+ * five flat keys beside it (`filteringItems`, `facetedEnabled`, `defaultOperatorId`,
+ * `resolvedOperators`, `betweenOperatorConfig`), so `filtering.items` was read back as
+ * `meta.filteringItems` and `filtering.faceted` as `meta.facetedEnabled` — one concept
+ * answering to two words depending on which side of the mapper you were standing on, which is
+ * the defect {@link ColumnCellMeta} already exists to have removed.
+ *
+ * The values here are **resolved**, not the raw config: `operators` is the settled list (not
+ * `true`), `faceted` folds in the table-level flag, and `defaultOperator` falls back to the
+ * cell type's default. `component` and `debounce` pass through unchanged.
+ */
+export type ColumnFilteringMeta = {
+	/** The column's own filter input, from `filtering.component`. Row-erased, so untyped here. */
+	component?: ColumnInputRenderer<InputComponentProps, unknown>
+	/** Commit debounce in ms, from `filtering.debounce`. */
+	debounce?: number
+	/** Explicit multi-select value list, from `filtering.items`. */
+	items?: FilterItem[]
+	/**
+	 * Whether this column reads faceted unique values — resolved from `filtering.faceted` and
+	 * the table-level `filtering.faceted`.
+	 */
+	faceted?: boolean
+	/** The settled operator list, resolved from `filtering.operators`. */
+	operators?: FilterOperatorDef[]
+	/** Between-operator UI config, from `filtering.operators.betweenOperator`. */
+	betweenOperator?: BetweenOperatorConfig
+	/**
+	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the one
+	 * its cell type declares, else the first of {@link ColumnFilteringMeta.operators}.
+	 */
+	defaultOperator?: FilterOperatorId
 }
 
 export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown> = {
@@ -726,10 +828,20 @@ export type ColumnDefCommon<
 	/**
 	 * Column footer, same shape as {@link ColumnDef.header}.
 	 *
-	 * Not part of the **default** layout — a plain `<DataGrid />` renders no footer row. You do
-	 * not read it yourself, though: place `<DataGrid.Footer />` inside a custom
-	 * `<DataGrid.Table>` body and it renders every column's `footer` for you, with colSpan,
-	 * pinning, alignment and `footerClassName` handled.
+	 * Declaring it on any column is enough: the default layout then renders a `<tfoot>` with
+	 * every column's `footer`, and handles colSpan, pinning, alignment and `footerClassName`.
+	 * `layout.footer: false` opts back out, `layout.stickyFooter` keeps the row in view down a
+	 * long table. A custom `<DataGrid.Table>` body mounts nothing for you — put
+	 * `<DataGrid.Footer />` in it yourself.
+	 *
+	 * The archetypal use is a total. The render function gets the live table, so summing the
+	 * *filtered* rows keeps the total honest while a filter is on:
+	 *
+	 * @example
+	 * ```tsx
+	 * { accessorKey: 'amount', align: 'end',
+	 *   footer: ({ table }) => table.getFilteredRowModel().rows.reduce((sum, r) => sum + r.original.amount, 0) }
+	 * ```
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
 	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
@@ -933,6 +1045,64 @@ export const SystemColumnType = {
 
 export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColumnType]
 
+/**
+ * The presentation options an auto-injected system column takes — the selection checkbox
+ * column, the expand chevron column, the row-actions column.
+ *
+ * Every field is a **column option under its own name**, with the same scalar-or-object shape
+ * it has on {@link ColumnDef}: this is a column, so it is configured the way a column is. What
+ * the column *does* is not settable here — that is `selection`, `expanding` and `rowActions`
+ * themselves — only how it sits in the table.
+ *
+ * The three columns previously took no configuration at all: their header was hard-wired to
+ * render nothing, their width was a constant, and their pinning was decided for them —
+ * selection pinned left, actions pinned right, and expand, alone among the three, not pinned,
+ * so a horizontally scrolled grid kept the checkbox in view and let the chevron slide away.
+ * Labelling the actions column, widening it, or unpinning it on a narrow grid had no route
+ * through the public API.
+ *
+ * Reached as `selection.column`, `expanding.column` and `rowActions.column`.
+ */
+export type SystemColumnDef<TRow extends object = object, TNode = unknown> = {
+	/**
+	 * Header content. Omitted, the column keeps its built-in header: the select-all checkbox
+	 * for selection, nothing for expand and actions.
+	 *
+	 * Supplying one on the **selection** column replaces the select-all checkbox, so only do
+	 * that for a grid where selecting every row is not on offer (`selection.multi: false`,
+	 * which renders no checkbox anyway).
+	 */
+	header?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	/**
+	 * Width in pixels. Defaults: `44` for selection and expand, and for actions a width
+	 * derived from how many buttons the widest row state renders.
+	 */
+	width?: number | ColumnWidthDef
+	/**
+	 * Which viewport edge the column sticks to, or `false` for none. Defaults: `'left'` for
+	 * selection and expand, `'right'` for actions.
+	 *
+	 * Physical, like a normal column's `pinning` and for the same reason — a pinned column
+	 * sticks to a viewport edge, and that edge does not flip with the text direction.
+	 */
+	pinning?: false | ColumnPinSide | ColumnPinningDef
+	/** Horizontal alignment of the column's contents. Logical, like a normal column's `align`. */
+	align?: ColumnAlign | ColumnAlignDef
+	/** Class applied to the column's header cell. */
+	headerClassName?: string
+	/** Class applied to the column's body cells. */
+	cellClassName?: string
+	/**
+	 * Class applied to the column's footer cell.
+	 *
+	 * The third of the three, like a normal column's — the default `<tfoot>` renders a cell for
+	 * every column, system columns included, and reads `align.footer` off this same def, so
+	 * there was no reason for the class to be the one part of a footer cell that could not be
+	 * set.
+	 */
+	footerClassName?: string
+}
+
 /** Augment TanStack's ColumnMeta with our custom fields. */
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -948,34 +1118,33 @@ declare module '@tanstack/table-core' {
 		pinning?: false | ColumnPinningDef
 		/** Resolved per-part alignment from `column.align`, normalized off the scalar form. */
 		align?: ColumnAlignDef
-		cellType?: CellType
-		config?: Record<string, unknown>
+		/** Resolved cell definition from `column.cell`, normalized off the scalar form. */
+		cell?: ColumnCellMeta
 		/** Class for this column's header cell, from `column.headerClassName`. */
 		headerClassName?: string
 		/** Class (or per-cell resolver) for this column's body cells, from `column.cellClassName`. */
 		cellClassName?: string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
 		/** Class for this column's footer cell, from `column.footerClassName`. */
 		footerClassName?: string
-		/** Resolved view renderer from `cell.component`. */
-		cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
-		filtering?: false | ColumnFilteringConfig
+		/** Resolved filtering config from `column.filtering`, normalized. */
+		filtering?: false | ColumnFilteringMeta
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: false | ColumnVisibilityDef
 		isSystemColumn?: boolean
 		systemColumnType?: SystemColumnType
-		/** Pre-resolved operator list for this column (set when filtering.operators is configured). */
-		resolvedOperators?: FilterOperatorDef[]
-		/** Between operator UI config passed from filtering.operators.betweenOperator. */
-		betweenOperatorConfig?: BetweenOperatorConfig
-		/** Default operator ID for this column (derived from config or cell type default). */
-		defaultOperatorId?: string
-		/** Explicit multi-select value list from `column.filtering.items`. */
-		filteringItems?: FilterItem[]
 		/**
-		 * Effective faceted flag for this column. Set to true when the resolved config
-		 * (table-level `filtering.faceted` or column-level `filtering.faceted`) opts in.
+		 * Header content for a system column, from `selection.column.header` and friends.
+		 *
+		 * Kept off TanStack's own `header` because the grid renders these header cells itself
+		 * — the select-all checkbox lives in one — and has to be able to tell "the author gave
+		 * this column a label" from "render the built-in".
 		 */
-		facetedEnabled?: boolean
+		// Row-erased, like `cellClassName` and the resolved `cell.view` beside it: the header
+		// cells for system columns are rendered by components that have no `TRow`. `any` rather
+		// than `unknown` because it must stay mutually assignable — a def written against a
+		// concrete row type has to land here, and be readable back out.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		systemHeader?: string | ColumnRenderer<HeaderContext<any, unknown>, unknown>
 	}
 }

@@ -179,7 +179,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				layout: { stickyHeader: true },
 				pinning: { column: true, row: { top: true, bottom: true } },
 				resizing: { mode: 'onChange' },
-				visibility: { toolbar: true },
+				visibility: true,
 				creating: { mode: 'modal' },
 				editing: { mode: 'modal' },
 				deleting: {
@@ -326,7 +326,7 @@ three fields out of your own `state` — reach the draft itself through `table.d
 table.draft.get() // the live values of the three deferred axes
 table.draft.set({ sorting }) // write into the draft
 table.draft.isDirty() // is anything pending?
-table.draft.getPendingCount() // { sorting, filters, search }
+table.draft.getPendingCount() // { sorting, columnFilters, globalFilter } — keyed by DraftAxis
 table.draft.apply() // emit once
 table.draft.reset() // discard the draft
 table.draft.resetAxis('sorting') // discard one axis

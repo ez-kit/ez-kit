@@ -37,7 +37,7 @@ import type {
 	VirtualizationConfig,
 } from '@ez-kit/data-grid-core'
 import type { Row, Table, TableState } from '@tanstack/table-core'
-import type { ComponentType, HTMLAttributes, ReactElement } from 'react'
+import type { ComponentType, HTMLAttributes, ReactElement, ReactNode } from 'react'
 
 // Re-exported from the shared defaults module so the public API surface is unchanged.
 export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
@@ -57,7 +57,11 @@ export type ExpandedRowProps<TRow extends object> = {
  * the detail panel is a component, not an opaque value. Nothing else is restated, so a field
  * added to the core config is available here the same day.
  */
-export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<TRow, ComponentType<ExpandedRowProps<TRow>>>
+export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<
+	TRow,
+	ComponentType<ExpandedRowProps<TRow>>,
+	ReactNode
+>
 
 /**
  * The headless {@link RowActionsConfig} with its one framework-bound field narrowed: in React a
@@ -65,7 +69,7 @@ export type ReactExpandingConfig<TRow extends object> = ExpandingConfig<TRow, Co
  * shape as {@link ReactExpandingConfig} — the parameter is bound here, nothing is restated, so
  * a field added to the core config reaches React the same day.
  */
-export type ReactRowActionsConfig<TRow extends object = object> = RowActionsConfig<TRow, ReactElement>
+export type ReactRowActionsConfig<TRow extends object = object> = RowActionsConfig<TRow, ReactElement, ReactNode>
 
 export type SelectionBarCallbackArgs<TRow extends object = object> = {
 	table: Table<TRow>
@@ -99,17 +103,39 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
  * React (its `actions` are `ReactElement`s), so it lives only in this layer and is never passed
  * down to the core `selection` config.
  */
-export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig & {
+export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig<TRow, ReactNode> & {
 	/**
 	 * Selection info bar config.
 	 * - `false` — bar never shown
 	 * - `undefined` | `true` — bar shown when ≥1 row is selected
-	 * - {@link SelectionBarConfig} — bar shown with config
+	 * - `'inline'` / `'floating'` — the scalar: the render mode, which is the whole of what
+	 *   this option usually has to say. Same shape as `filtering.chips`, and as a column's
+	 *   `align`, `width` and `pinning`.
+	 * - {@link SelectionBarConfig} — the object, for when the mode is not all you are setting.
 	 *
 	 * Presentational only. The bar's Delete button is not configured here — bulk deletion is
 	 * `deleting.bulk`, next to the per-row handler and prompt it shares its semantics with.
 	 */
-	bar?: boolean | SelectionBarConfig<TRow>
+	bar?: boolean | ActionBarVariant | SelectionBarConfig<TRow>
+}
+
+/**
+ * The resolved selection bar — `variant` settled, the two callbacks passed through.
+ * `undefined` on {@link ResolvedGridOptions} means the bar does not render at all.
+ *
+ * Row-erased, like `rowProps` and the cell registry beside it: every reader of `table.grid` is
+ * a component with no `TRow` of its own. `any` rather than `unknown` because it must stay
+ * mutually assignable — a config written against a concrete row type has to land here and be
+ * callable back out.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type NormalizedSelectionBarConfig<TRow extends object = any> = {
+	/** Render mode of the shared action bar, defaulted. Never undefined. */
+	variant: ActionBarVariant
+	/** Replacement for the default clear behaviour, from `selection.bar.clear`. */
+	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	/** Extra bar content, from `selection.bar.actions`. */
+	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
 }
 
 /** Normalized virtualized config stored on the table instance. */
@@ -249,27 +275,24 @@ function normalizeInfinite(
 }
 
 /**
- * Fully resolved `numbered` page-link window stored on the table instance for `Pagination` to
- * read. Both fields are required here — the `undefined`s from {@link ReactPaginationConfig}
- * are settled against {@link DATA_GRID_DEFAULTS} once, in the hook.
- */
-export type NormalizedPageWindowConfig = {
-	siblings: number
-	boundaries: number
-}
-
-/**
  * The headless {@link VisibilityConfig} plus this layer's `toolbar` auto-mount flag —
  * the same `React*` shape every other feature uses, so `onChange` is reachable from a grid
  * that only ever imports the adapter.
  */
 export type ReactVisibilityConfig = VisibilityConfig & {
 	/**
-	 * Auto-mount the column-visibility toggle into `Toolbar.end`.
+	 * Auto-mount the column-visibility toggle into `Toolbar.end`. Default: **on**, in both
+	 * forms — `visibility: true` and `visibility: { onChange }` mount the same control, and
+	 * `toolbar: false` is how a grid places `<DataGrid.VisibilityTrigger />` itself.
 	 *
-	 * - omitted on the object form — not mounted
-	 * - `visibility: true` — mounted (the bare `true` means "the feature with its toolbar control")
-	 * - `true` / `false` on the object form — mounted / not mounted
+	 * The object form used to default to *off*, so adding an `onChange` to a working
+	 * `visibility: true` silently removed the only control the feature has. The rule across the
+	 * config is now: **a feature's object form defaults its `toolbar` exactly the way its bare
+	 * `true` does.** What that default *is* still differs by feature, and deliberately —
+	 * `visibility` and `globalFiltering` default on because the auto-mounted control is the
+	 * feature's only UI, while `sorting` (the multi-sort builder) and `filtering` (Clear-all)
+	 * default off because the header already carries their affordances, and `pagination`
+	 * (the PageSizer) defaults to "yes when `items` is set".
 	 */
 	toolbar?: boolean
 }
@@ -329,17 +352,35 @@ export type FallbacksConfig = {
 }
 
 /**
- * Whether a fallback state renders. Omitted means on — the three fallbacks are the one group of
- * options that default to enabled, because a grid with nothing to show has to show something.
- * `false` and `{ enabled: false }` both turn one off; the latter is what a grid reaches for when
- * a defaults layer supplied the `component` and this grid wants neither.
- *
- * Not exported from the package — internal to the render layer.
+ * One resolved fallback state. `enabled` is settled — omitted means on, because a grid with
+ * nothing to show has to show something — and `component` is the override, when one was given.
  */
-export function isFallbackOn(
+export type NormalizedFallbackConfig = {
+	/** The state renders. `false` and `{ enabled: false }` on the option both land here as false. */
+	enabled: boolean
+	/** Content override, from the option's `component`. */
+	component?: ReactElement | ComponentType
+}
+
+/**
+ * The three fallback states, resolved. Always present on {@link ResolvedGridOptions} with all
+ * three settled, so no reader re-derives "omitted means on" for itself — which is what
+ * `isFallbackOn` used to exist for, at four call sites, while a UI kit reading
+ * `useGridOptions().fallbacks` got the raw `boolean | Config` union and could not.
+ */
+export type NormalizedFallbacksConfig = {
+	loading: NormalizedFallbackConfig
+	empty: NormalizedFallbackConfig
+	noResults: NormalizedFallbackConfig
+}
+
+/** Settles one fallback option. Omitted means on — see {@link NormalizedFallbackConfig}. */
+function normalizeFallback(
 	fallback: boolean | LoadingFallbackConfig | EmptyFallbackConfig | NoResultsFallbackConfig | undefined,
-): boolean {
-	return fallback === undefined || isFeatureEnabled(fallback)
+): NormalizedFallbackConfig {
+	const enabled = fallback === undefined || isFeatureEnabled(fallback)
+	const component = featureConfig(fallback)?.component
+	return { enabled, ...(component !== undefined ? { component } : {}) }
 }
 
 export type FilterChipsConfig = FeatureToggle & {
@@ -462,6 +503,29 @@ export type LayoutConfig = {
 	 * `--dg-table-max-height`.
 	 */
 	stickyHeader?: boolean
+	/**
+	 * Mount the table footer — one `<tfoot>` row per footer group, built from each column's
+	 * `footer`.
+	 *
+	 * - omitted — mounted when at least one column declares a `footer`, on the same
+	 *   "declared it, so it works" rule the rest of the column options follow
+	 * - `true` — always mounted, even before any column declares one (the case for a
+	 *   `<DataGrid.Footer>` whose `children` supply the content)
+	 * - `false` — never mounted; the way a grid opts out of a `footer` a
+	 *   {@link DataGridDefaultOptions} layer put on its shared columns
+	 *
+	 * Only the **default** layout reads this. A hand-placed `<DataGrid.Footer />` inside a
+	 * custom `<DataGrid.Table>` body renders because it is there.
+	 */
+	footer?: boolean
+	/**
+	 * Make the table footer stick to the bottom while the body scrolls — the totals row stays
+	 * in view down a long table.
+	 *
+	 * Bounded scroll container required, exactly as {@link LayoutConfig.stickyHeader} needs
+	 * one; the two can be combined.
+	 */
+	stickyFooter?: boolean
 	/**
 	 * Height of the scroll container, as any CSS length (`'32rem'`, `'60vh'`, `'500px'`).
 	 *
@@ -666,8 +730,32 @@ export function useDataGrid<TRow extends object>(
 	// Split `selection` into the headless core part (`onChange` / `multi`) passed to
 	// createTable and the React-only `bar` stored on the instance for SelectionBar to read.
 	// `bar` is stripped so the core `selection` config never carries React-specific fields.
-	const selectionBar: boolean | SelectionBarConfig<TRow> | undefined = featureConfig(rawSelection)?.bar
-	const coreSelection: boolean | SelectionConfig | undefined =
+	const selectionBar: boolean | ActionBarVariant | SelectionBarConfig<TRow> | undefined =
+		featureConfig(rawSelection)?.bar
+	// Settled here rather than at each reader: `variant` falls back to the default, the scalar
+	// form becomes that variant, and "off" becomes `undefined`. Three call sites inside this
+	// package used to re-derive the union — and a UI kit reading `useGridOptions()` could not
+	// derive it at all, since the default lives in a constant the package does not export.
+	const normalizedSelectionBar: NormalizedSelectionBarConfig<TRow> | undefined = (() => {
+		// No selection, no bar — there is nothing for it to report.
+		if (!isFeatureEnabled(rawSelection)) return undefined
+		// Omitted means on: a grid with row selection gets the bar unless it opts out.
+		if (selectionBar !== undefined && !isFeatureEnabled(selectionBar as boolean | SelectionBarConfig<TRow>)) {
+			return undefined
+		}
+		// The scalar: a render mode and nothing else, which is all this option usually says.
+		if (typeof selectionBar === 'string') return { variant: selectionBar }
+		const cfg = featureConfig(selectionBar)
+		return {
+			variant: cfg?.variant ?? DEFAULT_ACTION_BAR_VARIANT,
+			...(cfg?.clear !== undefined ? { clear: cfg.clear } : {}),
+			...(cfg?.actions !== undefined ? { actions: cfg.actions } : {}),
+		}
+	})()
+	// Typed at the React binding, not the core default: `selection.column.header` returns a
+	// `ReactNode` here, and `SelectionConfig` with its node parameter left to default would
+	// reject it.
+	const coreSelection: boolean | SelectionConfig<TRow, ReactNode> | undefined =
 		typeof rawSelection === 'object' ? (({ bar: _bar, ...rest }) => rest)(rawSelection) : rawSelection
 
 	// Split pagination into the headless core part (strip React-only detection tuning and
@@ -710,7 +798,7 @@ export function useDataGrid<TRow extends object>(
 	const paginationVariant: PaginationVariant = paginationCfg?.variant ?? DATA_GRID_DEFAULTS.pagination.variant
 
 	// Resolved once here — like the variant — so no UI kit ever has to fall back for itself.
-	const paginationWindow: NormalizedPageWindowConfig = {
+	const paginationWindow = {
 		siblings: paginationCfg?.siblings ?? DATA_GRID_DEFAULTS.pagination.siblings,
 		boundaries: paginationCfg?.boundaries ?? DATA_GRID_DEFAULTS.pagination.boundaries,
 	}
@@ -722,15 +810,15 @@ export function useDataGrid<TRow extends object>(
 	const reactExpandingCfg = featureConfig(rawExpanding)
 	const coreGetRowCanExpand =
 		reactExpandingCfg?.getRowCanExpand ?? (reactExpandingCfg?.component !== undefined ? () => true : undefined)
-	const coreExpanding: boolean | ExpandingConfig | undefined =
+	const coreExpanding: boolean | ExpandingConfig<TRow> | undefined =
 		rawExpanding === undefined
 			? undefined
 			: typeof rawExpanding === 'boolean'
 				? rawExpanding
-				: ({
+				: {
 						...(({ component: _component, ...rest }) => rest)(rawExpanding),
 						...(coreGetRowCanExpand !== undefined ? { getRowCanExpand: coreGetRowCanExpand } : {}),
-					} as ExpandingConfig)
+					}
 
 	// Split `visibility` the way `selection` and `globalFiltering` are split: the React-only
 	// `toolbar` is stripped for core and resolved separately for the UI. Collapsing the whole
@@ -738,10 +826,11 @@ export function useDataGrid<TRow extends object>(
 	// `visibility.onChange`, so a grid that asked to be told when a column was hidden never was.
 	const coreVisibility: boolean | VisibilityConfig | undefined =
 		typeof visibility === 'object' ? (({ toolbar: _toolbar, ...rest }) => rest)(visibility) : visibility
-	// `visibility: true` mounts the control, the object form only when it says `toolbar: true`.
-	// Preserved verbatim from the `Toolbar` that used to derive it inline.
+	// Both forms mount the control; `toolbar: false` is the opt-out. The object form used to
+	// default the other way, so `visibility: { onChange }` quietly shipped a grid whose columns
+	// could not be hidden from anywhere but a column menu — see {@link ReactVisibilityConfig}.
 	const normalizedVisibility: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(visibility)
-		? { toolbar: visibility === true || (typeof visibility === 'object' && Boolean(visibility.toolbar)) }
+		? { toolbar: typeof visibility === 'object' ? visibility.toolbar !== false : true }
 		: undefined
 
 	const normalizedSorting: NormalizedFeatureToolbarConfig | undefined = isFeatureEnabled(config.sorting)
@@ -880,7 +969,12 @@ export function useDataGrid<TRow extends object>(
 	// One typed object on the table instance, reassigned every render so every reader sees
 	// the freshest closures (notably `infinite.onLoadMore`). This replaced eighteen private
 	// `Symbol()` keys, each written and read through an untyped double cast.
-	const colPinEnabled = config.pinning === true || Boolean(featureConfig(config.pinning)?.column)
+	// Both halves of `pinning`, resolved the same way: the bare `true` turns on both axes, the
+	// object gates each on its own key. Row pinning was resolved nowhere on this object, so a
+	// kit had no way to read it back.
+	const pinningCfg = featureConfig(config.pinning)
+	const colPinEnabled = config.pinning === true || isFeatureEnabled(pinningCfg?.column)
+	const rowPinEnabled = config.pinning === true || isFeatureEnabled(pinningCfg?.row)
 	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
@@ -889,9 +983,14 @@ export function useDataGrid<TRow extends object>(
 		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,
+			// Omitted means "auto": a column that declared a `footer` gets it rendered, the way
+			// declaring `align` or `pinning` is all those options need. `false` is what turns it
+			// back off under a defaults layer that declared one on shared columns.
+			footer: layout?.footer ?? table.getAllFlatColumns().some((column) => column.columnDef.footer !== undefined),
+			stickyFooter: layout?.stickyFooter ?? false,
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
-		columnPinning: colPinEnabled,
+		pinning: { column: colPinEnabled, row: rowPinEnabled },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {
@@ -903,16 +1002,21 @@ export function useDataGrid<TRow extends object>(
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {
 			variant: paginationVariant,
-			window: paginationWindow,
+			siblings: paginationWindow.siblings,
+			boundaries: paginationWindow.boundaries,
 			...(paginationItems !== undefined ? { items: paginationItems } : {}),
-			pageSizer: pageSizerInToolbar,
+			toolbar: pageSizerInToolbar,
+			infinite: normalizedInfinite,
 		},
-		infinite: normalizedInfinite,
-		selection: { bar: selectionBar as ResolvedGridOptions['selection']['bar'] },
+		selection: { bar: normalizedSelectionBar },
 		expanding: {
 			component: expandingCfg?.component as ResolvedGridOptions['expanding']['component'],
 		},
-		fallbacks,
+		fallbacks: {
+			loading: normalizeFallback(fallbacks?.loading),
+			empty: normalizeFallback(fallbacks?.empty),
+			noResults: normalizeFallback(fallbacks?.noResults),
+		},
 		virtualization: virtualizationConfig,
 	}
 

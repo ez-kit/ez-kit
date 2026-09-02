@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -268,7 +269,7 @@ describe('<DataGrid>', () => {
 		// sizes present, auto-mount off — exactly what `pagination: { toolbar: false }` resolves to.
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.pageSizer = false
+		table.grid.pagination.toolbar = false
 		renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.PageSizer />
@@ -280,7 +281,7 @@ describe('<DataGrid>', () => {
 	it('renders PageSizer select with the pagination.items values', () => {
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.pageSizer = true
+		table.grid.pagination.toolbar = true
 		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
 		expect(select).toBeInTheDocument()
@@ -382,7 +383,7 @@ describe('<DataGrid>', () => {
 		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
 			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			table.grid.selection.bar = { variant: 'inline' }
+			table.grid.selection.bar = { variant: ActionBarVariant.Inline }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
 
@@ -396,7 +397,7 @@ describe('<DataGrid>', () => {
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			table.grid.selection.bar = true
+			table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
 
@@ -422,7 +423,7 @@ describe('<DataGrid>', () => {
 		const { rerender } = renderWithComponents(
 			<DataGrid
 				table={table}
-				cellTypes={{ 'custom-type': { edit: editFn } }}
+				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
 		)
 		act(() => {
@@ -431,7 +432,7 @@ describe('<DataGrid>', () => {
 		rerender(
 			<DataGrid
 				table={table}
-				cellTypes={{ 'custom-type': { edit: editFn } }}
+				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
 		)
 		expect(screen.getAllByTestId('registry-edit').length).toBeGreaterThan(0)
@@ -441,7 +442,7 @@ describe('<DataGrid>', () => {
 describe('<DataGrid> bulk delete confirmation', () => {
 	function makeBulkTable(bulk: NonNullable<DeletingConfig<User>['bulk']>, onDelete = vi.fn()) {
 		const table = makeTable({ selection: true, deleting: { onDelete: () => {}, bulk } })
-		table.grid.selection.bar = true
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		return { table, onDelete }
 	}
 
@@ -473,7 +474,7 @@ describe('<DataGrid> bulk delete confirmation', () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
 		const table = makeTable({ selection: true, deleting: { onDelete, bulk: true } })
-		table.grid.selection.bar = true
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		table.setRowSelection({ '1': true, '2': true })
 		renderWithComponents(<DataGrid table={table} />)
 

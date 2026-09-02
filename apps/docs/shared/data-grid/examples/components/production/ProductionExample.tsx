@@ -2,7 +2,7 @@
 
 import { DataGrid } from 'shared/DataGrid'
 
-import { orderColumns, type Order } from './data'
+import { orderColumns } from './data'
 import { useOrders } from './use-orders'
 
 export function ProductionExample() {
@@ -55,7 +55,7 @@ export function ProductionExample() {
 			layout={{ stickyHeader: true }}
 			pinning={{ column: true, row: { top: true, bottom: true } }}
 			resizing={{ mode: 'onChange' }}
-			visibility={{ toolbar: true }}
+			visibility
 			creating={{
 				mode: 'modal',
 				onSave: ({ values }) => orders.create(values),
@@ -68,7 +68,7 @@ export function ProductionExample() {
 				onDelete: ({ row }) => orders.remove([row.original.id]),
 				confirmation: {
 					title: 'Delete order?',
-					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+					description: (row) => `Order ${row.original.reference} will be permanently removed.`,
 				},
 				bulk: {
 					onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)),

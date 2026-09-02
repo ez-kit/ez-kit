@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { testComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { SelectionBar } from './selection-bar'
 import { TableContext } from './table-context'
@@ -57,7 +58,7 @@ describe('<SelectionBar>', () => {
 
 	it('renders nothing when selection.bar: false even with selection enabled', () => {
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, false)
+		setSelectionBarKey(table, undefined)
 
 		const { container } = render(
 			<Wrapper table={table}>
@@ -69,7 +70,7 @@ describe('<SelectionBar>', () => {
 
 	it('renders bar (closed) when selection enabled and no rows selected', () => {
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, true)
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
 
 		render(
 			<Wrapper table={table}>
@@ -82,7 +83,7 @@ describe('<SelectionBar>', () => {
 
 	it('renders bar with count when rows are selected', () => {
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, true)
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
 		table.setRowSelection({ '1': true })
 
 		render(
@@ -96,7 +97,7 @@ describe('<SelectionBar>', () => {
 
 	it('does NOT render Delete button when onDelete is not configured', () => {
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, true)
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
 		table.setRowSelection({ '1': true })
 
 		render(
@@ -109,7 +110,7 @@ describe('<SelectionBar>', () => {
 
 	it('renders Delete button when deleting.bulk is enabled', () => {
 		const table = makeTable({ selection: true, deleting: { onDelete: () => {}, bulk: { onDelete: vi.fn() } } })
-		setSelectionBarKey(table, true)
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
 		table.setRowSelection({ '1': true })
 
 		render(
@@ -124,7 +125,7 @@ describe('<SelectionBar>', () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
 		const table = makeTable({ selection: true, deleting: { onDelete: () => {}, bulk: { onDelete } } })
-		setSelectionBarKey(table, true)
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
 		table.setRowSelection({ '1': true })
 
 		render(
@@ -145,7 +146,7 @@ describe('<SelectionBar>', () => {
 	it('Cancel button calls table.resetRowSelection when clear not configured', async () => {
 		const user = userEvent.setup()
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, true)
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
 		table.setRowSelection({ '1': true })
 
 		const resetSpy = vi.spyOn(table, 'resetRowSelection')
@@ -164,7 +165,7 @@ describe('<SelectionBar>', () => {
 		const user = userEvent.setup()
 		const clear = vi.fn()
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, { clear })
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating, clear })
 		table.setRowSelection({ '1': true })
 
 		render(
@@ -182,6 +183,7 @@ describe('<SelectionBar>', () => {
 	it('renders ReactElement actions when provided', () => {
 		const table = makeTable({ selection: true })
 		setSelectionBarKey(table, {
+			variant: ActionBarVariant.Floating,
 			actions: <button type='button'>Export</button>,
 		})
 		table.setRowSelection({ '1': true })
@@ -197,6 +199,7 @@ describe('<SelectionBar>', () => {
 	it('renders function actions when provided', () => {
 		const table = makeTable({ selection: true })
 		setSelectionBarKey(table, {
+			variant: ActionBarVariant.Floating,
 			actions: () => <button type='button'>Export</button>,
 		})
 		table.setRowSelection({ '1': true })
@@ -211,7 +214,7 @@ describe('<SelectionBar>', () => {
 
 	it('passes variant="floating" by default to DI component', () => {
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, true)
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
 		table.setRowSelection({ '1': true })
 
 		render(

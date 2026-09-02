@@ -1,5 +1,3 @@
-import { featureConfig } from '@ez-kit/data-grid-core'
-
 import { useGridComponents } from '../components-context'
 
 import { flexRender } from './flex-render'
@@ -36,11 +34,8 @@ export function EmptyStateRow({ children }: DataGridEmptyStateRowProps = {}) {
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { EmptyState } = gridComponents.fallbacks
 
-	const fallbacks = table.grid.fallbacks
-	const emptyConfig = fallbacks?.empty
-
 	const columnCount = table.getVisibleLeafColumns().length
-	const customContent = featureConfig(emptyConfig)?.component
+	const customContent = table.grid.fallbacks.empty.component
 
 	const content =
 		children !== undefined ? (

@@ -21,21 +21,25 @@ import type { ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-c
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
-/** What a `<DataGrid.Cell>` render function receives. */
-export type DataGridCellRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<any, unknown>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+/**
+ * What a `<DataGrid.Cell>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Cell<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
+ * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridCellRenderArgs<TRow extends object = any> = {
+	cell: Cell<TRow, unknown>
+	row: Row<TRow>
 	/** The cell's value, already resolved through the column's accessor. */
 	value: unknown
 }
 
-export type DataGridCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<any, unknown>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridCellProps<TRow extends object = any> = {
+	cell: Cell<TRow, unknown>
+	row: Row<TRow>
 	/**
 	 * Custom content for this one cell, rendered inside the kit's `Td` — so the cell keeps its
 	 * pinning offset, its `data-*` attributes and its `cellClassName`.
@@ -46,7 +50,7 @@ export type DataGridCellProps = {
 	 * A column-wide override belongs on the column instead (`cell.component`), which also feeds
 	 * the create and edit forms; this is for a single cell in a hand-composed row.
 	 */
-	children?: ReactNode | ((args: DataGridCellRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridCellRenderArgs<TRow>) => ReactNode)
 }
 
 /** The chrome a body cell wears regardless of what it renders: pin offsets and alignment. */
@@ -71,7 +75,8 @@ const EMPTY_ERRORS: readonly string[] = Object.freeze([])
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.
  */
-export function DataGridCell({ cell, row, children }: DataGridCellProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridCell<TRow extends object = any>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const meta = cell.column.columnDef.meta
 	if (children !== undefined) {
 		return (
@@ -298,7 +303,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 						value: cell.getValue<unknown>(),
 						row: cell.row.original as unknown,
 						rowIndex: cell.row.index,
-						...(meta?.config !== undefined ? { config: meta.config } : {}),
+						...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 					})
 				: flexRender(cell.column.columnDef.cell, cell.getContext())}
 		</Td>
@@ -352,7 +357,7 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 			table.editing.setValue(columnId, v)
 		},
 		onBlur,
-		...(meta?.config !== undefined ? { config: meta.config } : {}),
+		...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 		error: fieldError,
 		errors: [...fieldErrors],
 		isValidating,
@@ -402,18 +407,19 @@ function resolveEditComponent(
 		const comp = editingConfig.component
 		if (comp) return comp as ComponentType<FieldState>
 	}
-	// 2. registry by cellType
-	if (meta?.cellType) {
-		const def = registry[meta.cellType]
-		if (def?.edit) return def.edit
+	// 2. registry by cell type
+	const cellTypeId = meta?.cell?.type
+	if (cellTypeId) {
+		const def = registry[cellTypeId]
+		if (def?.editing) return def.editing
 	}
 	return undefined
 }
 
 /**
  * Resolves the view renderer for a column.
- * - `meta.cellView` (set from `cell.component` in mapColumns) takes precedence.
- * - Otherwise, looks up `meta.cellType` in the cell-type registry.
+ * - `meta.cell?.view` (set from `cell.component` in mapColumns) takes precedence.
+ * - Otherwise, looks up `meta.cell?.type` in the cell-type registry.
  *
  * Returns `undefined` when no renderer is found — the caller falls back to
  * TanStack's default cell rendering (raw value).
@@ -429,9 +435,10 @@ function resolveViewComponent(
 	// allocated here would be a fresh component type on every render and remount the cell each
 	// time. `cell.component` takes `{ row, value, rowIndex }` and simply ignores the extra
 	// `config` that `CellViewProps` carries, so the shapes are already compatible.
-	if (meta?.cellView) return meta.cellView as ComponentType<CellViewProps>
-	if (meta?.cellType) {
-		const def = registry[meta.cellType]
+	if (meta?.cell?.view) return meta.cell.view as ComponentType<CellViewProps>
+	const cellTypeId = meta?.cell?.type
+	if (cellTypeId) {
+		const def = registry[cellTypeId]
 		if (def?.view) return def.view
 	}
 	return undefined

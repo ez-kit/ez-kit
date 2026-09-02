@@ -16,8 +16,11 @@ export type { FeatureOption, FeatureToggle } from './utils/feature-flag'
 
 // Column helpers
 export { createColumns } from './column/create-columns'
-export { mapColumns } from './column/map-columns'
 export { createColumnHelper } from './column/create-column-helper'
+// The one place the "a column's `creating` falls back to its `editing`" rule is written, so the
+// headless feature and the React form layer cannot drift on it.
+export { ColumnFormMode, resolveColumnFormConfig } from './column/resolve-form-config'
+export type { ResolvedColumnFormConfig } from './column/resolve-form-config'
 export {
 	BASE_CELL_TYPE_IDS,
 	BadgeVariant,
@@ -55,6 +58,8 @@ export type {
 	NumberCellConfig,
 	TextCellConfig,
 	CellViewCtx,
+	ColumnCellMeta,
+	ColumnFilteringMeta,
 	ColumnCreatingConfig,
 	ColumnDef,
 	ColumnEditingConfig,
@@ -68,6 +73,12 @@ export type {
 	// `footer`, `cell.component`, `filtering.component`, …) is typed with it, so a consumer
 	// factoring a shared renderer out into its own binding needs to be able to name it.
 	ColumnRenderer,
+	// The **input** renderer slot — `filtering.component`, `editing.component`,
+	// `creating.component`. Exported for the same reason as `ColumnRenderer` beside it, and
+	// with more need: its props are compared bivariantly so an author can annotate the
+	// `cell.config` the component reads, and that subtlety is exactly what someone factoring
+	// a shared filter input out into its own binding has to be able to name.
+	ColumnInputRenderer,
 	ExoticComponentLike,
 	DateCellConfig,
 	ImageCellConfig,
@@ -77,6 +88,7 @@ export type {
 	SelectCellConfig,
 	SelectItem,
 	SortingFn,
+	SystemColumnDef,
 } from './column/types'
 
 export type { TableState } from '@tanstack/table-core'
@@ -87,22 +99,30 @@ export type {
 	ColumnOperatorsConfig,
 	DateRangePreset,
 	FilterOperatorDef,
+	FilterOperatorId,
 	FilterItem,
 	OperatorRegistry,
 	StructuredFilterValue,
 } from './features/operators'
+// Every built-in operator list, so extending one reads as extending it —
+// `items: [...SELECT_BADGE_OPERATORS, myOperator]`. `SELECT_BADGE_OPERATORS` and
+// `EMPTY_OPERATORS` were the two that were not exported, which left the select / badge
+// default set nameable only as `DEFAULT_OPERATORS_BY_TYPE.select` — an index signature, so
+// `FilterOperatorDef[] | undefined`.
 export {
+	BOOLEAN_OPERATORS,
 	BetweenInputType,
 	BetweenInputVariant,
 	DATE_OPERATORS,
 	DATE_RANGE_PRESETS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
 	DEFAULT_OPERATORS_BY_TYPE,
+	EMPTY_OPERATORS,
+	FilterOperator,
 	IN_OPERATORS,
 	NUMBER_OPERATORS,
+	SELECT_BADGE_OPERATORS,
 	TEXT_OPERATORS,
-	buildOperatorRegistry,
-	resolveColumnOperators,
 } from './features/operators'
 
 export { CreatingMode } from './features/creating'
@@ -142,12 +162,15 @@ export type {
 	FieldState,
 	ValidateConfig,
 	ValidateContext,
+	ValidationIssue,
+	ValidationSchema,
 	ValidationErrors,
 	ValidationProblems,
 	ValidationResult,
 } from './features/validation'
 
 export {
+	BuiltInGlobalFilterFn,
 	GridDirection,
 	ColumnResizeMode,
 	ExpandingMode,
@@ -160,6 +183,7 @@ export type {
 	ExpandingConfig,
 	FilteringConfig,
 	GlobalFilterFn,
+	GlobalFilterFnId,
 	GlobalFilteringConfig,
 	InitialTableState,
 	MultiSortConfig,

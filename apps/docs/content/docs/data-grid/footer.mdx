@@ -1,0 +1,110 @@
+---
+title: Footer
+description: A totals row in the table's own column grid — declared per column, mounted for you.
+---
+
+# Footer
+
+A column declares `footer` and the grid renders a `<tfoot>` for it: one cell per column, in the
+same order, with the same widths, alignment and pinning as the header. It is the table's own
+footer, not the grid's bottom bar — pagination, load-more and the selection bar live outside the
+table and know nothing about columns.
+
+## Usage
+
+<DataGridDocsExample exampleId='column-footers' />
+
+```tsx
+const columns = createColumns<Product>([
+	{ accessorKey: 'name', header: 'Product', footer: 'Total' },
+	{
+		accessorKey: 'stock',
+		header: 'Stock',
+		align: 'end',
+		cell: { type: 'number' },
+		footerClassName: 'font-medium',
+		footer: ({ table }) => table.getFilteredRowModel().rows.reduce((sum, row) => sum + row.original.stock, 0),
+	},
+])
+```
+
+`footer` takes the same shape as `header` — a string, or a function of the live table. A total is
+the archetypal case, and reaching for `getFilteredRowModel()` is what keeps it honest: filter the
+grid and the total follows instead of contradicting what is on screen.
+
+There is no aggregation vocabulary (`sum`, `avg`) on purpose. Which rows an aggregate covers
+(filtered, all, the current page) and how the result is formatted are decisions only the column
+can make, and a render function makes both of them visible at the call site.
+
+### Column options
+
+| Option            | Type                           | Description                                                                 |
+| ----------------- | ------------------------------ | --------------------------------------------------------------------------- |
+| `footer`          | `string \| (ctx) => ReactNode` | Footer content for this column. Declaring it is what mounts the footer row. |
+| `footerClassName` | `string`                       | Class applied to this column's footer cell.                                 |
+
+`align` covers the footer with the rest of the column; `align: { footer: 'end' }` moves the footer
+cell alone. See [Columns](./columns).
+
+## Mounting
+
+| Option         | Type      | Default | Description                                                             |
+| -------------- | --------- | ------- | ----------------------------------------------------------------------- |
+| `footer`       | `boolean` | auto    | Mount the footer row. Omitted: mounted when a column declares a footer. |
+| `stickyFooter` | `boolean` | `false` | Keep the footer in view while the body scrolls.                         |
+
+Omitted, `layout.footer` follows the columns — declaring a `footer` is all it takes, the way
+declaring `align` or `pinning` is. Set it explicitly for the two cases the columns cannot express:
+
+```tsx
+// A grid opting out of a footer its shared columns declare under DataGridOptionsProvider.
+<DataGrid data={data} columns={columns} layout={{ footer: false }} />
+
+// A footer whose content comes from <DataGrid.Footer> children, with no column footers at all.
+<DataGrid data={data} columns={columns} layout={{ footer: true }} />
+```
+
+## Sticky footer
+
+<DataGridDocsExample exampleId='sticky-footer' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	layout={{ stickyHeader: true, stickyFooter: true, maxHeight: '20rem' }}
+/>
+```
+
+Like [`stickyHeader`](./sticky-header), it needs a bounded scroll container — `layout.maxHeight`,
+or the structural stylesheet's `400px` default. The grid sets `data-sticky="true"` on the
+`<tfoot>`; the kit CSS paints the opaque background that keeps rows from showing through.
+
+## Custom composition
+
+The default layout mounts the footer. A custom `<DataGrid.Table>` body replaces the built-in
+header/body pair, so there place `<DataGrid.Footer />` yourself:
+
+```tsx
+<DataGrid.Table>
+	<DataGrid.Header />
+	<DataGrid.Body />
+	<DataGrid.Footer />
+</DataGrid.Table>
+```
+
+Giving it `children` replaces the per-column row with your own markup inside the kit's `<tfoot>` —
+a node, or a render function receiving `{ table, footerGroups }`:
+
+```tsx
+<DataGrid.Footer>
+	{({ table }) => (
+		<tr>
+			<td colSpan={table.getVisibleLeafColumns().length}>{table.getRowModel().rows.length} rows</td>
+		</tr>
+	)}
+</DataGrid.Footer>
+```
+
+`<DataGrid.Footer />` reads `layout.stickyFooter` on its own; its `sticky` prop overrides that for
+one footer. See [Composition](./composition).

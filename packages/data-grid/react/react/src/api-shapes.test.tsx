@@ -68,7 +68,7 @@ describe('enabled: false on a nested config', () => {
 		)
 
 		expect(result.current.options.enableRowSelection).toBe(true)
-		expect(result.current.grid.selection.bar).toEqual({ enabled: false, variant: 'inline' })
+		expect(result.current.grid.selection.bar).toBeUndefined()
 	})
 
 	it('suppresses the filter-chips strip while filtering stays on', () => {
@@ -101,7 +101,7 @@ describe('enabled: false on a nested config', () => {
 			useDataGrid({ data: USERS, columns: COLUMNS, fallbacks: { noResults: { enabled: false } } }),
 		)
 
-		expect(result.current.grid.fallbacks?.noResults).toEqual({ enabled: false })
+		expect(result.current.grid.fallbacks.noResults).toEqual({ enabled: false })
 	})
 })
 

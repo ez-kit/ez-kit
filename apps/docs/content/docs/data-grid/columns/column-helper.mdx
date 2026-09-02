@@ -82,7 +82,7 @@ import { defineCellType } from '@ez-kit/data-grid-react'
 
 // StarRatingView / StarRatingInput are your own components — see the example's source below.
 const RATING_CELL_TYPES = {
-	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
+	rating: defineCellType()({ view: StarRatingView, editing: StarRatingInput }),
 }
 ```
 
@@ -100,7 +100,7 @@ Or once for a whole grid module, via `extendDataGrid()` from your UI kit — the
 import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
 
 const grid = extendDataGrid({
-	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
+	rating: defineCellType()({ view: StarRatingView, editing: StarRatingInput }),
 })
 
 export const { DataGrid, createColumnHelper, createColumns } = grid
@@ -135,7 +135,7 @@ The second parameter is the **registry**, not a union of its ids: the ids alone 
 
 <DataGridDocsExample exampleId='column-helper-registered' />
 
-See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full renderer contract (`view` / `edit` / `creating` / `filter`).
+See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full renderer contract (`view` / `editing` / `creating` / `filter`).
 
 ## Options
 
@@ -153,7 +153,7 @@ See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full re
 | `opts.cell.component`                                  | `ColumnRenderer`      | Your own view renderer for this column. Same slot, same name, as on a plain `ColumnDef`.         |
 | `opts.editing` / `opts.creating`                       | `object \| false`     | Passed through unchanged — `{ component, description }`, exactly as on a plain `ColumnDef`.      |
 
-`cell.type` is what the builders set for you; `meta.cellType` is the derived internal field the engine reads at render time, not something you author.
+`cell.type` is what the builders set for you; `meta.cell.type` is the derived internal field the engine reads at render time, not something you author.
 
 ## Source
 

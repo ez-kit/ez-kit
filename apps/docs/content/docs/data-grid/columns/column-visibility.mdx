@@ -30,18 +30,14 @@ A simpler base example is also available:
 
 ## Options
 
-| Option                          | Type                                    | Description                                                                                                                                                                                         |
-| ------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `visibility`                    | `false \| { initialHidden: true }`      | Per-column. `false` disables hiding — the column is always visible (no Hide option in its menu, absent from the Columns toggle). `{ initialHidden: true }` starts the column hidden but toggleable. |
-| `visibility.toolbar`            | `boolean`                               | Auto-mount the Columns toggle into `Toolbar.end`. `visibility: true` mounts it; on the object form it is off unless you write `toolbar: true`.                                                      |
-| `visibility.onChange`           | `(visibility: VisibilityState) => void` | Called whenever column visibility changes. Use it to persist which columns a user hid.                                                                                                              |
-| `state.columnVisibility`        | `Record<string, boolean>`               | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                                      |
-| `initialState.columnVisibility` | `Record<string, boolean>`               | Hidden columns at mount. Merges with the column-level `initialHidden` seeds — see below.                                                                                                            |
-| `visibility.enabled`            | `boolean`                               | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                      |
-
-Note that the object form turns the toolbar toggle off unless it says otherwise, so
-`visibility: { onChange }` keeps the feature but drops the button — write
-`visibility: { toolbar: true, onChange }` to keep both.
+| Option                          | Type                                    | Description                                                                                                                                                                                                                          |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `visibility`                    | `false \| { initialHidden: true }`      | Per-column. `false` disables hiding — the column is always visible (no Hide option in its menu, absent from the Columns toggle). `{ initialHidden: true }` starts the column hidden but toggleable.                                  |
+| `visibility.toolbar`            | `boolean`                               | Auto-mount the Columns toggle into `Toolbar.end`. Default `true` in both forms — `visibility: true` and `visibility: { onChange }` mount the same button; write `toolbar: false` to place `<DataGrid.VisibilityTrigger />` yourself. |
+| `visibility.onChange`           | `(visibility: VisibilityState) => void` | Called whenever column visibility changes. Use it to persist which columns a user hid.                                                                                                                                               |
+| `state.columnVisibility`        | `Record<string, boolean>`               | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                                                                       |
+| `initialState.columnVisibility` | `Record<string, boolean>`               | Hidden columns at mount. Merges with the column-level `initialHidden` seeds — see below.                                                                                                                                             |
+| `visibility.enabled`            | `boolean`                               | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                                       |
 
 ## Seeds and invariants
 

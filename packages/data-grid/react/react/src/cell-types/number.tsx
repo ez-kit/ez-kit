@@ -29,7 +29,7 @@ export function formatNumber(value: number, config?: NumberCellConfig): string {
 }
 
 function NumberCellInput(props: FieldState<NumberCellConfig>): ReactNode {
-	const { NumberInput } = useGridComponents().editing
+	const { NumberInput } = useGridComponents().core
 	return (
 		<NumberInput
 			value={typeof props.value === 'number' ? props.value : undefined}
@@ -46,7 +46,7 @@ function NumberCellInput(props: FieldState<NumberCellConfig>): ReactNode {
  *
  * - `view`: formats via {@link Intl.NumberFormat} with optional override of
  *   thousands/decimal separators, prefix, suffix, decimals, locale.
- * - `edit` / `creating` / `filter`: thin wrapper over `useGridComponents().NumberInput`.
+ * - `editing` / `creating` / `filtering`: thin wrapper over `useGridComponents().core.NumberInput`.
  *
  * Zero visual choices — formatting logic only. UI primitive comes from DI.
  */
@@ -55,7 +55,7 @@ export const numberCellType = defineCellType<NumberCellConfig>()({
 		if (typeof value !== 'number' || Number.isNaN(value)) return value == null ? '' : String(value)
 		return formatNumber(value, config)
 	},
-	edit: NumberCellInput,
+	editing: NumberCellInput,
 	creating: NumberCellInput,
-	filter: NumberCellInput,
+	filtering: NumberCellInput,
 })

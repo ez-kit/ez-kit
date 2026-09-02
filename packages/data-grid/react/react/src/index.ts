@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Public surface of `@ez-kit/data-grid-react`.
  *
@@ -41,12 +43,14 @@ export type {
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
 	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
+	NormalizedFallbackConfig,
+	NormalizedFallbacksConfig,
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageWindowConfig,
+	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
@@ -128,6 +132,7 @@ export type {
 	GridSortingComponents,
 	GridFilteringComponents,
 	GridEditingComponents,
+	GridDeletingComponents,
 	GridSelectionComponents,
 	GridDraftComponents,
 	GridRowActionsComponents,
@@ -147,6 +152,8 @@ export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/
 export type { DataGridHeaderRowProps, DataGridHeaderRowRenderArgs } from './data-grid/header-row'
 export type { DataGridHeaderCellProps, DataGridHeaderCellRenderArgs } from './data-grid/header-cell'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
+export type { DataGridFooterRowProps, DataGridFooterRowRenderArgs } from './data-grid/footer-row'
+export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './data-grid/footer-cell'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
@@ -183,10 +190,11 @@ export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
 // DI context
 export { GridComponentsProvider, useGridComponents } from './components-context'
+export type { GridComponentsProviderProps } from './components-context'
 
 // Cell type registry
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
-export type { CellTypeDefinition, CellTypeRegistry, CellViewProps } from './cell-types-context'
+export type { CellTypeDefinition, CellTypeRegistry, CellTypesProviderProps, CellViewProps } from './cell-types-context'
 
 // The nine base cell types a kit extends, and the two formatters their renderers use.
 //

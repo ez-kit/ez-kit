@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -24,12 +25,21 @@ function makeInstance() {
 }
 
 /**
- * `ColumnDef.footer` reached TanStack long before anything rendered it — the built-in layout
- * had no `<tfoot>` slot at all, so a totals row had to be built outside the table element.
+ * The default layout mounts the footer on its own once a column declares one — see
+ * `footer-default-layout.test.tsx`, which drives that through `useDataGrid`. These tests cover
+ * the hand-composed path, where `<DataGrid.Table>` children replace the built-in pair and
+ * nothing is mounted for you.
  */
 describe('<DataGrid.Footer>', () => {
-	it('is not part of the default layout', () => {
-		const { container } = renderWithComponents(<DataGrid table={makeInstance()} />)
+	it('is not mounted for you inside a custom <DataGrid.Table> body', () => {
+		const { container } = renderWithComponents(
+			<DataGrid table={makeInstance()}>
+				<DataGrid.Table>
+					<DataGrid.Header />
+					<DataGrid.Body />
+				</DataGrid.Table>
+			</DataGrid>,
+		)
 		expect(container.querySelector('tfoot')).toBeNull()
 	})
 
@@ -163,7 +173,7 @@ describe('compound render-prop slots', () => {
 				deleting: { onDelete: () => {}, bulk: { onDelete, confirmation: true } },
 			}),
 		)
-		table.grid.selection.bar = true
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 
 		const { container } = renderWithComponents(

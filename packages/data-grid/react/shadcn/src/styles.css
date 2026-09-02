@@ -119,6 +119,14 @@
 	z-index: 2;
 }
 
+/* The sticky footer keeps the footer's own colour instead of taking `bg-background` from the
+ * rule above: shadcn's `<TableFooter>` paints `bg-muted/50`, and a sticky element needs that
+ * same tone *opaque* — at 50% alpha the rows scroll through it. This is `bg-muted/50` already
+ * composited against the page. */
+[data-slot='tfoot'][data-sticky='true'] {
+	background: color-mix(in oklab, var(--muted) 50%, var(--background));
+}
+
 [data-slot='table-row']:hover,
 [data-slot='tr']:hover,
 [data-slot='table-row']:has([aria-expanded='true']),

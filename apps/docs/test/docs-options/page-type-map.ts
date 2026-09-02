@@ -44,6 +44,7 @@ export const DocPage = {
 	EditingIndex: 'content/docs/data-grid/editing/index.mdx',
 	EditingValidation: 'content/docs/data-grid/editing/validation.mdx',
 	Fallbacks: 'content/docs/data-grid/fallbacks.mdx',
+	Footer: 'content/docs/data-grid/footer.mdx',
 	Features: 'content/docs/data-grid/features.mdx',
 	GettingStarted: 'content/docs/data-grid/getting-started.mdx',
 	Index: 'content/docs/data-grid/index.mdx',
@@ -120,12 +121,14 @@ export const GRID_TYPE = {
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
 	SelectionBarConfig: { module: TypeModule.React, name: 'SelectionBarConfig', typeArgs: ROW_TYPE_ARGS },
 	RowActionItem: { module: TypeModule.Core, name: 'RowActionItem' },
+	SystemColumnDef: { module: TypeModule.Core, name: 'SystemColumnDef' },
 	EditingConfig: { module: TypeModule.Core, name: 'EditingConfig', typeArgs: ROW_TYPE_ARGS },
 	CreatingConfig: { module: TypeModule.Core, name: 'CreatingConfig', typeArgs: ROW_TYPE_ARGS },
 	LoadingState: { module: TypeModule.Core, name: 'LoadingState' },
 	DeletingConfig: { module: TypeModule.Core, name: 'DeletingConfig', typeArgs: ROW_TYPE_ARGS },
 	BulkDeletingConfig: { module: TypeModule.Core, name: 'BulkDeletingConfig', typeArgs: ROW_TYPE_ARGS },
 	CellTypeDefinition: { module: TypeModule.React, name: 'CellTypeDefinition' },
+	LayoutConfig: { module: TypeModule.React, name: 'LayoutConfig' },
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -225,6 +228,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		page: DocPage.Footer,
+		optionTables: [
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 2 },
+			{ heading: 'Mounting', roots: [GRID_TYPE.LayoutConfig], expectedCount: 2 },
+		],
+		nonOptionTables: [],
+	},
+	{
 		page: DocPage.Features,
 		optionTables: [],
 		nonOptionTables: [],
@@ -289,7 +300,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.Defaults,
-		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 38 }],
+		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 39 }],
 		nonOptionTables: [],
 	},
 	{
@@ -366,7 +377,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// grid config, disambiguated in prose ("(column def)" / "(table)").
 			// `state.columnPinning` / `initialState.columnPinning` resolve as real
 			// `UseDataGridConfig` paths, so they need no exception.
-			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 5 },
+			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
 		],
 		nonOptionTables: [],
 	},
@@ -433,7 +444,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.ExpandingSubContent,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
 		nonOptionTables: [],
 	},
 	{
@@ -470,7 +481,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.FilteringIndex,
 		optionTables: [
 			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 9 },
-			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 5 },
+			{ heading: 'Per-column `filtering`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 6 },
 		],
 		nonOptionTables: [],
 	},
@@ -548,20 +559,23 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.RowActions,
 		optionTables: [
-			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 },
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
 			// Rows are the fields of one custom entry, not keys of the grid config.
 			{ heading: 'Entry shape', roots: [GRID_TYPE.RowActionItem], expectedCount: 6 },
+			// The shared shape `selection.column` / `expanding.column` / `rowActions.column` all
+			// take, documented once here and linked to from the other two pages.
+			{ heading: 'The column itself', roots: [GRID_TYPE.SystemColumnDef], expectedCount: 6 },
 		],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.RowPinning,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
 	{
 		page: DocPage.SelectionIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 7 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 8 }],
 		nonOptionTables: [],
 	},
 	{

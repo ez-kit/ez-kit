@@ -32,6 +32,23 @@ and move on.
 - **Column `align` is logical (`start` / `end`), column `pinning` is physical (`left` /
   `right`).** The alignment axis flips under RTL; a pinned column sticks to a viewport edge and
   does not. `Toolbar.start` / `Toolbar.end` follow the `align` rule, for the same reason.
+- **One filter-operator vocabulary across cell types.** `FilterOperator` is a single closed set:
+  the same id means the same comparison whatever the column's cell type is, and only the `label`
+  changes (`greaterThan` reads "Greater than" on a number column and "After" on a date one).
+  Adding a type-specific spelling of an existing comparison — a second `eq` beside `equals`, an
+  `after` beside `greaterThan` — is the defect this replaced, not an improvement on it.
+- **Renderer slots are named for the feature they serve, at every level.** A cell type registers
+  `view` / `editing` / `creating` / `filtering`; a column writes `cell.component` /
+  `editing.component` / `creating.component` / `filtering.component`; the DI contract groups
+  components under `editing` / `deleting` / `rowActions` / … — the option names, never a kebab or
+  verb variant of them.
+- **`ColumnMeta` fields carry the name of the column option they hold.** `pinning`, `align`,
+  `cell`, `filtering`, `editing`, `creating`, `visibility`. A resolved value never gets a third
+  spelling (it was `cellType` / `config` / `cellView` for the three halves of `cell`).
+- **The three system columns are configured like columns.** `selection.column`,
+  `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
+  `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the
+  column scalar-or-object forms. What the column _does_ stays on the feature.
 
 ## Branching & Release Flow
 

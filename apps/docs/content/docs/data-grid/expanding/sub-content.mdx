@@ -23,13 +23,14 @@ Click a row to reveal a sub-row of arbitrary content beneath it. Common uses: or
 
 ## Options
 
-| Option                      | Type                            | Description                                                                                                                    |
-| --------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `expanding`                 | `boolean \| ExpandingConfig`    | Master switch. Providing `expanding.component` also enables it. Default `false`.                                               |
-| `expanding.component`       | `ComponentType<{ row, table }>` | Renders the expanded content. Required for sub-content mode.                                                                   |
-| `expanding.getRowCanExpand` | `(row) => boolean`              | Per-row expandability. All rows expandable when omitted.                                                                       |
-| `state.expanded`            | `ExpandedState`                 | Controlled expand state — see [Controlled state](./data-grid/controlled-state).                                                |
-| `expanding.enabled`         | `boolean`                       | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
+| Option                      | Type                            | Description                                                                                                                                                                         |
+| --------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `expanding`                 | `boolean \| ExpandingConfig`    | Master switch. Providing `expanding.component` also enables it. Default `false`.                                                                                                    |
+| `expanding.component`       | `ComponentType<{ row, table }>` | Renders the expanded content. Required for sub-content mode.                                                                                                                        |
+| `expanding.getRowCanExpand` | `(row) => boolean`              | Per-row expandability. All rows expandable when omitted.                                                                                                                            |
+| `state.expanded`            | `ExpandedState`                 | Controlled expand state — see [Controlled state](./data-grid/controlled-state).                                                                                                     |
+| `expanding.column`          | `SystemColumnDef`               | The chevron column itself — its width, pinning, alignment. See [Row actions](./data-grid/row-actions#the-column-itself) for the shared shape. Pinned `'left'` at `44px` by default. |
+| `expanding.enabled`         | `boolean`                       | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                      |
 
 ## See also
 

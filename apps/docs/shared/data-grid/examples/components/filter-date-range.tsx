@@ -29,7 +29,7 @@ const presetsBuiltInColumns = createColumns<Release>([
 		cell: { type: 'date' },
 		filtering: {
 			operators: {
-				items: ['eq', 'before', 'after', 'between'],
+				items: ['equals', 'lessThan', 'greaterThan', 'between'],
 				betweenOperator: { variant: 'inputs', presets: true },
 			},
 			defaultOperator: 'between',
