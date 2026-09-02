@@ -1,0 +1,78 @@
+---
+title: Reactivity
+description: Why a form re-renders what it re-renders, what form.Subscribe is for, and why you should never wrap a field in it.
+---
+
+# Reactivity
+
+`form.state` is a **snapshot**. Read it in a component body and you get the values as they were when that component last rendered; nothing tells React to render again when they move on. It is fine for a one-shot read inside an event handler or a submit path, and wrong for anything you put on screen.
+
+Everything rendered _from_ form state goes through a subscription instead.
+
+## `form.Subscribe`
+
+`form.Subscribe` takes a `selector` and re-renders **only its own children**, only when the selected value changes:
+
+```tsx
+<form.Subscribe selector={(state) => state.values.quantity * state.values.unitPrice}>
+	{(total) => <p>Total {currency.format(total)}</p>}
+</form.Subscribe>
+```
+
+Two properties matter and they are the same property seen from either end. The subscription is **narrow** — a keystroke in a field the selector does not touch changes nothing it selected, so nothing re-renders. And it is **local** — when the selected value does change, the children re-render and the component holding the form does not.
+
+That is what makes the selector the load-bearing part. Keep it returning something comparable: a primitive, or a small object rebuilt from primitives. A selector returning `state.values` wholesale subscribes to the whole form and hands back exactly the re-render you were avoiding.
+
+<KitExample exampleId='form-reactivity' />
+
+The example is an order line. Two number fields feed one `Subscribe` that multiplies them into a total, and a second `Subscribe` selects `state.values.notes.length` for a character counter. Type in the notes and the counter updates while the total does not; change the quantity and the reverse happens. Neither re-renders any field.
+
+## Do not wrap a field in `Subscribe`
+
+Every flat field is already its own subscriber. `form.TextField` renders through `form.AppField`, which subscribes to that one field's value and meta and re-renders only that field. This is why a large form stays cheap without you doing anything.
+
+Wrapping a field in `Subscribe` therefore does not add reactivity — it adds a **second** subscription over a **wider** slice of state, and makes the field re-render for edits elsewhere in the form. It is a strict loss.
+
+The one legitimate reason to wrap a field is that a **prop of it** depends on another field's value — `disabled`, or the `optionsParams` of a dependent select. There the value has to be read somewhere before it can be passed down, and `Subscribe` is the narrowest place to read it:
+
+```tsx
+<form.Subscribe selector={(state) => state.values.country}>
+	{(country) => (
+		<form.SelectField
+			name='city'
+			label='City'
+			disabled={country === ''}
+			optionsFrom='dictionary'
+			optionsParams={{ domain: 'cities', country }}
+		/>
+	)}
+</form.Subscribe>
+```
+
+That is the canonical real-world case, and [Option sources](/docs/form/select/option-sources) is where it is documented properly — including why the fresh object literal is deliberate and what happens to the city already chosen when the country changes.
+
+The other everyday use is the submit button's label, since the button subscribes to its own `disabled` state but not to its content — see [Submission](/docs/form/submission#submit-state).
+
+## The hook form
+
+The same subscription exists as a hook, `useStore(form.store, selector)`, for when the value is needed in the component body rather than in the JSX.
+
+Two things to know before reaching for it. It subscribes the **whole component**, so used inside a component that renders fields it costs precisely what `Subscribe` exists to avoid; it earns its keep one level up, in a component that renders no fields of its own. And it is not part of this package's surface: `useStore` comes from `@tanstack/react-store` and is re-exported by `@tanstack/react-form`, but the kits re-export neither, so
+
+```ts
+import { useStore } from '@ez-kit/form-shadcn' // ✗ does not resolve
+```
+
+does not compile. Using it means importing from TanStack directly and taking that dependency on purpose:
+
+```ts
+import { useStore } from '@tanstack/react-form'
+```
+
+Prefer `form.Subscribe`, which is already on the instance you have.
+
+<Callout>
+	This has no equivalent in a document. Choosing what to re-render on is arbitrary JavaScript, and a `FormSchema`
+	carries no code — inside a [config-driven form](/docs/form/schema) the renderer subscribes for you, narrowly, and the
+	declarative cases are covered by a node's `when` and `disabledWhen` conditions.
+</Callout>

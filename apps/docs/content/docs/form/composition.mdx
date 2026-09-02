@@ -1,0 +1,118 @@
+---
+title: Composition
+description: withForm, withFieldGroup, useFieldGroup and useFormGroup — reusable blocks of fields, and why one of the four had to be retyped.
+---
+
+# Composition
+
+A form long enough to be worth building is a form long enough to want cutting into pieces: an address block that appears twice, a step you render in three different flows, a section a colleague owns. TanStack Form ships four helpers for that, and all four are re-exported by your kit — but only one of them needed changing on the way, and the reason is worth understanding before you pick between them.
+
+## The problem a block has
+
+Pull a group of fields out into its own component and it loses the form. Hand the form back as a prop and the question becomes: what type is that prop?
+
+Not `any` — the whole value of these fields is that `name='shipping.city'` is a compile error the moment `shipping` stops having a `city`. The type has to carry both the form's data shape and the flat field components hanging off the instance.
+
+The type is `KitFormApi`, exported by every kit. The convenient way to name it is to derive it, so the block stays in step with the options rather than restating twelve generic arguments:
+
+```tsx
+function useCheckoutForm(onSave: (value: Checkout) => void) {
+	return useForm({
+		defaultValues: DEFAULT_CHECKOUT,
+		onSubmit: ({ value }) => {
+			onSave(value)
+		},
+	})
+}
+
+type CheckoutForm = ReturnType<typeof useCheckoutForm>
+```
+
+<KitExample exampleId='form-composition' />
+
+The example is a checkout with a billing and a shipping address. `AddressBlock` is written once, takes `form` plus the path it should write into, and is rendered twice. Inside it, `form.TextField` is the same component, checked against the same value type, as at the top level.
+
+That example declares its `form` prop by hand — deliberately, because it is rendered under two kits at once and so cannot import either kit's `withForm`. In your own app you would not: `withForm` infers the type for you.
+
+## `withForm`
+
+`withForm` builds a block from form options plus a render function, and infers the `form` prop's type from the options:
+
+```tsx
+import { withForm } from '@ez-kit/form-shadcn'
+
+const AddressBlock = withForm({
+	defaultValues: DEFAULT_CHECKOUT,
+	props: { path: 'billing' as AddressPath, heading: '' },
+	render: ({ form, path, heading }) => (
+		<fieldset>
+			<legend>{heading}</legend>
+			<form.TextField
+				name={`${path}.street`}
+				label='Street'
+			/>
+			<form.TextField
+				name={`${path}.city`}
+				label='City'
+			/>
+		</fieldset>
+	),
+})
+```
+
+The form options are **required, not decorative**. `defaultValues` — or another option that pins the shape — is the only place the block's data type can be inferred from. A block written as `withForm({ render })` infers `unknown`, which collapses the set of writable field names to `never`: no `name` compiles inside it, and no real form is assignable to it from outside. Always declare a block against the form data it belongs to.
+
+Extra props go through the `props` option, which is also their inference site; they are not inferred from the render function's own parameter.
+
+There is no runtime here. `withForm` hands the options straight to TanStack, which only closes over `render`.
+
+### Why it had to be retyped
+
+TanStack types the render prop's `form` as an API parameterised by the components injected into `createFormHook`. This adapter injects **none** — the kit's primitives reach the fields by closure instead — so TanStack's own type describes an instance with no `TextField` on it, and `form.TextField` inside a block would fail to compile while working perfectly at runtime.
+
+So `withForm` is wrapped, and the single thing the wrapper changes is that declared type: it says `KitFormApi`, which is what `useForm` already returns. A block therefore sees exactly the instance it is handed. The reasoning is written out in full at the top of `packages/form/react/react/src/composition.ts`.
+
+That wrapping is what puts `withForm` on the kit rather than on the adapter's general surface: it is produced by `createForm({ components })` together with `useForm`, `Form` and `FormRenderer`, so you import it from `@ez-kit/form-shadcn` or `@ez-kit/form-heroui` alongside them.
+
+## `withFieldGroup`
+
+`withForm` ties a block to **one form's** shape. `withFieldGroup` is the other half of the pair, for a block that should be reusable across **different** forms: it is written against the group's own shape — `Address` — and mapped onto a parent path at the call site.
+
+```tsx
+<AddressGroup
+	form={form}
+	fields='shipping'
+/>
+```
+
+The same block then serves any form that has an `Address` somewhere in it, under whatever name.
+
+The trade is deliberate and is the thing to weigh when choosing between the two. A group's render prop receives a **group API**, and a group API carries the native `group.Field`, not the flat field components — because a group has no idea what the surrounding form's value type is, which is exactly the freedom you asked for. Inside a field group you are in [native API](/docs/form/native-api) territory.
+
+Because of that, `withFieldGroup` needed no retyping and is re-exported as TanStack builds it. It still comes from your kit, since `createForm` returns it — and the parent `form` prop of the component it produces already accepts a `KitFormApi`, that type being an intersection over TanStack's.
+
+## The two hooks
+
+`useFieldGroup` is the hook behind `withFieldGroup`: it takes the parent form and a `fields` mapping and returns the same group API, for when you want a group inside a component you are already writing rather than a standalone block. `useFormGroup` scopes a subtree of one form — a named branch with validators of its own — and returns a group API for that branch.
+
+Neither is touched by this package, so both are re-exported **verbatim** from `@tanstack/react-form` by `@ez-kit/form-react`, and from there by each kit. Import them from your kit like everything else:
+
+```ts
+import { useFieldGroup, useFormGroup } from '@ez-kit/form-shadcn'
+```
+
+The [TanStack Form documentation](https://tanstack.com/form/latest/docs/framework/react/quick-start) is the reference for their options; nothing here changes them.
+
+## Choosing
+
+Reuse a block within **one form's** shape — an address at two paths, a step in a wizard over the same data — and `withForm` is the one to reach for, because it keeps the flat fields.
+
+Reuse a block across **different forms** and `withFieldGroup` is the only one that can, at the cost of writing its fields natively.
+
+And if the block is only ever rendered once, it does not need either: a plain component taking `form: KitFormApi<…>`, or a derived alias like the example's `CheckoutForm`, is less machinery for the same result.
+
+<Callout>
+	A `FormSchema` has an analogue in nested `section` and `step` nodes, but it is not the same mechanism. Those group
+	fields for **layout and visibility** inside one document; they do not produce a reusable, separately typed unit that
+	several forms can render. See [Config-driven forms](/docs/form/schema).
+</Callout>

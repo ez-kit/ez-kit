@@ -1,4 +1,4 @@
-import type { FormFieldType, SelectOption } from '@ez-kit/form-core'
+import type { DateRangeValue, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 /**
@@ -22,16 +22,6 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
  * crash.
  */
 
-/** The `type` attribute a text input may carry — a closed set, never a bare string. */
-export enum TextInputType {
-	Text = 'text',
-	Email = 'email',
-	Password = 'password',
-	Tel = 'tel',
-	Url = 'url',
-	Search = 'search',
-}
-
 /**
  * What every field receives, whatever its value type.
  *
@@ -45,8 +35,16 @@ export enum TextInputType {
 export type FieldRenderProps = {
 	/** The field's `name`. Kits spread it onto their root so CSS and tests can find the field. */
 	'data-field': string
-	/** Which kind of field this is; also spread onto the kit's root. */
-	'data-field-type': FormFieldType
+	/**
+	 * Which kind of field this is; also spread onto the kit's root.
+	 *
+	 * `string`, not `FormFieldType`: a schema may declare a **custom** field kind under any
+	 * author-chosen `type`, and that node's binding goes through this very shape. Narrowing to
+	 * the enum made the contract claim something untrue and forced an `as unknown as` cast at
+	 * the custom-field call site; a kit that wants to branch on a built-in still compares
+	 * against `FormFieldType`, whose members are plain strings.
+	 */
+	'data-field-type': string
 	/**
 	 * The DOM id the kit must put on the focusable control, so `data-field` lookups and a
 	 * `<label for>` agree. React-Aria kits still let the library own its internal wiring —
@@ -95,12 +93,82 @@ export type TextareaFieldRenderProps = FieldRenderProps & {
 	rows: number | undefined
 }
 
-export type SelectFieldRenderProps = FieldRenderProps & {
-	value: string
-	onChange: (value: string) => void
+/**
+ * What an option-bearing field adds on top of {@link FieldRenderProps}.
+ *
+ * `loading` is a plain `boolean`, not `boolean | undefined` like the optional consumer
+ * inputs above: absence and `false` would mean the same thing, and a kit that has to render
+ * *something* for every state should never have to collapse the two itself. The binding
+ * layer defaults an omitted consumer prop to `false`.
+ */
+type OptionsRenderProps = {
 	options: readonly SelectOption[]
-	placeholder: string | undefined
+	/**
+	 * The list is still loading; an empty `options` does not mean there is nothing to choose
+	 * from. Kits render a skeleton and keep the control non-interactive while it is true —
+	 * which is also what covers the edit-form case where a value arrives from the server
+	 * before the option it should be labelled by.
+	 */
+	loading: boolean
 }
+
+/**
+ * The query state of a `searchable` field, as the kit receives it — the one key `select` and
+ * `multiselect` grew for the feature, and they grew the identical one.
+ *
+ * One bundled key rather than three loose ones, because the three only ever make sense
+ * together — its presence *is* the mode switch, so a kit branches once (`search !== undefined`)
+ * instead of correlating a flag with two handlers it has to trust are there. `undefined` means
+ * a plain control, which is what every field that is not `searchable` gets.
+ *
+ * The **renderer** owns the query: it is what feeds the option source, which for a searchable
+ * field returns only the page matching the last query. So the kit is fully controlled here
+ * like everywhere else in this contract — report what was typed, render what `options` says,
+ * and never filter `options` yourself; that has already happened server-side.
+ *
+ * `options` always contains the option for everything currently selected, even when the
+ * search that produced the rest of the list did not return it — the renderer merges those in
+ * from a second query. From here it is still just "find the option whose value matches",
+ * which for a multi-select is what puts a **label** on each chip instead of a raw id.
+ *
+ * After a selection a kit is expected to clear the query (`onQueryChange('')`), so the next
+ * search starts fresh rather than leaving a stale term beside a chip that already consumed it.
+ *
+ * The query arrives **raw**, on every keystroke. Debouncing is the source's job for now and is
+ * not a kit concern.
+ */
+type SearchRenderProps = {
+	search: { query: string; onQueryChange: (query: string) => void } | undefined
+}
+
+export type SelectFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps &
+	SearchRenderProps & {
+		value: string
+		onChange: (value: string) => void
+		placeholder: string | undefined
+	}
+
+/**
+ * The multi-value counterparts of `SelectFieldRenderProps` / `RadioGroupFieldRenderProps`.
+ *
+ * `value` is always a list — `[]` when nothing is selected, never `undefined` — so a kit
+ * never has to decide what "no selection yet" looks like, and `onChange` always reports the
+ * complete new selection rather than a toggle.
+ */
+export type MultiSelectFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps &
+	SearchRenderProps & {
+		value: readonly string[]
+		onChange: (value: string[]) => void
+		placeholder: string | undefined
+	}
+
+export type CheckboxGroupFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps & {
+		value: readonly string[]
+		onChange: (value: string[]) => void
+	}
 
 export type CheckboxFieldRenderProps = FieldRenderProps & {
 	checked: boolean
@@ -112,10 +180,38 @@ export type SwitchFieldRenderProps = FieldRenderProps & {
 	onChange: (checked: boolean) => void
 }
 
-export type RadioGroupFieldRenderProps = FieldRenderProps & {
-	value: string
-	onChange: (value: string) => void
-	options: readonly SelectOption[]
+export type RadioGroupFieldRenderProps = FieldRenderProps &
+	OptionsRenderProps & {
+		value: string
+		onChange: (value: string) => void
+	}
+
+/**
+ * Both dates are `YYYY-MM-DD` strings, never `Date` objects — see `date-value.ts` in
+ * `@ez-kit/form-core`. Converting to whatever the kit's picker wants (`CalendarDate` for
+ * HeroUI, `Date` for react-day-picker) is the kit's job, and it is the only place a date
+ * library is allowed to appear.
+ */
+export type DateFieldRenderProps = FieldRenderProps & {
+	/** `undefined` while nothing is picked — an empty date is genuinely "no date". */
+	value: string | undefined
+	onChange: (value: string | undefined) => void
+	placeholder: string | undefined
+	min: string | undefined
+	max: string | undefined
+}
+
+/**
+ * A range is reported only once **both** ends are chosen; a half-picked range stays inside
+ * the picker, so form state never holds `{ start, end: undefined }` and every consumer of
+ * the value — validation, submission, a `when` rule — sees one shape.
+ */
+export type DateRangeFieldRenderProps = FieldRenderProps & {
+	value: DateRangeValue | undefined
+	onChange: (value: DateRangeValue | undefined) => void
+	placeholder: string | undefined
+	min: string | undefined
+	max: string | undefined
 }
 
 export type SliderFieldRenderProps = FieldRenderProps & {
@@ -129,6 +225,52 @@ export type SliderFieldRenderProps = FieldRenderProps & {
 	min: number | undefined
 	max: number | undefined
 	step: number | undefined
+}
+
+// ── layout ───────────────────────────────────────────────────────────────────
+
+export type SectionRenderProps = {
+	title: ReactNode
+	description: ReactNode
+	/** Grid columns for the direct children. `undefined` means one column. */
+	columns: number | undefined
+	children: ReactNode
+}
+
+export type GridItemRenderProps = {
+	/** Columns this item spans. `undefined` means one. */
+	colSpan: number | undefined
+	children: ReactNode
+}
+
+// ── wizard ───────────────────────────────────────────────────────────────────
+
+export type WizardStep = {
+	index: number
+	/** Already resolved by the adapter (`resolveText(step.title, translate)`) — same rule as `FieldRenderProps.label`. */
+	title: ReactNode
+	/** Already resolved by the adapter — same rule as `FieldRenderProps.description`. */
+	description: ReactNode
+	status: 'complete' | 'current' | 'upcoming'
+	/** Visited and failing validation. Never true for an unvisited step. */
+	invalid: boolean
+	/** Cannot be navigated to right now. */
+	disabled: boolean
+	goTo: () => void
+}
+
+export type WizardRenderProps = {
+	steps: WizardStep[]
+	currentIndex: number
+	canGoBack: boolean
+	canGoNext: boolean
+	isLastStep: boolean
+	/** Validates the current step's fields, advances only if they pass. */
+	goNext: () => void
+	goBack: () => void
+	submitting: boolean
+	/** The current step's fields. */
+	children: ReactNode
 }
 
 // ── form level ───────────────────────────────────────────────────────────────
@@ -156,6 +298,13 @@ export type FormComponents = {
 	SwitchField: (props: SwitchFieldRenderProps) => ReactNode
 	RadioGroupField: (props: RadioGroupFieldRenderProps) => ReactNode
 	SliderField: (props: SliderFieldRenderProps) => ReactNode
+	MultiSelectField: (props: MultiSelectFieldRenderProps) => ReactNode
+	CheckboxGroupField: (props: CheckboxGroupFieldRenderProps) => ReactNode
+	DateField: (props: DateFieldRenderProps) => ReactNode
+	DateRangeField: (props: DateRangeFieldRenderProps) => ReactNode
 	Button: (props: ButtonProps) => ReactNode
 	Form: (props: FormElementProps) => ReactNode
+	Section: (props: SectionRenderProps) => ReactNode
+	GridItem: (props: GridItemRenderProps) => ReactNode
+	Wizard: (props: WizardRenderProps) => ReactNode
 }

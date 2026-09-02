@@ -20,7 +20,7 @@ import {
 } from './docs-options/type-resolver'
 
 /**
- * Guards the data-grid docs against fabricated option names.
+ * Guards the data-grid and form docs against fabricated option names.
  *
  * A documented option is legal only if it is a real key of the type that
  * governs its table, as answered by `ts.TypeChecker`. This is deliberately not
@@ -134,9 +134,11 @@ function checkTable(page: DocPage, table: OptionTable): TableCheck {
 	return { failures, checkedCount }
 }
 
-describe('data-grid docs option names', () => {
-	it('every page under content/docs/data-grid is mapped', () => {
-		// The guard that keeps coverage total. While the map held a subset, an unmapped page was
+describe('docs option names', () => {
+	it('every page in DocPage is mapped', () => {
+		// The guard that keeps coverage total. `DocPage` lists every page under
+		// `content/docs/data-grid/**` plus the mapped `form/` pages, so this asserts each of
+		// them carries a `PAGE_ENTRIES` entry. While the map held a subset, an unmapped page was
 		// checked by nothing at all — which is how `columns/resizing.mdx` documented a `sizing`
 		// option that never existed, and how the whole `editing/**` section documented a
 		// `meta.editType` API that never existed. Adding a page now fails here until it is

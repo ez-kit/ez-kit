@@ -24,28 +24,31 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"build": "tsup",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "200 KB"
+			"limit": "18 KB"
 		}
 	],
 	"dependencies": {
+		"@ez-kit/form-core": "workspace:*",
 		"@ez-kit/form-react": "workspace:*",
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2"
+		"@internationalized/date": "^3.12.1"
 	},
 	"devDependencies": {
 		"@heroui/react": "^3.0.3",
 		"@heroui/styles": "^3.0.3",
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
@@ -54,6 +57,8 @@
 	"peerDependencies": {
 		"@heroui/react": "^3.0.0",
 		"@heroui/styles": "^3.0.0",
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2",
 		"react": ">=18.0.0",
 		"react-dom": ">=18.0.0"
 	}

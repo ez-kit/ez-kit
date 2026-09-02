@@ -1,6 +1,6 @@
 'use client'
 
-import { Form, useForm } from '@ez-kit/form-shadcn'
+import { Form, FormRenderer, useForm } from '@ez-kit/form-shadcn'
 
 import { FormKitProvider } from '@/shared/form/FormKit'
 
@@ -13,5 +13,5 @@ import type { ReactNode } from 'react'
  * embed bundle never pulls in the HeroUI kit, and vice versa.
  */
 export function ShadcnFormKitProvider({ children }: { children: ReactNode }) {
-	return <FormKitProvider kit={{ useForm, Form }}>{children}</FormKitProvider>
+	return <FormKitProvider kit={{ useForm, Form, FormRenderer }}>{children}</FormKitProvider>
 }

@@ -4,7 +4,7 @@ import ts from 'typescript'
 
 /**
  * Resolves documented option names against the *real* TypeScript types of the
- * data-grid packages, using the TypeScript Compiler API.
+ * data-grid and form packages, using the TypeScript Compiler API.
  *
  * Why the Compiler API and not a grep for the identifier: internal TanStack
  * Table options such as `enableSorting`, `enableColumnFilters`,
@@ -22,6 +22,10 @@ export enum TypeModule {
 	Core = '@ez-kit/data-grid-core',
 	/** `@ez-kit/data-grid-react` — React adapter; owns `UseDataGridConfig` and the `React*Config` variants. */
 	React = '@ez-kit/data-grid-react',
+	/** `@ez-kit/form-core` — framework-agnostic form layer; owns the schema node and validation types. */
+	FormCore = '@ez-kit/form-core',
+	/** `@ez-kit/form-react` — React form adapter; owns the kit contract, the consumer field props and the renderer props. */
+	FormReact = '@ez-kit/form-react',
 }
 
 /** A named exported type, plus the type arguments it needs to be instantiated. */
@@ -44,6 +48,19 @@ const PROBE_ROW_TYPE_NAME = 'DocsProbeRow'
 const PROBE_ROW_DECLARATION = `type ${PROBE_ROW_TYPE_NAME} = { id: string }`
 /** Type-argument list for row-generic config types, e.g. `UseDataGridConfig<TRow>`. */
 export const ROW_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}>`
+/**
+ * Type-argument list for the form packages' `<TFormData, TValue>` prop types, e.g.
+ * `BaseFieldProps<TFormData, TValue>`. The value type only narrows `name`, never the key
+ * set, so any concrete scalar answers the same question — `string` is the arbitrary pick.
+ */
+export const FORM_VALUE_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, string>`
+/**
+ * Type-argument list for the form types that mirror TanStack's twelve-parameter validator
+ * list verbatim (`KitFormApi`, `FormRendererUncontrolledProps`). Every validator slot is
+ * `undefined` and the submit meta `never` — the least specific instantiation, which is what
+ * the overloads collapse to and which leaves the key set untouched.
+ */
+export const FORM_API_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, ${new Array(10).fill('undefined').join(', ')}, never>`
 export const PATH_SEPARATOR = '.'
 /** How many suggestions a "did you mean" hint lists. */
 const SUGGESTION_LIMIT = 5

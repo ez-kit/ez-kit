@@ -28,6 +28,16 @@ describe('formatFieldErrors', () => {
 	it('stringifies an error shape it does not recognise', () => {
 		expect(formatFieldErrors([42])).toEqual(['42'])
 	})
+
+	it('deduplicates two entries that normalise to the same display string', () => {
+		expect(formatFieldErrors([{ message: 'This field is required' }, 'This field is required'])).toEqual([
+			'This field is required',
+		])
+	})
+
+	it('keeps genuinely different messages, in their original order', () => {
+		expect(formatFieldErrors(['Required', 'Too short', 'Required'])).toEqual(['Required', 'Too short'])
+	})
 })
 
 describe('hasFieldErrors', () => {

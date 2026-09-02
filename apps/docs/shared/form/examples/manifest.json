@@ -32,11 +32,251 @@
 		"exportName": "NativeApiExample"
 	},
 	{
+		"id": "form-multi-value",
+		"label": "Multi-value: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/multi-value.tsx",
+		"exportName": "MultiValueExample"
+	},
+	{
+		"id": "form-dates",
+		"label": "Dates: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/dates.tsx",
+		"exportName": "DatesExample"
+	},
+	{
+		"id": "form-schema-basic",
+		"label": "Schema: basic",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/schema-basic.tsx",
+		"exportName": "SchemaBasicExample"
+	},
+	{
+		"id": "form-schema-conditional",
+		"label": "Schema: conditions",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/schema-conditional.tsx",
+		"exportName": "SchemaConditionalExample"
+	},
+	{
+		"id": "form-schema-from-json",
+		"label": "Schema: from a JSON API",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/schema-from-json.tsx",
+		"exportName": "SchemaFromJsonExample"
+	},
+	{
 		"id": "form-dialog",
 		"label": "In a dialog",
 		"group": "form",
 		"groupLabel": "Form",
 		"sourceFile": "components/dialog.tsx",
 		"exportName": "DialogExample"
+	},
+	{
+		"id": "form-numeric-options",
+		"label": "Numeric options: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/numeric-options.tsx",
+		"exportName": "NumericOptionsExample"
+	},
+	{
+		"id": "form-async-options",
+		"label": "Async options",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/async-options.tsx",
+		"exportName": "AsyncOptionsExample"
+	},
+	{
+		"id": "form-option-sources",
+		"label": "Option sources",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/option-sources.tsx",
+		"exportName": "OptionSourcesExample"
+	},
+	{
+		"id": "form-searchable-select",
+		"label": "Searchable select",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/searchable-select.tsx",
+		"exportName": "SearchableSelectExample"
+	},
+	{
+		"id": "form-searchable-multiselect",
+		"label": "Searchable multiselect",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/searchable-multiselect.tsx",
+		"exportName": "SearchableMultiSelectExample"
+	},
+	{
+		"id": "form-creatable",
+		"label": "Creatable select",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/creatable.tsx",
+		"exportName": "CreatableExample"
+	},
+	{
+		"id": "form-async-options-schema",
+		"label": "Async options: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/async-options-schema.tsx",
+		"exportName": "AsyncOptionsSchemaExample"
+	},
+	{
+		"id": "form-composition",
+		"label": "Form composition",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/composition.tsx",
+		"exportName": "CompositionExample"
+	},
+	{
+		"id": "form-creatable-schema",
+		"label": "Creatable select: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/creatable-schema.tsx",
+		"exportName": "CreatableSchemaExample"
+	},
+	{
+		"id": "form-dates-jsx",
+		"label": "Dates: TSX",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/dates-jsx.tsx",
+		"exportName": "DatesJsxExample"
+	},
+	{
+		"id": "form-dialog-schema",
+		"label": "In a dialog: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/dialog-schema.tsx",
+		"exportName": "DialogSchemaExample"
+	},
+	{
+		"id": "form-fields-schema",
+		"label": "All fields: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/fields-schema.tsx",
+		"exportName": "FieldsSchemaExample"
+	},
+	{
+		"id": "form-multi-value-jsx",
+		"label": "Multi-value: TSX",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/multi-value-jsx.tsx",
+		"exportName": "MultiValueJsxExample"
+	},
+	{
+		"id": "form-numeric-options-jsx",
+		"label": "Numeric options: TSX",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/numeric-options-jsx.tsx",
+		"exportName": "NumericOptionsJsxExample"
+	},
+	{
+		"id": "form-option-sources-schema",
+		"label": "Option sources: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/option-sources-schema.tsx",
+		"exportName": "OptionSourcesSchemaExample"
+	},
+	{
+		"id": "form-reactivity",
+		"label": "Reactivity",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/reactivity.tsx",
+		"exportName": "ReactivityExample"
+	},
+	{
+		"id": "form-searchable-multiselect-schema",
+		"label": "Searchable multiselect: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/searchable-multiselect-schema.tsx",
+		"exportName": "SearchableMultiSelectSchemaExample"
+	},
+	{
+		"id": "form-searchable-select-schema",
+		"label": "Searchable select: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/searchable-select-schema.tsx",
+		"exportName": "SearchableSelectSchemaExample"
+	},
+	{
+		"id": "form-showcase-schema",
+		"label": "Complete form: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/showcase-schema.tsx",
+		"exportName": "ShowcaseSchemaExample"
+	},
+	{
+		"id": "form-showcase",
+		"label": "Complete form",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/showcase.tsx",
+		"exportName": "ShowcaseExample"
+	},
+	{
+		"id": "form-submit-schema",
+		"label": "Submission handling: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/submit-schema.tsx",
+		"exportName": "SubmitSchemaExample"
+	},
+	{
+		"id": "form-submit",
+		"label": "Submission handling",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/submit.tsx",
+		"exportName": "SubmitExample"
+	},
+	{
+		"id": "form-validation-schema",
+		"label": "Validation: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/validation-schema.tsx",
+		"exportName": "ValidationSchemaExample"
+	},
+	{
+		"id": "form-wizard-jsx",
+		"label": "Wizard: hand-rolled in JSX",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/wizard-jsx.tsx",
+		"exportName": "WizardJsxExample"
+	},
+	{
+		"id": "form-wizard",
+		"label": "Wizard: document",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/wizard.tsx",
+		"exportName": "WizardExample"
 	}
 ]

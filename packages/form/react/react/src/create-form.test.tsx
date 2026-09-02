@@ -1,8 +1,8 @@
+import { TextInputType } from '@ez-kit/form-core'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { TextInputType } from './contract'
 import { createForm } from './create-form'
 import { testComponents } from './test-kit'
 
