@@ -9,6 +9,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/async-options.tsx': () => import('./components/async-options'),
 	'components/basic.tsx': () => import('./components/basic'),
 	'components/dialog.tsx': () => import('./components/dialog'),
+	'components/creatable.tsx': () => import('./components/creatable'),
 	'components/dates.tsx': () => import('./components/dates'),
 	'components/fields.tsx': () => import('./components/fields'),
 	'components/multi-value.tsx': () => import('./components/multi-value'),

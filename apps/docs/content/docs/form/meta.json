@@ -10,6 +10,7 @@
 		"fields",
 		"option-sources",
 		"searchable-select",
+		"creatable",
 		"validation",
 		"schema",
 		"native-api",

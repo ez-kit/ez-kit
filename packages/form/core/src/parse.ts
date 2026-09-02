@@ -472,6 +472,53 @@ function assertSearchable(node: FormNode<unknown, string>, path: string): void {
 }
 
 /**
+ * `creatable` rides on `searchable`, and only on a string-valued list.
+ *
+ * Both restrictions are the schema's own, not a kit's. Creating a value means typing one, and
+ * `searchable` is the only thing that gives the field a text input — a `creatable` plain
+ * select would draw a listbox with nowhere to type. And the typed text is a **string**: a
+ * numeric list would have to invent an id no backend issued, so a document whose `options`
+ * are numeric is rejected here exactly as `CreatableProvision` rejects it in TypeScript. A
+ * numeric `optionsFrom` source cannot be checked from here and stays the author's error.
+ */
+function assertCreatable(node: FormNode<unknown, string>, path: string): void {
+	const record = node as unknown as UnknownRecord
+	const value = record.creatable
+	if (value === undefined) {
+		if (record.createLabel !== undefined) {
+			throw new FormSchemaError('"createLabel" is only meaningful together with "creatable": true', path)
+		}
+		return
+	}
+
+	if (node.type !== SELECT_TYPE && node.type !== MULTI_SELECT_TYPE) {
+		throw new FormSchemaError(
+			`"creatable" is only supported on "select" and "multiselect", not on "${node.type}", ` +
+				'which renders every option inline',
+			path,
+		)
+	}
+	if (typeof value !== 'boolean') {
+		throw new FormSchemaError(`"creatable" must be a boolean, got ${describeValue(value)}`, path)
+	}
+	if (value && record.searchable !== true) {
+		throw new FormSchemaError(
+			'"creatable" requires "searchable": true — a value is created by typing it, and only a ' +
+				'searchable field has somewhere to type',
+			path,
+		)
+	}
+	if (value && declaredOptionValueType(node) === 'number') {
+		throw new FormSchemaError(
+			'"creatable" is not supported on a numeric option list: typed text is a string, and a ' +
+				'numeric id can only come from the server. Use a string-valued list, or create through ' +
+				"the option source's `onCreate`",
+			path,
+		)
+	}
+}
+
+/**
  * A multi-value field's `defaultValue`: a list of option values, never a bare scalar.
  *
  * `[]` is legal and means "nothing selected" — that is the shape the field always holds, so a
@@ -580,6 +627,7 @@ function validateNode(
 		assertUniqueName((node as unknown as UnknownRecord).name, path, seenNames)
 		assertOptions(node, path, options)
 		assertSearchable(node, path)
+		assertCreatable(node, path)
 		assertDateValues(node, path)
 		assertMultiValueDefault(node, path)
 		assertKnownRule(node.validate, path, options)

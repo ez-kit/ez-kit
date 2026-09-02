@@ -265,6 +265,8 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 					{...(node.searchable !== undefined && { searchable: node.searchable })}
+					{...(node.creatable !== undefined && { creatable: node.creatable })}
+					{...(node.createLabel !== undefined && { createLabel: node.createLabel })}
 				/>
 			)
 		case FormFieldType.Checkbox:
@@ -309,6 +311,8 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 					{...(node.required !== undefined && { required: node.required })}
 					{...(node.placeholder !== undefined && { placeholder: node.placeholder })}
 					{...(node.searchable !== undefined && { searchable: node.searchable })}
+					{...(node.creatable !== undefined && { creatable: node.creatable })}
+					{...(node.createLabel !== undefined && { createLabel: node.createLabel })}
 				/>
 			)
 		case FormFieldType.CheckboxGroup:

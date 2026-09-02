@@ -89,8 +89,32 @@ type OptionsProvision<TValue> =
 	| { options: readonly LocalizedSelectOption<TValue>[]; optionsFrom?: never }
 	| { options?: never; optionsFrom: string | OptionsSource }
 
+/**
+ * Whether the field accepts a value its option list does not contain — the text the user
+ * typed, committed as-is.
+ *
+ * **String-valued fields only**, which is what the conditional enforces: typed text is a
+ * string, and a numeric-valued field would have to invent an id the server never issued. A
+ * domain with real ids creates through the source's `onCreate` instead, which returns the id
+ * the backend assigned. `creatable: true` on a numeric `select` is a compile error, and
+ * `parseFormSchema` rejects the same thing in a document whose `options` are numeric.
+ *
+ * Requires `searchable`. Creating means typing, and `searchable` is what gives the field a
+ * text input at all — without it a kit renders a plain listbox with no way to enter anything.
+ *
+ * The offer is a **row in the list**, not a silent commit on blur: with `creatable` on, a
+ * query matching no option puts one extra option at the end of the list, and picking it is
+ * what writes the text into form state. `createLabel` is that row's caption; it defaults to
+ * `Add "<query>"`, and in its `{ key, params }` form the typed text is merged in under
+ * `query`, so a translation may place it (`'Добавить «{{query}}»'`).
+ */
+type CreatableProvision<TValue> = [TValue] extends [string]
+	? { creatable?: boolean; createLabel?: LocalizedText }
+	: { creatable?: false; createLabel?: never }
+
 type SelectMember<TValues, TValue> = FieldCommon<TValues> &
-	OptionsProvision<TValue> & {
+	OptionsProvision<TValue> &
+	CreatableProvision<TValue> & {
 		type: FormFieldType.Select
 		name: DeepKeysOfType<TValues, TValue>
 		defaultValue?: TValue
@@ -116,7 +140,8 @@ type SelectMember<TValues, TValue> = FieldCommon<TValues> &
 	}
 
 type MultiSelectMember<TValues, TValue> = FieldCommon<TValues> &
-	OptionsProvision<TValue> & {
+	OptionsProvision<TValue> &
+	CreatableProvision<TValue> & {
 		type: FormFieldType.MultiSelect
 		name: DeepKeysOfType<TValues, TValue[]>
 		defaultValue?: readonly TValue[]

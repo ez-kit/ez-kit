@@ -123,7 +123,7 @@ function SearchableCities({ defaults }: { defaults: Values }): ReactNode {
 /** Nothing selected. Typed, so the empty list does not infer as `never[]`. */
 const EMPTY_DEFAULTS: Values = { country: 'de', cities: [], city: '' }
 
-/** A searchable multiselect wired to a static list — legal TSX, a runtime error by design. */
+/** A searchable multiselect wired to a static list: filtered client-side, no source involved. */
 function StaticSearchableCities(): ReactNode {
 	const form = useForm({ defaultValues: EMPTY_DEFAULTS })
 	return (
@@ -132,7 +132,10 @@ function StaticSearchableCities(): ReactNode {
 				name='cities'
 				label='Cities'
 				searchable
-				options={[{ label: 'Berlin', value: 'ber' }]}
+				options={[
+					{ label: 'Berlin', value: 'ber' },
+					{ label: 'Bremen', value: 'bre' },
+				]}
 			/>
 		</Form>
 	)
@@ -320,13 +323,12 @@ describe('searchable multiselect', () => {
 		error.mockRestore()
 	})
 
-	it('throws, naming the field, when a searchable multiselect has a static options list', () => {
-		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+	it('searches a static options list client-side, with no source at all', async () => {
+		const user = userEvent.setup()
+		render(<StaticSearchableCities />)
 
-		expect(() => {
-			render(<StaticSearchableCities />)
-		}).toThrow(/Field "cities" is `searchable`, which requires an `optionsFrom` source/)
+		await user.type(searchInput(), 'brem')
 
-		error.mockRestore()
+		expect(optionLabels('cities')).toEqual(['Bremen'])
 	})
 })

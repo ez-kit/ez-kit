@@ -149,7 +149,7 @@ The example above **starts with two cities already chosen**. Nothing has been ty
 `searchable` is legal on `select` and `multiselect` — the two kinds that draw one control standing for the selection.
 
 - **`radiogroup` and `checkboxgroup`** render every option inline. There is no trigger to type into and no page to narrow, so the flag is meaningless there and always will be. `parseFormSchema` rejects it.
-- A `searchable` field with a **static `options` list** throws: a list already in memory has nothing to search against. Client-side filtering of a written-out list is a different feature.
+- A `searchable` field with a **static `options` list** is filtered in the renderer, by a case-insensitive substring of the label and with no configuration. Everything else on this page — the second hook, the merged-in selection, the cleared query — is about a _source_, which is what you need the moment matching has to be anything more particular than that. See [Creatable select](/docs/form/creatable) for the static case.
 
 ## What still holds
 

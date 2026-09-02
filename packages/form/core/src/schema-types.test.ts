@@ -172,3 +172,37 @@ test('options and optionsFrom are mutually exclusive, and one of them is require
 
 	expectTypeOf(define).toBeFunction()
 })
+
+test('creatable is a string-list feature, rejected on a numeric one', () => {
+	type Tagged = { tag: string; priority: number }
+	const define = defineFormSchema<Tagged>()
+
+	define({
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.Select,
+				name: 'tag',
+				searchable: true,
+				creatable: true,
+				createLabel: { key: 'tags.create' },
+				options: [{ label: 'Bug', value: 'bug' }],
+			},
+		],
+	})
+
+	define({
+		version: 1,
+		children: [
+			{
+				type: FormFieldType.Select,
+				name: 'priority',
+				// @ts-expect-error typed text is a string; a numeric field would have to invent an id
+				creatable: true,
+				options: [{ label: 'High', value: 1 }],
+			},
+		],
+	})
+
+	expectTypeOf(define).toBeFunction()
+})

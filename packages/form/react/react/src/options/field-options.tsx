@@ -1,6 +1,6 @@
 'use client'
 
-import { getValueAtPath, resolveSelectOptions } from '@ez-kit/form-core'
+import { getValueAtPath, resolveSelectOptions, resolveText } from '@ez-kit/form-core'
 import { useSelector } from '@tanstack/react-form'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -11,7 +11,7 @@ import { isSearchableSource } from './source-types'
 import type { SearchableOptionSource, SimpleOptionSource } from './source-types'
 import type { BindableForm, FieldValue } from '../bindable-form'
 import type { ConditionSubscribableForm } from '../schema/use-condition'
-import type { OptionValue, SelectOption } from '@ez-kit/form-core'
+import type { LocalizedText, OptionValue, SelectOption, Translate } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -77,6 +77,14 @@ export type FieldOptionsProps = {
 	 * pass it; `parseFormSchema` rejects it on the two inline kinds.
 	 */
 	searchable?: boolean | undefined
+	/**
+	 * Offer the typed text as an extra option when it matches nothing. Requires `searchable`;
+	 * `parseFormSchema` rejects the pair in a document and {@link FieldOptions} throws for the
+	 * JSX path, which has no parser in front of it.
+	 */
+	creatable?: boolean | undefined
+	/** Caption for that extra option. Defaults to `Add "<query>"`; see {@link createRowLabel}. */
+	createLabel?: LocalizedText | undefined
 	children: (resolved: ResolvedFieldOptions) => ReactNode
 }
 
@@ -96,21 +104,38 @@ export function FieldOptions({
 	name,
 	clearedValue,
 	searchable,
+	creatable,
+	createLabel,
 	children,
 }: FieldOptionsProps): ReactNode {
 	const { options, loading, optionsFrom, optionsParams } = binding
+
+	// Checked before either branch, and before any hook, because it is true of both: a value is
+	// created by typing it, and only a searchable field has an input to type into. A document
+	// is stopped earlier still, by `parseFormSchema`; this covers the JSX path.
+	if (creatable === true && searchable !== true) {
+		throw new Error(
+			`Field "${name}" is \`creatable\`, which requires \`searchable\`: a value is created by typing it, ` +
+				'and only a searchable field has somewhere to type.',
+		)
+	}
 
 	if (optionsFrom === undefined) {
 		if (options === undefined) {
 			throw new Error(`Field "${name}" needs either an \`options\` list or an \`optionsFrom\` source name.`)
 		}
-		// A static list has nothing to search *against*: the query would reach no one, and the
-		// field would draw a search box that silently did nothing. Client-side filtering of a
-		// list already in memory is a different feature; this flag is about a source that
-		// returns one page at a time.
 		if (searchable === true) {
-			throw new Error(
-				`Field "${name}" is \`searchable\`, which requires an \`optionsFrom\` source; a static \`options\` list has nothing to search.`,
+			return (
+				<StaticSearchableOptions
+					options={options}
+					loading={loading ?? false}
+					form={form}
+					name={name}
+					creatable={creatable === true}
+					createLabel={createLabel}
+				>
+					{children}
+				</StaticSearchableOptions>
 			)
 		}
 		return children({ options, loading: loading ?? false, search: undefined })
@@ -127,10 +152,59 @@ export function FieldOptions({
 			name={name}
 			clearedValue={clearedValue}
 			searchable={searchable === true}
+			creatable={creatable === true}
+			createLabel={createLabel}
 		>
 			{children}
 		</SourcedFieldOptions>
 	)
+}
+
+/**
+ * A searchable field whose options are a list already in memory.
+ *
+ * This is the branch that used to throw. It filters client-side, by **one fixed rule** — a
+ * case-insensitive substring of the label — and takes no configuration at all. That cap is
+ * deliberate: "just filter it" is where `createFilterOptions({ ignoreAccents, ignoreCase,
+ * matchFrom, limit, stringify, trim })` comes from, and an author who needs any of those
+ * writes an option source, where the filter is theirs and this package still owns none of it.
+ *
+ * No parameters means nothing to clear on, so unlike the sourced branches there is no
+ * `useClearOnParamsChange` here — the list cannot change out from under the value.
+ */
+function StaticSearchableOptions({
+	options,
+	loading,
+	form,
+	name,
+	creatable,
+	createLabel,
+	children,
+}: {
+	options: readonly SelectOption<OptionValue>[]
+	loading: boolean
+	form: BindableForm
+	name: string
+	creatable: boolean
+	createLabel: LocalizedText | undefined
+	children: (resolved: ResolvedFieldOptions) => ReactNode
+}): ReactNode {
+	const translate = useSchemaTranslate()
+	const [query, setQuery] = useState('')
+	const values = useSelectedValues(form, name)
+
+	// The filter must not hide what is already selected. A selected option dropped from the
+	// list loses its label — a multiselect's chip would read as a raw id and a combobox's input
+	// would go blank — so it is merged back in exactly as the sourced branch merges in what
+	// `useSelectedOptions` answered. Without this, `withCreated` would then mistake a real
+	// option for a value it had to label itself.
+	const visible = useMemo(() => {
+		const shown = mergeOptions(filterByLabel(options, query), selectedFrom(options, values))
+		return withCreated(shown, { query, values, creatable, createLabel, translate })
+	}, [options, query, values, creatable, createLabel, translate])
+	const search = useMemo(() => ({ query, onQueryChange: setQuery }), [query])
+
+	return children({ options: visible, loading, search })
 }
 
 type SourcedFieldOptionsProps = {
@@ -140,6 +214,8 @@ type SourcedFieldOptionsProps = {
 	name: string
 	clearedValue: FieldValue
 	searchable: boolean
+	creatable: boolean
+	createLabel: LocalizedText | undefined
 	children: (resolved: ResolvedFieldOptions) => ReactNode
 }
 
@@ -150,7 +226,13 @@ type SourcedFieldOptionsProps = {
  * lookup — a hook called only when the lookup succeeded would change the hook count between
  * renders if a registry ever gained the key late.
  */
-function SourcedFieldOptions({ source, searchable, ...rest }: SourcedFieldOptionsProps): ReactNode {
+function SourcedFieldOptions({
+	source,
+	searchable,
+	creatable,
+	createLabel,
+	...rest
+}: SourcedFieldOptionsProps): ReactNode {
 	const registry = useOptionSourceRegistry()
 	const optionSource = registry[source]
 	if (optionSource === undefined) {
@@ -174,6 +256,8 @@ function SourcedFieldOptions({ source, searchable, ...rest }: SourcedFieldOption
 		return (
 			<SearchableSourcedOptions
 				source={optionSource}
+				creatable={creatable}
+				createLabel={createLabel}
 				{...rest}
 			/>
 		)
@@ -249,8 +333,14 @@ function SearchableSourcedOptions({
 	form,
 	name,
 	clearedValue,
+	creatable,
+	createLabel,
 	children,
-}: SourcedBodyProps & { source: SearchableOptionSource }): ReactNode {
+}: SourcedBodyProps & {
+	source: SearchableOptionSource
+	creatable: boolean
+	createLabel: LocalizedText | undefined
+}): ReactNode {
 	const translate = useSchemaTranslate()
 	const key = paramsKey(params)
 	const stableParams = useStableParams(params, key)
@@ -269,8 +359,14 @@ function SearchableSourcedOptions({
 
 	const options = useMemo(
 		() =>
-			mergeOptions(resolveSelectOptions(listed.options, translate), resolveSelectOptions(selected.options, translate)),
-		[listed.options, selected.options, translate],
+			withCreated(
+				mergeOptions(
+					resolveSelectOptions(listed.options, translate),
+					resolveSelectOptions(selected.options, translate),
+				),
+				{ query, values, creatable, createLabel, translate },
+			),
+		[listed.options, selected.options, translate, query, values, creatable, createLabel],
 	)
 
 	const search = useMemo(() => ({ query, onQueryChange: setQuery }), [query])
@@ -279,7 +375,7 @@ function SearchableSourcedOptions({
 }
 
 /** Everything both sourced bodies take, minus the parts the dispatcher above consumed. */
-type SourcedBodyProps = Omit<SourcedFieldOptionsProps, 'source' | 'searchable'>
+type SourcedBodyProps = Omit<SourcedFieldOptionsProps, 'source' | 'searchable' | 'creatable' | 'createLabel'>
 
 /**
  * The parameter object handed to a source, kept referentially stable across renders.
@@ -309,6 +405,107 @@ function useClearOnParamsChange(
 		form.setFieldValue(name, clearedValue)
 		alsoReset?.()
 	}, [key, form, name, clearedValue, alsoReset])
+}
+
+/**
+ * The options behind the values currently in form state — the static list's answer to the
+ * question `useSelectedOptions` answers for a source.
+ */
+function selectedFrom(
+	options: readonly SelectOption<OptionValue>[],
+	values: readonly OptionValue[],
+): readonly SelectOption<OptionValue>[] {
+	if (values.length === 0) return []
+	const wanted = new Set(values.map((value) => String(value)))
+	return options.filter((option) => wanted.has(String(option.value)))
+}
+
+/** The default caption of the creation row, when no `createLabel` was given. */
+function defaultCreateLabel(query: string): string {
+	return `Add "${query}"`
+}
+
+/**
+ * The creation row's caption.
+ *
+ * A plain-string `createLabel` is used verbatim — a static "Add a new tag" reads fine and
+ * needs nothing interpolated. The `{ key, params }` form gets the typed text merged in under
+ * `query`, so a translation may place it wherever its language wants it.
+ */
+function createRowLabel(query: string, label: LocalizedText | undefined, translate: Translate | undefined): string {
+	if (label === undefined) return defaultCreateLabel(query)
+	if (typeof label === 'string') return label
+	return resolveText({ key: label.key, params: { ...label.params, query } }, translate)
+}
+
+/**
+ * The one filter this package owns: a case-insensitive substring of the label.
+ *
+ * Only the static branch calls it. A sourced list arrives already narrowed — by the source,
+ * server-side — and filtering it again here would hide rows the search deliberately returned,
+ * which is the same mistake the kit contract tells kits not to make.
+ */
+function filterByLabel(
+	options: readonly SelectOption<OptionValue>[],
+	query: string,
+): readonly SelectOption<OptionValue>[] {
+	const needle = query.trim().toLowerCase()
+	if (needle === '') return options
+	return options.filter((option) => option.label.toLowerCase().includes(needle))
+}
+
+type CreatedOptionsInput = {
+	query: string
+	values: readonly OptionValue[]
+	creatable: boolean
+	createLabel: LocalizedText | undefined
+	translate: Translate | undefined
+}
+
+/**
+ * The two extra rows a `creatable` field needs, appended to the list the kit will see.
+ *
+ * **Already-created values first.** A value this field created earlier is on no list — not the
+ * static one, not a page of search results, not `useSelectedOptions`, which asks a server about
+ * an id the server never issued. Left unlabelled it would break differently in each kit: the
+ * heroui combobox leaves `inputValue` to React Aria, which draws nothing for a selected key
+ * outside the collection, and a multiselect's chips would read blank. So every current value
+ * the list cannot label is re-added as an option labelling itself — which, the value being the
+ * text the user typed, is exactly right.
+ *
+ * **Then the creation row**, last, where react-select and react-admin both put it. It appears
+ * only while the query matches nothing: an existing value or label makes it a duplicate, and
+ * picking the real option is what the user meant anyway. The comparison is case-insensitive on
+ * the label and exact on the value, mirroring react-select's `isValidNewOption` default.
+ *
+ * Selecting the row hands the kit a value the list contains, so `fromKitValue` resolves it
+ * like any other and no kit learns the mode exists.
+ */
+function withCreated(
+	options: readonly SelectOption<OptionValue>[],
+	{ query, values, creatable, createLabel, translate }: CreatedOptionsInput,
+): readonly SelectOption<OptionValue>[] {
+	if (!creatable) return options
+
+	const seen = new Set(options.map((option) => String(option.value)))
+	const created: SelectOption<OptionValue>[] = []
+	for (const value of values) {
+		if (typeof value !== 'string' || seen.has(value)) continue
+		seen.add(value)
+		created.push({ value, label: value })
+	}
+
+	const trimmed = query.trim()
+	const isNew =
+		trimmed !== '' &&
+		!seen.has(trimmed) &&
+		!options.some((option) => option.label.toLowerCase() === trimmed.toLowerCase())
+	const offer: SelectOption<OptionValue>[] = isNew
+		? [{ value: trimmed, label: createRowLabel(trimmed, createLabel, translate) }]
+		: []
+
+	if (created.length === 0 && offer.length === 0) return options
+	return [...options, ...created, ...offer]
 }
 
 /** Nothing selected. A module constant so the array's identity is stable across renders. */

@@ -1,0 +1,101 @@
+---
+title: Creatable select
+description: Let a select or multiselect accept a value its option list does not contain — the text the user typed, offered as one extra row.
+---
+
+# Creatable select
+
+An option list is sometimes a **suggestion**, not a constraint. Tags, skills, labels, "how did you hear about us" — the list covers most answers and the user still needs to give one it never anticipated.
+
+`creatable` on a `searchable` `select` or `multiselect` does that. When the typed text matches no option, one extra row appears at the end of the list offering to add it; picking that row writes the text into form state.
+
+```tsx
+<form.SelectField
+	name='primary'
+	label='Primary tag'
+	searchable
+	creatable
+	options={TAGS}
+/>
+```
+
+```json
+{
+	"type": "select",
+	"name": "primary",
+	"searchable": true,
+	"creatable": true,
+	"options": [{ "label": "Bug", "value": "bug" }]
+}
+```
+
+<KitExample exampleId='form-creatable' />
+
+## Nothing is committed by accident
+
+The created value arrives through a **row you pick**, never through blurring the field or through typing alone. That is deliberate, and it is where react-select's `Creatable` and react-admin's `onCreate` both draw the line: a value that appears because focus moved is a value nobody chose.
+
+Two consequences follow, and both are what you want:
+
+- **A query that matches an existing option offers nothing.** Typing `bug` next to a `Bug` option shows the real option and no offer — a second row carrying the same text under a different value would be a trap. The comparison is case-insensitive on the label and exact on the value.
+- **Whitespace alone offers nothing**, and what is offered is trimmed.
+
+## A created value is a string
+
+`creatable` is legal only on a **string-valued** list. On a numeric one it is a compile error, and `parseFormSchema` rejects a document whose `options` carry numbers.
+
+The reason is not a limitation so much as an honest boundary. Typed text is a string. A numeric-valued field would have to invent an id its backend never issued, and inventing one is exactly the bug that makes a form submit `city: -1` into a foreign key. A domain with real ids has to ask the server for one, which is a round trip this package does not make on your behalf.
+
+So a created value is the text itself:
+
+```ts
+{ primary: 'flaky', tags: ['docs', 'flaky'] }
+```
+
+Your backend distinguishes new from existing the same way it always did — `'flaky'` is not one of its ids. For a string-keyed vocabulary that is precisely the right shape.
+
+## A created value labels itself
+
+Once created, the value is on no list: not the static one, not a page of search results, and not what a source's `useSelectedOptions` can answer, since the server was never told the value exists. The renderer therefore re-adds every current value the list cannot label as an option labelling itself — which, the value being the typed text, reads correctly with no work from you.
+
+This is what keeps a multiselect's chips from going blank, and what keeps a combobox from drawing an empty input over a value it is still holding.
+
+## `createLabel`
+
+The offered row reads `Add "<query>"` by default. `createLabel` replaces it:
+
+```tsx
+<form.MultiSelectField
+	name='tags'
+	searchable
+	creatable
+	createLabel='Add this as a new tag'
+	options={TAGS}
+/>
+```
+
+A plain string is used verbatim. In the `{ key, params }` form the typed text is merged in under `query`, so a translation can place it wherever its language wants:
+
+```json
+{ "createLabel": { "key": "tags.create" } }
+```
+
+```ts
+const translate = (key, params) => (key === 'tags.create' ? `Добавить «${params.query}»` : key)
+```
+
+## Why `searchable` is required
+
+A value is created by typing it, and `searchable` is what gives the field somewhere to type. Without it both kits render a plain listbox — Radix `Select`, HeroUI `Select` — which has no text input at all, so a `creatable` plain select would offer a row nobody could ever summon. `parseFormSchema` rejects the pair, and the JSX path throws naming the field.
+
+That requirement costs less than it used to: **`searchable` no longer needs an option source.** A static `options` list is filtered in the renderer by one fixed rule — a case-insensitive substring of the label — with no configuration at all. If you need prefix matching, accent folding or a result limit, write an option source; the filter is yours there, and this package still owns none of it.
+
+<Callout>
+	The cap is on purpose. "Just filter it" is how MUI ended up with `createFilterOptions({ ignoreAccents, ignoreCase,
+	matchFrom, limit, stringify, trim })`. One rule plus a documented escape hatch beats six knobs.
+</Callout>
+
+## Scope
+
+- `select` and `multiselect` only. `radiogroup` and `checkboxgroup` render every option inline, so there is no trigger to type into — the same reason they reject `searchable`.
+- Neither UI kit was changed for this feature, and neither can tell it is on. The offered row reaches a kit as an ordinary option, and the value it carries resolves through the same lookup every other option's does — so a [custom kit](/docs/form/custom-kit) supports `creatable` the moment it supports `searchable`.

@@ -1,4 +1,4 @@
-import type { DateRangeValue, DeepKeysOfType, SelectOption, TextInputType } from '@ez-kit/form-core'
+import type { DateRangeValue, DeepKeysOfType, LocalizedText, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
 /**
@@ -78,6 +78,26 @@ type OptionsProps<TValue> = {
 	optionsParams?: Record<string, unknown>
 }
 
+/**
+ * Offer the typed text as an extra option when it matches nothing, so a value the list does
+ * not contain can still be chosen — the JSX spelling of the schema's `creatable`.
+ *
+ * Requires `searchable`: a value is created by typing it, and only a searchable field has an
+ * input to type into. That is a runtime throw naming the field, like the `searchable`
+ * requirements themselves are.
+ *
+ * **String-valued lists only**, which is what the conditional does — on the numeric arm the
+ * two keys are `never`, so `creatable` there is a compile error. The typed text is a string,
+ * and a numeric-valued field would have to invent an id no backend issued.
+ *
+ * `createLabel` captions the offered row. It defaults to `Add "<query>"`; a plain string is
+ * used verbatim, and the `{ key, params }` form gets the typed text merged in under `query`
+ * so a translation may place it.
+ */
+type CreatableProps<TValue> = [TValue] extends [string]
+	? { creatable?: boolean; createLabel?: LocalizedText }
+	: { creatable?: false; createLabel?: never }
+
 type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> &
 	OptionsProps<TValue> & {
 		placeholder?: string
@@ -94,7 +114,7 @@ type SelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TValue> 
 		 * `select` and `multiselect` only; the two inline kinds do not have the prop at all.
 		 */
 		searchable?: boolean
-	}
+	} & CreatableProps<TValue>
 
 export type SelectFieldProps<TFormData> =
 	| SelectFieldPropsFor<TFormData, string>
@@ -113,7 +133,7 @@ type MultiSelectFieldPropsFor<TFormData, TValue> = BaseFieldProps<TFormData, TVa
 		 * values to resolve as an **array**, and here it simply receives more than one.
 		 */
 		searchable?: boolean
-	}
+	} & CreatableProps<TValue>
 
 export type MultiSelectFieldProps<TFormData> =
 	| MultiSelectFieldPropsFor<TFormData, string>

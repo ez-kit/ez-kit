@@ -121,7 +121,7 @@ function PlainCity({ defaults }: { defaults: Values }): ReactNode {
 	)
 }
 
-/** A searchable field wired to a static list — legal TSX, a runtime error by design. */
+/** A searchable field wired to a static list: filtered client-side, no source involved. */
 function StaticSearchableCity(): ReactNode {
 	const form = useForm({ defaultValues: { country: 'de', city: '' } })
 	return (
@@ -130,7 +130,11 @@ function StaticSearchableCity(): ReactNode {
 				name='city'
 				label='City'
 				searchable
-				options={[{ label: 'Berlin', value: 'ber' }]}
+				options={[
+					{ label: 'Berlin', value: 'ber' },
+					{ label: 'Bremen', value: 'bre' },
+					{ label: 'Cologne', value: 'cgn' },
+				]}
 			/>
 		</Form>
 	)
@@ -240,13 +244,16 @@ describe('searchable select', () => {
 		error.mockRestore()
 	})
 
-	it('throws, naming the field, when a searchable field has a static options list', () => {
-		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+	it('searches a static options list client-side, with no source at all', async () => {
+		const user = userEvent.setup()
+		render(<StaticSearchableCity />)
 
-		expect(() => {
-			render(<StaticSearchableCity />)
-		}).toThrow(/Field "city" is `searchable`, which requires an `optionsFrom` source/)
+		expect(optionLabels('city')).toEqual(['Berlin', 'Bremen', 'Cologne'])
 
-		error.mockRestore()
+		await user.type(searchInput(), 'bre')
+
+		// Case-insensitive substring of the label — the one rule this package owns. 'Bremen'
+		// matches, and so would 'BRE'; 'Berlin' does not.
+		expect(optionLabels('city')).toEqual(['Bremen'])
 	})
 })

@@ -118,5 +118,13 @@
 		"groupLabel": "Form",
 		"sourceFile": "components/searchable-multiselect.tsx",
 		"exportName": "SearchableMultiSelectExample"
+	},
+	{
+		"id": "form-creatable",
+		"label": "Creatable select",
+		"group": "form",
+		"groupLabel": "Form",
+		"sourceFile": "components/creatable.tsx",
+		"exportName": "CreatableExample"
 	}
 ]

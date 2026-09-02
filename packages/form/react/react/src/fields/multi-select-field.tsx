@@ -16,7 +16,7 @@ export function createMultiSelectField<TFormData>(
 	KitMultiSelectField: FormComponents['MultiSelectField'],
 ): (props: MultiSelectFieldProps<TFormData>) => ReactNode {
 	return function MultiSelectField(props: MultiSelectFieldProps<TFormData>): ReactNode {
-		const { name, label, description, disabled, required, placeholder, searchable } = props
+		const { name, label, description, disabled, required, placeholder, searchable, creatable, createLabel } = props
 
 		// See `select-field.tsx` — the same string↔typed-value bridge, the same
 		// options-above-the-binding layering, and the same `searchable` plumbing, applied to
@@ -29,6 +29,8 @@ export function createMultiSelectField<TFormData>(
 				name={name}
 				clearedValue={CLEARED_LIST}
 				searchable={searchable}
+				creatable={creatable}
+				createLabel={createLabel}
 			>
 				{({ options, loading, search }) => (
 					<form.AppField name={name}>
