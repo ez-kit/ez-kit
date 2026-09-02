@@ -1,13 +1,13 @@
 ---
-title: Searchable select
+title: Searchable select and multiselect
 description: A select or multiselect that queries as the user types — and still shows the labels of values the current results do not contain.
 ---
 
-# Searchable select
+# Searchable select and multiselect
 
-Everything in [Option sources](/docs/form/option-sources) assumes a source returns **the whole list**. That assumption is doing more work than it looks: because the list is complete, the option carrying the value in form state is always on it, so the kit can draw its label by finding the matching entry.
+Everything in [Option sources](/docs/form/select/option-sources) assumes a source returns **the whole list**. That assumption is doing more work than it looks: because the list is complete, the option carrying the value in form state is always on it, so the kit can draw its label by finding the matching entry.
 
-Server-side search breaks that permanently. The source now returns only the **page matching the last query**. Form state holds `city: 4821`, the current results are Lisbon and Porto, and no option carries `4821` — so the control renders blank, forever. It is the transient "the value arrived before its option" case from [`loading`](/docs/form/option-sources) made permanent.
+Server-side search breaks that permanently. The source now returns only the **page matching the last query**. Form state holds `city: 4821`, the current results are Lisbon and Porto, and no option carries `4821` — so the control renders blank, forever. It is the transient "the value arrived before its option" case from [`loading`](/docs/form/select#options-that-arrive-later) made permanent.
 
 Add `searchable` to a `select` — or a `multiselect` — that already names a source:
 
@@ -31,9 +31,17 @@ Add `searchable` to a `select` — or a `multiselect` — that already names a s
 
 There is no new node `type`. The value and its shape are unchanged and only the presentation differs — the same reasoning that kept numeric option values on `select` instead of spawning a second kind.
 
+The flag reads the same on either side, and the source it needs is registered once for both.
+
+### In TSX
+
 <KitExample exampleId='form-searchable-select' />
 
-The example above **starts with a city already chosen**. Nothing has been typed, so the search has returned nothing at all — and the field still reads "Lisbon" rather than `4821` or an empty box. That is the entire feature.
+### The same form as a document
+
+<KitExample exampleId='form-searchable-select-schema' />
+
+Both examples **start with a city already chosen**. Nothing has been typed, so the search has returned nothing at all — and the field still reads "Lisbon" rather than `4821` or an empty box. That is the entire feature.
 
 ## Why a source grows a second hook
 
@@ -136,9 +144,15 @@ function useCitySearch({ params, query }) {
 }
 ```
 
+### In TSX
+
 <KitExample exampleId='form-searchable-multiselect' />
 
-The example above **starts with two cities already chosen**. Nothing has been typed, so the search has returned nothing at all — and both chips read "Lisbon" and "Porto" rather than `4821` and `4825`. That is the whole reason `useSelectedOptions` exists: with a server-side search the current selection is normally off the current page of results, and a chip showing a raw id is exactly the blank-trigger failure of the single-value case, once per value.
+### The same form as a document
+
+<KitExample exampleId='form-searchable-multiselect-schema' />
+
+Both examples **start with two cities already chosen**. Nothing has been typed, so the search has returned nothing at all — and both chips read "Lisbon" and "Porto" rather than `4821` and `4825`. That is the whole reason `useSelectedOptions` exists: with a server-side search the current selection is normally off the current page of results, and a chip showing a raw id is exactly the blank-trigger failure of the single-value case, once per value.
 
 `useSelectedOptions` receives the field's **whole value array** here, where a `select` sends a single-element one. Nothing else differs — the same registry entry serves both fields, even in the same form.
 
@@ -149,7 +163,7 @@ The example above **starts with two cities already chosen**. Nothing has been ty
 `searchable` is legal on `select` and `multiselect` — the two kinds that draw one control standing for the selection.
 
 - **`radiogroup` and `checkboxgroup`** render every option inline. There is no trigger to type into and no page to narrow, so the flag is meaningless there and always will be. `parseFormSchema` rejects it.
-- A `searchable` field with a **static `options` list** is filtered in the renderer, by a case-insensitive substring of the label and with no configuration. Everything else on this page — the second hook, the merged-in selection, the cleared query — is about a _source_, which is what you need the moment matching has to be anything more particular than that. See [Creatable select](/docs/form/creatable) for the static case.
+- A `searchable` field with a **static `options` list** is filtered in the renderer, by a case-insensitive substring of the label and with no configuration. Everything else on this page — the second hook, the merged-in selection, the cleared query — is about a _source_, which is what you need the moment matching has to be anything more particular than that. See [Creatable select](/docs/form/select/creatable) for the static case.
 
 ## What still holds
 

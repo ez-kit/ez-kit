@@ -58,7 +58,7 @@ const optionSources = { cities: useCitiesSource }
 </FormOptionSources>
 ```
 
-A source is a **React hook**, not a promise-returning function. That is deliberate, and it is the reason this package ships **no fetching, no cache and no abort logic at all**. Caching, request deduplication, cancellation, and the "a late response for the previous country must not overwrite the current one" race are precisely what TanStack Query, SWR and RTK Query exist to solve; a promise signature would force a worse reimplementation of all four into this library, sitting next to the one your app already runs. A hook also reports `loading` synchronously, so it feeds the [`loading`](/docs/form/fields#options-that-arrive-later) contract key directly instead of through a state machine of our own.
+A source is a **React hook**, not a promise-returning function. That is deliberate, and it is the reason this package ships **no fetching, no cache and no abort logic at all**. Caching, request deduplication, cancellation, and the "a late response for the previous country must not overwrite the current one" race are precisely what TanStack Query, SWR and RTK Query exist to solve; a promise signature would force a worse reimplementation of all four into this library, sitting next to the one your app already runs. A hook also reports `loading` synchronously, so it feeds the [`loading`](/docs/form/select#options-that-arrive-later) contract key directly instead of through a state machine of our own.
 
 A purely synchronous source is equally valid:
 
@@ -124,7 +124,15 @@ In TSX there is no `dependsOn` at all. You pass the live value:
 
 `dependsOn` exists only because JSON cannot hold a live value.
 
+### In TSX
+
 <KitExample exampleId='form-option-sources' />
+
+### The same form as a document
+
+<KitExample exampleId='form-option-sources-schema' />
+
+The cascade is the one place where the two authoring paths differ in more than spelling: the TSX field is handed the live country value through `optionsParams`, the document names it through `dependsOn`. Both produce the same flat `params` object, and the registry serving them is the same one.
 
 ### The dependent value is cleared
 
@@ -247,4 +255,4 @@ const optionSources = {
 
 ## Server-side search
 
-A source that returns only the page matching a search term is a different contract — the option for the value already in form state is usually not on it. That is [Searchable select](/docs/form/searchable-select), which adds a second hook to a source rather than stretching this one.
+A source that returns only the page matching a search term is a different contract — the option for the value already in form state is usually not on it. That is [Searchable select](/docs/form/select/searchable), which adds a second hook to a source rather than stretching this one.

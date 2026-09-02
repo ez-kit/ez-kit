@@ -58,7 +58,7 @@ A `date` node carries `min`, `max` and `defaultValue` as `YYYY-MM-DD` strings; a
 
 A `select`, `multiselect`, `radiogroup` or `checkboxgroup` node adds `options`: a `{ value, label, disabled? }` list whose `label` is `LocalizedText` like every other label in the format, so a delivered document can name a translation key instead of shipping copy in one language. The renderer resolves them before the kit sees them — a kit only ever receives finished strings.
 
-An option `value` is a **string or a number**, and the node's `name` is checked against it: a `number`-valued path takes numeric options (a `number[]` one for `multiselect` / `checkboxgroup`), a string-valued path string ones. That is what makes a backend-authored document over integer entity ids expressible — the id stays a number all the way into form state and back out of `onSubmit`. One list carries one scalar type; see [Numeric option values](/docs/form/fields#numeric-option-values).
+An option `value` is a **string or a number**, and the node's `name` is checked against it: a `number`-valued path takes numeric options (a `number[]` one for `multiselect` / `checkboxgroup`), a string-valued path string ones. That is what makes a backend-authored document over integer entity ids expressible — the id stays a number all the way into form state and back out of `onSubmit`. One list carries one scalar type; see [Numeric option values](/docs/form/select#numeric-option-values).
 
 A field node adds `name` (the full path from the root of the form values — never affected by which section or step it sits in), its kind-specific options, an optional `defaultValue` and an optional `validate` block. It may also carry `required`, which is the _marker_ the kit renders next to the label — enforcement is `validate.required`, and the two are deliberately separate so a field can be marked without being checked, or checked without being marked.
 
@@ -301,6 +301,8 @@ Keeping that set closed is what preserves the checking on built-in nodes — an 
 
 When the document's **top-level** children are `step` nodes, it is a wizard: the renderer shows one step at a time and asks your kit for the chrome (`Wizard` in the kit contract — neither shadcn nor HeroUI ships a stepper, so each kit draws its own). Steps live in the same tree as everything else, so a step can carry `when` — "skip the company step for an individual" is a first-class case.
 
+<KitExample exampleId='form-wizard' />
+
 A step's `title` and `description` are resolved by the renderer before the kit sees them — `WizardStep` types both as `ReactNode`, so a kit never has to know what a translation key is. Mixing `step` nodes with non-`step` siblings at the same level throws, in the parser and at render time alike: the loose nodes would otherwise be silently dropped.
 
 Four behaviours the renderer settles so no kit has to:
@@ -343,7 +345,7 @@ The parser is the trust boundary. It rejects, throwing `FormSchemaError` with th
 - a registry key colliding with a reserved node type;
 - a malformed rule, a `./` field reference, or a **function** condition — which cannot survive `JSON.parse` anyway, but a hand-built object must still be told it is not a serialisable document;
 - a `LocalizedText` that is neither a string nor `{ key }`, or a translation key with no `translate` registered;
-- an options-bearing node carrying neither `options` nor [`optionsFrom`](/docs/form/option-sources) — or both — an option missing its `value` or `label`, an option `value` that is neither a string nor a number, or one list mixing the two;
+- an options-bearing node carrying neither `options` nor [`optionsFrom`](/docs/form/select/option-sources) — or both — an option missing its `value` or `label`, an option `value` that is neither a string nor a number, or one list mixing the two;
 - an `optionsFrom` whose `dependsOn` names a relative (`./`) field reference, or whose `params` carry something `JSON.stringify` would not survive (a function, `undefined`, `NaN`, a `Date`);
 - a `multiselect` / `checkboxgroup` `defaultValue` that is not an array of option values, or whose entries disagree with the option value type;
 - a date `min` / `max` / `defaultValue` that is not a real `YYYY-MM-DD` day, or a `daterange` default missing an end;

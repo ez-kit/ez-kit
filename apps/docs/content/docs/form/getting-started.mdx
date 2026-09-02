@@ -27,7 +27,7 @@ file you already have so Tailwind v4 generates the kit's classes, since it does 
 @source '../node_modules/@ez-kit/form-heroui/dist/**/*.js';
 ```
 
-Full per-kit details — Tailwind setup, theming, peer dependencies — live in [Installation](./form/installation/shadcn).
+Full per-kit details — Tailwind setup, theming, peer dependencies — live in [Installation](/docs/form/installation/shadcn).
 
 ## 2. Render a form
 
@@ -107,7 +107,15 @@ The submit button sits in the footer and is still a native `type='submit'` insid
 	instance.
 </Callout>
 
+### In TSX
+
 <KitExample exampleId='form-dialog' />
+
+### The same form as a document
+
+`<FormRenderer>` calls `useForm` itself, so the lifetime argument above holds unchanged. The one arrangement that does not carry over is the split body/footer: the `submit` node is part of the document and renders where the document puts it, so the renderer goes in the dialog's body and only the dismiss button stays in the footer.
+
+<KitExample exampleId='form-dialog-schema' />
 
 ## Controlled: when the instance is needed outside
 
@@ -134,7 +142,15 @@ The two modes are mutually exclusive — passing `form` together with `defaultVa
 
 ## The whole loop, live
 
+### In TSX
+
 <KitExample exampleId='form-basic' />
+
+### The same form as a document
+
+The same form described as data and handed to `<FormRenderer>` — the second entry point, covered in [Config-driven forms](/docs/form/schema).
+
+<KitExample exampleId='form-schema-basic' />
 
 ## Type safety
 
@@ -181,11 +197,12 @@ A single `<form.TextField name='email' label='Email' description='Work address' 
 </div>
 ```
 
-The `data-*` attributes are the styling hooks; the visible elements all come from your kit. See [Fields](./form/fields) for the full prop reference.
+The `data-*` attributes are the styling hooks; the visible elements all come from your kit. See [Fields](/docs/form/fields) for the full prop reference.
 
 ## Next steps
 
-- [Fields](./form/fields) — the eight base fields and their props.
-- [Validation](./form/validation) — zod / valibot / arktype, straight through.
-- [Native API](./form/native-api) — everything TanStack Form gives you, still available.
-- [Custom kit](./form/custom-kit) — bind your own components.
+- [Basic concepts](/docs/form/basic-concepts) — the layering, the instance, the two entry points.
+- [Fields](/docs/form/fields) — the twelve base fields and their props.
+- [Validation](/docs/form/validation) — zod / valibot / arktype, straight through.
+- [Submission](/docs/form/submission) — submit state, server errors, async initial values.
+- [Examples](/docs/form/examples) — a full form, a wizard, cascading selects, a dialog.

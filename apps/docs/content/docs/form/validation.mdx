@@ -31,9 +31,38 @@ const form = useForm({
 
 Each issue lands on the field its path points at, and that field renders it:
 
+### In TSX
+
 <KitExample exampleId='form-validation' />
 
-Note the submit button: it is subscribed to `canSubmit`, so it stays disabled until the schema is satisfied.
+Note the submit button: it is subscribed to `canSubmit`. A pristine form is submittable — that is how a user finds out a required field is empty — but from the first keystroke onwards the button is disabled for as long as the schema is unsatisfied.
+
+### The same form as a document
+
+<KitExample exampleId='form-validation-schema' />
+
+The two forms behave the same way, but only one of them contains code. That difference is the whole subject of the next section.
+
+## Named rules: validation without JavaScript
+
+A [`FormSchema`](/docs/form/schema) may arrive as JSON, from a backend or a builder, and JSON holds no functions. So the document does not carry validators — it carries **constraints with names**, and `buildValidator` compiles them into a single standard-schema validator that TanStack consumes exactly like your zod one.
+
+Seven constraints make up a field's `validate` block: `required`, the bounds `min` and `max`, the length bounds `minLength` and `maxLength`, a `format` of `'email'`, `'url'` or `'tel'`, and a `rule` naming a registered function — alongside `messages`, which overrides the wording per constraint. They run in that order and stop at the first failure, so a field shows one message rather than a pile. [Config-driven forms](/docs/form/schema#validation) documents each of them; what matters here is what the set does **not** contain.
+
+There is no `pattern`. A regular expression arriving from a source you do not control is a ReDoS hazard, and a hung tab is a worse outcome than a missing client-side check. There is no predicate either — no `refine`, no cross-field callback, no checksum — because there is no way to spell one in a document without shipping executable code inside data.
+
+What replaces both is indirection: the document _names_ a rule and the application supplies it.
+
+```tsx
+<FormRenderer
+	schema={schema}
+	rules={{ 'ru-inn': (value, values) => isValidInn(value) || 'Invalid tax ID' }}
+/>
+```
+
+A rule receives the field's value and the whole form's values, and returns `true` or the message to show. Both halves of that arrangement are deliberate: the backend can compose new forms out of rules the frontend already ships, and it cannot make the frontend run anything the frontend did not already contain. A `validate.rule` naming a rule nobody registered throws when the validator is built — on mount, not on the user's first keystroke — so a mistyped name is a loud failure rather than a constraint that silently never fires.
+
+`rules` is meaningful in uncontrolled mode only. A controlled caller owns the form instance, so it owns the validator too: call `buildValidator(schema, { rules })` yourself and pass the result as `validators.onChange`. [Config-driven forms](/docs/form/schema#one-source-of-validation) explains why the two modes cannot be mixed.
 
 ## When validation runs
 
