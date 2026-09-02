@@ -1,3 +1,4 @@
+import type { FieldValidateProps } from './field-validate'
 import type { DateRangeValue, DeepKeysOfType, LocalizedText, SelectOption, TextInputType } from '@ez-kit/form-core'
 import type { ReactNode } from 'react'
 
@@ -12,7 +13,35 @@ export type BaseFieldProps<TFormData, TValue> = {
 	label?: ReactNode
 	description?: ReactNode
 	disabled?: boolean
+	/**
+	 * Mark the control as mandatory — the asterisk and `aria-required`. **Visual only:** it
+	 * validates nothing, which is what a caller whose validation lives elsewhere (a zod
+	 * schema on the form, say) needs in order to render the mark without this package
+	 * second-guessing their validator.
+	 *
+	 * To *enforce* it, use `validate={{ required: true }}`, which implies this one — the two
+	 * props have distinct jobs, they are not two spellings of one.
+	 */
 	required?: boolean
+	/**
+	 * Per-field validation, in the **same `FieldValidate` vocabulary** a schema document's
+	 * field node uses, run through the same engine in `@ez-kit/form-core` — see
+	 * {@link FieldValidateProps} for the two document-only keys it subtracts.
+	 *
+	 * Runs on `onChange`, the hook the schema side attaches its generated validator to, so
+	 * both entry points behave identically (including when the error is *shown*, which is
+	 * gated on `isTouched` either way).
+	 *
+	 * It layers on top of whatever `validators` the form itself carries rather than
+	 * replacing them: both run on every change. They share the field's single `onChange`
+	 * error slot, so when both fail it is this one's message that shows — the form-level
+	 * one appears as soon as the field's own constraints are satisfied.
+	 *
+	 * @example
+	 * <form.TextField name='email' label='Email' validate={{ required: true, format: 'email' }} />
+	 * <form.MultiSelectField name='tags' options={TAGS} validate={{ maxLength: 2 }} />
+	 */
+	validate?: FieldValidateProps
 }
 
 export type TextFieldProps<TFormData> = BaseFieldProps<TFormData, string> & {

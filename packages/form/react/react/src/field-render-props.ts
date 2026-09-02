@@ -1,7 +1,10 @@
 import { formatFieldErrors } from '@ez-kit/form-core'
 
+import { resolveRequired } from './field-validate'
+
 import type { BoundFieldApi } from './bindable-form'
 import type { FieldRenderProps } from './contract'
+import type { FieldValidateProps } from './field-validate'
 import type { ReactNode } from 'react'
 
 /**
@@ -26,7 +29,20 @@ export function fieldRenderProps(
 		description,
 		disabled,
 		required,
-	}: { label: ReactNode; description: ReactNode; disabled: boolean | undefined; required: boolean | undefined },
+		validate,
+	}: {
+		label: ReactNode
+		description: ReactNode
+		disabled: boolean | undefined
+		required: boolean | undefined
+		/**
+		 * Read for `validate.required` alone — the *running* of the constraints is wired
+		 * separately, onto the field's `onChange` (see `fieldValidators`). A required key
+		 * typed `| undefined` rather than an optional one, so a caller with no `validate` can
+		 * still pass it explicitly under `exactOptionalPropertyTypes`.
+		 */
+		validate: FieldValidateProps | undefined
+	},
 ): FieldRenderProps {
 	// Spec §7.2 attaches the schema's generated validator to the *form's* `onChange`, so the
 	// first keystroke anywhere computes an error for every empty required field in the whole
@@ -50,6 +66,6 @@ export function fieldRenderProps(
 		invalid: errors.length > 0,
 		onBlur: field.handleBlur,
 		disabled,
-		required,
+		required: resolveRequired(required, validate),
 	}
 }

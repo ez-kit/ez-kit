@@ -19,13 +19,26 @@ Every field is **complete**: it renders its own label, description, input and er
 
 ## Shared props
 
-| Prop          | Type        | Notes                                                                                       |
-| ------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| `name`        | typed path  | **Required.** Narrowed to paths whose value type matches the field.                         |
-| `label`       | `ReactNode` | Omit it and no label element is rendered.                                                   |
-| `description` | `ReactNode` | Helper text, linked via `aria-describedby`.                                                 |
-| `disabled`    | `boolean`   |                                                                                             |
-| `required`    | `boolean`   | Marks the control required. It does **not** validate — see [Validation](./form/validation). |
+| Prop          | Type                 | Notes                                                                                                                                                     |
+| ------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | typed path           | **Required.** Narrowed to paths whose value type matches the field.                                                                                       |
+| `label`       | `ReactNode`          | Omit it and no label element is rendered.                                                                                                                 |
+| `description` | `ReactNode`          | Helper text, linked via `aria-describedby`.                                                                                                               |
+| `disabled`    | `boolean`            |                                                                                                                                                           |
+| `required`    | `boolean`            | Marks the control required. It does **not** validate — for that use `validate` below.                                                                     |
+| `validate`    | `FieldValidateProps` | The constraints to enforce, in the same vocabulary a [document](/docs/form/schema#validation) uses. Sets the marker too when it carries `required: true`. |
+
+The last two are a pair, not two spellings of one thing: `required` draws the asterisk and sets `aria-required` and nothing else, while `validate` is what a value is actually checked against.
+
+```tsx
+<form.TextField
+	name='email'
+	label='Email'
+	validate={{ required: true, format: 'email' }}
+/>
+```
+
+[Validation](./form/validation#per-field-validators) covers the whole constraint set, how it composes with a validator on the form, and the two keys the JSX spelling leaves to a document.
 
 ## `form.TextField`
 
@@ -229,7 +242,7 @@ Binds to a **`YYYY-MM-DD` string**, never a `Date`. A calendar date has no time 
 | `max`         | `string` | Latest selectable day.                        |
 | `placeholder` | `string` | Shown on the trigger while nothing is picked. |
 
-`min` / `max` bound what the picker _offers_; they are not validation. To reject an out-of-range value use `validate: { min, max }` in a schema — those constraints take the same `YYYY-MM-DD` strings, and ISO dates compare correctly as text.
+`min` / `max` bound what the picker _offers_; they are not validation. To reject an out-of-range value pass `validate={{ min, max }}` — or `validate: { min, max }` on a schema's field node — since those constraints take the same `YYYY-MM-DD` strings, and ISO dates compare correctly as text.
 
 Each kit renders its own picker: shadcn a `Popover` holding its `Calendar` (react-day-picker), HeroUI its React Aria `DatePicker` with a segmented input. Both convert to and from the string at their own edge — no date library reaches your form state.
 

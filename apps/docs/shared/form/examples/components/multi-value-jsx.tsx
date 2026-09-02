@@ -26,9 +26,10 @@ const INTERESTS = [
  * The same two multi-value fields as `components/multi-value.tsx`, written with `<Form>` and
  * the flat fields instead of a document.
  *
- * `required` is the flat spelling of the document's `validate.required` — there is no flat
- * equivalent of `validate.maxLength`, so the "pick up to two" limit on `tags` is not enforced
- * here. See the report for this example.
+ * The `validate` prop takes the same object the document's field node does, so the "pick up to
+ * two" limit is the identical `{ required: true, maxLength: 2 }` on both sides — and
+ * `validate.required` draws the asterisk, so the bare `required` prop is not needed alongside
+ * it. `maxLength` counts items here rather than characters.
  */
 export function MultiValueJsxExample() {
 	const [saved, setSaved] = useState<Profile | null>(null)
@@ -49,7 +50,7 @@ export function MultiValueJsxExample() {
 							description='Pick up to two.'
 							placeholder='Choose tags'
 							options={TAGS}
-							required
+							validate={{ required: true, maxLength: 2 }}
 						/>
 						<form.CheckboxGroupField
 							name='interests'

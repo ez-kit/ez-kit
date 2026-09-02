@@ -203,6 +203,10 @@ export function RenderNode<TValues>({ node, form, layout, context }: RenderNodeA
 							description,
 							disabled: disabledByCondition,
 							required: node.required,
+							// A schema field's own `validate` is compiled into the *form*-level validator
+							// by `buildValidator` (see `resolveSchemaValidators`), so it must not also be
+							// attached per field here — that would run every constraint twice.
+							validate: undefined,
 						})}
 						value={field.state.value}
 						onChange={(value: unknown) => {

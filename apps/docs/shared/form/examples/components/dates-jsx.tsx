@@ -13,9 +13,10 @@ type Booking = {
  * The same two date fields as `components/dates.tsx`, written with `<Form>` and the flat
  * fields instead of a document.
  *
- * `min` / `max` bound what the calendar offers, same as on the document side; `required` is
- * the flat spelling of `validate.required` and is only needed on `arriveOn` — `stay` has no
- * required constraint in the document either.
+ * `min` / `max` bound what the calendar offers, same as on the document side; `validate` is
+ * the same object the document's field node carries, and is only on `arriveOn` — `stay` has
+ * no required constraint in the document either. It also draws the asterisk, so the bare
+ * `required` prop, which marks the control and nothing more, is not needed alongside it.
  */
 export function DatesJsxExample() {
 	const [saved, setSaved] = useState<Booking | null>(null)
@@ -36,7 +37,7 @@ export function DatesJsxExample() {
 							description='Any day in 2026.'
 							min='2026-01-01'
 							max='2026-12-31'
-							required
+							validate={{ required: true }}
 						/>
 						<form.DateRangeField
 							name='stay'

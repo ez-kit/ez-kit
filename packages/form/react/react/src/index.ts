@@ -3,6 +3,7 @@ export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
 export type { KitFormBlock, KitWithFormProps } from './composition'
+export type { FieldValidateProps } from './field-validate'
 export type { BoundForm, KitFormApi } from './kit-form'
 export type { AnyFormProps, FormControlledProps, FormProps, FormUncontrolledProps } from './form-props'
 export type {

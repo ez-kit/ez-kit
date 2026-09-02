@@ -2,6 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 
 import { asDateRange } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -19,15 +20,19 @@ export function createDateRangeField<TFormData>(
 		description,
 		disabled,
 		required,
+		validate,
 		placeholder,
 		min,
 		max,
 	}: DateRangeFieldProps<TFormData>): ReactNode {
 		return (
-			<form.AppField name={name}>
+			<form.AppField
+				name={name}
+				validators={fieldValidators(name, validate)}
+			>
 				{(field) => (
 					<KitDateRangeField
-						{...fieldRenderProps(field, FormFieldType.DateRange, { label, description, disabled, required })}
+						{...fieldRenderProps(field, FormFieldType.DateRange, { label, description, disabled, required, validate })}
 						placeholder={placeholder}
 						min={min}
 						max={max}

@@ -34,6 +34,24 @@ export type BoundFieldApi = {
 	}
 }
 
+/**
+ * What TanStack hands a field-level validator: the field's own value, plus the field API —
+ * narrowed here to the one member the `validate` prop reads through it, the whole form's
+ * current values, which a named rule would compare against.
+ */
+export type FieldValidatorContext = {
+	value: unknown
+	fieldApi: { form: { state: { values: unknown } } }
+}
+
+/**
+ * The `validators` entry the flat fields attach to a field. `onChange` only — see
+ * `fieldValidators` for why that is the hook the `validate` prop lands on.
+ */
+export type BoundFieldValidators = {
+	onChange: (context: FieldValidatorContext) => string | undefined
+}
+
 /** The one member `<Form>` needs from an instance to wire the `<form>` element's submit. */
 export type SubmittableForm = {
 	handleSubmit: () => Promise<void>
@@ -48,7 +66,15 @@ export type SubmittableForm = {
  * the `createForm` boundary, and stays fully typed for the consumer.
  */
 export type BindableForm = SubmittableForm & {
-	AppField: (props: { name: string; children: (field: BoundFieldApi) => ReactNode }) => ReactNode
+	AppField: (props: {
+		name: string
+		/**
+		 * `undefined` when the field carries no `validate` prop. Optional *and* explicitly
+		 * `| undefined` so a caller may pass either, under `exactOptionalPropertyTypes`.
+		 */
+		validators?: BoundFieldValidators | undefined
+		children: (field: BoundFieldApi) => ReactNode
+	}) => ReactNode
 	/**
 	 * Writes a field's value from outside its `AppField` subtree. Used by one caller: the
 	 * option-source plumbing, which clears a dependent field when its source's parameters

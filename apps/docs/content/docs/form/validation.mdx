@@ -5,9 +5,9 @@ description: Standard-schema validators passed straight through to TanStack Form
 
 # Validation
 
-There is **no resolver here**. `@ez-kit/form` adds nothing to TanStack Form's validation — it passes your validators through untouched, then renders whatever errors come back through the kit's error component.
+There is **no resolver here**. `@ez-kit/form` does not wrap or rewrite your validators — it passes them through untouched, then renders whatever errors come back through the kit's error component.
 
-That means everything in the [TanStack Form validation guide](https://tanstack.com/form/latest/docs/framework/react/guides/validation) applies verbatim.
+That means everything in the [TanStack Form validation guide](https://tanstack.com/form/latest/docs/framework/react/guides/validation) applies verbatim. What the package adds sits beside that rather than in front of it: the [`validate` prop](#per-field-validators) on a field, and the constraints a [document](#named-rules-validation-without-javascript) declares — two spellings of one small constraint vocabulary, both compiled into ordinary TanStack validators.
 
 ## Schema validation
 
@@ -80,7 +80,44 @@ Async validators (`onChangeAsync`, `onBlurAsync`) and `onChangeAsyncDebounceMs` 
 
 ## Per-field validators
 
-The flat fields do not take a `validators` prop — validation is declared on the form, which is where a schema naturally lives. For a rule that belongs to one field only, use a form-level function validator returning the `fields` map:
+Every flat field takes a `validate` prop, and it carries **the same `FieldValidate` object** a schema field node carries — the same constraints, in the same order, through the same engine in `@ez-kit/form-core`:
+
+```tsx
+<form.TextField
+	name='email'
+	label='Email'
+	validate={{ required: true, format: 'email' }}
+/>
+<form.NumberField
+	name='age'
+	label='Age'
+	validate={{ min: 18, max: 120 }}
+/>
+<form.MultiSelectField
+	name='tags'
+	label='Tags'
+	options={TAGS}
+	validate={{ maxLength: 2, messages: { maxLength: 'Pick at most two' } }}
+/>
+```
+
+The prop attaches to the field's `onChange` — the hook the document side attaches its generated validator to — so both entry points fail at the same moment, and both are gated for _display_ by the same `isTouched` check. `validate.required` implies the visual `required`, so the asterisk needs no second prop.
+
+It **layers on** the form's own `validators` rather than replacing them: both run on every change. They share the field's single `onChange` error slot, so while both fail it is the field's own message that shows, and the form-level one appears as soon as the field's constraints are satisfied.
+
+### The two keys the JSX spelling omits
+
+`rule` and `LocalizedText` messages only mean something to a document, so neither is available here. Both are compile errors.
+
+**`rule`** names an entry in a registry because JSON cannot carry code. JSX can, so there is no registry on this side to look a name up in, and a string indirection would be the worst of the spellings available to you — write the check as a TanStack field validator, or as a standard-schema validator on the form. A `rule` that arrives past a cast throws, naming the field.
+
+**`messages`** takes plain strings here. Resolving a `{ key, params }` message needs a `translate`, and `translate` is a prop of `<FormRenderer>`, not of `<Form>` or `useForm`; rather than invent a second translate channel for the JSX API, the type asks for the finished copy you already hold.
+
+### When a form-level validator is the right answer instead
+
+The constraint set is fixed and deliberately small — `required`, the bounds `min` and `max`, the length bounds `minLength` and `maxLength`, and `format`. It is the vocabulary a **document** must be able to express as data, not a validation library, and the JSX side offers it so that the two entry points say the same things rather than so that it can grow.
+
+Anything outside that set — a regular expression, a cross-field check, a predicate of your own — belongs in a standard-schema validator on the form, or in a form-level function validator returning the `fields` map:
 
 ```tsx
 const form = useForm({
@@ -111,4 +148,6 @@ When a field has at least one error, its root gets `data-invalid`, the input get
 
 ## `required` is not validation
 
-The `required` prop on a field marks the control required for assistive technology and native form semantics. It does **not** produce an error message — that is the validator's job. Set both when you want both.
+The bare `required` prop on a field marks the control required for assistive technology and native form semantics. It does **not** produce an error message — that is the validator's job. It stays visual-only on purpose: a caller whose validation lives in a zod schema on the form needs to render the marker without this package second-guessing their validator.
+
+To _enforce_ it, write `validate={{ required: true }}`, which implies the marker — so the two are never both needed, and the pair is not two spellings of one prop.

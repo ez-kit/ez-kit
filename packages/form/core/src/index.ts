@@ -7,7 +7,7 @@ export { resolveSelectOptions } from './select-option'
 export { FormSchemaError, parseFormSchema } from './parse'
 export { clampToGridRange, defineFormSchema, GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
 export { TextInputType } from './text-input-type'
-export { buildValidator } from './validate'
+export { buildValidator, runFieldValidate } from './validate'
 export { isFieldNode, walkNodes } from './walk'
 export { stripHiddenValues, visibleFieldNames } from './visibility'
 
@@ -28,7 +28,7 @@ export type {
 	StepNode,
 	SubmitNode,
 } from './schema'
-export type { FieldValidate, NamedRule } from './validate'
+export type { FieldConstraintKey, FieldValidate, NamedRule, RunFieldValidateOptions } from './validate'
 
 /**
  * Curated re-exports of the framework-agnostic TanStack Form types the kits and the

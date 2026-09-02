@@ -23,7 +23,7 @@ type BuildValidatorOptions = {
 }
 
 /** The constraint kinds `validate.messages` can override. */
-type ConstraintKey = 'required' | 'min' | 'max' | 'minLength' | 'maxLength' | 'format' | 'rule'
+export type FieldConstraintKey = 'required' | 'min' | 'max' | 'minLength' | 'maxLength' | 'format' | 'rule'
 
 /**
  * One small, anchored regex per format — nothing user-supplied. There is deliberately no
@@ -80,7 +80,7 @@ function maxLengthMessage(value: unknown, bound: number): string {
 }
 
 function resolveMessage(
-	key: ConstraintKey,
+	key: FieldConstraintKey,
 	config: FieldValidate,
 	translate: Translate | undefined,
 	fallback: string,
@@ -144,6 +144,32 @@ function runConstraints(
 	}
 
 	return undefined
+}
+
+/** What {@link runFieldValidate} needs beyond the value: the same two `buildValidator` takes. */
+export type RunFieldValidateOptions = BuildValidatorOptions
+
+/**
+ * Run one field's `validate` block against one value — the per-field entry point into the
+ * very engine `buildValidator` compiles a whole schema into.
+ *
+ * It exists so the JSX API can offer the identical `FieldValidate` vocabulary a schema
+ * document uses without a second implementation of it: `<form.TextField validate={…} />`
+ * attaches this to that field's `onChange`, while a schema attaches `buildValidator`'s
+ * output to the form's. Same constraints, same order, same messages, one code path.
+ *
+ * `values` is the whole form's data, and is only read by a named `rule` — pass the form
+ * state when one may be in play, and anything (`{}`) when none can be.
+ *
+ * @returns the first failing constraint's message, or `undefined` when the value passes.
+ */
+export function runFieldValidate(
+	value: unknown,
+	values: unknown,
+	config: FieldValidate,
+	options: RunFieldValidateOptions = {},
+): string | undefined {
+	return runConstraints(value, values, config, resolveNamedRule(config, options.rules), options.translate)
 }
 
 type FieldCheck = {

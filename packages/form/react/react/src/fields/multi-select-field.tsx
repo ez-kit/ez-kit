@@ -2,6 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 
 import { asOptionValueTexts } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fieldValidators } from '../field-validate'
 import { fromKitValues, toKitOptions } from '../option-values'
 import { CLEARED_LIST, FieldOptions } from '../options/field-options'
 
@@ -16,7 +17,8 @@ export function createMultiSelectField<TFormData>(
 	KitMultiSelectField: FormComponents['MultiSelectField'],
 ): (props: MultiSelectFieldProps<TFormData>) => ReactNode {
 	return function MultiSelectField(props: MultiSelectFieldProps<TFormData>): ReactNode {
-		const { name, label, description, disabled, required, placeholder, searchable, creatable, createLabel } = props
+		const { name, label, description, disabled, required, validate, placeholder, searchable, creatable, createLabel } =
+			props
 
 		// See `select-field.tsx` — the same string↔typed-value bridge, the same
 		// options-above-the-binding layering, and the same `searchable` plumbing, applied to
@@ -33,10 +35,19 @@ export function createMultiSelectField<TFormData>(
 				createLabel={createLabel}
 			>
 				{({ options, loading, search }) => (
-					<form.AppField name={name}>
+					<form.AppField
+						name={name}
+						validators={fieldValidators(name, validate)}
+					>
 						{(field) => (
 							<KitMultiSelectField
-								{...fieldRenderProps(field, FormFieldType.MultiSelect, { label, description, disabled, required })}
+								{...fieldRenderProps(field, FormFieldType.MultiSelect, {
+									label,
+									description,
+									disabled,
+									required,
+									validate,
+								})}
 								options={toKitOptions(options)}
 								loading={loading}
 								search={search}

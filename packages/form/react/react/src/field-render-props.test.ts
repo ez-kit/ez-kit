@@ -17,7 +17,7 @@ function boundField(overrides: { isTouched: boolean; errors?: readonly unknown[]
 	}
 }
 
-const CHROME = { label: 'Email', description: undefined, disabled: undefined, required: true }
+const CHROME = { label: 'Email', description: undefined, disabled: undefined, required: true, validate: undefined }
 
 describe('fieldRenderProps — error display gate', () => {
 	test('hides the errors of a field the user has not touched yet', () => {
