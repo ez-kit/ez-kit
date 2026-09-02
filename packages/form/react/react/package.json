@@ -24,7 +24,7 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"build": "tsup",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -36,7 +36,7 @@
 		{
 			"name": "everything (JSX API + config layer)",
 			"path": "dist/index.js",
-			"limit": "24 KB"
+			"limit": "9 KB"
 		},
 		{
 			"name": "config-layer helpers alone (no createForm)",
@@ -46,17 +46,19 @@
 		}
 	],
 	"dependencies": {
-		"@ez-kit/form-core": "workspace:*",
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2"
+		"@ez-kit/form-core": "workspace:*"
 	},
 	"devDependencies": {
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2",
 		"react": ">=18.0.0"
 	}
 }

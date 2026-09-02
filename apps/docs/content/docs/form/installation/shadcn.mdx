@@ -15,6 +15,13 @@ That is the only package you need at the call site — it re-exports the consume
 
 `react` and `react-dom` (18 or 19) are peer dependencies.
 
+`@tanstack/react-form` and `@tanstack/form-core` (v1) are peer dependencies too. The kit's
+`useForm` _is_ a TanStack Form hook — the instance you get back carries the whole native API,
+and the types this kit re-exports are TanStack's own. A second copy in your tree would mean a
+second `FormApi` and a second set of contexts, so the single copy is the contract rather than
+an implementation detail. pnpm and npm install it for you; add it explicitly if your package
+manager does not resolve peers automatically.
+
 ## 2. Point Tailwind at the package
 
 The kit ships **no stylesheet**. Your app owns its shadcn theme — that is exactly what

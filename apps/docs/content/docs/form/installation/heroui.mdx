@@ -17,6 +17,13 @@ Aria, whose fields talk to their controls through React context. A second, diffe
 versioned copy of `@heroui/react` in your tree would create a second set of contexts and the
 compositions would break in ways that are hard to trace.
 
+`@tanstack/react-form` and `@tanstack/form-core` (v1) are peer dependencies too. The kit's
+`useForm` _is_ a TanStack Form hook — the instance you get back carries the whole native API,
+and the types this kit re-exports are TanStack's own. A second copy in your tree would mean a
+second `FormApi` and a second set of contexts, so the single copy is the contract rather than
+an implementation detail. pnpm and npm install it for you; add it explicitly if your package
+manager does not resolve peers automatically.
+
 <Callout type='warn'>
 	This kit targets **HeroUI v3**, which is built on React Aria and requires **Tailwind CSS v4**. It is not compatible
 	with HeroUI v2.
