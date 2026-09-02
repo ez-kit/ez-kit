@@ -592,8 +592,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// "#### Per-kind props" subheading added for exactly this reason — a
 			// heading addresses at most one table.
 			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
-			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormComponents], expectedCount: 5 },
+			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormComponents], expectedCount: 12 },
 			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
+			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
 		],
 		nonOptionTables: [],
 	},
