@@ -14,7 +14,7 @@ export function BaseSelectionExample() {
 			data={data}
 			columns={columns}
 			selection
-			pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 25] }}
+			pagination={{ pageSize: 10, items: [5, 10, 25] }}
 		/>
 	)
 }

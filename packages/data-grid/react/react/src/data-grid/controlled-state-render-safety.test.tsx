@@ -39,7 +39,7 @@ function ControlledGrid({ pagination }: { pagination: PaginationState }): ReactE
 	const table = useDataGrid<Row>({
 		data: DATA,
 		columns: COLUMNS,
-		pagination: { pageSizeOptions: [5, 10] },
+		pagination: { items: [5, 10] },
 		globalFiltering: true,
 		state: { pagination },
 	})

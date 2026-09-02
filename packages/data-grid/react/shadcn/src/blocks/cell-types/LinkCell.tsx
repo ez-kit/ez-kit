@@ -1,15 +1,19 @@
 'use client'
 
+import { LINK_HREF_VALUE_TOKEN, LinkTarget } from '@ez-kit/data-grid-react'
+
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Input } from '@grid-shadcn/components/ui/input'
 
-import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState, LinkCellConfig } from '@ez-kit/data-grid-react'
 
-function LinkCellView({ value }: CellViewProps) {
-	const href = String(value ?? '')
+function LinkCellView({ value, config }: CellViewProps<LinkCellConfig>) {
+	const raw = String(value ?? '')
+	if (!raw) return null
 
-	if (!href) return null
+	const href = config?.href ? config.href.replaceAll(LINK_HREF_VALUE_TOKEN, encodeURIComponent(raw)) : raw
+	const target = config?.target ?? LinkTarget.Self
 
 	return (
 		<Button
@@ -18,10 +22,10 @@ function LinkCellView({ value }: CellViewProps) {
 		>
 			<a
 				href={href}
-				target='_blank'
-				rel='noreferrer'
+				target={target}
+				{...(target === LinkTarget.Blank ? { rel: 'noreferrer' } : {})}
 			>
-				{href}
+				{config?.label ?? raw}
 			</a>
 		</Button>
 	)

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -24,12 +25,21 @@ function makeInstance() {
 }
 
 /**
- * `ColumnDef.footer` reached TanStack long before anything rendered it — the built-in layout
- * had no `<tfoot>` slot at all, so a totals row had to be built outside the table element.
+ * The default layout mounts the footer on its own once a column declares one — see
+ * `footer-default-layout.test.tsx`, which drives that through `useDataGrid`. These tests cover
+ * the hand-composed path, where `<DataGrid.Table>` children replace the built-in pair and
+ * nothing is mounted for you.
  */
 describe('<DataGrid.Footer>', () => {
-	it('is not part of the default layout', () => {
-		const { container } = renderWithComponents(<DataGrid table={makeInstance()} />)
+	it('is not mounted for you inside a custom <DataGrid.Table> body', () => {
+		const { container } = renderWithComponents(
+			<DataGrid table={makeInstance()}>
+				<DataGrid.Table>
+					<DataGrid.Header />
+					<DataGrid.Body />
+				</DataGrid.Table>
+			</DataGrid>,
+		)
 		expect(container.querySelector('tfoot')).toBeNull()
 	})
 
@@ -155,8 +165,15 @@ describe('compound render-prop slots', () => {
 
 	it('<DataGrid.SelectionBar> hands over a confirmation-aware onDelete', () => {
 		const onDelete = vi.fn()
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, selection: true }))
-		table.grid.selection.panel = { onDelete, confirmation: true }
+		const table = prepareDataGridTable(
+			createTable<User>({
+				data: USERS,
+				columns: COLUMNS,
+				selection: true,
+				deleting: { onDelete: () => {}, bulk: { onDelete, confirmation: true } },
+			}),
+		)
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
 
 		const { container } = renderWithComponents(
@@ -184,35 +201,35 @@ describe('compound render-prop slots', () => {
 		// the handler — the ConfirmDialog runs it on confirm.
 		if (button) fireEvent.click(button)
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingBulkDelete).toBe(true)
+		expect(table.getState().deleting.pendingBulk).toBe(true)
 	})
 
-	it('<DataGrid.SortTrigger> excludes already-used columns from each entry', () => {
+	it('<DataGrid.SortMenuTrigger> excludes already-used columns from each entry', () => {
 		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, sorting: true }))
 		table.setState((prev) => ({ ...prev, sorting: [{ id: 'name', desc: false }] }))
 
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
-				<DataGrid.SortTrigger>
+				<DataGrid.SortMenuTrigger>
 					{({ items, sortableColumns, canAddSort }) => (
 						<p>
 							{[items[0]?.availableColumns.map((c) => c.id).join(','), sortableColumns.length, canAddSort].join(' | ')}
 						</p>
 					)}
-				</DataGrid.SortTrigger>
+				</DataGrid.SortMenuTrigger>
 			</DataGrid>,
 		)
 		// 'name' is this entry's own column so it stays offered; 'amount' is still free.
 		expect(container.querySelector('p')?.textContent).toBe('name,amount | 2 | true')
 	})
 
-	it('<DataGrid.ColumnVisibilityTrigger> hands over the toggleable columns', () => {
-		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, columnVisibility: true }))
+	it('<DataGrid.VisibilityTrigger> hands over the toggleable columns', () => {
+		const table = prepareDataGridTable(createTable<User>({ data: USERS, columns: COLUMNS, visibility: true }))
 		const { container } = renderWithComponents(
 			<DataGrid table={table}>
-				<DataGrid.ColumnVisibilityTrigger>
+				<DataGrid.VisibilityTrigger>
 					{({ columns }) => <p>{columns.map((c) => `${c.id}:${String(c.isVisible)}`).join(' ')}</p>}
-				</DataGrid.ColumnVisibilityTrigger>
+				</DataGrid.VisibilityTrigger>
 			</DataGrid>,
 		)
 		expect(container.querySelector('p')?.textContent).toBe('name:true amount:true')

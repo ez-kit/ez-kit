@@ -1,4 +1,5 @@
 import { useGridComponents } from '../components-context'
+import { SortDirection } from '../types'
 
 import { useDataGridState, useDataGridTable } from './table-context'
 
@@ -13,12 +14,12 @@ import type { ReactNode } from 'react'
  * - Wires Add Sort, Reset Sorting, change column/direction, and remove handlers
  */
 /**
- * What a `<DataGrid.SortTrigger>` render function receives — the multi-sort builder model.
+ * What a `<DataGrid.SortMenuTrigger>` render function receives — the multi-sort builder model.
  *
  * `items[].availableColumns` is per-entry, not the global list: a column already used by
  * another sort entry is excluded from it, so a custom builder cannot offer a duplicate.
  */
-export type DataGridSortTriggerRenderArgs = {
+export type DataGridSortMenuTriggerRenderArgs = {
 	/** One entry per active sort, in priority order, with its own change/remove handlers. */
 	items: SortMenuItem[]
 	/** Every sortable, non-system column. */
@@ -30,13 +31,13 @@ export type DataGridSortTriggerRenderArgs = {
 	onResetSorting: () => void
 }
 
-export type DataGridSortTriggerProps = {
+export type DataGridSortMenuTriggerProps = {
 	/**
 	 * Custom sort-builder content, replacing the kit's `SortMenu` component.
 	 *
 	 * @example
 	 * ```tsx
-	 * <DataGrid.SortTrigger>
+	 * <DataGrid.SortMenuTrigger>
 	 *   {({ items, canAddSort, onAddSort }) => (
 	 *     <div>
 	 *       {items.map((item) => (
@@ -45,13 +46,13 @@ export type DataGridSortTriggerProps = {
 	 *       <button disabled={!canAddSort} onClick={onAddSort}>Add sort</button>
 	 *     </div>
 	 *   )}
-	 * </DataGrid.SortTrigger>
+	 * </DataGrid.SortMenuTrigger>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridSortTriggerRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridSortMenuTriggerRenderArgs) => ReactNode)
 }
 
-export function SortTrigger({ children }: DataGridSortTriggerProps = {}) {
+export function SortMenuTrigger({ children }: DataGridSortMenuTriggerProps = {}) {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.sorting)
 	const { SortMenu } = useGridComponents().sorting
@@ -72,14 +73,16 @@ export function SortTrigger({ children }: DataGridSortTriggerProps = {}) {
 
 		return {
 			columnId: entry.id,
-			direction: entry.desc ? 'desc' : 'asc',
+			direction: entry.desc ? SortDirection.Desc : SortDirection.Asc,
 			availableColumns,
 			onChangeColumn: (nextId: string) => {
 				const next: ColumnSort[] = sorting.map((s, i) => (i === index ? { id: nextId, desc: entry.desc } : s))
 				table.setSorting(next)
 			},
 			onChangeDirection: (dir) => {
-				const next: ColumnSort[] = sorting.map((s, i) => (i === index ? { id: entry.id, desc: dir === 'desc' } : s))
+				const next: ColumnSort[] = sorting.map((s, i) =>
+					i === index ? { id: entry.id, desc: dir === SortDirection.Desc } : s,
+				)
 				table.setSorting(next)
 			},
 			onRemove: () => {

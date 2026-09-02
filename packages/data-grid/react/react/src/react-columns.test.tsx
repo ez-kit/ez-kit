@@ -25,7 +25,7 @@ describe('React-bound column definitions', () => {
 
 	it('type-checks what a cell renderer returns', () => {
 		const columns = createColumns<User>([
-			{ accessorKey: 'name', cell: { component: ({ value }) => <b>{String(value)}</b> } },
+			{ accessorKey: 'name', cell: { component: ({ value }) => <b>{value}</b> } },
 			{
 				accessorKey: 'id',
 				// @ts-expect-error a plain object is not a ReactNode

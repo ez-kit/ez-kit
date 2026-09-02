@@ -1,14 +1,9 @@
-import { isValidationError, zodSafeParseToResult } from '../validation'
+import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
+import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
 
+import type { ColumnEditingConfig } from '../../column/types'
 import type { FeatureToggle } from '../../utils/feature-flag'
-import type {
-	CommitStatus,
-	ValidateConfig,
-	ValidateContext,
-	ValidateOn,
-	ValidationErrors,
-	ValidationResult,
-} from '../validation'
+import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { InitialTableState, Row, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 /**
@@ -25,8 +20,7 @@ export type EditingSaveContext<TData> = {
 	signal: AbortSignal
 }
 
-const DEFAULT_VALIDATE_ON: ValidateOn = 'submit'
-const DEFAULT_DEBOUNCE_MS = 200
+const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
 const GENERIC_FORM_ERROR = 'Unexpected error'
 
 export type EditingState = {
@@ -62,8 +56,18 @@ export type EditingConfig<TData> = FeatureToggle & {
 	/** How the edit flow behaves. Default: {@link EditingMode.Row}. */
 	mode?: EditingMode
 	validate?: ValidateConfig<TData>
+	/** When a field validates. Default: {@link ValidateOn.Submit}. */
 	validateOn?: ValidateOn
-	validateDebounceMs?: number
+	/**
+	 * Debounce (ms) before validation runs while the user types. Applies only when the resolved
+	 * `validateOn` is {@link ValidateOn.Change}. Default:
+	 * {@link DEFAULT_VALIDATE_DEBOUNCE_MS} (200). Override per column with `column.editing.debounce`.
+	 *
+	 * Spelled `debounce`, like `filtering.debounce` and `globalFiltering.debounce` — one word for
+	 * "wait this long before acting on typing". The unit is milliseconds throughout the config, so
+	 * it stays out of the name.
+	 */
+	debounce?: number
 	/**
 	 * Called when the user commits the edit form (or cell). Return nothing for
 	 * synchronous handlers, a `Promise` for async work. Throw
@@ -117,7 +121,7 @@ const INITIAL_STATE: EditingState = {
 	values: {},
 	errors: {},
 	formError: null,
-	commitStatus: 'idle',
+	commitStatus: CommitStatus.Idle,
 }
 
 function isAbortError(e: unknown): boolean {
@@ -173,23 +177,22 @@ export const EditingFeature: TableFeature<RowData> = {
 			return col?.columnDef.meta
 		}
 
+		/** The column's own editing config, or `undefined` when it disabled editing entirely. */
+		const resolveColumnEditing = (columnId: string): ColumnEditingConfig | undefined => {
+			const fromColumn = resolveColumnMeta(columnId)?.editing
+			return fromColumn === false ? undefined : fromColumn
+		}
+
 		const resolveValidateOn = (columnId: string): ValidateOn => {
-			const fromColumn = resolveColumnMeta(columnId)?.validateOn
+			const fromColumn = resolveColumnEditing(columnId)?.validateOn
 			if (fromColumn) return fromColumn
-			const config = getConfig()
-			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.validateOn) return validate.validateOn
-			return config?.validateOn ?? DEFAULT_VALIDATE_ON
+			return getConfig()?.validateOn ?? DEFAULT_VALIDATE_ON
 		}
 
 		const resolveDebounceMs = (columnId: string): number => {
-			const fromColumn = resolveColumnMeta(columnId)?.validateDebounceMs
+			const fromColumn = resolveColumnEditing(columnId)?.debounce
 			if (fromColumn !== undefined) return fromColumn
-			const config = getConfig()
-			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.validateDebounceMs !== undefined)
-				return validate.validateDebounceMs
-			return config?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
+			return getConfig()?.debounce ?? DEFAULT_VALIDATE_DEBOUNCE_MS
 		}
 
 		const runValidate = async (values: Record<string, unknown>, ctx: ValidateContext): Promise<ValidationResult> => {
@@ -213,7 +216,7 @@ export const EditingFeature: TableFeature<RowData> = {
 			const config = getConfig()
 			if (!config?.validate) return
 
-			writeState({ commitStatus: 'validating' })
+			writeState({ commitStatus: CommitStatus.Validating })
 			const values = getState().values
 			let result: ValidationResult
 			try {
@@ -222,7 +225,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (isAbortError(e)) return
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				if (signal.aborted) return
-				writeState({ commitStatus: 'idle' })
+				writeState({ commitStatus: CommitStatus.Idle })
 				throw e
 			}
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -234,7 +237,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
 				return {
 					...prev,
-					editing: { ...prev.editing, errors: nextErrors, commitStatus: 'idle' },
+					editing: { ...prev.editing, errors: nextErrors, commitStatus: CommitStatus.Idle },
 				}
 			})
 		}
@@ -275,11 +278,15 @@ export const EditingFeature: TableFeature<RowData> = {
 					values: snapshotRow(rowId),
 					errors: {},
 					formError: null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 			},
 
 			startCell: (rowId, columnId) => {
+				// A column that opted out with `editing: false` is not editable in any mode.
+				// The React layer already renders no double-click affordance for it; this
+				// makes the programmatic path agree rather than quietly opening an input.
+				if (table.getColumn(columnId)?.columnDef.meta?.editing === false) return
 				resetController()
 				const row = table.getRowModel().rows.find((r) => r.id === rowId)
 				const initialValue = row?.getValue(columnId)
@@ -289,7 +296,7 @@ export const EditingFeature: TableFeature<RowData> = {
 					values: { [columnId]: initialValue },
 					errors: {},
 					formError: null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 			},
 
@@ -304,14 +311,14 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (!config) return
 				const { rowId, commitStatus, values } = getState()
 				if (!rowId) return
-				if (commitStatus !== 'idle') return // UI invariant
+				if (commitStatus !== CommitStatus.Idle) return // UI invariant
 
 				const c = resetController()
 
 				writeState({
 					errors: {},
 					formError: null,
-					commitStatus: 'validating',
+					commitStatus: CommitStatus.Validating,
 				})
 
 				if (config.validate) {
@@ -320,7 +327,7 @@ export const EditingFeature: TableFeature<RowData> = {
 						result = await runValidate(values, { signal: c.signal })
 					} catch (e) {
 						if (c.signal.aborted) return
-						writeState({ commitStatus: 'idle' })
+						writeState({ commitStatus: CommitStatus.Idle })
 						throw e
 					}
 					if (c.signal.aborted) return
@@ -328,13 +335,13 @@ export const EditingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: result.errors ?? {},
 							formError: result.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 				}
 
-				writeState({ commitStatus: 'saving' })
+				writeState({ commitStatus: CommitStatus.Saving })
 				try {
 					await config.onSave({ rowId, values, signal: c.signal })
 					if (c.signal.aborted) return
@@ -345,13 +352,13 @@ export const EditingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: e.errors,
 							formError: e.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 					writeState({
 						formError: GENERIC_FORM_ERROR,
-						commitStatus: 'idle',
+						commitStatus: CommitStatus.Idle,
 					})
 					throw e
 				}
@@ -362,7 +369,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (!config) return
 				const { rowId, cellId, commitStatus, values } = getState()
 				if (!rowId || !cellId) return
-				if (commitStatus !== 'idle') return
+				if (commitStatus !== CommitStatus.Idle) return
 
 				const columnId = extractColumnId(rowId, cellId)
 				const cellValues: Record<string, unknown> = { [columnId]: values[columnId] }
@@ -372,7 +379,7 @@ export const EditingFeature: TableFeature<RowData> = {
 				writeState({
 					errors: {},
 					formError: null,
-					commitStatus: 'validating',
+					commitStatus: CommitStatus.Validating,
 				})
 
 				if (config.validate) {
@@ -381,7 +388,7 @@ export const EditingFeature: TableFeature<RowData> = {
 						result = await runValidate(cellValues, { signal: c.signal, cell: { columnId } })
 					} catch (e) {
 						if (c.signal.aborted) return
-						writeState({ commitStatus: 'idle' })
+						writeState({ commitStatus: CommitStatus.Idle })
 						throw e
 					}
 					if (c.signal.aborted) return
@@ -392,13 +399,13 @@ export const EditingFeature: TableFeature<RowData> = {
 							// cross-field refine errors land in `formError`-free zone (ignored).
 							errors: fieldErrs && fieldErrs.length > 0 ? { [columnId]: fieldErrs } : {},
 							formError: null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 				}
 
-				writeState({ commitStatus: 'saving' })
+				writeState({ commitStatus: CommitStatus.Saving })
 				try {
 					await config.onSave({ rowId, values: cellValues, signal: c.signal })
 					if (c.signal.aborted) return
@@ -409,13 +416,13 @@ export const EditingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: e.errors,
 							formError: e.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 					writeState({
 						formError: GENERIC_FORM_ERROR,
-						commitStatus: 'idle',
+						commitStatus: CommitStatus.Idle,
 					})
 					throw e
 				}
@@ -433,7 +440,7 @@ export const EditingFeature: TableFeature<RowData> = {
 						},
 					}
 				})
-				if (resolveValidateOn(key) === 'change' && getConfig()?.validate) {
+				if (resolveValidateOn(key) === ValidateOn.Change && getConfig()?.validate) {
 					scheduleChangeValidation(key)
 				}
 			},
@@ -461,20 +468,20 @@ export const EditingFeature: TableFeature<RowData> = {
 				if (!config?.validate) return null
 				const c = resetController()
 				const values = getState().values
-				writeState({ commitStatus: 'validating' })
+				writeState({ commitStatus: CommitStatus.Validating })
 				let result: ValidationResult
 				try {
 					result = await runValidate(values, { signal: c.signal })
 				} catch (e) {
 					if (c.signal.aborted) return null
-					writeState({ commitStatus: 'idle' })
+					writeState({ commitStatus: CommitStatus.Idle })
 					throw e
 				}
 				if (c.signal.aborted) return null
 				writeState({
 					errors: result?.errors ?? {},
 					formError: result?.formError ?? null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 				return result
 			},

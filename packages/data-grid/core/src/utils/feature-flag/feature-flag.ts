@@ -10,7 +10,7 @@ export type FeatureToggle = {
 	 * Passing an object means "on with these settings", which is what a call site almost
 	 * always wants. `enabled: false` is the escape hatch for the case where the settings must
 	 * survive while the feature does not — typically a shared defaults layer
-	 * (`DataGridOptionsProvider`, `createDataGrid({ defaultOptions })`) that describes how a
+	 * (`DataGridOptionsProvider`, `createDataGrid({ defaults })`) that describes how a
 	 * feature should look for the whole app, switched off for one grid without restating it.
 	 *
 	 * Default: `true`.

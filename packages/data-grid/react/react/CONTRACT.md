@@ -56,8 +56,8 @@ Every kit owes exactly two things:
 Opt into individual feature groups with the tier types
 (`GridCoreComponents`, `GridPaginationComponents`, `GridSortingComponents`,
 `GridFilteringComponents`, `GridEditingComponents`, `GridSelectionComponents`,
-`GridRowActionsComponents`, `GridResizingComponents`, `GridColumnVisibilityComponents`,
-`GridFallbackStateComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
+`GridRowActionsComponents`, `GridResizingComponents`, `GridVisibilityComponents`,
+`GridFallbackComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
 
 All of these — plus the flat `COMPONENT_FEATURE` lookup — are derived from a single
 exported map, `FEATURE_COMPONENTS: Record<GridFeature, readonly (keyof GridComponents)[]>`,
@@ -96,7 +96,7 @@ exported — read them for the exact shape.
 | `Button`   | `ButtonProps`   | Generic button used by triggers/actions.                       |
 | `Input`    | `InputProps`    | Generic text input.                                            |
 | `Checkbox` | `CheckboxProps` | Row/all selection. `indeterminate`, `onChange(checked)`.       |
-| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `left` / `right` / `children`.   |
+| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `start` / `end` / `children`.    |
 
 ### `pagination`
 
@@ -121,7 +121,7 @@ exported — read them for the exact shape.
 | `FilterPanel`        | `FilterPanelProps`                                     |
 | `FilterPanelChip`    | `FilterPanelChipProps`                                 |
 | `FilterChip`         | `FilterChipProps`                                      |
-| `ClearFiltersButton` | `ClearFiltersButtonComponentProps`                     |
+| `ClearFiltersButton` | `ClearFiltersButtonProps`                              |
 | `GlobalFilterInput`  | `GlobalFilterInputProps` (debounce applied upstream)   |
 | `OperatorSelect`     | `OperatorSelectProps`                                  |
 | `BetweenInput`       | `BetweenInputProps` (`inputs` / `slider` / `calendar`) |
@@ -164,9 +164,9 @@ actions under the default `inline` variant, and every action under `menu`.
 
 ### `column-visibility`
 
-| Component              | Props                       |
-| ---------------------- | --------------------------- |
-| `ColumnVisibilityMenu` | `ColumnVisibilityMenuProps` |
+| Component        | Props                 |
+| ---------------- | --------------------- |
+| `VisibilityMenu` | `VisibilityMenuProps` |
 
 ### `fallback-states`
 

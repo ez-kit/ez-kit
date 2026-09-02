@@ -474,6 +474,14 @@
 		"exportName": "ExpandingControlledExample"
 	},
 	{
+		"id": "row-actions-custom",
+		"label": "Custom Actions",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/custom-actions.tsx",
+		"exportName": "RowActionsCustomExample"
+	},
+	{
 		"id": "row-pinning-sticky-header",
 		"label": "Sticky Header",
 		"group": "row-pinning",
@@ -622,5 +630,21 @@
 		"groupLabel": "Production",
 		"sourceFile": "components/production/ProductionFeedExample.tsx",
 		"exportName": "ProductionFeedExample"
+	},
+	{
+		"id": "column-footers",
+		"label": "Column footers",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-footers.tsx",
+		"exportName": "ColumnFootersExample"
+	},
+	{
+		"id": "sticky-footer",
+		"label": "Sticky footer",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-footers.tsx",
+		"exportName": "StickyFooterExample"
 	}
 ]

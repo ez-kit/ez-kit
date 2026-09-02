@@ -1,14 +1,16 @@
+import { featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
 import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import { SELECTION_PANEL_VARIANT, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
+import { FilterChipsPosition } from '../types'
+import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
+import { resolveActionBarVariant } from './action-bar-variant'
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
-import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
@@ -17,6 +19,8 @@ import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
 import { Footer } from './footer'
+import { DataGridFooterCell } from './footer-cell'
+import { DataGridFooterRow } from './footer-row'
 import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
 import { DataGridHeaderCell } from './header-cell'
@@ -26,16 +30,16 @@ import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
-import { SelectionBar, buildSelectionPanelArgs } from './selection-bar'
-import { resolveSelectionPanelVariant } from './selection-panel-variant'
-import { SortTrigger } from './sort-trigger'
+import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
+import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
 import { TableContext, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
+import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { ConfirmationOptions, DataTable } from '@ez-kit/data-grid-core'
+import type { BulkConfirmationConfig, ConfirmationConfig, DataTable } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -96,7 +100,7 @@ function defaultBulkConfirmDescription(count: number): string {
 }
 
 function resolveConfirmationText(
-	options: ConfirmationOptions,
+	options: ConfirmationConfig,
 	row: Row<unknown> | undefined,
 ): { title: string; description: string } {
 	const title = options.title ?? DEFAULT_CONFIRM_TITLE
@@ -111,68 +115,66 @@ function resolveConfirmationText(
 }
 
 /**
- * Bulk (selection-bar) confirmation text. Unlike the per-row resolver there is no
- * single `row`, so a `description` function is ignored in favour of a count-aware
- * default ("Delete N rows?").
+ * Bulk confirmation text. The `description` function is handed the whole selection rather than
+ * one row — see {@link BulkConfirmationConfig} — and falls back to count-aware default copy.
  */
 function resolveBulkConfirmationText(
-	options: ConfirmationOptions,
-	count: number,
+	options: BulkConfirmationConfig,
+	rows: Row<unknown>[],
 ): { title: string; description: string } {
 	const title = options.title ?? DEFAULT_BULK_CONFIRM_TITLE
 	const desc = options.description
-	const description = typeof desc === 'string' ? desc : defaultBulkConfirmDescription(count)
+	const description = typeof desc === 'function' ? desc(rows) : (desc ?? defaultBulkConfirmDescription(rows.length))
 	return { title, description }
 }
 
-/** Whether either the per-row or the bulk (selection-panel) confirmation dialog is configured. */
+/** The bulk-delete prompt's config, or `undefined` when bulk delete asks for no prompt. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function bulkConfirmationOptions(table: Table<any>): BulkConfirmationConfig | undefined {
+	const confirmation = featureConfig(table.options.deleting?.bulk)?.confirmation
+	// `featureConfig` yields `undefined` for the bare `true`, which here means "prompt, with the
+	// default copy" — so the on/off decision reads `isFeatureEnabled` and only the copy comes
+	// from the object.
+	if (!isFeatureEnabled(confirmation)) return undefined
+	return featureConfig(confirmation) ?? {}
+}
+
+/** Whether either the per-row or the bulk confirmation dialog is configured. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function hasConfirmDialog(table: Table<any>): boolean {
-	if (table.options.deleting?.confirmation) return true
-	const panelConfig = table.grid.selection.panel
-	return typeof panelConfig === 'object' && Boolean(panelConfig.confirmation)
+	return isFeatureEnabled(table.options.deleting?.confirmation) || bulkConfirmationOptions(table) !== undefined
 }
 
 function ConfirmDialogRenderer() {
 	const table = useDataGridTable()
-	const { ConfirmDialog } = useGridComponents().editing
+	const { ConfirmDialog } = useGridComponents().deleting
 	// Narrow: re-render only when a pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave these stable.
-	const pendingId = useDataGridState((s) => s.pendingDeleteRowId)
-	const pendingBulk = useDataGridState((s) => s.pendingBulkDelete)
+	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)
+	const pendingBulk = useDataGridState((s) => s.deleting.pendingBulk)
 
-	const panelConfig = table.grid.selection.panel
-	const panelConfigObj = typeof panelConfig === 'object' ? panelConfig : undefined
-	const bulkConfirmation = panelConfigObj?.confirmation
-	const bulkOnDelete = panelConfigObj?.onDelete
-
-	// Bulk (selection-panel) confirmation takes precedence while staged. The handler
-	// lives outside core, so run it here on confirm, then clear the pending flag.
-	if (pendingBulk && bulkConfirmation && bulkOnDelete) {
-		const bulkOptions: ConfirmationOptions = bulkConfirmation === true ? {} : bulkConfirmation
-		const args = buildSelectionPanelArgs(table)
-		const { title, description } = resolveBulkConfirmationText(bulkOptions, args.selectedRows.length)
+	// A staged bulk delete takes precedence: it is the gesture the user just made. Core owns
+	// both the staging and the run, so this only renders the prompt and reports the answer.
+	const bulkOptions = bulkConfirmationOptions(table)
+	if (pendingBulk && bulkOptions) {
+		const { selectedRows } = buildSelectionBarArgs(table)
+		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows)
 		return (
 			<ConfirmDialog
 				open
 				title={title}
 				description={description}
-				onConfirm={() => {
-					bulkOnDelete(args)
-					table.confirmBulkDelete()
-				}}
+				onConfirm={() => void table.deleting.bulk.confirm()}
 				onCancel={() => {
-					table.cancelBulkDelete()
+					table.deleting.bulk.cancel()
 				}}
 			/>
 		)
 	}
 
 	const confirmation = table.options.deleting?.confirmation
-
-	if (!confirmation) return null
-
-	const options: ConfirmationOptions = confirmation === true ? {} : confirmation
+	if (!isFeatureEnabled(confirmation)) return null
+	const options: ConfirmationConfig = featureConfig(confirmation) ?? {}
 	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
 		pendingId !== null ? resolveConfirmationText(options, pendingRow) : { title: '', description: '' }
@@ -182,9 +184,9 @@ function ConfirmDialogRenderer() {
 			open={pendingId !== null}
 			title={title}
 			description={description}
-			onConfirm={() => void table.confirmDeleteRow()}
+			onConfirm={() => void table.deleting.confirm()}
 			onCancel={() => {
-				table.cancelDeleteRow()
+				table.deleting.cancel()
 			}}
 		/>
 	)
@@ -195,13 +197,13 @@ function DefaultLayout() {
 	// without subscribing. Avoids cascading re-renders to Body / Table on
 	// state mutations the layout doesn't actually depend on.
 	const table = useDataGridTable()
-	const variant = resolveSelectionPanelVariant(table)
+	const variant = resolveActionBarVariant(table)
 
 	const chipsConfig = table.grid.filtering.chips
-	const chipsAbove = chipsConfig?.position === 'above' ? <ActiveFiltersBar /> : null
-	const chipsBelow = chipsConfig?.position === 'below' ? <ActiveFiltersBar /> : null
+	const chipsAbove = chipsConfig?.position === FilterChipsPosition.Above ? <ActiveFiltersBar /> : null
+	const chipsBelow = chipsConfig?.position === FilterChipsPosition.Below ? <ActiveFiltersBar /> : null
 
-	if (variant === SELECTION_PANEL_VARIANT.Inline) {
+	if (variant === ActionBarVariant.Inline) {
 		return (
 			<>
 				<DraftBar />
@@ -260,7 +262,7 @@ function DataGridControlled<TRow extends object>({
 	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
 
 	return (
-		<CellTypesProvider types={resolvedCellTypes}>
+		<CellTypesProvider cellTypes={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
 				<TableContext value={table}>
 					{IS_DEV && <ComponentGuard />}
@@ -354,6 +356,8 @@ type DataGridType = typeof DataGridRoot & {
 	Toolbar: typeof Toolbar
 	Table: typeof DataGridTable
 	Footer: typeof Footer
+	FooterRow: typeof DataGridFooterRow
+	FooterCell: typeof DataGridFooterCell
 	Header: typeof Header
 	HeaderRow: typeof DataGridHeaderRow
 	HeaderCell: typeof DataGridHeaderCell
@@ -365,8 +369,8 @@ type DataGridType = typeof DataGridRoot & {
 	SelectionBar: typeof SelectionBar
 	DraftBar: typeof DraftBar
 	CreateTrigger: typeof CreateTrigger
-	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
-	SortTrigger: typeof SortTrigger
+	VisibilityTrigger: typeof VisibilityTrigger
+	SortMenuTrigger: typeof SortMenuTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
 	ClearFiltersButton: typeof ClearFiltersButton
@@ -382,6 +386,8 @@ export const DataGrid = DataGridRoot as DataGridType
 DataGrid.Toolbar = Toolbar
 DataGrid.Table = DataGridTable
 DataGrid.Footer = Footer
+DataGrid.FooterRow = DataGridFooterRow
+DataGrid.FooterCell = DataGridFooterCell
 DataGrid.Header = Header
 DataGrid.HeaderRow = DataGridHeaderRow
 DataGrid.HeaderCell = DataGridHeaderCell
@@ -393,8 +399,8 @@ DataGrid.PageSizer = PageSizer
 DataGrid.SelectionBar = SelectionBar
 DataGrid.DraftBar = DraftBar
 DataGrid.CreateTrigger = CreateTrigger
-DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
-DataGrid.SortTrigger = SortTrigger
+DataGrid.VisibilityTrigger = VisibilityTrigger
+DataGrid.SortMenuTrigger = SortMenuTrigger
 DataGrid.GlobalFilterInput = GlobalFilterInput
 DataGrid.ActiveFiltersBar = ActiveFiltersBar
 DataGrid.ClearFiltersButton = ClearFiltersButton

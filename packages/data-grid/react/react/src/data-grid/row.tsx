@@ -4,26 +4,32 @@ import { joinClassNames } from '../utils/class-names'
 import { DataGridCell } from './cell'
 import { useDataGridTable } from './table-context'
 
+import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode, Ref } from 'react'
 
-/** What a `<DataGrid.Row>` render function receives. */
-export type DataGridRowRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+/**
+ * What a `<DataGrid.Row>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Row<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
+ * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridRowRenderArgs<TRow extends object = any> = {
+	row: Row<TRow>
 	/** The row's visible cells, in column order — already filtered by column visibility and pinning. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cells: ReturnType<Row<any>['getVisibleCells']>
+	cells: ReturnType<Row<TRow>['getVisibleCells']>
 }
 
-export type DataGridRowProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridRowProps<TRow extends object = any> = {
+	row: Row<TRow>
 	style?: CSSProperties
 	/** Forwarded to the kit's `Tr`; pinned rows are measured through it (see `usePinnedRowOffsets`). */
 	ref?: Ref<HTMLTableRowElement>
-	'data-pinned'?: 'top' | 'bottom'
+	'data-pinned'?: PinSide
 	'data-virtual'?: 'row'
 	/**
 	 * Custom cell content for this row, rendered inside the kit's `Tr` — so the row keeps its
@@ -39,7 +45,7 @@ export type DataGridRowProps = {
 	 * </DataGrid.Row>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridRowRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridRowRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -55,16 +61,17 @@ export type DataGridRowProps = {
  * Consumer props from `rowProps` are applied first, so those structural attributes always win;
  * `className` is the exception and is merged rather than overwritten.
  */
-export function DataGridRow({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridRow<TRow extends object = any>({
 	row,
 	style,
 	ref,
 	'data-pinned': dataPinned,
 	'data-virtual': dataVirtual,
 	children,
-}: DataGridRowProps) {
+}: DataGridRowProps<TRow>) {
 	const { Tr } = useGridComponents().core
-	const table = useDataGridTable()
+	const table = useDataGridTable<TRow>()
 	// `table.grid` is row-erased, so the stored resolver is typed `Row<never>`; the row we hold
 	// is the very one it was written against.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

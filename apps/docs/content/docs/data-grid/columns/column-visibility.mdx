@@ -30,13 +30,14 @@ A simpler base example is also available:
 
 ## Options
 
-| Option                          | Type                               | Description                                                                                                                                                                                         |
-| ------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `visibility`                    | `false \| { initialHidden: true }` | Per-column. `false` disables hiding — the column is always visible (no Hide option in its menu, absent from the Columns toggle). `{ initialHidden: true }` starts the column hidden but toggleable. |
-| `state.columnVisibility`        | `Record<string, boolean>`          | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                                      |
-| `initialState.columnVisibility` | `Record<string, boolean>`          | Hidden columns at mount. Merges with the column-level `initialHidden` seeds — see below.                                                                                                            |
-
-Column visibility has no dedicated `onChange` — subscribe via the single `onStateChange` callback (see [Controlled State](./data-grid/controlled-state)).
+| Option                          | Type                                    | Description                                                                                                                                                                                                                          |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `visibility`                    | `false \| { initialHidden: true }`      | Per-column. `false` disables hiding — the column is always visible (no Hide option in its menu, absent from the Columns toggle). `{ initialHidden: true }` starts the column hidden but toggleable.                                  |
+| `visibility.toolbar`            | `boolean`                               | Auto-mount the Columns toggle into `Toolbar.end`. Default `true` in both forms — `visibility: true` and `visibility: { onChange }` mount the same button; write `toolbar: false` to place `<DataGrid.VisibilityTrigger />` yourself. |
+| `visibility.onChange`           | `(visibility: VisibilityState) => void` | Called whenever column visibility changes. Use it to persist which columns a user hid.                                                                                                                                               |
+| `state.columnVisibility`        | `Record<string, boolean>`               | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                                                                       |
+| `initialState.columnVisibility` | `Record<string, boolean>`               | Hidden columns at mount. Merges with the column-level `initialHidden` seeds — see below.                                                                                                                                             |
+| `visibility.enabled`            | `boolean`                               | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                                       |
 
 ## Seeds and invariants
 
@@ -58,4 +59,4 @@ See [State model](./data-grid/state-model) for the full precedence.
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/visibility-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/visibility-trigger.tsx)

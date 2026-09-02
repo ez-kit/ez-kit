@@ -118,7 +118,7 @@ const DATE_COLUMNS_WITH_PRESETS = createColumns<DateRow>([
 		cell: { type: 'date' },
 		filtering: {
 			operators: {
-				items: ['eq', 'between'],
+				items: ['equals', 'between'],
 				betweenOperator: { variant: 'inputs', presets: true },
 			},
 			defaultOperator: 'between',

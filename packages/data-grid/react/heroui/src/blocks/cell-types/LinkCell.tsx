@@ -1,19 +1,24 @@
 'use client'
 
+import { LINK_HREF_VALUE_TOKEN, LinkTarget } from '@ez-kit/data-grid-react'
 import { Description, FieldError, Input, Label, Link, TextField } from '@heroui/react'
 
-import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import type { CellViewProps, FieldState, LinkCellConfig } from '@ez-kit/data-grid-react'
 
-function LinkCellView({ value }: CellViewProps) {
-	const href = String(value ?? '')
-	if (!href) return null
+function LinkCellView({ value, config }: CellViewProps<LinkCellConfig>) {
+	const raw = String(value ?? '')
+	if (!raw) return null
+
+	const href = config?.href ? config.href.replaceAll(LINK_HREF_VALUE_TOKEN, encodeURIComponent(raw)) : raw
+	const target = config?.target ?? LinkTarget.Self
+
 	return (
 		<Link
 			href={href}
-			target='_blank'
-			rel='noreferrer'
+			target={target}
+			{...(target === LinkTarget.Blank ? { rel: 'noreferrer' } : {})}
 		>
-			{href}
+			{config?.label ?? raw}
 		</Link>
 	)
 }

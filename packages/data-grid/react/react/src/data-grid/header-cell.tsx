@@ -3,6 +3,7 @@ import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
+import { ColumnSortDirection, FilteringVariant, SortDirection } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { getAlignAttrs } from './align-attrs'
@@ -15,9 +16,6 @@ import type { DataTable } from '@ez-kit/data-grid-core'
 import type { Column, Header } from '@tanstack/table-core'
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 
-/** Sort direction as the header reports it — `'none'` rather than `false`, so it reads in JSX. */
-export type HeaderSortDirection = 'asc' | 'desc' | 'none'
-
 /**
  * What a `<DataGrid.HeaderCell>` render function receives.
  *
@@ -25,14 +23,17 @@ export type HeaderSortDirection = 'asc' | 'desc' | 'none'
  * header's own parts, already wired. They exist so a custom header cell can keep the parts it
  * still wants instead of re-implementing sorting, the column menu and the filter control from
  * scratch — and so it can place its own controls **outside** `sortTrigger`.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.HeaderCell<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
  */
-export type DataGridHeaderCellRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	column: Column<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderCellRenderArgs<TRow extends object = any> = {
+	header: Header<TRow, unknown>
+	column: Column<TRow>
 	canSort: boolean
-	sortDirection: HeaderSortDirection
+	sortDirection: ColumnSortDirection
 	/** The column's own `header` content, with no sorting behaviour attached. */
 	label: ReactNode
 	/** `label` plus the sort indicator, wrapped in the clickable sort affordance. */
@@ -45,9 +46,9 @@ export type DataGridHeaderCellRenderArgs = {
 	resizer: ReactNode
 }
 
-export type DataGridHeaderCellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	header: Header<any, unknown>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderCellProps<TRow extends object = any> = {
+	header: Header<TRow, unknown>
 	/**
 	 * Custom content for this one header cell, rendered inside the kit's `Th` — so the cell keeps
 	 * its pinning offset, its `data-*` attributes, its `headerClassName` and its resize handle.
@@ -56,11 +57,11 @@ export type DataGridHeaderCellProps = {
 	 * filter control. The render-function form hands back those same parts
 	 * ({@link DataGridHeaderCellRenderArgs}) so a custom cell can reuse the ones it still wants.
 	 */
-	children?: ReactNode | ((args: DataGridHeaderCellRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridHeaderCellRenderArgs<TRow>) => ReactNode)
 }
 
 /**
- * Position of `columnId` in the not-yet-applied sort under `deferredApply`, or `-1` when the
+ * Position of `columnId` in the not-yet-applied sort under `draft`, or `-1` when the
  * column isn't part of a pending sort.
  *
  * Compares the draft entry at each index against the applied entry at the same index — not a
@@ -69,7 +70,7 @@ export type DataGridHeaderCellProps = {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function computeDraftSortIndex(table: DataTable<any>, columnId: string): number {
-	if (table.options.deferredApply !== true) return -1
+	if (table.options.draft !== true) return -1
 	const draftSorting = table.draft.get().sorting
 	const appliedSorting = table.getState().applied.sorting
 	const draftIndex = draftSorting.findIndex((s) => s.id === columnId)
@@ -106,8 +107,9 @@ function isInteractiveTarget(event: MouseEvent | KeyboardEvent): boolean {
  * Rendering it requires the surrounding `<DataGrid.Header>`, which owns the state subscriptions
  * these cells read through.
  */
-export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps) {
-	const table = useDataGridTable()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridHeaderCell<TRow extends object = any>({ header, children }: DataGridHeaderCellProps<TRow>) {
+	const table = useDataGridTable<TRow>()
 	const gridComponents = useGridComponents()
 	const { Th, Input, Checkbox, Menu } = gridComponents.core
 	const { Resizer } = gridComponents.resizing
@@ -117,15 +119,21 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 
 	const meta = header.column.columnDef.meta
 	const canSort = header.column.getCanSort()
-	const sortDir = header.column.getIsSorted()
+	const rawSortDir = header.column.getIsSorted()
 	const pinVars = getCommonPinStyles(header.column)
 	const pinned = header.column.getIsPinned()
-	const canResize = Boolean(table.options.enableColumnResizing) && header.column.getCanResize()
+	// One check, not two: `createTable` now emits `enableColumnResizing: false` when the feature
+	// is off, so `getCanResize()` accounts for the table-level gate as well as the column's own
+	// `resizing: false`. Anything composing its own header can rely on the same single call.
+	const canResize = header.column.getCanResize()
 
 	// Selection column: a select-all checkbox, and none of the rest.
 	if (header.column.id === SELECTION_COLUMN_ID) {
 		const isAllSelected = table.getIsAllRowsSelected()
 		const isSomeSelected = table.getIsSomeRowsSelected()
+		// Under `selection.multi: false` only one row can be selected at a time, so a select-all
+		// control has nothing to select — the header cell stays empty but keeps its width.
+		const canSelectAll = table.options.enableMultiRowSelection !== false
 		return (
 			<Th
 				data-slot='th'
@@ -137,14 +145,20 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 				{...(pinned ? { 'data-pinned': pinned } : {})}
 				{...getAlignAttrs(meta, 'header')}
 			>
-				<Checkbox
-					value={isAllSelected}
-					indeterminate={isSomeSelected && !isAllSelected}
-					onChange={() => {
-						table.toggleAllRowsSelected(!isAllSelected)
-					}}
-					aria-label='Select all rows'
-				/>
+				{/* An explicit `selection.column.header` replaces the select-all checkbox — the
+				    only thing worth putting there instead, and what a grid with
+				    `selection.multi: false` (which renders no checkbox anyway) wants. */}
+				{meta?.systemHeader !== undefined && flexRender(meta.systemHeader, header.getContext())}
+				{meta?.systemHeader === undefined && canSelectAll && (
+					<Checkbox
+						value={isAllSelected}
+						indeterminate={isSomeSelected && !isAllSelected}
+						onChange={() => {
+							table.toggleAllRowsSelected(!isAllSelected)
+						}}
+						aria-label='Select all rows'
+					/>
+				)}
 			</Th>
 		)
 	}
@@ -165,7 +179,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 			}
 		: undefined
 
-	const colPinDef = meta?.columnPinning
+	const colPinDef = meta?.pinning
 	const isStaticPin = typeof colPinDef === 'object' && colPinDef.side !== undefined
 	const isPinningDisabled = colPinDef === false
 	const isMenuEligible = !meta?.isSystemColumn && !header.isPlaceholder
@@ -175,7 +189,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 
 	const menuSections = buildColumnMenuSections(header, {
 		canSort: canSort && !header.isPlaceholder,
-		canPin: table.grid.columnPinning && isMenuEligible && !isPinningDisabled && !isStaticPin,
+		canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
 		canHide: isMenuEligible && header.column.getCanHide(),
 	})
 
@@ -185,7 +199,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 		meta?.filtering !== false &&
 		!meta?.isSystemColumn &&
 		header.column.getCanFilter() &&
-		filteringVariant !== 'panel'
+		filteringVariant !== FilteringVariant.Panel
 	const filterContent = canFilter
 		? renderFilterInput({
 				header,
@@ -200,8 +214,13 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 			})
 		: null
 
-	const sortDirection: HeaderSortDirection = sortDir === 'asc' || sortDir === 'desc' ? sortDir : 'none'
-	const label = header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())
+	const sortDirection: ColumnSortDirection =
+		rawSortDir === SortDirection.Asc || rawSortDir === SortDirection.Desc ? rawSortDir : ColumnSortDirection.None
+	// System columns carry their header on `meta.systemHeader` rather than TanStack's `header`,
+	// which the grid keeps for itself (the selection column renders a select-all checkbox
+	// there). Falling back to `columnDef.header` keeps every ordinary column unchanged.
+	const headerSlot = meta?.systemHeader ?? header.column.columnDef.header
+	const label = header.isPlaceholder ? null : flexRender(headerSlot, header.getContext())
 
 	const sortTrigger = (
 		<div
@@ -214,7 +233,7 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 		>
 			{label}
 			<SortIndicator
-				sortDir={sortDir}
+				sortDirection={sortDirection}
 				canSort={canSort}
 			/>
 		</div>
@@ -244,12 +263,14 @@ export function DataGridHeaderCell({ header, children }: DataGridHeaderCellProps
 		<>
 			<div data-slot='header-main'>
 				{sortTrigger}
-				{filteringVariant === 'popover' && canFilter && (
+				{filteringVariant === FilteringVariant.Popover && canFilter && (
 					<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>{filterContent}</FilterPopover>
 				)}
 				{menu}
 			</div>
-			{filteringVariant !== 'popover' && canFilter && <div data-slot='header-extras'>{filterContent}</div>}
+			{filteringVariant !== FilteringVariant.Popover && canFilter && (
+				<div data-slot='header-extras'>{filterContent}</div>
+			)}
 		</>
 	)
 

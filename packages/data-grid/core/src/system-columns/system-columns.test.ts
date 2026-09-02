@@ -27,6 +27,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			customRowActions: false,
 		})
 		expect(cols).toHaveLength(1)
 		expect(cols[0]?.id).toBe('name')
@@ -39,6 +40,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			customRowActions: false,
 		})
 		expect(cols[0]?.id).toBe(SELECTION_COLUMN_ID)
 		expect(cols[1]?.id).toBe('name')
@@ -51,6 +53,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			customRowActions: false,
 		})
 		expect(cols[0]?.id).toBe(SELECTION_COLUMN_ID)
 		expect(cols[1]?.id).toBe(EXPAND_COLUMN_ID)
@@ -64,20 +67,22 @@ describe('buildColumnList', () => {
 			editing: true,
 			deleting: false,
 			pinning: false,
+			customRowActions: false,
 		})
 		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('actions column has columnPinning: { side: "right" } in meta', () => {
+	it('actions column has pinning: { side: "right" } in meta', () => {
 		const cols = buildColumnList([USER_COL], {
 			selection: false,
 			expanding: false,
 			editing: false,
 			deleting: true,
 			pinning: false,
+			customRowActions: false,
 		})
 		const actions = cols.find((c) => c.id === ACTIONS_COLUMN_ID)
-		expect(actions?.meta?.columnPinning).toEqual({ side: 'right' })
+		expect(actions?.meta?.pinning).toEqual({ side: 'right' })
 	})
 
 	it('appends __actions__ when only row pinning is enabled', () => {
@@ -87,13 +92,14 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: true,
+			customRowActions: false,
 		})
 		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
 	})
 
 	it('actions column width grows with the number of inline actions', () => {
 		const sizeOf = (opts: { editing: boolean; deleting: boolean; pinning: boolean }) =>
-			buildColumnList([USER_COL], { selection: false, expanding: false, ...opts }).find(
+			buildColumnList([USER_COL], { selection: false, expanding: false, customRowActions: false, ...opts }).find(
 				(c) => c.id === ACTIONS_COLUMN_ID,
 			)?.size
 
@@ -114,6 +120,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: true,
+			customRowActions: false,
 			rowActionsVariant: RowActionsVariant.Inline,
 		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 		const menu = buildColumnList([USER_COL], {
@@ -122,10 +129,40 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: true,
+			customRowActions: false,
 			rowActionsVariant: RowActionsVariant.Menu,
 		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 
 		expect(menu).toBeLessThan(inline ?? 0)
+	})
+
+	it('injects the actions column for a grid whose only action is a custom one', () => {
+		const cols = buildColumnList([USER_COL], {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: false,
+			pinning: false,
+			customRowActions: true,
+		})
+
+		expect(cols.map((c) => c.id)).toEqual(['name', ACTIONS_COLUMN_ID])
+	})
+
+	it('reserves the overflow trigger width for custom actions', () => {
+		const base = {
+			selection: false,
+			expanding: false,
+			editing: false,
+			deleting: true,
+			pinning: false,
+			customRowActions: false,
+		}
+		const sizeOf = (customRowActions: boolean) =>
+			buildColumnList([USER_COL], { ...base, customRowActions }).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
+
+		// Delete button alone vs. delete button + the menu trigger the custom entries live behind.
+		expect(sizeOf(true)).toBeGreaterThan(sizeOf(false) ?? 0)
 	})
 
 	it('full order: [selection, expand, user..., actions]', () => {
@@ -135,6 +172,7 @@ describe('buildColumnList', () => {
 			editing: true,
 			deleting: true,
 			pinning: false,
+			customRowActions: false,
 		})
 		const ids = cols.map((c) => c.id)
 		expect(ids).toEqual([SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, 'name', ACTIONS_COLUMN_ID])
@@ -144,8 +182,8 @@ describe('buildColumnList', () => {
 describe('extractPinningState', () => {
 	it('extracts columns with static pin position', () => {
 		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'a', meta: { columnPinning: { side: 'left' } } },
-			{ id: 'b', meta: { columnPinning: { side: 'right' } } },
+			{ id: 'a', meta: { pinning: { side: 'left' } } },
+			{ id: 'b', meta: { pinning: { side: 'right' } } },
 			{ id: 'c', meta: {} },
 		]
 		const { left, right } = extractPinningState(cols)
@@ -156,16 +194,16 @@ describe('extractPinningState', () => {
 
 	it('extracts columns with initialSide position', () => {
 		const cols: TanStackColumnDef<Row>[] = [
-			{ id: 'd', meta: { columnPinning: { initialSide: 'left' } } },
-			{ id: 'e', meta: { columnPinning: { initialSide: 'right' } } },
+			{ id: 'd', meta: { pinning: { initialSide: 'left' } } },
+			{ id: 'e', meta: { pinning: { initialSide: 'right' } } },
 		]
 		const { left, right } = extractPinningState(cols)
 		expect(left).toContain('d')
 		expect(right).toContain('e')
 	})
 
-	it('skips columns with columnPinning: false', () => {
-		const cols: TanStackColumnDef<Row>[] = [{ id: 'f', meta: { columnPinning: false } }]
+	it('skips columns with meta.pinning: false', () => {
+		const cols: TanStackColumnDef<Row>[] = [{ id: 'f', meta: { pinning: false } }]
 		const { left, right } = extractPinningState(cols)
 		expect(left).not.toContain('f')
 		expect(right).not.toContain('f')

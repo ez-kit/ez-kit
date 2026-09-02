@@ -38,6 +38,7 @@ export function Pagination({
 	return (
 		<ShadcnPagination
 			className='mt-3'
+			data-slot='pagination'
 			data-variant={variant}
 		>
 			{label !== undefined && <span className={LABEL_CLASS}>{label}</span>}

@@ -22,6 +22,7 @@ export function DeleteConfirmationExample() {
 			data={data}
 			columns={columns}
 			sorting
+			selection
 			pagination={{ pageSize: 10 }}
 			deleting={{
 				onDelete: ({ row }) => {
@@ -29,8 +30,17 @@ export function DeleteConfirmationExample() {
 				},
 				confirmation: {
 					title: 'Delete product?',
-					description: (row) =>
-						`Are you sure you want to delete "${(row.original as Product).name}"? This action cannot be undone.`,
+					description: (row) => `Are you sure you want to delete "${row.original.name}"? This action cannot be undone.`,
+				},
+				bulk: {
+					onDelete: ({ rowIds }) => {
+						const removed = new Set(rowIds.map(Number))
+						setData((prev) => prev.filter((item) => !removed.has(item.id)))
+					},
+					confirmation: {
+						title: 'Delete products?',
+						description: (rows) => `${String(rows.length)} products will be permanently removed.`,
+					},
 				},
 			}}
 		/>

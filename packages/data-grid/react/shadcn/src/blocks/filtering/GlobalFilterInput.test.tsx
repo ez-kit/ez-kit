@@ -25,7 +25,7 @@ describe('GlobalFilterInput (shadcn)', () => {
 	})
 
 	// The headless `<DataGrid.GlobalFilterInput />` wrapper only wires `onKeyDown` under
-	// `deferredApply` — this asserts the kit forwards it to the real `<input>` verbatim, so a
+	// `draft` — this asserts the kit forwards it to the real `<input>` verbatim, so a
 	// future edit that drops the passthrough (e.g. destructuring away the rest of the props)
 	// fails here instead of silently dropping the Enter-applies-the-draft shortcut.
 	it('forwards onKeyDown to the underlying input', () => {

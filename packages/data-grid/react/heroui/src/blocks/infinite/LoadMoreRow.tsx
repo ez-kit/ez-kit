@@ -1,5 +1,6 @@
 'use client'
 
+import { LoadMoreTrigger } from '@ez-kit/data-grid-react'
 import { Button, Spinner } from '@heroui/react'
 import { AlertCircle } from 'lucide-react'
 
@@ -11,9 +12,9 @@ import type { LoadMoreRowProps } from '@ez-kit/data-grid-react'
  * Renders one of three states inside the full-width cell the react layer provides:
  * - `error` → message + "Retry"
  * - `isFetching` → spinner
- * - `trigger === 'manual'` and more available → "Load more" button
+ * - `trigger` is {@link LoadMoreTrigger.Manual} and more available → "Load more" button
  */
-export function LoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
+export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
 	if (error != null) {
 		return (
 			<div
@@ -53,7 +54,7 @@ export function LoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, on
 		)
 	}
 
-	if (trigger === 'manual' && hasMore) {
+	if (trigger === LoadMoreTrigger.Manual && hasNextPage) {
 		return (
 			<div
 				data-slot='load-more'

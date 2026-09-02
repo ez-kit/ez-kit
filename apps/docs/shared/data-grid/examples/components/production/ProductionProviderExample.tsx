@@ -20,14 +20,11 @@ function OrdersGrid() {
 			pagination={{ rowCount: orders.rowCount }}
 			creating={{ onSave: ({ values }) => orders.create(values) }}
 			editing={{ onSave: ({ rowId, values }) => orders.update(Number(rowId), values) }}
-			deleting={{ onDelete: ({ row }) => orders.remove([row.original.id]) }}
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						void orders.remove(selectedRows.map((row) => row.original.id)).then(clearSelection)
-					},
-				},
+			deleting={{
+				onDelete: ({ row }) => orders.remove([row.original.id]),
+				bulk: { onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)) },
 			}}
+			selection
 			state={{ ...orders.tableState, loading: orders.loading }}
 			onStateChange={orders.onStateChange}
 		/>

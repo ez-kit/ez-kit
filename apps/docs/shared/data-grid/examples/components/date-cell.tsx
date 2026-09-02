@@ -28,7 +28,7 @@ const baseColumns = createColumns<Milestone>([
 		header: 'Due date',
 		cell: {
 			type: 'date',
-			config: { format: { dateStyle: 'medium' }, minValue: '2025-01-01', maxValue: '2027-12-31' },
+			config: { format: { dateStyle: 'medium' }, min: '2025-01-01', max: '2027-12-31' },
 		},
 		filtering: { operators: true },
 	},
@@ -41,7 +41,7 @@ const baseColumns = createColumns<Milestone>([
 		},
 		filtering: {
 			operators: {
-				items: ['eq', 'before', 'after', 'between'],
+				items: ['equals', 'lessThan', 'greaterThan', 'between'],
 				betweenOperator: { variant: 'inputs' },
 			},
 		},

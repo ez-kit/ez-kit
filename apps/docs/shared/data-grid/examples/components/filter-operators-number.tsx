@@ -12,7 +12,7 @@ const columns = createColumns<Employee>([
 		accessorKey: 'salary',
 		header: 'Salary',
 		cell: { type: 'number' },
-		filtering: { operators: true, defaultOperator: 'gte' },
+		filtering: { operators: true, defaultOperator: 'greaterOrEqual' },
 	},
 ])
 

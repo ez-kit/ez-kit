@@ -1,5 +1,6 @@
 'use client'
 
+import { ActionBarVariant } from '@ez-kit/data-grid-react'
 import { Button } from '@heroui/react'
 import { Trash2, X } from 'lucide-react'
 
@@ -16,7 +17,7 @@ import type { SelectionBarProps } from '@ez-kit/data-grid-react'
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
 	const hasActions = Boolean(onDelete) || Boolean(actions)
 
-	if (variant === 'inline') {
+	if (variant === ActionBarVariant.Inline) {
 		if (!open) return null
 
 		return (

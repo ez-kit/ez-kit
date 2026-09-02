@@ -58,16 +58,16 @@ function makeCountingComponents(counters: Counters): Required<GridComponents> {
 		counters.thead += 1
 		return <thead {...props} />
 	}
-	function CountingToolbar({ children, left, right, ...rest }: ToolbarProps): ReactElement {
+	function CountingToolbar({ children, start, end, ...rest }: ToolbarProps): ReactElement {
 		counters.toolbar += 1
 		return (
 			<div
 				role='toolbar'
 				{...rest}
 			>
-				{left}
+				{start}
 				{children}
-				{right}
+				{end}
 			</div>
 		)
 	}
@@ -162,7 +162,7 @@ describe('rerender isolation', () => {
 	})
 
 	it('start editing a row does NOT re-render PageSizer', () => {
-		const { counters, table } = renderGrid({ pagination: { pageSizeOptions: [10, 25] } })
+		const { counters, table } = renderGrid({ pagination: { items: [10, 25] } })
 		const before = counters.pageSizer
 
 		act(() => {
@@ -174,7 +174,7 @@ describe('rerender isolation', () => {
 
 	it('start editing a row does NOT re-render the Toolbar', () => {
 		// Toolbar needs at least one control to render; the page sizer suffices.
-		const { counters, table } = renderGrid({ pagination: { pageSizeOptions: [10, 25] } })
+		const { counters, table } = renderGrid({ pagination: { items: [10, 25] } })
 		const toolbarBefore = counters.toolbar
 
 		act(() => {

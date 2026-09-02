@@ -1,4 +1,7 @@
+import { ColumnPinSide } from '@ez-kit/data-grid-core'
+
 import { GridMenuIcon, toMenuSections } from '../menu'
+import { SortDirection } from '../types'
 
 import type { GridMenuSection } from '../menu'
 import type { Header } from '@tanstack/table-core'
@@ -54,7 +57,7 @@ export function buildColumnMenuSections(
 
 	const sorting: GridMenuSection = { id: SORTING_SECTION, label: 'Sorting', items: [] }
 	if (canSort) {
-		if (sortDir !== 'asc') {
+		if (sortDir !== SortDirection.Asc) {
 			sorting.items.push({
 				id: ColumnActionId.SortAsc,
 				label: LABELS[ColumnActionId.SortAsc],
@@ -64,7 +67,7 @@ export function buildColumnMenuSections(
 				},
 			})
 		}
-		if (sortDir !== 'desc') {
+		if (sortDir !== SortDirection.Desc) {
 			sorting.items.push({
 				id: ColumnActionId.SortDesc,
 				label: LABELS[ColumnActionId.SortDesc],
@@ -88,23 +91,23 @@ export function buildColumnMenuSections(
 
 	const pin: GridMenuSection = { id: PIN_SECTION, label: 'Pin', items: [] }
 	if (canPin) {
-		if (isPinned !== 'left') {
+		if (isPinned !== ColumnPinSide.Left) {
 			pin.items.push({
 				id: ColumnActionId.PinLeft,
 				label: LABELS[ColumnActionId.PinLeft],
 				icon: GridMenuIcon.PinLeft,
 				onSelect: () => {
-					column.pin('left')
+					column.pin(ColumnPinSide.Left)
 				},
 			})
 		}
-		if (isPinned !== 'right') {
+		if (isPinned !== ColumnPinSide.Right) {
 			pin.items.push({
 				id: ColumnActionId.PinRight,
 				label: LABELS[ColumnActionId.PinRight],
 				icon: GridMenuIcon.PinRight,
 				onSelect: () => {
-					column.pin('right')
+					column.pin(ColumnPinSide.Right)
 				},
 			})
 		}

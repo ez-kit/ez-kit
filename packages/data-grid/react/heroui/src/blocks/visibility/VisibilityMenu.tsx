@@ -3,10 +3,10 @@
 import { Button, Dropdown, Label } from '@heroui/react'
 import { Columns2 } from 'lucide-react'
 
-import type { ColumnVisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
+import type { VisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-grid-react'
 import type { Selection } from '@heroui/react'
 
-export function ColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
+export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 	const selectedKeys = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
 
 	/**

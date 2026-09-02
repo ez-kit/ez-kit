@@ -10,7 +10,7 @@ import type { DraftBarProps } from '@ez-kit/data-grid-react'
 function makeProps(overrides: Partial<DraftBarProps> = {}): DraftBarProps {
 	return {
 		open: true,
-		pending: { sorting: 1, filters: 2, search: false },
+		pending: { sorting: 1, columnFilters: 2, globalFilter: 0 },
 		selectedCount: 3,
 		variant: 'floating',
 		onApply: vi.fn(),
@@ -29,20 +29,22 @@ describe('DraftBar (shadcn)', () => {
 	})
 
 	it('omits the selection chip when nothing is selected', () => {
-		render(<DraftBar {...makeProps({ pending: { sorting: 1, filters: 0, search: false }, selectedCount: 0 })} />)
+		render(
+			<DraftBar {...makeProps({ pending: { sorting: 1, columnFilters: 0, globalFilter: 0 }, selectedCount: 0 })} />,
+		)
 
 		expect(screen.queryByText(/selected/i)).toBeNull()
 	})
 
 	it('exposes the draft state on the toolbar root', () => {
-		render(<DraftBar {...makeProps({ pending: { sorting: 1, filters: 2, search: true } })} />)
+		render(<DraftBar {...makeProps({ pending: { sorting: 1, columnFilters: 2, globalFilter: 1 } })} />)
 
 		const bar = screen.getByTestId('draft-bar')
 		expect(bar).toHaveAttribute('role', 'toolbar')
 		expect(bar).toHaveAttribute('data-slot', 'draft-bar')
 		expect(bar).toHaveAttribute('data-pending-sorting', '1')
-		expect(bar).toHaveAttribute('data-pending-filters', '2')
-		expect(bar).toHaveAttribute('data-pending-search', 'true')
+		expect(bar).toHaveAttribute('data-pending-column-filters', '2')
+		expect(bar).toHaveAttribute('data-pending-global-filter', '1')
 		expect(bar).toHaveAttribute('data-selected-count', '3')
 	})
 

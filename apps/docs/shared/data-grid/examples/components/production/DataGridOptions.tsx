@@ -26,7 +26,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 			defaults={{
 				pagination: {
 					manual: true,
-					pageSizeOptions: [10, 25, 50],
+					items: [10, 25, 50],
 					variant: 'numbered',
 					siblings: 1,
 				},
@@ -43,13 +43,13 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				layout: { stickyHeader: true },
 				pinning: { column: true, row: { top: true, bottom: true } },
 				resizing: { mode: 'onChange' },
-				columnVisibility: { toolbar: true },
+				visibility: true,
 				creating: { mode: 'modal' },
 				editing: { mode: 'modal' },
 				deleting: {
 					confirmation: {
 						title: 'Delete order?',
-						description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+						description: (row) => `Order ${row.original.reference} will be permanently removed.`,
 					},
 				},
 			}}

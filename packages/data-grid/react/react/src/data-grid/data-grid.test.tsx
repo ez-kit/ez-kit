@@ -6,11 +6,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
+import { ActionBarVariant } from '../types'
 
 import { DataGrid } from './data-grid'
 
-import type { ResolvedGridOptions } from '../resolved-options'
 import type { ResizerProps } from '../types'
+import type { DeletingConfig } from '@ez-kit/data-grid-core'
 
 type User = {
 	id: number
@@ -205,7 +206,7 @@ describe('<DataGrid>', () => {
 			{
 				accessorKey: 'name',
 				header: 'Name',
-				cell: { component: ({ value }) => <span data-testid='custom-cell'>{String(value)}</span> },
+				cell: { component: ({ value }) => <span data-testid='custom-cell'>{value}</span> },
 			},
 			{ accessorKey: 'age', header: 'Age' },
 		])
@@ -255,7 +256,7 @@ describe('<DataGrid>', () => {
 		expect(screen.getAllByTestId('money-cell')).toHaveLength(USERS.length)
 	})
 
-	it('does not auto-mount PageSizer when pagination.pageSizeOptions is not set', () => {
+	it('does not auto-mount PageSizer when pagination.items is not set', () => {
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		renderWithComponents(<DataGrid table={table} />)
 		expect(screen.queryByRole('combobox')).toBeNull()
@@ -267,8 +268,8 @@ describe('<DataGrid>', () => {
 		// `makeTable` builds a bare core table, so the resolved options are set directly here:
 		// sizes present, auto-mount off — exactly what `pagination: { toolbar: false }` resolves to.
 		const table = makeTable({ pagination: { pageSize: 5 } })
-		table.grid.pagination.pageSizeOptions = [5, 10, 25]
-		table.grid.pagination.pageSizer = false
+		table.grid.pagination.items = [5, 10, 25]
+		table.grid.pagination.toolbar = false
 		renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.PageSizer />
@@ -277,10 +278,10 @@ describe('<DataGrid>', () => {
 		expect(screen.getByRole('combobox')).toHaveValue('5')
 	})
 
-	it('renders PageSizer select with the pagination.pageSizeOptions values', () => {
+	it('renders PageSizer select with the pagination.items values', () => {
 		const table = makeTable({ pagination: { pageSize: 5 } })
-		table.grid.pagination.pageSizeOptions = [5, 10, 25]
-		table.grid.pagination.pageSizer = true
+		table.grid.pagination.items = [5, 10, 25]
+		table.grid.pagination.toolbar = true
 		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
 		expect(select).toBeInTheDocument()
@@ -382,7 +383,7 @@ describe('<DataGrid>', () => {
 		it('renders inline SelectionBar above the Toolbar in DOM order', () => {
 			// Toolbar renders null without content — enable `creating` to give it the "+ Add" trigger.
 			const table = makeTable({ selection: true, creating: { onSave: () => Promise.resolve() } })
-			table.grid.selection.panel = { variant: 'inline' }
+			table.grid.selection.bar = { variant: ActionBarVariant.Inline }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
 
@@ -396,7 +397,7 @@ describe('<DataGrid>', () => {
 				creating: { onSave: () => Promise.resolve() },
 				pagination: true,
 			})
-			table.grid.selection.panel = true
+			table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 			table.setRowSelection({ '1': true })
 			renderWithComponents(<DataGrid table={table} />)
 
@@ -422,7 +423,7 @@ describe('<DataGrid>', () => {
 		const { rerender } = renderWithComponents(
 			<DataGrid
 				table={table}
-				cellTypes={{ 'custom-type': { edit: editFn } }}
+				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
 		)
 		act(() => {
@@ -431,16 +432,18 @@ describe('<DataGrid>', () => {
 		rerender(
 			<DataGrid
 				table={table}
-				cellTypes={{ 'custom-type': { edit: editFn } }}
+				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
 		)
 		expect(screen.getAllByTestId('registry-edit').length).toBeGreaterThan(0)
 	})
 })
 
-describe('<DataGrid> selection-bar delete confirmation', () => {
-	function setSelectionBar(table: ReturnType<typeof makeTable>, value: ResolvedGridOptions['selection']['panel']) {
-		table.grid.selection.panel = value
+describe('<DataGrid> bulk delete confirmation', () => {
+	function makeBulkTable(bulk: NonNullable<DeletingConfig<User>['bulk']>, onDelete = vi.fn()) {
+		const table = makeTable({ selection: true, deleting: { onDelete: () => {}, bulk } })
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
+		return { table, onDelete }
 	}
 
 	function getDialog(): HTMLElement {
@@ -449,79 +452,105 @@ describe('<DataGrid> selection-bar delete confirmation', () => {
 		return dialog
 	}
 
-	it('runs onDelete instantly when confirmation is not set (no dialog)', async () => {
+	// Scoped to the selection bar: `deleting` also injects the per-row actions column, whose
+	// every row carries its own Delete button.
+	function bulkDeleteButton(): HTMLElement {
+		return within(screen.getByRole('toolbar')).getByRole('button', { name: /delete/i })
+	}
+
+	it('runs the bulk handler instantly when confirmation is not set (no dialog)', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const table = makeTable({ selection: true })
-		setSelectionBar(table, { onDelete })
+		const { table } = makeBulkTable({ onDelete })
 		table.setRowSelection({ '1': true })
 		renderWithComponents(<DataGrid table={table} />)
 
-		await user.click(screen.getByRole('button', { name: /delete/i }))
+		await user.click(bulkDeleteButton())
 		expect(onDelete).toHaveBeenCalledOnce()
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
-	it('opens the ConfirmDialog and defers onDelete when confirmation is set', async () => {
+	it('falls back to the per-row handler, once per selected row, when bulk names none', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const table = makeTable({ selection: true })
-		setSelectionBar(table, { onDelete, confirmation: true })
+		const table = makeTable({ selection: true, deleting: { onDelete, bulk: true } })
+		table.grid.selection.bar = { variant: ActionBarVariant.Floating }
 		table.setRowSelection({ '1': true, '2': true })
 		renderWithComponents(<DataGrid table={table} />)
 
-		await user.click(screen.getByRole('button', { name: /delete/i }))
+		await user.click(bulkDeleteButton())
+		expect(onDelete).toHaveBeenCalledTimes(2)
+	})
+
+	it('opens the ConfirmDialog and defers the delete when confirmation is set', async () => {
+		const user = userEvent.setup()
+		const onDelete = vi.fn()
+		const { table } = makeBulkTable({ onDelete, confirmation: true })
+		table.setRowSelection({ '1': true, '2': true })
+		renderWithComponents(<DataGrid table={table} />)
+
+		await user.click(bulkDeleteButton())
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingBulkDelete).toBe(true)
+		expect(table.getState().deleting.pendingBulk).toBe(true)
 		// Count-aware default description for the two selected rows.
 		expect(screen.getByText(/delete 2 rows/i)).toBeInTheDocument()
 	})
 
-	it('runs onDelete and clears the pending flag on confirm', async () => {
+	it('runs the handler with the selected rows and clears the pending flag on confirm', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const table = makeTable({ selection: true })
-		setSelectionBar(table, { onDelete, confirmation: true })
+		const { table } = makeBulkTable({ onDelete, confirmation: true })
 		table.setRowSelection({ '1': true })
 		renderWithComponents(<DataGrid table={table} />)
 
-		await user.click(screen.getByRole('button', { name: /delete/i }))
+		await user.click(bulkDeleteButton())
 		await user.click(within(getDialog()).getByRole('button', { name: /confirm/i }))
 
 		expect(onDelete).toHaveBeenCalledOnce()
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const args = onDelete.mock.calls.at(0)?.at(0)
-		expect((args as { selectedRows: unknown[] }).selectedRows).toHaveLength(1)
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect((args as { rows: unknown[] }).rows).toHaveLength(1)
+		expect((args as { rowIds: string[] }).rowIds).toEqual(['1'])
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
 	it('leaves data intact and clears pending on cancel', async () => {
 		const user = userEvent.setup()
 		const onDelete = vi.fn()
-		const table = makeTable({ selection: true })
-		setSelectionBar(table, { onDelete, confirmation: true })
+		const { table } = makeBulkTable({ onDelete, confirmation: true })
 		table.setRowSelection({ '1': true })
 		renderWithComponents(<DataGrid table={table} />)
 
-		await user.click(screen.getByRole('button', { name: /delete/i }))
+		await user.click(bulkDeleteButton())
 		await user.click(within(getDialog()).getByRole('button', { name: /cancel/i }))
 
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 		expect(document.querySelector('dialog')).toBeNull()
 	})
 
 	it('uses a custom confirmation title when provided', async () => {
 		const user = userEvent.setup()
-		const onDelete = vi.fn()
-		const table = makeTable({ selection: true })
-		setSelectionBar(table, { onDelete, confirmation: { title: 'Remove these?' } })
+		const { table } = makeBulkTable({ onDelete: vi.fn(), confirmation: { title: 'Remove these?' } })
 		table.setRowSelection({ '1': true })
 		renderWithComponents(<DataGrid table={table} />)
 
-		await user.click(screen.getByRole('button', { name: /delete/i }))
+		await user.click(bulkDeleteButton())
 		expect(screen.getByText('Remove these?')).toBeInTheDocument()
+	})
+
+	it('hands the whole selection to a description function', async () => {
+		const user = userEvent.setup()
+		const { table } = makeBulkTable({
+			onDelete: vi.fn(),
+			confirmation: { description: (rows) => `Removing ${String(rows.length)} of them` },
+		})
+		table.setRowSelection({ '1': true, '2': true })
+		renderWithComponents(<DataGrid table={table} />)
+
+		await user.click(bulkDeleteButton())
+		expect(screen.getByText('Removing 2 of them')).toBeInTheDocument()
 	})
 })
 

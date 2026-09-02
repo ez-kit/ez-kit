@@ -9,8 +9,7 @@ export type DataGridCreateTriggerProps = {
 }
 
 /**
- * Button that opens the create form.
- * With `asChild`, injects onClick into the child element (Radix-style).
+ * Button that opens the create form. `children` is its label; omit it for the default `+ Add`.
  */
 export function CreateTrigger({ children }: DataGridCreateTriggerProps = {}) {
 	const table = useDataGridTable()

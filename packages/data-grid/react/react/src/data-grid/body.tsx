@@ -19,16 +19,23 @@ import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
-/** What a `<DataGrid.Body>` render function receives. */
-export type DataGridBodyRenderArgs = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	table: Table<any>
+/**
+ * What a `<DataGrid.Body>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Body<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
+ * It cannot be inferred, because a compound child reads the table from context rather than from
+ * a prop; this is the explicit-argument shape `useDataGridTable<Order>()` already uses.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridBodyRenderArgs<TRow extends object = any> = {
+	table: Table<TRow>
 	/** The rows of the current row model, already sorted / filtered / paginated. */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	rows: Row<any>[]
+	rows: Row<TRow>[]
 }
 
-export type DataGridBodyProps = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridBodyProps<TRow extends object = any> = {
 	/**
 	 * Custom body content, rendered inside the kit's `<Tbody>`.
 	 *
@@ -44,7 +51,7 @@ export type DataGridBodyProps = {
 	 * </DataGrid.Body>
 	 * ```
 	 */
-	children?: ReactNode | ((args: DataGridBodyRenderArgs) => ReactNode)
+	children?: ReactNode | ((args: DataGridBodyRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -61,9 +68,10 @@ export type DataGridBodyProps = {
  * structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offset.
  */
-export function Body({ children }: DataGridBodyProps = {}) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function Body<TRow extends object = any>({ children }: DataGridBodyProps<TRow> = {}) {
 	const { rowVirtualizer } = useVirtualContext()
-	const table = useDataGridTable()
+	const table = useDataGridTable<TRow>()
 	const { Tbody } = useGridComponents().core
 
 	// Narrow subscriptions: each returns a referentially stable slice. Body
@@ -108,9 +116,9 @@ export function Body({ children }: DataGridBodyProps = {}) {
 	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = table.grid.fallbacks
-	const renderExpanded = table.grid.expanding.renderExpanded as ComponentType<ExpandedRowProps<object>> | undefined
+	const expandedComponent = table.grid.expanding.component as ComponentType<ExpandedRowProps<object>> | undefined
 
-	if (isPending && fallbacks?.loading !== false) {
+	if (isPending && fallbacks.loading.enabled) {
 		return <LoadingBody />
 	}
 
@@ -124,10 +132,10 @@ export function Body({ children }: DataGridBodyProps = {}) {
 	const rawDataLength = (table.options.data as unknown[]).length
 
 	if (!showCreatingRow && allRows.length === 0) {
-		if (rawDataLength === 0 && fallbacks?.empty !== false) {
+		if (rawDataLength === 0 && fallbacks.empty.enabled) {
 			return <EmptyStateRow />
 		}
-		if (rawDataLength > 0 && fallbacks?.noResults !== false) {
+		if (rawDataLength > 0 && fallbacks.noResults.enabled) {
 			return <NoResultsRow />
 		}
 	}
@@ -145,13 +153,13 @@ export function Body({ children }: DataGridBodyProps = {}) {
 						data-pinned='top'
 						ref={registerTopRow(index)}
 					/>
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			{centerRows.map((row) => (
 				<Fragment key={row.id}>
 					<DataGridRow row={row} />
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			{bottomRows.map((row, index) => (
@@ -161,7 +169,7 @@ export function Body({ children }: DataGridBodyProps = {}) {
 						data-pinned='bottom'
 						ref={registerBottomRow(index)}
 					/>
-					{renderExpanded && row.getIsExpanded() && <ExpandedRow row={row} />}
+					{expandedComponent && row.getIsExpanded() && <ExpandedRow row={row} />}
 				</Fragment>
 			))}
 			<LoadMoreFooter />

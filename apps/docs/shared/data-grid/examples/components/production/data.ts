@@ -138,7 +138,7 @@ export const orderColumns = createColumns<Order>([
 		header: 'Placed',
 		width: { default: 180, min: 150 },
 		cell: { type: 'date', config: { format: { dateStyle: 'medium' } } },
-		filtering: { operators: { items: ['eq', 'before', 'after', 'between'] } },
+		filtering: { operators: { items: ['equals', 'lessThan', 'greaterThan', 'between'] } },
 	},
 	{
 		accessorKey: 'paid',

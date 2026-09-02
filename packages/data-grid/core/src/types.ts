@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
-import type { ColumnDef, SortingFn } from './column/types'
+import type { ColumnDef, SortingFn, SystemColumnDef } from './column/types'
 import type { CreatingConfig } from './features/creating'
+import type { DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
 import type { FilterOperatorDef } from './features/operators'
@@ -37,16 +38,25 @@ export type SortingState = SortingStateEntry[]
 
 /**
  * Gesture that engages multi-column sort.
- * - `'shift'` — shift+click adds the column (TanStack default)
- * - `'ctrl'`  — ctrl+click (or ⌘+click on macOS) adds the column
- * - `'always'` — every click extends the multi-sort set
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `event: 'ctrl'` is equally valid and needs no import.
  */
-export type MultiSortEvent = 'shift' | 'ctrl' | 'always'
+export const MultiSortEvent = {
+	/** Shift+click adds the column. The default, and TanStack's. */
+	Shift: 'shift',
+	/** Ctrl+click (or ⌘+click on macOS) adds the column. */
+	Ctrl: 'ctrl',
+	/** Every click extends the multi-sort set — no modifier needed. */
+	Always: 'always',
+} as const
+
+export type MultiSortEvent = (typeof MultiSortEvent)[keyof typeof MultiSortEvent]
 
 export type MultiSortConfig = {
 	/** Cap on simultaneously sorted columns. Unlimited by default. */
 	max?: number
-	/** Gesture that engages multi-sort. Default: `'shift'`. */
+	/** Gesture that engages multi-sort. Default: {@link MultiSortEvent.Shift}. */
 	event?: MultiSortEvent
 	/** Allow removing a single column from the multi-sort set. Default: true. */
 	removable?: boolean
@@ -139,6 +149,13 @@ export type SortingConfig = FeatureToggle & {
 }
 
 export type FilteringConfig = FeatureToggle & {
+	/**
+	 * Server-side column filtering: the grid stops filtering rows itself and hands
+	 * the filter state to {@link FilteringConfig.onChange}.
+	 *
+	 * Shares one TanStack switch with {@link GlobalFilteringConfig.manual} — setting
+	 * either one turns client-side filtering off for both axes.
+	 */
 	manual?: boolean
 	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
 	operators?: FilterOperatorDef[]
@@ -168,6 +185,50 @@ export type FilteringConfig = FeatureToggle & {
  * an `addMeta` callback for stashing match metadata (e.g. for highlighting).
  */
 export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
+
+/**
+ * The match functions available to global search by name.
+ *
+ * A closed set, and one the grid was previously passing through as a bare `string`: the value
+ * is handed to TanStack, which resolves it against its own built-in filter functions, so a
+ * typo — `'includesStrings'` — compiled, silently fell back to TanStack's `'auto'`, and
+ * changed what the search box matched with no error anywhere.
+ *
+ * Named members for internal reference; the option is typed as {@link GlobalFilterFnId}, so
+ * `fn: 'includesString'` is equally valid and needs no import. The same shape
+ * `column.sorting.fn` uses for {@link BuiltInSortingFn}, and for the same reason.
+ */
+export const BuiltInGlobalFilterFn = {
+	/** Case-insensitive substring match. The default. */
+	IncludesString: 'includesString',
+	/** Case-sensitive substring match. */
+	IncludesStringSensitive: 'includesStringSensitive',
+	/** Case-insensitive whole-value equality. */
+	EqualsString: 'equalsString',
+	/** Case-sensitive whole-value equality. */
+	EqualsStringSensitive: 'equalsStringSensitive',
+	/** The row value is an array containing the search value. */
+	ArrIncludes: 'arrIncludes',
+	/** The row value is an array containing all of the search values. */
+	ArrIncludesAll: 'arrIncludesAll',
+	/** The row value is an array containing some of the search values. */
+	ArrIncludesSome: 'arrIncludesSome',
+	/** Strict `===` against the raw row value. */
+	Equals: 'equals',
+	/** Loose `==` against the raw row value. */
+	WeakEquals: 'weakEquals',
+	/** Numeric range — the search value is a `[min, max]` tuple. */
+	InNumberRange: 'inNumberRange',
+} as const
+
+export type BuiltInGlobalFilterFn = (typeof BuiltInGlobalFilterFn)[keyof typeof BuiltInGlobalFilterFn]
+
+/**
+ * A global-search match function by name: a built-in, or an id registered through
+ * {@link GlobalFilteringConfig.fns}. The `string & {}` tail keeps a registry id assignable
+ * while preserving autocomplete for the built-ins.
+ */
+export type GlobalFilterFnId = BuiltInGlobalFilterFn | (string & {})
 
 /**
  * Table-level global search (cross-column) config.
@@ -201,14 +262,25 @@ export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
  */
 export type GlobalFilteringConfig = FeatureToggle & {
 	/**
+	 * Server-side global search: the grid stops filtering rows itself and hands the
+	 * search value to {@link GlobalFilteringConfig.onChange}, expecting the data it
+	 * receives back to already be filtered.
+	 *
+	 * TanStack exposes a **single** `manualFiltering` switch covering both column
+	 * filters and global search, so this option and {@link FilteringConfig.manual}
+	 * feed the same flag: setting either one turns client-side filtering off for
+	 * **both** axes. The two cannot be gated independently.
+	 */
+	manual?: boolean
+	/**
 	 * Function applied during global search.
-	 * - `string` — resolved against {@link GlobalFilteringConfig.fns} registry first,
-	 *   then against TanStack's built-in filter fns (`'includesString'`, etc.).
+	 * - {@link GlobalFilterFnId} — resolved against the {@link GlobalFilteringConfig.fns}
+	 *   registry first, then as a {@link BuiltInGlobalFilterFn}.
 	 * - {@link GlobalFilterFn} — used inline.
 	 *
-	 * Default: `'includesString'` (case-insensitive substring).
+	 * Default: {@link BuiltInGlobalFilterFn.IncludesString} (case-insensitive substring).
 	 */
-	fn?: string | GlobalFilterFn
+	fn?: GlobalFilterFnId | GlobalFilterFn
 	/**
 	 * Named global filter functions, addressable from {@link GlobalFilteringConfig.fn} by id.
 	 */
@@ -228,12 +300,22 @@ export type GlobalFilteringConfig = FeatureToggle & {
 
 /**
  * Direction of an infinite-scroll load.
- * - `'forward'` — load the next page (scroll down / append). Implemented.
- * - `'backward'` — load the previous page (scroll up / prepend). **Reserved for v2**:
- *   the type exists so the API can grow without a breaking change; v1 only ever emits
- *   `'forward'` and performs no scroll-anchoring.
+ *
+ * Named members for internal reference; the plain string union is what callers see, so
+ * `direction === 'forward'` is equally valid and needs no import.
  */
-export type LoadMoreDirection = 'forward' | 'backward'
+export const LoadMoreDirection = {
+	/** Load the next page (scroll down / append). Implemented. */
+	Forward: 'forward',
+	/**
+	 * Load the previous page (scroll up / prepend). **Reserved for v2**: the member exists so
+	 * the API can grow without a breaking change; v1 only ever emits
+	 * {@link LoadMoreDirection.Forward} and performs no scroll-anchoring.
+	 */
+	Backward: 'backward',
+} as const
+
+export type LoadMoreDirection = (typeof LoadMoreDirection)[keyof typeof LoadMoreDirection]
 
 /**
  * Infinite-scroll request status, held in `state.infinite`. **100% grid-owned** —
@@ -286,6 +368,29 @@ export type LoadingState = {
  */
 export type PaginationTotals = { rowCount?: number; pageCount?: never } | { pageCount?: number; rowCount?: never }
 
+/**
+ * What pagination *does* — not how it looks, hence `mode` rather than `variant`. How the
+ * pagination bar *looks* is `PaginationVariant`, a separate option on the React adapter.
+ *
+ * "Footer" is deliberately not used for it anywhere in this API: that word belongs to the
+ * `<tfoot>` summary row — `column.footer`, `column.footerClassName`, `align.footer`,
+ * `<DataGrid.Footer />` — and one word for two rows is how a reader ends up in the wrong one.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'infinite'` is equally valid and needs no import.
+ */
+export const PaginationMode = {
+	/** Classic pagination bar over a paged row model. The default. */
+	Pages: 'pages',
+	/**
+	 * Infinite scroll — mutually exclusive with the pagination bar. The grid is **event-only**:
+	 * it calls {@link PaginationConfig.onLoadMore} at a load edge and the consumer appends rows.
+	 */
+	Infinite: 'infinite',
+} as const
+
+export type PaginationMode = (typeof PaginationMode)[keyof typeof PaginationMode]
+
 export type PaginationConfig = FeatureToggle &
 	PaginationTotals & {
 		manual?: boolean
@@ -305,12 +410,12 @@ export type PaginationConfig = FeatureToggle &
 		 */
 		onChange?: (pagination: PaginationState) => void
 		/**
-		 * Pagination mode. `'pages'` (default) renders a classic page footer. `'infinite'`
-		 * enables infinite scroll — mutually exclusive with the page footer. In infinite
-		 * mode the grid is **event-only**: it calls {@link PaginationConfig.onLoadMore} when a
-		 * load edge is reached, and the consumer appends rows via `table.appendData(rows)`.
+		 * Pagination mode. Default: {@link PaginationMode.Pages}. In
+		 * {@link PaginationMode.Infinite} the grid is **event-only**: it calls
+		 * {@link PaginationConfig.onLoadMore} when a load edge is reached, and the consumer
+		 * appends rows via `table.appendData(rows)`.
 		 */
-		mode?: 'pages' | 'infinite'
+		mode?: PaginationMode
 		/**
 		 * Infinite mode only. Controlled flag declaring whether more rows can be loaded
 		 * forward (scroll down). A **server-data descriptor** (like `pageCount`/`rowCount`),
@@ -327,7 +432,7 @@ export type PaginationConfig = FeatureToggle &
 		 * "Load more" control is activated (manual trigger). Fetch the page and append rows
 		 * with `table.appendData(rows)`. The returned promise drives `isFetchingNextPage`;
 		 * a rejection surfaces `state.infinite.error` with a retry affordance. v1 always
-		 * passes `direction: 'forward'`.
+		 * passes {@link LoadMoreDirection.Forward}.
 		 *
 		 * Prefer returning a promise so the loading indicator tracks the real request.
 		 * A `void` return still flips `isFetchingNextPage` on, then off on the next
@@ -336,7 +441,16 @@ export type PaginationConfig = FeatureToggle &
 		onLoadMore?: (ctx: { direction: LoadMoreDirection }) => Promise<void> | void
 	}
 
-export type SelectionConfig = FeatureToggle & {
+/**
+ * Selection config, generic over the adapter's node type.
+ *
+ * `TNode` is what {@link SystemColumnDef.header} may return — `unknown` in core, which renders
+ * nothing and only carries the def through. The React adapter binds it to `ReactNode`, so a
+ * replacement select-all header is checked like any other column header. The same parameter,
+ * under the same name and for the same reason, is on {@link ExpandingConfig} and
+ * {@link RowActionsConfig}: one system-column vocabulary, one node type across all three.
+ */
+export type SelectionConfig<TRow extends object = object, TNode = unknown> = FeatureToggle & {
 	/**
 	 * Called when row selection changes.
 	 *
@@ -346,8 +460,22 @@ export type SelectionConfig = FeatureToggle & {
 	 * call site is noise.
 	 */
 	onChange?: (rowSelection: RowSelectionState, rowIds: string[]) => void
-	/** Allow selecting multiple rows. Default: true. */
-	multiple?: boolean
+	/**
+	 * Allow selecting more than one row. Default: true.
+	 *
+	 * Named `multi`, not `multiple`, to match {@link SortingConfig.multi} — "more than one of
+	 * this feature at a time" is one concept and gets one word across the config.
+	 *
+	 * `false` drops `enableMultiRowSelection`, so selecting a row clears the previous one, and
+	 * the React layer renders no select-all checkbox in the selection column's header — there
+	 * is nothing for it to select.
+	 */
+	multi?: boolean
+	/**
+	 * Presentation of the auto-injected `__selection__` column — its width, which edge it
+	 * pins to, its alignment. See {@link SystemColumnDef}.
+	 */
+	column?: SystemColumnDef<TRow, TNode>
 }
 
 /**
@@ -366,7 +494,7 @@ export const ExpandingMode = {
 export type ExpandingMode = (typeof ExpandingMode)[keyof typeof ExpandingMode]
 
 /**
- * Expanding config, generic over the type of {@link ExpandingConfig.renderExpanded}.
+ * Expanding config, generic over the type of {@link ExpandingConfig.component}.
  *
  * `TRenderExpanded` exists so an adapter can narrow the one framework-bound field without
  * restating the rest of the config. The React adapter's `ReactExpandingConfig<TRow>` is
@@ -374,14 +502,18 @@ export type ExpandingMode = (typeof ExpandingMode)[keyof typeof ExpandingMode]
  * added here reaches React automatically — the hand-copied React twin this replaced could
  * only ever drift.
  */
-export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unknown> = FeatureToggle & {
+export type ExpandingConfig<
+	TRow extends object = object,
+	TRenderExpanded = unknown,
+	TNode = unknown,
+> = FeatureToggle & {
 	/** What expanding does. Default: {@link ExpandingMode.SubContent}. */
 	mode?: ExpandingMode
 	/** Tree mode: sub-row extractor. Auto-detects `row.children` when omitted. */
 	getSubRows?: (row: TRow, index: number) => TRow[] | undefined
 	/**
 	 * Sub-content mode: per-row expandability callback.
-	 * When omitted and `renderExpanded` is provided, every row is expandable.
+	 * When omitted and `expanding.component` is provided, every row is expandable.
 	 */
 	getRowCanExpand?: (row: Row<TRow>) => boolean
 	/**
@@ -390,25 +522,30 @@ export type ExpandingConfig<TRow extends object = object, TRenderExpanded = unkn
 	 * Defaults to `unknown` here — core is framework-agnostic and never calls it, it only
 	 * carries it through to whichever adapter mounts the panel.
 	 */
-	renderExpanded?: TRenderExpanded
+	component?: TRenderExpanded
 	/** Called whenever the expanded set changes. Receives the resolved {@link ExpandedState}. */
 	onChange?: (expanded: ExpandedState) => void
+	/**
+	 * Presentation of the auto-injected `__expand__` chevron column — its width, which edge it
+	 * pins to, its alignment. See {@link SystemColumnDef}.
+	 */
+	column?: SystemColumnDef<TRow, TNode>
 }
 
-export type ColumnVisibilityConfig = FeatureToggle & {
+export type VisibilityConfig = FeatureToggle & {
 	/**
 	 * Called whenever column visibility changes. Receives the resolved {@link VisibilityState}.
 	 * Use it to persist which columns a user hid.
 	 */
-	onChange?: (columnVisibility: VisibilityState) => void
+	onChange?: (visibility: VisibilityState) => void
 }
 
-export type ColumnPinningFeatureConfig = {
+export type ColumnPinningConfig = FeatureToggle & {
 	/** Called whenever column pinning changes. Receives the resolved {@link ColumnPinningState}. */
 	onChange?: (columnPinning: ColumnPinningState) => void
 }
 
-export type RowPinningConfig = {
+export type RowPinningConfig = FeatureToggle & {
 	top?: boolean
 	bottom?: boolean
 	/** Called whenever row pinning changes. Receives the resolved {@link RowPinningState}. */
@@ -421,12 +558,12 @@ export type RowPinningConfig = {
  */
 export type PinningConfig = FeatureToggle & {
 	/** Enable column pin UI (ColumnMenu in headers). */
-	column?: boolean | ColumnPinningFeatureConfig
+	column?: boolean | ColumnPinningConfig
 	/** Enable row pinning. `true` = top+bottom, or fine-grained RowPinningConfig. */
 	row?: boolean | RowPinningConfig
 }
 
-export type RowVirtualOptions = {
+export type RowVirtualizationConfig = FeatureToggle & {
 	/** Estimated row height in px used by the virtualizer. Default: 50. */
 	estimateSize?: number | ((index: number) => number)
 	/** Extra rows rendered outside the visible viewport. Default: 5. */
@@ -434,18 +571,58 @@ export type RowVirtualOptions = {
 }
 
 export type VirtualizationConfig = FeatureToggle & {
-	row?: boolean | RowVirtualOptions
+	row?: boolean | RowVirtualizationConfig
 	// column virtualization — reserved for future
 }
 
-export type ColumnResizeMode = 'onChange' | 'onEnd'
-export type ColumnResizeDirection = 'ltr' | 'rtl'
+/**
+ * When a resize drag commits the new width.
+ *
+ * The two member values are `'onChange'` / `'onEnd'` — TanStack's `columnResizeMode` vocabulary,
+ * kept verbatim **on purpose**, unlike `size`/`minSize`/`maxSize` (folded into `width`) or
+ * `sortUndefined`'s `-1`/`1` (replaced by `'first'`/`'last'`). This is a **settled decision, not
+ * an oversight**: these two names are what every TanStack Table user already knows this option
+ * by, they read correctly on their own, and renaming them would buy a fresh vocabulary for a
+ * setting nobody has to translate. That it sits beside the feature's own `onChange` callback is
+ * noted and accepted — `mode` says which of the two you are reading.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'onEnd'` is equally valid and needs no import.
+ */
+export const ColumnResizeMode = {
+	/** The width follows the pointer live, every frame of the drag. The default. */
+	OnChange: 'onChange',
+	/** The width updates once, on mouse release. */
+	OnEnd: 'onEnd',
+} as const
+
+export type ColumnResizeMode = (typeof ColumnResizeMode)[keyof typeof ColumnResizeMode]
+
+/**
+ * Text direction the grid is laid out in.
+ *
+ * A fact about the **whole grid**, so it lives once, at the root of {@link TableConfig}. It was
+ * `resizing.direction`, which made a grid-wide property look like a resize setting: column
+ * alignment already flips on its own (`align` is logical — `'start'` / `'end'` — and the
+ * structural stylesheet emits `text-start` / `text-end`), so an RTL grid that never enabled
+ * resizing had nowhere to say so, and one that did had to know that the resize drag was the
+ * single thing not inferring it.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `direction: 'rtl'` is equally valid and needs no import.
+ */
+export const GridDirection = {
+	/** Left-to-right. The default. */
+	Ltr: 'ltr',
+	/** Right-to-left. */
+	Rtl: 'rtl',
+} as const
+
+export type GridDirection = (typeof GridDirection)[keyof typeof GridDirection]
 
 export type ResizingConfig = FeatureToggle & {
-	/** Resize mode. 'onChange' updates live; 'onEnd' updates after mouse release. Default: 'onChange'. */
+	/** Resize mode. Default: {@link ColumnResizeMode.OnChange}. */
 	mode?: ColumnResizeMode
-	/** Text direction for resize calculation. Default: 'ltr'. */
-	direction?: ColumnResizeDirection
 	/**
 	 * Called whenever a column's width changes. Receives the resolved {@link ColumnSizingState}.
 	 * Fires on the committed sizes, not on the transient drag info.
@@ -456,7 +633,7 @@ export type ResizingConfig = FeatureToggle & {
 /**
  * Seedable subset of {@link TableState} for {@link TableConfig.initialState}.
  *
- * Excludes `editing`, `creating`, `pendingDeleteRowId` and `pendingBulkDelete` — these are
+ * Excludes the three write features' slices — `editing`, `creating` and `deleting` — these are
  * transient per-open-form/dialog state that each feature re-initialises whenever it opens
  * (`creating.start()`, an edit start, a delete request), hard-resetting to its own defaults and
  * ignoring whatever was seeded. Seeding "start already editing/creating/deleting" is not a
@@ -464,10 +641,7 @@ export type ResizingConfig = FeatureToggle & {
  * at runtime. To seed values for a create form, use {@link CreatingConfig.defaultValues} (table
  * level) or a column's `creating.defaultValue` (per-column), not `initialState`.
  */
-export type InitialTableState = Omit<
-	Partial<TableState>,
-	'editing' | 'creating' | 'pendingDeleteRowId' | 'pendingBulkDelete' | 'pagination'
-> & {
+export type InitialTableState = Omit<Partial<TableState>, 'editing' | 'creating' | 'deleting' | 'pagination'> & {
 	/**
 	 * Seeded per key, unlike every other slice. `Partial<TableState>` only makes the slice
 	 * itself optional — TanStack's `PaginationState` still requires **both** `pageIndex` and
@@ -477,6 +651,12 @@ export type InitialTableState = Omit<
 	 *
 	 * Whichever key is omitted keeps its resolved default: `pageIndex: 0`, and `pageSize` from
 	 * {@link PaginationConfig.pageSize}.
+	 *
+	 * `pageSize` is therefore settable from two places, and that is deliberate:
+	 * {@link PaginationConfig.pageSize} is where an author *states* the size, this is where a
+	 * deep link *restores* the one the user picked. Write both and the seed wins — `createTable`
+	 * warns in development rather than leaving it to be noticed by a page that opens on a size
+	 * nobody asked for.
 	 */
 	pagination?: Partial<PaginationState>
 }
@@ -503,6 +683,16 @@ export type TableConfig<TRow extends object> = {
 	getRowId?: (row: TRow, index: number) => string
 
 	/**
+	 * Text direction the grid is laid out in. Default: {@link GridDirection.Ltr}.
+	 *
+	 * A grid-wide fact, declared once. Column alignment is logical and flips on its own; this is
+	 * what the behaviours that cannot infer it read — today, the direction a resize drag widens a
+	 * column in. It was `resizing.direction`, where a grid with resizing off could not state it
+	 * at all.
+	 */
+	direction?: GridDirection
+
+	/**
 	 * Sorting configuration. Falsy (`undefined` or `false`) fully disables sorting:
 	 * UI affordances are not rendered and `getSortedRowModel` is not attached,
 	 * regardless of per-column sorting config. Truthy (`true` or object) enables it
@@ -526,16 +716,16 @@ export type TableConfig<TRow extends object> = {
 	 */
 	globalFiltering?: boolean | GlobalFilteringConfig
 	pagination?: boolean | PaginationConfig
-	selection?: boolean | SelectionConfig
+	selection?: boolean | SelectionConfig<TRow>
 	expanding?: boolean | ExpandingConfig<TRow>
 	/**
 	 * Column visibility (hide/show columns). `false` / omitted disables hiding for all
 	 * columns; `true` enables it (per-column `visibility` controls still apply).
 	 *
 	 * The UI config (e.g. the toolbar button) is a React concern and lives on the adapter's
-	 * `ColumnVisibilityUIConfig`, which extends this one.
+	 * `ReactVisibilityConfig`, which extends this one.
 	 */
-	columnVisibility?: boolean | ColumnVisibilityConfig
+	visibility?: boolean | VisibilityConfig
 	/**
 	 * Pinning configuration. Column pinning and row pinning are gated independently:
 	 * - `true` — enable column menu UI + row pin top+bottom
@@ -545,23 +735,55 @@ export type TableConfig<TRow extends object> = {
 	 */
 	pinning?: boolean | PinningConfig
 	virtualization?: boolean | VirtualizationConfig
-	creating?: CreatingConfig<TRow>
-	editing?: EditingConfig<TRow>
-	deleting?: DeletingConfig<TRow>
+	/**
+	 * Row creation. `false` / omitted disables it; an object enables it **and** supplies the
+	 * `onSave` without which there is nothing to enable.
+	 *
+	 * `true` is accepted for one reason: a defaults layer
+	 * ({@link https://ez-kit.dev/docs/data-grid/default-options DataGridOptionsProvider} or
+	 * `createDataGrid({ defaults })`) can describe how creation *looks* for the whole app —
+	 * `mode`, `validateOn` — while only the grid that supplies `onSave` gets the feature.
+	 * `creating: true` at such a call site says "yes, this grid too", and the merge keeps the
+	 * shared object. Without a resolved `onSave` the feature stays off rather than mounting a
+	 * trigger whose commit would call `undefined`.
+	 */
+	creating?: boolean | CreatingConfig<TRow>
+	/** Row editing. Same three-way shape as {@link TableConfig.creating}. */
+	editing?: boolean | EditingConfig<TRow>
+	/** Row deletion. Same three-way shape as {@link TableConfig.creating}, keyed on `onDelete`. */
+	deleting?: boolean | DeletingConfig<TRow>
 	/**
 	 * Defer application of sorting, column filters and global search. While on,
 	 * those three axes accumulate as a draft and reach `onStateChange` only when
 	 * `table.draft.apply()` runs — one state change, one request, instead of one
 	 * per keystroke. Requires `manual: true` on at least one of the three.
+	 *
+	 * Named for the thing it produces, like every other feature: the API it turns on is
+	 * `table.draft`, the state it seeds is `initialState.draft`, the bar that reports it is
+	 * `<DataGrid.DraftBar />`, and the axes are `DraftAxis`. It was `deferredApply`,
+	 * which left one feature answering to two words depending on where you touched it.
+	 *
+	 * The object form exists for the same reason every other feature has one — `enabled: false`
+	 * turns off a `draft` that arrived from a defaults layer.
 	 */
-	deferredApply?: boolean
+	draft?: boolean | DraftConfig
 	/**
-	 * Layout of the per-row actions column (`__actions__`), which holds edit,
-	 * delete and the row-pin menu. The column is injected automatically as soon
-	 * as any of {@link TableConfig.editing}, {@link TableConfig.deleting} or row
-	 * pinning is enabled; this only controls how those actions are presented.
+	 * The per-row actions column (`__actions__`), which holds edit, delete and the row-pin
+	 * menu — how those are presented, and any application actions of your own.
+	 *
+	 * The column is injected automatically as soon as any of {@link TableConfig.editing},
+	 * {@link TableConfig.deleting}, row pinning or `rowActions.actions` is in play.
+	 *
+	 * Generic over `TRow` so `actions` receives a typed row. Without the argument the callback
+	 * would see `Row<object>` and every consumer would have to cast `row.original` back —
+	 * which is the same reason {@link TableConfig.deleting} and the rest are generic.
+	 *
+	 * `false` suppresses the column outright, including the built-in edit / delete / pin
+	 * affordances — the read-only escape hatch for a single grid under a defaults layer that
+	 * configured row actions app-wide. Like every other feature switch on this config, and
+	 * unlike the object-only shape this had, which left such a grid no way to opt out at all.
 	 */
-	rowActions?: RowActionsConfig
+	rowActions?: boolean | RowActionsConfig<TRow>
 	/**
 	 * Column resizing. Named to match the per-column `resizing` switch — one feature, one
 	 * name at both levels.
@@ -573,7 +795,7 @@ export type TableConfig<TRow extends object> = {
 	 * state, e.g. `initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } }`
 	 * or a default sort.
 	 *
-	 * Cannot seed `editing`, `creating`, `pendingDeleteRowId` or `pendingBulkDelete` — see
+	 * Cannot seed `editing`, `creating` or `deleting` — see
 	 * {@link InitialTableState} for why. To seed create-form values use
 	 * {@link TableConfig.creating}'s `defaultValues`, or a column's `creating.defaultValue`.
 	 */
@@ -583,7 +805,7 @@ export type TableConfig<TRow extends object> = {
 	 * Receives the **resolved** next state — assign it to your own state to implement
 	 * controlled mode.
 	 *
-	 * Under {@link TableConfig.deferredApply} this fires only when the query the consumer
+	 * Under {@link TableConfig.draft} this fires only when the query the consumer
 	 * is allowed to see actually changes: draft edits stay silent, and the state handed
 	 * over carries the applied snapshot on `sorting` / `columnFilters` / `globalFilter`
 	 * rather than the pending draft.

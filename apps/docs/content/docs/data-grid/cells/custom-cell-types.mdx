@@ -25,7 +25,7 @@ const TONE_MAP: Record<string, string> = { active: 'positive', cancelled: 'criti
 const CELL_TYPES = {
 	status: defineCellType()({
 		view: ({ value }: CellViewProps) => <span data-tone={TONE_MAP[String(value)] ?? 'neutral'}>{String(value)}</span>,
-		edit: ({ value, onChange }: FieldState) => (
+		editing: ({ value, onChange }: FieldState) => (
 			<input
 				value={String(value ?? '')}
 				onChange={(e) => {
@@ -64,14 +64,16 @@ createColumns<Order>([
 
 The config is required only when it has a required field. A config whose fields are all optional makes `config` optional too.
 
-The type parameter is explicit rather than inferred from the renderers because `view`, `edit`, `creating` and `filter` are four independent places the config appears — a type that registers only some of them would infer something arbitrary from the rest.
+The type parameter is explicit rather than inferred from the renderers because `view`, `editing`, `creating` and `filtering` are four independent places the config appears — a type that registers only some of them would infer something arbitrary from the rest.
 
-| Renderer   | Receives        | Used for                                                                       |
-| ---------- | --------------- | ------------------------------------------------------------------------------ |
-| `view`     | `CellViewProps` | Display mode.                                                                  |
-| `edit`     | `FieldState`    | Editing input. **No fallback** — omit it and edit mode uses the default input. |
-| `creating` | `FieldState`    | Create-row input. Falls back to `edit` when omitted.                           |
-| `filter`   | `FieldState`    | Filter input. Falls back to `edit` when omitted.                               |
+| Renderer    | Receives                 | Used for                                                                       |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------ |
+| `view`      | `CellViewProps<TConfig>` | Display mode.                                                                  |
+| `editing`   | `FieldState<TConfig>`    | Editing input. **No fallback** — omit it and edit mode uses the default input. |
+| `creating`  | `FieldState<TConfig>`    | Create-row input. Falls back to `editing` when omitted.                        |
+| `filtering` | `FieldState<TConfig>`    | Filter input. Falls back to `editing` when omitted.                            |
+
+A registered cell type's inputs all receive `FieldState` — one shape for the three of them, carrying the `config` this definition declared. A **column's** own `filtering.component` is the smaller `InputComponentProps` instead: it renders a filter and nothing else, so validation state would be dead weight. The two used to be documented as the same type under two names; they are not.
 
 The fallbacks run one way only — `creating → edit` and `filter → edit`, never `edit → creating`. A definition with just `creating` leaves edit mode on the default input.
 
@@ -99,7 +101,7 @@ export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = grid
 
 The merge runs **entry by entry**, not id by id: naming an id the kit already registered overrides
 only the keys you give it. `cellTypes={{ date: { view: MyDate } }}` swaps the date cell's view and
-keeps the kit's `edit`, `filter` and the config the type declared.
+keeps the kit's `editing`, `filtering` and the config the type declared.
 
 ## More examples
 

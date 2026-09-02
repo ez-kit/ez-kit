@@ -3,7 +3,14 @@ import { createContext, useContext, useMemo } from 'react'
 import type { GridFeature, FullGridComponents, GridComponents } from './contract'
 import type { ReactNode } from 'react'
 
-export const defaultComponents: FullGridComponents = {} as FullGridComponents
+/**
+ * The empty registry the context starts from. Deliberately **not** exported: its type claims a
+ * complete `FullGridComponents` while the value holds nothing, so a kit spreading it
+ * (`components: { ...defaultComponents, core: … }`) would typecheck and then crash on the first
+ * unregistered slot. Nothing outside this module has a use for "the registry before a kit
+ * filled it in" — a consumer who wants the kit's components already has them, from the kit.
+ */
+const emptyComponents: FullGridComponents = {} as FullGridComponents
 
 // ── context ───────────────────────────────────────────────────────────────
 
@@ -12,7 +19,7 @@ export const defaultComponents: FullGridComponents = {} as FullGridComponents
  * a nested, feature-grouped object and consumers read it the same way — no flattening — e.g.
  * `const { Table, Tr } = useGridComponents().core`.
  */
-const GridComponentsContext = createContext<FullGridComponents>(defaultComponents)
+const GridComponentsContext = createContext<FullGridComponents>(emptyComponents)
 
 export type GridComponentsProviderProps = {
 	components?: GridComponents

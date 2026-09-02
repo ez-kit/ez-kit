@@ -17,7 +17,7 @@ const columns = createColumns<Employee>([
 		cell: { type: 'number' },
 		filtering: {
 			operators: {
-				items: ['eq', 'between'],
+				items: ['equals', 'between'],
 				betweenOperator: { variant: 'slider', min: SALARY_SLIDER_MIN, max: SALARY_SLIDER_MAX },
 			},
 		},

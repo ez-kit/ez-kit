@@ -24,10 +24,10 @@ function BooleanCellInput(props: FieldState<BooleanCellConfig>): ReactNode {
  * shape. Kits spread this and add their own `view` / `filter`:
  *
  * ```tsx
- * { boolean: { ...booleanCellType, view: MyBooleanView, filter: MyBooleanFilter } }
+ * { boolean: { ...booleanCellType, view: MyBooleanView, filtering: MyBooleanFilter } }
  * ```
  */
 export const booleanCellType = defineCellType<BooleanCellConfig>()({
-	edit: BooleanCellInput,
+	editing: BooleanCellInput,
 	creating: BooleanCellInput,
 })

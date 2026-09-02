@@ -45,8 +45,8 @@ function DateCellInput({
 }: FieldState<DateCellConfig>) {
 	const hasError = errors.length > 0
 	const selected = toDate(value)
-	const minDate = config?.minValue ? toDate(config.minValue) : undefined
-	const maxDate = config?.maxValue ? toDate(config.maxValue) : undefined
+	const minDate = config?.min ? toDate(config.min) : undefined
+	const maxDate = config?.max ? toDate(config.max) : undefined
 	const displayLabel = selected ? format(selected, DISPLAY_FORMAT) : 'Pick a date'
 	const disabledMatchers: Matcher[] = []
 	if (minDate) disabledMatchers.push({ before: minDate })

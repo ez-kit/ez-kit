@@ -3,7 +3,7 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
-@import '@ez-kit/data-grid-shadcn/global.css';
+@import '@ez-kit/data-grid-shadcn/styles.css';
 
 @import 'tw-animate-css';
 

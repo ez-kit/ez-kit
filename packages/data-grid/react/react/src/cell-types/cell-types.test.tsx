@@ -94,9 +94,9 @@ describe('numberCellType', () => {
 		expect(renderView(view, { value: null, row: {}, rowIndex: 0 })).toBe('')
 	})
 
-	it('edit: forwards to DI NumberInput and onChange propagates a number', () => {
+	it('editing: forwards to DI NumberInput and onChange propagates a number', () => {
 		const onChange = vi.fn()
-		const Edit = numberCellType.edit as ComponentType<FieldState>
+		const Edit = numberCellType.editing as ComponentType<FieldState>
 		const { container } = renderWithComponents(<Edit {...baseField<never>({ value: 1, onChange })} />)
 		const input = container.querySelector('input[type="number"]')
 		if (!input) throw new Error('expected NumberInput')
@@ -120,9 +120,9 @@ describe('textCellType', () => {
 		expect(renderView(view, { value: null, row: {}, rowIndex: 0 })).toBe('')
 	})
 
-	it('edit: forwards to DI Input', () => {
+	it('editing: forwards to DI Input', () => {
 		const onChange = vi.fn()
-		const Edit = textCellType.edit as ComponentType<FieldState>
+		const Edit = textCellType.editing as ComponentType<FieldState>
 		const { container } = renderWithComponents(<Edit {...baseField<never>({ value: 'hi', onChange })} />)
 		const input = container.querySelector('input')
 		if (!input) throw new Error('expected Input')
@@ -139,9 +139,9 @@ describe('booleanCellType', () => {
 		expect(booleanCellType).not.toHaveProperty('filter')
 	})
 
-	it('edit: forwards to DI Checkbox', () => {
+	it('editing: forwards to DI Checkbox', () => {
 		const onChange = vi.fn()
-		const Edit = booleanCellType.edit as ComponentType<FieldState>
+		const Edit = booleanCellType.editing as ComponentType<FieldState>
 		const { container } = renderWithComponents(<Edit {...baseField<never>({ value: false, onChange })} />)
 		const checkbox = container.querySelector('input[type="checkbox"]')
 		if (!checkbox) throw new Error('expected Checkbox')

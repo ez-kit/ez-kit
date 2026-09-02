@@ -3,39 +3,38 @@
  *
  * There used to be two: `ColumnMenu` (a `sections` object of pin / sorting / visibility
  * callbacks) and `RowActionsMenu` (a flat `items` array). Both rendered the same thing —
- * a trigger plus icon+label entries with danger and disabled states — so every kit
+ * a trigger plus icon+label entries with destructive and disabled states — so every kit
  * implemented that twice, and the two drifted. One shape, one component, one icon map.
  */
 
-/**
- * Which glyph an entry carries. Semantic on purpose: the shared layer names the *meaning*,
- * each kit maps it to its own icon set and sizing (see each kit's `blocks/icons.tsx`).
- */
-export const GridMenuIcon = {
-	Edit: 'edit',
-	Delete: 'delete',
-	PinTop: 'pin-top',
-	PinBottom: 'pin-bottom',
-	PinLeft: 'pin-left',
-	PinRight: 'pin-right',
-	Unpin: 'unpin',
-	SortAsc: 'sort-asc',
-	SortDesc: 'sort-desc',
-	ClearSort: 'clear-sort',
-	Hide: 'hide',
-} as const
+import type { GridMenuIcon } from '@ez-kit/data-grid-core'
+import type { ReactElement } from 'react'
 
-export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]
+// The icon vocabulary itself lives in core: `RowActionsConfig` is a core option, so the set a
+// consumer writes an icon from has to be nameable there. Re-exported here because this is the
+// module that describes the menu model a kit renders.
+export { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-core'
 
 export type GridMenuItem = {
 	/** Stable within the menu — kits key their collection items on it. */
 	id: string
 	/** Default wording; a kit may localize it. */
 	label: string
-	icon: GridMenuIcon
+	/**
+	 * A member of the built-in {@link GridMenuIcon} set, which the kit maps to its own glyph
+	 * and sizing, or an element the consumer supplied for an action the set has no honest name
+	 * for. The built-in names cover grid affordances (edit / delete / pin / sort / hide); a
+	 * custom row action such as "Duplicate" brings its own `<Copy />`.
+	 *
+	 * Every entry the grid itself builds — `buildColumnMenuSections` and the row-actions
+	 * builder — sets a named member unconditionally, so in practice only a custom action
+	 * reaches a kit carrying an element or nothing at all. Use `isGridMenuIcon` to tell the
+	 * two apart; an entry with neither renders label-only.
+	 */
+	icon?: GridMenuIcon | ReactElement
 	disabled?: boolean
-	/** Destructive entry — kits render it in a danger colour. */
-	danger?: boolean
+	/** Destructive entry — kits render it in their danger colour. */
+	destructive?: boolean
 	onSelect: () => void
 }
 

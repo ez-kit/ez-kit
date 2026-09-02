@@ -29,8 +29,8 @@ And it powers the new-row form when `creating` is enabled, so authored dates go 
 		type: 'date',
 		config: {
 			format: { dateStyle: 'medium' }, // Intl.DateTimeFormatOptions
-			minValue: '2025-01-01',           // ISO 8601, hard minimum for the picker
-			maxValue: '2027-12-31',           // ISO 8601, hard maximum for the picker
+			min: '2025-01-01',           // ISO 8601, hard minimum for the picker
+			max: '2027-12-31',           // ISO 8601, hard maximum for the picker
 		},
 	},
 }
@@ -41,8 +41,8 @@ And it powers the new-row form when `creating` is enabled, so authored dates go 
 | `cell.config.*` | Type                         | Description                                                                            |
 | --------------- | ---------------------------- | -------------------------------------------------------------------------------------- |
 | `format`        | `Intl.DateTimeFormatOptions` | Forwarded to `Date.prototype.toLocaleDateString`. Omitted — locale-default formatting. |
-| `minValue`      | `string` (ISO 8601)          | Hard minimum forwarded to the date-picker editor as a disabled-before bound.           |
-| `maxValue`      | `string` (ISO 8601)          | Hard maximum forwarded to the date-picker editor as a disabled-after bound.            |
+| `min`           | `string` (ISO 8601)          | Hard minimum forwarded to the date-picker editor as a disabled-before bound.           |
+| `max`           | `string` (ISO 8601)          | Hard maximum forwarded to the date-picker editor as a disabled-after bound.            |
 
 ## Source
 

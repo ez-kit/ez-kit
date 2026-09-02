@@ -9,6 +9,7 @@ import { useDataGrid } from '../use-data-grid'
 import { DataGrid } from './data-grid'
 
 import type { UseDataGridConfig } from '../use-data-grid'
+import type { RowActionsConfig } from '@ez-kit/data-grid-core'
 
 // JSDOM lacks ResizeObserver; the table layout effect needs one.
 beforeAll(() => {
@@ -83,5 +84,59 @@ describe('<ActionsCell> — row actions column', () => {
 
 		expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
 		expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+	})
+})
+
+describe('<ActionsCell> — custom actions', () => {
+	// `row.original` is typed: `TableConfig<TRow>` passes `TRow` through to `RowActionsConfig`.
+	const duplicate = (onSelect: () => void) =>
+		({
+			actions: ({ row }) => [{ id: 'duplicate', label: `Duplicate ${row.original.name}`, onSelect }],
+		}) satisfies RowActionsConfig<Row>
+
+	it('inline variant puts custom entries in the overflow menu beside the built-ins', async () => {
+		const onSelect = vi.fn()
+		renderGrid({ ...EDIT_DELETE, rowActions: duplicate(onSelect) })
+
+		expect(actionLabels()).toEqual(expect.arrayContaining(['Edit', 'Delete', 'Duplicate Alice']))
+
+		await userEvent.click(screen.getByRole('button', { name: 'Duplicate Alice' }))
+		expect(onSelect).toHaveBeenCalledTimes(1)
+	})
+
+	it('inline variant shares one overflow menu between custom and pin entries', () => {
+		renderGrid({
+			...EDIT_DELETE,
+			pinning: { row: { top: true } },
+			rowActions: duplicate(() => {}),
+		})
+
+		expect(actionLabels()).toEqual(expect.arrayContaining(['Pin Top', 'Duplicate Alice']))
+	})
+
+	it('menu variant folds custom entries into the single menu', async () => {
+		const onSelect = vi.fn()
+		renderGrid({
+			...EDIT_DELETE,
+			rowActions: { variant: RowActionsVariant.Menu, ...duplicate(onSelect) },
+		})
+
+		expect(actionLabels()).toEqual(expect.arrayContaining(['Edit', 'Delete', 'Duplicate Alice']))
+
+		await userEvent.click(screen.getByRole('button', { name: 'Duplicate Alice' }))
+		expect(onSelect).toHaveBeenCalledTimes(1)
+	})
+
+	it('injects the actions column for a grid whose only action is a custom one', () => {
+		renderGrid({ rowActions: duplicate(() => {}) })
+
+		expect(document.querySelector(`[data-system-column='actions']`)).not.toBeNull()
+		expect(actionLabels()).toEqual(expect.arrayContaining(['Duplicate Alice']))
+	})
+
+	it('renders nothing extra for a row whose callback returns no entries', () => {
+		renderGrid({ ...EDIT_DELETE, rowActions: { actions: () => [] } })
+
+		expect(actionLabels()).toEqual(['Edit', 'Delete'])
 	})
 })

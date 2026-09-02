@@ -13,7 +13,7 @@ export type DataGridClearFiltersButtonProps = {
 	 */
 	alwaysShow?: boolean
 	/** Accessibility label. Defaults to "Clear filters" when omitted. */
-	ariaLabel?: string
+	'aria-label'?: string
 }
 
 /**
@@ -23,7 +23,7 @@ export type DataGridClearFiltersButtonProps = {
  * `filtering: { toolbar: { alwaysShow: true } }` on the table config) to keep
  * it visible in a disabled state.
  *
- * Auto-mounted by `<Toolbar>` into `Toolbar.right` after `<GlobalFilterInput>`
+ * Auto-mounted by `<Toolbar>` into `Toolbar.end` after `<GlobalFilterInput>`
  * when `filtering.toolbar` is truthy. Can also be placed manually via
  * `<DataGrid.ClearFiltersButton />`.
  *
@@ -33,7 +33,7 @@ export type DataGridClearFiltersButtonProps = {
 export function ClearFiltersButton({
 	children,
 	alwaysShow: alwaysShowProp,
-	ariaLabel,
+	'aria-label': ariaLabel,
 }: DataGridClearFiltersButtonProps = {}) {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnFilters)
@@ -57,8 +57,8 @@ export function ClearFiltersButton({
 				table.setGlobalFilter(undefined)
 			}}
 			{...(children !== undefined
-				? { children, ...(ariaLabel !== undefined ? { ariaLabel } : {}) }
-				: { ariaLabel: ariaLabel ?? 'Clear filters' })}
+				? { children, ...(ariaLabel !== undefined ? { 'aria-label': ariaLabel } : {}) }
+				: { 'aria-label': ariaLabel ?? 'Clear filters' })}
 		/>
 	)
 }

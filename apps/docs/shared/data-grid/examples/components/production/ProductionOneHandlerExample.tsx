@@ -2,7 +2,7 @@
 
 import { DataGrid } from 'shared/DataGrid'
 
-import { orderColumns, type Order } from './data'
+import { orderColumns } from './data'
 import { useOrdersState } from './use-orders-state'
 
 export function ProductionOneHandlerExample() {
@@ -15,7 +15,7 @@ export function ProductionOneHandlerExample() {
 			pagination={{
 				manual: true,
 				rowCount: orders.rowCount,
-				pageSizeOptions: [10, 25, 50],
+				items: [10, 25, 50],
 				variant: 'numbered',
 				siblings: 1,
 			}}
@@ -32,7 +32,7 @@ export function ProductionOneHandlerExample() {
 			layout={{ stickyHeader: true }}
 			pinning={{ column: true, row: { top: true, bottom: true } }}
 			resizing={{ mode: 'onChange' }}
-			columnVisibility={{ toolbar: true }}
+			visibility
 			creating={{
 				mode: 'modal',
 				onSave: ({ values }) => orders.create(values),
@@ -45,16 +45,14 @@ export function ProductionOneHandlerExample() {
 				onDelete: ({ row }) => orders.remove([row.original.id]),
 				confirmation: {
 					title: 'Delete order?',
-					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+					description: (row) => `Order ${row.original.reference} will be permanently removed.`,
+				},
+				bulk: {
+					onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)),
+					confirmation: { title: 'Delete orders?' },
 				},
 			}}
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						void orders.remove(selectedRows.map((row) => row.original.id)).then(clearSelection)
-					},
-				},
-			}}
+			selection
 			state={{ ...orders.tableState, loading: orders.loading }}
 			onStateChange={orders.onStateChange}
 		/>

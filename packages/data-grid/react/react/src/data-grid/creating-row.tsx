@@ -1,8 +1,14 @@
-import { ACTIONS_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import {
+	ACTIONS_COLUMN_ID,
+	ColumnFormMode,
+	CommitStatus,
+	resolveColumnFormConfig,
+	SELECTION_COLUMN_ID,
+} from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { RowActionsMode } from '../types'
+import { ActionsCellState } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { flexRender } from './flex-render'
@@ -27,13 +33,13 @@ export function CreatingRow() {
 	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Tr, Td, Input, Checkbox } = gridComponents.core
-	const { ActionsCell } = gridComponents['row-actions']
+	const { ActionsCell } = gridComponents.rowActions
 	const cellTypes = useCellTypes()
 	const state = table.creating.getState()
 	const values = state.values
 	const errors = state.errors
-	const isValidating = state.commitStatus === 'validating'
-	const isPending = state.commitStatus !== 'idle'
+	const isValidating = state.commitStatus === CommitStatus.Validating
+	const isPending = state.commitStatus !== CommitStatus.Idle
 	const creatingConfig = table.options.creating
 	const isPinRow = creatingConfig?.mode === 'pin-row'
 
@@ -59,7 +65,7 @@ export function CreatingRow() {
 								{...pinnedAttrs}
 							>
 								<ActionsCell
-									mode={RowActionsMode.Creating}
+									state={ActionsCellState.Creating}
 									onSave={() => table.creating.commit()}
 									onCancel={() => {
 										table.creating.cancel()
@@ -124,7 +130,7 @@ export function CreatingRow() {
 					value,
 					onChange,
 					onBlur,
-					...(meta?.config !== undefined ? { config: meta.config } : {}),
+					...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 					error: fieldError,
 					errors: fieldErrors,
 					isValidating,
@@ -164,17 +170,18 @@ type CreatingInputArgs = {
 }
 
 function renderCreatingInput({ meta, field, cellTypes, Input, placeholder }: CreatingInputArgs): ReactNode {
-	// 1. column-level creating.component
-	const creatingConfig = meta?.creating
+	// 1. column-level creating.component, falling back to editing.component
+	const creatingConfig = resolveColumnFormConfig(meta, ColumnFormMode.Creating)
 	if (creatingConfig !== false && creatingConfig !== undefined) {
 		const comp = creatingConfig.component
 		if (comp) return flexRender(comp, field)
 	}
 
-	// 2. registry creating → edit fallback by cellType
-	if (meta?.cellType) {
-		const def = cellTypes[meta.cellType]
-		const comp = def?.creating ?? def?.edit
+	// 2. registry creating → editing fallback by cell type
+	const cellTypeId = meta?.cell?.type
+	if (cellTypeId) {
+		const def = cellTypes[cellTypeId]
+		const comp = def?.creating ?? def?.editing
 		if (comp) return flexRender(comp, field)
 	}
 

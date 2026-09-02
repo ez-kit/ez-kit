@@ -2,7 +2,7 @@
 
 import { DataGrid } from 'shared/DataGrid'
 
-import { orderColumns, type Order } from './data'
+import { orderColumns } from './data'
 import { useOrdersState } from './use-orders-state'
 
 /**
@@ -19,11 +19,11 @@ export function ProductionDeferredApplyExample() {
 		<DataGrid
 			data={orders.rows}
 			columns={orderColumns}
-			deferredApply
+			draft
 			pagination={{
 				manual: true,
 				rowCount: orders.rowCount,
-				pageSizeOptions: [10, 25, 50],
+				items: [10, 25, 50],
 				variant: 'numbered',
 				siblings: 1,
 			}}
@@ -37,21 +37,19 @@ export function ProductionDeferredApplyExample() {
 			}}
 			globalFiltering={{ placeholder: 'Search orders…' }}
 			layout={{ stickyHeader: true }}
-			columnVisibility={{ toolbar: true }}
+			visibility
 			deleting={{
 				onDelete: ({ row }) => orders.remove([row.original.id]),
 				confirmation: {
 					title: 'Delete order?',
-					description: (row) => `Order ${(row.original as Order).reference} will be permanently removed.`,
+					description: (row) => `Order ${row.original.reference} will be permanently removed.`,
+				},
+				bulk: {
+					onDelete: ({ rows }) => orders.remove(rows.map((row) => row.original.id)),
+					confirmation: { title: 'Delete orders?' },
 				},
 			}}
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						void orders.remove(selectedRows.map((row) => row.original.id)).then(clearSelection)
-					},
-				},
-			}}
+			selection
 			state={{ loading: orders.loading }}
 			onStateChange={orders.onStateChange}
 		/>

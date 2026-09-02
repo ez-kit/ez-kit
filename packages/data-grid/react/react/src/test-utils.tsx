@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
-import { RowActionsMode } from './types'
+import { ActionsCellState } from './types'
 import { useDataGrid } from './use-data-grid'
 
 import type { FullGridComponents } from './contract'
@@ -14,9 +14,9 @@ import type {
 	BetweenInputProps,
 	ButtonProps,
 	CheckboxProps,
-	ColumnVisibilityMenuProps,
+	VisibilityMenuProps,
 	ConfirmDialogProps,
-	ClearFiltersButtonComponentProps,
+	ClearFiltersButtonProps,
 	DraftBarProps,
 	EmptyStateProps,
 	FilterChipProps,
@@ -200,7 +200,7 @@ function TestMenu({ sections, 'aria-label': ariaLabel }: GridMenuProps) {
 		</div>
 	)
 }
-function TestColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
+function TestColumnVisibilityMenu({ columns }: VisibilityMenuProps) {
 	const [open, setOpen] = useState(false)
 	return (
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -229,12 +229,12 @@ function TestColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 		</div>
 	)
 }
-function TestToolbar({ children, left, right }: ToolbarProps) {
+function TestToolbar({ children, start, end }: ToolbarProps) {
 	return (
 		<div role='toolbar'>
-			{left}
+			{start}
 			{children}
-			{right}
+			{end}
 		</div>
 	)
 }
@@ -267,7 +267,7 @@ function TestSaveCancel({
 	)
 }
 function TestActionsCell(props: ActionsCellProps) {
-	if (props.mode === RowActionsMode.Editing) {
+	if (props.state === ActionsCellState.Editing) {
 		return (
 			<TestSaveCancel
 				onSave={props.onSave}
@@ -276,7 +276,7 @@ function TestActionsCell(props: ActionsCellProps) {
 			/>
 		)
 	}
-	if (props.mode === RowActionsMode.Creating) {
+	if (props.state === ActionsCellState.Creating) {
 		return (
 			<TestSaveCancel
 				onSave={props.onSave}
@@ -434,7 +434,7 @@ function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: Be
 		</div>
 	)
 }
-function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+function TestMultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
 	const toggle = (value: string): void => {
 		const next = selectedValues.includes(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
 		onChange(next)
@@ -444,7 +444,7 @@ function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder 
 			role='group'
 			aria-label={placeholder ?? 'Filter'}
 		>
-			{options.map((opt) => (
+			{items.map((opt) => (
 				<label
 					key={opt.value}
 					style={{ display: 'flex', gap: 4, alignItems: 'center' }}
@@ -564,7 +564,7 @@ function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipPro
 		</span>
 	)
 }
-function TestClearFiltersButton({ disabled, onClick, children, ariaLabel }: ClearFiltersButtonComponentProps) {
+function TestClearFiltersButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
 	return (
 		<button
 			type='button'
@@ -643,8 +643,8 @@ function TestDraftBar({ open, pending, selectedCount, variant, onApply, onReset 
 			data-testid='draft-bar'
 			data-variant={variant}
 			data-pending-sorting={String(pending.sorting)}
-			data-pending-filters={String(pending.filters)}
-			data-pending-search={pending.search ? 'true' : 'false'}
+			data-pending-column-filters={String(pending.columnFilters)}
+			data-pending-global-filter={String(pending.globalFilter)}
 			data-selected-count={String(selectedCount)}
 		>
 			{selectedCount > 0 && <span data-slot='draft-bar-selected-chip'>{selectedCount} selected</span>}
@@ -684,7 +684,7 @@ function TestNoResultsState({ columnCount }: NoResultsStateProps) {
 		</tr>
 	)
 }
-function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
+function TestLoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
 	if (error != null) {
 		return (
 			<div data-slot='load-more-error'>
@@ -698,7 +698,7 @@ function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRet
 		)
 	}
 	if (isFetching) return <div data-slot='load-more-spinner'>Loading more…</div>
-	if (trigger === 'manual' && hasMore) {
+	if (trigger === 'manual' && hasNextPage) {
 		return (
 			<button
 				type='button'
@@ -742,6 +742,7 @@ export const testComponents: FullGridComponents = {
 		Checkbox: TestCheckbox,
 		Toolbar: TestToolbar,
 		Menu: TestMenu,
+		NumberInput: TestNumberInput,
 	},
 	pagination: {
 		Pagination: TestPagination,
@@ -776,8 +777,9 @@ export const testComponents: FullGridComponents = {
 	editing: {
 		Modal: TestModal,
 		FormShell: TestFormShell,
+	},
+	deleting: {
 		ConfirmDialog: TestConfirmDialog,
-		NumberInput: TestNumberInput,
 	},
 	selection: {
 		SelectionBar: TestSelectionBar,
@@ -785,16 +787,16 @@ export const testComponents: FullGridComponents = {
 	draft: {
 		DraftBar: TestDraftBar,
 	},
-	'row-actions': {
+	rowActions: {
 		ActionsCell: TestActionsCell,
 	},
 	resizing: {
 		Resizer: TestResizer,
 	},
-	'column-visibility': {
-		ColumnVisibilityMenu: TestColumnVisibilityMenu,
+	visibility: {
+		VisibilityMenu: TestColumnVisibilityMenu,
 	},
-	'fallback-states': {
+	fallbacks: {
 		LoadingRow: TestLoadingRow,
 		EmptyState: TestEmptyState,
 		NoResultsState: TestNoResultsState,

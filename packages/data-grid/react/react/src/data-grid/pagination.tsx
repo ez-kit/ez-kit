@@ -36,10 +36,10 @@ export type DataGridPaginationRenderArgs = {
 
 export type DataGridPaginationProps = {
 	/**
-	 * Custom footer content, replacing the kit's `Pagination` component.
+	 * Custom pagination-bar content, replacing the kit's `Pagination` component.
 	 *
-	 * The render function receives the whole settled model, so a custom footer never has to
-	 * repeat the page-count and row-count trust rules. Everything that hides the footer
+	 * The render function receives the whole settled model, so a custom bar never has to
+	 * repeat the page-count and row-count trust rules. Everything that hides the bar
 	 * entirely — the initial-load skeleton, a grid with no pagination row model, a trusted
 	 * total of zero — still applies, so `children` are not rendered in those states either.
 	 *
@@ -113,7 +113,7 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 
 	const canPrevious = table.getCanPreviousPage()
 	const canNext = table.getCanNextPage()
-	const { siblings, boundaries } = table.grid.pagination.window
+	const { siblings, boundaries } = table.grid.pagination
 
 	const previousPage = () => {
 		table.previousPage()

@@ -32,9 +32,9 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 
 	it('does not publish the selection panel config', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, selection: { enabled: false, panel: true } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, selection: { enabled: false, bar: true } }),
 		)
-		expect(result.current.grid.selection.panel).toBeUndefined()
+		expect(result.current.grid.selection.bar).toBeUndefined()
 	})
 
 	it('does not publish the infinite-scroll config', () => {
@@ -45,7 +45,7 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 				pagination: { enabled: false, mode: 'infinite', hasNextPage: true },
 			}),
 		)
-		expect(result.current.grid.infinite).toBeUndefined()
+		expect(result.current.grid.pagination.infinite).toBeUndefined()
 	})
 
 	it('does not publish the virtualization config', () => {
@@ -57,10 +57,10 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 
 	it('keeps column hiding off in core and mounts no toolbar trigger', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, columnVisibility: { enabled: false, toolbar: true } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, visibility: { enabled: false, toolbar: true } }),
 		)
 		expect(result.current.options.enableHiding).toBe(false)
-		expect(result.current.grid.columnVisibility).toBeUndefined()
+		expect(result.current.grid.visibility).toBeUndefined()
 	})
 
 	it('does not publish the sorting toolbar config', () => {
@@ -91,49 +91,47 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
 
 /**
  * `toolbar` is the one word for "auto-mount my control", on every feature that has one.
- * Pagination is the case that used to be implicit: the presence of `pageSizeOptions` was
+ * Pagination is the case that used to be implicit: the presence of `items` was
  * itself the switch, so options-without-control and control-with-default-options were both
  * unexpressible.
  */
 describe('useDataGrid — pagination.toolbar', () => {
 	it('mounts the PageSizer when a size list is supplied, with no extra flag', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSizeOptions: [5, 10] } }),
-		)
-		expect(result.current.grid.pagination.pageSizer).toBe(true)
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([5, 10])
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { items: [5, 10] } }))
+		expect(result.current.grid.pagination.toolbar).toBe(true)
+		expect(result.current.grid.pagination.items).toEqual([5, 10])
 	})
 
 	it('mounts nothing when pagination carries no size list', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
+		expect(result.current.grid.pagination.toolbar).toBe(false)
 	})
 
 	it('resolves the default size list even when the control is not auto-mounted', () => {
 		// The list is data, not a mount switch: `<DataGrid.PageSizer />` placed by hand needs it.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
+		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 	})
 
 	it('toolbar: true falls back to the named default size list', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: true } }))
-		expect(result.current.grid.pagination.pageSizer).toBe(true)
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([...DATA_GRID_DEFAULTS.pagination.pageSizeOptions])
+		expect(result.current.grid.pagination.toolbar).toBe(true)
+		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 	})
 
 	it('toolbar: false keeps the size list as data without mounting the control', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: false, pageSizeOptions: [5, 10] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: false, items: [5, 10] } }),
 		)
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
-		expect(result.current.grid.pagination.pageSizeOptions).toEqual([5, 10])
+		expect(result.current.grid.pagination.toolbar).toBe(false)
+		expect(result.current.grid.pagination.items).toEqual([5, 10])
 	})
 
 	it('never mounts the PageSizer in infinite mode', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', toolbar: true } }),
 		)
-		expect(result.current.grid.pagination.pageSizer).toBe(false)
-		expect(result.current.grid.pagination.pageSizeOptions).toBeUndefined()
+		expect(result.current.grid.pagination.toolbar).toBe(false)
+		expect(result.current.grid.pagination.items).toBeUndefined()
 	})
 })

@@ -1,3 +1,4 @@
+import type { FeatureToggle } from '../../utils/feature-flag'
 import type {
 	ColumnFiltersState,
 	InitialTableState,
@@ -8,8 +9,22 @@ import type {
 	TableState,
 } from '@tanstack/table-core'
 
-/** The three query axes whose application can be deferred. */
-export type DraftAxis = 'sorting' | 'columnFilters' | 'globalFilter'
+/**
+ * The three query axes whose application can be deferred. The members are the TanStack state
+ * slice names, so an axis doubles as the key into `AppliedState` / `PendingCount`.
+ *
+ * Named members for internal reference; the plain string union is what callers see.
+ */
+export const DraftAxis = {
+	/** Column sort order. */
+	Sorting: 'sorting',
+	/** Per-column filters. */
+	ColumnFilters: 'columnFilters',
+	/** The cross-column global search value. */
+	GlobalFilter: 'globalFilter',
+} as const
+
+export type DraftAxis = (typeof DraftAxis)[keyof typeof DraftAxis]
 
 /**
  * Snapshot of the query the consumer last saw. The live `sorting` /
@@ -26,11 +41,32 @@ export type AppliedState = {
 /** What `table.draft.get()` returns — the live values of the three axes. */
 export type QueryDraft = AppliedState
 
+/**
+ * How much is pending on each of the three {@link DraftAxis} axes.
+ *
+ * Keyed by the axis, like {@link AppliedState} — so `getPendingCount()[axis]` is a legal thing
+ * to write, which is what {@link DraftAxis}'s contract has always claimed. The keys used to be
+ * `sorting` / `filters` / `search`, which gave one axis three spellings between the state slice,
+ * this count and the table option, and made `pending[DraftAxis.ColumnFilters]` a type error.
+ *
+ * `globalFilter` counts rather than flags, for the same reason: a field whose type changed from
+ * `number` to `boolean` halfway across a three-key object cannot be summed, compared or rendered
+ * by one branch. It is only ever `0` or `1`.
+ */
 export type PendingCount = {
-	sorting: number
-	filters: number
-	search: boolean
+	[TAxis in DraftAxis]: number
 }
+
+/**
+ * Table-level draft config.
+ *
+ * Carries nothing but the shared {@link FeatureToggle} today: the feature has no knobs, and
+ * inventing some to justify an object would be speculative. It exists so `draft` reads like
+ * every other feature switch — `draft: { enabled: false }` turns off a `draft` inherited from
+ * a defaults layer, which the bare boolean this replaced could not express — and so the first
+ * real option can be added without a breaking change.
+ */
+export type DraftConfig = FeatureToggle
 
 export type DraftApi = {
 	get: () => QueryDraft
@@ -62,10 +98,10 @@ declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
 	interface TableOptionsResolved<TData extends RowData> {
 		/**
-		 * Mirrors `TableConfig.deferredApply`. Present only when deferral is on, so a
-		 * UI layer can gate on the option itself rather than inferring it from state.
+		 * Mirrors `TableConfig.draft`, resolved to a plain boolean. Present only when deferral
+		 * is on, so a UI layer can gate on the option itself rather than inferring it from state.
 		 */
-		deferredApply?: boolean
+		draft?: boolean
 	}
 }
 
@@ -136,8 +172,8 @@ export const DeferredApplyFeature: TableFeature<RowData> = {
 			const removedSorts = Math.max(applied.sorting.length - live.sorting.length, 0)
 			return {
 				sorting: changedSorts + removedSorts,
-				filters: changedFilters + removedFilters,
-				search: !sameAxis(live.globalFilter, applied.globalFilter),
+				columnFilters: changedFilters + removedFilters,
+				globalFilter: sameAxis(live.globalFilter, applied.globalFilter) ? 0 : 1,
 			}
 		}
 

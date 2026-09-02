@@ -21,13 +21,14 @@ function formatBetweenValue(value: BetweenValue): { display: string; hasValue: b
 }
 
 function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown> | undefined): string {
-	const explicit = meta?.filteringOptions
+	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+	const explicit = filteringMeta?.items
 	if (explicit) {
 		const hit = explicit.find((o) => o.value === rawValue)
 		if (hit) return hit.label
 	}
-	if (meta?.cellType === 'select' || meta?.cellType === 'badge') {
-		const items = (meta.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
+	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
+		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		const hit = items?.find((o) => o.value === rawValue)
 		if (hit) return hit.label
 	}
@@ -53,7 +54,8 @@ function formatFilterValue(
 
 	if (typeof filterValue === 'object' && 'operator' in filterValue) {
 		const sv = filterValue as StructuredFilterValue
-		const op = meta?.resolvedOperators?.find((o) => o.id === sv.operator)
+		const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+		const op = filteringMeta?.operators?.find((o) => o.id === sv.operator)
 		const inner = sv.value
 
 		// `requiresInput === false` operators (e.g. isEmpty / isNotEmpty) — show operator label.

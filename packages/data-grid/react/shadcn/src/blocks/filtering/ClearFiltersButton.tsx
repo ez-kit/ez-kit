@@ -4,9 +4,9 @@ import { FilterX } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 
-import type { ClearFiltersButtonComponentProps } from '@ez-kit/data-grid-react'
+import type { ClearFiltersButtonProps } from '@ez-kit/data-grid-react'
 
-export function ClearFiltersButton({ disabled, onClick, ariaLabel }: ClearFiltersButtonComponentProps) {
+export function ClearFiltersButton({ disabled, onClick, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
 	return (
 		<Button
 			type='button'

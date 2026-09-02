@@ -16,6 +16,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/base/sorting.tsx': () => import('./components/base/sorting'),
 	'components/base/sticky.tsx': () => import('./components/base/sticky'),
 	'components/cell-types.tsx': () => import('./components/cell-types'),
+	'components/column-footers.tsx': () => import('./components/column-footers'),
 	'components/column-helper.tsx': () => import('./components/column-helper'),
 	'components/column-helper-registered.tsx': () => import('./components/column-helper-registered'),
 	'components/column-pinning.tsx': () => import('./components/column-pinning'),
@@ -58,6 +59,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/infinite-scroll/reset-on-query.tsx': () => import('./components/infinite-scroll/reset-on-query'),
 	'components/infinite-scroll/virtualized.tsx': () => import('./components/infinite-scroll/virtualized'),
 	'components/pagination-variants.tsx': () => import('./components/pagination-variants'),
+	'components/row-actions/custom-actions.tsx': () => import('./components/row-actions/custom-actions'),
 	'components/row-pinning/sticky-header.tsx': () => import('./components/row-pinning/sticky-header'),
 	'components/production/ProductionDeferredApplyExample.tsx': () =>
 		import('./components/production/ProductionDeferredApplyExample'),

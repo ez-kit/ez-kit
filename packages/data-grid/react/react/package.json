@@ -22,17 +22,12 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
-		"./cell-types": {
-			"types": "./dist/cell-types/index.d.ts",
-			"import": "./dist/cell-types/index.js",
-			"default": "./dist/cell-types/index.js"
-		},
 		"./styles.css": "./dist/styles.css"
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts src/cell-types/index.ts --format esm --dts --sourcemap && cp src/styles/global.css dist/styles.css",
+		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/styles/global.css dist/styles.css",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -44,10 +39,6 @@
 		{
 			"path": "dist/index.js",
 			"limit": "50 KB"
-		},
-		{
-			"path": "dist/cell-types/index.js",
-			"limit": "5 KB"
 		}
 	],
 	"dependencies": {

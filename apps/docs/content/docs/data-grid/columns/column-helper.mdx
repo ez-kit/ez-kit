@@ -27,9 +27,47 @@ There is one factory per built-in cell type: `text`, `number`, `date`, `boolean`
 
 ## Custom view
 
-Use a custom cell renderer per column.
+Every builder takes `cell.component` — the same slot a plain `ColumnDef` spells that way — so a
+built-in cell type and a renderer of your own are not alternatives. The type still supplies the
+config (typed), your component draws the value:
+
+```ts
+createColumn.number({ accessorKey: 'rating', header: 'Rating', cell: { component: StarRatingView } })
+```
 
 <DataGridDocsExample exampleId='column-helper-custom-view' />
+
+`createColumn.custom({ … })` takes the same `cell.component`, and adds a loose `type` / `config`
+for a cell type the helper cannot know about — one registered at render time via the `cellTypes`
+prop rather than through the factory.
+
+## Computed columns
+
+`createColumn.computed({ … })` builds a column whose value is derived from the row rather than
+read from a field — and, unlike the same column written as a plain object, gives that value a
+type. It infers the value type from the `accessorFn` you pass:
+
+```ts
+const createColumn = createColumnHelper<Order>()
+
+createColumn.computed({
+	id: 'total',
+	accessorFn: (row) => row.price * row.qty, // value: number
+	cellClassName: ({ value }) => (value > 1000 ? 'font-semibold' : undefined),
+})
+```
+
+This is the one thing the helper does that a plain `ColumnDef` cannot. `accessorKey` columns get
+a typed `value` from the key itself, so `{ accessorKey: 'price', cellClassName: ({ value }) => … }`
+already sees a `number`. A column that computes its value has no key to read that from, and a
+plain object literal has nowhere to infer it — so written that way, `value` is `unknown`. A
+generic method does have somewhere: `computed`'s value type comes from its own `accessorFn`.
+
+`id` is required — stricter than the runtime, on purpose. Without an `accessorKey`, the table
+falls back to the `header` when that is a plain string, so the column works but takes its id from
+its label: reword the header and the id changes underneath any sorting, filtering or visibility
+state keyed to it. With no string header either, it throws `Columns require an id when using an
+accessorFn` on first render. Requiring `id` removes both cases.
 
 ## Registered cell types
 
@@ -44,7 +82,7 @@ import { defineCellType } from '@ez-kit/data-grid-react'
 
 // StarRatingView / StarRatingInput are your own components — see the example's source below.
 const RATING_CELL_TYPES = {
-	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
+	rating: defineCellType()({ view: StarRatingView, editing: StarRatingInput }),
 }
 ```
 
@@ -62,7 +100,7 @@ Or once for a whole grid module, via `extendDataGrid()` from your UI kit — the
 import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
 
 const grid = extendDataGrid({
-	rating: defineCellType()({ view: StarRatingView, edit: StarRatingInput }),
+	rating: defineCellType()({ view: StarRatingView, editing: StarRatingInput }),
 })
 
 export const { DataGrid, createColumnHelper, createColumns } = grid
@@ -84,7 +122,7 @@ const columns = [
 With the standalone `createColumnHelper` from `@ez-kit/data-grid-react` — as in the example, which registers per grid — pass the registry and the matching runtime ids yourself. Derive both from one object so they cannot drift apart, and include `baseCellTypes` so the builder still offers `.text()` / `.select()` alongside your own:
 
 ```ts
-import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import { baseCellTypes } from '@ez-kit/data-grid-react'
 
 const HELPER_CELL_TYPES = { ...baseCellTypes, ...RATING_CELL_TYPES }
 
@@ -97,22 +135,25 @@ The second parameter is the **registry**, not a union of its ids: the ids alone 
 
 <DataGridDocsExample exampleId='column-helper-registered' />
 
-See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full renderer contract (`view` / `edit` / `creating` / `filter`).
+See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full renderer contract (`view` / `editing` / `creating` / `filter`).
 
 ## Options
 
-| Option                                                 | Type                  | Description                                                                                    |
-| ------------------------------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------- |
-| `createColumn.text(opts)`                              | builder               | Accessor column rendered by the `text` cell type. Same shape for `number`, `boolean`, `link`.  |
-| `createColumn.date(opts)`                              | builder               | As above, plus an optional `config: DateCellConfig`.                                           |
-| `createColumn.select(opts)` / `createColumn.badge()`   | builder               | Require `config` (`SelectCellConfig` / `BadgeCellConfig`).                                     |
-| `createColumn.image(opts)` / `createColumn.progress()` | builder               | Optional `config` (`ImageCellConfig` / `ProgressCellConfig`).                                  |
-| `createColumn.custom(opts)`                            | builder               | Escape hatch: set `type`, `config`, and/or your own `view` / `editing` / `creating` renderers. |
-| `createColumn.<registeredId>(opts)`                    | builder               | One per registered cell type — present only when the helper knows that id (see above).         |
-| `opts.accessorKey`                                     | `keyof TRow & string` | The row field the column reads.                                                                |
-| `opts.config`                                          | `object`              | Cell-type configuration, forwarded to the renderer as `config`.                                |
+| Option                                                 | Type                  | Description                                                                                      |
+| ------------------------------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------ |
+| `createColumn.text(opts)`                              | builder               | Accessor column rendered by the `text` cell type. Same shape for `number`, `boolean`, `link`.    |
+| `createColumn.date(opts)`                              | builder               | As above, plus an optional `config: DateCellConfig`.                                             |
+| `createColumn.select(opts)` / `createColumn.badge()`   | builder               | Require `config` (`SelectCellConfig` / `BadgeCellConfig`).                                       |
+| `createColumn.image(opts)` / `createColumn.progress()` | builder               | Optional `config` (`ImageCellConfig` / `ProgressCellConfig`).                                    |
+| `createColumn.custom(opts)`                            | builder               | Escape hatch: an unchecked `type` / `config` for a cell type registered at render time.          |
+| `createColumn.computed(opts)`                          | builder               | Computed column: requires `id` + `accessorFn`, and types `value` from what `accessorFn` returns. |
+| `createColumn.<registeredId>(opts)`                    | builder               | One per registered cell type — present only when the helper knows that id (see above).           |
+| `opts.accessorKey`                                     | `keyof TRow & string` | The row field the column reads.                                                                  |
+| `opts.config`                                          | `object`              | Cell-type configuration, forwarded to the renderer as `config`.                                  |
+| `opts.cell.component`                                  | `ColumnRenderer`      | Your own view renderer for this column. Same slot, same name, as on a plain `ColumnDef`.         |
+| `opts.editing` / `opts.creating`                       | `object \| false`     | Passed through unchanged — `{ component, description }`, exactly as on a plain `ColumnDef`.      |
 
-`cell.type` is what the builders set for you; `meta.cellType` is the derived internal field the engine reads at render time, not something you author.
+`cell.type` is what the builders set for you; `meta.cell.type` is the derived internal field the engine reads at render time, not something you author.
 
 ## Source
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { SortDirection } from '@ez-kit/data-grid-react'
 import { Button, ListBox, Popover, Select } from '@heroui/react'
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 
@@ -46,7 +47,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 					value={item.direction}
 					aria-label='Sort direction'
 					onChange={(value) => {
-						if (value === 'asc' || value === 'desc') item.onChangeDirection(value)
+						if (value === SortDirection.Asc || value === SortDirection.Desc) item.onChangeDirection(value)
 					}}
 				>
 					<Select.Trigger>

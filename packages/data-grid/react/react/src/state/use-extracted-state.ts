@@ -3,7 +3,7 @@
 import { useRef, useSyncExternalStore } from 'react'
 
 import { pickState } from './extract-state'
-import { DEFAULT_STATE_KEYS } from './state-keys'
+import { DEFAULT_STATE_KEYS, DRAFT_STATE_KEY } from './state-keys'
 
 import type { DataGridState, DataGridStateOptions, PersistableStateKey } from './state-keys'
 import type { DataTable, TableState } from '@ez-kit/data-grid-core'
@@ -41,7 +41,19 @@ export function useExtractedState<TRow extends object>(
 	const cacheRef = useRef<Cache | null>(null)
 
 	const select = (state: TableState): DataGridState => {
-		const inputs: readonly unknown[] = keys.map((key) => state[key] as unknown)
+		// `draft` is not a slice: it is derived from the three deferred axes and the applied
+		// snapshot, so all four go in as inputs — see `DRAFT_STATE_KEY`. The list stays
+		// position-stable for a given `keys`, which is all `sameList` needs.
+		const inputs: readonly unknown[] = keys.flatMap((key): unknown[] =>
+			key === DRAFT_STATE_KEY
+				? [
+						state.sorting,
+						state.columnFilters,
+						state.globalFilter,
+						(state as unknown as Record<string, unknown>).applied,
+					]
+				: [state[key] as unknown],
+		)
 		const cache = cacheRef.current
 		if (cache && sameList(cache.keys, keys) && sameList(cache.inputs, inputs)) {
 			return cache.output

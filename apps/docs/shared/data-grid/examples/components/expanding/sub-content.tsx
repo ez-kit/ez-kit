@@ -80,7 +80,7 @@ export function ExpandingSubContentExample() {
 			data={EMPLOYEES}
 			columns={columns}
 			expanding={{
-				renderExpanded: ({ row }) => {
+				component: ({ row }) => {
 					const emp = row.original
 					return (
 						<div className='gap-8 flex-wrap flex'>

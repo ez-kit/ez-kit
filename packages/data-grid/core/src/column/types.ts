@@ -4,7 +4,8 @@ import type {
 	BetweenOperatorConfig,
 	ColumnOperatorsConfig,
 	FilterOperatorDef,
-	MultiSelectOption,
+	FilterOperatorId,
+	FilterItem,
 } from '../features/operators'
 import type { FieldState, ValidateOn } from '../features/validation'
 import type {
@@ -24,19 +25,34 @@ export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCor
 }
 
 /**
- * The cell types this package implements. A closed union — the escape hatch for
+ * The cell types this package implements. A closed set — the escape hatch for
  * project-specific types is {@link CellType}'s tail, not this.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `cell: { type: 'number' }` is equally valid and needs no import.
  */
-export type BuiltInCellType =
-	| 'text'
-	| 'number'
-	| 'date'
-	| 'boolean'
-	| 'select'
-	| 'badge'
-	| 'image'
-	| 'link'
-	| 'progress'
+export const BuiltInCellType = {
+	/** Plain text, optionally truncated — see {@link TextCellConfig}. */
+	Text: 'text',
+	/** Locale-formatted number — see {@link NumberCellConfig}. */
+	Number: 'number',
+	/** `Intl.DateTimeFormat`-rendered date — see {@link DateCellConfig}. */
+	Date: 'date',
+	/** Boolean with per-column labels — see {@link BooleanCellConfig}. */
+	Boolean: 'boolean',
+	/** Value picked from a fixed list — see {@link SelectCellConfig}. */
+	Select: 'select',
+	/** Value rendered as a coloured badge — see {@link BadgeCellConfig}. */
+	Badge: 'badge',
+	/** Avatar / thumbnail — see {@link ImageCellConfig}. */
+	Image: 'image',
+	/** Anchor rendered from the cell value. */
+	Link: 'link',
+	/** Progress bar — see {@link ProgressCellConfig}. */
+	Progress: 'progress',
+} as const
+
+export type BuiltInCellType = (typeof BuiltInCellType)[keyof typeof BuiltInCellType]
 
 /**
  * A cell type as it may appear on a column or in `ColumnMeta`. The `string & {}` tail keeps
@@ -66,16 +82,93 @@ export type ExoticComponentLike = { $$typeof: symbol }
  */
 export type ColumnRenderer<TProps, TNode> = ((props: TProps) => TNode) | ExoticComponentLike
 
-export type CellViewCtx<TRow, TValue> = {
+/**
+ * A renderer slot for a column's **input** components — the filter control, the edit field, the
+ * create field.
+ *
+ * Identical to {@link ColumnRenderer} except that its props are compared **bivariantly**, via the
+ * method-signature form. That is deliberate and load-bearing.
+ *
+ * These slots hand the component the column's `cell.config`, whose type is only known to the
+ * author: `filtering` and `cell` are sibling fields of one column object, and a union arm has no
+ * inference variable to carry a type from one to the other. So the only way to say "this filter
+ * reads a `SelectCellConfig`" is to annotate the component — and under `strictFunctionTypes` a
+ * property-position function type rejects exactly that annotation, because `config?: unknown` is
+ * not assignable to `config?: SelectCellConfig`. The result was that the `config` these slots have
+ * always been passed could only be read through a cast, which is the very thing
+ * {@link InputComponentProps} exists to remove.
+ *
+ * Bivariance is what React's own component types give props for the same reason. The narrowing an
+ * author writes here is a claim about their own column, not something the grid can check.
+ */
+export type ColumnInputRenderer<TProps, TNode> =
+	| { bivariantRender(props: TProps): TNode }['bivariantRender']
+	| ExoticComponentLike
+
+/**
+ * What every view-mode cell renderer is handed — a column's own `cell.component` and a
+ * registered cell type's `view` alike.
+ *
+ * `TConfig` is the cell type's `cell.config`. It is `never` on a column's `cell.component`,
+ * which is written next to the `config` it would read and has no use for it, and the declared
+ * config type on a registered cell type's `view`, which is written once for every column that
+ * uses the type. The React adapter's `CellViewProps<TConfig>` is this type with `TRow` and
+ * `TValue` erased — a registry entry serves grids of every row shape.
+ *
+ * One type rather than the two near-identical ones this replaced (`CellViewCtx` here,
+ * `CellViewProps` in the adapter, differing only by `config`): an author writing both slots on
+ * one cell type had to know both names for the same three fields.
+ */
+export type CellViewCtx<TRow, TValue, TConfig = never> = {
 	row: TRow
 	value: TValue
 	rowIndex: number
+	/**
+	 * The cell type's config. `never` by default, so a column's own `cell.component` — written
+	 * beside the config it would read — cannot take one, while a registered type's `view` gets
+	 * the type it declared.
+	 */
+	config?: TConfig
 }
 
-/** Props passed to column-level input components (filtering, editing, creating). */
-export type InputComponentProps = {
+/**
+ * Resolved `column.cell`, normalized off the scalar form.
+ *
+ * Named `cell` on the meta, for the column option it carries — like `pinning`, `align`,
+ * `filtering`, `editing` and every other sibling. It was three flat fields under three
+ * different names (`cellType`, `config`, `cellView`), so `cell.type` was read back as
+ * `meta.cellType` and `cell.component` as `meta.cellView`.
+ */
+export type ColumnCellMeta = {
+	/** The registered cell type id, from `cell.type` (or the `cell` scalar). */
+	type?: CellType
+	/** The type's config, from `cell.config`. Row-erased, so untyped here. */
+	config?: Record<string, unknown>
+	/** The column's own view renderer, from `cell.component`. */
+	view?: (ctx: CellViewCtx<unknown, unknown>) => unknown
+}
+
+/**
+ * Props passed to a column-level filter input (`column.filtering.component`).
+ *
+ * `config` is the column's own `cell.config`, forwarded verbatim — a custom filter for a
+ * `select` / `badge` column needs the very `items` the cell was declared with, and the grid
+ * has been passing them all along.
+ *
+ * Annotate the component to name that config — `(props: InputComponentProps<SelectCellConfig>)`
+ * — and the slot accepts it: {@link ColumnInputRenderer} compares these props bivariantly for
+ * precisely this reason. Left unannotated, `config` is `unknown`, as it must be.
+ *
+ * This is the shape of a **column's** `filtering.component`. A cell type registered in the kit's
+ * registry receives the richer `FieldState` in every one of its slots — `view` excepted — because
+ * a registered type also renders edit and create fields, where validation state is part of the
+ * job.
+ */
+export type InputComponentProps<TConfig = unknown> = {
 	value: unknown
 	onChange: (value: unknown) => void
+	/** The column's `cell.config`, when it declared one. */
+	config?: TConfig
 }
 
 // ── cell config types ─────────────────────────────────────────────────────
@@ -84,7 +177,26 @@ export type SelectItem = {
 	value: string
 	label: string
 }
-export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline'
+/**
+ * Visual variant of a badge rendered by the `badge` cell type. The names are the kits' shared
+ * badge vocabulary, not a colour — each kit maps them to its own palette.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `variant: 'destructive'` is equally valid and needs no import.
+ */
+export const BadgeVariant = {
+	/** The kit's primary/filled badge. */
+	Default: 'default',
+	/** Muted badge for supporting information. */
+	Secondary: 'secondary',
+	/** Error / danger badge. */
+	Destructive: 'destructive',
+	/** Outlined badge with no fill. */
+	Outline: 'outline',
+} as const
+
+export type BadgeVariant = (typeof BadgeVariant)[keyof typeof BadgeVariant]
+
 export type BadgeItem = {
 	value: string
 	label: string
@@ -105,6 +217,65 @@ export type ImageCellConfig = {
 export type ProgressCellConfig = {
 	max?: number
 }
+
+/**
+ * Where a `link` cell's anchor opens.
+ *
+ * `_self` is the default because a grid links inside its own app far more often than out of it,
+ * and `_blank` — the previous hard-coded behaviour — is the exception you now have to ask for.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `target: '_blank'` is equally valid and needs no import.
+ */
+export const LinkTarget = {
+	/** Navigate in the current tab. The default. */
+	Self: '_self',
+	/** Open a new tab. Rendered with `rel="noreferrer"`. */
+	Blank: '_blank',
+} as const
+
+export type LinkTarget = (typeof LinkTarget)[keyof typeof LinkTarget]
+
+/** The placeholder {@link LinkCellConfig.href} substitutes the cell value into. */
+export const LINK_HREF_VALUE_TOKEN = '{value}'
+
+/**
+ * Config for the `link` cell type.
+ *
+ * It had none, so the anchor's text was always the raw URL and the target was always a new tab.
+ * "Customer name, linking to `/customers/:id`, in this tab" — the ordinary case — had to give up
+ * the cell type and write a `cell.component` instead.
+ *
+ * Everything here is a plain value rather than a callback on purpose. A cell type's config lives
+ * in the kit's registry, which is row-agnostic by construction, so a callback declared here would
+ * be handed `row: unknown` and every call site would open with a cast. The row-derived cases stay
+ * where the row is actually typed: `cell.component`.
+ */
+export type LinkCellConfig = {
+	/**
+	 * Fixed anchor text — `'Open'`, `'View invoice'`. Defaults to the cell value.
+	 *
+	 * For text derived from another field, use `cell.component`: that slot is declared on the
+	 * column, so it sees the row's real type.
+	 */
+	label?: string
+	/**
+	 * URL template. `{value}` is replaced by the cell value, so a column of ids becomes a column
+	 * of links without leaving the cell type:
+	 *
+	 * ```ts
+	 * { accessorKey: 'customerId', cell: { type: 'link', config: { href: '/customers/{value}' } } }
+	 * ```
+	 *
+	 * The template literal type requires the token, so a template that forgot it — and would
+	 * therefore point every row at the same page — does not compile. Omitted, the value is the
+	 * href, which is what a column that already holds URLs wants.
+	 */
+	href?: `${string}${typeof LINK_HREF_VALUE_TOKEN}${string}`
+	/** Browsing context to open in. Default: {@link LinkTarget.Self}. */
+	target?: LinkTarget
+}
+
 export type TextCellConfig = {
 	/** Maximum character count for the rendered view. Longer values are truncated. */
 	maxLength?: number
@@ -138,9 +309,9 @@ export type BooleanCellConfig = {
 }
 export type DateCellConfig = {
 	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard minimum. */
-	minValue?: string
+	min?: string
 	/** ISO 8601 date string forwarded to the UI-kit date picker as a hard maximum. */
-	maxValue?: string
+	max?: string
 	/** Forwarded to `Intl.DateTimeFormat` by the view renderer. */
 	format?: Intl.DateTimeFormatOptions
 }
@@ -164,22 +335,30 @@ export type BaseCellTypes = {
 	select: { __config?: SelectCellConfig }
 	badge: { __config?: BadgeCellConfig }
 	image: { __config?: ImageCellConfig }
-	link: Record<never, never>
+	link: { __config?: LinkCellConfig }
 	progress: { __config?: ProgressCellConfig }
 }
 
-/** {@link BaseCellTypes}' ids at runtime — what the unbound column helper builds methods from. */
-export const BASE_CELL_TYPE_IDS = [
-	'text',
-	'number',
-	'boolean',
-	'date',
-	'select',
-	'badge',
-	'image',
-	'link',
-	'progress',
-] as const satisfies readonly (keyof BaseCellTypes)[]
+/**
+ * Compile-time proof that {@link BuiltInCellType}'s members and {@link BaseCellTypes}' keys are
+ * the *same* set, in both directions. `satisfies` on the array below only proves one of them —
+ * an id added to the contract and forgotten here would still compile.
+ */
+type _BuiltInCellTypeCoversContract = [BuiltInCellType] extends [keyof BaseCellTypes]
+	? [keyof BaseCellTypes] extends [BuiltInCellType]
+		? true
+		: never
+	: never
+const _builtInCellTypesMatchContract: _BuiltInCellTypeCoversContract = true
+void _builtInCellTypesMatchContract
+
+/**
+ * {@link BaseCellTypes}' ids at runtime — what the unbound column helper builds methods from.
+ *
+ * Derived from {@link BuiltInCellType} rather than re-listed, so the members, the union and
+ * this array cannot drift apart.
+ */
+export const BASE_CELL_TYPE_IDS: readonly (keyof BaseCellTypes)[] = Object.values(BuiltInCellType)
 
 // ── cell definition (registry-driven) ─────────────────────────────────────
 
@@ -236,6 +415,10 @@ export type CellDef<
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
 > =
+	// The scalar: a type id and nothing else, which is what most columns want. Same
+	// scalar-or-object shape as `align`, `width` and `pinning` — one word for the common case,
+	// the object for the exception that carries a `config` or a `component`.
+	| (keyof TCellTypes & string)
 	| {
 			type?: undefined
 			config?: undefined
@@ -245,18 +428,50 @@ export type CellDef<
 			[TKey in keyof TCellTypes & string]: CellArm<TKey, TCellTypes[TKey], TRow, TValue, TNode>
 	  }[keyof TCellTypes & string]
 
-export type ColumnFilteringConfig<TNode = unknown> = {
-	/** Custom filter input component for this column. */
-	component?: ColumnRenderer<InputComponentProps, TNode>
+export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
+	/**
+	 * Custom filter input component for this column.
+	 *
+	 * Receives {@link InputComponentProps}, including the column's own `cell.config`. Annotate
+	 * the component with the config it expects — `(props: InputComponentProps<SelectCellConfig>)`
+	 * — to read it without a cast.
+	 */
+	component?: ColumnInputRenderer<InputComponentProps<TConfig>, TNode>
 	/** Operator configuration. `true` = default operators for the column's cell type. */
 	operators?: boolean | ColumnOperatorsConfig
-	/** Override the default selected operator for this column. */
-	defaultOperator?: string
 	/**
-	 * Explicit option list for multi-value (`in` / `notIn`) filters. Wins over both
-	 * `cell.config.items` (for `select` / `badge` cell types) and faceted values.
+	 * Which operator this column's filter opens with. Defaults to the one its cell type
+	 * declares (`contains` for text, `equals` for number / date / boolean, `in` for
+	 * select / badge).
+	 *
+	 * Typed {@link FilterOperatorId} rather than `string`: the value has to be one of the
+	 * operators this column actually offers, and an id that is not selects nothing in the
+	 * operator control and dispatches to no `filterFn`, so the filter matches every row.
+	 * `createTable` warns about that in development.
 	 */
-	options?: MultiSelectOption[]
+	defaultOperator?: FilterOperatorId
+	/**
+	 * Commit debounce (ms) for this column's text filter input, overriding the table-level
+	 * {@link ReactFilteringConfig.debounce}. `0` commits on every keystroke.
+	 *
+	 * One word for "how long we wait before acting on typing", the same one
+	 * `editing.debounce` and `creating.debounce` use at both the table and the column level.
+	 * The unit is milliseconds everywhere, so it is not part of the name.
+	 *
+	 * Discrete controls (between, multi-select, select / badge, a custom `component`) commit
+	 * instantly and ignore this, exactly as they ignore the table-level option.
+	 */
+	debounce?: number
+	/**
+	 * Explicit value list for multi-value (`in` / `notIn`) filters. Wins over both
+	 * `cell.config.items` (for `select` / `badge` cell types) and faceted values.
+	 *
+	 * Named `items`, like `cell.config.items` it overrides — one column, one word for "the
+	 * values this column can take". It was `options`, which forced an author writing both slots
+	 * on the same column to remember two spellings of one list, and which reused the word this
+	 * config already spends on everything you configure.
+	 */
+	items?: FilterItem[]
 	/**
 	 * Per-column override for faceted unique values / counts. When `true`, this
 	 * column reads `column.getFacetedUniqueValues()` regardless of the table-level
@@ -266,26 +481,83 @@ export type ColumnFilteringConfig<TNode = unknown> = {
 	faceted?: boolean
 }
 
-export type ColumnEditingConfig<TNode = unknown> = {
+/**
+ * Resolved `column.filtering`, normalized off the raw config.
+ *
+ * Named `filtering` on the meta, for the column option it carries — like `pinning`, `align`,
+ * `cell` and every other sibling — and **every field named for the option it holds**. It was
+ * five flat keys beside it (`filteringItems`, `facetedEnabled`, `defaultOperatorId`,
+ * `resolvedOperators`, `betweenOperatorConfig`), so `filtering.items` was read back as
+ * `meta.filteringItems` and `filtering.faceted` as `meta.facetedEnabled` — one concept
+ * answering to two words depending on which side of the mapper you were standing on, which is
+ * the defect {@link ColumnCellMeta} already exists to have removed.
+ *
+ * The values here are **resolved**, not the raw config: `operators` is the settled list (not
+ * `true`), `faceted` folds in the table-level flag, and `defaultOperator` falls back to the
+ * cell type's default. `component` and `debounce` pass through unchanged.
+ */
+export type ColumnFilteringMeta = {
+	/** The column's own filter input, from `filtering.component`. Row-erased, so untyped here. */
+	component?: ColumnInputRenderer<InputComponentProps, unknown>
+	/** Commit debounce in ms, from `filtering.debounce`. */
+	debounce?: number
+	/** Explicit multi-select value list, from `filtering.items`. */
+	items?: FilterItem[]
+	/**
+	 * Whether this column reads faceted unique values — resolved from `filtering.faceted` and
+	 * the table-level `filtering.faceted`.
+	 */
+	faceted?: boolean
+	/** The settled operator list, resolved from `filtering.operators`. */
+	operators?: FilterOperatorDef[]
+	/** Between-operator UI config, from `filtering.operators.betweenOperator`. */
+	betweenOperator?: BetweenOperatorConfig
+	/**
+	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the one
+	 * its cell type declares, else the first of {@link ColumnFilteringMeta.operators}.
+	 */
+	defaultOperator?: FilterOperatorId
+}
+
+export type ColumnEditingConfig<TNode = unknown, TValue = unknown, TConfig = unknown> = {
 	/**
 	 * Custom edit input component for this column.
-	 * Receives a {@link FieldState} with `value`, `onChange`, `onBlur`, `error`, `errors`, `isValidating`, `config`.
+	 *
+	 * Receives a {@link FieldState} with `value`, `onChange`, `onBlur`, `error`, `errors`,
+	 * `isValidating`, `config`. On an `accessorKey` column `value` is that field's type; annotate
+	 * the component — `(props: FieldState<SelectCellConfig>)` — to name the `cell.config` it reads.
 	 */
-	component?: ColumnRenderer<FieldState, TNode>
+	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
 	/**
 	 * Help text rendered under the input in the edit form.
 	 * Forwarded to `FieldState.description` so composite cell types can show it
 	 * via the kit's `<FieldDescription>` / `<Description>` slot.
 	 */
 	description?: string
+	/**
+	 * When this column's field validates, overriding the feature-level
+	 * `editing.validateOn`. Per-field UX: an email that validates on blur next to a password
+	 * that validates on change for a live strength meter.
+	 */
+	validateOn?: ValidateOn
+	/**
+	 * Debounce (ms) for this column's validation, overriding the feature-level
+	 * `editing.debounce`. Applies only when the resolved `validateOn` is
+	 * {@link ValidateOn.Change}.
+	 *
+	 * One word for "how long we wait before acting on typing", the same one
+	 * `filtering.debounce` and `globalFiltering.debounce` use. The unit is milliseconds
+	 * everywhere, so it is not part of the name.
+	 */
+	debounce?: number
 }
 
-export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unknown> = {
+export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unknown, TConfig = unknown> = {
 	/**
 	 * Custom create input component for this column. Falls back to `editing.component` when omitted.
 	 * Receives a {@link FieldState} with the same shape as {@link ColumnEditingConfig.component}.
 	 */
-	component?: ColumnRenderer<FieldState, TNode>
+	component?: ColumnInputRenderer<FieldState<TConfig, TValue>, TNode>
 	/**
 	 * Help text rendered under the input in the create form.
 	 * Forwarded to `FieldState.description`.
@@ -310,6 +582,19 @@ export type ColumnCreatingConfig<TRow = unknown, TValue = unknown, TNode = unkno
 	 * function can therefore not be passed directly; wrap it (`defaultValue: () => myFn`).
 	 */
 	defaultValue?: TValue | ((ctx: CreateDefaultValueContext<TRow>) => TValue)
+	/**
+	 * When this column's field validates, overriding the feature-level
+	 * `creating.validateOn`. Falls back to this column's `editing.validateOn` when omitted, the same way
+	 * `creating.component` falls back to `editing.component`.
+	 */
+	validateOn?: ValidateOn
+	/**
+	 * Debounce (ms) for this column's validation, overriding the feature-level
+	 * `creating.debounce`. Applies only when the resolved `validateOn` is
+	 * {@link ValidateOn.Change}. Same word, same unit, as `editing.debounce` and
+	 * `filtering.debounce`.
+	 */
+	debounce?: number
 }
 
 /**
@@ -348,29 +633,80 @@ export type ColumnAlignDef = {
 export type ColumnPinningDef = {
 	/** Static pin — always pinned to this side, no pin section in the column menu. */
 	side?: ColumnPinSide
-	/** Seeds `initialState.columnPinning` — starts pinned, user can change via column menu. */
+	/**
+	 * Seeds `initialState.columnPinning` — starts pinned, and the user unpins or re-pins it
+	 * from the column menu.
+	 *
+	 * That menu belongs to the **table**-level `pinning` feature. With `pinning` off the seed
+	 * still applies — it is what the author wrote, and dropping it silently would be worse —
+	 * but there is no menu to change it from, so it behaves exactly like the static
+	 * {@link ColumnPinningDef.side}. `createTable` warns about that in development.
+	 */
 	initialSide?: ColumnPinSide
 }
 
 export type ColumnVisibilityDef = {
-	/** Seeds `initialState.columnVisibility` — starts hidden, user can toggle it on. */
+	/**
+	 * Seeds `initialState.columnVisibility` — starts hidden, and the user toggles it back on.
+	 *
+	 * That toggle belongs to the **table**-level `visibility` feature. With `visibility` off
+	 * the seed still applies, so the column starts hidden and stays hidden for good — a
+	 * legitimate way to keep a column in the model without showing it (its values still feed
+	 * global search), but rarely what someone writing `initialHidden` means. `createTable`
+	 * warns about that in development.
+	 */
 	initialHidden?: boolean
 }
 
-/** Built-in TanStack sort functions. The `string & {}` tail keeps custom registry IDs valid. */
-export type BuiltInSortingFn =
-	| 'alphanumeric'
-	| 'alphanumericCaseSensitive'
-	| 'text'
-	| 'textCaseSensitive'
-	| 'datetime'
-	| 'basic'
+/**
+ * The sort functions TanStack ships, addressable by name from `column.sorting.fn`.
+ *
+ * Named members for internal reference; the option is typed as the plain string union (with a
+ * `string & {}` tail for custom registry ids), so `sorting: { fn: 'datetime' }` is equally
+ * valid and needs no import.
+ */
+export const BuiltInSortingFn = {
+	/** Mixed text/number, case-insensitive. TanStack's default for string columns. */
+	Alphanumeric: 'alphanumeric',
+	/** As {@link BuiltInSortingFn.Alphanumeric}, case-sensitive. */
+	AlphanumericCaseSensitive: 'alphanumericCaseSensitive',
+	/** Pure text, case-insensitive. */
+	Text: 'text',
+	/** Pure text, case-sensitive. */
+	TextCaseSensitive: 'textCaseSensitive',
+	/** `Date` / date-like values by timestamp. */
+	Datetime: 'datetime',
+	/** Plain `<` / `>` comparison. */
+	Basic: 'basic',
+} as const
+
+export type BuiltInSortingFn = (typeof BuiltInSortingFn)[keyof typeof BuiltInSortingFn]
 
 /**
- * How undefined values are positioned during sort.
- * `false` (default) treats undefined as 0. Numeric variants directly forward to TanStack.
+ * Where `undefined` values land during a sort.
+ *
+ * The const object carries the two named positions. `false` — the absence of any special
+ * placement, i.e. treat `undefined` as `0` — is the union's third arm and deliberately gets
+ * no member: it is not a position, so naming it would invent a name for something that has
+ * none. It reads as the same `false` every other per-column switch takes.
+ *
+ * TanStack's raw `sortUndefined` numbers (`-1` / `1`) are **not** accepted. They were, and
+ * that left one concept with four spellings — `'first'` and `-1` meaning the same thing two
+ * columns apart — plus a raw pass-through of TanStack's vocabulary on a grid-level option.
+ * `'first'` / `'last'` say which end without anyone having to remember which way the sign
+ * points; the mapping to `sortUndefined` happens in `mapColumns`.
+ *
+ * Named members for internal reference; the option is typed as the plain union, so
+ * `undefined: 'last'` is equally valid and needs no import.
  */
-export type ColumnSortUndefined = 'first' | 'last' | -1 | 1 | false
+export const ColumnSortUndefined = {
+	/** `undefined` values sort to the top, whichever direction the column is sorted in. */
+	First: 'first',
+	/** `undefined` values sort to the bottom, whichever direction the column is sorted in. */
+	Last: 'last',
+} as const
+
+export type ColumnSortUndefined = (typeof ColumnSortUndefined)[keyof typeof ColumnSortUndefined] | false
 
 /**
  * Column-level sorting config.
@@ -435,16 +771,46 @@ export type ColumnSortingConfig = {
 }
 
 /**
- * User-facing column definition for @ez-kit/data-grid.
- * Converted to TanStack ColumnDef via mapColumns().
+ * Everything a column def carries except `accessorKey`, with the column's value type as a
+ * parameter. The shared body of {@link ColumnDef}'s arms — each arm pairs it with one
+ * `accessorKey` and the matching `TValue`.
+ *
+ * Exported because the column helper has to distribute over the same arms to build its own
+ * options type; `Omit` over the finished union cannot do it (see {@link ColumnDef}). Not part
+ * of the API anyone writes a column against — that is {@link ColumnDef}.
  */
-export type ColumnDef<
+export type ColumnDefCommon<
 	TRow extends object,
+	TValue,
 	TCellTypes extends CellTypeRegistryShape = BaseCellTypes,
 	TNode = unknown,
 > = {
 	id?: string
-	accessorKey?: keyof TRow & string
+	/**
+	 * Derive this column's value from the row instead of reading a field.
+	 *
+	 * Give it an {@link ColumnDefCommon.id}. With no `accessorKey` to build one from, the table
+	 * falls back to the `header` when that is a plain string — so the column works, but its id
+	 * changes the moment someone rewords the header, invalidating any sorting, filtering or
+	 * visibility state keyed to it. With neither, it throws `Columns require an id when using an
+	 * accessorFn` on first column access, at render rather than at construction.
+	 *
+	 * **Written here, the column's `value` is `unknown`** — in `cellClassName`, in
+	 * `cell.component`, and in `creating.defaultValue`. `accessorKey` columns get a typed
+	 * `value` because each key is its own arm of {@link ColumnDef}'s union, binding the field's
+	 * type; a union arm has no inference variable to bind *this* function's return type to.
+	 *
+	 * For a typed value on a computed column, write it through the column helper's generic
+	 * `computed` method, which infers the value type from the function you pass:
+	 *
+	 * ```ts
+	 * col.computed({
+	 *   id: 'total',
+	 *   accessorFn: (row) => row.price * row.qty, // value: number
+	 *   cellClassName: ({ value }) => (value < 0 ? 'text-red-600' : undefined),
+	 * })
+	 * ```
+	 */
 	accessorFn?: (row: TRow, index: number) => unknown
 	/**
 	 * Column header. A plain string, or a render function for anything richer — an icon
@@ -462,9 +828,20 @@ export type ColumnDef<
 	/**
 	 * Column footer, same shape as {@link ColumnDef.header}.
 	 *
-	 * Reaches TanStack (`table.getFooterGroups()`) but is **not** auto-rendered — the built-in
-	 * `<DataGrid.Table />` layout has no footer row. Read it yourself when composing a custom
-	 * body with `<DataGrid.Table>{…}</DataGrid.Table>`.
+	 * Declaring it on any column is enough: the default layout then renders a `<tfoot>` with
+	 * every column's `footer`, and handles colSpan, pinning, alignment and `footerClassName`.
+	 * `layout.footer: false` opts back out, `layout.stickyFooter` keeps the row in view down a
+	 * long table. A custom `<DataGrid.Table>` body mounts nothing for you — put
+	 * `<DataGrid.Footer />` in it yourself.
+	 *
+	 * The archetypal use is a total. The render function gets the live table, so summing the
+	 * *filtered* rows keeps the total honest while a filter is on:
+	 *
+	 * @example
+	 * ```tsx
+	 * { accessorKey: 'amount', align: 'end',
+	 *   footer: ({ table }) => table.getFilteredRowModel().rows.reduce((sum, r) => sum + r.original.amount, 0) }
+	 * ```
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
 	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
@@ -473,7 +850,8 @@ export type ColumnDef<
 	 * Column pinning.
 	 * - `'left'` / `'right'` — always pinned to that side (static), no menu section
 	 * - `false` — pinning disabled, no pin section in column menu
-	 * - `{ initialSide: 'left' }` — starts pinned left, user can change via menu
+	 * - `{ initialSide: 'left' }` — starts pinned left, user can change via menu (which requires
+	 *   the table-level `pinning` feature — see {@link ColumnPinningDef.initialSide})
 	 * - `{ side: 'left' }` — the long form of the scalar
 	 *
 	 * The scalar and the object are the same shape `align` and `width` use: the common case is
@@ -487,18 +865,25 @@ export type ColumnDef<
 	 */
 	sorting?: false | ColumnSortingConfig
 
-	/** Cell display and input configuration. */
-	cell?: CellDef<TRow, unknown, TCellTypes, TNode>
+	/**
+	 * Cell display and input configuration.
+	 *
+	 * - `'number'` — the scalar: a registered cell type, nothing else to say
+	 * - `{ type: 'number', config: { … } }` — the type plus its config
+	 * - `{ component }` — no type at all, just your own renderer
+	 */
+	cell?: CellDef<TRow, TValue, TCellTypes, TNode>
 
 	/**
 	 * Column visibility configuration.
 	 * - `false` — hiding disabled for this column: it is always visible and gets no Hide
 	 *   option in the column menu
-	 * - `{ initialHidden: true }` — starts hidden, user can toggle it on
+	 * - `{ initialHidden: true }` — starts hidden, user can toggle it on (which requires the
+	 *   table-level `visibility` feature — see {@link ColumnVisibilityDef.initialHidden})
 	 *
 	 * `false` reads the same as every other per-column switch (`sorting: false`,
 	 * `filtering: false`, `editing: false`, `resizing: false`): it turns the feature off
-	 * for this column. Note that the *table*-level `columnVisibility` flag is the opposite
+	 * for this column. Note that the *table*-level `visibility` flag is the opposite
 	 * polarity by nature — it turns hiding on for the grid as a whole.
 	 */
 	visibility?: false | ColumnVisibilityDef
@@ -517,20 +902,9 @@ export type ColumnDef<
 	 */
 	globalFiltering?: false
 	/** Column-level editing config. Set to false to disable. */
-	editing?: false | ColumnEditingConfig<TNode>
+	editing?: false | ColumnEditingConfig<TNode, TValue>
 	/** Column-level creating config. Set to false to disable. */
-	creating?: false | ColumnCreatingConfig<TRow, unknown, TNode>
-
-	/**
-	 * Override the global `creating.validateOn` / `editing.validateOn` for this column.
-	 * Useful for per-field UX (e.g. email validates onBlur, password onChange for live strength meter).
-	 */
-	validateOn?: ValidateOn
-	/**
-	 * Override the global `creating.validateDebounceMs` / `editing.validateDebounceMs` for this column.
-	 * Applies only when the resolved `validateOn` is `'change'`.
-	 */
-	validateDebounceMs?: number
+	creating?: false | ColumnCreatingConfig<TRow, TValue, TNode>
 
 	/**
 	 * Column-level resizing. `false` pins the column's width — the resize handle is not
@@ -554,7 +928,7 @@ export type ColumnDef<
 	 * ```
 	 *
 	 * `'start'` / `'end'` rather than `'left'` / `'right'`: this axis flips with the text
-	 * direction, and the grid already treats RTL as first-class (`sizing.direction`). Column
+	 * direction, and the grid already treats RTL as first-class (the root `direction` option). Column
 	 * *pinning* keeps `'left'` / `'right'` — a pinned column sticks to a viewport edge, which
 	 * does not flip.
 	 *
@@ -580,10 +954,10 @@ export type ColumnDef<
 	 *
 	 * @example
 	 * ```ts
-	 * { accessorKey: 'balance', cellClassName: ({ value }) => (Number(value) < 0 ? 'text-red-600' : undefined) }
+	 * { accessorKey: 'balance', cellClassName: ({ value }) => (value < 0 ? 'text-red-600' : undefined) }
 	 * ```
 	 */
-	cellClassName?: string | ((ctx: CellViewCtx<TRow, unknown>) => string | undefined)
+	cellClassName?: string | ((ctx: CellViewCtx<TRow, TValue>) => string | undefined)
 	/** Class applied to this column's footer cell. Only rendered inside `<DataGrid.Footer />`. */
 	footerClassName?: string
 
@@ -608,6 +982,37 @@ export type ColumnDef<
 	width?: number | ColumnWidthDef
 }
 
+/**
+ * User-facing column definition for @ez-kit/data-grid.
+ * Converted to TanStack ColumnDef via mapColumns().
+ *
+ * A **union with one member per field of `TRow`**, each binding that field's type as the
+ * column's value, plus one accessor-less member where `unknown` is the honest answer. So
+ * `{ accessorKey: 'total' }` on a `{ total: number }` row gives `value: number` in
+ * `cellClassName`, `cell.component` and `creating.defaultValue` — no cast, no annotation.
+ *
+ * TypeScript picks the member by the literal `accessorKey`, which is a plain discriminant, so
+ * it narrows before reporting: a mistake elsewhere in the column still produces the one-line
+ * error it did when this was a single object type, not a wall of union members.
+ *
+ * The union rides inside the existing type parameters — no new one is added. That is load-
+ * bearing: {@link TableConfig.columns} widens the cell-type parameter to `any` precisely so
+ * `useDataGrid({ data, columns })` keeps inferring `TRow` from `data`, and a second parameter
+ * here would destroy that at every call site.
+ *
+ * Note for anyone deriving from this type: `Omit<ColumnDef<…>, K>` does **not** work. `Omit`
+ * is not distributive and `keyof (A | B)` is the *intersection* of the members' keys, so the
+ * result collapses to the few properties every arm shares. Distribute over the arms instead —
+ * `create-column-helper.ts`'s `BaseOptions` is the worked example.
+ */
+export type ColumnDef<TRow extends object, TCellTypes extends CellTypeRegistryShape = BaseCellTypes, TNode = unknown> =
+	| {
+			[TKey in keyof TRow & string]: ColumnDefCommon<TRow, TRow[TKey], TCellTypes, TNode> & {
+				accessorKey: TKey
+			}
+	  }[keyof TRow & string]
+	| (ColumnDefCommon<TRow, unknown, TCellTypes, TNode> & { accessorKey?: undefined })
+
 export type ColumnWidthDef = {
 	/** Starting width in pixels. TanStack's `size`. */
 	default?: number
@@ -617,45 +1022,129 @@ export type ColumnWidthDef = {
 	max?: number
 }
 
+/**
+ * Which auto-injected system column a column def is.
+ *
+ * Distinct from the `SELECTION_COLUMN_ID` / `EXPAND_COLUMN_ID` / `ACTIONS_COLUMN_ID` constants,
+ * which are the columns' `id`s (`'__selection__'`, …). This is the *kind* the React layer
+ * switches on to decide what to render, and it is a shorter, stable vocabulary — the ids carry
+ * the `__…__` reserved-name convention and are matched against `column.id`, never against
+ * `meta.systemColumnType`. Reusing one for both would tie the rendered kind to the reserved-name
+ * spelling.
+ *
+ * Named members for internal reference; the field is typed as the plain string union.
+ */
+export const SystemColumnType = {
+	/** The row-selection checkbox column. */
+	Selection: 'selection',
+	/** The expand/collapse chevron column. */
+	Expand: 'expand',
+	/** The per-row actions column — edit, delete, row-pin menu, custom actions. */
+	Actions: 'actions',
+} as const
+
+export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColumnType]
+
+/**
+ * The presentation options an auto-injected system column takes — the selection checkbox
+ * column, the expand chevron column, the row-actions column.
+ *
+ * Every field is a **column option under its own name**, with the same scalar-or-object shape
+ * it has on {@link ColumnDef}: this is a column, so it is configured the way a column is. What
+ * the column *does* is not settable here — that is `selection`, `expanding` and `rowActions`
+ * themselves — only how it sits in the table.
+ *
+ * The three columns previously took no configuration at all: their header was hard-wired to
+ * render nothing, their width was a constant, and their pinning was decided for them —
+ * selection pinned left, actions pinned right, and expand, alone among the three, not pinned,
+ * so a horizontally scrolled grid kept the checkbox in view and let the chevron slide away.
+ * Labelling the actions column, widening it, or unpinning it on a narrow grid had no route
+ * through the public API.
+ *
+ * Reached as `selection.column`, `expanding.column` and `rowActions.column`.
+ */
+export type SystemColumnDef<TRow extends object = object, TNode = unknown> = {
+	/**
+	 * Header content. Omitted, the column keeps its built-in header: the select-all checkbox
+	 * for selection, nothing for expand and actions.
+	 *
+	 * Supplying one on the **selection** column replaces the select-all checkbox, so only do
+	 * that for a grid where selecting every row is not on offer (`selection.multi: false`,
+	 * which renders no checkbox anyway).
+	 */
+	header?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	/**
+	 * Width in pixels. Defaults: `44` for selection and expand, and for actions a width
+	 * derived from how many buttons the widest row state renders.
+	 */
+	width?: number | ColumnWidthDef
+	/**
+	 * Which viewport edge the column sticks to, or `false` for none. Defaults: `'left'` for
+	 * selection and expand, `'right'` for actions.
+	 *
+	 * Physical, like a normal column's `pinning` and for the same reason — a pinned column
+	 * sticks to a viewport edge, and that edge does not flip with the text direction.
+	 */
+	pinning?: false | ColumnPinSide | ColumnPinningDef
+	/** Horizontal alignment of the column's contents. Logical, like a normal column's `align`. */
+	align?: ColumnAlign | ColumnAlignDef
+	/** Class applied to the column's header cell. */
+	headerClassName?: string
+	/** Class applied to the column's body cells. */
+	cellClassName?: string
+	/**
+	 * Class applied to the column's footer cell.
+	 *
+	 * The third of the three, like a normal column's — the default `<tfoot>` renders a cell for
+	 * every column, system columns included, and reads `align.footer` off this same def, so
+	 * there was no reason for the class to be the one part of a footer cell that could not be
+	 * set.
+	 */
+	footerClassName?: string
+}
+
 /** Augment TanStack's ColumnMeta with our custom fields. */
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 	interface ColumnMeta<TData, TValue> {
-		columnPinning?: false | ColumnPinningDef
+		/**
+		 * Resolved pinning from `column.pinning`, normalized off the scalar form.
+		 *
+		 * Named for the column option it carries, like every sibling here. It was
+		 * `columnPinning`, which made one concept answer to two words depending on whether you
+		 * were writing the column or reading its meta — and read as TanStack's
+		 * `state.columnPinning`, which is a different thing entirely (the pinned-id lists).
+		 */
+		pinning?: false | ColumnPinningDef
 		/** Resolved per-part alignment from `column.align`, normalized off the scalar form. */
-		columnAlign?: ColumnAlignDef
-		cellType?: CellType
-		config?: Record<string, unknown>
+		align?: ColumnAlignDef
+		/** Resolved cell definition from `column.cell`, normalized off the scalar form. */
+		cell?: ColumnCellMeta
 		/** Class for this column's header cell, from `column.headerClassName`. */
 		headerClassName?: string
 		/** Class (or per-cell resolver) for this column's body cells, from `column.cellClassName`. */
 		cellClassName?: string | ((ctx: CellViewCtx<unknown, unknown>) => string | undefined)
 		/** Class for this column's footer cell, from `column.footerClassName`. */
 		footerClassName?: string
-		/** Resolved view renderer from `cell.component`. */
-		cellView?: (ctx: CellViewCtx<unknown, unknown>) => unknown
-		filtering?: false | ColumnFilteringConfig
+		/** Resolved filtering config from `column.filtering`, normalized. */
+		filtering?: false | ColumnFilteringMeta
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: false | ColumnVisibilityDef
 		isSystemColumn?: boolean
-		systemColumnType?: 'selection' | 'expand' | 'actions'
-		/** Pre-resolved operator list for this column (set when filtering.operators is configured). */
-		resolvedOperators?: FilterOperatorDef[]
-		/** Between operator UI config passed from filtering.operators.betweenOperator. */
-		betweenOperatorConfig?: BetweenOperatorConfig
-		/** Default operator ID for this column (derived from config or cell type default). */
-		defaultOperatorId?: string
-		/** Explicit multi-select option list from `column.filtering.options`. */
-		filteringOptions?: MultiSelectOption[]
+		systemColumnType?: SystemColumnType
 		/**
-		 * Effective faceted flag for this column. Set to true when the resolved config
-		 * (table-level `filtering.faceted` or column-level `filtering.faceted`) opts in.
+		 * Header content for a system column, from `selection.column.header` and friends.
+		 *
+		 * Kept off TanStack's own `header` because the grid renders these header cells itself
+		 * — the select-all checkbox lives in one — and has to be able to tell "the author gave
+		 * this column a label" from "render the built-in".
 		 */
-		facetedEnabled?: boolean
-		/** Per-column override for the global creating/editing `validateOn`. */
-		validateOn?: ValidateOn
-		/** Per-column override for the global creating/editing `validateDebounceMs`. */
-		validateDebounceMs?: number
+		// Row-erased, like `cellClassName` and the resolved `cell.view` beside it: the header
+		// cells for system columns are rendered by components that have no `TRow`. `any` rather
+		// than `unknown` because it must stay mutually assignable — a def written against a
+		// concrete row type has to land here, and be readable back out.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		systemHeader?: string | ColumnRenderer<HeaderContext<any, unknown>, unknown>
 	}
 }

@@ -15,7 +15,7 @@ const DATA: Row[] = [
 const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 
 describe('DeletingFeature', () => {
-	it('deleteRow calls onDelete with the correct row', async () => {
+	it('deleting.delete calls onDelete with the correct row', async () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
@@ -23,7 +23,7 @@ describe('DeletingFeature', () => {
 			deleting: { onDelete },
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		await table.deleteRow(rowId)
+		await table.deleting.delete(rowId)
 		expect(onDelete).toHaveBeenCalledTimes(1)
 		const ctx = onDelete.mock.calls[0]?.[0] as { rowId: string; row: { original: Row }; signal: AbortSignal }
 		expect(ctx.rowId).toBe(rowId)
@@ -31,34 +31,34 @@ describe('DeletingFeature', () => {
 		expect(ctx.signal).toBeInstanceOf(AbortSignal)
 	})
 
-	it('deleteRow does nothing when deleting config is absent', async () => {
+	it('deleting.delete does nothing when deleting config is absent', async () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
-		await expect(table.deleteRow('0')).resolves.toBeUndefined()
+		await expect(table.deleting.delete('0')).resolves.toBeUndefined()
 	})
 
-	it('deleteRow does nothing for unknown rowId', async () => {
+	it('deleting.delete does nothing for unknown rowId', async () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete },
 		})
-		await table.deleteRow('non-existent')
+		await table.deleting.delete('non-existent')
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 })
 
 describe('DeletingFeature — confirmation flow', () => {
-	it('initializes pendingDeleteRowId to null', () => {
+	it('initializes deleting.pendingRowId to null', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: vi.fn() },
 		})
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
-	it('requestDeleteRow with confirmation stages the row without deleting', () => {
+	it('deleting.request with confirmation stages the row without deleting', () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
@@ -66,12 +66,12 @@ describe('DeletingFeature — confirmation flow', () => {
 			deleting: { onDelete, confirmation: true },
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.requestDeleteRow(rowId)
-		expect(table.getState().pendingDeleteRowId).toBe(rowId)
+		table.deleting.request(rowId)
+		expect(table.getState().deleting.pendingRowId).toBe(rowId)
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
-	it('requestDeleteRow with confirmation object also stages the row', () => {
+	it('deleting.request with confirmation object also stages the row', () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
@@ -79,12 +79,12 @@ describe('DeletingFeature — confirmation flow', () => {
 			deleting: { onDelete, confirmation: { title: 'Delete?' } },
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.requestDeleteRow(rowId)
-		expect(table.getState().pendingDeleteRowId).toBe(rowId)
+		table.deleting.request(rowId)
+		expect(table.getState().deleting.pendingRowId).toBe(rowId)
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
-	it('requestDeleteRow without confirmation deletes immediately', async () => {
+	it('deleting.request without confirmation deletes immediately', async () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
@@ -92,22 +92,22 @@ describe('DeletingFeature — confirmation flow', () => {
 			deleting: { onDelete },
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.requestDeleteRow(rowId)
+		table.deleting.request(rowId)
 		await Promise.resolve()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 		expect(onDelete).toHaveBeenCalledTimes(1)
 		expect((onDelete.mock.calls[0]?.[0] as { rowId: string }).rowId).toBe(rowId)
 	})
 
-	it('requestDeleteRow does nothing when deleting config is absent', () => {
+	it('deleting.request does nothing when deleting config is absent', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
 		expect(() => {
-			table.requestDeleteRow('0')
+			table.deleting.request('0')
 		}).not.toThrow()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
-	it('confirmDeleteRow deletes the staged row and clears pending state', async () => {
+	it('deleting.confirm deletes the staged row and clears pending state', async () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
@@ -115,26 +115,26 @@ describe('DeletingFeature — confirmation flow', () => {
 			deleting: { onDelete, confirmation: true },
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.requestDeleteRow(rowId)
-		await table.confirmDeleteRow()
+		table.deleting.request(rowId)
+		await table.deleting.confirm()
 		expect(onDelete).toHaveBeenCalledTimes(1)
 		expect((onDelete.mock.calls[0]?.[0] as { rowId: string }).rowId).toBe(rowId)
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
-	it('confirmDeleteRow is a no-op when nothing is staged', async () => {
+	it('deleting.confirm is a no-op when nothing is staged', async () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete, confirmation: true },
 		})
-		await table.confirmDeleteRow()
+		await table.deleting.confirm()
 		expect(onDelete).not.toHaveBeenCalled()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 	})
 
-	it('cancelDeleteRow clears pending state without deleting', () => {
+	it('deleting.cancel clears pending state without deleting', () => {
 		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
@@ -142,54 +142,125 @@ describe('DeletingFeature — confirmation flow', () => {
 			deleting: { onDelete, confirmation: true },
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		table.requestDeleteRow(rowId)
-		table.cancelDeleteRow()
-		expect(table.getState().pendingDeleteRowId).toBeNull()
+		table.deleting.request(rowId)
+		table.deleting.cancel()
+		expect(table.getState().deleting.pendingRowId).toBeNull()
 		expect(onDelete).not.toHaveBeenCalled()
 	})
 
-	it('initializes pendingBulkDelete to false', () => {
+	it('deleting.getState() reads the slice, like editing.getState() / creating.getState()', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), confirmation: true, bulk: { confirmation: true } },
+		})
+		expect(table.deleting.getState()).toEqual({ pendingRowId: null, pendingBulk: false })
+
+		const rowId = table.getRowModel().rows[0]?.id ?? '0'
+		table.deleting.request(rowId)
+		expect(table.deleting.getState()).toEqual({ pendingRowId: rowId, pendingBulk: false })
+
+		// Staging a bulk delete leaves the per-row half alone — one slice, two independent fields.
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.deleting.bulk.request()
+		expect(table.deleting.getState()).toEqual({ pendingRowId: rowId, pendingBulk: true })
+	})
+
+	it('initializes deleting.pendingBulk to false', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			deleting: { onDelete: vi.fn() },
 		})
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 	})
 
-	it('requestBulkDelete stages a bulk delete', () => {
+	it('deleting.bulk.request stages a bulk delete when bulk.confirmation is set', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			deleting: { onDelete: vi.fn() },
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { confirmation: true } },
 		})
-		table.requestBulkDelete()
-		expect(table.getState().pendingBulkDelete).toBe(true)
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.deleting.bulk.request()
+		expect(table.getState().deleting.pendingBulk).toBe(true)
 	})
 
-	it('confirmBulkDelete clears the staged bulk delete', () => {
+	it('deleting.bulk.request deletes outright when bulk asks for no confirmation', async () => {
+		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			deleting: { onDelete: vi.fn() },
+			selection: true,
+			deleting: { onDelete, bulk: true },
 		})
-		table.requestBulkDelete()
-		table.confirmBulkDelete()
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true, '2': true } }))
+		table.deleting.bulk.request()
+		await vi.waitFor(() => {
+			expect(onDelete).toHaveBeenCalledTimes(2)
+		})
+		expect(table.getState().deleting.pendingBulk).toBe(false)
 	})
 
-	it('cancelBulkDelete clears the staged bulk delete', () => {
+	it('deleting.bulk.request does nothing when bulk is off', () => {
+		const onDelete = vi.fn()
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
-			deleting: { onDelete: vi.fn() },
+			selection: true,
+			deleting: { onDelete },
 		})
-		table.requestBulkDelete()
-		table.cancelBulkDelete()
-		expect(table.getState().pendingBulkDelete).toBe(false)
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.deleting.bulk.request()
+		expect(table.getState().deleting.pendingBulk).toBe(false)
+		expect(onDelete).not.toHaveBeenCalled()
 	})
 
-	it('cancelDeleteRow aborts the in-flight delete signal', () => {
+	it('deleting.bulk.confirm runs the bulk handler and clears the staged flag', async () => {
+		const bulkDelete = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: bulkDelete, confirmation: true } },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.deleting.bulk.request()
+		await table.deleting.bulk.confirm()
+		expect(bulkDelete).toHaveBeenCalledOnce()
+		expect(table.getState().deleting.pendingBulk).toBe(false)
+	})
+
+	it('deselects the deleted rows once the bulk handler resolves', async () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: vi.fn() } },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true, '2': true } }))
+		await table.deleting.bulk.delete(['1'])
+		expect(table.getState().rowSelection).toEqual({ '2': true })
+	})
+
+	it('deleting.bulk.cancel clears the staged bulk delete without running the handler', () => {
+		const bulkDelete = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: vi.fn(), bulk: { onDelete: bulkDelete, confirmation: true } },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '1': true } }))
+		table.deleting.bulk.request()
+		table.deleting.bulk.cancel()
+		expect(table.getState().deleting.pendingBulk).toBe(false)
+		expect(bulkDelete).not.toHaveBeenCalled()
+	})
+
+	it('deleting.cancel aborts the in-flight delete signal', () => {
 		let captured: AbortSignal | undefined
 		const onDelete = vi.fn((ctx: { signal: AbortSignal }) => {
 			captured = ctx.signal
@@ -203,9 +274,9 @@ describe('DeletingFeature — confirmation flow', () => {
 			deleting: { onDelete },
 		})
 		const rowId = table.getRowModel().rows[0]?.id ?? '0'
-		void table.deleteRow(rowId)
+		void table.deleting.delete(rowId)
 		expect(captured?.aborted).toBe(false)
-		table.cancelDeleteRow()
+		table.deleting.cancel()
 		expect(captured?.aborted).toBe(true)
 	})
 })

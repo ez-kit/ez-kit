@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Public surface of `@ez-kit/data-grid-react`.
  *
@@ -30,35 +32,43 @@ export type { ColumnDef, CellDef, ColumnHelper } from './react-columns'
 export { useDataGrid } from './use-data-grid'
 export type {
 	UseDataGridConfig,
-	ColumnVisibilityUIConfig,
+	ReactVisibilityConfig,
 	EmptyFallbackConfig,
 	ExpandedRowProps,
 	FallbacksConfig,
 	FilterChipsConfig,
-	FilterChipsPosition,
 	FilteringToolbarConfig,
-	FilteringVariant,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
-	NormalizedFilteringToolbarConfig,
+	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
+	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
+	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
+	NormalizedFallbackConfig,
+	NormalizedFallbacksConfig,
+	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
+	NormalizedFilteringToolbarConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
-	NormalizedPageWindowConfig,
+	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
 	ReactFilteringConfig,
 	ReactGlobalFilteringConfig,
 	ReactPaginationConfig,
+	ReactRowActionsConfig,
 	ReactSelectionConfig,
 	ReactSortingConfig,
 	RowPropsResolver,
 	LayoutConfig,
-	SelectionPanelCallbackArgs,
-	SelectionPanelConfig,
-	SelectionPanelVariant,
+	SelectionBarCallbackArgs,
+	SelectionBarConfig,
 } from './use-data-grid'
-export { DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
+// Resolved default option **values** — the single table the docs' "Defaults" page describes,
+// and what a consumer reads to extend a default rather than restate it (e.g. appending to
+// `pagination.items`). Referenced by `{@link DATA_GRID_DEFAULTS…}` throughout the
+// public JSDoc, which was pointing at something no consumer could import.
+export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'
@@ -122,12 +132,13 @@ export type {
 	GridSortingComponents,
 	GridFilteringComponents,
 	GridEditingComponents,
+	GridDeletingComponents,
 	GridSelectionComponents,
 	GridDraftComponents,
 	GridRowActionsComponents,
 	GridResizingComponents,
-	GridColumnVisibilityComponents,
-	GridFallbackStateComponents,
+	GridVisibilityComponents,
+	GridFallbackComponents,
 	GridInfiniteComponents,
 	GridExpandingComponents,
 } from './contract'
@@ -139,26 +150,32 @@ export type { DataGridTableProps, DataGridTableRenderArgs } from './data-grid/ta
 export type { DataGridBodyProps, DataGridBodyRenderArgs } from './data-grid/body'
 export type { DataGridHeaderProps, DataGridHeaderRenderArgs } from './data-grid/header'
 export type { DataGridHeaderRowProps, DataGridHeaderRowRenderArgs } from './data-grid/header-row'
-export type {
-	DataGridHeaderCellProps,
-	DataGridHeaderCellRenderArgs,
-	HeaderSortDirection,
-} from './data-grid/header-cell'
+export type { DataGridHeaderCellProps, DataGridHeaderCellRenderArgs } from './data-grid/header-cell'
 export type { DataGridFooterProps, DataGridFooterRenderArgs } from './data-grid/footer'
+export type { DataGridFooterRowProps, DataGridFooterRowRenderArgs } from './data-grid/footer-row'
+export type { DataGridFooterCellProps, DataGridFooterCellRenderArgs } from './data-grid/footer-cell'
 export type { DataGridRowProps, DataGridRowRenderArgs } from './data-grid/row'
 export type { DataGridCellProps, DataGridCellRenderArgs } from './data-grid/cell'
 export type { DataGridPaginationProps, DataGridPaginationRenderArgs } from './data-grid/pagination'
 export type { DataGridSelectionBarProps, DataGridSelectionBarRenderArgs } from './data-grid/selection-bar'
-export type { DataGridSortTriggerProps, DataGridSortTriggerRenderArgs } from './data-grid/sort-trigger'
+export type { DataGridSortMenuTriggerProps, DataGridSortMenuTriggerRenderArgs } from './data-grid/sort-menu-trigger'
 export type {
-	DataGridColumnVisibilityTriggerProps,
-	DataGridColumnVisibilityTriggerRenderArgs,
-} from './data-grid/column-visibility-trigger'
+	DataGridVisibilityTriggerProps,
+	DataGridVisibilityTriggerRenderArgs,
+} from './data-grid/visibility-trigger'
 export type {
 	DataGridFilterPanelColumn,
 	DataGridFilterPanelProps,
 	DataGridFilterPanelRenderArgs,
 } from './data-grid/filter-panel'
+export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
+export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
+export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
+export type { DataGridCreatingModalProps } from './data-grid/creating-modal'
+export type { DataGridEditingModalProps } from './data-grid/editing-modal'
+export type { DataGridLoadingBodyProps, DataGridLoadingBodyRenderArgs } from './data-grid/loading-body'
+export type { DataGridEmptyStateRowProps, DataGridEmptyStateRowRenderArgs } from './data-grid/empty-state-row'
+export type { DataGridNoResultsRowProps, DataGridNoResultsRowRenderArgs } from './data-grid/no-results-row'
 export type { DataGridToolbarProps } from './data-grid/toolbar'
 export type { DataGridActiveFiltersBarProps } from './data-grid/active-filters-bar'
 export type { DataGridClearFiltersButtonProps } from './data-grid/clear-filters-button'
@@ -172,13 +189,23 @@ export { ActiveFiltersBar } from './data-grid/active-filters-bar'
 export { ClearFiltersButton } from './data-grid/clear-filters-button'
 
 // DI context
-export { GridComponentsProvider, defaultComponents, useGridComponents } from './components-context'
+export { GridComponentsProvider, useGridComponents } from './components-context'
+export type { GridComponentsProviderProps } from './components-context'
 
 // Cell type registry
 export { CellTypesProvider, defineCellType, useCellTypes } from './cell-types-context'
-export type { CellTypeDefinition, CellTypeRegistry, CellViewProps, CellInputProps } from './cell-types-context'
+export type { CellTypeDefinition, CellTypeRegistry, CellTypesProviderProps, CellViewProps } from './cell-types-context'
 
-// Default options (app-level provider + kit-level factory `defaultOptions`)
+// The nine base cell types a kit extends, and the two formatters their renderers use.
+//
+// Previously a `./cell-types` sub-export. Folded into the root so there is one entry point
+// and one import path: a kit already imports this module for `defineCellType` and the DI
+// primitives, so reaching the base it extends through a second specifier bought nothing but
+// a second thing to know about. The package is `sideEffects`-free, so a consumer that never
+// names `baseCellTypes` still does not ship it.
+export { baseCellTypes, booleanCellType, formatNumber, numberCellType, textCellType, truncateText } from './cell-types'
+
+// Default options (app-level provider + kit-level factory `defaults`)
 export { DataGridOptionsProvider, useDataGridOptions } from './data-grid-options-context'
 export type { DataGridDefaultOptions, DataGridOptionsProviderProps } from './data-grid-options-context'
 
@@ -193,12 +220,11 @@ export type {
 	BetweenInputProps,
 	ChevronProps,
 	SortIndicatorProps,
-	ColumnVisibilityMenuProps,
-	ClearFiltersButtonComponentProps,
+	VisibilityMenuProps,
+	ClearFiltersButtonProps,
 	ConfirmDialogProps,
 	DraftBarProps,
 	EmptyStateProps,
-	FilterChipKind,
 	FilterChipProps,
 	FilterPanelChipProps,
 	FilterPanelProps,
@@ -207,6 +233,7 @@ export type {
 	GridComponentRegistry,
 	LoadingRowProps,
 	LoadMoreRowProps,
+	LoadMoreThreshold,
 	MultiSelectFilterProps,
 	NoResultsStateProps,
 	RefetchOverlayProps,
@@ -214,7 +241,6 @@ export type {
 	ResizerProps,
 	SelectionBarProps,
 	SortColumnOption,
-	SortDirection,
 	SortMenuItem,
 	SortMenuProps,
 	VisibilityColumnItem,
@@ -236,12 +262,34 @@ export type {
 } from './types'
 
 // Closed sets that a kit or a call site names. Each is a `const` object plus a same-named
-// string union, so `RowActionsMode.Idle` and the bare `'idle'` are both valid and no consumer
+// string union, so `ActionsCellState.Idle` and the bare `'idle'` are both valid and no consumer
 // has to import anything to write an option value.
-export { PaginationVariant, RowActionId, RowActionsMode } from './types'
+export {
+	FilterChipKind,
+	FilterChipsPosition,
+	FilteringVariant,
+	LoadMoreTrigger,
+	PaginationVariant,
+	RowActionId,
+	ActionsCellState,
+	ColumnSortDirection,
+	ActionBarVariant,
+	SortDirection,
+} from './types'
 
-// TanStack state types used when typing manual server-side `onChange` handlers.
-// Re-exported so consumers depend only on this package's surface. `SortingState` is not
-// re-exported here — the core one (`SortingStateEntry[]`) arrives via the star export above
-// and is structurally identical.
-export type { ColumnFiltersState, PaginationState } from '@tanstack/table-core'
+// TanStack state slice types. Every feature's `onChange` is typed with one of these, so a
+// consumer that lifts a handler out of the JSX must be able to name it — without adding
+// `@tanstack/table-core` as a second dependency, which is exactly what this package (and each
+// UI kit re-exporting it) promises they never need. `SortingState` is not re-exported here —
+// the core one (`SortingStateEntry[]`) arrives via the star export above and is structurally
+// identical.
+export type {
+	ColumnFiltersState,
+	ColumnPinningState,
+	ColumnSizingState,
+	ExpandedState,
+	PaginationState,
+	RowPinningState,
+	RowSelectionState,
+	VisibilityState,
+} from '@tanstack/table-core'

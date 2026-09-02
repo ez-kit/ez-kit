@@ -62,9 +62,9 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 	})
 
 	it('infinite-scroll detection defaults', () => {
-		expect(DATA_GRID_DEFAULTS.infinite.trigger).toBe('auto')
-		expect(DATA_GRID_DEFAULTS.infinite.threshold.rows).toBe(5)
-		expect(DATA_GRID_DEFAULTS.infinite.threshold.px).toBe(200)
+		expect(DATA_GRID_DEFAULTS.pagination.trigger).toBe('auto')
+		expect(DATA_GRID_DEFAULTS.pagination.threshold.rows).toBe(5)
+		expect(DATA_GRID_DEFAULTS.pagination.threshold.px).toBe(200)
 	})
 })
 
@@ -116,19 +116,19 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(config?.pagination).not.toHaveProperty('variant')
 	})
 
-	it('pagination.toolbar / pageSizeOptions are React-only → never reach createTable', () => {
+	it('pagination.toolbar / items are React-only → never reach createTable', () => {
 		renderHook(() =>
 			useDataGrid({
 				data: USERS,
 				columns: COLUMNS,
-				pagination: { toolbar: true, pageSizeOptions: [5, 10], pageSize: 10 },
+				pagination: { toolbar: true, items: [5, 10], pageSize: 10 },
 			}),
 		)
 
 		const config = createTableSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
 		expect(config?.pagination).toBeDefined()
 		expect(config?.pagination).not.toHaveProperty('toolbar')
-		expect(config?.pagination).not.toHaveProperty('pageSizeOptions')
+		expect(config?.pagination).not.toHaveProperty('items')
 		// Sanity: the spy sees a real config, so the assertion above can actually fail.
 		expect(config?.pagination).toHaveProperty('pageSize', 10)
 	})
@@ -161,6 +161,24 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(cfg?.debounce).toBe(0)
 	})
 
+	it('filtering: true → variant is the named default', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
+		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
+		expect(result.current.grid.filtering.variant).toBe('inline')
+	})
+
+	it('filtering config without an explicit variant → variant is the named default', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { debounce: 500 } }))
+		expect(result.current.grid.filtering.variant).toBe(DATA_GRID_DEFAULTS.filtering.variant)
+	})
+
+	it('an explicit filtering.variant wins over the default', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'popover' } }),
+		)
+		expect(result.current.grid.filtering.variant).toBe('popover')
+	})
+
 	it('filtering.chips: true → position is the named default', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { chips: true } }))
 		const cfg = result.current.grid.filtering.chips
@@ -171,9 +189,9 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		const { result } = renderHook(() =>
 			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite' } }),
 		)
-		const cfg = result.current.grid.infinite
-		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.infinite.trigger)
-		expect(cfg?.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.infinite.threshold.rows })
+		const cfg = result.current.grid.pagination.infinite
+		expect(cfg?.trigger).toBe(DATA_GRID_DEFAULTS.pagination.trigger)
+		expect(cfg?.threshold).toEqual({ rows: DATA_GRID_DEFAULTS.pagination.threshold.rows })
 	})
 })
 
@@ -200,7 +218,7 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)
 	})
 
-	it('factory defaultOptions win over the floor', () => {
+	it('factory defaults win over the floor', () => {
 		const factory: DataGridDefaultOptions<User> = { pagination: { pageSize: OVERRIDE_PAGE_SIZE } }
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS }, factory))
 		expect(result.current.getState().pagination.pageSize).toBe(OVERRIDE_PAGE_SIZE)

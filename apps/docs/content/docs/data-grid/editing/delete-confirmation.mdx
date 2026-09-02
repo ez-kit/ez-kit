@@ -1,40 +1,118 @@
 ---
-title: Delete Confirmation
-description: A bulk-delete pattern that prompts the user before removing rows, with cancel + retry.
+title: Deleting
+description: Deleting one row or the whole selection — one feature, one place, with a prompt for each.
 ---
 
-# Delete Confirmation
+# Deleting
 
-Bulk-delete is destructive. Confirm before applying, and roll back on failure.
+`deleting.onDelete` removes one row. `deleting.bulk` extends the same feature to the current
+selection. Both live here, next to each other, because they are the same operation over a
+different number of rows.
 
 ## Usage
 
+Select some rows to see the bulk prompt, or use a row's Delete action for the per-row one.
+
 <DataGridDocsExample exampleId='delete-confirmation' />
 
-The pattern:
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	selection
+	deleting={{
+		onDelete: ({ row }) => remove(row.original.id),
+		confirmation: {
+			title: 'Delete product?',
+			description: (row) => `"${row.original.name}" will be permanently removed.`,
+		},
+		bulk: {
+			onDelete: ({ rowIds }) => api.removeMany(rowIds),
+			confirmation: {
+				title: 'Delete products?',
+				description: (rows) => `${rows.length} products will be permanently removed.`,
+			},
+		},
+	}}
+/>
+```
 
-1. User selects rows.
-2. Bulk-delete button opens a confirmation dialog.
-3. On confirm, the example optimistically removes rows, calls the API, and re-inserts on failure.
+## Bulk delete
+
+`bulk` is the scalar-or-object shape the rest of the grid uses.
 
 ```tsx
-const onConfirm = async () => {
-	const ids = selectedRows.map((r) => r.original.id)
-	const snapshot = data
-	setData((d) => d.filter((r) => !ids.includes(r.id)))
-	try {
-		await api.bulkDelete(ids)
-	} catch {
-		setData(snapshot)
-		toast.error('Delete failed')
-	}
+// One word. With no handler of its own, bulk delete loops `onDelete` over the selection —
+// which is exactly what a client-side store wants.
+deleting: { onDelete, bulk: true }
+```
+
+```tsx
+// One call for the whole set — the shape a "delete these ids" endpoint wants.
+deleting: { onDelete, bulk: { onDelete: ({ rowIds }) => api.removeMany(rowIds) } }
+```
+
+The Delete button appears in the [selection bar](./data-grid/selection/selection-bar) as soon as
+`bulk` resolves to on and row selection is enabled. The deleted ids leave the selection once the
+handler resolves, so the bar never counts rows that no longer exist.
+
+## The prompt
+
+`confirmation` is per level, and the two are independent — deleting twelve rows at once may
+deserve a prompt where deleting one does not.
+
+- `true` — default copy. Per row: "Delete this row?"; bulk: count-aware, "Delete 3 rows?".
+- an object — `{ title?, description? }`. `description` may be a function: per row it receives
+  that `row`, in bulk it receives the whole selection, which is what lets it say "3 products".
+
+Without a prompt, the delete runs immediately.
+
+## Rollback
+
+Neither handler is optimistic for you. Snapshot, apply, and restore on failure if that is the
+UX you want:
+
+```tsx
+bulk: {
+	onDelete: async ({ rowIds }) => {
+		const snapshot = data
+		setData((d) => d.filter((r) => !rowIds.includes(String(r.id))))
+		try {
+			await api.bulkDelete(rowIds)
+		} catch {
+			setData(snapshot)
+			toast.error('Delete failed')
+		}
+	},
 }
 ```
 
+`signal` on both contexts aborts when the user cancels a staged delete or the table unmounts.
+
+## Options
+
+### `deleting`
+
+| `deleting` key | Type                                                | Description                                                            |
+| -------------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| `onDelete`     | `({ rowId, row, signal }) => void \| Promise<void>` | Required. Delete one row.                                              |
+| `confirmation` | `boolean \| { title?, description? }`               | Prompt before deleting one row. `description` receives that row.       |
+| `bulk`         | `boolean \| BulkDeletingConfig`                     | Delete the selection. `true` loops `onDelete`; an object adds its own. |
+| `enabled`      | `boolean`                                           | Explicit off-switch for a config that came from a defaults layer.      |
+
+### `deleting.bulk`
+
+| `deleting.bulk` key | Type                                                  | Description                                                            |
+| ------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| `onDelete`          | `({ rowIds, rows, signal }) => void \| Promise<void>` | One call for the whole set. Falls back to `deleting.onDelete` per row. |
+| `confirmation`      | `boolean \| { title?, description? }`                 | Prompt before deleting. `description` receives the selected rows.      |
+| `enabled`           | `boolean`                                             | Explicit off-switch.                                                   |
+
 ## Notes
 
-The dialog component comes from the active UI flavor (shadcn AlertDialog or HeroUI Modal). The data grid itself doesn't ship a dialog — toggle the flavor above to see both renderings.
+The dialog component comes from the active UI flavor (shadcn AlertDialog or HeroUI Modal). The
+data grid itself ships no dialog — toggle the flavor above to see both renderings.
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/selection-bar.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/selection-bar.tsx)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/deleting/deleting.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/features/deleting/deleting.ts)
