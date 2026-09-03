@@ -4,6 +4,12 @@ import { createContextStore } from '@ez-kit/zu-store'
 import { useState } from 'react'
 import { createStore } from 'zustand/vanilla'
 
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+
 type Theme = 'light' | 'dark'
 
 type PreviewState = {
@@ -29,23 +35,24 @@ function Preview() {
 	const registerClick = previewStore.useSelector((s) => s.registerClick)
 
 	return (
-		<div
-			className={`flex flex-col gap-3 rounded-md border p-3 ${
-				theme === 'dark' ? 'border-fd-foreground bg-fd-foreground text-fd-background' : 'border-fd-border bg-fd-card'
-			}`}
+		<Card
+			size='sm'
+			className='gap-3 px-4'
 		>
-			<p className='text-xs uppercase tracking-wider opacity-70'>inside the store</p>
-			<p className='text-sm'>
-				theme is <code className='font-mono'>{theme}</code> — read-only in here
-			</p>
-			<button
-				type='button'
+			<Badge variant='outline'>inside the store</Badge>
+			<div className='flex items-center gap-2'>
+				<Label className='text-muted-foreground'>theme — read-only in here</Label>
+				<Badge variant='secondary'>{theme}</Badge>
+			</div>
+			<Button
+				variant='outline'
+				size='sm'
+				className='self-start'
 				onClick={registerClick}
-				className='self-start rounded-md border border-current px-3 py-1 text-sm font-medium opacity-80 hover:opacity-100'
 			>
 				local click #{clicks}
-			</button>
-		</div>
+			</Button>
+		</Card>
 	)
 }
 
@@ -54,24 +61,20 @@ export default function ControlledMirrorExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<div className='flex flex-wrap items-center gap-2'>
-				<span className='text-sm text-fd-muted-foreground'>parent owns theme:</span>
-				{(['light', 'dark'] as const).map((option) => (
-					<button
-						key={option}
-						type='button'
-						onClick={() => {
-							setTheme(option)
-						}}
-						className={`rounded-md border px-3 py-1 text-sm font-medium ${
-							theme === option
-								? 'border-fd-primary bg-fd-primary text-fd-primary-foreground'
-								: 'border-fd-border bg-fd-card hover:bg-fd-muted'
-						}`}
-					>
-						{option}
-					</button>
-				))}
+			<div className='flex flex-wrap items-center gap-3'>
+				<Label className='text-muted-foreground'>parent owns theme</Label>
+				<ToggleGroup
+					type='single'
+					variant='outline'
+					size='sm'
+					value={theme}
+					onValueChange={(next) => {
+						if (next) setTheme(next as Theme)
+					}}
+				>
+					<ToggleGroupItem value='light'>light</ToggleGroupItem>
+					<ToggleGroupItem value='dark'>dark</ToggleGroupItem>
+				</ToggleGroup>
 			</div>
 
 			{/* No `onValueChange`: the store never writes `theme`, so there is nothing to lift. */}
@@ -79,9 +82,9 @@ export default function ControlledMirrorExample() {
 				<Preview />
 			</previewStore.Provider>
 
-			<p className='text-xs text-fd-muted-foreground'>
-				The local click counter keeps its own state across theme changes — only the keys listed in{' '}
-				<code className='font-mono'>value</code> are controlled.
+			<p className='text-xs text-muted-foreground'>
+				The local click counter keeps its own state across theme changes — only the keys listed in <code>value</code>{' '}
+				are controlled.
 			</p>
 		</div>
 	)

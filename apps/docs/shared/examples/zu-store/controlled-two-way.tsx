@@ -4,6 +4,14 @@ import { createContextStore } from '@ez-kit/zu-store'
 import { useCallback, useState } from 'react'
 import { createStore } from 'zustand/vanilla'
 
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+
+const LAST_STEP = 3
+
 type StepperState = {
 	/** Fully controlled: written from inside, lifted up, then flows back down. */
 	step: number
@@ -15,7 +23,7 @@ const stepperStore = createContextStore(() =>
 	createStore<StepperState>()((set, get) => ({
 		step: 0,
 		next: () => {
-			set({ step: Math.min(get().step + 1, 3) })
+			set({ step: Math.min(get().step + 1, LAST_STEP) })
 		},
 		previous: () => {
 			set({ step: Math.max(get().step - 1, 0) })
@@ -29,34 +37,36 @@ function Stepper() {
 	const previous = stepperStore.useSelector((s) => s.previous)
 
 	return (
-		<div className='flex flex-col gap-3 rounded-md border border-fd-border bg-fd-card p-3'>
-			<p className='text-xs uppercase tracking-wider text-fd-muted-foreground'>inside the store</p>
-			<div className='flex items-center gap-2'>
-				{[0, 1, 2, 3].map((index) => (
-					<span
-						key={index}
-						className={`size-2.5 rounded-full ${index <= step ? 'bg-fd-primary' : 'bg-fd-border'}`}
-					/>
-				))}
-				<span className='ml-2 font-mono text-sm tabular-nums'>step {step}</span>
+		<Card
+			size='sm'
+			className='gap-3 px-4'
+		>
+			<Badge variant='outline'>inside the store</Badge>
+			<div className='flex items-center gap-3'>
+				<Progress value={(step / LAST_STEP) * 100} />
+				<span className='shrink-0 font-mono text-sm tabular-nums'>
+					step {step}/{LAST_STEP}
+				</span>
 			</div>
 			<div className='flex gap-2'>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={previous}
-					className='rounded-md border border-fd-border px-3 py-1 text-sm font-medium hover:bg-fd-muted'
+					disabled={step === 0}
 				>
-					back
-				</button>
-				<button
-					type='button'
+					Back
+				</Button>
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={next}
-					className='rounded-md border border-fd-border px-3 py-1 text-sm font-medium hover:bg-fd-muted'
+					disabled={step === LAST_STEP}
 				>
-					next
-				</button>
+					Next
+				</Button>
 			</div>
-		</div>
+		</Card>
 	)
 }
 
@@ -70,18 +80,18 @@ export default function ControlledTwoWayExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<div className='flex flex-wrap items-center gap-2 rounded-md border border-fd-border bg-fd-muted/40 p-3'>
-				<span className='text-sm text-fd-muted-foreground'>parent knows the step:</span>
+			<div className='flex flex-wrap items-center gap-3'>
+				<Label className='text-muted-foreground'>parent knows the step</Label>
 				<output className='font-mono text-sm tabular-nums'>{step}</output>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={() => {
 						setStep(0)
 					}}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 				>
-					restart from parent
-				</button>
+					Restart from parent
+				</Button>
 			</div>
 
 			<stepperStore.Provider
@@ -91,10 +101,9 @@ export default function ControlledTwoWayExample() {
 				<Stepper />
 			</stepperStore.Provider>
 
-			<p className='text-xs text-fd-muted-foreground'>
-				The store writes <code className='font-mono'>step</code>, <code className='font-mono'>onValueChange</code> hands
-				the change up, and the parent feeds a new <code className='font-mono'>value</code> back down — so both sides
-				always agree.
+			<p className='text-xs text-muted-foreground'>
+				The store writes <code>step</code>, <code>onValueChange</code> hands the change up, and the parent feeds a new{' '}
+				<code>value</code> back down — so both sides always agree.
 			</p>
 		</div>
 	)

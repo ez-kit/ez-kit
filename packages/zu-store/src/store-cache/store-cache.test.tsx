@@ -1072,3 +1072,107 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		expect(two).toContain('second')
 	})
 })
+
+describe('createStoreCache — Subscribe', () => {
+	it('hands the selected value to children, compared by reference', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'subscribe-strict' })
+
+		function SetPageButton() {
+			const setPage = table.useSelector((s) => s.setPage)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setPage(2)
+					}}
+				>
+					page 2
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<table.Subscribe selector={(s) => s.page}>{(page) => <span data-testid='page'>{page}</span>}</table.Subscribe>
+					<SetPageButton />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(screen.getByTestId('page')).toHaveTextContent('1')
+		fireEvent.click(screen.getByRole('button', { name: 'page 2' }))
+		expect(screen.getByTestId('page')).toHaveTextContent('2')
+	})
+
+	it('compares shallowly when `shallow` is set, so an object selection is stable', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'subscribe-shallow' })
+		let renderCount = 0
+
+		function Pair({ filter, page }: { filter: string; page: number }) {
+			renderCount += 1
+			return <span data-testid='pair'>{`${filter}/${String(page)}`}</span>
+		}
+
+		function SetFilterButton() {
+			const setFilter = table.useSelector((s) => s.setFilter)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setFilter('active')
+					}}
+				>
+					filter
+				</button>
+			)
+		}
+
+		function SetSamePageButton() {
+			const setPage = table.useSelector((s) => s.setPage)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setPage(1)
+					}}
+				>
+					same page
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<table.Subscribe
+						selector={(s) => ({ filter: s.filter, page: s.page })}
+						shallow
+					>
+						{({ filter, page }) => (
+							<Pair
+								filter={filter}
+								page={page}
+							/>
+						)}
+					</table.Subscribe>
+					<SetFilterButton />
+					<SetSamePageButton />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(screen.getByTestId('pair')).toHaveTextContent('all/1')
+		expect(renderCount).toBe(1)
+
+		// Writing the value it already has notifies subscribers; shallow equality absorbs it.
+		fireEvent.click(screen.getByRole('button', { name: 'same page' }))
+		expect(renderCount).toBe(1)
+
+		fireEvent.click(screen.getByRole('button', { name: 'filter' }))
+		expect(renderCount).toBe(2)
+		expect(screen.getByTestId('pair')).toHaveTextContent('active/1')
+	})
+})

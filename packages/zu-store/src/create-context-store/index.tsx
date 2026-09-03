@@ -33,9 +33,18 @@ type ProviderProps<TDefaultValue, TState> = (undefined extends TDefaultValue
 	onValueChange?: (value: Partial<TState>) => void
 }
 
-type SubscribeProps<TStore extends StoreApi<unknown>, TSelected> = {
+type SelectedProps<TStore extends StoreApi<unknown>, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
 	children: (state: TSelected) => ReactElement
+}
+
+type SubscribeProps<TStore extends StoreApi<unknown>, TSelected> = SelectedProps<TStore, TSelected> & {
+	/**
+	 * Compare the selected value shallowly instead of by reference — the `Subscribe` counterpart of
+	 * `useShallowSelector`. Required whenever `selector` *builds* its result (an object, an array):
+	 * a fresh reference on every run never settles under the default `Object.is`.
+	 */
+	shallow?: boolean
 }
 
 export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultValue> = {
@@ -49,6 +58,10 @@ export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultV
 	useSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	/** As `useSelector`, but compares the selected value shallowly — for object/array selections. */
 	useShallowSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
+	/**
+	 * Render-prop read: subscribes to `selector` and hands the value to `children`. Compared by
+	 * reference unless `shallow` is set.
+	 */
 	Subscribe: <TSelected>(props: SubscribeProps<TStore, TSelected>) => ReactElement
 }
 
@@ -193,8 +206,30 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		return useZustandStore(store, useShallow(selector))
 	}
 
-	function Subscribe<TSelected>({ selector, children }: SubscribeProps<TStore, TSelected>): ReactElement {
+	function SubscribeByReference<TSelected>({ selector, children }: SelectedProps<TStore, TSelected>): ReactElement {
 		return children(useSelector(selector))
+	}
+
+	function SubscribeShallow<TSelected>({ selector, children }: SelectedProps<TStore, TSelected>): ReactElement {
+		return children(useShallowSelector(selector))
+	}
+
+	/**
+	 * `shallow` picks one of two child components rather than one of two selectors, so each of them
+	 * calls exactly one hook. Toggling the prop on a mounted `Subscribe` therefore swaps the element
+	 * type and remounts the render-prop subtree — `shallow` is a property of the selector, which is
+	 * itself written once per call site, so that is not a state a real tree passes through.
+	 */
+	function Subscribe<TSelected>({
+		selector,
+		shallow = false,
+		children,
+	}: SubscribeProps<TStore, TSelected>): ReactElement {
+		return shallow ? (
+			<SubscribeShallow selector={selector}>{children}</SubscribeShallow>
+		) : (
+			<SubscribeByReference selector={selector}>{children}</SubscribeByReference>
+		)
 	}
 
 	return {

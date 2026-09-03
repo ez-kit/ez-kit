@@ -5,8 +5,14 @@
 import { createStoreCache, StoreProvider } from '@ez-kit/va-store'
 import { type FieldsBuilder, persist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
-import { useState } from 'react'
+import { MinusIcon, PlusIcon } from 'lucide-react'
+import { useId, useState } from 'react'
 import { proxy } from 'valtio'
+
+import { Button } from '@/components/ui/button'
+import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 
@@ -30,45 +36,49 @@ const filtersStore = cache.createCachedStore<FiltersState>(() => proxy<FiltersSt
 })
 
 function FilterControls() {
+	const queryId = useId()
 	const snap = filtersStore.useSnapshot()
 	const store = filtersStore.useStore() // the raw mutable proxy
 	const search = url.useSearch()
 
 	return (
 		<div>
-			<div className='flex flex-wrap items-center gap-3'>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>q</span>
-					<input
+			<div className='flex flex-wrap items-center gap-4'>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={queryId}>q</Label>
+					<Input
+						id={queryId}
+						className='w-40'
 						value={snap.q}
+						placeholder='search…'
 						onChange={(event) => {
 							store.q = event.target.value
 						}}
-						placeholder='search…'
-						className='w-40 rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					/>
-				</label>
-				<div className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>page</span>
-					<button
-						type='button'
+				</div>
+				<div className='flex items-center gap-2'>
+					<Label>page</Label>
+					<Button
+						variant='outline'
+						size='icon-sm'
+						aria-label='Previous page'
 						onClick={() => {
 							store.page = Math.max(1, store.page - 1)
 						}}
-						className='rounded-md border border-fd-border bg-fd-card px-3 py-1 font-medium hover:bg-fd-muted'
 					>
-						−
-					</button>
+						<MinusIcon />
+					</Button>
 					<output className='min-w-[2ch] text-center font-mono tabular-nums'>{snap.page}</output>
-					<button
-						type='button'
+					<Button
+						variant='outline'
+						size='icon-sm'
+						aria-label='Next page'
 						onClick={() => {
 							store.page += 1
 						}}
-						className='rounded-md border border-fd-border bg-fd-card px-3 py-1 font-medium hover:bg-fd-muted'
 					>
-						+
-					</button>
+						<PlusIcon />
+					</Button>
 				</div>
 			</div>
 			<UrlReadout search={search} />
@@ -81,25 +91,29 @@ function Demo() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<button
-				type='button'
+			<Button
+				variant='outline'
+				size='sm'
+				className='self-start'
 				onClick={() => {
 					setOpen((on) => !on)
 				}}
-				className='self-start rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 			>
 				{open ? 'Close panel' : 'Reopen panel'}
-			</button>
+			</Button>
 
 			{open ? (
 				<filtersStore.Provider id='main'>
 					<FilterControls />
 				</filtersStore.Provider>
 			) : (
-				<p className='rounded-lg border border-dashed border-fd-border p-4 text-sm text-fd-muted-foreground'>
-					Panel closed. The filter store is kept alive in the cache and still mirrored to the URL — reopen it and your{' '}
-					<code>q</code>/<code>page</code> are preserved.
-				</p>
+				<Empty className='border'>
+					<EmptyTitle>Panel closed</EmptyTitle>
+					<EmptyDescription>
+						The filter store is kept alive in the cache and still mirrored to the URL — reopen it and your{' '}
+						<code>q</code>/<code>page</code> are preserved.
+					</EmptyDescription>
+				</Empty>
 			)}
 		</div>
 	)

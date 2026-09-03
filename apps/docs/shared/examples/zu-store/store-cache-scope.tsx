@@ -4,6 +4,12 @@ import { type ContextStoreInit, createStoreCache, toTree } from '@ez-kit/zu-stor
 import { useState } from 'react'
 import { createStore } from 'zustand/vanilla'
 
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Empty, EmptyDescription } from '@/components/ui/empty'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+
 type TableState = {
 	filter: string
 	setFilter: (filter: string) => void
@@ -32,24 +38,26 @@ function UserTable({ userId }: { userId: string }) {
 	const setFilter = userTable.useSelector((s) => s.setFilter)
 
 	return (
-		<div className='flex flex-wrap items-center gap-2'>
-			<span className='text-xs text-fd-muted-foreground'>user-{userId}:</span>
-			{FILTERS.map((value) => (
-				<button
-					key={value}
-					type='button'
-					onClick={() => {
-						setFilter(value)
-					}}
-					className={`rounded-full border px-3 py-0.5 text-xs font-medium ${
-						filter === value
-							? 'border-fd-primary bg-fd-primary/10 text-fd-primary'
-							: 'border-fd-border hover:bg-fd-muted'
-					}`}
-				>
-					{value}
-				</button>
-			))}
+		<div className='flex flex-wrap items-center gap-3'>
+			<Badge variant='secondary'>user-{userId}</Badge>
+			<ToggleGroup
+				type='single'
+				variant='outline'
+				size='sm'
+				value={filter}
+				onValueChange={(next) => {
+					if (next) setFilter(next)
+				}}
+			>
+				{FILTERS.map((value) => (
+					<ToggleGroupItem
+						key={value}
+						value={value}
+					>
+						{value}
+					</ToggleGroupItem>
+				))}
+			</ToggleGroup>
 		</div>
 	)
 }
@@ -57,12 +65,15 @@ function UserTable({ userId }: { userId: string }) {
 function Page({ name }: { name: string }) {
 	return (
 		<cache.Scope path={[name]}>
-			<div className='flex flex-col gap-2 rounded-lg border border-fd-border bg-fd-card p-4'>
-				<span className='text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground'>{name}</span>
+			<Card
+				size='sm'
+				className='gap-3 px-4'
+			>
+				<Badge variant='outline'>{name}</Badge>
 				<userTable.Provider id='user-42'>
 					<UserTable userId='42' />
 				</userTable.Provider>
-			</div>
+			</Card>
 		</cache.Scope>
 	)
 }
@@ -75,7 +86,7 @@ function Demo() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<p className='text-sm text-fd-muted-foreground'>
+			<p className='text-sm text-muted-foreground'>
 				Same <code>user-42</code> table, same store group — mounted under two scopes. Changing one never touches the
 				other.
 			</p>
@@ -84,29 +95,32 @@ function Demo() {
 				{showA ? (
 					<Page name='page-a' />
 				) : (
-					<div className='flex items-center justify-center rounded-lg border border-dashed border-fd-border p-4 text-xs text-fd-muted-foreground'>
-						page-a left — its store was evicted
-					</div>
+					<Empty className='border'>
+						<EmptyDescription>page-a left — its store was evicted</EmptyDescription>
+					</Empty>
 				)}
 				<Page name='page-b' />
 			</div>
 
-			<div className='flex flex-col gap-2 rounded-lg border border-dashed border-fd-border p-4'>
+			<Card
+				size='sm'
+				className='gap-2 px-4'
+			>
 				<div className='flex items-center justify-between gap-2'>
-					<span className='text-xs font-semibold uppercase tracking-wide text-fd-muted-foreground'>cache tree</span>
-					<button
-						type='button'
+					<Badge variant='outline'>cache tree</Badge>
+					<Button
+						variant='outline'
+						size='xs'
 						onClick={() => {
 							if (showA) clear(['page-a'])
 							setShowA((on) => !on)
 						}}
-						className='rounded-md border border-fd-border bg-fd-card px-2 py-0.5 text-xs hover:bg-fd-muted'
 					>
 						{showA ? `leave page-a → clear(['page-a'])` : `restore page-a`}
-					</button>
+					</Button>
 				</div>
-				<pre className='overflow-x-auto text-xs text-fd-foreground'>{JSON.stringify(tree, null, 2)}</pre>
-			</div>
+				<pre className='overflow-x-auto text-xs'>{JSON.stringify(tree, null, 2)}</pre>
+			</Card>
 		</div>
 	)
 }

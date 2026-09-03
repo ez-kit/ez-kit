@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from 'react'
 
+import { Badge } from '@/components/ui/badge'
+
 import type { AmbientAdapter, CommitCtx, Keyed, SourcePort } from '@ez-kit/va-store/persist'
 
 /**
@@ -82,9 +84,11 @@ export function createMemoryStorageAdapter(source: string): MemoryStorageAdapter
 /** Shared chrome for the storage blob read-out shown under each live storage example. */
 export function BlobReadout({ blob, label = 'localStorage' }: { blob: string; label?: string }) {
 	return (
-		<div className='mt-3 rounded-md border border-fd-border bg-fd-muted/40 px-3 py-2 font-mono text-xs'>
-			<span className='text-fd-muted-foreground'>{label}&nbsp;</span>
-			<span className='break-all'>{blob || <span className='text-fd-muted-foreground'>(empty)</span>}</span>
+		<div className='mt-3 flex items-center gap-2 rounded-2xl border bg-muted/40 px-3 py-2'>
+			<Badge variant='outline'>{label}</Badge>
+			<span className='font-mono text-xs break-all'>
+				{blob || <span className='text-muted-foreground'>(empty)</span>}
+			</span>
 		</div>
 	)
 }

@@ -14,7 +14,7 @@ pnpm add @ez-kit/zu-store zustand
 
 Wraps a Zustand store in React context. Returns `Provider`, `useSelector`, `useShallowSelector`, `useStore`, and `Subscribe`. Multiple `Provider` instances are fully independent.
 
-Reads go through `useSelector(selector)` (or `useShallowSelector` for object/array selections); `useStore()` hands back the raw `StoreApi` without subscribing the caller.
+Reads go through `useSelector(selector)` (or `useShallowSelector` for object/array selections); `useStore()` hands back the raw `StoreApi` without subscribing the caller. `Subscribe` is the render-prop form of `useSelector`, and takes `shallow` for the same object/array case.
 
 ```tsx
 const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ count?: number }>) =>

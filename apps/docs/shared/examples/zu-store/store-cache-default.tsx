@@ -4,6 +4,12 @@ import { CacheProvider, createCachedStore } from '@ez-kit/zu-store'
 import { useState } from 'react'
 import { createStore } from 'zustand/vanilla'
 
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+
 type DraftState = {
 	title: string
 	body: string
@@ -35,25 +41,26 @@ function DraftForm() {
 	const setBody = draftStore.useSelector((s) => s.setBody)
 
 	return (
-		<div className='flex flex-col gap-2 rounded-lg border border-fd-border bg-fd-card p-4'>
-			<input
+		<Card
+			size='sm'
+			className='gap-2 px-4'
+		>
+			<Input
 				value={title}
+				placeholder='Subject'
 				onChange={(e) => {
 					setTitle(e.target.value)
 				}}
-				placeholder='Subject'
-				className='rounded-md border border-fd-border bg-fd-background px-3 py-1.5 text-sm'
 			/>
-			<textarea
+			<Textarea
 				value={body}
+				placeholder='Write your message…'
+				rows={3}
 				onChange={(e) => {
 					setBody(e.target.value)
 				}}
-				placeholder='Write your message…'
-				rows={3}
-				className='resize-none rounded-md border border-fd-border bg-fd-background px-3 py-1.5 text-sm'
 			/>
-		</div>
+		</Card>
 	)
 }
 
@@ -65,17 +72,17 @@ function Demo() {
 	return (
 		<div className='flex flex-col gap-4'>
 			<div className='flex items-center gap-2'>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={() => {
 						setOpen((on) => !on)
 					}}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 				>
 					{open ? 'Close composer' : 'Reopen composer'}
-				</button>
-				<span className='ml-auto text-xs text-fd-muted-foreground'>
-					kept draft: <span className='font-mono'>{keptTitle || '—'}</span>
+				</Button>
+				<span className='ml-auto text-xs text-muted-foreground'>
+					kept draft <span className='font-mono'>{keptTitle || '—'}</span>
 				</span>
 			</div>
 
@@ -84,10 +91,12 @@ function Demo() {
 					<DraftForm />
 				</draftStore.Provider>
 			) : (
-				<p className='rounded-lg border border-dashed border-fd-border p-4 text-sm text-fd-muted-foreground'>
-					The composer is closed, but your draft is kept alive in the default cache. Reopen it — your subject and body
-					are still there.
-				</p>
+				<Empty className='border'>
+					<EmptyTitle>The composer is closed</EmptyTitle>
+					<EmptyDescription>
+						Your draft is kept alive in the default cache. Reopen it — your subject and body are still there.
+					</EmptyDescription>
+				</Empty>
 			)}
 		</div>
 	)

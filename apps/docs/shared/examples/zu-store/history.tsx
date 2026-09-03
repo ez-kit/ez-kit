@@ -1,9 +1,14 @@
 'use client'
 
 import { withHistory } from '@ez-kit/zu-store'
+import { MinusIcon, PlusIcon, Redo2Icon, Undo2Icon } from 'lucide-react'
 import { useMemo } from 'react'
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
+
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
 
 type CounterState = {
 	count: number
@@ -42,69 +47,72 @@ export default function HistoryExample() {
 	const timelineLength = pastsCount + 1 + futuresCount
 
 	return (
-		<div className='flex flex-col gap-3'>
+		<div className='flex flex-col gap-4'>
 			<div className='flex items-center gap-3'>
-				<button
-					type='button'
-					onClick={increment}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
-				>
-					+1
-				</button>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='icon-sm'
+					aria-label='Decrement'
 					onClick={decrement}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 				>
-					−1
-				</button>
+					<MinusIcon />
+				</Button>
 				<output className='min-w-[3ch] text-center font-mono text-lg tabular-nums'>{count}</output>
+				<Button
+					variant='outline'
+					size='icon-sm'
+					aria-label='Increment'
+					onClick={increment}
+				>
+					<PlusIcon />
+				</Button>
 			</div>
 
 			<div className='flex flex-wrap items-center gap-2'>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={undo}
 					disabled={pastsCount === 0}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted disabled:cursor-not-allowed disabled:opacity-40'
 				>
+					<Undo2Icon />
 					Undo
-				</button>
-				<button
-					type='button'
+				</Button>
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={redo}
 					disabled={futuresCount === 0}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted disabled:cursor-not-allowed disabled:opacity-40'
 				>
+					<Redo2Icon />
 					Redo
-				</button>
-				<button
-					type='button'
+				</Button>
+				<Button
+					variant='ghost'
+					size='sm'
 					onClick={clear}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium text-fd-muted-foreground hover:bg-fd-muted hover:text-fd-foreground'
 				>
 					Clear history
-				</button>
-				<span className='ml-1 text-xs text-fd-muted-foreground'>
-					pasts: <span className='font-mono'>{pastsCount}</span> · futures:{' '}
-					<span className='font-mono'>{futuresCount}</span>
+				</Button>
+				<span className='text-xs text-muted-foreground'>
+					pasts <span className='font-mono tabular-nums'>{pastsCount}</span> · futures{' '}
+					<span className='font-mono tabular-nums'>{futuresCount}</span>
 				</span>
 			</div>
 
 			{timelineLength > 1 && (
 				<div className='flex items-center gap-3'>
-					<span className='text-xs text-fd-muted-foreground'>Jump:</span>
-					<input
-						type='range'
+					<Label className='text-muted-foreground'>Jump</Label>
+					<Slider
+						className='flex-1'
 						min={0}
 						max={timelineLength - 1}
-						value={pastsCount}
-						onChange={(e) => {
-							goto(Number(e.target.value))
+						value={[pastsCount]}
+						onValueChange={([next]) => {
+							goto(next ?? 0)
 						}}
-						className='flex-1 accent-fd-primary'
 					/>
-					<span className='font-mono text-xs tabular-nums text-fd-muted-foreground'>
+					<span className='font-mono text-xs tabular-nums text-muted-foreground'>
 						{pastsCount} / {timelineLength - 1}
 					</span>
 				</div>

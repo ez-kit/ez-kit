@@ -1,7 +1,10 @@
 'use client'
 
 import { type ContextStoreInit, createContextStore } from '@ez-kit/va-store'
+import { MinusIcon, PlusIcon } from 'lucide-react'
 import { proxy } from 'valtio'
+
+import { Button } from '@/components/ui/button'
 
 type CounterState = {
 	count: number
@@ -37,28 +40,30 @@ function CounterDisplay() {
 
 	return (
 		<div className='flex items-center gap-3'>
-			<button
-				type='button'
+			<Button
+				variant='outline'
+				size='icon-sm'
+				aria-label='Decrement'
 				onClick={snap.decrement}
-				className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 			>
-				−
-			</button>
+				<MinusIcon />
+			</Button>
 			<output className='min-w-[3ch] text-center font-mono text-lg tabular-nums'>{snap.count}</output>
-			<button
-				type='button'
+			<Button
+				variant='outline'
+				size='icon-sm'
+				aria-label='Increment'
 				onClick={snap.increment}
-				className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 			>
-				+
-			</button>
-			<button
-				type='button'
+				<PlusIcon />
+			</Button>
+			<Button
+				variant='ghost'
+				size='sm'
 				onClick={snap.reset}
-				className='ml-2 rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium text-fd-muted-foreground hover:bg-fd-muted hover:text-fd-foreground'
 			>
-				reset
-			</button>
+				Reset
+			</Button>
 		</div>
 	)
 }

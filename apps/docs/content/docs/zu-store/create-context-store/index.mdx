@@ -52,8 +52,6 @@ const store = counterStore.useStore()
 <counterStore.Subscribe selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Subscribe>
 ```
 
-`useSelector` compares with strict equality, so returning a fresh object from it re-renders on every store update — that is what `useShallowSelector` is for.
-
 <Callout type='warn'>
 	`useStore()` is the **raw handle**, not a read. Reading state is `useSelector()` / `useShallowSelector()` — the same
 	split as [`@ez-kit/va-store`](../va-store/create-context-store), where the raw handle is also `useStore()` and reads
@@ -69,6 +67,78 @@ const handleSubmit = () => {
 	console.log(store.getState().count)
 }
 ```
+
+## Selecting more than one value
+
+`useSelector` compares the selected value with `Object.is`. That is right for a single field and **wrong the moment the selector builds something** — an object, an array, a tuple. The selector runs on every render and hands back a fresh reference each time, so the subscription never settles and React gives up:
+
+```
+Error: Maximum update depth exceeded.
+```
+
+This is worth stating plainly, because it is easy to read the two hooks as fast-path and slow-path: they are not. A fresh object through `useSelector` does not merely re-render too often — it **fails to render at all**, immediately, before any state has changed.
+
+```tsx
+// ✗ infinite loop on mount — a new object every time the selector runs
+const { count, label } = counterStore.useSelector((s) => ({ count: s.count, label: s.label }))
+
+// ✓ compares the selection's own entries, so equal values mean "no change"
+const { count, label } = counterStore.useShallowSelector((s) => ({ count: s.count, label: s.label }))
+
+// ✓ also fine — two scalar selections, each strictly compared
+const count = counterStore.useSelector((s) => s.count)
+const label = counterStore.useSelector((s) => s.label)
+```
+
+So the rule is mechanical: **does the selector construct its return value?** If yes, `useShallowSelector`. If it just reaches for one field, `useSelector`.
+
+<LivePreview
+	path='zu-store/shallow-selector'
+	title='One shallow selection, and a field it deliberately ignores'
+/>
+
+The payoff is the second half of shallow equality: the component re-renders when a **selected** key changes and stays put when anything else in the store moves. Bump the ignored counter in the example above as often as you like — the panel above it never re-renders.
+
+### Shallow is exactly one level
+
+`useShallowSelector` compares the entries of the object you return. It does not walk into them. A selector that rebuilds a nested value is back to a fresh reference on every run — and back to the same loop:
+
+```tsx
+// ✗ `filters` is a new object each run; one level down is compared by reference
+const { filters } = counterStore.useShallowSelector((s) => ({ filters: { ...s.filters } }))
+```
+
+Two ways out, and the first is usually the better design:
+
+```tsx
+// ✓ select the leaves you actually render
+const { search, sort } = counterStore.useShallowSelector((s) => ({
+	search: s.filters.search,
+	sort: s.filters.sort,
+}))
+
+// ✓ or select the stable reference the store already holds, and read into it below
+const filters = counterStore.useSelector((s) => s.filters)
+```
+
+### `Subscribe` takes it as a prop
+
+`Subscribe` reads through the same machinery, so it is strictly compared by default and carries the same escape hatch:
+
+```tsx
+<counterStore.Subscribe
+	selector={(s) => ({ count: s.count, label: s.label })}
+	shallow
+>
+	{({ count, label }) => <span>{`${String(count)} · ${label}`}</span>}
+</counterStore.Subscribe>
+```
+
+The rule does not change — only where you state it. Without `shallow` that selector loops exactly as `useSelector` would; with it, `Subscribe` behaves as `useShallowSelector`. The `Subscribe` on a [`createStoreCache`](./store-cache) group takes the same prop, with the same meaning.
+
+### Not the same thing as `shallowEqual`
+
+`useShallowSelector` and the `shallow` prop compare what a **selector returned**. The exported `shallowEqual` is a comparator you hand to the [`controlled` option](./create-context-store/api#the-controlled-option) for a **controlled field** — a value flowing _in_ from the parent. Same idea, opposite direction of data flow.
 
 ## Multiple independent instances
 

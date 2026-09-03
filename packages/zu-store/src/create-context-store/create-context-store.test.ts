@@ -146,6 +146,105 @@ describe('@ez-kit/zu-store', () => {
 		expect(screen.getByTestId('shallow-count')).toHaveTextContent('2')
 	})
 
+	it('compares shallowly in Subscribe when `shallow` is set', () => {
+		let renderCount = 0
+
+		function ChangeLabelButton() {
+			const setLabel = counterContextStore.useSelector((state) => state.setLabel)
+			return createElement(
+				'button',
+				{
+					type: 'button',
+					onClick: () => {
+						setLabel('changed')
+					},
+				},
+				'Change label',
+			)
+		}
+
+		function IncrementButton() {
+			const increment = counterContextStore.useSelector((state) => state.increment)
+			return createElement(
+				'button',
+				{
+					type: 'button',
+					onClick: increment,
+				},
+				'Increment',
+			)
+		}
+
+		function Pair({ count, label }: { count: number; label: string }) {
+			renderCount += 1
+			return createElement('span', { 'data-testid': 'pair' }, `${String(count)}/${label}`)
+		}
+
+		render(
+			createElement(
+				counterContextStore.Provider,
+				{ defaultValue: { count: 1, label: 'boot' } },
+				createElement(counterContextStore.Subscribe<{ count: number }>, {
+					selector: (state: CounterState) => ({ count: state.count }),
+					shallow: true,
+					children: ({ count }: { count: number }) => createElement(Pair, { count, label: 'fixed' }),
+				}),
+				createElement(ChangeLabelButton),
+				createElement(IncrementButton),
+			),
+		)
+
+		expect(screen.getByTestId('pair')).toHaveTextContent('1/fixed')
+		expect(renderCount).toBe(1)
+
+		// `label` is not part of the selection: the fresh object compares equal, so nothing re-renders.
+		fireEvent.click(screen.getByRole('button', { name: 'Change label' }))
+		expect(renderCount).toBe(1)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Increment' }))
+		expect(renderCount).toBe(2)
+		expect(screen.getByTestId('pair')).toHaveTextContent('2/fixed')
+	})
+
+	it('keeps Subscribe strictly compared by default', () => {
+		let renderCount = 0
+
+		function IncrementButton() {
+			const increment = counterContextStore.useSelector((state) => state.increment)
+			return createElement(
+				'button',
+				{
+					type: 'button',
+					onClick: increment,
+				},
+				'Increment',
+			)
+		}
+
+		function CountView({ count }: { count: number }) {
+			renderCount += 1
+			return createElement('span', { 'data-testid': 'strict-count' }, String(count))
+		}
+
+		render(
+			createElement(
+				counterContextStore.Provider,
+				{ defaultValue: { count: 1, label: 'boot' } },
+				createElement(counterContextStore.Subscribe<number>, {
+					selector: (state: CounterState) => state.count,
+					children: (count: number) => createElement(CountView, { count }),
+				}),
+				createElement(IncrementButton),
+			),
+		)
+
+		expect(renderCount).toBe(1)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Increment' }))
+		expect(renderCount).toBe(2)
+		expect(screen.getByTestId('strict-count')).toHaveTextContent('2')
+	})
+
 	it('throws when hook is used without Provider', () => {
 		function BrokenConsumer() {
 			counterContextStore.useSelector((state) => state.count)

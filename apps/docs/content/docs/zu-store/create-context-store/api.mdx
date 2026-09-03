@@ -32,6 +32,7 @@ function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = un
 	useShallowSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
 	Subscribe: <T>(props: {
 		selector: (state: ExtractState<TStore>) => T
+		shallow?: boolean
 		children: (value: T) => ReactElement
 	}) => ReactElement
 }
@@ -76,9 +77,16 @@ const count = counterStore.useSelector((s) => s.count)
 
 Returns `T`. Throws `Missing Provider for createContextStore` when called outside a `Provider`.
 
+<Callout type='warn'>
+	Only for a value the selector **reaches for**, never one it **builds**. Returning a fresh object or array from
+	`useSelector` throws `Maximum update depth exceeded` on mount — the comparison is `Object.is` and the reference is new
+	on every run. Use `useShallowSelector` instead; see [selecting more than one
+	value](../create-context-store#selecting-more-than-one-value).
+</Callout>
+
 ## `useShallowSelector(selector)`
 
-Same as `useSelector`, but compares with shallow equality. Use when the selector returns an object or array so you don't re-render on every state update.
+Same as `useSelector`, but compares the returned value with shallow equality (zustand's `useShallow`). Use it whenever the selector constructs its result, so equal values in a fresh object count as no change.
 
 ```tsx
 const { count, label } = counterStore.useShallowSelector((s) => ({
@@ -86,6 +94,12 @@ const { count, label } = counterStore.useShallowSelector((s) => ({
 	label: s.label,
 }))
 ```
+
+| Parameter  | Type                   | Description                      |
+| ---------- | ---------------------- | -------------------------------- |
+| `selector` | `(state: TState) => T` | Picks the slice to subscribe to. |
+
+The comparison is **one level deep**: the entries of the returned object or array are compared, not their contents. A selector that rebuilds a nested value (`{ filters: { ...s.filters } }`) is a fresh reference one level down and loops exactly as `useSelector` would — select the leaves, or select the store's own stable reference.
 
 ## `useStore()`
 
@@ -113,10 +127,24 @@ Render-prop alternative to `useSelector`. Handy in JSX-heavy code, or to keep a 
 <counterStore.Subscribe selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Subscribe>
 ```
 
-| Prop       | Type                         | Description                                  |
-| ---------- | ---------------------------- | -------------------------------------------- |
-| `selector` | `(state: TState) => T`       | Picks the slice to subscribe to.             |
-| `children` | `(value: T) => ReactElement` | Render prop, called with the selected value. |
+| Prop       | Type                         | Required | Description                                                     |
+| ---------- | ---------------------------- | -------- | --------------------------------------------------------------- |
+| `selector` | `(state: TState) => T`       | yes      | Picks the slice to subscribe to.                                |
+| `shallow`  | `boolean`                    | no       | Compare shallowly instead of by reference. Defaults to `false`. |
+| `children` | `(value: T) => ReactElement` | yes      | Render prop, called with the selected value.                    |
+
+`shallow` is the `Subscribe` counterpart of `useShallowSelector`, and the same rule decides it: set it whenever `selector` **builds** its result. Omitted, the comparison is `Object.is` and an object-returning selector loops on mount.
+
+```tsx
+<counterStore.Subscribe
+	selector={(s) => ({ count: s.count, label: s.label })}
+	shallow
+>
+	{({ count, label }) => <span>{`${String(count)} · ${label}`}</span>}
+</counterStore.Subscribe>
+```
+
+The prop is read on every render, so toggling it at runtime is safe — it selects which selector the subscription receives, never which hooks run.
 
 ## The `controlled` option
 
@@ -156,16 +184,16 @@ const store = createContextStore(createMyStore, {
 
 ## Exports
 
-| Export                                             | Kind  | Purpose                                                           |
-| -------------------------------------------------- | ----- | ----------------------------------------------------------------- |
-| `createContextStore`                               | value | The factory itself.                                               |
-| `shallowEqual`                                     | value | Shallow comparator, ready to drop into `controlled.<key>.equals`. |
-| `ContextStoreInit<TDefaultValue>`                  | type  | The envelope your factory's parameter should be typed with.       |
-| `CreateContextStoreOptions<TState>`                | type  | The second argument's type.                                       |
-| `CreateContextStoreFactory<TStore, TDefaultValue>` | type  | The factory argument's type.                                      |
-| `CreateContextStoreResult<TStore, TDefaultValue>`  | type  | The returned bundle — `Provider`, hooks and `Subscribe`.          |
-| `ControlledConfig<TState>`                         | type  | The `controlled` option's type.                                   |
-| `ControlledFieldConfig<TState, K>`                 | type  | One field's entry in `controlled`.                                |
+| Export                                             | Kind  | Purpose                                                                                     |
+| -------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------- |
+| `createContextStore`                               | value | The factory itself.                                                                         |
+| `shallowEqual`                                     | value | Shallow comparator for `controlled.<key>.equals` — **not** related to `useShallowSelector`. |
+| `ContextStoreInit<TDefaultValue>`                  | type  | The envelope your factory's parameter should be typed with.                                 |
+| `CreateContextStoreOptions<TState>`                | type  | The second argument's type.                                                                 |
+| `CreateContextStoreFactory<TStore, TDefaultValue>` | type  | The factory argument's type.                                                                |
+| `CreateContextStoreResult<TStore, TDefaultValue>`  | type  | The returned bundle — `Provider`, hooks and `Subscribe`.                                    |
+| `ControlledConfig<TState>`                         | type  | The `controlled` option's type.                                                             |
+| `ControlledFieldConfig<TState, K>`                 | type  | One field's entry in `controlled`.                                                          |
 
 These are re-exported from `@ez-kit/zu-store`, so you can name the `controlled` option's type without reaching for `@ez-kit/store-core` directly.
 

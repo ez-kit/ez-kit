@@ -31,9 +31,17 @@ type AnyStore = StoreApi<unknown>
  */
 const FALLBACK_STORE: AnyStore = createStore<unknown>(() => ({}))
 
-export type CachedSubscribeProps<TStore extends AnyStore, TSelected> = {
+type CachedSelectedProps<TStore extends AnyStore, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
 	children: (state: TSelected) => ReactElement
+}
+
+export type CachedSubscribeProps<TStore extends AnyStore, TSelected> = CachedSelectedProps<TStore, TSelected> & {
+	/**
+	 * Compare the selected value shallowly instead of by reference, exactly as on
+	 * `createContextStore`'s `Subscribe`. Required whenever `selector` *builds* its result.
+	 */
+	shallow?: boolean
 }
 
 /** Handle returned by `createCachedStore` — a group of keep-alive stores keyed by `(path, id)`. */
@@ -45,7 +53,10 @@ export type CachedStoreGroup<TStore extends AnyStore, TDefaultValue extends obje
 	useShallowSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	/** The raw store handle for this group's entry. Does not subscribe, so it never re-renders. */
 	useStore: () => TStore
-	/** Render-prop receiving the selected state, mirroring `createContextStore`'s `Subscribe`. */
+	/**
+	 * Render-prop receiving the selected state, mirroring `createContextStore`'s `Subscribe` —
+	 * including its `shallow` prop.
+	 */
 	Subscribe: <TSelected>(props: CachedSubscribeProps<TStore, TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live store or `undefined`. Never creates. */
 	fromCache: (target: CacheAddress) => TStore | undefined
@@ -104,8 +115,28 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			return group.useInstance() as TStore
 		}
 
-		function Subscribe<TSelected>({ selector, children }: CachedSubscribeProps<TStore, TSelected>): ReactElement {
+		function SubscribeByReference<TSelected>({
+			selector,
+			children,
+		}: CachedSelectedProps<TStore, TSelected>): ReactElement {
 			return children(useSelector(selector))
+		}
+
+		function SubscribeShallow<TSelected>({ selector, children }: CachedSelectedProps<TStore, TSelected>): ReactElement {
+			return children(useShallowSelector(selector))
+		}
+
+		/** One component per comparison, exactly as on `createContextStore`'s `Subscribe`. */
+		function Subscribe<TSelected>({
+			selector,
+			shallow = false,
+			children,
+		}: CachedSubscribeProps<TStore, TSelected>): ReactElement {
+			return shallow ? (
+				<SubscribeShallow selector={selector}>{children}</SubscribeShallow>
+			) : (
+				<SubscribeByReference selector={selector}>{children}</SubscribeByReference>
+			)
 		}
 
 		function fromCache(target: CacheAddress): TStore | undefined {
