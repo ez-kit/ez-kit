@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
-import { Button } from '../../components/ui/button'
+import { Button } from '@grid-shadcn/components/ui/button'
 
 import type { ChevronProps } from '@ez-kit/data-grid-react'
 

@@ -1,4 +1,3 @@
-@import 'shadcn/tailwind.css';
 @import '@ez-kit/data-grid-react/styles.css';
 
 [data-slot='active-filters-bar'] {

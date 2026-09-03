@@ -3,7 +3,7 @@
 import { GridMenuVariant } from '@ez-kit/data-grid-react'
 import { EllipsisVertical, MoreHorizontal } from 'lucide-react'
 
-import { Button } from '../../components/ui/button'
+import { Button } from '@grid-shadcn/components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -11,7 +11,8 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu'
+} from '@grid-shadcn/components/ui/dropdown-menu'
+
 import { renderGridMenuIcon } from '../icons'
 
 import type { GridMenuProps } from '@ez-kit/data-grid-react'

@@ -11,9 +11,13 @@ The shared React package (`data-grid/react/react`) must contain **zero visual st
 
 ### Vendored shadcn primitives are immutable
 
-`packages/data-grid/react/shadcn/src/components/ui/**` is vendored from shadcn — **do not modify these files.** All behavioral overrides (colSpan handling, alignment, pinning, custom slots, etc.) must live in `packages/data-grid/react/shadcn/src/blocks/` adapters that wrap the primitives. See `packages/data-grid/react/shadcn/CLAUDE.md` for the full rule.
+`packages/data-grid/react/shadcn/src/components/ui/**` is vendored from shadcn — **do not modify these files.** All _new_ behavioral overrides (colSpan handling, alignment, pinning, custom slots, etc.) must live in `packages/data-grid/react/shadcn/src/blocks/` adapters that wrap the primitives, not be added to the primitives themselves. See `packages/data-grid/react/shadcn/CLAUDE.md` for the full rule.
 
-This rule is **shadcn-specific** — it follows from those files being vendored, not from the `components/ui/` path. The heroui kit's `src/components/ui/action-bar.tsx` is hand-written and freely editable; see `packages/data-grid/react/heroui/CLAUDE.md`.
+Note this is **not** a claim that these files are currently byte-identical to upstream shadcn — they aren't: `table.tsx` already carries grid-layout modifications (`display: 'block'`, `data-[pinned]:bg-muted/40`) baked directly into the vendored file rather than a `blocks/` wrapper, predating this rule's current wording. Treat `components/ui/**` as this package's own deliberate fork of shadcn's primitives, not a live sync target — the rule is about not casually hand-editing it going forward, not about it matching upstream today.
+
+This rule is **shadcn-specific** — it follows from those files being vendored, not from the `components/ui/` path. `src/components/ui/action-bar.tsx` in **both** the shadcn and heroui kits is hand-written (built on `radix-ui` primitives directly, not adapted from an upstream shadcn/heroui component) and freely editable — there is no upstream registry entry for `action-bar` under either kit to stay faithful to; see `packages/data-grid/react/heroui/CLAUDE.md`.
+
+These files (`components/ui/**`, `blocks/**`, `hooks/**`, `lib/**`, `data-grid.tsx`, `styles.css`) are also the **shadcn registry payload**: `pnpm --filter @ez-kit/docs registry:build` compiles them into `apps/docs/public/r/data-grid.json`, which `npx shadcn add` copies verbatim into a consumer's project (see `packages/data-grid/react/shadcn/registry.config.mjs`). That is exactly why they ship as this package's own registry files rather than as `registryDependencies` pointing at the official shadcn registry — a consumer resolving `table` from upstream would get stock behavior, silently missing the grid-layout support the rest of the kit assumes. A casual edit to `components/ui/**` now propagates to every consumer that runs `shadcn add`, so changes here should be as deliberate as changes to the public API.
 
 ### Settled data-grid API decisions — do not re-propose
 
@@ -179,9 +183,24 @@ turbo/
   tunes it to roughly its real size plus headroom, so a regression actually fails the check
 - Packages declare `"sideEffects": false`
 
+### The public origin lives in one place
+
+The site resolves its own origin at build time from Vercel's `VERCEL_PROJECT_PRODUCTION_URL`
+(`apps/docs/lib/shared.ts`), which is "the shortest production custom domain, or vercel.app domain
+if no custom domain is available" — so attaching a domain in the dashboard is the entire migration
+for `llms.txt`, OG images and canonical links; no origin is hardcoded there.
+
+What a deployment cannot rewrite is published text: npm READMEs, and the `npx shadcn add <url>`
+command a reader copies out of a docs code fence. Those name the origin from `site.config.json` at
+the repo root, and `scripts/check-site-url.mjs` (first step of `pnpm lint`) fails if any `.md`/`.mdx`
+names a different `ez-kit*` origin. Change the domain there, run `pnpm lint`, fix what it lists.
+This exists because an aspirational domain sat in a dozen files, install command included, while
+resolving nowhere. Note the check has no exception list, so don't write a stale origin in prose
+either — describe it, as this paragraph does.
+
 ### Where a package's API is documented
 
-Each package's public API lives in its own `README.md` and on https://ez-kit.dev — deliberately not
+Each package's public API lives in its own `README.md` and on https://ez-kit-docs.vercel.app — deliberately not
 duplicated here. A copy of an API in this file goes stale faster than anyone updates it, and a stale
 copy is worse than no copy: it reads as authoritative while naming exports that no longer exist.
 
