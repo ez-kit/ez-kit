@@ -3,5 +3,5 @@
 	"description": "Tailwind + cva styled-components factory",
 	"icon": "Paintbrush",
 	"root": true,
-	"pages": ["index", "ai"]
+	"pages": ["index", "babel-plugin", "ai"]
 }

@@ -45,6 +45,67 @@ resolution to Babel's `require`, which fails outside runtimes that support `requ
 for SWC, not Babel ones. Either switch that app to `@vitejs/plugin-react`, or pass the name by
 hand: `twc.button({ base: 'px-4' }, 'Button')`.
 
+### Next.js
+
+Since **Next.js 16**, Turbopack runs Babel automatically once it finds a Babel config file — SWC
+still handles Next's internal transforms, so the Babel pass is additive:
+
+```js
+// babel.config.js
+module.exports = {
+	presets: ['next/babel'],
+	plugins: ['@ez-kit/babel-plugin-twc'],
+}
+```
+
+`next/babel` is required, not optional — it is what teaches Babel TypeScript and JSX syntax, and
+without it the first `.tsx` file fails to parse. The file
+must be `babel.config.js` or `.babelrc`; Next's Babel loader rejects `.cjs` and `.mjs`. `node_modules`
+is excluded, so a component library shipped as a package has to run its own pass at build time
+(see tsup below). `next build --webpack` works too, with the usual trade-off that a Babel config
+file disables SWC entirely there.
+
+### tsup / esbuild
+
+esbuild has no Babel step; add one through `esbuildPlugins`. Babel only has to **parse** TS and JSX
+here — esbuild still strips the types — so `parserOpts` suffices and no preset is needed:
+
+```ts
+// tsup.config.ts
+import { readFile } from 'node:fs/promises'
+
+import { transformAsync } from '@babel/core'
+import twc from '@ez-kit/babel-plugin-twc'
+import { defineConfig, type Options } from 'tsup'
+
+const twcPlugin: NonNullable<Options['esbuildPlugins']>[number] = {
+	name: 'twc',
+	setup(build) {
+		build.onLoad({ filter: /\.[jt]sx?$/ }, async ({ path }) => {
+			const source = await readFile(path, 'utf8')
+			const result = await transformAsync(source, {
+				filename: path,
+				babelrc: false,
+				configFile: false,
+				plugins: [twc],
+				parserOpts: { plugins: ['typescript', 'jsx'] },
+			})
+			return result?.code ? { contents: result.code } : null
+		})
+	},
+}
+
+export default defineConfig({
+	entry: ['src/index.ts'],
+	format: ['esm'],
+	esbuildPlugins: [twcPlugin],
+})
+```
+
+`esbuild-plugin-babel` does the same in one line if you would rather take the dependency. This is
+the pass that matters for a component library: names baked in here survive into `dist`, where a
+consuming app's Babel step never reaches them.
+
 ### webpack
 
 A project with a `babel.config.js` needs nothing beyond the entry above — `babel-loader` picks
@@ -70,8 +131,7 @@ module.exports = {
 }
 ```
 
-The same caveat as Vite applies to `swc-loader` and to Next.js with Turbopack: no Babel pass,
-no rewrite.
+The same caveat as Vite applies to `swc-loader`: no Babel pass, no rewrite.
 
 ## What it does
 

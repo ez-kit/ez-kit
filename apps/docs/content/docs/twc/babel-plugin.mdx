@@ -1,0 +1,217 @@
+---
+title: '@ez-kit/babel-plugin-twc'
+description: Fill the debug name of every twc component from the variable it is assigned to — setup for Babel, Vite, Next.js, tsup and webpack.
+---
+
+# `@ez-kit/babel-plugin-twc`
+
+The optional last argument of a [`twc`](./) call is a component name, and writing it by hand
+duplicates the variable it sits next to:
+
+```ts
+const Button = twc.button({ base: 'px-4' }, 'Button')
+```
+
+This plugin fills that argument in at build time from the variable name, so the source stays:
+
+```ts
+const Button = twc.button({ base: 'px-4' })
+const Link = twc(BaseLink, { base: 'underline' })
+```
+
+and the bundle carries:
+
+```ts
+const Button = twc.button({ base: 'px-4' }, 'Button')
+const Link = twc(BaseLink, { base: 'underline' }, 'Link')
+```
+
+Whether that name ever reaches the DOM is decided at **runtime** by `configure({ enabled })` in
+`@ez-kit/twc` — off in production by default. The plugin only supplies the string, so it is safe
+to leave enabled in every build.
+
+## Install
+
+```bash
+pnpm add -D @ez-kit/babel-plugin-twc
+```
+
+`@babel/core >= 7` is a peer dependency. The package is **ESM-only**, which matters for how each
+bundler below refers to it.
+
+## Setup
+
+### Babel
+
+Wherever Babel already runs, the plugin only has to be named:
+
+```js
+// babel.config.js
+export default {
+	plugins: ['@ez-kit/babel-plugin-twc'],
+}
+```
+
+### Vite
+
+Babel is not part of Vite's pipeline by default — `@vitejs/plugin-react` is what runs it:
+
+```ts
+// vite.config.ts
+import twc from '@ez-kit/babel-plugin-twc'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+	plugins: [react({ babel: { plugins: [twc] } })],
+})
+```
+
+**Import the plugin instead of naming it.** The string form leaves resolution to Babel's `require`,
+which fails for an ESM-only package outside runtimes that support `require(esm)`; `vite.config.ts`
+is itself ESM, so a direct import always works.
+
+`@vitejs/plugin-react` transforms `/\.[tj]sx?$/` by default, so components declared in plain `.ts`
+files are covered. Widen its `include` if yours live somewhere else (`.mdx`, say).
+
+<Callout type='warn'>
+	**`@vitejs/plugin-react-swc` cannot run this plugin.** Its `plugins` option takes Wasm plugins for SWC, not Babel
+	ones. Either switch that app to `@vitejs/plugin-react`, or pass the name by hand: `twc.button({ base: 'px-4' },
+	'Button')`.
+</Callout>
+
+### Next.js
+
+Since **Next.js 16**, Turbopack runs Babel automatically when it finds a Babel config file — no
+`--webpack` flag, no opt-in beyond the file itself. SWC still handles Next's internal transforms
+and downleveling, so the Babel pass is additive:
+
+```js
+// babel.config.js
+module.exports = {
+	presets: ['next/babel'],
+	plugins: ['@ez-kit/babel-plugin-twc'],
+}
+```
+
+Three details decide whether this works:
+
+- **`next/babel` is required, not optional.** It is what teaches Babel TypeScript and JSX syntax;
+  without it the first `.tsx` file fails to parse — `Unexpected token, expected ","`.
+- **The file must be `babel.config.js` or `.babelrc`.** Next's Babel loader rejects `.cjs` and
+  `.mjs` outright: `The Next.js Babel loader does not support .mjs or .cjs config files.` In a
+  package with `"type": "module"`, write `.babelrc` (JSON) rather than reaching for `.mjs`.
+- **`node_modules` is excluded**, so a component library consumed as a package is not rewritten by
+  the app that imports it. Give the library its own build-time pass — see [tsup](#tsup--esbuild).
+
+Naming the plugin as a string is fine here: Next loads Babel configs from Node, which resolves an
+ESM-only plugin through `require(esm)` — enabled by default on Node ≥ 20.19 and ≥ 22.12.
+
+Running Next with `--webpack` also works, with the usual trade-off: a Babel config file makes
+webpack builds disable SWC entirely.
+
+### tsup / esbuild
+
+esbuild has no Babel step, so the pass has to be added as an esbuild plugin through tsup's
+`esbuildPlugins`. Babel here only needs to **parse** TS and JSX — esbuild still does the type
+stripping afterwards — so `parserOpts` is enough and no preset is needed:
+
+```ts
+// tsup.config.ts
+import { readFile } from 'node:fs/promises'
+
+import { transformAsync } from '@babel/core'
+import twc from '@ez-kit/babel-plugin-twc'
+import { defineConfig, type Options } from 'tsup'
+
+const twcPlugin: NonNullable<Options['esbuildPlugins']>[number] = {
+	name: 'twc',
+	setup(build) {
+		build.onLoad({ filter: /\.[jt]sx?$/ }, async ({ path }) => {
+			const source = await readFile(path, 'utf8')
+			const result = await transformAsync(source, {
+				filename: path,
+				babelrc: false,
+				configFile: false,
+				plugins: [twc],
+				parserOpts: { plugins: ['typescript', 'jsx'] },
+			})
+			return result?.code ? { contents: result.code } : null
+		})
+	},
+}
+
+export default defineConfig({
+	entry: ['src/index.ts'],
+	format: ['esm'],
+	esbuildPlugins: [twcPlugin],
+})
+```
+
+[`esbuild-plugin-babel`](https://www.npmjs.com/package/esbuild-plugin-babel) does the same in one
+line if you would rather take the dependency:
+
+```ts
+esbuildPlugins: [
+	babel({
+		filter: /\.[jt]sx?$/,
+		config: { plugins: [twc], parserOpts: { plugins: ['typescript', 'jsx'] }, babelrc: false, configFile: false },
+	}),
+]
+```
+
+This is the pass that matters for a **component library**: names baked in here survive into `dist`,
+where a consuming app's own Babel step would never reach them.
+
+### webpack
+
+A project with a `babel.config.js` needs nothing beyond that file — `babel-loader` picks it up.
+Without a config file, put the plugin in the loader options:
+
+```js
+// webpack.config.js
+module.exports = {
+	module: {
+		rules: [
+			{
+				test: /\.[jt]sx?$/,
+				exclude: /node_modules/,
+				use: {
+					loader: 'babel-loader',
+					options: {
+						plugins: ['@ez-kit/babel-plugin-twc'],
+					},
+				},
+			},
+		],
+	},
+}
+```
+
+`swc-loader` has the same limitation as `@vitejs/plugin-react-swc`: no Babel pass, no rewrite.
+
+## Rules
+
+1. The `twc` binding is resolved through the import from `@ez-kit/twc`, aliases included
+   (`import { twc as x }`). A `twc` from any other module — or a local variable of that name — is
+   ignored.
+2. Both call forms are matched: `twc.<tag>(config)` and `twc(Component, config)`.
+3. The name is injected only when the call is the initializer of a `const` or `let` declaration,
+   and is taken from that variable.
+4. **Idempotent.** A call that already carries a name argument is left untouched, so running the
+   plugin twice changes nothing — and a hand-written name always wins.
+
+## What it deliberately skips
+
+These forms have no variable name to lift, so the plugin leaves them alone — pass the name by hand
+if you want one:
+
+```js
+export default twc.div({ base: 'px-4' }) // default export
+;<Wrapper>{twc.div({})}</Wrapper> // used inline as a JSX child
+foo.bar = twc.div({ base: 'px-4' }) // assignment expression
+const Button = twc['button']({}) // computed member access
+```
+
+A call carrying an extra non-string argument (`twc.button({}, componentName)`) is also left as-is
+rather than rewritten into something invalid.
