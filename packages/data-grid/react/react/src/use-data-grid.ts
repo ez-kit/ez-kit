@@ -18,6 +18,7 @@ import type {
 	PaginationVariant,
 } from './types'
 import type {
+	ActionItem,
 	VisibilityConfig,
 	CreatingConfig,
 	DataTable,
@@ -93,15 +94,32 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	 * argument is the default reset the replacement calls when it still wants it.
 	 */
 	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
-	/** Rendered between Delete and Cancel. ReactElement or render-function. */
-	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+	/**
+	 * Custom entries rendered between Delete and Cancel, built from the current selection.
+	 *
+	 * The counterpart of `rowActions.actions`, and deliberately the same {@link ActionItem}
+	 * shape: an "Export" offered both per row and for the selection is written once, and the
+	 * kit gives it the same glyph, danger colour and disabled state in both places. It used to
+	 * be a `ReactElement` here, which meant hand-drawing a button that never quite matched the
+	 * kit's own Delete beside it.
+	 *
+	 * An entry's `onSelect` takes no arguments — the callback that built it already closes over
+	 * `selectedRows`, `table` and `clearSelection`.
+	 *
+	 * Arbitrary markup that is not an action — a bulk-target select, a counter — goes in the
+	 * `start` / `end` slots of `<DataGrid.SelectionBar>`, the way `<DataGrid.Toolbar>` takes
+	 * its own: config carries data, the compound component carries markup.
+	 *
+	 * Return `[]` for a selection that offers nothing.
+	 */
+	actions?: (args: SelectionBarCallbackArgs<TRow>) => ActionItem<ReactElement>[]
 }
 
 /**
  * React-layer selection config. Extends the headless core {@link SelectionConfig}
- * (`onChange`, `multi`) with the React-only `bar` — a selection info bar that is inherently
- * React (its `actions` are `ReactElement`s), so it lives only in this layer and is never passed
- * down to the core `selection` config.
+ * (`onChange`, `multi`) with the React-only `bar` — a selection info bar whose entries carry
+ * React icons, so it lives only in this layer and is never passed down to the core `selection`
+ * config.
  */
 export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig<TRow, ReactNode> & {
 	/**
@@ -134,8 +152,8 @@ export type NormalizedSelectionBarConfig<TRow extends object = any> = {
 	variant: ActionBarVariant
 	/** Replacement for the default clear behaviour, from `selection.bar.clear`. */
 	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
-	/** Extra bar content, from `selection.bar.actions`. */
-	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+	/** Custom action entries, from `selection.bar.actions`. */
+	actions?: (args: SelectionBarCallbackArgs<TRow>) => ActionItem<ReactElement>[]
 }
 
 /** Normalized virtualized config stored on the table instance. */

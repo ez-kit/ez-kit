@@ -14,6 +14,16 @@ export function SelectionBarInlineExample() {
 		setLog((prev) => [`${new Date().toLocaleTimeString()} — ${msg}`, ...prev].slice(0, 5))
 	}
 
+	// One action, two places: the row's overflow menu and the selection bar take the same entry
+	// shape, so it is written once here and each kit draws it with its own chrome.
+	const exportAction = (names: string[]) => ({
+		id: 'export',
+		label: 'Export',
+		onSelect: () => {
+			addLog(`Export triggered: ${names.join(', ')}`)
+		},
+	})
+
 	return (
 		<div>
 			<DataGrid
@@ -41,25 +51,9 @@ export function SelectionBarInlineExample() {
 							clearSelection()
 							addLog('Selection cleared')
 						},
-						actions: (
-							<button
-								type='button'
-								onClick={() => {
-									addLog('Export triggered')
-								}}
-								style={{
-									padding: '0 10px',
-									height: 28,
-									fontSize: 12,
-									border: '1px solid #e2e8f0',
-									borderRadius: 6,
-									background: 'white',
-									cursor: 'pointer',
-								}}
-							>
-								Export
-							</button>
-						),
+						// Data, not markup: the kit draws the button, so it matches the Delete beside it.
+						// The same entry shape `rowActions.actions` takes — see `exportAction` above.
+						actions: ({ selectedRows }) => [exportAction(selectedRows.map((row) => row.original.name))],
 					},
 				}}
 			/>

@@ -600,7 +600,7 @@ function TestConfirmDialog({ open, title, description, onConfirm, onCancel }: Co
 		</dialog>
 	)
 }
-function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
+function TestSelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
 	if (!open) return null
 	return (
 		<div
@@ -619,7 +619,20 @@ function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: 
 					Delete
 				</button>
 			)}
-			{actions}
+			{start}
+			{actions?.map((item) => (
+				<button
+					key={item.id}
+					type='button'
+					data-slot='selection-bar-action'
+					data-destructive={item.destructive === true ? '' : undefined}
+					disabled={item.disabled === true}
+					onClick={item.onSelect}
+				>
+					{item.label}
+				</button>
+			))}
+			{end}
 			<button
 				type='button'
 				onClick={onClear}

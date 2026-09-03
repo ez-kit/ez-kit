@@ -180,11 +180,15 @@ describe('<SelectionBar>', () => {
 		expect(args).toHaveProperty('clearSelection')
 	})
 
-	it('renders ReactElement actions when provided', () => {
+	it('renders the actions the config builds, with the selection in scope', async () => {
+		const user = userEvent.setup()
+		const onExport = vi.fn()
 		const table = makeTable({ selection: true })
 		setSelectionBarKey(table, {
 			variant: ActionBarVariant.Floating,
-			actions: <button type='button'>Export</button>,
+			actions: ({ selectedRows }) => [
+				{ id: 'export', label: `Export ${String(selectedRows.length)}`, onSelect: onExport },
+			],
 		})
 		table.setRowSelection({ '1': true })
 
@@ -193,14 +197,15 @@ describe('<SelectionBar>', () => {
 				<SelectionBar />
 			</Wrapper>,
 		)
-		expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument()
+		await user.click(screen.getByRole('button', { name: 'Export 1' }))
+		expect(onExport).toHaveBeenCalledOnce()
 	})
 
-	it('renders function actions when provided', () => {
+	it('carries an entry\u2019s destructive and disabled flags through to the kit', () => {
 		const table = makeTable({ selection: true })
 		setSelectionBarKey(table, {
 			variant: ActionBarVariant.Floating,
-			actions: () => <button type='button'>Export</button>,
+			actions: () => [{ id: 'purge', label: 'Purge', destructive: true, disabled: true, onSelect: () => {} }],
 		})
 		table.setRowSelection({ '1': true })
 
@@ -209,7 +214,41 @@ describe('<SelectionBar>', () => {
 				<SelectionBar />
 			</Wrapper>,
 		)
-		expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument()
+		const button = screen.getByRole('button', { name: 'Purge' })
+		expect(button).toBeDisabled()
+		expect(button).toHaveAttribute('data-destructive')
+	})
+
+	it('renders no action buttons when the callback returns an empty list', () => {
+		const table = makeTable({ selection: true })
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating, actions: () => [] })
+		table.setRowSelection({ '1': true })
+
+		render(
+			<Wrapper table={table}>
+				<SelectionBar />
+			</Wrapper>,
+		)
+		expect(screen.queryByTestId('selection-bar')?.querySelectorAll('[data-slot="selection-bar-action"]')).toHaveLength(
+			0,
+		)
+	})
+
+	it('renders the start and end slots around the kit\u2019s own controls', () => {
+		const table = makeTable({ selection: true })
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
+		table.setRowSelection({ '1': true })
+
+		render(
+			<Wrapper table={table}>
+				<SelectionBar
+					start={<span data-testid='bar-start'>start</span>}
+					end={<span data-testid='bar-end'>end</span>}
+				/>
+			</Wrapper>,
+		)
+		expect(screen.getByTestId('bar-start')).toBeInTheDocument()
+		expect(screen.getByTestId('bar-end')).toBeInTheDocument()
 	})
 
 	it('passes variant="floating" by default to DI component', () => {

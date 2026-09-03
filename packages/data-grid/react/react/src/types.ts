@@ -1,4 +1,4 @@
-import type { GridMenuProps } from './menu'
+import type { GridMenuItem, GridMenuProps } from './menu'
 import type {
 	BetweenInputType,
 	BetweenInputVariant,
@@ -18,7 +18,6 @@ import type {
 	InputHTMLAttributes,
 	KeyboardEventHandler,
 	MouseEventHandler,
-	ReactElement,
 	ReactNode,
 	RefAttributes,
 	TdHTMLAttributes,
@@ -619,8 +618,24 @@ export type SelectionBarProps = {
 	 * If user did not provide `onClear`, this calls `table.resetRowSelection()`.
 	 */
 	onClear: () => void
-	/** Already-resolved actions slot (ReactElement | undefined). */
-	actions?: ReactElement
+	/**
+	 * Custom action entries from `selection.bar.actions`, already resolved against the current
+	 * selection and namespaced. Rendered as buttons beside the built-in Delete, with the same
+	 * chrome the row-actions menu gives its entries: `icon` mapped through the kit's glyph map,
+	 * `destructive` in the kit's danger colour, `disabled` honoured.
+	 *
+	 * Absent when the bar config supplied none. An empty array is possible — the callback may
+	 * return `[]` for a selection that offers nothing — and renders no buttons.
+	 */
+	actions?: GridMenuItem[]
+	/**
+	 * Markup from the `start` / `end` slots of `<DataGrid.SelectionBar>`, rendered as-is at
+	 * either end of the bar's controls. This is the escape hatch for content that is not an
+	 * action — a bulk-target select, a counter — which `actions` deliberately cannot express.
+	 */
+	start?: ReactNode
+	/** See {@link SelectionBarProps.start}. */
+	end?: ReactNode
 }
 
 /**

@@ -41,9 +41,13 @@ export { GridMenuIcon, isGridMenuIcon } from './menu-icon'
 // System column IDs
 export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
 
+// One custom action entry — contributed per row (`rowActions.actions`) or for the whole
+// selection (`selection.bar.actions`), and rendered by the kit either way.
+export type { ActionItem } from './action-item'
+
 // Row actions (edit / delete / row-pin menu share the `__actions__` column)
 export { RowActionsVariant } from './features/row-actions'
-export type { RowActionsConfig, RowActionsContext, RowActionItem } from './features/row-actions'
+export type { RowActionsConfig, RowActionsContext } from './features/row-actions'
 
 // Types
 export type {

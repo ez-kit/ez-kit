@@ -6,10 +6,47 @@ import { X } from 'lucide-react'
 import { Button } from '@grid-shadcn/components/ui/button'
 import { cn } from '@grid-shadcn/lib/utils'
 
-import type { SelectionBarProps } from '@ez-kit/data-grid-react'
+import { renderActionIcon } from '../icons'
 
-export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
-	const hasActions = Boolean(onDelete) || Boolean(actions)
+import type { GridMenuItem, SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
+
+/**
+ * One `selection.bar.actions` entry as a button, matching the built-in Delete beside it: the
+ * kit's glyph for a named icon, its danger colour for a destructive entry, its disabled state.
+ * This is what the config buys over hand-drawn markup.
+ */
+function ActionButton({ item }: { item: GridMenuItem }) {
+	const icon = renderActionIcon(item.icon)
+
+	return (
+		<Button
+			variant={item.destructive === true ? 'destructive' : 'outline'}
+			size='sm'
+			disabled={item.disabled === true}
+			data-slot='selection-bar-action'
+			onClick={item.onSelect}
+		>
+			{icon}
+			{item.label}
+		</Button>
+	)
+}
+
+/** The entries as buttons — `undefined` when the bar was given none, so separators can tell. */
+function renderActions(actions: GridMenuItem[] | undefined): ReactNode {
+	if (actions === undefined || actions.length === 0) return null
+	return actions.map((item) => (
+		<ActionButton
+			key={item.id}
+			item={item}
+		/>
+	))
+}
+
+export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
+	const actionButtons = renderActions(actions)
+	const hasActions = Boolean(onDelete) || actionButtons !== null || start !== undefined || end !== undefined
 
 	if (variant === ActionBarVariant.Inline) {
 		if (!open) return null
@@ -31,6 +68,8 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 				</div>
 
 				<div className='ml-auto flex items-center gap-2'>
+					{start}
+
 					{onDelete && (
 						<Button
 							variant='destructive'
@@ -41,7 +80,9 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 						</Button>
 					)}
 
-					{actions}
+					{actionButtons}
+
+					{end}
 
 					<Button
 						variant='ghost'
@@ -98,6 +139,8 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 					/>
 				)}
 
+				{start}
+
 				{/* Delete — only when handler provided */}
 				{onDelete && (
 					<Button
@@ -109,8 +152,10 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 					</Button>
 				)}
 
-				{/* Custom actions slot */}
-				{actions}
+				{/* Custom actions — `selection.bar.actions`, rendered by this kit */}
+				{actionButtons}
+
+				{end}
 
 				{/* Separator before Cancel */}
 				<div
