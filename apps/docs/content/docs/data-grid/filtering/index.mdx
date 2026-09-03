@@ -1,6 +1,6 @@
 ---
 title: Filtering
-description: Filter grid rows by column — basic per-column filtering with a default popover UI.
+description: Filter grid rows by column — what a filter matches, how a column opts in, and every option the feature takes.
 ---
 
 # Filtering
@@ -9,17 +9,14 @@ Filtering narrows the visible rows by matching column values against user input.
 
 ## Usage
 
-Base behavior — per-column filter inputs:
+`filtering` on the grid opts every column in, with the control rendered inline in the header — the
+default of three presentations, all of which are on [Variants](/docs/data-grid/filtering/variants).
 
 <DataGridDocsExample exampleId='base-filtering' />
 
-A filter icon appears in each column header. Click it to open a popover with the filter input; the icon turns the primary colour while a filter is active.
-
-<DataGridDocsExample exampleId='filter-popover-basic' />
-
-Opt columns into richer comparisons with `filtering: { operators }` — text operators like _contains_ / _equals_ / _is empty_, a `between` slider for numbers, and date-aware operators. The popover then renders an operator selector above the input.
-
-<DataGridDocsExample exampleId='filter-popover-operators' />
+Opt columns into richer comparisons with `filtering: { operators }` — text operators like _contains_
+/ _equals_ / _is empty_, a `between` slider for numbers, and date-aware operators. `initialState`
+seeds the filters the grid opens with:
 
 ```tsx
 <DataGrid
@@ -38,7 +35,7 @@ Opt columns into richer comparisons with `filtering: { operators }` — text ope
 
 | Option      | Type                                                 | Description                                                                                                                                                                                             |
 | ----------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variant`   | `'inline' \| 'popover' \| 'panel'`                   | Display variant for column filter controls. Default `'inline'`.                                                                                                                                         |
+| `variant`   | `'inline' \| 'popover' \| 'panel'`                   | Where every column's filter control renders — see [Variants](/docs/data-grid/filtering/variants). Default `'inline'`.                                                                                   |
 | `manual`    | `boolean`                                            | Disable client-side column filtering (and global filter). The grid calls `onChange` instead.                                                                                                            |
 | `operators` | `FilterOperatorDef[]`                                | Table-level custom operators (or built-in overrides), referenced by column items — see [Operators](/docs/data-grid/filtering/operators).                                                                |
 | `faceted`   | `boolean`                                            | Enable faceted row models (unique values + counts) for multi-select filters. Default `false`.                                                                                                           |
@@ -64,8 +61,9 @@ Filterable columns pick their default operator set from `cell.type` — every bu
 
 ## See also
 
+- [Variants](/docs/data-grid/filtering/variants) — inline, popover and panel, side by side
 - [Operators](/docs/data-grid/filtering/operators) — switch between equals / contains / between / etc.
-- [Filter panel](/docs/data-grid/filtering/panel) — opt into a side-panel filter UI
+- [Filter panel](/docs/data-grid/filtering/panel) — the panel variant in full
 - [Date range](/docs/data-grid/filtering/date-range) · [Multi-value](/docs/data-grid/filtering/multi-value)
 - [Global filtering](/docs/data-grid/filtering/global) — single search box across all columns
 

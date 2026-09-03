@@ -73,6 +73,7 @@ export const DocPage = {
 	FilteringMultiValue: 'content/docs/data-grid/filtering/multi-value.mdx',
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringPanel: 'content/docs/data-grid/filtering/panel.mdx',
+	FilteringVariants: 'content/docs/data-grid/filtering/variants.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
 	FormLayout: 'content/docs/form/layout.mdx',
@@ -589,6 +590,17 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{
 				heading: 'Built-in operators',
 				reason: 'Lists operator ids (`contains`, `between`, …) — filter values, not keys of any config type.',
+			},
+		],
+	},
+	{
+		page: DocPage.FilteringVariants,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 2 }],
+		nonOptionTables: [
+			{
+				heading: 'Filter Variants',
+				reason:
+					"First column holds `variant` *values* ('inline', 'popover', 'panel'), one row each, not keys of a config object.",
 			},
 		],
 	},
