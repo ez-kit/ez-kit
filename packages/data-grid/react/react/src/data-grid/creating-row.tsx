@@ -10,6 +10,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { ActionsCellState } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
+import { getVisualLeafColumns } from '../utils/visual-column-order'
 
 import { flexRender } from './flex-render'
 import { useDataGridState, useDataGridTable } from './table-context'
@@ -48,7 +49,7 @@ export function CreatingRow() {
 			data-slot='tr'
 			data-creating-row
 		>
-			{table.getVisibleLeafColumns().map((col) => {
+			{getVisualLeafColumns(table).map((col) => {
 				const meta = col.columnDef.meta
 				const pinVars = getCommonPinStyles(col)
 				const pinned = col.getIsPinned()

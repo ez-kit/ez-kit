@@ -1,6 +1,6 @@
 'use client'
 
-import { DataGrid, useDataGridState, useDataGridTable } from '@ez-kit/data-grid-react'
+import { DataGrid, getVisualLeafColumns, useDataGridState, useDataGridTable } from '@ez-kit/data-grid-react'
 import { Table as HeroTable, cn } from '@heroui/react'
 import { Children, createContext, Fragment, isValidElement, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -203,13 +203,15 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
  * "A table must have at least one Column with the isRowHeader prop set to true".
  *
  * The first visible non-system column is the same one the old scan found, and the column model
- * cannot be hidden behind a component boundary.
+ * cannot be hidden behind a component boundary. It is read in *visual* order, so pinning a
+ * column moves the row header with it rather than leaving it on whatever column was declared
+ * first.
  */
 function useRowHeaderId(): string | undefined {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
-	for (const column of table.getVisibleLeafColumns()) {
+	for (const column of getVisualLeafColumns(table)) {
 		if (column.columnDef.meta?.isSystemColumn === true) continue
 		return column.id
 	}

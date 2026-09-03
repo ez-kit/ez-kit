@@ -212,6 +212,7 @@ export type { DataGridDefaultOptions, DataGridOptionsProviderProps } from './dat
 // Utilities
 export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
+export { getVisualLeafColumns } from './utils/visual-column-order'
 
 // UI-kit component contracts
 export type {
