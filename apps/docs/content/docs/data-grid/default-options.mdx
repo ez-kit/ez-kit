@@ -96,7 +96,7 @@ export const { DataGrid, useDataGrid } = createDataGrid({
 
 ## Merge semantics
 
-Options are combined with an **immutable, per-feature deep merge** ([`utils/deep-merge.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/utils/deep-merge.ts)):
+Options are combined with an **immutable, per-feature deep merge** ([`utils/deep-merge.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/utils/deep-merge.ts)):
 
 - Nested config objects combine — `pagination: true` from defaults plus `pagination: { pageSize: 20 }` at the call site resolve together.
 - Arrays, atomics, and React elements **replace** wholesale — they are not merged element-by-element.
@@ -161,5 +161,5 @@ no business performing it.
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid-options-context.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid-options-context.tsx)
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/create-data-grid.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/create-data-grid.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid-options-context.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid-options-context.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/create-data-grid.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/create-data-grid.tsx)

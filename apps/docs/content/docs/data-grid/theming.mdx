@@ -14,7 +14,7 @@ The data grid does **not** prescribe a theme. Each UI-kit flavor exposes a styli
 The shared React package (`@ez-kit/data-grid-react`) emits a stable set of `data-*` attributes on its semantic elements. Flavors target those attributes in CSS. Your app overrides flavor tokens in its own CSS.
 
 ```css
-/* in your app's CSS, after importing the flavor's global.css */
+/* in your app's CSS, after importing the flavor's styles.css */
 :root {
 	--dg-row-hover: oklch(98% 0 0);
 	--dg-header-text: var(--color-foreground);
@@ -23,10 +23,10 @@ The shared React package (`@ez-kit/data-grid-react`) emits a stable set of `data
 
 ## Where to look
 
-| Flavor | Token source                                                                                                                                       | Selectors                                                                          |
-| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| shadcn | [`packages/data-grid/react/shadcn/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/global.css) | `[data-slot="table"]`, `[data-slot="row"]`, `[data-pinned]`, `[data-sticky]`, etc. |
-| HeroUI | [`packages/data-grid/react/heroui/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/global.css) | Same `data-*` attributes; HeroUI tokens.                                           |
+| Flavor | Token source                                                                                                                                  | Selectors                                                                          |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| shadcn | [`packages/data-grid/react/shadcn/src/styles.css`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/shadcn/src/styles.css) | `[data-slot="table"]`, `[data-slot="row"]`, `[data-pinned]`, `[data-sticky]`, etc. |
+| HeroUI | [`packages/data-grid/react/heroui/src/styles.css`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/heroui/src/styles.css) | Same `data-*` attributes; HeroUI tokens.                                           |
 
 ## Rules
 
@@ -40,5 +40,5 @@ The shared React package (`@ez-kit/data-grid-react`) emits a stable set of `data
 
 ## Source
 
-- shadcn — [`packages/data-grid/react/shadcn/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/global.css)
-- HeroUI — [`packages/data-grid/react/heroui/src/global.css`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/global.css)
+- shadcn — [`packages/data-grid/react/shadcn/src/styles.css`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/shadcn/src/styles.css)
+- HeroUI — [`packages/data-grid/react/heroui/src/styles.css`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/heroui/src/styles.css)
