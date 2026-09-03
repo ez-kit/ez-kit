@@ -165,7 +165,7 @@ export function Th({ pinned, className, ...props }: ThProps) {
 
 export function Td({ pinned, className, style, ...props }: TdProps) {
 	const inFooter = useContext(FooterContext)
-	// Rows are CSS grids (see global.css "grid column model"), and `colSpan` means nothing to a
+	// Rows are CSS grids (see styles.css "grid column model"), and `colSpan` means nothing to a
 	// grid item — a full-width fallback cell would sit in the first track. Span it explicitly,
 	// the same way the shadcn kit's Td does. `colSpan` itself stays on the element for a11y.
 	const { colSpan } = props

@@ -61,7 +61,7 @@ function keepBarMounted(event: Event) {
  * Built on the same `ActionBar` primitive as `SelectionBar`, so the two are identical in
  * height, padding, surface and elevation — they are the *same* bar, and only one of them is
  * ever mounted. What changes is the content, not the furniture. The root `data-slot` is
- * `draft-bar` rather than `action-bar`; `global.css` gives it the same entrance animation.
+ * `draft-bar` rather than `action-bar`; `styles.css` gives it the same entrance animation.
  *
  * While a draft is pending the selection stands down to a non-interactive count chip:
  * applying a query can drop the selected rows out of the result set, so any bulk action
