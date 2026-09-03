@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/form-react",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Framework-agnostic React adapter for @ez-kit/form — DI field layer with zero visual styling.",
 	"license": "MIT",
 	"repository": {

@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/store-core",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"description": "Shared foundation for the @ez-kit store packages: store ids, service registry, plugin contract and the manager-agnostic instance cache.",
 	"license": "MIT",
 	"repository": {
