@@ -47,7 +47,7 @@ A store-group handle from `createCachedStore` exposes:
 	useShallowSelector //  } same semantics as createContextStore, under the store-group Provider
 	useStore //  }
 	Item // /
-	fromCache({ path?, id }) // imperative get-if-alive → StoreApi | undefined (never creates)
+	getFromCache({ path?, id }) // imperative get-if-alive → StoreApi | undefined (never creates)
 	useFromCache({ path?, id }, sel) // reactive, passive cross-tree read
 	remove({ path?, id }) // remove this group's entry
 }
@@ -147,12 +147,12 @@ Multiple `Provider`s with the same `id` share one store (live-sync). The `Provid
 
 Reads address the **absolute** `{ path, id }` (`path` defaults to `[]` root). Writes inherit their path from `Scope`; reads state it explicitly.
 
-### `fromCache({ path, id })`
+### `getFromCache({ path, id })`
 
 Imperative, returns the live `StoreApi` or `undefined`. Never creates an entry and never affects lifecycle. Use it in event handlers, actions, or non-React code:
 
 ```ts
-usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ page: 2 })
+usersTable.getFromCache({ path: ['page-1'], id: 'users' })?.setState({ page: 2 })
 ```
 
 ### `useFromCache({ path, id }, selector)`
@@ -209,10 +209,10 @@ function CachePanel({ customerId }: { customerId: string }) {
 ## Gotchas
 
 - **`createCachedStore` names must be unique within a cache.** The `name` is the group's namespace and shows up in `useCache().keys()`; two groups sharing a name under the same `CacheProvider` would collide on one keyspace. In development, the library emits a `console.warn` on the second call — a frequent symptom of calling `createCachedStore` inside a render.
-- **Don't mount two `<cache.Provider>` for the same cache.** Imperative access via `fromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. In development, the library emits a `console.warn` when this happens.
+- **Don't mount two `<cache.Provider>` for the same cache.** Imperative access via `getFromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. In development, the library emits a `console.warn` when this happens.
 - **`alwaysCache` + dynamic keys or paths leaks.** Pinned entries under unbounded keys (`order-${id}`) or paths never evict. Use `alwaysCache` only for a small, fixed set; rely on `gcTime` for dynamic ones, and `clear(path)` to drop a subtree on navigation.
-- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` take `{ path, id }` and default `path` to `[]`. A read with the wrong path silently misses.
+- **Reads use the absolute path.** `getFromCache`/`useFromCache`/`remove` take `{ path, id }` and default `path` to `[]`. A read with the wrong path silently misses.
 - **`useFromCache` is passive.** After the owning `Provider` unmounts and `gcTime` elapses, the store is evicted and the reader sees `undefined`. Use `alwaysCache`/`gcTime` if a reader must keep it alive.
-- **Imperative access needs a mounted `cache.Provider`.** `fromCache`/`remove` target the active client cache; with multiple `cache.Provider`s, prefer `useCache()` inside the tree.
+- **Imperative access needs a mounted `cache.Provider`.** `getFromCache`/`remove` target the active client cache; with multiple `cache.Provider`s, prefer `useCache()` inside the tree.
 - **Prefer the URL for "prepare then navigate".** To open a page with pre-set state, carry intent in the URL/route and seed via `defaultValue` rather than setting a cold store before it mounts.
-- **Client-only.** On the server the store-group `Provider` is ephemeral (seeded per request) and `fromCache` returns `undefined`.
+- **Client-only.** On the server the store-group `Provider` is ephemeral (seeded per request) and `getFromCache` returns `undefined`.

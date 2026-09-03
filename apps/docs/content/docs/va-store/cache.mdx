@@ -86,7 +86,7 @@ Each `<Provider>` is counted as an observer. When the **last** one unmounts, the
 
 The group exposes two cross-tree reads at an address `({ path?, id })`. Neither ever **creates** an entry, and neither keeps one alive.
 
-### `fromCache({ path, id })` — imperative
+### `getFromCache({ path, id })` — imperative
 
 An imperative get-if-alive that returns the live proxy or `undefined`. Use it in event handlers or non-React code:
 
@@ -95,7 +95,7 @@ function ResetButton() {
 	return (
 		<button
 			onClick={() => {
-				const live = usersTable.fromCache({ id: 'users' })
+				const live = usersTable.getFromCache({ id: 'users' })
 				if (live) {
 					live.filter = 'all'
 					live.page = 1

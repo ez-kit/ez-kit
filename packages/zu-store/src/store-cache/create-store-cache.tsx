@@ -19,7 +19,7 @@ export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider'
 
 const MULTIPLE_PROVIDERS_WARNING =
 	'[zu-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
-	'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.'
+	'Imperative access via getFromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
 /** The instance type this cache stores: any Zustand vanilla store. */
 type AnyStore = StoreApi<unknown>
@@ -59,7 +59,7 @@ export type CachedStoreGroup<TStore extends AnyStore, TDefaultValue extends obje
 	 */
 	Subscribe: <TSelected>(props: CachedSubscribeProps<TStore, TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live store or `undefined`. Never creates. */
-	fromCache: (target: CacheAddress) => TStore | undefined
+	getFromCache: (target: CacheAddress) => TStore | undefined
 	/** Reactive, passive cross-tree read at `(path, id)`. Does not keep the store alive. */
 	useFromCache: <TSelected>(
 		target: CacheAddress,
@@ -139,8 +139,8 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			)
 		}
 
-		function fromCache(target: CacheAddress): TStore | undefined {
-			return group.fromCache(target) as TStore | undefined
+		function getFromCache(target: CacheAddress): TStore | undefined {
+			return group.getFromCache(target) as TStore | undefined
 		}
 
 		function useFromCache<TSelected>(
@@ -162,7 +162,7 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			useShallowSelector,
 			useStore,
 			Subscribe,
-			fromCache,
+			getFromCache,
 			useFromCache,
 			remove,
 		}

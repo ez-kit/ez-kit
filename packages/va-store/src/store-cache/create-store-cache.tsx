@@ -23,7 +23,7 @@ export const MISSING_CACHE_PROVIDER = 'Missing CacheProvider'
 
 const MULTIPLE_PROVIDERS_WARNING =
 	'[va-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
-	'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.'
+	'Imperative access via getFromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
 /** Render-prop argument for a cached group `Subscribe`: `snap` for reads, `store` (raw proxy) for writes. */
 export type CachedSubscribeRenderArg<TState extends object> = {
@@ -58,7 +58,7 @@ export type CachedStoreGroup<TState extends object, TDefaultValue extends object
 	 */
 	Store: (props: CachedStoreProps<TState>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live proxy or `undefined`. Never creates. */
-	fromCache: (target: CacheAddress) => TState | undefined
+	getFromCache: (target: CacheAddress) => TState | undefined
 	/**
 	 * Reactive, passive cross-tree read at `(path, id)`. The selector receives the entry's snapshot,
 	 * or `undefined` when no entry is live. Never creates an entry and never keeps one alive.
@@ -119,8 +119,8 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 			return children(useStore())
 		}
 
-		function fromCache(target: CacheAddress): TState | undefined {
-			return group.fromCache(target) as TState | undefined
+		function getFromCache(target: CacheAddress): TState | undefined {
+			return group.getFromCache(target) as TState | undefined
 		}
 
 		function useFromCache<TSelected>(
@@ -140,7 +140,7 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 			useStore,
 			Subscribe,
 			Store,
-			fromCache,
+			getFromCache,
 			useFromCache,
 			remove,
 		}

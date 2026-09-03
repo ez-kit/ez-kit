@@ -11,6 +11,8 @@ description: Keep context-store instances alive across Provider unmount/remount 
 
 The package ships a **ready-made default cache** — import `CacheProvider` and `createCachedStore` directly and you are done; no instance to create. This page uses the default cache throughout. If you need an isolated cache or several independent caches, see [Custom or multiple caches](#custom-or-multiple-caches) at the end.
 
+This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./store-cache/api).
+
 ## Keep-alive in action
 
 Switch to **Away** (the table unmounts) and back — the filter and page are preserved. The badge reads the same store from outside the table via `useFromCache`.
@@ -124,7 +126,7 @@ To open a page with pre-set state, drive it from the URL and seed from there, ra
 
 Reads are addressed by the **absolute** `{ path, id }` — `path` defaults to `[]` (root) when omitted. Writes inherit their path from `Scope`; reads, being "from elsewhere", state it explicitly.
 
-### `fromCache({ path, id })` — imperative
+### `getFromCache({ path, id })` — imperative
 
 Returns the live `StoreApi` or `undefined`. Never creates an entry. Use it in event handlers, actions, or non-React code:
 
@@ -133,7 +135,7 @@ Returns the live `StoreApi` or `undefined`. Never creates an entry. Use it in ev
 function ResetButton() {
 	return (
 		<button
-			onClick={() => usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'all', page: 1 })}
+			onClick={() => usersTable.getFromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'all', page: 1 })}
 		>
 			Reset
 		</button>
@@ -143,7 +145,7 @@ function ResetButton() {
 // A WebSocket pushing rows into the live store:
 socket.on('row', (row) =>
 	usersTable
-		.fromCache({ path: ['page-1'], id: 'users' })
+		.getFromCache({ path: ['page-1'], id: 'users' })
 		?.getState()
 		.addRow(row),
 )
@@ -177,7 +179,7 @@ Different groups never collide, even on the same key — the group `name` is the
 const usersTable = createCachedStore(usersFactory, { name: 'users' })
 const ordersTable = createCachedStore(ordersFactory, { name: 'orders' })
 
-usersTable.fromCache({ id: 'main' }) // ≠ ordersTable.fromCache({ id: 'main' })
+usersTable.getFromCache({ id: 'main' }) // ≠ ordersTable.getFromCache({ id: 'main' })
 ```
 
 ## Namespacing with `Scope`
@@ -395,50 +397,9 @@ function CustomerDetailPage({ customerId }: { customerId: string }) {
 
 For a single entry rather than a subtree, use the group's `remove({ path, id })`.
 
-## API
-
-The default cache is exposed as top-level exports — use these for the common one-cache-per-app case, no factory call required:
-
-```ts
-import {
-	CacheProvider, // mount once; owns the cache storage for its React tree
-	CacheScope, // contributes inherited path segments to descendant Providers
-	useCache, // () => { keys(prefix?), clear(prefix?) }
-	useCacheKeys, // (prefix?) => CacheRecord[] — reactive: re-renders on membership change
-	createCachedStore, // (factory, { name, gcTime? }) => StoreGroup
-	toTree, // pure utility: (records) => CacheTree
-} from '@ez-kit/zu-store'
-
-type CacheRecord = { path: string[]; name: string; id: string }
-```
-
-`Cache`-qualified names are used only where the bare member name would be too generic at package scope (`Provider`→`CacheProvider`, `Scope`→`CacheScope`). `useCache`, `useCacheKeys`, and `createCachedStore` are already specific and keep their names. `toTree` is a standalone pure function — it takes any coordinate list (e.g. the output of `keys()` or `useCacheKeys()`, or an array you assembled by hand for a test) and returns the nested view. For a reactive nested view, compose `toTree(useCacheKeys(prefix?))` at the call site.
-
-### `CacheScope`
-
-Contributes path segments to every descendant store-group `Provider`. Takes a `path: string[]`; nested `Scope`s concatenate (outermost first). Reusable components stay location-agnostic — the surrounding `Scope` decides their namespace.
-
-### `CacheProvider`
-
-Owns the real storage, created per React tree — so SSR requests and tests are isolated by construction. Mount it once above your store groups; unmounting it drops the whole cache. Using a group hook/provider without a `CacheProvider` ancestor throws `Missing StoreCacheProvider for createStoreCache`.
-
-### `createCachedStore(factory, options)`
-
-Returns a store group. `options.name` is the group's namespace (visible in `useCache().keys()`), is required, and must be unique within a cache. `options.gcTime` overrides the cache default for this group.
-
-The returned group exposes:
-
-| Member                                                          | Purpose                                                                                        |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `Provider`                                                      | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.           |
-| `useSelector` / `useShallowSelector` / `useStore` / `Subscribe` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`. |
-| `fromCache({ path?, id })`                                      | Imperative get-if-alive → `StoreApi` or `undefined`.                                           |
-| `useFromCache({ path?, id }, selector)`                         | Reactive, passive cross-tree read.                                                             |
-| `remove({ path?, id })`                                         | Drop one entry immediately.                                                                    |
-
 ## Server-side rendering
 
-The feature is client-only. On the server the group `Provider` behaves like `createContextStore` — a fresh store per request, seeded from `defaultValue` — and `fromCache` returns `undefined`. Because storage lives inside `CacheProvider` (per render tree), there is no cross-request leakage.
+The feature is client-only. On the server the group `Provider` behaves like `createContextStore` — a fresh store per request, seeded from `defaultValue` — and `getFromCache` returns `undefined`. Because storage lives inside `CacheProvider` (per render tree), there is no cross-request leakage.
 
 ## Custom or multiple caches
 
@@ -474,13 +435,13 @@ function App() {
 }
 ```
 
-A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `Missing StoreCacheProvider for createStoreCache`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useCacheKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
+A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `Missing StoreCacheProvider`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useCacheKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
 
 ## Gotchas
 
-- **Reads use the absolute path.** `fromCache`/`useFromCache`/`remove` address `{ path, id }` from outside, so pass the full resolved path (it defaults to `[]` root). A read with the wrong path silently misses.
+- **Reads use the absolute path.** `getFromCache`/`useFromCache`/`remove` address `{ path, id }` from outside, so pass the full resolved path (it defaults to `[]` root). A read with the wrong path silently misses.
 - **`alwaysCache` + dynamic keys or paths leaks.** Pinned entries under unbounded keys (`order-${id}`) or unbounded paths never evict. Use `alwaysCache` only for a small, fixed set; rely on `gcTime` for dynamic ones, and `clear(path)` to drop a subtree on navigation.
 - **`useFromCache` is passive.** It will not keep a store alive on its own.
 - **Imperative access needs a mounted `CacheProvider`.** With multiple `CacheProvider`s, the active one is ambiguous — prefer `useCache()` inside the tree.
 - **Group names must be unique within a cache.** Two groups sharing a name under the same `CacheProvider` collide on one keyspace. The library emits a `console.warn` in development if `createCachedStore` is called twice with the same name on the same cache — usually a sign of `createCachedStore` being invoked inside a render.
-- **Don't mount two `<CacheProvider>` for the same cache.** Imperative access via `fromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. The library emits a `console.warn` in development to make the collision visible at the moment it happens.
+- **Don't mount two `<CacheProvider>` for the same cache.** Imperative access via `getFromCache`/`remove` targets the most recently activated cache and is ambiguous when both are mounted. The library emits a `console.warn` in development to make the collision visible at the moment it happens.

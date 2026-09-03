@@ -104,7 +104,7 @@ export type CachedStoreGroup<TInstance extends object, TDefaultValue extends obj
 	useInstance: () => TInstance
 	Subscribe: <TSelected>(props: CachedSubscribeProps<TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live instance or `undefined`. Never creates. */
-	fromCache: (target: CacheAddress) => TInstance | undefined
+	getFromCache: (target: CacheAddress) => TInstance | undefined
 	/** Reactive, passive cross-tree read at `(path, id)`. Snapshot is `undefined` when no live entry. */
 	useFromCache: <TSelected>(target: CacheAddress, selector: (snap: unknown) => TSelected) => TSelected
 	/** Remove this group's entry at `(path, id)` immediately. */
@@ -173,7 +173,7 @@ export function createCacheReact<TInstance extends object>(
 		const cache = cacheRef.current
 
 		useEffect(() => {
-			// Imperative access (fromCache/remove) is client-only; the cache never becomes "active" on the server.
+			// Imperative access (getFromCache/remove) is client-only; the cache never becomes "active" on the server.
 			if (typeof window === 'undefined') return
 			if (IS_DEV && multipleProvidersMessage && activeCache.current !== null && activeCache.current !== cache) {
 				console.warn(multipleProvidersMessage)
@@ -304,7 +304,7 @@ export function createCacheReact<TInstance extends object>(
 			)
 		}
 
-		function fromCache(target: CacheAddress): TInstance | undefined {
+		function getFromCache(target: CacheAddress): TInstance | undefined {
 			return activeCache.current?.getInstance(toStoreId(target, name)) as TInstance | undefined
 		}
 
@@ -328,7 +328,7 @@ export function createCacheReact<TInstance extends object>(
 			activeCache.current?.remove(toStoreId(target, name))
 		}
 
-		return { Provider, useSelector, useInstance: useGroupInstance, Subscribe, fromCache, useFromCache, remove }
+		return { Provider, useSelector, useInstance: useGroupInstance, Subscribe, getFromCache, useFromCache, remove }
 	}
 
 	return { Provider, Scope, useCache, useCacheKeys, createCachedStore }

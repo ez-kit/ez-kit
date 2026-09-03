@@ -102,7 +102,7 @@ describe('valtio createStoreCache — surface', () => {
 
 		// `useSnapshot()` yields the readonly snapshot — a distinct object from the live cached proxy that
 		// `useStore()` returns. Under the old semantics `useStore()` handed back that same proxy.
-		expect(raw).toBe(form.fromCache({ id: 'main' }))
+		expect(raw).toBe(form.getFromCache({ id: 'main' }))
 		expect(snapshot).not.toBe(raw)
 		expect(snapshot?.name).toBe('seed')
 	})
@@ -296,7 +296,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			/>,
 		)
 		expect(screen.getByTestId('name')).toHaveTextContent('first')
-		const live = form.fromCache({ id: 'form' })
+		const live = form.getFromCache({ id: 'form' })
 
 		rerender(
 			<App
@@ -312,7 +312,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 		)
 
 		expect(screen.getByTestId('name')).toHaveTextContent('first')
-		expect(form.fromCache({ id: 'form' })).toBe(live)
+		expect(form.getFromCache({ id: 'form' })).toBe(live)
 	})
 
 	it('seeds a fresh proxy from defaultValue after the entry is evicted', async () => {
@@ -355,7 +355,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 		await act(async () => {
 			await new Promise((resolve) => setTimeout(resolve, PAST_GC_TIME))
 		})
-		expect(form.fromCache({ id: 'form' })).toBeUndefined()
+		expect(form.getFromCache({ id: 'form' })).toBeUndefined()
 
 		// Remount: the entry is gone, so the new defaultValue seeds a fresh proxy.
 		rerender(
@@ -464,7 +464,7 @@ describe('valtio createStoreCache — useFromCache', () => {
 		)
 
 		expect(screen.getByTestId('badge')).toHaveTextContent(NO_ENTRY)
-		expect(form.fromCache({ id: 'main' })).toBeUndefined()
+		expect(form.getFromCache({ id: 'main' })).toBeUndefined()
 	})
 })
 
@@ -491,7 +491,7 @@ describe('valtio createStoreCache — SSR ephemerality', () => {
 		)
 
 		expect(html).toContain('server-seed')
-		expect(form.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(form.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
 	})
 
 	it('does not share state across separate server renders', () => {

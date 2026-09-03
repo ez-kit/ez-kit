@@ -52,7 +52,7 @@ const [name, setName] = useStoreState(formStore, 'name')
 
 Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by `(path, name, id)`, in memory (no `localStorage`). Useful for preserving table filters, pagination, etc. between page navigations. `createContextStore` is left untouched — this is a separate, opt-in primitive.
 
-The package ships a **ready-made default cache**: import `CacheProvider` and `createCachedStore` directly — no instance to create. `createCachedStore(factory, { name })` returns a namespaced store group with `Provider`, the usual read hooks, plus `fromCache`, `useFromCache`, and `remove`. The `path` is inherited from `<CacheScope>`, so reusable components stay collision-free across mount locations.
+The package ships a **ready-made default cache**: import `CacheProvider` and `createCachedStore` directly — no instance to create. `createCachedStore(factory, { name })` returns a namespaced store group with `Provider`, the usual read hooks, plus `getFromCache`, `useFromCache`, and `remove`. The `path` is inherited from `<CacheScope>`, so reusable components stay collision-free across mount locations.
 
 ```tsx
 import { CacheProvider, CacheScope, createCachedStore } from '@ez-kit/zu-store'
@@ -76,7 +76,7 @@ const usersTable = createCachedStore(
 </CacheProvider>
 
 // imperatively, from anywhere — address the absolute { path, id }
-usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'archived' })
+usersTable.getFromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'archived' })
 ```
 
 Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useCacheKeys`, `cache.createCachedStore`).
