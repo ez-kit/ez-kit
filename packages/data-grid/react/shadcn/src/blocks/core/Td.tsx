@@ -1,4 +1,4 @@
-import { TableCell } from '../../components/ui/table'
+import { TableCell } from '@grid-shadcn/components/ui/table'
 
 import type { TdProps } from '@ez-kit/data-grid-react'
 

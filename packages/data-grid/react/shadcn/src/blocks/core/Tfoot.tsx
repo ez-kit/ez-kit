@@ -1,4 +1,4 @@
-import { TableFooter } from '../../components/ui/table'
+import { TableFooter } from '@grid-shadcn/components/ui/table'
 
 import type { TfootProps } from '@ez-kit/data-grid-react'
 

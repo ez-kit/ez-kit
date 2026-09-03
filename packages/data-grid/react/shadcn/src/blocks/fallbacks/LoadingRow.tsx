@@ -1,5 +1,5 @@
-import { Skeleton } from '../../components/ui/skeleton'
-import { TableCell, TableRow } from '../../components/ui/table'
+import { Skeleton } from '@grid-shadcn/components/ui/skeleton'
+import { TableCell, TableRow } from '@grid-shadcn/components/ui/table'
 
 import type { LoadingRowProps } from '@ez-kit/data-grid-react'
 

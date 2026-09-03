@@ -2,9 +2,9 @@
 
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 
-import { Button } from '../../components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Button } from '@grid-shadcn/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 
 import type { SortDirection, SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
 

@@ -5,23 +5,35 @@ description: Install the data grid for a shadcn-based React app — packages, CS
 
 # Install for shadcn
 
-## 1. Install packages
+This flavor follows the [shadcn registry](https://ui.shadcn.com/docs/registry) model: the CLI
+copies the source into your project instead of installing a versioned npm package. You end up
+owning the code — free to read, diff, and edit it — the same way you own any other shadcn
+component.
+
+## 1. Add the registry item
 
 ```bash
-pnpm add @ez-kit/data-grid-shadcn
+npx shadcn@latest add https://ez-kit.dev/r/data-grid.json
 ```
 
-The kit is the only package you install. It depends on `@ez-kit/data-grid-react` and
-`@ez-kit/data-grid-core`, so both arrive with it, and it re-exports their whole surface — every
-hook, type and constant is importable from `@ez-kit/data-grid-shadcn` itself. Adding them to your own
-`package.json` buys nothing and lets their versions drift out of step with the kit's.
+This requires an existing shadcn project (`npx shadcn init` if you don't have one yet). It copies
+`components/data-grid/**` — cells, toolbar, filtering, pagination, editing blocks, and the shadcn
+UI primitives they build on — into your project, and adds `@ez-kit/data-grid-react` plus the
+kit's other runtime dependencies to your `package.json`.
+
+To pick up a later update, re-run the same command, or check what changed first with:
+
+```bash
+npx shadcn@latest add https://ez-kit.dev/r/data-grid.json --diff
+```
 
 ## 2. Import the stylesheet
 
-Pull in the prebuilt CSS once at your app entry (`app/layout.tsx`, `_app.tsx`, `main.tsx`, etc.):
+Pull in the copied CSS once at your app entry (`app/layout.tsx`, `_app.tsx`, `main.tsx`, etc.) —
+adjust the path if your shadcn `components` alias differs from the default:
 
 ```ts
-import '@ez-kit/data-grid-shadcn/styles.css'
+import '@/components/data-grid/styles.css'
 ```
 
 This stylesheet defines the CSS tokens and `data-*` selectors that the flavor's components rely on. You can override any of them from your own design tokens — see [Theming](./data-grid/theming).
@@ -40,4 +52,4 @@ That's it — sort, filter, paginate, and select all work out of the box. Branch
 
 ## Source
 
-- `@ez-kit/data-grid-shadcn` — [`packages/data-grid/react/shadcn/README.md`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/README.md)
+- `data-grid` registry item — [`packages/data-grid/react/shadcn/README.md`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/README.md)

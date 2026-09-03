@@ -8,9 +8,10 @@
 		"#globals.css": "./app/globals.css"
 	},
 	"scripts": {
-		"dev": "pnpm build:deps && node scripts/dev-server.mjs",
-		"build": "pnpm build:deps && next build",
+		"dev": "pnpm build:deps && pnpm registry:build && node scripts/dev-server.mjs",
+		"build": "pnpm build:deps && pnpm registry:build && next build",
 		"build:deps": "turbo run build --filter=@ez-kit/docs^...",
+		"registry:build": "node scripts/build-registry.mjs",
 		"start": "next start",
 		"lint": "next typegen && eslint .",
 		"typecheck": "next typegen && fumadocs-mdx && tsc --project tsconfig.json --noEmit",

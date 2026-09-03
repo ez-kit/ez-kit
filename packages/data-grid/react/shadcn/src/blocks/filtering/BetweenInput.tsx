@@ -4,11 +4,12 @@ import { BetweenBranch, useBetweenValue } from '@ez-kit/data-grid-react'
 import { format, isValid, parseISO } from 'date-fns'
 import { useState } from 'react'
 
-import { Button } from '../../components/ui/button'
-import { Calendar } from '../../components/ui/calendar'
-import { Input } from '../../components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
-import { Slider } from '../../components/ui/slider'
+import { Button } from '@grid-shadcn/components/ui/button'
+import { Calendar } from '@grid-shadcn/components/ui/calendar'
+import { Input } from '@grid-shadcn/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
+import { Slider } from '@grid-shadcn/components/ui/slider'
+
 import { DateCellInput } from '../cell-types/DateCell'
 
 import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'

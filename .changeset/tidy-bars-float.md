@@ -1,6 +1,5 @@
 ---
 '@ez-kit/data-grid-heroui': patch
-'@ez-kit/data-grid-shadcn': patch
 ---
 
 fix(data-grid): floating selection bar no longer affects layout

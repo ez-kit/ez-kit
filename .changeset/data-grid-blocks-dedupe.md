@@ -1,5 +1,4 @@
 ---
-'@ez-kit/data-grid-shadcn': minor
 '@ez-kit/data-grid-heroui': minor
 ---
 
