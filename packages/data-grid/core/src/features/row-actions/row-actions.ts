@@ -1,5 +1,5 @@
+import type { ActionItem } from '../../action-item'
 import type { SystemColumnDef } from '../../column/types'
-import type { GridMenuIcon } from '../../menu-icon'
 import type { RowPinningConfig } from '../../types'
 import type { FeatureToggle } from '../../utils/feature-flag'
 import type { Row, RowData, Table } from '@tanstack/table-core'
@@ -21,41 +21,6 @@ export type RowActionsContext<TRow extends object = object> = {
 }
 
 /**
- * One custom entry contributed through {@link RowActionsConfig.actions}.
- *
- * Structurally the React layer's `GridMenuItem`. `TNode` is the adapter's node type — the same
- * parameter {@link ColumnRenderer} and {@link ExpandingConfig} take, and for the same reason:
- * core has to describe "a renderable thing" without naming React. It defaults to `never`, so a
- * config written against bare core accepts only the named glyphs; the React adapter binds it to
- * `ReactElement` (see `ReactRowActionsConfig`).
- */
-export type RowActionItem<TNode = never> = {
-	/** Stable within the menu — kits key their collection items on it. */
-	id: string
-	label: string
-	/**
-	 * The entry's glyph: either a member of the closed {@link GridMenuIcon} set, which the kit
-	 * maps to its own icon and sizing, or the adapter's own node for an application action the
-	 * set has no honest name for — React: `icon: <Copy />`.
-	 *
-	 * Deliberately **not** a bare `string`. It was one, and a kit silently dropped any value
-	 * that named no member, so `icon: 'copy'` compiled, ran, and rendered a label with no glyph
-	 * and no error anywhere. Omitting it entirely is still fine — the entry renders label-only.
-	 */
-	icon?: GridMenuIcon | TNode
-	disabled?: boolean
-	/**
-	 * Destructive entry — kits render it in their danger colour, like the built-in Delete.
-	 *
-	 * Named `destructive`, matching {@link BadgeVariant.Destructive}: one word for the
-	 * "this action destroys something" semantic across the whole API, rather than `danger`
-	 * here and `destructive` there.
-	 */
-	destructive?: boolean
-	onSelect: () => void
-}
-
-/**
  * Per-row actions config.
  *
  * `TRow` carries a default so a reference that names no argument still compiles — the
@@ -63,7 +28,7 @@ export type RowActionItem<TNode = never> = {
  * only to invoke it.
  *
  * Two node parameters, not one, because the config renders two unrelated things.
- * {@link RowActionItem.icon} needs an element (React: `<Copy />`), while
+ * {@link ActionItem.icon} needs an element (React: `<Copy />`), while
  * {@link SystemColumnDef.header} is column-header content and must accept everything a
  * column's `header` accepts — a string included. Sharing one parameter made
  * `rowActions.column.header: () => 'Actions'` a type error while leaving the same slot on
@@ -77,7 +42,8 @@ export type RowActionsConfig<TRow extends object = object, TIcon = never, TNode 
 	/**
 	 * Custom entries appended to the built-in edit / delete / pin affordances, built per row.
 	 *
-	 * The counterpart of `selection.bar.actions` for bulk operations. Both variants honour
+	 * The counterpart of `selection.bar.actions`, which takes the same {@link ActionItem}s for
+	 * bulk operations, so one action can be written once and offered in both. Both variants honour
 	 * it: under {@link RowActionsVariant.Menu} the entries join the one overflow menu, and
 	 * under {@link RowActionsVariant.Inline} they go behind the overflow menu that already
 	 * carries the pin entries — a fixed-width cell has no icon budget for an open-ended set
@@ -85,7 +51,7 @@ export type RowActionsConfig<TRow extends object = object, TIcon = never, TNode 
 	 *
 	 * Return `[]` for a row that offers nothing.
 	 */
-	actions?: (ctx: RowActionsContext<TRow>) => RowActionItem<TIcon>[]
+	actions?: (ctx: RowActionsContext<TRow>) => ActionItem<TIcon>[]
 	/**
 	 * Presentation of the auto-injected `__actions__` column — a label for its header, its
 	 * width, which edge it pins to. See {@link SystemColumnDef}.

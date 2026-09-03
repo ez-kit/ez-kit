@@ -46,8 +46,9 @@ variant: burying a pending commit inside a dropdown would hide it behind an extr
 
 The built-in three are rarely the whole story — a row usually also wants a _Duplicate_, a _Send
 invoice_, a _View history_. `rowActions.actions` is that slot, the per-row counterpart of
-[`selection.bar.actions`](./data-grid/selection) for bulk operations. It is called per row, so a
-row's entries can depend on the row itself:
+[`selection.bar.actions`](./data-grid/selection/selection-bar#custom-actions) for bulk operations —
+and the two take the **same** entry shape, so an action offered in both places is written once. It
+is called per row, so a row's entries can depend on the row itself:
 
 ```tsx
 <DataGrid
@@ -104,6 +105,25 @@ rowActions: {
 A name outside the built-in set is a **compile error**, not a silently missing glyph — which is
 what `icon: string` used to give you.
 
+### The same action for the selection
+
+`selection.bar.actions` takes the same entries, built from the selection instead of one row. Factor
+the entry out and offer it in both — the kit renders it as a menu entry in the row and as a button
+in the bar, with its own chrome either way:
+
+```tsx
+const exportAction = (rows: Row<Product>[]) => ({
+	id: 'export',
+	label: 'Export',
+	onSelect: () => exportRows(rows),
+})
+
+rowActions: { actions: ({ row }) => [exportAction([row])] },
+selection: {
+	bar: { actions: ({ selectedRows }) => [exportAction(selectedRows)] },
+}
+```
+
 ## Column width
 
 The column sizes itself from the number of actions it renders, rather than falling back to the
@@ -116,12 +136,12 @@ since the two share that trigger.
 
 ## Options
 
-| Option               | Type                                  | Description                                                                                                                    |
-| -------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `rowActions.variant` | `'inline' \| 'menu'`                  | `inline` (default) — one button per action. `menu` — every action in one dropdown.                                             |
-| `rowActions.actions` | `({ row, table }) => RowActionItem[]` | Custom entries appended to the built-ins, built per row. See [Custom actions](#custom-actions).                                |
-| `rowActions.column`  | `SystemColumnDef`                     | The actions column itself — its header, width, pinning. See [The column itself](#the-column-itself).                           |
-| `rowActions.enabled` | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
+| Option               | Type                               | Description                                                                                                                    |
+| -------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `rowActions.variant` | `'inline' \| 'menu'`               | `inline` (default) — one button per action. `menu` — every action in one dropdown.                                             |
+| `rowActions.actions` | `({ row, table }) => ActionItem[]` | Custom entries appended to the built-ins, built per row. See [Custom actions](#custom-actions).                                |
+| `rowActions.column`  | `SystemColumnDef`                  | The actions column itself — its header, width, pinning. See [The column itself](#the-column-itself).                           |
+| `rowActions.enabled` | `boolean`                          | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
 
 ## The column itself
 

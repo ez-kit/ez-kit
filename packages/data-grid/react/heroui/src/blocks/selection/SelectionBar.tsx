@@ -11,13 +11,70 @@ import {
 	ActionBarSelection,
 	ActionBarSeparator,
 } from '../../components/ui/action-bar'
+import { renderActionIcon } from '../icons'
 
-import type { SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { GridMenuItem, SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
-export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
-	const hasActions = Boolean(onDelete) || Boolean(actions)
+/**
+ * One `selection.bar.actions` entry as a button, matching the built-in Delete beside it: the
+ * kit's glyph for a named icon, its danger colour for a destructive entry, its disabled state.
+ * This is what the config buys over hand-drawn markup.
+ *
+ * The floating bar renders its controls as `ActionBarItem`s and the inline one as plain
+ * `Button`s, so the element is passed in rather than picked here.
+ */
+function ActionButton({ item, inline }: { item: GridMenuItem; inline: boolean }) {
+	const icon = renderActionIcon(item.icon)
+	const variant = item.destructive === true ? 'danger' : 'secondary'
+	const isDisabled = item.disabled === true
 
-	if (variant === ActionBarVariant.Inline) {
+	if (inline) {
+		return (
+			<Button
+				size='sm'
+				variant={variant}
+				isDisabled={isDisabled}
+				data-slot='selection-bar-action'
+				onPress={item.onSelect}
+			>
+				{icon}
+				{item.label}
+			</Button>
+		)
+	}
+
+	return (
+		<ActionBarItem
+			variant={variant}
+			isDisabled={isDisabled}
+			data-slot='selection-bar-action'
+			onPress={item.onSelect}
+		>
+			{icon}
+			{item.label}
+		</ActionBarItem>
+	)
+}
+
+/** The entries as buttons — `null` when the bar was given none, so separators can tell. */
+function renderActions(actions: GridMenuItem[] | undefined, inline: boolean): ReactNode {
+	if (actions === undefined || actions.length === 0) return null
+	return actions.map((item) => (
+		<ActionButton
+			key={item.id}
+			item={item}
+			inline={inline}
+		/>
+	))
+}
+
+export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
+	const isInline = variant === ActionBarVariant.Inline
+	const actionButtons = renderActions(actions, isInline)
+	const hasActions = Boolean(onDelete) || actionButtons !== null || start !== undefined || end !== undefined
+
+	if (isInline) {
 		if (!open) return null
 
 		return (
@@ -36,6 +93,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 					{count} selected
 				</span>
 				<div className='ml-auto flex items-center gap-2'>
+					{start}
 					{onDelete && (
 						<Button
 							size='sm'
@@ -46,7 +104,8 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 							Delete
 						</Button>
 					)}
-					{actions}
+					{actionButtons}
+					{end}
 					<Button
 						size='sm'
 						variant='ghost'
@@ -74,6 +133,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 			<ActionBarGroup>
 				<ActionBarSelection>{count} selected</ActionBarSelection>
 				{hasActions && <ActionBarSeparator />}
+				{start}
 				{onDelete && (
 					<ActionBarItem
 						variant='danger'
@@ -83,7 +143,8 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 						Delete
 					</ActionBarItem>
 				)}
-				{actions}
+				{actionButtons}
+				{end}
 				{hasActions && <ActionBarSeparator />}
 				<Button
 					size='sm'

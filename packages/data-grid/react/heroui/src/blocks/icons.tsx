@@ -59,3 +59,15 @@ export function renderGridMenuIcon(icon: GridMenuItem['icon']): ReactNode {
 	if (icon === undefined) return GRID_MENU_ICON_PLACEHOLDER
 	return isGridMenuIcon(icon) ? GRID_MENU_ICONS[icon] : icon
 }
+
+/**
+ * The same glyph for an entry rendered as a button — the selection bar's custom actions.
+ *
+ * No placeholder here, unlike {@link renderGridMenuIcon}: buttons sit side by side rather than
+ * stacked, so an icon-less one has no column to keep its label aligned with, and a blank box
+ * would only pad it.
+ */
+export function renderActionIcon(icon: GridMenuItem['icon']): ReactNode {
+	if (icon === undefined) return null
+	return isGridMenuIcon(icon) ? GRID_MENU_ICONS[icon] : icon
+}

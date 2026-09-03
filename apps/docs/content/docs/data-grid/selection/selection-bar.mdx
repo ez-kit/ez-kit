@@ -41,6 +41,42 @@ selection: {
 }
 ```
 
+## Custom actions
+
+`selection.bar.actions` builds the entries the bar offers for the selection. It is **data**, not
+markup — the same `ActionItem` shape [`rowActions.actions`](./data-grid/row-actions) takes — so the
+kit draws each entry with the chrome its own Delete button has: your icon from the built-in set (or
+your own element), the kit's danger colour for `destructive`, its disabled state for `disabled`.
+
+```tsx
+// One action, offered in both places, written once.
+const exportAction = (rows: Row<Product>[]) => ({
+	id: 'export',
+	label: 'Export',
+	icon: 'edit',
+	onSelect: () => exportRows(rows),
+})
+
+rowActions: { actions: ({ row }) => [exportAction([row])] },
+selection: {
+	bar: { actions: ({ selectedRows }) => [exportAction(selectedRows)] },
+}
+```
+
+An entry's `onSelect` takes no arguments: the callback that built it already closes over
+`selectedRows`, `table` and `clearSelection`. Return `[]` for a selection that offers nothing.
+
+## Slots
+
+Content that is not an action — a bulk-target select, a counter — goes in the `start` / `end` slots
+of `<DataGrid.SelectionBar>`, rendered around the kit's own controls. Same split as
+[`<DataGrid.Toolbar>`](./data-grid/toolbar): the config carries data, the compound component
+carries markup, and `children` still replaces the bar wholesale.
+
+```tsx
+<DataGrid.SelectionBar end={<WarehousePicker />} />
+```
+
 ## The Delete button
 
 The bar's Delete button is **not** configured here. Bulk delete is the `deleting` feature
@@ -80,7 +116,7 @@ for nothing but the render mode, or an object with the keys below. It renders on
 | ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                             |
 | `clear`             | `({ table, selectedRows, clearSelection }) => void` | Replaces the default clear behaviour (not a notification — call `clearSelection` to still reset). |
-| `actions`           | `ReactElement \| (args) => ReactElement`            | Extra controls rendered between Delete and Cancel.                                                |
+| `actions`           | `(args) => ActionItem[]`                            | Custom entries rendered between Delete and Cancel. See [Custom actions](#custom-actions).         |
 
 ## Source
 
