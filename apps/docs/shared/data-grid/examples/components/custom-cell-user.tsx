@@ -1,9 +1,11 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
+
+import type { CustomCellTypes } from 'shared/data-grid/custom-cell-types'
 
 type Member = {
 	id: number
@@ -20,7 +22,7 @@ const MEMBER_DATA: Member[] = [
 	{ id: 5, name: 'Eve Davis', role: 'Account Executive', team: 'Sales' },
 ]
 
-const memberColumns = defineColumns<Member>([
+const memberColumns = createColumns<Member, CustomCellTypes>([
 	{ accessorKey: 'name', header: 'Member', cell: { type: 'user' } },
 	{ accessorKey: 'role', header: 'Role' },
 	{ accessorKey: 'team', header: 'Team' },

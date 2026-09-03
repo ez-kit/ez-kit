@@ -1,10 +1,10 @@
-import { defineColumns, UNKNOWN_PAGE_COUNT } from '@ez-kit/data-grid-core'
+import { createColumns, UNKNOWN_PAGE_COUNT } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { renderWithComponents } from '../test-utils'
-import { PaginationVariants } from '../types'
+import { PaginationVariant } from '../types'
 import { useDataGrid } from '../use-data-grid'
 
 import { Pagination } from './pagination'
@@ -19,10 +19,10 @@ type User = { id: number; name: string }
 
 const PAGE_SIZE = 10
 const USERS: User[] = Array.from({ length: 50 }, (_, i) => ({ id: i + 1, name: `User ${String(i + 1)}` }))
-const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 /**
- * Render the real `Pagination` against a real grid instance and capture the props it hands to
+ * Render the real `Pagination` against a real grid table and capture the props it hands to
  * the UI kit — or `null` when the footer short-circuits to `return null` (a known-empty grid).
  * This is the seam the kits consume, so it is where the "unknown total" normalization and the
  * known-empty gate both have to hold.
@@ -38,17 +38,17 @@ function renderPagination(
 	}
 
 	const { result } = renderHook(() => useDataGrid<User>({ data, columns: COLUMNS, ...config }))
-	const instance = result.current
+	const table = result.current
 
 	renderWithComponents(
-		<TableContext value={instance}>
+		<TableContext value={table}>
 			<GridComponentsProvider components={{ pagination: { Pagination: Spy } }}>
 				<Pagination />
 			</GridComponentsProvider>
 		</TableContext>,
 	)
 
-	return { props: captured, table: instance.table }
+	return { props: captured, table: table }
 }
 
 /**
@@ -106,13 +106,13 @@ describe('Pagination — hides the footer on a known-empty grid', () => {
 
 describe('Pagination — variant plumbing', () => {
 	it('passes the configured variant through to the UI kit', () => {
-		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariants.Compact } })
-		expect(props.variant).toBe(PaginationVariants.Compact)
+		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Compact } })
+		expect(props.variant).toBe(PaginationVariant.Compact)
 	})
 
 	it('defaults to the numbered variant', () => {
 		const { props } = captureProps({ pagination: true })
-		expect(props.variant).toBe(PaginationVariants.Numbered)
+		expect(props.variant).toBe(PaginationVariant.Numbered)
 	})
 
 	it('passes the real pageSize, not one derived from rowCount ÷ pageCount', () => {

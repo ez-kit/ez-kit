@@ -7,7 +7,9 @@
 		"index",
 		"getting-started",
 		"features",
+		"production",
 		"architecture",
+		"composition",
 		"installation",
 		"columns",
 		"sorting",
@@ -15,9 +17,11 @@
 		"pagination",
 		"selection",
 		"row-pinning",
+		"row-actions",
 		"virtualization",
 		"cells",
 		"expanding",
+		"state-model",
 		"controlled-state",
 		"default-options",
 		"defaults",
@@ -26,7 +30,9 @@
 		"editing",
 		"fallbacks",
 		"sticky-header",
+		"footer",
 		"theming",
-		"advanced"
+		"advanced",
+		"ai"
 	]
 }

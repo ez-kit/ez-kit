@@ -2,11 +2,13 @@
 
 import { useSyncExternalStore } from 'react'
 
-import type { DataGridInstance } from './data-grid-instance'
-import type { TableState } from '@ez-kit/data-grid-core'
+import type { DataTable, TableState } from '@ez-kit/data-grid-core'
 
 /**
- * Subscribe to a slice of a {@link DataGridInstance}'s table state.
+ * Subscribe to a slice of a table's state, given the table explicitly.
+ *
+ * The context-bound form is `useDataGridState`; reach for this one when the table is not in
+ * context — reading grid state from a sibling component, or from outside `<DataGrid>`.
  *
  * **Contract:** the selector must return a referentially stable value when
  * the underlying TableState hasn't changed. Direct field access
@@ -19,20 +21,17 @@ import type { TableState } from '@ez-kit/data-grid-core'
  * such values with `useMemo` outside this hook instead.
  *
  * @example
- *   const sorting = useDataGridSelector(instance, (s) => s.sorting)
- *   const pagination = useDataGridSelector(instance, (s) => s.pagination)
- *   const filterCount = useDataGridSelector(
- *     instance,
- *     (s) => s.columnFilters.length,
- *   )
+ *   const table = useDataGrid({ data, columns, sorting: true })
+ *   const sorting = useDataGridSelector(table, (s) => s.sorting)
+ *   const filterCount = useDataGridSelector(table, (s) => s.columnFilters.length)
  */
 export function useDataGridSelector<TRow extends object, TSelected>(
-	instance: DataGridInstance<TRow>,
+	table: DataTable<TRow>,
 	selector: (state: TableState) => TSelected,
 ): TSelected {
 	return useSyncExternalStore(
-		instance.store.subscribe,
-		() => selector(instance.store.getSnapshot()),
-		() => selector(instance.store.getServerSnapshot()),
+		table.subscribe,
+		() => selector(table.getSnapshot()),
+		() => selector(table.getInitialSnapshot()),
 	)
 }

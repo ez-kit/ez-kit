@@ -1,5 +1,6 @@
 'use client'
 
+import { SortDirection } from '@ez-kit/data-grid-react'
 import { Button, ListBox, Popover, Select } from '@heroui/react'
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 
@@ -23,6 +24,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 				>
 					<Select.Trigger>
 						<Select.Value />
+						<Select.Indicator />
 					</Select.Trigger>
 					<Select.Popover>
 						<ListBox>
@@ -45,11 +47,12 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 					value={item.direction}
 					aria-label='Sort direction'
 					onChange={(value) => {
-						if (value === 'asc' || value === 'desc') item.onChangeDirection(value)
+						if (value === SortDirection.Asc || value === SortDirection.Desc) item.onChangeDirection(value)
 					}}
 				>
 					<Select.Trigger>
 						<Select.Value />
+						<Select.Indicator />
 					</Select.Trigger>
 					<Select.Popover>
 						<ListBox>
@@ -89,9 +92,10 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 	return (
 		<Popover>
 			<Popover.Trigger>
-				<span
-					data-slot='sort-trigger'
-					className='inline-flex items-center gap-1.5'
+				<Button
+					data-slot='sort-menu-trigger'
+					size='sm'
+					variant='outline'
 				>
 					<ArrowUpDown size={16} />
 					Sort
@@ -100,7 +104,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 							{activeCount}
 						</span>
 					) : null}
-				</span>
+				</Button>
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog

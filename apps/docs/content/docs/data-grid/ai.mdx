@@ -1,0 +1,34 @@
+---
+title: Use with AI
+description: Feed the data grid documentation to an LLM or coding agent — scoped llms.txt, full-text dump, and per-page Markdown.
+---
+
+# Use with AI
+
+The data grid documentation is served as plain Markdown, so an LLM or a coding agent can read it
+directly instead of scraping rendered HTML. These endpoints are scoped to this package —
+use them instead of the site-wide ones so the agent is not handed the whole documentation.
+
+| URL                                                    | What it is                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------------ |
+| [`/llms.txt/data-grid`](/llms.txt/data-grid)           | Index of every data grid page — title, link and description. |
+| [`/llms-full.txt/data-grid`](/llms-full.txt/data-grid) | Every data grid page as one Markdown file.                   |
+| `/llms.mdx/docs/data-grid/<slug>`                      | A single page as raw Markdown.                               |
+
+The per-page route mirrors the docs URL: [Getting Started](./getting-started) is served as Markdown
+at [`/llms.mdx/docs/data-grid/getting-started`](/llms.mdx/docs/data-grid/getting-started).
+Every page also carries **Copy Markdown** and **View options** controls under its title.
+
+```text
+Read https://ez-kit.dev/llms-full.txt/data-grid, then add a sortable, filterable
+@ez-kit/data-grid-shadcn table to my app.
+```
+
+```bash
+curl -O https://ez-kit.dev/llms-full.txt/data-grid
+```
+
+Covers `@ez-kit/data-grid-core`, `@ez-kit/data-grid-react`, `@ez-kit/data-grid-shadcn`,
+`@ez-kit/data-grid-heroui`.
+
+For the whole site — every package at once — see [Use with AI](/docs/ai).

@@ -1,7 +1,7 @@
 {
 	"name": "@ez-kit/store-core",
-	"version": "0.2.1",
-	"description": "A reusable utility package for ez-kit.",
+	"version": "0.3.0",
+	"description": "Shared foundation for the @ez-kit store packages: store ids, service registry, plugin contract and the manager-agnostic instance cache.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -19,19 +19,19 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
+		"./react": {
+			"types": "./dist/react.d.ts",
+			"import": "./dist/react.js"
+		},
 		"./cache": {
 			"types": "./dist/cache/index.d.ts",
 			"import": "./dist/cache/index.js"
-		},
-		"./persist": {
-			"types": "./dist/persist/index.d.ts",
-			"import": "./dist/persist/index.js"
 		}
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts src/cache/index.ts src/persist/index.ts --format esm --dts --sourcemap",
+		"build": "tsup",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -42,15 +42,15 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "5 KB"
+			"limit": "1 KB"
+		},
+		{
+			"path": "dist/react.js",
+			"limit": "1 KB"
 		},
 		{
 			"path": "dist/cache/index.js",
-			"limit": "10 KB"
-		},
-		{
-			"path": "dist/persist/index.js",
-			"limit": "2 KB"
+			"limit": "3 KB"
 		}
 	],
 	"devDependencies": {

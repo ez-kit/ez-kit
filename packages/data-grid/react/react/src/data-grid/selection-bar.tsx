@@ -1,25 +1,24 @@
-import { useGridComponents } from '../components-context'
-import {
-	DEFAULT_SELECTION_PANEL_VARIANT,
-	SELECTION_PANEL_KEY,
-	type SelectionPanelCallbackArgs,
-	type SelectionPanelConfig,
-} from '../use-data-grid'
+import { isFeatureEnabled } from '@ez-kit/data-grid-core'
 
-import { useTable } from './table-context'
+import { useGridComponents } from '../components-context'
+import { type SelectionBarCallbackArgs, type ActionBarVariant } from '../use-data-grid'
+
+import { resolveActionBarVariant } from './action-bar-variant'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { Table } from '@tanstack/table-core'
+import type { ReactElement, ReactNode } from 'react'
 
 /**
- * Build the `{ table, clearSelection, selectedRows }` argument passed to every
- * selection-panel callback. Shared with the bulk `ConfirmDialog` renderer so the
- * confirmed handler receives the exact same shape as the instant path.
+ * Build the `{ table, clearSelection, selectedRows }` argument passed to every selection-bar
+ * callback. Shared with the bulk `ConfirmDialog` renderer so the prompt describes the exact
+ * set the handler will receive.
  */
-export function buildSelectionPanelArgs(
+export function buildSelectionBarArgs(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	table: Table<any>,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-): SelectionPanelCallbackArgs<any> {
+): SelectionBarCallbackArgs<any> {
 	return {
 		table,
 		clearSelection: () => {
@@ -30,53 +29,89 @@ export function buildSelectionPanelArgs(
 }
 
 /**
- * Selection info bar. Automatically visible when `selection` is enabled
- * and at least one row is selected.
+ * What a `<DataGrid.SelectionBar>` render function receives.
  *
- * Render behaviour (driven by `selection.panel`):
- * - `selection.panel: false`       → never renders
- * - `selection.panel: undefined`   → renders (no delete button)
- * - `selection.panel: true`        → renders (no delete button)
- * - `selection.panel: { ... }`     → renders with config
+ * `onDelete` is the reason this is worth exposing: it already encodes the confirmation
+ * protocol. With `deleting.bulk.confirmation` set it stages a pending bulk delete and the
+ * shared `ConfirmDialog` runs the handler on confirm; without it the delete runs immediately.
+ * A hand-rolled bar that reached for the handler directly would silently skip the prompt.
  */
-export function SelectionBar() {
-	const table = useTable()
+export type DataGridSelectionBarRenderArgs<TRow extends object = object> = SelectionBarCallbackArgs<TRow> & {
+	/** Number of selected rows. */
+	count: number
+	/** Whether the bar would normally be shown — i.e. at least one row is selected. */
+	open: boolean
+	/** Confirmation-aware bulk delete. Absent when `deleting.bulk` is off. */
+	onDelete?: (() => void) | undefined
+	/** Runs the bar's `clear` when set, otherwise resets the selection. */
+	onClear: () => void
+	/** Resolved `actions` slot content, if the bar config supplied one. */
+	actions?: ReactElement | undefined
+	/** Resolved render mode — `'floating'` or `'inline'`. */
+	variant: ActionBarVariant
+}
+
+export type DataGridSelectionBarProps = {
+	/**
+	 * Custom bar content, replacing the kit's `SelectionBar` component.
+	 *
+	 * The gates that hide the bar still apply — selection disabled, `bar: false`, or the
+	 * draft bar owning the slot while a deferred query is pending — so `children` are not
+	 * rendered in those states. `open` is passed through rather than gating, so a custom bar
+	 * can animate its own enter/exit instead of unmounting.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.SelectionBar>
+	 *   {({ count, open, onDelete, onClear }) =>
+	 *     open ? (
+	 *       <div>
+	 *         {count} selected
+	 *         {onDelete && <button onClick={onDelete}>Delete</button>}
+	 *         <button onClick={onClear}>Cancel</button>
+	 *       </div>
+	 *     ) : null
+	 *   }
+	 * </DataGrid.SelectionBar>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridSelectionBarRenderArgs) => ReactNode)
+}
+
+export function SelectionBar({ children }: DataGridSelectionBarProps = {}) {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.rowSelection)
 	const { SelectionBar: SelectionBarComponent } = useGridComponents().selection
 
-	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
+	// The draft section owns the bar while a query is pending — see DraftBar.
+	if (table.options.draft === true && table.draft.isDirty()) return null
 
-	const selectionEnabled = Boolean(table.options.enableRowSelection)
-	if (!selectionEnabled || rawConfig === false) return null
+	// Resolved by `useDataGrid`: `undefined` already means "no bar" — selection off, `bar: false`
+	// or `bar: { enabled: false }` — so nothing is re-derived here.
+	const config = table.grid.selection.bar
+	if (config === undefined || !table.options.enableRowSelection) return null
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const config: SelectionPanelConfig<any> = typeof rawConfig === 'object' ? rawConfig : {}
-
-	const callbackArgs = buildSelectionPanelArgs(table)
+	const callbackArgs = buildSelectionBarArgs(table)
 	const { selectedRows } = callbackArgs
 	const count = selectedRows.length
 	const open = count > 0
 	const clearSelection = callbackArgs.clearSelection
 
-	const { onDelete: onDeleteHandler, onClear: onClearHandler } = config
+	const { clear: clearHandler } = config
 
-	// When `confirmation` is set, Delete stages a pending bulk delete and the
-	// shared ConfirmDialog runs the handler on confirm. Otherwise it fires instantly.
-	const onDelete = onDeleteHandler
-		? config.confirmation
+	// One entry point for both paths: `deleting.bulk.request` stages a pending delete when
+	// `deleting.bulk.confirmation` is set and runs it outright otherwise, so the bar never has
+	// to know which of the two it is looking at.
+	const onDelete =
+		table.options.deleting !== undefined && isFeatureEnabled(table.options.deleting.bulk)
 			? () => {
-					table.requestBulkDelete()
+					table.deleting.bulk.request()
 				}
-			: () => {
-					onDeleteHandler(callbackArgs)
-				}
-		: undefined
+			: undefined
 
-	const onClear = onClearHandler
+	const onClear = clearHandler
 		? () => {
-				onClearHandler(callbackArgs)
+				clearHandler(callbackArgs)
 			}
 		: clearSelection
 
@@ -87,7 +122,21 @@ export function SelectionBar() {
 				? config.actions(callbackArgs)
 				: config.actions
 
-	const variant = config.variant ?? DEFAULT_SELECTION_PANEL_VARIANT
+	const variant = resolveActionBarVariant(table)
+
+	if (children !== undefined) {
+		return typeof children === 'function'
+			? children({
+					...callbackArgs,
+					count,
+					open,
+					onDelete,
+					onClear,
+					actions,
+					variant,
+				})
+			: children
+	}
 
 	return (
 		<SelectionBarComponent

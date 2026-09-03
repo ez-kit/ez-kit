@@ -2,14 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
-import { GLOBAL_FILTERING_KEY } from '../use-data-grid'
 import { useDebouncedValue } from '../utils/use-debounced-value'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { NormalizedGlobalFilteringConfig } from '../use-data-grid'
-
-type GlobalFilterInputCompoundProps = {
+export type DataGridGlobalFilterInputProps = {
 	/** Override the placeholder configured via `globalFiltering.placeholder`. */
 	placeholder?: string
 }
@@ -23,15 +20,14 @@ type GlobalFilterInputCompoundProps = {
  * syncs back when external code mutates `state.globalFilter` (e.g. programmatic
  * reset, controlled mode).
  */
-export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilterInputCompoundProps = {}) {
-	const table = useTable()
+export function GlobalFilterInput({ placeholder: placeholderProp }: DataGridGlobalFilterInputProps = {}) {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.globalFilter as unknown)
 	const { GlobalFilterInput: Component } = useGridComponents().filtering
 
-	const cfg = (table as unknown as Record<symbol, unknown>)[GLOBAL_FILTERING_KEY] as
-		| NormalizedGlobalFilteringConfig
-		| undefined
+	const cfg = table.grid.globalFiltering
 
-	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.globalFiltering.debounce
+	const debounce = cfg?.debounce ?? DATA_GRID_DEFAULTS.filtering.debounce
 	const placeholder = placeholderProp ?? cfg?.placeholder ?? DATA_GRID_DEFAULTS.globalFiltering.placeholder
 
 	const committed = String(table.getState().globalFilter ?? '')
@@ -61,6 +57,16 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilter
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [debouncedDraft])
 
+	// Enter applies the whole pending draft — sorting, filters and search commit together in
+	// one request — mirroring the column filter path. `undefined` under non-deferred tables
+	// so Enter keeps its default meaning (e.g. form submission).
+	const onEnterApply =
+		table.options.draft === true
+			? () => {
+					table.draft.apply()
+				}
+			: undefined
+
 	return (
 		<Component
 			value={draft}
@@ -68,6 +74,15 @@ export function GlobalFilterInput({ placeholder: placeholderProp }: GlobalFilter
 			placeholder={placeholder}
 			debounce={debounce}
 			data-slot='global-filter-input'
+			{...(onEnterApply
+				? {
+						onKeyDown: (e) => {
+							if (e.key !== 'Enter') return
+							e.preventDefault()
+							onEnterApply()
+						},
+					}
+				: {})}
 		/>
 	)
 }

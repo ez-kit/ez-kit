@@ -3,7 +3,7 @@
  *
  * Every injectable input in the UI-kit contract maps to exactly one member, so the
  * field kind is never spelled as a bare string at a call site. Extended kinds
- * (switch, date picker, combobox, …) join this enum when they ship.
+ * (combobox, time, file, …) join this enum when they ship.
  */
 export enum FormFieldType {
 	Text = 'text',
@@ -14,6 +14,10 @@ export enum FormFieldType {
 	Switch = 'switch',
 	RadioGroup = 'radiogroup',
 	Slider = 'slider',
+	Date = 'date',
+	DateRange = 'daterange',
+	MultiSelect = 'multiselect',
+	CheckboxGroup = 'checkboxgroup',
 }
 
 /** Every built-in field kind, in the order the contract declares them. */
@@ -26,4 +30,8 @@ export const FORM_FIELD_TYPES = [
 	FormFieldType.Switch,
 	FormFieldType.RadioGroup,
 	FormFieldType.Slider,
+	FormFieldType.Date,
+	FormFieldType.DateRange,
+	FormFieldType.MultiSelect,
+	FormFieldType.CheckboxGroup,
 ] as const

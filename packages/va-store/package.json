@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/va-store",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Valtio-backed React context store with a source-agnostic persist engine.",
 	"license": "MIT",
 	"repository": {
@@ -65,23 +65,23 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "50 KB"
+			"limit": "6.5 KB"
 		},
 		{
 			"path": "dist/persist/index.js",
-			"limit": "10 KB"
+			"limit": "6.5 KB"
 		},
 		{
 			"path": "dist/persist/storage/index.js",
-			"limit": "3 KB"
+			"limit": "2 KB"
 		},
 		{
 			"path": "dist/persist/url/index.js",
-			"limit": "3 KB"
+			"limit": "1 KB"
 		},
 		{
 			"path": "dist/persist/url/react-router.js",
-			"limit": "2 KB"
+			"limit": "1 KB"
 		}
 	],
 	"devDependencies": {

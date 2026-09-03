@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -31,7 +31,7 @@ const DATA: Row[] = [
 	{ id: 2, name: 'Bob', email: 'b@x' },
 	{ id: 3, name: 'Carol', email: 'c@x' },
 ]
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{ accessorKey: 'name', editing: {} },
 	{ accessorKey: 'email', editing: {} },
 ])
@@ -58,16 +58,16 @@ function makeCountingComponents(counters: Counters): Required<GridComponents> {
 		counters.thead += 1
 		return <thead {...props} />
 	}
-	function CountingToolbar({ children, left, right, ...rest }: ToolbarProps): ReactElement {
+	function CountingToolbar({ children, start, end, ...rest }: ToolbarProps): ReactElement {
 		counters.toolbar += 1
 		return (
 			<div
 				role='toolbar'
 				{...rest}
 			>
-				{left}
+				{start}
 				{children}
-				{right}
+				{end}
 			</div>
 		)
 	}
@@ -103,7 +103,7 @@ type Instance = ReturnType<typeof useDataGrid<Row>>
 function renderGrid(config?: Partial<Parameters<typeof useDataGrid<Row>>[0]>) {
 	const counters: Counters = { tbody: 0, td: 0, thead: 0, toolbar: 0, pagination: 0, pageSizer: 0 }
 	const components = makeCountingComponents(counters)
-	const ref: { instance: Instance | null } = { instance: null }
+	const ref: { table: Instance | null } = { table: null }
 
 	function Harness(): ReactElement {
 		const t = useDataGrid<Row>({
@@ -112,7 +112,7 @@ function renderGrid(config?: Partial<Parameters<typeof useDataGrid<Row>>[0]>) {
 			editing: { onSave: () => Promise.resolve() },
 			...config,
 		})
-		ref.instance = t
+		ref.table = t
 		return <DataGrid<Row> table={t} />
 	}
 
@@ -122,74 +122,74 @@ function renderGrid(config?: Partial<Parameters<typeof useDataGrid<Row>>[0]>) {
 		</GridComponentsProvider>,
 	)
 
-	const instance = ref.instance
-	if (!instance) throw new Error('instance not initialised')
-	return { counters, instance }
+	const table = ref.table
+	if (!table) throw new Error('table not initialised')
+	return { counters, table }
 }
 
 describe('rerender isolation', () => {
 	it('start editing a row does NOT re-render the Body', () => {
-		const { counters, instance } = renderGrid()
+		const { counters, table } = renderGrid()
 		const tbodyBefore = counters.tbody
 
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 
 		expect(counters.tbody).toBe(tbodyBefore)
 	})
 
 	it('start editing a row does NOT re-render the Header (Thead)', () => {
-		const { counters, instance } = renderGrid()
+		const { counters, table } = renderGrid()
 		const theadBefore = counters.thead
 
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 
 		expect(counters.thead).toBe(theadBefore)
 	})
 
 	it('start editing a row does NOT re-render Pagination', () => {
-		const { counters, instance } = renderGrid({ pagination: { pageSize: 2 } })
+		const { counters, table } = renderGrid({ pagination: { pageSize: 2 } })
 		const before = counters.pagination
 
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 
 		expect(counters.pagination).toBe(before)
 	})
 
 	it('start editing a row does NOT re-render PageSizer', () => {
-		const { counters, instance } = renderGrid({ pageSizer: { items: [10, 25] } })
+		const { counters, table } = renderGrid({ pagination: { items: [10, 25] } })
 		const before = counters.pageSizer
 
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 
 		expect(counters.pageSizer).toBe(before)
 	})
 
 	it('start editing a row does NOT re-render the Toolbar', () => {
-		// Toolbar needs at least one control to render; pageSizer suffices.
-		const { counters, instance } = renderGrid({ pageSizer: { items: [10, 25] } })
+		// Toolbar needs at least one control to render; the page sizer suffices.
+		const { counters, table } = renderGrid({ pagination: { items: [10, 25] } })
 		const toolbarBefore = counters.toolbar
 
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 
 		expect(counters.toolbar).toBe(toolbarBefore)
 	})
 
 	it('start editing only re-mounts cells for the targeted row', () => {
-		const { counters, instance } = renderGrid()
+		const { counters, table } = renderGrid()
 		const tdBefore = counters.td
 
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 
 		// Row 1 has 2 data cells (name + email) that flipped to EditingCell.
@@ -199,18 +199,18 @@ describe('rerender isolation', () => {
 	})
 
 	it('setValue on an editing field re-renders only that one cell', () => {
-		const { counters, instance } = renderGrid()
+		const { counters, table } = renderGrid()
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 		const tbodyAfterStart = counters.tbody
 		const tdAfterStart = counters.td
 
 		act(() => {
-			instance.table.editing.setValue('name', 'A')
+			table.editing.setValue('name', 'A')
 		})
 		act(() => {
-			instance.table.editing.setValue('name', 'AB')
+			table.editing.setValue('name', 'AB')
 		})
 
 		// Body is not subscribed to `editing` — must not re-render on setValue.
@@ -222,25 +222,25 @@ describe('rerender isolation', () => {
 	})
 
 	it('cancel editing restores view cells without re-rendering Body', () => {
-		const { counters, instance } = renderGrid()
+		const { counters, table } = renderGrid()
 		act(() => {
-			instance.table.editing.start('1')
+			table.editing.start('1')
 		})
 		const tbodyAfterStart = counters.tbody
 
 		act(() => {
-			instance.table.editing.cancel()
+			table.editing.cancel()
 		})
 
 		expect(counters.tbody).toBe(tbodyAfterStart)
 	})
 
 	it('sorting still re-renders the Body (regression)', () => {
-		const { counters, instance } = renderGrid({ sorting: true })
+		const { counters, table } = renderGrid({ sorting: true })
 		const tbodyBefore = counters.tbody
 
 		act(() => {
-			instance.table.setSorting([{ id: 'name', desc: true }])
+			table.setSorting([{ id: 'name', desc: true }])
 		})
 
 		expect(counters.tbody).toBeGreaterThan(tbodyBefore)
@@ -281,11 +281,11 @@ describe('rerender isolation', () => {
 	})
 
 	it('pagination still re-renders the Body (regression)', () => {
-		const { counters, instance } = renderGrid({ pagination: { pageSize: 2 } })
+		const { counters, table } = renderGrid({ pagination: { pageSize: 2 } })
 		const tbodyBefore = counters.tbody
 
 		act(() => {
-			instance.table.setPageIndex(1)
+			table.setPageIndex(1)
 		})
 
 		expect(counters.tbody).toBeGreaterThan(tbodyBefore)

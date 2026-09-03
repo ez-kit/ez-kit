@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, render } from '@testing-library/react'
 import { useEffect, useState } from 'react'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -52,7 +52,7 @@ const DATA: Row[] = [
 	{ id: 3, name: 'Carol' },
 	{ id: 4, name: 'Dave' },
 ]
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }])
 
 type Instance = ReturnType<typeof useDataGrid<Row>>
 
@@ -88,11 +88,11 @@ function makeCountingComponents(counters: Counters, deferRows: boolean): Require
 	}
 }
 
-function makeHarness(ref: { instance: Instance | null }) {
+function makeHarness(ref: { table: Instance | null }) {
 	return function Harness(): ReactElement {
 		const table = useDataGrid<Row>({ data: DATA, columns: COLUMNS, pinning: { row: { top: true, bottom: true } } })
 		useEffect(() => {
-			ref.instance = table
+			ref.table = table
 		}, [table])
 		return <DataGrid<Row> table={table} />
 	}
@@ -102,7 +102,7 @@ function renderGrid(options?: { deferRows?: boolean }) {
 	const counters: Counters = { tbody: 0 }
 	const components = makeCountingComponents(counters, options?.deferRows ?? false)
 
-	const ref: { instance: Instance | null } = { instance: null }
+	const ref: { table: Instance | null } = { table: null }
 	const Harness = makeHarness(ref)
 
 	render(
@@ -111,9 +111,9 @@ function renderGrid(options?: { deferRows?: boolean }) {
 		</GridComponentsProvider>,
 	)
 
-	const instance = ref.instance
-	if (!instance) throw new Error('instance not initialised')
-	return { counters, instance }
+	const table = ref.table
+	if (!table) throw new Error('table not initialised')
+	return { counters, table }
 }
 
 function pinnedOffsets(side: 'top' | 'bottom'): string[] {
@@ -123,8 +123,8 @@ function pinnedOffsets(side: 'top' | 'bottom'): string[] {
 }
 
 /** Rows are addressed by their position in `data`; the id itself comes from the table's getRowId. */
-async function pin(instance: Instance, dataIndex: number, side: 'top' | 'bottom' | false) {
-	const row = instance.table.getCoreRowModel().rows[dataIndex]
+async function pin(table: Instance, dataIndex: number, side: 'top' | 'bottom' | false) {
+	const row = table.getCoreRowModel().rows[dataIndex]
 	if (!row) throw new Error(`no row at index ${String(dataIndex)}`)
 	await act(async () => {
 		row.pin(side, false, false)
@@ -136,55 +136,55 @@ async function pin(instance: Instance, dataIndex: number, side: 'top' | 'bottom'
 
 describe('usePinnedRowOffsets', () => {
 	it('stacks each pinned top row below the previous one', async () => {
-		const { instance } = renderGrid()
+		const { table } = renderGrid()
 
-		await pin(instance, 0, 'top')
+		await pin(table, 0, 'top')
 		expect(pinnedOffsets('top')).toEqual(['0px'])
 
-		await pin(instance, 1, 'top')
+		await pin(table, 1, 'top')
 		expect(pinnedOffsets('top')).toEqual(['0px', `${String(ROW_HEIGHT)}px`])
 
-		await pin(instance, 2, 'top')
+		await pin(table, 2, 'top')
 		expect(pinnedOffsets('top')).toEqual(['0px', `${String(ROW_HEIGHT)}px`, `${String(ROW_HEIGHT * 2)}px`])
 	})
 
 	it('stacks bottom rows upwards from the last', async () => {
-		const { instance } = renderGrid()
+		const { table } = renderGrid()
 
-		await pin(instance, 0, 'bottom')
-		await pin(instance, 1, 'bottom')
+		await pin(table, 0, 'bottom')
+		await pin(table, 1, 'bottom')
 
 		// The last bottom row sits flush with the edge; the one above it is offset by a row height.
 		expect(pinnedOffsets('bottom')).toEqual([`${String(ROW_HEIGHT)}px`, '0px'])
 	})
 
 	it('recomputes when the pinned set changes without changing its size', async () => {
-		const { instance } = renderGrid()
+		const { table } = renderGrid()
 
-		await pin(instance, 0, 'top')
-		await pin(instance, 1, 'top')
+		await pin(table, 0, 'top')
+		await pin(table, 1, 'top')
 		expect(pinnedOffsets('top')).toEqual(['0px', `${String(ROW_HEIGHT)}px`])
 
 		// Unpin A, pin B: the count stays at 2 while the nodes change. Keying the measurement on the
 		// row count alone would leave the newly pinned row without an offset.
-		await pin(instance, 0, false)
-		await pin(instance, 3, 'top')
+		await pin(table, 0, false)
+		await pin(table, 3, 'top')
 
 		expect(pinnedOffsets('top')).toEqual(['0px', `${String(ROW_HEIGHT)}px`])
 	})
 
 	it('applies offsets in the same commit when refs attach synchronously', async () => {
-		const { instance } = renderGrid()
+		const { table } = renderGrid()
 
-		await pin(instance, 0, 'top')
-		await pin(instance, 1, 'top')
+		await pin(table, 0, 'top')
+		await pin(table, 1, 'top')
 
 		// Swap one pinned row for another, leaving the count at 2, and assert *without* flushing the
 		// microtask: a kit with synchronous refs must be correct before paint, or the row visibly
 		// jumps for a frame. Keying the effect on the count alone would miss this change entirely.
-		const replacement = instance.table.getCoreRowModel().rows[3]
+		const replacement = table.getCoreRowModel().rows[3]
 		if (!replacement) throw new Error('no row at index 3')
-		const removed = instance.table.getCoreRowModel().rows[0]
+		const removed = table.getCoreRowModel().rows[0]
 		if (!removed) throw new Error('no row at index 0')
 		act(() => {
 			removed.pin(false, false, false)
@@ -195,10 +195,10 @@ describe('usePinnedRowOffsets', () => {
 	})
 
 	it('measures rows whose ref attaches after the layout effect', async () => {
-		const { instance } = renderGrid({ deferRows: true })
+		const { table } = renderGrid({ deferRows: true })
 
-		await pin(instance, 0, 'top')
-		await pin(instance, 1, 'top')
+		await pin(table, 0, 'top')
+		await pin(table, 1, 'top')
 
 		// The second row is registered a commit late. Measuring only from the effect leaves it
 		// without an offset, so it renders on top of the first one — the #140 gap, inverted.
@@ -206,10 +206,10 @@ describe('usePinnedRowOffsets', () => {
 	})
 
 	it('pinning a row does not re-render the body more than twice', async () => {
-		const { counters, instance } = renderGrid()
+		const { counters, table } = renderGrid()
 		const before = counters.tbody
 
-		await pin(instance, 0, 'top')
+		await pin(table, 0, 'top')
 
 		// One render for the row leaving the center list. The measurement itself must add none: it
 		// used to call setState per attached ref, re-rendering every row and cell several times over.

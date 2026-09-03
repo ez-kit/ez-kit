@@ -2,18 +2,17 @@ import { type ReactNode } from 'react'
 
 import { useGridComponents } from '../components-context'
 
-import { useTable } from './table-context'
+import { useDataGridTable } from './table-context'
 
-type CreateTriggerProps = {
+export type DataGridCreateTriggerProps = {
 	children?: ReactNode
 }
 
 /**
- * Button that opens the create form.
- * With `asChild`, injects onClick into the child element (Radix-style).
+ * Button that opens the create form. `children` is its label; omit it for the default `+ Add`.
  */
-export function CreateTrigger({ children }: CreateTriggerProps) {
-	const table = useTable()
+export function CreateTrigger({ children }: DataGridCreateTriggerProps = {}) {
+	const table = useDataGridTable()
 	const { Button } = useGridComponents().core
 	const handleClick = (): void => {
 		table.creating.start()

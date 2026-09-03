@@ -1,0 +1,31 @@
+---
+title: Use with AI
+description: Feed the twc documentation to an LLM or coding agent — scoped llms.txt, full-text dump, and per-page Markdown.
+---
+
+# Use with AI
+
+The `@ez-kit/twc` documentation is served as plain Markdown, so an LLM or a coding agent can read it
+directly instead of scraping rendered HTML. These endpoints are scoped to this package —
+use them instead of the site-wide ones so the agent is not handed the whole documentation.
+
+| URL                                        | What it is                                             |
+| ------------------------------------------ | ------------------------------------------------------ |
+| [`/llms.txt/twc`](/llms.txt/twc)           | Index of every twc page — title, link and description. |
+| [`/llms-full.txt/twc`](/llms-full.txt/twc) | Every twc page as one Markdown file.                   |
+| `/llms.mdx/docs/twc/<slug>`                | A single page as raw Markdown.                         |
+
+The per-page route mirrors the docs URL: this section's [overview](./) is served as Markdown at
+[`/llms.mdx/docs/twc`](/llms.mdx/docs/twc).
+Every page also carries **Copy Markdown** and **View options** controls under its title.
+
+```text
+Read https://ez-kit.dev/llms-full.txt/twc, then build a Button with variants
+using the twc factory.
+```
+
+```bash
+curl -O https://ez-kit.dev/llms-full.txt/twc
+```
+
+For the whole site — every package at once — see [Use with AI](/docs/ai).

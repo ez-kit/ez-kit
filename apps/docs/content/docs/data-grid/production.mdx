@@ -1,0 +1,369 @@
+---
+title: Production example
+description: One grid with every feature turned on at once, reading and writing against a simulated server.
+---
+
+# Production example
+
+Every other page in these docs isolates one feature. This one does the opposite: a single
+orders console with everything enabled at the same time, talking to a **simulated backend**.
+Nothing is filtered, sorted or paged in the browser — the grid sends a query, the fake server
+answers with one page plus a total, and mutations go back over the same wire.
+
+Use it to see how the features behave together, and copy the wiring rather than the feature list.
+
+<DataGridDocsExample exampleId='production-orders' />
+
+Things worth trying in the live preview above:
+
+- Sort by two columns — hold <kbd>Ctrl</kbd> (<kbd>⌘</kbd> on macOS) while clicking a second header.
+- Open the filter panel, filter **Status** by several values at once, then watch the chips above the table.
+- Change the page size, then page forward — the row count in the footer comes from the server, not from the loaded rows.
+- Edit or delete a row: the grid dims under a refetch overlay while the write and the follow-up query are in flight.
+- Drag the border of a column header to resize it — the width follows the cursor while you drag
+  (`resizing={{ mode: 'onChange' }}`) — and unpin **Order** from its column menu.
+
+## What is turned on
+
+| Area      | Enabled here                                                                                       |
+| --------- | -------------------------------------------------------------------------------------------------- |
+| Query     | Server-side pagination, sorting (multi, max 3) and filtering, plus global search — all `manual`    |
+| Filtering | Panel variant, faceted multi-value, operator filters (text / number / date / in), chips, clear-all |
+| Columns   | Pinning (`Order` starts pinned), visibility toggle (`Invoice` starts hidden), live resizing        |
+| Rows      | Selection with a bulk-delete bar, row pinning top and bottom, sticky header                        |
+| Cells     | Badge, select, number, progress, date, boolean and link renderers                                  |
+| Mutations | Create and edit in a modal, delete with a confirmation dialog, bulk delete from the selection bar  |
+| Loading   | Skeleton on first load, refetch overlay on every load after it, error state                        |
+
+## How the server side is wired
+
+Three files, each with one job:
+
+- **`server.ts`** — the fake API. It owns the dataset, applies filters, sorting and paging itself,
+  and answers after a delay. The grid only ever receives one page.
+- **`use-orders.ts`** — owns the query state (page, sort, filters, search) and re-queries whenever
+  any of it changes. Mutations write, then refetch.
+- **`ProductionExample.tsx`** — the grid. Every server-owned slice is passed back down through
+  `state`, so the grid renders what the server confirmed rather than a local guess.
+
+### Manual mode is per feature
+
+Each feature that the server takes over is switched with its own `manual` flag and reports changes
+through `onChange`:
+
+```tsx
+pagination={{ manual: true, rowCount, onChange: ({ pageIndex, pageSize }) => { … } }}
+sorting={{ manual: true, onChange: (next) => { … } }}
+filtering={{ manual: true, onChange: (next) => { … } }}
+```
+
+Global search has no `manual` flag of its own — `filtering.manual` already routes it server-side —
+so it only needs an `onChange`.
+
+### Reset the page on every query change
+
+A new sort or filter invalidates the current page number: page 4 of the old result set is
+meaningless in the new one. Every non-paging `onChange` therefore resets `pageIndex` to `0`.
+
+```tsx
+sorting={{
+	manual: true,
+	onChange: (next) => {
+		setSorting(next)
+		setPageIndex(0)
+	},
+}}
+```
+
+### Or: one handler for the whole state
+
+Per-feature `onChange` is the convenience layer. Underneath there is a single channel — pass a
+partial `TableState` to `state` and read every update back through one `onStateChange`, exactly as
+[Controlled state](/docs/data-grid/controlled-state) describes. Below is the grid from the top of
+this page — same features, same modals, same bulk delete — with only the state plumbing changed:
+`use-orders-state.ts` holds the state, the query and the mutations, and the component holds nothing
+but the grid.
+
+<DataGridDocsExample exampleId='production-one-handler' />
+
+```tsx
+const [tableState, setTableState] = useState<Partial<TableState>>(INITIAL_STATE)
+
+<DataGrid
+	data={rows}
+	columns={orderColumns}
+	pagination={{ manual: true, rowCount }}
+	sorting={{ manual: true }}
+	filtering={{ manual: true }}
+	state={{ ...tableState, loading }}
+	onStateChange={(nextState) => {
+		setTableState(nextState)
+	}}
+/>
+```
+
+The `manual` flags stay — they decide _who_ sorts, filters and pages, which is a separate question
+from _how_ you hear about a change. What disappears is one callback per feature.
+
+Create, edit and delete are untouched: `creating.onSave`, `editing.onSave` and `deleting.onDelete`
+are writes, not state, so they never travel through `onStateChange` — they still call the server and
+refetch, exactly as above.
+
+Two things move from the grid into your handler in exchange:
+
+**Not every update is a query.** `onStateChange` fires for column sizing, pinning and visibility too.
+Derive the query from the slices you actually send, and let the rest pass through untouched:
+
+```tsx
+const query = useMemo(
+	() => toQuery(tableState),
+	[tableState.pagination, tableState.sorting, tableState.columnFilters, tableState.globalFilter],
+)
+```
+
+Key on the whole `tableState` object instead and every column drag refetches the page.
+
+**The page reset becomes a comparison.** With per-feature handlers you know a sort changed because
+`sorting.onChange` ran. With one handler you have to notice it:
+
+```tsx
+const onStateChange = useCallback((next: TableState) => {
+	setTableState((prev) => {
+		const invalidatesPage =
+			next.sorting !== prev.sorting ||
+			next.columnFilters !== prev.columnFilters ||
+			next.globalFilter !== prev.globalFilter
+
+		if (!invalidatesPage) return next
+		return { ...next, pagination: { pageIndex: 0, pageSize: next.pagination.pageSize } }
+	})
+}, [])
+```
+
+Reference comparison is enough — each slice keeps its identity until it actually changes.
+
+Take this shape when the query is one object anyway (a URL, a `useQuery` key, a reducer); keep the
+per-feature `onChange` when only two or three slices are server-owned and each one maps to a
+different piece of your state.
+
+### Or: hoist the shared options into a provider
+
+Both grids above still declare _how the grid looks and behaves_ inline — the pagination variant, the
+filter panel, the debounces, sticky header, pinning, resizing. None of that is specific to orders:
+it is how every grid in the app is supposed to look. `DataGridOptionsProvider` takes those options
+once, and every grid beneath it inherits them, deep-merged **under** whatever the grid declares
+itself. Same features, same behaviour, and the `<DataGrid />` call shrinks to a third of its length:
+
+<DataGridDocsExample exampleId='production-provider' />
+
+Put the defaults in their own component and mount it as high as the grids go — the app shell, the
+route, the section:
+
+```tsx
+// DataGridOptions.tsx
+export function DataGridOptions({ children }: { children: ReactNode }) {
+	return (
+		<DataGridOptionsProvider<Order>
+			defaults={{
+				pagination: { manual: true, items: [10, 25, 50], variant: 'numbered', siblings: 1 },
+				sorting: { manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true },
+				filtering: {
+					manual: true,
+					variant: 'popover',
+					faceted: true,
+					debounce: 300,
+					chips: { position: 'above' },
+					toolbar: true,
+				},
+				globalFiltering: { placeholder: 'Search orders…', debounce: 300 },
+				layout: { stickyHeader: true },
+				pinning: { column: true, row: { top: true, bottom: true } },
+				resizing: { mode: 'onChange' },
+				visibility: true,
+				creating: { mode: 'modal' },
+				editing: { mode: 'modal' },
+				deleting: {
+					confirmation: {
+						title: 'Delete order?',
+						description: (row) => `Order ${row.original.reference} will be removed.`,
+					},
+				},
+			}}
+		>
+			{children}
+		</DataGridOptionsProvider>
+	)
+}
+```
+
+What is left at the call site is what only this grid can know — its rows, its columns, its state, and
+what a write actually does:
+
+```tsx
+<DataGridOptions>
+	<DataGrid
+		data={rows}
+		columns={orderColumns}
+		pagination={{ rowCount }}
+		creating={{ onSave: ({ values }) => create(values) }}
+		editing={{ onSave: ({ rowId, values }) => update(Number(rowId), values) }}
+		deleting={{ onDelete: ({ row }) => remove([row.original.id]) }}
+		state={{ ...tableState, loading }}
+		onStateChange={onStateChange}
+	/>
+</DataGridOptions>
+```
+
+Note `pagination={{ rowCount }}`: the provider's `manual`, `variant`, `siblings` and `items`
+survive it. Merging is per field, not per feature — a grid overrides one nested value without
+restating the object around it, and turns a whole feature off with `sorting={false}`.
+
+Two kinds of option **cannot** move into the provider, and the type signature says so:
+
+- **`data`, `columns`, `state`, `onStateChange`** are excluded from `DataGridDefaultOptions` outright.
+  A shared default for them is meaningless.
+- **`pagination.rowCount`** is per query, not per app — it comes back from the server with the page.
+
+Writes are the interesting case. `creating`, `editing` and `deleting` **are** describable app-wide —
+the modal mode, the confirmation copy — but their `onSave` / `onDelete` handlers close over your data
+layer, so a defaults layer has none to give. It does not need one: **a write feature is enabled by its
+handler, not by the defaults that describe it.** The provider above says every create and edit in this
+app opens in a modal and every delete asks first; a grid gets create, edit or delete only by supplying
+the handler. A read-only grid under the same provider stays read-only without opting out of anything,
+and no trigger is ever rendered for a write that would have nothing to call.
+
+Providers nest, so a subtree can refine app-wide defaults without repeating them — a compact grid in a
+side panel wraps itself in a second provider with `pagination: { pageSize: 5 }` and inherits the rest.
+See [Default options](/docs/data-grid/default-options) for the full merge rules, including the
+kit-level `createDataGrid({ defaults })` layer that sits **under** the provider.
+
+### Last write wins
+
+Filters change faster than a network answers, so responses can arrive out of order. Each request
+takes a ticket and only the newest one is allowed to commit:
+
+```ts
+const requestId = ++requestIdRef.current
+const page = await queryOrders(queryRef.current)
+if (requestId !== requestIdRef.current) return // a newer query already started
+```
+
+Skip this and a slow response for an abandoned filter will overwrite the rows the user is looking at.
+
+### Loading is controlled, not inferred
+
+The grid cannot know whether a fetch is in flight, so it is told:
+
+```tsx
+state={{ loading: { isPending, isFetching, isError, error } }}
+```
+
+`isPending` means "no rows yet" and shows the skeleton; `isFetching` keeps the current page on
+screen under a dimming overlay. See [Fallbacks](/docs/data-grid/fallbacks) for how each state renders.
+
+### Or: let the user compose the query, then send it once
+
+Every example above fetches the moment anything changes: a second sort level is a second request, a
+third filter a third. `draft` turns that around. Sorting, column filters and global search
+stop leaving the grid on change — they accumulate as a **draft**, an action bar reports what is
+pending, and the whole query reaches you as **one** state change when the user presses Apply.
+
+<DataGridDocsExample exampleId='production-deferred-apply' />
+
+Add two sorts and a filter in the preview above and watch the network panel: nothing goes out until
+Apply, and then exactly one request does. Pressing <kbd>Enter</kbd> in a column filter or in the
+search box applies the whole draft, not just the field you are in.
+
+```tsx
+<DataGrid
+	data={rows}
+	columns={orderColumns}
+	draft
+	pagination={{ manual: true, rowCount }}
+	sorting={{ manual: true, multi: { max: 3, event: 'ctrl' } }}
+	filtering={{ manual: true }}
+	selection
+	state={{ loading }}
+	onStateChange={(nextState) => {
+		setTableState(nextState)
+	}}
+/>
+```
+
+Four things to know before you turn it on:
+
+**It requires manual mode.** `draft` needs `manual: true` on `sorting`, `filtering` or
+`globalFiltering` —
+deferring a query the browser answers locally would only add a click. Without it the grid **throws**
+at construction rather than quietly doing nothing.
+
+**Your fetch trigger does not change.** `onStateChange` is still what tells you to query, and it
+still means "the query changed" — it simply stops firing for draft edits. So do the per-feature
+`sorting.onChange` / `filtering.onChange` / `globalFiltering.onChange` callbacks: while a draft is
+pending, nothing is emitted at all. `table.draft.apply()` then emits once, with `pageIndex` reset to
+`0` and the row selection cleared in that same state change, because applying a new query can drop
+the selected rows out of the result set. Applying a clean draft is a no-op.
+
+**`onStateChange` receives a resolved state, not an updater.** This is a break from earlier versions
+across the whole grid, `draft` or not: passing the updater through would hand you a function
+that recomputes from _your_ state and reintroduces the draft you were never meant to see.
+
+```diff
+-onStateChange={(updater) => setTableState((prev) => (typeof updater === 'function' ? updater(prev) : updater))}
++onStateChange={(nextState) => setTableState(nextState)}
+```
+
+**The draft is grid-owned.** Mirroring `onStateChange`'s output straight back through `state` — the
+ordinary controlled loop, and what the diff above already does — stays safe with `draft` on.
+Your copy only ever holds the _applied_ query, because `onStateChange` stays silent for draft edits,
+so on every re-render it is stale by construction for `sorting`, `columnFilters` and `globalFilter`.
+The grid knows this and ignores exactly those three slices out of what you pass back while a draft is
+pending, so it never clobbers what the user is still composing; the moment you call `table.draft.apply()`,
+the applied query becomes the new `state` your callback receives. You never need to special-case those
+three fields out of your own `state` — reach the draft itself through `table.draft`:
+
+```ts
+table.draft.get() // the live values of the three deferred axes
+table.draft.set({ sorting }) // write into the draft
+table.draft.isDirty() // is anything pending?
+table.draft.getPendingCount() // { sorting, columnFilters, globalFilter } — keyed by DraftAxis
+table.draft.apply() // emit once
+table.draft.reset() // discard the draft
+table.draft.resetAxis('sorting') // discard one axis
+```
+
+To restore a draft that outlived a reload, seed it at construction with `initialState.draft` —
+`initialState.sorting` and friends seed the **applied** query, so a grid born with a default sort is
+not born dirty.
+
+## Deliberately not in the same grid
+
+Two features cannot share a grid with the one above, so they get their own example rather than a
+footnote:
+
+- **Infinite scroll** replaces the page footer — the two are mutually exclusive.
+- **Row virtualization** only pays off when a long list is rendered at once, which is exactly what
+  paging avoids.
+
+Same server, read as a feed instead:
+
+<DataGridDocsExample exampleId='production-feed' />
+
+```tsx
+<DataGrid
+	data={rows}
+	columns={orderColumns}
+	layout={{ stickyHeader: true }}
+	virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
+	pagination={{ mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } }}
+/>
+```
+
+Row grouping, drag reordering and CSV export are not here because they are not built yet — see
+[Features](/docs/data-grid/features) for the current status of each.
+
+## Where to go next
+
+- [Server-side Data](/docs/data-grid/server-side) — the minimal version of this wiring, one feature at a time.
+- [Controlled state](/docs/data-grid/controlled-state) — which slices you can own and what happens when you do.
+- [State persistence](/docs/data-grid/state-persistence) — put this grid's query into the URL so it survives a reload.

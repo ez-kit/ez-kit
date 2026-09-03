@@ -1,15 +1,14 @@
 import { ExampleCard, ExampleShell } from '@/components/example-card'
-import { DEFAULT_EXAMPLE_LANGUAGE, SourcePanel } from '@/components/source-panel'
+import { SourcePanel } from '@/components/source-panel'
 
+import type { ExampleFile } from '@/components/example-file'
 import type { ReactNode } from 'react'
 
 export type ExamplePreviewProps = {
 	/** The rendered example itself — a component instance or an `<ExampleFrame />`. */
 	view: ReactNode
-	/** Example source, already in the exact form it should be shown and copied in. */
-	source: string
-	/** Syntax-highlighting language for the source panel. Defaults to tsx. */
-	language?: string
+	/** Every file the example is built from, entry first, already display-ready. */
+	files: readonly ExampleFile[]
 	/** Optional row above the card — a title caption or the flavor tabs. */
 	header?: ReactNode
 }
@@ -18,18 +17,13 @@ export type ExamplePreviewProps = {
  * The one wrapper every docs example is rendered through: optional header, the live
  * view, and the source panel below it.
  */
-export function ExamplePreview({ view, source, language = DEFAULT_EXAMPLE_LANGUAGE, header }: ExamplePreviewProps) {
+export function ExamplePreview({ view, files, header }: ExamplePreviewProps) {
 	return (
 		<ExampleShell>
 			{header}
 			<ExampleCard
 				view={view}
-				source={
-					<SourcePanel
-						source={source}
-						language={language}
-					/>
-				}
+				source={<SourcePanel files={files} />}
 			/>
 		</ExampleShell>
 	)

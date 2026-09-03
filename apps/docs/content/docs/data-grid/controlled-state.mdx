@@ -5,47 +5,69 @@ description: Pass any grid state in from outside — sort, filter, pagination, s
 
 # Controlled State
 
-Every interactive surface (sort, filter, pagination, selection, visibility, pinning, expansion, **loading**) supports controlled state. Pass `state.*` to drive it; pass `on*Change` to subscribe.
+Every interactive surface (sort, filter, pagination, selection, visibility, pinning, expansion, **loading**) supports controlled state. Pass `state.*` to drive it; pass `onStateChange` to subscribe.
 
 ## Usage
 
 <DataGridDocsExample exampleId='controlled-state' />
 
 ```ts
-const [sorting, setSorting] = useState<SortingState>([])
-const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
+const [tableState, setTableState] = useState<Partial<TableState>>({
+	sorting: [{ id: 'name', desc: false }],
+	pagination: { pageIndex: 0, pageSize: 3 },
+})
 
-const grid = useDataGrid({
+const table = useDataGrid({
 	data,
 	columns,
-	state: { sorting, pagination, isLoading: query.isFetching },
-	onSortingChange: setSorting,
-	onPaginationChange: setPagination,
+	sorting: true,
+	pagination: true,
+	state: tableState,
+	onStateChange: (nextState) => {
+		setTableState(nextState)
+	},
 })
 ```
+
+`state` is one of four places a grid value can come from — the other three (`initialState`, feature
+config, column-level seeds) are uncontrolled and only set a starting point. [State
+model](./data-grid/state-model) lays out which one wins.
 
 ## Why this matters
 
 - Server-side anything (sort, filter, pagination) needs controlled state so you can translate the user's input into your query.
 - URL state — keep sort/filter/page in `?` params so reload preserves view and links are shareable.
 - Cross-component coordination — e.g., a "clear all" button outside the grid that resets every controllable surface at once.
-- **Loading state** — `state.isLoading: true` lets the grid render its loading fallback while your data is fetching. Pass it from any data source — TanStack Query's `isFetching`, SWR's `isValidating`, or your own hook.
+- **Loading state** — `state.loading: { isPending, isFetching, isError, error }` lets the grid render its loading fallback while your data is fetching. Feed it from any data source — TanStack Query's `isPending`/`isFetching`, SWR's `isValidating`, or your own hook.
+
+## One state, one subscription
+
+There is exactly one controlled-state mechanism: pass a partial `TableState` to `state`, and read every
+update back through the single `onStateChange` callback. `onStateChange` receives the resolved
+**whole** table state, not a per-slot value — apply it to your own state as shown above.
+
+Some features additionally expose their own `feature.onChange` (e.g. `sorting.onChange`,
+`pagination.onChange`) — these are convenience subscriptions layered on top of the same mechanism,
+scoped to that one slice, and firing only when that slice's reference actually changed. They are not a
+separate state channel: every slot remains reachable through `onStateChange` even when no per-feature
+`onChange` exists. `selection.onChange` is the one exception in shape — it hands back `string[]` row ids,
+not a `RowSelectionState` object.
 
 ## Every controllable slot
 
-| Slot              | State key          | Change handler                          |
-| ----------------- | ------------------ | --------------------------------------- |
-| Sort              | `sorting`          | `onSortingChange`                       |
-| Column filters    | `columnFilters`    | `onColumnFiltersChange`                 |
-| Global filter     | `globalFilter`     | `onGlobalFilterChange`                  |
-| Pagination        | `pagination`       | `onPaginationChange`                    |
-| Row selection     | `rowSelection`     | `onRowSelectionChange`                  |
-| Column visibility | `columnVisibility` | `onColumnVisibilityChange`              |
-| Column pinning    | `columnPinning`    | `onColumnPinningChange`                 |
-| Row pinning       | `rowPinning`       | `onRowPinningChange`                    |
-| Expanded          | `expanded`         | `onExpandedChange`                      |
-| Column sizing     | `columnSizing`     | `onColumnSizingChange`                  |
-| Loading           | `isLoading`        | (read-only — set via `state.isLoading`) |
+| Slot              | State key          | Per-feature `onChange`                                                               |
+| ----------------- | ------------------ | ------------------------------------------------------------------------------------ |
+| Sort              | `sorting`          | `sorting.onChange`                                                                   |
+| Column filters    | `columnFilters`    | `filtering.onChange`                                                                 |
+| Global filter     | `globalFilter`     | `globalFiltering.onChange`                                                           |
+| Pagination        | `pagination`       | `pagination.onChange`                                                                |
+| Row selection     | `rowSelection`     | `selection.onChange` — `(rowSelection: RowSelectionState, rowIds: string[]) => void` |
+| Column visibility | `columnVisibility` | — (`onStateChange` only)                                                             |
+| Column pinning    | `columnPinning`    | — (`onStateChange` only)                                                             |
+| Row pinning       | `rowPinning`       | — (`onStateChange` only)                                                             |
+| Expanded          | `expanded`         | — (`onStateChange` only)                                                             |
+| Column sizing     | `columnSizing`     | — (`onStateChange` only)                                                             |
+| Loading           | `loading`          | — (read-only — set via `state.loading`)                                              |
 
 ## Source
 

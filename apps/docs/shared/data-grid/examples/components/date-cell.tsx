@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -21,14 +21,14 @@ const INITIAL_DATA: Milestone[] = [
 	{ id: 6, title: 'Retrospective', dueDate: '2026-05-15', completedAt: undefined },
 ]
 
-const baseColumns = defineColumns<Milestone>([
+const baseColumns = createColumns<Milestone>([
 	{ accessorKey: 'title', header: 'Title' },
 	{
 		accessorKey: 'dueDate',
 		header: 'Due date',
 		cell: {
 			type: 'date',
-			config: { format: { dateStyle: 'medium' }, minValue: '2025-01-01', maxValue: '2027-12-31' },
+			config: { format: { dateStyle: 'medium' }, min: '2025-01-01', max: '2027-12-31' },
 		},
 		filtering: { operators: true },
 	},
@@ -41,7 +41,7 @@ const baseColumns = defineColumns<Milestone>([
 		},
 		filtering: {
 			operators: {
-				items: ['eq', 'before', 'after', 'between'],
+				items: ['equals', 'lessThan', 'greaterThan', 'between'],
 				betweenOperator: { variant: 'inputs' },
 			},
 		},
@@ -64,7 +64,6 @@ export function DateCellEditExample() {
 		<DataGrid
 			data={rows}
 			columns={baseColumns}
-			getRowId={(row) => String(row.id)}
 			filtering
 			editing={{
 				mode: 'cell',
@@ -82,7 +81,6 @@ export function DateCellCreateExample() {
 		<DataGrid
 			data={rows}
 			columns={baseColumns}
-			getRowId={(row) => String(row.id)}
 			creating={{
 				mode: 'row',
 				onSave: ({ values }) => {

@@ -2,6 +2,8 @@ import { ListBox, Select as HeroSelect } from '@heroui/react'
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
+import { OptionSkeleton } from './option-skeleton'
+import { SearchableSelectField } from './searchable-select'
 
 import type { SelectFieldRenderProps } from '@ez-kit/form-react'
 import type { Key } from '@heroui/react'
@@ -24,10 +26,28 @@ function toStringValue(key: Key | Key[] | null): string {
  * follows HeroUI's anatomy: label above the trigger, description and error below the
  * popover, all inside the root so React Aria owns the wiring.
  */
-export function SelectField({
+export function SelectField(props: SelectFieldRenderProps): ReactNode {
+	// `search` present *is* the mode switch — see `SelectFieldRenderProps`. The two are
+	// different React Aria widgets (`Select` vs `ComboBox`) with different anatomy, so they
+	// are separate components rather than one with branches inside it.
+	if (props.search !== undefined) {
+		return (
+			<SearchableSelectField
+				{...props}
+				search={props.search}
+			/>
+		)
+	}
+
+	return <PlainSelectField {...props} />
+}
+
+function PlainSelectField({
 	value,
 	onChange,
 	options,
+	loading,
+	search: _search,
 	placeholder,
 	id,
 	name,
@@ -45,14 +65,18 @@ export function SelectField({
 			}}
 			name={name}
 			{...(placeholder !== undefined ? { placeholder } : {})}
-			{...fieldRoot(field)}
+			// A list that is still arriving cannot be chosen from, and a value that arrived before
+			// it has no option to be labelled by — so the field is disabled and the trigger shows a
+			// skeleton until the options land.
+			{...fieldRoot(loading ? { ...field, disabled: true } : field)}
 		>
 			<FieldLabel label={label} />
 			<HeroSelect.Trigger
 				id={id}
+				data-loading={loading || undefined}
 				onBlur={onBlur}
 			>
-				<HeroSelect.Value />
+				{loading ? <OptionSkeleton /> : <HeroSelect.Value />}
 				<HeroSelect.Indicator />
 			</HeroSelect.Trigger>
 			<HeroSelect.Popover>

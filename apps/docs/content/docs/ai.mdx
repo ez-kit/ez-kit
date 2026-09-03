@@ -1,0 +1,67 @@
+---
+title: Use with AI
+description: Feed ez-kit documentation to an LLM or coding agent — llms.txt, the full-text dump, and per-page Markdown.
+---
+
+# Use with AI
+
+Every page of this site is available as plain Markdown, so an LLM or a coding agent can read the
+documentation directly instead of scraping rendered HTML.
+
+## Endpoints
+
+| URL                                | What it is                                                                                | Use it when                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [`/llms.txt`](/llms.txt)           | Index of every page — title, link and one-line description, grouped by section. A few KB. | You want the agent to pick the relevant pages itself.        |
+| [`/llms-full.txt`](/llms-full.txt) | The entire documentation as one Markdown file — every package, a few hundred KB.          | You have a large context window and want everything at once. |
+| `/llms.mdx/docs/<slug>`            | A single page as raw Markdown.                                                            | You already know which page you need.                        |
+
+The per-page route mirrors the docs URL: the page at `/docs/data-grid/getting-started` is served as
+Markdown at [`/llms.mdx/docs/data-grid/getting-started`](/llms.mdx/docs/data-grid/getting-started).
+
+## One package at a time
+
+The full dump covers every package at once. When you are working with a single package, use its
+scoped endpoints instead — `/llms.txt/<package>` and `/llms-full.txt/<package>`:
+
+| Package   | Index                                        | Full text                                              | Page                              |
+| --------- | -------------------------------------------- | ------------------------------------------------------ | --------------------------------- |
+| Data Grid | [`/llms.txt/data-grid`](/llms.txt/data-grid) | [`/llms-full.txt/data-grid`](/llms-full.txt/data-grid) | [Use with AI](/docs/data-grid/ai) |
+| Form      | [`/llms.txt/form`](/llms.txt/form)           | [`/llms-full.txt/form`](/llms-full.txt/form)           | [Use with AI](/docs/form/ai)      |
+| zu-store  | [`/llms.txt/zu-store`](/llms.txt/zu-store)   | [`/llms-full.txt/zu-store`](/llms-full.txt/zu-store)   | [Use with AI](/docs/zu-store/ai)  |
+| va-store  | [`/llms.txt/va-store`](/llms.txt/va-store)   | [`/llms-full.txt/va-store`](/llms-full.txt/va-store)   | [Use with AI](/docs/va-store/ai)  |
+| twc       | [`/llms.txt/twc`](/llms.txt/twc)             | [`/llms-full.txt/twc`](/llms-full.txt/twc)             | [Use with AI](/docs/twc/ai)       |
+
+## From the page you are reading
+
+Every docs page carries two controls under its title:
+
+- **Copy Markdown** — puts the Markdown source of that page on your clipboard, ready to paste into a chat.
+- **View options** — opens the same Markdown in a new tab, or the source file on GitHub.
+
+## Examples
+
+Point an agent at the index and let it fetch what it needs:
+
+```text
+Read https://ez-kit.dev/llms.txt, then read the pages you need from it,
+and add a sortable @ez-kit/data-grid-shadcn table to my app.
+```
+
+Pull a single page from the terminal:
+
+```bash
+curl https://ez-kit.dev/llms.mdx/docs/va-store/persist
+```
+
+Or hand over the whole corpus:
+
+```bash
+curl -O https://ez-kit.dev/llms-full.txt
+```
+
+<Callout title='Docs describe the published packages'>
+	The Markdown mirrors what is on this site, which documents the latest released `@ez-kit/*` versions on npm. If you pin
+	an older version, check the package `CHANGELOG.md` in the [repository](https://github.com/ez-kit/ez-kit) for
+	differences.
+</Callout>

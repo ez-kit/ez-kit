@@ -16,7 +16,9 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/base/sorting.tsx': () => import('./components/base/sorting'),
 	'components/base/sticky.tsx': () => import('./components/base/sticky'),
 	'components/cell-types.tsx': () => import('./components/cell-types'),
+	'components/column-footers.tsx': () => import('./components/column-footers'),
 	'components/column-helper.tsx': () => import('./components/column-helper'),
+	'components/column-helper-registered.tsx': () => import('./components/column-helper-registered'),
 	'components/column-pinning.tsx': () => import('./components/column-pinning'),
 	'components/column-visibility.tsx': () => import('./components/column-visibility'),
 	'components/columns/combined.tsx': () => import('./components/columns/combined'),
@@ -57,7 +59,16 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/infinite-scroll/reset-on-query.tsx': () => import('./components/infinite-scroll/reset-on-query'),
 	'components/infinite-scroll/virtualized.tsx': () => import('./components/infinite-scroll/virtualized'),
 	'components/pagination-variants.tsx': () => import('./components/pagination-variants'),
+	'components/row-actions/custom-actions.tsx': () => import('./components/row-actions/custom-actions'),
 	'components/row-pinning/sticky-header.tsx': () => import('./components/row-pinning/sticky-header'),
+	'components/production/ProductionDeferredApplyExample.tsx': () =>
+		import('./components/production/ProductionDeferredApplyExample'),
+	'components/production/ProductionExample.tsx': () => import('./components/production/ProductionExample'),
+	'components/production/ProductionFeedExample.tsx': () => import('./components/production/ProductionFeedExample'),
+	'components/production/ProductionOneHandlerExample.tsx': () =>
+		import('./components/production/ProductionOneHandlerExample'),
+	'components/production/ProductionProviderExample.tsx': () =>
+		import('./components/production/ProductionProviderExample'),
 	'components/selection-bar-inline.tsx': () => import('./components/selection-bar-inline'),
 	'components/selection-bar.tsx': () => import('./components/selection-bar'),
 	'components/server-data.tsx': () => import('./components/server-data'),

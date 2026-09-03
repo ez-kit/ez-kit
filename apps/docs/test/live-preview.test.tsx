@@ -15,7 +15,8 @@ vi.mock('fumadocs-ui/components/dynamic-codeblock', () => ({
 
 vi.mock('node:fs/promises', () => {
 	const readFile = vi.fn().mockResolvedValue('export default function Example() {\n\treturn <div>hi</div>\n}\n')
-	return { default: { readFile }, readFile }
+	const stat = vi.fn().mockRejectedValue(new Error('ENOENT'))
+	return { default: { readFile, stat }, readFile, stat }
 })
 
 vi.mock('@/shared/examples/zu-store/counter', () => ({

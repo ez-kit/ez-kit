@@ -10,7 +10,7 @@ import { createRelativeLink } from 'fumadocs-ui/mdx'
 import { notFound } from 'next/navigation'
 
 import { getMDXComponents } from '@/components/mdx'
-import { gitConfig } from '@/lib/shared'
+import { docsContentDir, gitConfig } from '@/lib/shared'
 import { getPageImage, getPageMarkdownUrl, source } from '@/lib/source'
 
 import type { Metadata } from 'next'
@@ -46,7 +46,7 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
 				<MarkdownCopyButton markdownUrl={markdownUrl} />
 				<ViewOptionsPopover
 					markdownUrl={markdownUrl}
-					githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`}
+					githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/${docsContentDir}/${page.path}`}
 				/>
 			</div>
 			<DocsBody>

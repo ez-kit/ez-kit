@@ -2,6 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 
 import { asText } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -19,14 +20,18 @@ export function createTextField<TFormData>(
 		description,
 		disabled,
 		required,
+		validate,
 		type,
 		placeholder,
 	}: TextFieldProps<TFormData>): ReactNode {
 		return (
-			<form.AppField name={name}>
+			<form.AppField
+				name={name}
+				validators={fieldValidators(name, validate)}
+			>
 				{(field) => (
 					<KitTextField
-						{...fieldRenderProps(field, FormFieldType.Text, { label, description, disabled, required })}
+						{...fieldRenderProps(field, FormFieldType.Text, { label, description, disabled, required, validate })}
 						type={type}
 						placeholder={placeholder}
 						value={asText(field.state.value)}

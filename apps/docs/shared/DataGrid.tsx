@@ -33,29 +33,9 @@ function DataGridBase<T extends object>(props: DataGridProps<T>) {
 }
 
 // Compound members are context-consumers — they read TableContext + GridComponentsProvider
-// that the kit-specific bound DataGrid sets up internally. Re-attaching the adapter's
-// versions here so docs examples can use `<DataGrid.Toolbar>`, `<DataGrid.FilterPanel>`,
-// etc. without each docs route having to import them from a specific kit.
-export const DataGrid: typeof DataGridBase & typeof AdapterDataGrid = Object.assign(DataGridBase, {
-	Toolbar: AdapterDataGrid.Toolbar,
-	Table: AdapterDataGrid.Table,
-	Header: AdapterDataGrid.Header,
-	Body: AdapterDataGrid.Body,
-	Row: AdapterDataGrid.Row,
-	Cell: AdapterDataGrid.Cell,
-	Pagination: AdapterDataGrid.Pagination,
-	PageSizer: AdapterDataGrid.PageSizer,
-	SelectionBar: AdapterDataGrid.SelectionBar,
-	CreateTrigger: AdapterDataGrid.CreateTrigger,
-	ColumnVisibilityTrigger: AdapterDataGrid.ColumnVisibilityTrigger,
-	SortTrigger: AdapterDataGrid.SortTrigger,
-	GlobalFilterInput: AdapterDataGrid.GlobalFilterInput,
-	ActiveFiltersBar: AdapterDataGrid.ActiveFiltersBar,
-	ClearFiltersButton: AdapterDataGrid.ClearFiltersButton,
-	FilterPanel: AdapterDataGrid.FilterPanel,
-	CreatingModal: AdapterDataGrid.CreatingModal,
-	EditingModal: AdapterDataGrid.EditingModal,
-	LoadingBody: AdapterDataGrid.LoadingBody,
-	EmptyStateRow: AdapterDataGrid.EmptyStateRow,
-	NoResultsRow: AdapterDataGrid.NoResultsRow,
-})
+// that the kit-specific bound DataGrid sets up internally, so the adapter's versions work
+// unchanged here and docs examples can use `<DataGrid.Toolbar>` etc. without importing from
+// a specific kit. Copied wholesale rather than listed member by member: the hand-written list
+// this replaced is exactly the shape that had already drifted five members behind inside
+// `createDataGrid`.
+export const DataGrid: typeof DataGridBase & typeof AdapterDataGrid = Object.assign(DataGridBase, AdapterDataGrid)

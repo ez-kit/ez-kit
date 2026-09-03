@@ -1,15 +1,23 @@
+import { ColumnFormMode, CommitStatus, resolveColumnFormConfig } from '@ez-kit/data-grid-core'
+
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
-import { useTable } from './table-context'
+import { flexRender } from './flex-render'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
-import type { ColumnEditingConfig, ColumnCreatingConfig, FieldState } from '@ez-kit/data-grid-core'
+import type { FieldState, ResolvedColumnFormConfig } from '@ez-kit/data-grid-core'
 import type { ColumnMeta } from '@tanstack/table-core'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 type AutoFormProps = {
-	mode: 'creating' | 'editing'
+	/**
+	 * Which feature's form is being rendered. The core {@link ColumnFormMode}, not a local
+	 * twin: it named the same two members with the same two values, and it is the very value
+	 * `resolveColumnFormConfig` takes to pick between `meta.creating` and `meta.editing`.
+	 */
+	mode: ColumnFormMode
 }
 
 /**
@@ -17,7 +25,7 @@ type AutoFormProps = {
  *
  * Resolution order per column:
  *   1. column.creating/editing.component — user override
- *   2. cellTypes registry by `meta.cellType` — kit composite (shadcn / heroui ship
+ *   2. cellTypes registry by `meta.cell?.type` — kit composite (shadcn / heroui ship
  *      `text`/`number`/`boolean` etc. that wrap the input in idiomatic Field shells
  *      and consume `field.label` / `field.description` / `field.errors` directly)
  *   3. fallback — bare `<Input>` wrapped here in `<label>` + `<FieldError>` helper.
@@ -27,17 +35,18 @@ type AutoFormProps = {
  * `errors` / `error`, `onBlur`, `isValidating`.
  */
 export function AutoForm({ mode }: AutoFormProps): ReactNode {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => (mode === ColumnFormMode.Creating ? s.creating : s.editing))
 	const { Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 
-	const state = mode === 'creating' ? table.creating.getState() : table.editing.getState()
+	const state = mode === ColumnFormMode.Creating ? table.creating.getState() : table.editing.getState()
 	const values = state.values
 	const errors = state.errors
-	const isValidating = state.commitStatus === 'validating'
+	const isValidating = state.commitStatus === CommitStatus.Validating
 
 	const setValue = (key: string, value: unknown): void => {
-		if (mode === 'creating') {
+		if (mode === ColumnFormMode.Creating) {
 			table.creating.setValue(key, value)
 		} else {
 			table.editing.setValue(key, value)
@@ -45,7 +54,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 	}
 
 	const validateField = (columnId: string): void => {
-		if (mode === 'creating') {
+		if (mode === ColumnFormMode.Creating) {
 			void table.creating.validateField(columnId)
 		} else {
 			void table.editing.validateField(columnId)
@@ -58,7 +67,10 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				const meta = col.columnDef.meta
 				if (meta?.isSystemColumn) return null
 
-				const colDef = mode === 'creating' ? meta?.creating : meta?.editing
+				// `component`, `description`, `validateOn` and `debounce` in one resolution, with the
+				// documented per-field fallback from `creating` to `editing` — the same helper the
+				// headless creating feature uses for the two timing fields.
+				const colDef = resolveColumnFormConfig(meta, mode)
 				if (colDef === false) return null
 
 				const value = values[col.id]
@@ -77,7 +89,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 					value,
 					onChange,
 					onBlur,
-					...(meta?.config !== undefined ? { config: meta.config } : {}),
+					...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 					label,
 					...(description !== undefined ? { description } : {}),
 					error: fieldError,
@@ -89,13 +101,13 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				//    for rendering label/description/error from FieldState.
 				const customComp = resolveColumnComponent(colDef)
 				if (customComp) {
-					return <div key={col.id}>{customComp(field)}</div>
+					return <div key={col.id}>{flexRender(customComp, field)}</div>
 				}
 
-				// 2. registry by cellType — kit composite renders the full Field shell.
-				if (meta?.cellType) {
+				// 2. registry by cell type — kit composite renders the full Field shell.
+				if (meta?.cell?.type) {
 					const regComp = resolveRegistryComponent(meta, mode, cellTypes)
-					if (regComp) return <div key={col.id}>{regComp(field)}</div>
+					if (regComp) return <div key={col.id}>{flexRender(regComp, field)}</div>
 				}
 
 				// 3. fallback: kits without a composite registry entry (e.g. native)
@@ -153,26 +165,27 @@ function FieldError({ messages }: { messages: readonly string[] }): ReactNode {
 	)
 }
 
-type ColConfig = false | ColumnEditingConfig | ColumnCreatingConfig | undefined
+type ColConfig = false | ResolvedColumnFormConfig | undefined
 
 function resolveLabel(header: unknown, fallback: string): string {
 	return typeof header === 'string' ? header : fallback
 }
 
-function resolveColumnComponent(colDef: ColConfig): ((props: FieldState) => ReactNode) | undefined {
+function resolveColumnComponent(colDef: ColConfig): ComponentType<FieldState> | undefined {
 	if (!colDef) return undefined
 	const comp = colDef.component
-	return comp ? (comp as (props: FieldState) => ReactNode) : undefined
+	return comp ? (comp as ComponentType<FieldState>) : undefined
 }
 
 function resolveRegistryComponent(
 	meta: ColumnMeta<unknown, unknown>,
-	mode: 'creating' | 'editing',
+	mode: ColumnFormMode,
 	cellTypes: CellTypeRegistry,
-): ((props: FieldState) => ReactNode) | undefined {
-	if (!meta.cellType) return undefined
-	const def = cellTypes[meta.cellType]
+): ComponentType<FieldState> | undefined {
+	const cellTypeId = meta.cell?.type
+	if (!cellTypeId) return undefined
+	const def = cellTypes[cellTypeId]
 	if (!def) return undefined
-	const comp = mode === 'creating' ? (def.creating ?? def.edit) : def.edit
+	const comp = mode === ColumnFormMode.Creating ? (def.creating ?? def.editing) : def.editing
 	return comp
 }

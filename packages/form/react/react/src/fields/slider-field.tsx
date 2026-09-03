@@ -2,6 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 
 import { asNumber } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -26,15 +27,19 @@ export function createSliderField<TFormData>(
 		description,
 		disabled,
 		required,
+		validate,
 		min,
 		max,
 		step,
 	}: SliderFieldProps<TFormData>): ReactNode {
 		return (
-			<form.AppField name={name}>
+			<form.AppField
+				name={name}
+				validators={fieldValidators(name, validate)}
+			>
 				{(field) => (
 					<KitSliderField
-						{...fieldRenderProps(field, FormFieldType.Slider, { label, description, disabled, required })}
+						{...fieldRenderProps(field, FormFieldType.Slider, { label, description, disabled, required, validate })}
 						min={min}
 						max={max}
 						step={step}

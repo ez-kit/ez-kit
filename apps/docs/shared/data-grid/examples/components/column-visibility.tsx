@@ -77,8 +77,8 @@ export function ColumnVisibilityExample() {
 				{
 					accessorKey: 'name',
 					header: 'Name',
-					// visibility: true — required column, always visible / locked (no Hide option in menu)
-					visibility: true,
+					// visibility: false — hiding disabled: always visible, no Hide option in menu
+					visibility: false,
 				},
 				{
 					accessorKey: 'email',
@@ -97,19 +97,19 @@ export function ColumnVisibilityExample() {
 					header: 'Salary',
 					cell: { type: 'number' },
 					// starts hidden, user can toggle it on via the Columns button
-					visibility: { defaultHidden: true },
+					visibility: { initialHidden: true },
 				},
 				{
 					accessorKey: 'startDate',
 					header: 'Start Date',
 					cell: { type: 'date' },
 					// starts hidden, user can toggle it on via the Columns button
-					visibility: { defaultHidden: true },
+					visibility: { initialHidden: true },
 				},
 			]}
 			sorting
 			// shows the "Columns" toggle button in the toolbar
-			columnVisibility={{ toolbar: true }}
+			visibility
 		/>
 	)
 }

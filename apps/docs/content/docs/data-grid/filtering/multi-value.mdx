@@ -9,7 +9,7 @@ For columns with a bounded set of values (status, category, tag), let users pick
 
 ## Usage
 
-Multi-value filters let users pick any combination of values from a `select` or `badge` column to narrow the table. The default `in` operator keeps every row whose value matches one of the selected options.
+Multi-value filters are available on `select` and `badge` cell types. The default `in` operator keeps every row whose value matches one of the selected options.
 
 <DataGridDocsExample exampleId='filter-multi-value-in' />
 
@@ -17,40 +17,54 @@ With `filtering: { faceted: true }`, each option also shows how many rows would 
 
 <DataGridDocsExample exampleId='filter-multi-value-faceted' />
 
-Flip the default to `notIn` to exclude the selected values instead of including them.
+Set the column's `filtering.defaultOperator` to `'notIn'` to exclude the selected values instead of including them.
 
 <DataGridDocsExample exampleId='filter-multi-value-not-in' />
 
 ```ts
-const columns = defineColumns<Order>([
+const columns = createColumns<Order>([
 	{
-		id: 'status',
 		accessorKey: 'status',
-		meta: {
-			filterVariant: 'multiselect',
-			options: [
-				{ label: 'Pending', value: 'pending' },
-				{ label: 'Shipped', value: 'shipped' },
-				{ label: 'Delivered', value: 'delivered' },
-				{ label: 'Cancelled', value: 'cancelled' },
-			],
+		header: 'Status',
+		cell: {
+			type: 'select',
+			config: {
+				items: [
+					{ value: 'pending', label: 'Pending' },
+					{ value: 'shipped', label: 'Shipped' },
+					{ value: 'delivered', label: 'Delivered' },
+					{ value: 'cancelled', label: 'Cancelled' },
+				],
+			},
 		},
+		filtering: { operators: true },
 	},
 ])
 ```
 
 ## Faceted counts
 
-When `meta.faceted` is `true`, each option shows the count of rows currently matching it (post-other-filters). Useful for analytics-shaped grids.
+When `filtering.faceted` is `true` on the table (or the column overrides it to `true`), each option shows the count of rows currently matching it (post-other-filters). Useful for analytics-shaped grids.
 
 ## Options
 
-| Option               | Type                        | Description                                               |
-| -------------------- | --------------------------- | --------------------------------------------------------- |
-| `meta.filterVariant` | `'select' \| 'multiselect'` | `'select'` allows one value; `'multiselect'` allows many. |
-| `meta.options`       | `Array<{ label, value }>`   | Required.                                                 |
-| `meta.faceted`       | `boolean`                   | Default `false`. When `true`, options show live counts.   |
+### `cell` (select / badge)
+
+| Option         | Type                                              | Description                                                                   |
+| -------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `type`         | `'select' \| 'badge'`                             | `'select'` renders plain items; `'badge'` renders colored badges.             |
+| `config.items` | `Array<{ value, label }>` (badge adds `variant?`) | The option list used both for cell display and for the `in` / `notIn` filter. |
+
+### Per-column `filtering`
+
+| Option            | Type                                        | Description                                                                                        |
+| ----------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `operators`       | `boolean \| ColumnOperatorsConfig`          | `true` enables the default `select`/`badge` operator set (`in`, `notIn`, `isEmpty`, `isNotEmpty`). |
+| `defaultOperator` | `string`                                    | `'in'` (default) keeps selected values; `'notIn'` excludes them.                                   |
+| `items`           | `FilterItem[]` — `{ value, label, count? }` | Explicit value list — overrides `cell.config.items` and faceted values for the filter input.       |
+| `faceted`         | `boolean`                                   | Per-column override for the table-level `filtering.faceted` flag.                                  |
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/operators/operators.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/features/operators/operators.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts)

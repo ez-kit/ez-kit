@@ -14,6 +14,7 @@ function makeHeader(id: string, headerSize: number, colSize: number) {
 function mockTable(headers: ReturnType<typeof makeHeader>[]): DataTable<object> {
 	return {
 		getFlatHeaders: () => headers,
+		getVisibleLeafColumns: () => headers.map((header) => header.column),
 	} as unknown as DataTable<object>
 }
 
@@ -29,10 +30,18 @@ describe('getColumnSizeVars', () => {
 		})
 	})
 
-	it('returns empty object for table with no headers', () => {
+	it('returns only the zero table floor for a table with no headers', () => {
 		const table = mockTable([])
 		const vars = getColumnSizeVars(table)
-		expect(vars).toEqual({})
+		expect(vars).toEqual({ '--dg-table-min-width': '0px' })
+	})
+
+	// The floor keeps the table box — and with it the containing block of every sticky
+	// pinned cell — as wide as the columns, not as wide as the scrollport.
+	it('sums the visible leaf column widths into --dg-table-min-width', () => {
+		const table = mockTable([makeHeader('name', 200, 200), makeHeader('age', 80, 80)])
+		const vars = getColumnSizeVars(table)
+		expect(vars['--dg-table-min-width' as keyof typeof vars]).toBe('280px')
 	})
 
 	it('uses header.getSize() for --header-* and column.getSize() for --col-*', () => {

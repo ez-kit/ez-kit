@@ -5,35 +5,44 @@ description: The FormComponents contract and createForm — bind your own design
 
 # Custom kit
 
-`@ez-kit/form-shadcn` and `@ez-kit/form-heroui` are not special. Each is ~200 lines that implement one contract and call one factory. Your design system can do the same.
+`@ez-kit/form-shadcn` and `@ez-kit/form-heroui` are not special. Each is a folder of components that implement one contract, plus a single file that hands them to one factory. Your design system can do the same.
 
 ## The idea
 
 `@ez-kit/form-react` owns the behaviour — binding a field to form state, normalising errors, tracking submit state — and **no pixels and no DOM structure at all**. It hands you one flat props object per field and you build the whole element tree:
 
 ```tsx
-import { createForm } from '@ez-kit/form-react'
-import type { FormComponents } from '@ez-kit/form-react'
-
-const components = {
-	TextField,
-	NumberField,
-	TextareaField,
-	SelectField,
-	CheckboxField,
-	Button,
-	Form,
-} satisfies FormComponents
-
-export const { useForm } = createForm({ components })
+export function TextField({
+	id,
+	name,
+	label,
+	value,
+	onChange,
+	onBlur,
+	errors,
+	invalid,
+	...field
+}: TextFieldRenderProps) {
+	return (
+		<div {...field}>
+			<label htmlFor={id}>{label}</label>
+			<input
+				id={id}
+				name={name}
+				value={value}
+				onBlur={onBlur}
+				onChange={(event) => {
+					onChange(event.target.value)
+				}}
+				aria-invalid={invalid}
+			/>
+			{invalid && <p role='alert'>{errors.join(', ')}</p>}
+		</div>
+	)
+}
 ```
 
-That is the whole kit. Export `useForm` and your consumers get the same `form.TextField` / `form.SubmitButton` / `form.Form` API.
-
-<Callout>
-	Use `satisfies FormComponents` rather than a type annotation. It turns a forgotten field into a compile error instead
-	of a runtime crash, while keeping your components' own prop types intact.
-</Callout>
+Write one of those per slot, hand the lot to `createForm`, and your consumers get the same `<Form>` / `form.TextField` / `form.SubmitButton` API as either shipped flavour. The full slot list and the factory call are [below](#the-contract).
 
 ### Why the kit owns the markup
 
@@ -54,7 +63,37 @@ Rendered outside that root, `FieldError` has nothing to read and `Label` has not
 
 ## The contract
 
-Seven components: one per field kind, plus two form-level pieces.
+Seventeen components: twelve fields, two form-level pieces, two layout primitives and the wizard chrome. Registering them is one object:
+
+```tsx
+import { createForm } from '@ez-kit/form-react'
+
+import type { FormComponents } from '@ez-kit/form-react'
+
+const components = {
+	TextField,
+	NumberField,
+	TextareaField,
+	SelectField,
+	CheckboxField,
+	SwitchField,
+	RadioGroupField,
+	SliderField,
+	MultiSelectField,
+	CheckboxGroupField,
+	DateField,
+	DateRangeField,
+	Button,
+	Form: FormElement,
+	Section,
+	GridItem,
+	Wizard,
+} satisfies FormComponents
+
+export const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({ components })
+```
+
+`satisfies FormComponents` — rather than a type annotation, which would erase your components' own prop types — is the whole registration check: a missing or mistyped slot is a compile error, and there is no partial tier — every one of the seventeen is required, because a document may reach any of them. That is the entire wiring; both shipped kits' `src/form.tsx` is this file and nothing else.
 
 ### Fields
 
@@ -65,19 +104,28 @@ Every field receives the same base props:
 | `data-field`, `data-field-type` | Spread onto your root so CSS, tests and e2e can find the field.   |
 | `id`, `name`                    | `id` goes on the focusable control.                               |
 | `label`, `description`          | `ReactNode`; `null`/`undefined` when the consumer passed none.    |
-| `errors: string[]`, `invalid`   | Already normalised display strings; `errors` is empty when valid. |
+| `errors`, `invalid`             | Already normalised display strings; `errors` is empty when valid. |
 | `onBlur`                        | Must reach the control — blur validation depends on it.           |
 | `disabled`, `required`          | `boolean \| undefined`.                                           |
 
+#### Per-kind props
+
 On top of that, per kind:
 
-| Component       | Value props                                                      |
-| --------------- | ---------------------------------------------------------------- |
-| `TextField`     | `value: string`, `onChange(value)`, `placeholder?`, `type?`      |
-| `NumberField`   | `value: number \| undefined`, `onChange(value)`, `min/max/step?` |
-| `TextareaField` | `value: string`, `onChange(value)`, `rows?`                      |
-| `SelectField`   | `value: string`, `onChange(value)`, `options: SelectOption[]`    |
-| `CheckboxField` | `checked: boolean`, `onChange(checked)`                          |
+| Component            | Value props                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `TextField`          | `value: string`, `onChange(value)`, `placeholder?`, `type?`                                                                    |
+| `NumberField`        | `value: number \| undefined`, `onChange(value)`, `placeholder?`, `min/max/step?`                                               |
+| `TextareaField`      | `value: string`, `onChange(value)`, `placeholder?`, `rows?`                                                                    |
+| `SelectField`        | `value: string`, `onChange(value)`, `options`, `loading`, `search?`, `placeholder?`                                            |
+| `MultiSelectField`   | `value: readonly string[]`, `onChange(value)`, `options`, `loading`, `search?`, `placeholder?`                                 |
+| `CheckboxField`      | `checked: boolean`, `onChange(checked)`                                                                                        |
+| `SwitchField`        | `checked: boolean`, `onChange(checked)`                                                                                        |
+| `RadioGroupField`    | `value: string`, `onChange(value)`, `options`, `loading`                                                                       |
+| `CheckboxGroupField` | `value: readonly string[]`, `onChange(value)`, `options`, `loading`                                                            |
+| `SliderField`        | `value: number` — always concrete, never empty — `onChange(value)`, `min/max/step?`                                            |
+| `DateField`          | `value: string \| undefined` (`YYYY-MM-DD`), `onChange(value)`, `placeholder?`, `min/max?`                                     |
+| `DateRangeField`     | `value: DateRangeValue \| undefined` — reported only once both ends are picked — `onChange(value)`, `placeholder?`, `min/max?` |
 
 <Callout type='warn'>
 	`onChange` receives **the value**, not a DOM event. That is what keeps the contract identical across kits whose
@@ -90,6 +138,18 @@ On top of that, per kind:
 | --------- | -------------------------------- | ---------------------------- |
 | `Button`  | `type?`, `disabled?`, `children` | The submit button.           |
 | `Form`    | `<form>` props                   | The `<form>` element itself. |
+
+### Layout and wizard
+
+Three components the _document_ side leans on hardest, though `Section` and `GridItem` are equally reachable from JSX as `form.Section` / `form.GridItem` — see [Layout](/docs/form/layout).
+
+| Component  | Props                                                                                                         | Renders                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `Section`  | `title`, `description`, `columns`, `children`                                                                 | A heading plus a `columns`-wide grid. `columns` is `undefined` for one column; clamp it into 1–4 with `clampToGridRange`.         |
+| `GridItem` | `colSpan`, `children`                                                                                         | One cell of that grid. `undefined` spans one column.                                                                              |
+| `Wizard`   | `steps`, `currentIndex`, `canGoBack`, `canGoNext`, `isLastStep`, `goNext`, `goBack`, `submitting`, `children` | The stepper chrome around the current step's fields. Every step's `status` / `invalid` / `disabled` / `goTo` is already resolved. |
+
+Tailwind extracts class names statically, so `grid-cols-${columns}` would drop the utility from your build — both shipped kits map the four supported counts to literal class names instead.
 
 ## Two shapes, two implementations
 
@@ -162,7 +222,9 @@ export function TextField({
 - **Put `id` on the focusable control** and make sure a click on the label focuses it — via `htmlFor`, or via your library's own labelling.
 - **Route `onBlur` to the control.** Dropping it silently disables `onBlur` validators.
 - **Render errors only when `invalid`.** `errors` is empty otherwise.
+- **Handle `loading` on the four option-bearing fields.** `SelectField`, `MultiSelectField`, `RadioGroupField` and `CheckboxGroupField` each receive `loading: boolean` — a plain boolean, never `undefined`, so there is no absent case to collapse. While it is true the list has not arrived and an empty `options` says nothing about what there will be to choose from: keep the control non-interactive and put a skeleton where its value would go. A widget with no trigger (radio group, checkbox group) has nowhere to put a single skeleton — the shipped kits render a short list of placeholder rows instead. There is intentionally **no** `error` or `onRetry` in the contract; a failed fetch is the consuming app's to report.
 - **Map `invalid` to whatever your system wants** — `aria-invalid`, `isInvalid`, a `data-` attribute.
+- **Render `Section`'s heading only when `title` is given.** A section without one is legal and means grouping alone; the same goes for `description`.
 
 ## Boolean props and `exactOptionalPropertyTypes`
 

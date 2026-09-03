@@ -1,38 +1,36 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { INITIAL_DATA, type User } from '../_data'
 
-const combinedColumns = defineColumns<User>([
+const combinedColumns = createColumns<User>([
 	{
 		accessorKey: 'name',
 		header: 'Name',
-		size: 200,
-		minSize: 80,
-		maxSize: 400,
-		pinning: { defaultPin: 'left' },
+		width: { default: 200, min: 80, max: 400 },
+		pinning: { initialSide: 'left' },
 	},
-	{ accessorKey: 'email', header: 'Email', size: 250, minSize: 120 },
+	{ accessorKey: 'email', header: 'Email', width: { default: 250, min: 120 } },
 	{
 		accessorKey: 'age',
 		header: 'Age',
-		size: 80,
-		minSize: 50,
-		maxSize: 150,
+		width: { default: 80, min: 50, max: 150 },
+		align: 'end',
 		cell: { type: 'number' },
 	},
 	{
 		accessorKey: 'active',
 		header: 'Active',
-		size: 100,
-		enableResizing: false,
+		width: 100,
+		align: 'center',
+		resizing: false,
 		cell: { type: 'boolean' },
-		pinning: { defaultPin: 'right' },
-		visibility: { defaultHidden: true },
+		pinning: { initialSide: 'right' },
+		visibility: { initialHidden: true },
 	},
 ])
 
@@ -44,9 +42,9 @@ export function ColumnsCombinedExample() {
 			data={data}
 			columns={combinedColumns}
 			sorting
-			columnVisibility={{ toolbar: true }}
+			visibility
 			pinning={{ column: true }}
-			sizing={{ mode: 'onEnd' }}
+			resizing={{ mode: 'onEnd' }}
 		/>
 	)
 }

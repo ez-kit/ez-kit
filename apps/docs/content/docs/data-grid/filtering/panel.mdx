@@ -13,13 +13,26 @@ The panel variant collects every column filter into a single row of chips instea
 
 <DataGridDocsExample exampleId='filter-panel' />
 
-The panel is a `<DataGrid.FilterPanel />` slot. Each row corresponds to a filterable column; the engine reads `meta.filterVariant` and `meta.operators` to pick controls.
+The panel is a `<DataGrid.FilterPanel />` slot, enabled with `filtering: { variant: 'panel' }`. Each row corresponds to a filterable column; the engine reads the column's `cell.type` and `filtering.operators` to pick controls.
 
-A complementary surface is the active-filters chip strip. With `filtering: { chips: true, clearButton: true }`, a chip appears per active filter and the clear button auto-mounts once at least one filter is set.
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ variant: 'panel', faceted: true }}
+>
+	<DataGrid.Toolbar />
+	<DataGrid.FilterPanel />
+	<DataGrid.Table />
+	<DataGrid.Pagination />
+</DataGrid>
+```
+
+A complementary surface is the active-filters chip strip. With `filtering: { chips: true, toolbar: true }`, a chip appears per active filter and the clear button auto-mounts once at least one filter is set.
 
 <DataGridDocsExample exampleId='filter-chips-auto' />
 
-Pass `clearButton: { alwaysShow: true }` to keep the clear button mounted even when no filter is active.
+Pass `toolbar: { alwaysShow: true }` to keep the clear button mounted even when no filter is active.
 
 <DataGridDocsExample exampleId='filter-chips-always' />
 
@@ -34,11 +47,30 @@ For full control, compose the toolbar yourself — drop `<DataGrid.ActiveFilters
 
 ## Options
 
-| Option               | Type                                                                       | Description                                             |
-| -------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `meta.filterVariant` | `'text' \| 'number' \| 'select' \| 'multiselect' \| 'date' \| 'dateRange'` | Drives the input rendered in the panel.                 |
-| `meta.options`       | `Array<{ label, value }>`                                                  | Required when variant is `'select'` or `'multiselect'`. |
-| `meta.operators`     | `Operator[]`                                                               | See [Operators](./data-grid/filtering/operators).       |
+### `filtering`
+
+| Option    | Type                                | Description                                                                                                |
+| --------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `variant` | `'inline' \| 'popover' \| 'panel'`  | `'panel'` renders every filterable column as a chip inside `<DataGrid.FilterPanel />`.                     |
+| `faceted` | `boolean`                           | Enable faceted row models (unique values + counts) — see [Multi-value](./data-grid/filtering/multi-value). |
+| `chips`   | `boolean \| FilterChipsConfig`      | Auto-mount a strip of removable chips for active filters.                                                  |
+| `toolbar` | `boolean \| FilteringToolbarConfig` | Auto-mount filtering's toolbar control — the Clear-all button.                                             |
+
+### `FilterChipsConfig`
+
+| Option     | Type                 | Description                                                                            |
+| ---------- | -------------------- | -------------------------------------------------------------------------------------- |
+| `position` | `'above' \| 'below'` | Where to render the auto-mounted chips strip relative to the table. Default `'above'`. |
+
+### `FilteringToolbarConfig`
+
+| Option       | Type      | Description                                                                          |
+| ------------ | --------- | ------------------------------------------------------------------------------------ |
+| `alwaysShow` | `boolean` | Render the Clear-all button (disabled) even with no active filters. Default `false`. |
+
+### Per-column
+
+Each filterable column's row in the panel is driven by its own `cell` type and `filtering.operators` — see [Operators](./data-grid/filtering/operators), [Multi-value](./data-grid/filtering/multi-value), and [Date range](./data-grid/filtering/date-range).
 
 ## See also
 

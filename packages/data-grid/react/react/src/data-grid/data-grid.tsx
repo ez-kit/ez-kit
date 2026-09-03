@@ -1,47 +1,45 @@
+import { featureConfig, isFeatureEnabled } from '@ez-kit/data-grid-core'
 import { useRef } from 'react'
 
-import { CellTypesProvider } from '../cell-types-context'
+import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import {
-	CELL_TYPES_KEY,
-	FILTER_CHIPS_KEY,
-	SELECTION_PANEL_KEY,
-	SELECTION_PANEL_VARIANT,
-	DEFAULT_SELECTION_PANEL_VARIANT,
-	useDataGrid,
-	type NormalizedFilterChipsConfig,
-	type SelectionPanelConfig,
-	type UseDataGridConfig,
-} from '../use-data-grid'
+import { FilterChipsPosition } from '../types'
+import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
+import { resolveActionBarVariant } from './action-bar-variant'
 import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
-import { ColumnVisibilityTrigger } from './column-visibility-trigger'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
+import { DraftBar } from './draft-bar'
 import { EditingModal } from './editing-modal'
 import { EmptyStateRow } from './empty-state-row'
 import { FilterPanel } from './filter-panel'
+import { Footer } from './footer'
+import { DataGridFooterCell } from './footer-cell'
+import { DataGridFooterRow } from './footer-row'
 import { GlobalFilterInput } from './global-filter-input'
 import { Header } from './header'
+import { DataGridHeaderCell } from './header-cell'
+import { DataGridHeaderRow } from './header-row'
 import { LoadingBody } from './loading-body'
 import { NoResultsRow } from './no-results-row'
 import { PageSizer } from './page-sizer'
 import { Pagination } from './pagination'
 import { DataGridRow } from './row'
-import { SelectionBar, buildSelectionPanelArgs } from './selection-bar'
-import { SortTrigger } from './sort-trigger'
+import { SelectionBar, buildSelectionBarArgs } from './selection-bar'
+import { SortMenuTrigger } from './sort-menu-trigger'
 import { DataGridTable } from './table'
-import { TableContext, useDataGridInstance, useDataGridStore } from './table-context'
+import { TableContext, useDataGridTable, useDataGridState } from './table-context'
 import { Toolbar } from './toolbar'
+import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { DataGridInstance } from '../data-grid-instance'
-import type { ConfirmationOptions } from '@ez-kit/data-grid-core'
+import type { BulkConfirmationConfig, ConfirmationConfig, DataTable } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -54,13 +52,13 @@ type DataGridSharedProps = {
 }
 
 /**
- * Controlled usage: the caller owns the instance built by `useDataGrid` and
- * passes it in. Use this when several components need the same instance, or to
- * read state via `useDataGridStore` outside the grid.
+ * Controlled usage: the caller owns the table built by `useDataGrid` and passes it in.
+ * Use this when several components need the same table, or to read its state from outside
+ * the grid with `useDataGridSelector`.
  */
 export type DataGridControlledProps<TRow extends object> = DataGridSharedProps & {
 	/** Instance returned by `useDataGrid`. */
-	table: DataGridInstance<TRow>
+	table: DataTable<TRow>
 	/** Custom cell type renderers. Merged with types from `useDataGrid`. */
 	cellTypes?: CellTypeRegistry
 }
@@ -76,12 +74,12 @@ export type DataGridUncontrolledProps<TRow extends object> = DataGridSharedProps
 	}
 
 /**
- * `DataGrid` accepts **either** a ready `table` instance (controlled) **or** the
+ * `DataGrid` accepts **either** a ready `table` (controlled) **or** the
  * full `useDataGrid` config inline (uncontrolled). The two shapes are mutually
  * exclusive — pick one mode for the lifetime of the component, since switching
  * remounts the grid and resets its state.
  *
- * @example — controlled (explicit instance)
+ * @example — controlled (explicit table)
  * const table = useDataGrid({ data, columns, sorting: true })
  * return <DataGrid table={table} />
  *
@@ -102,7 +100,7 @@ function defaultBulkConfirmDescription(count: number): string {
 }
 
 function resolveConfirmationText(
-	options: ConfirmationOptions,
+	options: ConfirmationConfig,
 	row: Row<unknown> | undefined,
 ): { title: string; description: string } {
 	const title = options.title ?? DEFAULT_CONFIRM_TITLE
@@ -117,76 +115,66 @@ function resolveConfirmationText(
 }
 
 /**
- * Bulk (selection-bar) confirmation text. Unlike the per-row resolver there is no
- * single `row`, so a `description` function is ignored in favour of a count-aware
- * default ("Delete N rows?").
+ * Bulk confirmation text. The `description` function is handed the whole selection rather than
+ * one row — see {@link BulkConfirmationConfig} — and falls back to count-aware default copy.
  */
 function resolveBulkConfirmationText(
-	options: ConfirmationOptions,
-	count: number,
+	options: BulkConfirmationConfig,
+	rows: Row<unknown>[],
 ): { title: string; description: string } {
 	const title = options.title ?? DEFAULT_BULK_CONFIRM_TITLE
 	const desc = options.description
-	const description = typeof desc === 'string' ? desc : defaultBulkConfirmDescription(count)
+	const description = typeof desc === 'function' ? desc(rows) : (desc ?? defaultBulkConfirmDescription(rows.length))
 	return { title, description }
 }
 
-/** Whether either the per-row or the bulk (selection-panel) confirmation dialog is configured. */
+/** The bulk-delete prompt's config, or `undefined` when bulk delete asks for no prompt. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function bulkConfirmationOptions(table: Table<any>): BulkConfirmationConfig | undefined {
+	const confirmation = featureConfig(table.options.deleting?.bulk)?.confirmation
+	// `featureConfig` yields `undefined` for the bare `true`, which here means "prompt, with the
+	// default copy" — so the on/off decision reads `isFeatureEnabled` and only the copy comes
+	// from the object.
+	if (!isFeatureEnabled(confirmation)) return undefined
+	return featureConfig(confirmation) ?? {}
+}
+
+/** Whether either the per-row or the bulk confirmation dialog is configured. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function hasConfirmDialog(table: Table<any>): boolean {
-	if (table.options.deleting?.confirmation) return true
-	const panelConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY]
-	return (
-		typeof panelConfig === 'object' &&
-		panelConfig !== null &&
-		Boolean((panelConfig as SelectionPanelConfig).confirmation)
-	)
+	return isFeatureEnabled(table.options.deleting?.confirmation) || bulkConfirmationOptions(table) !== undefined
 }
 
 function ConfirmDialogRenderer() {
-	const instance = useDataGridInstance()
-	const table = instance.table
-	const { ConfirmDialog } = useGridComponents().editing
+	const table = useDataGridTable()
+	const { ConfirmDialog } = useGridComponents().deleting
 	// Narrow: re-render only when a pending delete target changes. Other
 	// state mutations (editing, sorting, etc.) leave these stable.
-	const pendingId = useDataGridStore((s) => s.pendingDeleteRowId)
-	const pendingBulk = useDataGridStore((s) => s.pendingBulkDelete)
+	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)
+	const pendingBulk = useDataGridState((s) => s.deleting.pendingBulk)
 
-	const panelConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
-	const panelConfigObj = typeof panelConfig === 'object' ? panelConfig : undefined
-	const bulkConfirmation = panelConfigObj?.confirmation
-	const bulkOnDelete = panelConfigObj?.onDelete
-
-	// Bulk (selection-panel) confirmation takes precedence while staged. The handler
-	// lives outside core, so run it here on confirm, then clear the pending flag.
-	if (pendingBulk && bulkConfirmation && bulkOnDelete) {
-		const bulkOptions: ConfirmationOptions = bulkConfirmation === true ? {} : bulkConfirmation
-		const args = buildSelectionPanelArgs(table)
-		const { title, description } = resolveBulkConfirmationText(bulkOptions, args.selectedRows.length)
+	// A staged bulk delete takes precedence: it is the gesture the user just made. Core owns
+	// both the staging and the run, so this only renders the prompt and reports the answer.
+	const bulkOptions = bulkConfirmationOptions(table)
+	if (pendingBulk && bulkOptions) {
+		const { selectedRows } = buildSelectionBarArgs(table)
+		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows)
 		return (
 			<ConfirmDialog
 				open
 				title={title}
 				description={description}
-				onConfirm={() => {
-					bulkOnDelete(args)
-					table.confirmBulkDelete()
-				}}
+				onConfirm={() => void table.deleting.bulk.confirm()}
 				onCancel={() => {
-					table.cancelBulkDelete()
+					table.deleting.bulk.cancel()
 				}}
 			/>
 		)
 	}
 
 	const confirmation = table.options.deleting?.confirmation
-
-	if (!confirmation) return null
-
-	const options: ConfirmationOptions = confirmation === true ? {} : confirmation
+	if (!isFeatureEnabled(confirmation)) return null
+	const options: ConfirmationConfig = featureConfig(confirmation) ?? {}
 	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
 		pendingId !== null ? resolveConfirmationText(options, pendingRow) : { title: '', description: '' }
@@ -196,35 +184,29 @@ function ConfirmDialogRenderer() {
 			open={pendingId !== null}
 			title={title}
 			description={description}
-			onConfirm={() => void table.confirmDeleteRow()}
+			onConfirm={() => void table.deleting.confirm()}
 			onCancel={() => {
-				table.cancelDeleteRow()
+				table.deleting.cancel()
 			}}
 		/>
 	)
 }
 
 function DefaultLayout() {
-	// Reads only symbol-keyed config refs, no state — so we use the instance
+	// Reads only config refs, no state — so we use the table
 	// without subscribing. Avoids cascading re-renders to Body / Table on
 	// state mutations the layout doesn't actually depend on.
-	const instance = useDataGridInstance()
-	const table = instance.table
-	const rawConfig = (table as unknown as Record<symbol, unknown>)[SELECTION_PANEL_KEY] as
-		| boolean
-		| SelectionPanelConfig
-		| undefined
-	const variant = (typeof rawConfig === 'object' ? rawConfig.variant : undefined) ?? DEFAULT_SELECTION_PANEL_VARIANT
+	const table = useDataGridTable()
+	const variant = resolveActionBarVariant(table)
 
-	const chipsConfig = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as
-		| NormalizedFilterChipsConfig
-		| undefined
-	const chipsAbove = chipsConfig?.position === 'above' ? <ActiveFiltersBar /> : null
-	const chipsBelow = chipsConfig?.position === 'below' ? <ActiveFiltersBar /> : null
+	const chipsConfig = table.grid.filtering.chips
+	const chipsAbove = chipsConfig?.position === FilterChipsPosition.Above ? <ActiveFiltersBar /> : null
+	const chipsBelow = chipsConfig?.position === FilterChipsPosition.Below ? <ActiveFiltersBar /> : null
 
-	if (variant === SELECTION_PANEL_VARIANT.Inline) {
+	if (variant === ActionBarVariant.Inline) {
 		return (
 			<>
+				<DraftBar />
 				<SelectionBar />
 				<Toolbar />
 				{chipsAbove}
@@ -242,31 +224,47 @@ function DefaultLayout() {
 			<DataGridTable />
 			{chipsBelow}
 			<Pagination />
+			<DraftBar />
 			<SelectionBar />
 		</>
 	)
 }
 
 /**
- * Shared core that mounts the provider tree around a ready instance. Both the
+ * Shared core that mounts the provider tree around a ready table. Both the
  * controlled and uncontrolled paths funnel through here, so every compound
  * child (`DataGrid.Table`, etc.) sees the same `TableContext`.
  */
 function DataGridControlled<TRow extends object>({
-	table: instance,
+	table,
 	components,
 	cellTypes,
 	children,
 }: DataGridControlledProps<TRow>) {
-	const table = instance.table
-	// Read cellTypes stored on the table instance by useDataGrid, merge with direct prop
-	const tableCellTypes = (table as unknown as Record<symbol, unknown>)[CELL_TYPES_KEY] as CellTypeRegistry | undefined
-	const resolvedCellTypes = { ...tableCellTypes, ...cellTypes }
+	// The one guarantee lost by returning the table itself rather than a wrapper type only
+	// `useDataGrid` could produce: a bare `createTable()` result now typechecks here. It has no
+	// `table.grid`, so the first compound child that reads a resolved option would crash on a
+	// property access. Say so instead.
+	// `grid` is declared non-optional on `DataTable`, because every table the React layer
+	// renders is meant to carry it — which is exactly the claim being checked here, so asking
+	// the question at all needs a cast.
+	const isPrepared = (table as { grid?: unknown }).grid !== undefined
+	if (IS_DEV && !isPrepared) {
+		throw new Error(
+			'<DataGrid table={…}> was given a table that has not been prepared for the React layer. ' +
+				'Build it with `useDataGrid(...)`, or pass a raw `createTable(...)` result through ' +
+				'`prepareDataGridTable(...)` first.',
+		)
+	}
+
+	// Read cellTypes stored on the table by useDataGrid, merge with direct prop
+	const tableCellTypes = table.grid.cellTypes
+	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
 
 	return (
-		<CellTypesProvider types={resolvedCellTypes}>
+		<CellTypesProvider cellTypes={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-				<TableContext value={instance}>
+				<TableContext value={table}>
 					{IS_DEV && <ComponentGuard />}
 					{children ?? <DefaultLayout />}
 					{table.options.creating?.mode === 'modal' && <CreatingModal />}
@@ -279,19 +277,19 @@ function DataGridControlled<TRow extends object>({
 }
 
 /**
- * Uncontrolled path: builds the instance with `useDataGrid` from inline config,
- * then renders the shared core. `cellTypes` (if any) flows through `config` into
- * the instance, so it is not forwarded a second time.
+ * Uncontrolled path: builds the table with `useDataGrid` from inline config, then renders
+ * the shared core. `cellTypes` (if any) flows through `config` into the table, so it is not
+ * forwarded a second time.
  */
 function DataGridUncontrolled<TRow extends object>({
 	components,
 	children,
 	...config
 }: DataGridUncontrolledProps<TRow>) {
-	const instance = useDataGrid<TRow>(config)
+	const table = useDataGrid<TRow>(config)
 	return (
 		<DataGridControlled
-			table={instance}
+			table={table}
 			{...(components !== undefined ? { components } : {})}
 		>
 			{children}
@@ -357,16 +355,22 @@ function DataGridRoot<TRow extends object>(props: DataGridProps<TRow>) {
 type DataGridType = typeof DataGridRoot & {
 	Toolbar: typeof Toolbar
 	Table: typeof DataGridTable
+	Footer: typeof Footer
+	FooterRow: typeof DataGridFooterRow
+	FooterCell: typeof DataGridFooterCell
 	Header: typeof Header
+	HeaderRow: typeof DataGridHeaderRow
+	HeaderCell: typeof DataGridHeaderCell
 	Body: typeof Body
 	Row: typeof DataGridRow
 	Cell: typeof DataGridCell
 	Pagination: typeof Pagination
 	PageSizer: typeof PageSizer
 	SelectionBar: typeof SelectionBar
+	DraftBar: typeof DraftBar
 	CreateTrigger: typeof CreateTrigger
-	ColumnVisibilityTrigger: typeof ColumnVisibilityTrigger
-	SortTrigger: typeof SortTrigger
+	VisibilityTrigger: typeof VisibilityTrigger
+	SortMenuTrigger: typeof SortMenuTrigger
 	GlobalFilterInput: typeof GlobalFilterInput
 	ActiveFiltersBar: typeof ActiveFiltersBar
 	ClearFiltersButton: typeof ClearFiltersButton
@@ -381,16 +385,22 @@ type DataGridType = typeof DataGridRoot & {
 export const DataGrid = DataGridRoot as DataGridType
 DataGrid.Toolbar = Toolbar
 DataGrid.Table = DataGridTable
+DataGrid.Footer = Footer
+DataGrid.FooterRow = DataGridFooterRow
+DataGrid.FooterCell = DataGridFooterCell
 DataGrid.Header = Header
+DataGrid.HeaderRow = DataGridHeaderRow
+DataGrid.HeaderCell = DataGridHeaderCell
 DataGrid.Body = Body
 DataGrid.Row = DataGridRow
 DataGrid.Cell = DataGridCell
 DataGrid.Pagination = Pagination
 DataGrid.PageSizer = PageSizer
 DataGrid.SelectionBar = SelectionBar
+DataGrid.DraftBar = DraftBar
 DataGrid.CreateTrigger = CreateTrigger
-DataGrid.ColumnVisibilityTrigger = ColumnVisibilityTrigger
-DataGrid.SortTrigger = SortTrigger
+DataGrid.VisibilityTrigger = VisibilityTrigger
+DataGrid.SortMenuTrigger = SortMenuTrigger
 DataGrid.GlobalFilterInput = GlobalFilterInput
 DataGrid.ActiveFiltersBar = ActiveFiltersBar
 DataGrid.ClearFiltersButton = ClearFiltersButton

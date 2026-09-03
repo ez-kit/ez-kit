@@ -1,0 +1,143 @@
+---
+title: Layout
+description: Sections, the column grid and colSpan — the same grouping in JSX and in a document.
+---
+
+# Layout
+
+A form of any size stops being a list of fields and becomes groups of them: a heading, two or three columns, one field that needs the full width. That is all `Section` and `GridItem` do. They are **pure layout** — putting a field inside a section changes neither its `name`, nor the path its value lives at, nor its validation, nor whether it is submitted. Move a field between cells and the payload is byte-identical.
+
+Both entry points reach the same two kit components, so the DOM matches whichever way you write it.
+
+## In TSX
+
+<KitExample exampleId='form-layout' />
+
+## The same layout as a document
+
+<KitExample exampleId='form-layout-schema' />
+
+## Sections
+
+A section draws an optional heading and description, then lays its direct children out on a `columns`-wide grid. A section with no `columns` is one column — useful when you want the heading and grouping alone.
+
+```tsx
+<form.Section
+	title='Company'
+	description='Three columns — the name takes two of them.'
+	columns={3}
+>
+	<form.TextField
+		name='company'
+		label='Company'
+	/>
+</form.Section>
+```
+
+### `form.Section`
+
+| Prop          | Type        | Notes                                                                               |
+| ------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `title`       | `ReactNode` | Omit it and no heading element is rendered — a section without a title is legal.    |
+| `description` | `ReactNode` | Sub-heading text under the title.                                                   |
+| `columns`     | `number`    | Grid columns for the direct children. Default 1, integer 1–4; anything else clamps. |
+| `children`    | `ReactNode` | **Required.** Fields, grid items or further sections.                               |
+
+## Spans
+
+Every direct child of a section occupies one column. To take more, wrap it in a `GridItem`:
+
+```tsx
+<form.Section columns={3}>
+	<form.GridItem colSpan={2}>
+		<form.TextField
+			name='company'
+			label='Company'
+		/>
+	</form.GridItem>
+	<form.TextField
+		name='vatId'
+		label='VAT id'
+	/>
+</form.Section>
+```
+
+Only write it where a wider span is wanted: an unwrapped child is already a cell of its own, and wrapping it in `<form.GridItem>` with no `colSpan` changes nothing but the markup.
+
+`colSpan` is geometry, not state — a `GridItem` binds no field and wraps anything, a nested section included.
+
+### `form.GridItem`
+
+| Prop       | Type        | Notes                                                                                        |
+| ---------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `colSpan`  | `number`    | Columns to span. Default 1, integer 1–4; a value above the parent's `columns` fills the row. |
+| `children` | `ReactNode` | **Required.**                                                                                |
+
+## Nesting
+
+A grid inside a grid is a section inside a section. The inner one is a child of the outer like any other, so it takes a `GridItem` when it should span more than one column, and its own `columns` starts a fresh grid for its children:
+
+```tsx
+<form.Section
+	title='Company'
+	columns={3}
+>
+	<form.GridItem colSpan={3}>
+		<form.Section
+			title='Billing address'
+			columns={4}
+		>
+			…
+		</form.Section>
+	</form.GridItem>
+</form.Section>
+```
+
+There is no depth limit and no interaction with field names: `street` inside two sections is still `street`.
+
+## The same thing as data
+
+A document says `section` and puts the span on the node itself, because a node cannot wrap itself:
+
+```ts
+{
+	type: 'section',
+	title: 'Company',
+	columns: 3,
+	children: [
+		{ type: FormFieldType.Text, name: 'company', label: 'Company', colSpan: 2 },
+		{ type: FormFieldType.Text, name: 'vatId', label: 'VAT id' },
+	],
+}
+```
+
+That is the one structural difference between the two spellings. The renderer wraps **every** child of a grid-bearing section in the kit's `GridItem`, passing the node's `colSpan`; in JSX you write the wrapper yourself, and only where you need it.
+
+### The `section` node
+
+| Property      | Type            | Notes                                                           |
+| ------------- | --------------- | --------------------------------------------------------------- |
+| `type`        | `'section'`     | **Required.**                                                   |
+| `title`       | `LocalizedText` | A plain string, or a map of locale → string.                    |
+| `description` | `LocalizedText` |                                                                 |
+| `columns`     | `number`        | Integer 1–4. `parseFormSchema` rejects a document outside that. |
+| `colSpan`     | `number`        | What this section spans in its **parent's** grid.               |
+| `children`    | `FormNode[]`    | **Required.** Fields, sections, blocks, a submit node.          |
+
+Sections carry the [common node properties](/docs/form/schema#common-node-properties) too, so `when` hides a whole group at once — with its fields' values stripped from the payload, exactly as if each were hidden on its own.
+
+## Styling hooks
+
+Both kits stamp the same attributes, so app CSS can reach the layout without forking a kit:
+
+| Attribute                       | Element                        |
+| ------------------------------- | ------------------------------ |
+| `data-slot='form-section'`      | The section wrapper.           |
+| `data-slot='form-section-grid'` | The grid holding the children. |
+| `data-slot='form-grid-item'`    | One cell.                      |
+
+## What layout is not
+
+- **Not a value path.** A section contributes nothing to a field's `name` — nesting is visual only. Group values under a key by naming the fields `address.city`, not by wrapping them.
+- **Not a reuse unit.** A block of fields you render more than once is a component; see [Composition](/docs/form/composition) for `withForm` and `withFieldGroup`.
+- **Not a wizard.** Steps exist only in a document, where the top-level children are `step` nodes — see [Config-driven forms](/docs/form/schema#wizards).

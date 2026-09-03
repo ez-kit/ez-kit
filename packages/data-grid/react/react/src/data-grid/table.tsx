@@ -2,21 +2,20 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
-import { INFINITE_KEY, STICKY_HEADER_KEY, VIRTUALIZED_KEY } from '../use-data-grid'
+import { DATA_GRID_DEFAULTS } from '../defaults'
 import { getColumnSizeVars, getGridTemplateColumns } from '../utils/column-size-vars'
 
 import { Body } from './body'
+import { Footer } from './footer'
 import { Header } from './header'
 import { InfiniteProvider } from './infinite-context'
 import { PinShadowOverlay } from './pin-shadow-overlay'
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 import { VirtualProvider } from './virtual-context'
 
-import type { NormalizedVirtualizedConfig } from '../use-data-grid'
-import type { CSSProperties } from 'react'
-
-const DEFAULT_ESTIMATE_SIZE = 50
-const DEFAULT_OVERSCAN = 5
+import type { NormalizedVirtualizationConfig } from '../use-data-grid'
+import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
+import type { CSSProperties, ReactNode } from 'react'
 
 const SCROLLING_OVERFLOWS = ['auto', 'scroll']
 
@@ -88,11 +87,50 @@ function useScrollShadows(
 }
 
 function resolveEstimateSize(
-	estimateSize: NormalizedVirtualizedConfig['row']['estimateSize'],
+	estimateSize: NormalizedVirtualizationConfig['row']['estimateSize'],
 ): (index: number) => number {
 	if (typeof estimateSize === 'function') return estimateSize
-	const size = estimateSize ?? DEFAULT_ESTIMATE_SIZE
+	const size = estimateSize ?? DATA_GRID_DEFAULTS.virtualization.row.estimateSize
 	return () => size
+}
+
+/**
+ * What a `<DataGrid.Table>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Table<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridTableRenderArgs<TRow extends object = any> = {
+	table: TanStackTable<TRow>
+	/** Header groups of the current column model — one entry per header row. */
+	headerGroups: HeaderGroup<TRow>[]
+	/** The rows of the current row model, already sorted / filtered / paginated. */
+	rows: Row<TRow>[]
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridTableProps<TRow extends object = any> = {
+	/**
+	 * Custom table content, rendered inside the kit's `<Table>` element and inside the
+	 * scroll / pin-shadow wrapper, so sticky headers, pinning and virtualization plumbing
+	 * still work.
+	 *
+	 * Omit it for the built-in `<DataGrid.Header /><DataGrid.Body />` pair. Supply it to
+	 * reorder, wrap, or replace either half — e.g. to add a `<tfoot>`, which the built-in
+	 * layout has no slot for.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.Table>
+	 *   <DataGrid.Header />
+	 *   <DataGrid.Body />
+	 *   <MyFooter />
+	 * </DataGrid.Table>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridTableRenderArgs<TRow>) => ReactNode)
 }
 
 /**
@@ -107,35 +145,40 @@ function resolveEstimateSize(
  * scroll container. CSS vars `--dg-pin-left-shadow` / `--dg-pin-right-shadow`
  * on the wrapper drive their opacity.
  */
-export function DataGridTable() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridTable<TRow extends object = any>({ children }: DataGridTableProps<TRow> = {}) {
 	const { Table } = useGridComponents().core
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable<TRow>()
 
 	// Narrow subscriptions: re-render only when slices that actually affect
 	// the table layout or row composition change. Editing / rowSelection /
 	// per-row state changes do NOT touch any of these.
-	useDataGridStore((s) => s.columnSizing)
-	useDataGridStore((s) => s.columnSizingInfo)
-	useDataGridStore((s) => s.columnVisibility)
-	useDataGridStore((s) => s.columnPinning)
+	useDataGridState((s) => s.columnSizing)
+	useDataGridState((s) => s.columnSizingInfo)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	// Row-model affecting slices (used when virtualized to size the virtualizer).
-	const sorting = useDataGridStore((s) => s.sorting)
-	const columnFilters = useDataGridStore((s) => s.columnFilters)
-	const globalFilter = useDataGridStore<unknown>((s) => s.globalFilter)
-	const pagination = useDataGridStore((s) => s.pagination)
-	useDataGridStore((s) => s.expanded)
-	useDataGridStore((s) => s.rowPinning)
+	const sorting = useDataGridState((s) => s.sorting)
+	const columnFilters = useDataGridState((s) => s.columnFilters)
+	const globalFilter = useDataGridState<unknown>((s) => s.globalFilter)
+	const pagination = useDataGridState((s) => s.pagination)
+	useDataGridState((s) => s.expanded)
+	useDataGridState((s) => s.rowPinning)
 
 	const sizeVars = getColumnSizeVars(table)
 	const gridTemplateColumns = getGridTemplateColumns(table)
 
-	const virtualizedConfig = (table as unknown as Record<symbol, unknown>)[VIRTUALIZED_KEY] as
-		| NormalizedVirtualizedConfig
-		| undefined
+	const virtualizationConfig = table.grid.virtualization
 
-	const isVirtualized = Boolean(virtualizedConfig)
-	const isStickyHeader = Boolean((table as unknown as Record<symbol, unknown>)[STICKY_HEADER_KEY])
+	const isVirtualized = Boolean(virtualizationConfig)
+	const { stickyHeader: isStickyHeader, footer: hasFooter, stickyFooter: isStickyFooter, maxHeight } = table.grid.layout
+
+	// One option, two custom properties: capped height for the normal scroll container,
+	// definite height for the virtualized one (which cannot size itself from its content).
+	// The stylesheet already reads both; until now neither had a way in from the API.
+	const heightVars = (
+		maxHeight !== undefined ? { '--dg-table-max-height': maxHeight, '--dg-virtual-height': maxHeight } : undefined
+	) as CSSProperties | undefined
 
 	// wrapperRef — outer div; CSS pin-shadow vars are written here so the overlay reads them
 	const wrapperRef = useRef<HTMLDivElement>(null)
@@ -150,13 +193,13 @@ export function DataGridTable() {
 	const rowVirtualizer = useVirtualizer({
 		count: isVirtualized ? rows.length : 0,
 		getScrollElement: () => containerRef.current,
-		estimateSize: resolveEstimateSize(virtualizedConfig?.row.estimateSize),
-		overscan: virtualizedConfig?.row.overscan ?? DEFAULT_OVERSCAN,
+		estimateSize: resolveEstimateSize(virtualizationConfig?.row.estimateSize),
+		overscan: virtualizationConfig?.row.overscan ?? DATA_GRID_DEFAULTS.virtualization.row.overscan,
 		enabled: isVirtualized,
 	})
 
 	// Virtualized: containerRef IS the scroll element; pass it directly to skip DOM traversal.
-	// Non-virtualized: resolveScrollElement finds the real scroll element inside wrapperRef
+	// Non-virtualization: resolveScrollElement finds the real scroll element inside wrapperRef
 	// (handles both shadcn's inner overflow div and HeroUI's inner ScrollContainer).
 	useScrollShadows(wrapperRef, isVirtualized ? containerRef : undefined)
 
@@ -185,7 +228,7 @@ export function DataGridTable() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
-	const infiniteEnabled = Boolean((table as unknown as Record<symbol, unknown>)[INFINITE_KEY])
+	const infiniteEnabled = table.grid.pagination.infinite !== undefined
 
 	// Reset on query change: when sorting / column filters / global search / page size
 	// change in infinite mode, clear any error, re-arm detection (handled by the loader
@@ -217,8 +260,17 @@ export function DataGridTable() {
 				} as CSSProperties
 			}
 		>
-			<Header stickyHeader={isStickyHeader} />
-			<Body />
+			{children === undefined ? (
+				<>
+					<Header />
+					<Body />
+					{hasFooter ? <Footer /> : null}
+				</>
+			) : typeof children === 'function' ? (
+				children({ table, headerGroups: table.getHeaderGroups(), rows: table.getRowModel().rows })
+			) : (
+				children
+			)}
 		</Table>
 	)
 
@@ -230,6 +282,7 @@ export function DataGridTable() {
 						ref={wrapperRef}
 						data-slot='table-wrapper'
 						data-virtualized='true'
+						style={heightVars}
 					>
 						<div
 							ref={containerRef}
@@ -250,11 +303,13 @@ export function DataGridTable() {
 			<div
 				ref={wrapperRef}
 				data-slot='table-wrapper'
+				style={heightVars}
 			>
 				<div
 					ref={scrollRef}
 					data-slot='table-scroll'
 					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
+					{...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {})}
 				>
 					{tableEl}
 				</div>

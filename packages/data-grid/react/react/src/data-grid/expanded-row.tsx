@@ -1,8 +1,7 @@
 import { useGridComponents } from '../components-context'
-import { EXPAND_KEY } from '../use-data-grid'
 
 import { flexRender } from './flex-render'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { ExpandedRowProps } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
@@ -14,20 +13,20 @@ type ExpandedRowComponentProps = {
 }
 
 type ExpandConfig = {
-	renderExpanded?: ComponentType<ExpandedRowProps<object>>
+	component?: ComponentType<ExpandedRowProps<object>>
 }
 
 /**
  * Renders a full-width row below an expanded row for the sub-content variant.
- * Reads `renderExpanded` from the EXPAND_KEY stored on the table instance.
+ * Reads `expandedComponent` from the grid's resolved options (`table.grid.expanding`).
  */
 export function ExpandedRow({ row }: ExpandedRowComponentProps) {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnVisibility)
 	const { Tr, Td } = useGridComponents().core
 
-	const expandConfig = (table as unknown as Record<symbol, unknown>)[EXPAND_KEY] as ExpandConfig | undefined
-	const renderExpanded = expandConfig?.renderExpanded
-	if (!renderExpanded) return null
+	const expandedComponent = table.grid.expanding.component as ExpandConfig['component']
+	if (!expandedComponent) return null
 
 	const colSpan = row.getVisibleCells().length
 
@@ -37,7 +36,7 @@ export function ExpandedRow({ row }: ExpandedRowComponentProps) {
 				colSpan={colSpan}
 				pinned={false}
 			>
-				{flexRender(renderExpanded, { row, table })}
+				{flexRender(expandedComponent, { row, table })}
 			</Td>
 		</Tr>
 	)

@@ -1,5 +1,6 @@
 'use client'
 
+import { buildMultiSelectLabel } from '@ez-kit/data-grid-react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '../../components/ui/button'
@@ -11,16 +12,16 @@ import type { MultiSelectFilterProps } from '@ez-kit/data-grid-react'
 
 const TRIGGER_BASE = 'h-7 min-w-[8rem] justify-between gap-2 px-2 text-xs font-normal'
 
-export function MultiSelectFilter({ options, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+export function MultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
 	const [query, setQuery] = useState('')
 
 	const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues])
 
 	const filteredOptions = useMemo(() => {
 		const q = query.trim().toLowerCase()
-		if (!q) return options
-		return options.filter((opt) => opt.label.toLowerCase().includes(q))
-	}, [options, query])
+		if (!q) return items
+		return items.filter((opt) => opt.label.toLowerCase().includes(q))
+	}, [items, query])
 
 	const toggle = (value: string): void => {
 		const next = selectedSet.has(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
@@ -31,12 +32,7 @@ export function MultiSelectFilter({ options, selectedValues, onChange, placehold
 		onChange([])
 	}
 
-	const triggerLabel =
-		selectedValues.length === 0
-			? (placeholder ?? 'Select…')
-			: selectedValues.length === 1
-				? (options.find((o) => o.value === selectedValues[0])?.label ?? selectedValues[0])
-				: `${String(selectedValues.length)} selected`
+	const triggerLabel = buildMultiSelectLabel(items, selectedValues, placeholder)
 
 	return (
 		<Popover>

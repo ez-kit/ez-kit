@@ -13,17 +13,19 @@ This grid registers custom `rating` and `color` cell types via `extendDataGrid()
 
 <DataGridDocsExample exampleId='custom-cell-types' />
 
-A cell type is a `CellTypeDefinition` — up to four renderers, all optional:
+A cell type is declared with `defineCellType` — up to four renderers, all optional:
 
 ```tsx
-import type { CellTypeRegistry, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import { defineCellType } from '@ez-kit/data-grid-react'
+
+import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
 
 const TONE_MAP: Record<string, string> = { active: 'positive', cancelled: 'critical' }
 
 const CELL_TYPES = {
-	status: {
+	status: defineCellType()({
 		view: ({ value }: CellViewProps) => <span data-tone={TONE_MAP[String(value)] ?? 'neutral'}>{String(value)}</span>,
-		edit: ({ value, onChange }: FieldState) => (
+		editing: ({ value, onChange }: FieldState) => (
 			<input
 				value={String(value ?? '')}
 				onChange={(e) => {
@@ -31,16 +33,47 @@ const CELL_TYPES = {
 				}}
 			/>
 		),
-	},
-} satisfies CellTypeRegistry
+	}),
+}
 ```
 
-| Renderer   | Receives        | Used for                                                                       |
-| ---------- | --------------- | ------------------------------------------------------------------------------ |
-| `view`     | `CellViewProps` | Display mode.                                                                  |
-| `edit`     | `FieldState`    | Editing input. **No fallback** — omit it and edit mode uses the default input. |
-| `creating` | `FieldState`    | Create-row input. Falls back to `edit` when omitted.                           |
-| `filter`   | `FieldState`    | Filter input. Falls back to `edit` when omitted.                               |
+### Declaring a config
+
+`defineCellType<TConfig>()` records the shape of `cell.config` for columns of that type. Give it one and the column must supply a matching config; omit it and `config` is rejected outright.
+
+```tsx
+type RatingConfig = { max: number }
+
+const CELL_TYPES = {
+	rating: defineCellType<RatingConfig>()({
+		view: ({ value, config }: CellViewProps<RatingConfig>) => (
+			<Stars
+				value={Number(value)}
+				max={config?.max ?? 5}
+			/>
+		),
+	}),
+}
+
+createColumns<Order>([
+	{ accessorKey: 'score', cell: { type: 'rating', config: { max: 10 } } }, // ✅
+	{ accessorKey: 'score', cell: { type: 'rating' } }, // ❌ config is required — `max` has no default
+	{ accessorKey: 'score', cell: { type: 'rating', config: { maks: 10 } } }, // ❌ did you mean 'max'?
+])
+```
+
+The config is required only when it has a required field. A config whose fields are all optional makes `config` optional too.
+
+The type parameter is explicit rather than inferred from the renderers because `view`, `editing`, `creating` and `filtering` are four independent places the config appears — a type that registers only some of them would infer something arbitrary from the rest.
+
+| Renderer    | Receives                 | Used for                                                                       |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------ |
+| `view`      | `CellViewProps<TConfig>` | Display mode.                                                                  |
+| `editing`   | `FieldState<TConfig>`    | Editing input. **No fallback** — omit it and edit mode uses the default input. |
+| `creating`  | `FieldState<TConfig>`    | Create-row input. Falls back to `editing` when omitted.                        |
+| `filtering` | `FieldState<TConfig>`    | Filter input. Falls back to `editing` when omitted.                            |
+
+A registered cell type's inputs all receive `FieldState` — one shape for the three of them, carrying the `config` this definition declared. A **column's** own `filtering.component` is the smaller `InputComponentProps` instead: it renders a filter and nothing else, so validation state would be dead weight. The two used to be documented as the same type under two names; they are not.
 
 The fallbacks run one way only — `creating → edit` and `filter → edit`, never `edit → creating`. A definition with just `creating` leaves edit mode on the default input.
 
@@ -53,7 +86,7 @@ import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
 
 const grid = extendDataGrid(CELL_TYPES)
 
-export const { DataGrid, useDataGrid, defineColumns, createColumnHelper } = grid
+export const { DataGrid, useDataGrid, createColumns, createColumnHelper } = grid
 ```
 
 …or per grid, with the `cellTypes` prop — registries nest, so this merges over the ones the kit already provides instead of replacing them:
@@ -61,10 +94,14 @@ export const { DataGrid, useDataGrid, defineColumns, createColumnHelper } = grid
 ```tsx
 <DataGrid
 	data={data}
-	columns={defineColumns<Order>([{ accessorKey: 'status', header: 'Status', cell: { type: 'status' } }])}
+	columns={createColumns<Order>([{ accessorKey: 'status', header: 'Status', cell: { type: 'status' } }])}
 	cellTypes={CELL_TYPES}
 />
 ```
+
+The merge runs **entry by entry**, not id by id: naming an id the kit already registered overrides
+only the keys you give it. `cellTypes={{ date: { view: MyDate } }}` swaps the date cell's view and
+keeps the kit's `editing`, `filtering` and the config the type declared.
 
 ## More examples
 
@@ -90,7 +127,7 @@ A composite view that derives an initials avatar (color hashed from the name) ne
 
 ## Type-safety
 
-The registry's **keys** are the source of truth. `extendDataGrid()` returns a bundle whose `createColumnHelper` is typed to those keys, so the helper gains a matching `helper.status({ … })` method and a typo in the method name is a TS error.
+The registry's **keys** are the source of truth. `extendDataGrid()` returns a bundle whose `createColumnHelper` is typed to those keys, so the builder gains a matching `createColumn.status({ … })` method and a typo in the method name is a TS error.
 
 Hand-written `cell: { type: '…' }` is **not** id-checked — `CellType` keeps a `string & {}` tail so custom ids stay assignable. A typo there silently falls through to the raw, unstyled value instead of your renderer: no compile error, and no visibly broken cell to tip you off. One more reason to go through the helper.
 

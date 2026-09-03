@@ -1,9 +1,9 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
-import { COLUMN_VISIBILITY_KEY, SELECTION_PANEL_KEY, SORTING_KEY, useDataGrid } from './use-data-grid'
+import { useDataGrid } from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { UseDataGridConfig } from './use-data-grid'
@@ -15,19 +15,17 @@ const USERS: User[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },
 ]
-const COLUMNS = defineColumns<User>([{ accessorKey: 'name' }])
-
-const symbols = (table: unknown) => table as Record<symbol, unknown>
+const COLUMNS = createColumns<User>([{ accessorKey: 'name' }])
 
 describe('mergeGridOptionLayers', () => {
 	const config: UseDataGridConfig<User> = { data: USERS, columns: COLUMNS }
 
-	it('applies provider defaults when instance omits them', () => {
+	it('applies provider defaults when table omits them', () => {
 		const merged = mergeGridOptionLayers<User>(undefined, { sorting: true }, config)
 		expect(merged.sorting).toBe(true)
 	})
 
-	it('lets instance config override provider defaults', () => {
+	it('lets table config override provider defaults', () => {
 		const merged = mergeGridOptionLayers<User>(undefined, { sorting: true }, { ...config, sorting: false })
 		expect(merged.sorting).toBe(false)
 	})
@@ -44,16 +42,16 @@ describe('mergeGridOptionLayers', () => {
 		expect(merged.pagination).toEqual({ pageSize: 50, manual: true })
 	})
 
-	it('orders precedence factory < provider < instance', () => {
-		const factory: DataGridDefaultOptions<User> = { sorting: false, filtering: true, columnVisibility: true }
+	it('orders precedence factory < provider < table', () => {
+		const factory: DataGridDefaultOptions<User> = { sorting: false, filtering: true, visibility: true }
 		const provider: DataGridDefaultOptions<User> = { sorting: true, filtering: false }
 		const merged = mergeGridOptionLayers<User>(factory, provider, { ...config, sorting: false })
-		expect(merged.sorting).toBe(false) // instance wins
+		expect(merged.sorting).toBe(false) // table wins
 		expect(merged.filtering).toBe(false) // provider beats factory
-		expect(merged.columnVisibility).toBe(true) // factory-only survives
+		expect(merged.visibility).toBe(true) // factory-only survives
 	})
 
-	it('leaves instance config untouched when no defaults exist', () => {
+	it('leaves table config untouched when no defaults exist', () => {
 		const merged = mergeGridOptionLayers<User>(undefined, {}, config)
 		expect(merged).toEqual(config)
 	})
@@ -84,30 +82,107 @@ describe('DataGridOptionsProvider', () => {
 
 	it('feeds provider defaults into a descendant useDataGrid', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
-			wrapper: makeWrapper({ sorting: true, columnVisibility: true }),
+			wrapper: makeWrapper({ sorting: true, visibility: true }),
 		})
-		expect(symbols(result.current.table)[SORTING_KEY]).toBe(true)
-		expect(symbols(result.current.table)[COLUMN_VISIBILITY_KEY]).toBe(true)
+		// Both arrive resolved, not as the raw `boolean | Config` the provider was handed:
+		// `sorting: true` does not auto-mount its toolbar control, `visibility: true` does.
+		expect(result.current.grid.sorting).toEqual({ toolbar: false })
+		expect(result.current.grid.visibility).toEqual({ toolbar: true })
 	})
 
-	it('lets an instance override provider defaults inside useDataGrid', () => {
+	it('lets an table override provider defaults inside useDataGrid', () => {
 		const { result } = renderHook(
-			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { panel: false } }),
-			{ wrapper: makeWrapper({ selection: { panel: true } }) },
+			() => useDataGrid<User>({ data: USERS, columns: COLUMNS, selection: { bar: false } }),
+			{ wrapper: makeWrapper({ selection: { bar: true } }) },
 		)
-		expect(symbols(result.current.table)[SELECTION_PANEL_KEY]).toBe(false)
+		expect(result.current.grid.selection.bar).toBeUndefined()
 	})
 })
 
 describe('useDataGrid without a provider', () => {
 	it('behaves identically to bare config (no defaults injected)', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }))
-		expect(symbols(result.current.table)[SORTING_KEY]).toBeUndefined()
-		expect(result.current.table.getRowModel().rows).toHaveLength(2)
+		expect(result.current.grid.sorting).toBeUndefined()
+		expect(result.current.getRowModel().rows).toHaveLength(2)
 	})
 
 	it('applies factory defaults passed as the base layer', () => {
 		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }, { sorting: true }))
-		expect(symbols(result.current.table)[SORTING_KEY]).toBe(true)
+		expect(result.current.grid.sorting).toEqual({ toolbar: false })
+	})
+})
+
+describe('write features are enabled by their callback', () => {
+	const makeWrapper = (defaults: DataGridDefaultOptions<User>) =>
+		function OptionsWrapper({ children }: { children: ReactNode }) {
+			return <DataGridOptionsProvider defaults={defaults}>{children}</DataGridOptionsProvider>
+		}
+
+	it('merges a provider-supplied creating.mode with the table onSave', () => {
+		const onSave = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, creating: { onSave } }), {
+			wrapper: makeWrapper({ creating: { mode: 'modal' } }),
+		})
+		expect(result.current.options.creating).toEqual({ mode: 'modal', onSave })
+	})
+
+	it('leaves creating off for a grid that supplies no onSave', () => {
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
+			wrapper: makeWrapper({ creating: { mode: 'modal' } }),
+		})
+		expect(result.current.options.creating).toBeUndefined()
+	})
+
+	it('merges a provider-supplied editing.mode with the table onSave', () => {
+		const onSave = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, editing: { onSave } }), {
+			wrapper: makeWrapper({ editing: { mode: 'modal' } }),
+		})
+		expect(result.current.options.editing).toEqual({ mode: 'modal', onSave })
+	})
+
+	it('leaves editing off for a grid that supplies no onSave', () => {
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
+			wrapper: makeWrapper({ editing: { mode: 'modal' } }),
+		})
+		expect(result.current.options.editing).toBeUndefined()
+	})
+
+	it('merges a provider-supplied deleting.confirmation with the table onDelete', () => {
+		const onDelete = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, deleting: { onDelete } }), {
+			wrapper: makeWrapper({ deleting: { confirmation: { title: 'Delete?' } } }),
+		})
+		expect(result.current.options.deleting).toEqual({ confirmation: { title: 'Delete?' }, onDelete })
+	})
+
+	it('leaves deleting off for a grid that supplies no onDelete', () => {
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS }), {
+			wrapper: makeWrapper({ deleting: { confirmation: true } }),
+		})
+		expect(result.current.options.deleting).toBeUndefined()
+	})
+
+	it('keeps an table-only write config untouched', () => {
+		const onDelete = vi.fn()
+		const { result } = renderHook(() => useDataGrid<User>({ data: USERS, columns: COLUMNS, deleting: { onDelete } }))
+		expect(result.current.options.deleting).toEqual({ onDelete })
+	})
+
+	it('drops the feature again when the grid stops supplying its callback', () => {
+		const onSave = vi.fn()
+		const { result, rerender } = renderHook(
+			({ withHandler }: { withHandler: boolean }) =>
+				useDataGrid<User>({
+					data: USERS,
+					columns: COLUMNS,
+					...(withHandler ? { creating: { onSave } } : {}),
+				}),
+			{ wrapper: makeWrapper({ creating: { mode: 'modal' } }), initialProps: { withHandler: true } },
+		)
+		expect(result.current.options.creating).toEqual({ mode: 'modal', onSave })
+
+		rerender({ withHandler: false })
+		expect(result.current.options.creating).toBeUndefined()
 	})
 })

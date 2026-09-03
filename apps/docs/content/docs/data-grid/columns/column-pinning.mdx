@@ -12,23 +12,48 @@ Pinned columns stick to the table edge during horizontal scroll. Useful for keep
 <DataGridDocsExample exampleId='column-pinning' />
 
 ```tsx
+const columns = createColumns<Row>([
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
+	{ accessorKey: 'actions', header: 'Actions', pinning: { initialSide: 'right' } },
+])
+
 <DataGrid
 	data={data}
 	columns={columns}
-	initialState={{
-		columnPinning: { left: ['id'], right: ['actions'] },
-	}}
+	pinning={{ column: true }}
 />
+```
+
+A column that should stay pinned — one the user is not meant to move — takes the scalar form:
+
+```tsx
+{ accessorKey: 'id', header: 'ID', pinning: 'left' }
 ```
 
 ## Options
 
-| Option                       | Type                                    | Description                                                                |
-| ---------------------------- | --------------------------------------- | -------------------------------------------------------------------------- |
-| `enablePinning`              | `boolean`                               | Per-column. Default `false`. Set to `true` to allow a column to be pinned. |
-| `initialState.columnPinning` | `{ left?: string[], right?: string[] }` | Initial pinned columns.                                                    |
-| `state.columnPinning`        | same                                    | Controlled pinning state.                                                  |
-| `onColumnPinningChange`      | `(updater) => void`                     | Subscribe to changes for persistence.                                      |
+| Option                       | Type                                                              | Description                                                                                                                                                            |
+| ---------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pinning` (column def)       | `false \| 'left' \| 'right' \| { side?, initialSide? }`           | Per-column. The scalar (or `side`) is a static pin — always pinned, no pin section in the column menu. `initialSide` — starts pinned, user can change it via the menu. |
+| `pinning` (table)            | `boolean \| { column?: boolean \| ColumnPinningConfig, row?: … }` | Table-level. `{ column: true }` enables the pin section in each column's ⋮ menu; the object form adds `onChange` and `enabled`.                                        |
+| `initialState.columnPinning` | `{ left?: string[], right?: string[] }`                           | Uncontrolled seed for pinned columns at mount. Merges with the column-level pins — see below.                                                                          |
+| `pinning.column.onChange`    | `(columnPinning: ColumnPinningState) => void`                     | Called whenever column pinning changes. Use it to persist which columns a user pinned.                                                                                 |
+| `state.columnPinning`        | same                                                              | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](./data-grid/controlled-state).                                                       |
+| `pinning.enabled`            | `boolean`                                                         | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                         |
+
+## Seeds and invariants
+
+`initialState.columnPinning` **merges** with the pins derived from the column defs rather than
+replacing them. A column you list in either array is yours; a column you leave out of both keeps its
+`initialSide`, and unmentioned seeds are placed outside your ids so a pinned selection column stays
+leftmost and a pinned actions column stays rightmost.
+
+A static pin is different: it is an invariant, not a seed. A statically pinned column keeps its pin no
+matter what `initialState`, `state` or `table.setState` says — the column menu has no pin section
+for it, so a state that unpinned it could never be undone by the user. The same holds for the
+system columns (`__selection__`, `__expand__`, `__actions__`).
+
+See [State model](./data-grid/state-model) for the full precedence.
 
 ## Notes
 

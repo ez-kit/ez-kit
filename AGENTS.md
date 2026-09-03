@@ -1,13 +1,63 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Guidance for coding agents working in this repository. This file is the single source of truth:
+`CLAUDE.md` imports it, and other agents read it directly. Edit it here, never in a copy.
 
-## Branching
+## Architecture Constraints
 
-- `develop` is the default integration branch — feature branches fork from and merge into `develop`.
-- `main` is release-only: a `develop → main` PR is a release and the Vercel production + npm release point.
-- CI (`.github/workflows/ci.yml`, job `verify`) gates every PR into `develop` and `main`.
-- Hooks: pre-commit `lint-staged`, commit-msg `commitlint` (Conventional Commits), pre-push `pnpm ci:fast`. Node pinned via `.nvmrc` (22.18.0).
+### No styles in `packages/data-grid/react/react`
+
+The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may only add semantic `data-*` attributes to elements so that UI kit CSS can target them.
+
+### Vendored shadcn primitives are immutable
+
+`packages/data-grid/react/shadcn/src/components/ui/**` is vendored from shadcn — **do not modify these files.** All behavioral overrides (colSpan handling, alignment, pinning, custom slots, etc.) must live in `packages/data-grid/react/shadcn/src/blocks/` adapters that wrap the primitives. See `packages/data-grid/react/shadcn/CLAUDE.md` for the full rule.
+
+This rule is **shadcn-specific** — it follows from those files being vendored, not from the `components/ui/` path. The heroui kit's `src/components/ui/action-bar.tsx` is hand-written and freely editable; see `packages/data-grid/react/heroui/CLAUDE.md`.
+
+### Settled data-grid API decisions — do not re-propose
+
+The data-grid public API has been audited several times. The following were **considered and
+deliberately kept**; re-proposing them is churn, so if a review turns one up, cite this section
+and move on.
+
+- **`resizing.mode: 'onChange' | 'onEnd'` keeps TanStack's vocabulary.** Unlike `size` /
+  `minSize` / `maxSize` (folded into `width`) or `sortUndefined`'s `-1` / `1` (replaced by
+  `'first'` / `'last'`), these two names are what every TanStack Table user already knows the
+  option by and they read correctly on their own. That `mode: 'onChange'` sits beside the
+  feature's own `onChange` callback is noted and accepted.
+- **`pagination.pageSize` and `initialState.pagination.pageSize` are both allowed.** The option
+  is where an author _states_ the size; the seed is where a deep link _restores_ the one the
+  user picked. Writing both is a mistake, and `createTable` warns about it in development.
+- **Column `align` is logical (`start` / `end`), column `pinning` is physical (`left` /
+  `right`).** The alignment axis flips under RTL; a pinned column sticks to a viewport edge and
+  does not. `Toolbar.start` / `Toolbar.end` follow the `align` rule, for the same reason.
+- **One filter-operator vocabulary across cell types.** `FilterOperator` is a single closed set:
+  the same id means the same comparison whatever the column's cell type is, and only the `label`
+  changes (`greaterThan` reads "Greater than" on a number column and "After" on a date one).
+  Adding a type-specific spelling of an existing comparison — a second `eq` beside `equals`, an
+  `after` beside `greaterThan` — is the defect this replaced, not an improvement on it.
+- **Renderer slots are named for the feature they serve, at every level.** A cell type registers
+  `view` / `editing` / `creating` / `filtering`; a column writes `cell.component` /
+  `editing.component` / `creating.component` / `filtering.component`; the DI contract groups
+  components under `editing` / `deleting` / `rowActions` / … — the option names, never a kebab or
+  verb variant of them.
+- **`ColumnMeta` fields carry the name of the column option they hold.** `pinning`, `align`,
+  `cell`, `filtering`, `editing`, `creating`, `visibility`. A resolved value never gets a third
+  spelling (it was `cellType` / `config` / `cellView` for the three halves of `cell`).
+- **The three system columns are configured like columns.** `selection.column`,
+  `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
+  `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the
+  column scalar-or-object forms. What the column _does_ stays on the feature.
+
+## Branching & Release Flow
+
+- `develop` is the default integration branch — all feature branches fork from and merge into `develop`.
+- `main` is release-only: a `develop → main` PR **is** a release. `main` is the Vercel **production** branch (docs deploy on release) and the npm release point. `develop` and feature branches get Vercel **preview** URLs.
+- CI (`.github/workflows/ci.yml`) gates every PR into `develop` and `main` with `build → lint → typecheck → test → size` (job name `verify`).
+- Issues close on merge into `develop`, not on release. GitHub itself only honours `Closes #N` when a PR merges into the **default** branch (`main`), so every PR into `develop` would otherwise leave its issue open — and strand its project-board card in **In review**, since the board moves items to Done on the _issue closed_ event. `.github/workflows/close-linked-issues.yml` restores the expected behaviour: on merge into `develop` or `integration/**` it parses closing keywords from the PR body **and its commit messages**, then closes those issues. It authenticates with the `CHANGESETS_TOKEN` PAT because the repo keeps `default_workflow_permissions: read`, which caps `GITHUB_TOKEN` below the required `issues: write`. That PAT therefore needs **`Issues: Read and write`** on top of the permissions the version-PR bot uses — if it is rotated or reissued without it, the job fails with `403 Resource not accessible by personal access token` and issues silently pile up open.
+- Git hooks (husky): pre-commit runs `lint-staged` (Prettier + ESLint on staged files only), commit-msg enforces Conventional Commits via commitlint, pre-push runs `pnpm ci:fast`.
+- Node is pinned via `.nvmrc` (22.18.0) and `engines.node` (`>=22`).
 
 ## Commands
 
@@ -17,10 +67,10 @@ pnpm build            # Build all packages via Turborepo
 pnpm lint             # Lint all packages (0 warnings allowed)
 pnpm typecheck        # TypeScript type-check all packages
 pnpm test             # Run all tests (requires build first per turbo deps)
-pnpm format           # Prettier write across the whole repo
+pnpm format           # Prettier write across the whole repo (scripts/prettier.mjs)
 pnpm format:check     # Prettier check across the whole repo
 pnpm size             # Check bundle size limits
-pnpm ci               # Full CI check: lint + typecheck + test + build + size
+pnpm run ci               # Full CI check: lint + typecheck + test + build + size
 ```
 
 Run a single package's tests directly (faster, no turbo overhead):
@@ -39,9 +89,14 @@ cd packages/zu-store && pnpm exec vitest
 Docs app:
 
 ```bash
-pnpm docs:dev         # Start Fumadocs dev server
+pnpm docs:dev         # Start the Fumadocs dev server
 pnpm docs:build
+pnpm docs:start       # Serve the production build
 ```
+
+`dev` and `build` both run `build:deps` (`turbo run build --filter=@ez-kit/docs^...`) first, so the docs app always compiles against freshly built packages — no separate build step needed.
+
+The docs app's `.source` directory (fumadocs-mdx codegen) is generated, gitignored, and regenerated by `next build`; `pnpm exec fumadocs-mdx` rebuilds it on demand. A stale or empty `.source` shows up as `Cannot find module 'collections/server'` or `'.source/server.ts' is not a module` — regenerate rather than chase it.
 
 Generate a new package:
 
@@ -49,13 +104,27 @@ Generate a new package:
 pnpm pkg:new          # Runs turbo gen package — interactive prompts
 ```
 
-Release flow:
+Release flow (automated — changesets, `.github/workflows/release.yml`):
 
-```bash
-pnpm changeset        # Create a changeset for changed public packages
-pnpm version-packages # Bump versions from changesets
-pnpm release          # Publish to npm
-```
+1. In a feature PR into `develop`, run `pnpm changeset` and commit the generated
+   `.changeset/*.md` (pick the packages + bump type + summary).
+2. Once changesets land on `develop`, the `version` job opens/updates a
+   **"version packages"** PR into `develop` (bumps versions, writes CHANGELOG,
+   consumes the changeset files). Merge it when ready to cut a release.
+3. Open the release PR `develop → main` — it already carries the bumped versions.
+   Merging it runs the `publish` job on `main`: `pnpm release`
+   (`turbo run build && changeset publish`) → publishes to npm **with provenance**,
+   creates git tags and GitHub Releases.
+
+`changesets` `baseBranch` is `develop`. Publishing uses **npm trusted publishing
+(OIDC)** — no long-lived npm token. Each `@ez-kit/*` package must have a trusted
+publisher configured on npmjs.com (repo `ez-kit/ez-kit`, workflow `release.yml`);
+the publish job upgrades npm to ≥ 11.5.1 and relies on `id-token: write`.
+A brand-new package's first version must be bootstrapped once from a local
+`pnpm release` (the trusted publisher can only be set after the package exists).
+The `version` job's PR bot uses the `CHANGESETS_TOKEN` PAT because the org blocks
+the default token from creating PRs. Local manual release stays possible with
+`pnpm changeset` / `pnpm version-packages` / `pnpm release`.
 
 ## Architecture
 
@@ -65,9 +134,28 @@ This is a **pnpm + Turborepo monorepo** of ESM-only React utility libraries.
 
 ```
 apps/
-  docs/               # Fumadocs-based Next.js documentation site
+  docs/                         # Fumadocs-based Next.js documentation site
+    app/
+      (site)/
+        docs/[[...slug]]/       # The documentation pages themselves (MDX, via fumadocs `source`)
+      (embed)/
+        examples/shadcn/[slug]/ # Bare example routes — one per UI kit, iframed by <ExampleFrame />
+        examples/heroui/[slug]/ # Both render the SAME example component (see registry.ts)
+    shared/
+      DataGrid.tsx              # Runtime switcher — lazy-loads shadcn or heroui DataGrid based on context
+      data-grid/
+        examples/               # data-grid examples — one set of components used by BOTH shadcn and heroui
+          manifest.json         # id → sourceFile + exportName (register new examples here)
+          registry.ts           # sourceFile → dynamic import — hand-maintained, also update it
+          components/           # example components, rendered via DataGridTypeProvider context
+      examples/                 # Newer per-package live examples — examples/<package>/<name>.tsx (zu-store, va-store)
+    scripts/
+      dev-server.mjs            # `pnpm docs:dev` entrypoint
+      verify-manifest-coverage.mjs  # Asserts every manifest example is referenced from some .mdx (run manually)
 packages/
-  zu-store/           # @ez-kit/zu-store — Zustand context store factory
+  zu-store/           # @ez-kit/zu-store — Zustand context store factory (+ history middleware, store-cache)
+  va-store/           # @ez-kit/va-store — Valtio context store + source-agnostic persist engine (URL/storage/IndexedDB)
+  store-core/         # @ez-kit/store-core — shared foundation under both: store ids, service registry, plugin contract, instance cache
   data-grid/
     core/             # @ez-kit/data-grid-core — headless data-grid (TanStack Table)
     react/
@@ -80,18 +168,52 @@ turbo/
 
 ### Package conventions
 
+- **Store packages are named `<first two letters of the backing library>-store`** — `zu-store`
+  (Zustand), `va-store` (Valtio). A future Redux binding is `re-store`, MobX is `mo-store`. The
+  directory name, the npm name (`@ez-kit/<name>`), and the docs route (`/docs/<name>`) all match.
 - Public API exported exclusively from `src/index.ts`
 - Built with `tsup` → ESM output + `.d.ts` declarations into `dist/`
 - Each package extends `tsconfig.base.json` and uses `@/*` → `src/*` path alias
 - Tests live in `src/**/*.test.ts(x)` or `test/**/*.test.ts(x)`, run with Vitest in jsdom
-- Each package has a `size-limit` budget (default 3 KB) enforced in CI
+- Each package has a `size-limit` budget enforced in CI. The generator seeds 3 KB; every package then
+  tunes it to roughly its real size plus headroom, so a regression actually fails the check
 - Packages declare `"sideEffects": false`
 
-### Key architectural patterns
+### Where a package's API is documented
 
-**`@ez-kit/zu-store`** — `createContextStore(factory)` wraps a Zustand vanilla store in React context, returning `{ Provider, useStore, useShallowStore, Item }`. The `Provider` initialises the store once via `useRef` so it survives re-renders without re-creating state.
+Each package's public API lives in its own `README.md` and on https://ez-kit.dev — deliberately not
+duplicated here. A copy of an API in this file goes stale faster than anyone updates it, and a stale
+copy is worse than no copy: it reads as authoritative while naming exports that no longer exist.
 
-**`@ez-kit/data-grid-*`** — layered architecture: `data-grid-core` is a UI-framework-agnostic layer on top of TanStack Table core; `data-grid-react` adds React; the `shadcn` and `heroui` sub-packages layer UI-component-library-specific implementations on top.
+### Docs app architecture
+
+**Runtime UI switching** — `apps/docs/shared/DataGrid.tsx` lazy-loads either `@ez-kit/data-grid-shadcn` or `@ez-kit/data-grid-heroui` based on `DataGridTypeProvider` context. The provider is set by `components/example-renderer.tsx` from the `kit` its `(embed)/examples/<kit>/[slug]` route passes in, so the two kits' routes differ only by that prop. Example components are written **once** and automatically work for both UI kits — there is no duplication.
+
+**Two example conventions** — (1) **data-grid** examples are manifest-based: add the component to `apps/docs/shared/data-grid/examples/components/`, register it in `apps/docs/shared/data-grid/examples/manifest.json` (`id` → `sourceFile` + `exportName`), and — for a **new source file** — add a `sourceFile` → dynamic import entry to `apps/docs/shared/data-grid/examples/registry.ts`. That registry is hand-maintained on purpose: Turbopack cannot statically analyse an import built from a variable path when the targets are `'use client'` components pulled in from a Server Component. It is keyed by `sourceFile`, not `id`, because several ids can share one file. Miss it and the example throws `has no registry entry for "<sourceFile>"` when the page renders — lint, typecheck and build all still pass, so nothing catches it for you. Once registered, the example appears for both shadcn and heroui automatically. (2) **Other packages** (zu-store, va-store) use a flat per-package convention with no registry: drop a file at `apps/docs/shared/examples/<package>/<name>.tsx` and reference it from MDX by its relative path without the `.tsx` extension.
+
+**One file may hold several examples** — the manifest maps each `id` to a `sourceFile` **and** an `exportName`, so several ids can share one file (e.g. `filter-chips.tsx` exports the auto/always/custom variants). Examples are declared as `export function <Name>Example()`; that convention is load-bearing for both the registry lookup and the source panel.
+
+**Documented option names are type-checked** — `apps/docs/test/docs-option-names.test.ts` (helpers in `apps/docs/test/docs-options/`) resolves every option name in the data-grid and form docs' markdown option tables against the **real** exported types, via `ts.TypeChecker.getPropertiesOfType()` on a `ts.Program` built from `apps/docs/tsconfig.json`. Deliberately **not** a grep: `enableSorting`, `enableColumnFilters`, `enableRowSelection` and `manualPagination` all appear literally in `packages/data-grid/core/src/create-table.ts` (the core sets them as _internal_ TanStack options) while being illegal in the public config, so a substring check would bless exactly the defect class this test exists to catch. A fabricated name on a mapped page fails CI with file:line, the bogus name, the legal keys of the governing type, and a "did you mean". Package exports resolve to `./dist`, so the data-grid and form packages must be **built** before the test runs — the turbo `test` task's `dependsOn: ["^build"]` already enforces that.
+
+Coverage over the data-grid docs is **total**: the explicit page → type map in
+`apps/docs/test/docs-options/page-type-map.ts` lists every page under `content/docs/data-grid/**`
+(52 today) plus the four `form/` pages that carry an option table, keyed by file path **plus the
+heading above each table** so multiple tables in one file map independently — 56 pages / 61 option
+tables / 340 checked names, of which 19 pages carry no option table and get an entry with two empty
+arrays. Those empty entries are the point: while coverage was partial, an unmapped page was checked
+by nothing, and the two worst pages in the docs were unmapped ones — `columns/resizing.mdx`
+documented a `sizing` option that never existed, and the whole `editing/**` section documented a
+`meta.editType` / `onCellEdit` API that never existed. An `everyPageIsMapped` guard now fails the
+moment a page is added to `DocPage` without being classified. `form/index.mdx` and `form/ai.mdx` are
+deliberately unmapped: every table on them documents exported symbols or URLs, so an entry would
+check nothing. To add a page: verify its tables against the real types by hand, add the path to
+`DocPage`, and add a `PAGE_ENTRIES` entry classifying **every** table on the page as either an
+`optionTables` entry (governing type + expected name count) or a `nonOptionTables` entry (with a
+reason) — an unclassified table fails the test, as does a table whose checked-name count drifts from
+what's recorded. Rows that intentionally document a non-key (e.g. the literal `false` a per-column
+slot accepts) go in `OPTION_EXCEPTIONS`, each with its reason.
+
+**Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false` — the heroui bundle contains a dynamic `require` that RSC/Turbopack cannot run during SSR, so both kits deliberately share the one client-rendered path rather than letting shadcn SSR and heroui silently fall back.
 
 ### TypeScript
 

@@ -7,8 +7,21 @@ import { booleanCellType } from './boolean'
 import { formatNumber, numberCellType } from './number'
 import { textCellType, truncateText } from './text'
 
+import type { CellViewProps } from '../cell-types-context'
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ComponentType } from 'react'
+
+/**
+ * Cell-type renderers are components, not formatting functions — mount and read the text.
+ * Calling one directly would smuggle its hooks into the caller's fiber, which is exactly what
+ * `flexRender` stopped doing.
+ */
+function renderView<TConfig>(
+	View: ComponentType<CellViewProps<TConfig>>,
+	props: CellViewProps<TConfig>,
+): string | null {
+	return renderWithComponents(<View {...props} />).container.textContent
+}
 
 function baseField<TConfig>(overrides: Partial<FieldState<TConfig>>): FieldState<TConfig> {
 	return {
@@ -67,22 +80,23 @@ describe('truncateText', () => {
 })
 
 describe('numberCellType', () => {
+	// `defineCellType` keeps the definition's precise type, so `view` is known to be present —
+	// the runtime guard this used to need is now provably dead.
 	const view = numberCellType.view
-	if (!view) throw new Error('numberCellType.view must be defined')
 
 	it('view: formats numeric values via config', () => {
-		const out = view({ value: 1500, row: {}, rowIndex: 0, config: { decimals: 2, locale: 'en-US' } })
+		const out = renderView(view, { value: 1500, row: {}, rowIndex: 0, config: { decimals: 2, locale: 'en-US' } })
 		expect(out).toBe('1,500.00')
 	})
 
 	it('view: stringifies non-number values', () => {
-		expect(view({ value: 'foo', row: {}, rowIndex: 0 })).toBe('foo')
-		expect(view({ value: null, row: {}, rowIndex: 0 })).toBe('')
+		expect(renderView(view, { value: 'foo', row: {}, rowIndex: 0 })).toBe('foo')
+		expect(renderView(view, { value: null, row: {}, rowIndex: 0 })).toBe('')
 	})
 
-	it('edit: forwards to DI NumberInput and onChange propagates a number', () => {
+	it('editing: forwards to DI NumberInput and onChange propagates a number', () => {
 		const onChange = vi.fn()
-		const Edit = numberCellType.edit as ComponentType<FieldState>
+		const Edit = numberCellType.editing as ComponentType<FieldState>
 		const { container } = renderWithComponents(<Edit {...baseField<never>({ value: 1, onChange })} />)
 		const input = container.querySelector('input[type="number"]')
 		if (!input) throw new Error('expected NumberInput')
@@ -92,22 +106,23 @@ describe('numberCellType', () => {
 })
 
 describe('textCellType', () => {
+	// `defineCellType` keeps the definition's precise type, so `view` is known to be present —
+	// the runtime guard this used to need is now provably dead.
 	const view = textCellType.view
-	if (!view) throw new Error('textCellType.view must be defined')
 
 	it('view: truncates with ellipsis when needed', () => {
-		const out = view({ value: 'a long string', row: {}, rowIndex: 0, config: { maxLength: 5 } })
+		const out = renderView(view, { value: 'a long string', row: {}, rowIndex: 0, config: { maxLength: 5 } })
 		expect(out).toBe('a lon…')
 	})
 
 	it('view: stringifies undefined / null', () => {
-		expect(view({ value: undefined, row: {}, rowIndex: 0 })).toBe('')
-		expect(view({ value: null, row: {}, rowIndex: 0 })).toBe('')
+		expect(renderView(view, { value: undefined, row: {}, rowIndex: 0 })).toBe('')
+		expect(renderView(view, { value: null, row: {}, rowIndex: 0 })).toBe('')
 	})
 
-	it('edit: forwards to DI Input', () => {
+	it('editing: forwards to DI Input', () => {
 		const onChange = vi.fn()
-		const Edit = textCellType.edit as ComponentType<FieldState>
+		const Edit = textCellType.editing as ComponentType<FieldState>
 		const { container } = renderWithComponents(<Edit {...baseField<never>({ value: 'hi', onChange })} />)
 		const input = container.querySelector('input')
 		if (!input) throw new Error('expected Input')
@@ -118,13 +133,15 @@ describe('textCellType', () => {
 
 describe('booleanCellType', () => {
 	it('does not ship a view or filter (kit-specific)', () => {
-		expect(booleanCellType.view).toBeUndefined()
-		expect(booleanCellType.filter).toBeUndefined()
+		// `defineCellType` keeps the definition's precise type, so the absence is now a type-level
+		// fact too — these slots are not on `booleanCellType` at all, not merely undefined.
+		expect(booleanCellType).not.toHaveProperty('view')
+		expect(booleanCellType).not.toHaveProperty('filter')
 	})
 
-	it('edit: forwards to DI Checkbox', () => {
+	it('editing: forwards to DI Checkbox', () => {
 		const onChange = vi.fn()
-		const Edit = booleanCellType.edit as ComponentType<FieldState>
+		const Edit = booleanCellType.editing as ComponentType<FieldState>
 		const { container } = renderWithComponents(<Edit {...baseField<never>({ value: false, onChange })} />)
 		const checkbox = container.querySelector('input[type="checkbox"]')
 		if (!checkbox) throw new Error('expected Checkbox')

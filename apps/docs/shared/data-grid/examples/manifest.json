@@ -348,7 +348,7 @@
 		"label": "Helper · Registered",
 		"group": "columns",
 		"groupLabel": "Columns",
-		"sourceFile": "components/column-helper.tsx",
+		"sourceFile": "components/column-helper-registered.tsx",
 		"exportName": "ColumnHelperRegisteredExample"
 	},
 	{
@@ -474,6 +474,14 @@
 		"exportName": "ExpandingControlledExample"
 	},
 	{
+		"id": "row-actions-custom",
+		"label": "Custom Actions",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/custom-actions.tsx",
+		"exportName": "RowActionsCustomExample"
+	},
+	{
 		"id": "row-pinning-sticky-header",
 		"label": "Sticky Header",
 		"group": "row-pinning",
@@ -582,5 +590,61 @@
 		"label": "State Persistence",
 		"sourceFile": "components/state-persistence.tsx",
 		"exportName": "StatePersistenceExample"
+	},
+	{
+		"id": "production-orders",
+		"label": "Orders console",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionExample.tsx",
+		"exportName": "ProductionExample"
+	},
+	{
+		"id": "production-one-handler",
+		"label": "One state handler",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionOneHandlerExample.tsx",
+		"exportName": "ProductionOneHandlerExample"
+	},
+	{
+		"id": "production-provider",
+		"label": "Shared options provider",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionProviderExample.tsx",
+		"exportName": "ProductionProviderExample"
+	},
+	{
+		"id": "production-deferred-apply",
+		"label": "Deferred apply",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionDeferredApplyExample.tsx",
+		"exportName": "ProductionDeferredApplyExample"
+	},
+	{
+		"id": "production-feed",
+		"label": "Virtualized feed",
+		"group": "production",
+		"groupLabel": "Production",
+		"sourceFile": "components/production/ProductionFeedExample.tsx",
+		"exportName": "ProductionFeedExample"
+	},
+	{
+		"id": "column-footers",
+		"label": "Column footers",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-footers.tsx",
+		"exportName": "ColumnFootersExample"
+	},
+	{
+		"id": "sticky-footer",
+		"label": "Sticky footer",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-footers.tsx",
+		"exportName": "StickyFooterExample"
 	}
 ]

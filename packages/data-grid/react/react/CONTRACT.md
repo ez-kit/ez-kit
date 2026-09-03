@@ -56,8 +56,8 @@ Every kit owes exactly two things:
 Opt into individual feature groups with the tier types
 (`GridCoreComponents`, `GridPaginationComponents`, `GridSortingComponents`,
 `GridFilteringComponents`, `GridEditingComponents`, `GridSelectionComponents`,
-`GridPinningComponents`, `GridResizingComponents`, `GridColumnVisibilityComponents`,
-`GridFallbackStateComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
+`GridRowActionsComponents`, `GridResizingComponents`, `GridVisibilityComponents`,
+`GridFallbackComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
 
 All of these — plus the flat `COMPONENT_FEATURE` lookup — are derived from a single
 exported map, `FEATURE_COMPONENTS: Record<GridFeature, readonly (keyof GridComponents)[]>`,
@@ -96,7 +96,7 @@ exported — read them for the exact shape.
 | `Button`   | `ButtonProps`   | Generic button used by triggers/actions.                       |
 | `Input`    | `InputProps`    | Generic text input.                                            |
 | `Checkbox` | `CheckboxProps` | Row/all selection. `indeterminate`, `onChange(checked)`.       |
-| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `left` / `right` / `children`.   |
+| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `start` / `end` / `children`.    |
 
 ### `pagination`
 
@@ -121,7 +121,7 @@ exported — read them for the exact shape.
 | `FilterPanel`        | `FilterPanelProps`                                     |
 | `FilterPanelChip`    | `FilterPanelChipProps`                                 |
 | `FilterChip`         | `FilterChipProps`                                      |
-| `ClearFiltersButton` | `ClearFiltersButtonComponentProps`                     |
+| `ClearFiltersButton` | `ClearFiltersButtonProps`                              |
 | `GlobalFilterInput`  | `GlobalFilterInputProps` (debounce applied upstream)   |
 | `OperatorSelect`     | `OperatorSelectProps`                                  |
 | `BetweenInput`       | `BetweenInputProps` (`inputs` / `slider` / `calendar`) |
@@ -133,7 +133,6 @@ exported — read them for the exact shape.
 | --------------------- | ------------------------------------------------- |
 | `Modal`               | `ModalProps`                                      |
 | `FormShell`           | `FormShellProps` (creating / editing modal shell) |
-| `ActionsCell`         | `ActionsCellProps`                                |
 | `CreatingActionsCell` | `CreatingActionsCellProps`                        |
 | `ConfirmDialog`       | `ConfirmDialogProps` (delete confirmation)        |
 | `NumberInput`         | `NumberInputProps`                                |
@@ -144,18 +143,30 @@ exported — read them for the exact shape.
 | -------------- | ------------------------------------------- |
 | `SelectionBar` | `SelectionBarProps` (`floating` / `inline`) |
 
-### `pinning` / `resizing`
+### `row-actions`
 
-| Component    | Props             | Feature    |
-| ------------ | ----------------- | ---------- |
-| `RowPinMenu` | `RowPinMenuProps` | `pinning`  |
-| `Resizer`    | `ResizerProps`    | `resizing` |
+Per-row actions share one column: edit / delete buttons plus the row-pin menu.
+
+| Component        | Props                 |
+| ---------------- | --------------------- |
+| `ActionsCell`    | `ActionsCellProps`    |
+| `RowActionsMenu` | `RowActionsMenuProps` |
+
+`RowActionsMenu` is item-driven: it receives `RowActionItem[]` and renders each one,
+mapping `item.id` (a `RowActionId`) to the kit's own icon. It holds only the pin
+actions under the default `inline` variant, and every action under `menu`.
+
+### `resizing`
+
+| Component | Props          |
+| --------- | -------------- |
+| `Resizer` | `ResizerProps` |
 
 ### `column-visibility`
 
-| Component              | Props                       |
-| ---------------------- | --------------------------- |
-| `ColumnVisibilityMenu` | `ColumnVisibilityMenuProps` |
+| Component        | Props                 |
+| ---------------- | --------------------- |
+| `VisibilityMenu` | `VisibilityMenuProps` |
 
 ### `fallback-states`
 

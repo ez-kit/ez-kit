@@ -1,10 +1,18 @@
-import { ACTIONS_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import {
+	ACTIONS_COLUMN_ID,
+	ColumnFormMode,
+	CommitStatus,
+	resolveColumnFormConfig,
+	SELECTION_COLUMN_ID,
+} from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { ActionsCellState } from '../types'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
-import { useTable } from './table-context'
+import { flexRender } from './flex-render'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { InputProps } from '../types'
@@ -19,16 +27,19 @@ import type { ChangeEvent, ComponentType, ReactNode } from 'react'
  * Edit-mode renderers receive a {@link FieldState} with `error` / `errors` / `onBlur`.
  */
 export function CreatingRow() {
-	const table = useTable()
+	const table = useDataGridTable()
+	useDataGridState((s) => s.creating)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Tr, Td, Input, Checkbox } = gridComponents.core
-	const { CreatingActionsCell } = gridComponents.editing
+	const { ActionsCell } = gridComponents.rowActions
 	const cellTypes = useCellTypes()
 	const state = table.creating.getState()
 	const values = state.values
 	const errors = state.errors
-	const isValidating = state.commitStatus === 'validating'
-	const isPending = state.commitStatus !== 'idle'
+	const isValidating = state.commitStatus === CommitStatus.Validating
+	const isPending = state.commitStatus !== CommitStatus.Idle
 	const creatingConfig = table.options.creating
 	const isPinRow = creatingConfig?.mode === 'pin-row'
 
@@ -53,12 +64,13 @@ export function CreatingRow() {
 								pinned={pinned}
 								{...pinnedAttrs}
 							>
-								<CreatingActionsCell
+								<ActionsCell
+									state={ActionsCellState.Creating}
 									onSave={() => table.creating.commit()}
 									onCancel={() => {
 										table.creating.cancel()
 									}}
-									isPinRow={isPinRow}
+									canCancel={!isPinRow}
 									isPending={isPending}
 								/>
 							</Td>
@@ -118,7 +130,7 @@ export function CreatingRow() {
 					value,
 					onChange,
 					onBlur,
-					...(meta?.config !== undefined ? { config: meta.config } : {}),
+					...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 					error: fieldError,
 					errors: fieldErrors,
 					isValidating,
@@ -158,18 +170,19 @@ type CreatingInputArgs = {
 }
 
 function renderCreatingInput({ meta, field, cellTypes, Input, placeholder }: CreatingInputArgs): ReactNode {
-	// 1. column-level creating.component
-	const creatingConfig = meta?.creating
+	// 1. column-level creating.component, falling back to editing.component
+	const creatingConfig = resolveColumnFormConfig(meta, ColumnFormMode.Creating)
 	if (creatingConfig !== false && creatingConfig !== undefined) {
 		const comp = creatingConfig.component
-		if (comp) return comp(field) as ReactNode
+		if (comp) return flexRender(comp, field)
 	}
 
-	// 2. registry creating → edit fallback by cellType
-	if (meta?.cellType) {
-		const def = cellTypes[meta.cellType]
-		const comp = def?.creating ?? def?.edit
-		if (comp) return comp(field)
+	// 2. registry creating → editing fallback by cell type
+	const cellTypeId = meta?.cell?.type
+	if (cellTypeId) {
+		const def = cellTypes[cellTypeId]
+		const comp = def?.creating ?? def?.editing
+		if (comp) return flexRender(comp, field)
 	}
 
 	// 3. default Input

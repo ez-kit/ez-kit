@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -26,8 +26,10 @@ beforeAll(() => {
 type Row = { id: number; name: string }
 const DATA: Row[] = [{ id: 1, name: 'Alice' }]
 const SPY_TYPE = 'spy' as const
-const COLUMNS = defineColumns<Row>([
-	// `cell.type` is loose — relies on the cellType registry passed via `cellTypes` prop.
+// The registry arrives at runtime via the `cellTypes` prop, so the second type argument is
+// how this call site declares which custom types it means. Omitting it defaults to `never` —
+// the unbound helper cannot know a registry it was never given.
+const COLUMNS = createColumns<Row, { [SPY_TYPE]: Record<never, never> }>([
 	{ accessorKey: 'name', cell: { type: SPY_TYPE }, editing: {}, creating: {} },
 ])
 
@@ -45,7 +47,7 @@ function makeSpyCellTypes(seen: FieldState[]): Record<string, CellTypeDefinition
 			/>
 		)
 	}
-	return { spy: { edit: renderer, creating: renderer } }
+	return { spy: { editing: renderer, creating: renderer } }
 }
 
 describe('<DataGridCell> — FieldState propagation', () => {
@@ -73,8 +75,8 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		if (!table) throw new Error('table not initialised')
 
 		act(() => {
-			table.table.creating.start()
-			table.table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
+			table.creating.start()
+			table.creating.setErrors({ name: ['too short', 'forbidden chars'] })
 		})
 		view.rerender(
 			<DataGrid<Row>
@@ -118,7 +120,7 @@ describe('<DataGridCell> — FieldState propagation', () => {
 		if (!table) throw new Error('table not initialised')
 
 		act(() => {
-			table.table.creating.start()
+			table.creating.start()
 		})
 		view.rerender(
 			<DataGrid<Row>

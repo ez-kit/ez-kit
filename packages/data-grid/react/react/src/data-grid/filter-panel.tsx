@@ -1,12 +1,12 @@
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import { DEFAULT_FILTER_DEBOUNCE_MS, FILTERING_DEBOUNCE_KEY } from '../use-data-grid'
 
 import { renderFilterInput } from './render-filter-input'
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { BadgeItem, BetweenValue, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
-import type { ColumnMeta, Header } from '@tanstack/table-core'
+import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
+import type { ReactNode } from 'react'
 
 const MAX_INLINE_VALUES = 2
 
@@ -21,13 +21,14 @@ function formatBetweenValue(value: BetweenValue): { display: string; hasValue: b
 }
 
 function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown> | undefined): string {
-	const explicit = meta?.filteringOptions
+	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+	const explicit = filteringMeta?.items
 	if (explicit) {
 		const hit = explicit.find((o) => o.value === rawValue)
 		if (hit) return hit.label
 	}
-	if (meta?.cellType === 'select' || meta?.cellType === 'badge') {
-		const items = (meta.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
+	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
+		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		const hit = items?.find((o) => o.value === rawValue)
 		if (hit) return hit.label
 	}
@@ -53,7 +54,8 @@ function formatFilterValue(
 
 	if (typeof filterValue === 'object' && 'operator' in filterValue) {
 		const sv = filterValue as StructuredFilterValue
-		const op = meta?.resolvedOperators?.find((o) => o.id === sv.operator)
+		const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+		const op = filteringMeta?.operators?.find((o) => o.id === sv.operator)
 		const inner = sv.value
 
 		// `requiresInput === false` operators (e.g. isEmpty / isNotEmpty) — show operator label.
@@ -89,8 +91,62 @@ function formatFilterValue(
  *
  * Pair with `filtering.variant: 'panel'` so the header skips inline filter rendering.
  */
-export function FilterPanel() {
-	const table = useTable()
+/** One filterable column, as the panel resolved it. */
+export type DataGridFilterPanelColumn = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	column: Column<any>
+	/** The column's string header, falling back to its id. */
+	label: string
+	/** Human-readable current value, or the "Any" placeholder when unset. */
+	valueDisplay: string
+	hasValue: boolean
+	/**
+	 * The ready-made filter control for this column — the same one the header renders, with
+	 * its operator select, between inputs or multi-select already resolved from the column's
+	 * cell type and operator config, and the shared debounce applied. Rebuilding this by hand
+	 * is the expensive part, which is why it is handed over rather than left to the caller.
+	 */
+	input: ReactNode
+	onClear: () => void
+}
+
+/** What a `<DataGrid.FilterPanel>` render function receives. */
+export type DataGridFilterPanelRenderArgs = {
+	columns: DataGridFilterPanelColumn[]
+	/** True when at least one column currently has a filter value. */
+	hasActiveFilter: boolean
+}
+
+export type DataGridFilterPanelProps = {
+	/**
+	 * Custom panel content, replacing the kit's `FilterPanel` chrome and its chips.
+	 *
+	 * The panel still renders nothing at all when the grid has no filtered row model or no
+	 * filterable columns, so `children` are not called in those states.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.FilterPanel>
+	 *   {({ columns }) =>
+	 *     columns.map(({ column, label, input, hasValue, onClear }) => (
+	 *       <fieldset key={column.id}>
+	 *         <legend>{label}</legend>
+	 *         {input}
+	 *         {hasValue && <button onClick={onClear}>Clear</button>}
+	 *       </fieldset>
+	 *     ))
+	 *   }
+	 * </DataGrid.FilterPanel>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridFilterPanelRenderArgs) => ReactNode)
+}
+
+export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Input } = gridComponents.core
 	const {
@@ -101,9 +157,7 @@ export function FilterPanel() {
 		MultiSelectFilter,
 	} = gridComponents.filtering
 	const cellTypes = useCellTypes()
-	const filteringDebounce =
-		((table as unknown as Record<symbol, unknown>)[FILTERING_DEBOUNCE_KEY] as number | undefined) ??
-		DEFAULT_FILTER_DEBOUNCE_MS
+	const filteringDebounce = table.grid.filtering.debounce
 
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
 	if (!hasFiltering) return null
@@ -119,7 +173,7 @@ export function FilterPanel() {
 
 	const hasActiveFilter = filterableColumns.some((c) => c.getFilterValue() !== undefined)
 
-	const chips = filterableColumns.map((column) => {
+	const resolvedColumns: DataGridFilterPanelColumn[] = filterableColumns.map((column) => {
 		const meta = column.columnDef.meta
 		const headerDef = column.columnDef.header
 		const label = typeof headerDef === 'string' ? headerDef : column.id
@@ -138,24 +192,31 @@ export function FilterPanel() {
 			BetweenInput,
 			MultiSelectFilter,
 			debounce: filteringDebounce,
+			table,
 		})
 
 		const onClear = (): void => {
 			column.setFilterValue(undefined)
 		}
 
-		return (
-			<FilterPanelChip
-				key={column.id}
-				label={label}
-				valueDisplay={display}
-				hasValue={hasValue}
-				onClear={onClear}
-			>
-				{input}
-			</FilterPanelChip>
-		)
+		return { column, label, valueDisplay: display, hasValue, input, onClear }
 	})
+
+	if (children !== undefined) {
+		return typeof children === 'function' ? children({ columns: resolvedColumns, hasActiveFilter }) : children
+	}
+
+	const chips = resolvedColumns.map(({ column, label, valueDisplay, hasValue, input, onClear }) => (
+		<FilterPanelChip
+			key={column.id}
+			label={label}
+			valueDisplay={valueDisplay}
+			hasValue={hasValue}
+			onClear={onClear}
+		>
+			{input}
+		</FilterPanelChip>
+	))
 
 	return (
 		<div data-slot='filter-panel'>

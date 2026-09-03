@@ -1,0 +1,126 @@
+---
+title: State Model
+description: Where a grid value comes from — column-level seeds, feature config, initialState, and controlled state — and which one wins.
+---
+
+# State Model
+
+A grid value can be set in four places. They are not alternatives to each other: each one runs at a
+different moment, and the later one wins.
+
+1. **Column-level seeds** — `pinning.initialSide`, `visibility.initialHidden`,
+   `creating.defaultValue`. Written on the column def, next to the thing they seed.
+2. **Feature config** — `pagination.pageSize`, `creating.defaultValues`. Written on the grid config,
+   for values that are not per-column.
+3. **`initialState`** — a partial `TableState` applied once, at mount. Uncontrolled: the user (or
+   `table.setState`) is free to change it afterwards.
+4. **`state`** — controlled state, re-applied on every render. Pass it together with
+   `onStateChange` or the grid will appear frozen.
+
+## Where a starting value comes from
+
+| Source                     | Level      | Applied                     | Overridable by                                                       |
+| -------------------------- | ---------- | --------------------------- | -------------------------------------------------------------------- |
+| `pinning.side`             | column def | always                      | nothing — it is an invariant, see below                              |
+| `pinning.initialSide`      | column def | once, at mount              | `initialState.columnPinning` for that column id, then by the user    |
+| `visibility.initialHidden` | column def | once, at mount              | `initialState.columnVisibility` for that column id, then by the user |
+| `creating.defaultValue`    | column def | on every `creating.start()` | the table-level `creating.defaultValues` for the same key            |
+| `pagination.pageSize`      | grid       | once, at mount              | `initialState.pagination`, then by the page-size selector            |
+| `creating.defaultValues`   | grid       | on every `creating.start()` | nothing — it is applied last                                         |
+| `initialState`             | grid       | once, at mount              | anything the user does afterwards, and by `state`                    |
+| `state`                    | grid       | every render                | nothing                                                              |
+
+## `initialState` merges for columns, replaces for everything else
+
+`initialState.columnPinning` and `initialState.columnVisibility` **merge** with the defaults derived
+from the column defs. A column you do not mention keeps its column-level seed; a column you do
+mention is yours.
+
+```tsx
+const columns = createColumns<Row>([
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
+	{ accessorKey: 'name', header: 'Name' },
+	{ accessorKey: 'notes', header: 'Notes', visibility: { initialHidden: true } },
+])
+
+<DataGrid
+	data={data}
+	columns={columns}
+	pinning={{ column: true }}
+	// `id` is not mentioned, so it keeps its `initialSide: 'left'`.
+	// `name` is added on the right. `notes` stays hidden.
+	initialState={{ columnPinning: { right: ['name'] } }}
+/>
+```
+
+Mentioning a column id in **either** array of `initialState.columnPinning` hands that column over to
+you — its seed is dropped and it sits exactly where you put it. Leaving it out of both arrays is the
+"not mentioned" case, which keeps the seed. There is therefore no way to start a seeded column
+unpinned from `initialState`; remove the `initialSide` from the column def instead.
+
+Unmentioned left seeds are placed in front of your left ids and unmentioned right seeds after your
+right ids, so a pinned selection column stays leftmost and a pinned actions column stays rightmost.
+
+Every other `initialState` slice replaces the whole slice — `sorting`, `pagination`,
+`rowSelection`, `expanded`, `columnSizing`, `rowPinning`, `globalFilter`, `columnFilters`,
+`loading`, `infinite`. Each slice is all-or-nothing: the type asks for the complete slice object,
+so there is no partial seed to merge.
+
+## Pagination: pick one
+
+Page size can be set from two places, and they are not merged:
+
+```tsx
+// A — feature config
+<DataGrid data={data} columns={columns} pagination={{ pageSize: 25 }} />
+
+// B — initial state
+<DataGrid data={data} columns={columns} pagination initialState={{ pagination: { pageIndex: 0, pageSize: 25 } }} />
+```
+
+Both are legal. Use one or the other. `initialState.pagination` replaces the whole pagination
+slice, so when both are present `initialState.pagination.pageSize` wins and `pagination.pageSize`
+is silently ignored.
+
+Prefer `pagination.pageSize` unless you also need a non-zero starting `pageIndex` — e.g. restoring a
+page from the URL, where you are writing the whole slice anyway.
+
+## Invariants no state can break
+
+Some column-level settings are enforced on **every** write path — `initialState`, controlled
+`state`, and `table.setState` alike. A state that violates one is corrected before it reaches the
+table:
+
+- **System columns** (`__selection__`, `__expand__`, `__actions__`) are always visible, and keep the
+  pins they were built with.
+- **`visibility: false`** columns are always visible — hiding is disabled for them.
+- **`pinning: 'left'` / `pinning: { side }`** columns keep that pin.
+
+This is not defensiveness for its own sake: the column menu deliberately hides the pin section for
+statically pinned columns and skips system columns entirely, so a state that unpinned or hid one
+could never be undone by the user.
+
+`initialSide` and `initialHidden` are **not** invariants — they are seeds, and the user may change
+them freely.
+
+## What `initialState` cannot seed
+
+`initialState` is typed as `InitialTableState`, which excludes the three write features' slices —
+`editing`, `creating` and `deleting`. Each of those is transient per-form or per-dialog state that
+its feature re-initialises whenever it opens, so a seeded value would be discarded without a word.
+It is a type error instead.
+
+To seed the create form, use `creating.defaultValues` or a column's `creating.defaultValue` — see
+[Creating Rows](./data-grid/editing/creating).
+
+## See also
+
+- [Controlled state](./data-grid/controlled-state) — the `state` / `onStateChange` pair
+- [State persistence](./data-grid/state-persistence) — saving and restoring `initialState`
+- [Column pinning](./data-grid/columns/column-pinning)
+- [Column visibility](./data-grid/columns/column-visibility)
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column-state/column-state.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/column-state/column-state.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/create-table/create-table.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/create-table/create-table.ts)

@@ -13,8 +13,7 @@ export function BaseEditingExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			pagination={{ pageSize: 10 }}
-			pageSizer={{ items: [5, 10, 25] }}
+			pagination={{ pageSize: 10, items: [5, 10, 25] }}
 			editing={{
 				mode: 'row',
 				onSave: ({ rowId, values }) => {

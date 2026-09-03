@@ -1,19 +1,23 @@
+import { createColumns } from '@ez-kit/data-grid-core'
 import { render } from '@testing-library/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
+import { DataGrid } from './data-grid/data-grid'
+import { ActionsCellState } from './types'
+import { useDataGrid } from './use-data-grid'
 
 import type { FullGridComponents } from './contract'
+import type { GridMenuProps } from './menu'
 import type {
 	ActionsCellProps,
 	BetweenInputProps,
 	ButtonProps,
 	CheckboxProps,
-	ColumnMenuProps,
-	ColumnVisibilityMenuProps,
+	VisibilityMenuProps,
 	ConfirmDialogProps,
-	CreatingActionsCellProps,
-	ClearFiltersButtonComponentProps,
+	ClearFiltersButtonProps,
+	DraftBarProps,
 	EmptyStateProps,
 	FilterChipProps,
 	FilterPanelChipProps,
@@ -31,9 +35,9 @@ import type {
 	PaginationProps,
 	RefetchOverlayProps,
 	ResizerProps,
-	RowPinMenuProps,
 	SelectionBarProps,
 	TbodyProps,
+	TfootProps,
 	TdProps,
 	ThProps,
 	TheadProps,
@@ -41,6 +45,8 @@ import type {
 	TrProps,
 	ToolbarProps,
 } from './types'
+import type { UseDataGridConfig } from './use-data-grid'
+import type { DataTable } from '@ez-kit/data-grid-core'
 import type { RenderOptions } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
 
@@ -54,6 +60,9 @@ function TestThead(props: TheadProps) {
 }
 function TestTbody(props: TbodyProps) {
 	return <tbody {...props} />
+}
+function TestTfoot(props: TfootProps) {
+	return <tfoot {...props} />
 }
 function TestTr(props: TrProps) {
 	return <tr {...props} />
@@ -73,7 +82,15 @@ function TestButton(props: ButtonProps) {
 	)
 }
 function TestInput(props: InputProps) {
-	return <input {...props} />
+	// Falls back to `placeholder` for the accessible name when the caller doesn't pass
+	// an explicit `aria-label` — real UI-kit inputs are expected to do the same, so tests
+	// can query column-filter inputs by their visible "Filter <column>…" placeholder text.
+	return (
+		<input
+			aria-label={props.placeholder}
+			{...props}
+		/>
+	)
 }
 function TestNumberInput({ value, onChange }: NumberInputProps) {
 	return (
@@ -154,103 +171,36 @@ function TestResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerProps)
 		/>
 	)
 }
-function TestRowPinMenu({ isPinned, canPinTop, canPinBottom, onPinTop, onPinBottom, onUnpin }: RowPinMenuProps) {
-	if (isPinned)
-		return (
+/**
+ * Menus are stubbed *open*: every entry is a plain button labelled by its `label`, so a test
+ * can click "Pin Top" without first driving a popover. The trigger is still rendered so tests
+ * can assert the menu exists at all.
+ */
+function TestMenu({ sections, 'aria-label': ariaLabel }: GridMenuProps) {
+	return (
+		<div style={{ display: 'inline-flex' }}>
 			<button
 				type='button'
-				onClick={onUnpin}
-			>
-				Unpin
-			</button>
-		)
-	return (
-		<>
-			{canPinTop && (
-				<button
-					type='button'
-					onClick={onPinTop}
-				>
-					Pin Top
-				</button>
-			)}
-			{canPinBottom && (
-				<button
-					type='button'
-					onClick={onPinBottom}
-				>
-					Pin Bottom
-				</button>
-			)}
-		</>
-	)
-}
-function TestColumnMenu({ sections }: ColumnMenuProps) {
-	const [open, setOpen] = useState(false)
-	const { pin, visibility } = sections
-	if (!pin && !visibility) return null
-	return (
-		<div style={{ position: 'relative', display: 'inline-flex' }}>
-			<button
-				type='button'
-				onClick={() => {
-					setOpen((p) => !p)
-				}}
+				aria-label={ariaLabel}
 			>
 				⋮
 			</button>
-			{open && (
-				<div style={{ position: 'absolute', top: '100%', background: 'white', border: '1px solid #ccc', zIndex: 10 }}>
-					{pin?.canPinLeft && (
-						<button
-							type='button'
-							onClick={() => {
-								pin.onPinLeft()
-								setOpen(false)
-							}}
-						>
-							Pin Left
-						</button>
-					)}
-					{pin?.canPinRight && (
-						<button
-							type='button'
-							onClick={() => {
-								pin.onPinRight()
-								setOpen(false)
-							}}
-						>
-							Pin Right
-						</button>
-					)}
-					{pin?.isPinned && (
-						<button
-							type='button'
-							onClick={() => {
-								pin.onUnpin()
-								setOpen(false)
-							}}
-						>
-							Unpin
-						</button>
-					)}
-					{visibility && (
-						<button
-							type='button'
-							onClick={() => {
-								visibility.onHide()
-								setOpen(false)
-							}}
-						>
-							Hide
-						</button>
-					)}
-				</div>
+			{sections.flatMap((section) =>
+				section.items.map((item) => (
+					<button
+						key={item.id}
+						type='button'
+						disabled={item.disabled ?? false}
+						onClick={item.onSelect}
+					>
+						{item.label}
+					</button>
+				)),
 			)}
 		</div>
 	)
 }
-function TestColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
+function TestColumnVisibilityMenu({ columns }: VisibilityMenuProps) {
 	const [open, setOpen] = useState(false)
 	return (
 		<div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -279,43 +229,63 @@ function TestColumnVisibilityMenu({ columns }: ColumnVisibilityMenuProps) {
 		</div>
 	)
 }
-function TestToolbar({ children, left, right }: ToolbarProps) {
+function TestToolbar({ children, start, end }: ToolbarProps) {
 	return (
 		<div role='toolbar'>
-			{left}
+			{start}
 			{children}
-			{right}
+			{end}
 		</div>
 	)
 }
-function TestActionsCell({
-	row,
-	isEditing,
-	hasEditing,
-	hasDeleting,
-	onEdit,
-	onDelete,
+function TestSaveCancel({
 	onSave,
 	onCancel,
-}: ActionsCellProps) {
-	if (isEditing) {
-		return (
-			<>
-				<button
-					type='button'
-					onClick={() => void onSave()}
-				>
-					Save
-				</button>
+	canCancel,
+}: {
+	onSave: () => Promise<void>
+	onCancel: () => void
+	canCancel: boolean
+}) {
+	return (
+		<>
+			<button
+				type='button'
+				onClick={() => void onSave()}
+			>
+				Save
+			</button>
+			{canCancel && (
 				<button
 					type='button'
 					onClick={onCancel}
 				>
 					Cancel
 				</button>
-			</>
+			)}
+		</>
+	)
+}
+function TestActionsCell(props: ActionsCellProps) {
+	if (props.state === ActionsCellState.Editing) {
+		return (
+			<TestSaveCancel
+				onSave={props.onSave}
+				onCancel={props.onCancel}
+				canCancel
+			/>
 		)
 	}
+	if (props.state === ActionsCellState.Creating) {
+		return (
+			<TestSaveCancel
+				onSave={props.onSave}
+				onCancel={props.onCancel}
+				canCancel={props.canCancel}
+			/>
+		)
+	}
+	const { row, hasEditing, hasDeleting, onEdit, onDelete } = props
 	return (
 		<>
 			{hasEditing && (
@@ -336,24 +306,6 @@ function TestActionsCell({
 					Delete
 				</button>
 			)}
-		</>
-	)
-}
-function TestCreatingActionsCell({ onSave, onCancel }: CreatingActionsCellProps) {
-	return (
-		<>
-			<button
-				type='button'
-				onClick={() => void onSave()}
-			>
-				Save
-			</button>
-			<button
-				type='button'
-				onClick={onCancel}
-			>
-				Cancel
-			</button>
 		</>
 	)
 }
@@ -482,7 +434,7 @@ function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: Be
 		</div>
 	)
 }
-function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+function TestMultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
 	const toggle = (value: string): void => {
 		const next = selectedValues.includes(value) ? selectedValues.filter((v) => v !== value) : [...selectedValues, value]
 		onChange(next)
@@ -492,7 +444,7 @@ function TestMultiSelectFilter({ options, selectedValues, onChange, placeholder 
 			role='group'
 			aria-label={placeholder ?? 'Filter'}
 		>
-			{options.map((opt) => (
+			{items.map((opt) => (
 				<label
 					key={opt.value}
 					style={{ display: 'flex', gap: 4, alignItems: 'center' }}
@@ -592,11 +544,12 @@ function TestFilterPanelChip({ label, valueDisplay, hasValue, onClear, children 
 		</span>
 	)
 }
-function TestFilterChip({ label, value, onRemove, kind }: FilterChipProps) {
+function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipProps) {
 	return (
 		<span
 			data-slot='filter-chip'
 			data-chip-kind={kind}
+			{...(isDraft ? { 'data-draft-filter': '' } : {})}
 			style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', border: '1px solid #ccc' }}
 		>
 			<strong>{label}</strong>
@@ -611,14 +564,14 @@ function TestFilterChip({ label, value, onRemove, kind }: FilterChipProps) {
 		</span>
 	)
 }
-function TestClearFiltersButton({ disabled, onPress, children, ariaLabel }: ClearFiltersButtonComponentProps) {
+function TestClearFiltersButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
 	return (
 		<button
 			type='button'
 			data-slot='clear-filters-button'
 			aria-label={ariaLabel}
 			disabled={disabled}
-			onClick={onPress}
+			onClick={onClick}
 		>
 			{children ?? '⌫'}
 		</button>
@@ -653,6 +606,7 @@ function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: 
 		<div
 			role='toolbar'
 			data-slot='selection-bar'
+			data-testid='selection-bar'
 			data-variant={variant}
 			style={{ display: 'flex', gap: 8, padding: '6px 12px', border: '1px solid #ccc' }}
 		>
@@ -671,6 +625,40 @@ function TestSelectionBar({ open, count, variant, onDelete, onClear, actions }: 
 				onClick={onClear}
 			>
 				Cancel
+			</button>
+		</div>
+	)
+}
+/**
+ * Unstyled stand-in for the kits' `DraftBar`. Renders exactly the DOM contract the
+ * shadcn / heroui components must reproduce: the `draft-bar` test id, one `data-pending-*`
+ * attribute per deferred axis, the `data-selected-count` context chip, and Apply / Reset.
+ */
+function TestDraftBar({ open, pending, selectedCount, variant, onApply, onReset }: DraftBarProps) {
+	if (!open) return null
+	return (
+		<div
+			role='toolbar'
+			data-slot='draft-bar'
+			data-testid='draft-bar'
+			data-variant={variant}
+			data-pending-sorting={String(pending.sorting)}
+			data-pending-column-filters={String(pending.columnFilters)}
+			data-pending-global-filter={String(pending.globalFilter)}
+			data-selected-count={String(selectedCount)}
+		>
+			{selectedCount > 0 && <span data-slot='draft-bar-selected-chip'>{selectedCount} selected</span>}
+			<button
+				type='button'
+				onClick={onApply}
+			>
+				Apply
+			</button>
+			<button
+				type='button'
+				onClick={onReset}
+			>
+				Reset
 			</button>
 		</div>
 	)
@@ -696,7 +684,7 @@ function TestNoResultsState({ columnCount }: NoResultsStateProps) {
 		</tr>
 	)
 }
-function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
+function TestLoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
 	if (error != null) {
 		return (
 			<div data-slot='load-more-error'>
@@ -710,7 +698,7 @@ function TestLoadMoreRow({ isFetching, hasMore, error, trigger, onTrigger, onRet
 		)
 	}
 	if (isFetching) return <div data-slot='load-more-spinner'>Loading more…</div>
-	if (trigger === 'manual' && hasMore) {
+	if (trigger === 'manual' && hasNextPage) {
 		return (
 			<button
 				type='button'
@@ -745,6 +733,7 @@ export const testComponents: FullGridComponents = {
 		Table: TestTable,
 		Thead: TestThead,
 		Tbody: TestTbody,
+		Tfoot: TestTfoot,
 		Tr: TestTr,
 		Th: TestTh,
 		Td: TestTd,
@@ -752,6 +741,8 @@ export const testComponents: FullGridComponents = {
 		Input: TestInput,
 		Checkbox: TestCheckbox,
 		Toolbar: TestToolbar,
+		Menu: TestMenu,
+		NumberInput: TestNumberInput,
 	},
 	pagination: {
 		Pagination: TestPagination,
@@ -760,7 +751,6 @@ export const testComponents: FullGridComponents = {
 	sorting: {
 		SortIndicator: () => null,
 		SortMenu: () => null,
-		ColumnMenu: TestColumnMenu,
 	},
 	filtering: {
 		FilterPopover: TestFilterPopover,
@@ -768,14 +758,16 @@ export const testComponents: FullGridComponents = {
 		FilterPanelChip: TestFilterPanelChip,
 		FilterChip: TestFilterChip,
 		ClearFiltersButton: TestClearFiltersButton,
-		GlobalFilterInput: ({ value, onChange, placeholder }) => (
+		GlobalFilterInput: ({ value, onChange, placeholder, onKeyDown }) => (
 			<input
 				data-slot='global-filter-input'
+				aria-label={placeholder}
 				value={value}
 				onChange={(e) => {
 					onChange(e.target.value)
 				}}
 				placeholder={placeholder}
+				{...(onKeyDown ? { onKeyDown } : {})}
 			/>
 		),
 		OperatorSelect: TestOperatorSelect,
@@ -785,24 +777,26 @@ export const testComponents: FullGridComponents = {
 	editing: {
 		Modal: TestModal,
 		FormShell: TestFormShell,
-		ActionsCell: TestActionsCell,
-		CreatingActionsCell: TestCreatingActionsCell,
+	},
+	deleting: {
 		ConfirmDialog: TestConfirmDialog,
-		NumberInput: TestNumberInput,
 	},
 	selection: {
 		SelectionBar: TestSelectionBar,
 	},
-	pinning: {
-		RowPinMenu: TestRowPinMenu,
+	draft: {
+		DraftBar: TestDraftBar,
+	},
+	rowActions: {
+		ActionsCell: TestActionsCell,
 	},
 	resizing: {
 		Resizer: TestResizer,
 	},
-	'column-visibility': {
-		ColumnVisibilityMenu: TestColumnVisibilityMenu,
+	visibility: {
+		VisibilityMenu: TestColumnVisibilityMenu,
 	},
-	'fallback-states': {
+	fallbacks: {
 		LoadingRow: TestLoadingRow,
 		EmptyState: TestEmptyState,
 		NoResultsState: TestNoResultsState,
@@ -825,4 +819,53 @@ export function renderWithComponents(
 	options?: Omit<RenderOptions, 'wrapper'>,
 ): ReturnType<typeof render> {
 	return render(ui, { wrapper: TestWrapper, ...options })
+}
+
+// ── shared grid harness ───────────────────────────────────────────────────
+
+export type TestRow = {
+	id: number
+	name: string
+	age: number
+}
+
+export const TEST_ROWS: TestRow[] = [
+	{ id: 1, name: 'Alice', age: 30 },
+	{ id: 2, name: 'Bob', age: 24 },
+	{ id: 3, name: 'Carol', age: 41 },
+]
+
+export const TEST_COLUMNS = createColumns<TestRow>([
+	{ accessorKey: 'name', header: 'Name' },
+	{ accessorKey: 'age', header: 'Age' },
+])
+
+export type RenderGridResult = ReturnType<typeof render> & {
+	/** The live table — drive state from a test with `table.setSorting(…)` etc. */
+	table: DataTable<TestRow>
+}
+
+/**
+ * Render a full `<DataGrid>` over {@link TEST_ROWS} with the test component kit, and
+ * hand the test the live `DataTable` back so it can drive state directly.
+ */
+export function renderGrid(config: Partial<UseDataGridConfig<TestRow>> = {}): RenderGridResult {
+	// Wrapper object, not a bare `let`: reassigning an outer variable during render is
+	// a side effect the react-hooks lint rule rejects.
+	const ref: { table: ReturnType<typeof useDataGrid<TestRow>> | null } = { table: null }
+
+	function Harness(): ReactElement {
+		const table = useDataGrid<TestRow>({ data: TEST_ROWS, columns: TEST_COLUMNS, ...config })
+		// Handed out in an effect, not during render: writing to an outer object mid-render
+		// is a side effect. Effects flush inside `render`'s `act`, so the caller sees it.
+		useEffect(() => {
+			ref.table = table
+		}, [table])
+		return <DataGrid<TestRow> table={table} />
+	}
+
+	const result = renderWithComponents(<Harness />)
+	const table = ref.table
+	if (!table) throw new Error('renderGrid: the grid never mounted, so no table was captured.')
+	return { ...result, table }
 }

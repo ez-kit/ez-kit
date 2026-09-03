@@ -36,18 +36,32 @@ function formatFieldError(error: unknown): string | null {
 }
 
 /**
- * Map raw `field.state.meta.errors` to display strings, dropping the empty slots.
+ * Map raw `field.state.meta.errors` to display strings, dropping the empty slots and
+ * deduplicating by the final display string (not the raw error object).
+ *
+ * A field-level validator and a form-level one can both run against the same field — e.g.
+ * `FormRenderer`'s schema-driven validator attaches the same compiled check to both
+ * `onChange` and `onSubmit` (see `resolveSchemaValidators`) — so `errors` can carry two
+ * distinct objects that normalise to the same text. Left alone that reads as the product
+ * repeating itself ("This field is required, This field is required"), so this is where every
+ * consumer gets the fix at once. Order is preserved: the first occurrence of a message keeps
+ * its position, since a field can legitimately carry several different messages and they
+ * should not reshuffle between renders.
  *
  * @example
  * formatFieldErrors([{ message: 'Required' }, undefined, 'Too short'])
  * // → ['Required', 'Too short']
+ * @example
+ * formatFieldErrors([{ message: 'Required' }, { message: 'Required' }])
+ * // → ['Required']
  */
 export function formatFieldErrors(errors: readonly unknown[] | undefined): string[] {
 	if (errors === undefined) {
 		return []
 	}
 
-	return errors.map(formatFieldError).filter((message): message is string => message !== null)
+	const messages = errors.map(formatFieldError).filter((message): message is string => message !== null)
+	return Array.from(new Set(messages))
 }
 
 /** Whether the field has at least one renderable error — the `invalid` / `aria-invalid` source. */

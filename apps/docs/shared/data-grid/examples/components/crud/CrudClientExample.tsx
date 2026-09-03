@@ -3,7 +3,7 @@
 import { DataGrid } from 'shared/DataGrid'
 
 import { crudColumns } from './columns'
-import { type Employee, useEmployeeStore } from './use-employee-store'
+import { useEmployeeStore } from './use-employee-store'
 
 export function CrudClientExample() {
 	const { data, add, update, remove, removeMany } = useEmployeeStore()
@@ -12,21 +12,12 @@ export function CrudClientExample() {
 		<DataGrid
 			data={data}
 			columns={crudColumns}
-			getRowId={(row) => String(row.id)}
 			sorting
 			filtering={{ variant: 'popover' }}
-			pagination={{ pageSize: 10 }}
-			pageSizer={{ items: [5, 10, 20, 50] }}
-			columnVisibility={{ toolbar: true }}
+			pagination={{ pageSize: 10, items: [5, 10, 20, 50] }}
+			visibility
 			pinning={{ column: true }}
-			selection={{
-				panel: {
-					onDelete: ({ selectedRows, clearSelection }) => {
-						removeMany(selectedRows.map((r) => r.original.id))
-						clearSelection()
-					},
-				},
-			}}
+			selection
 			creating={{
 				mode: 'row',
 				onSave: ({ values }) => {
@@ -45,8 +36,16 @@ export function CrudClientExample() {
 				},
 				confirmation: {
 					title: 'Delete employee?',
-					description: (row) =>
-						`Are you sure you want to delete "${(row.original as Employee).name}"? This action cannot be undone.`,
+					description: (row) => `Are you sure you want to delete "${row.original.name}"? This action cannot be undone.`,
+				},
+				bulk: {
+					onDelete: ({ rows }) => {
+						removeMany(rows.map((r) => r.original.id))
+					},
+					confirmation: {
+						title: 'Delete employees?',
+						description: (rows) => `${String(rows.length)} employees will be permanently removed.`,
+					},
 				},
 			}}
 		/>

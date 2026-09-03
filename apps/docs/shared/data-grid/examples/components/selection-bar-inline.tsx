@@ -21,16 +21,23 @@ export function SelectionBarInlineExample() {
 				columns={columns}
 				sorting
 				pagination={{ pageSize: 10 }}
-				selection={{
-					panel: {
-						variant: 'inline',
-						onDelete: ({ selectedRows, clearSelection }) => {
-							const names = selectedRows.map((r) => r.original.name).join(', ')
-							setData((prev) => prev.filter((row) => !selectedRows.some((r) => r.original === row)))
-							clearSelection()
+				deleting={{
+					onDelete: ({ row }) => {
+						setData((prev) => prev.filter((r) => r !== row.original))
+						addLog(`Deleted: ${row.original.name}`)
+					},
+					bulk: {
+						onDelete: ({ rows }) => {
+							const names = rows.map((r) => r.original.name).join(', ')
+							setData((prev) => prev.filter((row) => !rows.some((r) => r.original === row)))
 							addLog(`Deleted: ${names}`)
 						},
-						onClear: ({ clearSelection }) => {
+					},
+				}}
+				selection={{
+					bar: {
+						variant: 'inline',
+						clear: ({ clearSelection }) => {
 							clearSelection()
 							addLog('Selection cleared')
 						},

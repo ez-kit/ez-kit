@@ -7,7 +7,7 @@ description: Loading, empty, and no-results states — three slots the grid rend
 
 The grid distinguishes three "nothing to show" states and gives each its own slot:
 
-- **Loading** — initial fetch, refresh, or while controlled `state.isLoading` is `true`.
+- **Loading** — initial fetch, refresh, or while controlled `state.loading` reports a pending or in-flight request.
 - **Empty** — the data set is genuinely empty (no rows at all).
 - **No results** — the data set has rows, but filters/search excluded them all.
 
@@ -29,13 +29,20 @@ Fallbacks render automatically whenever the grid has no visible rows. Switch bet
 
 ## Loading
 
-Pass `state.isLoading` (see [Controlled State](./data-grid/controlled-state)) — the grid renders `<LoadingBody />` instead of rows.
+Pass `state.loading` (see [Controlled State](./data-grid/controlled-state)) — the grid renders `<LoadingBody />` instead of rows. The slot is a `LoadingState` object, not a boolean: `isPending` is the initial load, `isFetching` a refetch, and `isError` / `error` the last failure.
 
 ```tsx
 <DataGrid
 	data={data}
 	columns={columns}
-	state={{ isLoading: query.isFetching }}
+	state={{
+		loading: {
+			isPending: query.isPending,
+			isFetching: query.isFetching,
+			isError: query.isError,
+			error: query.error,
+		},
+	}}
 />
 ```
 
@@ -43,7 +50,21 @@ The loading fallback is **centered** in the body area — the constitution's "fa
 
 ## Empty vs No results
 
-The grid auto-picks which one to render based on whether filters are active. You can override the discrimination with `state.isEmpty` if you have a domain definition of "empty" different from "zero rows".
+The grid picks between them automatically and there is no state override: **empty** renders when `data` itself is empty and nothing is loading, **no results** when filters reduce a non-empty data set to zero rows.
+
+What you can configure is each slot, via `fallbacks`. Pass `false` to disable one, or `{ component }` to replace what it renders — `component` takes a `ReactElement` (rendered as-is) or a `ComponentType` (called via `flexRender`):
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	fallbacks={{
+		loading: true,
+		empty: { component: <p>No orders yet</p> },
+		noResults: false,
+	}}
+/>
+```
 
 ## Source
 

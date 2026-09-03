@@ -10,20 +10,26 @@ import {
 } from '@tanstack/table-core'
 
 import { mapColumns } from '../column/map-columns'
+import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingFeature } from '../features/creating'
+import { APPLIED_STATE_KEY, DeferredApplyFeature } from '../features/deferred-apply'
 import { DeletingFeature } from '../features/deleting'
 import { EditingFeature } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
 import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
+import { RowActionsVariant } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
+import { ColumnResizeMode, ExpandingMode, GridDirection, MultiSortEvent, PaginationMode } from '../types'
+import { featureConfig, isFeatureEnabled } from '../utils/feature-flag'
 import { setIfDefined } from '../utils/set-if-defined'
 
-import type { ColumnDef } from '../column/types'
+import type { ColumnDef, SystemColumnDef } from '../column/types'
+import type { AppliedState } from '../features/deferred-apply'
 import type { DataTable, GlobalFilterFn, MultiSortConfig, PinningConfig, RowPinningConfig, TableConfig } from '../types'
-import type { RowSelectionState, TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
+import type { TableOptionsResolved, TableState, Updater } from '@tanstack/table-core'
 
 /** Translate our `sorting.multi` shape into TanStack option flags. */
 function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string, unknown> {
@@ -32,27 +38,71 @@ function buildMultiSortOptions(multi: boolean | MultiSortConfig): Record<string,
 	const opts: Record<string, unknown> = { enableMultiSort: true }
 	setIfDefined(opts, 'maxMultiSortColCount', multi.max)
 	if (multi.removable === false) opts.enableMultiRemove = false
-	if (multi.event === 'always') {
+	if (multi.event === MultiSortEvent.Always) {
 		opts.isMultiSortEvent = () => true
-	} else if (multi.event === 'ctrl') {
+	} else if (multi.event === MultiSortEvent.Ctrl) {
 		opts.isMultiSortEvent = (e: unknown) => {
 			const event = e as { ctrlKey?: boolean; metaKey?: boolean } | null | undefined
 			return Boolean(event?.ctrlKey) || Boolean(event?.metaKey)
 		}
 	}
-	// 'shift' (default) → omit; TanStack's built-in handler already requires shift.
+	// MultiSortEvent.Shift (default) → omit; TanStack's built-in handler already requires shift.
 	return opts
 }
 
-function collectDefaultHidden<TRow extends object>(defs: ColumnDef<TRow>[]): Record<string, boolean> {
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
+/**
+ * Warn about a column seeded into a state the user can never leave.
+ *
+ * `visibility: { initialHidden }` and `pinning: { initialSide }` both say "starts this way, the
+ * user changes it from here" — but the affordance that lets them change it belongs to the
+ * *table*-level feature. With that feature off the seed still applies (a seed is what the
+ * developer wrote, and silently dropping it would be worse), so the column starts hidden or
+ * pinned with no route back: `initialSide` becomes indistinguishable from the static `side`,
+ * and an `initialHidden` column simply never appears.
+ *
+ * Both are legitimate configurations — a column can exist in the model without being shown, and
+ * its values still feed global search. So this is a warning, not an error, and it is stripped
+ * from production builds.
+ */
+function warnUnreachableSeed(columnId: string, seed: string, feature: string): void {
+	console.warn(
+		`[data-grid] Column "${columnId}" sets \`${seed}\`, but the table-level \`${feature}\` feature is off, ` +
+			`so nothing can change it back — the seed becomes permanent. ` +
+			`Enable \`${feature}\` on the table to give the user that control, or drop the seed.`,
+	)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function collectInitialHidden<TRow extends object>(defs: ColumnDef<TRow, any>[]): Record<string, boolean> {
 	const acc: Record<string, boolean> = {}
 	for (const def of defs) {
-		if (def.visibility && typeof def.visibility === 'object' && def.visibility.defaultHidden) {
+		if (def.visibility && typeof def.visibility === 'object' && def.visibility.initialHidden) {
 			const colId = def.id ?? def.accessorKey
 			if (colId !== undefined) acc[colId] = false
 		}
 		if (def.columns !== undefined) {
-			Object.assign(acc, collectDefaultHidden(def.columns))
+			Object.assign(acc, collectInitialHidden(def.columns))
+		}
+	}
+	return acc
+}
+
+/**
+ * Ids of columns seeded with `pinning: { initialSide }`. Only the dynamic seed — a static
+ * `pinning: 'left'` / `{ side }` is meant to be unchangeable, so it has nothing to warn about.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function collectInitialPinned<TRow extends object>(defs: ColumnDef<TRow, any>[]): string[] {
+	const acc: string[] = []
+	for (const def of defs) {
+		if (def.pinning && typeof def.pinning === 'object' && def.pinning.initialSide !== undefined) {
+			const colId = def.id ?? def.accessorKey
+			if (colId !== undefined) acc.push(colId)
+		}
+		if (def.columns !== undefined) {
+			acc.push(...collectInitialPinned(def.columns))
 		}
 	}
 	return acc
@@ -62,11 +112,16 @@ function normalizePinning(pinning: boolean | PinningConfig | undefined): {
 	column: boolean
 	row: RowPinningConfig | false
 } {
-	if (!pinning) return { column: false, row: false }
+	if (!isFeatureEnabled(pinning)) return { column: false, row: false }
 	if (pinning === true) return { column: true, row: { top: true, bottom: true } }
-	const rowCfg = pinning.row
-	const row: RowPinningConfig | false = rowCfg === true ? { top: true, bottom: true } : (rowCfg ?? false)
-	return { column: Boolean(pinning.column), row }
+	const config = featureConfig(pinning)
+	if (!config) return { column: false, row: false }
+	// Both halves take the same `boolean | Config` shape every feature option takes, `enabled`
+	// included: a defaults layer that configured row pinning app-wide is turned off for one grid
+	// with `pinning: { row: { enabled: false } }`, without restating its settings.
+	const rowCfg = config.row
+	const row: RowPinningConfig | false = rowCfg === true ? { top: true, bottom: true } : (featureConfig(rowCfg) ?? false)
+	return { column: isFeatureEnabled(config.column), row }
 }
 
 /**
@@ -80,7 +135,51 @@ function normalizePinning(pinning: boolean | PinningConfig | undefined): {
  * @example
  * const table = createTable({ data: users, columns, sorting: true })
  */
+/** Axes whose deferred draft `syncControlledState` must not let controlled input clobber. */
+const DRAFT_AXES = ['sorting', 'columnFilters', 'globalFilter'] as const
+
 export function createTable<TRow extends object>(config: TableConfig<TRow>): DataTable<TRow> {
+	// ── resolved feature options ─────────────────────────────────────────────
+	// Every feature is read through `isFeatureEnabled` / `featureConfig` exactly once, here.
+	// A config object means "on with these settings" unless it carries `enabled: false`, and
+	// `featureConfig` returns `undefined` for a feature that is off — so a disabled feature
+	// never contributes its `manual`, `onChange` or `fn` to the built table.
+	const sortingCfg = featureConfig(config.sorting)
+	const filteringCfg = featureConfig(config.filtering)
+	const globalFilteringCfg = featureConfig(config.globalFiltering)
+	const paginationCfg = featureConfig(config.pagination)
+	const selectionCfg = featureConfig(config.selection)
+	const expandingCfg = featureConfig(config.expanding)
+	const resizingCfg = featureConfig(config.resizing)
+	const creatingCfg = featureConfig(config.creating)
+	const editingCfg = featureConfig(config.editing)
+	const deletingCfg = featureConfig(config.deleting)
+
+	const hasSorting = isFeatureEnabled(config.sorting)
+	const hasColumnFiltering = isFeatureEnabled(config.filtering)
+	const hasGlobalFiltering = isFeatureEnabled(config.globalFiltering)
+	const hasPagination = isFeatureEnabled(config.pagination)
+	const hasSelection = isFeatureEnabled(config.selection)
+	const hasExpanding = isFeatureEnabled(config.expanding)
+	const hasResizing = isFeatureEnabled(config.resizing)
+	const hasEditing = isFeatureEnabled(config.editing)
+	const hasDeleting = isFeatureEnabled(config.deleting)
+
+	const hasDraft = isFeatureEnabled(config.draft)
+
+	if (hasDraft) {
+		const sortingManual = sortingCfg?.manual === true
+		const filteringManual = filteringCfg?.manual === true
+		const globalFilteringManual = globalFilteringCfg?.manual === true
+		if (!sortingManual && !filteringManual && !globalFilteringManual) {
+			throw new Error(
+				'`draft` requires `manual: true` on at least one of `sorting`, `filtering` or `globalFiltering`. ' +
+					'Client-side deferral is not supported: without manual mode the row models recompute ' +
+					'on every draft edit, so nothing is actually deferred.',
+			)
+		}
+	}
+
 	let store = createStore<TableState>({} as TableState)
 
 	// ── row identity ─────────────────────────────────────────────────────────
@@ -92,11 +191,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		})
 
 	// ── operator registry ────────────────────────────────────────────────────
-	const tableFilteringOperators = typeof config.filtering === 'object' ? config.filtering.operators : undefined
+	const tableFilteringOperators = filteringCfg?.operators
 	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
 
 	// ── faceted opt-in (table-level) ─────────────────────────────────────────
-	const tableFaceted = typeof config.filtering === 'object' && config.filtering.faceted === true
+	const tableFaceted = filteringCfg?.faceted === true
 
 	// Column-level opt-in: detect even when table-level flag is off so the row
 	// models still attach when any single column requests faceted data.
@@ -111,32 +210,27 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// ── map user columns → TanStack columns ──────────────────────────────────
 	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, { tableFaceted })
 
-	const hasEditing = Boolean(config.editing)
-	const hasDeleting = Boolean(config.deleting)
-	const hasSelection = Boolean(config.selection)
-	const hasExpanding = Boolean(config.expanding)
-
-	const expandingCfg = typeof config.expanding === 'object' ? config.expanding : undefined
-	const expandVariant = expandingCfg?.variant ?? 'sub-content'
+	const expandMode = expandingCfg?.mode ?? ExpandingMode.SubContent
 	const normalizedPinning = normalizePinning(config.pinning)
 	const rowPinConfig = normalizedPinning.row
 	const hasPinning = Boolean(rowPinConfig && (rowPinConfig.top ?? rowPinConfig.bottom))
 
-	const sortingCfg = typeof config.sorting === 'object' ? config.sorting : undefined
 	const sortingOnChange = sortingCfg?.onChange
 
 	// ── filtering / global filter gating ─────────────────────────────────────
-	const hasColumnFiltering = Boolean(config.filtering)
-	const hasGlobalFiltering = Boolean(config.globalFiltering)
 	const hasAnyFiltering = hasColumnFiltering || hasGlobalFiltering
 
-	const filteringCfg = typeof config.filtering === 'object' ? config.filtering : undefined
 	const filteringOnChange = filteringCfg?.onChange
-	const globalFilteringCfg = typeof config.globalFiltering === 'object' ? config.globalFiltering : undefined
 	const globalFilteringOnChange = globalFilteringCfg?.onChange
-
-	const paginationCfg = typeof config.pagination === 'object' ? config.pagination : undefined
 	const paginationOnChange = paginationCfg?.onChange
+	const selectionOnChange = selectionCfg?.onChange
+	const visibilityOnChange = featureConfig(config.visibility)?.onChange
+	const pinningCfgResolved = featureConfig(config.pinning)
+	const columnPinningOnChange =
+		typeof pinningCfgResolved?.column === 'object' ? pinningCfgResolved.column.onChange : undefined
+	const rowPinningOnChange = typeof pinningCfgResolved?.row === 'object' ? pinningCfgResolved.row.onChange : undefined
+	const resizingOnChange = featureConfig(config.resizing)?.onChange
+	const expandingOnChange = featureConfig(config.expanding)?.onChange
 
 	// Resolve `globalFilterFn`:
 	// - inline function → used as-is
@@ -153,29 +247,96 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		return fromRegistry ?? fn
 	})()
 
+	// `rowActions` defaults to on: omitting it must keep the actions column appearing as soon as
+	// editing / deleting / row pinning is in play, which is what it has always done. Only an
+	// explicit `false` (or `{ enabled: false }`) suppresses the column outright — the read-only
+	// escape hatch for one grid under a defaults layer that configured row actions app-wide.
+	const rowActionsEnabled = config.rowActions === undefined || isFeatureEnabled(config.rowActions)
+	const rowActionsCfg = featureConfig(config.rowActions)
+	const rowActionsVariant = rowActionsCfg?.variant ?? RowActionsVariant.Inline
+	const customRowActions = rowActionsCfg?.actions
+
+	// Row-erased on the way in, like every other structural setting the mapper carries: a system
+	// column renders no row value, so nothing downstream has a `TRow` left to keep.
+	const selectionColumn = selectionCfg?.column as SystemColumnDef | undefined
+	const expandingColumn = featureConfig(config.expanding)?.column as SystemColumnDef | undefined
+	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef | undefined
+
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
-		editing: hasEditing,
-		deleting: hasDeleting,
-		pinning: hasPinning,
+		editing: rowActionsEnabled && hasEditing,
+		deleting: rowActionsEnabled && hasDeleting,
+		pinning: rowActionsEnabled && hasPinning,
+		rowActionsVariant,
+		customRowActions: rowActionsEnabled && customRowActions !== undefined,
+		...(selectionColumn !== undefined ? { selectionColumn } : {}),
+		...(expandingColumn !== undefined ? { expandingColumn } : {}),
+		...(rowActionsColumn !== undefined ? { rowActionsColumn } : {}),
 	})
 
 	const { left: pinnedLeft, right: pinnedRight } = extractPinningState(allColumns)
 
 	// ── build TanStack options ────────────────────────────────────────────────
-	const defaultPageSize =
-		typeof config.pagination === 'object' && config.pagination.pageSize ? config.pagination.pageSize : DEFAULT_PAGE_SIZE
+	const defaultPageSize = paginationCfg?.pageSize ?? DEFAULT_PAGE_SIZE
 
-	const defaultHidden = collectDefaultHidden(config.columns)
+	const initialHidden = collectInitialHidden(config.columns)
 
-	const initialState: Partial<TableState> = {
-		columnPinning: { left: pinnedLeft, right: pinnedRight },
-		pagination: { pageIndex: 0, pageSize: defaultPageSize },
-		...(Object.keys(defaultHidden).length > 0 ? { columnVisibility: defaultHidden } : {}),
-		// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
-		...config.initialState,
+	// The seeds still apply with their feature off — see `warnUnreachableSeed` — but say so.
+	if (IS_DEV) {
+		if (!isFeatureEnabled(config.visibility)) {
+			for (const columnId of Object.keys(initialHidden)) {
+				warnUnreachableSeed(columnId, 'visibility.initialHidden', 'visibility')
+			}
+		}
+		if (!normalizedPinning.column) {
+			for (const columnId of collectInitialPinned(config.columns)) {
+				warnUnreachableSeed(columnId, 'pinning.initialSide', 'pinning')
+			}
+		}
 	}
+
+	// Column-derived rules that no state input may violate — see `../column-state`.
+	const columnInvariants = buildColumnInvariants(allColumns)
+
+	const userInitialState = config.initialState
+	// `columnPinning` / `columnVisibility` merge with the column-derived defaults instead of
+	// replacing them: a whole-slice spread would silently drop static pins, system-column pins
+	// and `initialHidden` columns the consumer never mentioned.
+	const seededPinning = mergePinningSeed({ left: pinnedLeft, right: pinnedRight }, userInitialState?.columnPinning)
+	const mergedVisibility = { ...initialHidden, ...userInitialState?.columnVisibility }
+	// Same reason as the two above, and the one slice where it was missed: spreading
+	// `userInitialState` replaces `pagination` wholesale, so seeding only `pageIndex`
+	// (a deep link to page 3) dropped the resolved `pageSize` to `undefined`.
+	const mergedPagination = {
+		pageIndex: 0,
+		pageSize: defaultPageSize,
+		...userInitialState?.pagination,
+	}
+
+	// Two routes to one value, kept on purpose: `pagination.pageSize` is where an author states
+	// the size, `initialState.pagination.pageSize` is where a deep link restores the one the user
+	// picked. They only collide when both are written, and then the seed — the more specific,
+	// per-mount one — wins silently. Say so in development rather than leaving it to be found by
+	// a page that opens on a size nobody asked for.
+	if (IS_DEV && paginationCfg?.pageSize !== undefined && userInitialState?.pagination?.pageSize !== undefined) {
+		console.warn(
+			`[data-grid] Both \`pagination.pageSize\` (${String(paginationCfg.pageSize)}) and ` +
+				`\`initialState.pagination.pageSize\` (${String(userInitialState.pagination.pageSize)}) are set. ` +
+				`The seed wins; the option is ignored. Set one of them.`,
+		)
+	}
+
+	const initialState: Partial<TableState> = enforceColumnInvariants(
+		{
+			// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
+			...userInitialState,
+			pagination: mergedPagination,
+			columnPinning: seededPinning,
+			...(Object.keys(mergedVisibility).length > 0 ? { columnVisibility: mergedVisibility } : {}),
+		},
+		columnInvariants,
+	)
 
 	// We need a stable reference for the callback closure.
 	// Using a wrapper object allows const + mutation inside the closure.
@@ -183,41 +344,142 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		table: null,
 	}
 
+	const deferred = hasDraft
+
+	/**
+	 * The snapshot the outside world is allowed to see: the three deferrable axes
+	 * replaced by the applied snapshot, and `applied` itself dropped. With
+	 * `draft` off this is the identity function.
+	 *
+	 * The `applied` guard covers the window before the store is rebuilt from
+	 * `table.initialState` below, where a state change raised during construction
+	 * would otherwise read the slice off an empty snapshot.
+	 */
+	const toOutward = (state: TableState): TableState => {
+		if (!deferred) return state
+		const applied = state.applied as AppliedState | undefined
+		if (applied === undefined) return state
+		const { applied: _dropped, ...rest } = state
+		return {
+			...rest,
+			sorting: applied.sorting,
+			columnFilters: applied.columnFilters,
+			globalFilter: applied.globalFilter,
+		} as TableState
+	}
+
+	/**
+	 * Reference comparison across **every** slice the outward snapshot carries,
+	 * derived from the objects rather than a hand-written list. A slice omitted
+	 * from a fixed list would be a state change that silently never reaches the
+	 * consumer while `draft` is on — a far worse failure than one extra
+	 * emission, and one that grows every time a feature adds a slice.
+	 */
+	const outwardUnchanged = (a: TableState, b: TableState): boolean => {
+		const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+		for (const key of keys) {
+			if (key === APPLIED_STATE_KEY) continue
+			if ((a as unknown as Record<string, unknown>)[key] !== (b as unknown as Record<string, unknown>)[key]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	/**
+	 * With `draft` off there is no draft, so the applied snapshot must track
+	 * the live axes — otherwise `table.draft.isDirty()` would report a phantom draft
+	 * for every consumer that never opted in. Returns the same object when already
+	 * in sync so the funnel's reference comparisons stay meaningful.
+	 */
+	const syncApplied = (state: TableState): TableState => {
+		const applied = state.applied as AppliedState | undefined
+		if (
+			applied === undefined ||
+			(applied.sorting === state.sorting &&
+				applied.columnFilters === state.columnFilters &&
+				applied.globalFilter === state.globalFilter)
+		) {
+			return state
+		}
+		return {
+			...state,
+			applied: { sorting: state.sorting, columnFilters: state.columnFilters, globalFilter: state.globalFilter },
+		}
+	}
+
 	const onStateChange = (updater: Updater<TableState>): void => {
 		const currentState = store.getState()
-		const next = typeof updater === 'function' ? updater(currentState) : updater
+		const requested = typeof updater === 'function' ? updater(currentState) : updater
+		const enforced = enforceColumnInvariants(requested, columnInvariants)
+		const next = deferred ? enforced : syncApplied(enforced)
 		ref.table?.setOptions((prev) => ({ ...prev, state: next }))
 		store.setState(next)
-		config.onStateChange?.(updater)
+
+		const outwardPrev = toOutward(currentState)
+		const outwardNext = toOutward(next)
+
+		// A draft edit changes nothing the consumer is allowed to see. Emitting an
+		// identical snapshot would be noise at best and a duplicate request at
+		// worst, so the funnel stays silent and "onStateChange fired" keeps meaning
+		// "the query changed".
+		if (deferred && outwardUnchanged(outwardPrev, outwardNext)) return
+
+		config.onStateChange?.(outwardNext)
 
 		// Per-feature onChange — fire only when the relevant sub-state reference actually changed
-		if (sortingOnChange && currentState.sorting !== next.sorting) {
-			sortingOnChange(next.sorting)
+		if (sortingOnChange && outwardPrev.sorting !== outwardNext.sorting) {
+			sortingOnChange(outwardNext.sorting)
 		}
-		if (filteringOnChange && currentState.columnFilters !== next.columnFilters) {
-			filteringOnChange(next.columnFilters)
+		if (filteringOnChange && outwardPrev.columnFilters !== outwardNext.columnFilters) {
+			filteringOnChange(outwardNext.columnFilters)
 		}
-		if (globalFilteringOnChange && currentState.globalFilter !== next.globalFilter) {
-			globalFilteringOnChange(next.globalFilter)
+		if (globalFilteringOnChange && outwardPrev.globalFilter !== outwardNext.globalFilter) {
+			globalFilteringOnChange(outwardNext.globalFilter)
 		}
-		if (paginationOnChange && currentState.pagination !== next.pagination) {
-			paginationOnChange(next.pagination)
+		if (paginationOnChange && outwardPrev.pagination !== outwardNext.pagination) {
+			paginationOnChange(outwardNext.pagination)
+		}
+		// Selection goes through this funnel like the rest, and deliberately NOT through
+		// TanStack's `onRowSelectionChange`: that option *replaces* the built-in state writer
+		// (`makeStateUpdater`), so supplying it to carry a callback silently stopped the
+		// selection from ever being recorded — `selection: { onChange }` disabled the checkboxes.
+		if (selectionOnChange && outwardPrev.rowSelection !== outwardNext.rowSelection) {
+			const selection = outwardNext.rowSelection
+			selectionOnChange(
+				selection,
+				Object.keys(selection).filter((id) => selection[id]),
+			)
+		}
+		if (visibilityOnChange && outwardPrev.columnVisibility !== outwardNext.columnVisibility) {
+			visibilityOnChange(outwardNext.columnVisibility)
+		}
+		if (columnPinningOnChange && outwardPrev.columnPinning !== outwardNext.columnPinning) {
+			columnPinningOnChange(outwardNext.columnPinning)
+		}
+		if (rowPinningOnChange && outwardPrev.rowPinning !== outwardNext.rowPinning) {
+			rowPinningOnChange(outwardNext.rowPinning)
+		}
+		// `columnSizing` only — `columnSizingInfo` churns on every pointer move mid-drag.
+		if (resizingOnChange && outwardPrev.columnSizing !== outwardNext.columnSizing) {
+			resizingOnChange(outwardNext.columnSizing)
+		}
+		if (expandingOnChange && outwardPrev.expanded !== outwardNext.expanded) {
+			expandingOnChange(outwardNext.expanded)
 		}
 	}
 
 	// Build options without an explicit type annotation to avoid exactOptionalPropertyTypes
 	// conflicts — let TypeScript infer, then cast at the call site.
-	const onRowSelectionChange =
-		typeof config.selection === 'object' && config.selection.onChange
-			? (updater: Updater<RowSelectionState>): void => {
-					const next = typeof updater === 'function' ? updater(store.getState().rowSelection) : updater
-					const selectedIds = Object.keys(next).filter((k) => next[k])
-					;(config.selection as { onChange: (ids: string[]) => void }).onChange(selectedIds)
-				}
-			: undefined
-
 	const options = {
-		_features: [CreatingFeature, EditingFeature, DeletingFeature, LoadingFeature, InfiniteFeature],
+		_features: [
+			CreatingFeature,
+			DeferredApplyFeature,
+			EditingFeature,
+			DeletingFeature,
+			LoadingFeature,
+			InfiniteFeature,
+		],
 		data: config.data,
 		columns: allColumns,
 		getRowId,
@@ -231,7 +493,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// return false for all columns regardless of per-column config, and the matching
 		// getXRowModel is not attached. Truthy config (true or object) leaves the
 		// TanStack default in place so per-column overrides keep working.
-		...(config.sorting ? { getSortedRowModel: getSortedRowModel() } : { enableSorting: false }),
+		...(hasSorting ? { getSortedRowModel: getSortedRowModel() } : { enableSorting: false }),
 		// Filtering: `getFilteredRowModel` is attached when either column filters
 		// or global search is enabled. Each axis is gated independently:
 		// - `filtering` falsy → enableColumnFilters: false (per-column UI disabled)
@@ -249,63 +511,78 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 				}
 			: {}),
 		...(resolvedGlobalFilterFn !== undefined ? { globalFilterFn: resolvedGlobalFilterFn } : {}),
-		...(config.columnVisibility ? {} : { enableHiding: false }),
+		// `isFeatureEnabled`, not `=== true`: the option grew a config object (for `onChange`),
+		// and a strict boolean check would have left `{ onChange }` reading as "off".
+		...(isFeatureEnabled(config.visibility) ? {} : { enableHiding: false }),
 		...(normalizedPinning.column ? {} : { enableColumnPinning: false }),
 		// Infinite mode shows ALL accumulated rows — no client-side page slicing, no footer.
-		...(config.pagination && paginationCfg?.mode !== 'infinite'
+		...(hasPagination && paginationCfg?.mode !== PaginationMode.Infinite
 			? { getPaginationRowModel: getPaginationRowModel() }
 			: {}),
-		...(config.expanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
-		...(config.expanding && expandVariant === 'tree'
+		...(hasExpanding ? { getExpandedRowModel: getExpandedRowModel() } : {}),
+		...(hasExpanding && expandMode === ExpandingMode.Tree
 			? {
 					getSubRows:
 						expandingCfg?.getSubRows ??
 						((row: TRow) => (row as Record<string, unknown>).children as TRow[] | undefined),
 				}
 			: {}),
-		...(config.expanding && expandVariant === 'sub-content' && expandingCfg?.getRowCanExpand
+		...(hasExpanding && expandMode === ExpandingMode.SubContent && expandingCfg?.getRowCanExpand
 			? { getRowCanExpand: expandingCfg.getRowCanExpand }
 			: {}),
 		// Row selection
 		enableRowSelection: hasSelection,
-		...(onRowSelectionChange ? { onRowSelectionChange } : {}),
+		// Single-row selection. TanStack defaults `enableMultiRowSelection` to true, so the gate
+		// has to be spelled out — the same shape as the `enableHiding` / `enableColumnResizing`
+		// gates above.
+		...(selectionCfg?.multi === false ? { enableMultiRowSelection: false } : {}),
 		// Pagination manual
-		...(typeof config.pagination === 'object' && config.pagination.manual
+		...(paginationCfg?.manual
 			? {
 					manualPagination: true,
 					// When rowCount is provided, omit pageCount so TanStack derives it
 					// automatically from rowCount ÷ pageSize. When only pageCount is
 					// given (or neither), fall back to the explicit value or -1 (unknown).
-					...(config.pagination.rowCount !== undefined
-						? { rowCount: config.pagination.rowCount }
-						: { pageCount: config.pagination.pageCount ?? UNKNOWN_PAGE_COUNT }),
+					...(paginationCfg.rowCount !== undefined
+						? { rowCount: paginationCfg.rowCount }
+						: { pageCount: paginationCfg.pageCount ?? UNKNOWN_PAGE_COUNT }),
 				}
 			: {}),
-		// Filtering manual
-		...(typeof config.filtering === 'object' && config.filtering.manual ? { manualFiltering: true } : {}),
+		// Filtering manual — TanStack has a single `manualFiltering` switch covering both column
+		// filters and global search, so either axis asking for manual mode turns it on for both.
+		...(filteringCfg?.manual || globalFilteringCfg?.manual ? { manualFiltering: true } : {}),
 		// Sorting manual
 		...(sortingCfg?.manual ? { manualSorting: true } : {}),
 		// Sorting: per-direction default
 		...(sortingCfg?.descFirst !== undefined ? { sortDescFirst: sortingCfg.descFirst } : {}),
 		// Sorting: third-click removal
-		...(sortingCfg?.removable === false ? { enableSortingRemoval: false } : {}),
+		...(sortingCfg?.clearable === false ? { enableSortingRemoval: false } : {}),
 		// Sorting: multi-column
 		...(sortingCfg?.multi !== undefined ? buildMultiSortOptions(sortingCfg.multi) : {}),
 		// Sorting: named comparator registry, addressable from `column.sorting.fn`
 		...(sortingCfg?.fns ? { sortingFns: sortingCfg.fns } : {}),
 		// Feature configs
-		...(config.creating ? { creating: config.creating } : {}),
-		...(config.editing ? { editing: config.editing } : {}),
-		...(config.deleting ? { deleting: config.deleting } : {}),
+		...(creatingCfg ? { creating: creatingCfg } : {}),
+		...(editingCfg ? { editing: editingCfg } : {}),
+		...(deletingCfg ? { deleting: deletingCfg } : {}),
+		// Read by the React layer to lay out the actions cell (inline vs. menu).
+		rowActions: {
+			variant: rowActionsVariant,
+			...(rowActionsEnabled && customRowActions ? { actions: customRowActions } : {}),
+		},
+		// The grid's text direction, declared once at the root. Set unconditionally: it is a fact
+		// about the grid, not a resize setting, so it does not wait for `resizing` to be on.
+		columnResizeDirection: config.direction ?? GridDirection.Ltr,
 		// Column resizing
-		...(config.sizing
+		...(hasResizing
 			? {
 					enableColumnResizing: true,
-					columnResizeMode: typeof config.sizing === 'object' && config.sizing.mode ? config.sizing.mode : 'onChange',
-					columnResizeDirection:
-						typeof config.sizing === 'object' && config.sizing.direction ? config.sizing.direction : 'ltr',
+					columnResizeMode: resizingCfg?.mode ?? ColumnResizeMode.OnChange,
 				}
-			: {}),
+			: // TanStack defaults `enableColumnResizing` to true, so the table-level gate has to be
+				// spelled out explicitly — otherwise `column.getCanResize()` stays true with the
+				// feature off. Same shape as the `enableHiding: false` gate above.
+				{ enableColumnResizing: false }),
 		// Row pinning — built-in TanStack feature, no separate row model needed
 		...(hasPinning
 			? {
@@ -314,8 +591,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 					pinning: rowPinConfig,
 				}
 			: {}),
+		// Mirrored onto options so the React layer can gate the draft UI on the flag itself.
+		...(deferred ? { draft: true } : {}),
 		// Virtualization config — stored for React layer to read; no TanStack core effect
-		...(config.virtualized !== undefined ? { virtualized: config.virtualized } : {}),
+		...(isFeatureEnabled(config.virtualization) ? { virtualization: config.virtualization } : {}),
 	}
 
 	// Create the table. Features run getInitialState during this call.
@@ -333,6 +612,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	dataTable.subscribe = (listener) => store.subscribe(listener)
 
 	dataTable.getSnapshot = () => store.getState()
+	// Frozen at construction: a server render must produce the same tree on every call, so it
+	// cannot read a store that a client-side interaction may already have advanced.
+	const initialSnapshot = store.getState()
+	dataTable.getInitialSnapshot = () => initialSnapshot
 
 	dataTable.setData = (data) => {
 		ref.table?.setOptions((prev) => ({
@@ -347,12 +630,26 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		store.setState((prev) => ({ ...prev }))
 	}
 
-	dataTable.syncControlledState = (partial) => {
+	dataTable.syncControlledState = (partial, options) => {
+		// While a draft is pending, the consumer only ever saw the last APPLIED query —
+		// what it mirrors back for the three deferrable axes is stale by construction.
+		// Accepting it would silently discard whatever the user is composing.
+		const incoming =
+			deferred && ref.table?.draft.isDirty() === true
+				? (Object.fromEntries(
+						Object.entries(partial).filter(([key]) => !(DRAFT_AXES as readonly string[]).includes(key)),
+					) as typeof partial)
+				: partial
+		const safe = enforceColumnInvariants(incoming, columnInvariants)
 		ref.table?.setOptions((prev) => ({
 			...prev,
-			state: { ...prev.state, ...partial },
+			state: { ...prev.state, ...safe },
 		}))
-		store.setState((prev) => ({ ...prev, ...partial }))
+		store.setState((prev) => ({ ...prev, ...safe }), options)
+	}
+
+	dataTable.notifyStateSubscribers = () => {
+		store.notify()
 	}
 
 	// Forward infinite scroll: append rows after current data. Immutable — builds a

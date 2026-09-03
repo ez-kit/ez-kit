@@ -3,21 +3,21 @@
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
 import { cellTypes } from './blocks/cell-types'
-import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilityMenu'
 import { Checkbox } from './blocks/core/Checkbox'
+import { Menu } from './blocks/core/Menu'
 import { Td } from './blocks/core/Td'
+import { Tfoot } from './blocks/core/Tfoot'
 import { Toolbar } from './blocks/core/Toolbar'
-import { ActionsCell } from './blocks/editing/ActionsCell'
+import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
-import { CreatingActionsCell } from './blocks/editing/CreatingActionsCell'
 import { FormShell } from './blocks/editing/FormShell'
 import { Modal } from './blocks/editing/Modal'
 import { NumberInput } from './blocks/editing/NumberInput'
 import { Chevron } from './blocks/expanding/Chevron'
-import { EmptyState } from './blocks/fallback-states/EmptyState'
-import { LoadingRow } from './blocks/fallback-states/LoadingRow'
-import { NoResultsState } from './blocks/fallback-states/NoResultsState'
-import { RefetchOverlay } from './blocks/fallback-states/RefetchOverlay'
+import { EmptyState } from './blocks/fallbacks/EmptyState'
+import { LoadingRow } from './blocks/fallbacks/LoadingRow'
+import { NoResultsState } from './blocks/fallbacks/NoResultsState'
+import { RefetchOverlay } from './blocks/fallbacks/RefetchOverlay'
 import { BetweenInput } from './blocks/filtering/BetweenInput'
 import { ClearFiltersButton } from './blocks/filtering/ClearFiltersButton'
 import { FilterChip } from './blocks/filtering/FilterChip'
@@ -30,23 +30,25 @@ import { OperatorSelect } from './blocks/filtering/OperatorSelect'
 import { LoadMoreRow } from './blocks/infinite/LoadMoreRow'
 import { PageSizer } from './blocks/pagination/PageSizer'
 import { Pagination } from './blocks/pagination/pagination'
-import { RowPinMenu } from './blocks/pinning/RowPinMenu'
 import { Resizer } from './blocks/resizing/Resizer'
+import { ActionsCell } from './blocks/row-actions/ActionsCell'
 import { SelectionBar } from './blocks/selection/SelectionBar'
-import { ColumnMenu } from './blocks/sorting/ColumnMenu'
 import { SortIndicator } from './blocks/sorting/SortIndicator'
 import { SortMenu } from './blocks/sorting/SortMenu'
+import { VisibilityMenu } from './blocks/visibility/VisibilityMenu'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Table, TableBody, TableHead, TableHeader, TableRow } from './components/ui/table'
 
-import type { FullGridComponents } from '@ez-kit/data-grid-react'
+import type { KitCellTypes } from './blocks/cell-types'
+import type { DataGridBundle, FullGridComponents } from '@ez-kit/data-grid-react'
 
 const components = {
 	core: {
 		Table,
 		Thead: TableHeader,
 		Tbody: TableBody,
+		Tfoot,
 		Tr: TableRow,
 		Th: TableHead,
 		Td,
@@ -54,9 +56,11 @@ const components = {
 		Input,
 		Checkbox,
 		Toolbar,
+		Menu,
+		NumberInput,
 	},
 	pagination: { Pagination, PageSizer },
-	sorting: { SortIndicator, SortMenu, ColumnMenu },
+	sorting: { SortIndicator, SortMenu },
 	filtering: {
 		FilterPopover,
 		FilterPanel,
@@ -68,12 +72,14 @@ const components = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell, ActionsCell, CreatingActionsCell, ConfirmDialog, NumberInput },
+	editing: { Modal, FormShell },
+	deleting: { ConfirmDialog },
 	selection: { SelectionBar },
-	pinning: { RowPinMenu },
+	draft: { DraftBar },
+	rowActions: { ActionsCell },
 	resizing: { Resizer },
-	'column-visibility': { ColumnVisibilityMenu },
-	'fallback-states': { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },
+	visibility: { VisibilityMenu },
+	fallbacks: { LoadingRow, EmptyState, NoResultsState, RefetchOverlay },
 	infinite: { LoadMoreRow },
 	expanding: { Chevron },
 } satisfies FullGridComponents
@@ -83,13 +89,26 @@ const components = {
  * merging in additional custom cell types (return typed to the merged keys).
  *
  * @example
- * const { DataGrid, defineColumns } = extendDataGrid({
+ * const { DataGrid, createColumns } = extendDataGrid({
  *   rating: { view: RatingCellView, edit: RatingCellInput },
  * })
  */
-const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } = createDataGrid({
+// Annotated, not inferred. The declaration emitter prints an *inferred* type structurally, so
+// without this the bundled `.d.ts` re-printed all nine registry entries into every signature that
+// mentions them — and a `CellDef` union built over that blob is large enough that TypeScript
+// stops contextually typing `cell.component` and hands its parameter back as an implicit `any`.
+// Naming the bundle's type keeps the registry a *name* in the emitted signatures.
+const bundle: DataGridBundle<KitCellTypes> = createDataGrid<KitCellTypes>({
 	components,
 	cellTypes,
 })
 
-export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid }
+const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } = bundle
+
+// Annotated one by one rather than destructured: a destructured binding is re-inferred by the
+// declaration emitter, which prints the registry structurally again. Indexing the bundle's type
+// keeps `KitCellTypes` a name in the two signatures that carry a `CellDef` union.
+const createColumns: DataGridBundle<KitCellTypes>['createColumns'] = bundle.createColumns
+const createColumnHelper: DataGridBundle<KitCellTypes>['createColumnHelper'] = bundle.createColumnHelper
+
+export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid, createColumns, createColumnHelper }

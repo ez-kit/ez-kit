@@ -1,5 +1,19 @@
 {
 	"$schema": "https://turbo.build/schema.json",
+	/* Half the machine's cores, rather than turbo's default.
+
+	   Every package's `test` task is a vitest run that forks its own worker pool, so the two
+	   multiply: unbounded, thirteen vitest instances each spawning a pool put ~80 jsdom processes
+	   on 8 cores. Tests that take 200 ms alone then blow vitest's 5 s timeout and their workers
+	   die with `write EPIPE`, failing a different innocent package on each run.
+
+	   Measured on an 8-core machine, `turbo run test --force`:
+	     50%  →  26/26 pass, 72 s, 678% CPU, 0 timeouts
+	     13   →  15/25 pass, 92 s, 433% CPU, 3 timeouts
+	   The limit is not a trade of speed for reliability — oversubscription was thrashing, so
+	   capping it is faster too. A percentage rather than a number so a smaller CI runner scales
+	   down with it. */
+	"concurrency": "50%",
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],

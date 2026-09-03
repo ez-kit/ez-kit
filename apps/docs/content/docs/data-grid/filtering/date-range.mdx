@@ -5,7 +5,7 @@ description: Filter rows by a date range — between two dates, before a date, a
 
 # Date Range Filter
 
-For date columns, prefer the date-range filter variant. It renders a calendar picker and supports named presets (today, last 7 days, last 30 days, this month).
+For date columns (`cell: { type: 'date' }`), the `between` operator renders a range picker and supports named presets (today, last 7 days, last 30 days, this month).
 
 ## Usage
 
@@ -22,13 +22,17 @@ Supply your own `presets` array — quarterly ranges, year-long windows, or anyt
 <DataGridDocsExample exampleId='filter-date-range-custom' />
 
 ```ts
-const columns = defineColumns<Order>([
+const columns = createColumns<Release>([
 	{
-		id: 'createdAt',
-		accessorKey: 'createdAt',
-		meta: {
-			filterVariant: 'dateRange',
-			presets: ['today', 'last7days', 'last30days', 'thisMonth'],
+		accessorKey: 'releasedAt',
+		header: 'Released',
+		cell: { type: 'date' },
+		filtering: {
+			operators: {
+				items: ['equals', 'lessThan', 'greaterThan', 'between'],
+				betweenOperator: { variant: 'inputs', presets: true },
+			},
+			defaultOperator: 'between',
 		},
 	},
 ])
@@ -36,11 +40,30 @@ const columns = defineColumns<Order>([
 
 ## Options
 
-| Option               | Type                    | Description                                                |
-| -------------------- | ----------------------- | ---------------------------------------------------------- |
-| `meta.filterVariant` | `'date' \| 'dateRange'` | Pick the picker shape.                                     |
-| `meta.presets`       | `string[]`              | Built-in preset ids. The order shown matches array order.  |
-| `meta.dateFormat`    | `string`                | Display format for the picker (passed to your locale lib). |
+### `betweenOperator`
+
+| Option    | Type                                 | Description                                                                                                        |
+| --------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `variant` | `'inputs' \| 'slider' \| 'calendar'` | Picker shape. `'inputs'` and `'calendar'` apply to date columns; `'slider'` is number-only.                        |
+| `presets` | `boolean \| DateRangePreset[]`       | `true` renders the built-in presets; pass an array to use a custom set instead. Only meaningful on `date` columns. |
+
+### `DateRangePreset`
+
+| Field      | Type                                             | Description                                                                      |
+| ---------- | ------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `id`       | `string`                                         | Preset id.                                                                       |
+| `label`    | `string`                                         | Label shown in the preset list.                                                  |
+| `getRange` | `(now?: Date) => { from?: string; to?: string }` | Returns the `{ from, to }` bounds for the preset, in ISO-8601 date-only strings. |
+
+Built-in preset ids: `'today'`, `'yesterday'`, `'last7'`, `'last30'`, `'thisMonth'`, `'lastMonth'`.
+
+### `cell` (date)
+
+| Option          | Type                         | Description                                                                  |
+| --------------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| `config.min`    | `string` (ISO 8601)          | Hard minimum forwarded to the date picker.                                   |
+| `config.max`    | `string` (ISO 8601)          | Hard maximum forwarded to the date picker.                                   |
+| `config.format` | `Intl.DateTimeFormatOptions` | Forwarded to `Intl.DateTimeFormat` for cell display — not the filter picker. |
 
 ## Notes
 
@@ -48,4 +71,5 @@ The accessor value MUST be a `Date` or an ISO string. If it's something else, su
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/operators/operators.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/features/operators/operators.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts)

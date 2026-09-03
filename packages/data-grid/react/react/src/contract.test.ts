@@ -8,7 +8,7 @@ describe('COMPONENT_FEATURE', () => {
 	})
 
 	it('groups the always-rendered structural primitives under core', () => {
-		for (const key of ['Table', 'Thead', 'Tbody', 'Tr', 'Th', 'Td'] as const) {
+		for (const key of ['Table', 'Thead', 'Tbody', 'Tr', 'Th', 'Td', 'Menu'] as const) {
 			expect(COMPONENT_FEATURE[key]).toBe(GridFeature.Core)
 		}
 	})
@@ -27,8 +27,9 @@ describe('COMPONENT_FEATURE', () => {
 		expect(COMPONENT_FEATURE.Pagination).toBe(GridFeature.Pagination)
 		expect(COMPONENT_FEATURE.SortMenu).toBe(GridFeature.Sorting)
 		expect(COMPONENT_FEATURE.FilterPanel).toBe(GridFeature.Filtering)
-		expect(COMPONENT_FEATURE.ConfirmDialog).toBe(GridFeature.Editing)
+		expect(COMPONENT_FEATURE.ConfirmDialog).toBe(GridFeature.Deleting)
 		expect(COMPONENT_FEATURE.SelectionBar).toBe(GridFeature.Selection)
+		expect(COMPONENT_FEATURE.DraftBar).toBe(GridFeature.Draft)
 		expect(COMPONENT_FEATURE.Resizer).toBe(GridFeature.Resizing)
 		expect(COMPONENT_FEATURE.LoadMoreRow).toBe(GridFeature.Infinite)
 		expect(COMPONENT_FEATURE.Chevron).toBe(GridFeature.Expanding)

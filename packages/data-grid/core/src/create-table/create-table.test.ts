@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createTable, defineColumns } from '../index'
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
+import { createTable, createColumns } from '../index'
+import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from '../system-columns'
 
 type Row = {
 	id: number
@@ -14,7 +14,7 @@ const DATA: Row[] = [
 	{ id: 2, name: 'Bob', age: 25 },
 ]
 
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'age', header: 'Age' },
 ])
@@ -57,17 +57,42 @@ describe('createTable — sorting', () => {
 		expect(table.getState().sorting).toEqual([{ id: 'name', desc: true }])
 	})
 
+	// `initialState` merges into the pagination slice instead of replacing it. Spreading the
+	// consumer seed over a whole `pagination` default used to wipe the sibling key, so a deep
+	// link that seeds only `pageIndex` left `pageSize` undefined and the first page rendered
+	// with no size at all.
+	it('initialState.pagination seeds one key without dropping the other', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { pageSize: 25 },
+			initialState: { pagination: { pageIndex: 3 } },
+		})
+		expect(table.initialState.pagination).toEqual({ pageIndex: 3, pageSize: 25 })
+		expect(table.getState().pagination).toEqual({ pageIndex: 3, pageSize: 25 })
+	})
+
+	it('initialState.pagination can override the configured pageSize', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			pagination: { pageSize: 25 },
+			initialState: { pagination: { pageIndex: 0, pageSize: 50 } },
+		})
+		expect(table.getState().pagination).toEqual({ pageIndex: 0, pageSize: 50 })
+	})
+
 	it('sorting.descFirst → sortDescFirst', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { descFirst: true } })
 		expect(table.options.sortDescFirst).toBe(true)
 	})
 
-	it('sorting.removable: false → enableSortingRemoval: false', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { removable: false } })
+	it('sorting.clearable: false → enableSortingRemoval: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { clearable: false } })
 		expect(table.options.enableSortingRemoval).toBe(false)
 	})
 
-	it('sorting.removable not set — enableSortingRemoval untouched', () => {
+	it('sorting.clearable not set — enableSortingRemoval untouched', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, sorting: true })
 		expect(table.options.enableSortingRemoval).toBeUndefined()
 	})
@@ -146,13 +171,6 @@ describe('createTable — sorting', () => {
 		})
 		table.getRow('1').toggleSelected(true)
 		expect(onChange).not.toHaveBeenCalled()
-	})
-
-	it('sorting.toolbar is a UI-only flag, no TanStack option leaks', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { toolbar: true } })
-		// Just verify it doesn't crash and getSortedRowModel is enabled.
-		expect(table.options.getSortedRowModel).toBeDefined()
-		expect((table.options as unknown as { toolbar?: unknown }).toolbar).toBeUndefined()
 	})
 })
 
@@ -237,12 +255,12 @@ describe('createTable — globalFiltering', () => {
 		expect(table.options.globalFilterFn).toBe('includesString')
 	})
 
-	it('column.globalFilter: false disables the column for global search', () => {
+	it('column.globalFiltering: false disables the column for global search', () => {
 		const table = createTable({
 			data: DATA,
 			columns: [
 				{ accessorKey: 'name', header: 'Name' },
-				{ accessorKey: 'age', header: 'Age', globalFilter: false },
+				{ accessorKey: 'age', header: 'Age', globalFiltering: false },
 			],
 			globalFiltering: true,
 		})
@@ -255,6 +273,36 @@ describe('createTable — globalFiltering', () => {
 		table.setGlobalFilter('alice')
 		expect(table.getFilteredRowModel().rows).toHaveLength(1)
 		expect(table.getFilteredRowModel().rows[0]?.getValue('name')).toBe('Alice')
+	})
+
+	it('globalFiltering: { manual: true } sets manualFiltering', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: { manual: true } })
+		expect(table.options.manualFiltering).toBe(true)
+	})
+
+	it('globalFiltering: { manual: true } leaves rows untouched by client-side global search', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: { manual: true } })
+		table.setGlobalFilter('alice')
+		expect(table.getFilteredRowModel().rows).toHaveLength(DATA.length)
+	})
+
+	it('filtering: { manual: true } also stops client-side global search', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			filtering: { manual: true },
+			globalFiltering: true,
+		})
+		table.setGlobalFilter('alice')
+		expect(table.options.manualFiltering).toBe(true)
+		expect(table.getFilteredRowModel().rows).toHaveLength(DATA.length)
+	})
+
+	it('globalFiltering without manual still filters client-side', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, globalFiltering: { onChange: vi.fn() } })
+		table.setGlobalFilter('alice')
+		expect(table.options.manualFiltering).toBeUndefined()
+		expect(table.getFilteredRowModel().rows).toHaveLength(1)
 	})
 })
 
@@ -340,6 +388,78 @@ describe('createTable — pagination', () => {
 
 // ── selection ─────────────────────────────────────────────────────────────────
 
+describe('createTable — unreachable seeds', () => {
+	// The seed is NOT dropped: it is what the author wrote, and silently ignoring config is
+	// worse than honouring it. But with the feature off there is no affordance to undo it, so
+	// the grid says so in development instead of leaving it silent.
+	it('visibility.initialHidden still applies when the table feature is off', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name' },
+				{ accessorKey: 'age', visibility: { initialHidden: true } },
+			]),
+		})
+		expect(table.getState().columnVisibility).toEqual({ age: false })
+		expect(table.getColumn('age')?.getCanHide()).toBe(false)
+		warn.mockRestore()
+	})
+
+	it('warns when visibility.initialHidden has no feature to undo it', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', visibility: { initialHidden: true } }]),
+		})
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn.mock.calls[0]?.[0]).toContain('visibility.initialHidden')
+		expect(warn.mock.calls[0]?.[0]).toContain('age')
+		warn.mockRestore()
+	})
+
+	it('does not warn when the visibility feature is on', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', visibility: { initialHidden: true } }]),
+			visibility: true,
+		})
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+
+	it('warns when pinning.initialSide has no column menu to undo it', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', pinning: { initialSide: 'left' } }]),
+		})
+		expect(warn).toHaveBeenCalledTimes(1)
+		expect(warn.mock.calls[0]?.[0]).toContain('pinning.initialSide')
+		warn.mockRestore()
+	})
+
+	// A static pin is meant to be unchangeable, so it has nothing to warn about.
+	it('does not warn for a static pin', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({ data: DATA, columns: createColumns<Row>([{ accessorKey: 'age', pinning: 'left' }]) })
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+
+	it('does not warn when the pinning feature is on', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'age', pinning: { initialSide: 'left' } }]),
+			pinning: { column: true },
+		})
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+})
+
 describe('createTable — selection', () => {
 	it('selection: true enables enableRowSelection', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, selection: true })
@@ -351,12 +471,99 @@ describe('createTable — selection', () => {
 		expect(table.options.enableRowSelection).toBe(false)
 	})
 
-	it('selection: { onChange } fires callback with selected row ids', () => {
+	it('selection: { onChange } fires with the slice first, then the selected ids', () => {
 		const onChange = vi.fn()
 		const table = createTable({ data: DATA, columns: COLUMNS, selection: { onChange } })
-		// Select first row
 		table.getRow('1').toggleSelected(true)
-		expect(onChange).toHaveBeenCalledWith(['1'])
+		expect(onChange).toHaveBeenCalledWith({ '1': true }, ['1'])
+	})
+
+	// The assertion this suite was missing. `selection.onChange` used to be carried by TanStack's
+	// `onRowSelectionChange`, which *replaces* the built-in state writer — so supplying a callback
+	// silently stopped the selection from ever being recorded, and every checkbox went dead. The
+	// old test passed throughout, because it only checked that the callback fired.
+	it('selection state is still recorded when onChange is supplied', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: { onChange: vi.fn() } })
+		table.getRow('1').toggleSelected(true)
+		expect(table.getState().rowSelection).toEqual({ '1': true })
+		expect(table.getRow('1').getIsSelected()).toBe(true)
+	})
+
+	// `selection.multiple` was declared, documented ("Set `false` to allow only one selected
+	// row") and read by nothing at all: TanStack defaults `enableMultiRowSelection` to true, so
+	// the grid kept accumulating rows. Renamed to `multi` (matching `sorting.multi`) and wired.
+	it('selection: { multi: false } disables enableMultiRowSelection', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: { multi: false } })
+		expect(table.options.enableMultiRowSelection).toBe(false)
+	})
+
+	it('selection: { multi: false } — selecting a row replaces the previous one', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: { multi: false } })
+		table.getRow('1').toggleSelected(true)
+		table.getRow('2').toggleSelected(true)
+		expect(table.getState().rowSelection).toEqual({ '2': true })
+	})
+
+	it('selection: true — rows accumulate', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: true })
+		table.getRow('1').toggleSelected(true)
+		table.getRow('2').toggleSelected(true)
+		expect(table.getState().rowSelection).toEqual({ '1': true, '2': true })
+	})
+})
+
+// ── per-feature onChange ──────────────────────────────────────────────────────
+
+describe('createTable — per-feature onChange', () => {
+	it('visibility.onChange fires with the visibility slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, visibility: { onChange } })
+		table.getColumn('name')?.toggleVisibility(false)
+		expect(onChange).toHaveBeenCalledWith({ name: false })
+		expect(table.getState().columnVisibility).toEqual({ name: false })
+	})
+
+	it('pinning.column.onChange fires with the column-pinning slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { column: { onChange } } })
+		table.getColumn('name')?.pin('left')
+		expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ left: ['name'] }))
+	})
+
+	it('pinning.row.onChange fires with the row-pinning slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true, onChange } } })
+		table.getRow('1').pin('top')
+		expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ top: ['1'] }))
+	})
+
+	it('resizing.onChange fires with the committed column sizes', () => {
+		const onChange = vi.fn()
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { onChange } })
+		table.setColumnSizing({ name: 240 })
+		expect(onChange).toHaveBeenCalledWith({ name: 240 })
+	})
+
+	it('expanding.onChange fires with the expanded slice', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			expanding: { onChange, getRowCanExpand: () => true },
+		})
+		table.getRow('1').toggleExpanded(true)
+		expect(onChange).toHaveBeenCalledWith({ '1': true })
+	})
+
+	it('a disabled feature contributes no onChange', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			visibility: { enabled: false, onChange },
+		})
+		table.getColumn('name')?.toggleVisibility(false)
+		expect(onChange).not.toHaveBeenCalled()
 	})
 })
 
@@ -468,6 +675,44 @@ describe('createTable — loading', () => {
 	})
 })
 
+// ── initialState — type-level ────────────────────────────────────────────────
+// `editing`, `creating` and `deleting` are transient UI
+// state that each feature hard-resets on its own initialization, so seeding them is
+// rejected at the type level rather than silently ignored at runtime — see
+// `InitialTableState` in `../types`.
+
+describe('createTable — initialState type constraints', () => {
+	it('rejects seeding transient editing/creating/deleting slices, allows loading', () => {
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			// @ts-expect-error — `editing` is transient per-open-form state, hard-reset by the feature
+			initialState: { editing: { rowId: '1', values: {}, errors: {}, commitStatus: 'idle' } },
+		})
+
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			// @ts-expect-error — `creating` is transient per-open-form state, hard-reset by the feature
+			initialState: { creating: { values: {}, errors: {}, commitStatus: 'idle' } },
+		})
+
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			// @ts-expect-error — `deleting` is transient per-dialog state, hard-reset by the feature
+			initialState: { deleting: { pendingRowId: '1', pendingBulk: false } },
+		})
+
+		// `loading` still deep-merges the consumer's value, so it stays allowed.
+		createTable({
+			data: DATA,
+			columns: COLUMNS,
+			initialState: { loading: { isPending: true, isFetching: false, isError: false, error: null } },
+		})
+	})
+})
+
 // ── system columns ────────────────────────────────────────────────────────────
 
 describe('createTable — system columns', () => {
@@ -505,13 +750,13 @@ describe('createTable — system columns', () => {
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('pinning: { row: { top: true } } appends __row_pin__ column last', () => {
+	it('pinning: { row: { top: true } } alone appends the __actions__ column', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true } } })
 		const ids = columnIds(table)
-		expect(ids.at(-1)).toBe(ROW_PIN_COLUMN_ID)
+		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('__row_pin__ comes after __actions__ when both editing and pinning are enabled', () => {
+	it('editing and pinning together share a single __actions__ column', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
@@ -519,13 +764,11 @@ describe('createTable — system columns', () => {
 			pinning: { row: { top: true } },
 		})
 		const ids = columnIds(table)
-		const actionsIdx = ids.indexOf(ACTIONS_COLUMN_ID)
-		const pinIdx = ids.indexOf(ROW_PIN_COLUMN_ID)
-		expect(actionsIdx).toBeGreaterThan(-1)
-		expect(pinIdx).toBe(actionsIdx + 1)
+		expect(ids.filter((id) => id === ACTIONS_COLUMN_ID)).toHaveLength(1)
+		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
-	it('full column order: __selection__, __expand__, user cols, __actions__, __row_pin__', () => {
+	it('full column order: __selection__, __expand__, user cols, __actions__', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
@@ -534,14 +777,7 @@ describe('createTable — system columns', () => {
 			editing: { mode: 'row', onSave: () => Promise.resolve() },
 			pinning: { row: { top: true } },
 		})
-		expect(columnIds(table)).toEqual([
-			SELECTION_COLUMN_ID,
-			EXPAND_COLUMN_ID,
-			'name',
-			'age',
-			ACTIONS_COLUMN_ID,
-			ROW_PIN_COLUMN_ID,
-		])
+		expect(columnIds(table)).toEqual([SELECTION_COLUMN_ID, EXPAND_COLUMN_ID, 'name', 'age', ACTIONS_COLUMN_ID])
 	})
 
 	it('system columns have isSystemColumn: true in meta', () => {
@@ -552,49 +788,49 @@ describe('createTable — system columns', () => {
 			pinning: { row: { top: true } },
 		})
 		const selCol = table.getColumn(SELECTION_COLUMN_ID)
-		const pinCol = table.getColumn(ROW_PIN_COLUMN_ID)
+		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
 		expect(selCol?.columnDef.meta?.isSystemColumn).toBe(true)
-		expect(pinCol?.columnDef.meta?.isSystemColumn).toBe(true)
+		expect(actionsCol?.columnDef.meta?.isSystemColumn).toBe(true)
 	})
 
-	it('__actions__ column has columnPinning: { pin: "right" } in meta', () => {
+	it('__actions__ column has meta.pinning: { side: "right" }', () => {
 		const table = createTable({
 			data: DATA,
 			columns: COLUMNS,
 			editing: { mode: 'row', onSave: () => Promise.resolve() },
 		})
 		const actionsCol = table.getColumn(ACTIONS_COLUMN_ID)
-		expect(actionsCol?.columnDef.meta?.columnPinning).toEqual({ pin: 'right' })
+		expect(actionsCol?.columnDef.meta?.pinning).toEqual({ side: 'right' })
 	})
 })
 
 // ── virtualized ───────────────────────────────────────────────────────────────
 
 describe('createTable — virtualized', () => {
-	it('virtualized not set — options.virtualized is undefined', () => {
+	it('virtualized not set — options.virtualization is undefined', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toBeUndefined()
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toBeUndefined()
 	})
 
-	it('virtualized: true — stored on options', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: true })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toBe(true)
+	it('virtualization: true — stored on options', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: true })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toBe(true)
 	})
 
-	it('virtualized: { row: true } — stored on options', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: true } })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: true })
+	it('virtualization: { row: true } — stored on options', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: { row: true } })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toEqual({ row: true })
 	})
 
-	it('virtualized: { row: { overscan: 10 } } — stored on options with custom options', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: { overscan: 10 } } })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: { overscan: 10 } })
+	it('virtualization: { row: { overscan: 10 } } — stored on options with custom options', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: { row: { overscan: 10 } } })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toEqual({ row: { overscan: 10 } })
 	})
 
-	it('virtualized: { row: { estimateSize: () => 64 } } — stored on options with custom estimateSize', () => {
+	it('virtualization: { row: { estimateSize: () => 64 } } — stored on options with custom estimateSize', () => {
 		const estimateSize = () => 64
-		const table = createTable({ data: DATA, columns: COLUMNS, virtualized: { row: { estimateSize } } })
-		expect((table.options as unknown as { virtualized?: unknown }).virtualized).toEqual({ row: { estimateSize } })
+		const table = createTable({ data: DATA, columns: COLUMNS, virtualization: { row: { estimateSize } } })
+		expect((table.options as unknown as { virtualization?: unknown }).virtualization).toEqual({ row: { estimateSize } })
 	})
 })
 
@@ -691,20 +927,20 @@ describe('createTable — table-level off: filtering', () => {
 	})
 })
 
-describe('createTable — table-level off: columnVisibility', () => {
-	it('columnVisibility undefined → enableHiding: false, all user columns getCanHide() = false', () => {
+describe('createTable — table-level off: visibility', () => {
+	it('visibility undefined → enableHiding: false, all user columns getCanHide() = false', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS })
 		expect(table.options.enableHiding).toBe(false)
 		expect(userColumns(table).every((c) => !c.getCanHide())).toBe(true)
 	})
 
-	it('columnVisibility: false → enableHiding: false', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: false })
+	it('visibility: false → enableHiding: false', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, visibility: false })
 		expect(table.options.enableHiding).toBe(false)
 	})
 
-	it('columnVisibility: true → enableHiding untouched, user columns can hide', () => {
-		const table = createTable({ data: DATA, columns: COLUMNS, columnVisibility: true })
+	it('visibility: true → enableHiding untouched, user columns can hide', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, visibility: true })
 		expect(table.options.enableHiding).toBeUndefined()
 		expect(userColumns(table).every((c) => c.getCanHide())).toBe(true)
 	})
@@ -758,7 +994,7 @@ describe('createTable — faceted', () => {
 	})
 
 	it('column-level faceted opt-in works even when table-level flag is off', () => {
-		const COLUMNS_WITH_FACET = defineColumns<Row>([
+		const COLUMNS_WITH_FACET = createColumns<Row>([
 			{ accessorKey: 'name', header: 'Name', filtering: { faceted: true } },
 			{ accessorKey: 'age', header: 'Age' },
 		])
@@ -770,5 +1006,158 @@ describe('createTable — faceted', () => {
 		const nameCol = table.getColumn('name')
 		if (!nameCol) throw new Error('expected name column')
 		expect(nameCol.getFacetedUniqueValues().get('Alice')).toBe(2)
+	})
+})
+
+// ── initial state × column-derived defaults ───────────────────────────────────
+
+describe('createTable — initialState vs column-derived state', () => {
+	const PINNED_COLUMNS = createColumns<Row>([
+		{ accessorKey: 'name', header: 'Name', pinning: { side: 'left' } },
+		{ accessorKey: 'age', header: 'Age' },
+	])
+
+	const DEFAULT_PINNED_COLUMNS = createColumns<Row>([
+		{ accessorKey: 'name', header: 'Name', pinning: { initialSide: 'left' } },
+		{ accessorKey: 'age', header: 'Age' },
+	])
+
+	const HIDDEN_COLUMNS = createColumns<Row>([
+		{ accessorKey: 'name', header: 'Name', visibility: { initialHidden: true } },
+		{ accessorKey: 'age', header: 'Age' },
+	])
+
+	it('column initialSide seeds columnPinning', () => {
+		const table = createTable({ data: DATA, columns: DEFAULT_PINNED_COLUMNS, pinning: { column: true } })
+		expect(table.getState().columnPinning.left).toContain('name')
+	})
+
+	it('consumer initialState.columnPinning wins over a initialSide it mentions', () => {
+		const table = createTable({
+			data: DATA,
+			columns: DEFAULT_PINNED_COLUMNS,
+			pinning: { column: true },
+			initialState: { columnPinning: { left: [], right: ['name'] } },
+		})
+		expect(table.getState().columnPinning.left).not.toContain('name')
+		expect(table.getState().columnPinning.right).toContain('name')
+	})
+
+	it('a initialSide the consumer never mentions keeps its seed', () => {
+		const table = createTable({
+			data: DATA,
+			columns: DEFAULT_PINNED_COLUMNS,
+			pinning: { column: true },
+			initialState: { columnPinning: { left: ['age'], right: [] } },
+		})
+		expect(table.getState().columnPinning.left).toEqual(['name', 'age'])
+	})
+
+	it('a static pin survives an initialState.columnPinning that omits it', () => {
+		const table = createTable({
+			data: DATA,
+			columns: PINNED_COLUMNS,
+			pinning: { column: true },
+			initialState: { columnPinning: { left: ['age'], right: [] } },
+		})
+		expect(table.getState().columnPinning.left).toContain('name')
+	})
+
+	it('initialState.columnPinning does not drop system column pins', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: true,
+			deleting: { onDelete: () => {} },
+			initialState: { columnPinning: { left: [], right: [] } },
+		})
+		const { left, right } = table.getState().columnPinning
+		expect(left).toContain(SELECTION_COLUMN_ID)
+		expect(right).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('initialState cannot hide a system column', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: () => {} },
+			visibility: true,
+			initialState: { columnVisibility: { [ACTIONS_COLUMN_ID]: false } },
+		})
+		expect(table.getVisibleLeafColumns().map((c) => c.id)).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('syncControlledState cannot hide a system column', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: () => {} },
+			visibility: true,
+		})
+		table.syncControlledState({ columnVisibility: { [ACTIONS_COLUMN_ID]: false } })
+		expect(table.getVisibleLeafColumns().map((c) => c.id)).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('setState cannot unpin a system column', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, selection: true, deleting: { onDelete: () => {} } })
+		table.setState((prev) => ({ ...prev, columnPinning: { left: [], right: [] } }))
+		const { left, right } = table.getState().columnPinning
+		expect(left).toContain(SELECTION_COLUMN_ID)
+		expect(right).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('columnVisibility merges per key — a initialHidden column stays hidden', () => {
+		const table = createTable({
+			data: DATA,
+			columns: HIDDEN_COLUMNS,
+			visibility: true,
+			initialState: { columnVisibility: { age: true } },
+		})
+		expect(table.getState().columnVisibility).toMatchObject({ name: false, age: true })
+	})
+})
+
+describe('createTable — enabled: false', () => {
+	const DATA = [{ name: 'Alice', age: 30 }]
+	const COLUMNS = createColumns<{ name: string; age: number }>([{ accessorKey: 'name' }, { accessorKey: 'age' }])
+
+	it('sorting: { enabled: false } disables sorting despite the config object', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, sorting: { enabled: false, multi: true } })
+		expect(table.options.enableSorting).toBe(false)
+	})
+
+	it('a disabled feature does not contribute its manual flag', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: { enabled: false, manual: true } })
+		expect(table.options.manualFiltering).toBeUndefined()
+	})
+
+	it('a disabled feature does not contribute its onChange', () => {
+		const onChange = vi.fn()
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			selection: { enabled: false, onChange },
+		})
+		table.setState((prev) => ({ ...prev, rowSelection: { '0': true } }))
+		expect(onChange).not.toHaveBeenCalled()
+	})
+
+	it('editing: { enabled: false } keeps the actions column out of the table', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { enabled: false, onSave: () => Promise.resolve() },
+		})
+		expect(table.getAllColumns().some((c) => c.id === ACTIONS_COLUMN_ID)).toBe(false)
+	})
+
+	it('resizing: { enabled: false } leaves column resizing off', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { enabled: false, mode: 'onEnd' } })
+		expect(table.options.enableColumnResizing).toBeFalsy()
+	})
+
+	it('an object without enabled turns the feature on', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, resizing: { mode: 'onEnd' } })
+		expect(table.options.enableColumnResizing).toBe(true)
 	})
 })

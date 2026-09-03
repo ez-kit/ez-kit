@@ -2,9 +2,10 @@ import { useEffect } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
+import { LoadMoreTrigger } from '../types'
 
 import { DataGridRow } from './row'
-import { useDataGridInstance, useTable } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 import { useInfiniteScroll } from './use-infinite-scroll'
 import { usePinnedRowOffsets } from './use-pinned-row-offsets'
 import { useVirtualContext } from './virtual-context'
@@ -27,10 +28,13 @@ const LOAD_MORE_ALLOWANCE_PX = 56
  * `display: grid` / `position: relative` shape comes from the structural
  * stylesheet shipped with this package.
  *
- * Each virtual row receives a runtime `transform: translateY(start)` inline
- * style — values change every scroll frame and cannot move to CSS — plus a
- * `data-slot="virtual-row"` for the structural CSS that sets
- * `position: absolute; left: 0; top: 0; width: 100%`.
+ * Each virtual row receives runtime `transform: translateY(start)` and `height`
+ * inline styles — values come from the virtualizer and cannot move to CSS — plus
+ * a `data-slot="virtual-row"` for the structural CSS that sets
+ * `position: absolute; left: 0; top: 0; width: 100%`. The explicit height makes
+ * the row fill exactly the slot the virtualizer reserved for it: nothing measures
+ * the rows back, so a kit whose natural row height differs from `estimateSize`
+ * would otherwise leave a gap (or an overlap) between every pair of rows.
  *
  * Pinned rows (top / bottom) use the same data-attr + `--dg-row-pin-offset`
  * pattern as the non-virtual Body.
@@ -40,15 +44,14 @@ const LOAD_MORE_ALLOWANCE_PX = 56
  * below the spacer with extra height reserved.
  */
 export function VirtualBody() {
-	const instance = useDataGridInstance()
-	const table = instance.table
+	const table = useDataGridTable()
 	const gridComponents = useGridComponents()
 	const { Tbody, Tr, Td } = gridComponents.core
 	const { LoadMoreRow } = gridComponents.infinite
 	const { rowVirtualizer } = useVirtualContext()
 	const controller = useInfiniteScroll()
 	// Subscribe to infinite slice so the loader row re-renders on status change.
-	useTable((s) => s.infinite)
+	useDataGridState((s) => s.infinite)
 
 	const virtualItems = rowVirtualizer?.getVirtualItems() ?? []
 	const lastIndex = virtualItems.length > 0 ? (virtualItems[virtualItems.length - 1]?.index ?? -1) : -1
@@ -66,25 +69,25 @@ export function VirtualBody() {
 		bottomRows.map((row) => row.id),
 	)
 
-	const { enabled, trigger, hasMore, isFetching, loadMore } = controller
-	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.infinite.threshold.rows
+	const { enabled, trigger, hasNextPage, isFetching, loadMore } = controller
+	const thresholdRows = controller.threshold.rows ?? DATA_GRID_DEFAULTS.pagination.threshold.rows
 	const rowCount = centerRows.length
 
 	// Index-based detection: load when the last rendered row nears the end.
 	// Skip while a fetch is in flight so we don't re-invoke the guarded no-op on
 	// every scroll frame; the effect re-runs once `isFetching` clears.
 	useEffect(() => {
-		if (!enabled || trigger !== 'auto' || !hasMore || isFetching) return
+		if (!enabled || trigger !== LoadMoreTrigger.Auto || !hasNextPage || isFetching) return
 		if (lastIndex < 0) return
 		if (lastIndex >= rowCount - thresholdRows) {
 			loadMore('forward')
 		}
-	}, [enabled, trigger, hasMore, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
+	}, [enabled, trigger, hasNextPage, isFetching, lastIndex, rowCount, thresholdRows, loadMore])
 
 	if (!rowVirtualizer) return null
 
 	const totalSize = rowVirtualizer.getTotalSize()
-	const showLoadMore = enabled && (hasMore || controller.isFetching || controller.error != null)
+	const showLoadMore = enabled && (hasNextPage || controller.isFetching || controller.error != null)
 	const tbodyHeight = totalSize + (showLoadMore ? LOAD_MORE_ALLOWANCE_PX : 0)
 	const columnCount = table.getVisibleLeafColumns().length
 
@@ -111,7 +114,7 @@ export function VirtualBody() {
 						key={row.id}
 						row={row}
 						data-virtual='row'
-						style={{ transform: `translateY(${String(virtualRow.start)}px)` }}
+						style={{ transform: `translateY(${String(virtualRow.start)}px)`, height: `${String(virtualRow.size)}px` }}
 					/>
 				)
 			})}
@@ -137,7 +140,7 @@ export function VirtualBody() {
 							columnCount={columnCount}
 							direction='forward'
 							isFetching={controller.isFetching}
-							hasMore={controller.hasMore}
+							hasNextPage={controller.hasNextPage}
 							error={controller.error}
 							trigger={controller.trigger}
 							onTrigger={() => {

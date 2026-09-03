@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns, extractState, parseState, useExtractedState } from '@ez-kit/data-grid-react'
+import { createColumns, extractState, parseState, useExtractedState } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
@@ -13,7 +13,7 @@ const PEOPLE: Person[] = [
 	{ id: 3, name: 'Carol', role: 'PM' },
 ]
 
-const columns = defineColumns<Person>([
+const columns = createColumns<Person>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'role', header: 'Role' },
 ])
@@ -30,7 +30,7 @@ export function StatePersistenceExample() {
 		<div>
 			<DataGrid table={table} />
 			<pre>{JSON.stringify(persisted, null, 2)}</pre>
-			<p>Snapshot for storage: {JSON.stringify(extractState(table.table))}</p>
+			<p>Snapshot for storage: {JSON.stringify(extractState(table))}</p>
 		</div>
 	)
 }

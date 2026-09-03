@@ -1,15 +1,8 @@
+import { defineCellType } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
-import type { CellTypeDefinition } from '../cell-types-context'
-import type { FieldState } from '@ez-kit/data-grid-core'
+import type { BooleanCellConfig, FieldState } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
-
-export type BooleanCellConfig = {
-	/** Label rendered (by the kit's view component) for `true`. */
-	trueLabel?: string
-	/** Label rendered (by the kit's view component) for `false`. */
-	falseLabel?: string
-}
 
 function BooleanCellInput(props: FieldState<BooleanCellConfig>): ReactNode {
 	const { Checkbox } = useGridComponents().core
@@ -31,10 +24,10 @@ function BooleanCellInput(props: FieldState<BooleanCellConfig>): ReactNode {
  * shape. Kits spread this and add their own `view` / `filter`:
  *
  * ```tsx
- * { boolean: { ...booleanCellType, view: MyBooleanView, filter: MyBooleanFilter } }
+ * { boolean: { ...booleanCellType, view: MyBooleanView, filtering: MyBooleanFilter } }
  * ```
  */
-export const booleanCellType: CellTypeDefinition<BooleanCellConfig> = {
-	edit: BooleanCellInput,
+export const booleanCellType = defineCellType<BooleanCellConfig>()({
+	editing: BooleanCellInput,
 	creating: BooleanCellInput,
-}
+})

@@ -2,6 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 
 import { asNumber } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -19,16 +20,20 @@ export function createNumberField<TFormData>(
 		description,
 		disabled,
 		required,
+		validate,
 		placeholder,
 		min,
 		max,
 		step,
 	}: NumberFieldProps<TFormData>): ReactNode {
 		return (
-			<form.AppField name={name}>
+			<form.AppField
+				name={name}
+				validators={fieldValidators(name, validate)}
+			>
 				{(field) => (
 					<KitNumberField
-						{...fieldRenderProps(field, FormFieldType.Number, { label, description, disabled, required })}
+						{...fieldRenderProps(field, FormFieldType.Number, { label, description, disabled, required, validate })}
 						placeholder={placeholder}
 						min={min}
 						max={max}

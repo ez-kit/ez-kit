@@ -7,23 +7,11 @@ description: TanStack Form with fully-wired, dependency-injected fields — one 
 
 A thin layer over [TanStack Form](https://tanstack.com/form) that hands you **fields, not plumbing**.
 
-`useForm` here is a **superset** of TanStack Form's: the instance it returns carries flat, ready-wired field components, while the entire native API stays on that same object.
-
-```tsx
-const form = useForm({
-	defaultValues: { email: '', password: '' },
-	onSubmit: ({ value }) => save(value),
-})
-
-<form.Form>
-	<form.TextField name='email' label='Email' />
-	<form.SubmitButton>Save</form.SubmitButton>
-</form.Form>
-```
-
-Each field renders its own label, description, input and error message. No `<Field>` render prop, no manual `value` / `onChange` / `onBlur` wiring, no error plumbing — unless you want it, in which case [the native API](./form/native-api) is right there.
+A field is `name` plus `label`. The label, the input, the description, the error message and the accessibility wiring between them are already done, and the form instance you get is TanStack's own — nothing is wrapped or hidden.
 
 <KitExample exampleId='form-basic' />
+
+The same form can also be written as **data** rather than JSX and rendered by `FormRenderer`, which is the same machinery entered from the other side. Both entry points are introduced in [Basic concepts](/docs/form/basic-concepts).
 
 ## The packages
 
@@ -34,26 +22,33 @@ Each field renders its own label, description, input and error message. No `<Fie
 | `@ez-kit/form-shadcn` | The shadcn flavour.                                                                              |
 | `@ez-kit/form-heroui` | The HeroUI v3 flavour.                                                                           |
 
-You install exactly one of the two flavours; it pulls the rest in.
+You install exactly one of the two flavours; it pulls the rest in and re-exports their whole consumer surface, so it is the only specifier you import from.
 
 ## Why the layering
 
-`@ez-kit/form-react` knows how to bind a field to form state, normalise errors and track submit state — but it owns no pixels and no markup. Each field's entire element tree is supplied by a kit through a `FormComponents` contract, so a React Aria kit can nest its label and error inside the field root while a plain-DOM kit keeps them as siblings. That is what lets the **same example render under either kit**, and it is why you can [build your own kit](./form/custom-kit) without forking anything.
+`@ez-kit/form-react` knows how to bind a field to form state, normalise errors and track submit state — but it owns no pixels and no markup. Each field's entire element tree is supplied by a kit through a `FormComponents` contract, so a React Aria kit can nest its label and error inside the field root while a plain-DOM kit keeps them as siblings. That is what lets the **same example render under either kit**, and it is why you can [build your own kit](/docs/form/custom-kit) without forking anything.
 
 ## What's in the box
 
-| Export                                        | Purpose                                                            |
-| --------------------------------------------- | ------------------------------------------------------------------ |
-| [`useForm`](./form/getting-started)           | The extended hook. Everything below hangs off its result.          |
-| [`form.TextField` and friends](./form/fields) | Five base fields: text, number, textarea, select, checkbox.        |
-| `form.SubmitButton`                           | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself. |
-| `form.Form`                                   | A `<form>` wired to `handleSubmit`.                                |
-| [`createForm`](./form/custom-kit)             | The factory a UI kit calls to bind its own components.             |
+| Export                                            | Purpose                                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [`Form`](/docs/form/getting-started)              | The `<form>` element. Creates the instance, or takes yours.                                 |
+| [`useForm`](/docs/form/getting-started)           | The extended hook, for when you need the instance yourself.                                 |
+| [`form.TextField` and friends](/docs/form/fields) | Twelve base fields: text, number, textarea, select, multi-select, checkbox, switch, date, … |
+| `form.SubmitButton`                               | Subscribed to `canSubmit` / `isSubmitting`, so it disables itself.                          |
+| [`FormRenderer`](/docs/form/schema)               | Renders a serialisable document — the schema-driven mode.                                   |
+| [`createForm`](/docs/form/custom-kit)             | The factory a UI kit calls to bind its own components.                                      |
 
-## Validation
-
-There is **no custom resolver**. Validation is pure pass-through of TanStack Form's native [standard-schema](https://github.com/standard-schema/standard-schema) support — hand it a zod, valibot or arktype schema and it just works. See [Validation](./form/validation).
+Validation has **no custom resolver**: it is pure pass-through of TanStack Form's native [standard-schema](https://github.com/standard-schema/standard-schema) support, so a zod, valibot or arktype schema just works. See [Validation](/docs/form/validation).
 
 ## Not included yet
 
-Switch, radio-group, date-picker and combobox fields, a schema-driven auto-form, and `extendForm` (registering your own field type) are planned but not shipped. Today, a field type we do not cover is written with [the native API](./form/native-api).
+Repeatable array fields are the notable gap: relative field references (`./`) are reserved in the format but not supported, so a list of addresses is written by hand today. Time and file inputs are not covered either, and a searchable field's debouncing is still its [option source](/docs/form/select/option-sources)'s job rather than the package's.
+
+A field kind we do not cover is written with [the native API](/docs/form/native-api), or — in a document — [registered as a custom field type](/docs/form/schema#registries) and rendered like any built-in one.
+
+## Where to start
+
+- [Getting started](/docs/form/getting-started) — install a kit and render your first form.
+- [Basic concepts](/docs/form/basic-concepts) — the layering, the instance, the two entry points.
+- [Examples](/docs/form/examples) — a full form, a wizard, cascading selects, a dialog.

@@ -14,14 +14,14 @@ Let users toggle which columns are visible. Hidden columns retain their filter a
 The grid exposes a `column-visibility-trigger` slot that renders the kit's menu component. Hidden columns are computed from the engine's visibility state.
 
 ```ts
-const grid = useDataGrid({ data, columns })
-grid.setColumnVisibility({ email: false })
+const table = useDataGrid({ data, columns })
+table.setColumnVisibility({ email: false })
 ```
 
 For a minimal toggle without the menu, use the same control directly via column id:
 
 ```ts
-columns.find((c) => c.id === 'email')?.toggleVisibility(false)
+table.getColumn('email')?.toggleVisibility(false)
 ```
 
 A simpler base example is also available:
@@ -30,13 +30,27 @@ A simpler base example is also available:
 
 ## Options
 
-| Option                          | Type                              | Description                                                                                                                                                                            |
-| ------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `visibility`                    | `true \| { defaultHidden: true }` | Per-column. `true` locks the column as always visible (no Hide option in its menu, absent from the Columns toggle). `{ defaultHidden: true }` starts the column hidden but toggleable. |
-| `enableHiding`                  | `boolean`                         | Per-column TanStack pass-through. Default `true`. `visibility: true` sets this to `false` under the hood.                                                                              |
-| `state.columnVisibility`        | `Record<string, boolean>`         | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                         |
-| `initialState.columnVisibility` | `Record<string, boolean>`         | Default hidden columns at mount.                                                                                                                                                       |
-| `onColumnVisibilityChange`      | `(updater) => void`               | Subscribe to visibility changes for persistence (e.g., to localStorage).                                                                                                               |
+| Option                          | Type                                    | Description                                                                                                                                                                                                                          |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `visibility`                    | `false \| { initialHidden: true }`      | Per-column. `false` disables hiding — the column is always visible (no Hide option in its menu, absent from the Columns toggle). `{ initialHidden: true }` starts the column hidden but toggleable.                                  |
+| `visibility.toolbar`            | `boolean`                               | Auto-mount the Columns toggle into `Toolbar.end`. Default `true` in both forms — `visibility: true` and `visibility: { onChange }` mount the same button; write `toolbar: false` to place `<DataGrid.VisibilityTrigger />` yourself. |
+| `visibility.onChange`           | `(visibility: VisibilityState) => void` | Called whenever column visibility changes. Use it to persist which columns a user hid.                                                                                                                                               |
+| `state.columnVisibility`        | `Record<string, boolean>`               | Controlled visibility state (passes through to `useDataGrid`).                                                                                                                                                                       |
+| `initialState.columnVisibility` | `Record<string, boolean>`               | Hidden columns at mount. Merges with the column-level `initialHidden` seeds — see below.                                                                                                                                             |
+| `visibility.enabled`            | `boolean`                               | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                                       |
+
+## Seeds and invariants
+
+`initialState.columnVisibility` **merges** with the `initialHidden` seeds from the column defs
+rather than replacing them: a column you do not mention stays hidden, one you do mention takes your
+value.
+
+`visibility: false` is an invariant, not a seed. Such a column can never be hidden — not by
+`initialState`, not by controlled `state`, not by `table.setState`. Its menu has no Hide option and
+it is absent from the Columns toggle, so a state that hid it could never be undone by the user. The
+system columns (`__selection__`, `__expand__`, `__actions__`) are covered by the same rule.
+
+See [State model](./data-grid/state-model) for the full precedence.
 
 ## See also
 
@@ -45,4 +59,4 @@ A simpler base example is also available:
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/column-visibility-trigger.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/visibility-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/visibility-trigger.tsx)

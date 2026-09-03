@@ -19,8 +19,8 @@ export function InfiniteScrollVirtualizedExample() {
 			data={data}
 			columns={columns}
 			state={state}
-			stickyHeader
-			virtualized={{ row: { estimateSize: 49, overscan: 10 } }}
+			layout={{ stickyHeader: true }}
+			virtualization={{ row: { estimateSize: 49, overscan: 10 } }}
 			pagination={{ mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } }}
 		/>
 	)

@@ -17,27 +17,28 @@ Pinning is demonstrated in a scrollable container with a sticky header — this 
 <DataGrid
 	data={data}
 	columns={columns}
-	enableRowPinning
-	initialState={{
-		rowPinning: { top: ['row-1'], bottom: ['row-99'] },
-	}}
+	pinning={{ row: { top: true, bottom: true } }}
 />
 ```
 
+The pin control lives in the row actions column, next to edit and delete — see [Row actions](./data-grid/row-actions). Enabling row pinning is enough to create that column; you do not need editing or deleting.
+
 ## Options
 
-| Option               | Type                                    | Description                                        |
-| -------------------- | --------------------------------------- | -------------------------------------------------- |
-| `enableRowPinning`   | `boolean`                               | Master switch. Default `false`.                    |
-| `state.rowPinning`   | `{ top?: string[], bottom?: string[] }` | Controlled pinning.                                |
-| `onRowPinningChange` | `(updater) => void`                     | Subscribe.                                         |
-| `getRowId`           | `(row) => string`                       | REQUIRED for stable pinning across data refreshes. |
+| Option                    | Type                                    | Description                                                                                                                                                                         |
+| ------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pinning.row` (table)     | `boolean \| RowPinningConfig`           | Enables row pinning. `true` — top+bottom. `{ top: true }` — top only, etc. Once enabled, the grid renders a per-row pin control.                                                    |
+| `pinning.row.onChange`    | `(rowPinning: RowPinningState) => void` | Called whenever row pinning changes. Use it to persist which rows a user pinned.                                                                                                    |
+| `state.rowPinning`        | `{ top?: string[], bottom?: string[] }` | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](./data-grid/controlled-state).                                                                    |
+| `initialState.rowPinning` | same                                    | Uncontrolled seed for pinned rows at mount.                                                                                                                                         |
+| `getRowId`                | `(row: TRow, index: number) => string`  | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so pinning survives a refetch out of the box. |
 
 ## See also
 
+- [Row actions](./data-grid/row-actions)
 - [Column pinning](./data-grid/columns/column-pinning)
 - [Sticky header](./data-grid/sticky-header)
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/types.ts)

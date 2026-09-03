@@ -32,7 +32,7 @@ const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ co
 const count = counterStore.useSelector((s) => s.count)
 ```
 
-→ [Full docs](docs/create-context-store.md)
+→ [Full docs](https://ez-kit.dev/docs/zu-store/create-context-store)
 
 ---
 
@@ -44,7 +44,7 @@ Binds a single store field to a `[value, setValue]` tuple — like `useState` ba
 const [name, setName] = useStoreState(formStore, 'name')
 ```
 
-→ [Full docs](docs/use-store-state.md)
+→ [Full docs](https://ez-kit.dev/docs/zu-store/use-store-state)
 
 ---
 
@@ -81,7 +81,7 @@ usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'arc
 
 Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useCacheKeys`, `cache.createCachedStore`).
 
-→ [Full docs](docs/store-cache.md)
+→ [Full docs](https://ez-kit.dev/docs/zu-store/store-cache)
 
 ---
 

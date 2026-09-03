@@ -1,0 +1,350 @@
+---
+title: Composition
+description: Escape hatches for laying out the grid yourself — Table and Body children, Toolbar slots, and per-instance component overrides.
+---
+
+# Composition
+
+`<DataGrid />` with no children renders the full default layout. Every piece of that layout is
+also a compound member you can place yourself, and each one degrades gracefully: supply nothing
+and you get the built-in behaviour, supply something and you take over exactly that piece.
+
+## The default layout
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+/>
+```
+
+is equivalent to writing the tree out:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+>
+	<DataGrid.Toolbar />
+	<DataGrid.Table />
+	<DataGrid.Pagination />
+</DataGrid>
+```
+
+## Toolbar: add without replacing
+
+The toolbar auto-mounts the controls the enabled features ask for — global search, Clear
+filters, the create trigger, the multi-sort builder, column visibility, the page sizer.
+
+`start` and `end` **append** to those, which is what "the default toolbar plus one button of
+mine" needs:
+
+```tsx
+<DataGrid.Toolbar end={<ExportButton />} />
+```
+
+`children` **replaces** the whole bar — the kit's `start` / `end` slots go unused and nothing
+auto-mounts:
+
+```tsx
+<DataGrid.Toolbar>
+	<MyEntirelyCustomBar />
+</DataGrid.Toolbar>
+```
+
+## Table: reorder, wrap, extend
+
+`<DataGrid.Table />` renders `<DataGrid.Header />` and `<DataGrid.Body />` inside the kit's
+`<table>`, wrapped in the scroll container that owns sticky headers, column pinning shadows and
+virtualization. Supplying `children` replaces the header/body pair while keeping all of that
+plumbing:
+
+```tsx
+<DataGrid.Table>
+	<DataGrid.Header />
+	<DataGrid.Body />
+	<DataGrid.Footer />
+</DataGrid.Table>
+```
+
+`<DataGrid.Footer />` is the footer row — the default layout mounts it for you, a custom body
+does not. See [Column footers](#column-footers).
+
+A render function gets the live table:
+
+```tsx
+<DataGrid.Table>
+	{({ table, headerGroups, rows }) => (
+		/* … */
+	)}
+</DataGrid.Table>
+```
+
+`<DataGrid.Header />` reads the grid's own `layout.stickyHeader` option, so it keeps working when placed
+by hand.
+
+## Body: compose the rows yourself
+
+```tsx
+<DataGrid.Body>
+	{({ rows }) =>
+		rows.map((row) => (
+			<DataGrid.Row
+				key={row.id}
+				row={row}
+			/>
+		))
+	}
+</DataGrid.Body>
+```
+
+<Callout type='warn'>
+	A custom body opts out of **everything** the built-in body does: pinned rows, the creating row, expanded sub-content,
+	the loading / empty / no-results fallbacks, the infinite-scroll footer and the refetch overlay. That is the trade —
+	full control in exchange for re-implementing what you still want. Omit `children` unless you need it.
+</Callout>
+
+### Typing the render arguments
+
+Every compound child reads the table from context rather than from a prop, so it has nothing to
+infer your row type from — `row.original` is `any` unless you say otherwise. Name the row type
+once, as a type argument, and the whole render function is typed:
+
+```tsx
+<DataGrid.Body<Order>>{({ rows }) => rows.map((row) => <td>{row.original.total}</td>)}</DataGrid.Body>
+```
+
+The same argument is available on `Table`, `Header`, `HeaderRow`, `HeaderCell`, `Row`, `Cell`,
+`Footer`, `FooterRow` and `FooterCell`, and on `useDataGridTable<Order>()` for a component of
+your own.
+
+## Header rows and cells: keep the chrome, change the markup
+
+`<DataGrid.Header>` composes three slots below it. Reach for them when `column.header` is not
+enough but you do not want to re-derive pinning, alignment, colSpan and the resize handle by hand.
+
+`<DataGrid.HeaderRow>` gives you one header group's headers in column order, already reflecting
+visibility and pinning:
+
+```tsx
+<DataGrid.Header>
+	{({ headerGroups }) =>
+		headerGroups.map((headerGroup) => (
+			<DataGrid.HeaderRow
+				key={headerGroup.id}
+				headerGroup={headerGroup}
+			/>
+		))
+	}
+</DataGrid.Header>
+```
+
+`<DataGrid.HeaderCell>` hands you the assembled pieces of one `<th>` separately, so you can
+rearrange them without rebuilding any of them:
+
+```tsx
+<DataGrid.HeaderCell header={header}>
+	{({ label, sortTrigger, menu, filter, sortDirection }) => (
+		<div>
+			<span>{sortTrigger}</span>
+			{sortDirection !== 'none' && <PriorityBadge />}
+			{menu}
+			{filter}
+		</div>
+	)}
+</DataGrid.HeaderCell>
+```
+
+| Render arg                 | What it is                                                                        |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `label`                    | The column's own `header` content, with no sorting behaviour attached.            |
+| `sortTrigger`              | `label` plus the sort indicator, wrapped in the clickable sort affordance.        |
+| `menu`                     | The column overflow menu (sort / pin / hide), or `null` when it has no sections.  |
+| `filter`                   | The column's filter control, or `null` when the column is not filterable.         |
+| `resizer`                  | The resize handle, or `null` when the column cannot be resized.                   |
+| `canSort`, `sortDirection` | The column's sort capability and current direction (`'asc' \| 'desc' \| 'none'`). |
+| `header`, `column`         | The underlying TanStack objects, for anything the above does not cover.           |
+
+`<DataGrid.Cell>` is the body-side equivalent: it keeps the `<td>`, its alignment, pinning
+offsets and `cellClassName`, and lets you replace only what goes inside.
+
+```tsx
+<DataGrid.Row row={row}>
+	{({ cells }) =>
+		cells.map((cell) => (
+			<DataGrid.Cell
+				key={cell.id}
+				cell={cell}
+				row={row}
+			>
+				{({ value }) => <strong>{String(value)}</strong>}
+			</DataGrid.Cell>
+		))
+	}
+</DataGrid.Row>
+```
+
+## Fallbacks, modals and bars
+
+The remaining slots are auto-mounted by their feature and take `children` for the same reason —
+replace the content, keep the placement and the conditions under which it appears.
+
+| Slot                                                   | Renders when                         | `children` receives                                             |
+| ------------------------------------------------------ | ------------------------------------ | --------------------------------------------------------------- |
+| `<DataGrid.LoadingBody>`                               | `loading.isPending`                  | `{ columnCount }`                                               |
+| `<DataGrid.EmptyStateRow>`                             | the data array is empty              | `{ columnCount }`                                               |
+| `<DataGrid.NoResultsRow>`                              | filters match nothing                | `{ columnCount }`                                               |
+| `<DataGrid.CreatingModal>` / `<DataGrid.EditingModal>` | `mode: 'modal'` and the form is open | `{ open, form, title, formError, isPending, onSave, onCancel }` |
+| `<DataGrid.DraftBar>`                                  | `draft` is on and the draft is dirty | `{ pending, selectedCount, variant, onApply, onReset }`         |
+| `<DataGrid.PageSizer>`                                 | page-based pagination is on          | `{ pageSize, items, onPageSizeChange }`                         |
+
+The three row-level fallbacks render their `children` **inside** the kit's
+`<Tbody><Tr><Td colSpan>` scaffold, so the table markup stays valid and you supply only the
+cell's content. The modals hand you `form` — the field set the columns already describe — so a
+custom dialog does not have to rebuild the inputs:
+
+```tsx
+<DataGrid.EditingModal>
+	{({ form, isPending, onSave, onCancel }) => (
+		<MyDialog
+			title='Edit order'
+			onClose={onCancel}
+		>
+			{form}
+			<button
+				disabled={isPending}
+				onClick={() => void onSave()}
+			>
+				Save
+			</button>
+		</MyDialog>
+	)}
+</DataGrid.EditingModal>
+```
+
+## Column headers
+
+`column.header` takes a string or a render function, so a header can carry an icon, a tooltip or
+a badge:
+
+```tsx
+createColumns<Row>([
+	{
+		accessorKey: 'total',
+		header: () => (
+			<span>
+				Total <InfoIcon />
+			</span>
+		),
+	},
+])
+```
+
+## Column footers
+
+`column.footer` accepts the same shape as `column.header`, and a plain `<DataGrid />` renders it:
+declaring it on any column mounts the footer row — see [Footer](./footer) for `layout.footer` and
+the sticky variant. This section is about the composed path, where `<DataGrid.Table>` children
+replace the built-in pair and nothing is mounted for you.
+
+`<DataGrid.Footer />` renders every column's `footer` in the same column order and with the same
+colSpan, pinning and alignment as the header; `column.footerClassName` lands on the footer cell.
+The archetypal case is a numeric column with a total. The render function gets the live table,
+so summing over the _filtered_ rows keeps the total honest while a filter is on:
+
+```tsx
+const columns = createColumns<Row>([
+	{ accessorKey: 'product', header: 'Product', footer: 'Total' },
+	{
+		accessorKey: 'amount',
+		header: 'Amount',
+		align: 'end',
+		footerClassName: 'font-medium',
+		footer: ({ table }) => table.getFilteredRowModel().rows.reduce((sum, row) => sum + row.original.amount, 0),
+	},
+])
+```
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+>
+	<DataGrid.Toolbar />
+	<DataGrid.Table>
+		<DataGrid.Header />
+		<DataGrid.Body />
+		<DataGrid.Footer />
+	</DataGrid.Table>
+	<DataGrid.Pagination />
+</DataGrid>
+```
+
+Giving `<DataGrid.Footer>` `children` replaces the per-column row with your own markup inside
+the kit's `<tfoot>` — a node, or a render function receiving `{ table, footerGroups }`:
+
+```tsx
+<DataGrid.Footer>
+	{({ table }) => (
+		<tr>
+			<td colSpan={table.getVisibleLeafColumns().length}>{table.getRowModel().rows.length} rows</td>
+		</tr>
+	)}
+</DataGrid.Footer>
+```
+
+`<DataGrid.FooterRow>` and `<DataGrid.FooterCell>` are the footer's counterparts to
+`<DataGrid.HeaderRow>` and `<DataGrid.HeaderCell>`, for when only _one_ cell should differ. A
+hand-written `<td>` would give up the `colSpan`, the pinning offset, the `align.footer` attribute
+and the `footerClassName` that the default footer applies for you; these keep all of it:
+
+```tsx
+<DataGrid.Footer>
+	{({ footerGroups }) =>
+		footerGroups.map((group) => (
+			<DataGrid.FooterRow
+				key={group.id}
+				footerGroup={group}
+			>
+				{({ headers }) =>
+					headers.map((header) => (
+						<DataGrid.FooterCell
+							key={header.id}
+							header={header}
+						>
+							{({ content }) => (header.column.id === 'amount' ? <strong>{content}</strong> : content)}
+						</DataGrid.FooterCell>
+					))
+				}
+			</DataGrid.FooterRow>
+		))
+	}
+</DataGrid.Footer>
+```
+
+## Swapping a UI component for one grid
+
+`components` on `<DataGrid>` merges over the kit's registry group by group, so an override
+replaces one slot and leaves the rest of the kit intact:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	components={{ sorting: { SortMenu: MySortMenu } }}
+/>
+```
+
+<Callout type='info'>
+	Define the object outside the render (or memoize it). The provider keys its merge on the object's identity, so a fresh
+	literal every render re-renders every component that reads the registry.
+</Callout>
+
+For an app-wide swap, wrap a subtree in `GridComponentsProvider` instead — providers nest and
+merge the same way.
+
+## See also
+
+- [Architecture](./data-grid/architecture) — why the layers are split the way they are
+- [Default options](./data-grid/default-options) — set feature defaults once for the whole app
+- [Advanced: React](./data-grid/advanced/react) — building your own UI flavor

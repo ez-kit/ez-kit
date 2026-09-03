@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useMemo } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -12,7 +12,7 @@ const ROW_TOTAL = 50
 // Enough pages that the numbered strip has to window (1 … 4 5 6 … 100) rather than list them all.
 const NUMBERED_ROW_TOTAL = 1000
 
-const columns = defineColumns<User>([
+const columns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'email', header: 'Email' },
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },

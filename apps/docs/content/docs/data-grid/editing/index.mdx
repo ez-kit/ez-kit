@@ -1,43 +1,112 @@
 ---
 title: Editing
-description: Inline cell editing — double-click to edit, blur to commit, escape to cancel, validation on commit.
+description: Row, modal and cell editing — one handler, typed values, validation before commit.
 ---
 
-# Inline Editing
+# Editing
 
-Inline editing lets users update cells in place. Double-click a cell to enter edit mode, blur or Enter to commit, Escape to cancel.
+Editing is one option and one handler. `editing.onSave` receives the row id and the edited
+values; supply it and the grid mounts the edit affordance, the form inputs and the commit
+pipeline.
 
 ## Usage
 
 <DataGridDocsExample exampleId='base-editing' />
 
 ```tsx
-const columns = defineColumns<User>([
-	{
-		id: 'email',
-		accessorKey: 'email',
-		meta: { editable: true, editType: 'email' },
-	},
-])
-
 <DataGrid
 	data={data}
 	columns={columns}
-	onCellEdit={({ rowId, columnId, value }) => updateRow(rowId, { [columnId]: value })}
+	editing={{
+		mode: 'row',
+		onSave: ({ rowId, values }) => {
+			setData((prev) => prev.map((row) => (String(row.id) === rowId ? { ...row, ...values } : row)))
+		},
+	}}
 />
 ```
 
-## Edit types
+The feature is enabled by its **handler**, not by its presence: a config without `onSave`
+resolves away rather than mounting an Edit button whose commit would call `undefined`. That is
+what lets a [defaults layer](./data-grid/default-options) describe how editing should _look_ for
+a whole app while only the grids that supply `onSave` actually get it.
 
-`meta.editType` picks the input rendered while editing: `'text'`, `'number'`, `'email'`, `'select'`, `'date'`, `'boolean'`. Custom edit types follow the same pattern as [Custom Cell Types](./data-grid/cells/custom-cell-types).
+## Modes
+
+`mode` is what editing _does_, not how it looks.
+
+| `mode`    | Behaviour                                                                                                        |
+| --------- | ---------------------------------------------------------------------------------------------------------------- |
+| `'row'`   | The default. The row turns into inputs in place; the actions cell offers Save / Cancel.                          |
+| `'modal'` | A dialog collects the whole row. `<DataGrid.EditingModal />` is mounted for you when this mode is on.            |
+| `'cell'`  | One cell at a time. `table.editing.startCell(rowId, columnId)` opens it, `commitCell()` commits just that field. |
+
+## Which inputs a row gets
+
+From the columns, not from a second list. A column's `cell.type` decides the input its field
+renders — a `date` column gets the kit's date picker, a `select` column its select. See
+[Cell types](./data-grid/cells/cell-types).
+
+Per column, the edit form is tuned under `editing`:
+
+```tsx
+const columns = createColumns<User>([
+	{ accessorKey: 'name', header: 'Name' },
+	// Not editable: the field is left out of the form.
+	{ accessorKey: 'createdAt', header: 'Created', editing: false },
+	{
+		accessorKey: 'email',
+		header: 'Email',
+		editing: {
+			description: 'Used for sign-in',
+			validateOn: 'blur',
+		},
+	},
+	{
+		accessorKey: 'rating',
+		header: 'Rating',
+		// Anything the built-in types do not cover.
+		editing: { component: RatingInput },
+	},
+])
+```
+
+`editing.component` receives a `FieldState` — `value`, `onChange`, `onBlur`, `error`, `errors`,
+`isValidating`, plus the column's `config`, `label` and `description` in form contexts.
+
+## Options
+
+| `editing` key | Type                                                   | Description                                                                                           |
+| ------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `onSave`      | `({ rowId, values, signal }) => void \| Promise<void>` | Required. Commit the edit. `signal` aborts when the user cancels or the table unmounts.               |
+| `mode`        | `'row' \| 'modal' \| 'cell'`                           | What editing does. Default `'row'`.                                                                   |
+| `validate`    | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](./data-grid/editing/validation).                |
+| `validateOn`  | `'submit' \| 'blur' \| 'change'`                       | When a field validates. Default `'submit'`. A column overrides it under its own `editing.validateOn`. |
+| `debounce`    | `number`                                               | Debounce for `validateOn: 'change'`. Default `200`.                                                   |
+| `enabled`     | `boolean`                                              | Explicit off-switch for a config that came from a defaults layer.                                     |
+
+## Reading and driving it yourself
+
+`table.editing` is the whole pipeline, so a custom layout never has to re-implement it:
+
+```ts
+table.editing.start(rowId)
+table.editing.setValue('email', next)
+await table.editing.commit()
+table.editing.cancel()
+table.editing.getState() // { rowId, cellId, values, errors, formError, commitStatus }
+```
+
+`row.getIsEditing()` answers whether a given row is the one being edited.
 
 ## See also
 
-- [CRUD (server)](./data-grid/editing/crud-server) — full create/update/delete with a real backend
-- [CRUD (client)](./data-grid/editing/crud-client) — same UX, in-memory store
-- [Creating](./data-grid/editing/creating) — new-row workflow
-- [Validation](./data-grid/editing/validation) — async + sync validation patterns
+- [Validation](./data-grid/editing/validation) — schemas, async checks, server errors
+- [Creating](./data-grid/editing/creating) — the new-row workflow
+- [Delete confirmation](./data-grid/editing/delete-confirmation) — the third write
+- [CRUD (server)](./data-grid/editing/crud-server) · [CRUD (client)](./data-grid/editing/crud-client)
 
 ## Source
 
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/editing/editing.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/features/editing/editing.ts)
 - `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/editing-modal.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/editing-modal.tsx)

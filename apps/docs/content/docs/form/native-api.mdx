@@ -1,24 +1,31 @@
 ---
 title: Native API
-description: The flat fields are additive — form.Field, form.Subscribe, form.handleSubmit and form.state are all still there.
+description: The flat fields are additive — form.Field, form.handleSubmit and form.state are all still there, on the same TanStack Form instance.
 ---
 
 # Native API
 
 The flat fields are **added to** the TanStack Form instance, not layered over it. Everything the native API gives you is on the same object, unchanged:
 
-| Member                 | Still there                                                     |
-| ---------------------- | --------------------------------------------------------------- |
-| `form.Field`           | The render-prop field, for markup the flat fields do not cover. |
-| `form.Subscribe`       | Selector-based subscription to form state.                      |
-| `form.handleSubmit()`  | Submit programmatically.                                        |
-| `form.state`           | The current snapshot (not reactive on its own — see below).     |
-| `form.setFieldValue()` | …and the rest of the imperative API.                            |
-| `form.AppField`        | TanStack's own component-bound field.                           |
+| Member               | Still there                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| `form.Field`         | The render-prop field, for markup the flat fields do not cover.        |
+| `form.Subscribe`     | Selector-based subscription — see [Reactivity](/docs/form/reactivity). |
+| `form.handleSubmit`  | Submit programmatically.                                               |
+| `form.state`         | The current snapshot (not reactive on its own).                        |
+| `form.setFieldValue` | …and the rest of the imperative API.                                   |
+| `form.AppField`      | TanStack's own component-bound field.                                  |
 
 So reaching for a custom control never means abandoning the fields you already wrote:
 
 <KitExample exampleId='form-native-api' />
+
+<Callout>
+	This is the one part of the API with no counterpart in a document. Reading form state and re-rendering on it is
+	arbitrary JavaScript, and a `FormSchema` carries no code — the renderer handles its own re-rendering, and the
+	declarative cases are covered by a node's `when` and `disabledWhen` conditions. See [Config-driven
+	forms](/docs/form/schema).
+</Callout>
 
 ## `form.Field`
 
@@ -37,28 +44,15 @@ Use it whenever you need a control we do not ship — a segmented picker, a slid
 </form.Field>
 ```
 
-You own the chrome here — label, description and error rendering are up to you. If you want the flat fields' layout and error handling around your own control, [write a kit](./form/custom-kit) instead.
+You own the chrome here — label, description and error rendering are up to you. If you want the flat fields' layout and error handling around your own control, [write a kit](/docs/form/custom-kit) instead.
 
-## `form.Subscribe`
+## Reading state
 
-Read form state reactively. The selector's result is shallow-compared, so only real changes re-render:
-
-```tsx
-<form.Subscribe selector={(state) => state.values.email}>{(email) => <p>{email}</p>}</form.Subscribe>
-
-<form.Subscribe selector={(state) => state.isDirty}>
-	{(isDirty) => (isDirty ? <span>Unsaved changes</span> : null)}
-</form.Subscribe>
-```
-
-<Callout type='warn'>
-	Reading `form.state` directly in a component body is **not** reactive — the component will not re-render when that
-	value changes. It is a snapshot, useful in event handlers and effects. For anything you render, use `form.Subscribe`.
-</Callout>
+`form.state` read in a component body is a snapshot, not a subscription: the component will not re-render when the value changes. Anything you render from form state goes through `form.Subscribe`, which is the subject of [Reactivity](/docs/form/reactivity).
 
 ## Submitting from elsewhere
 
-`form.Form` wires submission for you, but nothing stops you calling it yourself — from a toolbar button, a keyboard shortcut, a dialog footer:
+`<Form>` wires submission for you, but nothing stops you calling it yourself — from a toolbar button, a keyboard shortcut, a dialog footer that sits outside the element:
 
 ```tsx
 <button
@@ -69,7 +63,7 @@ Read form state reactively. The selector's result is shallow-compared, so only r
 </button>
 ```
 
-And if you would rather own the `<form>` element entirely, skip `form.Form`:
+And if you would rather own the `<form>` element entirely, skip `<Form>` — take the instance from `useForm` and render your own:
 
 ```tsx
 <form
@@ -90,4 +84,4 @@ The flat fields do not care which element they sit in — they bind to the form 
 
 ## Composition helpers
 
-`createFormHook`'s `withForm` and `withFieldGroup` are not re-exported. If you need them, build your own hook with [`createForm`](./form/custom-kit) alongside TanStack's `createFormHook` — the two coexist, since the flat fields are bound per instance rather than through context.
+All four of TanStack's composition helpers — `withForm`, `withFieldGroup`, `useFormGroup` and `useFieldGroup` — are shipped by your kit package, with `withForm` retyped so the flat fields compile inside a block. They have a page of their own: [Composition](/docs/form/composition).

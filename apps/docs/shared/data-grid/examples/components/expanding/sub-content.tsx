@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -68,7 +68,7 @@ const EMPLOYEES: Employee[] = [
 	},
 ]
 
-const columns = defineColumns<Employee>([
+const columns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'role', header: 'Role' },
 	{ accessorKey: 'department', header: 'Department' },
@@ -80,7 +80,7 @@ export function ExpandingSubContentExample() {
 			data={EMPLOYEES}
 			columns={columns}
 			expanding={{
-				renderExpanded: ({ row }) => {
+				component: ({ row }) => {
 					const emp = row.original
 					return (
 						<div className='gap-8 flex-wrap flex'>

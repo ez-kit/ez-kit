@@ -1,13 +1,10 @@
-import { isValidationError, zodSafeParseToResult } from '../validation'
+import { ColumnFormMode, resolveColumnFormConfig } from '../../column/resolve-form-config'
+import { DEFAULT_VALIDATE_DEBOUNCE_MS } from '../../defaults'
+import { CommitStatus, isValidationError, ValidateOn, zodSafeParseToResult } from '../validation'
 
-import type {
-	CommitStatus,
-	ValidateConfig,
-	ValidateContext,
-	ValidateOn,
-	ValidationErrors,
-	ValidationResult,
-} from '../validation'
+import type { ResolvedColumnFormConfig } from '../../column/resolve-form-config'
+import type { FeatureToggle } from '../../utils/feature-flag'
+import type { ValidateConfig, ValidateContext, ValidationErrors, ValidationResult } from '../validation'
 import type { InitialTableState, RowData, Table, TableFeature, TableState } from '@tanstack/table-core'
 
 /**
@@ -22,8 +19,36 @@ export type CreatingSaveContext<TData> = {
 	signal: AbortSignal
 }
 
-const DEFAULT_VALIDATE_ON: ValidateOn = 'submit'
-const DEFAULT_DEBOUNCE_MS = 200
+/**
+ * Context passed to the function form of a column's `creating.defaultValue`.
+ *
+ * Deliberately minimal: `table` already covers the real use cases
+ * (`table.getRowCount() + 1`, `table.getState().columnFilters`, `table.getRowModel().rows[0]`).
+ * The partially-accumulated `values` object is **not** passed — a default that could read the
+ * defaults resolved before it would silently depend on the order the columns happen to sit in
+ * the config. Cross-field seeding belongs in the table-level `creating.defaultValues`, which
+ * runs once after all column defaults.
+ *
+ * @typeParam TRow - row data type
+ */
+export type CreateDefaultValueContext<TRow> = {
+	table: Table<TRow>
+	/** Id of the column whose default is being resolved. */
+	columnId: string
+}
+
+/**
+ * Context passed to the function form of {@link CreatingConfig.defaultValues}.
+ *
+ * Minimal for the same reason as {@link CreateDefaultValueContext} — see its doc comment.
+ *
+ * @typeParam TRow - row data type
+ */
+export type CreateDefaultValuesContext<TRow> = {
+	table: Table<TRow>
+}
+
+const DEFAULT_VALIDATE_ON: ValidateOn = ValidateOn.Submit
 const GENERIC_FORM_ERROR = 'Unexpected error'
 
 export type CreatingState = {
@@ -34,11 +59,49 @@ export type CreatingState = {
 	commitStatus: CommitStatus
 }
 
-export type CreatingConfig<TData> = {
-	mode?: 'row' | 'modal' | 'pin-row'
+/**
+ * How the create flow behaves. `mode` and not `variant` because the members differ in
+ * behaviour, not only in layout: `pin-row` keeps the form permanently open and renders no
+ * create trigger at all. The repo rule is `mode` = changes semantics, `variant` = changes
+ * layout only.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `mode: 'modal'` is equally valid and needs no import. See {@link CreatingMode}.
+ */
+export const CreatingMode = {
+	/** An extra row appended to the body while the form is open. */
+	Row: 'row',
+	/** A modal dialog opened from the toolbar's create trigger. */
+	Modal: 'modal',
+	/** A permanently pinned row at the top of the body; no create trigger is rendered. */
+	PinRow: 'pin-row',
+} as const
+
+export type CreatingMode = (typeof CreatingMode)[keyof typeof CreatingMode]
+
+export type CreatingConfig<TData> = FeatureToggle & {
+	/** How the create flow behaves. Default: {@link CreatingMode.Row}. */
+	mode?: CreatingMode
 	validate?: ValidateConfig<TData>
+	/** When a field validates. Default: {@link ValidateOn.Submit}. */
 	validateOn?: ValidateOn
-	validateDebounceMs?: number
+	/**
+	 * Debounce (ms) before validation runs while the user types. Applies only when the resolved
+	 * `validateOn` is {@link ValidateOn.Change}. Default:
+	 * {@link DEFAULT_VALIDATE_DEBOUNCE_MS} (200). Override per column with
+	 * `column.creating.debounce`. Same word and unit as `editing.debounce` and
+	 * `filtering.debounce`.
+	 */
+	debounce?: number
+	/**
+	 * Values the create form opens with, applied **over** the per-column
+	 * `creating.defaultValue` seeds (table level wins per key).
+	 *
+	 * Resolved on every `creating.start()`, and must be **synchronous** — see
+	 * {@link ColumnCreatingConfig.defaultValue} for the reasoning behind both.
+	 * The function form is detected with `typeof === 'function'`.
+	 */
+	defaultValues?: Partial<TData> | ((ctx: CreateDefaultValuesContext<TData>) => Partial<TData>)
 	/**
 	 * Called when the user commits the create form. Return nothing for
 	 * synchronous handlers, a `Promise` for async work. Throw
@@ -84,7 +147,7 @@ const INITIAL_STATE: CreatingState = {
 	values: {},
 	errors: {},
 	formError: null,
-	commitStatus: 'idle',
+	commitStatus: CommitStatus.Idle,
 }
 
 function isAbortError(e: unknown): boolean {
@@ -137,23 +200,27 @@ export const CreatingFeature: TableFeature<RowData> = {
 			return col?.columnDef.meta
 		}
 
+		/**
+		 * The column's create-form settings, falling back **per field** to its edit-form ones —
+		 * the same rule the React layer applies to `component` and `description`, through the
+		 * same helper, so a column that states how one form should behave does not have to
+		 * restate it for the other.
+		 */
+		const resolveColumnForm = (columnId: string): ResolvedColumnFormConfig | undefined => {
+			const resolved = resolveColumnFormConfig(resolveColumnMeta(columnId), ColumnFormMode.Creating)
+			return resolved === false ? undefined : resolved
+		}
+
 		const resolveValidateOn = (columnId: string): ValidateOn => {
-			const fromColumn = resolveColumnMeta(columnId)?.validateOn
+			const fromColumn = resolveColumnForm(columnId)?.validateOn
 			if (fromColumn) return fromColumn
-			const config = getConfig()
-			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.validateOn) return validate.validateOn
-			return config?.validateOn ?? DEFAULT_VALIDATE_ON
+			return getConfig()?.validateOn ?? DEFAULT_VALIDATE_ON
 		}
 
 		const resolveDebounceMs = (columnId: string): number => {
-			const fromColumn = resolveColumnMeta(columnId)?.validateDebounceMs
+			const fromColumn = resolveColumnForm(columnId)?.debounce
 			if (fromColumn !== undefined) return fromColumn
-			const config = getConfig()
-			const validate = config?.validate
-			if (validate && typeof validate === 'object' && validate.validateDebounceMs !== undefined)
-				return validate.validateDebounceMs
-			return config?.validateDebounceMs ?? DEFAULT_DEBOUNCE_MS
+			return getConfig()?.debounce ?? DEFAULT_VALIDATE_DEBOUNCE_MS
 		}
 
 		const runValidate = async (values: Record<string, unknown>, ctx: ValidateContext): Promise<ValidationResult> => {
@@ -177,7 +244,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 			const config = getConfig()
 			if (!config?.validate) return
 
-			writeState({ commitStatus: 'validating' })
+			writeState({ commitStatus: CommitStatus.Validating })
 			const values = getState().values
 			let result: ValidationResult
 			try {
@@ -186,7 +253,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 				if (isAbortError(e)) return
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				if (signal.aborted) return
-				writeState({ commitStatus: 'idle' })
+				writeState({ commitStatus: CommitStatus.Idle })
 				throw e
 			}
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -199,7 +266,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 				const nextErrors = fieldErrs && fieldErrs.length > 0 ? { ...rest, [columnId]: fieldErrs } : rest
 				return {
 					...prev,
-					creating: { ...prev.creating, errors: nextErrors, commitStatus: 'idle' },
+					creating: { ...prev.creating, errors: nextErrors, commitStatus: CommitStatus.Idle },
 				}
 			})
 		}
@@ -219,41 +286,77 @@ export const CreatingFeature: TableFeature<RowData> = {
 			})()
 		}
 
+		/**
+		 * Builds the seed for `state.creating.values`: column-level `creating.defaultValue`
+		 * first (in final column order, system columns skipped), then the table-level
+		 * `creating.defaultValues` shallow-merged over them so the table level wins per key.
+		 *
+		 * Runs on every start() — the resolved values are a snapshot of the table as it is
+		 * when the form opens, not of how it was constructed.
+		 */
+		const resolveDefaultValues = (): Record<string, unknown> => {
+			const fromColumns: Record<string, unknown> = {}
+			for (const col of table.getAllColumns()) {
+				const meta = col.columnDef.meta
+				if (!col.id || meta?.isSystemColumn) continue
+				const creating = meta?.creating
+				// A column without a default contributes no key at all — not a key set to undefined.
+				if (!creating || creating.defaultValue === undefined) continue
+				const defaultValue: unknown = creating.defaultValue
+				fromColumns[col.id] =
+					typeof defaultValue === 'function'
+						? (defaultValue as (ctx: CreateDefaultValueContext<RowData>) => unknown)({
+								table,
+								columnId: col.id,
+							})
+						: defaultValue
+			}
+
+			const fromTable = getConfig()?.defaultValues
+			if (fromTable === undefined) return fromColumns
+			// CreatingConfig is instantiated with RowData (= any) inside the feature, so the
+			// resolved patch widens to `any` here — narrow it back before merging.
+			const resolved = (typeof fromTable === 'function' ? fromTable({ table }) : fromTable) as Record<string, unknown>
+			return { ...fromColumns, ...resolved }
+		}
+
 		const api: CreatingApi = {
 			start: () => {
 				resetController()
 				writeState({
 					isOpen: true,
-					values: {},
+					values: resolveDefaultValues(),
 					errors: {},
 					formError: null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 			},
 
 			cancel: () => {
 				controller?.abort()
 				controller = undefined
+				// Values reset to empty, not to the defaults: the form is closed at this point
+				// and the next start() re-applies them.
 				writeState({
 					isOpen: false,
 					values: {},
 					errors: {},
 					formError: null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 			},
 
 			commit: async () => {
 				const config = getConfig()
 				if (!config) return
-				if (getState().commitStatus !== 'idle') return // UI invariant — second click is no-op
+				if (getState().commitStatus !== CommitStatus.Idle) return // UI invariant — second click is no-op
 
 				const c = resetController()
 
 				writeState({
 					errors: {},
 					formError: null,
-					commitStatus: 'validating',
+					commitStatus: CommitStatus.Validating,
 				})
 
 				const values = getState().values
@@ -265,7 +368,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 						result = await runValidate(values, { signal: c.signal })
 					} catch (e) {
 						if (c.signal.aborted) return
-						writeState({ commitStatus: 'idle' })
+						writeState({ commitStatus: CommitStatus.Idle })
 						throw e
 					}
 					if (c.signal.aborted) return
@@ -273,14 +376,14 @@ export const CreatingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: result.errors ?? {},
 							formError: result.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 				}
 
 				// ── save phase ───────────────────────────────────────────────
-				writeState({ commitStatus: 'saving' })
+				writeState({ commitStatus: CommitStatus.Saving })
 				try {
 					await config.onSave({ values, signal: c.signal })
 					if (c.signal.aborted) return
@@ -290,7 +393,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 						values: {},
 						errors: {},
 						formError: null,
-						commitStatus: 'idle',
+						commitStatus: CommitStatus.Idle,
 					})
 				} catch (e) {
 					if (c.signal.aborted) return
@@ -298,13 +401,13 @@ export const CreatingFeature: TableFeature<RowData> = {
 						writeState({
 							errors: e.errors,
 							formError: e.formError ?? null,
-							commitStatus: 'idle',
+							commitStatus: CommitStatus.Idle,
 						})
 						return
 					}
 					writeState({
 						formError: GENERIC_FORM_ERROR,
-						commitStatus: 'idle',
+						commitStatus: CommitStatus.Idle,
 					})
 					throw e
 				}
@@ -323,7 +426,7 @@ export const CreatingFeature: TableFeature<RowData> = {
 						},
 					}
 				})
-				if (resolveValidateOn(key) === 'change' && getConfig()?.validate) {
+				if (resolveValidateOn(key) === ValidateOn.Change && getConfig()?.validate) {
 					scheduleChangeValidation(key)
 				}
 			},
@@ -351,20 +454,20 @@ export const CreatingFeature: TableFeature<RowData> = {
 				if (!config?.validate) return null
 				const c = resetController()
 				const values = getState().values
-				writeState({ commitStatus: 'validating' })
+				writeState({ commitStatus: CommitStatus.Validating })
 				let result: ValidationResult
 				try {
 					result = await runValidate(values, { signal: c.signal })
 				} catch (e) {
 					if (c.signal.aborted) return null
-					writeState({ commitStatus: 'idle' })
+					writeState({ commitStatus: CommitStatus.Idle })
 					throw e
 				}
 				if (c.signal.aborted) return null
 				writeState({
 					errors: result?.errors ?? {},
 					formError: result?.formError ?? null,
-					commitStatus: 'idle',
+					commitStatus: CommitStatus.Idle,
 				})
 				return result
 			},

@@ -1,23 +1,8 @@
+import { defineCellType } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
-import type { CellTypeDefinition } from '../cell-types-context'
-import type { FieldState } from '@ez-kit/data-grid-core'
+import type { NumberCellConfig, FieldState } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
-
-export type NumberCellConfig = {
-	/** Fixed number of fraction digits (both min and max). */
-	decimals?: number
-	/** Override the locale's thousands separator (e.g. `' '`, `','`). */
-	thousandsSeparator?: string
-	/** Override the locale's decimal separator (e.g. `'.'`, `','`). */
-	decimalSeparator?: string
-	/** String prepended to the formatted value (e.g. `'$'`). */
-	prefix?: string
-	/** String appended to the formatted value (e.g. `' kg'`). */
-	suffix?: string
-	/** BCP 47 locale tag. Default: runtime/system locale. */
-	locale?: string | string[]
-}
 
 /** Pure formatter used by the view renderer. Exposed for testing. */
 export function formatNumber(value: number, config?: NumberCellConfig): string {
@@ -44,7 +29,7 @@ export function formatNumber(value: number, config?: NumberCellConfig): string {
 }
 
 function NumberCellInput(props: FieldState<NumberCellConfig>): ReactNode {
-	const { NumberInput } = useGridComponents().editing
+	const { NumberInput } = useGridComponents().core
 	return (
 		<NumberInput
 			value={typeof props.value === 'number' ? props.value : undefined}
@@ -61,16 +46,16 @@ function NumberCellInput(props: FieldState<NumberCellConfig>): ReactNode {
  *
  * - `view`: formats via {@link Intl.NumberFormat} with optional override of
  *   thousands/decimal separators, prefix, suffix, decimals, locale.
- * - `edit` / `creating` / `filter`: thin wrapper over `useGridComponents().NumberInput`.
+ * - `editing` / `creating` / `filtering`: thin wrapper over `useGridComponents().core.NumberInput`.
  *
  * Zero visual choices — formatting logic only. UI primitive comes from DI.
  */
-export const numberCellType: CellTypeDefinition<NumberCellConfig> = {
+export const numberCellType = defineCellType<NumberCellConfig>()({
 	view: ({ value, config }) => {
 		if (typeof value !== 'number' || Number.isNaN(value)) return value == null ? '' : String(value)
 		return formatNumber(value, config)
 	},
-	edit: NumberCellInput,
+	editing: NumberCellInput,
 	creating: NumberCellInput,
-	filter: NumberCellInput,
-}
+	filtering: NumberCellInput,
+})

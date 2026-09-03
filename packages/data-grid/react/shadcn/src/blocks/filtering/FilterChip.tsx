@@ -7,12 +7,13 @@ import { cn } from '@grid-shadcn/lib/utils'
 
 import type { FilterChipProps } from '@ez-kit/data-grid-react'
 
-export function FilterChip({ label, value, onRemove, kind }: FilterChipProps) {
+export function FilterChip({ label, value, onRemove, kind, isDraft }: FilterChipProps) {
 	return (
 		<Badge
 			variant='secondary'
 			data-slot='filter-chip'
 			data-chip-kind={kind}
+			{...(isDraft ? { 'data-draft-filter': '' } : {})}
 			className={cn('gap-1.5 pr-1 pl-2 py-1 h-auto text-xs font-normal')}
 		>
 			<span className='font-medium text-muted-foreground'>{label}</span>

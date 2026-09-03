@@ -1,30 +1,64 @@
-import { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, ROW_PIN_COLUMN_ID, SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import {
+	ACTIONS_COLUMN_ID,
+	CommitStatus,
+	EditingMode,
+	EXPAND_COLUMN_ID,
+	SELECTION_COLUMN_ID,
+} from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
+import { resolveCellClassName } from '../utils/class-names'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { ActionsCell } from './actions-cell'
+import { getAlignAttrs } from './align-attrs'
 import { flexRender } from './flex-render'
-import { RowPinCell } from './row-pin-cell'
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
-import type { FieldState } from '@ez-kit/data-grid-core'
+import type { ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
-type CellProps = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	cell: Cell<any, unknown>
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	row: Row<any>
+/**
+ * What a `<DataGrid.Cell>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Cell<Order>>` — and the render arguments are typed: `row.original` is an `Order`.
+ * See {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridCellRenderArgs<TRow extends object = any> = {
+	cell: Cell<TRow, unknown>
+	row: Row<TRow>
+	/** The cell's value, already resolved through the column's accessor. */
+	value: unknown
 }
 
-type PinInfo = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridCellProps<TRow extends object = any> = {
+	cell: Cell<TRow, unknown>
+	row: Row<TRow>
+	/**
+	 * Custom content for this one cell, rendered inside the kit's `Td` — so the cell keeps its
+	 * pinning offset, its `data-*` attributes and its `cellClassName`.
+	 *
+	 * Omit it for the built-in content: the cell-type renderer, the inline editor, the system
+	 * column controls. Supply it to replace just the content of one cell.
+	 *
+	 * A column-wide override belongs on the column instead (`cell.component`), which also feeds
+	 * the create and edit forms; this is for a single cell in a hand-composed row.
+	 */
+	children?: ReactNode | ((args: DataGridCellRenderArgs<TRow>) => ReactNode)
+}
+
+/** The chrome a body cell wears regardless of what it renders: pin offsets and alignment. */
+type CellChrome = {
 	pinVars: CSSProperties
-	pinned: false | 'left' | 'right'
-	pinnedAttrs: { 'data-pinned'?: 'left' | 'right' }
+	pinned: false | ColumnPinSide
+	pinnedAttrs: { 'data-pinned'?: ColumnPinSide }
+	alignAttrs: { 'data-align'?: ColumnAlign }
 }
 
 const EMPTY_ERRORS: readonly string[] = Object.freeze([])
@@ -41,8 +75,19 @@ const EMPTY_ERRORS: readonly string[] = Object.freeze([])
  * The structural stylesheet shipped with this package applies the actual
  * `position: sticky` + offsets.
  */
-export function DataGridCell({ cell, row }: CellProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function DataGridCell<TRow extends object = any>({ cell, row, children }: DataGridCellProps<TRow>) {
 	const meta = cell.column.columnDef.meta
+	if (children !== undefined) {
+		return (
+			<CustomCell
+				cell={cell}
+				row={row}
+			>
+				{children}
+			</CustomCell>
+		)
+	}
 	if (meta?.isSystemColumn) {
 		return (
 			<SystemCell
@@ -59,18 +104,47 @@ export function DataGridCell({ cell, row }: CellProps) {
 	)
 }
 
+/**
+ * A cell whose content the caller supplied. Keeps the `Td` shell — pinning vars, `data-slot`,
+ * `data-pinned` and the column's `cellClassName` — so a replaced cell still lines up with its
+ * neighbours and its pinned column still sticks.
+ */
+function CustomCell({ cell, row, children }: DataGridCellProps) {
+	const { Td } = useGridComponents().core
+	const meta = cell.column.columnDef.meta
+	const chrome = getCellChrome(cell)
+	const cellClassName = resolveCellClassName(meta?.cellClassName, {
+		row: row.original as unknown,
+		value: cell.getValue<unknown>(),
+		rowIndex: row.index,
+	})
+
+	return (
+		<Td
+			data-slot='td'
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
+			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
+		>
+			{typeof children === 'function' ? children({ cell, row, value: cell.getValue<unknown>() }) : children}
+		</Td>
+	)
+}
+
 // ── system columns ──────────────────────────────────────────────────────────
 
-function SystemCell({ cell, row }: CellProps) {
+function SystemCell({ cell, row }: DataGridCellProps) {
 	const columnId = cell.column.id
-	const pin = getCellPinInfo(cell)
+	const chrome = getCellChrome(cell)
 	const { Td } = useGridComponents().core
 
 	if (columnId === SELECTION_COLUMN_ID) {
 		return (
 			<SelectionCell
 				row={row}
-				pin={pin}
+				chrome={chrome}
 			/>
 		)
 	}
@@ -78,7 +152,7 @@ function SystemCell({ cell, row }: CellProps) {
 		return (
 			<ExpandCell
 				row={row}
-				pin={pin}
+				chrome={chrome}
 			/>
 		)
 	}
@@ -86,24 +160,13 @@ function SystemCell({ cell, row }: CellProps) {
 		return (
 			<Td
 				data-slot='td'
-				style={pin.pinVars}
-				pinned={pin.pinned}
-				{...pin.pinnedAttrs}
+				style={chrome.pinVars}
+				pinned={chrome.pinned}
+				{...chrome.pinnedAttrs}
+				{...chrome.alignAttrs}
 				data-system-column='actions'
 			>
 				<ActionsCell row={row} />
-			</Td>
-		)
-	}
-	if (columnId === ROW_PIN_COLUMN_ID) {
-		return (
-			<Td
-				data-slot='td'
-				style={pin.pinVars}
-				pinned={pin.pinned}
-				{...pin.pinnedAttrs}
-			>
-				<RowPinCell row={row} />
 			</Td>
 		)
 	}
@@ -113,23 +176,24 @@ function SystemCell({ cell, row }: CellProps) {
 type SystemSubProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
-	pin: PinInfo
+	chrome: CellChrome
 }
 
-function SelectionCell({ row, pin }: SystemSubProps) {
+function SelectionCell({ row, chrome }: SystemSubProps) {
 	const { Td, Checkbox } = useGridComponents().core
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
 	// re-derive correctly. Refining this to per-row keys breaks indeterminate
 	// state for parent rows (which depends on children).
-	useDataGridStore((s) => s.rowSelection)
+	useDataGridState((s) => s.rowSelection)
 	const isSelected = row.getIsSelected()
 	const isIndeterminate = typeof row.getIsSomeSelected === 'function' ? row.getIsSomeSelected() : undefined
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 		>
 			<Checkbox
 				value={isSelected}
@@ -143,20 +207,21 @@ function SelectionCell({ row, pin }: SystemSubProps) {
 	)
 }
 
-function ExpandCell({ row, pin }: SystemSubProps) {
+function ExpandCell({ row, chrome }: SystemSubProps) {
 	const gridComponents = useGridComponents()
 	const { Td } = gridComponents.core
 	const { Chevron } = gridComponents.expanding
 	// Subscribe broadly to expanded so derived row.getIsExpanded() re-renders.
-	useDataGridStore((s) => s.expanded)
+	useDataGridState((s) => s.expanded)
 	const canExpand = row.getCanExpand()
 	const isExpanded = row.getIsExpanded()
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 			data-system-column='expand'
 			data-depth={row.depth}
 		>
@@ -173,62 +238,74 @@ function ExpandCell({ row, pin }: SystemSubProps) {
 
 // ── data columns ────────────────────────────────────────────────────────────
 
-function BodyDataCell({ cell, row }: CellProps) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+function BodyDataCell({ cell, row }: DataGridCellProps) {
+	const table = useDataGridTable()
 	const { Td } = useGridComponents().core
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
-	const pin = getCellPinInfo(cell)
+	const chrome = getCellChrome(cell)
 
-	const editMode: 'row' | 'modal' | 'cell' = table.options.editing?.mode ?? 'row'
+	const editMode: EditingMode = table.options.editing?.mode ?? EditingMode.Row
 	const cellId = `${row.id}_${columnId}`
 
 	// Narrow boolean subscription. For non-target rows this remains stably `false`
 	// across any `editing` mutation → no re-render. Flips exactly once on
 	// start / cancel / commit of THIS row (or cell in cell-mode).
-	const isEditing = useDataGridStore((s) =>
+	const isEditing = useDataGridState((s) =>
 		editMode === 'cell' ? s.editing.cellId === cellId : s.editing.rowId === row.id,
 	)
 
-	if (isEditing && (editMode === 'cell' || meta?.editing !== false)) {
+	const isColumnEditable = meta?.editing !== false
+
+	if (isEditing && isColumnEditable) {
 		return (
 			<EditingCell
 				cell={cell}
 				editMode={editMode}
 				cellId={cellId}
-				pin={pin}
+				chrome={chrome}
 			/>
 		)
 	}
 
 	// ── normal view cell ───────────────────────────────────────────────────────
+	// `editing: false` opts a column out at every mode, cell mode included: it used to be
+	// bypassed here, so a read-only column still became an input on double-click.
 	const handleDoubleClick =
-		editMode === 'cell'
+		editMode === 'cell' && isColumnEditable
 			? () => {
 					table.editing.startCell(row.id, columnId)
 				}
 			: undefined
 
 	const viewComp = resolveViewComponent(meta, cellTypes)
+	const cellClassName = resolveCellClassName(meta?.cellClassName, {
+		row: cell.row.original as unknown,
+		value: cell.getValue<unknown>(),
+		rowIndex: cell.row.index,
+	})
 
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
+			{...(cellClassName !== undefined ? { className: cellClassName } : {})}
 			onDoubleClick={handleDoubleClick}
 		>
 			{viewComp
-				? viewComp({
-						value: cell.getValue(),
-						row: cell.row.original,
+				? flexRender(viewComp, {
+						// `cell` is row-type-erased here, so `getValue()` and `row.original` are both
+						// `any`. The view contract says `unknown` — narrow once, at the boundary.
+						value: cell.getValue<unknown>(),
+						row: cell.row.original as unknown,
 						rowIndex: cell.row.index,
-						...(meta?.config !== undefined ? { config: meta.config } : {}),
+						...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 					})
-				: flexRender(cell.column.columnDef.cell, cell.getContext() as unknown as Record<string, unknown>)}
+				: flexRender(cell.column.columnDef.cell, cell.getContext())}
 		</Td>
 	)
 }
@@ -236,9 +313,9 @@ function BodyDataCell({ cell, row }: CellProps) {
 type EditingCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	cell: Cell<any, unknown>
-	editMode: 'row' | 'modal' | 'cell'
+	editMode: EditingMode
 	cellId: string
-	pin: PinInfo
+	chrome: CellChrome
 }
 
 /**
@@ -249,22 +326,21 @@ type EditingCellProps = {
  * - `value`: from `editing.values[columnId]` — primitive or stable ref
  * - `errors`: from `editing.errors[columnId]` — `undefined` when no errors
  *   (stable falsy), array when present (stable ref while content unchanged)
- * - `isValidating`: boolean from `commitStatus === 'validating'`
+ * - `isValidating`: boolean from `commitStatus === CommitStatus.Validating`
  *
  * As a result, `setValue` on a different column does not re-render this cell:
  * only the one whose `values[columnId]` key actually changed re-renders.
  */
-function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
-	const instance = useDataGridInstance()
-	const table = instance.table
+function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
+	const table = useDataGridTable()
 	const { Td, Input } = useGridComponents().core
 	const cellTypes = useCellTypes()
 	const columnId = cell.column.id
 	const meta = cell.column.columnDef.meta
 
-	const value = useDataGridStore((s) => s.editing.values[columnId])
-	const rawErrors = useDataGridStore((s) => s.editing.errors[columnId])
-	const isValidating = useDataGridStore((s) => s.editing.commitStatus === 'validating')
+	const value = useDataGridState((s) => s.editing.values[columnId])
+	const rawErrors = useDataGridState((s) => s.editing.errors[columnId])
+	const isValidating = useDataGridState((s) => s.editing.commitStatus === CommitStatus.Validating)
 
 	const fieldErrors = rawErrors ?? EMPTY_ERRORS
 	const fieldError = fieldErrors[0]
@@ -281,7 +357,7 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 			table.editing.setValue(columnId, v)
 		},
 		onBlur,
-		...(meta?.config !== undefined ? { config: meta.config } : {}),
+		...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 		error: fieldError,
 		errors: [...fieldErrors],
 		isValidating,
@@ -290,13 +366,14 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 	return (
 		<Td
 			data-slot='td'
-			style={pin.pinVars}
-			pinned={pin.pinned}
-			{...pin.pinnedAttrs}
+			style={chrome.pinVars}
+			pinned={chrome.pinned}
+			{...chrome.pinnedAttrs}
+			{...chrome.alignAttrs}
 			{...(fieldError ? { 'data-error': true } : {})}
 		>
 			{editComp ? (
-				editComp(fieldState)
+				flexRender(editComp, fieldState)
 			) : (
 				<Input
 					{...(editMode === 'cell' ? { autoFocus: true } : {})}
@@ -313,35 +390,36 @@ function EditingCell({ cell, editMode, cellId, pin }: EditingCellProps) {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-function getCellPinInfo(cell: Cell<unknown, unknown>): PinInfo {
+function getCellChrome(cell: Cell<unknown, unknown>): CellChrome {
 	const pinVars = getCommonPinStyles(cell.column)
 	const pinned = cell.column.getIsPinned()
-	const pinnedAttrs: PinInfo['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
-	return { pinVars, pinned, pinnedAttrs }
+	const pinnedAttrs: CellChrome['pinnedAttrs'] = pinned ? { 'data-pinned': pinned } : {}
+	return { pinVars, pinned, pinnedAttrs, alignAttrs: getAlignAttrs(cell.column.columnDef.meta, 'cell') }
 }
 
 function resolveEditComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
-): ((props: FieldState) => ReactNode) | undefined {
+): ComponentType<FieldState> | undefined {
 	// 1. column-level editing.component
 	const editingConfig = meta?.editing
 	if (editingConfig !== false && editingConfig !== undefined) {
 		const comp = editingConfig.component
-		if (comp) return comp as (props: FieldState) => ReactNode
+		if (comp) return comp as ComponentType<FieldState>
 	}
-	// 2. registry by cellType
-	if (meta?.cellType) {
-		const def = registry[meta.cellType]
-		if (def?.edit) return def.edit
+	// 2. registry by cell type
+	const cellTypeId = meta?.cell?.type
+	if (cellTypeId) {
+		const def = registry[cellTypeId]
+		if (def?.editing) return def.editing
 	}
 	return undefined
 }
 
 /**
  * Resolves the view renderer for a column.
- * - `meta.cellView` (set from `cell.component` in mapColumns) takes precedence.
- * - Otherwise, looks up `meta.cellType` in the cell-type registry.
+ * - `meta.cell?.view` (set from `cell.component` in mapColumns) takes precedence.
+ * - Otherwise, looks up `meta.cell?.type` in the cell-type registry.
  *
  * Returns `undefined` when no renderer is found — the caller falls back to
  * TanStack's default cell rendering (raw value).
@@ -352,14 +430,15 @@ function resolveEditComponent(
 function resolveViewComponent(
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	registry: CellTypeRegistry,
-): ((props: CellViewProps) => ReactNode) | undefined {
-	if (meta?.cellView) {
-		const cellView = meta.cellView
-		return (props: CellViewProps) =>
-			cellView({ row: props.row, value: props.value, rowIndex: props.rowIndex }) as ReactNode
-	}
-	if (meta?.cellType) {
-		const def = registry[meta.cellType]
+): ComponentType<CellViewProps> | undefined {
+	// Returned as-is, never wrapped: `flexRender` mounts by component identity, so a wrapper
+	// allocated here would be a fresh component type on every render and remount the cell each
+	// time. `cell.component` takes `{ row, value, rowIndex }` and simply ignores the extra
+	// `config` that `CellViewProps` carries, so the shapes are already compatible.
+	if (meta?.cell?.view) return meta.cell.view as ComponentType<CellViewProps>
+	const cellTypeId = meta?.cell?.type
+	if (cellTypeId) {
+		const def = registry[cellTypeId]
 		if (def?.view) return def.view
 	}
 	return undefined

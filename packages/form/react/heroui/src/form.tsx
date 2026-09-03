@@ -2,6 +2,7 @@
 
 import { createForm } from '@ez-kit/form-react'
 
+import { DateField, DateRangeField } from './blocks/date'
 import {
 	CheckboxField,
 	NumberField,
@@ -11,8 +12,11 @@ import {
 	TextareaField,
 	TextField,
 } from './blocks/fields'
-import { Button, Form } from './blocks/form-parts'
+import { Button, Form as FormElement } from './blocks/form-parts'
+import { GridItem, Section } from './blocks/layout'
+import { CheckboxGroupField, MultiSelectField } from './blocks/multi-value'
 import { SelectField } from './blocks/select'
+import { Wizard } from './blocks/wizard'
 
 import type { FormComponents } from '@ez-kit/form-react'
 
@@ -30,10 +34,17 @@ const components = {
 	SwitchField,
 	RadioGroupField,
 	SliderField,
+	MultiSelectField,
+	CheckboxGroupField,
+	DateField,
+	DateRangeField,
 	Button,
-	Form,
+	Form: FormElement,
+	Section,
+	GridItem,
+	Wizard,
 } satisfies FormComponents
 
-const { useForm } = createForm({ components })
+const { useForm, Form, FormRenderer, withForm, withFieldGroup } = createForm({ components })
 
-export { useForm }
+export { useForm, Form, FormRenderer, withForm, withFieldGroup }

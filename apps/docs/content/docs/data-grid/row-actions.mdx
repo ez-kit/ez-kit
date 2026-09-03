@@ -1,0 +1,157 @@
+---
+title: Row Actions
+description: The per-row actions column that holds edit, delete, the row-pin menu and your own actions — inline buttons or a single overflow menu.
+---
+
+# Row Actions
+
+Edit, delete and row pinning all act on a single row, so they share one column at the right edge of
+the grid. The column is injected automatically as soon as any of them is enabled — you never declare
+it yourself.
+
+## Layout
+
+By default each action is its own icon button, side by side:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+	deleting={{ onDelete }}
+	pinning={{ row: { top: true, bottom: true } }}
+/>
+```
+
+Set `rowActions.variant` to `'menu'` to collapse them into one overflow menu instead:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+	deleting={{ onDelete }}
+	pinning={{ row: { top: true, bottom: true } }}
+	rowActions={{ variant: 'menu' }}
+/>
+```
+
+The pin actions always live behind a menu — inline or not — because there are up to three of them
+(`Pin Top`, `Pin Bottom`, `Unpin`) and only one applies at a time.
+
+While a row is in **inline** edit mode, save and cancel are rendered as buttons regardless of the
+variant: burying a pending commit inside a dropdown would hide it behind an extra click.
+
+## Custom actions
+
+The built-in three are rarely the whole story — a row usually also wants a _Duplicate_, a _Send
+invoice_, a _View history_. `rowActions.actions` is that slot, the per-row counterpart of
+[`selection.bar.actions`](./data-grid/selection) for bulk operations. It is called per row, so a
+row's entries can depend on the row itself:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+	deleting={{ onDelete }}
+	rowActions={{
+		actions: ({ row }) => [
+			{
+				id: 'duplicate',
+				label: 'Duplicate',
+				disabled: !row.original.active,
+				onSelect: () => duplicate(row.original),
+			},
+		],
+	}}
+/>
+```
+
+Return `[]` for a row that offers nothing extra.
+
+<DataGridDocsExample exampleId='row-actions-custom' />
+
+Custom entries live in the **overflow menu** under both variants: with `variant: 'menu'` there is
+only the one menu, and with `variant: 'inline'` they join the menu that already carries the pin
+actions — so an inline grid with custom actions grows one trigger, not one button per action. They
+are not promoted to inline buttons on purpose: the cell is a fixed width, and an open-ended set of
+application actions has neither the room nor a guaranteed icon.
+
+### Entry shape
+
+| Field         | Type                           | Description                                                                                                                          |
+| ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`          | `string`                       | Required. Stable within the menu. Namespaced internally, so it cannot collide with a built-in action.                                |
+| `label`       | `string`                       | Required. The wording rendered in the menu.                                                                                          |
+| `icon`        | `GridMenuIcon \| ReactElement` | A built-in glyph name (`'edit'`, `'delete'`, `'pin-top'`, …) the kit maps to its own icon, or your own element. Omit for label-only. |
+| `disabled`    | `boolean`                      | Renders the entry inert.                                                                                                             |
+| `destructive` | `boolean`                      | Renders the entry in the kit's destructive colour, like the built-in Delete.                                                         |
+| `onSelect`    | `() => void`                   | Required. Runs when the entry is chosen.                                                                                             |
+
+The built-in vocabulary names grid affordances — edit, delete, pin, sort, hide — so an application
+action such as _Duplicate_ has no honest member of it and brings its own element instead:
+
+```tsx
+rowActions: {
+	actions: ({ row }) => [
+		{ id: 'duplicate', label: 'Duplicate', icon: <Copy />, onSelect: () => duplicate(row.original) },
+		{ id: 'archive', label: 'Archive', icon: 'delete', onSelect: () => archive(row.original) },
+	],
+}
+```
+
+A name outside the built-in set is a **compile error**, not a silently missing glyph — which is
+what `icon: string` used to give you.
+
+## Column width
+
+The column sizes itself from the number of actions it renders, rather than falling back to the
+150px default width TanStack gives a column with no `width`. Resize it like any other column when
+`resizing` is enabled.
+
+Supplying `rowActions.actions` reserves room for the overflow trigger, so an inline grid that had
+none before widens by one button — and one that already showed the pin menu does not widen at all,
+since the two share that trigger.
+
+## Options
+
+| Option               | Type                                  | Description                                                                                                                    |
+| -------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `rowActions.variant` | `'inline' \| 'menu'`                  | `inline` (default) — one button per action. `menu` — every action in one dropdown.                                             |
+| `rowActions.actions` | `({ row, table }) => RowActionItem[]` | Custom entries appended to the built-ins, built per row. See [Custom actions](#custom-actions).                                |
+| `rowActions.column`  | `SystemColumnDef`                     | The actions column itself — its header, width, pinning. See [The column itself](#the-column-itself).                           |
+| `rowActions.enabled` | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
+
+## The column itself
+
+`selection`, `expanding` and `rowActions` each inject a column, and each takes a `column`
+option describing it — with the same names, and the same scalar-or-object forms, an ordinary
+column uses.
+
+| Option            | Type                                                          | Description                                                                                                                            |
+| ----------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `header`          | `string \| (ctx) => ReactNode`                                | Header content. Omitted, the column keeps its built-in header — the select-all checkbox for selection, nothing for expand and actions. |
+| `width`           | `number \| { default?, min?, max? }`                          | Width in pixels. Defaults: `44` for selection and expand, a derived width for actions.                                                 |
+| `pinning`         | `false \| 'left' \| 'right' \| { side?, initialSide? }`       | Which viewport edge it sticks to. Defaults: `'left'` for selection and expand, `'right'` for actions.                                  |
+| `align`           | `'start' \| 'center' \| 'end' \| { header?, cell?, footer? }` | Horizontal alignment. Logical, like a normal column's `align`.                                                                         |
+| `headerClassName` | `string`                                                      | Class applied to the header cell.                                                                                                      |
+| `cellClassName`   | `string`                                                      | Class applied to the body cells.                                                                                                       |
+
+```tsx
+<DataGrid
+	data={rows}
+	columns={columns}
+	deleting={{ onDelete }}
+	rowActions={{ column: { header: 'Actions', width: 120, pinning: false } }}
+/>
+```
+
+## See also
+
+- [Editing](./data-grid/editing)
+- [Row pinning](./data-grid/row-pinning)
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/features/row-actions/row-actions.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/features/row-actions/row-actions.ts)

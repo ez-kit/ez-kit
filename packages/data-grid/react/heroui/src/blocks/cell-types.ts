@@ -1,4 +1,4 @@
-import { booleanCellType, numberCellType, textCellType } from '@ez-kit/data-grid-react/cell-types'
+import { baseCellTypes } from '@ez-kit/data-grid-react'
 
 import { BadgeCellInput, BadgeCellView } from './cell-types/BadgeCell'
 import { BooleanCellInput, BooleanCellView, BooleanFilterInput } from './cell-types/BooleanCell'
@@ -12,35 +12,41 @@ import { TextCellInput } from './cell-types/TextCell'
 
 import type { CellTypeRegistry } from '@ez-kit/data-grid-react'
 
-export const cellTypes: CellTypeRegistry = {
+export const cellTypes = {
 	text: {
-		...textCellType,
-		edit: TextCellInput,
-		creating: TextCellInput,
-		filter: TextCellInput,
+		...baseCellTypes.text,
+		editing: TextCellInput,
+		filtering: TextCellInput,
 	},
 	number: {
-		...numberCellType,
-		edit: NumberCellInput,
-		creating: NumberCellInput,
-		filter: NumberCellInput,
+		...baseCellTypes.number,
+		editing: NumberCellInput,
+		filtering: NumberCellInput,
 	},
 	boolean: {
-		...booleanCellType,
+		...baseCellTypes.boolean,
 		view: BooleanCellView,
-		edit: BooleanCellInput,
-		creating: BooleanCellInput,
-		filter: BooleanFilterInput,
+		editing: BooleanCellInput,
+		filtering: BooleanFilterInput,
 	},
 	date: {
+		...baseCellTypes.date,
 		view: DateCellView,
-		edit: DateCellInput,
-		creating: DateCellInput,
-		filter: DateCellInput,
+		editing: DateCellInput,
+		filtering: DateCellInput,
 	},
-	select: { view: SelectCellView, edit: SelectCellInput, filter: SelectCellInput },
-	badge: { view: BadgeCellView, edit: BadgeCellInput, filter: BadgeCellInput },
-	image: { view: ImageCellView, edit: ImageCellInput },
-	link: { view: LinkCellView, edit: LinkCellInput },
-	progress: { view: ProgressCellView, edit: ProgressCellInput },
-}
+	select: { ...baseCellTypes.select, view: SelectCellView, editing: SelectCellInput, filtering: SelectCellInput },
+	badge: { ...baseCellTypes.badge, view: BadgeCellView, editing: BadgeCellInput, filtering: BadgeCellInput },
+	image: { ...baseCellTypes.image, view: ImageCellView, editing: ImageCellInput },
+	link: { ...baseCellTypes.link, view: LinkCellView, editing: LinkCellInput },
+	progress: { ...baseCellTypes.progress, view: ProgressCellView, editing: ProgressCellInput },
+} satisfies CellTypeRegistry
+
+/**
+ * The registry's type, under a name.
+ *
+ * `createDataGrid` is instantiated with this alias rather than letting `typeof cellTypes` be
+ * inferred, so the bundled `.d.ts` refers to the registry **by name** instead of re-printing
+ * all nine entries structurally at every use site.
+ */
+export type KitCellTypes = typeof cellTypes

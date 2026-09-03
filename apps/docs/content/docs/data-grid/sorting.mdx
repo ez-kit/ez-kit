@@ -23,16 +23,42 @@ A toolbar-driven sort UI for selecting sort field + direction:
 
 ## Options
 
-| Option                     | Type                       | Description                                                                                                |
-| -------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `enableSorting`            | `boolean`                  | Master switch. Default `true`.                                                                             |
-| `enableMultiSort`          | `boolean`                  | Default `true`. Set `false` to allow only one sorted column at a time.                                     |
-| `initialState.sorting`     | `SortingState`             | `[{ id, desc }]` — initial sort order.                                                                     |
-| `state.sorting`            | `SortingState`             | Controlled sort state.                                                                                     |
-| `onSortingChange`          | `(updater) => void`        | Subscribe to sort changes.                                                                                 |
-| Per-column `enableSorting` | `boolean`                  | Disable sort on specific columns.                                                                          |
-| Per-column `sortingFn`     | name \| `(a, b) => number` | Built-in: `'auto'`, `'alphanumeric'`, `'basic'`, `'datetime'`, `'text'`, etc. Or pass a custom comparator. |
+### `sorting`
+
+| Option      | Type                              | Description                                                                                                                    |
+| ----------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `manual`    | `boolean`                         | Disable client-side sorting. The grid calls `onChange` instead — see [Server-side Data](./data-grid/server-side).              |
+| `descFirst` | `boolean`                         | First click sorts descending. Default `false`.                                                                                 |
+| `clearable` | `boolean`                         | Allow a third click to clear the sort. Default `true`.                                                                         |
+| `multi`     | `boolean \| MultiSortConfig`      | Multi-column sort. `false` (default) = single-column only; `true` = enabled with defaults.                                     |
+| `toolbar`   | `boolean`                         | Show a multi-sort builder button in the toolbar. Default `false`. UI-only, ignored by core.                                    |
+| `fns`       | `Record<string, SortingFn>`       | Named sort functions, addressable from column `sorting.fn` by id.                                                              |
+| `onChange`  | `(sorting: SortingState) => void` | Called when sort state changes.                                                                                                |
+| `enabled`   | `boolean`                         | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`. |
+
+### `MultiSortConfig`
+
+| Option      | Type                            | Description                                                             |
+| ----------- | ------------------------------- | ----------------------------------------------------------------------- |
+| `max`       | `number`                        | Cap on simultaneously sorted columns. Unlimited by default.             |
+| `event`     | `'shift' \| 'ctrl' \| 'always'` | Gesture that engages multi-sort. Default `'shift'`.                     |
+| `removable` | `boolean`                       | Allow removing a single column from the multi-sort set. Default `true`. |
+
+### Per-column `sorting`
+
+| Option      | Type                                                   | Description                                                                                                                                                                                                  |
+| ----------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `false`     | —                                                      | Disable sorting for this column.                                                                                                                                                                             |
+| `descFirst` | `boolean`                                              | Overrides the table-level `sorting.descFirst` for this column.                                                                                                                                               |
+| `fn`        | built-in name \| registry id \| `(a, b, id) => number` | Built-in: `'alphanumeric'`, `'alphanumericCaseSensitive'`, `'text'`, `'textCaseSensitive'`, `'datetime'`, `'basic'`. Or an id resolved from the table-level `sorting.fns` registry, or an inline comparator. |
+| `undefined` | `'first' \| 'last' \| false`                           | Where `undefined` values land. Default `false` (treated as `0`).                                                                                                                                             |
+| `invert`    | `boolean`                                              | Invert direction — useful for ranking columns where lower is "better".                                                                                                                                       |
+| `multi`     | `boolean`                                              | Allow this column to participate in multi-sort. Default `true` (when multi enabled).                                                                                                                         |
+
+### Controlled state
+
+`state.sorting` and `onStateChange` — see [Controlled State](./data-grid/controlled-state).
 
 ## Source
 
-- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/sort-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/sort-trigger.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/sort-menu-trigger.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/sort-menu-trigger.tsx)

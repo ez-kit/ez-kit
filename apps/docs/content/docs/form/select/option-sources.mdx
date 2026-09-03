@@ -1,0 +1,258 @@
+---
+title: Option sources
+description: Name a list instead of writing it into the document — a country cascade, a 200-entry dictionary, or anything else the app already fetches.
+---
+
+# Option sources
+
+A select-like field usually carries its own `options`. That stops working in two places:
+
+- A **200-country list** does not belong inside a form document, repeated once per document.
+- A **cascade** — the city list depends on the country the user just picked — cannot be written down at all, because the list is not known until the form is being filled in.
+
+In the JSX API this is a non-problem: `options` is a prop, so the app computes it.
+
+```tsx
+const { data, isPending } = useQuery({ queryKey: ['cities', country], queryFn: fetchCities })
+;<form.SelectField
+	name='city'
+	label='City'
+	options={data ?? []}
+	loading={isPending}
+/>
+```
+
+The gap is the **JSON document**, which has no place to put a `useQuery` call. `optionsFrom` closes it: the document names a list, and the app decides what that name fetches.
+
+```json
+{ "type": "select", "name": "address.city", "optionsFrom": "cities" }
+```
+
+## The name, never a URL
+
+A document names a **source**. It never carries a URL, and there is deliberately no escape hatch that lets it.
+
+`parseFormSchema` is the trust boundary for a delivered document, and it works by checking every extension point against _this app's_ registered capabilities — `fieldTypes`, `blocks`, `rules`, and now `optionSources`. A URL is unverifiable: nothing on the client can say whether a document that asks for `https://…/internal/dictionary` was supposed to. It is also an SSRF-shaped surface, and — as Form.io and SurveyJS both demonstrate — a URL in the document does not stay a URL: it grows an auth flag, then a templating mini-language for the query string, then an executable-JS hook for the response mapping. A name grows none of that.
+
+The cost is stated plainly further down: the parser can only confirm the name is registered, so how much a typo costs you is a choice you make when you design the registry.
+
+## A source is a hook
+
+Register sources on `<FormOptionSources>`:
+
+```tsx
+import { FormOptionSources } from '@ez-kit/form-shadcn'
+
+function useCitiesSource({ params }) {
+	const query = useQuery({
+		queryKey: ['cities', params],
+		queryFn: () => api.get('/api/cities', { params }),
+	})
+	return { options: (query.data ?? []).map(toOption), loading: query.isPending }
+}
+
+const optionSources = { cities: useCitiesSource }
+
+<FormOptionSources value={optionSources}>
+	<App />
+</FormOptionSources>
+```
+
+A source is a **React hook**, not a promise-returning function. That is deliberate, and it is the reason this package ships **no fetching, no cache and no abort logic at all**. Caching, request deduplication, cancellation, and the "a late response for the previous country must not overwrite the current one" race are precisely what TanStack Query, SWR and RTK Query exist to solve; a promise signature would force a worse reimplementation of all four into this library, sitting next to the one your app already runs. A hook also reports `loading` synchronously, so it feeds the [`loading`](/docs/form/select#options-that-arrive-later) contract key directly instead of through a state machine of our own.
+
+A purely synchronous source is equally valid:
+
+```tsx
+const optionSources = { currencies: () => ({ options: CURRENCIES, loading: false }) } // no hooks, no name needed
+```
+
+### Three rules that follow from it being a hook
+
+1. **The registry must be stable across renders.** Hoist it to a module constant, or memoise it. A fresh object each render swaps hook identities under React.
+2. **A source must call a fixed set of hooks.** ``api[`useGet${params.domain}Query`](…)`` is illegal — the hook it resolves to changes with the parameters. Branch on the parameters _inside_ one hook call; a query key is the natural place.
+3. **A source must not throw.** It reports failure by returning empty `options` with `loading: false` and handling the error itself — a toast, a retry, its own error boundary. A throw here unmounts the form.
+
+Give each source a `use…` **name**, and register the named function rather than writing it inline. React and `eslint-plugin-react-hooks` both identify hooks by name, so an inline `cities: ({ params }) => useQuery(…)` trips `react-hooks/rules-of-hooks` even though it is perfectly correct:
+
+```tsx
+function useCitiesSource({ params }) {
+	const query = useQuery({ queryKey: ['cities', params], queryFn: () => fetchCities(params) })
+	return { options: query.data ?? [], loading: query.isPending }
+}
+
+const optionSources = { cities: useCitiesSource }
+```
+
+The registry key is the name the document uses; the function's own name is for React's benefit, and the two need not match.
+
+### Why a provider, when `fields` and `blocks` are props
+
+`fields`, `blocks` and `rules` are props on `FormRenderer` because they are schema-only concepts: nothing outside a document can refer to a block component or a named rule. An option source is not schema-only — `<form.SelectField optionsFrom='cities' />` is plain TSX with no document in sight, and it needs the same registry. One mechanism serves both authoring paths, so there is intentionally **no** `optionSources` prop to drift from the provider.
+
+## Parameters, and the cascade
+
+`optionsFrom`'s object form carries two more keys:
+
+```json
+{
+	"type": "select",
+	"name": "address.city",
+	"optionsFrom": {
+		"source": "dictionary",
+		"params": { "domain": "cities" },
+		"dependsOn": { "country": "address.country" }
+	}
+}
+```
+
+- **`params`** — static arguments from the document. Must survive `JSON.stringify`: strings, numbers, booleans, `null`, arrays and plain objects. A function, `undefined`, `NaN`/`Infinity` or a `Date` is a parse error.
+- **`dependsOn`** — a map from the **source's parameter name** to where its value lives in the form. Absolute paths from the root of the values, the same vocabulary a rule's `field` uses.
+
+Both are merged into one flat object, which is what the source receives as `params`. The renderer reads each `dependsOn` path with a narrow subscription, so a keystroke in an unrelated field does not re-run the query.
+
+`dependsOn` is keyed by the **parameter name, not by the path**. That is what lets one source serve documents whose field layouts differ — `country` in one, `address.country` in another — and it is what makes the two authoring paths produce a byte-identical `params` object. Keying by the path would bind the source to one document's layout.
+
+In TSX there is no `dependsOn` at all. You pass the live value:
+
+```tsx
+<form.SelectField
+	name='address.city'
+	optionsFrom='dictionary'
+	optionsParams={{ domain: 'cities', country }}
+/>
+```
+
+`dependsOn` exists only because JSON cannot hold a live value.
+
+### In TSX
+
+<KitExample exampleId='form-option-sources' />
+
+### The same form as a document
+
+<KitExample exampleId='form-option-sources-schema' />
+
+The cascade is the one place where the two authoring paths differ in more than spelling: the TSX field is handed the live country value through `optionsParams`, the document names it through `dependsOn`. Both produce the same flat `params` object, and the registry serving them is the same one.
+
+### The dependent value is cleared
+
+When the resolved parameters change, the dependent field's value is cleared **immediately** — the new list is not waited for, and the old value is not checked against it (while the list is loading it cannot be). Otherwise the user switches country, the stale city sits in form state behind an empty-looking trigger, and `{ country: 'de', city: 'msk' }` is submitted. There is no opt-out.
+
+Two details make that behave rather than annoy:
+
+- The parameters are compared **by value**. An inline `optionsParams={{ country }}` literal is a brand-new object every render and clears nothing by itself.
+- The **first** computation is skipped, so a loaded draft or a schema `defaultValue` survives mount.
+
+### Disabling until the dependency is chosen
+
+Nothing new is needed, and it is deliberately not inferred from `dependsOn` — "the list depends on the country" and "the field is unusable without a country" are different claims, and only the document knows whether the second one holds:
+
+```json
+{
+	"type": "select",
+	"name": "address.city",
+	"optionsFrom": { "source": "cities", "dependsOn": { "country": "address.country" } },
+	"disabledWhen": { "not": { "field": "address.country", "truthy": true } }
+}
+```
+
+## Two ways to shape the registry
+
+### One generic source — no frontend code per new list
+
+```tsx
+function useDictionarySource({ params }) {
+	const query = useQuery({
+		queryKey: ['dictionary', params],
+		queryFn: () => api.get(`/api/dictionary/${params.domain}`, { params }),
+	})
+	return { options: (query.data ?? []).map(toOption), loading: query.isPending }
+}
+
+const optionSources = { dictionary: useDictionarySource }
+```
+
+```json
+{
+	"type": "select",
+	"name": "address.city",
+	"optionsFrom": {
+		"source": "dictionary",
+		"params": { "domain": "cities" },
+		"dependsOn": { "country": "address.country" }
+	}
+}
+```
+
+A new dictionary is a new document and **no frontend release** — which is the point of a config-driven form in the first place.
+
+What it costs: the parser can now only confirm that the app has a dictionary mechanism at all. A typo in `"domain": "citiez"` passes `parseFormSchema` cleanly and surfaces in production as an empty dropdown.
+
+### One key per entry — the parser keeps its teeth
+
+```tsx
+const DOMAINS = ['countries', 'cities', 'roles'] as const
+
+const optionSources = Object.fromEntries(
+	DOMAINS.map((domain) => [
+		domain,
+		function useDomainSource({ params }) {
+			return useDictionary(domain, params)
+		},
+	]),
+)
+```
+
+```ts
+parseFormSchema(payload, { optionSources: DOMAINS })
+```
+
+Now `"optionsFrom": "citiez"` fails at parse time, with the offending node's path:
+
+```text
+FormSchemaError: Unknown option source "citiez" (at children[1].children[0])
+```
+
+A new dictionary costs one word in `DOMAINS` — and a release. Pick the trade-off per project; nothing stops you from registering both a `dictionary` catch-all and named keys for the lists you care about most.
+
+## Any data layer, one document
+
+The document is identical whichever client the source is written against — dependency injection is free here, because the source _is_ the injection point.
+
+```tsx
+// TanStack Query
+function useCitiesSource({ params }) {
+	const query = useQuery({ queryKey: ['cities', params], queryFn: () => fetchCities(params) })
+	return { options: query.data ?? [], loading: query.isPending }
+}
+
+// SWR
+function useCitiesSource({ params }) {
+	const { data, isLoading } = useSWR(['cities', params], () => fetchCities(params))
+	return { options: data ?? [], loading: isLoading }
+}
+
+// RTK Query
+function useCitiesSource({ params }) {
+	const { data, isFetching } = useGetCitiesQuery(params)
+	return { options: data ?? [], loading: isFetching }
+}
+```
+
+We ship no built-in `dictionary` source and no fetcher of any kind. Doing so would bake a URL convention and an HTTP client into the library — exactly what naming a source instead of a URL was meant to avoid. The recipes above are documentation, not code you inherit.
+
+## Localised labels
+
+A source returns `LocalizedSelectOption`s, so it may hand back translation keys just as a statically authored list may:
+
+```tsx
+const optionSources = {
+	cities: () => ({ options: [{ label: { key: 'city.berlin' }, value: 'ber' }], loading: false }),
+}
+```
+
+`FormRenderer`'s `translate` resolves them, through the same `resolveSelectOptions` a written-out list goes through. The JSX API has no `translate`, so there a source's labels are plain strings.
+
+## Server-side search
+
+A source that returns only the page matching a search term is a different contract — the option for the value already in form state is usually not on it. That is [Searchable select](/docs/form/select/searchable), which adds a second hook to a source rather than stretching this one.

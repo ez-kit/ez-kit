@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -37,7 +37,7 @@ const PRIORITY_ITEMS = [
 	{ value: 'high', label: 'High' },
 ]
 
-const baseColumns = defineColumns<Ticket>([
+const baseColumns = createColumns<Ticket>([
 	{ accessorKey: 'title', header: 'Title' },
 	{
 		accessorKey: 'status',
@@ -53,7 +53,7 @@ const baseColumns = defineColumns<Ticket>([
 	},
 ])
 
-const notInColumns = defineColumns<Ticket>([
+const notInColumns = createColumns<Ticket>([
 	{ accessorKey: 'title', header: 'Title' },
 	{
 		accessorKey: 'status',

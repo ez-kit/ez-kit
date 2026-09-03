@@ -1,8 +1,8 @@
+import { TextInputType } from '@ez-kit/form-core'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { TextInputType } from './contract'
 import { createForm } from './create-form'
 import { testComponents } from './test-kit'
 
@@ -30,14 +30,14 @@ const PLAN_OPTIONS = [
 	{ label: 'Pro', value: 'pro' },
 ]
 
-const { useForm } = createForm({ components: testComponents })
+const { useForm, Form } = createForm({ components: testComponents })
 
 describe('createForm — field binding', () => {
 	function TextCase() {
 		const form = useForm({ defaultValues: DEFAULTS })
 
 		return (
-			<form.Form>
+			<Form form={form}>
 				<form.TextField
 					name='email'
 					label='Email'
@@ -45,7 +45,7 @@ describe('createForm — field binding', () => {
 					placeholder='you@example.com'
 				/>
 				<form.Subscribe selector={(state) => state.values.email}>{(email) => <output>{email}</output>}</form.Subscribe>
-			</form.Form>
+			</Form>
 		)
 	}
 
@@ -74,7 +74,7 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.NumberField
 						name='age'
 						label='Age'
@@ -82,7 +82,7 @@ describe('createForm — field binding', () => {
 					<form.Subscribe selector={(state) => state.values.age}>
 						{(age) => <output>{`${typeof age}:${String(age)}`}</output>}
 					</form.Subscribe>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -105,14 +105,14 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.TextareaField
 						name='bio'
 						label='Bio'
 						rows={4}
 					/>
 					<form.Subscribe selector={(state) => state.values.bio}>{(bio) => <output>{bio}</output>}</form.Subscribe>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -130,7 +130,7 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.SelectField
 						name='role'
 						label='Role'
@@ -138,7 +138,7 @@ describe('createForm — field binding', () => {
 						placeholder='Pick one'
 					/>
 					<form.Subscribe selector={(state) => state.values.role}>{(role) => <output>{role}</output>}</form.Subscribe>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -155,7 +155,7 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.CheckboxField
 						name='agree'
 						label='I agree'
@@ -163,7 +163,7 @@ describe('createForm — field binding', () => {
 					<form.Subscribe selector={(state) => state.values.agree}>
 						{(agree) => <output>{String(agree)}</output>}
 					</form.Subscribe>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -182,7 +182,7 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.SwitchField
 						name='notify'
 						label='Notify me'
@@ -190,7 +190,7 @@ describe('createForm — field binding', () => {
 					<form.Subscribe selector={(state) => state.values.notify}>
 						{(notify) => <output>{String(notify)}</output>}
 					</form.Subscribe>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -209,14 +209,14 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.RadioGroupField
 						name='plan'
 						label='Plan'
 						options={PLAN_OPTIONS}
 					/>
 					<form.Subscribe selector={(state) => state.values.plan}>{(plan) => <output>{plan}</output>}</form.Subscribe>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -231,7 +231,7 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.SliderField
 						name='age'
 						label='Age'
@@ -241,7 +241,7 @@ describe('createForm — field binding', () => {
 					<form.Subscribe selector={(state) => state.values.age}>
 						{(age) => <output>{String(age)}</output>}
 					</form.Subscribe>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -263,14 +263,14 @@ describe('createForm — field binding', () => {
 			const form = useSliderForm({ defaultValues: { level: Number.NaN } })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.SliderField
 						name='level'
 						label='Level'
 						min={10}
 						max={20}
 					/>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -287,12 +287,12 @@ describe('createForm — field binding', () => {
 			const form = useForm({ defaultValues: DEFAULTS, validators: { onBlur } })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.TextField
 						name='email'
 						label='Email'
 					/>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -316,13 +316,13 @@ describe('createForm — errors', () => {
 		})
 
 		return (
-			<form.Form>
+			<Form form={form}>
 				<form.TextField
 					name='email'
 					label='Email'
 					description='Work address'
 				/>
-			</form.Form>
+			</Form>
 		)
 	}
 
@@ -375,7 +375,7 @@ describe('createForm — errors', () => {
 })
 
 describe('createForm — submit', () => {
-	it('wires form.Form to handleSubmit and hands over the values', async () => {
+	it('wires the form element to handleSubmit and hands over the values', async () => {
 		const user = userEvent.setup()
 		const onSubmit = vi.fn()
 
@@ -388,13 +388,13 @@ describe('createForm — submit', () => {
 			})
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.TextField
 						name='email'
 						label='Email'
 					/>
 					<form.SubmitButton>Save</form.SubmitButton>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -415,9 +415,9 @@ describe('createForm — submit', () => {
 			})
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.SubmitButton>Save</form.SubmitButton>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -433,9 +433,9 @@ describe('createForm — submit', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.SubmitButton disabled>Save</form.SubmitButton>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -462,7 +462,7 @@ describe('createForm — native TanStack API', () => {
 			expect(typeof form.handleSubmit).toBe('function')
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					{/* the native render-prop Field, untouched by the flat wrappers */}
 					<form.Field name='email'>
 						{(field) => (
@@ -479,7 +479,7 @@ describe('createForm — native TanStack API', () => {
 						{(email) => <output>{email}</output>}
 					</form.Subscribe>
 					<form.SubmitButton>Save</form.SubmitButton>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -500,7 +500,7 @@ describe('createForm — native TanStack API', () => {
 
 			expect(typeof form.AppField).toBe('function')
 
-			return <form.Form>{null}</form.Form>
+			return <Form form={form}>{null}</Form>
 		}
 
 		render(<AppFieldCase />)
@@ -513,13 +513,13 @@ describe('createForm — dependency injection', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.TextField
 						name='email'
 						label='Email'
 					/>
 					<form.SubmitButton>Save</form.SubmitButton>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -553,12 +553,12 @@ describe('createForm — dependency injection', () => {
 			const form = useAltForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.TextField
 						name='email'
 						label='Email'
 					/>
-				</form.Form>
+				</Form>
 			)
 		}
 
@@ -573,7 +573,7 @@ describe('createForm — dependency injection', () => {
 			const form = useForm({ defaultValues: DEFAULTS })
 
 			return (
-				<form.Form>
+				<Form form={form}>
 					<form.TextField
 						name='email'
 						label='Email'
@@ -586,7 +586,7 @@ describe('createForm — dependency injection', () => {
 						name='agree'
 						label='Agree'
 					/>
-				</form.Form>
+				</Form>
 			)
 		}
 

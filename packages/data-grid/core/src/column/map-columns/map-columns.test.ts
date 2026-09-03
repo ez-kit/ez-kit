@@ -4,12 +4,18 @@ import { buildOperatorRegistry } from '../../features/operators'
 
 import { mapColumns } from './map-columns'
 
-import type { ColumnDef } from '../types'
+import type { ColumnDef, ColumnFilteringMeta, TanStackColumnDef } from '../types'
 
 type Row = {
 	id: number
 	name: string
 	age: number
+}
+
+/** `meta.filtering` narrowed past its `false` arm — the shape every assertion below wants. */
+function filteringMeta(def: TanStackColumnDef<Row> | undefined): ColumnFilteringMeta | undefined {
+	const filtering = def?.meta?.filtering
+	return filtering === false ? undefined : filtering
 }
 
 describe('mapColumns', () => {
@@ -63,13 +69,13 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableSorting).toBeUndefined()
 	})
 
-	it('visibility: true → enableHiding: false (column is locked)', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: true }])
+	it('visibility: false → enableHiding: false (hiding disabled for the column)', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: false }])
 		expect(result[0]?.enableHiding).toBe(false)
 	})
 
-	it('visibility: { defaultHidden: true } does not lock the column', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: { defaultHidden: true } }])
+	it('visibility: { initialHidden: true } leaves the column hideable', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', visibility: { initialHidden: true } }])
 		expect(result[0]?.enableHiding).toBeUndefined()
 	})
 
@@ -78,19 +84,24 @@ describe('mapColumns', () => {
 		expect(result[0]?.enableHiding).toBeUndefined()
 	})
 
-	it('pinning: { pin: left } goes into meta.columnPinning', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { pin: 'left' } }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ pin: 'left' })
+	it('pinning: { side: left } goes into meta.pinning', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { side: 'left' } }])
+		expect(result[0]?.meta?.pinning).toEqual({ side: 'left' })
 	})
 
-	it('pinning: { defaultPin: right } goes into meta.columnPinning', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { defaultPin: 'right' } }])
-		expect(result[0]?.meta?.columnPinning).toEqual({ defaultPin: 'right' })
+	it('the scalar pinning form normalizes to a static side', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: 'left' }])
+		expect(result[0]?.meta?.pinning).toEqual({ side: 'left' })
 	})
 
-	it('pinning: false goes into meta.columnPinning as false', () => {
+	it('pinning: { initialSide: right } goes into meta.pinning', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: { initialSide: 'right' } }])
+		expect(result[0]?.meta?.pinning).toEqual({ initialSide: 'right' })
+	})
+
+	it('pinning: false goes into meta.pinning as false', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', pinning: false }])
-		expect(result[0]?.meta?.columnPinning).toBe(false)
+		expect(result[0]?.meta?.pinning).toBe(false)
 	})
 
 	it('filtering goes into meta.filtering', () => {
@@ -104,14 +115,27 @@ describe('mapColumns', () => {
 		expect(result[0]?.meta?.filtering).toBe(false)
 	})
 
-	it('cell.type goes into meta.cellType', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'age', cell: { type: 'number' } }])
-		expect(result[0]?.meta?.cellType).toBe('number')
+	// Regression: `filtering: false` used to reach only `meta`, so `column.getCanFilter()`
+	// still reported true and any consumer-built toolbar reading the TanStack API disagreed
+	// with the config.
+	it('filtering: false also sets enableColumnFilter so getCanFilter() agrees', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: false }])
+		expect(result[0]?.enableColumnFilter).toBe(false)
 	})
 
-	it('defaults meta.cellType to "text" when cell.type is omitted', () => {
+	it('filtering config object leaves enableColumnFilter untouched', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { defaultOperator: 'contains' } }])
+		expect(result[0]?.enableColumnFilter).toBeUndefined()
+	})
+
+	it('cell.type goes into meta.cell.type', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'age', cell: { type: 'number' } }])
+		expect(result[0]?.meta?.cell?.type).toBe('number')
+	})
+
+	it('defaults meta.cell.type to "text" when cell.type is omitted', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name' }])
-		expect(result[0]?.meta?.cellType).toBe('text')
+		expect(result[0]?.meta?.cell?.type).toBe('text')
 	})
 
 	it('forwards creating.description to meta.creating.description', () => {
@@ -139,11 +163,11 @@ describe('mapColumns', () => {
 		expect((result[0] as { columns?: unknown[] }).columns).toHaveLength(2)
 	})
 
-	it('cell.component maps to TanStack cell renderer and meta.cellView', () => {
+	it('cell.component maps to TanStack cell renderer and meta.cell.view', () => {
 		const component = vi.fn().mockReturnValue('custom')
 		const result = mapColumns<Row>([{ accessorKey: 'name', cell: { component } }])
 		expect(result[0]?.cell).toBeTypeOf('function')
-		expect(result[0]?.meta?.cellView).toBeTypeOf('function')
+		expect(result[0]?.meta?.cell?.view).toBeTypeOf('function')
 	})
 
 	it('cell.component invoked as TanStack cell renderer', () => {
@@ -177,44 +201,56 @@ describe('mapColumns', () => {
 		expect((result[0]?.meta?.creating as { component?: unknown } | undefined)?.component).toBe(component)
 	})
 
-	it('passes size, minSize, maxSize to TanStack column', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', size: 200, minSize: 50, maxSize: 500 }])
+	it('width object maps onto size / minSize / maxSize', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', width: { default: 200, min: 50, max: 500 } }])
 		expect(result[0]?.size).toBe(200)
 		expect(result[0]?.minSize).toBe(50)
 		expect(result[0]?.maxSize).toBe(500)
 	})
 
-	it('passes enableResizing: false to TanStack column', () => {
-		const result = mapColumns<Row>([{ accessorKey: 'name', enableResizing: false }])
+	it('the scalar width form is the starting width, with no bounds', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', width: 200 }])
+		expect(result[0]?.size).toBe(200)
+		expect(result[0]?.minSize).toBeUndefined()
+		expect(result[0]?.maxSize).toBeUndefined()
+	})
+
+	it('resizing: false → enableResizing: false on the TanStack column', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', resizing: false }])
 		expect(result[0]?.enableResizing).toBe(false)
 	})
 
-	it('filtering.options is forwarded to meta.filteringOptions', () => {
-		const options = [
+	it('resizing omitted → enableResizing untouched (column stays resizable)', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name' }])
+		expect(result[0]?.enableResizing).toBeUndefined()
+	})
+
+	it('filtering.items is forwarded to meta.filtering.items', () => {
+		const items = [
 			{ value: 'a', label: 'A' },
 			{ value: 'b', label: 'B' },
 		]
-		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { options } }])
-		expect(result[0]?.meta?.filteringOptions).toEqual(options)
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { items } }])
+		expect(filteringMeta(result[0])?.items).toEqual(items)
 	})
 
-	it('column.filtering.faceted: true → meta.facetedEnabled = true (overrides table flag)', () => {
+	it('column.filtering.faceted: true → meta.filtering.faceted = true (overrides table flag)', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: true } }], undefined, {
 			tableFaceted: false,
 		})
-		expect(result[0]?.meta?.facetedEnabled).toBe(true)
+		expect(filteringMeta(result[0])?.faceted).toBe(true)
 	})
 
-	it('column.filtering.faceted: false → meta.facetedEnabled is not set even when table-level is on', () => {
+	it('column.filtering.faceted: false → meta.filtering.faceted is not set even when table-level is on', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { faceted: false } }], undefined, {
 			tableFaceted: true,
 		})
-		expect(result[0]?.meta?.facetedEnabled).toBeUndefined()
+		expect(filteringMeta(result[0])?.faceted).toBeUndefined()
 	})
 
 	it('table-level tableFaceted: true inherits to column meta when column does not override', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: {} }], undefined, { tableFaceted: true })
-		expect(result[0]?.meta?.facetedEnabled).toBe(true)
+		expect(filteringMeta(result[0])?.faceted).toBe(true)
 	})
 
 	it('select cell with operators: true resolves to in/notIn defaults', () => {
@@ -229,8 +265,29 @@ describe('mapColumns', () => {
 			],
 			registry,
 		)
-		const resolved = result[0]?.meta?.resolvedOperators
+		const resolved = filteringMeta(result[0])?.operators
 		expect(resolved?.map((o) => o.id)).toEqual(['in', 'notIn', 'isEmpty', 'isNotEmpty'])
-		expect(result[0]?.meta?.defaultOperatorId).toBe('in')
+		expect(filteringMeta(result[0])?.defaultOperator).toBe('in')
+	})
+})
+
+describe('mapColumns — header/footer renderers', () => {
+	it('keeps a string header as-is', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', header: 'Name' }])
+		expect(result[0]?.header).toBe('Name')
+	})
+
+	// The renderer path always worked (the adapter runs it through flexRender); only the
+	// public type forbade it, so `header: () => <b>Name</b>` failed to compile.
+	it('passes a header render function through untouched', () => {
+		const header = vi.fn(() => 'rendered')
+		const result = mapColumns<Row>([{ accessorKey: 'name', header }])
+		expect(result[0]?.header).toBe(header)
+	})
+
+	it('passes a footer render function through untouched', () => {
+		const footer = vi.fn(() => 'total')
+		const result = mapColumns<Row>([{ accessorKey: 'age', footer }])
+		expect(result[0]?.footer).toBe(footer)
 	})
 })

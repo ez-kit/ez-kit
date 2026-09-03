@@ -1,9 +1,9 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
-import { createDataGridInstance } from '../data-grid-instance'
+import { prepareDataGridTable } from '../prepare-table'
 import { testComponents } from '../test-utils'
 
 import type { DataTable, StructuredFilterValue } from '@ez-kit/data-grid-core'
@@ -20,7 +20,7 @@ const DATA: Row[] = [
 	{ id: 4, status: 'cancelled' },
 ]
 
-const COLUMNS = defineColumns<Row>([
+const COLUMNS = createColumns<Row>([
 	{
 		accessorKey: 'status',
 		header: 'Status',
@@ -43,11 +43,10 @@ const { DataGrid, GridComponentsProvider } = createDataGrid({
 })
 
 function setup(config?: Partial<Parameters<typeof createTable<Row>>[0]>): DataTable<Row> {
-	const table = createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config })
-	const instance = createDataGridInstance(table)
+	const table = prepareDataGridTable(createTable<Row>({ data: DATA, columns: COLUMNS, filtering: true, ...config }))
 	render(
 		<GridComponentsProvider>
-			<DataGrid table={instance} />
+			<DataGrid table={table} />
 		</GridComponentsProvider>,
 	)
 	return table
@@ -112,14 +111,14 @@ const DATE_DATA: DateRow[] = [
 	{ id: 2, joinedAt: '2026-05-12' },
 ]
 
-const DATE_COLUMNS_WITH_PRESETS = defineColumns<DateRow>([
+const DATE_COLUMNS_WITH_PRESETS = createColumns<DateRow>([
 	{
 		accessorKey: 'joinedAt',
 		header: 'Joined',
 		cell: { type: 'date' },
 		filtering: {
 			operators: {
-				items: ['eq', 'between'],
+				items: ['equals', 'between'],
 				betweenOperator: { variant: 'inputs', presets: true },
 			},
 			defaultOperator: 'between',
@@ -128,11 +127,12 @@ const DATE_COLUMNS_WITH_PRESETS = defineColumns<DateRow>([
 ])
 
 function setupDate(): DataTable<DateRow> {
-	const table = createTable<DateRow>({ data: DATE_DATA, columns: DATE_COLUMNS_WITH_PRESETS, filtering: true })
-	const instance = createDataGridInstance(table)
+	const table = prepareDataGridTable(
+		createTable<DateRow>({ data: DATE_DATA, columns: DATE_COLUMNS_WITH_PRESETS, filtering: true }),
+	)
 	render(
 		<GridComponentsProvider>
-			<DataGrid table={instance} />
+			<DataGrid table={table} />
 		</GridComponentsProvider>,
 	)
 	return table

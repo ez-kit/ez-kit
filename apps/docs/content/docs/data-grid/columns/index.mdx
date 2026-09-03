@@ -16,9 +16,9 @@ This grid combines visibility, pinning, and resizing: drag column borders to res
 You define columns once and pass them to the grid's `columns` prop. Most columns are accessor columns — they read a row property by key and render a value.
 
 ```ts
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
-const columns = defineColumns<User>([
+const columns = createColumns<User>([
 	{ id: 'name', header: 'Name', accessorKey: 'name' },
 	{ id: 'email', header: 'Email', accessorKey: 'email' },
 	{ id: 'status', header: 'Status', accessorKey: 'status' },
@@ -29,19 +29,78 @@ For typed accessors, custom rendering, and registered cell types, prefer the [co
 
 ## Options
 
-| Option                         | Type                                        | Description                                                                                         |
-| ------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `id`                           | `string`                                    | Stable column identifier. Required when no `accessorKey` is given.                                  |
-| `accessorKey`                  | `keyof TRow`                                | Reads a row property by name.                                                                       |
-| `accessorFn`                   | `(row: TRow) => unknown`                    | Computed accessor; takes the whole row.                                                             |
-| `header`                       | `string \| ReactNode \| (ctx) => ReactNode` | Header label or render fn.                                                                          |
-| `cell`                         | `(ctx) => ReactNode`                        | Custom cell renderer.                                                                               |
-| `enableSorting`                | `boolean`                                   | Default `true`.                                                                                     |
-| `enableColumnFilter`           | `boolean`                                   | Default `true`.                                                                                     |
-| `enableHiding`                 | `boolean`                                   | Default `true`.                                                                                     |
-| `enablePinning`                | `boolean`                                   | Default `false`.                                                                                    |
-| `size` / `minSize` / `maxSize` | `number`                                    | Column-width constraints when resizing is enabled.                                                  |
-| `meta`                         | `unknown`                                   | Free-form per-column data; commonly used for alignment, formatter hints, or cell-type registration. |
+| Option            | Type                                                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `string`                                                        | Stable column identifier. Required when no `accessorKey` is given.                                                                                                                                                                                                                                                                                                                                                         |
+| `accessorKey`     | `keyof TRow`                                                    | Reads a row property by name.                                                                                                                                                                                                                                                                                                                                                                                              |
+| `accessorFn`      | `(row: TRow, index: number) => unknown`                         | Computed accessor; takes the whole row and its index.                                                                                                                                                                                                                                                                                                                                                                      |
+| `header`          | `string \| ColumnRenderer<HeaderContext<TRow, unknown>, TNode>` | Header label, or a render function for anything richer — an icon beside the label, a tooltip, a badge.                                                                                                                                                                                                                                                                                                                     |
+| `footer`          | `string \| ColumnRenderer<HeaderContext<TRow, unknown>, TNode>` | Column footer, the same shape as `header`. Rendered by `<DataGrid.Footer />` — see [Composition](./data-grid/composition).                                                                                                                                                                                                                                                                                                 |
+| `columns`         | `ColumnDef<TRow>[]`                                             | Child columns, for a grouped (multi-level) header. The parent column renders only its `header`; the leaves carry the accessors.                                                                                                                                                                                                                                                                                            |
+| `cell`            | `CellType \| { type?, config?, component? }`                    | Cell display and input config. The scalar is a type id and nothing else — `cell: 'number'` — which is what most columns want; the object adds a `config` or a `component`. Pick a built-in `type` (`text`, `number`, `date`, `boolean`, `select`, `badge`, `image`, `link`, `progress`, or a registered custom id) with per-type `config`, or supply a custom `component`. See [Cell types](./data-grid/cells/cell-types). |
+| `sorting`         | `false \| ColumnSortingConfig`                                  | Column-level sorting. `false` disables sorting for this column; an object fine-tunes `descFirst`, `fn`, `undefined`, `invert`, `multi`.                                                                                                                                                                                                                                                                                    |
+| `pinning`         | `false \| 'left' \| 'right' \| { side?, initialSide? }`         | Column-level pinning. The scalar (or `side`) is a static pin — always pinned, no pin section in the column menu. `initialSide` — starts pinned, user can change it via the menu. See [Column Pinning](./data-grid/columns/column-pinning).                                                                                                                                                                                 |
+| `filtering`       | `false \| ColumnFilteringConfig`                                | Column-level filtering. `false` removes the column's filter control **and** makes `column.getCanFilter()` false. See [Filtering](./data-grid/filtering).                                                                                                                                                                                                                                                                   |
+| `visibility`      | `false \| { initialHidden?: boolean }`                          | `false` disables hiding — the column is always visible; `{ initialHidden: true }` starts it hidden but toggleable. See [Column Visibility](./data-grid/columns/column-visibility).                                                                                                                                                                                                                                         |
+| `resizing`        | `false`                                                         | `false` pins the column's width — no resize handle, `column.getCanResize()` false. See [Resizing](./data-grid/columns/resizing).                                                                                                                                                                                                                                                                                           |
+| `width`           | `number \| { default?, min?, max? }`                            | Column width in pixels. The scalar is the starting width; the object adds the bounds a resizable column is dragged between. See [Resizing](./data-grid/columns/resizing).                                                                                                                                                                                                                                                  |
+| `align`           | `'start' \| 'center' \| 'end' \| { header?, cell?, footer? }`   | Horizontal alignment. The scalar aligns header, cells and footer alike; the object names the parts that differ. Logical, so it flips under RTL.                                                                                                                                                                                                                                                                            |
+| `globalFiltering` | `false`                                                         | `false` excludes the column from table-level global search. Independent from `filtering`: a column can have its own filter popover disabled and still be searchable, or vice versa. See [Global search](./data-grid/filtering/global).                                                                                                                                                                                     |
+| `editing`         | `false \| ColumnEditingConfig`                                  | Column-level editing. `false` disables editing for this column; the object supplies a custom `component`, a `description` shown under the input, and this column's `validateOn` / `debounce`. See [Editing](./data-grid/editing).                                                                                                                                                                                          |
+| `creating`        | `false \| ColumnCreatingConfig`                                 | Column-level create-form config. `false` leaves the column out of the create form; the object supplies `component`, `description`, a `defaultValue` the field is seeded with, and this column's `validateOn` / `debounce`. See [Creating](./data-grid/editing/creating).                                                                                                                                                   |
+| `headerClassName` | `string`                                                        | Class applied to this column's header cell (`<th>`).                                                                                                                                                                                                                                                                                                                                                                       |
+| `cellClassName`   | `string \| ((ctx) => string \| undefined)`                      | Class applied to this column's body cells (`<td>`). The function form runs per cell, so it can key off the value or the row — see below.                                                                                                                                                                                                                                                                                   |
+| `footerClassName` | `string`                                                        | Class applied to this column's footer cell. Only rendered inside `<DataGrid.Footer />`.                                                                                                                                                                                                                                                                                                                                    |
+
+Three class names rather than one: right-alignment belongs to the header and the cells alike, a
+value-driven highlight only to the cells. `cellClassName`'s function form is the shortest route to
+the latter — colour a cell from its own value, without rebuilding the body:
+
+```tsx
+const columns = createColumns<Account>([
+	{
+		accessorKey: 'balance',
+		header: 'Balance',
+		align: 'end',
+		cellClassName: ({ value }) => (value < 0 ? 'text-red-600' : undefined),
+	},
+])
+```
+
+The context is `{ row, value, rowIndex }`. Return `undefined` to add no class.
+
+## Typed cell values
+
+`value` is typed from `accessorKey`: on a row of `{ balance: number }`, the `value` above is a
+`number`, so `value < 0` compiles with no cast and no annotation. The same applies in
+`cell.component` and in `creating.defaultValue` — seeding a `boolean` column with `'yes'` is a
+compile error, not a runtime surprise.
+
+The one exception is a **computed** column, which derives its value with `accessorFn` instead of
+naming a field. Written as a plain column object, its `value` is `unknown`:
+
+```tsx
+const columns = createColumns<Order>([
+	{ id: 'total', accessorFn: (row) => row.price * row.qty }, // value: unknown
+])
+```
+
+Reach for the column helper's `computed` method to get the value typed. It infers the value type
+from the function you pass:
+
+```tsx
+const col = createColumnHelper<Order>()
+
+const totalColumn = col.computed({
+	id: 'total',
+	accessorFn: (row) => row.price * row.qty, // value: number
+	cellClassName: ({ value }) => (value > 1000 ? 'font-semibold' : undefined),
+})
+```
+
+`computed` requires an `id`. A column with no `accessorKey` would otherwise take its id from a
+string `header`, which then changes whenever the header is reworded — see
+[Column Helper](./data-grid/columns/column-helper).
 
 ## See also
 

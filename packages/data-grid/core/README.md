@@ -1,12 +1,11 @@
 # @ez-kit/data-grid-core
 
-Headless, UI-framework-agnostic data-grid core for **@ez-kit/data-grid**, built on top of [TanStack Table](https://tanstack.com/table) core. It owns columns, features (sorting, filtering, operators, pagination, selection, pinning, editing, creating, deleting, validation, infinite loading) and table state — with no React and no styling.
+Headless, UI-framework-agnostic data-grid core for **@ez-kit/data-grid**, built on top of [TanStack Table](https://tanstack.com/table) core. It owns columns, features (sorting, filtering, global search, operators, pagination, infinite loading, selection, expanding, visibility, pinning, resizing, virtualization, row actions, editing, creating, deleting, validation, deferred apply) and table state — with no React and no styling.
 
 Most apps should use a UI flavour instead:
 
 - [`@ez-kit/data-grid-shadcn`](../react/shadcn) — Shadcn UI
 - [`@ez-kit/data-grid-heroui`](../react/heroui) — HeroUI
-- [`@ez-kit/data-grid-native`](../react/native) — plain/native UI
 
 Use this package directly only when building your own adapter.
 
@@ -21,9 +20,9 @@ pnpm add @ez-kit/data-grid-core @tanstack/table-core
 ## Usage
 
 ```ts
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 
-const columns = defineColumns([
+const columns = createColumns([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'role', header: 'Role' },
 ])

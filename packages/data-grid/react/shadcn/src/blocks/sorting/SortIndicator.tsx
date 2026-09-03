@@ -1,18 +1,19 @@
+import { ColumnSortDirection } from '@ez-kit/data-grid-react'
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 
 import type { SortIndicatorProps } from '@ez-kit/data-grid-react'
 
-export function SortIndicator({ sortDir, canSort }: SortIndicatorProps) {
+export function SortIndicator({ sortDirection, canSort }: SortIndicatorProps) {
 	if (!canSort) return null
 	const icon =
-		sortDir === 'asc' ? (
+		sortDirection === ColumnSortDirection.Asc ? (
 			<ArrowUp
 				className='h-3 w-3'
 				aria-hidden
 			/>
-		) : sortDir === 'desc' ? (
+		) : sortDirection === ColumnSortDirection.Desc ? (
 			<ArrowDown
 				className='h-3 w-3'
 				aria-hidden

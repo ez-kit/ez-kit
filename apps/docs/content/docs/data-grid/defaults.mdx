@@ -11,27 +11,59 @@ These are **values only**. They never enable a feature; they only fill the gaps 
 
 ## Reference
 
-| Setting                                  | Default                         | Applies when                                 |
-| ---------------------------------------- | ------------------------------- | -------------------------------------------- |
-| `pagination.pageSize`                    | `10`                            | `pagination` is enabled without a `pageSize` |
-| `globalFiltering.placeholder`            | `'Search…'`                     | `globalFiltering` is enabled                 |
-| `globalFiltering.debounce`               | `250` (ms)                      | `globalFiltering` is enabled                 |
-| `filtering.variant`                      | `'inline'`                      | `filtering` is enabled without a `variant`   |
-| `filtering.debounce`                     | `0` (ms — commit per keystroke) | `filtering` text inputs, no `debounce` set   |
-| `filtering.chips.position`               | `'above'`                       | `filtering.chips` is enabled                 |
-| `filtering.clearButton.alwaysShow`       | `false`                         | `filtering.clearButton` is enabled           |
-| `pagination` (infinite) `trigger`        | `'auto'`                        | `pagination.mode: 'infinite'`                |
-| `pagination` (infinite) `threshold.rows` | `5`                             | infinite + virtualized rows                  |
-| `pagination` (infinite) `threshold.px`   | `200`                           | infinite + non-virtualized rows              |
+| Setting                             | Default                                  | Applies when                                              |
+| ----------------------------------- | ---------------------------------------- | --------------------------------------------------------- |
+| `direction`                         | `'ltr'`                                  | always — the grid's text direction                        |
+| `pagination.mode`                   | `'pages'`                                | `pagination` is enabled without a `mode`                  |
+| `pagination.pageSize`               | `10`                                     | `pagination` is enabled without a `pageSize`              |
+| `pagination.items`                  | `[10, 20, 50, 100]`                      | the PageSizer renders with no list supplied               |
+| `pagination.variant`                | `'numbered'`                             | `pagination` is enabled without a `variant`               |
+| `pagination.siblings`               | `1`                                      | `pagination.variant: 'numbered'`                          |
+| `pagination.boundaries`             | `1`                                      | `pagination.variant: 'numbered'`                          |
+| `pagination.trigger`                | `'auto'`                                 | `pagination.mode: 'infinite'`                             |
+| `pagination.threshold.rows`         | `5`                                      | infinite + virtualized rows                               |
+| `pagination.threshold.px`           | `200`                                    | infinite + non-virtualized rows                           |
+| `globalFiltering.placeholder`       | `'Search…'`                              | `globalFiltering` is enabled                              |
+| `globalFiltering.debounce`          | inherits `filtering.debounce`            | `globalFiltering` is enabled                              |
+| `globalFiltering.toolbar`           | `true`                                   | `globalFiltering` is enabled                              |
+| `visibility.toolbar`                | `true`                                   | `visibility` is enabled                                   |
+| `filtering.variant`                 | `'inline'`                               | `filtering` is enabled without a `variant`                |
+| `filtering.debounce`                | `250` (ms — shared by every text filter) | `filtering` text inputs, no `debounce` set                |
+| `filtering.faceted`                 | `false`                                  | `filtering` is enabled                                    |
+| `filtering.chips.position`          | `'above'`                                | `filtering.chips` is enabled                              |
+| `filtering.toolbar.alwaysShow`      | `false`                                  | `filtering.toolbar` is enabled                            |
+| `sorting.descFirst`                 | `false`                                  | `sorting` is enabled                                      |
+| `sorting.clearable`                 | `true`                                   | `sorting` is enabled                                      |
+| `sorting.multi`                     | `false`                                  | `sorting` is enabled                                      |
+| `sorting.multi.event`               | `'shift'`                                | `sorting.multi` is on                                     |
+| `sorting.multi.removable`           | `true`                                   | `sorting.multi` is on                                     |
+| `selection.multi`                   | `true`                                   | `selection` is enabled                                    |
+| `selection.bar.variant`             | `'floating'`                             | the selection bar renders                                 |
+| `expanding.mode`                    | `'sub-content'`                          | `expanding` is enabled without a `mode`                   |
+| `resizing.mode`                     | `'onChange'`                             | `resizing` is enabled without a `mode`                    |
+| `virtualization.row.estimateSize`   | `50` (px)                                | `virtualization.row` is on                                |
+| `virtualization.row.overscan`       | `5` (rows)                               | `virtualization.row` is on                                |
+| `rowActions.variant`                | `'inline'`                               | the row-actions column renders                            |
+| `editing.mode`                      | `'row'`                                  | `editing` is enabled without a `mode`                     |
+| `editing.validateOn`                | `'submit'`                               | `editing` is enabled                                      |
+| `editing.debounce`                  | `200` (ms)                               | `editing.validateOn: 'change'`                            |
+| `creating.mode`                     | `'row'`                                  | `creating` is enabled without a `mode`                    |
+| `creating.validateOn`               | `'submit'`                               | `creating` is enabled                                     |
+| `creating.debounce`                 | `200` (ms)                               | `creating.validateOn: 'change'`                           |
+| `layout.maxHeight`                  | `400px`                                  | the body scrolls under a capped height                    |
+| `layout.maxHeight` (virtualized)    | `600px`                                  | `virtualization` is on — the container needs a set height |
+| `cell.config.target` (`link` cells) | `'_self'`                                | a `link` cell with no `target`                            |
 
-> These values are a refactor-safe single source, not a behavior change: enabling a feature resolves to exactly the same values it always did. `pageSize` lives in `@ez-kit/data-grid-core` (`DEFAULT_PAGE_SIZE`) so every layer references one number.
+> Every one of these lives in the exported `DATA_GRID_DEFAULTS`, under the very path the option has — `DATA_GRID_DEFAULTS.pagination.items` defaults `pagination.items` — so a grid that wants to extend a default rather than restate it can read it. The table above and that constant are the same list, and both are complete: a default that exists only as a literal at its use site is one nobody can read, extend, or document. Values core resolves (`DEFAULT_PAGE_SIZE`, `DEFAULT_VALIDATE_DEBOUNCE_MS`, `DEFAULT_ROW_ESTIMATE_SIZE`, `DEFAULT_ROW_OVERSCAN`) are re-exported from `@ez-kit/data-grid-core` rather than restated, so the layers cannot drift.
+
+> `layout.maxHeight` is the one row applied by the structural stylesheet rather than by JS — it is the fallback baked into `--dg-table-max-height` / `--dg-virtual-height`.
 
 ## Overriding
 
 A default is only the **floor** — the lowest layer. Any value you supply wins over it, through the same three layers documented in [Default Options](./default-options):
 
 ```
-library defaults  <  factory defaultOptions  <  provider defaults  <  instance config
+library defaults  <  factory defaults  <  provider defaults  <  instance config
 ```
 
 ### Per grid (instance config)
@@ -57,14 +89,14 @@ Set a default once for every grid beneath a provider. See [Default Options → A
 </DataGridOptionsProvider>
 ```
 
-### Per kit (factory `defaultOptions`)
+### Per kit (factory `defaults`)
 
 Bake defaults into a custom kit so every grid built with it inherits them — no provider required. See [Default Options → Kit-level](./default-options#kit-level-factory-defaultoptions).
 
 ```tsx
 export const { DataGrid, useDataGrid } = createDataGrid({
 	components,
-	defaultOptions: { pagination: { pageSize: 20 } },
+	defaults: { pagination: { pageSize: 20 } },
 })
 ```
 

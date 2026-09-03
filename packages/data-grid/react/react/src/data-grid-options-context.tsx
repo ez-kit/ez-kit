@@ -3,26 +3,52 @@ import { createContext, useContext, useMemo } from 'react'
 import { deepMerge } from './utils/deep-merge'
 
 import type { UseDataGridConfig } from './use-data-grid'
+import type { CreatingConfig, DeletingConfig, EditingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
 /**
  * The mergeable subset of {@link UseDataGridConfig} — feature toggles and their config
  * objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`,
- * `columnVisibility`, `expanding`, `pinning`, `sizing`, `stickyHeader`,
+ * `visibility`, `expanding`, `pinning`, `resizing`, `layout`,
  * `fallbacks`, …) that can be supplied once as defaults (app-level `DataGridOptionsProvider`
- * or kit-level `createDataGrid({ defaultOptions })`) and merged **under** each instance's own
+ * or kit-level `createDataGrid({ defaults })`) and merged **under** each instance's own
  * config.
  *
  * Excludes the per-instance data inputs and controlled-state bindings — `data`, `columns`,
  * `state`, `onStateChange` — which are meaningless as shared application defaults.
+ *
+ * `creating`, `editing` and `deleting` keep their full shape except for the callback that
+ * makes them run: a defaults layer describes *how* a write looks (`mode`, `confirmation`)
+ * for every grid in the app, while the grid that supplies `onSave` / `onDelete` is the one
+ * that actually gets the feature. A grid left without a handler resolves the feature away
+ * rather than rendering a trigger that would throw on commit — see `useDataGrid`.
  */
 export type DataGridDefaultOptions<TRow extends object> = Omit<
 	UseDataGridConfig<TRow>,
-	'data' | 'columns' | 'state' | 'onStateChange'
->
+	'data' | 'columns' | 'state' | 'onStateChange' | 'creating' | 'editing' | 'deleting'
+> & {
+	/**
+	 * How create looks. The grid that supplies `onSave` decides whether it exists at all.
+	 *
+	 * The `boolean` arm is kept, exactly as on every other feature: a defaults layer must be able
+	 * to say `creating: false` and switch the feature off for a whole subtree without restating
+	 * the settings, which is the same reason the instance config carries it.
+	 */
+	creating?: boolean | PartialBy<CreatingConfig<TRow>, 'onSave'>
+	/** How edit looks. The grid that supplies `onSave` decides whether it exists at all. */
+	editing?: boolean | PartialBy<EditingConfig<TRow>, 'onSave'>
+	/** How delete looks. The grid that supplies `onDelete` decides whether it exists at all. */
+	deleting?: boolean | PartialBy<DeletingConfig<TRow>, 'onDelete'>
+}
 
 /** Alias used at the context boundary where the row type is erased (mirrors the cell-type registry). */
 type AnyDefaultOptions = DataGridDefaultOptions<object>
+
+/**
+ * `TConfig` with `TKey` made optional — relaxes the callbacks that are required on an
+ * instance config but cannot be supplied by a shared defaults layer.
+ */
+type PartialBy<TConfig, TKey extends keyof TConfig> = Omit<TConfig, TKey> & Partial<Pick<TConfig, TKey>>
 
 /** Untyped record view used when handing options to the row-agnostic {@link deepMerge}. */
 type OptionsRecord = Record<string, unknown>
@@ -30,7 +56,7 @@ type OptionsRecord = Record<string, unknown>
 const EMPTY_OPTIONS: AnyDefaultOptions = {}
 
 /**
- * Default is **empty** — with no provider and no factory `defaultOptions`, instance config
+ * Default is **empty** — with no provider and no factory `defaults`, instance config
  * flows through untouched and behaviour is identical to calling `useDataGrid` directly.
  */
 const DataGridOptionsContext = createContext<AnyDefaultOptions>(EMPTY_OPTIONS)
@@ -72,7 +98,7 @@ export function useDataGridOptions<TRow extends object>(): DataGridDefaultOption
 
 /**
  * Composes the three option layers into the final instance config.
- * Precedence, low → high: factory `defaultOptions` < provider `defaults` < instance `config`.
+ * Precedence, low → high: factory `defaults` < provider `defaults` < instance `config`.
  * Deep and immutable — nested feature settings combine; instance values win on conflict.
  */
 export function mergeGridOptionLayers<TRow extends object>(

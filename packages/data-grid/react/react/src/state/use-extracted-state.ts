@@ -3,11 +3,10 @@
 import { useRef, useSyncExternalStore } from 'react'
 
 import { pickState } from './extract-state'
-import { DEFAULT_STATE_KEYS } from './state-keys'
+import { DEFAULT_STATE_KEYS, DRAFT_STATE_KEY } from './state-keys'
 
 import type { DataGridState, DataGridStateOptions, PersistableStateKey } from './state-keys'
-import type { DataGridInstance } from '../data-grid-instance'
-import type { TableState } from '@ez-kit/data-grid-core'
+import type { DataTable, TableState } from '@ez-kit/data-grid-core'
 
 type Cache = {
 	keys: readonly PersistableStateKey[]
@@ -35,14 +34,26 @@ function sameList(a: readonly unknown[], b: readonly unknown[]): boolean {
  * field until mutated — and rebuild only when an included reference changes.
  */
 export function useExtractedState<TRow extends object>(
-	instance: DataGridInstance<TRow>,
+	table: DataTable<TRow>,
 	options?: DataGridStateOptions,
 ): DataGridState {
 	const keys = options?.keys ?? DEFAULT_STATE_KEYS
 	const cacheRef = useRef<Cache | null>(null)
 
 	const select = (state: TableState): DataGridState => {
-		const inputs: readonly unknown[] = keys.map((key) => state[key] as unknown)
+		// `draft` is not a slice: it is derived from the three deferred axes and the applied
+		// snapshot, so all four go in as inputs — see `DRAFT_STATE_KEY`. The list stays
+		// position-stable for a given `keys`, which is all `sameList` needs.
+		const inputs: readonly unknown[] = keys.flatMap((key): unknown[] =>
+			key === DRAFT_STATE_KEY
+				? [
+						state.sorting,
+						state.columnFilters,
+						state.globalFilter,
+						(state as unknown as Record<string, unknown>).applied,
+					]
+				: [state[key] as unknown],
+		)
 		const cache = cacheRef.current
 		if (cache && sameList(cache.keys, keys) && sameList(cache.inputs, inputs)) {
 			return cache.output
@@ -53,8 +64,8 @@ export function useExtractedState<TRow extends object>(
 	}
 
 	return useSyncExternalStore(
-		instance.store.subscribe,
-		() => select(instance.store.getSnapshot()),
-		() => select(instance.store.getServerSnapshot()),
+		table.subscribe,
+		() => select(table.getSnapshot()),
+		() => select(table.getInitialSnapshot()),
 	)
 }

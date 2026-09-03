@@ -1,4 +1,23 @@
-import type { ZodType } from 'zod'
+/**
+ * The `{ schema }` shorthand's contract, written structurally rather than as
+ * `import type { ZodType } from 'zod'`.
+ *
+ * zod is an **optional** peer dependency, but a bare `import` of it in this module ends up in
+ * the package's published `index.d.ts` unconditionally — so every consumer had to have zod
+ * installed for the type declarations to resolve at all, optional or not. Only `safeParse` and
+ * the issue shape are ever read (see `zodSafeParseToResult`), and every zod schema satisfies
+ * this by structure, so `validate: { schema }` keeps type-checking against a real zod schema
+ * with no import.
+ */
+export type ValidationSchema = {
+	safeParse(input: unknown): { success: true } | { success: false; error: { issues: readonly ValidationIssue[] } }
+}
+
+/** One problem reported by a {@link ValidationSchema}. The zod issue shape, structurally. */
+export type ValidationIssue = {
+	path: readonly PropertyKey[]
+	message: string
+}
 
 /**
  * Validation error map keyed by columnId.
@@ -19,18 +38,41 @@ export type ValidateContext = {
 	cell?: { columnId: string }
 }
 
-export type ValidateOn = 'submit' | 'blur' | 'change'
+/**
+ * When a form field runs its validation.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `validateOn: 'blur'` is equally valid and needs no import.
+ */
+export const ValidateOn = {
+	/** Only when the form is submitted. */
+	Submit: 'submit',
+	/** When the field loses focus, then on every submit. */
+	Blur: 'blur',
+	/** On every keystroke (debounced by `debounce`), then on every submit. */
+	Change: 'change',
+} as const
+
+export type ValidateOn = (typeof ValidateOn)[keyof typeof ValidateOn]
 
 /**
  * Single state machine for the commit pipeline (creating + editing).
  *
- * - `idle`     — нечего не происходит; форма принимает ввод
- * - `validating` — выполняется validate() (sync или async)
- * - `saving`     — выполняется onSave()
+ * UI invariant: Save stays disabled while `commitStatus !== CommitStatus.Idle`.
  *
- * UI-инвариант: Save disabled, пока `commitStatus !== 'idle'`.
+ * Named members for internal reference; the plain string union is what callers see, so
+ * `status === 'saving'` is equally valid and needs no import.
  */
-export type CommitStatus = 'idle' | 'validating' | 'saving'
+export const CommitStatus = {
+	/** Nothing in flight; the form accepts input. */
+	Idle: 'idle',
+	/** `validate()` is running (sync or async). */
+	Validating: 'validating',
+	/** `onSave()` is running. */
+	Saving: 'saving',
+} as const
+
+export type CommitStatus = (typeof CommitStatus)[keyof typeof CommitStatus]
 
 /**
  * Per-field state passed to custom cell renderers in `creating` / `editing` modes.
@@ -46,12 +88,16 @@ export type CommitStatus = 'idle' | 'validating' | 'saving'
  * input loses focus.
  *
  * @typeParam TConfig - column-level cell config (see `meta.config`)
+ * @typeParam TValue - the field's value type. Bound to the column's own value by
+ * `ColumnEditingConfig` / `ColumnCreatingConfig`, so an `accessorKey` column's edit input sees
+ * that field's type rather than `unknown`. Stays `unknown` for a cell type registered in the
+ * kit's registry, which is row-agnostic by construction.
  */
-export type FieldState<TConfig = unknown> = {
+export type FieldState<TConfig = unknown, TValue = unknown> = {
 	/** Stable id for `htmlFor` / aria wiring. Always present (defaults to columnId). */
 	id: string
-	value: unknown
-	onChange: (value: unknown) => void
+	value: TValue
+	onChange: (value: TValue) => void
 	/** Triggers field-level validation when the column's resolved `validateOn` is `'blur'`. */
 	onBlur: () => void
 	/** Optional column-level cell config (`meta.config`). */
@@ -76,13 +122,18 @@ export type FieldState<TConfig = unknown> = {
 }
 
 /**
- * `validate` config — function form OR `{ schema }` shorthand for zod.
- * `validateOn` and `validateDebounceMs` on the shorthand override the global creating/editing
- * `validateOn` / `validateDebounceMs` for that specific call.
+ * `validate` config — a function, or the `{ schema }` shorthand for zod.
+ *
+ * **When** validation runs is not settable here. It is `editing.validateOn` /
+ * `creating.validateOn` (and the per-column override under `column.editing` /
+ * `column.creating`), full stop. The shorthand used to carry its own `validateOn` /
+ * `debounce` that silently won over the feature-level ones — so the same setting had
+ * two spellings, only one of which existed when `validate` was written as a function, and
+ * adopting a zod schema from another example quietly re-timed the whole form.
  */
 export type ValidateConfig<TData> =
 	| ((values: Partial<TData>, ctx: ValidateContext) => ValidationResult | Promise<ValidationResult>)
-	| { schema: ZodType; validateOn?: ValidateOn; validateDebounceMs?: number }
+	| { schema: ValidationSchema }
 
 const VALIDATION_ERROR_BRAND = Symbol.for('@ez-kit/validation-error')
 

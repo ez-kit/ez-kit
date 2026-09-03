@@ -1,29 +1,62 @@
 import { useGridComponents } from '../components-context'
-import { DATA_GRID_DEFAULTS } from '../defaults'
-import { PAGINATION_VARIANT_KEY, PAGINATION_WINDOW_KEY } from '../use-data-grid'
 
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { useDataGridTable, useDataGridState } from './table-context'
 
-import type { PaginationVariant } from '../types'
-import type { NormalizedPageWindowConfig } from '../use-data-grid'
+import type { ReactNode } from 'react'
 
 /** A trusted page total of zero — the grid is known to be empty, so there is nothing to paginate. */
 const EMPTY_TOTAL = 0
 
-/** The window a table carries no config for — a grid built outside `useDataGrid` (e.g. in a test). */
-const FALLBACK_PAGE_WINDOW: NormalizedPageWindowConfig = {
-	siblings: DATA_GRID_DEFAULTS.pagination.siblings,
-	boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
+/**
+ * What a `<DataGrid.Pagination>` render function receives — the footer model this component
+ * derives, already settled.
+ *
+ * The two totals are the reason this is worth exposing rather than re-deriving: each is
+ * `undefined` when the grid cannot be trusted to know it. `pageCount` is `undefined` for the
+ * `-1` sentinel a manual grid carries when given neither `rowCount` nor `pageCount`;
+ * `rowCount` is `undefined` under `manualPagination` without an explicit `rowCount`, because
+ * `data` is then only the current page and its length is not the total.
+ */
+export type DataGridPaginationRenderArgs = {
+	pageIndex: number
+	pageSize: number
+	/** Total pages, or `undefined` when unknown. */
+	pageCount: number | undefined
+	/** Total rows, or `undefined` when the grid cannot be trusted to know it. */
+	rowCount: number | undefined
+	canPreviousPage: boolean
+	canNextPage: boolean
+	previousPage: () => void
+	nextPage: () => void
+	firstPage: () => void
+	/** No-op when {@link DataGridPaginationRenderArgs.pageCount} is unknown. */
+	lastPage: () => void
+	setPageIndex: (pageIndex: number) => void
 }
 
-function readVariant(table: object): PaginationVariant {
-	const variant = (table as Record<symbol, unknown>)[PAGINATION_VARIANT_KEY] as PaginationVariant | undefined
-	return variant ?? DATA_GRID_DEFAULTS.pagination.variant
-}
-
-function readPageWindow(table: object): NormalizedPageWindowConfig {
-	const window = (table as Record<symbol, unknown>)[PAGINATION_WINDOW_KEY] as NormalizedPageWindowConfig | undefined
-	return window ?? FALLBACK_PAGE_WINDOW
+export type DataGridPaginationProps = {
+	/**
+	 * Custom pagination-bar content, replacing the kit's `Pagination` component.
+	 *
+	 * The render function receives the whole settled model, so a custom bar never has to
+	 * repeat the page-count and row-count trust rules. Everything that hides the bar
+	 * entirely — the initial-load skeleton, a grid with no pagination row model, a trusted
+	 * total of zero — still applies, so `children` are not rendered in those states either.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.Pagination>
+	 *   {({ pageIndex, pageCount, previousPage, nextPage }) => (
+	 *     <nav>
+	 *       <button onClick={previousPage}>Prev</button>
+	 *       <span>{pageIndex + 1} / {pageCount ?? '?'}</span>
+	 *       <button onClick={nextPage}>Next</button>
+	 *     </nav>
+	 *   )}
+	 * </DataGrid.Pagination>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridPaginationRenderArgs) => ReactNode)
 }
 
 /**
@@ -34,18 +67,17 @@ function readPageWindow(table: object): NormalizedPageWindowConfig {
  * depends on the row model). Editing / column / selection mutations do NOT
  * touch any of these → no re-render.
  */
-export function Pagination() {
-	const instance = useDataGridInstance()
-	const table = instance.table
+export function Pagination({ children }: DataGridPaginationProps = {}) {
+	const table = useDataGridTable()
 	const { Pagination: PaginationComponent } = useGridComponents().pagination
 
-	useDataGridStore((s) => s.pagination)
-	const isPending = useDataGridStore((s) => s.loading.isPending)
+	useDataGridState((s) => s.pagination)
+	const isPending = useDataGridState((s) => s.loading.isPending)
 	// Row-model affecting slices (pageCount is derived from rowModel.length).
-	useDataGridStore((s) => s.sorting)
-	useDataGridStore((s) => s.columnFilters)
-	useDataGridStore<unknown>((s) => s.globalFilter)
-	useDataGridStore((s) => s.expanded)
+	useDataGridState((s) => s.sorting)
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState<unknown>((s) => s.globalFilter)
+	useDataGridState((s) => s.expanded)
 
 	// Hide only during the initial-load skeleton path (`isPending`); a background
 	// refetch (`isFetching`) keeps the footer mounted (the overlay dims rows instead).
@@ -81,36 +113,60 @@ export function Pagination() {
 
 	const canPrevious = table.getCanPreviousPage()
 	const canNext = table.getCanNextPage()
-	const { siblings, boundaries } = readPageWindow(table)
+	const { siblings, boundaries } = table.grid.pagination
+
+	const previousPage = () => {
+		table.previousPage()
+	}
+	const nextPage = () => {
+		table.nextPage()
+	}
+	const firstPage = () => {
+		table.setPageIndex(0)
+	}
+	// No-op when the page count is unknown — there is no last page to jump to.
+	// (Unguarded this called setPageIndex(-2) for the -1 sentinel.)
+	const lastPage = () => {
+		if (pageCount !== undefined) table.setPageIndex(pageCount - 1)
+	}
+	const setPageIndex = (nextIndex: number) => {
+		table.setPageIndex(nextIndex)
+	}
+
+	if (children !== undefined) {
+		return typeof children === 'function'
+			? children({
+					pageIndex,
+					pageSize,
+					pageCount,
+					rowCount,
+					canPreviousPage: canPrevious,
+					canNextPage: canNext,
+					previousPage,
+					nextPage,
+					firstPage,
+					lastPage,
+					setPageIndex,
+				})
+			: children
+	}
 
 	return (
 		<PaginationComponent
 			{...(rowCount !== undefined ? { rowCount } : {})}
 			{...(pageCount !== undefined ? { pageCount } : {})}
-			variant={readVariant(table)}
+			variant={table.grid.pagination.variant}
 			siblings={siblings}
 			boundaries={boundaries}
 			pageIndex={pageIndex}
 			pageSize={pageSize}
 			canPreviousPage={canPrevious}
 			canNextPage={canNext}
-			onPreviousPage={() => {
-				table.previousPage()
-			}}
-			onNextPage={() => {
-				table.nextPage()
-			}}
-			onFirstPage={() => {
-				table.setPageIndex(0)
-			}}
-			onLastPage={() => {
-				// No-op when the page count is unknown — there is no last page to jump to.
-				// (Unguarded this called setPageIndex(-2) for the -1 sentinel.)
-				if (pageCount !== undefined) table.setPageIndex(pageCount - 1)
-			}}
-			onPageChange={(pageIndex) => {
-				table.setPageIndex(pageIndex)
-			}}
+			onPreviousPage={previousPage}
+			onNextPage={nextPage}
+			onFirstPage={firstPage}
+			onLastPage={lastPage}
+			onPageChange={setPageIndex}
 		/>
 	)
 }

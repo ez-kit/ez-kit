@@ -42,3 +42,33 @@ describe('deepMerge', () => {
 		expect(result.pagination).not.toBe(nested)
 	})
 })
+
+describe('deepMerge — `true` over a config object', () => {
+	// Every feature option is `boolean | Config`; `true` and an object both mean "enabled".
+	// A call site writing the short form over a defaults layer that wrote the long one is
+	// restating the decision, not reversing it, so the config must survive.
+	it('keeps the target config when the source says `true`', () => {
+		const result = deepMerge({ pagination: { pageSize: 50, variant: 'simple' } }, { pagination: true })
+		expect(result.pagination).toEqual({ pageSize: 50, variant: 'simple' })
+	})
+
+	it('still lets `false` turn a defaulted feature off', () => {
+		const result = deepMerge({ pagination: { pageSize: 50 } }, { pagination: false })
+		expect(result.pagination).toBe(false)
+	})
+
+	it('`true` over a non-object target is written through unchanged', () => {
+		expect(deepMerge({ sorting: false }, { sorting: true }).sorting).toBe(true)
+		expect(deepMerge({}, { sorting: true }).sorting).toBe(true)
+	})
+
+	it('an object over `true` still wins wholesale', () => {
+		const result = deepMerge({ pagination: true }, { pagination: { pageSize: 20 } })
+		expect(result.pagination).toEqual({ pageSize: 20 })
+	})
+
+	it('applies at any depth', () => {
+		const result = deepMerge({ filtering: { chips: { position: 'below' } } }, { filtering: { chips: true } })
+		expect(result.filtering).toEqual({ chips: { position: 'below' } })
+	})
+})

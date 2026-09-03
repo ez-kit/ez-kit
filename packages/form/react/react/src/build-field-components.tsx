@@ -1,5 +1,10 @@
 import { createCheckboxField } from './fields/checkbox-field'
-import { createFormWrapper, createSubmitButton } from './fields/form-parts'
+import { createCheckboxGroupField } from './fields/checkbox-group-field'
+import { createDateField } from './fields/date-field'
+import { createDateRangeField } from './fields/date-range-field'
+import { createSubmitButton } from './fields/form-parts'
+import { createGridItem, createSection } from './fields/layout-parts'
+import { createMultiSelectField } from './fields/multi-select-field'
 import { createNumberField } from './fields/number-field'
 import { createRadioGroupField } from './fields/radio-group-field'
 import { createSelectField } from './fields/select-field'
@@ -33,8 +38,13 @@ export function buildFieldComponents<TFormData>(
 		SwitchField: KitSwitchField,
 		RadioGroupField: KitRadioGroupField,
 		SliderField: KitSliderField,
+		MultiSelectField: KitMultiSelectField,
+		CheckboxGroupField: KitCheckboxGroupField,
+		DateField: KitDateField,
+		DateRangeField: KitDateRangeField,
 		Button,
-		Form,
+		Section: KitSection,
+		GridItem: KitGridItem,
 	} = components
 
 	return {
@@ -46,7 +56,12 @@ export function buildFieldComponents<TFormData>(
 		SwitchField: createSwitchField<TFormData>(form, KitSwitchField),
 		RadioGroupField: createRadioGroupField<TFormData>(form, KitRadioGroupField),
 		SliderField: createSliderField<TFormData>(form, KitSliderField),
+		MultiSelectField: createMultiSelectField<TFormData>(form, KitMultiSelectField),
+		CheckboxGroupField: createCheckboxGroupField<TFormData>(form, KitCheckboxGroupField),
+		DateField: createDateField<TFormData>(form, KitDateField),
+		DateRangeField: createDateRangeField<TFormData>(form, KitDateRangeField),
 		SubmitButton: createSubmitButton(form, Button),
-		Form: createFormWrapper(form, Form),
+		Section: createSection(KitSection),
+		GridItem: createGridItem(KitGridItem),
 	}
 }

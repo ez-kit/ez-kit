@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -46,7 +46,7 @@ const EMPLOYEES: Employee[] = [
 	},
 ]
 
-const columns = defineColumns<Employee>([
+const columns = createColumns<Employee>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'role', header: 'Role' },
 	{ accessorKey: 'department', header: 'Department' },
@@ -87,11 +87,11 @@ export function ExpandingControlledExample() {
 				data={EMPLOYEES}
 				columns={columns}
 				state={tableState}
-				onStateChange={(updater) => {
-					setTableState((prev) => (typeof updater === 'function' ? updater(prev as TableState) : updater))
+				onStateChange={(nextState) => {
+					setTableState(nextState)
 				}}
 				expanding={{
-					renderExpanded: ({ row }) => (
+					component: ({ row }) => (
 						<div>
 							<span style={{ fontWeight: 600 }}>Notes: </span>
 							{row.original.notes}

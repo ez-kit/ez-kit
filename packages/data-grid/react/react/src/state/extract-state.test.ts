@@ -1,10 +1,10 @@
-import { createTable, defineColumns } from '@ez-kit/data-grid-core'
+import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { describe, expect, it } from 'vitest'
 
 import { extractState } from './extract-state'
 
 type Row = { id: number; name: string }
-const columns = defineColumns<Row>([{ accessorKey: 'name' }])
+const columns = createColumns<Row>([{ accessorKey: 'name' }])
 const data: Row[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },
@@ -45,5 +45,33 @@ describe('extractState', () => {
 	it('is JSON-serializable', () => {
 		const result = extractState(makeTable())
 		expect(() => JSON.stringify(result)).not.toThrow()
+	})
+})
+
+/**
+ * The draft is not a state slice — the live axes carry it and `state.applied` carries what was
+ * emitted — so it is picked by name rather than copied. Persisting it is the only way a
+ * restored grid comes back with the draft still pending instead of silently applied.
+ */
+describe('extractState — draft', () => {
+	function makeDeferredTable() {
+		return createTable<Row>({ data, columns, sorting: { manual: true }, draft: true })
+	}
+
+	it('reports nothing while the draft is clean', () => {
+		const table = makeDeferredTable()
+		expect(extractState(table, { keys: ['draft'] })).toEqual({})
+	})
+
+	it('reports the pending axes once the draft is dirty', () => {
+		const table = makeDeferredTable()
+		table.draft.set({ sorting: [{ id: 'name', desc: true }] })
+		const result = extractState(table, { keys: ['draft'] })
+		expect(result.draft?.sorting).toEqual([{ id: 'name', desc: true }])
+	})
+
+	it('reports nothing when the grid does not defer at all', () => {
+		const table = createTable<Row>({ data, columns, sorting: true })
+		expect(extractState(table, { keys: ['draft'] })).toEqual({})
 	})
 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
 
@@ -70,7 +70,7 @@ const ORG_DATA: OrgNode[] = [
 	},
 ]
 
-const columns = defineColumns<OrgNode>([
+const columns = createColumns<OrgNode>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'role', header: 'Role' },
 	{ accessorKey: 'headcount', header: 'Headcount', cell: { type: 'number' } },
@@ -82,7 +82,7 @@ export function ExpandingTreeExample() {
 			data={ORG_DATA}
 			columns={columns}
 			expanding={{
-				variant: 'tree',
+				mode: 'tree',
 			}}
 		/>
 	)

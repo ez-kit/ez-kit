@@ -1,11 +1,11 @@
-import { createDataGridInstance, createTable, defineColumns } from '@ez-kit/data-grid-react'
+import { prepareDataGridTable, createTable, createColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ColumnVisibilityMenu } from './blocks/column-visibility/ColumnVisibilityMenu'
 import { BetweenInput } from './blocks/filtering/BetweenInput'
 import { MultiSelectFilter } from './blocks/filtering/MultiSelectFilter'
 import { PageSizer } from './blocks/pagination/PageSizer'
+import { VisibilityMenu } from './blocks/visibility/VisibilityMenu'
 
 import {
 	CellTypesProvider,
@@ -13,7 +13,7 @@ import {
 	createColumnHelper,
 	DataGrid,
 	DataGridOptionsProvider,
-	defineColumns as kitDefineColumns,
+	createColumns as kitDefineColumns,
 	extractState,
 	GridComponentsProvider,
 	parseState,
@@ -44,7 +44,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 	})
 
 	// The kit must carry the whole consumer surface on its own: installing a kit and also
-	// depending on `@ez-kit/data-grid-react` to reach `defineColumns` is the thing #66 removes.
+	// depending on `@ez-kit/data-grid-react` to reach `createColumns` is the thing #66 removes.
 	it('re-exports the adapter consumer surface', () => {
 		expect(kitDefineColumns).toBeTypeOf('function')
 		expect(createColumnHelper).toBeTypeOf('function')
@@ -58,9 +58,15 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 	// Type-level half of the same guarantee: these annotations are the assertion — the test
 	// fails at `pnpm typecheck` if the kit stops carrying a type an example relies on.
+	//
+	// `KitCellType` is the point of the kit-bound helpers: they are typed to the cell types
+	// this kit registers, so `cell: { type: … }` is checked against them. The headless
+	// helpers the star export used to supply resolve `TCustomCellTypes` to `never`, and
+	// annotating with them here would compile while checking nothing.
 	it('types a consumer that imports from the kit alone', () => {
-		const columns: ColumnDef<User>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
-		const helper: ColumnHelper<User> = createColumnHelper<User>()
+		type KitCellTypes = typeof cellTypes
+		const columns: ColumnDef<User, KitCellTypes>[] = kitDefineColumns<User>([{ accessorKey: 'name', header: 'Name' }])
+		const helper: ColumnHelper<User, KitCellTypes> = createColumnHelper<User>()
 		const sorting: SortingState = [{ id: 'name', desc: false }]
 		const props: DataGridProps<User> = { data: [{ id: 1, name: 'Ada' }], columns }
 
@@ -73,10 +79,10 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('renders a simple DataGrid', () => {
 		const table = createTable<User>({
 			data: [{ id: 1, name: 'Ada' }],
-			columns: defineColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 		})
 
-		render(<DataGrid table={createDataGridInstance(table)} />)
+		render(<DataGrid table={prepareDataGridTable(table)} />)
 
 		expect(screen.getByRole('grid', { name: 'Data grid' })).toBeInTheDocument()
 		expect(screen.getByText('Name')).toBeInTheDocument()
@@ -86,11 +92,11 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('selects rows through the grid checkbox', () => {
 		const table = createTable<User>({
 			data: [{ id: 1, name: 'Ada' }],
-			columns: defineColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
+			columns: createColumns<User>([{ accessorKey: 'name', header: 'Name' }]),
 			selection: true,
 		})
 
-		render(<DataGrid table={createDataGridInstance(table)} />)
+		render(<DataGrid table={prepareDataGridTable(table)} />)
 
 		const checkbox = screen.getByRole('checkbox', { name: /Select row/i })
 		fireEvent.click(checkbox)
@@ -140,7 +146,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 		const onChange = vi.fn()
 		const { rerender } = render(
 			<MultiSelectFilter
-				options={[
+				items={[
 					{ value: 'a', label: 'Apple' },
 					{ value: 'b', label: 'Banana' },
 				]}
@@ -158,7 +164,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 		rerender(
 			<MultiSelectFilter
-				options={[
+				items={[
 					{ value: 'a', label: 'Apple' },
 					{ value: 'b', label: 'Banana' },
 				]}
@@ -171,7 +177,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 
 		rerender(
 			<MultiSelectFilter
-				options={[
+				items={[
 					{ value: 'a', label: 'Apple' },
 					{ value: 'b', label: 'Banana' },
 				]}
@@ -242,13 +248,46 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('toggles column visibility items', () => {
 		const onToggle = vi.fn()
 
-		render(<ColumnVisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, onToggle }]} />)
+		render(<VisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, onToggle }]} />)
 
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')
 		fireEvent.click(columnsButton)
-		fireEvent.click(screen.getByRole('option', { name: 'Name' }))
+		fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Name' }))
 
 		expect(onToggle).toHaveBeenCalledTimes(1)
+	})
+})
+
+// ── surface parity with the adapter ───────────────────────────────────────
+
+describe('@ez-kit/data-grid-heroui — adapter surface parity', () => {
+	it('carries every runtime value the adapter exports', async () => {
+		const adapter = await import('@ez-kit/data-grid-react')
+		const kit = await import('./index')
+		const missing = Object.keys(adapter).filter((name) => !(name in kit))
+		expect(missing).toEqual([])
+	})
+
+	it('keeps the heroui-bound names, not the adapter ones', async () => {
+		const adapter = await import('@ez-kit/data-grid-react')
+		const kit = await import('./index')
+		// An explicit re-export shadows a star of the same name — this is what makes
+		// `export * from '@ez-kit/data-grid-react'` safe next to the bound exports.
+		expect(kit.DataGrid).not.toBe(adapter.DataGrid)
+		expect(kit.useDataGrid).not.toBe(adapter.useDataGrid)
+		// The two that used to slip through: with no explicit re-export the star supplied the
+		// headless core helpers, typed `TCustomCellTypes = never`, so a column's
+		// `cell: { type: 'my-type' }` silently stopped being checked against the kit registry.
+		expect(kit.createColumns).not.toBe(adapter.createColumns)
+		expect(kit.createColumnHelper).not.toBe(adapter.createColumnHelper)
+	})
+
+	it('the bound DataGrid carries the full compound namespace', async () => {
+		const adapter = await import('@ez-kit/data-grid-react')
+		const kit = await import('./index')
+		for (const member of Object.keys(adapter.DataGrid) as (keyof typeof adapter.DataGrid)[]) {
+			expect(kit.DataGrid[member], `DataGrid.${member} missing from the kit bundle`).toBeDefined()
+		}
 	})
 })

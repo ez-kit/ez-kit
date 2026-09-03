@@ -15,6 +15,23 @@
 
 /* ── table layout ─────────────────────────────────────────────────────── */
 
+/* The rows carry the column grid, but the table / header / body around them are
+ * *block* boxes — so they take the scrollport's width, not the tracks' width, and
+ * the grid tracks simply overflow. That silently breaks column pinning: a sticky
+ * cell is clamped to its containing block, so once the row's right edge scrolls
+ * past a left-pinned cell, the browser drags that cell out of view with the
+ * content (only the pin shadow, which lives on the wrapper, stays behind).
+ * Flooring the box at the summed column widths keeps the containing block as wide
+ * as the content; `minmax(…, 1fr)` tracks still stretch past it when there's room.
+ *
+ * Keyed on the element, not on `data-slot` alone: a kit may stamp `data-slot="table"`
+ * on a wrapper around the real table (HeroUI's `.table-root`, which is also the element
+ * that clips and scrolls). Flooring *that* box would push the overflow out of its own
+ * scroller instead of into it. Such kits floor their inner table themselves. */
+table[data-slot='table'] {
+	min-width: var(--dg-table-min-width, 0px);
+}
+
 [data-slot='table'][data-virtualized='true'] {
 	@apply grid;
 }
@@ -32,7 +49,10 @@
 [data-slot='table-scroll'] {
 	@apply overflow-x-auto;
 }
-[data-slot='table-scroll'][data-sticky-header='true'] {
+/* One bound, two stickies: a sticky header and a sticky footer both need this div to be the
+ * bounded vertical scrollport, so either attribute opens it. */
+[data-slot='table-scroll'][data-sticky-header='true'],
+[data-slot='table-scroll'][data-sticky-footer='true'] {
 	@apply overflow-y-auto;
 	max-height: var(--dg-table-max-height, 400px);
 }
@@ -44,6 +64,15 @@
 
 [data-slot='thead'][data-sticky='true'] {
 	@apply sticky top-0 z-10;
+}
+
+/* ── sticky tfoot ─────────────────────────────────────────────────────── */
+
+/* `position: sticky` sits on the `<tfoot>` itself, mirroring the header. The kits paint its
+ * background off the same `[data-sticky='true']` hook the header uses — without an opaque
+ * background a sticky footer shows the rows sliding underneath it. */
+[data-slot='tfoot'][data-sticky='true'] {
+	@apply sticky bottom-0 z-10;
 }
 
 /* ── pinned columns ───────────────────────────────────────────────────── */
@@ -63,8 +92,57 @@
 
 /* ── resizable th — resizer is absolutely positioned inside ──────────── */
 
-[data-slot='th'][data-resizable='true'] {
+/* Skip pinned headers: they are already `sticky`, which positions the resizer
+   just as well, and this rule would otherwise override that stickiness — a
+   pinned + resizable column would stop sticking and shift by its pin offset
+   instead, overlapping its neighbour. */
+[data-slot='th'][data-resizable='true']:not([data-pinned]) {
 	@apply relative;
+}
+
+/* ── column alignment ─────────────────────────────────────────────────── */
+
+/* `data-align` comes from a column's `align`, already resolved per part by the core.
+ *
+ * Selectors are qualified by `data-slot` on purpose: `data-align` is not ours alone — the kits'
+ * `input-group` and `action-bar` primitives set it too, with an unrelated vocabulary
+ * (`inline-start`, `block-end`). Scoping to the grid's own slots keeps the two apart.
+ *
+ * Alignment is layout, not decoration, so it belongs in this structural sheet: a column that asks
+ * to be right-aligned should look the same in both kits, and leaving it to them is what made
+ * `headerClassName` + `cellClassName` the only route to it. */
+/* Each rule carries `justify-*` beside `text-*` because a kit is free to lay its cells out with
+ * flex — shadcn's `<TableCell>` is `flex items-center`, so its content is a flex item and
+ * `text-align` has nothing left to move, exactly as it has nothing to move inside the header's
+ * `sort-trigger` below. `justify-content` is inert on a block box, so the kits that keep their
+ * cells as blocks (heroui) are unaffected. Without it the same `align: 'end'` right-aligned a
+ * column's header in both kits but its body and footer cells in only one of them — a numeric
+ * column with a total came out with the header at one edge and every value at the other. */
+[data-slot='td'][data-align='start'],
+[data-slot='th'][data-align='start'] {
+	@apply justify-start text-start;
+}
+[data-slot='td'][data-align='center'],
+[data-slot='th'][data-align='center'] {
+	@apply justify-center text-center;
+}
+[data-slot='td'][data-align='end'],
+[data-slot='th'][data-align='end'] {
+	@apply justify-end text-end;
+}
+
+/* The default header content is laid out by flex, and `[data-slot='sort-trigger']` — which holds
+ * the label — is `flex-1`, so it fills the row and `text-align` on the `<th>` has nothing left to
+ * move. The label follows the trigger's main axis instead. (The `<th>` rules above still carry
+ * alignment for a header composed by hand, where no sort-trigger exists.) */
+[data-slot='th'][data-align='start'] [data-slot='sort-trigger'] {
+	@apply justify-start;
+}
+[data-slot='th'][data-align='center'] [data-slot='sort-trigger'] {
+	@apply justify-center;
+}
+[data-slot='th'][data-align='end'] [data-slot='sort-trigger'] {
+	@apply justify-end;
 }
 
 /* ── header inner layout ──────────────────────────────────────────────── */

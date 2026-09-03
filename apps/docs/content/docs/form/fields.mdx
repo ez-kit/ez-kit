@@ -7,17 +7,38 @@ description: The base fields, the props they share, and the styling hooks they e
 
 Every field is **complete**: it renders its own label, description, input and error message, and wires the accessibility attributes that tie them together. You give it a `name` and a `label`.
 
+## Every field in one form
+
+### In TSX
+
 <KitExample exampleId='form-fields' />
+
+### The same form as a document
+
+<KitExample exampleId='form-fields-schema' />
 
 ## Shared props
 
-| Prop          | Type        | Notes                                                                                       |
-| ------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| `name`        | typed path  | **Required.** Narrowed to paths whose value type matches the field.                         |
-| `label`       | `ReactNode` | Omit it and no label element is rendered.                                                   |
-| `description` | `ReactNode` | Helper text, linked via `aria-describedby`.                                                 |
-| `disabled`    | `boolean`   |                                                                                             |
-| `required`    | `boolean`   | Marks the control required. It does **not** validate — see [Validation](./form/validation). |
+| Prop          | Type                 | Notes                                                                                                                                                     |
+| ------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | typed path           | **Required.** Narrowed to paths whose value type matches the field.                                                                                       |
+| `label`       | `ReactNode`          | Omit it and no label element is rendered.                                                                                                                 |
+| `description` | `ReactNode`          | Helper text, linked via `aria-describedby`.                                                                                                               |
+| `disabled`    | `boolean`            |                                                                                                                                                           |
+| `required`    | `boolean`            | Marks the control required. It does **not** validate — for that use `validate` below.                                                                     |
+| `validate`    | `FieldValidateProps` | The constraints to enforce, in the same vocabulary a [document](/docs/form/schema#validation) uses. Sets the marker too when it carries `required: true`. |
+
+The last two are a pair, not two spellings of one thing: `required` draws the asterisk and sets `aria-required` and nothing else, while `validate` is what a value is actually checked against.
+
+```tsx
+<form.TextField
+	name='email'
+	label='Email'
+	validate={{ required: true, format: 'email' }}
+/>
+```
+
+[Validation](./form/validation#per-field-validators) covers the whole constraint set, how it composes with a validator on the form, and the two keys the JSX spelling leaves to a document.
 
 ## `form.TextField`
 
@@ -82,6 +103,8 @@ Each option is a `SelectOption`: `{ label, value, disabled? }`. Both kits render
 
 An empty string means "nothing selected", so the placeholder shows.
 
+Where that list comes from is its own subject, and it is the same subject for all four option-bearing fields: a numeric `value`, a list still being fetched, a list the app names instead of writing out, a search box, a value the list does not contain. See [Options](/docs/form/select).
+
 ## `form.CheckboxField`
 
 Binds to a `boolean`.
@@ -125,6 +148,58 @@ Binds to a `string`. Like `form.SelectField` it takes a flat `options` list, but
 
 Each option is the same `SelectOption` shape as `form.SelectField`: `{ label, value, disabled? }`. The value in form state is the selected option's `value`; an empty string means nothing is selected.
 
+## `form.MultiSelectField`
+
+Binds to a **`string[]`** — the multi-value counterpart of `form.SelectField`, taking the same flat `options` list:
+
+```tsx
+<form.MultiSelectField
+	name='tags'
+	label='Tags'
+	placeholder='Pick a few'
+	options={[
+		{ label: 'Design', value: 'design' },
+		{ label: 'Engineering', value: 'engineering' },
+	]}
+/>
+```
+
+The value is always a list — `[]` when nothing is chosen, never `undefined` — and `onChange` reports the whole new selection rather than a toggle.
+
+**A separate field, not a `multiple` flag on `form.SelectField`.** Its value has a different type, and that is what keeps `name` narrowed to `string[]` paths here and to `string` paths there. The kits differ underneath and it does not matter: HeroUI uses its own `Select` in `selectionMode='multiple'`, shadcn a popover of checkboxes (Radix's select is single-selection only).
+
+## `form.CheckboxGroupField`
+
+Binds to a `string[]` as well, but lays every choice out at once — the multi-value counterpart of `form.RadioGroupField`:
+
+```tsx
+<form.CheckboxGroupField
+	name='interests'
+	label='Interests'
+	options={[
+		{ label: 'Code', value: 'code' },
+		{ label: 'Design', value: 'design' },
+	]}
+/>
+```
+
+It is **one field**, not one per box: a single `name` holding the list of checked values. A lone `form.CheckboxField` remains what it was — one boolean, for "I agree".
+
+The four selection fields line up as a grid — collapsed or expanded, one value or many:
+
+|                                   | one value         | many values          |
+| --------------------------------- | ----------------- | -------------------- |
+| collapsed (trigger plus a popup)  | `SelectField`     | `MultiSelectField`   |
+| expanded (every choice on screen) | `RadioGroupField` | `CheckboxGroupField` |
+
+### In TSX
+
+<KitExample exampleId='form-multi-value-jsx' />
+
+### The same form as a document
+
+<KitExample exampleId='form-multi-value' />
+
 ## `form.SliderField`
 
 Binds to a `number`, like `form.NumberField`, but picks the value along a track instead of typing it. Accepts `min`, `max`, `step` — reach for it when the range is bounded and the exact digit matters less than the feel of "more or less".
@@ -148,6 +223,53 @@ Binds to a `number`, like `form.NumberField`, but picks the value along a track 
 
 A slider has no "empty" position: when the form value is not yet a number the thumb rests at `min` (or `0` when `min` is omitted), so the control always shows a definite value. Both kits render a real slider widget with a draggable thumb (Radix for shadcn, React Aria for HeroUI).
 
+## `form.DateField`
+
+Binds to a **`YYYY-MM-DD` string**, never a `Date`. A calendar date has no time and no zone, and a string is the only representation that survives `JSON.stringify` — which is what lets the same field be described by a [schema](./form/schema) delivered from a backend.
+
+```tsx
+<form.DateField
+	name='startsOn'
+	label='Starts on'
+	min='2026-01-01'
+	max='2026-12-31'
+/>
+```
+
+| Prop          | Type     | Notes                                         |
+| ------------- | -------- | --------------------------------------------- |
+| `min`         | `string` | Earliest selectable day, `YYYY-MM-DD`.        |
+| `max`         | `string` | Latest selectable day.                        |
+| `placeholder` | `string` | Shown on the trigger while nothing is picked. |
+
+`min` / `max` bound what the picker _offers_; they are not validation. To reject an out-of-range value pass `validate={{ min, max }}` — or `validate: { min, max }` on a schema's field node — since those constraints take the same `YYYY-MM-DD` strings, and ISO dates compare correctly as text.
+
+Each kit renders its own picker: shadcn a `Popover` holding its `Calendar` (react-day-picker), HeroUI its React Aria `DatePicker` with a segmented input. Both convert to and from the string at their own edge — no date library reaches your form state.
+
+## `form.DateRangeField`
+
+Binds to a **`{ start, end }` object** of two `YYYY-MM-DD` strings, under a single `name`:
+
+```tsx
+<form.DateRangeField
+	name='stay'
+	label='Stay'
+	min='2026-01-01'
+/>
+```
+
+A range is a separate field rather than a flag on `form.DateField` because its value has a different shape — which is what keeps `name` checked against your form's type in both cases.
+
+**The value appears only once both ends are picked.** A half-picked range lives inside the picker; form state holds either a complete range or nothing, so validation, `onSubmit` and a `when` rule never have to handle `{ start, end: undefined }`.
+
+### In TSX
+
+<KitExample exampleId='form-dates-jsx' />
+
+### The same form as a document
+
+<KitExample exampleId='form-dates' />
+
 ## `form.SubmitButton`
 
 Subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself while the form is invalid or in flight. The `disabled` prop can only add to that, never override it.
@@ -156,24 +278,36 @@ Subscribed to the form's `canSubmit` and `isSubmitting`, so it disables itself w
 <form.SubmitButton>Save</form.SubmitButton>
 ```
 
-## `form.Form`
+## `Form`
 
-A `<form>` element already wired to `handleSubmit`, with `noValidate` set so the browser's own bubbles stay out of the way. It accepts the usual `<form>` props **except `onSubmit`**, which it owns.
+The `<form>` element, already wired to `handleSubmit`, with `noValidate` set so the browser's own bubbles stay out of the way. It accepts the usual `<form>` props **except `onSubmit`**, which it owns — in uncontrolled mode `onSubmit` is TanStack's, called with the validated values.
 
 ```tsx
-<form.Form className='max-w-sm'>{/* fields */}</form.Form>
+<Form
+	defaultValues={{ email: '' }}
+	className='max-w-sm'
+>
+	{(form) => (
+		<form.TextField
+			name='email'
+			label='Email'
+		/>
+	)}
+</Form>
 ```
+
+See [Getting started](./form/getting-started) for both modes.
 
 ## Styling hooks
 
 The field layer emits these and styles none of them — that is the kit's job:
 
-| Attribute         | Where        | Value                                                                                       |
-| ----------------- | ------------ | ------------------------------------------------------------------------------------------- |
-| `data-field`      | field root   | the field's `name`                                                                          |
-| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `checkbox` / `switch` / `radiogroup` / `slider` |
-| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                         |
-| `data-form`       | the `<form>` | always present                                                                              |
+| Attribute         | Where        | Value                                                                                                                                                |
+| ----------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-field`      | field root   | the field's `name`                                                                                                                                   |
+| `data-field-type` | field root   | `text` / `number` / `textarea` / `select` / `multiselect` / `checkbox` / `checkboxgroup` / `switch` / `radiogroup` / `slider` / `date` / `daterange` |
+| `data-invalid`    | field root   | `true` while the field has errors, absent otherwise                                                                                                  |
+| `data-form`       | the `<form>` | always present                                                                                                                                       |
 
 So targeting one field, or every field of a kind, is plain CSS:
 
@@ -192,4 +326,6 @@ So targeting one field, or every field of a kind, is plain CSS:
 
 ## Fields we do not ship yet
 
-Date-picker and combobox are planned. Until then, build them with [the native API](./form/native-api) — it composes with the flat fields in the same form.
+The list above is the whole catalogue: there is no file upload, rich text or colour field. Build one with [the native API](./form/native-api), which composes with the flat fields in the same form, or register it as a custom field type for a [document](/docs/form/schema).
+
+A date picker and a combobox are **not** on that list of gaps: `form.DateField` is the picker, and a [`searchable`](/docs/form/select/searchable) select is the combobox.

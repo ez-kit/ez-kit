@@ -17,7 +17,7 @@ Global search and per-column filters coexist — enable both `filtering` and `gl
 
 <DataGridDocsExample exampleId='global-filtering-combined' />
 
-Set `globalFilter: false` on a column to exclude it from the global match (here the `Internal ID` column is never searched).
+Set `globalFiltering: false` on a column to exclude it from the global match (here the `Internal ID` column is never searched).
 
 <DataGridDocsExample exampleId='global-filtering-excluded' />
 
@@ -33,20 +33,33 @@ Provide your own `fn` to change the match semantics — this one does a starts-w
 <DataGrid
 	data={data}
 	columns={columns}
-	enableGlobalFilter
-	globalFilterFn='includesString' // default
+	globalFiltering
+	// Equivalent to the default:
+	// globalFiltering={{ fn: 'includesString' }}
 />
 ```
 
 ## Options
 
-| Option                          | Type                              | Description                                                               |
-| ------------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
-| `enableGlobalFilter`            | `boolean`                         | Master switch. Default `false`.                                           |
-| `globalFilterFn`                | name \| `(row, value) => boolean` | Default `'includesString'`. Built-ins also include `'equals'`, `'fuzzy'`. |
-| `state.globalFilter`            | `string`                          | Controlled global filter value.                                           |
-| `onGlobalFilterChange`          | `(updater) => void`               | Subscribe to changes.                                                     |
-| Per-column `enableGlobalFilter` | `boolean`                         | Default `true`. Set `false` to exclude a column from global matching.     |
+### `globalFiltering`
+
+Global search has no `manual` flag of its own — setting `filtering.manual: true` makes both column filters **and** the global search server-side (see [Server-side Data](./data-grid/server-side)).
+
+| Option        | Type                                        | Description                                                                                                                                                                  |
+| ------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `placeholder` | `string`                                    | Placeholder for the search input. Default `'Search…'`.                                                                                                                       |
+| `debounce`    | `number`                                    | Commit debounce (ms) for the auto-mounted input. Defaults to the shared `filtering.debounce` (250); set it only to time the search box differently. `0` disables debouncing. |
+| `toolbar`     | `boolean`                                   | Auto-mount the search input in `Toolbar.end`. Default `true`.                                                                                                                |
+| `fn`          | name \| `(row, columnId, value) => boolean` | Function applied during global search. Default `'includesString'` (case-insensitive substring).                                                                              |
+| `fns`         | `Record<string, GlobalFilterFn>`            | Named global filter functions, addressable from `fn` by id.                                                                                                                  |
+| `onChange`    | `(globalFilter: unknown) => void`           | Called when the global search value changes.                                                                                                                                 |
+| `enabled`     | `boolean`                                   | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                               |
+
+### Per-column `globalFiltering`
+
+| Option  | Type      | Description                                                              |
+| ------- | --------- | ------------------------------------------------------------------------ |
+| `false` | `boolean` | Exclude this column from global matching. Default `true` (participates). |
 
 ## Source
 

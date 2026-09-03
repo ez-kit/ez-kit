@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/form-react",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Framework-agnostic React adapter for @ez-kit/form — DI field layer with zero visual styling.",
 	"license": "MIT",
 	"repository": {
@@ -24,32 +24,42 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"build": "tsup",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
 	"size-limit": [
 		{
+			"name": "everything (JSX API + config layer)",
 			"path": "dist/index.js",
-			"limit": "20 KB"
+			"limit": "9 KB"
+		},
+		{
+			"name": "config-layer helpers alone (no createForm)",
+			"path": "dist/index.js",
+			"import": "{ stripHiddenValues, clampToGridRange, GRID_MIN, GRID_MAX, FormFieldType }",
+			"limit": "1 KB"
 		}
 	],
 	"dependencies": {
-		"@ez-kit/form-core": "workspace:*",
-		"@tanstack/form-core": "^1.33.2",
-		"@tanstack/react-form": "^1.33.2"
+		"@ez-kit/form-core": "workspace:*"
 	},
 	"devDependencies": {
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
+		"@tanstack/form-core": "^1.33.2",
+		"@tanstack/react-form": "^1.33.2",
 		"react": ">=18.0.0"
 	}
 }

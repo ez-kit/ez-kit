@@ -12,6 +12,7 @@ import {
 
 import { FieldDescription, FieldErrorText, FieldLabel } from './field-chrome'
 import { fieldRoot } from './field-state'
+import { OptionListSkeleton } from './option-skeleton'
 
 import type {
 	CheckboxFieldRenderProps,
@@ -231,6 +232,7 @@ export function RadioGroupField({
 	value,
 	onChange,
 	options,
+	loading,
 	id,
 	name,
 	onBlur,
@@ -248,10 +250,13 @@ export function RadioGroupField({
 			value={value}
 			onChange={onChange}
 			onBlur={onBlur}
-			{...fieldRoot(field)}
+			data-loading={loading || undefined}
+			// See the checkbox group in `multi-value.tsx` — same reasoning, same placeholder rows.
+			{...fieldRoot(loading ? { ...field, disabled: true } : field)}
 		>
 			<FieldLabel label={label} />
 			<FieldDescription description={description} />
+			{loading && <OptionListSkeleton />}
 			{options.map((option) => (
 				<Radio
 					key={option.value}

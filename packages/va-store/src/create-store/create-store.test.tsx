@@ -1,4 +1,5 @@
-import { createServiceRegistry, ServicesProvider, serviceKey } from '@ez-kit/store-core'
+import { createServiceRegistry, serviceKey } from '@ez-kit/store-core'
+import { ServicesProvider } from '@ez-kit/store-core/react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
@@ -143,22 +144,31 @@ describe('createStore — base behavior without plugins', () => {
 		})
 	})
 
-	it('throws the createContextStore error message when used without a Provider', () => {
+	it('names the store in the missing-Provider error', () => {
 		const store = createStore(counterFactory)
 		function Broken() {
 			store.useSnapshot()
 			return null
 		}
-		expect(() => render(<Broken />)).toThrowError('Missing Provider for createContextStore')
+		expect(() => render(<Broken />)).toThrowError('Missing Provider for store')
 	})
 
-	it('throws the createContextStore error message when useStore is used without a Provider', () => {
+	it('uses the configured name in the missing-Provider error', () => {
+		const store = createStore(counterFactory, { name: 'filters' })
+		function Broken() {
+			store.useStore()
+			return null
+		}
+		expect(() => render(<Broken />)).toThrowError('Missing Provider for filters')
+	})
+
+	it('names the store in the missing-Provider error raised by useStore', () => {
 		const store = createStore(counterFactory)
 		function Broken() {
 			store.useStore()
 			return null
 		}
-		expect(() => render(<Broken />)).toThrowError('Missing Provider for createContextStore')
+		expect(() => render(<Broken />)).toThrowError('Missing Provider for store')
 	})
 
 	it('exposes useSnapshot as the reactive read alongside the raw useStore write path', async () => {
@@ -268,10 +278,8 @@ describe('createStore — StoreItem', () => {
 		expect(storeItemRenders).toBe(storeItemRendersAfterMount)
 	})
 
-	it('throws the createContextStore error message when used without a Provider', () => {
+	it('names the store in the missing-Provider error raised by StoreItem', () => {
 		const store = createStore(counterFactory)
-		expect(() => render(<store.StoreItem>{() => <span />}</store.StoreItem>)).toThrowError(
-			'Missing Provider for createContextStore',
-		)
+		expect(() => render(<store.StoreItem>{() => <span />}</store.StoreItem>)).toThrowError('Missing Provider for store')
 	})
 })

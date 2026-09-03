@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/form-core",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Framework-agnostic form core for @ez-kit/form — field types, select options and error formatting (built on TanStack Form).",
 	"license": "MIT",
 	"repository": {
@@ -29,13 +29,14 @@
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "3 KB"
+			"limit": "4.5 KB"
 		}
 	],
 	"dependencies": {

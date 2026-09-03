@@ -1,10 +1,20 @@
-import { useServices } from '@ez-kit/store-core'
-import { createContext, type PropsWithChildren, type ReactElement, useContext, useEffect, useRef } from 'react'
-import { useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
+import { getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
+import { useServices } from '@ez-kit/store-core/react'
+import {
+	createContext,
+	type PropsWithChildren,
+	type ReactElement,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+} from 'react'
+import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 
-import type { PluginCleanup, PluginContext, StoreId, StorePlugin } from '@ez-kit/store-core'
+import type { ControlledConfig, PluginCleanup, PluginContext, StoreId, StorePlugin } from '@ez-kit/store-core'
 
-const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
+/** Names the store in the error, so `createStore(f, { name: 'filters' })` reports `filters`. */
+const missingProviderError = (name: string): string => `Missing Provider for ${name}`
 
 /** Synthetic id for a non-cached, singleton store. There is one entry per Provider, hence a fixed `id`. */
 const SINGLETON_ID = 'singleton'
@@ -12,7 +22,7 @@ const DEFAULT_STORE_NAME = 'store'
 const EMPTY_PATH: readonly string[] = []
 const IS_SERVER = typeof window === 'undefined'
 
-/** Seed envelope passed to a store factory. Reserves room for a future controlled `value`. */
+/** Seed envelope passed to a store factory. */
 export type StoreInit<TDefaultValue> = {
 	defaultValue: TDefaultValue
 }
@@ -28,12 +38,20 @@ export type CreateStoreOptions<TState extends object> = {
 	name?: string
 	/** Plugins bound to the Provider's mount: `setup` runs on mount, its cleanup on unmount. */
 	plugins?: readonly StorePlugin<TState>[]
+	/** Per-key overrides for fields controlled via the Provider's `value` prop. */
+	controlled?: ControlledConfig<TState>
 }
 
-/** `defaultValue` is required when the seed has required fields, optional when it doesn't. */
-type ProviderProps<TDefaultValue> = undefined extends TDefaultValue
+/**
+ * `defaultValue` is required when the seed has required fields, optional when it doesn't. `value`
+ * and `onValueChange` are always optional — the keys present in `value` are the controlled ones.
+ */
+type ProviderProps<TDefaultValue, TState extends object> = (undefined extends TDefaultValue
 	? { defaultValue?: TDefaultValue }
-	: { defaultValue: TDefaultValue }
+	: { defaultValue: TDefaultValue }) & {
+	value?: Partial<TState>
+	onValueChange?: (value: Partial<TState>) => void
+}
 
 /** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy, as from `useStore()`) for writes. */
 export type ItemRenderArg<TState extends object> = {
@@ -50,7 +68,7 @@ type StoreItemProps<TState extends object> = {
 }
 
 export type CreateStoreResult<TState extends object, TDefaultValue> = {
-	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue>>) => ReactElement
+	Provider: (props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>) => ReactElement
 	/** Reactive read: the readonly, auto-tracked snapshot. Forwards Valtio's `useSnapshot` options. */
 	useSnapshot: (options?: UseSnapshotOptions) => Snapshot<TState>
 	/**
@@ -68,9 +86,37 @@ export type CreateStoreResult<TState extends object, TDefaultValue> = {
 	StoreItem: (props: StoreItemProps<TState>) => ReactElement
 }
 
-function getStoreFromContext<TState extends object>(store: TState | null): TState {
-	if (!store) throw new Error(MISSING_PROVIDER_ERROR)
+function getStoreFromContext<TState extends object>(store: TState | null, name: string): TState {
+	if (!store) throw new Error(missingProviderError(name))
 	return store
+}
+
+/**
+ * Writes `changed` into the proxy: `controlled[key].set` when declared, otherwise a batched
+ * `Object.assign`. `Object.assign` on a Valtio proxy invokes class accessor setters and wraps a
+ * replaced nested object/array in its own proxy — a manual per-key assignment loop would not.
+ */
+function applyControlledEntries<TState extends object>(
+	store: TState,
+	changed: Partial<TState>,
+	controlled: ControlledConfig<TState>,
+): void {
+	const direct: Partial<TState> = {}
+
+	for (const key of Object.keys(changed) as (keyof TState)[]) {
+		const value = changed[key] as TState[typeof key]
+		const set = controlled[key]?.set
+
+		if (set) {
+			set(store, value)
+		} else {
+			direct[key] = value
+		}
+	}
+
+	if (Object.keys(direct).length > 0) {
+		Object.assign(store, direct)
+	}
 }
 
 /**
@@ -88,7 +134,9 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 ): CreateStoreResult<TState, TDefaultValue> {
 	const StoreContext = createContext<TState | null>(null)
 	const plugins = options.plugins ?? []
-	const storeId: StoreId = { path: EMPTY_PATH, name: options.name ?? DEFAULT_STORE_NAME, id: SINGLETON_ID }
+	const controlled: ControlledConfig<TState> = options.controlled ?? {}
+	const name = options.name ?? DEFAULT_STORE_NAME
+	const storeId: StoreId = { path: EMPTY_PATH, name, id: SINGLETON_ID }
 
 	function usePlugins(store: TState, services: PluginContext['services']): void {
 		useEffect(() => {
@@ -103,21 +151,95 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 		}, [store, services])
 	}
 
-	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue>>): ReactElement {
-		const { children, defaultValue } = props as PropsWithChildren<{ defaultValue: TDefaultValue }>
+	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>): ReactElement {
+		const { children, defaultValue, value, onValueChange } = props as PropsWithChildren<{
+			defaultValue: TDefaultValue
+			value?: Partial<TState>
+			onValueChange?: (value: Partial<TState>) => void
+		}>
 		const services = useServices()
 		const storeRef = useRef<TState | null>(null)
+		const isNewStore = storeRef.current === null
+		const hasSyncedInitialRef = useRef(false)
+		const previousValueRef = useRef<Partial<TState> | undefined>(undefined)
+		/**
+		 * Controlled values already accounted for — either emitted upwards or just pushed down from
+		 * `value`. Anti-echo is a value baseline rather than an "is syncing" flag on purpose: Valtio
+		 * defers `subscribe` callbacks to a microtask, so any flag cleared synchronously after the
+		 * write is already clear by the time the callback runs, and the echo leaks out.
+		 */
+		const baselineRef = useRef<Partial<TState>>({})
+		const onValueChangeRef = useRef(onValueChange)
+		const valueRef = useRef(value)
+		onValueChangeRef.current = onValueChange
+		valueRef.current = value
 
 		storeRef.current ??= factory({ defaultValue })
 		const store = storeRef.current
 
+		if (isNewStore) {
+			// First frame must already reflect `value` — apply it now, synchronously, during render.
+			const initialChanges = getChangedControlledEntries<TState>(undefined, value, controlled)
+			if (Object.keys(initialChanges).length > 0) {
+				applyControlledEntries(store, initialChanges, controlled)
+			}
+		}
+
 		usePlugins(store, services)
+
+		useLayoutEffect(() => {
+			const isInitialSync = !hasSyncedInitialRef.current
+			hasSyncedInitialRef.current = true
+
+			if (!isInitialSync) {
+				const changed = getChangedControlledEntries<TState>(previousValueRef.current, value, controlled)
+				if (Object.keys(changed).length > 0) {
+					// Baseline the intended values *before* writing, so the anti-echo holds whether the
+					// store notifies synchronously or, as Valtio does, on a later microtask.
+					baselineRef.current = { ...baselineRef.current, ...changed }
+					try {
+						applyControlledEntries(store, changed, controlled)
+					} finally {
+						// Re-baselining even when a custom `set` threw keeps a failed write from
+						// permanently suppressing later real changes to those keys.
+						rebaselineControlledKeys()
+					}
+				}
+			}
+
+			previousValueRef.current = value
+			// Keys that only just became controlled are baselined here, so entering `value` never
+			// looks like an internal write on the next store notification.
+			rebaselineControlledKeys()
+
+			function rebaselineControlledKeys(): void {
+				const keys = value ? (Object.keys(value) as (keyof TState)[]) : []
+				baselineRef.current = pickControlledKeys(snapshot(store) as TState, keys)
+			}
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+		}, [value])
+
+		useLayoutEffect(() => {
+			return subscribeValtio(store, () => {
+				const controlledKeys = valueRef.current ? (Object.keys(valueRef.current) as (keyof TState)[]) : []
+				if (controlledKeys.length === 0) return
+
+				// Emit from the snapshot, never the live proxy: a parent must not receive a mutable
+				// handle that writes past the Provider's own write path.
+				const current = pickControlledKeys(snapshot(store) as TState, controlledKeys)
+				const changed = getChangedControlledEntries<TState>(baselineRef.current, current, controlled)
+				baselineRef.current = current
+				if (Object.keys(changed).length === 0) return
+
+				onValueChangeRef.current?.(changed)
+			})
+		}, [store])
 
 		return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
 	}
 
 	function useStore(): TState {
-		return getStoreFromContext(useContext(StoreContext))
+		return getStoreFromContext(useContext(StoreContext), name)
 	}
 
 	function useSnapshot(snapshotOptions?: UseSnapshotOptions): Snapshot<TState> {

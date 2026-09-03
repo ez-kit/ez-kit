@@ -1,4 +1,4 @@
-import { defineColumns } from '@ez-kit/data-grid-core'
+import { createColumns } from '@ez-kit/data-grid-core'
 import { act, renderHook } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -10,7 +10,7 @@ import { useExtractedState } from './use-extracted-state'
 import type { PersistableStateKey } from './state-keys'
 
 type Row = { id: number; name: string }
-const columns = defineColumns<Row>([{ accessorKey: 'name' }])
+const columns = createColumns<Row>([{ accessorKey: 'name' }])
 const data: Row[] = [
 	{ id: 1, name: 'Alice' },
 	{ id: 2, name: 'Bob' },
@@ -35,7 +35,7 @@ describe('useExtractedState', () => {
 		})
 		const before = result.current.state
 		act(() => {
-			result.current.grid.table.setSorting([{ id: 'name', desc: true }])
+			result.current.grid.setSorting([{ id: 'name', desc: true }])
 		})
 		expect(result.current.state).not.toBe(before)
 		expect(result.current.state.sorting).toEqual([{ id: 'name', desc: true }])
@@ -49,7 +49,7 @@ describe('useExtractedState', () => {
 		})
 		const before = result.current.state
 		act(() => {
-			result.current.grid.table.setPageIndex(3)
+			result.current.grid.setPageIndex(3)
 		})
 		expect(result.current.state).toBe(before)
 	})

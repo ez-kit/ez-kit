@@ -1,26 +1,64 @@
-import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
 import { useEffect, useState } from 'react'
 
-import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
-import {
-	COL_PINNING_KEY,
-	DEFAULT_FILTER_DEBOUNCE_MS,
-	FILTERING_DEBOUNCE_KEY,
-	FILTERING_VARIANT_KEY,
-} from '../use-data-grid'
-import { getCommonPinStyles } from '../utils/pin-styles'
 
-import { flexRender } from './flex-render'
-import { renderFilterInput } from './render-filter-input'
-import { useDataGridInstance, useDataGridStore } from './table-context'
+import { DataGridHeaderRow } from './header-row'
+import { useDataGridTable, useDataGridState } from './table-context'
 
-import type { ColumnMenuSections } from '../types'
-import type { KeyboardEvent } from 'react'
+import type { DataTable } from '@ez-kit/data-grid-core'
+import type { HeaderGroup } from '@tanstack/table-core'
+import type { ReactNode } from 'react'
 
-type HeaderProps = {
-	/** When true, adds `data-sticky="true"` to the thead for structural CSS targeting. */
-	stickyHeader?: boolean
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderProps<TRow extends object = any> = {
+	/**
+	 * Adds `data-sticky="true"` to the thead for structural CSS targeting.
+	 *
+	 * Omit it — the default — and the flag is read from the grid's own `layout.stickyHeader`
+	 * option. The prop exists only to force the value; without that fallback a
+	 * `<DataGrid.Header />` placed inside a custom `<DataGrid.Table>` body would
+	 * silently lose sticky positioning.
+	 *
+	 * Named `sticky`, not `stickyHeader`: the component already says "header", the way the
+	 * neighbouring local overrides drop the prefix too (`<DataGrid.ActiveFiltersBar position>`,
+	 * `<DataGrid.GlobalFilterInput placeholder>`).
+	 */
+	sticky?: boolean
+	/**
+	 * Custom header content, rendered inside the kit's `<Thead>` — so sticky positioning and
+	 * the measured header-height CSS variable still apply.
+	 *
+	 * Omit it for the built-in header rows: sort affordances, the column menu, resize
+	 * handles and the inline / popover filter controls. Supplying `children` opts out of all
+	 * of that in exchange for full control over the markup.
+	 *
+	 * @example
+	 * ```tsx
+	 * <DataGrid.Header>
+	 *   {({ headerGroups }) =>
+	 *     headerGroups.map((group) => (
+	 *       <tr key={group.id}>
+	 *         {group.headers.map((header) => <th key={header.id}>{header.column.id}</th>)}
+	 *       </tr>
+	 *     ))
+	 *   }
+	 * </DataGrid.Header>
+	 * ```
+	 */
+	children?: ReactNode | ((args: DataGridHeaderRenderArgs<TRow>) => ReactNode)
+}
+
+/**
+ * What a `<DataGrid.Header>` render function receives.
+ *
+ * `TRow` defaults to `any` so nothing has to name it. Write it once at the call site —
+ * `<DataGrid.Header<Order>>` — and the render arguments are typed. See
+ * {@link DataGridBodyRenderArgs} for why it is explicit rather than inferred.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DataGridHeaderRenderArgs<TRow extends object = any> = {
+	table: DataTable<TRow>
+	headerGroups: HeaderGroup<TRow>[]
 }
 
 /**
@@ -65,239 +103,50 @@ function useHeaderHeightVar(enabled: boolean): (node: HTMLTableSectionElement | 
  * - `data-slot="thead" | "tr" | "th" | "header-main" | "sort-trigger" | "header-extras"`
  * - `data-sticky="true"` on the thead when sticky header is on
  * - `data-sortable="true"` and `data-sort-direction="asc | desc | none"` on sortable headers
+ * - `data-draft-sorting="<index>"` on a `<th>` whose sort is pending under `draft`
+ *   (the column's position in the not-yet-applied sort array)
  *
  * Pin offsets are written as CSS variables via {@link getCommonPinStyles}; the
  * structural CSS reads them on `[data-pinned]` elements.
  */
-export function Header({ stickyHeader }: HeaderProps = {}) {
-	const theadRef = useHeaderHeightVar(Boolean(stickyHeader))
-	const instance = useDataGridInstance()
-	const table = instance.table
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function Header<TRow extends object = any>({ sticky, children }: DataGridHeaderProps<TRow> = {}) {
+	const table = useDataGridTable<TRow>()
+	const isSticky = sticky ?? table.grid.layout.stickyHeader
+	const theadRef = useHeaderHeightVar(isSticky)
 
-	// Narrow subscriptions: re-render only when slices the header actually
-	// reflects change. Editing, expanded, pagination, rowPinning do NOT
-	// touch any of these, so clicking Edit on a row leaves the header
-	// untouched.
-	useDataGridStore((s) => s.sorting)
-	useDataGridStore((s) => s.columnFilters)
-	useDataGridStore((s) => s.columnVisibility)
-	useDataGridStore((s) => s.columnPinning)
-	useDataGridStore((s) => s.columnSizing)
-	useDataGridStore((s) => s.columnSizingInfo)
-	useDataGridStore((s) => s.rowSelection)
+	// Narrow subscriptions: re-render only when slices the header actually reflects change.
+	// Editing, expanded, pagination and rowPinning touch none of these, so clicking Edit on a
+	// row leaves the header untouched. They live here rather than in `DataGridHeaderCell`
+	// because one subscription per header beats one per column, and every cell re-renders with
+	// this component anyway.
+	useDataGridState((s) => s.sorting)
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnPinning)
+	useDataGridState((s) => s.columnSizing)
+	useDataGridState((s) => s.columnSizingInfo)
+	useDataGridState((s) => s.rowSelection)
 
-	const gridComponents = useGridComponents()
-	const { Thead, Tr, Th, Input, Checkbox } = gridComponents.core
-	const { Resizer } = gridComponents.resizing
-	const { SortIndicator, ColumnMenu } = gridComponents.sorting
-	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter } = gridComponents.filtering
-	const cellTypes = useCellTypes()
-	const hasFiltering = Boolean(table.options.getFilteredRowModel)
-	const colPinEnabled = (table as unknown as Record<symbol, unknown>)[COL_PINNING_KEY] as boolean | undefined
-	const filteringVariant = (table as unknown as Record<symbol, unknown>)[FILTERING_VARIANT_KEY] as
-		| 'inline'
-		| 'popover'
-		| 'panel'
-		| undefined
-	const filteringDebounce =
-		((table as unknown as Record<symbol, unknown>)[FILTERING_DEBOUNCE_KEY] as number | undefined) ??
-		DEFAULT_FILTER_DEBOUNCE_MS
+	const { Thead } = useGridComponents().core
+	const headerGroups = table.getHeaderGroups()
 
 	return (
 		<Thead
 			ref={theadRef}
 			data-slot='thead'
-			{...(stickyHeader ? { 'data-sticky': 'true' } : {})}
+			{...(isSticky ? { 'data-sticky': 'true' } : {})}
 		>
-			{table.getHeaderGroups().map((headerGroup) => (
-				<Tr
-					data-slot='tr'
-					key={headerGroup.id}
-				>
-					{headerGroup.headers.map((header) => {
-						const meta = header.column.columnDef.meta
-						const canSort = header.column.getCanSort()
-						const sortDir = header.column.getIsSorted()
-						const pinVars = getCommonPinStyles(header.column)
-						const pinned = header.column.getIsPinned()
-
-						const sortHandler = canSort ? header.column.getToggleSortingHandler() : undefined
-						const onSortKeyDown = canSort
-							? (e: KeyboardEvent) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault()
-										sortHandler?.(e)
-									}
-								}
-							: undefined
-
-						const canResize = Boolean(table.options.enableColumnResizing) && header.column.getCanResize()
-
-						// Build column menu sections
-						const sections: ColumnMenuSections = {}
-						const colPinDef = meta?.columnPinning
-						const isStaticPin = typeof colPinDef === 'object' && colPinDef.pin !== undefined
-						const isPinningDisabled = colPinDef === false
-
-						if (colPinEnabled && !meta?.isSystemColumn && !isPinningDisabled && !isStaticPin && !header.isPlaceholder) {
-							const isPinned = header.column.getIsPinned()
-							sections.pin = {
-								isPinned,
-								canPinLeft: isPinned !== 'left',
-								canPinRight: isPinned !== 'right',
-								onPinLeft: () => {
-									header.column.pin('left')
-								},
-								onPinRight: () => {
-									header.column.pin('right')
-								},
-								onUnpin: () => {
-									header.column.pin(false)
-								},
-							}
-						}
-
-						if (!meta?.isSystemColumn && !header.isPlaceholder && header.column.getCanHide()) {
-							sections.visibility = {
-								onHide: () => {
-									header.column.toggleVisibility(false)
-								},
-							}
-						}
-
-						if (canSort && !header.isPlaceholder) {
-							sections.sorting = {
-								currentSort: sortDir,
-								canAsc: sortDir !== 'asc',
-								canDesc: sortDir !== 'desc',
-								onSortAsc: () => {
-									header.column.toggleSorting(false)
-								},
-								onSortDesc: () => {
-									header.column.toggleSorting(true)
-								},
-								onClearSort: () => {
-									header.column.clearSorting()
-								},
-							}
-						}
-
-						const hasSections = Object.keys(sections).length > 0
-
-						// Selection column: render select-all checkbox
-						if (header.column.id === SELECTION_COLUMN_ID) {
-							const isAllSelected = table.getIsAllRowsSelected()
-							const isSomeSelected = table.getIsSomeRowsSelected()
-							return (
-								<Th
-									data-slot='th'
-									data-slot-selection-th='true'
-									data-column-id={header.column.id}
-									key={header.id}
-									colSpan={header.colSpan}
-									style={pinVars}
-									pinned={pinned}
-									{...(pinned ? { 'data-pinned': pinned } : {})}
-								>
-									<Checkbox
-										value={isAllSelected}
-										indeterminate={isSomeSelected && !isAllSelected}
-										onChange={() => {
-											table.toggleAllRowsSelected(!isAllSelected)
-										}}
-										aria-label='Select all rows'
-									/>
-								</Th>
-							)
-						}
-
-						return (
-							<Th
-								data-slot='th'
-								data-column-id={header.column.id}
-								key={header.id}
-								colSpan={header.colSpan}
-								style={pinVars}
-								pinned={pinned}
-								{...(pinned ? { 'data-pinned': pinned } : {})}
-								{...(canResize ? { 'data-resizable': 'true' } : {})}
-							>
-								{(() => {
-									const canFilter =
-										hasFiltering &&
-										meta?.filtering !== false &&
-										!meta?.isSystemColumn &&
-										header.column.getCanFilter() &&
-										filteringVariant !== 'panel'
-									const filterContent = canFilter
-										? renderFilterInput({
-												header,
-												meta,
-												Input,
-												cellTypes,
-												OperatorSelect,
-												BetweenInput,
-												MultiSelectFilter,
-												debounce: filteringDebounce,
-											})
-										: null
-									const sortDirAttr: 'asc' | 'desc' | 'none' =
-										sortDir === 'asc' || sortDir === 'desc' ? sortDir : 'none'
-									return (
-										<>
-											<div data-slot='header-main'>
-												<div
-													data-slot='sort-trigger'
-													{...(canSort ? { 'data-sortable': 'true', 'data-sort-direction': sortDirAttr } : {})}
-													role={canSort ? 'button' : undefined}
-													tabIndex={canSort ? 0 : undefined}
-													onClick={sortHandler}
-													onKeyDown={onSortKeyDown}
-												>
-													{header.isPlaceholder
-														? null
-														: flexRender(
-																header.column.columnDef.header,
-																header.getContext() as unknown as Record<string, unknown>,
-															)}
-													<SortIndicator
-														sortDir={sortDir}
-														canSort={canSort}
-													/>
-												</div>
-												{filteringVariant === 'popover' && canFilter && (
-													<FilterPopover hasActiveFilter={Boolean(header.column.getFilterValue())}>
-														{filterContent}
-													</FilterPopover>
-												)}
-												{hasSections && (
-													<ColumnMenu
-														column={header.column}
-														sections={sections}
-													/>
-												)}
-											</div>
-											{filteringVariant !== 'popover' && canFilter && (
-												<div data-slot='header-extras'>{filterContent}</div>
-											)}
-										</>
-									)
-								})()}
-								{canResize && (
-									<Resizer
-										onMouseDown={header.getResizeHandler()}
-										onTouchStart={header.getResizeHandler()}
-										onDoubleClick={() => {
-											header.column.resetSize()
-										}}
-										isResizing={header.column.getIsResizing()}
-									/>
-								)}
-							</Th>
-						)
-					})}
-				</Tr>
-			))}
+			{children === undefined
+				? headerGroups.map((headerGroup) => (
+						<DataGridHeaderRow
+							key={headerGroup.id}
+							headerGroup={headerGroup}
+						/>
+					))
+				: typeof children === 'function'
+					? children({ table, headerGroups })
+					: children}
 		</Thead>
 	)
 }

@@ -1,13 +1,13 @@
-import { defineColumns } from '@ez-kit/data-grid-react'
+import { createColumns } from '@ez-kit/data-grid-react'
 
 import type { Employee } from './use-employee-store'
 
-export const crudColumns = defineColumns<Employee>([
+export const crudColumns = createColumns<Employee>([
 	{
 		accessorKey: 'name',
 		header: 'Name',
-		visibility: true,
-		pinning: { defaultPin: 'left' },
+		visibility: false,
+		pinning: { initialSide: 'left' },
 		filtering: { operators: true },
 	},
 	{
@@ -41,7 +41,7 @@ export const crudColumns = defineColumns<Employee>([
 		cell: { type: 'number' },
 		filtering: {
 			operators: {
-				items: ['eq', 'between'],
+				items: ['equals', 'between'],
 				betweenOperator: { variant: 'slider', min: 40000, max: 200000 },
 			},
 		},
@@ -51,7 +51,7 @@ export const crudColumns = defineColumns<Employee>([
 		header: 'Start Date',
 		cell: { type: 'date' },
 		filtering: { operators: true },
-		visibility: { defaultHidden: true },
+		visibility: { initialHidden: true },
 	},
 	{
 		accessorKey: 'active',

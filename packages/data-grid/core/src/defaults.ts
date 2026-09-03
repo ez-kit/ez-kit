@@ -18,3 +18,19 @@ export const DEFAULT_PAGE_SIZE = 10
  * the milder hazard: `setPageIndex(pageCount - 1)` passed -2, which core then clamped to 0.
  */
 export const UNKNOWN_PAGE_COUNT = -1
+
+/**
+ * Default debounce (ms) for form-field validation under `validateOn: 'change'` — the
+ * `editing.debounce` / `creating.debounce` floor, and the per-column overrides of both.
+ *
+ * A separate number from the React layer's filter debounce (`DEFAULT_FILTER_DEBOUNCE_MS`, 250):
+ * validating a field while the user types is a different gesture from re-querying the grid, and
+ * they were never the same value. One name each, both spelled `debounce` at the option level.
+ */
+export const DEFAULT_VALIDATE_DEBOUNCE_MS = 200
+
+/** Default estimated row height (px) for the row virtualizer. */
+export const DEFAULT_ROW_ESTIMATE_SIZE = 50
+
+/** Default number of rows rendered outside the viewport by the row virtualizer. */
+export const DEFAULT_ROW_OVERSCAN = 5

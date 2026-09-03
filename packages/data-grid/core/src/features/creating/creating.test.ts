@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-import { defineColumns } from '../../column/define-columns'
+import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
 import { ValidationError } from '../validation'
 
@@ -14,7 +14,7 @@ type Row = {
 }
 
 const DATA: Row[] = [{ id: 1, name: 'Alice', email: 'a@b.co' }]
-const COLUMNS = defineColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email' }])
+const COLUMNS = createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email' }])
 
 const noop = (): void => {}
 
@@ -299,7 +299,7 @@ describe('CreatingFeature — validate config variants', () => {
 		type PwRow = { id: number; password: string }
 		const table = createTable<PwRow>({
 			data: [{ id: 1, password: '' }],
-			columns: defineColumns<PwRow>([{ accessorKey: 'password' }]),
+			columns: createColumns<PwRow>([{ accessorKey: 'password' }]),
 			creating: { validate: { schema }, onSave: () => Promise.resolve() },
 		})
 		table.creating.start()
@@ -326,15 +326,15 @@ describe('CreatingFeature — validate config variants', () => {
 })
 
 describe('CreatingFeature — per-column validateOn', () => {
-	it("meta.validateOn = 'change' triggers field-level validate after debounce", async () => {
+	it("column validateOn = 'change' triggers field-level validate after debounce", async () => {
 		const validate = vi.fn((values: Partial<Row>, _ctx: ValidateContext) =>
 			values.email === 'taken@x.co' ? { errors: { email: ['taken'] } } : null,
 		)
 		const table = createTable({
 			data: DATA,
-			columns: defineColumns<Row>([
+			columns: createColumns<Row>([
 				{ accessorKey: 'name' },
-				{ accessorKey: 'email', validateOn: 'change', validateDebounceMs: 20 },
+				{ accessorKey: 'email', creating: { validateOn: 'change', debounce: 20 } },
 			]),
 			creating: { validate, onSave: () => Promise.resolve() },
 		})
@@ -372,11 +372,14 @@ describe('CreatingFeature — per-column validateOn', () => {
 		expect(s.errors.other).toEqual(['preserved']) // unrelated, kept
 	})
 
-	it("meta.validateOn = 'blur' does NOT auto-trigger on setValue", async () => {
+	it("column validateOn = 'blur' does NOT auto-trigger on setValue", async () => {
 		const validate = vi.fn().mockReturnValue(null)
 		const table = createTable({
 			data: DATA,
-			columns: defineColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'email', validateOn: 'blur' }]),
+			columns: createColumns<Row>([
+				{ accessorKey: 'name' },
+				{ accessorKey: 'email', creating: { validateOn: 'blur' } },
+			]),
 			creating: { validate, onSave: () => Promise.resolve() },
 		})
 		table.creating.start()
@@ -421,5 +424,128 @@ describe('CreatingFeature — abort propagation', () => {
 		// no creating config → no-op
 		expect(table.creating.getState().isOpen).toBe(true)
 		noop()
+	})
+})
+
+describe('CreatingFeature — default values', () => {
+	it('applies a column-level defaultValue on start()', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
+				{ accessorKey: 'email' },
+			]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Anonymous' })
+	})
+
+	it('columns without a defaultValue contribute no key', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
+				{ accessorKey: 'email', creating: { description: 'work address' } },
+			]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(Object.keys(table.creating.getState().values)).toEqual(['name'])
+	})
+
+	it('table-level defaultValues override column-level per key', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } },
+				{ accessorKey: 'email', creating: { defaultValue: 'none@example.com' } },
+			]),
+			creating: { defaultValues: { name: 'Bob' }, onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Bob', email: 'none@example.com' })
+	})
+
+	it('column-level function form receives { table, columnId } and its return lands in values', () => {
+		const defaultValue = vi.fn((ctx: { table: unknown; columnId: string }) => `row-${ctx.columnId}`)
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue } }, { accessorKey: 'email' }]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(defaultValue).toHaveBeenCalledTimes(1)
+		expect(defaultValue.mock.calls[0]?.[0].table).toBe(table)
+		expect(defaultValue.mock.calls[0]?.[0].columnId).toBe('name')
+		expect(table.creating.getState().values).toEqual({ name: 'row-name' })
+	})
+
+	it('table-level function form receives { table } and sees live table state', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			creating: {
+				defaultValues: (ctx) => ({ name: `Row ${String(ctx.table.getRowCount() + 1)}` }),
+				onSave: () => Promise.resolve(),
+			},
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Row 2' })
+	})
+
+	it('re-applies defaults on a second start() after cancel()', () => {
+		let calls = 0
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([
+				{
+					accessorKey: 'name',
+					creating: {
+						defaultValue: () => {
+							calls += 1
+							return `Draft ${String(calls)}`
+						},
+					},
+				},
+			]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Draft 1' })
+		table.creating.setValue('name', 'typed over')
+		table.creating.cancel()
+		expect(table.creating.getState().values).toEqual({})
+		table.creating.start()
+		expect(table.creating.getState().values).toEqual({ name: 'Draft 2' })
+	})
+
+	it('system columns never contribute a key', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } }]),
+			selection: true,
+			expanding: true,
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		expect(Object.keys(table.creating.getState().values)).toEqual(['name'])
+	})
+
+	it('errors, formError and commitStatus still reset on start()', () => {
+		const table = createTable({
+			data: DATA,
+			columns: createColumns<Row>([{ accessorKey: 'name', creating: { defaultValue: 'Anonymous' } }]),
+			creating: { onSave: () => Promise.resolve() },
+		})
+		table.creating.start()
+		table.creating.setErrors({ name: ['required'] })
+		table.creating.setFormError('boom')
+		table.creating.start()
+		const s = table.creating.getState()
+		expect(s.errors).toEqual({})
+		expect(s.formError).toBe(null)
+		expect(s.commitStatus).toBe('idle')
+		expect(s.values).toEqual({ name: 'Anonymous' })
 	})
 })

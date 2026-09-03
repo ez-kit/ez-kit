@@ -1,15 +1,15 @@
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
-import { FILTER_CHIPS_KEY } from '../use-data-grid'
+import { FilterChipKind } from '../types'
 
-import { useTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { FilterChipsPosition, NormalizedFilterChipsConfig } from '../use-data-grid'
+import type { FilterChipsPosition } from '../use-data-grid'
 import type { FilterOperatorDef } from '@ez-kit/data-grid-core'
 import type { Column } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
-type ActiveFiltersBarProps = {
+export type DataGridActiveFiltersBarProps = {
 	/** Override the position data attribute. Defaults to the auto-mount config or `'above'`. */
 	position?: FilterChipsPosition
 }
@@ -54,6 +54,12 @@ function renderValueDisplay(rawValue: unknown, operators?: FilterOperatorDef[]):
 	return renderInnerValue(rawValue)
 }
 
+/** Reference-and-value comparison good enough to detect a pending filter draft. */
+function sameFilterValue(a: unknown, b: unknown): boolean {
+	if (a === b) return true
+	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function columnLabel(column: Column<any>): string {
 	const header = column.columnDef.header
@@ -70,22 +76,28 @@ function columnLabel(column: Column<any>): string {
  * Renders nothing when no filter is active. Reads chips position from
  * {@link FILTER_CHIPS_KEY} unless overridden via the `position` prop.
  */
-export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarProps = {}) {
-	const table = useTable()
+export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFiltersBarProps = {}) {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.columnFilters)
+	useDataGridState((s) => s.globalFilter as unknown)
+	useDataGridState((s) => s.applied)
 	const { FilterChip } = useGridComponents().filtering
 
-	const cfg = (table as unknown as Record<symbol, unknown>)[FILTER_CHIPS_KEY] as NormalizedFilterChipsConfig | undefined
+	const cfg = table.grid.filtering.chips
 
 	const position: FilterChipsPosition = positionProp ?? cfg?.position ?? DATA_GRID_DEFAULTS.filtering.chips.position
 	const columnFilters = table.getState().columnFilters
 	const globalFilter = table.getState().globalFilter as unknown
+	const isDrafting = table.options.draft === true
+	const applied = table.getState().applied
 
 	type ChipDescriptor = {
 		key: string
 		label: string
 		value: ReactNode
 		onRemove: () => void
-		kind: 'column' | 'global'
+		kind: FilterChipKind
+		isDraft: boolean
 	}
 
 	const chips: ChipDescriptor[] = []
@@ -93,10 +105,11 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 	for (const cf of columnFilters) {
 		const column = table.getColumn(cf.id)
 		if (!column) continue
-		const operators = (column.columnDef.meta as { resolvedOperators?: FilterOperatorDef[] } | undefined)
-			?.resolvedOperators
+		const filteringMeta = column.columnDef.meta?.filtering
+		const operators = filteringMeta === false ? undefined : filteringMeta?.operators
 		const display = renderValueDisplay(cf.value, operators)
 		if (display == null || display === '') continue
+		const appliedFilter = applied.columnFilters.find((a) => a.id === cf.id)
 		chips.push({
 			key: `column:${cf.id}`,
 			label: columnLabel(column),
@@ -104,7 +117,8 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 			onRemove: () => {
 				column.setFilterValue(undefined)
 			},
-			kind: 'column',
+			kind: FilterChipKind.Column,
+			isDraft: isDrafting && !sameFilterValue(appliedFilter?.value, cf.value),
 		})
 	}
 
@@ -116,7 +130,8 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 			onRemove: () => {
 				table.setGlobalFilter(undefined)
 			},
-			kind: 'global',
+			kind: FilterChipKind.Global,
+			isDraft: isDrafting && !sameFilterValue(applied.globalFilter, globalFilter),
 		})
 	}
 
@@ -134,6 +149,7 @@ export function ActiveFiltersBar({ position: positionProp }: ActiveFiltersBarPro
 					value={c.value}
 					onRemove={c.onRemove}
 					kind={c.kind}
+					isDraft={c.isDraft}
 				/>
 			))}
 		</div>
