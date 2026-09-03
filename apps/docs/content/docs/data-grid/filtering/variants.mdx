@@ -75,16 +75,33 @@ sortable.
 />
 ```
 
-The panel auto-mounts above the table, like every other surface the filtering config asks for.
-Compose the grid yourself only to put it somewhere else — that, the chips strip and the clear-all
-button are on [Filter panel](/docs/data-grid/filtering/panel).
+The panel auto-mounts between the toolbar and the table, like every other surface the filtering
+config asks for. To put it somewhere else — beside the toolbar, in a sidebar, under the table —
+compose the grid yourself and place `<DataGrid.FilterPanel />` where you want it. Children replace
+the default layout, so mount the rest of the grid too:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ variant: 'panel' }}
+>
+	<DataGrid.Toolbar />
+	<DataGrid.Table />
+	<DataGrid.FilterPanel />
+	<DataGrid.Pagination />
+</DataGrid>
+```
+
+It renders nothing when the grid has no filtered row model or no filterable column, so a
+hand-placed panel is safe on a grid whose filtering a defaults layer switched off.
 
 ## Options
 
-| Option    | Type                               | Description                                                                        |
-| --------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
-| `variant` | `'inline' \| 'popover' \| 'panel'` | Where every column's filter control renders. Default `'inline'`.                   |
-| `chips`   | `boolean \| FilterChipsConfig`     | Removable chips for the active filters — useful under any variant, not just panel. |
+| Option    | Type                               | Description                                                                                              |
+| --------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `variant` | `'inline' \| 'popover' \| 'panel'` | Where every column's filter control renders. Default `'inline'`.                                         |
+| `chips`   | `boolean \| FilterChipsConfig`     | Removable chips for the active filters — see [Active filters](/docs/data-grid/filtering/active-filters). |
 
 The names are also available as `FilteringVariant.Inline` and friends, for code that would otherwise
 repeat the literal.
@@ -92,7 +109,7 @@ repeat the literal.
 ## See also
 
 - [Filtering](/docs/data-grid/filtering) — the rest of the feature's config
-- [Filter panel](/docs/data-grid/filtering/panel) — the panel variant in full
+- [Active filters](/docs/data-grid/filtering/active-filters) — the chips strip and the Clear-all button
 - [Operators](/docs/data-grid/filtering/operators) — what goes inside the control
 - [Global filtering](/docs/data-grid/filtering/global) — one search box, no per-column control
 

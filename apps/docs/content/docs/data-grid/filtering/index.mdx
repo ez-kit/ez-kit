@@ -33,17 +33,17 @@ seeds the filters the grid opens with:
 
 ### `filtering`
 
-| Option      | Type                                                 | Description                                                                                                                                                                                             |
-| ----------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variant`   | `'inline' \| 'popover' \| 'panel'`                   | Where every column's filter control renders — see [Variants](/docs/data-grid/filtering/variants). Default `'inline'`.                                                                                   |
-| `manual`    | `boolean`                                            | Disable client-side column filtering (and global filter). The grid calls `onChange` instead.                                                                                                            |
-| `operators` | `FilterOperatorDef[]`                                | Table-level custom operators (or built-in overrides), referenced by column items — see [Operators](/docs/data-grid/filtering/operators).                                                                |
-| `faceted`   | `boolean`                                            | Enable faceted row models (unique values + counts) for multi-select filters. Default `false`.                                                                                                           |
-| `debounce`  | `number`                                             | Commit debounce (ms) shared by every text filter input, the global search box included. Default `250`. `0` commits every keystroke.                                                                     |
-| `chips`     | `boolean \| 'above' \| 'below' \| FilterChipsConfig` | Auto-mount a strip of removable chips for active filters. The scalar is the position — `chips: 'below'` — and the object exists for anything more; see [Filter panel](/docs/data-grid/filtering/panel). |
-| `toolbar`   | `boolean \| FilteringToolbarConfig`                  | Auto-mount filtering's toolbar control — the Clear-all button — see [Filter panel](/docs/data-grid/filtering/panel).                                                                                    |
-| `onChange`  | `(columnFilters: ColumnFiltersState) => void`        | Called when any column filter changes.                                                                                                                                                                  |
-| `enabled`   | `boolean`                                            | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                          |
+| Option      | Type                                                 | Description                                                                                                                                                                                                        |
+| ----------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `variant`   | `'inline' \| 'popover' \| 'panel'`                   | Where every column's filter control renders — see [Variants](/docs/data-grid/filtering/variants). Default `'inline'`.                                                                                              |
+| `manual`    | `boolean`                                            | Disable client-side column filtering (and global filter). The grid calls `onChange` instead.                                                                                                                       |
+| `operators` | `FilterOperatorDef[]`                                | Table-level custom operators (or built-in overrides), referenced by column items — see [Operators](/docs/data-grid/filtering/operators).                                                                           |
+| `faceted`   | `boolean`                                            | Enable faceted row models (unique values + counts) for multi-select filters. Default `false`.                                                                                                                      |
+| `debounce`  | `number`                                             | Commit debounce (ms) shared by every text filter input, the global search box included. Default `250`. `0` commits every keystroke.                                                                                |
+| `chips`     | `boolean \| 'above' \| 'below' \| FilterChipsConfig` | Auto-mount a strip of removable chips for active filters. The scalar is the position — `chips: 'below'` — and the object exists for anything more; see [Active filters](/docs/data-grid/filtering/active-filters). |
+| `toolbar`   | `boolean \| FilteringToolbarConfig`                  | Auto-mount filtering's toolbar control — the Clear-all button — see [Active filters](/docs/data-grid/filtering/active-filters).                                                                                    |
+| `onChange`  | `(columnFilters: ColumnFiltersState) => void`        | Called when any column filter changes.                                                                                                                                                                             |
+| `enabled`   | `boolean`                                            | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                     |
 
 ### Per-column `filtering`
 
@@ -63,7 +63,7 @@ Filterable columns pick their default operator set from `cell.type` — every bu
 
 - [Variants](/docs/data-grid/filtering/variants) — inline, popover and panel, side by side
 - [Operators](/docs/data-grid/filtering/operators) — switch between equals / contains / between / etc.
-- [Filter panel](/docs/data-grid/filtering/panel) — the panel variant in full
+- [Active filters](/docs/data-grid/filtering/active-filters) — the chips strip and the Clear-all button
 - [Date range](/docs/data-grid/filtering/date-range) · [Multi-value](/docs/data-grid/filtering/multi-value)
 - [Global filtering](/docs/data-grid/filtering/global) — single search box across all columns
 

@@ -72,7 +72,7 @@ export const DocPage = {
 	FilteringIndex: 'content/docs/data-grid/filtering/index.mdx',
 	FilteringMultiValue: 'content/docs/data-grid/filtering/multi-value.mdx',
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
-	FilteringPanel: 'content/docs/data-grid/filtering/panel.mdx',
+	FilteringActiveFilters: 'content/docs/data-grid/filtering/active-filters.mdx',
 	FilteringVariants: 'content/docs/data-grid/filtering/variants.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
@@ -605,9 +605,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.FilteringPanel,
+		page: DocPage.FilteringActiveFilters,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 4 },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 2 },
 			{ heading: '`FilterChipsConfig`', roots: [GRID_TYPE.FilterChipsConfig], expectedCount: 1 },
 			{ heading: '`FilteringToolbarConfig`', roots: [GRID_TYPE.FilteringToolbarConfig], expectedCount: 1 },
 		],

@@ -125,10 +125,18 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 	},
 	{
 		category: 'Filtering',
-		feature: 'Filter panel · active chips · clear-all',
-		description: 'Slide-out filter panel with active filter chips and a one-click clear-all action.',
+		feature: 'Filter variants — inline · popover · panel',
+		description:
+			"Where a column's filter control lives: in the header, behind a popover trigger, or collected into one panel.",
 		status: FeatureStatus.Done,
-		doc: 'filtering/panel',
+		doc: 'filtering/variants',
+	},
+	{
+		category: 'Filtering',
+		feature: 'Active filter chips · clear-all',
+		description: 'A strip of removable chips for the active filters, and a one-click clear-all action.',
+		status: FeatureStatus.Done,
+		doc: 'filtering/active-filters',
 	},
 	{
 		category: 'Filtering',
