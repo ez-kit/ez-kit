@@ -2,7 +2,7 @@ import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariant } fro
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Pagination } from './pagination'
+import { Pagination } from './PaginationBar'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 

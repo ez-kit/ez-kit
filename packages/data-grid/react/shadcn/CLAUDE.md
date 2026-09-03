@@ -27,7 +27,14 @@ This package is **not** published to npm (`private: true`). Instead `registry.co
 `../../../../scripts/generate-shadcn-registry-manifest.mjs` describe it as a shadcn registry item;
 `pnpm --filter @ez-kit/docs registry:build` compiles `registry.json` (via the official `shadcn
 build` CLI) into `apps/docs/public/r/data-grid.json`, which external consumers install with
-`npx shadcn add https://ez-kit.dev/r/data-grid.json`. `components/ui/**`, `blocks/**`, `hooks/**`,
+`npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json`. That origin is not written here by
+hand — it comes from `site.config.json` at the repo root, and `scripts/check-site-url.mjs` (run by
+`pnpm lint`) fails if any `.md`/`.mdx` names a different one, so the install command in the docs can
+never drift from the site that actually serves the JSON. `apps/docs/public/r/**` is gitignored, so the
+file exists in production only because `apps/docs`' `build` script chains `registry:build` before
+`next build`; `apps/docs/vercel.json` pins that as the deploy's `buildCommand` so a dashboard
+default can't silently drop it and 404 the install URL with a green build.
+`components/ui/**`, `blocks/**`, `hooks/**`,
 `lib/**`, `data-grid.tsx` and `styles.css` are copied byte-for-byte into the consumer's project
 (imports are rewritten from this package's `@grid-shadcn/*` alias to `@/*` as part of that build —
 see `apps/docs/scripts/build-registry.mjs`). `index.ts`/`index.test.ts` are excluded — they exist

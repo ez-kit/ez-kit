@@ -79,10 +79,10 @@ The fallbacks run one way only — `creating → edit` and `filter → edit`, ne
 
 `CellTypeDefinition` also takes optional `operators` / `defaultOperator`, which seed the filter UI for columns of that type.
 
-Register the whole map once for a grid module. `extendDataGrid` comes from your UI kit — `@ez-kit/data-grid-shadcn`, `-heroui`, or `-native` — not from the headless package:
+Register the whole map once for a grid module. `extendDataGrid` comes from your UI kit, not from the headless package — for HeroUI that's the `@ez-kit/data-grid-heroui` npm package; for shadcn it's the copy the registry put in your project (`@/components/data-grid/data-grid`), since that flavor ships as source you own rather than as a package:
 
 ```tsx
-import { extendDataGrid } from '@ez-kit/data-grid-shadcn'
+import { extendDataGrid } from '@/components/data-grid/data-grid'
 
 const grid = extendDataGrid(CELL_TYPES)
 

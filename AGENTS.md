@@ -183,9 +183,24 @@ turbo/
   tunes it to roughly its real size plus headroom, so a regression actually fails the check
 - Packages declare `"sideEffects": false`
 
+### The public origin lives in one place
+
+The site resolves its own origin at build time from Vercel's `VERCEL_PROJECT_PRODUCTION_URL`
+(`apps/docs/lib/shared.ts`), which is "the shortest production custom domain, or vercel.app domain
+if no custom domain is available" — so attaching a domain in the dashboard is the entire migration
+for `llms.txt`, OG images and canonical links; no origin is hardcoded there.
+
+What a deployment cannot rewrite is published text: npm READMEs, and the `npx shadcn add <url>`
+command a reader copies out of a docs code fence. Those name the origin from `site.config.json` at
+the repo root, and `scripts/check-site-url.mjs` (first step of `pnpm lint`) fails if any `.md`/`.mdx`
+names a different `ez-kit*` origin. Change the domain there, run `pnpm lint`, fix what it lists.
+This exists because an aspirational domain sat in a dozen files, install command included, while
+resolving nowhere. Note the check has no exception list, so don't write a stale origin in prose
+either — describe it, as this paragraph does.
+
 ### Where a package's API is documented
 
-Each package's public API lives in its own `README.md` and on https://ez-kit.dev — deliberately not
+Each package's public API lives in its own `README.md` and on https://ez-kit-docs.vercel.app — deliberately not
 duplicated here. A copy of an API in this file goes stale faster than anyone updates it, and a stale
 copy is worse than no copy: it reads as authoritative while naming exports that no longer exist.
 

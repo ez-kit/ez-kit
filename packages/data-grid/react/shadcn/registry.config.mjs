@@ -5,6 +5,13 @@ import { fileURLToPath } from 'node:url'
 import { generateRegistryManifest } from '../../../../scripts/generate-shadcn-registry-manifest.mjs'
 
 const pkgDir = fileURLToPath(new URL('.', import.meta.url))
+// On Vercel the origin comes from the deployment itself, so a domain attached in the dashboard
+// needs no code change here; `site.config.json` is the answer everywhere else (local builds, CI)
+// and the value `scripts/check-site-url.mjs` holds the docs' install command to.
+const siteConfigPath = fileURLToPath(new URL('../../../../site.config.json', import.meta.url))
+const homepage = process.env.VERCEL_PROJECT_PRODUCTION_URL
+	? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+	: JSON.parse(readFileSync(siteConfigPath, 'utf8')).siteUrl
 const reactPkgDir = fileURLToPath(new URL('../react', import.meta.url))
 const reactPkgVersion = JSON.parse(readFileSync(`${reactPkgDir}/package.json`, 'utf8')).version
 
@@ -15,7 +22,7 @@ const outPath = generateRegistryManifest({
 	title: 'Data Grid',
 	description: '@ez-kit/data-grid shadcn UI blocks: cells, toolbar, filtering, pagination, editing and more.',
 	registryName: 'ez-kit',
-	homepage: 'https://ez-kit.dev',
+	homepage,
 	// Only packages the copied files import directly (verify with:
 	// grep -rho "from '[a-z][a-z0-9@/-]*'" src/{blocks,hooks,lib} src/data-grid.tsx | sort -u).
 	// @ez-kit/data-grid-core is a transitive dep of @ez-kit/data-grid-react (declared in its own

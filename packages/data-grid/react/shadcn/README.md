@@ -7,10 +7,10 @@ This is **not** an npm package — it's distributed as a [shadcn registry](https
 ## Install
 
 ```bash
-npx shadcn@latest add https://ez-kit.dev/r/data-grid.json
+npx shadcn@latest add https://ez-kit-docs.vercel.app/r/data-grid.json
 ```
 
-This copies `components/data-grid/**` into your project (cells, toolbar, filtering, pagination, editing blocks, plus the shadcn UI primitives they use) and adds `@ez-kit/data-grid-react` and its other runtime dependencies to your `package.json`. To pull in later updates, re-run the same command or use `npx shadcn add https://ez-kit.dev/r/data-grid.json --diff` to see what changed upstream first.
+This copies `components/data-grid/**` into your project (cells, toolbar, filtering, pagination, editing blocks, plus the shadcn UI primitives they use) and adds `@ez-kit/data-grid-react` and its other runtime dependencies to your `package.json`. To pull in later updates, re-run the same command or use `npx shadcn add https://ez-kit-docs.vercel.app/r/data-grid.json --diff` to see what changed upstream first.
 
 ## Usage
 
@@ -51,7 +51,7 @@ Pick one mode for the lifetime of a given grid — switching between them remoun
 
 `cellTypes` and the `KitCellTypes` type — needed by `extendDataGrid` to add a custom cell type — are also exported from `@/components/data-grid/data-grid`, alongside everything above. Everything else (`ColumnDef`, `ColumnSortingConfig`, `RowActionsVariant`, and the rest of the headless API surface) is not re-exported from the copied files — import those directly from `@ez-kit/data-grid-react`, which is already a `package.json` dependency after install.
 
-Full documentation: [ez-kit.dev/docs/data-grid](https://ez-kit.dev/docs/data-grid).
+Full documentation: [ez-kit-docs.vercel.app/docs/data-grid](https://ez-kit-docs.vercel.app/docs/data-grid).
 
 ## License
 

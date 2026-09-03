@@ -33,9 +33,16 @@ import { join, relative, sep } from 'node:path'
  *   here fails the build loudly instead of being silently dropped from the registry item.
  */
 
+// The registry payload is whatever this scan returns, copied verbatim into every consumer's
+// project — so it ships only files we recognise as source. Anything a tool happens to drop under
+// `src/` (editor scratch files, agent/session state in a dot-dir, `.DS_Store`) would otherwise be
+// published to consumers; that is not hypothetical, a stray `.omc/state/*.jsonl` was picked up here.
+const SOURCE_FILE_PATTERN = /\.(tsx?|css)$/
+
 function listFilesRecursive(dir) {
 	const out = []
 	for (const entry of readdirSync(dir)) {
+		if (entry.startsWith('.')) continue
 		const full = join(dir, entry)
 		if (statSync(full).isDirectory()) {
 			out.push(...listFilesRecursive(full))
@@ -70,6 +77,39 @@ function assertTopLevelCoverage(srcAbs, config) {
 	}
 }
 
+// `shadcn add` rewrites an item's `@/`-prefixed imports by matching the import's BASENAME against
+// the item's files, ignoring the directory — so two files sharing one basename make that rewrite
+// ambiguous and it silently picks the wrong target. `blocks/pagination/pagination.tsx` importing
+// `@/components/ui/pagination` resolved to itself: a circular import alias in every consumer's
+// project (TS2303), with the real primitive shipped but imported by nothing. Nothing in this repo
+// catches that — the sources typecheck fine here, the break only exists after `shadcn add`.
+//
+// Case-SENSITIVE on purpose. `blocks/core/Checkbox.tsx` and `components/ui/checkbox.tsx` differ
+// only by case and coexist fine: verified in a real `shadcn add` install (on a case-insensitive
+// macOS filesystem, so the matching is done against the item's file list, not by probing disk) —
+// the installed block imports the ui primitive, which is also imported by two other blocks. Making
+// this check case-insensitive would fail the build on that benign pair every time.
+function assertUniqueBasenames(items) {
+	const byBasename = new Map()
+	for (const item of items) {
+		const key = item.target
+			.split('/')
+			.pop()
+			.replace(/\.[^.]+$/, '')
+		byBasename.set(key, [...(byBasename.get(key) ?? []), item.target])
+	}
+	const collisions = [...byBasename.entries()].filter(([, targets]) => targets.length > 1)
+	if (collisions.length > 0) {
+		throw new Error(
+			`generateRegistryManifest: files sharing a basename: ` +
+				collisions.map(([name, targets]) => `"${name}" (${targets.join(', ')})`).join('; ') +
+				`. \`shadcn add\` resolves @/ imports by basename alone, so one of these would be ` +
+				`silently rewritten to the other in every consumer's project. Rename one to a ` +
+				`distinct basename (e.g. PaginationBar.tsx).`,
+		)
+	}
+}
+
 function assertPathExists(abs, describedAs) {
 	if (!existsSync(abs)) {
 		throw new Error(`generateRegistryManifest: ${describedAs} does not exist: ${abs}`)
@@ -89,7 +129,7 @@ export function generateRegistryManifest(config) {
 	const files = scanDirs
 		.map((dir) => join(srcAbs, dir))
 		.flatMap((dirAbs) => listFilesRecursive(dirAbs))
-		.filter((abs) => !isTestFile(abs))
+		.filter((abs) => SOURCE_FILE_PATTERN.test(abs) && !isTestFile(abs))
 
 	for (const f of config.rootFiles) assertPathExists(join(srcAbs, f), `config.rootFiles entry "${f}"`)
 	const rootFiles = config.rootFiles.map((f) => join(srcAbs, f))
@@ -103,6 +143,8 @@ export function generateRegistryManifest(config) {
 			target: `${config.targetPrefix}/${relToSrc}`,
 		}
 	})
+
+	assertUniqueBasenames(items)
 
 	const manifest = {
 		$schema: 'https://ui.shadcn.com/schema/registry.json',

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Builds shadcn registry manifests for every opted-in shadcn-flavour package and
 // publishes the compiled registry-item JSON into `apps/docs/public/r`, so
-// `npx shadcn add https://ez-kit.dev/r/<name>.json` can install them.
+// `npx shadcn add https://ez-kit-docs.vercel.app/r/<name>.json` can install them.
 //
 // Pipeline per package:
 //   1. run its `registry.config.mjs` to (re)generate `registry.json` from source

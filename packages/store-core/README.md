@@ -28,4 +28,4 @@ The root entry is deliberately free of React, so it stays importable from a serv
 
 **Instance cache** — `createInstanceCache` plus `createCacheReact`, which turns it into a React surface (`Provider`, `Scope`, `useCache`, `useCacheKeys`, `createCachedStore`) given a single manager-specific injection: `useRead(instance, selector)`. Zustand passes `useStore`, Valtio passes `useSnapshot`; everything else — keying by `(path, id)`, scope inheritance, GC timing, cross-tree reads — is shared. That is why both packages expose the same cache API without duplicating it.
 
-→ [Full docs](https://ez-kit.dev/docs)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs)
