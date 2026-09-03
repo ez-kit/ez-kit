@@ -47,7 +47,7 @@ JSON, with no functions anywhere, so the same document can be authored in TypeSc
 stored in a database, or delivered by a backend. `<FormRenderer>` (from a kit package)
 renders it through the same bound field components the JSX API uses.
 
-The full guide lives at [ez-kit.dev/docs/form/schema](https://ez-kit.dev/docs/form/schema).
+The full guide lives at [ez-kit-docs.vercel.app/docs/form/schema](https://ez-kit-docs.vercel.app/docs/form/schema).
 
 ### Authoring
 

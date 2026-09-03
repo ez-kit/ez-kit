@@ -100,7 +100,7 @@ native `form.Field` / `form.AppField`.
 ## Config-driven forms
 
 `<FormRenderer schema={…} />` renders a plain-data
-[`FormSchema`](https://ez-kit.dev/docs/form/schema) — the same document a backend can deliver
+[`FormSchema`](https://ez-kit-docs.vercel.app/docs/form/schema) — the same document a backend can deliver
 as JSON — through the very same bound field components, so a config-driven form and a
 hand-written one produce identical DOM.
 

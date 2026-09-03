@@ -19,13 +19,16 @@ const expectedOrigin = siteUrl.replace(/\/$/, '')
 const OWN_ORIGIN_PATTERN = /https:\/\/ez-kit[a-z0-9-]*\.(?:dev|vercel\.app)/g
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', '.source', '.turbo', 'dist', '.omc', 'public'])
 const CHECKED_EXTENSIONS = /\.mdx?$/
+// CHANGELOGs are an append-only record of what each release actually said. Rewriting a URL inside
+// one would falsify history, so they are read-only to this check.
+const SKIP_FILES = /(^|\/)CHANGELOG\.md$/
 
 function* walk(dir) {
 	for (const entry of readdirSync(dir)) {
 		if (SKIP_DIRS.has(entry) || entry.startsWith('.')) continue
 		const full = join(dir, entry)
 		if (statSync(full).isDirectory()) yield* walk(full)
-		else if (CHECKED_EXTENSIONS.test(entry)) yield full
+		else if (CHECKED_EXTENSIONS.test(entry) && !SKIP_FILES.test(entry)) yield full
 	}
 }
 
