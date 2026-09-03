@@ -78,6 +78,12 @@ compile.
 `SubmitButton` (subscribed to `canSubmit` / `isSubmitting`), plus the standalone `Form`
 element wired to `handleSubmit`.
 
+### Layout
+
+`form.Section` groups fields under an optional heading on a `columns`-wide grid (1–4), and
+`form.GridItem` gives one child a wider `colSpan`. They are the JSX spelling of the schema's
+`section` node and its `colSpan` — pure layout, binding no value.
+
 ### Native API
 
 `form.Field`, `form.Subscribe`, `form.handleSubmit`, `form.state` and `form.AppField` are

@@ -1,0 +1,108 @@
+---
+title: Examples
+description: Four complete forms — a full field showcase, a wizard, a dependent cascade and a form in a dialog — each shown as TSX and as a document.
+---
+
+# Examples
+
+Four forms, each one a whole feature rather than a fragment, and each shown twice: once written in
+TSX, once as a `FormSchema` document rendered by `FormRenderer`. Both versions are live — the
+document is a real `<FormRenderer schema={…} />`, not a code block — because the two are the same
+machinery entered from different sides, and the only convincing way to say so is to run both.
+
+Scroll for the shape closest to your problem. Each case names the guide that explains it properly;
+this page is deliberately short on prose and long on working forms.
+
+## A complete form
+
+Every field kind the kits ship, laid out in sections on the column grid: text, number, textarea,
+select, multiselect, checkbox, checkbox group, switch, radio group, slider, date and date range,
+with validation on the fields where it matters. It is the page to skim when you want to know what a
+field actually looks like in your kit before deciding to use it.
+
+Sections are the layout unit in both spellings: a `section` carries `columns` (1–4) and each child
+may claim a `colSpan`. [Fields](/docs/form/fields) covers what each kind accepts, and
+[Validation](/docs/form/validation) the constraints used here.
+
+### In TSX
+
+<KitExample exampleId='form-showcase' />
+
+### The same form as a document
+
+<KitExample exampleId='form-showcase-schema' />
+
+## A wizard
+
+The document version comes first here, because the wizard exists **only** on the document side. When
+a schema's top-level children are `step` nodes, `FormRenderer` shows one step at a time and asks
+your kit for the stepper chrome. There is no `<Step>` component in the JSX API.
+
+Three behaviours of the real wizard are worth watching in the example rather than taking on trust:
+
+- **A step never opens red.** The schema's constraints compile into one form-level `onChange`
+  validator that sees every field in the document, including ones on steps the user has not reached.
+  A step is marked invalid only once the user has tried to _leave_ it.
+- **A step hidden by `when` is removed from the list and the rest are renumbered**, so the stepper
+  never claims "3 of 5" for a form with four reachable steps. If the step on screen hides itself,
+  the wizard falls back to the nearest earlier visible step rather than to the start.
+- **The final submit is not wizard chrome.** It is a `submit` node placed in the last step, rendered
+  like any other node — so "Next" and "Submit" are not two spellings of the same button.
+
+[Config-driven forms](/docs/form/schema#wizards) has the rest, including why which fields a step
+owns is decided by its subtree and never by a data path.
+
+### As a document
+
+<KitExample exampleId='form-wizard' />
+
+### The nearest thing in TSX
+
+The version below is **not** a translation of the document above: with no step node to lean on, it
+is a hand-rolled state machine — a `step` piece of React state, your own Back/Next buttons, and your
+own decision about what to validate before advancing. That is the honest comparison, and it is the
+argument for describing a wizard as data.
+
+<KitExample exampleId='form-wizard-jsx' />
+
+## A dependent cascade
+
+A country select that decides what the city select can offer. The list is not known until the form
+is being filled in, so it cannot be written into the document at all — the document names a
+**source** and the app decides what that name fetches. A source is a React hook, which is what lets
+your existing data layer do the caching, deduplication and cancellation instead of this package
+reimplementing them.
+
+Watch the city value clear the moment the country changes: the new list is not waited for and the
+old value is not checked against it, because a stale `{ country: 'de', city: 'msk' }` reaching
+`onSubmit` is the worse outcome. [Option sources](/docs/form/select/option-sources) explains the
+registry, `params` and `dependsOn`.
+
+### In TSX
+
+<KitExample exampleId='form-option-sources' />
+
+### The same form as a document
+
+<KitExample exampleId='form-option-sources-schema' />
+
+## A form in a dialog
+
+The interesting part is not the dialog — it is the form instance's lifetime. The form lives exactly
+as long as the element that created it, so `<Form>` goes **inside** the dialog and wraps both its
+body and its footer. Closing the dialog throws the values, errors and submit state away with it, and
+opening it again gives a clean form with no `reset` call anywhere. Put the dialog inside the form and
+you get the opposite: state that outlives the interaction the user thought they had abandoned.
+
+[Getting started](/docs/form/getting-started#3-mind-the-lifetime) covers the rule and where it bites.
+
+The document version relies on the same property: in uncontrolled mode, mounting `FormRenderer` _is_
+creating the form.
+
+### In TSX
+
+<KitExample exampleId='form-dialog' />
+
+### The same form as a document
+
+<KitExample exampleId='form-dialog-schema' />

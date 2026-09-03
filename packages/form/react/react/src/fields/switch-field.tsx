@@ -2,6 +2,7 @@ import { FormFieldType } from '@ez-kit/form-core'
 
 import { asBoolean } from '../coerce'
 import { fieldRenderProps } from '../field-render-props'
+import { fieldValidators } from '../field-validate'
 
 import type { BindableForm } from '../bindable-form'
 import type { FormComponents } from '../contract'
@@ -19,12 +20,16 @@ export function createSwitchField<TFormData>(
 		description,
 		disabled,
 		required,
+		validate,
 	}: SwitchFieldProps<TFormData>): ReactNode {
 		return (
-			<form.AppField name={name}>
+			<form.AppField
+				name={name}
+				validators={fieldValidators(name, validate)}
+			>
 				{(field) => (
 					<KitSwitchField
-						{...fieldRenderProps(field, FormFieldType.Switch, { label, description, disabled, required })}
+						{...fieldRenderProps(field, FormFieldType.Switch, { label, description, disabled, required, validate })}
 						checked={asBoolean(field.state.value)}
 						onChange={(checked) => {
 							field.handleChange(checked)

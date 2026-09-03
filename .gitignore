@@ -13,6 +13,9 @@ packages/**/registry.json
 apps/docs/public/r/
 # testing
 /coverage
+# Per-package coverage output. The root-anchored line above only ever matched the root,
+# so a package's own report — which `pnpm --filter <pkg> test:coverage` writes — leaked in.
+**/coverage
 
 # playwright
 playwright-report/

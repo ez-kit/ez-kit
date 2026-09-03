@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/data-grid-shadcn",
-	"version": "0.1.1",
+	"version": "0.2.0",
 	"private": true,
 	"description": "Shadcn UI flavour of @ez-kit/data-grid.",
 	"license": "MIT",

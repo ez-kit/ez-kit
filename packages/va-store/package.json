@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/va-store",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Valtio-backed React context store with a source-agnostic persist engine.",
 	"license": "MIT",
 	"repository": {

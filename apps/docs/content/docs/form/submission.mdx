@@ -1,0 +1,102 @@
+---
+title: Submission
+description: What onSubmit receives, what the submit button already does for you, and where an error from the server has to go to reach a field.
+---
+
+# Submission
+
+`<Form>` renders the `<form>` element and wires its `onSubmit` to `form.handleSubmit()`, preventing the browser's navigation and stopping the event from bubbling out of a form nested inside another. Nothing else is claimed: what happens to the values is yours.
+
+## `onSubmit`
+
+The handler is an option of the form, not a prop of the button:
+
+```tsx
+<Form
+	defaultValues={{ email: '', password: '' }}
+	onSubmit={async ({ value, formApi, meta }) => {
+		await save(value)
+	}}
+>
+```
+
+`value` is the form's values, typed by `defaultValues`. `formApi` is the instance, for the cases where the handler has to reach back into the form — resetting it after a successful save, or reading a field it was not given. `meta` carries whatever was passed to `handleSubmit(meta)`, which is how one form ends up with a "save" and a "save and publish" button that differ only in what the handler is told.
+
+It runs **only after validation has passed**. `handleSubmit` first marks every field touched — which is what makes a required-but-never-focused field show its error on the first submit attempt — then runs the field validators, then the form's, and returns early if either produced an issue. `onSubmitInvalid` is the hook for that early return, if you want to scroll to the first error or announce the failure.
+
+An exception thrown from the handler is not swallowed: `isSubmitting` is cleared, the form is marked unsuccessful, and the error propagates out of `handleSubmit`. Since `<Form>` calls it as `void form.handleSubmit()`, an unhandled rejection there is an unhandled rejection in the page — catch what you expect to fail, and see the next section for the failure worth modelling properly.
+
+To submit from outside the element — a dialog footer, a toolbar, a keyboard shortcut — call `form.handleSubmit()` yourself; see [Native API](/docs/form/native-api).
+
+## Submit state
+
+Two pieces of state describe a submission, and `form.SubmitButton` is already subscribed to both.
+
+`isSubmitting` is true from the moment validation passes until the handler settles. `canSubmit` is the form's own answer to "would submitting be meaningful right now": true while the form is pristine and has never been submitted — otherwise the very first submit could never happen — and thereafter true only when the form is valid, not validating and not already submitting.
+
+So the button disables itself while a request is in flight and again whenever the form is invalid, and there is nothing to wire. Its `disabled` prop only ever _adds_ a reason of your own; it cannot force the button enabled. What it does not do is change its own label — that is content, and content is yours:
+
+```tsx
+<form.Subscribe selector={(state) => state.isSubmitting}>
+	{(isSubmitting) => <form.SubmitButton>{isSubmitting ? 'Saving…' : 'Save'}</form.SubmitButton>}
+</form.Subscribe>
+```
+
+Reaching for `form.Subscribe` here rather than reading `form.state.isSubmitting` is the general rule, explained in [Reactivity](/docs/form/reactivity).
+
+## Errors that come back from the server
+
+A uniqueness clash, a rejected card, a stale version — the interesting failures are the ones only the backend can detect, and they have to land on the field responsible rather than in a banner the user has to translate into an edit.
+
+The seam for that is a **validator**, not the `onSubmit` handler. The handler's return value is ignored; `validators.onSubmit` and `validators.onSubmitAsync` are the two whose result TanStack maps back onto fields. Return `undefined` and submission proceeds to the handler; return an object with a `fields` map and it does not:
+
+```tsx
+<Form
+	defaultValues={{ email: '', password: '' }}
+	validators={{
+		onSubmitAsync: async ({ value }) => {
+			const conflict = await createAccount(value)
+			return conflict ? { fields: { email: 'That address is already registered' } } : undefined
+		},
+	}}
+	onSubmit={({ value }) => {
+		// Only reached when the request above reported nothing.
+	}}
+>
+```
+
+Each key of `fields` is a field name, and its message goes into that field's submit-time error slot — where the flat fields already look, so it renders through the kit's error component with `aria-invalid` and `aria-describedby` set, exactly like a schema issue. It is visible immediately because submitting has just marked every field touched. A `form` key may sit alongside `fields` for a message about the form as a whole; that one belongs to no field, so nothing renders it for you — read it from `form.state.errorMap.onSubmit` and put it where you want it.
+
+The message then clears itself. Editing the rejected field runs its own change validation, and a field that now passes drops its stale submit-time error. That is not cosmetic: an unresolved error keeps the form invalid, and an invalid form keeps `canSubmit` false — without the clearing, one server rejection would disable the button for good.
+
+Because the request is a validator, `isSubmitting` is already true while it awaits, and the button is disabled for the whole round trip.
+
+### In TSX
+
+<KitExample exampleId='form-submit' />
+
+### The same form as a document
+
+<KitExample exampleId='form-submit-schema' />
+
+The document describes the fields and the button; it does not describe what happens to the values, because that is code. The twin is also the one example rendered **controlled**, and for a reason worth knowing: an uncontrolled `FormRenderer` compiles the schema's own `validate` blocks into the form's validators and refuses to do so while a `validators` prop is present, since TanStack accepts exactly one validator per trigger. The server round trip _is_ a validator, so the two have to be assembled in one place — call [`buildValidator`](/docs/form/schema#one-source-of-validation) yourself, own the instance, and give the constraints to `onChange` and the server to `onSubmitAsync`.
+
+## Hidden values and the submitted payload
+
+A field that is not on screen has usually stopped being part of the answer, and the value it holds should not travel with the submission.
+
+In a [config-driven form](/docs/form/schema#visibility-and-the-submitted-payload) this is handled: a field hidden by a `when` condition is stripped from the value at submit time, `keepHiddenValues` opts out, and a controlled caller applies `stripHiddenValues(schema, value)` at the top of their own handler because the renderer has no seam to wrap.
+
+In the JSX API there is no `when` and therefore nothing to compute visibility from — hiding a field means not rendering it, and that is a decision only your component knows about. Unmounting a field resets its meta but deliberately **leaves its value in form state**, so that a field toggled away and back does not lose what the user typed. The consequence is that the value still reaches `onSubmit`, and dropping it is an explicit act: omit the key when you build the request, or call `form.deleteField(name)` when the field goes away.
+
+## Initial values that arrive late
+
+Editing an existing record means the form is often mounted before the record is loaded, and this package adds no API for it: `<Form>` splits its props into the `<form>` element's DOM attributes and TanStack Form's options, then hands the options over untouched. Everything below is TanStack's behaviour, not ours, and its [async initial values guide](https://tanstack.com/form/latest/docs/framework/react/guides/async-initial-values) is the fuller account.
+
+Three approaches, in the order they are worth trying:
+
+**Pass `defaultValues` as they arrive.** TanStack re-applies the options on every render, and replaces the form's values when `defaultValues` changes — but only while the form is still untouched. That proviso is the whole reason this is safe: data landing a moment after mount fills the fields, while a response landing after the user has started typing cannot overwrite their work. Render the form with empty defaults and swap them in when the request resolves.
+
+**Call `form.reset(values)`** when you want the change to apply regardless — after a successful save, or when the user explicitly discards their edits. It replaces both the values and the defaults the form compares against, so the form is pristine again rather than dirty against a stale baseline.
+
+**Remount with `key`** when the form should genuinely start over: `<Form key={recordId} …>` gives each record its own form instance, and switching records throws away the previous one's state instead of reconciling it. This is the blunt option, and the right one when reconciling would be wrong.

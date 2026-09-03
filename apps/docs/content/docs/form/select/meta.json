@@ -1,0 +1,5 @@
+{
+	"title": "Select",
+	"description": "Options, named sources, searchable and creatable selects",
+	"pages": ["index", "option-sources", "searchable", "creatable"]
+}

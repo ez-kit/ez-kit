@@ -1,0 +1,103 @@
+---
+title: Options
+description: Where a select-like field's choices come from — written into the form, numeric as well as string, and the list that is still being fetched.
+---
+
+# Options
+
+Four fields choose from a list rather than accepting free text: `form.SelectField`, `form.MultiSelectField`, `form.RadioGroupField` and `form.CheckboxGroupField`. What each of them _renders_ is on [Fields](/docs/form/fields); this page is about the list itself — where it comes from, what a value in it may be, and what the control shows while the list is not there yet.
+
+## A list written into the form
+
+The common case is a list the app already knows, passed inline:
+
+```tsx
+<form.SelectField
+	name='role'
+	label='Role'
+	placeholder='Pick a role'
+	options={[
+		{ label: 'Viewer', value: 'viewer' },
+		{ label: 'Admin', value: 'admin', disabled: true },
+	]}
+/>
+```
+
+Each entry is a `SelectOption`: `{ label, value, disabled? }`. The `label` is what the user reads, the `value` is what lands in form state, and `disabled` renders the row but refuses selection. The list is flat and identical across kits — no groups, no nesting — which is what shields you from the fact that shadcn renders a Radix listbox and HeroUI a React Aria one rather than a native `<select>`.
+
+A field bound to a single value holds the chosen option's `value`; an empty string means nothing is selected, so the placeholder shows. A multi-value field holds a list, `[]` when nothing is chosen and never `undefined`.
+
+The same list, in a [document](/docs/form/schema), is the node's `options` key with the same entries — labels there may additionally be `{ key }` translation keys, resolved by `FormRenderer`'s `translate`.
+
+## Numeric option values
+
+An option `value` may be a **string or a number**, and `name` is checked against it: a field bound to a `number` path takes numeric options, one bound to a `string` path string ones. Mixing the two is a compile error, not a lookup that quietly finds nothing.
+
+```tsx
+// `countryId: number` in the form values
+<form.SelectField
+	name='countryId'
+	label='Country'
+	options={[
+		{ label: 'Germany', value: 49 },
+		{ label: 'France', value: 33 },
+	]}
+/>
+```
+
+Form state holds the option's value **verbatim** — `49`, never `'49'` — so a submitted payload carries the entity id a backend expects. The kits themselves stay string-only at the DOM edge (Radix requires string item values, and reserves `''` for "nothing selected"); the binding layer stringifies the options on the way down and maps the string a kit reports back to the option it came from. That is a lookup, never `Number(value)`, so a string-valued `'42'` stays a string.
+
+The same holds for all four option-bearing fields — a `form.MultiSelectField` bound to a `number[]` path takes numeric options too — and for the equivalent schema nodes. There is no separate node `type` for the numeric flavour: the widget and the value shape are unchanged and only the JSON scalar differs. `parseFormSchema` rejects a delivered document that mixes string and number values in one list, because `1` and `'1'` are distinct option values that collide the moment a kit renders them as keys.
+
+### In TSX
+
+<KitExample exampleId='form-numeric-options-jsx' />
+
+### The same form as a document
+
+<KitExample exampleId='form-numeric-options' />
+
+## Options that arrive later
+
+When an app fetches its options, `options={data ?? []}` is ambiguous: an empty list can mean "still fetching" or "the backend genuinely offers nothing", and both render as an empty dropdown. Pass `loading` to say which:
+
+```tsx
+const { data, isPending } = useQuery({ queryKey: ['roles'], queryFn: fetchRoles })
+;<form.SelectField
+	name='role'
+	label='Role'
+	options={data ?? []}
+	loading={isPending}
+/>
+```
+
+While `loading` is true both kits disable the control and show a **skeleton** in place of its value — a single bar in a select or multi-select trigger, a short list of placeholder rows in a radio or checkbox group, which have no trigger to put one in. That is also what covers an edit form: a value loaded from the server (`role: 'admin'`) arrives before the option that carries its label, and a skeleton reads better than a blank trigger.
+
+`loading` is accepted by all four option-bearing fields and defaults to `false`.
+
+Failure is deliberately not in the contract: there is no `error` or `onRetry` prop. A retry button inside a select popover is awkward UI and multiplies badly across the four widgets, and the code that supplies the options is already the right place to surface a failed fetch — a toast from `onError`, an error boundary, a message beside the form.
+
+<Callout>
+	`loading` is a **rendering** concern and has no schema key. A statically authored `options` array in a document is
+	never loading, and `@ez-kit/form-core` knows nothing about the flag. A document that needs a fetched list names an
+	[option source](/docs/form/select/option-sources) instead, and the source reports its own `loading` — which is what
+	the twin below does.
+</Callout>
+
+### In TSX
+
+<KitExample exampleId='form-async-options' />
+
+### The same form as a document
+
+<KitExample exampleId='form-async-options-schema' />
+
+## The rest of this section
+
+`options` and `loading` cover a list the component computes. Three pages take it further, each one adding a single flag or key rather than a new kind of field:
+
+- [Option sources](/docs/form/select/option-sources) — a document has nowhere to put a `useQuery` call, so it names a list instead: `optionsFrom='cities'`, with the app deciding what that name fetches. The same prop works in TSX, and a cascade (city depends on country) works from either side.
+- [Searchable select and multiselect](/docs/form/select/searchable) — `searchable` turns the trigger into a search box. With a server-side search the option carrying the current value is usually off the current page of results, which is why a searchable source answers two questions rather than one.
+- [Creatable select](/docs/form/select/creatable) — `creatable` lets the field accept a value its list does not contain: the text the user typed, offered as one extra row.
+
+`searchable` and `creatable` are legal on `select` and `multiselect` only. `radiogroup` and `checkboxgroup` render every option inline, so there is no trigger to type into; `parseFormSchema` rejects both flags there.

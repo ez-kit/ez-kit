@@ -1,0 +1,686 @@
+import { isDateRangeValue, isIsoDate } from './date-value'
+import { FORM_FIELD_TYPES, FormFieldType } from './field-types'
+import { collectRuleFields } from './rules'
+import { GRID_MAX, GRID_MIN, RESERVED_NODE_TYPES } from './schema'
+import { hasChildren, isFieldNode, walkNodes } from './walk'
+
+import type { Condition } from './rules'
+import type { AnyFormSchema, FieldValidate, FormNode } from './schema'
+
+/**
+ * Options that widen what `parseFormSchema` accepts: custom field kinds, block components
+ * and validation rule keys the caller registered, plus whether a translation function will
+ * be available downstream (so translation-key labels are legal to keep).
+ */
+export type ParseOptions = {
+	fieldTypes?: readonly string[]
+	blocks?: readonly string[]
+	rules?: readonly string[]
+	/**
+	 * Option-source keys the app registered on `<FormOptionSources>`. A node's `optionsFrom`
+	 * naming anything else is rejected here, exactly as an unregistered `rule` or `block` is —
+	 * the parser can only ever confirm that *this* app knows the name, which is precisely why
+	 * the document carries a name and not a URL.
+	 */
+	optionSources?: readonly string[]
+	hasTranslate?: boolean
+}
+
+/**
+ * Thrown by `parseFormSchema` on the first structural or semantic violation. `path` is a
+ * human-readable node location (e.g. `children[1].children[0]`) so a document delivered from
+ * a server — with no source map back to any editor — can still be debugged from the message
+ * alone.
+ */
+export class FormSchemaError extends Error {
+	readonly path: string
+
+	constructor(message: string, path: string) {
+		super(`${message} (at ${path})`)
+		this.name = 'FormSchemaError'
+		this.path = path
+	}
+}
+
+/** The field kinds whose nodes carry an `options` list. */
+const OPTION_FIELD_TYPES: readonly string[] = [
+	FormFieldType.Select,
+	FormFieldType.RadioGroup,
+	FormFieldType.MultiSelect,
+	FormFieldType.CheckboxGroup,
+]
+
+/** The field kinds whose value — and so whose `defaultValue` — is a list of option values. */
+const MULTI_VALUE_FIELD_TYPES: readonly string[] = [FormFieldType.MultiSelect, FormFieldType.CheckboxGroup]
+
+/** The field kinds whose `min` / `max` / `defaultValue` are calendar dates. */
+const DATE_FIELD_TYPES: readonly string[] = [FormFieldType.Date, FormFieldType.DateRange]
+
+/** Widened for the same reason as `DATE_FIELD_TYPES`: a node's `type` is a bare `string`. */
+const DATE_RANGE_TYPE: string = FormFieldType.DateRange
+
+/** The same widening, for the two kinds `searchable` has to tell apart. */
+const SELECT_TYPE: string = FormFieldType.Select
+const MULTI_SELECT_TYPE: string = FormFieldType.MultiSelect
+
+const SUPPORTED_VERSION = 1
+const RELATIVE_FIELD_PREFIX = './'
+const ROOT_PATH = 'root'
+
+type UnknownRecord = Record<string, unknown>
+
+/** The `typeof` of a legal option value — the runtime face of `OptionValue`. */
+type OptionValueType = 'string' | 'number'
+
+function isPlainObject(value: unknown): value is UnknownRecord {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** The option-value scalar `value` is, or `undefined` if it is not a legal option value. */
+function optionValueTypeOf(value: unknown): OptionValueType | undefined {
+	if (typeof value === 'string') return 'string'
+	if (typeof value === 'number' && Number.isFinite(value)) return 'number'
+	return undefined
+}
+
+/**
+ * The scalar type this node's options carry, when the node has a usable list to read it from.
+ * `undefined` for an empty or malformed list — `assertOptions` has already rejected the cases
+ * that matter, so a caller only uses this to *tighten* a check it can otherwise skip.
+ */
+function declaredOptionValueType(node: FormNode<unknown, string>): OptionValueType | undefined {
+	const list = (node as unknown as UnknownRecord).options
+	if (!Array.isArray(list) || list.length === 0) return undefined
+	const first: unknown = list[0]
+	return isPlainObject(first) ? optionValueTypeOf(first.value) : undefined
+}
+
+/**
+ * Registering a custom field type or block component under a name reserved for a container
+ * (`section` / `step` / `submit` / `block`) would make it structurally unreachable — `isFieldNode`
+ * always classifies those names as containers, never as fields. Caught once, up front, rather
+ * than as a confusing "unknown node type" on every node that tries to use it.
+ */
+function assertNoReservedCollision(options: ParseOptions): void {
+	const registered = [...(options.fieldTypes ?? []), ...(options.blocks ?? [])]
+	const collision = registered.find((name) => (RESERVED_NODE_TYPES as readonly string[]).includes(name))
+	if (collision !== undefined) {
+		throw new FormSchemaError(`"${collision}" is a reserved node type and cannot be registered`, ROOT_PATH)
+	}
+}
+
+function assertVersion(version: unknown): void {
+	if (version !== SUPPORTED_VERSION) {
+		throw new FormSchemaError(
+			`Unsupported FormSchema version ${JSON.stringify(version)}; expected ${String(SUPPORTED_VERSION)}`,
+			ROOT_PATH,
+		)
+	}
+}
+
+/** A `step` node cannot share a children array with a non-`step` sibling (spec §9.3). */
+function assertStepHomogeneity(children: readonly FormNode<unknown, string>[], path: string): void {
+	const stepCount = children.filter((child) => child.type === 'step').length
+	if (stepCount > 0 && stepCount !== children.length) {
+		throw new FormSchemaError('Step nodes cannot be mixed with non-step siblings', path)
+	}
+}
+
+/**
+ * Structural pass: confirms every node down the tree is an object with a string `type`, and
+ * that every container carries a `children` array — the minimum a node needs before it is
+ * safe to hand to `walkNodes` and the semantic checks that follow.
+ */
+function assertNodeShape(raw: unknown, path: string): FormNode<unknown, string> {
+	if (!isPlainObject(raw)) {
+		throw new FormSchemaError('Expected a form node object', path)
+	}
+	if (typeof raw.type !== 'string') {
+		throw new FormSchemaError('Form node is missing a "type" string', path)
+	}
+
+	const node = raw as unknown as FormNode<unknown, string>
+	if (hasChildren(node)) {
+		if (!Array.isArray(node.children)) {
+			throw new FormSchemaError(`Container node "${node.type}" is missing a "children" array`, path)
+		}
+		assertStepHomogeneity(node.children, `${path}.children`)
+		node.children.forEach((child, index) => assertNodeShape(child, `${path}.children[${String(index)}]`))
+	}
+	return node
+}
+
+function assertKnownFieldType(type: string, path: string, options: ParseOptions): void {
+	const isBuiltIn = (FORM_FIELD_TYPES as readonly string[]).includes(type)
+	const isRegistered = options.fieldTypes?.includes(type) ?? false
+	if (!isBuiltIn && !isRegistered) {
+		throw new FormSchemaError(`Unknown node type "${type}"`, path)
+	}
+}
+
+function assertUniqueName(rawName: unknown, path: string, seenNames: Set<string>): void {
+	if (typeof rawName !== 'string' || rawName.length === 0) {
+		throw new FormSchemaError('Field node is missing a "name"', path)
+	}
+	if (seenNames.has(rawName)) {
+		throw new FormSchemaError(`Duplicate field name "${rawName}"`, path)
+	}
+	seenNames.add(rawName)
+}
+
+function assertKnownRule(validate: FieldValidate | undefined, path: string, options: ParseOptions): void {
+	if (validate?.rule === undefined) return
+	if (!options.rules?.includes(validate.rule)) {
+		throw new FormSchemaError(`Unknown validation rule "${validate.rule}"`, path)
+	}
+}
+
+function assertKnownBlock(component: unknown, path: string, options: ParseOptions): void {
+	if (typeof component !== 'string' || component.length === 0) {
+		throw new FormSchemaError('Block node is missing a "component" string', path)
+	}
+	if (!options.blocks?.includes(component)) {
+		throw new FormSchemaError(`Unknown block component "${component}"`, path)
+	}
+}
+
+/**
+ * Structurally validates a raw `when` / `disabledWhen` value against the `Rule` union before
+ * `collectRuleFields` ever sees it — `collectRuleFields` (and `compileCondition`) assume a
+ * well-formed rule and throw a raw `TypeError` on anything else (`null`, a primitive, `{}`, an
+ * object with no recognised operator key, a composite arm that isn't an array). A caller
+ * catching only `FormSchemaError` must never see that `TypeError` escape.
+ */
+function assertRuleShape(value: unknown, path: string): void {
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError('Condition must be a rule object', path)
+	}
+	if ('and' in value || 'or' in value) {
+		const key = 'and' in value ? 'and' : 'or'
+		const rules = value[key]
+		if (!Array.isArray(rules)) {
+			throw new FormSchemaError(`Rule "${key}" must be an array of rules`, path)
+		}
+		rules.forEach((rule) => {
+			assertRuleShape(rule, path)
+		})
+		return
+	}
+	if ('not' in value) {
+		assertRuleShape(value.not, path)
+		return
+	}
+	if (typeof value.field !== 'string') {
+		throw new FormSchemaError('Rule is missing a "field" string', path)
+	}
+	if ('eq' in value) return
+	if ('in' in value) {
+		if (!Array.isArray(value.in)) {
+			throw new FormSchemaError('Rule "in" must be an array', path)
+		}
+		return
+	}
+	if ('gt' in value) {
+		if (typeof value.gt !== 'number') {
+			throw new FormSchemaError('Rule "gt" must be a number', path)
+		}
+		return
+	}
+	if ('lt' in value) {
+		if (typeof value.lt !== 'number') {
+			throw new FormSchemaError('Rule "lt" must be a number', path)
+		}
+		return
+	}
+	if ('truthy' in value) {
+		if (value.truthy !== true) {
+			throw new FormSchemaError('Rule "truthy" must be true', path)
+		}
+		return
+	}
+	throw new FormSchemaError('Rule must have one of "eq", "in", "gt", "lt" or "truthy"', path)
+}
+
+/**
+ * Rejects a `when` / `disabledWhen` that cannot survive a trip through `JSON.parse`: a
+ * function condition (never serialisable — this is what makes `parseFormSchema` the trust
+ * boundary for BDUI payloads, spec I2/I3), a value that isn't a well-formed `Rule`, and a
+ * relative field reference, reserved for array items and not yet supported in v1.
+ */
+function assertKnownCondition(condition: Condition<unknown> | undefined, path: string): void {
+	if (condition === undefined) return
+	if (typeof condition === 'function') {
+		throw new FormSchemaError('Condition must be a serialisable rule object, not a function', path)
+	}
+	assertRuleShape(condition, path)
+	for (const field of collectRuleFields(condition)) {
+		if (field.startsWith(RELATIVE_FIELD_PREFIX)) {
+			throw new FormSchemaError(
+				`Relative field reference "${field}" is reserved for array items and is not supported in FormSchema v1`,
+				path,
+			)
+		}
+	}
+}
+
+/**
+ * A `LocalizedText` must be a string, or an object carrying a string `key` — anything else
+ * (a number, `{}`, an object whose `key` isn't a string) is garbage that would otherwise pass
+ * silently whenever `options.hasTranslate` happens to be true.
+ */
+function assertLocalizedText(text: unknown, path: string, options: ParseOptions): void {
+	if (text === undefined || typeof text === 'string') return
+	if (!isPlainObject(text) || typeof text.key !== 'string') {
+		throw new FormSchemaError('LocalizedText must be a string or an object with a string "key"', path)
+	}
+	if (!options.hasTranslate) {
+		throw new FormSchemaError(
+			`FormSchema uses the translation key "${text.key}" but no translate function is registered`,
+			path,
+		)
+	}
+}
+
+/** How a rejected value is named back to the author, without `JSON.stringify`'s blind spots. */
+function describeValue(value: unknown): string {
+	if (value === undefined) return 'undefined'
+	if (typeof value === 'function') return 'a function'
+	if (value instanceof Date) return 'a Date'
+	if (typeof value === 'number' && !Number.isFinite(value)) return String(value)
+	// The three values `JSON.stringify` returns `undefined` for are all handled above.
+	if (typeof value === 'symbol') return 'a symbol'
+	return JSON.stringify(value)
+}
+
+/** A `JSON.parse` result — `Object.create(null)` included, which a reviver can produce. */
+function isJsonObject(value: unknown): value is UnknownRecord {
+	if (!isPlainObject(value)) return false
+	const prototype: unknown = Object.getPrototypeOf(value)
+	return prototype === Object.prototype || prototype === null
+}
+
+/**
+ * One `params` entry, recursively. `params` is the document's own static argument list, so it
+ * must survive `JSON.stringify` unchanged: a function, `undefined`, `NaN`/`Infinity` (which
+ * stringify to `null`) and a `Date` (which stringifies to a string the source would then have
+ * to parse back) are all rejected here rather than reaching a source as something other than
+ * what the author wrote.
+ */
+function assertJsonValue(value: unknown, label: string, path: string): void {
+	if (value === null || typeof value === 'string' || typeof value === 'boolean') return
+	if (typeof value === 'number') {
+		if (!Number.isFinite(value)) {
+			throw new FormSchemaError(`"${label}" must be a finite number, got ${describeValue(value)}`, path)
+		}
+		return
+	}
+	if (Array.isArray(value)) {
+		;(value as unknown[]).forEach((entry, index) => {
+			assertJsonValue(entry, `${label}[${String(index)}]`, path)
+		})
+		return
+	}
+	if (isJsonObject(value)) {
+		for (const [key, entry] of Object.entries(value)) {
+			assertJsonValue(entry, `${label}.${key}`, path)
+		}
+		return
+	}
+	throw new FormSchemaError(
+		`"${label}" must be a JSON value (string, number, boolean, null, array or plain object), got ${describeValue(value)}`,
+		path,
+	)
+}
+
+function assertKnownOptionSource(source: unknown, path: string, options: ParseOptions): void {
+	if (typeof source !== 'string' || source.length === 0) {
+		throw new FormSchemaError('"optionsFrom" is missing a "source" name', path)
+	}
+	if (!(options.optionSources?.includes(source) ?? false)) {
+		throw new FormSchemaError(`Unknown option source "${source}"`, path)
+	}
+}
+
+/**
+ * `dependsOn`'s values are field references, and are held to the same rule every other one in
+ * the format is: an absolute path from the root of the form values. `./` stays reserved for
+ * array items (see `assertKnownCondition`) and is not supported in v1.
+ */
+function assertDependsOn(value: unknown, path: string): void {
+	if (value === undefined) return
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError('"dependsOn" must map a parameter name to a field path', path)
+	}
+	for (const [parameter, ref] of Object.entries(value)) {
+		if (typeof ref !== 'string' || ref.length === 0) {
+			throw new FormSchemaError(`"dependsOn.${parameter}" must be a field path string, got ${describeValue(ref)}`, path)
+		}
+		if (ref.startsWith(RELATIVE_FIELD_PREFIX)) {
+			throw new FormSchemaError(
+				`Relative field reference "${ref}" is reserved for array items and is not supported in FormSchema v1`,
+				path,
+			)
+		}
+	}
+}
+
+/**
+ * A node's `optionsFrom`: a registered source name, or an object naming one plus the static
+ * `params` and the `dependsOn` map that together make up the argument object the source
+ * receives. A bare string is sugar for `{ source }`.
+ */
+function assertOptionsFrom(value: unknown, path: string, options: ParseOptions): void {
+	if (typeof value === 'string') {
+		assertKnownOptionSource(value, path, options)
+		return
+	}
+	if (!isPlainObject(value)) {
+		throw new FormSchemaError(
+			`"optionsFrom" must be a source name or an object with a "source" name, got ${describeValue(value)}`,
+			path,
+		)
+	}
+	assertKnownOptionSource(value.source, path, options)
+	assertDependsOn(value.dependsOn, path)
+	if (value.params !== undefined) {
+		if (!isJsonObject(value.params)) {
+			throw new FormSchemaError(`"params" must be an object of JSON values, got ${describeValue(value.params)}`, path)
+		}
+		for (const [key, entry] of Object.entries(value.params)) {
+			assertJsonValue(entry, `params.${key}`, path)
+		}
+	}
+}
+
+/**
+ * A `select` / `radiogroup` node's `options`. The renderer would otherwise turn a missing or
+ * malformed list into an empty dropdown — a form that silently offers no choices is exactly
+ * the failure a trust boundary exists to catch — and each `label` is `LocalizedText`, so it
+ * needs the same check every other label gets.
+ */
+function assertOptions(node: FormNode<unknown, string>, path: string, options: ParseOptions): void {
+	// `node.type` is a bare `string` here (a custom field kind can be anything), so it is
+	// compared against the widened list rather than the enum members directly.
+	if (!OPTION_FIELD_TYPES.includes(node.type)) return
+
+	const raw = node as unknown as UnknownRecord
+	const hasList = raw.options !== undefined
+	const hasSource = raw.optionsFrom !== undefined
+	if (hasList && hasSource) {
+		throw new FormSchemaError(`"${node.type}" cannot carry both "options" and "optionsFrom"`, path)
+	}
+	if (hasSource) {
+		assertOptionsFrom(raw.optionsFrom, path, options)
+		return
+	}
+
+	const list = raw.options
+	if (!Array.isArray(list)) {
+		throw new FormSchemaError(`"${node.type}" needs either an "options" array or an "optionsFrom" source`, path)
+	}
+	let valueType: OptionValueType | undefined
+	for (const option of list as unknown[]) {
+		if (!isPlainObject(option) || !('value' in option)) {
+			throw new FormSchemaError('Each option must be an object with a "value"', path)
+		}
+		if (option.label === undefined) {
+			throw new FormSchemaError('Each option must carry a "label"', path)
+		}
+		assertLocalizedText(option.label, path, options)
+
+		const type = optionValueTypeOf(option.value)
+		if (type === undefined) {
+			throw new FormSchemaError(
+				`Each option "value" must be a string or a number, got ${JSON.stringify(option.value)}`,
+				path,
+			)
+		}
+		// One list, one scalar type. `1` and `'1'` are distinct option values but collide as
+		// DOM keys the moment a kit stringifies them, so the pair could never be told apart on
+		// the way back up — and the schema's own `name`↔`options` correlation already forbids
+		// the mixture in TypeScript. A delivered document gets told the same thing.
+		if (valueType !== undefined && valueType !== type) {
+			throw new FormSchemaError(`An "options" list cannot mix ${valueType} and ${type} values`, path)
+		}
+		valueType = type
+	}
+}
+
+/**
+ * `searchable` belongs to the two kinds that have a trigger to type into.
+ *
+ * `select` and `multiselect` both draw one control that stands for the selection and opens a
+ * list — a search box fits there, and for a `multiselect` the selection is chips carrying
+ * labels resolved through the source's `useSelectedOptions`. A `radiogroup` or a
+ * `checkboxgroup` renders every option inline instead; there is nothing to type into and no
+ * page of results to narrow, so the flag is meaningless there and always will be.
+ */
+function assertSearchable(node: FormNode<unknown, string>, path: string): void {
+	const value = (node as unknown as UnknownRecord).searchable
+	if (value === undefined) return
+
+	if (node.type !== SELECT_TYPE && node.type !== MULTI_SELECT_TYPE) {
+		throw new FormSchemaError(
+			`"searchable" is only supported on "select" and "multiselect", not on "${node.type}", ` +
+				'which renders every option inline',
+			path,
+		)
+	}
+	if (typeof value !== 'boolean') {
+		throw new FormSchemaError(`"searchable" must be a boolean, got ${describeValue(value)}`, path)
+	}
+}
+
+/**
+ * `creatable` rides on `searchable`, and only on a string-valued list.
+ *
+ * Both restrictions are the schema's own, not a kit's. Creating a value means typing one, and
+ * `searchable` is the only thing that gives the field a text input — a `creatable` plain
+ * select would draw a listbox with nowhere to type. And the typed text is a **string**: a
+ * numeric list would have to invent an id no backend issued, so a document whose `options`
+ * are numeric is rejected here exactly as `CreatableProvision` rejects it in TypeScript. A
+ * numeric `optionsFrom` source cannot be checked from here and stays the author's error.
+ */
+function assertCreatable(node: FormNode<unknown, string>, path: string): void {
+	const record = node as unknown as UnknownRecord
+	const value = record.creatable
+	if (value === undefined) {
+		if (record.createLabel !== undefined) {
+			throw new FormSchemaError('"createLabel" is only meaningful together with "creatable": true', path)
+		}
+		return
+	}
+
+	if (node.type !== SELECT_TYPE && node.type !== MULTI_SELECT_TYPE) {
+		throw new FormSchemaError(
+			`"creatable" is only supported on "select" and "multiselect", not on "${node.type}", ` +
+				'which renders every option inline',
+			path,
+		)
+	}
+	if (typeof value !== 'boolean') {
+		throw new FormSchemaError(`"creatable" must be a boolean, got ${describeValue(value)}`, path)
+	}
+	if (value && record.searchable !== true) {
+		throw new FormSchemaError(
+			'"creatable" requires "searchable": true — a value is created by typing it, and only a ' +
+				'searchable field has somewhere to type',
+			path,
+		)
+	}
+	if (value && declaredOptionValueType(node) === 'number') {
+		throw new FormSchemaError(
+			'"creatable" is not supported on a numeric option list: typed text is a string, and a ' +
+				'numeric id can only come from the server. Use a string-valued list, or create through ' +
+				"the option source's `onCreate`",
+			path,
+		)
+	}
+}
+
+/**
+ * A multi-value field's `defaultValue`: a list of option values, never a bare scalar.
+ *
+ * `[]` is legal and means "nothing selected" — that is the shape the field always holds, so a
+ * document may seed it explicitly rather than leaving the key absent.
+ *
+ * Entries are strings or numbers, all of one type, and — when the node's `options` say which
+ * type that is — of *that* type: a numeric select seeded with `['7']` would render as nothing
+ * selected, since `'7'` is not on its list.
+ */
+function assertMultiValueDefault(node: FormNode<unknown, string>, path: string): void {
+	if (!MULTI_VALUE_FIELD_TYPES.includes(node.type)) return
+
+	const value = (node as unknown as UnknownRecord).defaultValue
+	if (value === undefined) return
+	if (!Array.isArray(value)) {
+		throw new FormSchemaError(`"defaultValue" must be an array of option values, got ${JSON.stringify(value)}`, path)
+	}
+
+	let expected = declaredOptionValueType(node)
+	for (const entry of value as unknown[]) {
+		const type = optionValueTypeOf(entry)
+		if (type === undefined) {
+			throw new FormSchemaError(`"defaultValue" must be an array of option values, got ${JSON.stringify(value)}`, path)
+		}
+		if (expected !== undefined && expected !== type) {
+			throw new FormSchemaError(`"defaultValue" entries must all be ${expected} option values`, path)
+		}
+		expected = type
+	}
+}
+
+/**
+ * A date field's own values. Every date the format carries is a `YYYY-MM-DD` calendar date
+ * string, so a document naming `01/02/2026` — or a `Date` that only looked like one before
+ * `JSON.stringify` flattened it — is rejected here rather than reaching a picker, which would
+ * either throw inside the kit or silently drift to a different day.
+ *
+ * `defaultValue` is checked against the kind: a `date` carries one date, a `daterange` carries
+ * `{ start, end }` with both ends present — a half-open range is picker state, never form state.
+ */
+function assertDateValues(node: FormNode<unknown, string>, path: string): void {
+	if (!DATE_FIELD_TYPES.includes(node.type)) return
+
+	const raw = node as unknown as UnknownRecord
+	for (const bound of ['min', 'max'] as const) {
+		if (raw[bound] !== undefined && !isIsoDate(raw[bound])) {
+			throw new FormSchemaError(`"${bound}" must be a YYYY-MM-DD date, got ${JSON.stringify(raw[bound])}`, path)
+		}
+	}
+
+	if (raw.defaultValue === undefined) return
+	const isRange = node.type === DATE_RANGE_TYPE
+	const isValid = isRange ? isDateRangeValue(raw.defaultValue) : isIsoDate(raw.defaultValue)
+	if (!isValid) {
+		const shape = isRange ? '{ start, end } of YYYY-MM-DD dates' : 'a YYYY-MM-DD date'
+		throw new FormSchemaError(`"defaultValue" must be ${shape}, got ${JSON.stringify(raw.defaultValue)}`, path)
+	}
+}
+
+/**
+ * `columns` (section) and `colSpan` (any node) are part of the v1 format's supported range,
+ * not an undocumented kit detail — a document authored outside this codebase (BDUI, spec
+ * I2/I3) has no other way to learn that 6 columns silently becomes 1.
+ */
+function assertGridValue(value: unknown, propertyName: string, path: string): void {
+	if (value === undefined) return
+	if (typeof value !== 'number' || !Number.isInteger(value) || value < GRID_MIN || value > GRID_MAX) {
+		throw new FormSchemaError(
+			`"${propertyName}" must be an integer between ${String(GRID_MIN)} and ${String(GRID_MAX)}, got ${JSON.stringify(value)}`,
+			path,
+		)
+	}
+}
+
+function assertValidateMessages(validate: FieldValidate | undefined, path: string, options: ParseOptions): void {
+	if (!validate?.messages) return
+	for (const message of Object.values(validate.messages)) {
+		assertLocalizedText(message, path, options)
+	}
+}
+
+/** Rebuilds a node's `children[i].children[j]…` path from its ancestor chain via `walkNodes`. */
+function computeNodePath(
+	schema: AnyFormSchema<unknown>,
+	node: FormNode<unknown, string>,
+	ancestors: FormNode<unknown, string>[],
+): string {
+	let siblings: FormNode<unknown, string>[] = schema.children
+	const segments: string[] = []
+	for (const ancestor of ancestors) {
+		segments.push(`children[${String(siblings.indexOf(ancestor))}]`)
+		siblings = hasChildren(ancestor) ? ancestor.children : []
+	}
+	segments.push(`children[${String(siblings.indexOf(node))}]`)
+	return segments.join('.')
+}
+
+function validateNode(
+	node: FormNode<unknown, string>,
+	path: string,
+	options: ParseOptions,
+	seenNames: Set<string>,
+): void {
+	if (isFieldNode(node)) {
+		assertKnownFieldType(node.type, path, options)
+		assertUniqueName((node as unknown as UnknownRecord).name, path, seenNames)
+		assertOptions(node, path, options)
+		assertSearchable(node, path)
+		assertCreatable(node, path)
+		assertDateValues(node, path)
+		assertMultiValueDefault(node, path)
+		assertKnownRule(node.validate, path, options)
+		assertValidateMessages(node.validate, path, options)
+	} else if (node.type === 'block') {
+		assertKnownBlock(node.component, path, options)
+	} else if (node.type === 'section' || node.type === 'step') {
+		assertLocalizedText(node.title, path, options)
+	}
+
+	if (node.type === 'section') {
+		assertGridValue((node as unknown as UnknownRecord).columns, 'columns', path)
+	}
+	assertGridValue((node as unknown as UnknownRecord).colSpan, 'colSpan', path)
+
+	assertKnownCondition(node.when, path)
+	assertKnownCondition(node.disabledWhen, path)
+	assertLocalizedText(node.label, path, options)
+	assertLocalizedText(node.description, path, options)
+}
+
+/**
+ * The trust boundary for a `FormSchema` that did not come from this bundle — typically one
+ * delivered by a backend as BDUI payload (spec I2/I3). Validates shape, node types, name
+ * uniqueness, validation-rule registration, condition serialisability and absoluteness, and
+ * translation-key availability, throwing `FormSchemaError` with the offending node's path on
+ * the first violation. A function passed as a `when`/`disabledWhen` cannot survive
+ * `JSON.parse` anyway, but a caller passing a hand-built object must still be told it is not a
+ * serialisable document.
+ */
+export function parseFormSchema<TValues>(input: unknown, options: ParseOptions = {}): AnyFormSchema<TValues> {
+	assertNoReservedCollision(options)
+
+	if (!isPlainObject(input)) {
+		throw new FormSchemaError('Expected a form schema object', ROOT_PATH)
+	}
+	assertVersion(input.version)
+	if (!Array.isArray(input.children)) {
+		throw new FormSchemaError('FormSchema is missing a "children" array', ROOT_PATH)
+	}
+
+	assertStepHomogeneity(input.children as FormNode<unknown, string>[], 'children')
+	;(input.children as unknown[]).forEach((child, index) => assertNodeShape(child, `children[${String(index)}]`))
+
+	const schema = input as unknown as AnyFormSchema<TValues>
+	const untypedSchema = schema as unknown as AnyFormSchema<unknown>
+	const seenNames = new Set<string>()
+	walkNodes(schema, (node, ancestors) => {
+		const untypedNode = node as unknown as FormNode<unknown, string>
+		const untypedAncestors = ancestors as unknown as FormNode<unknown, string>[]
+		const path = computeNodePath(untypedSchema, untypedNode, untypedAncestors)
+		validateNode(untypedNode, path, options, seenNames)
+	})
+
+	return schema
+}

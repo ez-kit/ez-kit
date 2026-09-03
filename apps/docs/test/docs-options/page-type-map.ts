@@ -1,4 +1,4 @@
-import { ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
+import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
 
 /**
  * The explicit page → type map behind `docs-option-names.test.ts`.
@@ -7,14 +7,18 @@ import { ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
  * the docs tree: an unmapped page is *visibly* absent rather than silently
  * skipped, which is the only way coverage stays an honest number.
  *
- * Scope: **every** page under `content/docs/data-grid/**`. A page with no option
+ * Scope: **every** page under `content/docs/data-grid/**`, plus the four
+ * `form/` pages that carry at least one option table. A page with no option
  * table still gets an entry with two empty arrays — that is the point. While
  * coverage was partial, an unmapped page was checked by nothing, and the two
  * worst pages in the docs were unmapped ones: `columns/resizing.mdx`
  * documented a `sizing` option that never existed, and the whole `editing/**`
  * section documented a `meta.editType` / `onCellEdit` API that never existed.
  * With the set closed, `everyPageIsMapped` fails the moment a page is added
- * without being classified, so the hole cannot reopen.
+ * without being classified, so the hole cannot reopen. `form/index.mdx` and
+ * `form/ai.mdx` are absent for the opposite reason: every table on them
+ * documents exported symbols or URLs, so an entry would carry a maintenance
+ * obligation while checking nothing.
  *
  * ## Adding a page
  *
@@ -70,6 +74,11 @@ export const DocPage = {
 	FilteringMultiValue: 'content/docs/data-grid/filtering/multi-value.mdx',
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
 	FilteringPanel: 'content/docs/data-grid/filtering/panel.mdx',
+	FormCustomKit: 'content/docs/form/custom-kit.mdx',
+	FormFields: 'content/docs/form/fields.mdx',
+	FormLayout: 'content/docs/form/layout.mdx',
+	FormNativeApi: 'content/docs/form/native-api.mdx',
+	FormSchema: 'content/docs/form/schema.mdx',
 	PaginationInfiniteScroll: 'content/docs/data-grid/pagination/infinite-scroll.mdx',
 	PaginationIndex: 'content/docs/data-grid/pagination/index.mdx',
 	Production: 'content/docs/data-grid/production.mdx',
@@ -131,6 +140,59 @@ export const GRID_TYPE = {
 	LayoutConfig: { module: TypeModule.React, name: 'LayoutConfig' },
 } as const satisfies Record<string, TypeRef>
 
+/**
+ * Types that govern the mapped `form/` tables.
+ *
+ * The split mirrors the packages: `@ez-kit/form-core` owns the serialisable
+ * document (`SubmitNode`, `FieldValidate`), `@ez-kit/form-react` owns both
+ * halves of the React surface — the *consumer* props a caller writes
+ * (`BaseFieldProps`, `SliderFieldProps`, …) and the *kit contract* props a kit
+ * receives (`FieldRenderProps`, `FormComponents`).
+ */
+export const FORM_TYPE = {
+	/**
+	 * Governs "what every node may carry". `CommonProps` — the type that actually
+	 * declares those five keys — is internal to `@ez-kit/form-core`, so the
+	 * tightest exported stand-in is the leanest node built on it: `SubmitNode` is
+	 * `CommonProps` plus `type` and `disabled` and nothing else, so a name that
+	 * resolves here really is common to every node. A laxer choice such as
+	 * `FormNode` would also accept `columns`, `path` and `component`, which are
+	 * exactly the per-kind keys this table must not bless.
+	 */
+	SubmitNode: { module: TypeModule.FormCore, name: 'SubmitNode', typeArgs: ROW_TYPE_ARGS },
+	FieldValidate: { module: TypeModule.FormCore, name: 'FieldValidate' },
+	/**
+	 * The props every flat field shares. Written once as
+	 * `BaseFieldProps<TFormData, TValue>` and intersected into each field's own
+	 * props, so it is the exact governing type for the "Shared props" table —
+	 * `TextFieldProps` would additionally bless `placeholder` and `type`.
+	 */
+	BaseFieldProps: { module: TypeModule.FormReact, name: 'BaseFieldProps', typeArgs: FORM_VALUE_TYPE_ARGS },
+	SliderFieldProps: { module: TypeModule.FormReact, name: 'SliderFieldProps', typeArgs: ROW_TYPE_ARGS },
+	/** The JSX layout pair — neither is generic, both are pure presentation. */
+	SectionProps: { module: TypeModule.FormReact, name: 'SectionProps' },
+	GridItemProps: { module: TypeModule.FormReact, name: 'GridItemProps' },
+	/** The `section` node — `CommonProps` (so `colSpan`) plus the grid's own keys. */
+	SectionNode: { module: TypeModule.FormCore, name: 'SectionNode', typeArgs: ROW_TYPE_ARGS },
+	DateFieldProps: { module: TypeModule.FormReact, name: 'DateFieldProps', typeArgs: ROW_TYPE_ARGS },
+	/** What a kit's field component receives — the base half of the `FormComponents` contract. */
+	FieldRenderProps: { module: TypeModule.FormReact, name: 'FieldRenderProps' },
+	/** The kit contract itself; its keys are the component slots a kit must supply. */
+	FormComponents: { module: TypeModule.FormReact, name: 'FormComponents' },
+	FormRendererControlledProps: {
+		module: TypeModule.FormReact,
+		name: 'FormRendererControlledProps',
+		typeArgs: ROW_TYPE_ARGS,
+	},
+	FormRendererUncontrolledProps: {
+		module: TypeModule.FormReact,
+		name: 'FormRendererUncontrolledProps',
+		typeArgs: FORM_API_TYPE_ARGS,
+	},
+	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
+	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
+} as const satisfies Record<string, TypeRef>
+
 /** Zero-based index of the table column that names the option. */
 export const OptionColumn = {
 	First: 0,
@@ -181,6 +243,8 @@ export type PageEntry = {
 }
 
 const CELL_CONFIG_PREFIX = 'config.'
+/** Receiver the native-API table writes in front of every member it documents. */
+const FORM_RECEIVER_PREFIX = 'form.'
 
 export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
@@ -520,6 +584,93 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`FilteringToolbarConfig`', roots: [GRID_TYPE.FilteringToolbarConfig], expectedCount: 1 },
 		],
 		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FormCustomKit,
+		optionTables: [
+			// The base-props table sits under "Fields"; the per-kind table under the
+			// "#### Per-kind props" subheading added for exactly this reason — a
+			// heading addresses at most one table.
+			{ heading: 'Fields', roots: [FORM_TYPE.FieldRenderProps], expectedCount: 11 },
+			{ heading: 'Per-kind props', roots: [FORM_TYPE.FormComponents], expectedCount: 12 },
+			{ heading: 'Form level', roots: [FORM_TYPE.FormComponents], expectedCount: 2 },
+			{ heading: 'Layout and wizard', roots: [FORM_TYPE.FormComponents], expectedCount: 3 },
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FormFields,
+		optionTables: [
+			{ heading: 'Shared props', roots: [FORM_TYPE.BaseFieldProps], expectedCount: 6 },
+			{ heading: '`form.SliderField`', roots: [FORM_TYPE.SliderFieldProps], expectedCount: 3 },
+			{ heading: '`form.DateField`', roots: [FORM_TYPE.DateFieldProps], expectedCount: 3 },
+		],
+		nonOptionTables: [
+			{
+				heading: '`form.CheckboxGroupField`',
+				reason:
+					'A 2×2 grid placing the four selection fields by cardinality; its cells name components, and its first column is prose with no code span at all.',
+			},
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-*` attributes the field layer emits onto the DOM, not props of any field.',
+			},
+		],
+	},
+	{
+		page: DocPage.FormLayout,
+		optionTables: [
+			{ heading: '`form.Section`', roots: [FORM_TYPE.SectionProps], expectedCount: 4 },
+			{ heading: '`form.GridItem`', roots: [FORM_TYPE.GridItemProps], expectedCount: 2 },
+			{ heading: 'The `section` node', roots: [FORM_TYPE.SectionNode], expectedCount: 6 },
+		],
+		nonOptionTables: [
+			{
+				heading: 'Styling hooks',
+				reason: 'Documents the `data-slot` attributes both kits emit onto the DOM, not props of any type.',
+			},
+		],
+	},
+	{
+		page: DocPage.FormNativeApi,
+		optionTables: [
+			// Rows are written `form.Field`, so the receiver prefix is stripped and
+			// the remainder resolved against the instance `useForm` returns.
+			{
+				heading: 'Native API',
+				roots: [FORM_TYPE.KitFormApi],
+				stripPrefix: FORM_RECEIVER_PREFIX,
+				expectedCount: 6,
+			},
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.FormSchema,
+		optionTables: [
+			{ heading: 'Common node properties', roots: [FORM_TYPE.SubmitNode], expectedCount: 5 },
+			{ heading: 'Validation', roots: [FORM_TYPE.FieldValidate], expectedCount: 8 },
+			// Two roots because the table documents both modes in one place and marks
+			// each row with the mode it belongs to: `form` exists only on the
+			// controlled props, `keepHiddenValues` and the `useForm` options only on
+			// the uncontrolled ones.
+			{
+				heading: 'Renderer props',
+				roots: [FORM_TYPE.FormRendererControlledProps, FORM_TYPE.FormRendererUncontrolledProps],
+				expectedCount: 10,
+			},
+		],
+		nonOptionTables: [
+			{
+				heading: 'The document',
+				reason: 'Lists the node `type` discriminant values (`text`, `section`, `submit`, …) — values, not keys.',
+			},
+			{
+				heading: 'Conditions',
+				reason:
+					'Documents the shape of a rule object (`{ field, eq: value }`, `{ and: [...] }`) — rule literals, not keys of a config type.',
+			},
+		],
 	},
 	{
 		page: DocPage.PaginationInfiniteScroll,

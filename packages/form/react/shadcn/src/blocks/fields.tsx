@@ -7,6 +7,7 @@ import { Switch as SwitchPrimitive } from '@form-shadcn/components/ui/switch'
 import { Textarea as TextareaPrimitive } from '@form-shadcn/components/ui/textarea'
 
 import { FieldShell } from './field-shell'
+import { OptionListSkeleton } from './option-skeleton'
 
 import type {
 	CheckboxFieldRenderProps,
@@ -229,6 +230,7 @@ export function RadioGroupField({
 	value,
 	onChange,
 	options,
+	loading,
 	id,
 	name,
 	onBlur,
@@ -236,6 +238,9 @@ export function RadioGroupField({
 	required,
 	...field
 }: RadioGroupFieldRenderProps): ReactNode {
+	// See the checkbox group in `multi-value.tsx` — same reasoning, same placeholder rows.
+	const controlDisabled = loading ? true : disabled
+
 	return (
 		<FieldShell
 			id={id}
@@ -245,16 +250,19 @@ export function RadioGroupField({
 				<RadioGroup
 					id={id}
 					name={name}
+					data-loading={loading || undefined}
+					aria-busy={loading || undefined}
 					// Radix reserves `''` for "no selection", and under `exactOptionalPropertyTypes` an
 					// explicit `undefined` is rejected — so an empty form value omits the key entirely.
 					{...(value === '' ? {} : { value })}
-					{...(disabled !== undefined ? { disabled } : {})}
+					{...(controlDisabled !== undefined ? { disabled: controlDisabled } : {})}
 					{...(required !== undefined ? { required } : {})}
 					aria-invalid={field.invalid}
 					onValueChange={onChange}
 					onBlur={onBlur}
 					{...binding}
 				>
+					{loading && <OptionListSkeleton />}
 					{options.map((option) => {
 						const itemId = `${id}${RADIO_ITEM_ID_SEPARATOR}${option.value}`
 						return (
