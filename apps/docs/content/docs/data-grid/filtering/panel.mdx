@@ -13,20 +13,32 @@ The panel variant collects every column filter into a single row of chips instea
 
 <DataGridDocsExample exampleId='filter-panel' />
 
-The panel is a `<DataGrid.FilterPanel />` slot, enabled with `filtering: { variant: 'panel' }`. Each row corresponds to a filterable column; the engine reads the column's `cell.type` and `filtering.operators` to pick controls.
+`filtering: { variant: 'panel' }` is the whole opt-in: the panel auto-mounts between the toolbar and the table. Each chip corresponds to a filterable column; the engine reads the column's `cell.type` and `filtering.operators` to pick the control.
 
 ```tsx
 <DataGrid
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'panel', faceted: true }}
+/>
+```
+
+To put the panel somewhere else — beside the toolbar, in a sidebar, under the table — compose the grid yourself and place `<DataGrid.FilterPanel />` where you want it. Your children replace the default layout, so mount the rest of the grid too:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ variant: 'panel' }}
 >
 	<DataGrid.Toolbar />
-	<DataGrid.FilterPanel />
 	<DataGrid.Table />
+	<DataGrid.FilterPanel />
 	<DataGrid.Pagination />
 </DataGrid>
 ```
+
+It renders nothing when the grid has no filtered row model or no filterable column, so a hand-placed panel is safe on a grid whose filtering is switched off from a defaults layer.
 
 A complementary surface is the active-filters chip strip. With `filtering: { chips: true, toolbar: true }`, a chip appears per active filter and the clear button auto-mounts once at least one filter is set.
 
@@ -51,7 +63,7 @@ For full control, compose the toolbar yourself — drop `<DataGrid.ActiveFilters
 
 | Option    | Type                                | Description                                                                                                    |
 | --------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `variant` | `'inline' \| 'popover' \| 'panel'`  | `'panel'` renders every filterable column as a chip inside `<DataGrid.FilterPanel />`.                         |
+| `variant` | `'inline' \| 'popover' \| 'panel'`  | `'panel'` renders every filterable column as a chip in an auto-mounted `<DataGrid.FilterPanel />`.             |
 | `faceted` | `boolean`                           | Enable faceted row models (unique values + counts) — see [Multi-value](/docs/data-grid/filtering/multi-value). |
 | `chips`   | `boolean \| FilterChipsConfig`      | Auto-mount a strip of removable chips for active filters.                                                      |
 | `toolbar` | `boolean \| FilteringToolbarConfig` | Auto-mount filtering's toolbar control — the Clear-all button.                                                 |

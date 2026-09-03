@@ -12,11 +12,11 @@ column's `cell.type` and its `filtering.operators`.
 The variant is table-level. Every filterable column gets the same presentation — a grid whose
 columns each chose their own would give the user three places to look for one filter.
 
-| `variant`   | Where the control lives                                        | Reach for it when                                                                         |
-| ----------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `'inline'`  | In the header cell, under the column label. **The default.**   | A few filterable columns, and filtering is the main thing the user does.                  |
-| `'popover'` | Behind a filter icon in the header, one popover per column.    | Many columns, or controls too tall for a header — operator selectors, sliders, calendars. |
-| `'panel'`   | Collected into one `<DataGrid.FilterPanel />` above the table. | The filter set is the interface: the user reads and edits several filters as one form.    |
+| `variant`   | Where the control lives                                      | Reach for it when                                                                         |
+| ----------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `'inline'`  | In the header cell, under the column label. **The default.** | A few filterable columns, and filtering is the main thing the user does.                  |
+| `'popover'` | Behind a filter icon in the header, one popover per column.  | Many columns, or controls too tall for a header — operator selectors, sliders, calendars. |
+| `'panel'`   | Collected into one panel above the table.                    | The filter set is the interface: the user reads and edits several filters as one form.    |
 
 ## `'inline'`
 
@@ -72,16 +72,12 @@ sortable.
 	data={data}
 	columns={columns}
 	filtering={{ variant: 'panel' }}
->
-	<DataGrid.Toolbar />
-	<DataGrid.FilterPanel />
-	<DataGrid.Table />
-	<DataGrid.Pagination />
-</DataGrid>
+/>
 ```
 
-The panel is the one variant with a slot of its own to place, plus the chips strip and the clear-all
-button that go with it — see [Filter panel](/docs/data-grid/filtering/panel).
+The panel auto-mounts above the table, like every other surface the filtering config asks for.
+Compose the grid yourself only to put it somewhere else — that, the chips strip and the clear-all
+button are on [Filter panel](/docs/data-grid/filtering/panel).
 
 ## Options
 

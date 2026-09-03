@@ -3,7 +3,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import { FilterChipsPosition } from '../types'
+import { FilterChipsPosition, FilteringVariant } from '../types'
 import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
 import { resolveActionBarVariant } from './action-bar-variant'
@@ -203,12 +203,21 @@ function DefaultLayout() {
 	const chipsAbove = chipsConfig?.position === FilterChipsPosition.Above ? <ActiveFiltersBar /> : null
 	const chipsBelow = chipsConfig?.position === FilterChipsPosition.Below ? <ActiveFiltersBar /> : null
 
+	// The panel variant moves every column's filter control out of the header, so unless the
+	// panel is mounted the grid has no filter UI at all. It is auto-mounted for the same reason
+	// the chips strip and the Clear-all button are: the option that asks for it is the same one
+	// that took the controls out of the header. `<FilterPanel />` renders nothing when the grid
+	// has no filtered row model or no filterable column, so this costs nothing when it applies
+	// to a grid that does not filter.
+	const filterPanel = table.grid.filtering.variant === FilteringVariant.Panel ? <FilterPanel /> : null
+
 	if (variant === ActionBarVariant.Inline) {
 		return (
 			<>
 				<DraftBar />
 				<SelectionBar />
 				<Toolbar />
+				{filterPanel}
 				{chipsAbove}
 				<DataGridTable />
 				{chipsBelow}
@@ -220,6 +229,7 @@ function DefaultLayout() {
 	return (
 		<>
 			<Toolbar />
+			{filterPanel}
 			{chipsAbove}
 			<DataGridTable />
 			{chipsBelow}

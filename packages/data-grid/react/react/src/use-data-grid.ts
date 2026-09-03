@@ -586,6 +586,8 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * Enable filtering.
 	 * - `true` — inline filter inputs below each column header
 	 * - `{ variant: FilteringVariant.Popover }` — filter icon in header; click opens a popover with the filter input
+	 * - `{ variant: FilteringVariant.Panel }` — the controls leave the header for one auto-mounted
+	 *   `<DataGrid.FilterPanel />` above the table
 	 * - `{ variant: FilteringVariant.Inline, ...opts }` — same as `true` with extra FilteringConfig options
 	 */
 	filtering?: boolean | ReactFilteringConfig
