@@ -14,7 +14,7 @@ export { withHistory } from './middlewares'
 export type { HistoryActionTag, HistoryOptions, HistoryState } from './middlewares'
 
 export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore } from './store-cache'
-export type { StoreCache, CachedStoreGroup, CachedItemProps } from './store-cache'
+export type { StoreCache, CachedStoreGroup, CachedSubscribeProps } from './store-cache'
 
 export { shallowEqual } from '@ez-kit/store-core'
 export type { ControlledConfig, ControlledFieldConfig } from '@ez-kit/store-core'

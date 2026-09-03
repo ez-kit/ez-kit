@@ -206,14 +206,14 @@ describe('createStore — base behavior without plugins', () => {
 	})
 })
 
-describe('createStore — StoreItem', () => {
+describe('createStore — Store', () => {
 	it('hands the raw proxy to its child, and writes through it reach snapshot readers', async () => {
 		const store = createStore(counterFactory)
 
 		render(
 			<store.Provider defaultValue={{ count: 1 }}>
-				<store.Item>{({ snap }) => <span data-testid='count'>{snap.count}</span>}</store.Item>
-				<store.StoreItem>
+				<store.Subscribe>{({ snap }) => <span data-testid='count'>{snap.count}</span>}</store.Subscribe>
+				<store.Store>
 					{(state) => (
 						<button
 							type='button'
@@ -224,7 +224,7 @@ describe('createStore — StoreItem', () => {
 							inc
 						</button>
 					)}
-				</store.StoreItem>
+				</store.Store>
 			</store.Provider>,
 		)
 
@@ -235,22 +235,22 @@ describe('createStore — StoreItem', () => {
 		})
 	})
 
-	it('does not re-render its child on store mutations, unlike Item', async () => {
+	it('does not re-render its child on store mutations, unlike Subscribe', async () => {
 		const store = createStore(counterFactory)
-		let storeItemRenders = 0
+		let storeRenders = 0
 		let itemRenders = 0
 
 		render(
 			<store.Provider defaultValue={{ count: 1 }}>
-				<store.Item>
+				<store.Subscribe>
 					{({ snap }) => {
 						itemRenders += 1
 						return <span data-testid='count'>{snap.count}</span>
 					}}
-				</store.Item>
-				<store.StoreItem>
+				</store.Subscribe>
+				<store.Store>
 					{(state) => {
-						storeItemRenders += 1
+						storeRenders += 1
 						return (
 							<button
 								type='button'
@@ -262,11 +262,11 @@ describe('createStore — StoreItem', () => {
 							</button>
 						)
 					}}
-				</store.StoreItem>
+				</store.Store>
 			</store.Provider>,
 		)
 
-		const storeItemRendersAfterMount = storeItemRenders
+		const storeRendersAfterMount = storeRenders
 		const itemRendersAfterMount = itemRenders
 
 		fireEvent.click(screen.getByRole('button', { name: 'inc' }))
@@ -275,11 +275,11 @@ describe('createStore — StoreItem', () => {
 		})
 
 		expect(itemRenders).toBeGreaterThan(itemRendersAfterMount)
-		expect(storeItemRenders).toBe(storeItemRendersAfterMount)
+		expect(storeRenders).toBe(storeRendersAfterMount)
 	})
 
-	it('names the store in the missing-Provider error raised by StoreItem', () => {
+	it('names the store in the missing-Provider error raised by Store', () => {
 		const store = createStore(counterFactory)
-		expect(() => render(<store.StoreItem>{() => <span />}</store.StoreItem>)).toThrowError('Missing Provider for store')
+		expect(() => render(<store.Store>{() => <span />}</store.Store>)).toThrowError('Missing Provider for store')
 	})
 })

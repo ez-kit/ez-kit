@@ -80,12 +80,12 @@ describe('@ez-kit/zu-store', () => {
 		expect(screen.getByTestId('count')).toHaveTextContent('2')
 	})
 
-	it('supports Item render-prop API', () => {
+	it('supports Subscribe render-prop API', () => {
 		render(
 			createElement(
 				counterContextStore.Provider,
 				{ defaultValue: { count: 5, label: 'boot' } },
-				createElement(counterContextStore.Item<number>, {
+				createElement(counterContextStore.Subscribe<number>, {
 					selector: (state: CounterState) => state.count,
 					children: (count: number) => createElement('span', { 'data-testid': 'item-count' }, String(count)),
 				}),

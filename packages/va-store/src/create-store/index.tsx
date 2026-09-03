@@ -53,17 +53,17 @@ type ProviderProps<TDefaultValue, TState extends object> = (undefined extends TD
 	onValueChange?: (value: Partial<TState>) => void
 }
 
-/** Render-prop argument for `Item`: `snap` for reads, `store` (raw proxy, as from `useStore()`) for writes. */
-export type ItemRenderArg<TState extends object> = {
+/** Render-prop argument for `Subscribe`: `snap` for reads, `store` (raw proxy, as from `useStore()`) for writes. */
+export type SubscribeRenderArg<TState extends object> = {
 	snap: Snapshot<TState>
 	store: TState
 }
 
-type ItemProps<TState extends object> = {
-	children: (arg: ItemRenderArg<TState>) => ReactElement
+type SubscribeProps<TState extends object> = {
+	children: (arg: SubscribeRenderArg<TState>) => ReactElement
 }
 
-type StoreItemProps<TState extends object> = {
+type StoreProps<TState extends object> = {
 	children: (store: TState) => ReactElement
 }
 
@@ -77,13 +77,13 @@ export type CreateStoreResult<TState extends object, TDefaultValue> = {
 	 */
 	useStore: () => TState
 	/** Reading slot: subscribes through `useSnapshot()`, so tracked mutations re-render its children. */
-	Item: (props: ItemProps<TState>) => ReactElement
+	Subscribe: (props: SubscribeProps<TState>) => ReactElement
 	/**
 	 * Write-only slot: hands the raw proxy from `useStore()` to its children without subscribing, so
 	 * store mutations never re-render them. It is **not** memoised — it still renders whenever its
 	 * parent does.
 	 */
-	StoreItem: (props: StoreItemProps<TState>) => ReactElement
+	Store: (props: StoreProps<TState>) => ReactElement
 }
 
 function getStoreFromContext<TState extends object>(store: TState | null, name: string): TState {
@@ -246,13 +246,13 @@ export function createStore<TState extends object, TDefaultValue = undefined>(
 		return useValtioSnapshot(useStore(), snapshotOptions)
 	}
 
-	function Item({ children }: ItemProps<TState>): ReactElement {
+	function Subscribe({ children }: SubscribeProps<TState>): ReactElement {
 		return children({ snap: useSnapshot(), store: useStore() })
 	}
 
-	function StoreItem({ children }: StoreItemProps<TState>): ReactElement {
+	function Store({ children }: StoreProps<TState>): ReactElement {
 		return children(useStore())
 	}
 
-	return { Provider, useSnapshot, useStore, Item, StoreItem }
+	return { Provider, useSnapshot, useStore, Subscribe, Store }
 }

@@ -9,7 +9,7 @@ export type CreateContextStoreFactory<TState extends object, TDefaultValue> = St
 
 export type CreateContextStoreResult<TState extends object, TDefaultValue> = CreateStoreResult<TState, TDefaultValue>
 
-export type { ItemRenderArg, UseSnapshotOptions } from '../create-store'
+export type { SubscribeRenderArg, UseSnapshotOptions } from '../create-store'
 
 export type CreateContextStoreOptions<TState extends object> = {
 	plugins?: readonly StorePlugin<TState>[]
@@ -19,7 +19,7 @@ export type CreateContextStoreOptions<TState extends object> = {
 
 /**
  * Context store built on the plugin-aware {@link createStore}. With no plugins this is the original
- * behavior unchanged: returns `{ Provider, useSnapshot, useStore, Item, StoreItem }` and creates the
+ * behavior unchanged: returns `{ Provider, useSnapshot, useStore, Subscribe, Store }` and creates the
  * proxy once per Provider via `useRef`. Read with `useSnapshot()` (auto-tracked snapshot), write
  * through the raw proxy from `useStore()`. Pass `plugins` to bind capabilities to the Provider's
  * mount lifetime, and `controlled` for per-key overrides of the Provider's `value` prop.

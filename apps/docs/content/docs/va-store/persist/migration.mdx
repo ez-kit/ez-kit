@@ -30,7 +30,7 @@ Coming from **before `0.2.0`**, `useStore()` is once again the write path, so on
 
 The rename is what makes the naming uniform across `@ez-kit`: `useStore()` is the raw handle everywhere, and only the read hook is manager-specific — `useSnapshot()` here, `useSelector()` in [`@ez-kit/zu-store`](./zu-store/create-context-store).
 
-`Item`'s `{ snap, store }` render argument keeps its meaning, and the new [`StoreItem`](./va-store/create-context-store) is its write-only counterpart: it hands over the raw proxy without subscribing, so store mutations never re-render it. The same surface applies to cached groups from [`createCachedStore`](./va-store/cache). The package is pre-1.0, so this ships as a `minor` bump.
+`Subscribe`'s `{ snap, store }` render argument keeps its meaning, and the new [`Store`](./va-store/create-context-store) is its write-only counterpart: it hands over the raw proxy without subscribing, so store mutations never re-render it. The same surface applies to cached groups from [`createCachedStore`](./va-store/cache). The package is pre-1.0, so this ships as a `minor` bump.
 
 ## `createPersistStore` → `createStore` + `persist()`
 
@@ -51,7 +51,7 @@ import { persist } from '@ez-kit/va-store/persist'
 const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
 ```
 
-The returned `{ Provider, useSnapshot, useStore, Item }` shape is identical, so component code that reads `useSnapshot()` and mutates `useStore()` needs no change.
+The returned `{ Provider, useSnapshot, useStore, Subscribe }` shape is identical, so component code that reads `useSnapshot()` and mutates `useStore()` needs no change.
 
 ## `createPersistFields` → `persist({ fields })`
 

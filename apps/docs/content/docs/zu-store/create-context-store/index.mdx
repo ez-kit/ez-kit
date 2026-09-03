@@ -7,52 +7,18 @@ description: Wrap a Zustand vanilla store in React context so every Provider get
 
 Wraps a Zustand vanilla store in React context. Each `<Provider>` creates its own store instance (via `useRef`), so the same store factory can power multiple isolated subtrees.
 
-## Signature
-
-```ts
-type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
-
-type CreateContextStoreOptions<TState> = {
-	controlled?: ControlledConfig<TState>
-}
-
-function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = undefined>(
-	factory: (init: ContextStoreInit<TDefaultValue>) => TStore,
-	options?: CreateContextStoreOptions<ExtractState<TStore>>,
-): {
-	Provider: (
-		props: PropsWithChildren<{
-			defaultValue: TDefaultValue
-			value?: Partial<ExtractState<TStore>>
-			onValueChange?: (value: Partial<ExtractState<TStore>>) => void
-		}>,
-	) => ReactElement
-	useStore: () => TStore
-	useSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
-	useShallowSelector: <T>(selector: (state: ExtractState<TStore>) => T) => T
-	Item: <T>(props: {
-		selector: (state: ExtractState<TStore>) => T
-		children: (value: T) => ReactElement
-	}) => ReactElement
-}
-```
-
-The factory is seeded through a single `defaultValue` envelope — type its parameter with the exported `ContextStoreInit<T>` helper. `defaultValue` is required on the `Provider` when your seed has required fields, and optional otherwise.
-
-`value` / `onValueChange` and the `controlled` option make individual fields controllable from the outside — see [Controlled fields](#controlled-fields).
+This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./create-context-store/api).
 
 ## Basic usage
+
+Write the store as a plain Zustand vanilla store, hand the factory to `createContextStore`, and wrap the subtree in the returned `Provider`.
 
 <LivePreview
 	path='zu-store/counter'
 	title='Counter'
 />
 
-## API
-
-### `Provider`
-
-Creates and provides the store. The factory runs **once per mount** (held in a `useRef`), so changing `defaultValue` after the first render won't recreate the store. Pass your seed through the single `defaultValue` prop.
+The factory is seeded through a single `defaultValue` envelope — type its parameter with the exported `ContextStoreInit<T>` helper. `defaultValue` is required on the `Provider` when your seed has required fields, and optional otherwise.
 
 ```tsx
 <counterStore.Provider defaultValue={{ initialCount: 10 }}>
@@ -60,36 +26,41 @@ Creates and provides the store. The factory runs **once per mount** (held in a `
 </counterStore.Provider>
 ```
 
-| Prop            | Type                               | Required                          | Description                                                                         |
-| --------------- | ---------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------- |
-| `defaultValue`  | `TDefaultValue`                    | when the seed has required fields | Seed handed to the factory. Applied **once**, at store creation.                    |
-| `value`         | `Partial<TState>`                  | no                                | The fields the parent controls. Applied on mount and on every real change.          |
-| `onValueChange` | `(value: Partial<TState>) => void` | no                                | Fired when the store itself changes a controlled field. Receives only what changed. |
+The factory runs **once per mount** (held in a `useRef`), so changing `defaultValue` after the first render won't recreate the store.
 
-`TState` is your store's state — `ExtractState<TStore>` in the signature above.
+## Reading state
 
-### `useSelector(selector)`
+Four ways in, for four different jobs.
 
-Subscribes to a slice of state with strict equality. Re-renders only when the selected value changes.
+| You want                                           | Use                  |
+| -------------------------------------------------- | -------------------- |
+| a single value, re-render when it changes          | `useSelector`        |
+| an object or array of values                       | `useShallowSelector` |
+| the raw handle, without subscribing                | `useStore`           |
+| a value inside JSX, without touching the component | `Subscribe`          |
 
 ```tsx
 const count = counterStore.useSelector((s) => s.count)
-```
 
-### `useShallowSelector(selector)`
-
-Same as `useSelector`, but compares with shallow equality. Use when the selector returns an object or array so you don't re-render on every state update.
-
-```tsx
 const { count, label } = counterStore.useShallowSelector((s) => ({
 	count: s.count,
 	label: s.label,
 }))
+
+const store = counterStore.useStore()
+
+<counterStore.Subscribe selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Subscribe>
 ```
 
-### `useStore()`
+`useSelector` compares with strict equality, so returning a fresh object from it re-renders on every store update — that is what `useShallowSelector` is for.
 
-Returns the raw `StoreApi` instance without subscribing the caller. Use when you need direct access — for example, to read state outside of render or to feed the store into another hook (such as [`useStoreState`](./use-store-state)).
+<Callout type='warn'>
+	`useStore()` is the **raw handle**, not a read. Reading state is `useSelector()` / `useShallowSelector()` — the same
+	split as [`@ez-kit/va-store`](../va-store/create-context-store), where the raw handle is also `useStore()` and reads
+	go through `useSnapshot()`.
+</Callout>
+
+Use `useStore()` when you need direct access — to read state outside of render, or to feed the store into another hook (such as [`useStoreState`](./use-store-state)):
 
 ```tsx
 const store = counterStore.useStore()
@@ -99,19 +70,14 @@ const handleSubmit = () => {
 }
 ```
 
-<Callout type='warn'>
-	`useStore()` is the **raw handle**, not a read. Reading state is `useSelector()` / `useShallowSelector()` — the same
-	split as [`@ez-kit/va-store`](../va-store/create-context-store), where the raw handle is also `useStore()` and reads
-	go through `useSnapshot()`.
-</Callout>
+## Multiple independent instances
 
-### `Item`
+Each `Provider` creates its own store — state is never shared between siblings.
 
-Render-prop alternative to `useSelector`. Handy in JSX-heavy code, or to keep a consuming component oblivious to the store.
-
-```tsx
-<counterStore.Item selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Item>
-```
+<LivePreview
+	path='zu-store/multiple-instances'
+	title='Two isolated counters'
+/>
 
 ## Controlled fields
 
@@ -119,7 +85,7 @@ By default a store is fully self-contained: `defaultValue` seeds it and nothing 
 
 <LivePreview
 	path='zu-store/controlled'
-	title='Mirror and fully controlled fields side by side'
+	title='Mirror, controlled and uncontrolled fields side by side'
 />
 
 ### `defaultValue` vs `value`
@@ -144,9 +110,14 @@ For a key present in both, `value` wins on mount. Keys absent from `value` still
 </store.Provider>
 ```
 
-### Two modes, and how to choose
+### Mode 1 — a mirror
 
 `value` alone is a **mirror**: the field flows in from outside and nothing inside the store writes it. This is the right shape for a theme, a locale, a `userId`, server data from react-query, or a router param.
+
+<LivePreview
+	path='zu-store/controlled-mirror'
+	title='A mirror field: theme flows in, nothing writes it back'
+/>
 
 ```tsx
 <store.Provider
@@ -157,7 +128,14 @@ For a key present in both, `value` wins on mount. Keys absent from `value` still
 </store.Provider>
 ```
 
+### Mode 2 — two-way control
+
 `value` **plus** `onValueChange` is full two-way control: children write to the store, the callback hands the changed slice up, and the parent feeds a new `value` back down.
+
+<LivePreview
+	path='zu-store/controlled-two-way'
+	title='Two-way control: the store writes, the parent owns'
+/>
 
 ```tsx
 const handleValueChange = useCallback((next: Partial<State>) => {
@@ -172,6 +150,8 @@ const handleValueChange = useCallback((next: Partial<State>) => {
 	<App />
 </store.Provider>
 ```
+
+### Choosing between them
 
 The deciding question is simply: **does anything inside the store write this field?** If it does and you did not pass `onValueChange`, the write still lands — the store just drifts away from `value` until the prop next changes, at which point it is overwritten. That is deliberate, not a bug, but it is rarely what you want.
 
@@ -194,40 +174,11 @@ The difference matters. "The prop always wins" would clobber any local write on 
 
 Passing an inline object literal (`value={{ count }}`) is therefore fine: the identity is fresh every render, but the Provider compares **key by key**, so an unchanged `count` writes nothing.
 
-### The `controlled` option
-
-Declared once, where you define the store — not at the call site. Every key is optional, and a key you never mention is still controllable; it just uses the defaults.
-
-```ts
-// TState here is your store's state — ExtractState<TStore> in the signature above.
-type ControlledFieldConfig<TState, K extends keyof TState> = {
-	equals?: (previous: TState[K], next: TState[K]) => boolean
-	set?: (store: TState, value: TState[K]) => void
-}
-```
-
-| Handle   | Answers              | Default                                        |
-| -------- | -------------------- | ---------------------------------------------- |
-| `equals` | "did this change?"   | `Object.is`                                    |
-| `set`    | "how do I write it?" | direct assignment, batched into one `setState` |
-
-`set` receives the current **state** (as from `store.getState()`), so it is the hook for stores whose writes must go through an action:
-
-```ts
-const store = createContextStore(createMyStore, {
-	controlled: {
-		users: {
-			set: (state, users) => {
-				state.replaceUsers(users)
-			},
-		},
-	},
-})
-```
+## Traps worth knowing
 
 ### Deriving `value` on the fly
 
-This is the single most common trap:
+This is the single most common one:
 
 ```tsx
 <store.Provider value={{ users: transform(dto) }}>
@@ -235,7 +186,7 @@ This is the single most common trap:
 
 `transform(dto)` returns a **new reference every render**, so the default `Object.is` sees a change every time the parent renders and writes to the store on every one of them.
 
-The fix is a per-field comparator. `shallowEqual` is re-exported from this package for exactly this:
+The fix is a per-field comparator, declared once via the [`controlled` option](./create-context-store/api#the-controlled-option). `shallowEqual` is re-exported from this package for exactly this:
 
 ```ts
 import { createContextStore, shallowEqual } from '@ez-kit/zu-store'
@@ -244,10 +195,6 @@ const store = createContextStore(createMyStore, {
 	controlled: { users: { equals: shallowEqual } },
 })
 ```
-
-Any comparator of your own works just as well — `equals` is a plain `(a, b) => boolean`. The `ControlledConfig` and
-`ControlledFieldConfig` types are re-exported alongside it, so you can name the `controlled` option's type without
-reaching for `@ez-kit/store-core` directly.
 
 The architectural alternative is worth considering too: keep the **raw** source in the controlled field and derive `users` inside the store. Then the controlled value is a stable reference from the server and there is nothing to compare deeply.
 
@@ -285,21 +232,18 @@ A key that disappears from `value` simply stops being controlled. It keeps whate
 
 "Disappears" means the key is genuinely absent. `value={{ count: undefined }}` still **controls** `count` — the key is present, so it is written, and `count` becomes `undefined`. Drop the key rather than blanking it.
 
-## Multiple independent instances
+### Consuming outside a `Provider`
 
-Each `Provider` creates its own store — state is never shared between siblings.
-
-<LivePreview
-	path='zu-store/multiple-instances'
-	title='Two isolated counters'
-/>
-
-## Errors
-
-Using `useStore`, `useSelector`, `useShallowSelector`, or `Item` outside a `Provider` throws:
+Using `useStore`, `useSelector`, `useShallowSelector`, or `Subscribe` outside a `Provider` throws:
 
 ```
 Error: Missing Provider for createContextStore
 ```
 
 This is deliberate — there is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. Wrap the consuming subtree in a `Provider`.
+
+## Next
+
+- [API reference](./create-context-store/api) — every signature, prop and option in one place.
+- [`createStoreCache`](./store-cache) — keep a store alive across unmounts.
+- [`useStoreState`](./use-store-state) — a `useState`-shaped handle onto one field.

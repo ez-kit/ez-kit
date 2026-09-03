@@ -31,7 +31,7 @@ type AnyStore = StoreApi<unknown>
  */
 const FALLBACK_STORE: AnyStore = createStore<unknown>(() => ({}))
 
-export type CachedItemProps<TStore extends AnyStore, TSelected> = {
+export type CachedSubscribeProps<TStore extends AnyStore, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
 	children: (state: TSelected) => ReactElement
 }
@@ -45,8 +45,8 @@ export type CachedStoreGroup<TStore extends AnyStore, TDefaultValue extends obje
 	useShallowSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	/** The raw store handle for this group's entry. Does not subscribe, so it never re-renders. */
 	useStore: () => TStore
-	/** Render-prop receiving the selected state, mirroring `createContextStore`'s `Item`. */
-	Item: <TSelected>(props: CachedItemProps<TStore, TSelected>) => ReactElement
+	/** Render-prop receiving the selected state, mirroring `createContextStore`'s `Subscribe`. */
+	Subscribe: <TSelected>(props: CachedSubscribeProps<TStore, TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live store or `undefined`. Never creates. */
 	fromCache: (target: CacheAddress) => TStore | undefined
 	/** Reactive, passive cross-tree read at `(path, id)`. Does not keep the store alive. */
@@ -104,7 +104,7 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			return group.useInstance() as TStore
 		}
 
-		function Item<TSelected>({ selector, children }: CachedItemProps<TStore, TSelected>): ReactElement {
+		function Subscribe<TSelected>({ selector, children }: CachedSubscribeProps<TStore, TSelected>): ReactElement {
 			return children(useSelector(selector))
 		}
 
@@ -130,7 +130,7 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			useSelector,
 			useShallowSelector,
 			useStore,
-			Item,
+			Subscribe,
 			fromCache,
 			useFromCache,
 			remove,

@@ -147,7 +147,7 @@ describe('valtio createStoreCache — surface', () => {
 		})
 	})
 
-	it('exposes { snap, store } via the Item render-prop', () => {
+	it('exposes { snap, store } via the Subscribe render-prop', () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'surface-item' })
 
@@ -157,7 +157,7 @@ describe('valtio createStoreCache — surface', () => {
 					id='main'
 					defaultValue={{ name: 'render-prop' }}
 				>
-					<form.Item>{({ snap }) => <span data-testid='item'>{snap.name}</span>}</form.Item>
+					<form.Subscribe>{({ snap }) => <span data-testid='item'>{snap.name}</span>}</form.Subscribe>
 				</form.Provider>
 			</cache.Provider>,
 		)
@@ -166,11 +166,11 @@ describe('valtio createStoreCache — surface', () => {
 	})
 })
 
-describe('valtio createStoreCache — StoreItem', () => {
+describe('valtio createStoreCache — Store', () => {
 	it('writes through the raw proxy without re-rendering its own child', async () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'store-item' })
-		let storeItemRenders = 0
+		let storeRenders = 0
 
 		render(
 			<cache.Provider>
@@ -178,10 +178,10 @@ describe('valtio createStoreCache — StoreItem', () => {
 					id='main'
 					defaultValue={{ name: 'seed' }}
 				>
-					<form.Item>{({ snap }) => <span data-testid='name'>{snap.name}</span>}</form.Item>
-					<form.StoreItem>
+					<form.Subscribe>{({ snap }) => <span data-testid='name'>{snap.name}</span>}</form.Subscribe>
+					<form.Store>
 						{(store) => {
-							storeItemRenders += 1
+							storeRenders += 1
 							return (
 								<button
 									type='button'
@@ -193,12 +193,12 @@ describe('valtio createStoreCache — StoreItem', () => {
 								</button>
 							)
 						}}
-					</form.StoreItem>
+					</form.Store>
 				</form.Provider>
 			</cache.Provider>,
 		)
 
-		const rendersAfterMount = storeItemRenders
+		const rendersAfterMount = storeRenders
 
 		expect(screen.getByTestId('name')).toHaveTextContent('seed')
 		fireEvent.click(screen.getByRole('button', { name: 'rename' }))
@@ -206,7 +206,7 @@ describe('valtio createStoreCache — StoreItem', () => {
 			expect(screen.getByTestId('name')).toHaveTextContent('Ann')
 		})
 
-		expect(storeItemRenders).toBe(rendersAfterMount)
+		expect(storeRenders).toBe(rendersAfterMount)
 	})
 })
 

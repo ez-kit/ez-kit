@@ -12,7 +12,7 @@ pnpm add @ez-kit/zu-store zustand
 
 ### `createContextStore(factory)`
 
-Wraps a Zustand store in React context. Returns `Provider`, `useSelector`, `useShallowSelector`, `useStore`, and `Item`. Multiple `Provider` instances are fully independent.
+Wraps a Zustand store in React context. Returns `Provider`, `useSelector`, `useShallowSelector`, `useStore`, and `Subscribe`. Multiple `Provider` instances are fully independent.
 
 Reads go through `useSelector(selector)` (or `useShallowSelector` for object/array selections); `useStore()` hands back the raw `StoreApi` without subscribing the caller.
 

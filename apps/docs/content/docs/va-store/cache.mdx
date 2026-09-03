@@ -66,7 +66,7 @@ function UsersTable() {
 }
 ```
 
-`useSnapshot()`, `useStore()`, `Item`, and `StoreItem` behave exactly like [`createContextStore`](./va-store/create-context-store): read from the snapshot, mutate the proxy. There are no selectors — reading is `useSnapshot()`, writing is `useStore()`, and `StoreItem` is the write-only slot that never subscribes.
+`useSnapshot()`, `useStore()`, `Subscribe`, and `Store` behave exactly like [`createContextStore`](./va-store/create-context-store): read from the snapshot, mutate the proxy. There are no selectors — reading is `useSnapshot()`, writing is `useStore()`, and `Store` is the write-only slot that never subscribes.
 
 ## How it stays alive
 

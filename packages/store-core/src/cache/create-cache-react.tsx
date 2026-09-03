@@ -86,7 +86,7 @@ export type CachedStoreFactory<TInstance extends object, TDefaultValue extends o
 	init: CachedStoreFactoryInit<TDefaultValue>,
 ) => TInstance
 
-export type CachedItemProps<TSelected> = {
+export type CachedSubscribeProps<TSelected> = {
 	selector: (snap: unknown) => TSelected
 	children: (state: TSelected) => ReactElement
 }
@@ -102,7 +102,7 @@ export type CachedStoreGroup<TInstance extends object, TDefaultValue extends obj
 	 * can never re-render the caller.
 	 */
 	useInstance: () => TInstance
-	Item: <TSelected>(props: CachedItemProps<TSelected>) => ReactElement
+	Subscribe: <TSelected>(props: CachedSubscribeProps<TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live instance or `undefined`. Never creates. */
 	fromCache: (target: CacheAddress) => TInstance | undefined
 	/** Reactive, passive cross-tree read at `(path, id)`. Snapshot is `undefined` when no live entry. */
@@ -246,7 +246,7 @@ export function createCacheReact<TInstance extends object>(
 			return useRead(useGroupInstance(), selector)
 		}
 
-		function Item<TSelected>({ selector, children }: CachedItemProps<TSelected>): ReactElement {
+		function Subscribe<TSelected>({ selector, children }: CachedSubscribeProps<TSelected>): ReactElement {
 			return children(useSelector(selector))
 		}
 
@@ -328,7 +328,7 @@ export function createCacheReact<TInstance extends object>(
 			activeCache.current?.remove(toStoreId(target, name))
 		}
 
-		return { Provider, useSelector, useInstance: useGroupInstance, Item, fromCache, useFromCache, remove }
+		return { Provider, useSelector, useInstance: useGroupInstance, Subscribe, fromCache, useFromCache, remove }
 	}
 
 	return { Provider, Scope, useCache, useCacheKeys, createCachedStore }

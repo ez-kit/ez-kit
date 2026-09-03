@@ -30,8 +30,8 @@ function createContextStore<TState extends object, TDefaultValue = undefined>(
 	) => ReactElement
 	useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
 	useStore: () => TState
-	Item: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
-	StoreItem: (props: { children: (store: TState) => ReactElement }) => ReactElement
+	Subscribe: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
+	Store: (props: { children: (store: TState) => ReactElement }) => ReactElement
 }
 ```
 
@@ -124,12 +124,12 @@ useEffect(() => subscribe(state, () => console.log('changed')), [state])
 	mutation site with `// eslint-disable-next-line react-hooks/immutability`.
 </Callout>
 
-### `Item`
+### `Subscribe`
 
-Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Item` can both render and mutate without a separate `useStore()` consumer.
+Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Subscribe` can both render and mutate without a separate `useStore()` consumer.
 
 ```tsx
-<counterStore.Item>
+<counterStore.Subscribe>
 	{({ snap, store }) => (
 		<button
 			onClick={() => {
@@ -139,15 +139,15 @@ Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` �
 			{snap.count}
 		</button>
 	)}
-</counterStore.Item>
+</counterStore.Subscribe>
 ```
 
-### `StoreItem`
+### `Store`
 
-Write-only counterpart to `Item`. Its child receives just the raw proxy, and — because nothing subscribes to a snapshot — store mutations never re-render it. Use it for controls that only write:
+The render-prop form of `useStore()`, and the write-only counterpart to `Subscribe`. Its child receives just the raw proxy, and — because nothing subscribes to a snapshot — store mutations never re-render it. Use it for controls that only write:
 
 ```tsx
-<counterStore.StoreItem>
+<counterStore.Store>
 	{(store) => (
 		<button
 			onClick={() => {
@@ -157,14 +157,14 @@ Write-only counterpart to `Item`. Its child receives just the raw proxy, and —
 			increment
 		</button>
 	)}
-</counterStore.StoreItem>
+</counterStore.Store>
 ```
 
-`Item` subscribes, `StoreItem` does not — that is the whole difference. Reach for `StoreItem` when a subtree writes but renders nothing from the store, so a counter ticking elsewhere no longer drags it through a re-render.
+`Subscribe` subscribes, `Store` does not — that is the whole difference. Reach for `Store` when a subtree writes but renders nothing from the store, so a counter ticking elsewhere no longer drags it through a re-render.
 
 <Callout type='info'>
-	`StoreItem` is not memoised. It still renders whenever its parent renders; what it guarantees is that a store mutation
-	on its own is never the cause.
+	`Store` is not memoised. It still renders whenever its parent renders; what it guarantees is that a store mutation on
+	its own is never the cause.
 </Callout>
 
 ## Controlled fields
@@ -412,7 +412,7 @@ Each `Provider` creates its own proxy — state is never shared between siblings
 
 ## Errors
 
-Using `useSnapshot`, `useStore`, `Item`, or `StoreItem` outside a `Provider` throws:
+Using `useSnapshot`, `useStore`, `Subscribe`, or `Store` outside a `Provider` throws:
 
 ```
 Error: Missing Provider for createContextStore

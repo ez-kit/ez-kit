@@ -45,7 +45,9 @@ describe('createCacheReact', () => {
 							id='x'
 							defaultValue={{ id: 'x' }}
 						>
-							<group.Item selector={(snap) => (snap as Fake).id}>{(value) => <span>{value}</span>}</group.Item>
+							<group.Subscribe selector={(snap) => (snap as Fake).id}>
+								{(value) => <span>{value}</span>}
+							</group.Subscribe>
 						</group.Provider>
 					) : null}
 				</api.Provider>

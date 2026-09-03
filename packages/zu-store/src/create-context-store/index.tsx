@@ -33,7 +33,7 @@ type ProviderProps<TDefaultValue, TState> = (undefined extends TDefaultValue
 	onValueChange?: (value: Partial<TState>) => void
 }
 
-type ItemProps<TStore extends StoreApi<unknown>, TSelected> = {
+type SubscribeProps<TStore extends StoreApi<unknown>, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
 	children: (state: TSelected) => ReactElement
 }
@@ -49,7 +49,7 @@ export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultV
 	useSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	/** As `useSelector`, but compares the selected value shallowly — for object/array selections. */
 	useShallowSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
-	Item: <TSelected>(props: ItemProps<TStore, TSelected>) => ReactElement
+	Subscribe: <TSelected>(props: SubscribeProps<TStore, TSelected>) => ReactElement
 }
 
 function getStoreFromContext<TStore extends StoreApi<unknown>>(store: TStore | null): TStore {
@@ -193,7 +193,7 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		return useZustandStore(store, useShallow(selector))
 	}
 
-	function Item<TSelected>({ selector, children }: ItemProps<TStore, TSelected>): ReactElement {
+	function Subscribe<TSelected>({ selector, children }: SubscribeProps<TStore, TSelected>): ReactElement {
 		return children(useSelector(selector))
 	}
 
@@ -202,6 +202,6 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		useStore,
 		useSelector,
 		useShallowSelector,
-		Item,
+		Subscribe,
 	}
 }

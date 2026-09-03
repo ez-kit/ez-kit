@@ -6,7 +6,7 @@ export type {
 	CreateContextStoreFactory,
 	CreateContextStoreOptions,
 	CreateContextStoreResult,
-	ItemRenderArg,
+	SubscribeRenderArg,
 	UseSnapshotOptions,
 } from './create-context-store'
 
@@ -17,9 +17,9 @@ export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, cr
 export type {
 	StoreCache,
 	CachedStoreGroup,
-	CachedItemProps,
-	CachedItemRenderArg,
-	CachedStoreItemProps,
+	CachedSubscribeProps,
+	CachedSubscribeRenderArg,
+	CachedStoreProps,
 } from './store-cache'
 
 export { StoreProvider } from './store-provider'

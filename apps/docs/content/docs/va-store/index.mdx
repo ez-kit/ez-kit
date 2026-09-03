@@ -18,7 +18,7 @@ It exists because a plain `proxy()` is a module-level singleton — fine for app
 | Export                                                  | Purpose                                                                                                                                 |
 | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | [Getting Started](./va-store/getting-started)           | Install, first store, read/write model, decorator TypeScript setup.                                                                     |
-| [`createContextStore`](./va-store/create-context-store) | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Item`.                                                    |
+| [`createContextStore`](./va-store/create-context-store) | Factory: wraps a Valtio proxy in React context. Returns `Provider` + hooks + `Subscribe`.                                               |
 | [Persist](./va-store/persist)                           | Sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate: typed codecs, decorators, hydration, cross-tab. |
 
 ## Why not a plain Valtio proxy?

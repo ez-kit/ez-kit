@@ -59,7 +59,7 @@ describe('@ez-kit/va-store persist() plugin on a non-cached store', () => {
 				expect(typeof store.Provider).toBe('function')
 				expect(typeof store.useSnapshot).toBe('function')
 				expect(typeof store.useStore).toBe('function')
-				expect(typeof store.Item).toBe('function')
+				expect(typeof store.Subscribe).toBe('function')
 			})
 
 			it('hydrates from the URL after mount', async () => {
