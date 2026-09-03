@@ -9,12 +9,12 @@ ez-kit's data grid is a **headless engine** with two pre-built UI flavors. You p
 
 ## Packages
 
-| Package                    | What it is                                                         | Who imports it                                          |
-| -------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------- |
-| `@ez-kit/data-grid-core`   | UI-agnostic engine on top of TanStack Table. No React.             | Internal & advanced consumers building a custom flavor. |
-| `@ez-kit/data-grid-react`  | React adapter — hooks, context, semantic render slots. No styling. | Internal & advanced consumers building a custom flavor. |
-| `@ez-kit/data-grid-shadcn` | shadcn-flavored Data Grid component.                               | App authors using shadcn.                               |
-| `@ez-kit/data-grid-heroui` | HeroUI-flavored Data Grid component.                               | App authors using HeroUI.                               |
+| Package                       | What it is                                                                                    | Who imports it                                          |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `@ez-kit/data-grid-core`      | UI-agnostic engine on top of TanStack Table. No React.                                        | Internal & advanced consumers building a custom flavor. |
+| `@ez-kit/data-grid-react`     | React adapter — hooks, context, semantic render slots. No styling.                            | Internal & advanced consumers building a custom flavor. |
+| `data-grid` (shadcn registry) | shadcn-flavored Data Grid — copied into your project by `shadcn add`, not installed from npm. | App authors using shadcn.                               |
+| `@ez-kit/data-grid-heroui`    | HeroUI-flavored Data Grid component.                                                          | App authors using HeroUI.                               |
 
 The dependency direction is one-way: `core` → `react` → flavor. UI-kit specifics never leak down.
 
@@ -30,5 +30,5 @@ Once you have a grid rendering, jump into the per-capability pages from the side
 
 - `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/core/src/index.ts)
 - `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/react/src/index.ts)
-- `@ez-kit/data-grid-shadcn` — [`packages/data-grid/react/shadcn/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/index.ts)
+- shadcn flavor — [`packages/data-grid/react/shadcn/src/data-grid.tsx`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/shadcn/src/data-grid.tsx) (the registry item's entry point; `src/index.ts` is the repo-internal barrel and is excluded from the registry payload)
 - `@ez-kit/data-grid-heroui` — [`packages/data-grid/react/heroui/src/index.ts`](https://github.com/easylimeyep/ez-kit/blob/main/packages/data-grid/react/heroui/src/index.ts)

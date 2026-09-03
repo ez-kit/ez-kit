@@ -29,7 +29,7 @@ import { MultiSelectFilter } from './blocks/filtering/MultiSelectFilter'
 import { OperatorSelect } from './blocks/filtering/OperatorSelect'
 import { LoadMoreRow } from './blocks/infinite/LoadMoreRow'
 import { PageSizer } from './blocks/pagination/PageSizer'
-import { Pagination } from './blocks/pagination/pagination'
+import { Pagination } from './blocks/pagination/PaginationBar'
 import { Resizer } from './blocks/resizing/Resizer'
 import { ActionsCell } from './blocks/row-actions/ActionsCell'
 import { SelectionBar } from './blocks/selection/SelectionBar'
@@ -111,4 +111,9 @@ const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } = bundle
 const createColumns: DataGridBundle<KitCellTypes>['createColumns'] = bundle.createColumns
 const createColumnHelper: DataGridBundle<KitCellTypes>['createColumnHelper'] = bundle.createColumnHelper
 
-export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid, createColumns, createColumnHelper }
+// `cellTypes` / `KitCellTypes` are re-exported here (not just consumed internally by
+// `createDataGrid` above) because this file is the registry consumer's actual entry point —
+// `index.ts` (which re-exported them, plus `@ez-kit/data-grid-react`'s whole surface) is excluded
+// from the shadcn registry payload, see `registry.config.mjs`'s `excludeTopLevel`.
+export { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid, createColumns, createColumnHelper, cellTypes }
+export type { KitCellTypes }

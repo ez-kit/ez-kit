@@ -35,7 +35,7 @@ const snap = counter.useSnapshot() // read  → snap.count
 const state = counter.useStore() // write → state.count += 1
 ```
 
-→ [Full docs](https://ez-kit.dev/docs/va-store/create-context-store)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/create-context-store)
 
 ### Persist
 
@@ -85,4 +85,4 @@ Subpaths (optional peers, install only what you use):
 | `@ez-kit/va-store/persist/url/next`         | `next`            |
 | `@ez-kit/va-store/persist/validators/zod`   | `zod`             |
 
-→ [Full docs](https://ez-kit.dev/docs/va-store/persist)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/persist)

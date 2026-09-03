@@ -45,7 +45,7 @@ Own the instance only when you need it (to read state, or to share one grid acro
 
 Pick one mode for the lifetime of a given grid — switching between them remounts it and resets its state.
 
-Full documentation: [ez-kit.dev/docs/data-grid](https://ez-kit.dev/docs/data-grid).
+Full documentation: [ez-kit-docs.vercel.app/docs/data-grid](https://ez-kit-docs.vercel.app/docs/data-grid).
 
 ## License
 

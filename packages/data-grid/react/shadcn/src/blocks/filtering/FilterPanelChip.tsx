@@ -2,8 +2,8 @@
 
 import { X } from 'lucide-react'
 
-import { Button } from '../../components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover'
+import { Button } from '@grid-shadcn/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 
 import type { FilterPanelChipProps } from '@ez-kit/data-grid-react'
 import type { MouseEvent } from 'react'

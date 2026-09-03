@@ -1,0 +1,4 @@
+{
+	"$comment": "Single source of truth for the public docs origin. Change it here and nowhere else: scripts/check-site-url.mjs fails the lint if any .md/.mdx still names a different ez-kit origin. Live deployments do NOT read this — apps/docs/lib/shared.ts takes the origin from Vercel's VERCEL_PROJECT_PRODUCTION_URL, so attaching a custom domain in the dashboard is enough for the site itself. This value is what the published text says: npm READMEs and docs code blocks a reader copies by hand, plus the registry item's homepage when built outside Vercel.",
+	"siteUrl": "https://ez-kit-docs.vercel.app"
+}

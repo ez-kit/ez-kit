@@ -23,6 +23,7 @@ export default tseslint.config(
 			'apps/docs/.source/**',
 			'apps/docs/.sandpack-tmp/**',
 			'apps/docs/scripts/**',
+			'scripts/**',
 			'.claude/skills/**/scripts/**',
 			'apps/docs/shared/data-grid/sandpack/generated/**',
 			'**/*.config.{js,cjs,mjs,ts,mts,cts}',

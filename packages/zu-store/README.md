@@ -32,7 +32,7 @@ const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ co
 const count = counterStore.useSelector((s) => s.count)
 ```
 
-→ [Full docs](https://ez-kit.dev/docs/zu-store/create-context-store)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/create-context-store)
 
 ---
 
@@ -44,7 +44,7 @@ Binds a single store field to a `[value, setValue]` tuple — like `useState` ba
 const [name, setName] = useStoreState(formStore, 'name')
 ```
 
-→ [Full docs](https://ez-kit.dev/docs/zu-store/use-store-state)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/use-store-state)
 
 ---
 
@@ -81,7 +81,7 @@ usersTable.fromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: 'arc
 
 Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useCacheKeys`, `cache.createCachedStore`).
 
-→ [Full docs](https://ez-kit.dev/docs/zu-store/store-cache)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/store-cache)
 
 ---
 
@@ -115,4 +115,4 @@ Avoid `useStore(store.history)` without a selector — it re-renders on every re
 
 For per-call history suppression — both from external `setState` and from inside actions — use `store.history.getState().skip(fn)`.
 
-→ [Full docs](https://ez-kit.dev/docs/zu-store/with-history)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/with-history)
