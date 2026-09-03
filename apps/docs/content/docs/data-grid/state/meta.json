@@ -1,0 +1,5 @@
+{
+	"title": "State",
+	"description": "Where a grid value comes from — seeds, defaults, controlled state, server-side data, persistence",
+	"pages": ["index", "controlled", "defaults", "server-side", "persistence"]
+}

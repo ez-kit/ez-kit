@@ -21,7 +21,7 @@ Pinning is demonstrated in a scrollable container with a sticky header — this 
 />
 ```
 
-The pin control lives in the row actions column, next to edit and delete — see [Row actions](./data-grid/row-actions). Enabling row pinning is enough to create that column; you do not need editing or deleting.
+The pin control lives in the row actions column, next to edit and delete — see [Row actions](/docs/data-grid/row-actions). Enabling row pinning is enough to create that column; you do not need editing or deleting.
 
 ## Options
 
@@ -29,15 +29,15 @@ The pin control lives in the row actions column, next to edit and delete — see
 | ------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pinning.row` (table)     | `boolean \| RowPinningConfig`           | Enables row pinning. `true` — top+bottom. `{ top: true }` — top only, etc. Once enabled, the grid renders a per-row pin control.                                                    |
 | `pinning.row.onChange`    | `(rowPinning: RowPinningState) => void` | Called whenever row pinning changes. Use it to persist which rows a user pinned.                                                                                                    |
-| `state.rowPinning`        | `{ top?: string[], bottom?: string[] }` | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](./data-grid/controlled-state).                                                                    |
+| `state.rowPinning`        | `{ top?: string[], bottom?: string[] }` | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](/docs/data-grid/state/controlled).                                                                |
 | `initialState.rowPinning` | same                                    | Uncontrolled seed for pinned rows at mount.                                                                                                                                         |
 | `getRowId`                | `(row: TRow, index: number) => string`  | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so pinning survives a refetch out of the box. |
 
 ## See also
 
-- [Row actions](./data-grid/row-actions)
-- [Column pinning](./data-grid/columns/column-pinning)
-- [Sticky header](./data-grid/sticky-header)
+- [Row actions](/docs/data-grid/row-actions)
+- [Column pinning](/docs/data-grid/pinning/columns)
+- [Pinning](/docs/data-grid/pinning) · [Layout](/docs/data-grid/layout)
 
 ## Source
 

@@ -5,19 +5,76 @@ description: Where a grid value comes from — column-level seeds, feature confi
 
 # State Model
 
-A grid value can be set in four places. They are not alternatives to each other: each one runs at a
-different moment, and the later one wins.
+A grid value can be set in four places. They are not alternatives to each other: each runs at a
+different moment, and the later one wins. Read top to bottom — the last thing that speaks, decides.
 
-1. **Column-level seeds** — `pinning.initialSide`, `visibility.initialHidden`,
-   `creating.defaultValue`. Written on the column def, next to the thing they seed.
-2. **Feature config** — `pagination.pageSize`, `creating.defaultValues`. Written on the grid config,
-   for values that are not per-column.
-3. **`initialState`** — a partial `TableState` applied once, at mount. Uncontrolled: the user (or
-   `table.setState`) is free to change it afterwards.
-4. **`state`** — controlled state, re-applied on every render. Pass it together with
-   `onStateChange` or the grid will appear frozen.
+## 1. Column seeds
 
-## Where a starting value comes from
+Written on the column def, next to the thing they seed. Applied once, at mount (or on each
+`creating.start()`, for `creating.defaultValue`).
+
+```tsx
+const columns = createColumns<Row>([
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
+	{ accessorKey: 'notes', header: 'Notes', visibility: { initialHidden: true } },
+	{ accessorKey: 'status', header: 'Status', creating: { defaultValue: 'draft' } },
+])
+```
+
+The grid opens with `id` pinned left, `notes` hidden and the create form pre-filled — and the user is
+free to change all three.
+
+## 2. Feature config
+
+The same idea for values that are not per-column. Written on the grid.
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{ pageSize: 25 }}
+	creating={{ defaultValues: { status: 'draft', region: 'eu' }, onSave }}
+/>
+```
+
+## 3. `initialState`
+
+A partial `TableState` applied once, at mount, on top of everything above. Uncontrolled: the user —
+or `table.setState` — is free to change it afterwards. This is what you restore a deep link into.
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	sorting
+	pagination
+	initialState={{
+		sorting: [{ id: 'createdAt', desc: true }],
+		pagination: { pageIndex: 2, pageSize: 25 },
+	}}
+/>
+```
+
+## 4. Controlled `state`
+
+Re-applied on every render, so it wins over all three. Pass it together with `onStateChange` or the
+grid will appear frozen — you are now the only one who can move it.
+
+```tsx
+const [sorting, setSorting] = useState<SortingState>([])
+
+<DataGrid
+	data={data}
+	columns={columns}
+	sorting={{ onChange: setSorting }}
+	state={{ sorting }}
+/>
+```
+
+State is controlled **per slice**: the slices you pass are yours, everything else stays
+uncontrolled. See [Controlled state](/docs/data-grid/state/controlled).
+
+## Precedence at a glance
 
 | Source                     | Level      | Applied                     | Overridable by                                                       |
 | -------------------------- | ---------- | --------------------------- | -------------------------------------------------------------------- |
@@ -111,14 +168,15 @@ its feature re-initialises whenever it opens, so a seeded value would be discard
 It is a type error instead.
 
 To seed the create form, use `creating.defaultValues` or a column's `creating.defaultValue` — see
-[Creating Rows](./data-grid/editing/creating).
+[Creating Rows](/docs/data-grid/editing/creating).
 
 ## See also
 
-- [Controlled state](./data-grid/controlled-state) — the `state` / `onStateChange` pair
-- [State persistence](./data-grid/state-persistence) — saving and restoring `initialState`
-- [Column pinning](./data-grid/columns/column-pinning)
-- [Column visibility](./data-grid/columns/column-visibility)
+- [Controlled state](/docs/data-grid/state/controlled) — the `state` / `onStateChange` pair
+- [Defaults](/docs/data-grid/state/defaults) — the layers under a feature's config
+- [State persistence](/docs/data-grid/state/persistence) — saving and restoring `initialState`
+- [Pinning](/docs/data-grid/pinning)
+- [Column visibility](/docs/data-grid/columns/visibility)
 
 ## Source
 

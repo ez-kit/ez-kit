@@ -48,7 +48,7 @@ The URL variant is the same shape — swap the effect body for your router's `se
 that may not survive a data reload) and `draft` (a query the user has not applied yet — session
 state, not a shareable link). Opt into anything from `PERSISTABLE_STATE_KEYS` explicitly.
 
-`draft` is the one key that is not a `TableState` slice: under [deferred apply](./data-grid/production)
+`draft` is the one key that is not a `TableState` slice: under [deferred apply](/docs/data-grid/production)
 the live axes carry the pending query, so `extractState` reports it under the name
 `initialState.draft` reads it back under. Persist it — `keys: [...DEFAULT_STATE_KEYS, 'draft']` —
 and a restored grid comes back with the draft still pending instead of silently applied.

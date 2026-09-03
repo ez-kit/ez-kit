@@ -29,7 +29,7 @@ Fallbacks render automatically whenever the grid has no visible rows. Switch bet
 
 ## Loading
 
-Pass `state.loading` (see [Controlled State](./data-grid/controlled-state)) — the grid renders `<LoadingBody />` instead of rows. The slot is a `LoadingState` object, not a boolean: `isPending` is the initial load, `isFetching` a refetch, and `isError` / `error` the last failure.
+Pass `state.loading` (see [Controlled State](/docs/data-grid/state/controlled)) — the grid renders `<LoadingBody />` instead of rows. The slot is a `LoadingState` object, not a boolean: `isPending` is the initial load, `isFetching` a refetch, and `isError` / `error` the last failure.
 
 ```tsx
 <DataGrid

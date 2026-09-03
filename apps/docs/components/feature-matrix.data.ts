@@ -33,7 +33,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Delete + confirmation dialog',
 		description: 'Remove selected rows with a confirmation step to prevent accidental deletion.',
 		status: FeatureStatus.Done,
-		doc: 'editing/delete-confirmation',
+		doc: 'editing/deleting',
 	},
 	{
 		category: 'Editing & CRUD',
@@ -55,7 +55,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		description:
 			'Full async server mode with manual pagination/sort/filter, rowCount, controlled state.loading (isPending/isFetching/isError/error), and refetch overlay.',
 		status: FeatureStatus.Done,
-		doc: 'server-side',
+		doc: 'state/server-side',
 	},
 	{
 		category: 'Editing & CRUD',
@@ -98,7 +98,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Sticky header',
 		description: 'Keep the column header row visible while scrolling through data.',
 		status: FeatureStatus.Done,
-		doc: 'sticky-header',
+		doc: 'layout',
 	},
 	{
 		category: 'Data & Display',
@@ -157,14 +157,14 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Column pinning (sticky)',
 		description: 'Pin columns to the left or right so they stay visible during horizontal scroll.',
 		status: FeatureStatus.Done,
-		doc: 'columns/column-pinning',
+		doc: 'pinning/columns',
 	},
 	{
 		category: 'Columns',
 		feature: 'Column visibility',
 		description: 'Toggle individual columns on or off via a column picker menu.',
 		status: FeatureStatus.Done,
-		doc: 'columns/column-visibility',
+		doc: 'columns/visibility',
 	},
 	{
 		category: 'Columns',
@@ -207,7 +207,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Row pinning (top / bottom)',
 		description: 'Pin individual rows to the top or bottom of the grid.',
 		status: FeatureStatus.Done,
-		doc: 'row-pinning',
+		doc: 'pinning/rows',
 	},
 	{
 		category: 'Rows & Selection',
@@ -228,14 +228,14 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Built-in + rich cell types (select/badge/image/link/progress)',
 		description: 'Ready-to-use cell renderers for common data types including badges, images, and progress bars.',
 		status: FeatureStatus.Done,
-		doc: 'cells/cell-types',
+		doc: 'columns/cell-types',
 	},
 	{
 		category: 'Cells',
 		feature: 'Custom cell types',
 		description: 'Define reusable typed cell renderers with full TypeScript inference.',
 		status: FeatureStatus.Done,
-		doc: 'cells/custom-cell-types',
+		doc: 'columns/custom-cell-types',
 	},
 	{
 		category: 'Cells',
@@ -250,7 +250,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		feature: 'Controlled state / snapshot & restore',
 		description: 'Own the grid state externally and serialize or restore it at any time.',
 		status: FeatureStatus.Done,
-		doc: 'controlled-state',
+		doc: 'state/controlled',
 	},
 	{
 		category: 'State & Tooling',
@@ -258,7 +258,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		description:
 			'Set grid options once — app-wide via a provider or baked into a custom kit — with instance config always winning.',
 		status: FeatureStatus.Done,
-		doc: 'default-options',
+		doc: 'state/defaults',
 	},
 	{
 		category: 'State & Tooling',
@@ -273,7 +273,7 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		description:
 			'Extract grid state (sort, filters, page, column layout) for the URL or localStorage, and seed it back on load.',
 		status: FeatureStatus.Done,
-		doc: 'state-persistence',
+		doc: 'state/persistence',
 	},
 	{
 		category: 'State & Tooling',

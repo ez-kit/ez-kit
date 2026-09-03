@@ -28,7 +28,7 @@ pipeline.
 
 The feature is enabled by its **handler**, not by its presence: a config without `onSave`
 resolves away rather than mounting an Edit button whose commit would call `undefined`. That is
-what lets a [defaults layer](./data-grid/default-options) describe how editing should _look_ for
+what lets a [defaults layer](/docs/data-grid/state/defaults) describe how editing should _look_ for
 a whole app while only the grids that supply `onSave` actually get it.
 
 ## Modes
@@ -45,7 +45,7 @@ a whole app while only the grids that supply `onSave` actually get it.
 
 From the columns, not from a second list. A column's `cell.type` decides the input its field
 renders — a `date` column gets the kit's date picker, a `select` column its select. See
-[Cell types](./data-grid/cells/cell-types).
+[Cell types](/docs/data-grid/columns/cell-types).
 
 Per column, the edit form is tuned under `editing`:
 
@@ -80,7 +80,7 @@ const columns = createColumns<User>([
 | ------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | `onSave`      | `({ rowId, values, signal }) => void \| Promise<void>` | Required. Commit the edit. `signal` aborts when the user cancels or the table unmounts.               |
 | `mode`        | `'row' \| 'modal' \| 'cell'`                           | What editing does. Default `'row'`.                                                                   |
-| `validate`    | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](./data-grid/editing/validation).                |
+| `validate`    | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](/docs/data-grid/editing/validation).            |
 | `validateOn`  | `'submit' \| 'blur' \| 'change'`                       | When a field validates. Default `'submit'`. A column overrides it under its own `editing.validateOn`. |
 | `debounce`    | `number`                                               | Debounce for `validateOn: 'change'`. Default `200`.                                                   |
 | `enabled`     | `boolean`                                              | Explicit off-switch for a config that came from a defaults layer.                                     |
@@ -101,10 +101,10 @@ table.editing.getState() // { rowId, cellId, values, errors, formError, commitSt
 
 ## See also
 
-- [Validation](./data-grid/editing/validation) — schemas, async checks, server errors
-- [Creating](./data-grid/editing/creating) — the new-row workflow
-- [Delete confirmation](./data-grid/editing/delete-confirmation) — the third write
-- [CRUD (server)](./data-grid/editing/crud-server) · [CRUD (client)](./data-grid/editing/crud-client)
+- [Validation](/docs/data-grid/editing/validation) — schemas, async checks, server errors
+- [Creating](/docs/data-grid/editing/creating) — the new-row workflow
+- [Delete confirmation](/docs/data-grid/editing/deleting) — the third write
+- [CRUD (server)](/docs/data-grid/editing/crud-server) · [CRUD (client)](/docs/data-grid/editing/crud-client)
 
 ## Source
 

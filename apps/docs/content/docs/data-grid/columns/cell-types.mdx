@@ -51,6 +51,43 @@ filtering enabled.
 | `'link'`     | `string`       | `label`, `href`, `target` — see below. All optional.                                                  |
 | `'progress'` | `number`       | `max`.                                                                                                |
 
+### `'date'`
+
+A date column renders through `Date.prototype.toLocaleDateString`, filters with the date-aware
+operators (including a `between` range), and — where the grid allows writes — opens a date picker
+for both editing and creating, so every date in the grid is authored through the same control.
+
+<DataGridDocsExample exampleId='date-cell-view' />
+
+```ts
+{
+	accessorKey: 'createdAt',
+	header: 'Created at',
+	cell: {
+		type: 'date',
+		config: {
+			format: { dateStyle: 'medium' }, // Intl.DateTimeFormatOptions
+			min: '2025-01-01',           // ISO 8601, hard minimum for the picker
+			max: '2027-12-31',           // ISO 8601, hard maximum for the picker
+		},
+	},
+}
+```
+
+| `cell.config` | Type                         | Description                                                                            |
+| ------------- | ---------------------------- | -------------------------------------------------------------------------------------- |
+| `format`      | `Intl.DateTimeFormatOptions` | Forwarded to `Date.prototype.toLocaleDateString`. Omitted — locale-default formatting. |
+| `min`         | `string` (ISO 8601)          | Hard minimum forwarded to the date-picker editor as a disabled-before bound.           |
+| `max`         | `string` (ISO 8601)          | Hard maximum forwarded to the date-picker editor as a disabled-after bound.            |
+
+With `editing: { mode: 'cell' }` the picker opens in place:
+
+<DataGridDocsExample exampleId='date-cell-edit' />
+
+And it backs the new-row form when `creating` is enabled:
+
+<DataGridDocsExample exampleId='date-cell-create' />
+
 ### `'link'`
 
 The anchor defaults to the cell value for both its `href` and its text, and opens in the current
@@ -101,11 +138,12 @@ input, no filter control.
 
 ## See also
 
-- [Custom Cell Types](./data-grid/cells/custom-cell-types) — register your own with `defineCellType`
-- [Date Cell](./data-grid/cells/date-cell) — the date type in detail
-- [Columns](./data-grid/columns) — the rest of a column definition
+- [Custom Cell Types](/docs/data-grid/columns/custom-cell-types) — register your own with `defineCellType`
+- [Columns](/docs/data-grid/columns) — the rest of a column definition
 
 ## Source
 
 - `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/column/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/column/types.ts)
 - `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/cell-types/`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/cell-types/)
+- shadcn flavor — [`packages/data-grid/react/shadcn/src/blocks/cell-types/`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/shadcn/src/blocks/cell-types/)
+- HeroUI flavor — [`packages/data-grid/react/heroui/src/blocks/cell-types/`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/heroui/src/blocks/cell-types/)

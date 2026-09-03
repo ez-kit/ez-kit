@@ -9,13 +9,13 @@ A full create/read/update/delete loop with optimistic updates and rollback on fa
 
 ## Usage
 
-A live server-backed example is coming soon. In the meantime, the [CRUD (Client)](./data-grid/editing/crud-client) example shows the identical UI surface against an in-memory store — swapping the store for API calls is the only change.
+A live server-backed example is coming soon. In the meantime, the [CRUD (Client)](/docs/data-grid/editing/crud-client) example shows the identical UI surface against an in-memory store — swapping the store for API calls is the only change.
 
 The server pattern covers:
 
 - New-row creation via `<DataGrid.CreateTrigger />` and `<DataGrid.CreatingModal />`
 - Inline editing with debounced server commits
-- Bulk delete with confirmation (see [Delete Confirmation](./data-grid/editing/delete-confirmation))
+- Bulk delete with confirmation (see [Delete Confirmation](/docs/data-grid/editing/deleting))
 - Optimistic UI with rollback on API failure
 
 ## Server contract
@@ -33,7 +33,7 @@ type Api = {
 
 ## Notes
 
-Pair this with [Controlled State](./data-grid/controlled-state) so the grid's sort/filter/pagination round-trip through your query.
+Pair this with [Controlled State](/docs/data-grid/state/controlled) so the grid's sort/filter/pagination round-trip through your query.
 
 ## Source
 

@@ -217,8 +217,8 @@ copy is worse than no copy: it reads as authoritative while naming exports that 
 Coverage over the data-grid docs is **total**: the explicit page → type map in
 `apps/docs/test/docs-options/page-type-map.ts` lists every page under `content/docs/data-grid/**`
 (52 today) plus the four `form/` pages that carry an option table, keyed by file path **plus the
-heading above each table** so multiple tables in one file map independently — 56 pages / 61 option
-tables / 340 checked names, of which 19 pages carry no option table and get an entry with two empty
+heading above each table** so multiple tables in one file map independently — 56 pages / 68 option
+tables / 368 checked names, of which 19 pages carry no option table and get an entry with two empty
 arrays. Those empty entries are the point: while coverage was partial, an unmapped page was checked
 by nothing, and the two worst pages in the docs were unmapped ones — `columns/resizing.mdx`
 documented a `sizing` option that never existed, and the whole `editing/**` section documented a

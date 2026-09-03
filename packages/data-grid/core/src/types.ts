@@ -740,7 +740,7 @@ export type TableConfig<TRow extends object> = {
 	 * `onSave` without which there is nothing to enable.
 	 *
 	 * `true` is accepted for one reason: a defaults layer
-	 * ({@link https://ez-kit.dev/docs/data-grid/default-options DataGridOptionsProvider} or
+	 * ({@link https://ez-kit.dev/docs/data-grid/state/defaults DataGridOptionsProvider} or
 	 * `createDataGrid({ defaults })`) can describe how creation *looks* for the whole app —
 	 * `mode`, `validateOn` — while only the grid that supplies `onSave` gets the feature.
 	 * `creating: true` at such a call site says "yes, this grid too", and the merge keeps the

@@ -50,7 +50,7 @@ deep-linked page is `initialState={{ pagination: { pageIndex: 2 } }}` and nothin
 `pageSize` to restate, and restating it wrong is exactly how a page opens on a size nobody asked
 for. Write both spellings of the size and the seed wins — `createTable` warns about it in
 development. Prefer form A for "this grid shows 25 rows" and form B for "restore the size this user
-picked". See [State model](./data-grid/state-model).
+picked". See [State model](/docs/data-grid/state).
 
 ## Page size selector
 
@@ -151,7 +151,7 @@ applies to a **trusted** zero: a manual grid with an unknown total (neither `row
 
 ## Server-side pagination
 
-Set `pagination.manual: true` and supply `rowCount`. See [Server-side Data](./data-grid/server-side)
+Set `pagination.manual: true` and supply `rowCount`. See [Server-side Data](/docs/data-grid/state/server-side)
 for the full pattern, including loading state.
 
 ```tsx
@@ -182,7 +182,7 @@ for the full pattern, including loading state.
 | `pagination.pageCount`    | `number`                              | Server total **pages**, for an API that reports only that. Mutually exclusive with `rowCount` — the type forbids both. Under `manual`, supply one of the two; with neither the footer only knows which page it is on.           |
 | `pagination.onChange`     | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                                                                                                                                                                       |
 | `initialState.pagination` | `{ pageIndex?, pageSize? }`           | Seeds the slice **per key**, not wholesale: whichever key you omit keeps its resolved default — `pageIndex: 0`, and `pageSize` from `pagination.pageSize`. So a deep link to page 3 writes `{ pageIndex: 2 }` and nothing else. |
-| `state.pagination`        | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                                                                                                                                                        |
+| `state.pagination`        | same                                  | Controlled state — see [Controlled state](/docs/data-grid/state/controlled).                                                                                                                                                    |
 | `pagination.enabled`      | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                                  |
 
 ## Infinite scroll

@@ -38,7 +38,7 @@ A column that should stay pinned — one the user is not meant to move — takes
 | `pinning` (table)            | `boolean \| { column?: boolean \| ColumnPinningConfig, row?: … }` | Table-level. `{ column: true }` enables the pin section in each column's ⋮ menu; the object form adds `onChange` and `enabled`.                                        |
 | `initialState.columnPinning` | `{ left?: string[], right?: string[] }`                           | Uncontrolled seed for pinned columns at mount. Merges with the column-level pins — see below.                                                                          |
 | `pinning.column.onChange`    | `(columnPinning: ColumnPinningState) => void`                     | Called whenever column pinning changes. Use it to persist which columns a user pinned.                                                                                 |
-| `state.columnPinning`        | same                                                              | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](./data-grid/controlled-state).                                                       |
+| `state.columnPinning`        | same                                                              | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](/docs/data-grid/state/controlled).                                                   |
 | `pinning.enabled`            | `boolean`                                                         | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                         |
 
 ## Seeds and invariants
@@ -53,18 +53,18 @@ matter what `initialState`, `state` or `table.setState` says — the column menu
 for it, so a state that unpinned it could never be undone by the user. The same holds for the
 system columns (`__selection__`, `__expand__`, `__actions__`).
 
-See [State model](./data-grid/state-model) for the full precedence.
+See [State model](/docs/data-grid/state) for the full precedence.
 
 ## Notes
 
 The shadcn flavor renders pinned columns by reading `data-pinned` attributes on `<th>`/`<td>` and applying sticky positioning in CSS — this avoids touching the vendored shadcn primitives. The HeroUI flavor does the same against the HeroUI table primitives.
 
-Per [Architecture](./data-grid/architecture) Principle III, pinning overrides live in the flavor's `blocks/` adapters; the vendored shadcn `components/ui/**` files are never modified.
+Per [Architecture](/docs/data-grid/architecture) Principle III, pinning overrides live in the flavor's `blocks/` adapters; the vendored shadcn `components/ui/**` files are never modified.
 
 ## See also
 
-- [Row pinning](./data-grid/row-pinning)
-- [Columns](./data-grid/columns)
+- [Pinning](/docs/data-grid/pinning) · [Row pinning](/docs/data-grid/pinning/rows)
+- [Columns](/docs/data-grid/columns)
 
 ## Source
 

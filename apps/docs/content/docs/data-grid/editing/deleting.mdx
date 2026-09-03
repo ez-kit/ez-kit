@@ -52,7 +52,7 @@ deleting: { onDelete, bulk: true }
 deleting: { onDelete, bulk: { onDelete: ({ rowIds }) => api.removeMany(rowIds) } }
 ```
 
-The Delete button appears in the [selection bar](./data-grid/selection/selection-bar) as soon as
+The Delete button appears in the [selection bar](/docs/data-grid/selection/selection-bar) as soon as
 `bulk` resolves to on and row selection is enabled. The deleted ids leave the selection once the
 handler resolves, so the bar never counts rows that no longer exist.
 

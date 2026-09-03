@@ -1,0 +1,59 @@
+---
+title: Pinning
+description: Keep columns and rows in view while the rest of the grid scrolls — one feature, two axes.
+---
+
+# Pinning
+
+Pinning holds part of the grid still while the rest scrolls past it. Columns pin to the **left or
+right** edge and survive horizontal scroll; rows pin to the **top or bottom** and survive vertical
+scroll. Both axes live under one `pinning` option, so a grid that wants both asks once:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pinning={{ column: true, row: { top: true, bottom: true } }}
+/>
+```
+
+The two axes are independent — enable either on its own — but they read the same way: the table
+option opens the **UI** that lets a user pin, and the starting pins come from the column defs
+(`pinning: { initialSide }`) or from `initialState`.
+
+| Option            | Type                             | Description                                                                                                                       |
+| ----------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `pinning.column`  | `boolean \| ColumnPinningConfig` | Adds the pin section to each column's ⋮ menu. See [Column pinning](/docs/data-grid/pinning/columns).                              |
+| `pinning.row`     | `boolean \| RowPinningConfig`    | Adds a per-row pin control in the row-actions column. `true` — top and bottom. See [Row pinning](/docs/data-grid/pinning/rows).   |
+| `pinning.enabled` | `boolean`                        | Explicit off-switch for a config that arrived from a defaults layer — the settings survive, the feature does not. Default `true`. |
+
+## Which edge, and why it is physical
+
+`left` / `right` and `top` / `bottom` are **physical** directions, not logical ones: a pinned column
+sticks to a viewport edge, and that edge does not flip when the grid runs right-to-left. Column
+`align`, which does flip, is the logical counterpart — see [Columns](/docs/data-grid/columns).
+
+## Seeds vs. invariants
+
+A pin can be a starting value the user may undo, or a fixture they may not:
+
+```tsx
+const columns = createColumns<Row>([
+	{ accessorKey: 'id', header: 'ID', pinning: 'left' }, // invariant — no pin control at all
+	{ accessorKey: 'name', header: 'Name', pinning: { initialSide: 'left' } }, // seed — user may unpin
+])
+```
+
+The scalar form (or `pinning: { side }`) is enforced on every write path, so no `initialState`,
+controlled `state` or `table.setState` can move it. `initialSide` is only a seed. The full
+precedence is in the [State model](/docs/data-grid/state).
+
+## See also
+
+- [Column pinning](/docs/data-grid/pinning/columns)
+- [Row pinning](/docs/data-grid/pinning/rows)
+- [Layout](/docs/data-grid/layout) — the sticky header pinned rows scroll under
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/types.ts)

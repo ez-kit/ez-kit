@@ -36,35 +36,34 @@ export const DocPage = {
 	AdvancedCore: 'content/docs/data-grid/advanced/core.mdx',
 	Ai: 'content/docs/data-grid/ai.mdx',
 	Architecture: 'content/docs/data-grid/architecture.mdx',
-	CellsCellTypes: 'content/docs/data-grid/cells/cell-types.mdx',
-	CellsCustomCellTypes: 'content/docs/data-grid/cells/custom-cell-types.mdx',
-	Composition: 'content/docs/data-grid/composition.mdx',
-	DefaultOptions: 'content/docs/data-grid/default-options.mdx',
-	Defaults: 'content/docs/data-grid/defaults.mdx',
+	ClientVsServer: 'content/docs/data-grid/client-vs-server.mdx',
+	ColumnsCellTypes: 'content/docs/data-grid/columns/cell-types.mdx',
+	ColumnsCustomCellTypes: 'content/docs/data-grid/columns/custom-cell-types.mdx',
+	LayoutComposition: 'content/docs/data-grid/layout/composition.mdx',
+	StateDefaults: 'content/docs/data-grid/state/defaults.mdx',
 	EditingCreating: 'content/docs/data-grid/editing/creating.mdx',
 	EditingCrudClient: 'content/docs/data-grid/editing/crud-client.mdx',
 	EditingCrudServer: 'content/docs/data-grid/editing/crud-server.mdx',
-	EditingDeleteConfirmation: 'content/docs/data-grid/editing/delete-confirmation.mdx',
+	EditingDeleting: 'content/docs/data-grid/editing/deleting.mdx',
 	EditingIndex: 'content/docs/data-grid/editing/index.mdx',
 	EditingValidation: 'content/docs/data-grid/editing/validation.mdx',
 	Fallbacks: 'content/docs/data-grid/fallbacks.mdx',
-	Footer: 'content/docs/data-grid/footer.mdx',
+	LayoutFooter: 'content/docs/data-grid/layout/footer.mdx',
 	Features: 'content/docs/data-grid/features.mdx',
 	GettingStarted: 'content/docs/data-grid/getting-started.mdx',
 	Index: 'content/docs/data-grid/index.mdx',
 	InstallationHeroui: 'content/docs/data-grid/installation/heroui.mdx',
 	InstallationShadcn: 'content/docs/data-grid/installation/shadcn.mdx',
-	ServerSide: 'content/docs/data-grid/server-side.mdx',
-	StatePersistence: 'content/docs/data-grid/state-persistence.mdx',
-	StickyHeader: 'content/docs/data-grid/sticky-header.mdx',
+	StateServerSide: 'content/docs/data-grid/state/server-side.mdx',
+	StatePersistence: 'content/docs/data-grid/state/persistence.mdx',
+	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
 	Theming: 'content/docs/data-grid/theming.mdx',
-	CellsDateCell: 'content/docs/data-grid/cells/date-cell.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
-	ColumnsColumnPinning: 'content/docs/data-grid/columns/column-pinning.mdx',
-	ColumnsColumnVisibility: 'content/docs/data-grid/columns/column-visibility.mdx',
+	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
+	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
 	ColumnsIndex: 'content/docs/data-grid/columns/index.mdx',
 	ColumnsResizing: 'content/docs/data-grid/columns/resizing.mdx',
-	ControlledState: 'content/docs/data-grid/controlled-state.mdx',
+	StateControlled: 'content/docs/data-grid/state/controlled.mdx',
 	ExpandingControlled: 'content/docs/data-grid/expanding/controlled.mdx',
 	ExpandingSubContent: 'content/docs/data-grid/expanding/sub-content.mdx',
 	ExpandingTree: 'content/docs/data-grid/expanding/tree.mdx',
@@ -81,13 +80,14 @@ export const DocPage = {
 	FormSchema: 'content/docs/form/schema.mdx',
 	PaginationInfiniteScroll: 'content/docs/data-grid/pagination/infinite-scroll.mdx',
 	PaginationIndex: 'content/docs/data-grid/pagination/index.mdx',
+	PinningIndex: 'content/docs/data-grid/pinning/index.mdx',
 	Production: 'content/docs/data-grid/production.mdx',
 	RowActions: 'content/docs/data-grid/row-actions.mdx',
-	RowPinning: 'content/docs/data-grid/row-pinning.mdx',
+	PinningRows: 'content/docs/data-grid/pinning/rows.mdx',
 	SelectionIndex: 'content/docs/data-grid/selection/index.mdx',
 	SelectionSelectionBar: 'content/docs/data-grid/selection/selection-bar.mdx',
 	Sorting: 'content/docs/data-grid/sorting.mdx',
-	StateModel: 'content/docs/data-grid/state-model.mdx',
+	StateIndex: 'content/docs/data-grid/state/index.mdx',
 	Virtualization: 'content/docs/data-grid/virtualization.mdx',
 } as const
 
@@ -253,7 +253,25 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.Composition,
+		page: DocPage.ClientVsServer,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Choosing',
+				reason:
+					'A side-by-side comparison: the first column is a prose property of the mode ("`data` holds", "Sort / filter latency"), not a key anyone sets.',
+			},
+		],
+	},
+	{
+		page: DocPage.PinningIndex,
+		// The table sits under the page's own `# Pinning` heading and names full paths
+		// from the grid config (`pinning.column`, `pinning.row`, `pinning.enabled`).
+		optionTables: [{ heading: 'Pinning', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.LayoutComposition,
 		optionTables: [],
 		nonOptionTables: [
 			{
@@ -279,7 +297,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.EditingDeleteConfirmation,
+		page: DocPage.EditingDeleting,
 		optionTables: [
 			{ heading: '`deleting`', roots: [GRID_TYPE.DeletingConfig], expectedCount: 4 },
 			{ heading: '`deleting.bulk`', roots: [GRID_TYPE.BulkDeletingConfig], expectedCount: 3 },
@@ -292,7 +310,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.Footer,
+		page: DocPage.LayoutFooter,
 		optionTables: [
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 2 },
 			{ heading: 'Mounting', roots: [GRID_TYPE.LayoutConfig], expectedCount: 2 },
@@ -320,8 +338,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.StickyHeader,
-		optionTables: [],
+		page: DocPage.LayoutIndex,
+		// The table sits under the page's own `# Layout` heading and names full paths
+		// from the grid config (`layout.maxHeight`, `layout.stickyHeader`, `layout.stickyFooter`).
+		optionTables: [{ heading: 'Layout', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
 	{
@@ -340,8 +360,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [{ heading: 'Use with AI', reason: 'A list of documentation URLs.' }],
 	},
 	{
-		page: DocPage.CellsCellTypes,
-		optionTables: [{ heading: "`'link'`", roots: [GRID_TYPE.LinkCellConfig], expectedCount: 3 }],
+		page: DocPage.ColumnsCellTypes,
+		optionTables: [
+			{ heading: "`'date'`", roots: [GRID_TYPE.DateCellConfig], expectedCount: 3 },
+			{ heading: "`'link'`", roots: [GRID_TYPE.LinkCellConfig], expectedCount: 3 },
+		],
 		nonOptionTables: [
 			{
 				heading: 'Built-in cell types',
@@ -350,22 +373,20 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.CellsCustomCellTypes,
+		page: DocPage.ColumnsCustomCellTypes,
 		// The four renderer slots a `defineCellType` definition may carry.
 		optionTables: [{ heading: 'Declaring a config', roots: [GRID_TYPE.CellTypeDefinition], expectedCount: 4 }],
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.DefaultOptions,
-		// The keys a defaults layer deliberately cannot carry — real `UseDataGridConfig` keys,
-		// which is exactly what makes the row meaningful.
-		optionTables: [{ heading: 'What can be defaulted', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
+		page: DocPage.StateDefaults,
+		optionTables: [
+			// The keys a defaults layer deliberately cannot carry — real `UseDataGridConfig` keys,
+			// which is exactly what makes the row meaningful.
+			{ heading: 'What can be defaulted', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
+			{ heading: 'Built-in default values', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 39 },
+		],
 		nonOptionTables: [{ heading: 'When to use which', reason: 'Maps a situation to an API, naming no keys.' }],
-	},
-	{
-		page: DocPage.Defaults,
-		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 39 }],
-		nonOptionTables: [],
 	},
 	{
 		page: DocPage.EditingCreating,
@@ -396,7 +417,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [{ heading: 'Packages', reason: 'Lists the published packages and who imports them.' }],
 	},
 	{
-		page: DocPage.ServerSide,
+		page: DocPage.StateServerSide,
 		optionTables: [
 			// Each table is headed by the feature it configures and lists that config's own keys,
 			// so the governing type is the feature config, not the root.
@@ -430,12 +451,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.CellsDateCell,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.DateCellConfig], expectedCount: 3 }],
-		nonOptionTables: [],
-	},
-	{
-		page: DocPage.ColumnsColumnPinning,
+		page: DocPage.PinningColumns,
 		optionTables: [
 			// One table, two sources: `pinning` on a column def and `pinning` on the
 			// grid config, disambiguated in prose ("(column def)" / "(table)").
@@ -446,7 +462,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.ColumnsColumnVisibility,
+		page: DocPage.ColumnsVisibility,
 		// The `enableHiding` row is gone — it was the raw TanStack pass-through that
 		// duplicated `visibility`, and `ColumnDef` no longer accepts it.
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
@@ -485,7 +501,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.ControlledState,
+		page: DocPage.StateControlled,
 		optionTables: [
 			// The option names live in the second column ("State key"); the first is
 			// a prose slot label ("Row selection"). The governing type is the
@@ -720,7 +736,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.RowPinning,
+		page: DocPage.PinningRows,
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
@@ -737,14 +753,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.StateModel,
+		page: DocPage.StateIndex,
 		optionTables: [
 			// One table crossing both levels on purpose: the page's whole point is
 			// that a starting value can come from a column def *or* from the grid
 			// config, so the column-level rows resolve against `ColumnDef` and the
 			// grid-level ones against `UseDataGridConfig`.
 			{
-				heading: 'Where a starting value comes from',
+				heading: 'Precedence at a glance',
 				roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig],
 				expectedCount: 8,
 			},
@@ -809,8 +825,8 @@ export const OPTION_EXCEPTIONS: readonly OptionException[] = [
 			'A literal value the whole per-column `filtering` slot accepts (`filtering: false`), not a key of `ColumnFilteringConfig`.',
 	},
 	{
-		page: DocPage.Defaults,
-		heading: 'Reference',
+		page: DocPage.StateDefaults,
+		heading: 'Built-in default values',
 		name: 'cell.config.target',
 		reason:
 			'A per-column cell-type config default (`column.cell.config.target` on a `link` cell), listed on the ' +
@@ -818,8 +834,8 @@ export const OPTION_EXCEPTIONS: readonly OptionException[] = [
 			'grid config, and this one row belongs to a column def.',
 	},
 	{
-		page: DocPage.Defaults,
-		heading: 'Reference',
+		page: DocPage.StateDefaults,
+		heading: 'Built-in default values',
 		name: 'link',
 		reason: 'Not an option: the cell-type id in the "(`link` cells)" qualifier on the `cell.config.target` row above.',
 	},

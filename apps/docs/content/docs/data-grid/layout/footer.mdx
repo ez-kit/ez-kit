@@ -44,7 +44,7 @@ can make, and a render function makes both of them visible at the call site.
 | `footerClassName` | `string`                       | Class applied to this column's footer cell.                                 |
 
 `align` covers the footer with the rest of the column; `align: { footer: 'end' }` moves the footer
-cell alone. See [Columns](./columns).
+cell alone. See [Columns](/docs/data-grid/columns).
 
 ## Mounting
 
@@ -76,7 +76,7 @@ declaring `align` or `pinning` is. Set it explicitly for the two cases the colum
 />
 ```
 
-Like [`stickyHeader`](./sticky-header), it needs a bounded scroll container — `layout.maxHeight`,
+Like [`stickyHeader`](/docs/data-grid/layout), it needs a bounded scroll container — `layout.maxHeight`,
 or the structural stylesheet's `400px` default. The grid sets `data-sticky="true"` on the
 `<tfoot>`; the kit CSS paints the opaque background that keeps rows from showing through.
 
@@ -107,4 +107,4 @@ a node, or a render function receiving `{ table, footerGroups }`:
 ```
 
 `<DataGrid.Footer />` reads `layout.stickyFooter` on its own; its `sticky` prop overrides that for
-one footer. See [Composition](./composition).
+one footer. See [Composition](/docs/data-grid/layout/composition).

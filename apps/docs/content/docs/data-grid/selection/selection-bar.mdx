@@ -44,7 +44,7 @@ selection: {
 ## Custom actions
 
 `selection.bar.actions` builds the entries the bar offers for the selection. It is **data**, not
-markup — the same `ActionItem` shape [`rowActions.actions`](./data-grid/row-actions) takes — so the
+markup — the same `ActionItem` shape [`rowActions.actions`](/docs/data-grid/row-actions) takes — so the
 kit draws each entry with the chrome its own Delete button has: your icon from the built-in set (or
 your own element), the kit's danger colour for `destructive`, its disabled state for `disabled`.
 
@@ -70,7 +70,7 @@ An entry's `onSelect` takes no arguments: the callback that built it already clo
 
 Content that is not an action — a bulk-target select, a counter — goes in the `start` / `end` slots
 of `<DataGrid.SelectionBar>`, rendered around the kit's own controls. Same split as
-[`<DataGrid.Toolbar>`](./data-grid/toolbar): the config carries data, the compound component
+[`<DataGrid.Toolbar>`](/docs/data-grid/layout/composition): the config carries data, the compound component
 carries markup, and `children` still replaces the bar wholesale.
 
 ```tsx
@@ -81,7 +81,7 @@ carries markup, and `children` still replaces the bar wholesale.
 
 The bar's Delete button is **not** configured here. Bulk delete is the `deleting` feature
 operating on more than one row, so its handler and its prompt live next to the per-row ones — see
-[Delete confirmation](./data-grid/editing/delete-confirmation). The bar renders the button
+[Delete confirmation](/docs/data-grid/editing/deleting). The bar renders the button
 whenever `deleting.bulk` resolves to on.
 
 ```tsx
