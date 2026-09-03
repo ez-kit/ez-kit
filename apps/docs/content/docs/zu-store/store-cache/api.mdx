@@ -158,7 +158,7 @@ Registers an observer on the entry at `(resolvedPath, id)`, creating it if it is
 | `alwaysCache`  | `boolean`       | no                                | Never auto-evict (`gcTime: Infinity`). Birth-config. `remove` / `clear` still drop the entry.   |
 | `children`     | `ReactNode`     | no                                | The subtree that reads this entry.                                                              |
 
-`gcTime` resolves first-match-wins: `alwaysCache` → `Provider.gcTime` → group `gcTime` → cache default (5 min). `gcTime`, `alwaysCache` and `defaultValue` are read only by the mount that **creates** the entry; later mounts attach to the live store and ignore them.
+`gcTime` resolves first-match-wins: `alwaysCache` → `Provider.gcTime` → group `gcTime` → cache default (5 min). `gcTime={0}` opts this mounting point out of keep-alive — see [the guide](../store-cache#opting-one-place-out-of-keep-alive). `gcTime`, `alwaysCache` and `defaultValue` are read only by the mount that **creates** the entry; later mounts attach to the live store and ignore them.
 
 ## `useSelector(selector)`
 

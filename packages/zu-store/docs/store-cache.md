@@ -205,6 +205,7 @@ function CachePanel({ customerId }: { customerId: string }) {
 - The `Provider` (and only the `Provider`) reference-counts an entry.
 - When observers reach 0, the entry is evicted after `gcTime`; remounting before then keeps it.
 - `alwaysCache` / `gcTime: Infinity` pins an entry; manual `remove`/`clear` still removes it.
+- `gcTime: 0` is the opposite end: the entry dies with its last observer, so that mounting point keeps nothing and the next mount reseeds from `defaultValue`. Birth-config, so it only applies when this `Provider` creates the entry.
 
 ## Gotchas
 

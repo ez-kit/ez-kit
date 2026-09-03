@@ -100,6 +100,22 @@ Each `<Provider>` is counted as an observer. When the **last** one unmounts, the
 
 `gcTime` and `alwaysCache` are **birth-config**: they are fixed by the first mount that creates the entry. Later mounts attach to the existing store and ignore them.
 
+### Opting one place out of keep-alive
+
+`gcTime={0}` is the other end of the same dial: the entry is evicted as soon as its last observer leaves, so this one mounting point behaves like [`createContextStore`](./create-context-store) while the rest of the group keeps its state. The next mount creates a fresh store and `defaultValue` seeds it again, which is also the answer to "on this screen I want to start from the seed every time" — there is no separate reset-on-mount switch, and deliberately so: a flag that clears on mount would wipe the state under any _other_ `Provider` still observing the same key, while `gcTime` simply waits for the last one to leave.
+
+```tsx
+<usersTable.Provider
+	id='draft'
+	gcTime={0}
+	defaultValue={{ filter: 'all' }}
+/>
+```
+
+A handoff still survives: when one `Provider` unmounts and another on the same key mounts in the same commit — a route cross-fade, a re-parented subtree — the returning observer cancels the pending eviction.
+
+Being birth-config, `gcTime={0}` only takes effect if this `Provider` is the one that **creates** the entry. If the same `(path, id)` is already live because another mounting point created it with the group's or cache's `gcTime`, the `0` is ignored — give the opted-out place its own `id` or `path`.
+
 ## `defaultValue` seed once
 
 `defaultValue` seeds the store **only when the key is first created**. On remount of a live entry it is ignored — that is the whole point of keep-alive.

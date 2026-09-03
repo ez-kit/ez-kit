@@ -542,6 +542,96 @@ describe('createStoreCache — gc lifecycle', () => {
 		expect(table.getFromCache({ id: 'main' })).toBeUndefined()
 	})
 
+	it('evicts on unmount with gcTime={0}, and reseeds from defaultValue on remount', () => {
+		vi.useFakeTimers()
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'gc-zero' })
+		function App({ show }: { show: boolean }) {
+			return (
+				<cache.Provider>
+					{show ? (
+						<table.Provider
+							id='main'
+							gcTime={0}
+							defaultValue={{ filter: 'active' }}
+						>
+							<span />
+						</table.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(<App show />)
+		act(() => {
+			table.getFromCache({ id: 'main' })?.getState().setFilter('archived')
+		})
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('archived')
+
+		rerender(<App show={false} />)
+		act(() => {
+			vi.advanceTimersByTime(0)
+		})
+		expect(table.getFromCache({ id: 'main' })).toBeUndefined()
+
+		// A fresh entry: the factory runs again, so `defaultValue` seeds it as on first mount.
+		rerender(<App show />)
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('active')
+	})
+
+	it('cancels a pending gcTime={0} eviction when an observer returns in the same commit', () => {
+		vi.useFakeTimers()
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'gc-zero-handoff' })
+		// Two Providers on one key: the handoff a route cross-fade or a re-parented subtree performs.
+		function App({ a, b }: { a: boolean; b: boolean }) {
+			return (
+				<cache.Provider>
+					{a ? (
+						<table.Provider
+							id='main'
+							gcTime={0}
+							defaultValue={{ filter: 'active' }}
+						>
+							<span />
+						</table.Provider>
+					) : null}
+					{b ? (
+						<table.Provider
+							id='main'
+							gcTime={0}
+							defaultValue={{ filter: 'active' }}
+						>
+							<span />
+						</table.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(
+			<App
+				a
+				b={false}
+			/>,
+		)
+		act(() => {
+			table.getFromCache({ id: 'main' })?.getState().setFilter('archived')
+		})
+
+		// One commit: the first Provider's cleanup and the second's effect both run before any timer.
+		rerender(
+			<App
+				a={false}
+				b
+			/>,
+		)
+		act(() => {
+			vi.advanceTimersByTime(0)
+		})
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('archived')
+	})
+
 	it('keeps an alwaysCache entry alive after all Providers unmount', () => {
 		vi.useFakeTimers()
 		const cache = createStoreCache({ gcTime: 1000 })
