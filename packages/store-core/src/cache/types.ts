@@ -1,4 +1,4 @@
-import type { PluginContext, StorePlugin } from '../plugin'
+import type { PluginContext } from '../plugin'
 
 /** Structural coordinate of one live entry, as surfaced by `keys()` / `useCacheKeys()`. */
 export type CacheRecord = {
@@ -31,11 +31,15 @@ export type CreateOptions = {
 	context: PluginContext
 }
 
-export type CachedStoreOptions<T> = {
+/**
+ * `_T` is unused within this type today — capabilities are attached to the instance itself via
+ * `attachCapability` inside the factory (see `CachedStoreFactory`), not declared here. It stays on the
+ * signature so existing call sites (`createCachedStore<TStore>(factory, options: CachedStoreOptions<TStore>)`)
+ * keep compiling unchanged; the alternative is a wider, unrelated signature change across every consumer.
+ */
+export type CachedStoreOptions<_T> = {
 	/** Group namespace; must be unique within a cache. Visible in `keys()` / `useCacheKeys()`. */
 	name: string
 	/** Store-group default `gcTime`, overriding the cache default. */
 	gcTime?: number
-	/** Plugins bound to each entry's instance lifetime (run on create, cleaned up on clear). */
-	plugins?: readonly StorePlugin<T>[]
 }

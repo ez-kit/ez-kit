@@ -1,4 +1,5 @@
 import { act, render } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { attachCapability } from '../capability'
@@ -173,5 +174,38 @@ describe('createCacheReact', () => {
 		)
 
 		expect(JSON.parse(view.getByTestId('keys').textContent)).toEqual([{ path: [], name: 'fake', id: 'x' }])
+	})
+
+	it('skips capability setup during server rendering', () => {
+		const api = freshApi()
+		const setup = vi.fn(() => undefined)
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, { name: 'probe', setup })
+				return instance
+			},
+			{ name: 'fake' },
+		)
+
+		// Simulate SSR: `ProviderInner` branches on `typeof window === 'undefined'` to skip the cache
+		// (and, with it, capability setup) and build an ephemeral instance per render instead.
+		vi.stubGlobal('window', undefined)
+		try {
+			renderToString(
+				<api.Provider>
+					<group.Provider
+						id='a'
+						defaultValue={{ id: 'a' }}
+					>
+						{null}
+					</group.Provider>
+				</api.Provider>,
+			)
+		} finally {
+			vi.unstubAllGlobals()
+		}
+
+		expect(setup).not.toHaveBeenCalled()
 	})
 })
