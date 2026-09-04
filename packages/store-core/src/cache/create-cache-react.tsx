@@ -118,7 +118,7 @@ export type CacheReact<TInstance extends object> = {
 	useCacheKeys: (prefix?: readonly string[]) => CacheRecord[]
 	createCachedStore: <TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TInstance, TDefaultValue>,
-		options: CachedStoreOptions<TInstance>,
+		options: CachedStoreOptions,
 	) => CachedStoreGroup<TInstance, TDefaultValue>
 }
 
@@ -226,7 +226,7 @@ export function createCacheReact<TInstance extends object>(
 
 	function createCachedStore<TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TInstance, TDefaultValue>,
-		options: CachedStoreOptions<TInstance>,
+		options: CachedStoreOptions,
 	): CachedStoreGroup<TInstance, TDefaultValue> {
 		const { name } = options
 		registerGroupName(name)

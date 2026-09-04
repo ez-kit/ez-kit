@@ -31,13 +31,7 @@ export type CreateOptions = {
 	context: PluginContext
 }
 
-/**
- * `_T` is unused within this type today — capabilities are attached to the instance itself via
- * `attachCapability` inside the factory (see `CachedStoreFactory`), not declared here. It stays on the
- * signature so existing call sites (`createCachedStore<TStore>(factory, options: CachedStoreOptions<TStore>)`)
- * keep compiling unchanged; the alternative is a wider, unrelated signature change across every consumer.
- */
-export type CachedStoreOptions<_T> = {
+export type CachedStoreOptions = {
 	/** Group namespace; must be unique within a cache. Visible in `keys()` / `useCacheKeys()`. */
 	name: string
 	/** Store-group default `gcTime`, overriding the cache default. */
