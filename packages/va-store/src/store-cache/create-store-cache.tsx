@@ -78,7 +78,7 @@ export type StoreCache = {
 	useCacheKeys: CacheReact<object>['useCacheKeys']
 	createCachedStore: <TState extends object, TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TState, TDefaultValue>,
-		options: CachedStoreOptions<TState>,
+		options: CachedStoreOptions,
 	) => CachedStoreGroup<TState, TDefaultValue>
 }
 
@@ -99,7 +99,7 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 
 	function createCachedStore<TState extends object, TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TState, TDefaultValue>,
-		groupOptions: CachedStoreOptions<TState>,
+		groupOptions: CachedStoreOptions,
 	): CachedStoreGroup<TState, TDefaultValue> {
 		const group = cache.createCachedStore<TDefaultValue>(factory, groupOptions)
 

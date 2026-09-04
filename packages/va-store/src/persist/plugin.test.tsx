@@ -1,4 +1,4 @@
-import { createServiceRegistry } from '@ez-kit/store-core'
+import { attachCapability, createServiceRegistry } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { proxy } from 'valtio'
@@ -12,6 +12,7 @@ import { persist, useHydrated } from './plugin'
 import { PERSIST_ENGINES } from './service'
 import { createFakePersistAdapter } from './testing/fake-persist-adapter'
 import { persistUrl } from './url/decorator'
+import { withPersist } from './with-persist'
 
 import type { StoreId } from '@ez-kit/store-core'
 
@@ -20,9 +21,10 @@ const STORE_ID: StoreId = { path: [], name: 'plugin-test', id: 'singleton' }
 type Filters = { q: string }
 
 // Accessor front: plain proxy + plugin `fields` builder.
-const fieldsStore = createContextStore<Filters, { q?: string }>(
-	({ defaultValue }: ContextStoreInit<{ q?: string }>) => proxy<Filters>({ q: defaultValue.q ?? '' }),
-	{ plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })] },
+const fieldsStore = createContextStore<Filters, { q?: string }>(({ defaultValue }: ContextStoreInit<{ q?: string }>) =>
+	withPersist(proxy<Filters>({ q: defaultValue.q ?? '' }), {
+		fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+	}),
 )
 
 // Decorator front: class instance with `persistUrl` fields, discovered automatically.
@@ -33,9 +35,8 @@ const decoratedStore = createContextStore<DecoratedFilters, { q?: string }>(
 	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
 		const store = proxy(new DecoratedFilters())
 		store.q = defaultValue.q ?? ''
-		return store
+		return withPersist(store)
 	},
-	{ plugins: [persist()] },
 )
 
 function makeView(store: { useSnapshot: () => { q: string } }) {
@@ -98,17 +99,16 @@ describe('@ez-kit/va-store persist() plugin — service contract', () => {
 		const fake = createFakePersistAdapter()
 		let sources: readonly string[] = []
 		const inspector = createContextStore<{ ready: boolean }, { ready?: boolean }>(
-			({ defaultValue }: ContextStoreInit<{ ready?: boolean }>) => proxy({ ready: defaultValue.ready ?? false }),
-			{
-				plugins: [
-					{
-						name: 'inspect',
-						setup: (_proxy, ctx) => {
-							sources = ctx.services.get(PERSIST_ENGINES).sources()
-							return undefined
-						},
+			({ defaultValue }: ContextStoreInit<{ ready?: boolean }>) => {
+				const state = proxy({ ready: defaultValue.ready ?? false })
+				attachCapability(state, {
+					name: 'inspect',
+					setup: (_proxy, ctx) => {
+						sources = ctx.services.get(PERSIST_ENGINES).sources()
+						return undefined
 					},
-				],
+				})
+				return state
 			},
 		)
 		function Probe(): ReactElement {

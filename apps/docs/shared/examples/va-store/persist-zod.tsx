@@ -1,7 +1,7 @@
 'use client'
 
 import { createContextStore } from '@ez-kit/va-store'
-import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { type FieldsBuilder, PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { zodParam } from '@ez-kit/va-store/persist/validators/zod'
 import { StarIcon } from 'lucide-react'
@@ -23,9 +23,7 @@ const fields: FieldsBuilder<RatingState> = (field) => [
 	field((s) => s.rating, urlField({ parser: zodParam(ratingSchema) })),
 ]
 
-const ratingStore = createContextStore<RatingState>(() => proxy<RatingState>({ rating: 3 }), {
-	plugins: [persist({ fields })],
-})
+const ratingStore = createContextStore<RatingState>(() => withPersist(proxy<RatingState>({ rating: 3 }), { fields }))
 
 const { adapter, useSearch } = createMemoryUrlAdapter()
 

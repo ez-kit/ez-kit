@@ -15,6 +15,7 @@
 // --- persist plugin + app-level engines service ---
 export { persist, type PersistPluginOptions, useHydrated } from './plugin'
 export { PERSIST_ENGINES, type PersistEngines } from './service'
+export { withPersist } from './with-persist'
 
 // --- Provider + adapter contract ---
 export {

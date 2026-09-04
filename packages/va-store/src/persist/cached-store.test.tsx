@@ -7,8 +7,8 @@ import { createStoreCache } from '../store-cache'
 import { StoreProvider } from '../store-provider'
 
 import { paramString } from './codecs'
-import { persist } from './plugin'
 import { createFakePersistAdapter } from './testing/fake-persist-adapter'
+import { withPersist } from './with-persist'
 
 import type { StoreCache } from '../store-cache'
 import type { CachedStoreFactoryInit } from '@ez-kit/store-core/cache'
@@ -18,17 +18,16 @@ type Filters = { q: string; note: string }
 type FiltersSeed = { q?: string; note?: string }
 
 /**
- * A cached store group that ALSO carries `persist()`. The two layers compose through `plugins`:
- * the cache owns the proxy's lifetime, the plugin mirrors its fields to the URL source.
+ * A cached store group that ALSO carries `persist()`. The two layers compose in the factory: the
+ * cache owns the proxy's lifetime, the plugin mirrors its fields to the URL source.
  */
 function createCachedFilters(cache: StoreCache, name: string) {
 	return cache.createCachedStore<Filters, FiltersSeed>(
 		({ defaultValue }: CachedStoreFactoryInit<FiltersSeed>) =>
-			proxy<Filters>({ q: defaultValue.q ?? '', note: defaultValue.note ?? '' }),
-		{
-			name,
-			plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })],
-		},
+			withPersist(proxy<Filters>({ q: defaultValue.q ?? '', note: defaultValue.note ?? '' }), {
+				fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+			}),
+		{ name },
 	)
 }
 

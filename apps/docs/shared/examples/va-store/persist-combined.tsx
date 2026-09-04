@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
 import { createContextStore } from '@ez-kit/va-store'
-import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { type FieldsBuilder, PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { LOCAL_STORAGE_SOURCE, localStorageField } from '@ez-kit/va-store/persist/storage'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { useId } from 'react'
@@ -29,9 +29,9 @@ const fields: FieldsBuilder<ListState> = (field) => [
 	field((s) => s.density, localStorageField()),
 ]
 
-const listStore = createContextStore<ListState>(() => proxy<ListState>({ q: '', density: 'comfortable' }), {
-	plugins: [persist({ fields })],
-})
+const listStore = createContextStore<ListState>(() =>
+	withPersist(proxy<ListState>({ q: '', density: 'comfortable' }), { fields }),
+)
 
 // Seed the URL with a shared link (?q=boots). Storage starts empty — first-present-wins means the
 // shared `q` is never clobbered by a restored value.

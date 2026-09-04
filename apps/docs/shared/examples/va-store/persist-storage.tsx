@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
 import { createContextStore } from '@ez-kit/va-store'
-import { type FieldsBuilder, persist, PersistProvider, useHydrated } from '@ez-kit/va-store/persist'
+import { type FieldsBuilder, PersistProvider, useHydrated, withPersist } from '@ez-kit/va-store/persist'
 import { LOCAL_STORAGE_SOURCE, localStorageField } from '@ez-kit/va-store/persist/storage'
 import { MinusIcon, PlusIcon } from 'lucide-react'
 import { useId } from 'react'
@@ -28,9 +28,9 @@ const fields: FieldsBuilder<PrefsState> = (field) => [
 	field((s) => s.fontScale, localStorageField()),
 ]
 
-const prefsStore = createContextStore<PrefsState>(() => proxy<PrefsState>({ theme: 'light', fontScale: 1 }), {
-	plugins: [persist({ fields })],
-})
+const prefsStore = createContextStore<PrefsState>(() =>
+	withPersist(proxy<PrefsState>({ theme: 'light', fontScale: 1 }), { fields }),
+)
 
 const { adapter, useBlob } = createMemoryStorageAdapter(LOCAL_STORAGE_SOURCE)
 

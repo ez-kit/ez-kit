@@ -1,3 +1,4 @@
+import { attachCapability } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement, useSyncExternalStore } from 'react'
 import { proxy } from 'valtio'
@@ -5,9 +6,9 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createContextStore, type ContextStoreInit } from '../create-context-store'
 import { paramString } from '../persist/codecs'
-import { persist } from '../persist/plugin'
 import { PERSIST_ENGINES } from '../persist/service'
 import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '../persist/url/adapter'
+import { withPersist } from '../persist/with-persist'
 import { createStoreCache } from '../store-cache'
 
 import { StoreProvider } from './index'
@@ -65,17 +66,16 @@ describe('StoreProvider — service resolution', () => {
 		const { adapter } = createSpyUrlAdapter()
 		let resolvedSources: readonly string[] = []
 		const store = createContextStore<{ count: number }, { count?: number }>(
-			({ defaultValue }: ContextStoreInit<{ count?: number }>) => proxy({ count: defaultValue.count ?? 0 }),
-			{
-				plugins: [
-					{
-						name: 'probe',
-						setup: (_proxy, ctx) => {
-							resolvedSources = ctx.services.get(PERSIST_ENGINES).sources()
-							return undefined
-						},
+			({ defaultValue }: ContextStoreInit<{ count?: number }>) => {
+				const state = proxy({ count: defaultValue.count ?? 0 })
+				attachCapability(state, {
+					name: 'probe',
+					setup: (_proxy, ctx) => {
+						resolvedSources = ctx.services.get(PERSIST_ENGINES).sources()
+						return undefined
 					},
-				],
+				})
+				return state
 			},
 		)
 		function View(): ReactElement {
@@ -98,10 +98,13 @@ describe('StoreProvider — service resolution', () => {
 	it('drives a cached, persisted store via the cache layer under StoreProvider', async () => {
 		const { adapter } = createSpyUrlAdapter('?q=cached')
 		const cache = createStoreCache()
-		const group = cache.createCachedStore<{ q: string }>(() => proxy({ q: '' }), {
-			name: 'cached-persist',
-			plugins: [persist({ fields: (field) => [field((s) => s.q, { source: URL_SOURCE, parser: paramString() })] })],
-		})
+		const group = cache.createCachedStore<{ q: string }>(
+			() =>
+				withPersist(proxy({ q: '' }), {
+					fields: (field) => [field((s) => s.q, { source: URL_SOURCE, parser: paramString() })],
+				}),
+			{ name: 'cached-persist' },
+		)
 
 		function QView(): ReactElement {
 			const snap = group.useSnapshot()
@@ -128,16 +131,16 @@ describe('StoreProvider — single writer for one source', () => {
 	it('routes many url-bound stores through one engine (commits coalesce, no races)', async () => {
 		const { adapter, commitSpy } = createSpyUrlAdapter()
 
-		const storeA = createContextStore<{ a: string }>(() => proxy({ a: '' }), {
-			plugins: [
-				persist({ fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })] }),
-			],
-		})
-		const storeB = createContextStore<{ b: string }>(() => proxy({ b: '' }), {
-			plugins: [
-				persist({ fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })] }),
-			],
-		})
+		const storeA = createContextStore<{ a: string }>(() =>
+			withPersist(proxy({ a: '' }), {
+				fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })],
+			}),
+		)
+		const storeB = createContextStore<{ b: string }>(() =>
+			withPersist(proxy({ b: '' }), {
+				fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })],
+			}),
+		)
 
 		function Editor(): ReactElement {
 			const a = storeA.useStore()

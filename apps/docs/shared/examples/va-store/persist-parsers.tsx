@@ -8,8 +8,8 @@ import {
 	paramArray,
 	paramEnum,
 	paramString,
-	persist,
 	PersistProvider,
+	withPersist,
 } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { useId } from 'react'
@@ -43,9 +43,8 @@ const fields: FieldsBuilder<SearchState> = (field) => [
 	field((s) => s.sort, urlField({ parser: paramEnum<Sort>(['relevance', 'newest']) })),
 ]
 
-const searchStore = createContextStore<SearchState>(
-	() => proxy<SearchState>({ q: '', page: 1, inStock: false, tags: [], sort: 'relevance' }),
-	{ plugins: [persist({ fields })] },
+const searchStore = createContextStore<SearchState>(() =>
+	withPersist(proxy<SearchState>({ q: '', page: 1, inStock: false, tags: [], sort: 'relevance' }), { fields }),
 )
 
 const { adapter, useSearch } = createMemoryUrlAdapter('q=boots&tags=red,suede&sort=newest&page=2')

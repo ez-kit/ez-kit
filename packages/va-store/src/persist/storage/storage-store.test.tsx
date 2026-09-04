@@ -8,8 +8,9 @@ import { createContextStore } from '../../create-context-store'
 import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
 import { PERSIST_HANDLE, URL_HANDLE } from '../handle'
-import { persist, useHydrated } from '../plugin'
+import { useHydrated } from '../plugin'
 import { createFakePersistAdapter } from '../testing/fake-persist-adapter'
+import { withPersist } from '../with-persist'
 
 import { DEFAULT_STORAGE_KEY, localStorageAdapter, sessionStorageAdapter } from './adapter'
 
@@ -29,9 +30,9 @@ function blobOf(area: Storage): Record<string, string> {
 	return parsed.s ?? {}
 }
 
-/** Build a non-cached persist store (factory + accessor fields) mounted via the `persist()` plugin. */
+/** Build a non-cached persist store (factory + accessor fields) mounted via `withPersist`. */
 function persistFieldsStore<TState extends object>(factory: () => TState, fields: FieldsBuilder<object>) {
-	return createContextStore<TState>(factory, { plugins: [persist({ fields })] })
+	return createContextStore<TState>(() => withPersist(factory(), { fields }))
 }
 
 describe('@ez-kit/va-store persist storage adapters', () => {
@@ -163,7 +164,7 @@ describe('@ez-kit/va-store persist dual-source (URL + storage)', () => {
 		field((s) => (s as { q: string }).q, { source: 'localStorage', parser: paramString() }),
 	]
 	const makeDualStore = () =>
-		createContextStore<{ q: string }>(() => proxy({ q: '' }), { plugins: [persist({ fields: dualFields })] })
+		createContextStore<{ q: string }>(() => withPersist(proxy({ q: '' }), { fields: dualFields }))
 
 	it('lets the URL win over a stale stored value on cold start (first-present-wins)', async () => {
 		window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify({ v: 0, s: { q: 'cached' } }))
@@ -252,9 +253,11 @@ describe('@ez-kit/va-store persist dual-source (URL + storage)', () => {
 
 describe('@ez-kit/va-store persist useHydrated', () => {
 	const makeStore = () =>
-		createContextStore<{ q: string }>(() => proxy({ q: '' }), {
-			plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })] })],
-		})
+		createContextStore<{ q: string }>(() =>
+			withPersist(proxy({ q: '' }), {
+				fields: (field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })],
+			}),
+		)
 
 	it('is false on the server render', () => {
 		const store = makeStore()

@@ -7,13 +7,15 @@ import { describe, expect, it } from 'vitest'
 import { createContextStore } from '../../create-context-store'
 import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
-import { persist } from '../plugin'
+import { withPersist } from '../with-persist'
 
 import { reactRouterAdapter } from './react-router'
 
-const store = createContextStore<{ q: string }>(() => proxy({ q: '' }), {
-	plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })],
-})
+const store = createContextStore<{ q: string }>(() =>
+	withPersist(proxy({ q: '' }), {
+		fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+	}),
+)
 
 function View(): ReactElement {
 	const snap = store.useSnapshot()

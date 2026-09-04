@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createContextStore } from '../../create-context-store'
 import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
-import { persist } from '../plugin'
+import { withPersist } from '../with-persist'
 
 /**
  * In-memory stand-in for the App Router navigation state. `useSearchParams`/`usePathname`
@@ -64,9 +64,11 @@ vi.mock('next/navigation', () => ({
 // Imported after the mock so the adapter binds to the mocked `next/navigation`.
 const { nextAdapter } = await import('./next')
 
-const store = createContextStore<{ q: string }>(() => proxy({ q: '' }), {
-	plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })],
-})
+const store = createContextStore<{ q: string }>(() =>
+	withPersist(proxy({ q: '' }), {
+		fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+	}),
+)
 
 function View(): ReactElement {
 	const snap = store.useSnapshot()

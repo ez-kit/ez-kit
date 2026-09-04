@@ -26,7 +26,7 @@ describe('createContextStore — capability lifecycle (non-cached)', () => {
 			},
 		}
 
-		const store = createContextStore((init) => {
+		const store = createContextStore((init: ContextStoreInit<CounterDefaultValue>) => {
 			const state = counterFactory(init)
 			attachCapability(state, plugin)
 			return state
@@ -65,7 +65,7 @@ describe('createContextStore — capability lifecycle (non-cached)', () => {
 			},
 		}
 
-		const store = createContextStore((init) => {
+		const store = createContextStore((init: ContextStoreInit<CounterDefaultValue>) => {
 			const state = counterFactory(init)
 			attachCapability(state, plugin)
 			return state
@@ -135,7 +135,7 @@ describe('createContextStore — service resolution', () => {
 			},
 		}
 
-		const store = createContextStore((init) => {
+		const store = createContextStore((init: ContextStoreInit<CounterDefaultValue>) => {
 			const state = counterFactory(init)
 			attachCapability(state, plugin)
 			return state
