@@ -1,0 +1,175 @@
+import { describe, expect, it, vi } from 'vitest'
+
+import { createHistoryStack } from './stack'
+
+import type { HistoryAdapter, HistorySnapshot } from './types'
+
+type State = { count: number }
+
+function harness(initial: State = { count: 0 }) {
+	let current = initial
+	const snapshots: HistorySnapshot<State>[] = []
+	const adapter: HistoryAdapter<State> = {
+		read: () => current,
+		write: (state) => {
+			current = state
+		},
+		onStateChange: (snapshot) => snapshots.push(snapshot),
+	}
+	return {
+		adapter,
+		snapshots,
+		get current() {
+			return current
+		},
+		set current(next: State) {
+			current = next
+		},
+	}
+}
+
+describe('createHistoryStack', () => {
+	it('records a past entry and clears futures', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+
+		expect(h.snapshots.at(-1)?.pasts).toEqual([{ count: 0 }])
+		expect(h.snapshots.at(-1)?.futures).toEqual([])
+	})
+
+	it('undo writes the previous state back and moves the current one into futures', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+
+		history.undo()
+
+		expect(h.current).toEqual({ count: 0 })
+		expect(h.snapshots.at(-1)?.futures).toEqual([{ count: 1 }])
+		expect(h.snapshots.at(-1)?.pasts).toEqual([])
+	})
+
+	it('is a no-op when there is nothing to undo or redo', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		const before = h.snapshots.length
+
+		history.undo()
+		history.redo()
+
+		expect(h.current).toEqual({ count: 0 })
+		expect(h.snapshots.length).toBe(before)
+	})
+
+	it('trims the pasts stack from the front once limit is exceeded', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, { limit: 2 })
+
+		history.record({ count: 0 }, { count: 1 })
+		history.record({ count: 1 }, { count: 2 })
+		history.record({ count: 2 }, { count: 3 })
+
+		expect(h.snapshots.at(-1)?.pasts).toEqual([{ count: 1 }, { count: 2 }])
+	})
+
+	it('trims defaultPasts beyond limit from the front', () => {
+		const h = harness()
+		createHistoryStack(h.adapter, { limit: 1, defaultPasts: [{ count: 7 }, { count: 8 }] })
+
+		expect(h.snapshots.at(-1)?.pasts).toEqual([{ count: 8 }])
+	})
+
+	it('does not record while paused, and the state still changes', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, { defaultPaused: true })
+
+		history.record({ count: 0 }, { count: 1 })
+
+		expect(h.snapshots.at(-1)?.pasts ?? []).toEqual([])
+	})
+
+	it('skip is re-entrant and restores the outer paused value', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, { defaultPaused: true })
+
+		history.skip(() => {
+			history.skip(() => {})
+			expect(history.isPaused).toBe(true)
+		})
+
+		expect(history.isPaused).toBe(true)
+	})
+
+	it('skips a write when shouldRecord returns false but still lets it through', () => {
+		const h = harness()
+		const shouldRecord = vi.fn(() => false)
+		const history = createHistoryStack<State, string>(h.adapter, { shouldRecord })
+
+		history.record({ count: 0 }, { count: 1 }, 'typing')
+
+		expect(shouldRecord).toHaveBeenCalledWith({ count: 0 }, { count: 1 }, 'typing')
+		expect(h.snapshots.at(-1)?.pasts ?? []).toEqual([])
+	})
+
+	it('goto jumps to an absolute timeline position with a single write', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		history.record({ count: 1 }, { count: 2 })
+		h.current = { count: 2 }
+		const writes = h.snapshots.length
+
+		history.goto(0)
+
+		expect(h.current).toEqual({ count: 0 })
+		expect(h.snapshots.length).toBe(writes + 1)
+		expect(h.snapshots.at(-1)?.futures).toEqual([{ count: 1 }, { count: 2 }])
+	})
+
+	it('clamps an out-of-range goto index instead of throwing', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+
+		history.goto(-5)
+		expect(h.current).toEqual({ count: 0 })
+
+		history.goto(99)
+		expect(h.current).toEqual({ count: 1 })
+	})
+
+	it('clear empties both stacks without touching the state', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+
+		history.clear()
+
+		expect(h.current).toEqual({ count: 1 })
+		expect(h.snapshots.at(-1)?.pasts).toEqual([])
+		expect(h.snapshots.at(-1)?.futures).toEqual([])
+	})
+
+	it('does not record the write it performs itself during undo', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+		// эмулируем менеджер, который зовёт record из подписки на любую запись
+		h.adapter.write = (state) => {
+			h.current = state
+			history.record({ count: 1 }, state)
+		}
+
+		history.undo()
+
+		expect(h.snapshots.at(-1)?.pasts).toEqual([])
+		expect(h.snapshots.at(-1)?.futures).toEqual([{ count: 1 }])
+	})
+})
