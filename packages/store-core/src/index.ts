@@ -7,4 +7,6 @@ export type { ControlledConfig, ControlledFieldConfig } from './controlled'
 export { serviceKey, createServiceRegistry, extendServiceRegistry } from './service'
 export type { ServiceKey, ServiceRegistry } from './service'
 
+export { attachCapability, capabilitiesOf } from './capability'
+
 export type { StorePlugin, PluginContext, PluginCleanup } from './plugin'
