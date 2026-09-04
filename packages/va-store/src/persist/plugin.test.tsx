@@ -4,7 +4,7 @@ import { type ReactElement } from 'react'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
-import { createStore, type StoreInit } from '../create-store'
+import { createContextStore, type ContextStoreInit } from '../create-context-store'
 import { StoreProvider } from '../store-provider'
 
 import { paramString } from './codecs'
@@ -20,8 +20,8 @@ const STORE_ID: StoreId = { path: [], name: 'plugin-test', id: 'singleton' }
 type Filters = { q: string }
 
 // Accessor front: plain proxy + plugin `fields` builder.
-const fieldsStore = createStore<Filters, { q?: string }>(
-	({ defaultValue }: StoreInit<{ q?: string }>) => proxy<Filters>({ q: defaultValue.q ?? '' }),
+const fieldsStore = createContextStore<Filters, { q?: string }>(
+	({ defaultValue }: ContextStoreInit<{ q?: string }>) => proxy<Filters>({ q: defaultValue.q ?? '' }),
 	{ plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })] },
 )
 
@@ -29,8 +29,8 @@ const fieldsStore = createStore<Filters, { q?: string }>(
 class DecoratedFilters {
 	@persistUrl() q = ''
 }
-const decoratedStore = createStore<DecoratedFilters, { q?: string }>(
-	({ defaultValue }: StoreInit<{ q?: string }>) => {
+const decoratedStore = createContextStore<DecoratedFilters, { q?: string }>(
+	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
 		const store = proxy(new DecoratedFilters())
 		store.q = defaultValue.q ?? ''
 		return store
@@ -55,7 +55,7 @@ describe('@ez-kit/va-store persist() plugin on a non-cached store', () => {
 		describe(name, () => {
 			const QView = makeView(store)
 
-			it('exposes the createStore API surface', () => {
+			it('exposes the createContextStore API surface', () => {
 				expect(typeof store.Provider).toBe('function')
 				expect(typeof store.useSnapshot).toBe('function')
 				expect(typeof store.useStore).toBe('function')
@@ -97,8 +97,8 @@ describe('@ez-kit/va-store persist() plugin — service contract', () => {
 	it('resolves PERSIST_ENGINES with one engine per mounted source', () => {
 		const fake = createFakePersistAdapter()
 		let sources: readonly string[] = []
-		const inspector = createStore<{ ready: boolean }, { ready?: boolean }>(
-			({ defaultValue }: StoreInit<{ ready?: boolean }>) => proxy({ ready: defaultValue.ready ?? false }),
+		const inspector = createContextStore<{ ready: boolean }, { ready?: boolean }>(
+			({ defaultValue }: ContextStoreInit<{ ready?: boolean }>) => proxy({ ready: defaultValue.ready ?? false }),
 			{
 				plugins: [
 					{

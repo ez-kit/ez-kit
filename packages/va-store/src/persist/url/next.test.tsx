@@ -3,7 +3,7 @@ import { type ReactElement, useSyncExternalStore } from 'react'
 import { proxy } from 'valtio'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createStore } from '../../create-store'
+import { createContextStore } from '../../create-context-store'
 import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
 import { persist } from '../plugin'
@@ -64,7 +64,7 @@ vi.mock('next/navigation', () => ({
 // Imported after the mock so the adapter binds to the mocked `next/navigation`.
 const { nextAdapter } = await import('./next')
 
-const store = createStore<{ q: string }>(() => proxy({ q: '' }), {
+const store = createContextStore<{ q: string }>(() => proxy({ q: '' }), {
 	plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })],
 })
 

@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createStore } from '@ez-kit/va-store'
+import { createContextStore } from '@ez-kit/va-store'
 import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { MinusIcon, PlusIcon } from 'lucide-react'
@@ -23,10 +23,10 @@ type FiltersState = {
 // The accessor API runs in this in-browser sandbox (no decorator transform needed). The decorator
 // form — class Filters { @persistUrl() q = '' } — produces identical URL output. See Quick start → URL.
 // Author the `fields` builder against the store type for typed selectors; `persist()` infers the state
-// type from the surrounding `createStore<FiltersState>` call, so no cast is needed.
+// type from the surrounding `createContextStore<FiltersState>` call, so no cast is needed.
 const fields: FieldsBuilder<FiltersState> = (field) => [field((s) => s.q, urlField()), field((s) => s.page, urlField())]
 
-const filtersStore = createStore<FiltersState>(() => proxy<FiltersState>({ q: '', page: 1 }), {
+const filtersStore = createContextStore<FiltersState>(() => proxy<FiltersState>({ q: '', page: 1 }), {
 	plugins: [persist({ fields })],
 })
 

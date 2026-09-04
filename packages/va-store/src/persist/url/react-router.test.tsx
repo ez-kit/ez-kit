@@ -4,14 +4,14 @@ import { MemoryRouter } from 'react-router'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
-import { createStore } from '../../create-store'
+import { createContextStore } from '../../create-context-store'
 import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
 import { persist } from '../plugin'
 
 import { reactRouterAdapter } from './react-router'
 
-const store = createStore<{ q: string }>(() => proxy({ q: '' }), {
+const store = createContextStore<{ q: string }>(() => proxy({ q: '' }), {
 	plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })],
 })
 

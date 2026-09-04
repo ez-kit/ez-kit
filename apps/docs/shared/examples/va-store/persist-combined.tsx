@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createStore } from '@ez-kit/va-store'
+import { createContextStore } from '@ez-kit/va-store'
 import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/va-store/persist'
 import { LOCAL_STORAGE_SOURCE, localStorageField } from '@ez-kit/va-store/persist/storage'
 import { urlField } from '@ez-kit/va-store/persist/url'
@@ -29,7 +29,7 @@ const fields: FieldsBuilder<ListState> = (field) => [
 	field((s) => s.density, localStorageField()),
 ]
 
-const listStore = createStore<ListState>(() => proxy<ListState>({ q: '', density: 'comfortable' }), {
+const listStore = createContextStore<ListState>(() => proxy<ListState>({ q: '', density: 'comfortable' }), {
 	plugins: [persist({ fields })],
 })
 

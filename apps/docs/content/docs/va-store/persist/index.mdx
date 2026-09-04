@@ -39,26 +39,26 @@ Valtio is the **source of truth**; the substrate is a **mirror**.
 
 You bring your own proxy and declare which fields sync. There are two fronts on one engine:
 
-| Front                                                                                    | You write          | Best for                                      |
-| ---------------------------------------------------------------------------------------- | ------------------ | --------------------------------------------- |
-| [Decorators](./va-store/persist/decorators) — `@persistUrl()` / `@persistLocalStorage()` | classes            | entity models, composition, inheritance       |
-| [Fields / accessor](./va-store/persist/fields) — `field(s => s.q, urlField())`           | plain `proxy({…})` | quick stores; no build-time decorator support |
+| Front                                                                           | You write          | Best for                                      |
+| ------------------------------------------------------------------------------- | ------------------ | --------------------------------------------- |
+| [Decorators](./persist/decorators) — `@persistUrl()` / `@persistLocalStorage()` | classes            | entity models, composition, inheritance       |
+| [Fields / accessor](./persist/fields) — `field(s => s.q, urlField())`           | plain `proxy({…})` | quick stores; no build-time decorator support |
 
 Both produce the same path-based descriptors and feed the same engine, so sources, parsers, and SSR behave identically.
 
 ## On this topic
 
-| Page                                                            | What it covers                                                          |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| [Quick start — URL](./va-store/persist/quick-start-url)         | The shortest URL-synced store.                                          |
-| [Quick start — storage](./va-store/persist/quick-start-storage) | The same store, persisted to localStorage.                              |
-| [Combined](./va-store/persist/combined)                         | URL + storage on one store; first-present-wins; per-source handles.     |
-| [Cached stores](./va-store/persist/cache)                       | One store that is both cached and persisted, under one `StoreProvider`. |
-| [Deep dive — URL](./va-store/persist/deep-dive-url)             | History push/replace, key prefix, router adapters, SSR.                 |
-| [Deep dive — storage](./va-store/persist/deep-dive-storage)     | Blob packing, `useHydrated()`, schema versioning, cross-tab.            |
-| [Custom adapter](./va-store/persist/custom-adapter)             | Write your own `SourcePort`.                                            |
-| [Decorators](./va-store/persist/decorators)                     | Classes: composition, inheritance, key placement.                       |
-| [Fields](./va-store/persist/fields)                             | The accessor API for plain proxies.                                     |
-| [Parsers](./va-store/persist/parsers)                           | Typed codecs, auto-resolution, Zod, custom parsers.                     |
-| [TypeScript](./va-store/persist/typescript)                     | Decorator build setup.                                                  |
-| [Migration](./va-store/persist/migration)                       | Moving off `createPersistStore` / `createPersistFields`.                |
+| Page                                                   | What it covers                                                          |
+| ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| [Quick start — URL](./persist/quick-start-url)         | The shortest URL-synced store.                                          |
+| [Quick start — storage](./persist/quick-start-storage) | The same store, persisted to localStorage.                              |
+| [Combined](./persist/combined)                         | URL + storage on one store; first-present-wins; per-source handles.     |
+| [Cached stores](./persist/cache)                       | One store that is both cached and persisted, under one `StoreProvider`. |
+| [Deep dive — URL](./persist/deep-dive-url)             | History push/replace, key prefix, router adapters, SSR.                 |
+| [Deep dive — storage](./persist/deep-dive-storage)     | Blob packing, `useHydrated()`, schema versioning, cross-tab.            |
+| [Custom adapter](./persist/custom-adapter)             | Write your own `SourcePort`.                                            |
+| [Decorators](./persist/decorators)                     | Classes: composition, inheritance, key placement.                       |
+| [Fields](./persist/fields)                             | The accessor API for plain proxies.                                     |
+| [Parsers](./persist/parsers)                           | Typed codecs, auto-resolution, Zod, custom parsers.                     |
+| [TypeScript](./persist/typescript)                     | Decorator build setup.                                                  |
+| [Migration](./persist/migration)                       | Moving off `createPersistStore` / `createPersistFields`.                |

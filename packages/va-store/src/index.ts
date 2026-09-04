@@ -10,9 +10,6 @@ export type {
 	UseSnapshotOptions,
 } from './create-context-store'
 
-export { createStore } from './create-store'
-export type { CreateStoreOptions, CreateStoreResult, StoreFactory, StoreInit } from './create-store'
-
 export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore } from './store-cache'
 export type {
 	StoreCache,

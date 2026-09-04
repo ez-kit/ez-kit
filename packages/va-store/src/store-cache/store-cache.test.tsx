@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 
-import type { StoreInit } from '../create-store'
+import type { ContextStoreInit } from '../create-context-store'
 import type { Snapshot } from 'valtio'
 
 type FormState = {
@@ -20,7 +20,7 @@ const GC_TIME = 200
 /** A multiple of gcTime, not a hair over it, so a loaded CI runner cannot race the eviction timer. */
 const PAST_GC_TIME = GC_TIME * 2
 
-const formFactory = ({ defaultValue }: StoreInit<FormDefaultValue>) =>
+const formFactory = ({ defaultValue }: ContextStoreInit<FormDefaultValue>) =>
 	proxy<FormState>({
 		dirty: defaultValue.dirty ?? false,
 		name: defaultValue.name ?? '',
@@ -525,5 +525,100 @@ describe('valtio createStoreCache — SSR ephemerality', () => {
 
 		expect(one).toContain('first')
 		expect(two).toContain('second')
+	})
+})
+
+describe('valtio createStoreCache — gcTime={0} opt-out', () => {
+	it('evicts on unmount with gcTime={0}, and reseeds from defaultValue on remount', async () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'gc-zero' })
+
+		function App({ show }: { show: boolean }) {
+			return (
+				<cache.Provider>
+					{show ? (
+						<form.Provider
+							id='draft'
+							gcTime={0}
+							defaultValue={{ name: 'seed' }}
+						>
+							<span />
+						</form.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(<App show={true} />)
+		act(() => {
+			const live = form.getFromCache({ id: 'draft' })
+			if (live) live.name = 'edited'
+		})
+		expect(form.getFromCache({ id: 'draft' })?.name).toBe('edited')
+
+		// Last observer leaves: with gcTime={0} the entry goes on the next macrotask, not after a window.
+		rerender(<App show={false} />)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0))
+		})
+		expect(form.getFromCache({ id: 'draft' })).toBeUndefined()
+
+		// A fresh entry: the factory runs again, so `defaultValue` seeds it as on first mount.
+		rerender(<App show={true} />)
+		expect(form.getFromCache({ id: 'draft' })?.name).toBe('seed')
+	})
+
+	it('cancels a pending gcTime={0} eviction when an observer returns in the same commit', async () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'gc-zero-handoff' })
+
+		// Two Providers on one key: the handoff a route cross-fade or a re-parented subtree performs.
+		function App({ a, b }: { a: boolean; b: boolean }) {
+			return (
+				<cache.Provider>
+					{a ? (
+						<form.Provider
+							id='draft'
+							gcTime={0}
+							defaultValue={{ name: 'seed' }}
+						>
+							<span />
+						</form.Provider>
+					) : null}
+					{b ? (
+						<form.Provider
+							id='draft'
+							gcTime={0}
+							defaultValue={{ name: 'seed' }}
+						>
+							<span />
+						</form.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(
+			<App
+				a={true}
+				b={false}
+			/>,
+		)
+		act(() => {
+			const live = form.getFromCache({ id: 'draft' })
+			if (live) live.name = 'edited'
+		})
+
+		// One commit: the first Provider's cleanup and the second's effect both run before any timer.
+		rerender(
+			<App
+				a={false}
+				b={true}
+			/>,
+		)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0))
+		})
+		expect(form.getFromCache({ id: 'draft' })?.name).toBe('edited')
 	})
 })

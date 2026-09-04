@@ -3,7 +3,7 @@ import { type ReactElement, useSyncExternalStore } from 'react'
 import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createStore, type StoreInit } from '../create-store'
+import { createContextStore, type ContextStoreInit } from '../create-context-store'
 import { paramString } from '../persist/codecs'
 import { persist } from '../persist/plugin'
 import { PERSIST_ENGINES } from '../persist/service'
@@ -64,8 +64,8 @@ describe('StoreProvider — service resolution', () => {
 	it('exposes the PERSIST_ENGINES service to a plugin under StoreProvider', async () => {
 		const { adapter } = createSpyUrlAdapter()
 		let resolvedSources: readonly string[] = []
-		const store = createStore<{ count: number }, { count?: number }>(
-			({ defaultValue }: StoreInit<{ count?: number }>) => proxy({ count: defaultValue.count ?? 0 }),
+		const store = createContextStore<{ count: number }, { count?: number }>(
+			({ defaultValue }: ContextStoreInit<{ count?: number }>) => proxy({ count: defaultValue.count ?? 0 }),
 			{
 				plugins: [
 					{
@@ -128,12 +128,12 @@ describe('StoreProvider — single writer for one source', () => {
 	it('routes many url-bound stores through one engine (commits coalesce, no races)', async () => {
 		const { adapter, commitSpy } = createSpyUrlAdapter()
 
-		const storeA = createStore<{ a: string }>(() => proxy({ a: '' }), {
+		const storeA = createContextStore<{ a: string }>(() => proxy({ a: '' }), {
 			plugins: [
 				persist({ fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })] }),
 			],
 		})
-		const storeB = createStore<{ b: string }>(() => proxy({ b: '' }), {
+		const storeB = createContextStore<{ b: string }>(() => proxy({ b: '' }), {
 			plugins: [
 				persist({ fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })] }),
 			],

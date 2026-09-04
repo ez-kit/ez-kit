@@ -4,9 +4,9 @@ import { StrictMode } from 'react'
 import { proxy, subscribe } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createStore } from './index'
+import { createContextStore } from './index'
 
-import type { StoreInit } from './index'
+import type { ContextStoreInit } from './index'
 
 type CounterState = {
 	count: number
@@ -27,7 +27,7 @@ function assertDefined<T>(value: T | undefined): T {
 	return value
 }
 
-function counterFactory({ defaultValue }: StoreInit<CounterDefaultValue>) {
+function counterFactory({ defaultValue }: ContextStoreInit<CounterDefaultValue>) {
 	return proxy<CounterState>({
 		count: defaultValue.count ?? 0,
 		label: defaultValue.label ?? 'initial',
@@ -38,7 +38,7 @@ function counterFactory({ defaultValue }: StoreInit<CounterDefaultValue>) {
 
 describe('@ez-kit/va-store — controlled value', () => {
 	it('lets value win over defaultValue for its own key on mount, while other keys still seed from defaultValue', () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 
 		function View() {
 			const snap = store.useSnapshot()
@@ -64,7 +64,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('syncs the store when the value prop changes', () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 
 		function View() {
 			const snap = store.useSnapshot()
@@ -93,7 +93,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('does not write when a new value object holds the same values (default Object.is per key, primitives)', () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 		let raw: CounterState | undefined
 
 		function CaptureStore() {
@@ -127,7 +127,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('suppresses writes for a custom equals when a new reference holds the same values', () => {
-		const store = createStore(counterFactory, { controlled: { users: { equals: shallowEqual } } })
+		const store = createContextStore(counterFactory, { controlled: { users: { equals: shallowEqual } } })
 		let raw: CounterState | undefined
 
 		function CaptureStore() {
@@ -162,7 +162,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('still writes through a custom equals when the values actually differ', () => {
-		const store = createStore(counterFactory, { controlled: { users: { equals: shallowEqual } } })
+		const store = createContextStore(counterFactory, { controlled: { users: { equals: shallowEqual } } })
 
 		function View() {
 			const snap = store.useSnapshot()
@@ -192,7 +192,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 
 	it('calls a custom set instead of the default direct write, passing only the controlled value', () => {
 		const setUsers = vi.fn()
-		const store = createStore(counterFactory, {
+		const store = createContextStore(counterFactory, {
 			controlled: {
 				users: {
 					set: (state, value) => {
@@ -214,7 +214,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('lets a local write to a controlled field live until the next value change', async () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 
 		function View() {
 			const snap = store.useSnapshot()
@@ -270,7 +270,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('calls onValueChange on an internal write, with only the controlled keys', async () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 		const onValueChange = vi.fn()
 
 		function View() {
@@ -307,7 +307,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 
 	it('does not call onValueChange for the sync it just applied from the value prop (anti-echo)', async () => {
 		const onValueChange = vi.fn()
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 
 		function View() {
 			const snap = store.useSnapshot()
@@ -345,7 +345,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('emits an object-typed controlled field as a snapshot, not the live mutable proxy', async () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 		const onValueChange = vi.fn()
 		let raw: CounterState | undefined
 
@@ -388,7 +388,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('reflects a fresh callback passed via value after the parent re-renders (no stale closure)', () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 		const firstHandler = vi.fn()
 		const secondHandler = vi.fn()
 
@@ -429,7 +429,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('replaces a nested key wholesale rather than merging into it', () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 
 		function View() {
 			const snap = store.useSnapshot()
@@ -458,7 +458,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('stops controlling a key once it is removed from value, without reverting to defaultValue', async () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 
 		function View() {
 			const snap = store.useSnapshot()
@@ -504,7 +504,7 @@ describe('@ez-kit/va-store — controlled value', () => {
 	})
 
 	it('creates the proxy exactly once under StrictMode double-invocation', async () => {
-		const store = createStore(counterFactory)
+		const store = createContextStore(counterFactory)
 
 		function View() {
 			const snap = store.useSnapshot()

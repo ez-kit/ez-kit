@@ -27,7 +27,7 @@ const tags = paramArray(paramString())
 
 All codecs live on the core `@ez-kit/va-store/persist` entry — they're source-agnostic. Each satisfies a round-trip contract (`parse(stringify(v))` deep-equals `v`), which lets the engine break the proxy⇄substrate loop by comparing serialized forms.
 
-The parsers are exercised live by the [URL deep dive demo](./va-store/persist/deep-dive-url) — an array of tags and an enum sort, encoded into the query string.
+The parsers are exercised live by the [URL deep dive demo](./deep-dive-url) — an array of tags and an enum sort, encoded into the query string.
 
 ## Auto-resolution
 

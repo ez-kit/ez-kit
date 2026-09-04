@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server'
 import { proxy } from 'valtio'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { createStore } from '../../create-store'
+import { createContextStore } from '../../create-context-store'
 import { StoreProvider } from '../../store-provider'
 import { paramString } from '../codecs'
 import { PERSIST_HANDLE, URL_HANDLE } from '../handle'
@@ -31,7 +31,7 @@ function blobOf(area: Storage): Record<string, string> {
 
 /** Build a non-cached persist store (factory + accessor fields) mounted via the `persist()` plugin. */
 function persistFieldsStore<TState extends object>(factory: () => TState, fields: FieldsBuilder<object>) {
-	return createStore<TState>(factory, { plugins: [persist({ fields })] })
+	return createContextStore<TState>(factory, { plugins: [persist({ fields })] })
 }
 
 describe('@ez-kit/va-store persist storage adapters', () => {
@@ -163,7 +163,7 @@ describe('@ez-kit/va-store persist dual-source (URL + storage)', () => {
 		field((s) => (s as { q: string }).q, { source: 'localStorage', parser: paramString() }),
 	]
 	const makeDualStore = () =>
-		createStore<{ q: string }>(() => proxy({ q: '' }), { plugins: [persist({ fields: dualFields })] })
+		createContextStore<{ q: string }>(() => proxy({ q: '' }), { plugins: [persist({ fields: dualFields })] })
 
 	it('lets the URL win over a stale stored value on cold start (first-present-wins)', async () => {
 		window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify({ v: 0, s: { q: 'cached' } }))
@@ -252,7 +252,7 @@ describe('@ez-kit/va-store persist dual-source (URL + storage)', () => {
 
 describe('@ez-kit/va-store persist useHydrated', () => {
 	const makeStore = () =>
-		createStore<{ q: string }>(() => proxy({ q: '' }), {
+		createContextStore<{ q: string }>(() => proxy({ q: '' }), {
 			plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })] })],
 		})
 

@@ -34,7 +34,7 @@ const bindingsByProxy = new WeakMap<object, SourceBinding[]>()
 /**
  * Options for the {@link persist} plugin.
  *
- * `T` is the store's state type. It is inferred from the surrounding `createStore<T>(…, { plugins })`
+ * `T` is the store's state type. It is inferred from the surrounding `createContextStore<T>(…, { plugins })`
  * call (the contextual `StorePlugin<T>` return type drives it), so the {@link FieldsBuilder} selectors
  * are typed end-to-end with no cast at the call site.
  */

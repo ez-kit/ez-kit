@@ -196,7 +196,7 @@ describe('@ez-kit/va-store createContextStore', () => {
 			return <div />
 		}
 
-		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for createContextStore')
+		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for store')
 	})
 
 	it('throws when useStore is used without a Provider', () => {
@@ -205,7 +205,17 @@ describe('@ez-kit/va-store createContextStore', () => {
 			return <div />
 		}
 
-		expect(() => render(<BrokenWriter />)).toThrowError('Missing Provider for createContextStore')
+		expect(() => render(<BrokenWriter />)).toThrowError('Missing Provider for store')
+	})
+
+	it('names the store in the missing-Provider error when `name` is set', () => {
+		const named = createContextStore(createCounterStore, { name: 'filters' })
+		function BrokenConsumer() {
+			named.useStore()
+			return <div />
+		}
+
+		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for filters')
 	})
 
 	it('re-renders a useSnapshot consumer when the field it reads changes', async () => {
