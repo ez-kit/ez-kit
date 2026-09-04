@@ -49,6 +49,15 @@ and move on.
 - **`ColumnMeta` fields carry the name of the column option they hold.** `pinning`, `align`,
   `cell`, `filtering`, `editing`, `creating`, `visibility`. A resolved value never gets a third
   spelling (it was `cellType` / `config` / `cellView` for the three halves of `cell`).
+- **`placement` names a region; `position` names a spot on an axis.** `filtering.chips.position`
+  is `'above'` / `'below'` — where the strip sits relative to the table. `filtering.panel.placement`
+  and `pagination.pageSizer.placement` are `'toolbar'` / `'footer'` / `'above'` — which container
+  holds the control. Both take the scalar-or-object form, and the scalar **is** the value.
+- **A control with two homes is named for itself, not for a container.** `sorting.toolbar`,
+  `visibility.toolbar`, `globalFiltering.toolbar` and `filtering.toolbar` keep the one word for
+  "auto-mount my control into the toolbar" because those controls can live nowhere else.
+  `pagination.pageSizer` replaced `pagination.toolbar` when the page sizer gained a footer
+  placement: `toolbar: true, placement: 'footer'` is a config contradicting itself.
 - **The three system columns are configured like columns.** `selection.column`,
   `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
   `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the

@@ -3,13 +3,20 @@
 import { Description, FieldError, Label, ListBox, Select } from '@heroui/react'
 
 import type { CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
 const ALL_SENTINEL = '__all__'
 
 function SelectCellView({ value, config }: CellViewProps<SelectCellConfig>) {
 	const items = config?.items ?? []
 	const match = items.find((item) => item.value === String(value ?? ''))
-	return <>{match ? match.label : String(value ?? '')}</>
+	if (!match) return <>{String(value ?? '')}</>
+	return (
+		<span data-slot='select-cell-value'>
+			{(match.icon as ReactNode) ?? null}
+			{match.label}
+		</span>
+	)
 }
 
 /**
@@ -59,6 +66,7 @@ function SelectCellInput({
 							id={item.value}
 							textValue={item.label}
 						>
+							{(item.icon as ReactNode) ?? null}
 							{item.label}
 						</ListBox.Item>
 					))}

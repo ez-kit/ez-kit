@@ -9,6 +9,7 @@ import { Input } from '@grid-shadcn/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 
 import type { MultiSelectFilterProps } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
 const TRIGGER_BASE = 'h-7 min-w-[8rem] justify-between gap-2 px-2 text-xs font-normal'
 
@@ -87,7 +88,10 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 												toggle(opt.value)
 											}}
 										/>
-										<span className='flex-1 truncate'>{opt.label}</span>
+										<span className='flex flex-1 items-center gap-1.5 truncate'>
+											{(opt.icon as ReactNode) ?? null}
+											{opt.label}
+										</span>
 										{opt.count !== undefined && (
 											<span
 												data-slot='count'

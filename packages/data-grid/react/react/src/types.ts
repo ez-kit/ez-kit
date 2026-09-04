@@ -521,6 +521,41 @@ export const FilterChipsPosition = {
 export type FilterChipsPosition = (typeof FilterChipsPosition)[keyof typeof FilterChipsPosition]
 
 /**
+ * Which region the auto-mounted page-size selector renders in.
+ *
+ * A *region*, which is why it is `placement` and not the `position` that
+ * {@link FilterChipsPosition} uses: that option names a spot on one axis (above or below the
+ * table), this one names which of two containers holds the control.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `pageSizer: 'footer'` is equally valid and needs no import.
+ */
+export const PageSizerPlacement = {
+	/** Leading slot of the toolbar, above the table. The default. */
+	Toolbar: 'toolbar',
+	/** The pagination row under the table, before the pagination controls. */
+	Footer: 'footer',
+} as const
+
+export type PageSizerPlacement = (typeof PageSizerPlacement)[keyof typeof PageSizerPlacement]
+
+/**
+ * Which region holds the auto-mounted filter panel under
+ * {@link FilteringVariant.Panel}.
+ *
+ * `placement`, like {@link PageSizerPlacement} and for the same reason: the values name a
+ * container, not a spot on an axis the way `filtering.chips`' `position` does.
+ */
+export const FilterPanelPlacement = {
+	/** Its own strip between the toolbar and the table. The default. */
+	Above: 'above',
+	/** The leading slot of the toolbar, beside the other toolbar controls. */
+	Toolbar: 'toolbar',
+} as const
+
+export type FilterPanelPlacement = (typeof FilterPanelPlacement)[keyof typeof FilterPanelPlacement]
+
+/**
  * What makes an infinite-scroll grid load the next page.
  *
  * Named members for internal reference; the option is typed as the plain string union, so

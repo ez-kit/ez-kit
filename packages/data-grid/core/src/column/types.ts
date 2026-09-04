@@ -176,6 +176,15 @@ export type InputComponentProps<TConfig = unknown> = {
 export type SelectItem = {
 	value: string
 	label: string
+	/**
+	 * Optional glyph the adapter renders before the label — React: `icon: <Circle />`.
+	 *
+	 * Typed `unknown` for the same reason {@link ColumnRenderer}'s `TNode` is `unknown` here:
+	 * core renders nothing and must not name a framework's node type. The adapter is what turns
+	 * it into a node, and the same item feeds both the cell and the column's filter list, so one
+	 * icon is stated once.
+	 */
+	icon?: unknown
 }
 /**
  * Visual variant of a badge rendered by the `badge` cell type. The names are the kits' shared
@@ -201,6 +210,15 @@ export type BadgeItem = {
 	value: string
 	label: string
 	variant?: BadgeVariant
+	/**
+	 * Optional glyph the adapter renders before the label — React: `icon: <Circle />`.
+	 *
+	 * Typed `unknown` for the same reason {@link ColumnRenderer}'s `TNode` is `unknown` here:
+	 * core renders nothing and must not name a framework's node type. The adapter is what turns
+	 * it into a node, and the same item feeds both the cell and the column's filter list, so one
+	 * icon is stated once.
+	 */
+	icon?: unknown
 }
 
 export type SelectCellConfig = {

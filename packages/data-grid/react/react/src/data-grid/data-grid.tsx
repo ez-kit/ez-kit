@@ -3,7 +3,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import { FilterChipsPosition, FilteringVariant } from '../types'
+import { FilterChipsPosition, FilterPanelPlacement, PageSizerPlacement } from '../types'
 import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
 import { resolveActionBarVariant } from './action-bar-variant'
@@ -11,6 +11,7 @@ import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
+import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
@@ -209,7 +210,22 @@ function DefaultLayout() {
 	// that took the controls out of the header. `<FilterPanel />` renders nothing when the grid
 	// has no filtered row model or no filterable column, so this costs nothing when it applies
 	// to a grid that does not filter.
-	const filterPanel = table.grid.filtering.variant === FilteringVariant.Panel ? <FilterPanel /> : null
+	// The toolbar placement mounts the panel itself, in its leading slot.
+	const filterPanel = table.grid.filtering.panel?.placement === FilterPanelPlacement.Above ? <FilterPanel /> : null
+
+	// `pageSizer: 'footer'` puts the size control next to the pagination controls instead of in
+	// the toolbar. The two then share one row, which is the only reason this wrapper exists: the
+	// element carries a `data-slot` for the kits' CSS to lay out and no styling of its own, per
+	// the no-styles-in-this-package rule.
+	const paginationRow =
+		table.grid.pagination.pageSizer?.placement === PageSizerPlacement.Footer ? (
+			<div data-slot='pagination-row'>
+				<PageSizer />
+				<Pagination />
+			</div>
+		) : (
+			<Pagination />
+		)
 
 	if (variant === ActionBarVariant.Inline) {
 		return (
@@ -221,7 +237,7 @@ function DefaultLayout() {
 				{chipsAbove}
 				<DataGridTable />
 				{chipsBelow}
-				<Pagination />
+				{paginationRow}
 			</>
 		)
 	}
@@ -233,7 +249,7 @@ function DefaultLayout() {
 			{chipsAbove}
 			<DataGridTable />
 			{chipsBelow}
-			<Pagination />
+			{paginationRow}
 			<DraftBar />
 			<SelectionBar />
 		</>
@@ -376,6 +392,7 @@ type DataGridType = typeof DataGridRoot & {
 	Cell: typeof DataGridCell
 	Pagination: typeof Pagination
 	PageSizer: typeof PageSizer
+	ColumnFilter: typeof ColumnFilter
 	SelectionBar: typeof SelectionBar
 	DraftBar: typeof DraftBar
 	CreateTrigger: typeof CreateTrigger
@@ -406,6 +423,7 @@ DataGrid.Row = DataGridRow
 DataGrid.Cell = DataGridCell
 DataGrid.Pagination = Pagination
 DataGrid.PageSizer = PageSizer
+DataGrid.ColumnFilter = ColumnFilter
 DataGrid.SelectionBar = SelectionBar
 DataGrid.DraftBar = DraftBar
 DataGrid.CreateTrigger = CreateTrigger

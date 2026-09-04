@@ -220,6 +220,19 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 ]
 
+/**
+ * Table-level operator configuration when not using the simple `true` / `false` shorthand.
+ *
+ * `items` here is the **registry**: custom operator definitions (or overrides of built-ins)
+ * that any column can then reference by id from its own
+ * {@link ColumnOperatorsConfig.items}. It is not a column's offered list — a column narrows
+ * what it offers on the column, where the cell type is known.
+ */
+export type TableOperatorsConfig = {
+	/** Custom operators (or built-in overrides), addressable from column `items` by id. */
+	items?: FilterOperatorDef[]
+}
+
 /** Column-level operator configuration when not using the simple `true` shorthand. */
 export type ColumnOperatorsConfig = {
 	/**

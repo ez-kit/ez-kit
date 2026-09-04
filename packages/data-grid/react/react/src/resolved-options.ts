@@ -9,8 +9,10 @@ import type {
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
+	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
+	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
@@ -85,6 +87,11 @@ export type ResolvedGridOptions = {
 		debounce: number
 		/** Active-filter chips strip. `undefined` when not auto-mounted. */
 		chips?: NormalizedFilterChipsConfig | undefined
+		/**
+		 * The auto-mounted filter panel and the region that holds it. `undefined` unless
+		 * {@link FilteringVariant.Panel} — the other variants keep the controls in the header.
+		 */
+		panel?: NormalizedFilterPanelConfig | undefined
 		/** Filtering's toolbar control (the Clear-all button). `undefined` when not auto-mounted. */
 		toolbar?: NormalizedFilteringToolbarConfig | undefined
 	}
@@ -110,14 +117,15 @@ export type ResolvedGridOptions = {
 		 */
 		items?: number[] | undefined
 		/**
-		 * The toolbar auto-mounts the PageSizer. Governs mounting only, never the list above.
+		 * The auto-mounted PageSizer and the region that holds it. `undefined` when the grid
+		 * mounts no PageSizer. Governs mounting only, never the list above.
 		 *
-		 * `toolbar`, the one word every feature's resolved auto-mount flag uses — see
-		 * {@link NormalizedFeatureToolbarConfig}, `globalFiltering.toolbar`,
-		 * `filtering.toolbar`. It was `pageSizer`, so the built-in `Toolbar` read
-		 * `grid.pagination.pageSizer` on one line and `grid.globalFiltering?.toolbar` on the next.
+		 * Named for the control, not for a container, because it has two homes — the toolbar
+		 * and the pagination row. The features whose control has exactly one home keep the
+		 * `toolbar` flag ({@link NormalizedFeatureToolbarConfig}, `globalFiltering.toolbar`,
+		 * `filtering.toolbar`).
 		 */
-		toolbar: boolean
+		pageSizer?: NormalizedPageSizerConfig | undefined
 		/**
 		 * Infinite-scroll detection config. `undefined` unless `pagination.mode` is
 		 * `'infinite'`.
@@ -192,7 +200,6 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 			variant: DATA_GRID_DEFAULTS.pagination.variant,
 			siblings: DATA_GRID_DEFAULTS.pagination.siblings,
 			boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
-			toolbar: false,
 		},
 		selection: {},
 		expanding: {},

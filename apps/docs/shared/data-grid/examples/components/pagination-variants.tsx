@@ -50,3 +50,14 @@ export function PaginationVariantCompactExample() {
 		/>
 	)
 }
+
+export function PaginationPageSizerFooterExample() {
+	const data = useMemo(() => makeUsers(ROW_TOTAL), [])
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			pagination={{ pageSize: PAGE_SIZE, variant: 'compact', pageSizer: 'footer' }}
+		/>
+	)
+}

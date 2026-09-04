@@ -1,0 +1,91 @@
+---
+title: Examples
+description: Complete grids assembled from the options documented across this section, with a note on which part each surface comes from.
+---
+
+# Examples
+
+The pages in this section document one feature at a time. This one puts them together: whole
+tables of the kind an application actually ships, with a note on which option produces each
+surface — and, where something is deliberately not an option, why it is written by hand instead.
+
+## Task board
+
+The layout every issue tracker converges on: a search box and faceted filters in the toolbar,
+sortable columns, badge and icon-labelled cells, an overflow menu per row, and a footer carrying
+the selection count, the page size and the page controls.
+
+<DataGridDocsExample exampleId='example-task-board' />
+
+### Where each surface comes from
+
+| Surface                                    | Option                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------- |
+| Search box                                 | `globalFiltering: { placeholder }`                                              |
+| Column filters in the toolbar              | `filtering: { variant: 'panel', panel: 'toolbar', faceted: true }`              |
+| Which columns get a filter                 | `filtering: false` on the columns that should not (Task and Title here)         |
+| Sort menu with its active-sort count       | `sorting: { toolbar: true }`                                                    |
+| Column visibility menu                     | `visibility`                                                                    |
+| Select-all checkbox and per-row checkboxes | `selection`                                                                     |
+| Status badge with its glyph                | `cell: { type: 'badge', config: { items } }` — each item carries `icon`         |
+| Priority with its glyph                    | `cell: { type: 'select', config: { items } }`                                   |
+| Right-aligned hours                        | `cell: { type: 'number' }` + `align: 'end'`                                     |
+| "September 3, 2026"                        | `cell: { type: 'date', config: { format: { dateStyle: 'long' } } }`             |
+| `…` menu at the end of each row            | `rowActions: { variant: 'menu' }` (plus `editing` / `deleting` for its entries) |
+| "Page 1 of 16"                             | `pagination: { variant: 'compact' }`                                            |
+| Rows-per-page control                      | `<DataGrid.PageSizer />`, placed by hand — see below                            |
+
+### What is written by hand, and why
+
+Two pieces are not options, on purpose.
+
+**The Title cell** composes a label chip with truncated text. That is one column's editorial
+decision, not a cell type, so it goes through `cell.component` — the slot that exists for exactly
+this.
+
+**The "N of 10 row(s) selected." line** is five lines over the public hooks:
+
+```tsx
+function SelectionCount() {
+	const table = useDataGridTable()
+	useDataGridState((s) => s.rowSelection)
+	const selected = table.getSelectedRowModel().rows.length
+	const total = table.getRowModel().rows.length
+	return (
+		<span>
+			{selected} of {total} row(s) selected.
+		</span>
+	)
+}
+```
+
+It is not [`<DataGrid.SelectionBar />`](/docs/data-grid/selection/bar): that bar appears only once
+something is selected and carries bulk actions, while this line is always visible and carries a
+count.
+
+Both live inside the grid's own children, which replace the default layout — so the footer row is
+composed explicitly:
+
+```tsx
+<DataGrid /* … */>
+	<DataGrid.Toolbar />
+	<DataGrid.Table />
+	<div className='footer-row'>
+		<SelectionCount />
+		<div>
+			<DataGrid.PageSizer />
+			<DataGrid.Pagination />
+		</div>
+	</div>
+</DataGrid>
+```
+
+A grid that needs no selection count can skip the children entirely and let
+[`pagination.pageSizer: 'footer'`](/docs/data-grid/pagination#where-the-page-size-selector-goes)
+put the size control in the footer for it.
+
+## See also
+
+- [Getting started](/docs/data-grid/getting-started) — the smallest grid that renders
+- [Filtering · Variants](/docs/data-grid/filtering/variants) — where the filter controls live
+- [Layout](/docs/data-grid/layout) — composing a grid out of its compound members

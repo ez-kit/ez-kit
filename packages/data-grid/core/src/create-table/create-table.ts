@@ -191,8 +191,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		})
 
 	// ── operator registry ────────────────────────────────────────────────────
-	const tableFilteringOperators = filteringCfg?.operators
-	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
+	// One option, two jobs: `items` seeds the registry, and the option's presence is the
+	// table-wide switch every column falls back to. `undefined` is a third state — neither on
+	// nor off — so a table that never mentions operators keeps the per-column opt-in.
+	const tableOperatorsCfg = filteringCfg?.operators
+	const operatorRegistry = buildOperatorRegistry(
+		typeof tableOperatorsCfg === 'object' ? tableOperatorsCfg.items : undefined,
+	)
+	const tableOperators: boolean | undefined = tableOperatorsCfg === undefined ? undefined : tableOperatorsCfg !== false
 
 	// ── faceted opt-in (table-level) ─────────────────────────────────────────
 	const tableFaceted = filteringCfg?.faceted === true
@@ -208,7 +214,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const facetedNeeded = tableFaceted || hasColumnFaceted
 
 	// ── map user columns → TanStack columns ──────────────────────────────────
-	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, { tableFaceted })
+	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, {
+		tableFaceted,
+		...(tableOperators !== undefined ? { tableOperators } : {}),
+	})
 
 	const expandMode = expandingCfg?.mode ?? ExpandingMode.SubContent
 	const normalizedPinning = normalizePinning(config.pinning)

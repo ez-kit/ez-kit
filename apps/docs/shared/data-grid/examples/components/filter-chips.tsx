@@ -7,10 +7,13 @@ import { DataGrid } from 'shared/DataGrid'
 
 import { makeUsers, type User } from './_data'
 
+// The popover variant is what makes this feature worth its space: the filter controls sit behind
+// header icons, so the chips strip is the only place the applied filters are readable. Under the
+// inline variant every chip would just repeat the input right below it.
 const columns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
 	{ accessorKey: 'email', header: 'Email' },
-	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
+	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' }, filtering: { operators: true } },
 	{ accessorKey: 'active', header: 'Active', cell: { type: 'boolean' } },
 ])
 
@@ -20,8 +23,20 @@ export function FilterChipsAutoExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			filtering={{ chips: true, toolbar: true }}
-			globalFiltering={{ placeholder: 'Search…' }}
+			filtering={{ variant: 'popover', chips: true, toolbar: true }}
+			globalFiltering
+			pagination={{ pageSize: 10 }}
+		/>
+	)
+}
+
+export function FilterChipsOnlyExample() {
+	const data = useMemo(() => makeUsers(50), [])
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			filtering={{ variant: 'popover', chips: true }}
 			pagination={{ pageSize: 10 }}
 		/>
 	)
@@ -33,7 +48,7 @@ export function FilterChipsAlwaysExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			filtering={{ chips: true, toolbar: { alwaysShow: true } }}
+			filtering={{ variant: 'popover', chips: true, toolbar: { alwaysShow: true } }}
 			globalFiltering
 			pagination={{ pageSize: 10 }}
 		/>
@@ -46,7 +61,7 @@ export function FilterChipsCustomExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			filtering
+			filtering={{ variant: 'popover' }}
 			globalFiltering
 			pagination={{ pageSize: 10 }}
 		>
@@ -54,18 +69,7 @@ export function FilterChipsCustomExample() {
 				<DataGrid.GlobalFilterInput />
 				<DataGrid.ClearFiltersButton>Reset</DataGrid.ClearFiltersButton>
 			</DataGrid.Toolbar>
-			<div
-				style={{
-					display: 'flex',
-					alignItems: 'center',
-					gap: '0.5rem',
-					padding: '0.5rem 0',
-					flexWrap: 'wrap',
-				}}
-			>
-				<span style={{ color: '#64748b', fontSize: '0.875rem' }}>Active:</span>
-				<DataGrid.ActiveFiltersBar />
-			</div>
+			<DataGrid.ActiveFiltersBar />
 			<DataGrid.Table />
 			<DataGrid.Pagination />
 		</DataGrid>

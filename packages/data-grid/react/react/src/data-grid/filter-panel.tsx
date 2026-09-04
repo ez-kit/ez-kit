@@ -142,25 +142,26 @@ export type DataGridFilterPanelProps = {
 	children?: ReactNode | ((args: DataGridFilterPanelRenderArgs) => ReactNode)
 }
 
-export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
+/**
+ * The filterable columns with their labels, value summaries and ready-made controls — what
+ * both `<FilterPanel>` and `<ColumnFilter>` render.
+ *
+ * `undefined` when the grid has nothing to filter (no filtered row model, or no filterable
+ * column), which is what makes both components render nothing in those states.
+ */
+export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefined {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnFilters)
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Input } = gridComponents.core
-	const {
-		OperatorSelect,
-		BetweenInput,
-		FilterPanel: FilterPanelChrome,
-		FilterPanelChip,
-		MultiSelectFilter,
-	} = gridComponents.filtering
+	const { OperatorSelect, BetweenInput, MultiSelectFilter } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const filteringDebounce = table.grid.filtering.debounce
 
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
-	if (!hasFiltering) return null
+	if (!hasFiltering) return undefined
 
 	const filterableColumns = table.getAllLeafColumns().filter((column) => {
 		const meta = column.columnDef.meta
@@ -169,7 +170,7 @@ export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
 		return column.getCanFilter()
 	})
 
-	if (filterableColumns.length === 0) return null
+	if (filterableColumns.length === 0) return undefined
 
 	const hasActiveFilter = filterableColumns.some((c) => c.getFilterValue() !== undefined)
 
@@ -202,11 +203,21 @@ export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
 		return { column, label, valueDisplay: display, hasValue, input, onClear }
 	})
 
+	return { columns: resolvedColumns, hasActiveFilter }
+}
+
+export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
+	const { FilterPanel: FilterPanelChrome, FilterPanelChip } = useGridComponents().filtering
+	const resolved = useFilterPanelColumns()
+	if (resolved === undefined) return null
+
+	const { columns, hasActiveFilter } = resolved
+
 	if (children !== undefined) {
-		return typeof children === 'function' ? children({ columns: resolvedColumns, hasActiveFilter }) : children
+		return typeof children === 'function' ? children({ columns, hasActiveFilter }) : children
 	}
 
-	const chips = resolvedColumns.map(({ column, label, valueDisplay, hasValue, input, onClear }) => (
+	const chips = columns.map(({ column, label, valueDisplay, hasValue, input, onClear }) => (
 		<FilterPanelChip
 			key={column.id}
 			label={label}

@@ -2,6 +2,7 @@
 
 import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariant } from '@ez-kit/data-grid-react'
 import { Pagination as HeroPagination } from '@heroui/react'
+import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
@@ -9,6 +10,8 @@ const LABEL_CLASS = 'dg-pagination-label px-2 text-sm'
 const PREVIOUS_LABEL = 'Previous'
 const NEXT_LABEL = 'Next'
 const PAGINATION_ARIA_LABEL = 'Pagination'
+const FIRST_ARIA_LABEL = 'Go to first page'
+const LAST_ARIA_LABEL = 'Go to last page'
 
 export function Pagination({
 	variant,
@@ -22,6 +25,8 @@ export function Pagination({
 	canNextPage,
 	onPreviousPage,
 	onNextPage,
+	onFirstPage,
+	onLastPage,
 	onPageChange,
 }: PaginationProps) {
 	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
@@ -29,6 +34,10 @@ export function Pagination({
 	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
 	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
 	const pages = showLinks ? buildPageWindow({ pageIndex, pageCount, siblings, boundaries }) : []
+	// Jump-to-edge only under `compact`: that variant navigates without page links, so first/last
+	// are the only way to reach the ends. `numbered` already lists the boundary pages, and
+	// `simple` deliberately offers nothing but prev/next.
+	const showEdges = variant === PaginationVariant.Compact
 
 	return (
 		<HeroPagination
@@ -43,6 +52,17 @@ export function Pagination({
 				</HeroPagination.Item>
 			)}
 			<HeroPagination.Content>
+				{showEdges && (
+					<HeroPagination.Item>
+						<HeroPagination.Link
+							aria-label={FIRST_ARIA_LABEL}
+							isDisabled={!canPreviousPage}
+							onPress={onFirstPage}
+						>
+							<ChevronsLeft size={16} />
+						</HeroPagination.Link>
+					</HeroPagination.Item>
+				)}
 				<HeroPagination.Item>
 					<HeroPagination.Previous
 						isDisabled={!canPreviousPage}
@@ -77,6 +97,17 @@ export function Pagination({
 						{NEXT_LABEL}
 					</HeroPagination.Next>
 				</HeroPagination.Item>
+				{showEdges && (
+					<HeroPagination.Item>
+						<HeroPagination.Link
+							aria-label={LAST_ARIA_LABEL}
+							isDisabled={!canNextPage}
+							onPress={onLastPage}
+						>
+							<ChevronsRight size={16} />
+						</HeroPagination.Link>
+					</HeroPagination.Item>
+				)}
 			</HeroPagination.Content>
 		</HeroPagination>
 	)

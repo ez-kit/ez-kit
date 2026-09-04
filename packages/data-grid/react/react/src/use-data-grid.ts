@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
-import { ActionBarVariant } from './types'
+import { ActionBarVariant, FilteringVariant } from './types'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
@@ -12,9 +12,10 @@ import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type {
 	FilterChipsPosition,
-	FilteringVariant,
+	FilterPanelPlacement,
 	LoadMoreThreshold,
 	LoadMoreTrigger,
+	PageSizerPlacement,
 	PaginationVariant,
 } from './types'
 import type {
@@ -248,20 +249,39 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 */
 	items?: number[]
 	/**
-	 * Page-based mode only. Auto-mount the PageSizer control in `Toolbar.start`.
+	 * Page-based mode only. Auto-mount the PageSizer control, and say where.
 	 *
-	 * - omitted — mounted iff {@link ReactPaginationConfig.items} is set
-	 * - `true` — mounted, falling back to
+	 * - omitted — mounted iff {@link ReactPaginationConfig.items} is set, in the toolbar
+	 * - `true` — mounted in the toolbar, falling back to
 	 *   {@link DATA_GRID_DEFAULTS.pagination.items} when no list is given
+	 * - `'toolbar'` / `'footer'` — mounted there; the scalar **is** the placement
+	 * - {@link PageSizerConfig} — the same, spelled out
 	 * - `false` — never auto-mounted; `<DataGrid.PageSizer />` still works if placed by hand,
-	 *   because this flag governs mounting only and never erases
+	 *   because this option governs mounting only and never erases
 	 *   {@link ReactPaginationConfig.items}
 	 *
-	 * Same name and meaning as `sorting.toolbar`, `globalFiltering.toolbar`,
-	 * `filtering.toolbar` and `visibility.toolbar`: one word for "auto-mount my
-	 * control into the toolbar", on every feature that has one.
+	 * Named for the control it mounts rather than for a container, unlike `sorting.toolbar`,
+	 * `globalFiltering.toolbar`, `filtering.toolbar` and `visibility.toolbar`. Those controls
+	 * can live in one place, so `toolbar` states both the mounting and the destination; this
+	 * one has two homes, and `toolbar: true, placement: 'footer'` would be a config
+	 * contradicting itself.
 	 */
-	toolbar?: boolean
+	pageSizer?: boolean | PageSizerPlacement | PageSizerConfig
+}
+
+/**
+ * The object form of {@link ReactPaginationConfig.pageSizer}. Scalar-or-object, like the
+ * column options and like `filtering.chips`: the scalar is the placement, the object exists
+ * for when there is more to say.
+ */
+export type PageSizerConfig = FeatureToggle & {
+	/** Which region holds the control. Default: {@link PageSizerPlacement.Toolbar}. */
+	placement?: PageSizerPlacement
+}
+
+/** Normalized shape stored on the table instance for `Toolbar` / the default layout to read. */
+export type NormalizedPageSizerConfig = {
+	placement: PageSizerPlacement
 }
 
 /**
@@ -438,6 +458,19 @@ export type ReactFilteringConfig = {
 	 */
 	chips?: boolean | FilterChipsPosition | FilterChipsConfig
 	/**
+	 * {@link FilteringVariant.Panel} only. Where the auto-mounted panel renders.
+	 *
+	 * - omitted — its own strip between the toolbar and the table
+	 * - `'toolbar'` — the toolbar's leading slot, so the column filters sit beside the
+	 *   search box
+	 * - {@link FilterPanelConfig} — the same, spelled out
+	 *
+	 * The scalar **is** the placement, as with `chips`. It says nothing about *whether* the
+	 * panel mounts: `variant: 'panel'` took the controls out of the header, so the panel is
+	 * the grid's only filter UI and always mounts.
+	 */
+	panel?: FilterPanelPlacement | FilterPanelConfig
+	/**
 	 * Auto-mount filtering's toolbar control — the Clear-all button — into `Toolbar.end`
 	 * after `GlobalFilterInput`. Hidden when no filter is active unless `alwaysShow: true`.
 	 *
@@ -454,6 +487,21 @@ export type ReactFilteringConfig = {
 /** Normalized shape stored on the table instance for `DataGrid` root to read. */
 export type NormalizedFilterChipsConfig = {
 	position: FilterChipsPosition
+}
+
+/**
+ * The object form of {@link ReactFilteringConfig.panel}. Scalar-or-object, like `chips` and
+ * like the column options: the scalar is the placement, the object exists for when there is
+ * more to say.
+ */
+export type FilterPanelConfig = FeatureToggle & {
+	/** Which region holds the panel. Default: {@link FilterPanelPlacement.Above}. */
+	placement?: FilterPanelPlacement
+}
+
+/** Normalized shape stored on the table instance. `undefined` unless the variant is `panel`. */
+export type NormalizedFilterPanelConfig = {
+	placement: FilterPanelPlacement
 }
 
 /** Normalized shape stored on the table instance for `Toolbar` / `ClearFiltersButton` to read. */
@@ -790,7 +838,7 @@ export function useDataGrid<TRow extends object>(
 					siblings: _siblings,
 					boundaries: _boundaries,
 					items: _items,
-					toolbar: _toolbar,
+					pageSizer: _pageSizer,
 					...rest
 				}) => rest)(rawPagination)
 			: rawPagination
@@ -810,10 +858,22 @@ export function useDataGrid<TRow extends object>(
 		? (paginationCfg?.items ?? [...DATA_GRID_DEFAULTS.pagination.items])
 		: undefined
 
-	// Whether `<Toolbar>` mounts the PageSizer itself. Defaults to "yes when a list was
-	// supplied", so the one-field case is unchanged.
-	const pageSizerInToolbar: boolean =
-		isPagedPagination && (paginationCfg?.toolbar ?? paginationCfg?.items !== undefined)
+	// Whether the grid mounts the PageSizer itself, and where. Defaults to "yes when a list was
+	// supplied", in the toolbar — so the one-field case is unchanged.
+	const normalizedPageSizer: NormalizedPageSizerConfig | undefined = (() => {
+		if (!isPagedPagination) return undefined
+		const pageSizer = paginationCfg?.pageSizer
+		const defaultPlacement = DATA_GRID_DEFAULTS.pagination.pageSizer.placement
+		if (pageSizer === undefined) {
+			return paginationCfg?.items !== undefined ? { placement: defaultPlacement } : undefined
+		}
+		if (pageSizer === false) return undefined
+		if (pageSizer === true) return { placement: defaultPlacement }
+		if (typeof pageSizer === 'string') return { placement: pageSizer }
+		const config = featureConfig(pageSizer)
+		if (config === undefined) return undefined
+		return { placement: config.placement ?? defaultPlacement }
+	})()
 
 	const paginationVariant: PaginationVariant = paginationCfg?.variant ?? DATA_GRID_DEFAULTS.pagination.variant
 
@@ -874,6 +934,20 @@ export function useDataGrid<TRow extends object>(
 		return { position: config.position ?? DATA_GRID_DEFAULTS.filtering.chips.position }
 	})()
 
+	// Where the panel goes. Resolved only under the `panel` variant — under `inline` or
+	// `popover` the controls are in the header and there is no panel to place.
+	const normalizedFilterPanel: NormalizedFilterPanelConfig | undefined = (() => {
+		if (filteringVariant !== FilteringVariant.Panel) return undefined
+		const panel = filteringCfg?.panel
+		const defaultPlacement = DATA_GRID_DEFAULTS.filtering.panel.placement
+		if (panel === undefined) return { placement: defaultPlacement }
+		// The scalar: a placement and nothing else.
+		if (typeof panel === 'string') return { placement: panel }
+		const config = featureConfig(panel)
+		if (!config) return { placement: defaultPlacement }
+		return { placement: config.placement ?? defaultPlacement }
+	})()
+
 	const normalizedFilteringToolbar: NormalizedFilteringToolbarConfig | undefined = (() => {
 		const toolbar = filteringCfg?.toolbar
 		if (toolbar === undefined || toolbar === false) return undefined
@@ -885,7 +959,7 @@ export function useDataGrid<TRow extends object>(
 
 	const coreFiltering: boolean | FilteringConfig | undefined =
 		typeof rawFiltering === 'object'
-			? (({ variant: _v, chips: _c, toolbar: _t, debounce: _d, ...rest }) => rest)(rawFiltering)
+			? (({ variant: _v, chips: _c, panel: _p, toolbar: _t, debounce: _d, ...rest }) => rest)(rawFiltering)
 			: rawFiltering
 
 	// Split `globalFiltering` into:
@@ -1017,6 +1091,7 @@ export function useDataGrid<TRow extends object>(
 			variant: filteringVariant,
 			debounce: filteringDebounce,
 			chips: normalizedChips,
+			panel: normalizedFilterPanel,
 			toolbar: normalizedFilteringToolbar,
 		},
 		globalFiltering: normalizedGlobalFiltering,
@@ -1025,7 +1100,7 @@ export function useDataGrid<TRow extends object>(
 			siblings: paginationWindow.siblings,
 			boundaries: paginationWindow.boundaries,
 			...(paginationItems !== undefined ? { items: paginationItems } : {}),
-			toolbar: pageSizerInToolbar,
+			pageSizer: normalizedPageSizer,
 			infinite: normalizedInfinite,
 		},
 		selection: { bar: normalizedSelectionBar },

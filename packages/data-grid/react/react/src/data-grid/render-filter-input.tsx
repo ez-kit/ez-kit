@@ -76,14 +76,16 @@ function resolveFilterItems(
 	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
 		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		if (items && items.length > 0) {
+			// `icon` rides along: one item states the glyph, and the cell and this list both draw it.
+			const asFilterItem = ({ value, label, icon }: SelectItem | BadgeItem): FilterItem =>
+				icon !== undefined ? { value, label, icon } : { value, label }
 			return facetMap
 				? items.map((item): FilterItem => {
 						const count = facetMap.get(item.value)
-						return count !== undefined
-							? { value: item.value, label: item.label, count }
-							: { value: item.value, label: item.label }
+						const base = asFilterItem(item)
+						return count !== undefined ? { ...base, count } : base
 					})
-				: items.map((item): FilterItem => ({ value: item.value, label: item.label }))
+				: items.map(asFilterItem)
 		}
 	}
 

@@ -4,13 +4,20 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 
 import type { CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
 const ALL_SENTINEL = '__all__'
 
 function SelectCellView({ value, config }: CellViewProps<SelectCellConfig>) {
 	const items = config?.items ?? []
 	const match = items.find((item) => item.value === String(value ?? ''))
-	return <>{match ? match.label : String(value ?? '')}</>
+	if (!match) return <>{String(value ?? '')}</>
+	return (
+		<span data-slot='select-cell-value'>
+			{(match.icon as ReactNode) ?? null}
+			{match.label}
+		</span>
+	)
 }
 
 /**
@@ -53,6 +60,7 @@ function SelectCellInput({
 							key={item.value}
 							value={item.value}
 						>
+							{(item.icon as ReactNode) ?? null}
 							{item.label}
 						</SelectItem>
 					))}

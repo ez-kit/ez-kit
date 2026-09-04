@@ -1,5 +1,5 @@
 import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariant } from '@ez-kit/data-grid-react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Pagination } from './PaginationBar'
@@ -125,5 +125,34 @@ describe('shadcn Pagination — compact', () => {
 		render(<Pagination {...makeUnknownTotalProps({ variant: PaginationVariant.Compact })} />)
 
 		expect(screen.getByText('Page 1')).toBeDefined()
+	})
+
+	it('jumps to the first and last page', () => {
+		const onFirstPage = vi.fn()
+		const onLastPage = vi.fn()
+		render(
+			<Pagination
+				{...makeProps({
+					variant: PaginationVariant.Compact,
+					pageIndex: 2,
+					canPreviousPage: true,
+					onFirstPage,
+					onLastPage,
+				})}
+			/>,
+		)
+
+		fireEvent.click(screen.getByLabelText('Go to first page'))
+		fireEvent.click(screen.getByLabelText('Go to last page'))
+
+		expect(onFirstPage).toHaveBeenCalledTimes(1)
+		expect(onLastPage).toHaveBeenCalledTimes(1)
+	})
+
+	it('leaves the edge controls to `compact` alone', () => {
+		render(<Pagination {...makeProps({ variant: PaginationVariant.Numbered })} />)
+
+		expect(screen.queryByLabelText('Go to first page')).toBeNull()
+		expect(screen.queryByLabelText('Go to last page')).toBeNull()
 	})
 })

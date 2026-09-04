@@ -39,17 +39,40 @@ filtering enabled.
 
 ## Built-in cell types
 
-| `cell.type`  | Value          | `cell.config`                                                                                         |
-| ------------ | -------------- | ----------------------------------------------------------------------------------------------------- |
-| `'text'`     | `string`       | `maxLength`, `ellipsis` — truncation for the rendered view.                                           |
-| `'number'`   | `number`       | `decimals`, `thousandsSeparator`, `decimalSeparator`, `prefix`, `suffix`, `locale`.                   |
-| `'date'`     | `string`       | `min`, `max` (ISO 8601, for the picker), `format` (`Intl.DateTimeFormatOptions`).                     |
-| `'boolean'`  | `boolean`      | `trueLabel`, `falseLabel`.                                                                            |
-| `'select'`   | `string`       | `items: { value, label }[]` — **required**.                                                           |
-| `'badge'`    | `string`       | `items: { value, label, variant? }[]` — **required**. `variant` is the kits' shared badge vocabulary. |
-| `'image'`    | `string` (src) | `alt`, `width`, `height`.                                                                             |
-| `'link'`     | `string`       | `label`, `href`, `target` — see below. All optional.                                                  |
-| `'progress'` | `number`       | `max`.                                                                                                |
+| `cell.type`  | Value          | `cell.config`                                                                                                |
+| ------------ | -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `'text'`     | `string`       | `maxLength`, `ellipsis` — truncation for the rendered view.                                                  |
+| `'number'`   | `number`       | `decimals`, `thousandsSeparator`, `decimalSeparator`, `prefix`, `suffix`, `locale`.                          |
+| `'date'`     | `string`       | `min`, `max` (ISO 8601, for the picker), `format` (`Intl.DateTimeFormatOptions`).                            |
+| `'boolean'`  | `boolean`      | `trueLabel`, `falseLabel`.                                                                                   |
+| `'select'`   | `string`       | `items: { value, label, icon? }[]` — **required**.                                                           |
+| `'badge'`    | `string`       | `items: { value, label, variant?, icon? }[]` — **required**. `variant` is the kits' shared badge vocabulary. |
+| `'image'`    | `string` (src) | `alt`, `width`, `height`.                                                                                    |
+| `'link'`     | `string`       | `label`, `href`, `target` — see below. All optional.                                                         |
+| `'progress'` | `number`       | `max`.                                                                                                       |
+
+### Item icons
+
+An item in a `select` or `badge` list may carry an `icon` — any element the kit should draw before
+the label:
+
+```tsx
+cell: {
+	type: 'badge',
+	config: {
+		items: [
+			{ value: 'todo', label: 'Todo', variant: 'outline', icon: <CircleHelp size={14} /> },
+			{ value: 'done', label: 'Done', variant: 'outline', icon: <CircleCheck size={14} /> },
+		],
+	},
+}
+```
+
+It is your element, not a name from a set the grid owns — the glyph comes from whatever icon
+library the application already uses.
+
+The same list feeds the column's filter, so one item states the icon once and both the cell and the
+filter's value list draw it (see the [task board](/docs/data-grid/examples#task-board)).
 
 ### `'date'`
 

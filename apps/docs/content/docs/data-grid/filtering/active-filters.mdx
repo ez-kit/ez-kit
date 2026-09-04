@@ -10,7 +10,10 @@ what is filtered **right now**, apart from the controls themselves: a strip of r
 per active filter, and a button that clears them all.
 
 Both are variant-independent — the strip reads the filter state, not the header — so they are as
-useful beside inline inputs as beside a filter panel.
+useful beside inline inputs as beside a filter panel. The examples below use the
+[popover](/docs/data-grid/filtering/variants) variant, where they earn their space: the controls
+sit behind header icons, so the strip is the only place the applied filters are readable. Under the
+inline variant each chip merely repeats the input right below it.
 
 ## Auto-mounted
 
@@ -23,12 +26,30 @@ and the Clear-all button mounts into the toolbar once at least one filter is set
 <DataGrid
 	data={data}
 	columns={columns}
-	filtering={{ chips: true, toolbar: true }}
+	filtering={{ variant: 'popover', chips: true, toolbar: true }}
+	globalFiltering
 />
 ```
 
+The global search term gets a chip of its own, beside the column ones — the strip lists everything
+narrowing the table, not just the column filters.
+
 The strip renders above the table by default; `chips: 'below'` puts it under. The scalar **is** the
 position — the object form exists for nothing else today.
+
+The two flags are independent. `filtering: { chips: true }` alone mounts the strip and nothing
+else: each chip still removes its own filter, there is simply no button that clears them all — and
+with no other feature asking for the toolbar, the toolbar row itself does not render.
+
+<DataGridDocsExample exampleId='filter-chips-only' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ variant: 'popover', chips: true }}
+/>
+```
 
 Pass `toolbar: { alwaysShow: true }` to keep the Clear-all button mounted, disabled, even with no
 active filter — worth it when its appearing and disappearing makes the toolbar jump.
@@ -46,7 +67,8 @@ the layout calls for them. Children replace the default layout, so mount the res
 <DataGrid
 	data={data}
 	columns={columns}
-	filtering
+	filtering={{ variant: 'popover' }}
+	globalFiltering
 >
 	<DataGrid.Toolbar>
 		<DataGrid.GlobalFilterInput />

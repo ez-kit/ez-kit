@@ -88,6 +88,14 @@
 		"exportName": "SortToolbarExample"
 	},
 	{
+		"id": "filter-operators-table",
+		"label": "Operators · Whole table",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-table.tsx",
+		"exportName": "FilterOperatorsTableExample"
+	},
+	{
 		"id": "filter-operators-text",
 		"label": "Operators · Text",
 		"group": "filtering",
@@ -190,6 +198,14 @@
 		"groupLabel": "Filtering",
 		"sourceFile": "components/filter-chips.tsx",
 		"exportName": "FilterChipsAutoExample"
+	},
+	{
+		"id": "filter-chips-only",
+		"label": "Active chips · Chips only",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-chips.tsx",
+		"exportName": "FilterChipsOnlyExample"
 	},
 	{
 		"id": "filter-chips-always",
@@ -546,6 +562,14 @@
 		"exportName": "PaginationVariantCompactExample"
 	},
 	{
+		"id": "pagination-page-sizer-footer",
+		"label": "Page sizer in the footer",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/pagination-variants.tsx",
+		"exportName": "PaginationPageSizerFooterExample"
+	},
+	{
 		"id": "infinite-scroll-auto",
 		"label": "Auto",
 		"group": "infinite-scroll",
@@ -646,5 +670,13 @@
 		"groupLabel": "Columns",
 		"sourceFile": "components/column-footers.tsx",
 		"exportName": "StickyFooterExample"
+	},
+	{
+		"id": "example-task-board",
+		"label": "Task board",
+		"group": "examples",
+		"groupLabel": "Examples",
+		"sourceFile": "components/example-task-board.tsx",
+		"exportName": "ExampleTaskBoardExample"
 	}
 ]

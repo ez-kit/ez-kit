@@ -16,7 +16,15 @@ import {
 } from '@ez-kit/data-grid-core'
 
 import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from './data-grid/page-window'
-import { ActionBarVariant, FilterChipsPosition, FilteringVariant, LoadMoreTrigger, PaginationVariant } from './types'
+import {
+	ActionBarVariant,
+	FilterChipsPosition,
+	FilteringVariant,
+	FilterPanelPlacement,
+	LoadMoreTrigger,
+	PageSizerPlacement,
+	PaginationVariant,
+} from './types'
 
 /**
  * Default commit debounce (ms) for **every** text filter input — the per-column ones and the
@@ -57,8 +65,10 @@ export const DATA_GRID_DEFAULTS = {
 	pagination: {
 		/** `pageSize` mirrors the core default (one source across layers). */
 		pageSize: DEFAULT_PAGE_SIZE,
-		/** Offered by the PageSizer when `pagination.toolbar` is on and no list is supplied. */
+		/** Offered by the PageSizer when it is mounted and no list is supplied. */
 		items: [10, 20, 50, 100],
+		/** Where the auto-mounted PageSizer goes when the config names no region. */
+		pageSizer: { placement: PageSizerPlacement.Toolbar },
 		/** What pagination does. */
 		mode: PaginationMode.Pages,
 		variant: PaginationVariant.Numbered,
@@ -86,6 +96,8 @@ export const DATA_GRID_DEFAULTS = {
 		variant: FilteringVariant.Inline,
 		debounce: DEFAULT_FILTER_DEBOUNCE_MS,
 		chips: { position: FilterChipsPosition.Above },
+		/** Where the `panel` variant's panel goes when the config names no region. */
+		panel: { placement: FilterPanelPlacement.Above },
 		toolbar: { alwaysShow: false },
 		/** Faceted row models are opt-in — they cost a row model per column. */
 		faceted: false,

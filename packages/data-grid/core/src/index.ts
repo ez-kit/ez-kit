@@ -107,6 +107,7 @@ export type {
 	FilterItem,
 	OperatorRegistry,
 	StructuredFilterValue,
+	TableOperatorsConfig,
 } from './features/operators'
 // Every built-in operator list, so extending one reads as extending it —
 // `items: [...SELECT_BADGE_OPERATORS, myOperator]`. `SELECT_BADGE_OPERATORS` and

@@ -486,11 +486,11 @@ describe('useDataGrid — pagination.items', () => {
 	})
 
 	it('falls back to the default list when page-based pagination carries no explicit one', () => {
-		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the toolbar
-		// mounts the control is `pagination.toolbar`, resolved separately.
+		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the grid
+		// mounts the control is `pagination.pageSizer`, resolved separately.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
-		expect(result.current.grid.pagination.toolbar).toBe(false)
+		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
 	})
 
 	it('stores the explicit options in page-based mode', () => {

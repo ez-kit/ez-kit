@@ -240,8 +240,13 @@
 	 * `overflow: clip` — so without this the row grids are clipped at the container
 	 * width and the scroll container never sees anything to scroll to. (A native table
 	 * box grew to its columns on its own; a block box does not.) Floor it at the tracks'
-	 * width and let it stretch past that when there is room (`minmax(…, 1fr)` tracks). */
-	min-width: max-content;
+	 * width and let it stretch past that when there is room (`minmax(…, 1fr)` tracks).
+	 *
+	 * `min-content`, not `max-content`: a grid's max-content size resolves every `1fr` track
+	 * to the *largest* track minimum, so one 360px column stretched every other flexible
+	 * column to 360px too and the table ran off the viewport (#task-board). The min-content
+	 * size is the sum of the track minimums — exactly the floor this needs. */
+	min-width: min-content;
 }
 [data-slot='table'] [data-slot='thead'] {
 	display: block;
@@ -471,4 +476,40 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	background: transparent;
 	border: 1px dashed var(--separator);
 	color: var(--muted);
+}
+
+/* ---- Footer page sizer ----
+ * `pagination: { pageSizer: 'footer' }` puts the size control in the pagination row instead of
+ * the toolbar, so the two share one line: sizer to the leading edge, pagination controls to the
+ * trailing one. The shared React package ships the `data-slot` and no styling, so the row's
+ * layout has to live here. The nested pagination's own top margin would double the gap. */
+
+[data-slot='pagination-row'] {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	margin-top: 0.75rem;
+}
+
+/* Both kits' pagination roots are full-width centred bars of their own (`mx-auto w-full
+ * justify-center`); inside this row they are one of two items, so the width and the centring
+ * have to come back off or the controls wrap onto their own line. */
+
+[data-slot='pagination-row'] [data-slot='pagination'] {
+	width: auto;
+	margin: 0;
+	justify-content: flex-end;
+}
+
+/* ---- Icon-bearing option values ----
+ * `select` / `badge` items may carry an `icon`; the glyph and the label are one line, so the
+ * cell's value wrapper lays them out rather than letting the icon wrap above the text. */
+
+[data-slot='select-cell-value'] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	white-space: nowrap;
 }

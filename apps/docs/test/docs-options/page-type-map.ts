@@ -58,6 +58,7 @@ export const DocPage = {
 	StatePersistence: 'content/docs/data-grid/state/persistence.mdx',
 	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
 	Theming: 'content/docs/data-grid/theming.mdx',
+	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
 	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
@@ -116,6 +117,7 @@ export const GRID_TYPE = {
 	ColumnSortingConfig: { module: TypeModule.Core, name: 'ColumnSortingConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
+	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
@@ -442,6 +444,17 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [{ heading: 'Where to look', reason: 'Maps a UI kit to where its design tokens live.' }],
 	},
 	{
+		page: DocPage.ExamplesIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Where each surface comes from',
+				reason:
+					'Maps a rendered surface to the option that produces it — whole config expressions, not keys of one type.',
+			},
+		],
+	},
+	{
 		page: DocPage.AdvancedReact,
 		optionTables: [],
 		nonOptionTables: [
@@ -582,6 +595,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringOperators,
 		optionTables: [
+			{ heading: '`TableOperatorsConfig`', roots: [GRID_TYPE.TableOperatorsConfig], expectedCount: 1 },
 			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
 			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 4 },
 			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 4 },
@@ -595,7 +609,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.FilteringVariants,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 2 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 3 }],
 		nonOptionTables: [
 			{
 				heading: 'Filter Variants',

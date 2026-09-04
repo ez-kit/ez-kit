@@ -38,8 +38,10 @@ export type {
 	FallbacksConfig,
 	FilterChipsConfig,
 	FilteringToolbarConfig,
+	FilterPanelConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
+	PageSizerConfig,
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
 	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
@@ -48,8 +50,10 @@ export type {
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
+	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
+	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
@@ -168,6 +172,7 @@ export type {
 	DataGridFilterPanelProps,
 	DataGridFilterPanelRenderArgs,
 } from './data-grid/filter-panel'
+export type { DataGridColumnFilterProps } from './data-grid/column-filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
 export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
 export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
@@ -269,7 +274,9 @@ export {
 	FilterChipKind,
 	FilterChipsPosition,
 	FilteringVariant,
+	FilterPanelPlacement,
 	LoadMoreTrigger,
+	PageSizerPlacement,
 	PaginationVariant,
 	RowActionId,
 	ActionsCellState,

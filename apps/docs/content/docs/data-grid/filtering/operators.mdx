@@ -5,7 +5,7 @@ description: Switch the matching strategy per filter — equals, contains, start
 
 # Filter Operators
 
-Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `gt`, `lt`, `between`, and more. Operators are configured per column via `filtering.operators`, and the default set is picked from the column's `cell.type`.
+Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `gt`, `lt`, `between`, and more. Operators are opt-in: a column gets a selector from its own `filtering.operators`, or from the table-wide switch below. The default set is picked from the column's `cell.type`.
 
 ## Usage
 
@@ -18,6 +18,25 @@ const columns = createColumns<Employee>([
 	},
 ])
 ```
+
+### The whole table at once
+
+`filtering.operators` on the grid is the same switch one level up:
+
+```tsx
+// every filterable column gets the operators its cell type declares
+<DataGrid data={data} columns={columns} filtering={{ operators: true }} />
+
+// no column gets one, whatever the columns say
+<DataGrid data={data} columns={columns} filtering={{ operators: false }} />
+```
+
+A column overrides the table in both directions — `filtering: { operators: false }` opts one
+column out of a table-wide `true`, and `filtering: { operators: { items: […] } }` narrows what
+it offers. Omit the table-level option entirely and the decision stays per column, which is what
+the examples below do.
+
+<DataGridDocsExample exampleId='filter-operators-table' />
 
 ### Text operators
 
@@ -79,6 +98,8 @@ for both `defaultOperator` and `operators.items`.
 
 ## Custom operators
 
+Inline on the column, when one column needs it:
+
 ```ts
 filtering: {
 	operators: {
@@ -86,6 +107,28 @@ filtering: {
 	},
 }
 ```
+
+Or once on the table, when several do — `filtering.operators.items` is the registry every
+column addresses by id:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ operators: { items: [{ id: 'fuzzy', label: 'Fuzzy match', filterFn: fuzzyMatch }] } }}
+/>
+// …and in a column: filtering: { operators: { items: ['contains', 'fuzzy'] } }
+```
+
+An id listed on a column resolves against its cell type's own operators first, then the
+registry — which is why `equals` compares numbers on a number column and dates on a date one.
+A table-level definition sharing a built-in id replaces that built-in everywhere.
+
+## `TableOperatorsConfig`
+
+| Option  | Type                  | Description                                                                                                                                                           |
+| ------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items` | `FilterOperatorDef[]` | Custom operators (or overrides of built-ins), addressable by id from any column's `filtering.operators.items`. Writing the object switches operators on, like `true`. |
 
 ## `ColumnOperatorsConfig`
 

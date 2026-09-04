@@ -198,6 +198,56 @@ describe('createTable — filtering', () => {
 	})
 })
 
+// The table-level operator switch, end to end: `filtering.operators` is both the word that
+// turns selectors on for every column and the registry the columns reference by id.
+describe('createTable — filtering.operators', () => {
+	const operatorIds = (table: ReturnType<typeof createTable<Row>>, columnId: string) => {
+		const meta = table.getColumn(columnId)?.columnDef.meta?.filtering
+		return meta === false ? undefined : meta?.operators?.map((o) => o.id)
+	}
+
+	it('filtering: { operators: true } gives every column its cell type defaults', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: { operators: true } })
+		expect(operatorIds(table, 'name')).toContain('contains')
+		expect(operatorIds(table, 'age')).toContain('contains')
+	})
+
+	it('filtering: { operators: false } silences a column that asks for them', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'name', filtering: { operators: true } },
+			{ accessorKey: 'age' },
+		])
+		const table = createTable({ data: DATA, columns, filtering: { operators: false } })
+		expect(operatorIds(table, 'name')).toBeUndefined()
+	})
+
+	it('filtering omitting operators keeps the per-column opt-in', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'name', filtering: { operators: true } },
+			{ accessorKey: 'age' },
+		])
+		const table = createTable({ data: DATA, columns, filtering: true })
+		expect(operatorIds(table, 'name')).toContain('contains')
+		expect(operatorIds(table, 'age')).toBeUndefined()
+	})
+
+	it('registers custom operators from `items` and resolves them by id from a column', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'name', filtering: { operators: { items: ['contains', 'fuzzy'] } } },
+			{ accessorKey: 'age' },
+		])
+		const table = createTable({
+			data: DATA,
+			columns,
+			filtering: { operators: { items: [{ id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }] } },
+		})
+		expect(operatorIds(table, 'name')).toEqual(['contains', 'fuzzy'])
+		// The object form switches the feature on like `true` does, so the column that said
+		// nothing gets its defaults too.
+		expect(operatorIds(table, 'age')).toContain('contains')
+	})
+})
+
 // ── global filtering ──────────────────────────────────────────────────────────
 
 describe('createTable — globalFiltering', () => {

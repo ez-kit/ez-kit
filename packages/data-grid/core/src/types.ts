@@ -4,7 +4,7 @@ import type { CreatingConfig } from './features/creating'
 import type { DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
-import type { FilterOperatorDef } from './features/operators'
+import type { TableOperatorsConfig } from './features/operators'
 import type { RowActionsConfig } from './features/row-actions'
 import type { SetStateOptions } from './store/store'
 import type { FeatureToggle } from './utils/feature-flag'
@@ -157,8 +157,30 @@ export type FilteringConfig = FeatureToggle & {
 	 * either one turns client-side filtering off for both axes.
 	 */
 	manual?: boolean
-	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
-	operators?: FilterOperatorDef[]
+	/**
+	 * Operator selectors for the whole table — the switch, and the registry of custom
+	 * operators columns reference by id.
+	 *
+	 * - omitted — per-column opt-in only: a column gets an operator selector iff its own
+	 *   `filtering.operators` says so
+	 * - `true` — every filterable column gets one, offering the default operators for its
+	 *   `cell.type`
+	 * - `false` — no column gets one; `column.filtering.operators` is ignored, wherever it
+	 *   says otherwise
+	 * - {@link TableOperatorsConfig} — registers custom definitions (or overrides of
+	 *   built-ins) and switches the feature on, exactly as `true` does. The object form of a
+	 *   feature always defaults the way its bare `true` does, so that adding a custom
+	 *   operator to a working `operators: true` cannot silently take the selectors away.
+	 *
+	 * A column overrides the table in both directions: `operators: false` opts one column out
+	 * of a table-wide `true`, and `operators: { items }` narrows what it offers.
+	 *
+	 * @example Every column, plus one custom operator two of them reference by id
+	 * ```ts
+	 * filtering: { operators: { items: [{ id: 'fuzzy', label: 'Fuzzy', filterFn: fuzzy }] } }
+	 * ```
+	 */
+	operators?: boolean | TableOperatorsConfig
 	/**
 	 * Enable faceted row models (unique values + counts) for columns that opt in via
 	 * `column.filtering.faceted` or for all filterable columns when `true`. Used by
