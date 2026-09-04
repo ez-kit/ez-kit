@@ -1,4 +1,4 @@
-import { attachCapability } from '@ez-kit/store-core'
+import { capabilitiesOf } from '@ez-kit/store-core'
 import { act, render } from '@testing-library/react'
 import { useEffect } from 'react'
 import { proxy } from 'valtio'
@@ -120,6 +120,10 @@ describe('history interop', () => {
 			instance.q = 'typed'
 			await flush()
 		})
+		// The value must actually leave the URL before the undo assertion below can mean anything —
+		// otherwise a broken persist binding that never writes back would still read the seeded value.
+		expect(fake.getSearch()).toBe('q=typed')
+
 		await act(async () => {
 			instance.history.undo()
 			await flush()
@@ -129,18 +133,14 @@ describe('history interop', () => {
 		expect(fake.getSearch()).toContain('q=seeded')
 	})
 
-	it('runs capability setups innermost first', () => {
-		const calls: string[] = []
-		const store = createContextStore(() => {
-			const state = proxy({ q: '' })
-			attachCapability(state, { name: 'inner', setup: () => void calls.push('inner') })
-			attachCapability(state, { name: 'outer', setup: () => void calls.push('outer') })
-			return state
+	it('attaches History before persist in the withPersist(withHistory(...)) chain', () => {
+		const state = withPersist(withHistory(proxy<Filters>({ q: '' })), {
+			fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
 		})
 
-		render(<store.Provider>{null}</store.Provider>)
-
-		expect(calls).toEqual(['inner', 'outer'])
+		// withHistory attaches first (it wraps the innermost proxy), withPersist attaches second — the
+		// Provider then runs setups in this same attachment order, innermost first.
+		expect(capabilitiesOf(state).map((plugin) => plugin.name)).toEqual(['History', 'persist'])
 	})
 
 	it('records an externally pushed controlled value and converges after undo', async () => {
@@ -229,7 +229,7 @@ describe('history interop', () => {
 		expect(group.getFromCache({ id: 'counter' })?.history.state.pasts).toHaveLength(0)
 	})
 
-	it('stops recording after the Provider unmounts', async () => {
+	it('keeps recording after the Provider unmounts', async () => {
 		const store = createContextStore(() => withHistory(proxy({ count: 0 })))
 		let instance!: ReturnType<typeof store.useStore>
 		function Probe(): null {
