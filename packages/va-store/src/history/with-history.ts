@@ -23,13 +23,7 @@ export type StoreHistory<T extends object> = HistoryApi<T, readonly ValtioOp[]> 
 
 const HISTORY_KEY = 'history'
 const HISTORY_CAPABILITY_NAME = 'History'
-const DEFAULT_LIMIT = 100
 const IS_SERVER = typeof window === 'undefined'
-
-// Valtio only populates `subscribe`'s op payloads once this is called — off by default (the `unstable_`
-// prefix is about the shape of that payload changing across versions, not about opting in being risky).
-// Global and idempotent; call it once so `shouldRecord` and `record`'s `meta` see real operations.
-unstable_enableOp(true)
 
 /** The key `withHistory` hangs its own API off; never part of a recorded past/future state. */
 function omitHistoryKey<T extends object>(state: T): T {
@@ -65,13 +59,17 @@ export function withHistory<T extends object>(
 	target: T,
 	options: ValtioHistoryOptions<T> = {},
 ): T & { history: StoreHistory<T> } {
+	// Valtio only populates `subscribe`'s op payloads once this is called — off by default (the
+	// `unstable_` prefix is about the shape of that payload changing across versions, not about opting
+	// in being risky). Global and idempotent, and scoped to stores that actually asked for history: a
+	// consumer who never calls `withHistory` never flips this process-wide flag on Valtio's behalf.
+	unstable_enableOp(true)
+
 	const { sync = false, ...historyOptions } = options
-	const stacks = proxy<HistorySnapshot<T>>({
-		pasts: [],
-		futures: [],
-		limit: historyOptions.limit ?? DEFAULT_LIMIT,
-		isPaused: historyOptions.defaultPaused ?? false,
-	})
+	// Seed values are inert: `createHistoryStack`'s constructor calls `publish()` before returning,
+	// which `Object.assign`s the real `pasts`/`futures`/`limit`/`isPaused` in below, so nothing ever
+	// reads these placeholders.
+	const stacks = proxy<HistorySnapshot<T>>({ pasts: [], futures: [], limit: 0, isPaused: false })
 
 	const api = createHistoryStack<T, readonly ValtioOp[]>(
 		{
@@ -83,25 +81,6 @@ export function withHistory<T extends object>(
 		},
 		historyOptions,
 	)
-
-	const host = target as T & { history: StoreHistory<T> }
-	host.history = ref<StoreHistory<T>>({
-		record: api.record,
-		undo: api.undo,
-		redo: api.redo,
-		goto: api.goto,
-		clear: api.clear,
-		pause: api.pause,
-		resume: api.resume,
-		skip: api.skip,
-		get isPaused() {
-			return api.isPaused
-		},
-		state: stacks,
-		toJSON: () => undefined,
-	})
-
-	if (IS_SERVER) return host
 
 	// Tracked as the *raw* snapshot (history key included) rather than the stripped one: Valtio caches
 	// and reuses that reference until the next real mutation, which is what makes the `===` checks below
@@ -124,6 +103,43 @@ export function withHistory<T extends object>(
 		lastSnapshot = nextSnapshot
 	}
 
+	const host = target as T & { history: StoreHistory<T> }
+	host.history = ref<StoreHistory<T>>({
+		// `undo`/`redo`/`goto` all read `adapter.read()` (the *live* target) to capture "the current
+		// state" before moving it into the other stack. A write still sitting in `pendingOps` — made
+		// this same tick, not yet flushed — would otherwise be read as if it had already happened, and
+		// then silently dropped by `flushBatch`'s `nextSnapshot === lastSnapshot` guard once it does run
+		// (nothing changed between the flush and `lastSnapshot` any more, from its point of view). Flush
+		// first so the pending write becomes its own recorded step before the jump reads "current".
+		record: (prev, next, meta) => {
+			flushBatch()
+			api.record(prev, next, meta)
+		},
+		undo: () => {
+			flushBatch()
+			api.undo()
+		},
+		redo: () => {
+			flushBatch()
+			api.redo()
+		},
+		goto: (index) => {
+			flushBatch()
+			api.goto(index)
+		},
+		clear: api.clear,
+		pause: api.pause,
+		resume: api.resume,
+		skip: api.skip,
+		get isPaused() {
+			return api.isPaused
+		},
+		state: stacks,
+		toJSON: () => undefined,
+	})
+
+	if (IS_SERVER) return host
+
 	/**
 	 * `createContextStore`'s Provider applies the seed value and any controlled `value` push
 	 * synchronously, in the same batch the factory runs in — before this capability's `setup` runs on
@@ -142,8 +158,7 @@ export function withHistory<T extends object>(
 	subscribe(
 		target,
 		(ops) => {
-			const [op] = ops
-			if (!op) return
+			if (ops.length === 0) return
 
 			// A paused write (ours, from undo/redo/goto's restore, or the caller's own `skip`) is
 			// observed synchronously here, while still paused — keep `lastSnapshot` correct without
@@ -153,7 +168,9 @@ export function withHistory<T extends object>(
 				return
 			}
 
-			pendingOps.push(op)
+			// `notifyInSync: true` means Valtio hands us one op per call today, but nothing about that
+			// is part of its contract — spread the whole array rather than assuming a length of 1.
+			pendingOps.push(...ops)
 			if (sync) {
 				flushBatch()
 				return

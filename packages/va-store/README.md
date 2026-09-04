@@ -37,6 +37,45 @@ const state = counter.useStore() // write → state.count += 1
 
 → [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/create-context-store)
 
+### History
+
+`withHistory(proxy(...), options?)` adds an undo/redo stack, backed by the same
+`@ez-kit/store-core/history` engine every `@ez-kit/*` store uses:
+
+```tsx
+import { useHistory, withHistory } from '@ez-kit/va-store'
+import { proxy } from 'valtio'
+
+const state = withHistory(proxy({ count: 0 }))
+
+function Toolbar() {
+	const { undo, redo, canUndo, canRedo } = useHistory(state)
+	return (
+		<>
+			<button
+				disabled={!canUndo}
+				onClick={undo}
+			>
+				Undo
+			</button>
+			<button
+				disabled={!canRedo}
+				onClick={redo}
+			>
+				Redo
+			</button>
+		</>
+	)
+}
+```
+
+Calling `withHistory` flips on Valtio's `unstable_enableOp` globally for the process — it's how
+`subscribe` gets real operation payloads instead of always-empty ones, and it's what lets
+`shouldRecord` inspect which paths changed. This is harmless (every other `subscribe()` call in
+this codebase ignores its op argument) but it is process-wide: once any store in your app calls
+`withHistory`, every Valtio proxy's `subscribe` callbacks start receiving populated `ops` instead
+of `[]`.
+
 ### Persist
 
 Mirror a Valtio store into an external substrate — the URL, `localStorage`/`sessionStorage`, IndexedDB, or your own — and back, in both directions. The proxy stays the **synchronous** source of truth; the substrate is a throttled, rehydratable projection of it.

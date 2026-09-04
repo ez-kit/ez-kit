@@ -66,6 +66,21 @@ describe('withHistory', () => {
 		expect(state.history.state.futures).toHaveLength(1)
 	})
 
+	it('flushes a still-pending write before undo, instead of losing it', async () => {
+		const state = withHistory(proxy({ count: 0 }))
+		state.count = 1
+		await flush()
+		// pasts is now [{ count: 0 }]; this write is still pending (no flush before undo below)
+		state.count = 2
+
+		state.history.undo()
+		await flush()
+
+		expect(state.count).toBe(1)
+		expect(state.history.state.pasts).toEqual([{ count: 0 }])
+		expect(state.history.state.futures).toEqual([{ count: 2 }])
+	})
+
 	it('redo replays the undone state', async () => {
 		const state = withHistory(proxy({ count: 0 }))
 		state.count = 1
