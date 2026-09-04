@@ -1,4 +1,4 @@
-import { createServiceRegistry, serviceKey } from '@ez-kit/store-core'
+import { attachCapability, createServiceRegistry, serviceKey } from '@ez-kit/store-core'
 import { ServicesProvider } from '@ez-kit/store-core/react'
 import { render } from '@testing-library/react'
 import { proxy } from 'valtio'
@@ -14,7 +14,7 @@ type CounterDefaultValue = { count?: number }
 const counterFactory = ({ defaultValue }: ContextStoreInit<CounterDefaultValue>) =>
 	proxy<CounterState>({ count: defaultValue.count ?? 0 })
 
-describe('createContextStore — plugin lifecycle (non-cached)', () => {
+describe('createContextStore — capability lifecycle (non-cached)', () => {
 	it('runs setup on mount and cleanup on unmount exactly once', () => {
 		const setup = vi.fn()
 		const cleanup = vi.fn()
@@ -26,7 +26,11 @@ describe('createContextStore — plugin lifecycle (non-cached)', () => {
 			},
 		}
 
-		const store = createContextStore(counterFactory, { plugins: [plugin] })
+		const store = createContextStore((init) => {
+			const state = counterFactory(init)
+			attachCapability(state, plugin)
+			return state
+		})
 
 		function CountView() {
 			return <span data-testid='count'>{store.useSnapshot().count}</span>
@@ -61,7 +65,11 @@ describe('createContextStore — plugin lifecycle (non-cached)', () => {
 			},
 		}
 
-		const store = createContextStore(counterFactory, { plugins: [plugin] })
+		const store = createContextStore((init) => {
+			const state = counterFactory(init)
+			attachCapability(state, plugin)
+			return state
+		})
 		function CountView() {
 			return <span data-testid='count'>{store.useSnapshot().count}</span>
 		}
@@ -77,6 +85,42 @@ describe('createContextStore — plugin lifecycle (non-cached)', () => {
 		expect(receivedInstance?.count).toBe(9)
 		expect(receivedIsServer).toBe(false)
 	})
+
+	it('runs setups in attachment order, innermost first', () => {
+		const calls: string[] = []
+		const store = createContextStore(() => {
+			const state = proxy({ count: 0 })
+			attachCapability(state, { name: 'inner', setup: () => void calls.push('inner') })
+			attachCapability(state, { name: 'outer', setup: () => void calls.push('outer') })
+			return state
+		})
+
+		render(
+			<store.Provider defaultValue={undefined}>
+				<span>ok</span>
+			</store.Provider>,
+		)
+		expect(calls).toEqual(['inner', 'outer'])
+	})
+
+	it('runs cleanups on unmount, in reverse order', () => {
+		const calls: string[] = []
+		const store = createContextStore(() => {
+			const state = proxy({ count: 0 })
+			attachCapability(state, { name: 'inner', setup: () => () => void calls.push('inner') })
+			attachCapability(state, { name: 'outer', setup: () => () => void calls.push('outer') })
+			return state
+		})
+
+		const { unmount } = render(
+			<store.Provider defaultValue={undefined}>
+				<span>ok</span>
+			</store.Provider>,
+		)
+		expect(calls).toEqual([])
+		unmount()
+		expect(calls).toEqual(['outer', 'inner'])
+	})
 })
 
 describe('createContextStore — service resolution', () => {
@@ -91,7 +135,11 @@ describe('createContextStore — service resolution', () => {
 			},
 		}
 
-		const store = createContextStore(counterFactory, { plugins: [plugin] })
+		const store = createContextStore((init) => {
+			const state = counterFactory(init)
+			attachCapability(state, plugin)
+			return state
+		})
 		const registry = createServiceRegistry([[GREETING, 'hello']])
 		function CountView() {
 			return <span>{store.useSnapshot().count}</span>

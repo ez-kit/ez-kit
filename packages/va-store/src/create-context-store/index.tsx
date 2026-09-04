@@ -1,4 +1,4 @@
-import { getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
+import { capabilitiesOf, getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
 import { useServices } from '@ez-kit/store-core/react'
 import {
 	createContext,
@@ -11,7 +11,7 @@ import {
 } from 'react'
 import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 
-import type { ControlledConfig, PluginCleanup, PluginContext, StoreId, StorePlugin } from '@ez-kit/store-core'
+import type { ControlledConfig, PluginCleanup, PluginContext, StoreId } from '@ez-kit/store-core'
 
 /** Names the store in the error, so `createContextStore(f, { name: 'filters' })` reports `filters`. */
 const missingProviderError = (name: string): string => `Missing Provider for ${name}`
@@ -38,8 +38,6 @@ export type UseSnapshotOptions = {
 export type CreateContextStoreOptions<TState extends object> = {
 	/** Group name used to synthesize this store's `StoreId`. Defaults to a stable `'store'`. */
 	name?: string
-	/** Plugins bound to the Provider's mount: `setup` runs on mount, its cleanup on unmount. */
-	plugins?: readonly StorePlugin<TState>[]
 	/** Per-key overrides for fields controlled via the Provider's `value` prop. */
 	controlled?: ControlledConfig<TState>
 }
@@ -122,10 +120,11 @@ function applyControlledEntries<TState extends object>(
 }
 
 /**
- * Plugin-capable base store factory. Creates the Valtio proxy once per Provider via `useRef`. When
- * `plugins` are declared, each plugin's `setup(proxy, ctx)` runs once on mount and its returned
- * `PluginCleanup` runs on unmount. `ctx.services` resolves app-level services published by an
- * ancestor `ServicesProvider`/`StoreProvider`. `createContextStore` is this factory with no plugins.
+ * Capability-aware base store factory. Creates the Valtio proxy once per Provider via `useRef`. Any
+ * capability the factory attached to it via `attachCapability` (e.g. `withPersist`) has its
+ * `setup(proxy, ctx)` run once on mount, in attachment order, with the returned `PluginCleanup` run
+ * on unmount in reverse order. `ctx.services` resolves app-level services published by an ancestor
+ * `ServicesProvider`/`StoreProvider`. `createContextStore` is this factory with no capabilities.
  *
  * Reads go through `useSnapshot()`, which returns the auto-tracked readonly snapshot. Writes go
  * through `useStore()`, which hands back the raw mutable proxy without subscribing.
@@ -135,18 +134,18 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 	options: CreateContextStoreOptions<TState> = {},
 ): CreateContextStoreResult<TState, TDefaultValue> {
 	const StoreContext = createContext<TState | null>(null)
-	const plugins = options.plugins ?? []
 	const controlled: ControlledConfig<TState> = options.controlled ?? {}
 	const name = options.name ?? DEFAULT_STORE_NAME
 	const storeId: StoreId = { path: EMPTY_PATH, name, id: SINGLETON_ID }
 
-	function usePlugins(store: TState, services: PluginContext['services']): void {
+	function useCapabilities(store: TState, services: PluginContext['services']): void {
 		useEffect(() => {
-			if (plugins.length === 0) return
+			const capabilities = capabilitiesOf(store)
+			if (capabilities.length === 0) return
 			const context: PluginContext = { services, id: storeId, isServer: IS_SERVER }
-			const cleanups: PluginCleanup[] = plugins.map((plugin) => plugin.setup(store, context))
+			const cleanups: PluginCleanup[] = capabilities.map((plugin) => plugin.setup(store, context))
 			return () => {
-				for (const cleanup of cleanups) {
+				for (const cleanup of [...cleanups].reverse()) {
 					if (cleanup) cleanup()
 				}
 			}
@@ -187,7 +186,7 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 			}
 		}
 
-		usePlugins(store, services)
+		useCapabilities(store, services)
 
 		useLayoutEffect(() => {
 			const isInitialSync = !hasSyncedInitialRef.current
