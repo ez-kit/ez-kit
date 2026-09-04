@@ -110,8 +110,9 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 				<Popover.Dialog
 					aria-label='Sort'
 					data-slot='sort-menu'
+					className='p-3'
 				>
-					<div className='min-w-[26rem] flex flex-col gap-3 p-3'>
+					<div className='min-w-[26rem] flex flex-col gap-3'>
 						{activeCount === 0 ? (
 							<p className='m-0 text-xs opacity-70'>No sorts applied. Add one to start sorting.</p>
 						) : (

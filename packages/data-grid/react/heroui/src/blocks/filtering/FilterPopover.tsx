@@ -20,8 +20,11 @@ export function FilterPopover({ children, hasActiveFilter }: FilterPopoverProps)
 				</span>
 			</Popover.Trigger>
 			<Popover.Content>
-				<Popover.Dialog aria-label='Filter'>
-					<div className='grid gap-2 p-3 min-w-64'>{children}</div>
+				<Popover.Dialog
+					aria-label='Filter'
+					className='p-3'
+				>
+					<div className='grid gap-2 min-w-64'>{children}</div>
 				</Popover.Dialog>
 			</Popover.Content>
 		</Popover>

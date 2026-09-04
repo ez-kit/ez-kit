@@ -34,7 +34,6 @@ const DIALOG_STYLE = {
 	flexDirection: 'column' as const,
 	gap: '0.5rem',
 	minWidth: 220,
-	padding: '0.5rem',
 }
 
 export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, children }: FilterPanelChipProps) {
@@ -85,7 +84,10 @@ export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, childr
 				</Button>
 			</Popover.Trigger>
 			<Popover.Content>
-				<Popover.Dialog aria-label={`Filter ${label}`}>
+				<Popover.Dialog
+					aria-label={`Filter ${label}`}
+					className='p-2'
+				>
 					<div style={DIALOG_STYLE}>{children}</div>
 				</Popover.Dialog>
 			</Popover.Content>
