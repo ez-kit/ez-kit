@@ -31,6 +31,9 @@ const hydrationByProxy = new WeakMap<object, Hydration>()
  */
 const bindingsByProxy = new WeakMap<object, SourceBinding[]>()
 
+/** Proxies whose first `setup` has run — gates the one synchronous seed, which {@link bindPersist} cannot. */
+const seededProxies = new WeakSet()
+
 /**
  * Options for the {@link persist} plugin.
  *
@@ -95,6 +98,37 @@ function connectBinding(engine: PersistEngine | undefined, source: string, bindi
 }
 
 /**
+ * Construct — but do NOT connect — the per-source bindings for `proxy`, and attach its `$url` /
+ * `$persist` control handles. This is the half of binding that needs nothing but the proxy and the
+ * field specs, so {@link withPersist} runs it in the factory phase; connecting those bindings to the
+ * engines needs services and stays in the plugin's `setup`.
+ *
+ * Memoized per proxy and therefore idempotent: a StrictMode double-invoke, a cache-reuse re-bind, or
+ * a hand-written `persist()` capability all reuse the original bindings. Recreating them would
+ * capture the now-seeded values as a binding's "default", breaking first-present-wins and
+ * clearOnDefault.
+ *
+ * Running in the factory phase means a binding's pristine default is the value the FACTORY produced,
+ * captured before `createContextStore`'s Provider pushes the initial controlled `value` during the
+ * first render. That is the honest pristine — it is the store as its author declared it — but it is
+ * observable for a field that is both controlled and persisted; `pristine-timing.test.tsx` pins it.
+ */
+export function bindPersist<T extends object>(proxy: T, options: PersistPluginOptions<T>): SourceBinding[] {
+	const existing = bindingsByProxy.get(proxy)
+	if (existing) return existing
+
+	const persistOptions = persistOptionsOf(options)
+	const bySource = groupBySource(resolveSpecs(proxy, options))
+	const bindings: SourceBinding[] = [...bySource].map(([source, descriptors]) => ({
+		source,
+		binding: createBinding(proxy, descriptors, persistOptions),
+	}))
+	bindingsByProxy.set(proxy, bindings)
+	attachHandles(proxy, bindings)
+	return bindings
+}
+
+/**
  * The persist store plugin. `setup(proxy, ctx)` resolves the app-level {@link PERSIST_ENGINES} service,
  * determines the field descriptors (accessor `fields` or discovered decorators), groups them by source,
  * creates one binding per source over the proxy, connects each binding to its source engine, and attaches
@@ -108,8 +142,6 @@ function connectBinding(engine: PersistEngine | undefined, source: string, bindi
  * to a no-op binding with a dev-warning so a re-bind on a cached instance can't crash the render.
  */
 export function persist<T extends object = object>(options: PersistPluginOptions<T> = {}): StorePlugin<T> {
-	const persistOptions = persistOptionsOf(options)
-
 	return {
 		name: 'persist',
 		setup(proxy: T, ctx: PluginContext): PluginCleanup {
@@ -117,25 +149,17 @@ export function persist<T extends object = object>(options: PersistPluginOptions
 			const hydration = trackerFor(proxy)
 			const disconnects: (() => void)[] = []
 
-			// Create every binding FIRST so each captures the proxy's PRISTINE field defaults before any
-			// source seeds — and only once per proxy (memoized). A field shared by two sources (`url` +
-			// `localStorage`) must capture the same pristine default for both, or first-present-wins breaks;
-			// reusing the memoized bindings also makes a StrictMode/cache re-bind idempotent.
-			const firstBind = !bindingsByProxy.has(proxy)
-			let bindings = bindingsByProxy.get(proxy)
-			if (!bindings) {
-				const bySource = groupBySource(resolveSpecs(proxy, options))
-				bindings = [...bySource].map(([source, descriptors]) => ({
-					source,
-					binding: createBinding(proxy, descriptors, persistOptions),
-				}))
-				bindingsByProxy.set(proxy, bindings)
-			}
+			// `withPersist` has already constructed these in the factory phase; the call is the idempotent
+			// fallback for `attachCapability(proxy, persist(…))` written by hand.
+			const bindings = bindPersist(proxy, options)
 
-			// Synchronous seed only on the first bind. Ambient (storage) sources also snapshot synchronously
+			const firstSetup = !seededProxies.has(proxy)
+			seededProxies.add(proxy)
+
+			// Synchronous seed only on the first setup. Ambient (storage) sources also snapshot synchronously
 			// here; first-present-wins means an earlier source (adapter/spec order) holds a shared field, so a
 			// later source skips it. On a re-bind the proxy already carries its hydrated state — don't re-seed.
-			if (firstBind && !ctx.isServer) {
+			if (firstSetup && !ctx.isServer) {
 				for (const { source, binding } of bindings) {
 					const engine = engines.safeGet(source)
 					if (!engine) continue
@@ -145,8 +169,6 @@ export function persist<T extends object = object>(options: PersistPluginOptions
 					}
 				}
 			}
-
-			attachHandles(proxy, bindings)
 
 			// On the server we never subscribe (no client lifecycle); leave the seeded proxy as-is.
 			if (!ctx.isServer) {

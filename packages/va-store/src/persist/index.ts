@@ -30,7 +30,7 @@ export {
 } from './provider'
 
 // --- Per-source control handles: typed accessors ($url / $persist) ---
-export { persistHandle, type PersistHandle, type UrlHandle, urlHandle } from './handle'
+export { persistHandle, type PersistHandle, type PersistHandles, type UrlHandle, urlHandle } from './handle'
 
 // --- Decorator + accessor fronts (field declaration) ---
 export { persistField, type PersistFieldOptions } from './decorators'

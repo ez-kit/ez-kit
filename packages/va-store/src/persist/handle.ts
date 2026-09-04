@@ -7,28 +7,27 @@ export const URL_HANDLE = '$url'
 /** Proxy property exposing the storage (persist) control handle. */
 export const PERSIST_HANDLE = '$persist'
 
-/** Map a source id to the proxy property that exposes its control handle. */
-function handleNameFor(source: string): string {
-	return source === URL_SOURCE ? URL_HANDLE : PERSIST_HANDLE
-}
-
 /**
  * Per-source control handle attached to a bound proxy (`$url`, `$persist`). It routes meta-tagged
  * mutations (e.g. URL push/replace) through the connected engine. When no provider is mounted (server
  * render, or before connect) it is inert: the mutation still runs, but without engine meta.
  */
 export type PersistHandle = {
-	/** The source this handle controls (e.g. `'url'`, `'localStorage'`). */
-	source: string
+	/**
+	 * The source this handle controls (e.g. `'url'`, `'localStorage'`), or `null` when the store
+	 * declares no field for this handle's slot — the slot exists so the type is true, but there is
+	 * nothing behind it and the handle stays permanently inert.
+	 */
+	source: string | null
 	/** Run a mutation whose resulting commit carries `meta` (no-op meta when disconnected). */
 	runWithMeta(meta: unknown, mutate: () => void): void
 }
 
-function createHandle(source: string, binding: PersistBinding): PersistHandle {
+function createHandle(source: string | null, binding: PersistBinding | undefined): PersistHandle {
 	return {
 		source,
 		runWithMeta(meta, mutate) {
-			const controller = binding.controller
+			const controller = binding?.controller
 			if (controller) {
 				controller.runWithMeta(meta, mutate)
 			} else {
@@ -42,24 +41,40 @@ function createHandle(source: string, binding: PersistBinding): PersistHandle {
 /** A binding tagged with its source — the shape the store factory tracks per proxy. */
 export type SourceBinding = { source: string; binding: PersistBinding }
 
+/** The pair of control handles every bound proxy carries — the type {@link withPersist} widens by. */
+export type PersistHandles = {
+	[URL_HANDLE]: UrlHandle
+	[PERSIST_HANDLE]: PersistHandle
+}
+
+function defineHandle(proxy: object, name: string, source: string | null, binding: PersistBinding | undefined): void {
+	if (Object.prototype.hasOwnProperty.call(proxy, name)) {
+		return
+	}
+	Object.defineProperty(proxy, name, {
+		value: createHandle(source, binding),
+		enumerable: false,
+		configurable: true,
+		writable: false,
+	})
+}
+
 /**
- * Attach a non-enumerable control handle per source to a bound proxy. Non-enumerable so it never
- * leaks into snapshots or serialization. A proxy bound to several sources exposes one handle each
- * (`$url` and `$persist`) without collision.
+ * Attach BOTH control handles to a bound proxy, non-enumerably. Non-enumerable so they never leak
+ * into snapshots, serialization, or a `withHistory` recorded state (whose restore would then try to
+ * assign a non-writable property).
+ *
+ * Both slots are attached even when the store declares fields for only one of them, because
+ * {@link withPersist} widens its return type by {@link PersistHandles} unconditionally — a slot the
+ * runtime skipped would make that type a lie. The unbacked slot's handle carries `source: null` and
+ * is inert: `runWithMeta` runs the mutation without engine meta, exactly as a bound-but-unconnected
+ * handle does. A proxy bound to several storage sources exposes the first one as `$persist`.
  */
 export function attachHandles(proxy: object, bindings: SourceBinding[]): void {
-	for (const { source, binding } of bindings) {
-		const name = handleNameFor(source)
-		if (Object.prototype.hasOwnProperty.call(proxy, name)) {
-			continue
-		}
-		Object.defineProperty(proxy, name, {
-			value: createHandle(source, binding),
-			enumerable: false,
-			configurable: true,
-			writable: false,
-		})
-	}
+	const url = bindings.find(({ source }) => source === URL_SOURCE)
+	const storage = bindings.find(({ source }) => source !== URL_SOURCE)
+	defineHandle(proxy, URL_HANDLE, url?.source ?? null, url?.binding)
+	defineHandle(proxy, PERSIST_HANDLE, storage?.source ?? null, storage?.binding)
 }
 
 /** The URL control handle, with {@link UrlMeta}-typed commit meta (`{ history: UrlHistory.Push }`). */
@@ -69,10 +84,10 @@ export type UrlHandle = Omit<PersistHandle, 'runWithMeta'> & {
 }
 
 /**
- * Read a per-source control handle off a bound proxy WITHOUT casts. The handle is attached as a
- * non-enumerable property by the {@link persist} plugin's `setup`; this resolver looks it up by the
- * source's handle name and throws a named error when it is absent (no persist plugin, no field for
- * that source, or called before the store's Provider mounted).
+ * Read a per-source control handle off a bound proxy WITHOUT casts. Handles are attached as
+ * non-enumerable properties by {@link withPersist}; this resolver looks one up by name and throws a
+ * named error when it is absent — which now means only that the proxy never went through
+ * `withPersist` at all, since both slots are attached whatever the store declares.
  */
 function requireHandle(proxy: object, name: string): PersistHandle {
 	const handle = (proxy as Record<string, PersistHandle | undefined>)[name]
