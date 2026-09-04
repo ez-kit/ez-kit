@@ -1,10 +1,11 @@
 'use client'
 
 import { BetweenBranch, useBetweenValue } from '@ez-kit/data-grid-react'
-import { Button, Input, Popover, RangeCalendar, Slider } from '@heroui/react'
+import { Button, Popover, RangeCalendar, Slider } from '@heroui/react'
 import { parseDate } from '@internationalized/date'
 
 import { DateCellInput } from '../cell-types/DateCell'
+import { NumberFieldControl } from '../core/NumberField'
 
 import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
 import type { CalendarDate } from '@internationalized/date'
@@ -15,6 +16,7 @@ const ROW_CLASS = 'flex gap-2 items-center'
 const COLUMN_CLASS = 'flex flex-col gap-2'
 const PRESET_ROW_CLASS = 'flex flex-wrap gap-1'
 const TRIGGER_CLASS = 'min-w-[12rem] text-xs'
+const RANGE_END_CLASS = 'flex-1'
 
 function toCalendarDate(value: unknown): CalendarDate | null {
 	if (typeof value !== 'string' || !value) return null
@@ -180,25 +182,27 @@ export function BetweenInput(props: BetweenInputProps) {
 	return withPresets(
 		presetRow,
 		<div className={ROW_CLASS}>
-			<Input
-				type='number'
+			<NumberFieldControl
+				className={RANGE_END_CLASS}
+				aria-label='From'
 				placeholder='From'
-				value={numbers.from}
-				{...(numbers.min === undefined ? {} : { min: numbers.min })}
-				{...(numbers.max === undefined ? {} : { max: numbers.max })}
-				onChange={(e) => {
-					numbers.onFromChange(e.target.valueAsNumber)
+				value={numbers.from === '' ? undefined : numbers.from}
+				minValue={numbers.min}
+				maxValue={numbers.max}
+				onChange={(next) => {
+					numbers.onFromChange(next ?? NaN)
 				}}
 			/>
 			<span aria-hidden>–</span>
-			<Input
-				type='number'
+			<NumberFieldControl
+				className={RANGE_END_CLASS}
+				aria-label='To'
 				placeholder='To'
-				value={numbers.to}
-				{...(numbers.min === undefined ? {} : { min: numbers.min })}
-				{...(numbers.max === undefined ? {} : { max: numbers.max })}
-				onChange={(e) => {
-					numbers.onToChange(e.target.valueAsNumber)
+				value={numbers.to === '' ? undefined : numbers.to}
+				minValue={numbers.min}
+				maxValue={numbers.max}
+				onChange={(next) => {
+					numbers.onToChange(next ?? NaN)
 				}}
 			/>
 		</div>,

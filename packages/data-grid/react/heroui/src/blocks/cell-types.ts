@@ -5,7 +5,7 @@ import { BooleanCellInput, BooleanCellView, BooleanFilterInput } from './cell-ty
 import { DateCellInput, DateCellView } from './cell-types/DateCell'
 import { ImageCellInput, ImageCellView } from './cell-types/ImageCell'
 import { LinkCellInput, LinkCellView } from './cell-types/LinkCell'
-import { NumberCellInput } from './cell-types/NumberCell'
+import { NumberCellInput, NumberFilterInput } from './cell-types/NumberCell'
 import { ProgressCellInput, ProgressCellView } from './cell-types/ProgressCell'
 import { SelectCellInput, SelectCellView } from './cell-types/SelectCell'
 import { TextCellInput } from './cell-types/TextCell'
@@ -21,7 +21,7 @@ export const cellTypes = {
 	number: {
 		...baseCellTypes.number,
 		editing: NumberCellInput,
-		filtering: NumberCellInput,
+		filtering: NumberFilterInput,
 	},
 	boolean: {
 		...baseCellTypes.boolean,
