@@ -133,14 +133,14 @@ describe('history interop', () => {
 		expect(fake.getSearch()).toContain('q=seeded')
 	})
 
-	it('attaches History before persist in the withPersist(withHistory(...)) chain', () => {
+	it('attaches history before persist in the withPersist(withHistory(...)) chain', () => {
 		const state = withPersist(withHistory(proxy<Filters>({ q: '' })), {
 			fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
 		})
 
 		// withHistory attaches first (it wraps the innermost proxy), withPersist attaches second — the
 		// Provider then runs setups in this same attachment order, innermost first.
-		expect(capabilitiesOf(state).map((plugin) => plugin.name)).toEqual(['History', 'persist'])
+		expect(capabilitiesOf(state).map((plugin) => plugin.name)).toEqual(['history', 'persist'])
 	})
 
 	it('records an externally pushed controlled value and converges after undo', async () => {

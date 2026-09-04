@@ -22,7 +22,7 @@ export type StoreHistory<T extends object> = HistoryApi<T, readonly ValtioOp[]> 
 }
 
 const HISTORY_KEY = 'history'
-const HISTORY_CAPABILITY_NAME = 'History'
+const HISTORY_CAPABILITY_NAME = 'history'
 const IS_SERVER = typeof window === 'undefined'
 
 /** The key `withHistory` hangs its own API off; never part of a recorded past/future state. */
