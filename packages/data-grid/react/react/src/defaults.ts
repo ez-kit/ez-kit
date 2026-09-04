@@ -23,7 +23,7 @@ import {
 	FilterPanelPlacement,
 	LoadMoreTrigger,
 	PageSizerPlacement,
-	PaginationVariant,
+	PaginationLabel,
 } from './types'
 
 /**
@@ -71,8 +71,13 @@ export const DATA_GRID_DEFAULTS = {
 		pageSizer: { placement: PageSizerPlacement.Toolbar },
 		/** What pagination does. */
 		mode: PaginationMode.Pages,
-		variant: PaginationVariant.Numbered,
-		/** `numbered` page-link window; mirrors the `buildPageWindow` defaults. */
+		/** Page-number links beside prev/next. */
+		links: true,
+		/** Jump-to-first / jump-to-last buttons. Off — prev/next and the links already move the page. */
+		edges: false,
+		/** Which built-in form the footer's label takes. */
+		label: PaginationLabel.Range,
+		/** `links` page-link window; mirrors the `buildPageWindow` defaults. */
 		siblings: DEFAULT_PAGE_SIBLINGS,
 		boundaries: DEFAULT_PAGE_BOUNDARIES,
 		/** Infinite mode only — what makes the grid load the next page. */

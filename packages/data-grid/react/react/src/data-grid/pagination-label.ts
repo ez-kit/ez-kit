@@ -1,19 +1,19 @@
-import { PaginationVariant } from '../types'
+import { PaginationLabel } from '../types'
 
 const RANGE_SEPARATOR = '–'
 const OF_LABEL = 'of'
 const PAGE_LABEL = 'Page'
 
 /**
- * Inputs for {@link buildPaginationLabel}. `pageCount` / `rowCount` are optional
- * because either can be genuinely unknown: a manually paginated grid that supplies
- * neither `rowCount` nor `pageCount` knows only which page it is on.
+ * The live page state a label is built from — and exactly what a `pagination.label` renderer
+ * receives, so a custom label never has to re-derive what the built-in rule already settled.
  *
- * Both are already normalized by the `Pagination` component — the `-1` "unknown"
- * sentinel that core hands to TanStack never reaches here.
+ * `pageCount` / `rowCount` are optional because either can be genuinely unknown: a manually
+ * paginated grid that supplies neither `rowCount` nor `pageCount` knows only which page it is
+ * on. Both are already normalized by the `Pagination` component — the `-1` "unknown" sentinel
+ * that core hands to TanStack never reaches here.
  */
-export type PaginationLabelInput = {
-	variant: PaginationVariant
+export type PaginationLabelModel = {
 	pageIndex: number
 	pageSize: number
 	// Explicitly `| undefined`: under `exactOptionalPropertyTypes` callers forward
@@ -51,24 +51,20 @@ function buildPageLabel(pageIndex: number, pageCount: number | undefined): strin
 }
 
 /**
- * The footer's text label for a variant, or `undefined` when that variant shows none.
+ * The footer's text in one of the two built-in forms.
  *
- * One implementation shared by every UI kit: the label is content, not styling, and
- * three copies of this rule had already drifted apart. Kits still own placement,
- * markup and styling — they render the returned string however they like.
+ * One implementation shared by every UI kit: the label is content, not styling, and three
+ * copies of this rule had already drifted apart. Kits still own placement, markup and styling —
+ * they render the returned string however they like.
  *
- * Degradation is deliberate: `simple` is *defined* by its "X–Y of N" range, so when the
- * total is unknown it shows the page label rather than bare prev/next with no context.
+ * `range` degrades to `page` when the total is unknown: it is *defined* by its "X–Y of N", and
+ * a grid that cannot be trusted to know the total must show position rather than invent one.
+ * `page` never needs a fallback — a page index is always known.
  */
-export function buildPaginationLabel({
-	variant,
-	pageIndex,
-	pageSize,
-	pageCount,
-	rowCount,
-}: PaginationLabelInput): string | undefined {
-	if (variant === PaginationVariant.Compact) return buildPageLabel(pageIndex, pageCount)
-	if (rowCount !== undefined) return buildRangeLabel(pageIndex, pageSize, rowCount)
-	// No total to range over: `simple` still needs a label, `numbered` has its page links.
-	return variant === PaginationVariant.Simple ? buildPageLabel(pageIndex, pageCount) : undefined
+export function buildPaginationLabel(label: PaginationLabel, model: PaginationLabelModel): string {
+	const { pageIndex, pageSize, pageCount, rowCount } = model
+	if (label === PaginationLabel.Range && rowCount !== undefined) {
+		return buildRangeLabel(pageIndex, pageSize, rowCount)
+	}
+	return buildPageLabel(pageIndex, pageCount)
 }

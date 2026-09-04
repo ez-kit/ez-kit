@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DataGridOptionsProvider, mergeGridOptionLayers } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
-import { PaginationVariant } from './types'
+import { PaginationLabel } from './types'
 import { useDataGrid } from './use-data-grid'
 
 import type { DataGridDefaultOptions } from './data-grid-options-context'
@@ -43,8 +43,10 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 		expect(DEFAULT_PAGE_SIZE).toBe(10)
 	})
 
-	it('page-based pagination renders the numbered variant by default', () => {
-		expect(DATA_GRID_DEFAULTS.pagination.variant).toBe(PaginationVariant.Numbered)
+	it('page-based pagination renders page links, no edge jumps, and the range label', () => {
+		expect(DATA_GRID_DEFAULTS.pagination.links).toBe(true)
+		expect(DATA_GRID_DEFAULTS.pagination.edges).toBe(false)
+		expect(DATA_GRID_DEFAULTS.pagination.label).toBe(PaginationLabel.Range)
 	})
 
 	it('global search input defaults', () => {
@@ -76,44 +78,47 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 		expect(result.current.getState().pagination.pageSize).toBe(DATA_GRID_DEFAULTS.pagination.pageSize)
 	})
 
-	it('pagination without a variant → resolves to the named default', () => {
+	it('pagination without footer options → resolves to the named defaults', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.grid.pagination.variant).toBe(DATA_GRID_DEFAULTS.pagination.variant)
+		expect(result.current.grid.pagination.links).toBe(DATA_GRID_DEFAULTS.pagination.links)
+		expect(result.current.grid.pagination.edges).toBe(DATA_GRID_DEFAULTS.pagination.edges)
+		expect(result.current.grid.pagination.label).toBe(DATA_GRID_DEFAULTS.pagination.label)
 	})
 
-	it('pagination.variant → stored on the table for Pagination to read', () => {
+	it('pagination.links / edges → stored on the table for Pagination to read', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: PaginationVariant.Simple } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { links: false, edges: true } }),
 		)
-		expect(result.current.grid.pagination.variant).toBe(PaginationVariant.Simple)
+		expect(result.current.grid.pagination.links).toBe(false)
+		expect(result.current.grid.pagination.edges).toBe(true)
 	})
 
-	// The public option is the `PaginationVariant` string union — `PaginationVariant` is only
+	// The public option is the `PaginationLabel` string union — `PaginationLabel` is only
 	// sugar. A plain literal must compile and behave identically; typing the option as an enum
 	// would reject this call.
-	it('pagination.variant as a plain string → accepted, same as the named member', () => {
-		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { variant: 'simple' } }),
-		)
-		expect(result.current.grid.pagination.variant).toBe(PaginationVariant.Simple)
+	it('pagination.label as a plain string → accepted, same as the named member', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { label: 'page' } }))
+		expect(result.current.grid.pagination.label).toBe(PaginationLabel.Page)
 	})
 
 	// Asserting on `table.options` / `getState().pagination` would be unfalsifiable: core only
 	// *reads* fields off `config.pagination` and rebuilds state from pageIndex/pageSize, so an
-	// unstripped `variant` would be inert there and the test would pass regardless. The
+	// unstripped `links` would be inert there and the test would pass regardless. The
 	// invariant worth guarding is what `createTable` is actually handed — so spy on that.
-	it('pagination.variant is display-only → never reaches the config handed to createTable', () => {
+	it('the footer options are display-only → never reach the config handed to createTable', () => {
 		renderHook(() =>
 			useDataGrid({
 				data: USERS,
 				columns: COLUMNS,
-				pagination: { variant: PaginationVariant.Compact, pageSize: 10 },
+				pagination: { links: false, edges: true, label: 'page', pageSize: 10 },
 			}),
 		)
 
 		const config = createTableSpy.mock.calls[0]?.[0] as { pagination?: object } | undefined
 		expect(config?.pagination).toBeDefined()
-		expect(config?.pagination).not.toHaveProperty('variant')
+		expect(config?.pagination).not.toHaveProperty('links')
+		expect(config?.pagination).not.toHaveProperty('edges')
+		expect(config?.pagination).not.toHaveProperty('label')
 	})
 
 	it('pagination.pageSizer / items are React-only → never reach createTable', () => {

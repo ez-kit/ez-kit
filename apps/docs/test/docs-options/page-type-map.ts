@@ -387,7 +387,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// The keys a defaults layer deliberately cannot carry — real `UseDataGridConfig` keys,
 			// which is exactly what makes the row meaningful.
 			{ heading: 'What can be defaulted', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
-			{ heading: 'Built-in default values', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 39 },
+			{ heading: 'Built-in default values', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 41 },
 		],
 		nonOptionTables: [{ heading: 'When to use which', reason: 'Maps a situation to an API, naming no keys.' }],
 	},
@@ -729,12 +729,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.PaginationIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 15 }],
 		nonOptionTables: [
 			{
-				heading: 'When the total is unknown',
+				heading: 'Label',
 				reason:
-					'Compares the three `pagination.variant` values against data availability; the rows are values, not keys.',
+					'Lists the values `pagination.label` accepts (`range`, `page`, `false`, a renderer) against what each reads; the rows are values, not keys.',
 			},
 		],
 	},

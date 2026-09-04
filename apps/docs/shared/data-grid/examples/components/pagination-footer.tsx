@@ -9,8 +9,8 @@ import { makeUsers, type User } from './_data'
 
 const PAGE_SIZE = 10
 const ROW_TOTAL = 50
-// Enough pages that the numbered strip has to window (1 … 4 5 6 … 100) rather than list them all.
-const NUMBERED_ROW_TOTAL = 1000
+// Enough pages that the link strip has to window (1 … 4 5 6 … 100) rather than list them all.
+const WINDOWED_ROW_TOTAL = 1000
 
 const columns = createColumns<User>([
 	{ accessorKey: 'name', header: 'Name' },
@@ -18,35 +18,35 @@ const columns = createColumns<User>([
 	{ accessorKey: 'age', header: 'Age', cell: { type: 'number' } },
 ])
 
-export function PaginationVariantNumberedExample() {
-	const data = useMemo(() => makeUsers(NUMBERED_ROW_TOTAL), [])
+export function PaginationLinksExample() {
+	const data = useMemo(() => makeUsers(WINDOWED_ROW_TOTAL), [])
 	return (
 		<DataGrid
 			data={data}
 			columns={columns}
-			pagination={{ pageSize: PAGE_SIZE, variant: 'numbered' }}
+			pagination={{ pageSize: PAGE_SIZE, links: true }}
 		/>
 	)
 }
 
-export function PaginationVariantSimpleExample() {
+export function PaginationLinksOffExample() {
 	const data = useMemo(() => makeUsers(ROW_TOTAL), [])
 	return (
 		<DataGrid
 			data={data}
 			columns={columns}
-			pagination={{ pageSize: PAGE_SIZE, variant: 'simple' }}
+			pagination={{ pageSize: PAGE_SIZE, links: false }}
 		/>
 	)
 }
 
-export function PaginationVariantCompactExample() {
+export function PaginationEdgesExample() {
 	const data = useMemo(() => makeUsers(ROW_TOTAL), [])
 	return (
 		<DataGrid
 			data={data}
 			columns={columns}
-			pagination={{ pageSize: PAGE_SIZE, variant: 'compact' }}
+			pagination={{ pageSize: PAGE_SIZE, links: false, edges: true, label: 'page' }}
 		/>
 	)
 }
@@ -57,7 +57,7 @@ export function PaginationPageSizerFooterExample() {
 		<DataGrid
 			data={data}
 			columns={columns}
-			pagination={{ pageSize: PAGE_SIZE, variant: 'compact', pageSizer: 'footer' }}
+			pagination={{ pageSize: PAGE_SIZE, links: false, edges: true, label: 'page', pageSizer: 'footer' }}
 		/>
 	)
 }

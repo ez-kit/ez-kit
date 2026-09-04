@@ -1,12 +1,12 @@
 'use client'
 
-import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariant } from '@ez-kit/data-grid-react'
+import { buildPageWindow, PAGE_GAP } from '@ez-kit/data-grid-react'
 import { Pagination as HeroPagination } from '@heroui/react'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
-const LABEL_CLASS = 'dg-pagination-label px-2 text-sm'
+const LABEL_CLASS = 'dg-pagination-label'
 const PREVIOUS_LABEL = 'Previous'
 const NEXT_LABEL = 'Next'
 const PAGINATION_ARIA_LABEL = 'Pagination'
@@ -14,11 +14,11 @@ const FIRST_ARIA_LABEL = 'Go to first page'
 const LAST_ARIA_LABEL = 'Go to last page'
 
 export function Pagination({
-	variant,
+	links,
+	edges,
+	label,
 	pageIndex,
-	pageSize,
 	pageCount,
-	rowCount,
 	siblings,
 	boundaries,
 	canPreviousPage,
@@ -29,30 +29,22 @@ export function Pagination({
 	onLastPage,
 	onPageChange,
 }: PaginationProps) {
-	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
-	// Page links need a known page count; without one `numbered` degrades to prev/next.
-	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
+	// Page links need a known page count; without one they degrade to prev/next.
+	const showLinks = links && pageCount !== undefined
 	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
 	const pages = showLinks ? buildPageWindow({ pageIndex, pageCount, siblings, boundaries }) : []
-	// Jump-to-edge only under `compact`: that variant navigates without page links, so first/last
-	// are the only way to reach the ends. `numbered` already lists the boundary pages, and
-	// `simple` deliberately offers nothing but prev/next.
-	const showEdges = variant === PaginationVariant.Compact
 
 	return (
 		<HeroPagination
 			aria-label={PAGINATION_ARIA_LABEL}
 			className='mt-3'
 			data-slot='pagination'
-			data-variant={variant}
+			data-links={links || undefined}
+			data-edges={edges || undefined}
 		>
-			{label !== undefined && (
-				<HeroPagination.Item>
-					<span className={LABEL_CLASS}>{label}</span>
-				</HeroPagination.Item>
-			)}
+			{label !== undefined && <HeroPagination.Summary className={LABEL_CLASS}>{label}</HeroPagination.Summary>}
 			<HeroPagination.Content>
-				{showEdges && (
+				{edges && (
 					<HeroPagination.Item>
 						<HeroPagination.Link
 							aria-label={FIRST_ARIA_LABEL}
@@ -97,7 +89,7 @@ export function Pagination({
 						{NEXT_LABEL}
 					</HeroPagination.Next>
 				</HeroPagination.Item>
-				{showEdges && (
+				{edges && (
 					<HeroPagination.Item>
 						<HeroPagination.Link
 							aria-label={LAST_ARIA_LABEL}

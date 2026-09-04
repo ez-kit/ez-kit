@@ -1,7 +1,8 @@
 import { DATA_GRID_DEFAULTS } from './defaults'
 
 import type { CellTypeRegistry } from './cell-types-context'
-import type { PaginationVariant } from './types'
+import type { PaginationLabelModel } from './data-grid/pagination-label'
+import type { PaginationLabel } from './types'
 import type {
 	ExpandedRowProps,
 	FilteringVariant,
@@ -18,7 +19,7 @@ import type {
 	RowPropsResolver,
 } from './use-data-grid'
 import type { RowData } from '@tanstack/table-core'
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 /**
  * Everything `useDataGrid` decided, in one typed place.
@@ -98,9 +99,12 @@ export type ResolvedGridOptions = {
 	/** Global search UI config. `undefined` when global search is off. */
 	globalFiltering?: NormalizedGlobalFilteringConfig | undefined
 	pagination: {
-		variant: PaginationVariant
+		/** Page-number links beside prev/next. Resolved. */
+		links: boolean
+		/** Jump-to-first / jump-to-last buttons. Resolved. */
+		edges: boolean
 		/**
-		 * `numbered` variant: pages kept either side of the current one. Resolved.
+		 * `links`: pages kept either side of the current one. Resolved.
 		 *
 		 * Flat, under the option's own name — it is `pagination.siblings` on the config and
 		 * `DATA_GRID_DEFAULTS.pagination.siblings` in the defaults table. It was nested under a
@@ -108,8 +112,15 @@ export type ResolvedGridOptions = {
 		 * way `pagination.pageSizer` gave one to `toolbar`.
 		 */
 		siblings: number
-		/** `numbered` variant: pages kept at each end of the strip. Resolved. */
+		/** `links`: pages kept at each end of the strip. Resolved. */
 		boundaries: number
+		/**
+		 * `pagination.label`, resolved to one of the two built-in forms, `false` for "no label",
+		 * or the consumer's renderer verbatim. Deliberately **not** resolved to a node here —
+		 * the label depends on the live page state, which this options object does not carry;
+		 * `<DataGrid.Pagination>` applies it where that state is at hand.
+		 */
+		label: PaginationLabel | false | ((ctx: PaginationLabelModel) => ReactNode)
 		/**
 		 * Sizes the PageSizer offers. Present whenever page-based pagination is on, whether or
 		 * not the toolbar auto-mounts the control — a hand-placed `<DataGrid.PageSizer />`
@@ -197,7 +208,9 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 			debounce: DATA_GRID_DEFAULTS.filtering.debounce,
 		},
 		pagination: {
-			variant: DATA_GRID_DEFAULTS.pagination.variant,
+			links: DATA_GRID_DEFAULTS.pagination.links,
+			edges: DATA_GRID_DEFAULTS.pagination.edges,
+			label: DATA_GRID_DEFAULTS.pagination.label,
 			siblings: DATA_GRID_DEFAULTS.pagination.siblings,
 			boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
 		},

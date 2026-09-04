@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GridComponentsProvider } from '../components-context'
 import { renderWithComponents } from '../test-utils'
-import { PaginationVariant } from '../types'
 import { useDataGrid } from '../use-data-grid'
 
 import { Pagination } from './pagination'
@@ -104,15 +103,17 @@ describe('Pagination — hides the footer on a known-empty grid', () => {
 	})
 })
 
-describe('Pagination — variant plumbing', () => {
-	it('passes the configured variant through to the UI kit', () => {
-		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, variant: PaginationVariant.Compact } })
-		expect(props.variant).toBe(PaginationVariant.Compact)
+describe('Pagination — control plumbing', () => {
+	it('passes the configured controls through to the UI kit', () => {
+		const { props } = captureProps({ pagination: { pageSize: PAGE_SIZE, links: false, edges: true } })
+		expect(props.links).toBe(false)
+		expect(props.edges).toBe(true)
 	})
 
-	it('defaults to the numbered variant', () => {
+	it('defaults to page links without edge jumps', () => {
 		const { props } = captureProps({ pagination: true })
-		expect(props.variant).toBe(PaginationVariant.Numbered)
+		expect(props.links).toBe(true)
+		expect(props.edges).toBe(false)
 	})
 
 	it('passes the real pageSize, not one derived from rowCount ÷ pageCount', () => {
@@ -184,5 +185,48 @@ describe('Pagination — manual pagination normalizes unknown totals', () => {
 		props.onLastPage()
 
 		expect(setPageIndex).toHaveBeenCalledWith(4)
+	})
+})
+
+describe('Pagination — the label reaches the kit already resolved', () => {
+	it('defaults to the shared rule, so a kit renders the label without deriving it', () => {
+		const { props } = captureProps({ pagination: true })
+
+		expect(props.label).toBe('1–10 of 50')
+	})
+
+	// The label is its own axis: the page counter is available with the links still on.
+	it("switches to the page counter under `label: 'page'`", () => {
+		const { props } = captureProps({ pagination: { label: 'page' } })
+
+		expect(props.label).toBe('Page 1 of 5')
+	})
+
+	it('shows no label at all under `label: false`', () => {
+		const { props } = captureProps({ pagination: { label: false } })
+
+		expect(props.label).toBeUndefined()
+	})
+
+	it('hands a renderer the same settled model the built-in rule reads', () => {
+		const label = vi.fn(() => 'Страница 1')
+		const { props } = captureProps({ pagination: { label } })
+
+		expect(label).toHaveBeenCalledWith({
+			pageIndex: 0,
+			pageSize: PAGE_SIZE,
+			pageCount: 5,
+			rowCount: 50,
+		})
+		expect(props.label).toBe('Страница 1')
+	})
+
+	// A renderer must see the same `undefined` totals the built-in rule does, or it would
+	// invent a range out of a page whose length is not the total.
+	it('passes an untrusted total to a renderer as undefined', () => {
+		const label = vi.fn(() => 'x')
+		captureProps({ pagination: { manual: true, pageCount: 5, label } }, USERS.slice(0, PAGE_SIZE))
+
+		expect(label).toHaveBeenCalledWith(expect.objectContaining({ pageCount: 5, rowCount: undefined }))
 	})
 })

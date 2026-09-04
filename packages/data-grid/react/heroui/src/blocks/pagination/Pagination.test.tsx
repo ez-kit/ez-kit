@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS, PaginationVariant } from '@ez-kit/data-grid-react'
+import { DEFAULT_PAGE_BOUNDARIES, DEFAULT_PAGE_SIBLINGS } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -9,11 +9,15 @@ import type { PaginationProps } from '@ez-kit/data-grid-react'
 /** A known-total, mid-range page — overridden per case. */
 function makeProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
 	return {
-		variant: PaginationVariant.Numbered,
+		links: true,
+		edges: false,
 		pageIndex: 0,
 		pageSize: 10,
 		pageCount: 5,
 		rowCount: 50,
+		// Already resolved by `<DataGrid.Pagination>` — which string a label form gets is
+		// `buildPaginationLabel`'s job and is tested there, not here.
+		label: '1–10 of 50',
 		siblings: DEFAULT_PAGE_SIBLINGS,
 		boundaries: DEFAULT_PAGE_BOUNDARIES,
 		canPreviousPage: false,
@@ -37,12 +41,6 @@ function makeUnknownTotalProps(overrides: Partial<PaginationProps> = {}): Pagina
 	return rest
 }
 
-/** A manually paginated grid given `pageCount` but no `rowCount` — pages known, total not. */
-function makeUnknownRowCountProps(overrides: Partial<PaginationProps> = {}): PaginationProps {
-	const { rowCount: _rowCount, ...rest } = makeProps(overrides)
-	return rest
-}
-
 const pageLinks = (container: HTMLElement): string[] =>
 	Array.from(container.querySelectorAll('a, button'))
 		.map((el) => el.textContent)
@@ -55,16 +53,24 @@ describe('heroui Pagination — numbered', () => {
 		expect(pageLinks(container)).toEqual(['1', '2', '3', '4', '5'])
 	})
 
-	it('shows the range label alongside the links', () => {
+	it('renders the resolved label alongside the links', () => {
 		render(<Pagination {...makeProps()} />)
 
 		expect(screen.getByText('1–10 of 50')).toBeDefined()
 	})
 
-	it('reports the variant so kit CSS can target it', () => {
+	it('renders no label when the react layer resolved none', () => {
+		const { label: _label, ...rest } = makeProps()
+		render(<Pagination {...rest} />)
+
+		expect(screen.queryByText('1–10 of 50')).toBeNull()
+	})
+
+	it('reports the active controls so kit CSS can target them', () => {
 		const { container } = render(<Pagination {...makeProps()} />)
 
-		expect(container.querySelector('[data-variant="numbered"]')).not.toBeNull()
+		expect(container.querySelector('[data-links]')).not.toBeNull()
+		expect(container.querySelector('[data-edges]')).toBeNull()
 	})
 
 	it('degrades to prev/next when the page count is unknown', () => {
@@ -83,41 +89,28 @@ describe('heroui Pagination — numbered', () => {
 	})
 })
 
-describe('heroui Pagination — simple / compact', () => {
-	it('simple shows the range label and no page links', () => {
-		const { container } = render(<Pagination {...makeProps({ variant: PaginationVariant.Simple })} />)
+describe('heroui Pagination — links & edges', () => {
+	it('shows the label and no page links under `links: false`', () => {
+		const { container } = render(<Pagination {...makeProps({ links: false })} />)
 
 		expect(screen.getByText('1–10 of 50')).toBeDefined()
 		expect(pageLinks(container)).toEqual([])
 	})
 
-	// Regression: an unknown total under manual pagination produced the inverted "21–10 of 10".
-	it('simple falls back to the page label when the total is unknown', () => {
-		render(<Pagination {...makeUnknownRowCountProps({ variant: PaginationVariant.Simple, pageIndex: 2 })} />)
-
-		expect(screen.getByText('Page 3 of 5')).toBeDefined()
-	})
-
-	it('compact shows the page label', () => {
-		render(<Pagination {...makeProps({ variant: PaginationVariant.Compact })} />)
+	it('shows the label it is given', () => {
+		render(<Pagination {...makeProps({ links: false, edges: true, label: 'Page 1 of 5' })} />)
 
 		expect(screen.getByText('Page 1 of 5')).toBeDefined()
 	})
 
-	// Regression: the core -1 unknown-pageCount sentinel rendered as "Page 1 of -1".
-	it('compact omits the total when the page count is unknown', () => {
-		render(<Pagination {...makeUnknownTotalProps({ variant: PaginationVariant.Compact })} />)
-
-		expect(screen.getByText('Page 1')).toBeDefined()
-	})
-
-	it('compact jumps to the first and last page', () => {
+	it('jumps to the first and last page under `edges`', () => {
 		const onFirstPage = vi.fn()
 		const onLastPage = vi.fn()
 		render(
 			<Pagination
 				{...makeProps({
-					variant: PaginationVariant.Compact,
+					links: false,
+					edges: true,
 					pageIndex: 2,
 					canPreviousPage: true,
 					onFirstPage,
@@ -133,8 +126,8 @@ describe('heroui Pagination — simple / compact', () => {
 		expect(onLastPage).toHaveBeenCalledTimes(1)
 	})
 
-	it('leaves the edge controls to `compact` alone', () => {
-		render(<Pagination {...makeProps({ variant: PaginationVariant.Numbered })} />)
+	it('renders no edge controls until `edges` asks for them', () => {
+		render(<Pagination {...makeProps()} />)
 
 		expect(screen.queryByLabelText('Go to first page')).toBeNull()
 		expect(screen.queryByLabelText('Go to last page')).toBeNull()

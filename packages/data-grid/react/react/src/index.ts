@@ -86,7 +86,7 @@ export type { ColumnMenuCapabilities } from './data-grid/column-menu-sections'
 
 // Pagination footer label (shared by every UI kit — content, not styling)
 export { buildPaginationLabel } from './data-grid/pagination-label'
-export type { PaginationLabelInput } from './data-grid/pagination-label'
+export type { PaginationLabelModel } from './data-grid/pagination-label'
 
 // Numbered-pagination page window (shared by every UI kit — structure, not styling)
 export { buildPageWindow, PAGE_GAP, DEFAULT_PAGE_SIBLINGS, DEFAULT_PAGE_BOUNDARIES } from './data-grid/page-window'
@@ -277,7 +277,7 @@ export {
 	FilterPanelPlacement,
 	LoadMoreTrigger,
 	PageSizerPlacement,
-	PaginationVariant,
+	PaginationLabel,
 	RowActionId,
 	ActionsCellState,
 	ColumnSortDirection,

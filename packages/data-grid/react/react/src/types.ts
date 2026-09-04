@@ -164,31 +164,31 @@ export type GlobalFilterInputProps = {
 }
 
 /**
- * Named members of {@link PaginationVariant}. A convenience handle — the option and every prop
- * are typed as the string union, so `variant: 'simple'` is equally valid and needs no import.
- * Internal code (defaults, label builder, kits) references the members instead of repeating
+ * Named members of {@link PaginationLabel}. A convenience handle — the option and the label
+ * builder are typed as the string union, so `label: 'page'` is equally valid and needs no
+ * import. Internal code (defaults, label builder) references the members instead of repeating
  * the literals.
  *
  * A const object rather than an `enum` on purpose: enum members are a nominal type, so code
  * holding the public union could not be compared against them
  * (`@typescript-eslint/no-unsafe-enum-comparison`).
  */
-export const PaginationVariant = {
-	/** Prev/next plus a link per page. The default. */
-	Numbered: 'numbered',
-	/** Prev/next plus an "X–Y of N" range label; no page links. */
-	Simple: 'simple',
-	/** Prev/next plus a "Page X of Y" label; no page links. */
-	Compact: 'compact',
+export const PaginationLabel = {
+	/** `1–10 of 50` — the slice of the total on screen. Needs a total; falls back to {@link PaginationLabel.Page}. */
+	Range: 'range',
+	/** `Page 2 of 5`, or `Page 2` when the page count is unknown. */
+	Page: 'page',
 } as const
 
 /**
- * Presentation of the page-based pagination footer. A pure display concern —
- * the page-based logic is identical across variants, only the controls differ.
+ * Which of the two built-in forms the footer's label takes. The label is one axis of the
+ * footer's presentation, independent of which controls render (`pagination.links` /
+ * `pagination.edges`) — a numbered strip can carry the page counter and prev/next alone can
+ * carry the range.
  *
- * Derived from {@link PaginationVariant} so the union and the members cannot drift apart.
+ * Derived from {@link PaginationLabel} so the union and the members cannot drift apart.
  */
-export type PaginationVariant = (typeof PaginationVariant)[keyof typeof PaginationVariant]
+export type PaginationLabel = (typeof PaginationLabel)[keyof typeof PaginationLabel]
 
 export type PaginationProps = {
 	pageIndex: number
@@ -206,16 +206,32 @@ export type PaginationProps = {
 	 * from the loaded page. Use to render an "X–Y of N" label.
 	 */
 	rowCount?: number
-	/** Which set of controls to render. Resolved by the react layer; never undefined. */
-	variant: PaginationVariant
 	/**
-	 * `numbered` only. Pages kept either side of the current one in the page-link strip.
+	 * Render the page-number links beside prev/next. Resolved by the react layer; never
+	 * undefined. A kit still drops them when `pageCount` is unknown — they cannot be
+	 * enumerated without a total.
+	 */
+	links: boolean
+	/** Render jump-to-first / jump-to-last buttons. Resolved by the react layer; never undefined. */
+	edges: boolean
+	/**
+	 * `links` only. Pages kept either side of the current one in the page-link strip.
 	 * Resolved by the react layer; never undefined. Feed it to `buildPageWindow` rather than
 	 * looping over `pageCount` — see {@link https://github.com/ez-kit/ez-kit/issues/106}.
 	 */
 	siblings: number
-	/** `numbered` only. Pages kept at each end of the page-link strip. Never undefined. */
+	/** `links` only. Pages kept at each end of the page-link strip. Never undefined. */
 	boundaries: number
+	/**
+	 * The footer's label, already resolved by the react layer — the shared
+	 * {@link buildPaginationLabel} output, whatever a `pagination.label` renderer returned, or
+	 * `undefined` when the option is `false`.
+	 *
+	 * Render it as given. A kit that calls `buildPaginationLabel` for itself silently ignores
+	 * `pagination.label`, which is the drift this prop exists to remove: the label is content,
+	 * the kit owns only where it sits and how it looks.
+	 */
+	label?: ReactNode
 	canPreviousPage: boolean
 	canNextPage: boolean
 	onPreviousPage: () => void

@@ -1,4 +1,4 @@
-import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariant } from '@ez-kit/data-grid-react'
+import { buildPageWindow, PAGE_GAP } from '@ez-kit/data-grid-react'
 import { ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react'
 
 import {
@@ -14,14 +14,14 @@ import {
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
 const DISABLED_CLASS = 'pointer-events-none opacity-50'
-const LABEL_CLASS = 'mr-3 flex items-center text-sm text-muted-foreground'
+const LABEL_CLASS = 'flex items-center text-sm text-muted-foreground'
 
 export function Pagination({
-	variant,
+	links,
+	edges,
+	label,
 	pageIndex,
-	pageSize,
 	pageCount,
-	rowCount,
 	siblings,
 	boundaries,
 	canPreviousPage,
@@ -32,25 +32,25 @@ export function Pagination({
 	onLastPage,
 	onPageChange,
 }: PaginationProps) {
-	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
-	// Page links need a known page count; without one `numbered` degrades to prev/next.
-	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
+	// Page links need a known page count; without one they degrade to prev/next.
+	const showLinks = links && pageCount !== undefined
 	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
 	const pages = showLinks ? buildPageWindow({ pageIndex, pageCount, siblings, boundaries }) : []
-	// Jump-to-edge only under `compact`: that variant navigates without page links, so first/last
-	// are the only way to reach the ends. `numbered` already lists the boundary pages, and
-	// `simple` deliberately offers nothing but prev/next.
-	const showEdges = variant === PaginationVariant.Compact
 
 	return (
 		<ShadcnPagination
-			className='mt-3'
+			// shadcn's root centres the whole bar (`mx-auto flex w-full justify-center`), which is
+			// its blog-pagination default. A grid footer reads label-left / controls-right, and
+			// that is also where a footer-placed PageSizer lands — so both kits use the layout
+			// heroui's `.pagination` already has.
+			className='mt-3 justify-between'
 			data-slot='pagination'
-			data-variant={variant}
+			data-links={links || undefined}
+			data-edges={edges || undefined}
 		>
 			{label !== undefined && <span className={LABEL_CLASS}>{label}</span>}
 			<PaginationContent>
-				{showEdges && (
+				{edges && (
 					<PaginationItem>
 						<PaginationLink
 							aria-label='Go to first page'
@@ -94,7 +94,7 @@ export function Pagination({
 						onClick={canNextPage ? onNextPage : undefined}
 					/>
 				</PaginationItem>
-				{showEdges && (
+				{edges && (
 					<PaginationItem>
 						<PaginationLink
 							aria-label='Go to last page'

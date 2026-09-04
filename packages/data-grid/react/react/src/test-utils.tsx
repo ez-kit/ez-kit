@@ -312,7 +312,8 @@ function TestActionsCell(props: ActionsCellProps) {
 function TestPagination({
 	pageIndex,
 	pageCount,
-	variant,
+	links,
+	edges,
 	canPreviousPage,
 	canNextPage,
 	onPreviousPage,
@@ -324,7 +325,10 @@ function TestPagination({
 	// rather than "1 / undefined".
 	const position = pageCount === undefined ? String(pageIndex + 1) : `${String(pageIndex + 1)} / ${String(pageCount)}`
 	return (
-		<div data-variant={variant}>
+		<div
+			data-links={links || undefined}
+			data-edges={edges || undefined}
+		>
 			<button
 				type='button'
 				onClick={onFirstPage}

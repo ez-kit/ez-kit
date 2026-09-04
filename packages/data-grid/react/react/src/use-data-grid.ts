@@ -8,6 +8,7 @@ import { ActionBarVariant, FilteringVariant } from './types'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
+import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type {
@@ -16,7 +17,7 @@ import type {
 	LoadMoreThreshold,
 	LoadMoreTrigger,
 	PageSizerPlacement,
-	PaginationVariant,
+	PaginationLabel,
 } from './types'
 import type {
 	ActionItem,
@@ -206,21 +207,50 @@ function normalizeVirtualization(
  */
 export type ReactPaginationConfig = PaginationConfig & {
 	/**
-	 * Page-based mode only. Which pagination-bar controls to render.
-	 * Default {@link PaginationVariant.Numbered}. Purely presentational — paging
-	 * behaviour is identical across variants.
+	 * Page-based mode only. Render a link per page beside prev/next, windowed by `siblings` /
+	 * `boundaries`. Default `true`. Purely presentational — paging behaviour is identical
+	 * whichever controls render. Links are dropped when the page count is unknown, since they
+	 * cannot be enumerated without a total.
 	 */
-	variant?: PaginationVariant
+	links?: boolean
 	/**
-	 * `numbered` variant only. How many pages stay either side of the current one in the page-link
+	 * Page-based mode only. Render jump-to-first / jump-to-last buttons flanking prev/next.
+	 * Default `false`. Worth turning on with `links: false`, where they are the only way to
+	 * reach either end.
+	 */
+	edges?: boolean
+	/**
+	 * `links` only. How many pages stay either side of the current one in the page-link
 	 * strip. Default {@link DATA_GRID_DEFAULTS.pagination.siblings} (1) → `1 … 4 5 6 … 100`.
 	 */
 	siblings?: number
 	/**
-	 * `numbered` variant only. How many pages stay at each end of the page-link strip.
+	 * `links` only. How many pages stay at each end of the page-link strip.
 	 * Default {@link DATA_GRID_DEFAULTS.pagination.boundaries} (1) → the `1` and `100` above.
 	 */
 	boundaries?: number
+	/**
+	 * Page-based mode only. The footer's label, an axis of its own — which controls render
+	 * does not decide it. {@link PaginationLabel.Range} (the default) reads `1–10 of 50` and
+	 * falls back to the page counter when the total is unknown; {@link PaginationLabel.Page}
+	 * reads `Page 2 of 5`. `false` shows no label at all; a function replaces the text, and is
+	 * the hook for translating it.
+	 *
+	 * Receives the same settled model the built-in rule reads, so a renderer never repeats the
+	 * trust rules: both totals are `undefined` exactly when the grid cannot be trusted to know
+	 * them (see {@link ReactPaginationConfig} above).
+	 *
+	 * @example
+	 * ```ts
+	 * pagination: {
+	 *   label: ({ pageIndex, pageSize, rowCount }) =>
+	 *     rowCount === undefined
+	 *       ? `Страница ${String(pageIndex + 1)}`
+	 *       : `${String(pageIndex * pageSize + 1)}–${String(Math.min((pageIndex + 1) * pageSize, rowCount))} из ${String(rowCount)}`,
+	 * }
+	 * ```
+	 */
+	label?: PaginationLabel | false | ((ctx: PaginationLabelModel) => ReactNode)
 	/**
 	 * Infinite mode only. Default: {@link LoadMoreTrigger.Auto} — loads when the edge enters
 	 * view. {@link LoadMoreTrigger.Manual} suppresses auto detection and renders a
@@ -826,19 +856,21 @@ export function useDataGrid<TRow extends object>(
 	const coreSelection: boolean | SelectionConfig<TRow, ReactNode> | undefined =
 		typeof rawSelection === 'object' ? (({ bar: _bar, ...rest }) => rest)(rawSelection) : rawSelection
 
-	// Split pagination into the headless core part (strip React-only detection tuning and
-	// the display-only `variant`) and the normalized infinite config stored on the instance
+	// Split pagination into the headless core part (strip React-only detection tuning and the
+	// display-only footer options) and the normalized infinite config stored on the instance
 	// for the infinite hook.
 	const corePagination: boolean | PaginationConfig | undefined =
 		typeof rawPagination === 'object'
 			? (({
 					trigger: _trigger,
 					threshold: _threshold,
-					variant: _variant,
+					links: _links,
+					edges: _edges,
 					siblings: _siblings,
 					boundaries: _boundaries,
 					items: _items,
 					pageSizer: _pageSizer,
+					label: _label,
 					...rest
 				}) => rest)(rawPagination)
 			: rawPagination
@@ -875,9 +907,16 @@ export function useDataGrid<TRow extends object>(
 		return { placement: config.placement ?? defaultPlacement }
 	})()
 
-	const paginationVariant: PaginationVariant = paginationCfg?.variant ?? DATA_GRID_DEFAULTS.pagination.variant
+	// The footer's three display axes, each resolved once here so no UI kit ever has to fall
+	// back for itself. `label` keeps `false` distinct from an absent option: the first says
+	// "show no label", the second "use the default form".
+	const paginationControls = {
+		links: paginationCfg?.links ?? DATA_GRID_DEFAULTS.pagination.links,
+		edges: paginationCfg?.edges ?? DATA_GRID_DEFAULTS.pagination.edges,
+	}
+	const paginationLabel: PaginationLabel | false | ((ctx: PaginationLabelModel) => ReactNode) =
+		paginationCfg?.label ?? DATA_GRID_DEFAULTS.pagination.label
 
-	// Resolved once here — like the variant — so no UI kit ever has to fall back for itself.
 	const paginationWindow = {
 		siblings: paginationCfg?.siblings ?? DATA_GRID_DEFAULTS.pagination.siblings,
 		boundaries: paginationCfg?.boundaries ?? DATA_GRID_DEFAULTS.pagination.boundaries,
@@ -1096,7 +1135,9 @@ export function useDataGrid<TRow extends object>(
 		},
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {
-			variant: paginationVariant,
+			links: paginationControls.links,
+			edges: paginationControls.edges,
+			label: paginationLabel,
 			siblings: paginationWindow.siblings,
 			boundaries: paginationWindow.boundaries,
 			...(paginationItems !== undefined ? { items: paginationItems } : {}),

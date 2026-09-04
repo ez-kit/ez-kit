@@ -538,35 +538,35 @@
 		"exportName": "FallbacksExample"
 	},
 	{
-		"id": "pagination-variant-numbered",
-		"label": "Numbered (default)",
+		"id": "pagination-links",
+		"label": "Page links (default)",
 		"group": "pagination",
 		"groupLabel": "Pagination",
-		"sourceFile": "components/pagination-variants.tsx",
-		"exportName": "PaginationVariantNumberedExample"
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationLinksExample"
 	},
 	{
-		"id": "pagination-variant-simple",
-		"label": "Simple",
+		"id": "pagination-links-off",
+		"label": "Prev / next only",
 		"group": "pagination",
 		"groupLabel": "Pagination",
-		"sourceFile": "components/pagination-variants.tsx",
-		"exportName": "PaginationVariantSimpleExample"
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationLinksOffExample"
 	},
 	{
-		"id": "pagination-variant-compact",
-		"label": "Compact",
+		"id": "pagination-edges",
+		"label": "Edge jumps",
 		"group": "pagination",
 		"groupLabel": "Pagination",
-		"sourceFile": "components/pagination-variants.tsx",
-		"exportName": "PaginationVariantCompactExample"
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationEdgesExample"
 	},
 	{
 		"id": "pagination-page-sizer-footer",
 		"label": "Page sizer in the footer",
 		"group": "pagination",
 		"groupLabel": "Pagination",
-		"sourceFile": "components/pagination-variants.tsx",
+		"sourceFile": "components/pagination-footer.tsx",
 		"exportName": "PaginationPageSizerFooterExample"
 	},
 	{

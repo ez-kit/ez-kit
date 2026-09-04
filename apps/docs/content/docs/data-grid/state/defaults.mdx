@@ -189,9 +189,11 @@ no business performing it.
 | `pagination.mode`                   | `'pages'`                                | `pagination` is enabled without a `mode`                  |
 | `pagination.pageSize`               | `10`                                     | `pagination` is enabled without a `pageSize`              |
 | `pagination.items`                  | `[10, 20, 50, 100]`                      | the PageSizer renders with no list supplied               |
-| `pagination.variant`                | `'numbered'`                             | `pagination` is enabled without a `variant`               |
-| `pagination.siblings`               | `1`                                      | `pagination.variant: 'numbered'`                          |
-| `pagination.boundaries`             | `1`                                      | `pagination.variant: 'numbered'`                          |
+| `pagination.links`                  | `true`                                   | `pagination` is enabled without a `links`                 |
+| `pagination.edges`                  | `false`                                  | `pagination` is enabled without an `edges`                |
+| `pagination.label`                  | `'range'`                                | `pagination` is enabled without a `label`                 |
+| `pagination.siblings`               | `1`                                      | `pagination.links` (on by default)                        |
+| `pagination.boundaries`             | `1`                                      | `pagination.links` (on by default)                        |
 | `pagination.trigger`                | `'auto'`                                 | `pagination.mode: 'infinite'`                             |
 | `pagination.threshold.rows`         | `5`                                      | infinite + virtualized rows                               |
 | `pagination.threshold.px`           | `200`                                    | infinite + non-virtualized rows                           |

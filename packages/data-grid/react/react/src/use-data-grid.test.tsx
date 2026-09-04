@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { buildPaginationLabel } from './data-grid/pagination-label'
 import { DATA_GRID_DEFAULTS } from './defaults'
-import { PaginationVariant } from './types'
+import { PaginationLabel } from './types'
 import { useDataGrid } from './use-data-grid'
 
 import type {
@@ -127,8 +127,7 @@ describe('useDataGrid', () => {
 
 		expect(result.current.getState().pagination.pageIndex).toBe(0)
 		expect(
-			buildPaginationLabel({
-				variant: PaginationVariant.Simple,
+			buildPaginationLabel(PaginationLabel.Range, {
 				pageIndex: result.current.getState().pagination.pageIndex,
 				pageSize: 10,
 				rowCount: result.current.getRowCount(),
