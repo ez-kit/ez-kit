@@ -25,10 +25,9 @@ export type StoreCacheOptions = {
 	gcTime?: number
 }
 
-/** Options passed to `getOrCreate` controlling lifetime and the plugins bound to the new instance. */
-export type CreateOptions<T> = {
+/** Options passed to `getOrCreate` controlling lifetime and the plugin context for the new instance. */
+export type CreateOptions = {
 	gcTime: number
-	plugins: readonly StorePlugin<T>[]
 	context: PluginContext
 }
 

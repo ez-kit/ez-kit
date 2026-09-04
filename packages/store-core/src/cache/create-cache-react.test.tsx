@@ -1,9 +1,10 @@
 import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { attachCapability } from '../capability'
+
 import { createCacheReact } from './create-cache-react'
 
-import type { StorePlugin } from '../plugin'
 import type { ReactElement } from 'react'
 
 type Fake = { id: string }
@@ -30,11 +31,14 @@ describe('createCacheReact', () => {
 		const api = freshApi()
 		const setup = vi.fn(() => cleanup)
 		const cleanup = vi.fn()
-		const plugins: StorePlugin<Fake>[] = [{ name: 'p', setup }]
-		const group = api.createCachedStore<{ id: string }>((init) => ({ id: init.defaultValue.id }), {
-			name: 'fake',
-			plugins,
-		})
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, { name: 'p', setup })
+				return instance
+			},
+			{ name: 'fake' },
+		)
 
 		// Keep the cache Provider mounted across renders; toggle only the group Provider child.
 		function Tree({ show }: { show: boolean }): ReactElement {
@@ -79,10 +83,14 @@ describe('createCacheReact', () => {
 		const api = freshApi()
 		const cleanup = vi.fn()
 		const setup = vi.fn(() => cleanup)
-		const group = api.createCachedStore<{ id: string }>((init) => ({ id: init.defaultValue.id }), {
-			name: 'fake',
-			plugins: [{ name: 'p', setup }],
-		})
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, { name: 'p', setup })
+				return instance
+			},
+			{ name: 'fake' },
+		)
 
 		const view = render(
 			<api.Provider>
@@ -109,18 +117,20 @@ describe('createCacheReact', () => {
 	it('accumulates nested Scope paths into the StoreId path', () => {
 		const api = freshApi()
 		const seen: string[][] = []
-		const group = api.createCachedStore<{ id: string }>((init) => ({ id: init.defaultValue.id }), {
-			name: 'fake',
-			plugins: [
-				{
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, {
 					name: 'capture',
 					setup: (_instance, ctx) => {
 						seen.push([...ctx.id.path])
 						return undefined
 					},
-				},
-			],
-		})
+				})
+				return instance
+			},
+			{ name: 'fake' },
+		)
 
 		render(
 			<api.Provider>

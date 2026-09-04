@@ -231,7 +231,6 @@ export function createCacheReact<TInstance extends object>(
 		const { name } = options
 		registerGroupName(name)
 		const groupGcTime = options.gcTime
-		const plugins = options.plugins ?? []
 
 		const StoreContext = createContext<TInstance | null>(null)
 		const MISSING_GROUP_PROVIDER = `Missing <${name}.Provider>`
@@ -267,7 +266,7 @@ export function createCacheReact<TInstance extends object>(
 			const [instance] = useState<TInstance>(() => {
 				if (typeof window === 'undefined') return factory({ defaultValue })
 				const context: PluginContext = { services, id: storeId, isServer: false }
-				return cache.getOrCreate(storeId, () => factory({ defaultValue }), { gcTime, plugins, context })
+				return cache.getOrCreate(storeId, () => factory({ defaultValue }), { gcTime, context })
 			})
 
 			useEffect(() => {

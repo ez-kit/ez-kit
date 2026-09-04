@@ -1,3 +1,4 @@
+import { capabilitiesOf } from '../capability'
 import { serializeStoreId } from '../store-id'
 
 import { createMembershipView, startsWithPrefix, toRecords, updateMembership } from './cache-utils'
@@ -15,7 +16,7 @@ export const DEFAULT_GC_TIME = 5 * 60 * 1000
  */
 export type InstanceCache = {
 	/** Miss: create + run plugin setups; hit: return the existing instance with NO re-run. */
-	getOrCreate: <T>(id: StoreId, create: () => T, opts: CreateOptions<T>) => T
+	getOrCreate: <T>(id: StoreId, create: () => T, opts: CreateOptions) => T
 	/** Register a mounted observer; keeps the entry alive and cancels any pending eviction. */
 	addObserver: (id: StoreId) => void
 	/** Unregister an observer; when the last one leaves, schedule eviction after the entry's `gcTime`. */
@@ -105,15 +106,15 @@ export function createInstanceCache(options: CacheConfig = {}): InstanceCache {
 		}, meta.gcTime)
 	}
 
-	function getOrCreate<T>(id: StoreId, create: () => T, opts: CreateOptions<T>): T {
+	function getOrCreate<T>(id: StoreId, create: () => T, opts: CreateOptions): T {
 		const key = serializeStoreId(id)
 		const existing = metaByKey.get(key)
 		if (existing) return existing.instance as T
 
-		const instance = create()
-		const cleanups: PluginCleanup[] = opts.plugins.map((plugin) => plugin.setup(instance, opts.context))
+		const instance = create() as T & object
+		const cleanups: PluginCleanup[] = capabilitiesOf(instance).map((plugin) => plugin.setup(instance, opts.context))
 		metaByKey.set(key, {
-			instance: instance as object,
+			instance,
 			storeId: id,
 			observerCount: 0,
 			gcTime: opts.gcTime,
