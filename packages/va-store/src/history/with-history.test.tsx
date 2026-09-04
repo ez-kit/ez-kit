@@ -131,6 +131,19 @@ describe('withHistory', () => {
 		expect(state.history.state.pasts).toHaveLength(0)
 	})
 
+	it('flushes a still-pending write before skip, instead of losing it', async () => {
+		const state = withHistory(proxy({ count: 0 }))
+		state.count = 1
+		// pending: no flush before skip below
+		state.history.skip(() => {
+			state.count = 99
+		})
+		await flush()
+
+		expect(state.count).toBe(99)
+		expect(state.history.state.pasts).toEqual([{ count: 0 }])
+	})
+
 	it('passes valtio ops to shouldRecord so a path can be excluded', async () => {
 		const state = withHistory(proxy({ count: 0, hovered: false }), {
 			shouldRecord: (_prev, _next, ops) => !ops?.every((op) => op[1][0] === 'hovered'),

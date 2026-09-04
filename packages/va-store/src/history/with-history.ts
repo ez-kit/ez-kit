@@ -127,10 +127,19 @@ export function withHistory<T extends object>(
 			flushBatch()
 			api.goto(index)
 		},
+		// `skip`'s pause is transient — `fn` runs, then `isPaused` reverts synchronously, before a
+		// pending (not yet flushed) earlier write's deferred notification can ever observe it. Without
+		// flushing first, that earlier write is read as already applied by nothing in particular (no
+		// `read()` call happens here), then silently dropped by `flushBatch`'s reference-equality guard
+		// once the deferred flush finally runs and finds the state unchanged since the reset caused by
+		// `fn`'s own (correctly suppressed) write. Flushing first turns it into its own recorded step.
+		skip: (fn) => {
+			flushBatch()
+			api.skip(fn)
+		},
 		clear: api.clear,
 		pause: api.pause,
 		resume: api.resume,
-		skip: api.skip,
 		get isPaused() {
 			return api.isPaused
 		},
