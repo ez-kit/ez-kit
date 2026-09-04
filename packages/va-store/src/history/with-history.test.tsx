@@ -144,6 +144,38 @@ describe('withHistory', () => {
 		expect(state.history.state.pasts).toEqual([{ count: 0 }])
 	})
 
+	it('flushes a still-pending write before pause, instead of losing it', async () => {
+		const state = withHistory(proxy({ count: 0 }))
+		state.count = 1
+		// pending: no flush before pause below
+		state.history.pause()
+		await flush()
+
+		expect(state.history.state.pasts).toEqual([{ count: 0 }])
+	})
+
+	it('flushes a still-pending write before clear, so the stack ends up actually empty', async () => {
+		const state = withHistory(proxy({ count: 0 }))
+		state.count = 1
+		// pending: no flush before clear below
+		state.history.clear()
+		await flush()
+
+		expect(state.history.state.pasts).toHaveLength(0)
+		expect(state.history.state.futures).toHaveLength(0)
+	})
+
+	it('also flushes a still-pending write before resume, for the same reason as every other method', async () => {
+		const state = withHistory(proxy({ count: 0 }))
+		state.count = 1
+		// pending: no flush before resume below (resume is a no-op here — it was never paused — but the
+		// uniform wrapper flushes before delegating regardless, same as every other method)
+		state.history.resume()
+		await flush()
+
+		expect(state.history.state.pasts).toEqual([{ count: 0 }])
+	})
+
 	it('passes valtio ops to shouldRecord so a path can be excluded', async () => {
 		const state = withHistory(proxy({ count: 0, hovered: false }), {
 			shouldRecord: (_prev, _next, ops) => !ops?.every((op) => op[1][0] === 'hovered'),

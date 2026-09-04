@@ -103,43 +103,34 @@ export function withHistory<T extends object>(
 		lastSnapshot = nextSnapshot
 	}
 
+	/**
+	 * Every function-valued member of `api` gets flushed-before-delegate, applied uniformly rather than
+	 * as a hand-picked list of call sites. Three rounds of review each found the same failure through a
+	 * different door — `undo`/`redo`/`goto` reading `adapter.read()` (the live target) as if a pending,
+	 * not-yet-flushed write had already happened and then losing it to `flushBatch`'s reference-equality
+	 * guard; `skip`'s transient pause reverting before a deferred flush can see it; `pause`/`clear`
+	 * changing the stacks in a way a still-pending write's later flush would silently undo or duplicate.
+	 * A hand-written list of wrapped call sites is exactly how a fourth method slips through unnoticed;
+	 * this reads `api`'s own shape at runtime instead, so a method added to `HistoryApi` later inherits
+	 * the flush automatically — an exception would require deliberately excluding a key here, not just
+	 * forgetting to add one. `flushBatch()` is a no-op when nothing is pending, so this costs nothing for
+	 * a member (like `resume`, see the report) that in practice never has anything to flush.
+	 */
+	function buildFlushingHistoryMethods(): Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused'> {
+		const methods: Record<string, unknown> = {}
+		for (const [key, member] of Object.entries(api)) {
+			if (typeof member !== 'function') continue
+			methods[key] = (...args: unknown[]) => {
+				flushBatch()
+				return (member as (...args: unknown[]) => unknown)(...args)
+			}
+		}
+		return methods as Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused'>
+	}
+
 	const host = target as T & { history: StoreHistory<T> }
 	host.history = ref<StoreHistory<T>>({
-		// `undo`/`redo`/`goto` all read `adapter.read()` (the *live* target) to capture "the current
-		// state" before moving it into the other stack. A write still sitting in `pendingOps` — made
-		// this same tick, not yet flushed — would otherwise be read as if it had already happened, and
-		// then silently dropped by `flushBatch`'s `nextSnapshot === lastSnapshot` guard once it does run
-		// (nothing changed between the flush and `lastSnapshot` any more, from its point of view). Flush
-		// first so the pending write becomes its own recorded step before the jump reads "current".
-		record: (prev, next, meta) => {
-			flushBatch()
-			api.record(prev, next, meta)
-		},
-		undo: () => {
-			flushBatch()
-			api.undo()
-		},
-		redo: () => {
-			flushBatch()
-			api.redo()
-		},
-		goto: (index) => {
-			flushBatch()
-			api.goto(index)
-		},
-		// `skip`'s pause is transient — `fn` runs, then `isPaused` reverts synchronously, before a
-		// pending (not yet flushed) earlier write's deferred notification can ever observe it. Without
-		// flushing first, that earlier write is read as already applied by nothing in particular (no
-		// `read()` call happens here), then silently dropped by `flushBatch`'s reference-equality guard
-		// once the deferred flush finally runs and finds the state unchanged since the reset caused by
-		// `fn`'s own (correctly suppressed) write. Flushing first turns it into its own recorded step.
-		skip: (fn) => {
-			flushBatch()
-			api.skip(fn)
-		},
-		clear: api.clear,
-		pause: api.pause,
-		resume: api.resume,
+		...buildFlushingHistoryMethods(),
 		get isPaused() {
 			return api.isPaused
 		},
