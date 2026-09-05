@@ -43,4 +43,13 @@ describe('capability registry', () => {
 			attachCapability(target, { name: 'persist', setup: noop })
 		}).toThrow(/persist/)
 	})
+
+	it('capitalizes the wrapper name in the duplicate-attach message', () => {
+		const target = {}
+		attachCapability(target, { name: 'history', setup: noop })
+
+		expect(() => {
+			attachCapability(target, { name: 'history', setup: noop })
+		}).toThrow('capability "history" is already attached to this store. Wrap the store in withHistory only once.')
+	})
 })
