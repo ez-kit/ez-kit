@@ -80,7 +80,7 @@ capabilitiesOf(store).map((plugin) => plugin.name) // → ['history', 'persist']
 Attaching the same capability name twice — `withHistory(withHistory(store))`, or two of your own plugins both named `'logging'` — throws:
 
 ```
-[store-core] capability "history" is already attached to this store. Wrap the store in withhistory only once.
+[store-core] capability "history" is already attached to this store. Wrap the store in withHistory only once.
 ```
 
 That's a construction-time check, not a runtime one: it fires the moment the second `attachCapability` call runs, before the store is ever rendered.

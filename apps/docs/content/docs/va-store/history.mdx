@@ -40,7 +40,7 @@ function Toolbar() {
 ## Options
 
 ```ts
-type ValtioHistoryOptions<T> = {
+type ValtioHistoryOptions<T extends object> = {
 	limit?: number
 	defaultPaused?: boolean
 	defaultPasts?: T[]
