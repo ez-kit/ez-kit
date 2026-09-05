@@ -5,7 +5,7 @@ description: One store that is BOTH cached and persisted — kept alive across u
 
 # Cached stores
 
-`persist()` is a plugin, and [`createCachedStore`](../cache) accepts the same `plugins` array as `createContextStore`. So a single store can be **both** kept alive in the cache **and** synced to the URL or storage — composed, not bolted together.
+`withPersist` attaches its capability to the proxy itself, inside the factory — so it composes with [`createCachedStore`](../cache) exactly the way it composes with `createContextStore`: call it inside the factory function you hand to `createCachedStore`. A single store can be **both** kept alive in the cache **and** synced to the URL or storage — composed, not bolted together.
 
 A cache-hit returns the same already-bound proxy, so its persist binding (and any in-progress edits) survive a remount within `gcTime` — the substrate is never re-read on the way back.
 
@@ -16,11 +16,11 @@ A cache-hit returns the same already-bound proxy, so its persist binding (and an
 
 ## Wiring it up
 
-Two pieces: a cached store group whose `plugins` include `persist()`, and a single `StoreProvider` that mounts **both** the persist engines and the cache.
+Two pieces: a cached store group whose factory wraps the proxy in `withPersist`, and a single `StoreProvider` that mounts **both** the persist engines and the cache.
 
 ```tsx
 import { createStoreCache, StoreProvider } from '@ez-kit/va-store'
-import { persist } from '@ez-kit/va-store/persist'
+import { withPersist } from '@ez-kit/va-store/persist'
 import { localStorageAdapter } from '@ez-kit/va-store/persist/storage'
 import { reactRouterAdapter } from '@ez-kit/va-store/persist/url/react-router'
 import { urlField } from '@ez-kit/va-store/persist/url'
@@ -31,11 +31,14 @@ type FiltersState = { q: string; page: number }
 // An isolated cache, threaded into the StoreProvider below.
 const cache = createStoreCache()
 
-// Cached AND persisted: the cache keeps the proxy alive; `persist()` mirrors its fields to the URL.
-const filtersStore = cache.createCachedStore<FiltersState>(() => proxy<FiltersState>({ q: '', page: 1 }), {
-	name: 'filters',
-	plugins: [persist({ fields: (field) => [field((s) => s.q, urlField()), field((s) => s.page, urlField())] })],
-})
+// Cached AND persisted: the cache keeps the proxy alive; `withPersist` mirrors its fields to the URL.
+const filtersStore = cache.createCachedStore<FiltersState>(
+	() =>
+		withPersist(proxy<FiltersState>({ q: '', page: 1 }), {
+			fields: (field) => [field((s) => s.q, urlField()), field((s) => s.page, urlField())],
+		}),
+	{ name: 'filters' },
+)
 
 // One StoreProvider mounts the persist engines (`persist`) and the cache (`cache`) at once.
 function App({ children }: { children: React.ReactNode }) {
@@ -58,10 +61,10 @@ function FiltersPanel() {
 }
 ```
 
-`StoreProvider` composes the two layers in the right order — the persist engines outermost, the cache inside — so a cached store's `persist()` plugin always resolves the engines published above it. Omit either prop to skip that layer: no `persist` → no engines; no `cache` → no cache boundary (a plain `StoreProvider persist={[…]}` is the modern replacement for a bare `PersistProvider`).
+`StoreProvider` composes the two layers in the right order — the persist engines outermost, the cache inside — so a cached store's `withPersist` capability always resolves the engines published above it. Omit either prop to skip that layer: no `persist` → no engines; no `cache` → no cache boundary (a plain `StoreProvider persist={[…]}` is the modern replacement for a bare `PersistProvider`).
 
 <Callout type="info">
-	A non-cached `createContextStore(factory, { plugins: [persist()] })` is request-scoped — a fresh proxy per
+	A non-cached `createContextStore(() => withPersist(proxy(…)))` is request-scoped — a fresh proxy per
 	`Provider` mount, persisted but not kept alive. Add the cache only when the store should outlive its
 	`Provider`. See [createCachedStore](../cache) for the keep-alive lifecycle.
 </Callout>

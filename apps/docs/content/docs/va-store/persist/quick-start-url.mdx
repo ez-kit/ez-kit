@@ -22,7 +22,7 @@ The shortest path to URL-as-state: declare which fields sync, mount the URL adap
 
 ```tsx
 import { createContextStore } from '@ez-kit/va-store'
-import { persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { persistUrl } from '@ez-kit/va-store/persist/url'
 import { reactRouterAdapter } from '@ez-kit/va-store/persist/url/react-router'
 import { proxy } from 'valtio'
@@ -33,9 +33,8 @@ class Filters {
 	@persistUrl() page = 1
 }
 
-// 2. Build a request-scoped store with the `persist()` plugin. Omit `fields` → decorators are
-//    discovered on the instance.
-const filtersStore = createContextStore(() => proxy(new Filters()), { plugins: [persist()] })
+// 2. Wrap the proxy in `withPersist`. Omit `fields` → decorators are discovered on the instance.
+const filtersStore = createContextStore(() => withPersist(proxy(new Filters())))
 
 // 3. Mount the URL adapter once, app-level, and render the store under it.
 function Page() {
@@ -83,7 +82,7 @@ class Filters {
 ```
 
 ```ts
-persist({
+withPersist(proxy({ q: '', page: 1 }), {
 	fields: (field) => [field((s) => s.q, urlField({ key: 'search' })), field((s) => s.page, urlField())],
 })
 ```

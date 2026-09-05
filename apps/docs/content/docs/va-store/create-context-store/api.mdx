@@ -14,7 +14,6 @@ type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
 
 type CreateContextStoreOptions<TState extends object> = {
 	name?: string
-	plugins?: readonly StorePlugin<TState>[]
 	controlled?: ControlledConfig<TState>
 }
 
@@ -41,7 +40,7 @@ function createContextStore<TState extends object, TDefaultValue = undefined>(
 | Parameter | Type                                                | Description                                                                                     |
 | --------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `factory` | `(init: ContextStoreInit<TDefaultValue>) => TState` | Creates the Valtio proxy. Runs once per `Provider` mount. Receives the `defaultValue` envelope. |
-| `options` | `CreateContextStoreOptions<TState>`                 | Optional. Carries [`plugins`](#the-plugins-option) and [`controlled`](#the-controlled-option).  |
+| `options` | `CreateContextStoreOptions<TState>`                 | Optional. Carries [`controlled`](#the-controlled-option) and [`name`](#the-name-option).        |
 
 > **Rule of thumb:** read from snapshots (`useSnapshot`), mutate the source proxy (`useStore`).
 
@@ -204,22 +203,11 @@ Because the default write is `Object.assign` on the proxy, a `set` **accessor** 
 
 `equals` is a plain `(a, b) => boolean`, so any comparator of your own works. See [deriving `value` on the fly](../create-context-store#deriving-value-on-the-fly) for when you need one.
 
-## The `plugins` option
+## Capabilities
 
-Capabilities bound to the `Provider`'s mount: each plugin's `setup` runs when the proxy is created and its returned cleanup runs on unmount.
+`createContextStore` takes no `plugins` option. A capability — [`withPersist`](../persist), [`withHistory`](../history) — is attached to the proxy itself, inside the factory: `createContextStore(() => withPersist(proxy({ … })))`. `createContextStore` discovers whatever capabilities the factory attached and runs their `setup` when the proxy is created, in attachment order, with the returned cleanup run in reverse on unmount.
 
-```ts
-type StorePlugin<TState> = {
-	name: string
-	setup(instance: TState, ctx: { services: ServiceRegistry; id: StoreId; isServer: boolean }): (() => void) | undefined
-}
-```
-
-| Option    | Type                             | Required | Description                                                 |
-| --------- | -------------------------------- | -------- | ----------------------------------------------------------- |
-| `plugins` | `readonly StorePlugin<TState>[]` | no       | Bound to the Provider's mount lifetime, in the order given. |
-
-The plugin this package ships is [`persist()`](../persist) — URL, storage and IndexedDB mirroring. A plugin that reaches app-level services (as `persist()` does) needs a [`StoreProvider`](../persist) above it. The same array is accepted by [`createCachedStore`](../cache), where the lifetime is the cache entry's rather than the Provider's.
+A capability that reaches app-level services (as `withPersist` does) needs a [`StoreProvider`](../persist) above it. The same factory-position wrapping is how [`createCachedStore`](../cache) attaches a capability too — there the lifetime is the cache entry's rather than the Provider's. See [Capabilities](../../capabilities) for the full shape of `StorePlugin`, attachment order, and writing your own.
 
 ## The `name` option
 
@@ -233,7 +221,7 @@ const filtersStore = createContextStore(createFilters, { name: 'filters' })
 | ------ | -------- | -------- | ------------------------------------------------------------------------------------- |
 | `name` | `string` | no       | Names the store in `ctx.id` and in the missing-Provider error. Defaults to `'store'`. |
 
-`name` is a label, not a behaviour switch. In particular it does **not** affect persisted keys: those come from each field's path plus an explicit `prefix`, and `persist()` reads only `ctx.services` and `ctx.isServer`, never `ctx.id`. Set it when a named store reads better in a throw, or when a plugin of your own keys off `ctx.id`.
+`name` is a label, not a behaviour switch. In particular it does **not** affect persisted keys: those come from each field's path plus an explicit `prefix`, and `withPersist` reads only `ctx.services` and `ctx.isServer`, never `ctx.id`. Set it when a named store reads better in a throw, or when a capability of your own keys off `ctx.id`.
 
 On [`createCachedStore`](../cache) the same option carries real weight — there `name` is the group namespace and part of every entry's identity.
 

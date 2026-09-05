@@ -118,11 +118,10 @@ function createCachedStore<TStore extends StoreApi<unknown>, TDefaultValue exten
 
 ### `options`
 
-| Option    | Type                        | Required | Description                                                                                       |
-| --------- | --------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| `name`    | `string`                    | yes      | Group namespace, visible in `keys()` / `useCacheKeys()`. Must be unique within a cache.           |
-| `gcTime`  | `number`                    | no       | Group default eviction delay in ms, overriding the cache default (5 min).                         |
-| `plugins` | `readonly StorePlugin<T>[]` | no       | Instance-lifetime plugins from `@ez-kit/store-core`. `@ez-kit/zu-store` ships none — leave unset. |
+| Option   | Type     | Required | Description                                                                             |
+| -------- | -------- | -------- | --------------------------------------------------------------------------------------- |
+| `name`   | `string` | yes      | Group namespace, visible in `keys()` / `useCacheKeys()`. Must be unique within a cache. |
+| `gcTime` | `number` | no       | Group default eviction delay in ms, overriding the cache default (5 min).               |
 
 Call it once at module top-level. Calling it twice with the same `name` on one cache `console.warn`s in development.
 

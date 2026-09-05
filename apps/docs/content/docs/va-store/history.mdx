@@ -1,0 +1,123 @@
+---
+title: History
+description: withHistory adds an undo/redo/goto stack to any Valtio proxy, backed by the same manager-agnostic @ez-kit/store-core/history engine every @ez-kit store uses.
+---
+
+# History
+
+`withHistory` wraps a Valtio proxy with an undo/redo stack. It's a [capability](./capabilities) — attach it in the factory, read and drive it with `useHistory()`.
+
+```tsx
+import { createContextStore, useHistory, withHistory } from '@ez-kit/va-store'
+import { proxy } from 'valtio'
+
+const store = createContextStore(() => withHistory(proxy({ count: 0 })))
+
+function Toolbar() {
+	const state = store.useStore()
+	const { undo, redo, canUndo, canRedo } = useHistory(state)
+	return (
+		<>
+			<button
+				disabled={!canUndo}
+				onClick={undo}
+			>
+				Undo
+			</button>
+			<button
+				disabled={!canRedo}
+				onClick={redo}
+			>
+				Redo
+			</button>
+		</>
+	)
+}
+```
+
+`withHistory` mutates the proxy it's given and returns it — same identity, widened by `{ history: StoreHistory<T> }`. `store.history` is enumerable and `ref()`-wrapped (so `snapshot(store).history` is the same live object, not a deep-cloned copy), and its `toJSON()` returns `undefined`, so it never leaks into `JSON.stringify(store)`.
+
+## Options
+
+```ts
+type ValtioHistoryOptions<T> = {
+	limit?: number
+	defaultPaused?: boolean
+	defaultPasts?: T[]
+	defaultFutures?: T[]
+	shouldRecord?: (prev: T, next: T, meta?: readonly ValtioOp[]) => boolean
+	sync?: boolean
+}
+
+withHistory(proxy({ count: 0 }), options)
+```
+
+| Option           | Type                                                        | Default | Description                                                                          |
+| ---------------- | ----------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
+| `limit`          | `number`                                                    | `100`   | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
+| `defaultPaused`  | `boolean`                                                   | `false` | Start with recording paused — `resume()` (or a change to this option) flips it on.   |
+| `defaultPasts`   | `T[]`                                                       | `[]`    | Seed the undo stack. Trimmed to `limit` like any other write.                        |
+| `defaultFutures` | `T[]`                                                       | `[]`    | Seed the redo stack. Trimmed to `limit` like any other write.                        |
+| `shouldRecord`   | `(prev: T, next: T, meta?: readonly ValtioOp[]) => boolean` | —       | Veto a write: return `false` to skip recording it. `meta` is the batch's Valtio ops. |
+| `sync`           | `boolean`                                                   | `false` | Record one entry **per operation** instead of one per microtask batch.               |
+
+`shouldRecord`'s `meta` is `readonly ValtioOp[]` — the exact shape Valtio's `subscribe` reports (`['set', path, value, previousValue]` or `['delete', path, previousValue]`), one array per recorded batch (or per op, with `sync: true`). This requires `unstable_enableOp(true)`, which `withHistory` turns on globally the first time it's called — see [the process-wide flag](#the-process-wide-op-flag) below.
+
+## `useHistory(store)`
+
+```tsx
+const { undo, redo, goto, clear, pause, resume, skip, isPaused, pasts, futures, limit, canUndo, canRedo } =
+	useHistory(store)
+```
+
+Subscribes through `useSnapshot(history.state)`, so `pasts`, `futures`, `limit` and `isPaused` re-render the caller when they change; `canUndo` / `canRedo` are derived (`pasts.length > 0` / `futures.length > 0`). The methods (`undo`, `redo`, `goto`, `clear`, `pause`, `resume`, `skip`) are stable references from `store.history` — call them from event handlers without re-subscribing.
+
+`goto(index)` jumps to an absolute position on the linear timeline `[...pasts, current, ...futures]` (`index === pasts.length` is a no-op — you're already there); out-of-range indices clamp rather than throw. `skip(fn)` runs `fn` with recording paused for its duration, re-entrant, and restores the prior pause state on exit.
+
+## The cost of history, honestly
+
+`withHistory` is not free, and the trade-offs are worth stating plainly rather than glossing over:
+
+- **Deep clone on every recorded write.** Recording a step deep-clones the state via `valtio/utils`' `deepClone` so that `pasts`/`futures` hold independent snapshots, not live references into the proxy. For a large or deeply nested state, that clone runs on every batched write while unpaused.
+- **`ref`-wrapped and class-typed values do not time-travel.** Valtio's `ref()` marks a value as opaque to the proxy machinery — it's never cloned, tracked, or restored field-by-field. A `ref`-wrapped value inside recorded state is the **same object** across every past/future entry; undo/redo cannot give you an earlier version of it. Likewise `Map`/`Set` instances and class instances survive `deepClone` structurally, but `applyState`'s restore only ever assigns and deletes **plain keys** on the target — an instance's own methods and prototype are never part of what's diffed, so mutations reachable only through a class's own methods (as opposed to plain field writes) are not what history is tracking.
+- **`sync: false` (the default) batches one entry per microtask**, not per assignment — several field writes in the same tick become one undo step. Set `sync: true` for one-entry-per-operation, e.g. to make every individual keystroke separately undoable.
+
+### Persist + history
+
+Persist hydration arrives as a **late batch** — the store's fields update after the substrate resolves, which for storage sources (and cross-tab pulls) happens after the store's very first render. Recorded against a history capability, that hydration is a **step like any other**, indistinguishable from a user edit, unless you tell it otherwise. The very first batch — synchronous writes from the first render plus an initial controlled `value` push — is the one exception: it's the baseline, not a step, because nothing meaningful preceded it to undo back to.
+
+The documented recipe for keeping persist hydration out of the undo stack is `defaultPaused: true` paired with `resume()` driven by `useHydrated`:
+
+```tsx
+import { createContextStore, useHistory, withHistory } from '@ez-kit/va-store'
+import { paramString, useHydrated, withPersist } from '@ez-kit/va-store/persist'
+import { useEffect } from 'react'
+import { proxy } from 'valtio'
+
+const store = createContextStore(() =>
+	withPersist(withHistory(proxy({ q: '' }), { defaultPaused: true }), {
+		fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+	}),
+)
+
+function Filters() {
+	const state = store.useStore()
+	const hydrated = useHydrated(state)
+	useEffect(() => {
+		if (hydrated) state.history.resume()
+	}, [hydrated, state])
+
+	const { undo, canUndo } = useHistory(state)
+	// …
+}
+```
+
+`withPersist(withHistory(proxy(…)))` — history attaches first (it wraps the bare proxy), persist second — is the required order: `createContextStore`'s Provider runs setups in attachment order, so history's subscription is already listening by the time persist's `setup` pushes the hydrated value in. Reversing the chain would attach persist to a proxy history hasn't wrapped yet. See [Capabilities → attachment order](./capabilities#attachment-order).
+
+With `defaultPaused: true`, hydration never gets recorded (the stack stays empty until `resume()` fires), and once resumed a normal edit records a step whose `prev` is the hydrated value — so `undo` after an edit correctly returns to what the substrate hydrated, and (because the restore write is not paused) that undo commits back into persist too.
+
+Without `defaultPaused`, hydration **is** recorded as a step — useful if you genuinely want "undo" to be able to walk back past the hydrated value to the pre-hydration default, but the more common expectation ("undo should only affect things the user did") means most stores that combine persist and history want the paused recipe above.
+
+### The process-wide `op` flag
+
+`withHistory` calls Valtio's `unstable_enableOp(true)` the first time it runs, which is how `subscribe` gets real operation payloads (`ValtioOp[]`) instead of always-empty arrays — required for `shouldRecord` and for `sync: true`'s per-operation granularity. This flag is global and idempotent, but it is **process-wide**: once any store in your app calls `withHistory`, every Valtio `subscribe()` callback anywhere in that process starts receiving populated `ops` instead of `[]`. Harmless for code that ignores its `ops` argument (the overwhelming majority), but worth knowing if you have code that branches on an empty ops array specifically.

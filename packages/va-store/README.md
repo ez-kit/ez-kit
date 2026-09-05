@@ -84,7 +84,7 @@ One source-agnostic engine drives every substrate. Its only interchange language
 
 ```tsx
 import { createContextStore } from '@ez-kit/va-store'
-import { persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { persistUrl } from '@ez-kit/va-store/persist/url'
 import { reactRouterAdapter } from '@ez-kit/va-store/persist/url/react-router'
 import { persistLocalStorage, localStorageAdapter } from '@ez-kit/va-store/persist/storage'
@@ -96,9 +96,9 @@ class Filters {
 	@persistLocalStorage() density = 'comfortable' // → localStorage
 }
 
-// Persistence is a plugin on the base store. Request-scoped, SSR-correct.
-// `persist()` with no fields discovers the decorators.
-const filtersStore = createContextStore(() => proxy(new Filters()), { plugins: [persist()] })
+// Persistence is a capability attached to the proxy in the factory. Request-scoped, SSR-correct.
+// `withPersist` with no `fields` discovers the decorators.
+const filtersStore = createContextStore(() => withPersist(proxy(new Filters())))
 
 function Page() {
 	return (
@@ -111,7 +111,9 @@ function Page() {
 }
 ```
 
-Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `persist({ fields: (field) => [field((s) => s.q, urlField())] })` — and `persist` infers the state type from `createContextStore<T>`.
+Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `withPersist(proxy({ q: '' }), { fields: (field) => [field((s) => s.q, urlField())] })` — and `withPersist` infers the state type from the proxy you pass it.
+
+`withPersist` composes with [`withHistory`](#history) — `withPersist(withHistory(proxy({ … })))` — as they're both [capabilities](https://ez-kit-docs.vercel.app/docs/va-store/capabilities) attached to the same proxy.
 
 Subpaths (optional peers, install only what you use):
 

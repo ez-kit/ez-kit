@@ -17,7 +17,7 @@ import {
 	CacheScope, // contributes inherited path segments to descendant Providers
 	useCache, // () => { keys(prefix?), clear(prefix?) }
 	useCacheKeys, // (prefix?) => CacheRecord[] — reactive: re-renders on membership change
-	createCachedStore, // (factory, { name, gcTime?, plugins? }) => CachedStoreGroup
+	createCachedStore, // (factory, { name, gcTime? }) => CachedStoreGroup
 	createStoreCache, // build an isolated cache instead of using the default one
 	toTree, // pure utility: (records) => CacheTree
 } from '@ez-kit/va-store'
@@ -118,15 +118,14 @@ function createCachedStore<TState extends object, TDefaultValue extends object =
 
 ### `options`
 
-| Option    | Type                             | Required | Description                                                                             |
-| --------- | -------------------------------- | -------- | --------------------------------------------------------------------------------------- |
-| `name`    | `string`                         | yes      | Group namespace, visible in `keys()` / `useCacheKeys()`. Must be unique within a cache. |
-| `gcTime`  | `number`                         | no       | Group default eviction delay in ms, overriding the cache default (5 min).               |
-| `plugins` | `readonly StorePlugin<TState>[]` | no       | Bound to each **entry's** lifetime: `setup` on creation, cleanup on eviction.           |
+| Option   | Type     | Required | Description                                                                             |
+| -------- | -------- | -------- | --------------------------------------------------------------------------------------- |
+| `name`   | `string` | yes      | Group namespace, visible in `keys()` / `useCacheKeys()`. Must be unique within a cache. |
+| `gcTime` | `number` | no       | Group default eviction delay in ms, overriding the cache default (5 min).               |
 
 Call it once at module top-level. Calling it twice with the same `name` on one cache `console.warn`s in development.
 
-`plugins` is the same array [`createContextStore`](../create-context-store/api#the-plugins-option) takes, which is what makes a store [cached **and** persisted](../persist/cache) — note the lifetime differs: here a plugin lives as long as the cache entry, not as long as one `Provider` mount.
+There is no `plugins` option here either — a capability is attached inside the `factory`, exactly as with [`createContextStore`](../create-context-store/api#capabilities): `cache.createCachedStore(() => withPersist(proxy({ … })), { name })`. That factory-position wrapping is what makes a store [cached **and** persisted](../persist/cache) — note the lifetime differs from a plain `createContextStore`: here the capability lives as long as the cache entry, not as long as one `Provider` mount.
 
 ### The returned group
 
