@@ -8,6 +8,11 @@ const CAPABILITIES = Symbol.for('ez-kit/capabilities')
 
 type CapabilityHost = Record<symbol, unknown>
 
+/** `'history'` → `'History'`, so the wrapper name quoted in an error reads `withHistory`, not `withhistory`. */
+function capitalize(name: string): string {
+	return name.charAt(0).toUpperCase() + name.slice(1)
+}
+
 /**
  * Register a plugin on the instance itself. Called by a `with*` wrapper at construction time — before
  * the instance is subscribed to — so the mount-time seam (`createContextStore`'s Provider, the instance
@@ -33,7 +38,7 @@ export function attachCapability<T extends object>(target: T, plugin: StorePlugi
 	if (list.some((existing) => existing.name === plugin.name)) {
 		throw new Error(
 			`[store-core] capability "${plugin.name}" is already attached to this store. ` +
-				`Wrap the store in with${plugin.name} only once.`,
+				`Wrap the store in with${capitalize(plugin.name)} only once.`,
 		)
 	}
 
