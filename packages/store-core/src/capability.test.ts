@@ -19,6 +19,15 @@ describe('capability registry', () => {
 		expect(capabilitiesOf(target).map((plugin) => plugin.name)).toEqual(['history', 'persist'])
 	})
 
+	it('keeps attachment order past the second capability', () => {
+		const target = {}
+		attachCapability(target, { name: 'history', setup: noop })
+		attachCapability(target, { name: 'persist', setup: noop })
+		attachCapability(target, { name: 'devtools', setup: noop })
+
+		expect(capabilitiesOf(target).map((plugin) => plugin.name)).toEqual(['history', 'persist', 'devtools'])
+	})
+
 	it('hides the registry from enumeration, spreading and JSON', () => {
 		const target: Record<string, unknown> = { count: 0 }
 		attachCapability(target, { name: 'history', setup: noop })

@@ -120,6 +120,73 @@ describe('withHistory', () => {
 		expect('b' in state).toBe(false)
 	})
 
+	it('pins the public history surface', () => {
+		const state = withHistory(proxy({ count: 0 }))
+
+		// `record` is the subscription's own channel into the stack: called by hand with an arbitrary
+		// `(prev, next)` pair it pushes a state the store was never in. Everything else here is public
+		// API, so a member appearing or vanishing should fail loudly rather than ship.
+		expect(Object.keys(state.history).sort()).toEqual([
+			'clear',
+			'goto',
+			'isPaused',
+			'pause',
+			'redo',
+			'resume',
+			'skip',
+			'state',
+			'toJSON',
+			'undo',
+		])
+	})
+
+	it('goto jumps to an absolute index, splits the stacks, and deletes keys added later', async () => {
+		const state = withHistory(proxy<{ a: number; b?: number }>({ a: 1 }))
+		state.a = 2
+		await flush()
+		state.b = 9
+		await flush()
+
+		// timeline: [{a:1}, {a:2}] + current {a:2,b:9}
+		expect(state.history.state.pasts).toEqual([{ a: 1 }, { a: 2 }])
+
+		state.history.goto(0)
+		await flush()
+
+		expect(state.a).toBe(1)
+		// `b` was added after step 0, so the restore must DELETE it, not leave it behind.
+		expect('b' in state).toBe(false)
+		expect(state.history.state.pasts).toEqual([])
+		expect(state.history.state.futures).toEqual([{ a: 2 }, { a: 2, b: 9 }])
+	})
+
+	it('seeds pasts/futures through the real proxy, trims to limit, and round-trips undo → redo', async () => {
+		const state = withHistory(proxy({ count: 10 }), {
+			defaultPasts: [{ count: 1 }, { count: 2 }, { count: 3 }],
+			defaultFutures: [{ count: 20 }, { count: 21 }, { count: 22 }],
+			limit: 2,
+		})
+
+		expect(state.history.state.limit).toBe(2)
+		// Each seeded stack is trimmed independently, dropping its oldest (front) entries.
+		expect(state.history.state.pasts).toEqual([{ count: 2 }, { count: 3 }])
+		expect(state.history.state.futures).toEqual([{ count: 21 }, { count: 22 }])
+
+		state.history.undo()
+		await flush()
+		expect(state.count).toBe(3)
+		expect(state.history.state.pasts).toEqual([{ count: 2 }])
+		// `undo` pushes the state it left onto the FRONT of futures and drops the farthest entry, so
+		// the very next `redo` lands back where undo came from rather than somewhere else entirely.
+		expect(state.history.state.futures).toEqual([{ count: 10 }, { count: 21 }])
+
+		state.history.redo()
+		await flush()
+		expect(state.count).toBe(10)
+		expect(state.history.state.pasts).toEqual([{ count: 2 }, { count: 3 }])
+		expect(state.history.state.futures).toEqual([{ count: 21 }])
+	})
+
 	it('does not record mutations made inside skip', async () => {
 		const state = withHistory(proxy({ count: 0 }))
 		state.history.skip(() => {
