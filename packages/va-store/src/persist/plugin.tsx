@@ -37,9 +37,10 @@ const seededProxies = new WeakSet()
 /**
  * Options for the {@link persist} plugin.
  *
- * `T` is the store's state type. It is inferred from the surrounding `createContextStore<T>(…, { plugins })`
- * call (the contextual `StorePlugin<T>` return type drives it), so the {@link FieldsBuilder} selectors
- * are typed end-to-end with no cast at the call site.
+ * `T` is the store's state type. Under `withPersist` it is inferred from the proxy being wrapped;
+ * for a hand-written `attachCapability(proxy, persist<T>(…))` it comes from the contextual
+ * `StorePlugin<T>`. Either way the {@link FieldsBuilder} selectors are typed end-to-end with no cast at
+ * the call site.
  */
 export type PersistPluginOptions<T extends object = object> = PersistOptions & {
 	/**
