@@ -206,6 +206,54 @@ describe('createHistoryStack', () => {
 		expect(h.current).toEqual({ count: 0 })
 	})
 
+	it('publishes isPaused=true while `skip`s callback runs, and restores it after', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		let observedDuring: boolean | undefined
+
+		history.skip(() => {
+			observedDuring = h.snapshots.at(-1)?.isPaused
+		})
+
+		expect(observedDuring).toBe(true)
+		expect(h.snapshots.at(-1)?.isPaused).toBe(false)
+	})
+
+	it('publishes the updated stacks before writing the restored state during undo/redo/goto', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+
+		let pastsDuringWrite: readonly State[] | undefined
+		const originalWrite = h.adapter.write
+		h.adapter.write = (state) => {
+			// A subscriber reacting to the state write must already see the NEW pasts/futures — not
+			// the pair this operation is replacing.
+			pastsDuringWrite = h.snapshots.at(-1)?.pasts
+			originalWrite(state)
+		}
+
+		history.undo()
+
+		expect(pastsDuringWrite).toEqual([])
+	})
+
+	it('deduplicates a redundant pause or resume — deliberately does not re-publish', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+
+		history.pause()
+		const afterFirstPause = h.snapshots.length
+		history.pause()
+		expect(h.snapshots.length).toBe(afterFirstPause)
+
+		history.resume()
+		const afterResume = h.snapshots.length
+		history.resume()
+		expect(h.snapshots.length).toBe(afterResume)
+	})
+
 	it('does not record the write it performs itself during undo', () => {
 		const h = harness()
 		const history = createHistoryStack(h.adapter, {})
