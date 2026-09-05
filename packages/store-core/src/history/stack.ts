@@ -57,7 +57,11 @@ export function createHistoryStack<T, TMeta = unknown>(
 
 			const current = adapter.read()
 			pasts = pasts.slice(0, -1)
-			futures = trim([current, ...futures], limit)
+			// `futures[0]` is the very next redo step — an over-limit stack (reachable via
+			// `defaultFutures`, not just accumulation) must drop the FARTHEST entry (the tail), never
+			// the one `undo` just put back. Trimming from the front here would delete the state undo
+			// just left, making the very next `redo` land somewhere else entirely.
+			futures = [current, ...futures].slice(0, limit)
 			restore(prev)
 			publish()
 		},
@@ -83,9 +87,15 @@ export function createHistoryStack<T, TMeta = unknown>(
 			const target = Math.min(Math.max(index, 0), timeline.length - 1)
 			if (target === pasts.length) return
 
+			// `goto` only reorders an already-bounded timeline — it introduces no new entries, so
+			// there is nothing here for a `limit` cap to defend against. Trimming would silently
+			// delete reachable states (and not even reliably: a mid-target `goto` leaves
+			// `pasts.length + futures.length` unchanged, so it wouldn't restore `total ≤ limit`
+			// either) whenever a seed (`defaultPasts` + `defaultFutures`, each capped independently)
+			// put the combined stack over `limit` to begin with.
 			const state = timeline[target] as T
-			pasts = trim(timeline.slice(0, target), limit)
-			futures = trim(timeline.slice(target + 1), limit)
+			pasts = timeline.slice(0, target)
+			futures = timeline.slice(target + 1)
 			restore(state)
 			publish()
 		},

@@ -156,6 +156,56 @@ describe('createHistoryStack', () => {
 		expect(h.snapshots.at(-1)?.futures).toEqual([])
 	})
 
+	it('goto does not trim an already-over-limit seed — it only reorders, never deletes', () => {
+		// limit 2, seeded independently at the cap on both sides (defaultPasts and defaultFutures
+		// are each trimmed to `limit` on their own, so their SUM can start above `limit` — a real
+		// path via a persisted/deep-linked history, not just accumulation past the cap).
+		const h = harness({ count: 0 })
+		const history = createHistoryStack(h.adapter, {
+			limit: 2,
+			defaultPasts: [{ count: -2 }, { count: -1 }],
+			defaultFutures: [{ count: 1 }, { count: 2 }],
+		})
+
+		history.goto(0)
+
+		expect(h.current).toEqual({ count: -2 })
+		expect(h.snapshots.at(-1)?.pasts).toEqual([])
+		expect(h.snapshots.at(-1)?.futures).toEqual([{ count: -1 }, { count: 0 }, { count: 1 }, { count: 2 }])
+	})
+
+	it('undo on an over-limit seed keeps the just-left state as the nearest redo step', () => {
+		// limit 2, defaultPasts=[-1] (1 entry) + defaultFutures=[1,2] (2 entries, already at cap) +
+		// current=0 → combined stack of 4 states against a limit of 2.
+		const h = harness({ count: 0 })
+		const history = createHistoryStack(h.adapter, {
+			limit: 2,
+			defaultPasts: [{ count: -1 }],
+			defaultFutures: [{ count: 1 }, { count: 2 }],
+		})
+
+		history.undo()
+
+		expect(h.current).toEqual({ count: -1 })
+		// The state undo just left (0) must be the nearest redo step, not silently dropped in favor
+		// of keeping the farthest-away entries.
+		expect(h.snapshots.at(-1)?.futures).toEqual([{ count: 0 }, { count: 1 }])
+	})
+
+	it('undo then redo returns to the original state under an over-limit seed', () => {
+		const h = harness({ count: 0 })
+		const history = createHistoryStack(h.adapter, {
+			limit: 2,
+			defaultPasts: [{ count: -1 }],
+			defaultFutures: [{ count: 1 }, { count: 2 }],
+		})
+
+		history.undo()
+		history.redo()
+
+		expect(h.current).toEqual({ count: 0 })
+	})
+
 	it('does not record the write it performs itself during undo', () => {
 		const h = harness()
 		const history = createHistoryStack(h.adapter, {})
