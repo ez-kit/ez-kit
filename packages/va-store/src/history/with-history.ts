@@ -15,13 +15,20 @@ export type ValtioHistoryOptions<T extends object> = HistoryOptions<T, readonly 
 	sync?: boolean
 }
 
-export type StoreHistory<T extends object> = HistoryApi<T, readonly ValtioOp[]> & {
+/**
+ * The public `store.history` surface. `record` is deliberately absent: it is how the subscription
+ * feeds the stack a `(prev, next)` pair it just observed, so a caller invoking it by hand would push
+ * a state the store was never in. `zu-store`'s middleware keeps it internal for the same reason.
+ */
+export type StoreHistory<T extends object> = Omit<HistoryApi<T, readonly ValtioOp[]>, 'record'> & {
 	/** Live stacks, as their own proxy — subscribe with `useSnapshot` or `useHistory`. */
 	state: HistorySnapshot<T>
 	toJSON: () => undefined
 }
 
 const HISTORY_KEY = 'history'
+/** The one `HistoryApi` member that stays internal to the wrapper — see {@link StoreHistory}. */
+const RECORD_KEY = 'record'
 const HISTORY_CAPABILITY_NAME = 'history'
 const IS_SERVER = typeof window === 'undefined'
 
@@ -116,16 +123,19 @@ export function withHistory<T extends object>(
 	 * forgetting to add one. `flushBatch()` is a no-op when nothing is pending, so this costs nothing for
 	 * a member (like `resume`, see the report) that in practice never has anything to flush.
 	 */
-	function buildFlushingHistoryMethods(): Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused'> {
+	function buildFlushingHistoryMethods(): Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused' | 'record'> {
 		const methods: Record<string, unknown> = {}
 		for (const [key, member] of Object.entries(api)) {
 			if (typeof member !== 'function') continue
+			// `record` is the subscription's own channel into the stack, not a public operation — a caller
+			// handing it an arbitrary `(prev, next)` pair would push a state the store was never in.
+			if (key === RECORD_KEY) continue
 			methods[key] = (...args: unknown[]) => {
 				flushBatch()
 				return (member as (...args: unknown[]) => unknown)(...args)
 			}
 		}
-		return methods as Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused'>
+		return methods as Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused' | 'record'>
 	}
 
 	const host = target as T & { history: StoreHistory<T> }
@@ -138,9 +148,13 @@ export function withHistory<T extends object>(
 		toJSON: () => undefined,
 	})
 
-	if (IS_SERVER) return host
-
 	/**
+	 * Attached on both server and client, ahead of the `IS_SERVER` bail-out below, so
+	 * `capabilitiesOf(store)` reports the same list in either environment — the registry is a
+	 * side-effect-free record of what the store is, and nothing about it is client-only. What *is*
+	 * client-only lives in `setup`, which only ever runs on mount and additionally guards on
+	 * `ctx.isServer`.
+	 *
 	 * `createContextStore`'s Provider applies the seed value and any controlled `value` push
 	 * synchronously, in the same batch the factory runs in — before this capability's `setup` runs on
 	 * mount. Re-baselining here (decision 9) makes the state the user first saw the start of history
@@ -154,6 +168,8 @@ export function withHistory<T extends object>(
 			return undefined
 		},
 	})
+
+	if (IS_SERVER) return host
 
 	subscribe(
 		target,
