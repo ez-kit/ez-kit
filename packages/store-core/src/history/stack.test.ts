@@ -219,7 +219,23 @@ describe('createHistoryStack', () => {
 		expect(h.snapshots.at(-1)?.isPaused).toBe(false)
 	})
 
-	it('publishes the updated stacks before writing the restored state during undo/redo/goto', () => {
+	it('skip inside an already-paused store keeps isPaused true throughout and after', () => {
+		// The case a naive `skip` gets wrong: unconditionally restoring to `false` on exit instead
+		// of the OUTER value — here the outer value is already `true`, so both the inner read and
+		// the state after `skip` returns must stay `true`, never flip to `false`.
+		const h = harness()
+		const history = createHistoryStack(h.adapter, { defaultPaused: true })
+		let observedDuring: boolean | undefined
+
+		history.skip(() => {
+			observedDuring = h.snapshots.at(-1)?.isPaused
+		})
+
+		expect(observedDuring).toBe(true)
+		expect(h.snapshots.at(-1)?.isPaused).toBe(true)
+	})
+
+	it('publishes the updated stacks before writing the restored state during undo', () => {
 		const h = harness()
 		const history = createHistoryStack(h.adapter, {})
 		history.record({ count: 0 }, { count: 1 })
@@ -235,6 +251,44 @@ describe('createHistoryStack', () => {
 		}
 
 		history.undo()
+
+		expect(pastsDuringWrite).toEqual([])
+	})
+
+	it('publishes the updated stacks before writing the restored state during redo', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		h.current = { count: 1 }
+		history.undo()
+
+		let futuresDuringWrite: readonly State[] | undefined
+		const originalWrite = h.adapter.write
+		h.adapter.write = (state) => {
+			futuresDuringWrite = h.snapshots.at(-1)?.futures
+			originalWrite(state)
+		}
+
+		history.redo()
+
+		expect(futuresDuringWrite).toEqual([])
+	})
+
+	it('publishes the updated stacks before writing the restored state during goto', () => {
+		const h = harness()
+		const history = createHistoryStack(h.adapter, {})
+		history.record({ count: 0 }, { count: 1 })
+		history.record({ count: 1 }, { count: 2 })
+		h.current = { count: 2 }
+
+		let pastsDuringWrite: readonly State[] | undefined
+		const originalWrite = h.adapter.write
+		h.adapter.write = (state) => {
+			pastsDuringWrite = h.snapshots.at(-1)?.pasts
+			originalWrite(state)
+		}
+
+		history.goto(0)
 
 		expect(pastsDuringWrite).toEqual([])
 	})

@@ -7,10 +7,10 @@ export type HistoryOptions<T, TMeta = unknown> = {
 }
 
 export type HistorySnapshot<T> = {
-	pasts: readonly T[]
-	futures: readonly T[]
-	limit: number
-	isPaused: boolean
+	readonly pasts: readonly T[]
+	readonly futures: readonly T[]
+	readonly limit: number
+	readonly isPaused: boolean
 }
 
 export type HistoryAdapter<T> = {
