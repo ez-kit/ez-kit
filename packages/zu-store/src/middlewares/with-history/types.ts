@@ -25,4 +25,5 @@ export type HistoryOptions<T> = CoreHistoryOptions<T, HistoryActionTag>
  * to zu-store's `HistoryActionTag` meta. `record` stays internal to the middleware — it is not
  * part of the public sub-store.
  */
-export type HistoryState<T> = HistorySnapshot<T> & Omit<HistoryApi<T, HistoryActionTag>, 'isPaused' | 'record'>
+export type HistoryState<T> = Readonly<HistorySnapshot<T>> &
+	Omit<HistoryApi<T, HistoryActionTag>, 'isPaused' | 'record'>
