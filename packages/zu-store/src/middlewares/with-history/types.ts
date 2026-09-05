@@ -23,7 +23,7 @@ export type HistoryOptions<T> = CoreHistoryOptions<T, HistoryActionTag>
 /**
  * The shape of `store.history`'s state: the live stacks plus the undo/redo/goto controls, bound
  * to zu-store's `HistoryActionTag` meta. `record` stays internal to the middleware — it is not
- * part of the public sub-store.
+ * part of the public sub-store. `HistorySnapshot`'s fields are `readonly` at the source
+ * (`@ez-kit/store-core/history`), so no extra `Readonly<...>` wrap is needed here.
  */
-export type HistoryState<T> = Readonly<HistorySnapshot<T>> &
-	Omit<HistoryApi<T, HistoryActionTag>, 'isPaused' | 'record'>
+export type HistoryState<T> = HistorySnapshot<T> & Omit<HistoryApi<T, HistoryActionTag>, 'isPaused' | 'record'>
