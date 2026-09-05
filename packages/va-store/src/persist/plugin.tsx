@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 import { resolveFieldSpecs, type FieldsBuilder } from './accessor'
-import { applyKeyed, ApplyMode, createBinding, type PersistBinding } from './binding'
+import { applyKeyed, ApplyMode, captureDefaults, createBinding, type PersistBinding } from './binding'
 import { discoverPersistFields } from './decorators'
 import { attachHandles, type SourceBinding } from './handle'
 import { PERSIST_ENGINES } from './service'
@@ -108,10 +108,8 @@ function connectBinding(engine: PersistEngine | undefined, source: string, bindi
  * capture the now-seeded values as a binding's "default", breaking first-present-wins and
  * clearOnDefault.
  *
- * Running in the factory phase means a binding's pristine default is the value the FACTORY produced,
- * captured before `createContextStore`'s Provider pushes the initial controlled `value` during the
- * first render. That is the honest pristine — it is the store as its author declared it — but it is
- * observable for a field that is both controlled and persisted; `pristine-timing.test.tsx` pins it.
+ * What does NOT happen here is the capture of each binding's pristine defaults: that belongs with
+ * connection, in `setup`, which explains why at the call site.
  */
 export function bindPersist<T extends object>(proxy: T, options: PersistPluginOptions<T>): SourceBinding[] {
 	const existing = bindingsByProxy.get(proxy)
@@ -155,6 +153,21 @@ export function persist<T extends object = object>(options: PersistPluginOptions
 
 			const firstSetup = !seededProxies.has(proxy)
 			seededProxies.add(proxy)
+
+			// Capture the pristine defaults HERE, on first connect — NOT alongside construction in
+			// `bindPersist`. It reads like an obvious simplification to fold this into `createBinding` now
+			// that construction happens in the factory phase; it is not, and it was only found by
+			// instrumenting. `createContextStore`'s Provider applies a controlled `value` synchronously
+			// during the first render, i.e. after the factory and before this effect, so a factory-phase
+			// capture would record the value the AUTHOR declared while the store already holds the value
+			// the PARENT pushed. `ApplyMode.Pull` resets a field absent from the substrate back to its
+			// default and `PersistProvider` pulls every URL source once on mount, so that mismatch does not
+			// stay theoretical: a field that is both controlled and persisted would be reset to its factory
+			// default on mount and the reset echoed up through `onValueChange`. `pristine-timing.test.tsx`
+			// pins it.
+			if (firstSetup) {
+				for (const { binding } of bindings) captureDefaults(binding)
+			}
 
 			// Synchronous seed only on the first setup. Ambient (storage) sources also snapshot synchronously
 			// here; first-present-wins means an earlier source (adapter/spec order) holds a shared field, so a

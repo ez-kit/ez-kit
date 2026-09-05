@@ -6,7 +6,15 @@
  */
 
 // --- Binding + engine ---
-export { applyKeyed, ApplyMode, createBinding, desiredKeyed, type MetaRunner, type PersistBinding } from './binding'
+export {
+	applyKeyed,
+	ApplyMode,
+	captureDefaults,
+	createBinding,
+	desiredKeyed,
+	type MetaRunner,
+	type PersistBinding,
+} from './binding'
 export { createPersistEngine, type CreateEngineOptions, type PersistEngine } from './engine'
 
 // --- Key naming + path access ---

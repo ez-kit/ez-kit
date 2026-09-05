@@ -3,7 +3,7 @@ import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
 import { paramString } from './codecs'
-import { PERSIST_HANDLE, URL_HANDLE } from './handle'
+import { persistHandle, PERSIST_HANDLE, urlHandle, URL_HANDLE } from './handle'
 import { withPersist } from './with-persist'
 
 import type { PersistPluginOptions } from './plugin'
@@ -53,6 +53,25 @@ describe('withPersist', () => {
 		})
 
 		expect(state.q).toBe('typed')
+	})
+
+	it('resolves an unbacked slot through the accessors instead of throwing', () => {
+		// The accessors used to throw "no $persist handle on this proxy" for a store that declared no
+		// storage field. Both slots now exist so the widened return type is true, so the throw is gone
+		// for anything that went through `withPersist` — the handle is simply inert.
+		const state = withPersist(proxy({ q: '' }), urlField)
+
+		expect(urlHandle(state).source).toBe('url')
+		expect(persistHandle(state).source).toBeNull()
+	})
+
+	it('still throws for a proxy that never went through withPersist', () => {
+		// What the accessors' error means now: not "no field for that source", but "this proxy was
+		// never persisted at all".
+		const bare = proxy({ q: '' })
+
+		expect(() => urlHandle(bare)).toThrow(/no "\$url" handle/)
+		expect(() => persistHandle(bare)).toThrow(/no "\$persist" handle/)
 	})
 
 	it('keeps both handles non-enumerable, so they stay out of snapshots and JSON', () => {

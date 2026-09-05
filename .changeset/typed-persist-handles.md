@@ -17,11 +17,7 @@ longer throw for a `withPersist`ed proxy; the "no handle on this proxy" error no
 proxy never went through `withPersist`.
 
 - **Bindings are now built in the factory phase**, not on mount: `withPersist` constructs them and
-  attaches the handles, while connecting them to the engines stays in the capability's `setup`. A
-  binding's pristine default is therefore the value the **factory** produced, captured before a
-  Provider pushes its initial controlled `value` during the first render.
-- Consequence for a field that is **both controlled and persisted**: a field absent from the
-  substrate is reset to its default on mount (`ApplyMode.Pull`, which every URL source runs once),
-  and that default is now the factory value rather than the controlled one — so the controlled value
-  no longer survives the first mount, and `onValueChange` reports the reset. A field that is only
-  persisted, or only controlled, is unaffected.
+  attaches the handles right away, so `$url`/`$persist` are on the returned type. Connecting a
+  binding to its engine — and capturing its pristine default — still happens at connect time, in the
+  capability's `setup`, exactly as before. There is no behaviour change: a field that is both
+  controlled and persisted still keeps its controlled value across the first mount.

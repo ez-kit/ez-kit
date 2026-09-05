@@ -6,7 +6,8 @@ import { bindPersist, persist, type PersistPluginOptions } from './plugin'
 /**
  * Factory-position front for the persist plugin: builds the per-source bindings, attaches the
  * `$url` / `$persist` control handles, and registers the plugin so `createContextStore`'s Provider
- * (or the instance cache) connects those bindings to the engines at mount.
+ * (or the instance cache) connects those bindings to the engines at mount. Only construction moves
+ * into the factory phase — each binding still reads its pristine defaults when it connects.
  *
  * The handles are on the returned type, on a par with `withHistory`'s `history`, so
  * `store.$url.runWithMeta(…)` type-checks off `useStore()` without the `urlHandle()` accessor (which

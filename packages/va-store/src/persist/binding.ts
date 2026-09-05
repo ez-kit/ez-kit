@@ -23,7 +23,10 @@ export type PersistBinding = {
 	fields: FieldDescriptor[]
 	/** Stable logical key per field (path/`key`/`absolute`; substrate prefix is an adapter concern). */
 	keyOf: Map<FieldDescriptor, string>
-	/** Field defaults captured before any hydration (for clearOnDefault and reset-on-absent). */
+	/**
+	 * Field defaults captured before any hydration (for clearOnDefault and reset-on-absent). Seeded at
+	 * construction and re-taken by {@link captureDefaults} when the binding connects.
+	 */
 	defaults: Map<FieldDescriptor, unknown>
 	clearOnDefault: boolean
 	throttleMs: number
@@ -42,7 +45,12 @@ function stringifyField(field: FieldDescriptor, value: unknown): string | null {
 	return field.parser.stringify ? field.parser.stringify(value) : String(value)
 }
 
-/** Build a binding from a proxy, its resolved field descriptors, and the global options. */
+/**
+ * Build a binding from a proxy, its resolved field descriptors, and the global options. The pristine
+ * defaults are seeded here, so a binding is usable the moment it exists; a caller that constructs a
+ * binding well before connecting it — as `withPersist` does, in the factory phase — re-takes them
+ * with {@link captureDefaults} at connect time.
+ */
 export function createBinding(proxy: object, fields: FieldDescriptor[], options: PersistOptions): PersistBinding {
 	validateBinding(proxy, fields)
 
@@ -61,6 +69,17 @@ export function createBinding(proxy: object, fields: FieldDescriptor[], options:
 		clearOnDefault: options.clearOnDefault ?? true,
 		throttleMs: options.throttleMs ?? 0,
 		controller: null,
+	}
+}
+
+/**
+ * (Re-)record each field's current value as its pristine default — the baseline `clearOnDefault`
+ * omits and {@link ApplyMode.Pull} resets an absent field back to. Call it once per binding, when the
+ * binding connects, if construction happened earlier than that.
+ */
+export function captureDefaults(binding: PersistBinding): void {
+	for (const field of binding.fields) {
+		binding.defaults.set(field, readPath(binding.proxy, field.path))
 	}
 }
 
