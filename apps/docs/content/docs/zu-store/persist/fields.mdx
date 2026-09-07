@@ -1,0 +1,99 @@
+---
+title: Fields
+description: Declare persisted fields with field() and a source helper — typed selectors against the store's state, key placement, per-field options.
+---
+
+# Fields
+
+You declare which fields sync by passing a builder to `withPersist`. Each field is a typed selector plus a **source** helper; the parser type follows the selected leaf, and you get autocomplete on the store shape.
+
+```tsx
+import { createContextStore, pipe } from '@ez-kit/zu-store'
+import { withPersist } from '@ez-kit/zu-store/persist'
+import { localStorageField } from '@ez-kit/zu-store/persist/storage'
+import { urlField } from '@ez-kit/zu-store/persist/url'
+import { createStore } from 'zustand/vanilla'
+
+const store = createContextStore(() =>
+	pipe(
+		createStore<{ q: string; page: number; pageSize: number }>()(() => ({ q: '', page: 1, pageSize: 25 })),
+		withPersist({
+			fields: (field) => [
+				field((state) => state.q, urlField()), // → ?q=
+				field((state) => state.page, urlField()), // auto-resolved number
+				field((state) => state.pageSize, localStorageField()), // persisted to localStorage
+			],
+		}),
+	),
+)
+```
+
+The selector supports **direct property access only** (`state => state.a.b.c`) — it's recorded to derive the path, not executed for its value. Each field's second argument is a source helper (`urlField()`, `localStorageField()`, `sessionStorageField()`, `indexedDbField()`), which returns the `{ source, … }` options the field needs.
+
+Selectors are typed against the store's **state**, not its handle: `withPersist` reads `ExtractState` off the store `pipe` hands it. Declaring the builder separately keeps that inference — annotate it with `FieldsBuilder<State>`:
+
+```tsx
+import type { FieldsBuilder } from '@ez-kit/zu-store/persist'
+
+const fields: FieldsBuilder<Filters> = (field) => [field((state) => state.q, urlField())]
+```
+
+Actions are just state that no field selects, so they are never persisted — `set`, thunks and derived callbacks stay out of the substrate without any exclusion list.
+
+## Live example
+
+The URL quick start runs on exactly this API — a plain store with two `field()` declarations:
+
+<LivePreview
+	path='zu-store/persist-url'
+	title='Accessor fields — q + page'
+/>
+
+## Key placement
+
+A field's substrate key defaults to its **path**, joined with dots. Three source-agnostic options reshape it — they apply to the URL and to storage alike:
+
+| Option     | Effect                                                                       |
+| ---------- | ---------------------------------------------------------------------------- |
+| `key`      | Override the **last** segment (defaults to the property name). → `?query=`   |
+| `prefix`   | Prepend a namespace verbatim, e.g. a per-widget scope. → `?a.q=`             |
+| `absolute` | Pin to an exact top-level key, dropping the ancestor path segments entirely. |
+
+```ts
+// state: { filters: { price: { min: 0 } } }
+field((state) => state.filters.price.min, urlField()) // → ?filters.price.min=0
+field((state) => state.filters.price.min, urlField({ key: 'from' })) // → ?filters.price.from=0
+field((state) => state.filters.price.min, urlField({ key: 'from', absolute: true })) // → ?from=0
+field((state) => state.q, urlField({ prefix: 'cart.' })) // → ?cart.q=
+```
+
+`prefix` is the lever for two stores that would otherwise claim the same key.
+
+## Per-field options
+
+The source helper also takes an explicit `parser`:
+
+```tsx
+import { paramEnum } from '@ez-kit/zu-store/persist'
+
+withPersist({
+	fields: (field) => [
+		field((state) => state.filters.search.q, urlField({ key: 'q', absolute: true })), // → ?q
+		field((state) => state.filters.sort, urlField({ parser: paramEnum(['asc', 'desc']) })),
+	],
+})
+```
+
+Omit it and one is resolved from the field's runtime value at bind time — see [Parsers](./parsers).
+
+## Multiple sources, one field
+
+List the same field once per source to dual-bind it (URL when present, restored from storage otherwise):
+
+```tsx
+withPersist({
+	fields: (field) => [field((state) => state.q, urlField()), field((state) => state.q, localStorageField())],
+})
+```
+
+First-present-wins governs cold start — see [Combined](./combined#first-present-wins-on-cold-start).

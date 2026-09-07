@@ -1,7 +1,10 @@
 'use client'
 
 import { type ContextStoreInit, createContextStore } from '@ez-kit/zu-store'
+import { MinusIcon, PlusIcon } from 'lucide-react'
 import { createStore } from 'zustand/vanilla'
+
+import { Button } from '@/components/ui/button'
 
 type CounterState = {
 	count: number
@@ -38,28 +41,30 @@ function CounterDisplay() {
 
 	return (
 		<div className='flex items-center gap-3'>
-			<button
-				type='button'
+			<Button
+				variant='outline'
+				size='icon-sm'
+				aria-label='Decrement'
 				onClick={decrement}
-				className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 			>
-				−
-			</button>
+				<MinusIcon />
+			</Button>
 			<output className='min-w-[3ch] text-center font-mono text-lg tabular-nums'>{count}</output>
-			<button
-				type='button'
+			<Button
+				variant='outline'
+				size='icon-sm'
+				aria-label='Increment'
 				onClick={increment}
-				className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 			>
-				+
-			</button>
-			<button
-				type='button'
+				<PlusIcon />
+			</Button>
+			<Button
+				variant='ghost'
+				size='sm'
 				onClick={reset}
-				className='ml-2 rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium text-fd-muted-foreground hover:bg-fd-muted hover:text-fd-foreground'
 			>
-				reset
-			</button>
+				Reset
+			</Button>
 		</div>
 	)
 }

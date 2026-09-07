@@ -2,10 +2,17 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createStore } from '@ez-kit/va-store'
-import { type FieldsBuilder, persist, PersistProvider, useHydrated } from '@ez-kit/va-store/persist'
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { type FieldsBuilder, PersistProvider, useHydrated, withPersist } from '@ez-kit/va-store/persist'
 import { LOCAL_STORAGE_SOURCE, localStorageField } from '@ez-kit/va-store/persist/storage'
+import { MinusIcon, PlusIcon } from 'lucide-react'
+import { useId } from 'react'
 import { proxy } from 'valtio'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 
 import { BlobReadout, createMemoryStorageAdapter } from './_memory-storage'
 
@@ -21,13 +28,14 @@ const fields: FieldsBuilder<PrefsState> = (field) => [
 	field((s) => s.fontScale, localStorageField()),
 ]
 
-const prefsStore = createStore<PrefsState>(() => proxy<PrefsState>({ theme: 'light', fontScale: 1 }), {
-	plugins: [persist({ fields })],
-})
+const prefsStore = createContextStore<PrefsState>(() =>
+	pipe(proxy<PrefsState>({ theme: 'light', fontScale: 1 }), withPersist({ fields })),
+)
 
 const { adapter, useBlob } = createMemoryStorageAdapter(LOCAL_STORAGE_SOURCE)
 
 function PrefControls() {
+	const themeId = useId()
 	const snap = prefsStore.useSnapshot()
 	const store = prefsStore.useStore() // the raw mutable proxy
 	const hydrated = useHydrated(store) // standalone hook — pass the raw proxy
@@ -35,48 +43,50 @@ function PrefControls() {
 
 	return (
 		<div>
-			<div className='mb-2 flex items-center gap-2 text-xs'>
-				<span
-					className={`inline-block size-2 rounded-full ${hydrated ? 'bg-green-500' : 'bg-amber-500'}`}
-					aria-hidden
-				/>
-				<span className='text-fd-muted-foreground'>{hydrated ? 'hydrated' : 'restoring…'}</span>
-			</div>
-			<div className='flex flex-wrap items-center gap-3'>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>theme</span>
-					<select
+			<Badge
+				variant={hydrated ? 'secondary' : 'outline'}
+				className='mb-3'
+			>
+				{hydrated ? 'hydrated' : 'restoring…'}
+			</Badge>
+			<div className='flex flex-wrap items-center gap-4'>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={themeId}>theme</Label>
+					<NativeSelect
+						id={themeId}
+						size='sm'
 						value={snap.theme}
 						onChange={(event) => {
 							store.theme = event.target.value as PrefsState['theme']
 						}}
-						className='rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					>
-						<option value='light'>light</option>
-						<option value='dark'>dark</option>
-					</select>
-				</label>
-				<div className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>fontScale</span>
-					<button
-						type='button'
+						<NativeSelectOption value='light'>light</NativeSelectOption>
+						<NativeSelectOption value='dark'>dark</NativeSelectOption>
+					</NativeSelect>
+				</div>
+				<div className='flex items-center gap-2'>
+					<Label>fontScale</Label>
+					<Button
+						variant='outline'
+						size='icon-sm'
+						aria-label='Decrease font scale'
 						onClick={() => {
 							store.fontScale = Math.max(0.5, Math.round((store.fontScale - 0.25) * 100) / 100)
 						}}
-						className='rounded-md border border-fd-border bg-fd-card px-3 py-1 font-medium hover:bg-fd-muted'
 					>
-						−
-					</button>
+						<MinusIcon />
+					</Button>
 					<output className='min-w-[3ch] text-center font-mono tabular-nums'>{snap.fontScale}</output>
-					<button
-						type='button'
+					<Button
+						variant='outline'
+						size='icon-sm'
+						aria-label='Increase font scale'
 						onClick={() => {
 							store.fontScale = Math.round((store.fontScale + 0.25) * 100) / 100
 						}}
-						className='rounded-md border border-fd-border bg-fd-card px-3 py-1 font-medium hover:bg-fd-muted'
 					>
-						+
-					</button>
+						<PlusIcon />
+					</Button>
 				</div>
 			</div>
 			<BlobReadout blob={blob} />

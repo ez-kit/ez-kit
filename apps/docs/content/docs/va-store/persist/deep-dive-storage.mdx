@@ -12,13 +12,13 @@ The storage sources (`localStorage`, `sessionStorage`, IndexedDB) persist a stor
 A store's fields are packed into one JSON blob under one key:
 
 ```jsonc
-// localStorage["va-store"]
+// localStorage["ez-kit"]
 { "v": 0, "s": { "theme": "dark", "fontScale": "1.25" } }
 ```
 
 - `v` is the schema **version** (see below). `s` maps each field's substrate key to its already-stringified value.
 - Per-field values inside `s` still flow through the same codecs as the URL, so Date/BigInt/array round-trips hold.
-- Set the key with `storageKey`: `localStorageAdapter({ storageKey: 'my-app' })`.
+- The default key is `ez-kit`. Set your own with `storageKey`: `localStorageAdapter({ storageKey: 'my-app' })`.
 - A field returned to its default is omitted; when the blob empties, the key is removed.
 
 ## `useHydrated()` — flash and CLS

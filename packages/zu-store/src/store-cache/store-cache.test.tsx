@@ -121,9 +121,9 @@ describe('createStoreCache — namespacing & seeding', () => {
 			</cache.Provider>,
 		)
 
-		expect(users.fromCache({ id: 'main' })).toBeDefined()
-		expect(orders.fromCache({ id: 'main' })).toBeDefined()
-		expect(users.fromCache({ id: 'main' })).not.toBe(orders.fromCache({ id: 'main' }))
+		expect(users.getFromCache({ id: 'main' })).toBeDefined()
+		expect(orders.getFromCache({ id: 'main' })).toBeDefined()
+		expect(users.getFromCache({ id: 'main' })).not.toBe(orders.getFromCache({ id: 'main' }))
 	})
 
 	it('seeds the store from defaultValue on first mount', () => {
@@ -180,7 +180,7 @@ describe('createStoreCache — path namespacing via Scope', () => {
 		expect(toTree(controller?.keys() ?? [])).toEqual({
 			'page-1': { 'section-1': { 'scope-nested': ['user-42'] } },
 		})
-		expect(table.fromCache({ path: ['page-1', 'section-1'], id: 'user-42' })).toBeDefined()
+		expect(table.getFromCache({ path: ['page-1', 'section-1'], id: 'user-42' })).toBeDefined()
 	})
 
 	it('defaults to the root path when no Scope encloses the Provider', () => {
@@ -195,8 +195,8 @@ describe('createStoreCache — path namespacing via Scope', () => {
 			</cache.Provider>,
 		)
 
-		expect(table.fromCache({ path: [], id: 'user-42' })).toBeDefined()
-		expect(table.fromCache({ id: 'user-42' })).toBeDefined()
+		expect(table.getFromCache({ path: [], id: 'user-42' })).toBeDefined()
+		expect(table.getFromCache({ id: 'user-42' })).toBeDefined()
 	})
 
 	it('does not collide when the same group + id mounts under different paths', () => {
@@ -238,8 +238,8 @@ describe('createStoreCache — path namespacing via Scope', () => {
 
 		expect(screen.getByTestId('one')).toHaveTextContent('archived')
 		expect(screen.getByTestId('two')).toHaveTextContent('all')
-		expect(table.fromCache({ path: ['page-1'], id: 'user-42' })).not.toBe(
-			table.fromCache({ path: ['page-2'], id: 'user-42' }),
+		expect(table.getFromCache({ path: ['page-1'], id: 'user-42' })).not.toBe(
+			table.getFromCache({ path: ['page-2'], id: 'user-42' }),
 		)
 	})
 
@@ -260,8 +260,8 @@ describe('createStoreCache — path namespacing via Scope', () => {
 			</cache.Provider>,
 		)
 
-		expect(table.fromCache({ path: ['page-1', 'detail'], id: 'row-1' })).toBeDefined()
-		expect(table.fromCache({ path: ['page-1'], id: 'row-1' })).toBeUndefined()
+		expect(table.getFromCache({ path: ['page-1', 'detail'], id: 'row-1' })).toBeDefined()
+		expect(table.getFromCache({ path: ['page-1'], id: 'row-1' })).toBeUndefined()
 	})
 
 	it('re-resolves the store when the enclosing scope path changes', () => {
@@ -481,13 +481,13 @@ describe('createStoreCache — gc lifecycle', () => {
 		}
 
 		const { rerender } = render(<App show />)
-		expect(table.fromCache({ id: 'main' })).toBeDefined()
+		expect(table.getFromCache({ id: 'main' })).toBeDefined()
 
 		rerender(<App show={false} />)
 		act(() => {
 			vi.advanceTimersByTime(1001)
 		})
-		expect(table.fromCache({ id: 'main' })).toBeUndefined()
+		expect(table.getFromCache({ id: 'main' })).toBeUndefined()
 	})
 
 	it('fixes gcTime birth-config from the first mounting Provider', () => {
@@ -539,7 +539,97 @@ describe('createStoreCache — gc lifecycle', () => {
 		act(() => {
 			vi.advanceTimersByTime(1001)
 		})
-		expect(table.fromCache({ id: 'main' })).toBeUndefined()
+		expect(table.getFromCache({ id: 'main' })).toBeUndefined()
+	})
+
+	it('evicts on unmount with gcTime={0}, and reseeds from defaultValue on remount', () => {
+		vi.useFakeTimers()
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'gc-zero' })
+		function App({ show }: { show: boolean }) {
+			return (
+				<cache.Provider>
+					{show ? (
+						<table.Provider
+							id='main'
+							gcTime={0}
+							defaultValue={{ filter: 'active' }}
+						>
+							<span />
+						</table.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(<App show />)
+		act(() => {
+			table.getFromCache({ id: 'main' })?.getState().setFilter('archived')
+		})
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('archived')
+
+		rerender(<App show={false} />)
+		act(() => {
+			vi.advanceTimersByTime(0)
+		})
+		expect(table.getFromCache({ id: 'main' })).toBeUndefined()
+
+		// A fresh entry: the factory runs again, so `defaultValue` seeds it as on first mount.
+		rerender(<App show />)
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('active')
+	})
+
+	it('cancels a pending gcTime={0} eviction when an observer returns in the same commit', () => {
+		vi.useFakeTimers()
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'gc-zero-handoff' })
+		// Two Providers on one key: the handoff a route cross-fade or a re-parented subtree performs.
+		function App({ a, b }: { a: boolean; b: boolean }) {
+			return (
+				<cache.Provider>
+					{a ? (
+						<table.Provider
+							id='main'
+							gcTime={0}
+							defaultValue={{ filter: 'active' }}
+						>
+							<span />
+						</table.Provider>
+					) : null}
+					{b ? (
+						<table.Provider
+							id='main'
+							gcTime={0}
+							defaultValue={{ filter: 'active' }}
+						>
+							<span />
+						</table.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(
+			<App
+				a
+				b={false}
+			/>,
+		)
+		act(() => {
+			table.getFromCache({ id: 'main' })?.getState().setFilter('archived')
+		})
+
+		// One commit: the first Provider's cleanup and the second's effect both run before any timer.
+		rerender(
+			<App
+				a={false}
+				b
+			/>,
+		)
+		act(() => {
+			vi.advanceTimersByTime(0)
+		})
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('archived')
 	})
 
 	it('keeps an alwaysCache entry alive after all Providers unmount', () => {
@@ -566,7 +656,7 @@ describe('createStoreCache — gc lifecycle', () => {
 		act(() => {
 			vi.advanceTimersByTime(100_000)
 		})
-		expect(table.fromCache({ id: 'main' })).toBeDefined()
+		expect(table.getFromCache({ id: 'main' })).toBeDefined()
 	})
 })
 
@@ -575,7 +665,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 		vi.useRealTimers()
 	})
 
-	it('fromCache imperatively updates a live store at a path and re-renders subscribers', () => {
+	it('getFromCache imperatively updates a live store at a path and re-renders subscribers', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'imp-1' })
 		function PageView() {
@@ -594,14 +684,14 @@ describe('createStoreCache — imperative & reactive access', () => {
 
 		expect(screen.getByTestId('p')).toHaveTextContent('1')
 		act(() => {
-			table.fromCache({ path: ['page-1'], id: 'main' })?.setState({ page: 2 })
+			table.getFromCache({ path: ['page-1'], id: 'main' })?.setState({ page: 2 })
 		})
 		expect(screen.getByTestId('p')).toHaveTextContent('2')
 		// Root address misses the page-1 entry.
-		expect(table.fromCache({ id: 'main' })).toBeUndefined()
+		expect(table.getFromCache({ id: 'main' })).toBeUndefined()
 	})
 
-	it('fromCache returns undefined for a missing id without creating it', () => {
+	it('getFromCache returns undefined for a missing id without creating it', () => {
 		const cache = createStoreCache()
 		const table = cache.createCachedStore(tableFactory, { name: 'imp-2' })
 		render(
@@ -609,7 +699,7 @@ describe('createStoreCache — imperative & reactive access', () => {
 				<span />
 			</cache.Provider>,
 		)
-		expect(table.fromCache({ id: 'ghost' })).toBeUndefined()
+		expect(table.getFromCache({ id: 'ghost' })).toBeUndefined()
 	})
 
 	it('useFromCache passively reflects creation, updates, and eviction at a path', () => {
@@ -708,13 +798,13 @@ describe('createStoreCache — imperative & reactive access', () => {
 		act(() => {
 			users.remove({ path: ['page-1'], id: 'main' })
 		})
-		expect(users.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
-		expect(orders.fromCache({ path: ['page-1'], id: 'main' })).toBeDefined()
-		expect(users.fromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
+		expect(users.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(orders.getFromCache({ path: ['page-1'], id: 'main' })).toBeDefined()
+		expect(users.getFromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
 
 		fireEvent.click(screen.getByRole('button', { name: 'clear-page-1' }))
-		expect(orders.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
-		expect(users.fromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
+		expect(orders.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(users.getFromCache({ path: ['page-2'], id: 'main' })).toBeDefined()
 	})
 })
 
@@ -737,7 +827,7 @@ describe('createStoreCache — useStore', () => {
 			</cache.Provider>,
 		)
 
-		expect(seen[0]).toBe(table.fromCache({ id: 'main' }))
+		expect(seen[0]).toBe(table.getFromCache({ id: 'main' }))
 		expect(seen[0]?.getState().filter).toBe('all')
 	})
 
@@ -778,7 +868,7 @@ describe('createStoreCache — useStore', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'change' }))
 		// The raw handle is a passive read: state changed, but the holder must not re-render.
 		expect(readerRenders).toBe(before)
-		expect(table.fromCache({ id: 'main' })?.getState().filter).toBe('changed')
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('changed')
 	})
 })
 
@@ -1039,7 +1129,7 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		)
 
 		expect(html).toContain('active')
-		expect(table.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(table.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
 	})
 
 	it('does not share state across separate server renders', () => {
@@ -1070,5 +1160,109 @@ describe('createStoreCache — StrictMode & SSR', () => {
 		)
 		expect(one).toContain('first')
 		expect(two).toContain('second')
+	})
+})
+
+describe('createStoreCache — Subscribe', () => {
+	it('hands the selected value to children, compared by reference', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'subscribe-strict' })
+
+		function SetPageButton() {
+			const setPage = table.useSelector((s) => s.setPage)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setPage(2)
+					}}
+				>
+					page 2
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<table.Subscribe selector={(s) => s.page}>{(page) => <span data-testid='page'>{page}</span>}</table.Subscribe>
+					<SetPageButton />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(screen.getByTestId('page')).toHaveTextContent('1')
+		fireEvent.click(screen.getByRole('button', { name: 'page 2' }))
+		expect(screen.getByTestId('page')).toHaveTextContent('2')
+	})
+
+	it('compares shallowly when `shallow` is set, so an object selection is stable', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'subscribe-shallow' })
+		let renderCount = 0
+
+		function Pair({ filter, page }: { filter: string; page: number }) {
+			renderCount += 1
+			return <span data-testid='pair'>{`${filter}/${String(page)}`}</span>
+		}
+
+		function SetFilterButton() {
+			const setFilter = table.useSelector((s) => s.setFilter)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setFilter('active')
+					}}
+				>
+					filter
+				</button>
+			)
+		}
+
+		function SetSamePageButton() {
+			const setPage = table.useSelector((s) => s.setPage)
+			return (
+				<button
+					type='button'
+					onClick={() => {
+						setPage(1)
+					}}
+				>
+					same page
+				</button>
+			)
+		}
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<table.Subscribe
+						selector={(s) => ({ filter: s.filter, page: s.page })}
+						shallow
+					>
+						{({ filter, page }) => (
+							<Pair
+								filter={filter}
+								page={page}
+							/>
+						)}
+					</table.Subscribe>
+					<SetFilterButton />
+					<SetSamePageButton />
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(screen.getByTestId('pair')).toHaveTextContent('all/1')
+		expect(renderCount).toBe(1)
+
+		// Writing the value it already has notifies subscribers; shallow equality absorbs it.
+		fireEvent.click(screen.getByRole('button', { name: 'same page' }))
+		expect(renderCount).toBe(1)
+
+		fireEvent.click(screen.getByRole('button', { name: 'filter' }))
+		expect(renderCount).toBe(2)
+		expect(screen.getByTestId('pair')).toHaveTextContent('active/1')
 	})
 })

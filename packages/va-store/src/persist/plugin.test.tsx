@@ -1,17 +1,16 @@
-import { createServiceRegistry } from '@ez-kit/store-core'
+import { attachCapability, createServiceRegistry, pipe } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
-import { createStore, type StoreInit } from '../create-store'
+import { createContextStore, type ContextStoreInit } from '../create-context-store'
 import { StoreProvider } from '../store-provider'
 
-import { paramString } from './codecs'
-import { persist, useHydrated } from './plugin'
-import { PERSIST_ENGINES } from './service'
-import { createFakePersistAdapter } from './testing/fake-persist-adapter'
-import { persistUrl } from './url/decorator'
+import { createFakePersistAdapter } from './testing'
+import { persistUrl } from './url'
+
+import { paramString, persist, useHydrated, PERSIST_ENGINES, withPersist } from './index'
 
 import type { StoreId } from '@ez-kit/store-core'
 
@@ -20,22 +19,25 @@ const STORE_ID: StoreId = { path: [], name: 'plugin-test', id: 'singleton' }
 type Filters = { q: string }
 
 // Accessor front: plain proxy + plugin `fields` builder.
-const fieldsStore = createStore<Filters, { q?: string }>(
-	({ defaultValue }: StoreInit<{ q?: string }>) => proxy<Filters>({ q: defaultValue.q ?? '' }),
-	{ plugins: [persist({ fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })] })] },
+const fieldsStore = createContextStore<Filters, { q?: string }>(({ defaultValue }: ContextStoreInit<{ q?: string }>) =>
+	pipe(
+		proxy<Filters>({ q: defaultValue.q ?? '' }),
+		withPersist({
+			fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+		}),
+	),
 )
 
 // Decorator front: class instance with `persistUrl` fields, discovered automatically.
 class DecoratedFilters {
 	@persistUrl() q = ''
 }
-const decoratedStore = createStore<DecoratedFilters, { q?: string }>(
-	({ defaultValue }: StoreInit<{ q?: string }>) => {
+const decoratedStore = createContextStore<DecoratedFilters, { q?: string }>(
+	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
 		const store = proxy(new DecoratedFilters())
 		store.q = defaultValue.q ?? ''
-		return store
+		return pipe(store, withPersist())
 	},
-	{ plugins: [persist()] },
 )
 
 function makeView(store: { useSnapshot: () => { q: string } }) {
@@ -55,11 +57,11 @@ describe('@ez-kit/va-store persist() plugin on a non-cached store', () => {
 		describe(name, () => {
 			const QView = makeView(store)
 
-			it('exposes the createStore API surface', () => {
+			it('exposes the createContextStore API surface', () => {
 				expect(typeof store.Provider).toBe('function')
 				expect(typeof store.useSnapshot).toBe('function')
 				expect(typeof store.useStore).toBe('function')
-				expect(typeof store.Item).toBe('function')
+				expect(typeof store.Subscribe).toBe('function')
 			})
 
 			it('hydrates from the URL after mount', async () => {
@@ -97,18 +99,17 @@ describe('@ez-kit/va-store persist() plugin — service contract', () => {
 	it('resolves PERSIST_ENGINES with one engine per mounted source', () => {
 		const fake = createFakePersistAdapter()
 		let sources: readonly string[] = []
-		const inspector = createStore<{ ready: boolean }, { ready?: boolean }>(
-			({ defaultValue }: StoreInit<{ ready?: boolean }>) => proxy({ ready: defaultValue.ready ?? false }),
-			{
-				plugins: [
-					{
-						name: 'inspect',
-						setup: (_proxy, ctx) => {
-							sources = ctx.services.get(PERSIST_ENGINES).sources()
-							return undefined
-						},
+		const inspector = createContextStore<{ ready: boolean }, { ready?: boolean }>(
+			({ defaultValue }: ContextStoreInit<{ ready?: boolean }>) => {
+				const state = proxy({ ready: defaultValue.ready ?? false })
+				attachCapability(state, {
+					name: 'inspect',
+					setup: (_proxy, ctx) => {
+						sources = ctx.services.get(PERSIST_ENGINES).sources()
+						return undefined
 					},
-				],
+				})
+				return state
 			},
 		)
 		function Probe(): ReactElement {

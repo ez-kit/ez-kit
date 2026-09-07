@@ -3,6 +3,8 @@
 import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '@ez-kit/va-store/persist/url'
 import { useRef, useSyncExternalStore } from 'react'
 
+import { Badge } from '@/components/ui/badge'
+
 import type { RenderScopedAdapter, SyncSourcePort } from '@ez-kit/va-store/persist'
 
 /**
@@ -64,9 +66,11 @@ export function createMemoryUrlAdapter(initial = ''): MemoryUrlAdapter {
 /** Shared chrome for the URL read-out shown under each live example. */
 export function UrlReadout({ search }: { search: string }) {
 	return (
-		<div className='mt-3 rounded-md border border-fd-border bg-fd-muted/40 px-3 py-2 font-mono text-xs'>
-			<span className='text-fd-muted-foreground'>URL&nbsp;</span>
-			<span className='break-all'>?{search || <span className='text-fd-muted-foreground'>(empty)</span>}</span>
+		<div className='mt-3 flex items-center gap-2 rounded-2xl border bg-muted/40 px-3 py-2'>
+			<Badge variant='outline'>URL</Badge>
+			<span className='font-mono text-xs break-all'>
+				?{search || <span className='text-muted-foreground'>(empty)</span>}
+			</span>
 		</div>
 	)
 }

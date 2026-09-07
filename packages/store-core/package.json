@@ -26,6 +26,10 @@
 		"./cache": {
 			"types": "./dist/cache/index.d.ts",
 			"import": "./dist/cache/index.js"
+		},
+		"./history": {
+			"types": "./dist/history/index.d.ts",
+			"import": "./dist/history/index.js"
 		}
 	},
 	"main": "./dist/index.js",
@@ -51,6 +55,10 @@
 		{
 			"path": "dist/cache/index.js",
 			"limit": "3 KB"
+		},
+		{
+			"path": "dist/history/index.js",
+			"limit": "2 KB"
 		}
 	],
 	"devDependencies": {

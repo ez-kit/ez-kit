@@ -2,10 +2,15 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createStore } from '@ez-kit/va-store'
-import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { type FieldsBuilder, PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
+import { useId } from 'react'
 import { proxy } from 'valtio'
+
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 
@@ -25,64 +30,70 @@ const fields: FieldsBuilder<ProductFiltersState> = (field) => [
 	field((s) => s.onSale, urlField()),
 ]
 
-const store = createStore<ProductFiltersState>(
-	() => proxy<ProductFiltersState>({ q: '', price: { min: 0, max: 100 }, onSale: false }),
-	{ plugins: [persist({ fields })] },
+const store = createContextStore<ProductFiltersState>(() =>
+	pipe(proxy<ProductFiltersState>({ q: '', price: { min: 0, max: 100 }, onSale: false }), withPersist({ fields })),
 )
 
 const { adapter, useSearch } = createMemoryUrlAdapter('q=jacket&price.min=20&price.max=80&onSale=true')
 
 function Controls() {
+	const queryId = useId()
+	const minId = useId()
+	const maxId = useId()
+	const onSaleId = useId()
 	const snap = store.useSnapshot()
 	const state = store.useStore()
 	const search = useSearch()
 
 	return (
 		<div>
-			<div className='flex flex-wrap items-center gap-3'>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>q</span>
-					<input
+			<div className='flex flex-wrap items-center gap-4'>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={queryId}>q</Label>
+					<Input
+						id={queryId}
+						className='w-32'
 						value={snap.q}
+						placeholder='search…'
 						onChange={(event) => {
 							state.q = event.target.value
 						}}
-						placeholder='search…'
-						className='w-32 rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					/>
-				</label>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>price.min</span>
-					<input
+				</div>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={minId}>price.min</Label>
+					<Input
+						id={minId}
 						type='number'
+						className='w-20'
 						value={snap.price.min}
 						onChange={(event) => {
 							state.price.min = event.target.valueAsNumber || 0
 						}}
-						className='w-20 rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					/>
-				</label>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>price.max</span>
-					<input
+				</div>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={maxId}>price.max</Label>
+					<Input
+						id={maxId}
 						type='number'
+						className='w-20'
 						value={snap.price.max}
 						onChange={(event) => {
 							state.price.max = event.target.valueAsNumber || 0
 						}}
-						className='w-20 rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					/>
-				</label>
-				<label className='flex items-center gap-2 text-sm'>
-					<input
-						type='checkbox'
+				</div>
+				<div className='flex items-center gap-2'>
+					<Checkbox
+						id={onSaleId}
 						checked={snap.onSale}
-						onChange={(event) => {
-							state.onSale = event.target.checked
+						onCheckedChange={(checked) => {
+							state.onSale = checked === true
 						}}
 					/>
-					<span className='text-fd-muted-foreground'>onSale</span>
-				</label>
+					<Label htmlFor={onSaleId}>onSale</Label>
+				</div>
 			</div>
 			<UrlReadout search={search} />
 		</div>

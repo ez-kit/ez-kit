@@ -1,0 +1,132 @@
+---
+title: Capabilities
+description: The two extension seams a zu-store store has — Zustand's own middleware, and a lifecycle-bound capability attached to the store handle that createContextStore sets up and tears down around the Provider.
+---
+
+# Capabilities
+
+A `zu-store` store is extended in two places, and which one a wrapper uses follows from what it needs.
+
+- **A Zustand middleware** wraps the _initializer_ and changes how writes work. It is Zustand's own seam, it runs at `createStore` time, and it has no notion of mounting. [`withHistory`](./with-history) is one: it has to intercept every `set` to record it.
+- **A capability** is attached to the _store handle_ and carries a lifecycle — a `setup` that runs when the store's `Provider` mounts and a cleanup that runs when it unmounts. [`withPersist`](./persist) is one: it has nothing to intercept, but it does have to connect to an engine for exactly as long as the store is on screen.
+
+```tsx
+import { createContextStore, pipe, withHistory } from '@ez-kit/zu-store'
+import { withPersist } from '@ez-kit/zu-store/persist'
+import { createStore } from 'zustand/vanilla'
+
+type Filters = { q: string }
+
+const store = createContextStore(() => pipe(createStore<Filters>()(withHistory(() => ({ q: '' }))), withPersist()))
+```
+
+Read that inside out and each seam sits where it belongs: `withHistory` wraps the initializer handed to `createStore`, `pipe` applies `withPersist` to the handle `createStore` returned. `createContextStore` never takes the store apart — it discovers whatever capabilities the handle carries and runs them for you.
+
+## What ships
+
+| Wrapper                         | Seam       | Adds                                                              | Docs                      |
+| ------------------------------- | ---------- | ----------------------------------------------------------------- | ------------------------- |
+| [`withHistory`](./with-history) | middleware | `store.history` — undo/redo/goto, `useHistory()`, `useTimeline()` | [History](./with-history) |
+| [`withPersist`](./persist)      | capability | `$url` / `$persist` control handles, engine connections           | [Persist](./persist)      |
+
+## `pipe` and the enhancer shape
+
+Every capability wrapper is curried: `withPersist(options)` builds a `StoreEnhancer<In, Out>`, and `pipe` applies enhancers left to right onto the handle. Each one mutates the handle it is given and returns it — same identity, widened type — so they chain.
+
+Currying is what makes the options type-check: the enhancer's state type comes from the value `pipe` feeds it, so `withPersist({ fields })` types its `fields` selectors against `ExtractState` of that store with no annotation. Applying an enhancer outside `pipe` gives it nothing to infer from, so name the store type yourself there:
+
+```tsx
+withPersist<StoreApi<Filters>>()(createStore<Filters>()(() => ({ q: '' })))
+```
+
+Middleware composes the way Zustand middleware always has, and mixes freely with the enhancers:
+
+```tsx
+pipe(createStore<Filters>()(subscribeWithSelector(withHistory(() => ({ q: '' })))), withPersist())
+```
+
+## Attachment order
+
+A wrapper calls `attachCapability(target, plugin)` at construction time, before the store is ever subscribed to. The registry is a list, in **attachment order** — the leftmost enhancer first:
+
+```tsx
+capabilitiesOf(store).map((plugin) => plugin.name) // → ['persist']
+```
+
+`createContextStore`'s Provider runs every attached plugin's `setup` in that same order on mount, and runs the returned cleanups in **reverse** order on unmount — the last thing attached is the first thing torn down.
+
+`withHistory` is not in that list: as a middleware it is already in place by the time the handle exists, and it needs no mount-time setup. That is also why the persist + history recipe reads `pipe(createStore()(withHistory(…)), withPersist())` and only that way round — hydration is a `set` like any other, and the history middleware must already be wrapping `set` when persist's `setup` pushes the first hydrated value in. See [History → persist](./with-history) for the `defaultPaused` + `resume()` pattern that keeps hydration out of the undo stack.
+
+## The `plugins` option
+
+A capability that belongs to the _factory_ rather than to any one store instance can be passed as an option instead of attached:
+
+```tsx
+const store = createContextStore(() => createStore<Filters>()(() => ({ q: '' })), {
+	plugins: [persist({ fields })],
+})
+```
+
+Both routes run under the same lifecycle, in one list — whatever the handle carries first, then the option's plugins; `withPersist` is `persist` plus the attachment plus the typed `$url` / `$persist` handles on the returned type. Reach for the option when a plugin is not written as a `with*` wrapper, or when it is a property of the factory rather than of the store.
+
+## The registry is invisible
+
+`attachCapability` stores the list under a non-enumerable, `Symbol.for`-keyed property on the store handle. It never reaches `Object.keys`, a spread, `JSON.stringify`, or a `withHistory` recorded past/future state — the recorded states are Zustand _state_ objects, and the registry lives on the handle beside `getState` / `setState`. It is also **own-only**: a capability attached to a prototype is not inherited by an object created from it.
+
+## Writing your own
+
+A capability is a plain object satisfying `StorePlugin<T>`, attached with `attachCapability`:
+
+```tsx
+import { attachCapability } from '@ez-kit/store-core'
+import { createContextStore, pipe } from '@ez-kit/zu-store'
+import { createStore } from 'zustand/vanilla'
+
+import type { PluginCleanup, PluginContext, StoreEnhancer, StorePlugin } from '@ez-kit/store-core'
+import type { StoreApi } from 'zustand/vanilla'
+
+function withLogging<TStore extends StoreApi<unknown>>(label: string): StoreEnhancer<TStore, TStore> {
+	return (target: TStore) => {
+		const plugin: StorePlugin<TStore> = {
+			name: 'logging',
+			setup(instance, ctx: PluginContext): PluginCleanup {
+				const unsubscribe = instance.subscribe((state) => console.log(`[${label}]`, state))
+				console.log(`[${label}] mounted`, { isServer: ctx.isServer })
+				return () => {
+					unsubscribe()
+					console.log(`[${label}] unmounted`)
+				}
+			},
+		}
+		attachCapability(target, plugin)
+		return target
+	}
+}
+
+const store = createContextStore(() =>
+	pipe(
+		createStore(() => ({ q: '' })),
+		withLogging('filters'),
+	),
+)
+```
+
+`setup(instance, ctx)` runs once when the store's `Provider` mounts; `instance` is the store handle, and `ctx` carries `services` (app-level services published by an ancestor `ServicesProvider` / [`StoreProvider`](./store-cache)), `id` (the store's `StoreId`), and `isServer`. The returned cleanup — or `undefined`, if there is nothing to tear down — runs once on unmount.
+
+`capabilitiesOf(target)` reads the list back, for introspection or in a test:
+
+```tsx
+import { capabilitiesOf } from '@ez-kit/store-core'
+
+capabilitiesOf(store).map((plugin) => plugin.name) // → ['logging']
+```
+
+Attaching the same capability name twice — two of your own plugins both named `'logging'`, or `pipe(store, withPersist(), withPersist())` — throws at construction time, before the store is ever rendered:
+
+```
+[store-core] capability "logging" is already attached to this store. Wrap the store in withLogging only once.
+```
+
+## Server rendering
+
+`setup` only runs on mount, so a capability's side effects — subscribing to an engine, logging, timers — never run during a server render. `attachCapability` itself is synchronous and side-effect-free, so the registry is populated identically on server and client; `ctx.isServer` is how a capability's `setup` tells the two apart on the one render where it does run.

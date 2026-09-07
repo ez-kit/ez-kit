@@ -11,7 +11,7 @@ export type {
 	CachedStoreFactory,
 	CachedStoreFactoryInit,
 	CachedProviderProps,
-	CachedItemProps,
+	CachedSubscribeProps,
 	ScopeProps,
 	StoreCacheController,
 } from './create-cache-react'

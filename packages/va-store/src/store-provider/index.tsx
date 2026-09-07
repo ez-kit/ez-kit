@@ -1,6 +1,6 @@
 import { type ReactElement, type ReactNode } from 'react'
 
-import { PersistProvider, type PersistAdapter } from '../persist/provider'
+import { PersistProvider, type PersistAdapter } from '../persist'
 
 import type { StoreCache } from '../store-cache'
 

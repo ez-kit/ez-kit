@@ -13,8 +13,8 @@ A field is bound to a source, not a store — so one proxy can mix sources freel
 />
 
 ```tsx
-import { createStore } from '@ez-kit/va-store'
-import { persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { localStorageAdapter, persistLocalStorage } from '@ez-kit/va-store/persist/storage'
 import { persistUrl } from '@ez-kit/va-store/persist/url'
 import { reactRouterAdapter } from '@ez-kit/va-store/persist/url/react-router'
@@ -24,7 +24,7 @@ class ListState {
 	@persistLocalStorage() density = 'comfortable' // device preference — restored, not shared
 }
 
-const listStore = createStore(() => proxy(new ListState()), { plugins: [persist()] })
+const listStore = createContextStore(() => pipe(proxy(new ListState()), withPersist()))
 
 function Page() {
 	return (
@@ -49,12 +49,17 @@ class State {
 }
 ```
 
-With the accessor API, list the field once per source via `persist({ fields })`:
+With the accessor API, list the field once per source via `withPersist`'s `fields` option:
 
 ```tsx
-createStore(() => proxy({ q: '' }), {
-	plugins: [persist({ fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())] })],
-})
+createContextStore(() =>
+	pipe(
+		proxy({ q: '' }),
+		withPersist({
+			fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())],
+		}),
+	),
+)
 ```
 
 ## First-present-wins on cold start
@@ -73,4 +78,4 @@ This makes "an explicit shared link beats a restored cache" automatic, with no p
 
 ## Per-source handles
 
-Each bound source attaches a non-enumerable control handle to the proxy — `$url` and `$persist` — for source-specific imperative control (e.g. forcing a URL `push`). A dual-bound proxy exposes both without collision. They're covered in the [URL deep dive](./va-store/persist/deep-dive-url#imperative-control).
+Each bound source attaches a non-enumerable control handle to the proxy — `$url` and `$persist` — for source-specific imperative control (e.g. forcing a URL `push`). A dual-bound proxy exposes both without collision. They're covered in the [URL deep dive](./deep-dive-url#imperative-control-via-url).

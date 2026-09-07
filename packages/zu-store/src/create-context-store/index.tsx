@@ -1,12 +1,20 @@
 import { getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
+import { useCapabilities, useServices } from '@ez-kit/store-core/react'
 import { createContext, type PropsWithChildren, type ReactElement, useContext, useLayoutEffect, useRef } from 'react'
 import { useStore as useZustandStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import type { ControlledConfig } from '@ez-kit/store-core'
+import type { ControlledConfig, StoreId, StorePlugin } from '@ez-kit/store-core'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
 const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
+
+/** Synthetic id for a non-cached store. There is one instance per Provider, hence a fixed `id`. */
+const SINGLETON_ID = 'singleton'
+const DEFAULT_STORE_NAME = 'store'
+const EMPTY_PATH: readonly string[] = []
+/** Shared empty list, so a factory without `plugins` hands `useCapabilities` a stable identity. */
+const EMPTY_PLUGINS: readonly StorePlugin<never>[] = []
 
 /** Seed envelope passed to a `createContextStore` factory. */
 export type ContextStoreInit<TDefaultValue> = {
@@ -17,9 +25,17 @@ export type CreateContextStoreFactory<TStore extends StoreApi<unknown>, TDefault
 	init: ContextStoreInit<TDefaultValue>,
 ) => TStore
 
-export type CreateContextStoreOptions<TState> = {
+export type CreateContextStoreOptions<TStore extends StoreApi<unknown>, TState> = {
+	/** Group name used to synthesize this store's `StoreId`. Defaults to a stable `'store'`. */
+	name?: string
 	/** Per-key overrides for fields controlled via the Provider's `value` prop. */
 	controlled?: ControlledConfig<TState>
+	/**
+	 * Plugins to run for every instance this factory creates, after the capabilities the factory chain
+	 * attached to the store itself (`pipe(createStore()(…), withPersist())`). Use it for a plugin that
+	 * is not written as a `with*` wrapper, or one that belongs to the factory rather than to the store.
+	 */
+	plugins?: readonly StorePlugin<TStore>[]
 }
 
 /**
@@ -33,9 +49,18 @@ type ProviderProps<TDefaultValue, TState> = (undefined extends TDefaultValue
 	onValueChange?: (value: Partial<TState>) => void
 }
 
-type ItemProps<TStore extends StoreApi<unknown>, TSelected> = {
+type SelectedProps<TStore extends StoreApi<unknown>, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
 	children: (state: TSelected) => ReactElement
+}
+
+type SubscribeProps<TStore extends StoreApi<unknown>, TSelected> = SelectedProps<TStore, TSelected> & {
+	/**
+	 * Compare the selected value shallowly instead of by reference — the `Subscribe` counterpart of
+	 * `useShallowSelector`. Required whenever `selector` *builds* its result (an object, an array):
+	 * a fresh reference on every run never settles under the default `Object.is`.
+	 */
+	shallow?: boolean
 }
 
 export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultValue> = {
@@ -49,7 +74,11 @@ export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultV
 	useSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
 	/** As `useSelector`, but compares the selected value shallowly — for object/array selections. */
 	useShallowSelector: <TSelected>(selector: (state: ExtractState<TStore>) => TSelected) => TSelected
-	Item: <TSelected>(props: ItemProps<TStore, TSelected>) => ReactElement
+	/**
+	 * Render-prop read: subscribes to `selector` and hands the value to `children`. Compared by
+	 * reference unless `shallow` is set.
+	 */
+	Subscribe: <TSelected>(props: SubscribeProps<TStore, TSelected>) => ReactElement
 }
 
 function getStoreFromContext<TStore extends StoreApi<unknown>>(store: TStore | null): TStore {
@@ -89,11 +118,13 @@ function applyControlledEntries<TStore extends StoreApi<unknown>, TState extends
 
 export function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = undefined>(
 	createStore: CreateContextStoreFactory<TStore, TDefaultValue>,
-	options: CreateContextStoreOptions<ExtractState<TStore>> = {},
+	options: CreateContextStoreOptions<TStore, ExtractState<TStore>> = {},
 ): CreateContextStoreResult<TStore, TDefaultValue> {
 	type TState = ExtractState<TStore>
 	const StoreContext = createContext<TStore | null>(null)
 	const controlled: ControlledConfig<TState> = options.controlled ?? {}
+	const storeId: StoreId = { path: EMPTY_PATH, name: options.name ?? DEFAULT_STORE_NAME, id: SINGLETON_ID }
+	const plugins = options.plugins ?? EMPTY_PLUGINS
 
 	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>): ReactElement {
 		const { children, defaultValue, value, onValueChange } = props as PropsWithChildren<{
@@ -101,6 +132,7 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 			value?: Partial<TState>
 			onValueChange?: (value: Partial<TState>) => void
 		}>
+		const services = useServices()
 		const storeRef = useRef<TStore | null>(null)
 		const isNewStore = storeRef.current === null
 		const hasSyncedInitialRef = useRef(false)
@@ -127,6 +159,8 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 				applyControlledEntries(store, initialChanges, controlled)
 			}
 		}
+
+		useCapabilities(store, services, storeId, plugins)
 
 		useLayoutEffect(() => {
 			const isInitialSync = !hasSyncedInitialRef.current
@@ -193,8 +227,30 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		return useZustandStore(store, useShallow(selector))
 	}
 
-	function Item<TSelected>({ selector, children }: ItemProps<TStore, TSelected>): ReactElement {
+	function SubscribeByReference<TSelected>({ selector, children }: SelectedProps<TStore, TSelected>): ReactElement {
 		return children(useSelector(selector))
+	}
+
+	function SubscribeShallow<TSelected>({ selector, children }: SelectedProps<TStore, TSelected>): ReactElement {
+		return children(useShallowSelector(selector))
+	}
+
+	/**
+	 * `shallow` picks one of two child components rather than one of two selectors, so each of them
+	 * calls exactly one hook. Toggling the prop on a mounted `Subscribe` therefore swaps the element
+	 * type and remounts the render-prop subtree — `shallow` is a property of the selector, which is
+	 * itself written once per call site, so that is not a state a real tree passes through.
+	 */
+	function Subscribe<TSelected>({
+		selector,
+		shallow = false,
+		children,
+	}: SubscribeProps<TStore, TSelected>): ReactElement {
+		return shallow ? (
+			<SubscribeShallow selector={selector}>{children}</SubscribeShallow>
+		) : (
+			<SubscribeByReference selector={selector}>{children}</SubscribeByReference>
+		)
 	}
 
 	return {
@@ -202,6 +258,6 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		useStore,
 		useSelector,
 		useShallowSelector,
-		Item,
+		Subscribe,
 	}
 }

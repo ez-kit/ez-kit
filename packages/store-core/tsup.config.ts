@@ -5,6 +5,7 @@ export default defineConfig({
 		index: 'src/index.ts',
 		react: 'src/react.tsx',
 		'cache/index': 'src/cache/index.ts',
+		'history/index': 'src/history/index.ts',
 	},
 	format: ['esm'],
 	dts: true,

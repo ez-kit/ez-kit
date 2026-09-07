@@ -8,8 +8,8 @@ description: Declare persisted fields on class properties — @persistUrl / @per
 Decorate the fields you want synced with the wrapper for their source. The property name becomes the substrate key, and the parser is **auto-resolved from the field's value** — so primitives need no parser. This is the recommended path for anything shaped like an entity model.
 
 ```tsx
-import { createStore } from '@ez-kit/va-store'
-import { persist } from '@ez-kit/va-store/persist'
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { withPersist } from '@ez-kit/va-store/persist'
 import { persistUrl } from '@ez-kit/va-store/persist/url'
 import { persistLocalStorage } from '@ez-kit/va-store/persist/storage'
 import { proxy } from 'valtio'
@@ -20,16 +20,16 @@ class Filters {
 	@persistLocalStorage() pageSize = 25 // persisted to localStorage instead
 }
 
-// Request-scoped store with the `persist()` plugin. Omit `fields` → decorators are discovered on the instance.
-const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
+// Wrap the proxy in `withPersist`. Omit `fields` → decorators are discovered on the instance.
+const filtersStore = createContextStore(() => pipe(proxy(new Filters()), withPersist()))
 ```
 
 Every wrapper is a thin shim over the base `persistField({ source, … })`. They add exactly two things: a `source` and a typed options bag — so a field can carry `@persistUrl()` **and** `@persistLocalStorage()` to sync to both at once (one descriptor per source).
 
 <Callout type='warn'>
-	The **interactive demos** in this section are declared with the equivalent [accessor API](./va-store/persist/fields) —
-	decorators need a build-time transform this in-browser sandbox doesn't run. Same engine, identical output; the code
-	blocks show the real decorator syntax.
+	The **interactive demos** in this section are declared with the equivalent [accessor API](./fields) — decorators need
+	a build-time transform this in-browser sandbox doesn't run. Same engine, identical output; the code blocks show the
+	real decorator syntax.
 </Callout>
 
 ## Parsers: auto vs explicit
@@ -49,7 +49,7 @@ class Filters {
 }
 ```
 
-The full catalogue, auto-resolution rules, and Zod live on the [Parsers](./va-store/persist/parsers) page.
+The full catalogue, auto-resolution rules, and Zod live on the [Parsers](./parsers) page.
 
 ## Composition
 
@@ -108,12 +108,12 @@ class Search {
 // wherever Search is nested, it always writes ?q=…
 ```
 
-These let a deeply-nested field own a short, shareable key regardless of where its class sits. The same options exist on the [accessor API](./va-store/persist/fields).
+These let a deeply-nested field own a short, shareable key regardless of where its class sits. The same options exist on the [accessor API](./fields).
 
 ## Imperative control
 
-The bound proxy carries per-source handles (`$url`, `$persist`) for source-specific commits — e.g. forcing a URL `push`. See [Deep dive — URL → imperative control](./va-store/persist/deep-dive-url#imperative-control).
+The bound proxy carries per-source handles (`$url`, `$persist`) for source-specific commits — e.g. forcing a URL `push`. See [Deep dive — URL → imperative control](./deep-dive-url#imperative-control-via-url).
 
 ## Build setup
 
-Decorators need **Stage 3 decorators** + `Symbol.metadata` in your toolchain. If you can't enable them, the [accessor API](./va-store/persist/fields) is equivalent and needs no transpilation. Full configuration is on the [TypeScript](./va-store/persist/typescript) page.
+Decorators need **Stage 3 decorators** + `Symbol.metadata` in your toolchain. If you can't enable them, the [accessor API](./fields) is equivalent and needs no transpilation. Full configuration is on the [TypeScript](./typescript) page.
