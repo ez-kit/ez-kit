@@ -27,6 +27,13 @@ const tags = paramArray(paramString())
 
 All codecs live on the core `@ez-kit/zu-store/persist` entry — they're source-agnostic. Each satisfies a round-trip contract (`parse(stringify(v))` deep-equals `v`), which lets the engine break the store⇄substrate loop by comparing serialized forms.
 
+The catalogue is exercised live below: `q`, `page` and `inStock` auto-resolve from their runtime values, while the array of tags and the closed enum carry an explicit codec.
+
+<LivePreview
+	path='zu-store/persist-parsers'
+	title='Every codec in one query string'
+/>
+
 ## Auto-resolution
 
 When you omit a parser, one is picked from the field's **runtime value** at bind time:
