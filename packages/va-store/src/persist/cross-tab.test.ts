@@ -1,11 +1,10 @@
+import { createBinding, createPersistEngine } from '@ez-kit/store-persist/internals'
 import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createBinding } from './binding'
-import { paramString } from './codecs'
-import { createPersistEngine } from './engine'
+import { paramString, valtioPort } from './index'
 
-import type { SyncSourcePort } from './types'
+import type { SyncSourcePort } from './index'
 
 /**
  * Let the whole reactive chain settle: valtio batches its subscription notifications in a microtask,
@@ -61,7 +60,7 @@ describe('@ez-kit/va-store persist cross-tab sync', () => {
 		const setSpyA = vi.spyOn(portA, 'set')
 		const engineA = createPersistEngine(portA)
 		const stateA = proxy({ q: '' })
-		engineA.connect(createBinding(stateA, [{ path: ['q'], parser: paramString() }], {}))
+		engineA.connect(createBinding(stateA, valtioPort, [{ path: ['q'], parser: paramString() }], {}))
 		portA.subscribe?.(() => {
 			engineA.pull(portA.get())
 		})
@@ -71,7 +70,7 @@ describe('@ez-kit/va-store persist cross-tab sync', () => {
 		const setSpyB = vi.spyOn(portB, 'set')
 		const engineB = createPersistEngine(portB)
 		const stateB = proxy({ q: '' })
-		engineB.connect(createBinding(stateB, [{ path: ['q'], parser: paramString() }], {}))
+		engineB.connect(createBinding(stateB, valtioPort, [{ path: ['q'], parser: paramString() }], {}))
 		portB.subscribe?.(() => {
 			engineB.pull(portB.get())
 		})
@@ -98,11 +97,11 @@ describe('@ez-kit/va-store persist cross-tab sync', () => {
 
 		const engineA = createPersistEngine(port)
 		const stateA = proxy({ q: '' })
-		engineA.connect(createBinding(stateA, [{ path: ['q'], parser: paramString() }], {}))
+		engineA.connect(createBinding(stateA, valtioPort, [{ path: ['q'], parser: paramString() }], {}))
 
 		const engineB = createPersistEngine(port)
 		const stateB = proxy({ q: '' })
-		engineB.connect(createBinding(stateB, [{ path: ['q'], parser: paramString() }], {}))
+		engineB.connect(createBinding(stateB, valtioPort, [{ path: ['q'], parser: paramString() }], {}))
 		port.subscribe?.(() => {
 			engineB.pull(port.get())
 		})

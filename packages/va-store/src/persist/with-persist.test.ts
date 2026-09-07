@@ -1,12 +1,11 @@
 import { capabilitiesOf, pipe } from '@ez-kit/store-core'
+import { PERSIST_HANDLE, URL_HANDLE } from '@ez-kit/store-persist/internals'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
-import { paramString } from './codecs'
-import { persistHandle, PERSIST_HANDLE, urlHandle, URL_HANDLE } from './handle'
-import { withPersist } from './with-persist'
+import { paramString, persistHandle, urlHandle, withPersist } from './index'
 
-import type { PersistPluginOptions } from './plugin'
+import type { PersistPluginOptions } from './index'
 
 /** A store with a URL field and no storage field — so `$persist` is the unbacked slot. */
 const urlField: PersistPluginOptions<{ q: string }> = {

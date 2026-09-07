@@ -18,12 +18,44 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
+		},
+		"./persist": {
+			"types": "./dist/persist/index.d.ts",
+			"import": "./dist/persist/index.js"
+		},
+		"./persist/internals": {
+			"types": "./dist/persist/internals.d.ts",
+			"import": "./dist/persist/internals.js"
+		},
+		"./persist/storage": {
+			"types": "./dist/persist/storage/index.d.ts",
+			"import": "./dist/persist/storage/index.js"
+		},
+		"./persist/url": {
+			"types": "./dist/persist/url/index.d.ts",
+			"import": "./dist/persist/url/index.js"
+		},
+		"./persist/url/react-router": {
+			"types": "./dist/persist/url/react-router.d.ts",
+			"import": "./dist/persist/url/react-router.js"
+		},
+		"./persist/url/next": {
+			"types": "./dist/persist/url/next.d.ts",
+			"import": "./dist/persist/url/next.js"
+		},
+		"./persist/validators/zod": {
+			"types": "./dist/persist/validators/zod.d.ts",
+			"import": "./dist/persist/validators/zod.js"
+		},
+		"./persist/testing": {
+			"types": "./dist/persist/testing/index.d.ts",
+			"import": "./dist/persist/testing/index.js"
 		}
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"build": "tsup",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -34,7 +66,19 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "5 KB"
+			"limit": "6.5 KB"
+		},
+		{
+			"path": "dist/persist/index.js",
+			"limit": "6.5 KB"
+		},
+		{
+			"path": "dist/persist/storage/index.js",
+			"limit": "2 KB"
+		},
+		{
+			"path": "dist/persist/url/index.js",
+			"limit": "1 KB"
 		}
 	],
 	"devDependencies": {
@@ -45,7 +89,8 @@
 		"zustand": "^5.0.12"
 	},
 	"dependencies": {
-		"@ez-kit/store-core": "workspace:*"
+		"@ez-kit/store-core": "workspace:*",
+		"@ez-kit/store-persist": "workspace:*"
 	},
 	"peerDependencies": {
 		"react": ">=18.0.0",

@@ -7,9 +7,9 @@ import { describe, expect, it } from 'vitest'
 import { createStoreCache } from '../store-cache'
 import { StoreProvider } from '../store-provider'
 
-import { paramString } from './codecs'
-import { createFakePersistAdapter } from './testing/fake-persist-adapter'
-import { withPersist } from './with-persist'
+import { createFakePersistAdapter } from './testing'
+
+import { paramString, withPersist } from './index'
 
 import type { StoreCache } from '../store-cache'
 import type { CachedStoreFactoryInit } from '@ez-kit/store-core/cache'

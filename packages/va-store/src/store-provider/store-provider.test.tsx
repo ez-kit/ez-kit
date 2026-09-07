@@ -5,16 +5,14 @@ import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createContextStore, type ContextStoreInit } from '../create-context-store'
-import { paramString } from '../persist/codecs'
-import { PERSIST_ENGINES } from '../persist/service'
-import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '../persist/url/adapter'
-import { withPersist } from '../persist/with-persist'
+import { paramString, PERSIST_ENGINES, withPersist } from '../persist'
+import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '../persist/url'
 import { createStoreCache } from '../store-cache'
 
 import { StoreProvider } from './index'
 
-import type { RenderScopedAdapter } from '../persist/provider'
-import type { UrlDriver } from '../persist/url/adapter'
+import type { RenderScopedAdapter } from '../persist'
+import type { UrlDriver } from '../persist/url'
 
 /**
  * A spy URL adapter over a shared in-memory location. `commit` counts navigations so a test can assert

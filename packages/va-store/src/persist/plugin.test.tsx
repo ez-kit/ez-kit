@@ -7,12 +7,10 @@ import { describe, expect, it } from 'vitest'
 import { createContextStore, type ContextStoreInit } from '../create-context-store'
 import { StoreProvider } from '../store-provider'
 
-import { paramString } from './codecs'
-import { persist, useHydrated } from './plugin'
-import { PERSIST_ENGINES } from './service'
-import { createFakePersistAdapter } from './testing/fake-persist-adapter'
-import { persistUrl } from './url/decorator'
-import { withPersist } from './with-persist'
+import { createFakePersistAdapter } from './testing'
+import { persistUrl } from './url'
+
+import { paramString, persist, useHydrated, PERSIST_ENGINES, withPersist } from './index'
 
 import type { StoreId } from '@ez-kit/store-core'
 

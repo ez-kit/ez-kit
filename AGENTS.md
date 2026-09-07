@@ -163,9 +163,10 @@ apps/
       dev-server.mjs            # `pnpm docs:dev` entrypoint
       verify-manifest-coverage.mjs  # Asserts every manifest example is referenced from some .mdx (run manually)
 packages/
-  zu-store/           # @ez-kit/zu-store — Zustand context store factory (+ history middleware, store-cache)
-  va-store/           # @ez-kit/va-store — Valtio context store + source-agnostic persist engine (URL/storage/IndexedDB)
-  store-core/         # @ez-kit/store-core — shared foundation under both: store ids, service registry, plugin contract, instance cache
+  zu-store/           # @ez-kit/zu-store — Zustand context store factory (+ history middleware, store-cache, persist front)
+  va-store/           # @ez-kit/va-store — Valtio context store (+ history, store-cache, persist front)
+  store-core/         # @ez-kit/store-core — shared foundation under both: store ids, service registry, plugin contract, instance cache, store port + path helpers
+  store-persist/      # @ez-kit/store-persist — the manager-agnostic persist engine (URL/storage/IndexedDB), consumed through a binding package
   data-grid/
     core/             # @ez-kit/data-grid-core — headless data-grid (TanStack Table)
     react/
@@ -175,6 +176,25 @@ packages/
 turbo/
   generators/         # Plop-based package scaffolding (config.ts + templates/)
 ```
+
+### Persistence is one engine behind two ports
+
+`@ez-kit/store-persist` holds the whole persist stack — engine, bindings, codecs, URL/storage/IndexedDB
+adapters, provider — and knows nothing about Valtio or Zustand. It reaches a store only through
+`StorePort` (`@ez-kit/store-core`): `getState` / `write(store, writes)` / `subscribe`. The Valtio port
+mutates the proxy in place (node identity is what makes a tracked snapshot re-render precisely); the
+Zustand port rebuilds the touched path with `setPath` and issues **one** `setState` for the whole
+batch, because an in-place mutation would notify nobody and would defeat every `Object.is` selector.
+
+Two consequences worth keeping:
+
+- **The port lives on the binding, not on the engine.** One engine per source is mounted app-wide, and
+  the stores connected to it may come from different managers — so a Valtio and a Zustand store can
+  share the URL in one tree.
+- **Consumers never import `@ez-kit/store-persist`.** Each binding package re-exports the entire
+  surface with its own port pre-bound (`@ez-kit/va-store/persist*`, `@ez-kit/zu-store/persist*`), so
+  there is exactly one import path per app. The only typed wrapper each binding writes itself is
+  `withPersist`, because only it knows how to get from a store handle to its state type.
 
 ### Package conventions
 

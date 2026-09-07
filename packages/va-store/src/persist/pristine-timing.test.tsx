@@ -6,9 +6,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { createContextStore, type ContextStoreInit } from '../create-context-store'
 import { StoreProvider } from '../store-provider'
 
-import { paramString } from './codecs'
-import { createFakePersistAdapter } from './testing/fake-persist-adapter'
-import { withPersist } from './with-persist'
+import { createFakePersistAdapter } from './testing'
+
+import { paramString, withPersist } from './index'
 
 const flush = () =>
 	new Promise<void>((resolve) => {

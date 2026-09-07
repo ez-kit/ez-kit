@@ -5,10 +5,8 @@ import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createContextStore } from '../create-context-store'
-import { paramString } from '../persist/codecs'
-import { useHydrated } from '../persist/plugin'
-import { createFakePersistAdapter } from '../persist/testing/fake-persist-adapter'
-import { withPersist } from '../persist/with-persist'
+import { paramString, useHydrated, withPersist } from '../persist'
+import { createFakePersistAdapter } from '../persist/testing'
 import { createStoreCache } from '../store-cache'
 import { StoreProvider } from '../store-provider'
 

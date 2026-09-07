@@ -9,6 +9,10 @@ export type { ServiceKey, ServiceRegistry } from './service'
 
 export { attachCapability, capabilitiesOf } from './capability'
 
+export { findPropertyDescriptor, parentOf, readPath, setPath, writePath } from './path'
+
+export type { PathWrite, StorePort } from './store-port'
+
 export { pipe } from './pipe'
 export type { StoreEnhancer } from './pipe'
 

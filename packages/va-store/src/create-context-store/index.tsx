@@ -1,17 +1,9 @@
-import { capabilitiesOf, getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
-import { useServices } from '@ez-kit/store-core/react'
-import {
-	createContext,
-	type PropsWithChildren,
-	type ReactElement,
-	useContext,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-} from 'react'
+import { getChangedControlledEntries, pickControlledKeys } from '@ez-kit/store-core'
+import { useCapabilities, useServices } from '@ez-kit/store-core/react'
+import { createContext, type PropsWithChildren, type ReactElement, useContext, useLayoutEffect, useRef } from 'react'
 import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 
-import type { ControlledConfig, PluginCleanup, PluginContext, StoreId } from '@ez-kit/store-core'
+import type { ControlledConfig, StorePlugin, StoreId } from '@ez-kit/store-core'
 
 /** Names the store in the error, so `createContextStore(f, { name: 'filters' })` reports `filters`. */
 const missingProviderError = (name: string): string => `Missing Provider for ${name}`
@@ -20,7 +12,8 @@ const missingProviderError = (name: string): string => `Missing Provider for ${n
 const SINGLETON_ID = 'singleton'
 const DEFAULT_STORE_NAME = 'store'
 const EMPTY_PATH: readonly string[] = []
-const IS_SERVER = typeof window === 'undefined'
+/** Shared empty list, so a factory without `plugins` hands `useCapabilities` a stable identity. */
+const EMPTY_PLUGINS: readonly StorePlugin<never>[] = []
 
 /** Seed envelope passed to a `createContextStore` factory. */
 export type ContextStoreInit<TDefaultValue> = {
@@ -40,6 +33,12 @@ export type CreateContextStoreOptions<TState extends object> = {
 	name?: string
 	/** Per-key overrides for fields controlled via the Provider's `value` prop. */
 	controlled?: ControlledConfig<TState>
+	/**
+	 * Plugins to run for every instance this factory creates, after the capabilities the factory chain
+	 * attached to the proxy itself. Use it for a plugin that is not written as a `with*` wrapper, or one
+	 * that belongs to the factory rather than to the store value.
+	 */
+	plugins?: readonly StorePlugin<TState>[]
 }
 
 /**
@@ -137,20 +136,7 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 	const controlled: ControlledConfig<TState> = options.controlled ?? {}
 	const name = options.name ?? DEFAULT_STORE_NAME
 	const storeId: StoreId = { path: EMPTY_PATH, name, id: SINGLETON_ID }
-
-	function useCapabilities(store: TState, services: PluginContext['services']): void {
-		useEffect(() => {
-			const capabilities = capabilitiesOf(store)
-			if (capabilities.length === 0) return
-			const context: PluginContext = { services, id: storeId, isServer: IS_SERVER }
-			const cleanups: PluginCleanup[] = capabilities.map((plugin) => plugin.setup(store, context))
-			return () => {
-				for (const cleanup of [...cleanups].reverse()) {
-					if (cleanup) cleanup()
-				}
-			}
-		}, [store, services])
-	}
+	const plugins = options.plugins ?? EMPTY_PLUGINS
 
 	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>): ReactElement {
 		const { children, defaultValue, value, onValueChange } = props as PropsWithChildren<{
@@ -186,7 +172,7 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 			}
 		}
 
-		useCapabilities(store, services)
+		useCapabilities(store, services, storeId, plugins)
 
 		useLayoutEffect(() => {
 			const isInitialSync = !hasSyncedInitialRef.current

@@ -50,12 +50,17 @@
 		"./persist/validators/zod": {
 			"types": "./dist/persist/validators/zod.d.ts",
 			"import": "./dist/persist/validators/zod.js"
+		},
+		"./persist/testing": {
+			"types": "./dist/persist/testing/index.d.ts",
+			"import": "./dist/persist/testing/index.js"
 		}
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"dependencies": {
-		"@ez-kit/store-core": "workspace:*"
+		"@ez-kit/store-core": "workspace:*",
+		"@ez-kit/store-persist": "workspace:*"
 	},
 	"scripts": {
 		"build": "tsup",
