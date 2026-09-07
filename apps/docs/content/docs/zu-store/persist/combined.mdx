@@ -1,0 +1,74 @@
+---
+title: Combined
+description: Sync one store to the URL and storage at once. Shared state deep-links; device preferences restore — and a shared link is never clobbered by a stale cache.
+---
+
+# Combined
+
+A field is bound to a source, not a store — so one store can mix sources freely. Put **shareable** state (`q`, filters) in the URL and **device-local** state (density, theme) in storage. Mount both adapters; each field picks where it goes.
+
+<LivePreview
+	path='zu-store/persist-combined'
+	title='URL + localStorage on one store'
+/>
+
+```tsx
+import { createContextStore, pipe, StoreProvider } from '@ez-kit/zu-store'
+import { type FieldsBuilder, withPersist } from '@ez-kit/zu-store/persist'
+import { localStorageAdapter, localStorageField } from '@ez-kit/zu-store/persist/storage'
+import { urlField } from '@ez-kit/zu-store/persist/url'
+import { reactRouterAdapter } from '@ez-kit/zu-store/persist/url/react-router'
+import { createStore } from 'zustand/vanilla'
+
+type ListState = { q: string; density: 'comfortable' | 'compact' }
+
+const fields: FieldsBuilder<ListState> = (field) => [
+	field((state) => state.q, urlField()), // shared — deep-links, survives Back/forward
+	field((state) => state.density, localStorageField()), // device preference — restored, not shared
+]
+
+const listStore = createContextStore(() =>
+	pipe(
+		createStore<ListState>()(() => ({ q: '', density: 'comfortable' })),
+		withPersist({ fields }),
+	),
+)
+
+function Page() {
+	return (
+		<StoreProvider persist={[reactRouterAdapter, localStorageAdapter()]}>
+			<listStore.Provider>…</listStore.Provider>
+		</StoreProvider>
+	)
+}
+```
+
+One engine is created per source — they never coordinate writes (each flushes its own substrate), and an async source (IndexedDB) can't stall the synchronous URL.
+
+## Dual-binding one field
+
+List the _same_ field once per source to keep a shareable value **and** a local fallback — a URL param when present, restored from storage otherwise:
+
+```tsx
+withPersist({
+	fields: (field) => [field((state) => state.q, urlField()), field((state) => state.q, localStorageField())],
+})
+```
+
+## First-present-wins on cold start
+
+When several sources can fill the same field, the rule is **first-present-wins on cold start, last-arrival-wins at runtime**:
+
+- **Cold start** — a source writes an incoming value into a field only if that field still holds its default. The URL connects first (synchronous, in render) and sets `q`; storage then fills only the fields the URL left at default. A shared `?q=boots` link is **never** clobbered by a stale localStorage value — even an async IndexedDB value that resolves later can't win.
+- **Runtime** — after mount, whatever change arrives last wins (a fresh navigation, an edit, another tab).
+
+This makes "an explicit shared link beats a restored cache" automatic, with no precedence config. The only lever for sync-vs-sync ordering is adapter order in the `persist` array; it's rarely needed.
+
+<Callout type='info'>
+	A consumer who genuinely wants storage to override the URL on load can't, by design — the rule favors shareable links.
+	That trade-off is intentional.
+</Callout>
+
+## Per-source handles
+
+Each bound source attaches a non-enumerable control handle to the store handle — `$url` and `$persist` — for source-specific imperative control (e.g. forcing a URL `push`). A dual-bound store exposes both without collision. They're covered in the [URL deep dive](./deep-dive-url#imperative-control-via-url).
