@@ -37,6 +37,19 @@ function Toolbar() {
 
 `withHistory` mutates the proxy it's given and returns it — same identity, widened by `{ history: StoreHistory<T> }`. `store.history` is enumerable and `ref()`-wrapped (so `snapshot(store).history` is the same live object, not a deep-cloned copy), and its `toJSON()` returns `undefined`, so it never leaks into `JSON.stringify(store)`.
 
+A photo-adjustment panel is the shape this is really for — every write is a step, `undo` walks them
+back, and the strip along the bottom is the timeline `goto(index)` addresses:
+
+<LivePreview
+	path='va-store/history-image-adjust'
+	title='Image adjustments'
+/>
+
+Dragging a slider fires a write per pointer move, which would bury the stack in near-identical
+entries. The example passes a `shouldRecord` that vetoes a repeat write to the same key within
+400 ms, so a whole drag collapses into one step whose `prev` is the pre-drag value — see
+[`shouldRecord`](#options) below.
+
 ## Options
 
 ```ts
@@ -73,6 +86,33 @@ const { undo, redo, goto, clear, pause, resume, skip, isPaused, pasts, futures, 
 Subscribes through `useSnapshot(history.state)`, so `pasts`, `futures`, `limit` and `isPaused` re-render the caller when they change; `canUndo` / `canRedo` are derived (`pasts.length > 0` / `futures.length > 0`). The methods (`undo`, `redo`, `goto`, `clear`, `pause`, `resume`, `skip`) are stable references from `store.history` — call them from event handlers without re-subscribing.
 
 `goto(index)` jumps to an absolute position on the linear timeline `[...pasts, current, ...futures]` (`index === pasts.length` is a no-op — you're already there); out-of-range indices clamp rather than throw. `skip(fn)` runs `fn` with recording paused for its duration, re-entrant, and restores the prior pause state on exit.
+
+## `useTimeline(store)`
+
+```tsx
+const { steps, index, current, goto } = useTimeline(store)
+```
+
+The timeline itself, assembled: `steps` is `[...pasts, current, ...futures]`, `index` is where the store sits on it (`pasts.length`, so `steps[index] === current`), and `current` is the live state shaped like a step — the store's own fields, without `history`. That is what a step strip, a "step 3 of 7" read-out, or anything driving `goto()` needs, and it saves rebuilding `current` field by field from a snapshot.
+
+It is a separate hook rather than more fields on `useHistory` because of what assembling `current` costs. It means `useSnapshot(store)`, and valtio re-renders a component on **any** store write once that component snapshots the store — even one that reads nothing off the snapshot, since an empty access set reads as "changed". On `useHistory` that cost would land on every caller, including a toolbar that only wanted `undo` / `redo` and would then re-render on every keystroke. On `useTimeline` it lands only where the state is being rendered anyway.
+
+```tsx
+function Strip() {
+	const { steps, index, goto } = useTimeline(store.useStore())
+	return steps.map((step, at) => (
+		<button
+			key={at}
+			aria-current={at === index}
+			onClick={() => {
+				goto(at)
+			}}
+		>
+			<Preview state={step} />
+		</button>
+	))
+}
+```
 
 ## The cost of history, honestly
 
@@ -115,6 +155,16 @@ function Filters() {
 `withPersist(withHistory(proxy(…)))` — history attaches first (it wraps the bare proxy), persist second — is the required order: `createContextStore`'s Provider runs setups in attachment order, so history's subscription is already listening by the time persist's `setup` pushes the hydrated value in. Reversing the chain would attach persist to a proxy history hasn't wrapped yet. See [Capabilities → attachment order](./capabilities#attachment-order).
 
 With `defaultPaused: true`, hydration never gets recorded (the stack stays empty until `resume()` fires), and once resumed a normal edit records a step whose `prev` is the hydrated value — so `undo` after an edit correctly returns to what the substrate hydrated, and (because the restore write is not paused) that undo commits back into persist too.
+
+<LivePreview
+	path='va-store/history-persist-filters'
+	title='Filters restored from the URL'
+/>
+
+The example starts on a shared link (`?q=boots&sort=price`), so the first thing that happens is a
+hydration — and the counters stay at `0 back` through it. Edit a filter and steps start appearing;
+undo back past your first edit and you land on the hydrated value, with the URL read-out following
+the restore.
 
 Without `defaultPaused`, hydration **is** recorded as a step — useful if you genuinely want "undo" to be able to walk back past the hydrated value to the pre-hydration default, but the more common expectation ("undo should only affect things the user did") means most stores that combine persist and history want the paused recipe above.
 
