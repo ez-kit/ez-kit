@@ -1,5 +1,24 @@
 # @ez-kit/docs
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+  - @ez-kit/zu-store@0.7.0
+  - @ez-kit/va-store@0.3.0
+
 ## 0.0.5
 
 ### Patch Changes

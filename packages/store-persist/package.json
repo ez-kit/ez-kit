@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/store-persist",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Source-agnostic persist engine for the @ez-kit store packages: URL / storage / IndexedDB as state, bound to any store manager through a StorePort.",
 	"license": "MIT",
 	"repository": {
