@@ -9,4 +9,7 @@ export type { ServiceKey, ServiceRegistry } from './service'
 
 export { attachCapability, capabilitiesOf } from './capability'
 
+export { pipe } from './pipe'
+export type { StoreEnhancer } from './pipe'
+
 export type { StorePlugin, PluginContext, PluginCleanup } from './plugin'

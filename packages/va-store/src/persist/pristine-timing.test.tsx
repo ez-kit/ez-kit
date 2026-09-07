@@ -1,3 +1,4 @@
+import { pipe } from '@ez-kit/store-core'
 import { act, render } from '@testing-library/react'
 import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
@@ -27,9 +28,12 @@ type Filters = { q: string }
  * differ.
  */
 const filtersStore = createContextStore<Filters, { q?: string }>(({ defaultValue }: ContextStoreInit<{ q?: string }>) =>
-	withPersist(proxy<Filters>({ q: defaultValue.q ?? FACTORY_DEFAULT }), {
-		fields: (field) => [field((state) => state.q, { source: 'url', parser: paramString() })],
-	}),
+	pipe(
+		proxy<Filters>({ q: defaultValue.q ?? FACTORY_DEFAULT }),
+		withPersist({
+			fields: (field) => [field((state) => state.q, { source: 'url', parser: paramString() })],
+		}),
+	),
 )
 
 function renderWithUrl(search: string, value?: Partial<Filters>) {

@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo writes the raw mutable proxy from useStore() */
 
-import { createStoreCache, StoreProvider } from '@ez-kit/va-store'
+import { createStoreCache, pipe, StoreProvider } from '@ez-kit/va-store'
 import { type FieldsBuilder, withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { MinusIcon, PlusIcon } from 'lucide-react'
@@ -31,7 +31,7 @@ const fields: FieldsBuilder<FiltersState> = (field) => [field((s) => s.q, urlFie
 // cache keeps the live proxy alive across unmount/remount. A cache-hit returns the same already-bound
 // proxy, so its URL binding (and in-progress edits) survive a remount within `gcTime`.
 const filtersStore = cache.createCachedStore<FiltersState>(
-	() => withPersist(proxy<FiltersState>({ q: '', page: 1 }), { fields }),
+	() => pipe(proxy<FiltersState>({ q: '', page: 1 }), withPersist({ fields })),
 	{ name: 'cached-filters' },
 )
 

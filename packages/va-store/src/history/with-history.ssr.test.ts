@@ -7,7 +7,7 @@
  * report the same capabilities as the same store built in the browser — otherwise a mount-time seam
  * that reads `capabilitiesOf` sees nothing to run.
  */
-import { capabilitiesOf } from '@ez-kit/store-core'
+import { capabilitiesOf, pipe } from '@ez-kit/store-core'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
 
@@ -19,13 +19,13 @@ describe('withHistory on the server', () => {
 	})
 
 	it('registers its capability even though the subscription is skipped', () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 
 		expect(capabilitiesOf(state).map((plugin) => plugin.name)).toEqual(['history'])
 	})
 
 	it('still exposes the history API', () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 
 		expect(typeof state.history.undo).toBe('function')
 	})

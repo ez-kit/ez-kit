@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo writes through the raw mutable proxy from useStore() */
 
-import { createContextStore, useHistory, withHistory } from '@ez-kit/va-store'
+import { createContextStore, pipe, useHistory, withHistory } from '@ez-kit/va-store'
 import { type FieldsBuilder, paramEnum, PersistProvider, useHydrated, withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { RedoIcon, UndoIcon } from 'lucide-react'
@@ -33,7 +33,7 @@ const fields: FieldsBuilder<Filters> = (field) => [
 // History attaches first (it wraps the bare proxy), persist second — the order the Provider replays
 // setups in, so history is already listening when persist pushes the hydrated value in.
 const filtersStore = createContextStore(() =>
-	withPersist(withHistory(proxy<Filters>({ q: '', sort: 'newest' }), { defaultPaused: true }), { fields }),
+	pipe(proxy<Filters>({ q: '', sort: 'newest' }), withHistory({ defaultPaused: true }), withPersist({ fields })),
 )
 
 // The example's own in-memory URL, seeded as if the reader arrived on a shared link.

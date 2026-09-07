@@ -1,6 +1,6 @@
 'use client'
 
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import { type FieldsBuilder, PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { zodParam } from '@ez-kit/va-store/persist/validators/zod'
@@ -23,7 +23,9 @@ const fields: FieldsBuilder<RatingState> = (field) => [
 	field((s) => s.rating, urlField({ parser: zodParam(ratingSchema) })),
 ]
 
-const ratingStore = createContextStore<RatingState>(() => withPersist(proxy<RatingState>({ rating: 3 }), { fields }))
+const ratingStore = createContextStore<RatingState>(() =>
+	pipe(proxy<RatingState>({ rating: 3 }), withPersist({ fields })),
+)
 
 const { adapter, useSearch } = createMemoryUrlAdapter()
 

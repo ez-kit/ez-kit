@@ -20,7 +20,7 @@ Storage works exactly like the URL — same store shape, same fronts. Only the *
 ## The three pieces
 
 ```tsx
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { localStorageAdapter, persistLocalStorage } from '@ez-kit/va-store/persist/storage'
 import { proxy } from 'valtio'
@@ -30,7 +30,7 @@ class Prefs {
 	@persistLocalStorage() fontScale = 1
 }
 
-const prefsStore = createContextStore(() => withPersist(proxy(new Prefs())))
+const prefsStore = createContextStore(() => pipe(proxy(new Prefs()), withPersist()))
 
 function Page() {
 	return (

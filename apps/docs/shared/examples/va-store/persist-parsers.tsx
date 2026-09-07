@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import {
 	type FieldsBuilder,
 	paramArray,
@@ -44,7 +44,7 @@ const fields: FieldsBuilder<SearchState> = (field) => [
 ]
 
 const searchStore = createContextStore<SearchState>(() =>
-	withPersist(proxy<SearchState>({ q: '', page: 1, inStock: false, tags: [], sort: 'relevance' }), { fields }),
+	pipe(proxy<SearchState>({ q: '', page: 1, inStock: false, tags: [], sort: 'relevance' }), withPersist({ fields })),
 )
 
 const { adapter, useSearch } = createMemoryUrlAdapter('q=boots&tags=red,suede&sort=newest&page=2')

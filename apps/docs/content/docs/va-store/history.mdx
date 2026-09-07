@@ -5,13 +5,13 @@ description: withHistory adds an undo/redo/goto stack to any Valtio proxy, backe
 
 # History
 
-`withHistory` wraps a Valtio proxy with an undo/redo stack. It's a [capability](./capabilities) — attach it in the factory, read and drive it with `useHistory()`.
+`withHistory` wraps a Valtio proxy with an undo/redo stack. It's a [capability](./capabilities) — build the enhancer, apply it to the proxy with [`pipe`](./capabilities) in the factory, read and drive it with `useHistory()`.
 
 ```tsx
-import { createContextStore, useHistory, withHistory } from '@ez-kit/va-store'
+import { createContextStore, pipe, useHistory, withHistory } from '@ez-kit/va-store'
 import { proxy } from 'valtio'
 
-const store = createContextStore(() => withHistory(proxy({ count: 0 })))
+const store = createContextStore(() => pipe(proxy({ count: 0 }), withHistory()))
 
 function Toolbar() {
 	const state = store.useStore()
@@ -35,7 +35,7 @@ function Toolbar() {
 }
 ```
 
-`withHistory` mutates the proxy it's given and returns it — same identity, widened by `{ history: StoreHistory<T> }`. `store.history` is enumerable and `ref()`-wrapped (so `snapshot(store).history` is the same live object, not a deep-cloned copy), and its `toJSON()` returns `undefined`, so it never leaks into `JSON.stringify(store)`.
+`withHistory(options)` builds an enhancer; applying it mutates the proxy it's given and returns it — same identity, widened by `{ history: StoreHistory<T> }`. Nothing is attached until the enhancer runs, so a named enhancer can seed several stores. `store.history` is enumerable and `ref()`-wrapped (so `snapshot(store).history` is the same live object, not a deep-cloned copy), and its `toJSON()` returns `undefined`, so it never leaks into `JSON.stringify(store)`.
 
 A photo-adjustment panel is the shape this is really for — every write is a step, `undo` walks them
 back, and the strip along the bottom is the timeline `goto(index)` addresses:
@@ -62,7 +62,7 @@ type ValtioHistoryOptions<T extends object> = {
 	sync?: boolean
 }
 
-withHistory(proxy({ count: 0 }), options)
+pipe(proxy({ count: 0 }), withHistory(options))
 ```
 
 | Option           | Type                                                        | Default | Description                                                                          |
@@ -129,15 +129,19 @@ Persist hydration arrives as a **late batch** — the store's fields update afte
 The documented recipe for keeping persist hydration out of the undo stack is `defaultPaused: true` paired with `resume()` driven by `useHydrated`:
 
 ```tsx
-import { createContextStore, useHistory, withHistory } from '@ez-kit/va-store'
+import { createContextStore, pipe, useHistory, withHistory } from '@ez-kit/va-store'
 import { paramString, useHydrated, withPersist } from '@ez-kit/va-store/persist'
 import { useEffect } from 'react'
 import { proxy } from 'valtio'
 
 const store = createContextStore(() =>
-	withPersist(withHistory(proxy({ q: '' }), { defaultPaused: true }), {
-		fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
-	}),
+	pipe(
+		proxy({ q: '' }),
+		withHistory({ defaultPaused: true }),
+		withPersist({
+			fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+		}),
+	),
 )
 
 function Filters() {
@@ -152,7 +156,7 @@ function Filters() {
 }
 ```
 
-`withPersist(withHistory(proxy(…)))` — history attaches first (it wraps the bare proxy), persist second — is the required order: `createContextStore`'s Provider runs setups in attachment order, so history's subscription is already listening by the time persist's `setup` pushes the hydrated value in. Reversing the chain would attach persist to a proxy history hasn't wrapped yet. See [Capabilities → attachment order](./capabilities#attachment-order).
+`pipe(proxy(…), withHistory(), withPersist())` — history attaches first (it wraps the bare proxy), persist second — is the required order: `createContextStore`'s Provider runs setups in attachment order, so history's subscription is already listening by the time persist's `setup` pushes the hydrated value in. Reversing the chain would attach persist to a proxy history hasn't wrapped yet. See [Capabilities → attachment order](./capabilities#attachment-order).
 
 With `defaultPaused: true`, hydration never gets recorded (the stack stays empty until `resume()` fires), and once resumed a normal edit records a step whose `prev` is the hydrated value — so `undo` after an edit correctly returns to what the substrate hydrated, and (because the restore write is not paused) that undo commits back into persist too.
 

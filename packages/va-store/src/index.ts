@@ -25,8 +25,8 @@ export type { StoreProviderProps } from './store-provider'
 export { useHistory, useTimeline, withHistory } from './history'
 export type { StoreHistory, Timeline, ValtioHistoryOptions, ValtioOp } from './history'
 
-export { shallowEqual } from '@ez-kit/store-core'
-export type { ControlledConfig, ControlledFieldConfig } from '@ez-kit/store-core'
+export { pipe, shallowEqual } from '@ez-kit/store-core'
+export type { ControlledConfig, ControlledFieldConfig, StoreEnhancer } from '@ez-kit/store-core'
 
 export { toTree } from '@ez-kit/store-core/cache'
 export type {

@@ -39,14 +39,14 @@ const state = counter.useStore() // write → state.count += 1
 
 ### History
 
-`withHistory(proxy(...), options?)` adds an undo/redo stack, backed by the same
+`pipe(proxy(...), withHistory(options?))` adds an undo/redo stack, backed by the same
 `@ez-kit/store-core/history` engine every `@ez-kit/*` store uses:
 
 ```tsx
-import { useHistory, withHistory } from '@ez-kit/va-store'
+import { pipe, useHistory, withHistory } from '@ez-kit/va-store'
 import { proxy } from 'valtio'
 
-const state = withHistory(proxy({ count: 0 }))
+const state = pipe(proxy({ count: 0 }), withHistory())
 
 function Toolbar() {
 	const { undo, redo, canUndo, canRedo } = useHistory(state)
@@ -69,7 +69,7 @@ function Toolbar() {
 }
 ```
 
-Calling `withHistory` flips on Valtio's `unstable_enableOp` globally for the process — it's how
+Applying `withHistory`'s enhancer flips on Valtio's `unstable_enableOp` globally for the process — it's how
 `subscribe` gets real operation payloads instead of always-empty ones, and it's what lets
 `shouldRecord` inspect which paths changed. This is harmless (every other `subscribe()` call in
 this codebase ignores its op argument) but it is process-wide: once any store in your app calls
@@ -98,7 +98,7 @@ class Filters {
 
 // Persistence is a capability attached to the proxy in the factory. Request-scoped, SSR-correct.
 // `withPersist` with no `fields` discovers the decorators.
-const filtersStore = createContextStore(() => withPersist(proxy(new Filters())))
+const filtersStore = createContextStore(() => pipe(proxy(new Filters()), withPersist()))
 
 function Page() {
 	return (
@@ -111,9 +111,9 @@ function Page() {
 }
 ```
 
-Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `withPersist(proxy({ q: '' }), { fields: (field) => [field((s) => s.q, urlField())] })` — and `withPersist` infers the state type from the proxy you pass it.
+Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `pipe(proxy({ q: '' }), withPersist({ fields: (field) => [field((s) => s.q, urlField())] }))` — and the builder's selectors are typed against the proxy `pipe` feeds the enhancer.
 
-`withPersist` composes with [`withHistory`](#history) — `withPersist(withHistory(proxy({ … })))` — as they're both [capabilities](https://ez-kit-docs.vercel.app/docs/va-store/capabilities) attached to the same proxy.
+`withPersist` composes with [`withHistory`](#history) — `pipe(proxy({ … }), withHistory(), withPersist())`, in attachment order — as they're both [capabilities](https://ez-kit-docs.vercel.app/docs/va-store/capabilities) attached to the same proxy.
 
 Subpaths (optional peers, install only what you use):
 

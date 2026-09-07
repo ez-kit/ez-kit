@@ -1,4 +1,4 @@
-import { capabilitiesOf } from '@ez-kit/store-core'
+import { capabilitiesOf, pipe } from '@ez-kit/store-core'
 import { act, render } from '@testing-library/react'
 import { useEffect } from 'react'
 import { proxy } from 'valtio'
@@ -25,12 +25,16 @@ const PAST_GC_TIME = GC_TIME * 2
 
 type Filters = { q: string }
 
-/** Builds a `withPersist(withHistory(...))` chain bound to the `url` source via the accessor front. */
-function makeQueryStore(historyOptions?: Parameters<typeof withHistory<Filters>>[1]) {
+/** Builds a `pipe(..., withHistory(), withPersist())` chain bound to the `url` source via the accessor front. */
+function makeQueryStore(historyOptions?: Parameters<typeof withHistory<Filters>>[0]) {
 	return createContextStore(() =>
-		withPersist(withHistory(proxy<Filters>({ q: '' }), historyOptions), {
-			fields: (field) => [field((state) => state.q, { source: 'url', parser: paramString() })],
-		}),
+		pipe(
+			proxy<Filters>({ q: '' }),
+			withHistory(historyOptions),
+			withPersist({
+				fields: (field) => [field((state) => state.q, { source: 'url', parser: paramString() })],
+			}),
+		),
 	)
 }
 
@@ -133,10 +137,14 @@ describe('history interop', () => {
 		expect(fake.getSearch()).toContain('q=seeded')
 	})
 
-	it('attaches history before persist in the withPersist(withHistory(...)) chain', () => {
-		const state = withPersist(withHistory(proxy<Filters>({ q: '' })), {
-			fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
-		})
+	it('attaches history before persist in the pipe(..., withHistory(), withPersist()) chain', () => {
+		const state = pipe(
+			proxy<Filters>({ q: '' }),
+			withHistory(),
+			withPersist({
+				fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+			}),
+		)
 
 		// withHistory attaches first (it wraps the innermost proxy), withPersist attaches second — the
 		// Provider then runs setups in this same attachment order, innermost first.
@@ -144,7 +152,7 @@ describe('history interop', () => {
 	})
 
 	it('records an externally pushed controlled value and converges after undo', async () => {
-		const store = createContextStore(() => withHistory(proxy({ q: '' })))
+		const store = createContextStore(() => pipe(proxy({ q: '' }), withHistory()))
 		let instance!: ReturnType<typeof store.useStore>
 		function Probe(): null {
 			instance = store.useStore()
@@ -190,7 +198,7 @@ describe('history interop', () => {
 
 	it('keeps history across a remount inside gcTime and drops it after', async () => {
 		const cache = createStoreCache({ gcTime: GC_TIME })
-		const group = cache.createCachedStore(() => withHistory(proxy({ count: 0 })), { name: 'counter' })
+		const group = cache.createCachedStore(() => pipe(proxy({ count: 0 }), withHistory()), { name: 'counter' })
 
 		function App({ show }: { show: boolean }) {
 			return (
@@ -230,7 +238,7 @@ describe('history interop', () => {
 	})
 
 	it('keeps recording after the Provider unmounts', async () => {
-		const store = createContextStore(() => withHistory(proxy({ count: 0 })))
+		const store = createContextStore(() => pipe(proxy({ count: 0 }), withHistory()))
 		let instance!: ReturnType<typeof store.useStore>
 		function Probe(): null {
 			instance = store.useStore()

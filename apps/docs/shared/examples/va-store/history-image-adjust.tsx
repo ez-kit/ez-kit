@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo writes through the raw mutable proxy from useStore() */
 
-import { createContextStore, useHistory, useTimeline, withHistory, type ValtioOp } from '@ez-kit/va-store'
+import { createContextStore, pipe, useHistory, useTimeline, type ValtioOp, withHistory } from '@ez-kit/va-store'
 import { RedoIcon, RotateCcwIcon, UndoIcon } from 'lucide-react'
 import { useId } from 'react'
 import { proxy } from 'valtio'
@@ -40,10 +40,13 @@ function createDragCoalescer(): (prev: Adjustments, next: Adjustments, meta?: re
 }
 
 const adjustStore = createContextStore(() =>
-	withHistory(proxy<Adjustments>({ ...NEUTRAL }), {
-		limit: 20,
-		shouldRecord: createDragCoalescer(),
-	}),
+	pipe(
+		proxy<Adjustments>({ ...NEUTRAL }),
+		withHistory({
+			limit: 20,
+			shouldRecord: createDragCoalescer(),
+		}),
+	),
 )
 
 function ChannelSlider({ channel }: { channel: (typeof CHANNELS)[number] }) {

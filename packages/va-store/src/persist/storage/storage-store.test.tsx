@@ -1,3 +1,4 @@
+import { pipe } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { renderToString } from 'react-dom/server'
@@ -32,7 +33,7 @@ function blobOf(area: Storage): Record<string, string> {
 
 /** Build a non-cached persist store (factory + accessor fields) mounted via `withPersist`. */
 function persistFieldsStore<TState extends object>(factory: () => TState, fields: FieldsBuilder<object>) {
-	return createContextStore<TState>(() => withPersist(factory(), { fields }))
+	return createContextStore<TState>(() => pipe(factory(), withPersist({ fields })))
 }
 
 describe('@ez-kit/va-store persist storage adapters', () => {
@@ -164,7 +165,7 @@ describe('@ez-kit/va-store persist dual-source (URL + storage)', () => {
 		field((s) => (s as { q: string }).q, { source: 'localStorage', parser: paramString() }),
 	]
 	const makeDualStore = () =>
-		createContextStore<{ q: string }>(() => withPersist(proxy({ q: '' }), { fields: dualFields }))
+		createContextStore<{ q: string }>(() => pipe(proxy({ q: '' }), withPersist({ fields: dualFields })))
 
 	it('lets the URL win over a stale stored value on cold start (first-present-wins)', async () => {
 		window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify({ v: 0, s: { q: 'cached' } }))
@@ -254,9 +255,12 @@ describe('@ez-kit/va-store persist dual-source (URL + storage)', () => {
 describe('@ez-kit/va-store persist useHydrated', () => {
 	const makeStore = () =>
 		createContextStore<{ q: string }>(() =>
-			withPersist(proxy({ q: '' }), {
-				fields: (field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })],
-			}),
+			pipe(
+				proxy({ q: '' }),
+				withPersist({
+					fields: (field) => [field((s) => s.q, { source: 'localStorage', parser: paramString() })],
+				}),
+			),
 		)
 
 	it('is false on the server render', () => {

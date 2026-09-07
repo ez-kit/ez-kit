@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import { type FieldsBuilder, PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { useId } from 'react'
@@ -31,7 +31,7 @@ const fields: FieldsBuilder<ProductFiltersState> = (field) => [
 ]
 
 const store = createContextStore<ProductFiltersState>(() =>
-	withPersist(proxy<ProductFiltersState>({ q: '', price: { min: 0, max: 100 }, onSale: false }), { fields }),
+	pipe(proxy<ProductFiltersState>({ q: '', price: { min: 0, max: 100 }, onSale: false }), withPersist({ fields })),
 )
 
 const { adapter, useSearch } = createMemoryUrlAdapter('q=jacket&price.min=20&price.max=80&onSale=true')

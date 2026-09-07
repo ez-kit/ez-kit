@@ -1,3 +1,4 @@
+import { pipe } from '@ez-kit/store-core'
 import { render, screen } from '@testing-library/react'
 import { proxy, snapshot } from 'valtio'
 import { describe, expect, it } from 'vitest'
@@ -14,21 +15,21 @@ const flush = () =>
 describe('withHistory', () => {
 	it('returns the same proxy identity', () => {
 		const state = proxy({ count: 0 })
-		expect(withHistory(state)).toBe(state)
+		expect(pipe(state, withHistory())).toBe(state)
 	})
 
 	it('exposes history through the snapshot as the same object (ref)', () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		expect(snapshot(state).history).toBe(state.history)
 	})
 
 	it('keeps history out of JSON', () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		expect(JSON.parse(JSON.stringify(snapshot(state)))).toEqual({ count: 0 })
 	})
 
 	it('records one entry per microtask batch by default', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		state.count = 2
 		await flush()
@@ -37,7 +38,7 @@ describe('withHistory', () => {
 	})
 
 	it('records one entry per operation with sync: true', async () => {
-		const state = withHistory(proxy({ count: 0 }), { sync: true })
+		const state = pipe(proxy({ count: 0 }), withHistory({ sync: true }))
 		state.count = 1
 		state.count = 2
 		await flush()
@@ -46,7 +47,7 @@ describe('withHistory', () => {
 	})
 
 	it('records the user state without its own history key', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		await flush()
 
@@ -54,7 +55,7 @@ describe('withHistory', () => {
 	})
 
 	it('undo restores the previous state without recording itself', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		await flush()
 
@@ -67,7 +68,7 @@ describe('withHistory', () => {
 	})
 
 	it('flushes a still-pending write before undo, instead of losing it', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		await flush()
 		// pasts is now [{ count: 0 }]; this write is still pending (no flush before undo below)
@@ -82,7 +83,7 @@ describe('withHistory', () => {
 	})
 
 	it('redo replays the undone state', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		await flush()
 		state.history.undo()
@@ -96,7 +97,7 @@ describe('withHistory', () => {
 	})
 
 	it('restores nested objects as live proxies, not frozen snapshots', async () => {
-		const state = withHistory(proxy({ nested: { a: 1 } }))
+		const state = pipe(proxy({ nested: { a: 1 } }), withHistory())
 		state.nested = { a: 2 }
 		await flush()
 
@@ -110,7 +111,7 @@ describe('withHistory', () => {
 	})
 
 	it('deletes keys that the restored state does not have', async () => {
-		const state = withHistory(proxy<{ a: number; b?: number }>({ a: 1 }))
+		const state = pipe(proxy<{ a: number; b?: number }>({ a: 1 }), withHistory())
 		state.b = 2
 		await flush()
 
@@ -121,7 +122,7 @@ describe('withHistory', () => {
 	})
 
 	it('pins the public history surface', () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 
 		// `record` is the subscription's own channel into the stack: called by hand with an arbitrary
 		// `(prev, next)` pair it pushes a state the store was never in. Everything else here is public
@@ -141,7 +142,7 @@ describe('withHistory', () => {
 	})
 
 	it('goto jumps to an absolute index, splits the stacks, and deletes keys added later', async () => {
-		const state = withHistory(proxy<{ a: number; b?: number }>({ a: 1 }))
+		const state = pipe(proxy<{ a: number; b?: number }>({ a: 1 }), withHistory())
 		state.a = 2
 		await flush()
 		state.b = 9
@@ -161,11 +162,14 @@ describe('withHistory', () => {
 	})
 
 	it('seeds pasts/futures through the real proxy, trims to limit, and round-trips undo → redo', async () => {
-		const state = withHistory(proxy({ count: 10 }), {
-			defaultPasts: [{ count: 1 }, { count: 2 }, { count: 3 }],
-			defaultFutures: [{ count: 20 }, { count: 21 }, { count: 22 }],
-			limit: 2,
-		})
+		const state = pipe(
+			proxy({ count: 10 }),
+			withHistory({
+				defaultPasts: [{ count: 1 }, { count: 2 }, { count: 3 }],
+				defaultFutures: [{ count: 20 }, { count: 21 }, { count: 22 }],
+				limit: 2,
+			}),
+		)
 
 		expect(state.history.state.limit).toBe(2)
 		// Each seeded stack is trimmed independently, dropping its oldest (front) entries.
@@ -188,7 +192,7 @@ describe('withHistory', () => {
 	})
 
 	it('does not record mutations made inside skip', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.history.skip(() => {
 			state.count = 5
 		})
@@ -199,7 +203,7 @@ describe('withHistory', () => {
 	})
 
 	it('flushes a still-pending write before skip, instead of losing it', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		// pending: no flush before skip below
 		state.history.skip(() => {
@@ -212,7 +216,7 @@ describe('withHistory', () => {
 	})
 
 	it('flushes a still-pending write before pause, instead of losing it', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		// pending: no flush before pause below
 		state.history.pause()
@@ -222,7 +226,7 @@ describe('withHistory', () => {
 	})
 
 	it('flushes a still-pending write before clear, so the stack ends up actually empty', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		// pending: no flush before clear below
 		state.history.clear()
@@ -233,7 +237,7 @@ describe('withHistory', () => {
 	})
 
 	it('also flushes a still-pending write before resume, for the same reason as every other method', async () => {
-		const state = withHistory(proxy({ count: 0 }))
+		const state = pipe(proxy({ count: 0 }), withHistory())
 		state.count = 1
 		// pending: no flush before resume below (resume is a no-op here — it was never paused — but the
 		// uniform wrapper flushes before delegating regardless, same as every other method)
@@ -244,9 +248,12 @@ describe('withHistory', () => {
 	})
 
 	it('passes valtio ops to shouldRecord so a path can be excluded', async () => {
-		const state = withHistory(proxy({ count: 0, hovered: false }), {
-			shouldRecord: (_prev, _next, ops) => !ops?.every((op) => op[1][0] === 'hovered'),
-		})
+		const state = pipe(
+			proxy({ count: 0, hovered: false }),
+			withHistory({
+				shouldRecord: (_prev, _next, ops) => !ops?.every((op) => op[1][0] === 'hovered'),
+			}),
+		)
 
 		state.hovered = true
 		await flush()
@@ -257,9 +264,39 @@ describe('withHistory', () => {
 		expect(state.history.state.pasts).toHaveLength(1)
 	})
 
+	// The enhancer can be applied without `pipe`, but then nothing supplies its state type — hence the
+	// explicit type argument. Documented on the capabilities page; kept here so a change to the
+	// signature that breaks direct application fails a test rather than only a doc.
+	it('applies outside pipe when the state type is named explicitly', async () => {
+		const state = withHistory<{ count: number }>()(proxy({ count: 0 }))
+
+		state.count = 1
+		await flush()
+
+		expect(state.history.state.pasts).toEqual([{ count: 0 }])
+	})
+
+	// Compilation is the assertion: `prev`/`next` carry no annotation, so this only type-checks while
+	// the curried wrapper takes its state type from the proxy `pipe` feeds it. Before currying, the
+	// options were checked against the target argument; a tuple-shaped `pipe` would leave them `any`.
+	it('types shouldRecord against the piped proxy without an annotation', async () => {
+		const state = pipe(
+			proxy({ count: 0, label: 'a' }),
+			withHistory({ shouldRecord: (prev, next) => prev.count !== next.count }),
+		)
+
+		state.label = 'b'
+		await flush()
+		expect(state.history.state.pasts).toHaveLength(0)
+
+		state.count = 1
+		await flush()
+		expect(state.history.state.pasts).toHaveLength(1)
+	})
+
 	it('treats the first render batch as the baseline, not as an entry', async () => {
 		const store = createContextStore((init: { defaultValue: { count: number } }) =>
-			withHistory(proxy({ count: init.defaultValue.count })),
+			pipe(proxy({ count: init.defaultValue.count }), withHistory()),
 		)
 
 		// захватываем сам инстанс, а стек читаем ПОСЛЕ микротаска, когда valtio уже уведомил

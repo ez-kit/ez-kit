@@ -194,7 +194,7 @@ A store group is **bound to the cache that created it** — mount it under that 
 
 ## Cached **and** persisted
 
-A capability like [`withPersist`](./persist) attaches to the proxy itself, inside the factory — so `createCachedStore` composes with it exactly the way `createContextStore` does: `cache.createCachedStore(() => withPersist(proxy({ … })), { name })`. A cached store can ALSO carry `withPersist` this way — kept alive in memory **and** mirrored to the URL or storage at once, under one `StoreProvider`. The lifetimes differ, and that is the point: the cache entry outlives any single `Provider` mount, so the capability attached to it does too. See [Persist → Cached stores](./persist/cache).
+A capability like [`withPersist`](./persist) attaches to the proxy itself, inside the factory — so `createCachedStore` composes with it exactly the way `createContextStore` does: `cache.createCachedStore(() => pipe(proxy({ … }), withPersist()), { name })`. A cached store can ALSO carry `withPersist` this way — kept alive in memory **and** mirrored to the URL or storage at once, under one `StoreProvider`. The lifetimes differ, and that is the point: the cache entry outlives any single `Provider` mount, so the capability attached to it does too. See [Persist → Cached stores](./persist/cache).
 
 ## Next
 

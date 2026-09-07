@@ -1,4 +1,4 @@
-import { attachCapability } from '@ez-kit/store-core'
+import { attachCapability, pipe } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement, useSyncExternalStore } from 'react'
 import { proxy } from 'valtio'
@@ -100,9 +100,12 @@ describe('StoreProvider — service resolution', () => {
 		const cache = createStoreCache()
 		const group = cache.createCachedStore<{ q: string }>(
 			() =>
-				withPersist(proxy({ q: '' }), {
-					fields: (field) => [field((s) => s.q, { source: URL_SOURCE, parser: paramString() })],
-				}),
+				pipe(
+					proxy({ q: '' }),
+					withPersist({
+						fields: (field) => [field((s) => s.q, { source: URL_SOURCE, parser: paramString() })],
+					}),
+				),
 			{ name: 'cached-persist' },
 		)
 
@@ -132,14 +135,20 @@ describe('StoreProvider — single writer for one source', () => {
 		const { adapter, commitSpy } = createSpyUrlAdapter()
 
 		const storeA = createContextStore<{ a: string }>(() =>
-			withPersist(proxy({ a: '' }), {
-				fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })],
-			}),
+			pipe(
+				proxy({ a: '' }),
+				withPersist({
+					fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })],
+				}),
+			),
 		)
 		const storeB = createContextStore<{ b: string }>(() =>
-			withPersist(proxy({ b: '' }), {
-				fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })],
-			}),
+			pipe(
+				proxy({ b: '' }),
+				withPersist({
+					fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })],
+				}),
+			),
 		)
 
 		function Editor(): ReactElement {

@@ -8,20 +8,23 @@ description: Declare persisted fields on a plain Valtio proxy with field() and a
 The accessor API is the second front on the same engine: no classes, no build-time decorator support required. Pass a builder that declares each field with a typed selector and a **source** helper; the parser type follows the selected leaf, and you get autocomplete on the store shape.
 
 ```tsx
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import { withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { localStorageField } from '@ez-kit/va-store/persist/storage'
 import { proxy } from 'valtio'
 
 const store = createContextStore(() =>
-	withPersist(proxy({ q: '', page: 1, pageSize: 25 }), {
-		fields: (field) => [
-			field((s) => s.q, urlField()), // → ?q=
-			field((s) => s.page, urlField()), // auto-resolved number
-			field((s) => s.pageSize, localStorageField()), // persisted to localStorage
-		],
-	}),
+	pipe(
+		proxy({ q: '', page: 1, pageSize: 25 }),
+		withPersist({
+			fields: (field) => [
+				field((s) => s.q, urlField()), // → ?q=
+				field((s) => s.page, urlField()), // auto-resolved number
+				field((s) => s.pageSize, localStorageField()), // persisted to localStorage
+			],
+		}),
+	),
 )
 ```
 
@@ -49,12 +52,15 @@ The source helper accepts the same options as the matching decorator — `parser
 import { paramEnum } from '@ez-kit/va-store/persist'
 
 createContextStore(() =>
-	withPersist(proxy({ filters: { search: { q: '' }, sort: 'asc' as 'asc' | 'desc' } }), {
-		fields: (field) => [
-			field((s) => s.filters.search.q, urlField({ key: 'q', absolute: true })), // → ?q
-			field((s) => s.filters.sort, urlField({ parser: paramEnum(['asc', 'desc']) })),
-		],
-	}),
+	pipe(
+		proxy({ filters: { search: { q: '' }, sort: 'asc' as 'asc' | 'desc' } }),
+		withPersist({
+			fields: (field) => [
+				field((s) => s.filters.search.q, urlField({ key: 'q', absolute: true })), // → ?q
+				field((s) => s.filters.sort, urlField({ parser: paramEnum(['asc', 'desc']) })),
+			],
+		}),
+	),
 )
 ```
 
@@ -65,9 +71,12 @@ See [Key placement](./decorators#key-placement) for the full semantics — ident
 List the same field once per source to dual-bind it (URL when present, restored from storage otherwise):
 
 ```tsx
-withPersist(proxy({ q: '' }), {
-	fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())],
-})
+pipe(
+	proxy({ q: '' }),
+	withPersist({
+		fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())],
+	}),
+)
 ```
 
 First-present-wins governs cold start — see [Combined](./combined#first-present-wins-on-cold-start).

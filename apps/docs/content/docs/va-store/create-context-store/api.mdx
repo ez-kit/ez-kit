@@ -205,7 +205,7 @@ Because the default write is `Object.assign` on the proxy, a `set` **accessor** 
 
 ## Capabilities
 
-`createContextStore` takes no `plugins` option. A capability — [`withPersist`](../persist), [`withHistory`](../history) — is attached to the proxy itself, inside the factory: `createContextStore(() => withPersist(proxy({ … })))`. `createContextStore` discovers whatever capabilities the factory attached and runs their `setup` when the proxy is created, in attachment order, with the returned cleanup run in reverse on unmount.
+`createContextStore` takes no `plugins` option. A capability — [`withPersist`](../persist), [`withHistory`](../history) — is attached to the proxy itself, inside the factory: `createContextStore(() => pipe(proxy({ … }), withPersist()))`. `createContextStore` discovers whatever capabilities the factory attached and runs their `setup` when the proxy is created, in attachment order, with the returned cleanup run in reverse on unmount.
 
 A capability that reaches app-level services (as `withPersist` does) needs a [`StoreProvider`](../persist) above it. The same factory-position wrapping is how [`createCachedStore`](../cache) attaches a capability too — there the lifetime is the cache entry's rather than the Provider's. See [Capabilities](../../capabilities) for the full shape of `StorePlugin`, attachment order, and writing your own.
 

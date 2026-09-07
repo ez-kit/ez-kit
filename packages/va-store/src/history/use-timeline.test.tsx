@@ -1,3 +1,4 @@
+import { pipe } from '@ez-kit/store-core'
 import { act, render } from '@testing-library/react'
 import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
@@ -14,9 +15,9 @@ const flush = () =>
 	})
 
 type Doc = { title: string; body: string }
-type DocStore = ReturnType<typeof withHistory<Doc>>
+type DocStore = ReturnType<ReturnType<typeof withHistory<Doc>>>
 
-const makeStore = () => createContextStore(() => withHistory(proxy<Doc>({ title: 'a', body: 'x' })))
+const makeStore = () => createContextStore(() => pipe(proxy<Doc>({ title: 'a', body: 'x' }), withHistory()))
 
 describe('useTimeline', () => {
 	it('returns the live state as `current`, without the history key', () => {

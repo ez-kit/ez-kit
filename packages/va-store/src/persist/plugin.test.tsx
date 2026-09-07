@@ -1,4 +1,4 @@
-import { attachCapability, createServiceRegistry } from '@ez-kit/store-core'
+import { attachCapability, createServiceRegistry, pipe } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { proxy } from 'valtio'
@@ -22,9 +22,12 @@ type Filters = { q: string }
 
 // Accessor front: plain proxy + plugin `fields` builder.
 const fieldsStore = createContextStore<Filters, { q?: string }>(({ defaultValue }: ContextStoreInit<{ q?: string }>) =>
-	withPersist(proxy<Filters>({ q: defaultValue.q ?? '' }), {
-		fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
-	}),
+	pipe(
+		proxy<Filters>({ q: defaultValue.q ?? '' }),
+		withPersist({
+			fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+		}),
+	),
 )
 
 // Decorator front: class instance with `persistUrl` fields, discovered automatically.
@@ -35,7 +38,7 @@ const decoratedStore = createContextStore<DecoratedFilters, { q?: string }>(
 	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
 		const store = proxy(new DecoratedFilters())
 		store.q = defaultValue.q ?? ''
-		return withPersist(store)
+		return pipe(store, withPersist())
 	},
 )
 

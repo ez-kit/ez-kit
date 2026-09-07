@@ -1,3 +1,4 @@
+import { pipe } from '@ez-kit/store-core'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { proxy } from 'valtio'
@@ -24,9 +25,12 @@ type FiltersSeed = { q?: string; note?: string }
 function createCachedFilters(cache: StoreCache, name: string) {
 	return cache.createCachedStore<Filters, FiltersSeed>(
 		({ defaultValue }: CachedStoreFactoryInit<FiltersSeed>) =>
-			withPersist(proxy<Filters>({ q: defaultValue.q ?? '', note: defaultValue.note ?? '' }), {
-				fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
-			}),
+			pipe(
+				proxy<Filters>({ q: defaultValue.q ?? '', note: defaultValue.note ?? '' }),
+				withPersist({
+					fields: (field) => [field((s) => s.q, { source: 'url', parser: paramString() })],
+				}),
+			),
 		{ name },
 	)
 }

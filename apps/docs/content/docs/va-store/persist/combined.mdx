@@ -13,7 +13,7 @@ A field is bound to a source, not a store — so one proxy can mix sources freel
 />
 
 ```tsx
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { localStorageAdapter, persistLocalStorage } from '@ez-kit/va-store/persist/storage'
 import { persistUrl } from '@ez-kit/va-store/persist/url'
@@ -24,7 +24,7 @@ class ListState {
 	@persistLocalStorage() density = 'comfortable' // device preference — restored, not shared
 }
 
-const listStore = createContextStore(() => withPersist(proxy(new ListState())))
+const listStore = createContextStore(() => pipe(proxy(new ListState()), withPersist()))
 
 function Page() {
 	return (
@@ -53,9 +53,12 @@ With the accessor API, list the field once per source via `withPersist`'s `field
 
 ```tsx
 createContextStore(() =>
-	withPersist(proxy({ q: '' }), {
-		fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())],
-	}),
+	pipe(
+		proxy({ q: '' }),
+		withPersist({
+			fields: (field) => [field((s) => s.q, urlField()), field((s) => s.q, localStorageField())],
+		}),
+	),
 )
 ```
 

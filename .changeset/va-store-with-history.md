@@ -6,10 +6,10 @@ Add `withHistory` and `useHistory` — an undo/redo/goto capability for any Valt
 same manager-agnostic `@ez-kit/store-core/history` engine `@ez-kit/zu-store`'s `withHistory` uses:
 
 ```tsx
-import { createContextStore, useHistory, withHistory } from '@ez-kit/va-store'
+import { createContextStore, pipe, useHistory, withHistory } from '@ez-kit/va-store'
 import { proxy } from 'valtio'
 
-const store = createContextStore(() => withHistory(proxy({ count: 0 })))
+const store = createContextStore(() => pipe(proxy({ count: 0 }), withHistory()))
 
 function Toolbar() {
 	const { undo, redo, canUndo, canRedo } = useHistory(store.useStore())
@@ -17,13 +17,13 @@ function Toolbar() {
 }
 ```
 
-`withHistory` composes with `withPersist` by nesting — `withPersist(withHistory(proxy({ … })))` — as
+`withHistory` composes with `withPersist` in a `pipe` — `pipe(proxy({ … }), withHistory(), withPersist())` — as
 capabilities attached to the same proxy (see the `@ez-kit/store-core`/`@ez-kit/va-store` capability
 changeset in this release). `store.history` is enumerable and `ref()`-wrapped, so `snapshot()` exposes
 the same live object rather than a deep-cloned copy, and its `toJSON()` returns `undefined` so it never
 reaches `JSON.stringify(store)`.
 
-Calling `withHistory` flips on Valtio's `unstable_enableOp` globally for the process (needed for
+Applying the enhancer flips on Valtio's `unstable_enableOp` globally for the process (needed for
 `shouldRecord` and `sync: true`'s per-operation granularity) — harmless for `subscribe()` callers that
 ignore their `ops` argument, but process-wide once any store calls it.
 

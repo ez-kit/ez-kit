@@ -11,8 +11,7 @@ Persistence is now a **capability** attached to the proxy itself, not a bespoke 
 
 <Callout type='info'>
 	If you are migrating from a `{ plugins: [persist()] }` option instead — an intermediate shape this package shipped
-	briefly — the change is the same one described below: move the wrapping into the factory as `withPersist(proxy(…),
-	options)`. See [Capabilities](../../capabilities) for why the option was replaced by a factory-position wrapper.
+	briefly — the change is the same one described below: move the wrapping into the factory as `pipe(proxy(…), withPersist(options))`. See [Capabilities](../../capabilities) for why the option was replaced by a factory-position wrapper.
 </Callout>
 
 ## The read/write split — one read hook, one write hook
@@ -51,15 +50,15 @@ const filtersStore = createPersistStore(() => proxy(new Filters()))
 
 ```tsx
 // After
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import { withPersist } from '@ez-kit/va-store/persist'
 
-const filtersStore = createContextStore(() => withPersist(proxy(new Filters())))
+const filtersStore = createContextStore(() => pipe(proxy(new Filters()), withPersist()))
 ```
 
 The returned `{ Provider, useSnapshot, useStore, Subscribe }` shape is identical, so component code that reads `useSnapshot()` and mutates `useStore()` needs no change.
 
-## `createPersistFields` → `withPersist(proxy, { fields })`
+## `createPersistFields` → `pipe(proxy, withPersist({ fields }))`
 
 The accessor builder moves verbatim into `withPersist`'s `fields` option:
 
@@ -75,13 +74,16 @@ const store = createPersistFields(
 
 ```tsx
 // After
-import { createContextStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import { withPersist } from '@ez-kit/va-store/persist'
 
 const store = createContextStore(() =>
-	withPersist(proxy({ q: '', page: 1 }), {
-		fields: (field) => [field((s) => s.q, urlField()), field((s) => s.page, urlField())],
-	}),
+	pipe(
+		proxy({ q: '', page: 1 }),
+		withPersist({
+			fields: (field) => [field((s) => s.q, urlField()), field((s) => s.page, urlField())],
+		}),
+	),
 )
 ```
 
@@ -128,8 +130,8 @@ Omit `cache` for a persist-only tree (equivalent to `PersistProvider`), or omit 
 
 | Before                                                              | After                                                                                      |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `createPersistStore(factory)`                                       | `createContextStore(() => withPersist(factory()))`                                         |
-| `createPersistFields(factory, fields)`                              | `createContextStore(() => withPersist(factory(), { fields }))`                             |
+| `createPersistStore(factory)`                                       | `createContextStore(() => pipe(factory(), withPersist()))`                                 |
+| `createPersistFields(factory, fields)`                              | `createContextStore(() => pipe(factory(), withPersist({ fields })))`                       |
 | `store.useHydrated()`                                               | `useHydrated(store.useStore())`                                                            |
 | `store.useContextStore()` (`0.2.x` write path)                      | `store.useStore()`                                                                         |
 | `store.useStore()` (read, pre-`0.2.0`)                              | `store.useSnapshot()`                                                                      |

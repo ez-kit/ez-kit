@@ -125,7 +125,7 @@ function createCachedStore<TState extends object, TDefaultValue extends object =
 
 Call it once at module top-level. Calling it twice with the same `name` on one cache `console.warn`s in development.
 
-There is no `plugins` option here either — a capability is attached inside the `factory`, exactly as with [`createContextStore`](../create-context-store/api#capabilities): `cache.createCachedStore(() => withPersist(proxy({ … })), { name })`. That factory-position wrapping is what makes a store [cached **and** persisted](../persist/cache) — note the lifetime differs from a plain `createContextStore`: here the capability lives as long as the cache entry, not as long as one `Provider` mount.
+There is no `plugins` option here either — a capability is attached inside the `factory`, exactly as with [`createContextStore`](../create-context-store/api#capabilities): `cache.createCachedStore(() => pipe(proxy({ … }), withPersist()), { name })`. That factory-position wrapping is what makes a store [cached **and** persisted](../persist/cache) — note the lifetime differs from a plain `createContextStore`: here the capability lives as long as the cache entry, not as long as one `Provider` mount.
 
 ### The returned group
 
