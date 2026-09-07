@@ -79,13 +79,20 @@
 		{
 			"path": "dist/persist/url/index.js",
 			"limit": "1 KB"
+		},
+		{
+			"path": "dist/persist/url/react-router.js",
+			"limit": "1 KB"
 		}
 	],
 	"devDependencies": {
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
+		"next": "16.2.4",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
+		"react-router": "^7.9.0",
+		"zod": "^4.3.6",
 		"zustand": "^5.0.12"
 	},
 	"dependencies": {
@@ -93,7 +100,21 @@
 		"@ez-kit/store-persist": "workspace:*"
 	},
 	"peerDependencies": {
+		"next": ">=14.0.0",
 		"react": ">=18.0.0",
+		"react-router": ">=6.0.0",
+		"zod": ">=3.0.0",
 		"zustand": "^5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"next": {
+			"optional": true
+		},
+		"react-router": {
+			"optional": true
+		},
+		"zod": {
+			"optional": true
+		}
 	}
 }

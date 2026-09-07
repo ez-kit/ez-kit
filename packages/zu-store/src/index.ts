@@ -10,8 +10,8 @@ export type {
 
 export { useStoreState } from './use-store-state'
 
-export { withHistory } from './middlewares'
-export type { HistoryActionTag, HistoryOptions, HistoryState } from './middlewares'
+export { useHistory, useTimeline, withHistory } from './middlewares'
+export type { HistoryActionTag, HistoryOptions, HistoryState, Timeline } from './middlewares'
 
 export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore } from './store-cache'
 export type { StoreCache, CachedStoreGroup, CachedSubscribeProps } from './store-cache'
