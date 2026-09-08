@@ -2,7 +2,7 @@ import { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-react'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, EyeOff, Pencil, PinOff, Trash2, X } from 'lucide-react'
 import { createElement } from 'react'
 
-import type { GridMenuItem } from '@ez-kit/data-grid-react'
+import type { GridMenuItemDef } from '@ez-kit/data-grid-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -60,7 +60,7 @@ export const GRID_MENU_ICON_PLACEHOLDER: ReactNode = (
  * the consumer's own element (a custom row action's `icon: <Copy />`) and is rendered as-is.
  * An entry with no icon gets the placeholder so its label stays aligned with its siblings'.
  */
-export function renderGridMenuIcon(icon: GridMenuItem['icon']): ReactNode {
+export function renderGridMenuIcon(icon: GridMenuItemDef['icon']): ReactNode {
 	if (icon === undefined) return GRID_MENU_ICON_PLACEHOLDER
 	return isGridMenuIcon(icon) ? GRID_MENU_ICONS[icon] : icon
 }
@@ -72,7 +72,7 @@ export function renderGridMenuIcon(icon: GridMenuItem['icon']): ReactNode {
  * stacked, so an icon-less one has no column to keep its label aligned with, and a blank box
  * would only pad it.
  */
-export function renderActionIcon(icon: GridMenuItem['icon']): ReactNode {
+export function renderActionIcon(icon: GridMenuItemDef['icon']): ReactNode {
 	if (icon === undefined) return null
 	if (!isGridMenuIcon(icon)) return icon
 	const Icon = GRID_MENU_ICON_COMPONENTS[icon]

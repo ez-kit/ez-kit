@@ -19,7 +19,7 @@ export function SelectionBarExample() {
 	const exportAction = (names: string[]) => ({
 		id: 'export',
 		label: 'Export',
-		onSelect: () => {
+		onAction: () => {
 			addLog(`Export triggered: ${names.join(', ')}`)
 		},
 	})
@@ -49,8 +49,7 @@ export function SelectionBarExample() {
 				}}
 				selection={{
 					bar: {
-						clear: ({ clearSelection }) => {
-							clearSelection()
+						onClear: () => {
 							addLog('Selection cleared')
 						},
 						// Data, not markup: the kit draws the button, so it matches the Delete beside it.

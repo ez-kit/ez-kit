@@ -45,7 +45,7 @@ export type DataGridSelectionBarRenderArgs<TRow extends object = object> = Selec
 	open: boolean
 	/** Confirmation-aware bulk delete. Absent when `deleting.bulk` is off. */
 	onDelete?: (() => void) | undefined
-	/** Runs the bar's `clear` when set, otherwise resets the selection. */
+	/** Resets the selection, then notifies the bar's `onClear` when one is configured. */
 	onClear: () => void
 	/**
 	 * `selection.bar.actions` resolved against this selection, in the menu model a kit renders
@@ -114,9 +114,7 @@ export function SelectionBar({ children, start, end }: DataGridSelectionBarProps
 	const { selectedRows } = callbackArgs
 	const count = selectedRows.length
 	const open = count > 0
-	const clearSelection = callbackArgs.clearSelection
-
-	const { clear: clearHandler } = config
+	const { onClear: onClearHandler } = config
 
 	// One entry point for both paths: `deleting.bulk.request` stages a pending delete when
 	// `deleting.bulk.confirmation` is set and runs it outright otherwise, so the bar never has
@@ -128,11 +126,12 @@ export function SelectionBar({ children, start, end }: DataGridSelectionBarProps
 				}
 			: undefined
 
-	const onClear = clearHandler
-		? () => {
-				clearHandler(callbackArgs)
-			}
-		: clearSelection
+	// The grid always clears — the handler is told what was selected, never asked to finish
+	// the job. `callbackArgs` is built above, so `selectedRows` is still the pre-reset set.
+	const onClear = () => {
+		callbackArgs.clearSelection()
+		onClearHandler?.(callbackArgs)
+	}
 
 	const actions = config.actions ? buildActionItems(config.actions(callbackArgs)) : undefined
 

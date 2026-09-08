@@ -62,7 +62,7 @@ export function buildColumnMenuSections(
 				id: ColumnActionId.SortAsc,
 				label: LABELS[ColumnActionId.SortAsc],
 				icon: GridMenuIcon.SortAsc,
-				onSelect: () => {
+				onAction: () => {
 					column.toggleSorting(false)
 				},
 			})
@@ -72,7 +72,7 @@ export function buildColumnMenuSections(
 				id: ColumnActionId.SortDesc,
 				label: LABELS[ColumnActionId.SortDesc],
 				icon: GridMenuIcon.SortDesc,
-				onSelect: () => {
+				onAction: () => {
 					column.toggleSorting(true)
 				},
 			})
@@ -82,7 +82,7 @@ export function buildColumnMenuSections(
 				id: ColumnActionId.ClearSort,
 				label: LABELS[ColumnActionId.ClearSort],
 				icon: GridMenuIcon.ClearSort,
-				onSelect: () => {
+				onAction: () => {
 					column.clearSorting()
 				},
 			})
@@ -96,7 +96,7 @@ export function buildColumnMenuSections(
 				id: ColumnActionId.PinLeft,
 				label: LABELS[ColumnActionId.PinLeft],
 				icon: GridMenuIcon.PinLeft,
-				onSelect: () => {
+				onAction: () => {
 					column.pin(ColumnPinSide.Left)
 				},
 			})
@@ -106,7 +106,7 @@ export function buildColumnMenuSections(
 				id: ColumnActionId.PinRight,
 				label: LABELS[ColumnActionId.PinRight],
 				icon: GridMenuIcon.PinRight,
-				onSelect: () => {
+				onAction: () => {
 					column.pin(ColumnPinSide.Right)
 				},
 			})
@@ -116,7 +116,7 @@ export function buildColumnMenuSections(
 				id: ColumnActionId.Unpin,
 				label: LABELS[ColumnActionId.Unpin],
 				icon: GridMenuIcon.Unpin,
-				onSelect: () => {
+				onAction: () => {
 					column.pin(false)
 				},
 			})
@@ -129,7 +129,7 @@ export function buildColumnMenuSections(
 			id: ColumnActionId.Hide,
 			label: LABELS[ColumnActionId.Hide],
 			icon: GridMenuIcon.Hide,
-			onSelect: () => {
+			onAction: () => {
 				column.toggleVisibility(false)
 			},
 		})

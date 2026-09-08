@@ -43,11 +43,14 @@ export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './syst
 
 // One custom action entry — contributed per row (`rowActions.actions`) or for the whole
 // selection (`selection.bar.actions`), and rendered by the kit either way.
-export type { ActionItem } from './action-item'
+export type { ActionItem, ActionItemDef, ActionItemSlot } from './action-item'
 
 // Row actions (edit / delete / row-pin menu share the `__actions__` column)
-export { RowActionsVariant } from './features/row-actions'
-export type { RowActionsConfig, RowActionsContext } from './features/row-actions'
+// `ACTION_BUTTON_SIZE` / `getActionsCellWidth` are the cell's own geometry, exported because
+// the grid stops auto-sizing the column once an author promotes entries to inline buttons —
+// they are how that author writes `rowActions.column.width` in the kit's own units.
+export { ACTION_BUTTON_SIZE, getActionsCellWidth, RowActionsPlacement } from './features/row-actions'
+export type { RowActionItem, RowActionsConfig, RowActionsContext } from './features/row-actions'
 
 // Types
 export type {

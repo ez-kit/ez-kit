@@ -6,7 +6,7 @@ import { Button } from '@grid-shadcn/components/ui/button'
 
 import type { ChevronProps } from '@ez-kit/data-grid-react'
 
-export function Chevron({ expanded, onClick, disabled }: ChevronProps) {
+export function Chevron({ expanded, onClick }: ChevronProps) {
 	const Icon = expanded ? ChevronDown : ChevronRight
 
 	return (
@@ -14,7 +14,6 @@ export function Chevron({ expanded, onClick, disabled }: ChevronProps) {
 			variant='ghost'
 			size='icon'
 			type='button'
-			disabled={disabled}
 			onClick={onClick}
 			aria-label={expanded ? 'Collapse row' : 'Expand row'}
 		>

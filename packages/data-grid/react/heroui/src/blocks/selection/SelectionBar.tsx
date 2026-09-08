@@ -1,20 +1,26 @@
 'use client'
 
-import { ActionBarVariant } from '@ez-kit/data-grid-react'
-import { Button } from '@heroui/react'
+import { ActionBarVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
+import { Button, Chip } from '@heroui/react'
 import { Trash2, X } from 'lucide-react'
+import { Fragment } from 'react'
 
-import {
-	ActionBar,
-	ActionBarGroup,
-	ActionBarItem,
-	ActionBarSelection,
-	ActionBarSeparator,
-} from '../../components/ui/action-bar'
+import { ActionBar, ActionBarGroup, ActionBarItem, ActionBarSeparator } from '../../components/ui/action-bar'
 import { renderActionIcon } from '../icons'
 
-import type { GridMenuItem, SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { GridMenuItem, GridMenuItemDef, SelectionBarProps } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
+
+/**
+ * The primitive dismisses the bar after an item press, the way a menu closes behind a chosen
+ * entry. Here "dismissed" means `onOpenChange(false)` → clear the selection, which pulls the
+ * rows out from under the action that was just pressed: a bulk delete awaiting its confirmation
+ * dialog then had nothing left to delete. Cancelling the select event keeps the bar (and the
+ * selection) alive; the × is the only thing that clears it.
+ */
+const keepBarOpen = (event: Event) => {
+	event.preventDefault()
+}
 
 /**
  * One `selection.bar.actions` entry as a button, matching the built-in Delete beside it: the
@@ -24,7 +30,7 @@ import type { ReactNode } from 'react'
  * The floating bar renders its controls as `ActionBarItem`s and the inline one as plain
  * `Button`s, so the element is passed in rather than picked here.
  */
-function ActionButton({ item, inline }: { item: GridMenuItem; inline: boolean }) {
+function ActionButton({ item, inline }: { item: GridMenuItemDef; inline: boolean }) {
 	const icon = renderActionIcon(item.icon)
 	const variant = item.destructive === true ? 'danger' : 'secondary'
 	const isDisabled = item.disabled === true
@@ -36,7 +42,8 @@ function ActionButton({ item, inline }: { item: GridMenuItem; inline: boolean })
 				variant={variant}
 				isDisabled={isDisabled}
 				data-slot='selection-bar-action'
-				onPress={item.onSelect}
+				{...(item.className !== undefined ? { className: item.className } : {})}
+				onPress={item.onAction}
 			>
 				{icon}
 				{item.label}
@@ -49,7 +56,9 @@ function ActionButton({ item, inline }: { item: GridMenuItem; inline: boolean })
 			variant={variant}
 			isDisabled={isDisabled}
 			data-slot='selection-bar-action'
-			onPress={item.onSelect}
+			{...(item.className !== undefined ? { className: item.className } : {})}
+			onSelect={keepBarOpen}
+			onPress={item.onAction}
 		>
 			{icon}
 			{item.label}
@@ -60,13 +69,19 @@ function ActionButton({ item, inline }: { item: GridMenuItem; inline: boolean })
 /** The entries as buttons — `null` when the bar was given none, so separators can tell. */
 function renderActions(actions: GridMenuItem[] | undefined, inline: boolean): ReactNode {
 	if (actions === undefined || actions.length === 0) return null
-	return actions.map((item) => (
-		<ActionButton
-			key={item.id}
-			item={item}
-			inline={inline}
-		/>
-	))
+	return actions.map((item) =>
+		// An entry that brought its own markup stands where its button would have been. Both bars
+		// already take arbitrary nodes here — `start` / `end` sit in the same row.
+		isGridMenuItemSlot(item) ? (
+			<Fragment key={item.id}>{item.component}</Fragment>
+		) : (
+			<ActionButton
+				key={item.id}
+				item={item}
+				inline={inline}
+			/>
+		),
+	)
 }
 
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
@@ -88,9 +103,10 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 			>
 				<span
 					data-slot='action-bar-selection'
+					aria-label={`${String(count)} selected`}
 					className='font-medium tabular-nums'
 				>
-					{count} selected
+					{count}
 				</span>
 				<div className='ml-auto flex items-center gap-2'>
 					{start}
@@ -131,12 +147,19 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 			sideOffset={16}
 		>
 			<ActionBarGroup>
-				<ActionBarSelection>{count} selected</ActionBarSelection>
+				<Chip
+					data-slot='action-bar-selection'
+					aria-label={`${String(count)} selected`}
+					className='tabular-nums'
+				>
+					{count}
+				</Chip>
 				{hasActions && <ActionBarSeparator />}
 				{start}
 				{onDelete && (
 					<ActionBarItem
 						variant='danger'
+						onSelect={keepBarOpen}
 						onPress={onDelete}
 					>
 						<Trash2 size={16} />
@@ -145,7 +168,8 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 				)}
 				{actionButtons}
 				{end}
-				{hasActions && <ActionBarSeparator />}
+				{/* Always present: it divides the count (and any actions) from the close button. */}
+				<ActionBarSeparator />
 				<Button
 					size='sm'
 					variant='ghost'

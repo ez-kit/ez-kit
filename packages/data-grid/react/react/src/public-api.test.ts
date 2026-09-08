@@ -28,7 +28,7 @@ import type {
 	LoadingState,
 	PaginationConfig,
 	RowActionsConfig,
-	RowActionsVariant,
+	RowActionsPlacement,
 	ReactSortingConfig,
 	SelectionConfig,
 	SortingConfig,
@@ -53,7 +53,7 @@ describe('public API surface', () => {
 		expect(publicApi.PaginationLabel.Range).toBe('range')
 		expect(publicApi.ActionBarVariant.Inline).toBe('inline')
 		expect(publicApi.GridFeature.Core).toBe('core')
-		expect(publicApi.RowActionsVariant.Menu).toBe('menu')
+		expect(publicApi.RowActionsPlacement.Menu).toBe('menu')
 		expect(publicApi.CreatingMode.PinRow).toBe('pin-row')
 		expect(publicApi.EditingMode.Cell).toBe('cell')
 		expect(publicApi.ExpandingMode.Tree).toBe('tree')
@@ -92,7 +92,7 @@ describe('public API surface', () => {
 			'LoadingState',
 			'PaginationConfig',
 			'RowActionsConfig',
-			'RowActionsVariant',
+			'RowActionsPlacement',
 			'SelectionConfig',
 			'SortingConfig',
 		] satisfies string[]
@@ -121,7 +121,7 @@ type _Assertions = [
 	LoadingState,
 	PaginationConfig,
 	RowActionsConfig,
-	RowActionsVariant,
+	RowActionsPlacement,
 	SelectionConfig,
 	SortingConfig,
 	typeof ACTIONS_COLUMN_ID,

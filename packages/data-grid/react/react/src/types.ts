@@ -45,6 +45,15 @@ type ActionsCellIdleProps<TRow extends object = any> = {
 	hasDeleting: boolean
 	onEdit: () => void
 	onDelete: () => void
+	/**
+	 * The row's own actions that asked for `placement: 'inline'`, already resolved to the menu
+	 * model — render each as an icon button beside Edit and Delete, in order, and a
+	 * {@link GridMenuItemSlot} as its bare `component`.
+	 *
+	 * Empty for the overwhelming majority of grids. Their menu-placed siblings never reach a
+	 * kit this way: those go through the shared `Menu` with the pin entries.
+	 */
+	actions: GridMenuItem[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -723,7 +732,6 @@ export type DraftBarProps = {
 export type ChevronProps = {
 	expanded: boolean
 	onClick: () => void
-	disabled?: boolean
 }
 
 // ── DI registry ──────────────────────────────────────────────────────────

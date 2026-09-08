@@ -19,7 +19,7 @@ export function SelectionBarInlineExample() {
 	const exportAction = (names: string[]) => ({
 		id: 'export',
 		label: 'Export',
-		onSelect: () => {
+		onAction: () => {
 			addLog(`Export triggered: ${names.join(', ')}`)
 		},
 	})
@@ -47,8 +47,7 @@ export function SelectionBarInlineExample() {
 				selection={{
 					bar: {
 						variant: 'inline',
-						clear: ({ clearSelection }) => {
-							clearSelection()
+						onClear: () => {
 							addLog('Selection cleared')
 						},
 						// Data, not markup: the kit draws the button, so it matches the Delete beside it.

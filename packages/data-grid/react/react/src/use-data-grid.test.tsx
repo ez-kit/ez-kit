@@ -540,10 +540,10 @@ describe('useDataGrid — selection.bar', () => {
 	})
 
 	it('carries the callbacks through, with the variant settled', () => {
-		const clear = vi.fn()
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { clear } } }))
+		const onClear = vi.fn()
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { onClear } } }))
 		const key = result.current.grid.selection.bar
-		expect(key).toEqual({ variant: 'floating', clear })
+		expect(key).toEqual({ variant: 'floating', onClear })
 	})
 
 	it('takes the render mode as a scalar', () => {

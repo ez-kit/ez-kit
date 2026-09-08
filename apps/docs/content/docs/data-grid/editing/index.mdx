@@ -35,11 +35,62 @@ a whole app while only the grids that supply `onSave` actually get it.
 
 `mode` is what editing _does_, not how it looks.
 
-| `mode`    | Behaviour                                                                                                        |
-| --------- | ---------------------------------------------------------------------------------------------------------------- |
-| `'row'`   | The default. The row turns into inputs in place; the actions cell offers Save / Cancel.                          |
-| `'modal'` | A dialog collects the whole row. `<DataGrid.EditingModal />` is mounted for you when this mode is on.            |
-| `'cell'`  | One cell at a time. `table.editing.startCell(rowId, columnId)` opens it, `commitCell()` commits just that field. |
+| `mode`    | Behaviour                                                                                             |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| `'row'`   | The default. The row turns into inputs in place; the actions cell offers Save / Cancel.               |
+| `'modal'` | A dialog collects the whole row. `<DataGrid.EditingModal />` is mounted for you when this mode is on. |
+| `'cell'`  | One cell at a time. Double-click a cell to open it; Enter or leaving it commits, Escape cancels.      |
+
+### Row
+
+The row you picked turns into inputs in place, and the actions cell swaps Edit for Save / Cancel.
+
+<DataGridDocsExample exampleId='editing-mode-row' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'row', onSave }}
+/>
+```
+
+### Modal
+
+The same form, collected in a dialog instead of in the row. `<DataGrid.EditingModal />` is mounted
+for you — nothing to place by hand.
+
+<DataGridDocsExample exampleId='editing-mode-modal' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+/>
+```
+
+### Cell
+
+One field at a time: double-click a cell to open it. Columns marked `editing: false` stay
+read-only here too. `table.editing.startCell(rowId, columnId)` opens a cell programmatically.
+
+The opened cell takes the focus. **Enter** commits that one field, **Escape** abandons it, and
+clicking or tabbing anywhere outside the cell commits too — a control _inside_ it, a switch or a
+select's popover, does not. Which is why this mode adds no Edit pencil and no Save / Cancel pair to
+the [row actions](/docs/data-grid/row-actions) column — the pencil starts the _row_ flow, which
+opens nothing here, and there is no row-wide form left to save. With nothing else switched on, the
+actions column does not appear at all.
+
+<DataGridDocsExample exampleId='editing-mode-cell' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'cell', onSave }}
+/>
+```
 
 ## Which inputs a row gets
 

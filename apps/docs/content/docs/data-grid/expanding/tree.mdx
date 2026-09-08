@@ -15,7 +15,24 @@ When your data is hierarchical (folders, org charts, BOMs), render it as a tree.
 <DataGrid
 	data={data} // each row has optional `children: TRow[]`
 	columns={columns}
-	expanding={{ variant: 'tree' }}
+	expanding={{ mode: 'tree' }}
+/>
+```
+
+## Custom sub-rows key
+
+`getSubRows` tells the grid where the children live when they are not on `children`.
+
+<DataGridDocsExample exampleId='expanding-tree-sub-rows' />
+
+```tsx
+<DataGrid
+	data={data} // each row has optional `reports: TRow[]`
+	columns={columns}
+	expanding={{
+		mode: 'tree',
+		getSubRows: (row) => row.reports,
+	}}
 />
 ```
 

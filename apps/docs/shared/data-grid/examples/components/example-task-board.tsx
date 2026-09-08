@@ -187,7 +187,7 @@ export function ExampleTaskBoardExample() {
 			visibility
 			globalFiltering={{ placeholder: 'Search titles…' }}
 			filtering={{ variant: 'panel', panel: 'toolbar', faceted: true }}
-			rowActions={{ variant: 'menu' }}
+			rowActions={{ placement: 'menu' }}
 			editing={{
 				mode: 'modal',
 				onSave: () => {
@@ -195,7 +195,14 @@ export function ExampleTaskBoardExample() {
 				},
 			}}
 			deleting
-			pagination={{ pageSize: 10, variant: 'compact', items: [10, 20, 30, 50], pageSizer: false }}
+			pagination={{
+				pageSize: 10,
+				links: false,
+				edges: true,
+				label: 'page',
+				items: [10, 20, 30, 50],
+				pageSizer: false,
+			}}
 		>
 			<DataGrid.Toolbar />
 			<DataGrid.Table />

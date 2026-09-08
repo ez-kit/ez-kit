@@ -11,7 +11,7 @@ import {
 	LinkTarget,
 	MultiSortEvent,
 	PaginationMode,
-	RowActionsVariant,
+	RowActionsPlacement,
 	ValidateOn,
 } from '@ez-kit/data-grid-core'
 
@@ -149,7 +149,7 @@ export const DATA_GRID_DEFAULTS = {
 	},
 	/** The per-row actions column. */
 	rowActions: {
-		variant: RowActionsVariant.Inline,
+		placement: RowActionsPlacement.Inline,
 	},
 	/** Row editing. */
 	editing: {

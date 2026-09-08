@@ -1,9 +1,10 @@
 'use client'
 
 import { LoadMoreTrigger } from '@ez-kit/data-grid-react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
+import { Spinner } from '@grid-shadcn/components/ui/spinner'
 
 import type { LoadMoreRowProps } from '@ez-kit/data-grid-react'
 
@@ -44,13 +45,9 @@ export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger
 			<div
 				data-slot='load-more'
 				data-state='loading'
-				className='flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground'
+				className='flex items-center justify-center py-3 text-muted-foreground'
 			>
-				<Loader2
-					className='size-4 animate-spin'
-					aria-hidden='true'
-				/>
-				<span>Loading more…</span>
+				<Spinner aria-label='Loading more' />
 			</div>
 		)
 	}

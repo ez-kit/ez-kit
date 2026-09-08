@@ -91,11 +91,18 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	 */
 	variant?: ActionBarVariant
 	/**
-	 * Replaces the bar's default clear behaviour — it does not observe it. Named `clear`, not
-	 * `onClear`: every `on*` in this API notifies, this one substitutes, and the `clearSelection`
-	 * argument is the default reset the replacement calls when it still wants it.
+	 * Called when the bar's Cancel is pressed. The grid resets the selection itself either
+	 * way — this notifies, like every other `on*` in the API, and never has to be told to
+	 * finish the job.
+	 *
+	 * `selectedRows` is the set as it stood *before* the reset, which is the reason to reach
+	 * for this over `selection.onChange`: that one fires after, with nothing left to report.
+	 *
+	 * To gate the clear itself — a confirmation before a large selection is discarded — draw
+	 * the bar yourself with `<DataGrid.SelectionBar>`; its render args carry `count`,
+	 * `onClear` and the rest.
 	 */
-	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
 	/**
 	 * Custom entries rendered between Delete and Cancel, built from the current selection.
 	 *
@@ -152,8 +159,8 @@ export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig
 export type NormalizedSelectionBarConfig<TRow extends object = any> = {
 	/** Render mode of the shared action bar, defaulted. Never undefined. */
 	variant: ActionBarVariant
-	/** Replacement for the default clear behaviour, from `selection.bar.clear`. */
-	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	/** Clear notification, from `selection.bar.onClear`. */
+	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
 	/** Custom action entries, from `selection.bar.actions`. */
 	actions?: (args: SelectionBarCallbackArgs<TRow>) => ActionItem<ReactElement>[]
 }
@@ -846,7 +853,7 @@ export function useDataGrid<TRow extends object>(
 		const cfg = featureConfig(selectionBar)
 		return {
 			variant: cfg?.variant ?? DEFAULT_ACTION_BAR_VARIANT,
-			...(cfg?.clear !== undefined ? { clear: cfg.clear } : {}),
+			...(cfg?.onClear !== undefined ? { onClear: cfg.onClear } : {}),
 			...(cfg?.actions !== undefined ? { actions: cfg.actions } : {}),
 		}
 	})()

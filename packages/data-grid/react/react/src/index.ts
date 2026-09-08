@@ -79,8 +79,8 @@ export { useGridOptions } from './use-grid-options'
 export type { ResolvedGridOptions } from './resolved-options'
 
 // Grid overflow menu — one model for the column header menu and the row actions menu
-export { GridMenuIcon, GridMenuVariant, toMenuSections } from './menu'
-export type { GridMenuItem, GridMenuProps, GridMenuSection } from './menu'
+export { GridMenuIcon, GridMenuVariant, isGridMenuItemSlot, toMenuSections } from './menu'
+export type { GridMenuItem, GridMenuItemDef, GridMenuItemSlot, GridMenuProps, GridMenuSection } from './menu'
 export { buildColumnMenuSections, ColumnActionId } from './data-grid/column-menu-sections'
 export type { ColumnMenuCapabilities } from './data-grid/column-menu-sections'
 

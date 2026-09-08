@@ -14,18 +14,31 @@ scroll. Both axes live under one `pinning` option, so a grid that wants both ask
 	data={data}
 	columns={columns}
 	pinning={{ column: true, row: { top: true, bottom: true } }}
+	layout={{ stickyHeader: true, maxHeight: '24rem' }}
 />
 ```
 
-The two axes are independent — enable either on its own — but they read the same way: the table
-option opens the **UI** that lets a user pin, and the starting pins come from the column defs
-(`pinning: { initialSide }`) or from `initialState`.
+Scroll the grid below in either direction: **Name** stays against the left edge, and a row pinned
+from its ⋮ menu stays against the top or bottom.
 
-| Option            | Type                             | Description                                                                                                                       |
-| ----------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `pinning.column`  | `boolean \| ColumnPinningConfig` | Adds the pin section to each column's ⋮ menu. See [Column pinning](/docs/data-grid/pinning/columns).                              |
-| `pinning.row`     | `boolean \| RowPinningConfig`    | Adds a per-row pin control in the row-actions column. `true` — top and bottom. See [Row pinning](/docs/data-grid/pinning/rows).   |
-| `pinning.enabled` | `boolean`                        | Explicit off-switch for a config that arrived from a defaults layer — the settings survive, the feature does not. Default `true`. |
+<DataGridDocsExample exampleId='pinning-both' />
+
+Every option this feature accepts is in the [API reference](/docs/data-grid/pinning/api).
+
+## The two axes are independent
+
+Enable either on its own — they read the same way, but they are separate features over separate
+state slices, which is why each carries its own `onChange` rather than the group carrying one for
+both:
+
+```tsx
+pinning={{ column: true }}                    // horizontal only
+pinning={{ row: { top: true } }}              // vertical, top edge only
+```
+
+The table option opens the **UI** that lets a user pin: for columns that is the pin section in each
+column's ⋮ menu, for rows a pin control in the row-actions column. The starting pins come from
+somewhere else — the column defs, or `initialState`.
 
 ## Which edge, and why it is physical
 
@@ -52,6 +65,7 @@ precedence is in the [State model](/docs/data-grid/state).
 
 - [Column pinning](/docs/data-grid/pinning/columns)
 - [Row pinning](/docs/data-grid/pinning/rows)
+- [API reference](/docs/data-grid/pinning/api)
 - [Layout](/docs/data-grid/layout) — the sticky header pinned rows scroll under
 
 ## Source

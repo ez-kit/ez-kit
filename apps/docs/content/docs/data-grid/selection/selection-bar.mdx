@@ -44,17 +44,19 @@ selection: {
 ## Custom actions
 
 `selection.bar.actions` builds the entries the bar offers for the selection. It is **data**, not
-markup — the same `ActionItem` shape [`rowActions.actions`](/docs/data-grid/row-actions) takes — so the
-kit draws each entry with the chrome its own Delete button has: your icon from the built-in set (or
-your own element), the kit's danger colour for `destructive`, its disabled state for `disabled`.
+markup — the same `ActionItem` shape [`rowActions.actions`](/docs/data-grid/row-actions/api#entry-shape) takes — so the
+kit draws each entry with the chrome its own Delete button has: your own icon element, the kit's
+danger colour for `destructive`, its disabled state for `disabled`.
+
+<DataGridDocsExample exampleId='selection-custom-action' />
 
 ```tsx
 // One action, offered in both places, written once.
 const exportAction = (rows: Row<Product>[]) => ({
 	id: 'export',
 	label: 'Export',
-	icon: 'edit',
-	onSelect: () => exportRows(rows),
+	icon: <Download />,
+	onAction: () => exportRows(rows),
 })
 
 rowActions: { actions: ({ row }) => [exportAction([row])] },
@@ -63,8 +65,26 @@ selection: {
 }
 ```
 
-An entry's `onSelect` takes no arguments: the callback that built it already closes over
+An entry's `onAction` takes no arguments: the callback that built it already closes over
 `selectedRows`, `table` and `clearSelection`. Return `[]` for a selection that offers nothing.
+
+An entry that this shape cannot express hands over its markup instead — `{ id, component }`, and
+the kit draws nothing around it:
+
+```tsx
+selection={{
+	bar: {
+		actions: ({ selectedRows }) => [
+			{ id: 'assign', component: <BulkAssign rows={selectedRows} /> },
+		],
+	},
+}}
+```
+
+The example above offers one entry of each kind: Export is described, the assignee picker is not.
+In the bar `component` stands exactly where the entry's button would have been. Prefer the
+described form while it fits: it is what keeps an entry matching the built-in Delete beside it in
+both kits. See [Drawing an entry yourself](/docs/data-grid/row-actions#drawing-an-entry-yourself).
 
 ## Slots
 
@@ -112,11 +132,11 @@ The bar is configured under `selection.bar` — `true` for the default bar, `'in
 for nothing but the render mode, or an object with the keys below. It renders only while
 `selection` is enabled. Everything here is presentational.
 
-| `selection.bar` key | Type                                                | Description                                                                                       |
-| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                             |
-| `clear`             | `({ table, selectedRows, clearSelection }) => void` | Replaces the default clear behaviour (not a notification — call `clearSelection` to still reset). |
-| `actions`           | `(args) => ActionItem[]`                            | Custom entries rendered between Delete and Cancel. See [Custom actions](#custom-actions).         |
+| `selection.bar` key | Type                                                | Description                                                                               |
+| ------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                     |
+| `onClear`           | `({ table, selectedRows, clearSelection }) => void` | Notified after the bar clears the selection; `selectedRows` is the set it held.           |
+| `actions`           | `(args) => ActionItem[]`                            | Custom entries rendered between Delete and Cancel. See [Custom actions](#custom-actions). |
 
 ## Source
 

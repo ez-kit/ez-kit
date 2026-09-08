@@ -43,13 +43,12 @@ export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger
 			<div
 				data-slot='load-more'
 				data-state='loading'
-				className='dg-load-more flex items-center justify-center gap-2 py-3 text-sm'
+				className='dg-load-more flex items-center justify-center py-3'
 			>
 				<Spinner
 					size='sm'
 					aria-label='Loading more'
 				/>
-				<span>Loading more…</span>
 			</div>
 		)
 	}

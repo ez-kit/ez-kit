@@ -152,9 +152,14 @@ Per-row actions share one column: edit / delete buttons plus the row-pin menu.
 | `ActionsCell`    | `ActionsCellProps`    |
 | `RowActionsMenu` | `RowActionsMenuProps` |
 
-`RowActionsMenu` is item-driven: it receives `RowActionItem[]` and renders each one,
-mapping `item.id` (a `RowActionId`) to the kit's own icon. It holds only the pin
-actions under the default `inline` variant, and every action under `menu`.
+`RowActionsMenu` is item-driven: it receives the menu model and renders each entry,
+mapping `item.id` (a `RowActionId`) to the kit's own icon. Under the default
+`rowActions.placement: 'inline'` it holds the pin entries and any custom entry that
+did not ask to be a button; under `'menu'` it holds every action.
+
+`ActionsCell` in the `idle` state also receives `actions` — the custom entries that
+asked for `placement: 'inline'`. A kit renders each as an icon button beside its own
+Edit and Delete, and a slot entry as its bare `component`.
 
 ### `resizing`
 

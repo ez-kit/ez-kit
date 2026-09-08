@@ -1,14 +1,22 @@
-import { CommitStatus, RowActionsVariant } from '@ez-kit/data-grid-core'
+import {
+	ACTION_BUTTON_SIZE,
+	ACTIONS_COLUMN_ID,
+	CommitStatus,
+	EditingMode,
+	getActionsCellWidth,
+	RowActionsPlacement,
+} from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
 import { GridMenuIcon, GridMenuVariant, toMenuSections } from '../menu'
 import { ActionsCellState, RowActionId } from '../types'
 
-import { buildActionItems } from './build-action-items'
+import { splitRowActionItems } from './build-action-items'
 import { useDataGridTable, useDataGridState } from './table-context'
 
+import type { RowActionGroups } from './build-action-items'
 import type { GridMenuItem, GridMenuSection } from '../menu'
-import type { ActionItem, RowActionsContext, RowPinningConfig } from '@ez-kit/data-grid-core'
+import type { DataTable, RowActionItem, RowActionsContext, RowPinningConfig } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
@@ -40,6 +48,51 @@ const PIN_SECTION = 'row-pinning'
 const ROW_ACTIONS_LABEL = 'Row actions'
 const ROW_PINNING_LABEL = 'Row pinning'
 
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
+/** A grid with no `rowActions.actions` splits nothing — one shared value, never mutated. */
+const EMPTY_GROUPS: RowActionGroups = { inline: [], menu: [], inlineWidths: [] }
+
+/** One warning per grid, however many rows render it. Keyed by the message. */
+const warned = new Set<string>()
+
+type CellFitInput = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	table: DataTable<any>
+	hasEditing: boolean
+	hasDeleting: boolean
+	inlineWidths: number[]
+	hasOverflow: boolean
+}
+
+/**
+ * Development-only: says so when a row's inline entries no longer fit the actions column.
+ *
+ * `getActionsColumnSize` sizes the column before any row exists, so it can only budget the
+ * built-in pair and the overflow trigger. Entries promoted to inline buttons are the author's
+ * to account for — this turns "the last button is clipped" into the number to put in
+ * `rowActions.column.width`.
+ */
+function warnIfCellOverflows({ table, hasEditing, hasDeleting, inlineWidths, hasOverflow }: CellFitInput): void {
+	if (inlineWidths.length === 0) return
+	const builtIns = [
+		...(hasEditing ? [ACTION_BUTTON_SIZE] : []),
+		...(hasDeleting ? [ACTION_BUTTON_SIZE] : []),
+		...(hasOverflow ? [ACTION_BUTTON_SIZE] : []),
+	]
+	const needed = getActionsCellWidth([...builtIns, ...inlineWidths])
+	const actual = table.getColumn(ACTIONS_COLUMN_ID)?.getSize() ?? 0
+	if (needed <= actual) return
+	const message =
+		`[data-grid] The actions column is ${String(actual)}px but this row's inline actions need ` +
+		`${String(needed)}px, so the last of them is clipped. \`rowActions.actions\` is a function of the ` +
+		`row, so the grid cannot size the column for entries it has not built yet — set ` +
+		`\`rowActions.column.width\`.`
+	if (warned.has(message)) return
+	warned.add(message)
+	console.warn(message)
+}
+
 /**
  * Builds the pin entries for a row: the two pin directions the config allows,
  * plus `Unpin` once the row is pinned.
@@ -58,7 +111,7 @@ function buildPinItems(
 			label: LABELS[RowActionId.PinTop],
 			icon: ICONS[RowActionId.PinTop],
 			disabled: isPinned === 'top',
-			onSelect: () => {
+			onAction: () => {
 				row.pin('top', false, false)
 			},
 		})
@@ -69,7 +122,7 @@ function buildPinItems(
 			label: LABELS[RowActionId.PinBottom],
 			icon: ICONS[RowActionId.PinBottom],
 			disabled: isPinned === 'bottom',
-			onSelect: () => {
+			onAction: () => {
 				row.pin('bottom', false, false)
 			},
 		})
@@ -79,7 +132,7 @@ function buildPinItems(
 			id: RowActionId.Unpin,
 			label: LABELS[RowActionId.Unpin],
 			icon: ICONS[RowActionId.Unpin],
-			onSelect: () => {
+			onAction: () => {
 				row.pin(false, false, false)
 			},
 		})
@@ -96,10 +149,10 @@ function buildPinItems(
  *   their own overflow menu;
  * - `menu` — a single overflow menu holding every action.
  *
- * Custom entries from `rowActions.actions` join the overflow menu in both layouts: under
- * `menu` there is only the one, and under `inline` they sit in the menu that already carries
- * the pin entries. They are not promoted to inline buttons — the cell is a fixed width and an
- * open-ended set of application actions has no icon budget there, nor a guaranteed icon.
+ * Custom entries from `rowActions.actions` join the overflow menu unless they asked for
+ * `placement: 'inline'`, in which case they become icon buttons after the built-in pair. Menu
+ * is their default whatever the column says, so a column switched to `inline` never promotes an
+ * entry that did not claim an icon to show.
  *
  * A row in inline edit mode always falls back to the inline save / cancel
  * buttons: burying a commit inside a dropdown would hide it behind an extra
@@ -121,13 +174,17 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// Row pinning is derived state; subscribe so the menu re-derives on pin/unpin.
 	useDataGridState((s) => s.rowPinning)
 
-	const hasEditing = Boolean(table.options.editing)
+	const editingMode = table.options.editing?.mode ?? EditingMode.Row
+	// Cell mode owns no affordance in this column: its edit is opened by double-clicking the
+	// cell, committed on blur / Enter and cancelled with Escape. The pencil here would call
+	// `editing.start(rowId)` — the row flow — and open no input at all.
+	const hasEditing = Boolean(table.options.editing) && editingMode !== EditingMode.Cell
 	const hasDeleting = Boolean(table.options.deleting)
-	const editingMode = table.options.editing?.mode
 	const pinConfig = table.options.pinning
 
-	// Mid-edit: save / cancel only, whatever the variant.
-	if (isEditing && editingMode !== 'modal') {
+	// Mid-edit: save / cancel only. Row mode alone — a modal carries its own buttons, and a cell
+	// edit commits itself, so neither should swap this column out from under the user.
+	if (isEditing && editingMode === EditingMode.Row) {
 		return (
 			<Renderer
 				state={ActionsCellState.Editing}
@@ -141,21 +198,6 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		)
 	}
 
-	const buttons = (
-		<Renderer
-			state={ActionsCellState.Idle}
-			row={row}
-			hasEditing={hasEditing}
-			hasDeleting={hasDeleting}
-			onEdit={() => {
-				table.editing.start(row.id)
-			}}
-			onDelete={() => {
-				table.deleting.request(row.id)
-			}}
-		/>
-	)
-
 	const pinItems = pinConfig ? buildPinItems(row, pinConfig) : []
 	const buildActions = table.options.rowActions?.actions
 	// The augmented option is `RowActionsConfig<object, unknown>` — the row type and the node
@@ -163,17 +205,23 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// are narrowed at the call, and the returned items are re-bound to this layer's node type.
 	// `buildActionItems` still checks each icon at runtime; see its `toMenuIcon`.
 	const actionsCtx: RowActionsContext = { row: row as Row<object>, table: table as Table<object> }
-	const customItems = buildActions ? buildActionItems(buildActions(actionsCtx) as ActionItem<ReactElement>[]) : []
-	const variant = table.options.rowActions?.variant ?? RowActionsVariant.Inline
+	const placement = table.options.rowActions?.placement ?? RowActionsPlacement.Inline
+	const {
+		inline: inlineItems,
+		menu: customItems,
+		inlineWidths,
+	} = buildActions
+		? splitRowActionItems(buildActions(actionsCtx) as RowActionItem<ReactElement>[], placement)
+		: EMPTY_GROUPS
 
-	if (variant === RowActionsVariant.Menu) {
+	if (placement === RowActionsPlacement.Menu) {
 		const actions: GridMenuItem[] = []
 		if (hasEditing) {
 			actions.push({
 				id: RowActionId.Edit,
 				label: LABELS[RowActionId.Edit],
 				icon: ICONS[RowActionId.Edit],
-				onSelect: () => {
+				onAction: () => {
 					table.editing.start(row.id)
 				},
 			})
@@ -184,7 +232,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				label: LABELS[RowActionId.Delete],
 				icon: ICONS[RowActionId.Delete],
 				destructive: true,
-				onSelect: () => {
+				onAction: () => {
 					table.deleting.request(row.id)
 				},
 			})
@@ -204,16 +252,39 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		)
 	}
 
-	// Inline: the built-ins stay icon buttons and the custom entries share the overflow menu
-	// with the pin entries — one trigger, whose width `getActionsColumnSize` reserves.
+	// Inline: the built-ins stay icon buttons, entries that asked for it join them, and the rest
+	// share the overflow menu with the pin entries — one trigger, whose width
+	// `getActionsColumnSize` reserves.
 	const overflowSections: GridMenuSection[] = toMenuSections([
 		{ id: CUSTOM_SECTION, items: customItems },
 		{ id: PIN_SECTION, items: pinItems },
 	])
 
+	if (IS_DEV) {
+		warnIfCellOverflows({
+			table,
+			hasEditing,
+			hasDeleting,
+			inlineWidths,
+			hasOverflow: overflowSections.length > 0,
+		})
+	}
+
 	return (
 		<>
-			{buttons}
+			<Renderer
+				state={ActionsCellState.Idle}
+				row={row}
+				hasEditing={hasEditing}
+				hasDeleting={hasDeleting}
+				actions={inlineItems}
+				onEdit={() => {
+					table.editing.start(row.id)
+				}}
+				onDelete={() => {
+					table.deleting.request(row.id)
+				}}
+			/>
 			{overflowSections.length > 0 && (
 				<Menu
 					variant={GridMenuVariant.Row}

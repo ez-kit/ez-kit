@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { RowActionsVariant } from '../features/row-actions'
+import { RowActionsPlacement } from '../features/row-actions'
 
 import {
 	buildColumnList,
@@ -113,7 +113,7 @@ describe('buildColumnList', () => {
 		expect(all).toBeLessThan(150)
 	})
 
-	it('menu variant collapses the actions column to a single trigger', () => {
+	it('menu placement collapses the actions column to a single trigger', () => {
 		const inline = buildColumnList([USER_COL], {
 			selection: false,
 			expanding: false,
@@ -121,7 +121,7 @@ describe('buildColumnList', () => {
 			deleting: true,
 			pinning: true,
 			customRowActions: false,
-			rowActionsVariant: RowActionsVariant.Inline,
+			rowActionsPlacement: RowActionsPlacement.Inline,
 		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 		const menu = buildColumnList([USER_COL], {
 			selection: false,
@@ -130,7 +130,7 @@ describe('buildColumnList', () => {
 			deleting: true,
 			pinning: true,
 			customRowActions: false,
-			rowActionsVariant: RowActionsVariant.Menu,
+			rowActionsPlacement: RowActionsPlacement.Menu,
 		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 
 		expect(menu).toBeLessThan(inline ?? 0)

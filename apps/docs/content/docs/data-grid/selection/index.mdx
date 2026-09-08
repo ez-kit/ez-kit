@@ -21,18 +21,94 @@ Click checkboxes to select rows; the header checkbox toggles every row on the cu
 />
 ```
 
+## Bulk delete
+
+The bar's Delete button is the `deleting` feature applied to the selection, so its handler lives
+next to the per-row one — `bulk` is not configured under `selection`. Select a few rows and delete
+them; the confirmation is the bulk one:
+
+<DataGridDocsExample exampleId='selection-delete' />
+
+```tsx
+deleting={{
+	onDelete: ({ row }) => remove(row.original.id),
+	bulk: {
+		onDelete: ({ rowIds }) => api.removeMany(rowIds),
+		confirmation: { title: 'Delete users?' },
+	},
+}}
+```
+
+`bulk: true` is enough when there is nothing better to call than the per-row handler in a loop.
+See [Delete confirmation](/docs/data-grid/editing/deleting) for the whole feature.
+
+## Clearing the selection
+
+The bar's × clears it itself — `selection.bar.onClear` only tells you it happened, so something
+else can be reset in the same gesture. Its `selectedRows` is the set as it stood _before_ the
+reset, which is what `selection.onChange` cannot give you: that one fires after, with nothing
+left to report.
+
+<DataGridDocsExample exampleId='selection-clear' />
+
+```tsx
+selection={{
+	bar: {
+		onClear: ({ selectedRows }) => reportCleared(selectedRows.length),
+	},
+}}
+```
+
+To gate the clear itself — a confirmation before a long selection is discarded — draw the bar
+yourself with [`<DataGrid.SelectionBar>`](/docs/data-grid/selection/selection-bar).
+
+## A custom button in the bar
+
+`selection.bar.actions` builds the entries the bar offers. An entry is normally **data**, not
+markup, so each kit draws it with the chrome its own Delete button has — and when that shape does
+not fit, the entry hands over its markup instead. The example offers one of each:
+
+<DataGridDocsExample exampleId='selection-custom-action' />
+
+```tsx
+selection={{
+	bar: {
+		actions: ({ selectedRows, clearSelection }) => [
+			// Described: the kit draws the button.
+			{
+				id: 'export',
+				label: 'Export',
+				icon: <Download size={16} />,
+				onAction: () => {
+					exportRows(selectedRows)
+					clearSelection()
+				},
+			},
+			// Handed over: your markup stands where that button would have been.
+			{ id: 'assign', component: <BulkAssign rows={selectedRows} onDone={clearSelection} /> },
+		],
+	},
+}}
+```
+
+An entry's `onAction` takes no arguments — the callback that built it already closes over
+`selectedRows`, `table` and `clearSelection`. Prefer the described form while it fits: it is what
+keeps an entry matching the built-in Delete beside it in every kit. More on the bar itself,
+including the inline variant and the `start` / `end` slots, on
+[Selection bar](/docs/data-grid/selection/selection-bar).
+
 ## Options
 
-| Option               | Type                                                          | Description                                                                                                                                                                              |
-| -------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `selection`          | `boolean \| SelectionConfig`                                  | Master switch. `true` enables multi-select with the info bar. Default `false`.                                                                                                           |
-| `selection.multi`    | `boolean`                                                     | Default `true`. Set `false` to allow only one selected row: selecting a row clears the previous one, and the header shows no select-all checkbox.                                        |
-| `selection.onChange` | `(rowSelection: RowSelectionState, rowIds: string[]) => void` | Subscribe. The slice first, like every other feature; the selected ids follow as a convenience.                                                                                          |
-| `selection.bar`      | `boolean \| 'floating' \| 'inline' \| SelectionBarConfig`     | React-only. Presentational config for the selection info bar; shown when ≥1 row is selected. The scalar is the render mode. Its Delete button is `deleting.bulk`.                        |
-| `state.rowSelection` | `RowSelectionState`                                           | Controlled state — see [Controlled state](/docs/data-grid/state/controlled).                                                                                                             |
-| `getRowId`           | `(row) => string`                                             | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so selection survives a refetch out of the box.    |
-| `selection.enabled`  | `boolean`                                                     | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                           |
-| `selection.column`   | `SystemColumnDef`                                             | The checkbox column itself — its width, pinning, alignment. See [Row actions](/docs/data-grid/row-actions#the-column-itself) for the shared shape. Pinned `'left'` at `44px` by default. |
+| Option               | Type                                                          | Description                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `selection`          | `boolean \| SelectionConfig`                                  | Master switch. `true` enables multi-select with the info bar. Default `false`.                                                                                                               |
+| `selection.multi`    | `boolean`                                                     | Default `true`. Set `false` to allow only one selected row: selecting a row clears the previous one, and the header shows no select-all checkbox.                                            |
+| `selection.onChange` | `(rowSelection: RowSelectionState, rowIds: string[]) => void` | Subscribe. The slice first, like every other feature; the selected ids follow as a convenience.                                                                                              |
+| `selection.bar`      | `boolean \| 'floating' \| 'inline' \| SelectionBarConfig`     | React-only. Presentational config for the selection info bar; shown when ≥1 row is selected. The scalar is the render mode. Its Delete button is `deleting.bulk`.                            |
+| `state.rowSelection` | `RowSelectionState`                                           | Controlled state — see [Controlled state](/docs/data-grid/state/controlled).                                                                                                                 |
+| `getRowId`           | `(row) => string`                                             | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so selection survives a refetch out of the box.        |
+| `selection.enabled`  | `boolean`                                                     | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                               |
+| `selection.column`   | `SystemColumnDef`                                             | The checkbox column itself — its width, pinning, alignment. See [Row actions](/docs/data-grid/row-actions/api#the-column-itself) for the shared shape. Pinned `'left'` at `44px` by default. |
 
 ## See also
 

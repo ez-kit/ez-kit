@@ -294,6 +294,16 @@ tr[data-expanded] > td {
 	justify-content: center;
 }
 
+/* Leaf rows render no chevron (nothing left to expand), so reserve the button's height
+ * here — otherwise a leaf row would sit lower than its parent and the tree would look
+ * ragged. 2rem is the icon-button height in this kit. */
+[data-system-column='expand']:empty::before {
+	content: '';
+	display: block;
+	width: 0;
+	height: 2rem;
+}
+
 /* Row-height rule: cell height is driven by content, and the action buttons are the only
  * icon-only buttons in the kit without an explicit `size`, so they fall back to HeroUI's
  * default `md` (36-40px) instead of matching the rest of the kit's `sm` (32px). A bare `<td>`

@@ -60,6 +60,7 @@ export const DocPage = {
 	Theming: 'content/docs/data-grid/theming.mdx',
 	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
+	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
 	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
 	ColumnsIndex: 'content/docs/data-grid/columns/index.mdx',
@@ -84,7 +85,8 @@ export const DocPage = {
 	PaginationIndex: 'content/docs/data-grid/pagination/index.mdx',
 	PinningIndex: 'content/docs/data-grid/pinning/index.mdx',
 	Production: 'content/docs/data-grid/production.mdx',
-	RowActions: 'content/docs/data-grid/row-actions.mdx',
+	RowActionsApi: 'content/docs/data-grid/row-actions/api.mdx',
+	RowActionsIndex: 'content/docs/data-grid/row-actions/index.mdx',
 	PinningRows: 'content/docs/data-grid/pinning/rows.mdx',
 	SelectionIndex: 'content/docs/data-grid/selection/index.mdx',
 	SelectionSelectionBar: 'content/docs/data-grid/selection/selection-bar.mdx',
@@ -132,7 +134,9 @@ export const GRID_TYPE = {
 	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
 	SelectionBarConfig: { module: TypeModule.React, name: 'SelectionBarConfig', typeArgs: ROW_TYPE_ARGS },
-	ActionItem: { module: TypeModule.Core, name: 'ActionItem' },
+	ActionItemDef: { module: TypeModule.Core, name: 'ActionItemDef' },
+	ActionItemSlot: { module: TypeModule.Core, name: 'ActionItemSlot' },
+	RowActionItem: { module: TypeModule.Core, name: 'RowActionItem' },
 	SystemColumnDef: { module: TypeModule.Core, name: 'SystemColumnDef' },
 	EditingConfig: { module: TypeModule.Core, name: 'EditingConfig', typeArgs: ROW_TYPE_ARGS },
 	CreatingConfig: { module: TypeModule.Core, name: 'CreatingConfig', typeArgs: ROW_TYPE_ARGS },
@@ -267,10 +271,25 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
+		// The narrative half of the split: prose and live examples, every table moved to
+		// `pinning/api.mdx` below. Mapped with two empty arrays so the page stays inside
+		// `everyPageIsMapped` rather than silently unchecked.
 		page: DocPage.PinningIndex,
-		// The table sits under the page's own `# Pinning` heading and names full paths
-		// from the grid config (`pinning.column`, `pinning.row`, `pinning.enabled`).
-		optionTables: [{ heading: 'Pinning', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.PinningApi,
+		optionTables: [
+			// `pinning.column.onChange` / `pinning.row.top` resolve through the `boolean | …Config`
+			// unions the resolver looks past; `getRowId` is here because a row pin is keyed by
+			// whatever it returns.
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 9 },
+			// The per-column half: `pinning` on a column def, plus the two members of the object
+			// form it accepts beside the scalar.
+			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 3 },
+			{ heading: 'State', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
+		],
 		nonOptionTables: [],
 	},
 	{
@@ -465,14 +484,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
+		// Prose and live examples only — its options table moved to `pinning/api.mdx`.
 		page: DocPage.PinningColumns,
-		optionTables: [
-			// One table, two sources: `pinning` on a column def and `pinning` on the
-			// grid config, disambiguated in prose ("(column def)" / "(table)").
-			// `state.columnPinning` / `initialState.columnPinning` resolve as real
-			// `UseDataGridConfig` paths, so they need no exception.
-			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
-		],
+		optionTables: [],
 		nonOptionTables: [],
 	},
 	{
@@ -750,11 +764,27 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.RowActions,
+		// The narrative half of the split: prose and live examples, every table moved to
+		// `row-actions/api.mdx` below. Mapped with two empty arrays so the page stays inside
+		// `everyPageIsMapped` rather than silently unchecked.
+		page: DocPage.RowActionsIndex,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.RowActionsApi,
 		optionTables: [
 			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
-			// Rows are the fields of one custom entry, not keys of the grid config.
-			{ heading: 'Entry shape', roots: [GRID_TYPE.ActionItem], expectedCount: 6 },
+			// Rows are the fields of one custom entry, not keys of the grid config. Three roots
+			// because the table documents one shape a reader meets in two places: the two halves
+			// of the shared `ActionItem` union — the described entry and the `component` an entry
+			// that draws itself carries instead — plus `RowActionItem`, the row's own extension,
+			// which is where `placement` and `width` live.
+			{
+				heading: 'Entry shape',
+				roots: [GRID_TYPE.ActionItemDef, GRID_TYPE.ActionItemSlot, GRID_TYPE.RowActionItem],
+				expectedCount: 10,
+			},
 			// The shared shape `selection.column` / `expanding.column` / `rowActions.column` all
 			// take, documented once here and linked to from the other two pages.
 			{ heading: 'The column itself', roots: [GRID_TYPE.SystemColumnDef], expectedCount: 6 },
@@ -762,8 +792,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		// Prose and live examples only — its options table moved to `pinning/api.mdx`.
 		page: DocPage.PinningRows,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
+		optionTables: [],
 		nonOptionTables: [],
 	},
 	{

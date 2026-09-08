@@ -16,7 +16,6 @@ export function ProductionExample() {
 				manual: true,
 				rowCount: orders.rowCount,
 				items: [10, 25, 50],
-				variant: 'numbered',
 				siblings: 1,
 				onChange: ({ pageIndex, pageSize }) => {
 					orders.setPageIndex(pageIndex)

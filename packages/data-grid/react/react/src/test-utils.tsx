@@ -1,9 +1,10 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { render } from '@testing-library/react'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
+import { isGridMenuItemSlot } from './menu'
 import { ActionsCellState } from './types'
 import { useDataGrid } from './use-data-grid'
 
@@ -186,16 +187,20 @@ function TestMenu({ sections, 'aria-label': ariaLabel }: GridMenuProps) {
 				⋮
 			</button>
 			{sections.flatMap((section) =>
-				section.items.map((item) => (
-					<button
-						key={item.id}
-						type='button'
-						disabled={item.disabled ?? false}
-						onClick={item.onSelect}
-					>
-						{item.label}
-					</button>
-				)),
+				section.items.map((item) =>
+					isGridMenuItemSlot(item) ? (
+						<span key={item.id}>{item.component}</span>
+					) : (
+						<button
+							key={item.id}
+							type='button'
+							disabled={item.disabled ?? false}
+							onClick={item.onAction}
+						>
+							{item.label}
+						</button>
+					),
+				),
 			)}
 		</div>
 	)
@@ -285,7 +290,7 @@ function TestActionsCell(props: ActionsCellProps) {
 			/>
 		)
 	}
-	const { row, hasEditing, hasDeleting, onEdit, onDelete } = props
+	const { row, hasEditing, hasDeleting, onEdit, onDelete, actions } = props
 	return (
 		<>
 			{hasEditing && (
@@ -305,6 +310,21 @@ function TestActionsCell(props: ActionsCellProps) {
 				>
 					Delete
 				</button>
+			)}
+			{actions.map((item) =>
+				isGridMenuItemSlot(item) ? (
+					<Fragment key={item.id}>{item.component}</Fragment>
+				) : (
+					<button
+						key={item.id}
+						type='button'
+						data-row-id={row.id}
+						data-slot='row-action'
+						onClick={item.onAction}
+					>
+						{item.label}
+					</button>
+				),
 			)}
 		</>
 	)
@@ -624,18 +644,22 @@ function TestSelectionBar({ open, count, variant, onDelete, onClear, actions, st
 				</button>
 			)}
 			{start}
-			{actions?.map((item) => (
-				<button
-					key={item.id}
-					type='button'
-					data-slot='selection-bar-action'
-					data-destructive={item.destructive === true ? '' : undefined}
-					disabled={item.disabled === true}
-					onClick={item.onSelect}
-				>
-					{item.label}
-				</button>
-			))}
+			{actions?.map((item) =>
+				isGridMenuItemSlot(item) ? (
+					<span key={item.id}>{item.component}</span>
+				) : (
+					<button
+						key={item.id}
+						type='button'
+						data-slot='selection-bar-action'
+						data-destructive={item.destructive === true ? '' : undefined}
+						disabled={item.disabled === true}
+						onClick={item.onAction}
+					>
+						{item.label}
+					</button>
+				),
+			)}
 			{end}
 			<button
 				type='button'

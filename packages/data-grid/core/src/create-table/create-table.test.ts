@@ -794,6 +794,27 @@ describe('createTable — system columns', () => {
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
+	it('editing: { mode: cell } alone appends no __actions__ column', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', onSave: () => Promise.resolve() },
+		})
+		// The pencil there starts the row flow, which opens nothing in cell mode — so the column
+		// would be an empty strip whose width is reserved for a button that must not be drawn.
+		expect(columnIds(table)).not.toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('editing: { mode: cell } still shares the __actions__ column another feature asked for', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', onSave: () => Promise.resolve() },
+			deleting: { onDelete: () => {} },
+		})
+		expect(columnIds(table).at(-1)).toBe(ACTIONS_COLUMN_ID)
+	})
+
 	it('deleting: true appends __actions__ column after user columns', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, deleting: { onDelete: () => {} } })
 		const ids = columnIds(table)

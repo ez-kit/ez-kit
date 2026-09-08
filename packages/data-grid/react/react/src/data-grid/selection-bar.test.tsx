@@ -143,7 +143,7 @@ describe('<SelectionBar>', () => {
 		expect((args as { rows: unknown[] }).rows).toHaveLength(1)
 	})
 
-	it('Cancel button calls table.resetRowSelection when clear not configured', async () => {
+	it('Cancel button calls table.resetRowSelection when onClear not configured', async () => {
 		const user = userEvent.setup()
 		const table = makeTable({ selection: true })
 		setSelectionBarKey(table, { variant: ActionBarVariant.Floating })
@@ -161,12 +161,14 @@ describe('<SelectionBar>', () => {
 		expect(resetSpy).toHaveBeenCalledOnce()
 	})
 
-	it('calls the custom clear handler when configured', async () => {
+	it('clears the selection and notifies onClear with the rows it held', async () => {
 		const user = userEvent.setup()
-		const clear = vi.fn()
+		const onClear = vi.fn()
 		const table = makeTable({ selection: true })
-		setSelectionBarKey(table, { variant: ActionBarVariant.Floating, clear })
+		setSelectionBarKey(table, { variant: ActionBarVariant.Floating, onClear })
 		table.setRowSelection({ '1': true })
+
+		const resetSpy = vi.spyOn(table, 'resetRowSelection')
 
 		render(
 			<Wrapper table={table}>
@@ -174,10 +176,14 @@ describe('<SelectionBar>', () => {
 			</Wrapper>,
 		)
 		await user.click(screen.getByRole('button', { name: /cancel/i }))
-		expect(clear).toHaveBeenCalledOnce()
+		// The grid clears on its own — the handler is never asked to finish the job.
+		expect(resetSpy).toHaveBeenCalledOnce()
+		expect(onClear).toHaveBeenCalledOnce()
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		const args = clear.mock.calls.at(0)?.at(0)
+		const args = onClear.mock.calls.at(0)?.at(0)
 		expect(args).toHaveProperty('clearSelection')
+		// The set as it stood before the reset — the reason to prefer this over selection.onChange.
+		expect((args as { selectedRows: unknown[] }).selectedRows).toHaveLength(1)
 	})
 
 	it('renders the actions the config builds, with the selection in scope', async () => {
@@ -187,7 +193,7 @@ describe('<SelectionBar>', () => {
 		setSelectionBarKey(table, {
 			variant: ActionBarVariant.Floating,
 			actions: ({ selectedRows }) => [
-				{ id: 'export', label: `Export ${String(selectedRows.length)}`, onSelect: onExport },
+				{ id: 'export', label: `Export ${String(selectedRows.length)}`, onAction: onExport },
 			],
 		})
 		table.setRowSelection({ '1': true })
@@ -201,11 +207,47 @@ describe('<SelectionBar>', () => {
 		expect(onExport).toHaveBeenCalledOnce()
 	})
 
+	it('renders an entry that brought its own component instead of a kit button', async () => {
+		const user = userEvent.setup()
+		const onExport = vi.fn()
+		const table = makeTable({ selection: true })
+		setSelectionBarKey(table, {
+			variant: ActionBarVariant.Floating,
+			actions: ({ selectedRows }) => [
+				{
+					id: 'export',
+					component: (
+						<button
+							type='button'
+							onClick={() => {
+								onExport(selectedRows.length)
+							}}
+						>
+							Export mine
+						</button>
+					),
+				},
+			],
+		})
+		table.setRowSelection({ '1': true })
+
+		render(
+			<Wrapper table={table}>
+				<SelectionBar />
+			</Wrapper>,
+		)
+		const button = screen.getByRole('button', { name: 'Export mine' })
+		// The kit wrapped nothing around it: no action-slot button was drawn for this entry.
+		expect(button).not.toHaveAttribute('data-slot', 'selection-bar-action')
+		await user.click(button)
+		expect(onExport).toHaveBeenCalledWith(1)
+	})
+
 	it('carries an entry\u2019s destructive and disabled flags through to the kit', () => {
 		const table = makeTable({ selection: true })
 		setSelectionBarKey(table, {
 			variant: ActionBarVariant.Floating,
-			actions: () => [{ id: 'purge', label: 'Purge', destructive: true, disabled: true, onSelect: () => {} }],
+			actions: () => [{ id: 'purge', label: 'Purge', destructive: true, disabled: true, onAction: () => {} }],
 		})
 		table.setRowSelection({ '1': true })
 

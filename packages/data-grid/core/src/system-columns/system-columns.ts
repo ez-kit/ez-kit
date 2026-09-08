@@ -1,6 +1,6 @@
 import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../column/normalize'
 import { ColumnPinSide, SystemColumnType } from '../column/types'
-import { getActionsColumnSize, RowActionsVariant } from '../features/row-actions'
+import { getActionsColumnSize, RowActionsPlacement } from '../features/row-actions'
 import { setIfDefined } from '../utils/set-if-defined'
 
 import type { SystemColumnDef, TanStackColumnDef } from '../column/types'
@@ -17,15 +17,15 @@ type SystemColumnsOptions = {
 	deleting: boolean
 	/** Row pinning — its menu lives in the actions column alongside edit / delete. */
 	pinning: boolean
-	/** Defaults to {@link RowActionsVariant.Inline}. */
-	rowActionsVariant?: RowActionsVariant
+	/** Defaults to {@link RowActionsPlacement.Inline}. */
+	rowActionsPlacement?: RowActionsPlacement
 	/**
 	 * Whether `rowActions.actions` was supplied.
 	 *
-	 * Required, like `editing` / `deleting` / `pinning` and unlike `rowActionsVariant?`: those
+	 * Required, like `editing` / `deleting` / `pinning` and unlike `rowActionsPlacement?`: those
 	 * three decide whether the column exists at all and this is a fourth such feature — a grid
 	 * whose only per-row action is a custom one still needs the column, and its entries still
-	 * need the overflow trigger's width reserved. `rowActionsVariant` has an honest default
+	 * need the overflow trigger's width reserved. `rowActionsPlacement` has an honest default
 	 * (Inline); "does the consumer supply actions?" has none, and silently defaulting it to
 	 * false is exactly how the option went missing before.
 	 */
@@ -152,7 +152,7 @@ export function buildColumnList<TRow extends object>(
 					deleting: opts.deleting,
 					pinning: opts.pinning,
 					custom: opts.customRowActions,
-					variant: opts.rowActionsVariant ?? RowActionsVariant.Inline,
+					placement: opts.rowActionsPlacement ?? RowActionsPlacement.Inline,
 				}),
 				defaultPinning: ColumnPinSide.Right,
 				def: opts.rowActionsColumn,

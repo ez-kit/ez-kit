@@ -1,14 +1,15 @@
 'use client'
 
-import { ActionBarVariant } from '@ez-kit/data-grid-react'
+import { ActionBarVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
 import { X } from 'lucide-react'
+import { Fragment } from 'react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { cn } from '@grid-shadcn/lib/utils'
 
 import { renderActionIcon } from '../icons'
 
-import type { GridMenuItem, SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { GridMenuItem, GridMenuItemDef, SelectionBarProps } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -16,7 +17,7 @@ import type { ReactNode } from 'react'
  * kit's glyph for a named icon, its danger colour for a destructive entry, its disabled state.
  * This is what the config buys over hand-drawn markup.
  */
-function ActionButton({ item }: { item: GridMenuItem }) {
+function ActionButton({ item }: { item: GridMenuItemDef }) {
 	const icon = renderActionIcon(item.icon)
 
 	return (
@@ -25,7 +26,8 @@ function ActionButton({ item }: { item: GridMenuItem }) {
 			size='sm'
 			disabled={item.disabled === true}
 			data-slot='selection-bar-action'
-			onClick={item.onSelect}
+			{...(item.className !== undefined ? { className: item.className } : {})}
+			onClick={item.onAction}
 		>
 			{icon}
 			{item.label}
@@ -36,12 +38,18 @@ function ActionButton({ item }: { item: GridMenuItem }) {
 /** The entries as buttons — `undefined` when the bar was given none, so separators can tell. */
 function renderActions(actions: GridMenuItem[] | undefined): ReactNode {
 	if (actions === undefined || actions.length === 0) return null
-	return actions.map((item) => (
-		<ActionButton
-			key={item.id}
-			item={item}
-		/>
-	))
+	return actions.map((item) =>
+		// An entry that brought its own markup stands where its button would have been — the bar
+		// is plain flex, so it needs no wrapper of ours.
+		isGridMenuItemSlot(item) ? (
+			<Fragment key={item.id}>{item.component}</Fragment>
+		) : (
+			<ActionButton
+				key={item.id}
+				item={item}
+			/>
+		),
+	)
 }
 
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
@@ -62,9 +70,10 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 			>
 				<div
 					data-slot='action-bar-selection'
+					aria-label={`${String(count)} selected`}
 					className='font-medium tabular-nums'
 				>
-					{count} selected
+					{count}
 				</div>
 
 				<div className='ml-auto flex items-center gap-2'>
@@ -124,9 +133,10 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 				{/* Selected count badge */}
 				<div
 					data-slot='action-bar-selection'
+					aria-label={`${String(count)} selected`}
 					className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-sm tabular-nums'
 				>
-					{count} selected
+					{count}
 				</div>
 
 				{/* Separator — only when there are action buttons to divide from the count */}

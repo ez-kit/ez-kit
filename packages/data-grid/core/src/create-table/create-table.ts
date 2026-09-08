@@ -15,11 +15,11 @@ import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
 import { CreatingFeature } from '../features/creating'
 import { APPLIED_STATE_KEY, DeferredApplyFeature } from '../features/deferred-apply'
 import { DeletingFeature } from '../features/deleting'
-import { EditingFeature } from '../features/editing'
+import { EditingFeature, EditingMode } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
 import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
-import { RowActionsVariant } from '../features/row-actions'
+import { RowActionsPlacement } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
 import { ColumnResizeMode, ExpandingMode, GridDirection, MultiSortEvent, PaginationMode } from '../types'
@@ -163,6 +163,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasExpanding = isFeatureEnabled(config.expanding)
 	const hasResizing = isFeatureEnabled(config.resizing)
 	const hasEditing = isFeatureEnabled(config.editing)
+	// Cell editing is entered by double-clicking the cell itself, never from the actions column:
+	// the pencil there calls `editing.start(rowId)`, which is the row flow and opens nothing in
+	// this mode. So it is not a reason to mount the actions column, nor to reserve its width.
+	const hasRowEditAction = hasEditing && editingCfg?.mode !== EditingMode.Cell
 	const hasDeleting = isFeatureEnabled(config.deleting)
 
 	const hasDraft = isFeatureEnabled(config.draft)
@@ -262,7 +266,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// escape hatch for one grid under a defaults layer that configured row actions app-wide.
 	const rowActionsEnabled = config.rowActions === undefined || isFeatureEnabled(config.rowActions)
 	const rowActionsCfg = featureConfig(config.rowActions)
-	const rowActionsVariant = rowActionsCfg?.variant ?? RowActionsVariant.Inline
+	const rowActionsPlacement = rowActionsCfg?.placement ?? RowActionsPlacement.Inline
 	const customRowActions = rowActionsCfg?.actions
 
 	// Row-erased on the way in, like every other structural setting the mapper carries: a system
@@ -274,10 +278,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
-		editing: rowActionsEnabled && hasEditing,
+		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
-		rowActionsVariant,
+		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
 		...(selectionColumn !== undefined ? { selectionColumn } : {}),
 		...(expandingColumn !== undefined ? { expandingColumn } : {}),
@@ -576,7 +580,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(deletingCfg ? { deleting: deletingCfg } : {}),
 		// Read by the React layer to lay out the actions cell (inline vs. menu).
 		rowActions: {
-			variant: rowActionsVariant,
+			placement: rowActionsPlacement,
 			...(rowActionsEnabled && customRowActions ? { actions: customRowActions } : {}),
 		},
 		// The grid's text direction, declared once at the root. Set unconditionally: it is a fact

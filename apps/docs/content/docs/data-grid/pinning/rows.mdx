@@ -5,36 +5,60 @@ description: Pin rows to the top or bottom of the grid so they stay visible whil
 
 # Row Pinning
 
-Pinned rows stay anchored to the top or bottom of the table. Useful for summary rows, "you are here" markers, or recently-edited rows.
+Pinned rows stay anchored to the top or bottom of the table. Useful for summary rows, "you are here"
+markers, or the row someone just edited and wants to keep an eye on.
+
+Every option on this page is listed in the [API reference](/docs/data-grid/pinning/api).
 
 ## Usage
-
-Pinning is demonstrated in a scrollable container with a sticky header — this is what makes the pin effect visible: pinned rows stay stuck to the top or bottom as the rest of the table scrolls underneath.
-
-<DataGridDocsExample exampleId='row-pinning-sticky-header' />
 
 ```tsx
 <DataGrid
 	data={data}
 	columns={columns}
 	pinning={{ row: { top: true, bottom: true } }}
+	layout={{ stickyHeader: true }}
 />
 ```
 
-The pin control lives in the row actions column, next to edit and delete — see [Row actions](/docs/data-grid/row-actions). Enabling row pinning is enough to create that column; you do not need editing or deleting.
+The example runs in a scrollable container with a sticky header — that is what makes the effect
+visible. Pin a row from its ⋮ menu, then scroll: it stays stuck while the rest passes underneath.
 
-## Options
+<DataGridDocsExample exampleId='row-pinning-sticky-header' />
 
-| Option                    | Type                                    | Description                                                                                                                                                                         |
-| ------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pinning.row` (table)     | `boolean \| RowPinningConfig`           | Enables row pinning. `true` — top+bottom. `{ top: true }` — top only, etc. Once enabled, the grid renders a per-row pin control.                                                    |
-| `pinning.row.onChange`    | `(rowPinning: RowPinningState) => void` | Called whenever row pinning changes. Use it to persist which rows a user pinned.                                                                                                    |
-| `state.rowPinning`        | `{ top?: string[], bottom?: string[] }` | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](/docs/data-grid/state/controlled).                                                                |
-| `initialState.rowPinning` | same                                    | Uncontrolled seed for pinned rows at mount.                                                                                                                                         |
-| `getRowId`                | `(row: TRow, index: number) => string`  | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so pinning survives a refetch out of the box. |
+The pin control lives in the row actions column, next to edit and delete — see
+[Row actions](/docs/data-grid/row-actions). Enabling row pinning is enough to create that column;
+you do not need editing or deleting.
+
+`{ top: true, bottom: true }` offers both edges. Narrow it to one when only one makes sense:
+
+```tsx
+pinning={{ row: { top: true } }} // "Pin to top" only
+```
+
+## Rows pinned from the start
+
+`initialState.rowPinning` seeds the pins by **row id**, which is the value `getRowId` returns —
+`row.id` by default. The user can still unpin them:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pinning={{ row: { top: true, bottom: true } }}
+	initialState={{ rowPinning: { top: ['3'], bottom: ['58'] } }}
+/>
+```
+
+<DataGridDocsExample exampleId='row-pinning-initial' />
+
+For a pin that has to survive a reload, pass `pinning.row.onChange` and restore what you stored into
+the same seed — or hold the slice yourself with `state.rowPinning`, see
+[Controlled State](/docs/data-grid/state/controlled).
 
 ## See also
 
+- [API reference](/docs/data-grid/pinning/api)
 - [Row actions](/docs/data-grid/row-actions)
 - [Column pinning](/docs/data-grid/pinning/columns)
 - [Pinning](/docs/data-grid/pinning) · [Layout](/docs/data-grid/layout)

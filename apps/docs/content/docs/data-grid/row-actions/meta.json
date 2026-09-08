@@ -1,0 +1,5 @@
+{
+	"title": "Row Actions",
+	"description": "The per-row actions column — inline buttons or one overflow menu, plus your own actions",
+	"pages": ["index", "api"]
+}

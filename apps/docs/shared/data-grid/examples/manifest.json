@@ -40,6 +40,30 @@
 		"exportName": "BaseSelectionExample"
 	},
 	{
+		"id": "selection-delete",
+		"label": "Bulk delete",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/selection-bar-basics.tsx",
+		"exportName": "SelectionDeleteExample"
+	},
+	{
+		"id": "selection-clear",
+		"label": "Clearing the selection",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/selection-bar-basics.tsx",
+		"exportName": "SelectionClearExample"
+	},
+	{
+		"id": "selection-custom-action",
+		"label": "Custom bar action",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/selection-bar-basics.tsx",
+		"exportName": "SelectionCustomActionExample"
+	},
+	{
 		"id": "base-sticky",
 		"label": "Sticky Header",
 		"group": "base",
@@ -320,6 +344,22 @@
 		"exportName": "ColumnPinningExample"
 	},
 	{
+		"id": "column-pinning-static",
+		"label": "Static Pin",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/pinning/static-column.tsx",
+		"exportName": "ColumnPinningStaticExample"
+	},
+	{
+		"id": "pinning-both",
+		"label": "Both Axes",
+		"group": "pinning",
+		"groupLabel": "Pinning",
+		"sourceFile": "components/pinning/both-axes.tsx",
+		"exportName": "PinningBothAxesExample"
+	},
+	{
 		"id": "resizing-on-change",
 		"label": "onChange",
 		"group": "columns",
@@ -458,6 +498,30 @@
 		"exportName": "CreatingValidationExample"
 	},
 	{
+		"id": "editing-mode-row",
+		"label": "Row mode",
+		"group": "editing",
+		"groupLabel": "Editing",
+		"sourceFile": "components/editing/modes.tsx",
+		"exportName": "EditingRowModeExample"
+	},
+	{
+		"id": "editing-mode-modal",
+		"label": "Modal mode",
+		"group": "editing",
+		"groupLabel": "Editing",
+		"sourceFile": "components/editing/modes.tsx",
+		"exportName": "EditingModalModeExample"
+	},
+	{
+		"id": "editing-mode-cell",
+		"label": "Cell mode",
+		"group": "editing",
+		"groupLabel": "Editing",
+		"sourceFile": "components/editing/modes.tsx",
+		"exportName": "EditingCellModeExample"
+	},
+	{
 		"id": "editing-validation",
 		"label": "Editing",
 		"group": "validation",
@@ -482,12 +546,36 @@
 		"exportName": "ExpandingTreeExample"
 	},
 	{
+		"id": "expanding-tree-sub-rows",
+		"label": "Tree · custom sub-rows key",
+		"group": "expanding",
+		"groupLabel": "Expanding",
+		"sourceFile": "components/expanding/tree.tsx",
+		"exportName": "ExpandingTreeSubRowsExample"
+	},
+	{
 		"id": "expanding-controlled",
 		"label": "Controlled",
 		"group": "expanding",
 		"groupLabel": "Expanding",
 		"sourceFile": "components/expanding/controlled.tsx",
 		"exportName": "ExpandingControlledExample"
+	},
+	{
+		"id": "row-actions-inline",
+		"label": "Inline Placement",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/placement.tsx",
+		"exportName": "RowActionsInlineExample"
+	},
+	{
+		"id": "row-actions-menu",
+		"label": "Menu Placement",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/placement.tsx",
+		"exportName": "RowActionsMenuExample"
 	},
 	{
 		"id": "row-actions-custom",
@@ -498,12 +586,36 @@
 		"exportName": "RowActionsCustomExample"
 	},
 	{
+		"id": "row-actions-custom-inline",
+		"label": "Custom Actions Inline",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/custom-actions.tsx",
+		"exportName": "RowActionsInlineCustomExample"
+	},
+	{
+		"id": "row-actions-component",
+		"label": "Custom Component",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/action-component.tsx",
+		"exportName": "RowActionsComponentExample"
+	},
+	{
 		"id": "row-pinning-sticky-header",
 		"label": "Sticky Header",
 		"group": "row-pinning",
 		"groupLabel": "Row Pinning",
 		"sourceFile": "components/row-pinning/sticky-header.tsx",
 		"exportName": "RowPinningStickyHeaderExample"
+	},
+	{
+		"id": "row-pinning-initial",
+		"label": "Initial Pins",
+		"group": "row-pinning",
+		"groupLabel": "Row Pinning",
+		"sourceFile": "components/pinning/initial-rows.tsx",
+		"exportName": "RowPinningInitialExample"
 	},
 	{
 		"id": "virtualized",
