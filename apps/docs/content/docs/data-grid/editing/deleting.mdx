@@ -69,8 +69,9 @@ Without a prompt, the delete runs immediately.
 
 ## Rollback
 
-Neither handler is optimistic for you. Snapshot, apply, and restore on failure if that is the
-UX you want:
+Neither handler is optimistic for you, and the grid rolls nothing back — `onDelete` owns the data,
+so restoring it is the handler's job. Snapshot, apply, and restore on failure if that is the UX
+you want:
 
 ```tsx
 bulk: {
@@ -87,7 +88,39 @@ bulk: {
 }
 ```
 
-`signal` on both contexts aborts when the user cancels a staged delete or the table unmounts.
+`signal` on both contexts aborts when the user cancels a staged delete or a new delete starts.
+
+## When the handler fails
+
+What the grid _does_ own is the delete flow around your handler, and it reads the outcome of the
+promise you return. Three things follow from that, and the example below shows all of them —
+tick the checkbox to have the handler rethrow, untick it to have it swallow the error, then select
+every row and press Delete.
+
+<DataGridDocsExample exampleId='deleting-rollback' />
+
+**The bulk loop stops at the first rejection.** With `bulk: true` there is no single-call handler,
+so the grid calls `onDelete` once per selected row, sequentially, awaiting each one. A rejection
+ends the run: the rows after the failing one are never called at all. That is deliberate — a
+partial delete you can see beats a half-applied set from a parallel run — but it means the
+selection can end up spanning deleted and untouched rows.
+
+**Resolving is what clears the selection.** The deleted ids leave `state.rowSelection` after the
+handler resolves, and only then. Reject and the whole selection stays, which is what lets the user
+retry. The trap is the rollback pattern above: catching the error inside the handler makes it
+_resolve_, so the grid treats the failed delete as a success and drops those rows from the
+selection anyway. Notice the example clears all five ids in swallow mode even though one row is
+still in the table.
+
+**Nothing catches a rejection for you.** The grid calls the handler from a fire-and-forget path
+(`void table.deleting.confirm()`), so a rethrow surfaces as an unhandled promise rejection in the
+console. If you rethrow to keep the selection, still handle the error yourself — report it to the
+user in the same handler, before rethrowing.
+
+The prompt is not part of this: `confirm()` clears `state.deleting.pendingRowId` _before_ awaiting
+the handler, so the dialog closes as soon as the user presses Delete and never reflects the
+outcome. There is no built-in pending or error state on the dialog — a grid that needs one renders
+it around the table, as the panel in the example does.
 
 ## Options
 

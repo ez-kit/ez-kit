@@ -5,18 +5,34 @@ description: Full create, read, update, delete workflow against a real backend �
 
 # CRUD against a server
 
-A full create/read/update/delete loop with optimistic updates and rollback on failure.
+The same UI surface as [CRUD (Client)](/docs/data-grid/editing/crud-client), but every write goes
+through an API: the row is painted immediately, the request runs, and a failure puts the previous
+rows back.
 
 ## Usage
 
-A live server-backed example is coming soon. In the meantime, the [CRUD (Client)](/docs/data-grid/editing/crud-client) example shows the identical UI surface against an in-memory store — swapping the store for API calls is the only change.
+<DataGridDocsExample exampleId='crud-server' />
 
-The server pattern covers:
+The example runs against a mock API with 600 ms of latency. Tick **Server rejects every write** to
+watch a rejection roll the optimistic change back — the editor stays open with its error state, the
+deleted row reappears, and the request log records what happened.
 
-- New-row creation via `<DataGrid.CreateTrigger />` and `<DataGrid.CreatingModal />`
-- Inline editing with debounced server commits
-- Bulk delete with confirmation (see [Delete Confirmation](/docs/data-grid/editing/deleting))
-- Optimistic UI with rollback on API failure
+## The optimistic loop
+
+`creating.onSave`, `editing.onSave` and `deleting.onDelete` all accept an `async` handler, and the
+grid awaits it. That gives you the whole loop in one place:
+
+1. **Paint** the change into your row state and keep the previous array as a snapshot.
+2. **Call** the server, passing the `signal` the grid hands you so an aborted edit aborts the request.
+3. **Reconcile** with the response — the server owns the id, so a created row swaps its placeholder
+   for the real one.
+4. **Roll back** to the snapshot on failure, and **rethrow**.
+
+Rethrowing matters: the grid reads a resolved promise as "the write succeeded" and closes the
+editor. Throwing keeps the row in edit mode with the typed values intact, so the user can retry —
+in `mode: 'modal'` the generic failure message also renders above the form. Throw a
+[`ValidationError`](/docs/data-grid/editing/validation) instead and the message lands on the offending
+field.
 
 ## Server contract
 
@@ -24,16 +40,21 @@ The example assumes a REST shape but the pattern is transport-agnostic:
 
 ```ts
 type Api = {
-	list: (params: { sort; filters; page }) => Promise<{ rows; total }>
-	create: (row) => Promise<TRow>
-	update: (id, patch) => Promise<TRow>
-	delete: (ids: string[]) => Promise<void>
+	list: () => Promise<TRow[]>
+	create: (values: Partial<TRow>, signal?: AbortSignal) => Promise<TRow>
+	update: (id: number, patch: Partial<TRow>, signal?: AbortSignal) => Promise<TRow>
+	delete: (ids: number[], signal?: AbortSignal) => Promise<void>
 }
 ```
 
+`deleting.bulk.onDelete` takes the whole selection, so one request covers a bulk delete. Omit it and
+the grid loops the single-row handler instead — see [Deleting](/docs/data-grid/editing/deleting).
+
 ## Notes
 
-Pair this with [Controlled State](/docs/data-grid/state/controlled) so the grid's sort/filter/pagination round-trip through your query.
+Pair this with [Controlled State](/docs/data-grid/state/controlled) so the grid's sort/filter/pagination
+round-trip through your query, and with [Server Data](/docs/data-grid/state/server-side) when the list
+itself is paged by the server.
 
 ## Source
 

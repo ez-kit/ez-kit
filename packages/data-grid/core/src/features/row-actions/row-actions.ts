@@ -134,13 +134,20 @@ export const ACTION_BUTTON_SIZE = 32
 const ACTION_BUTTON_GAP = 4
 /** Horizontal padding of the actions cell (both sides). */
 const ACTIONS_CELL_PADDING = 32
-/** Inline row editing always shows exactly two buttons: save + cancel. */
-const INLINE_EDITING_BUTTONS = 2
+/** An inline row form — editing or creating — always shows exactly two buttons: save + cancel. */
+const INLINE_FORM_BUTTONS = 2
 
 type ActionsColumnSizeInput = {
 	editing: boolean
 	deleting: boolean
 	pinning: boolean
+	/**
+	 * Whether an inline creating row can appear (`creating.mode` is `'row'` or `'pin-row'`).
+	 *
+	 * It renders its save / cancel pair in this column exactly as an editing row does, so it
+	 * reserves the same width — even in a grid with no other row action.
+	 */
+	creating: boolean
 	/** Whether `rowActions.actions` was supplied — its entries share the overflow trigger. */
 	custom: boolean
 	placement: RowActionsPlacement
@@ -175,6 +182,7 @@ export function getActionsColumnSize({
 	editing,
 	deleting,
 	pinning,
+	creating,
 	custom,
 	placement,
 }: ActionsColumnSizeInput): number {
@@ -183,9 +191,9 @@ export function getActionsColumnSize({
 	const hasOverflow = pinning || custom
 	const actionCount =
 		placement === RowActionsPlacement.Menu ? 1 : Number(editing) + Number(deleting) + Number(hasOverflow)
-	// A row in inline edit mode swaps its buttons for save + cancel, which can be
-	// wider than the resting state (e.g. delete-only grids).
-	const buttons = Math.max(actionCount, editing ? INLINE_EDITING_BUTTONS : 0)
+	// A row in an inline form — editing or creating — swaps its buttons for save + cancel,
+	// which can be wider than the resting state (e.g. delete-only grids).
+	const buttons = Math.max(actionCount, editing || creating ? INLINE_FORM_BUTTONS : 0)
 	return getActionsCellWidth(new Array<number>(buttons).fill(ACTION_BUTTON_SIZE))
 }
 

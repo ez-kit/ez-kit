@@ -17,6 +17,14 @@ type SystemColumnsOptions = {
 	deleting: boolean
 	/** Row pinning — its menu lives in the actions column alongside edit / delete. */
 	pinning: boolean
+	/**
+	 * Whether an inline creating row can appear (`creating.mode` is `'row'` or `'pin-row'`).
+	 *
+	 * Its save / cancel pair is rendered in the actions cell, so a grid whose only row-level
+	 * feature is `creating` still needs the column — without it the draft row has no way to
+	 * commit.
+	 */
+	creating: boolean
 	/** Defaults to {@link RowActionsPlacement.Inline}. */
 	rowActionsPlacement?: RowActionsPlacement
 	/**
@@ -141,7 +149,7 @@ export function buildColumnList<TRow extends object>(
 
 	result.push(...userColumns)
 
-	const needsActions = opts.editing || opts.deleting || opts.pinning || opts.customRowActions
+	const needsActions = opts.editing || opts.deleting || opts.pinning || opts.creating || opts.customRowActions
 	if (needsActions) {
 		result.push(
 			buildSystemColumn({
@@ -151,6 +159,7 @@ export function buildColumnList<TRow extends object>(
 					editing: opts.editing,
 					deleting: opts.deleting,
 					pinning: opts.pinning,
+					creating: opts.creating,
 					custom: opts.customRowActions,
 					placement: opts.rowActionsPlacement ?? RowActionsPlacement.Inline,
 				}),

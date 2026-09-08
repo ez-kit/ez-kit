@@ -12,7 +12,7 @@ import {
 import { mapColumns } from '../column/map-columns'
 import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
-import { CreatingFeature } from '../features/creating'
+import { CreatingFeature, CreatingMode } from '../features/creating'
 import { APPLIED_STATE_KEY, DeferredApplyFeature } from '../features/deferred-apply'
 import { DeletingFeature } from '../features/deleting'
 import { EditingFeature, EditingMode } from '../features/editing'
@@ -168,6 +168,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// this mode. So it is not a reason to mount the actions column, nor to reserve its width.
 	const hasRowEditAction = hasEditing && editingCfg?.mode !== EditingMode.Cell
 	const hasDeleting = isFeatureEnabled(config.deleting)
+	const hasInlineCreating = isFeatureEnabled(config.creating) && creatingCfg?.mode !== CreatingMode.Modal
+	const hasPinRowCreating = hasInlineCreating && creatingCfg?.mode === CreatingMode.PinRow
 
 	const hasDraft = isFeatureEnabled(config.draft)
 
@@ -275,12 +277,25 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const expandingColumn = featureConfig(config.expanding)?.column as SystemColumnDef | undefined
 	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef | undefined
 
+	// Where an inline draft row puts its save / cancel pair. It shares the actions cell with the
+	// row actions — but only when that column is there anyway, or when the draft row itself is
+	// permanent. `mode: 'row'` in a grid with no row actions deliberately does **not** mount it:
+	// the column would sit empty until someone pressed the create trigger, and mounting it on
+	// open would take its fixed width off the `1fr` tracks, so every column would jump on each
+	// open and again on each close. Such a grid puts the pair in the toolbar instead, in place of
+	// the create trigger (data-grid-react `create-trigger.tsx`) — the toolbar is already there,
+	// so nothing reflows. `mode: 'modal'` needs neither: the dialog has its own footer.
+	const hasOtherRowActions =
+		rowActionsEnabled && (hasRowEditAction || hasDeleting || hasPinning || customRowActions !== undefined)
+	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
+
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
 		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
+		creating: creatingInActionsColumn,
 		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
 		...(selectionColumn !== undefined ? { selectionColumn } : {}),

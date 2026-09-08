@@ -1,5 +1,13 @@
 @import '@ez-kit/data-grid-react/styles.css';
 
+/* The generated create / edit form: each field composite renders its own label, control and
+ * error, and nothing between them separates one field from the next. Stack them with a gap. */
+[data-slot='auto-form'] {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
 [data-slot='active-filters-bar'] {
 	display: flex;
 	flex-wrap: wrap;

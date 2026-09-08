@@ -153,6 +153,10 @@ function ConfirmDialogRenderer() {
 	// state mutations (editing, sorting, etc.) leave these stable.
 	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)
 	const pendingBulk = useDataGridState((s) => s.deleting.pendingBulk)
+	// Confirming clears the pending target, which closes the dialog, which fires the kit's
+	// close handler — the same `onCancel` a dismissal uses. Without this flag that close would
+	// abort the delete request the confirm just started.
+	const hasConfirmed = useRef(false)
 
 	// A staged bulk delete takes precedence: it is the gesture the user just made. Core owns
 	// both the staging and the run, so this only renders the prompt and reports the answer.
@@ -165,8 +169,15 @@ function ConfirmDialogRenderer() {
 				open
 				title={title}
 				description={description}
-				onConfirm={() => void table.deleting.bulk.confirm()}
+				onConfirm={() => {
+					hasConfirmed.current = true
+					void table.deleting.bulk.confirm()
+				}}
 				onCancel={() => {
+					if (hasConfirmed.current) {
+						hasConfirmed.current = false
+						return
+					}
 					table.deleting.bulk.cancel()
 				}}
 			/>
@@ -185,8 +196,15 @@ function ConfirmDialogRenderer() {
 			open={pendingId !== null}
 			title={title}
 			description={description}
-			onConfirm={() => void table.deleting.confirm()}
+			onConfirm={() => {
+				hasConfirmed.current = true
+				void table.deleting.confirm()
+			}}
 			onCancel={() => {
+				if (hasConfirmed.current) {
+					hasConfirmed.current = false
+					return
+				}
 				table.deleting.cancel()
 			}}
 		/>

@@ -320,6 +320,14 @@
 		"exportName": "SelectionBarInlineExample"
 	},
 	{
+		"id": "deleting-rollback",
+		"label": "Failure semantics",
+		"group": "selection",
+		"groupLabel": "Selection",
+		"sourceFile": "components/deleting/rollback.tsx",
+		"exportName": "DeletingRollbackExample"
+	},
+	{
 		"id": "delete-confirmation",
 		"label": "Delete Confirmation",
 		"group": "selection",
@@ -630,6 +638,14 @@
 		"groupLabel": "CRUD",
 		"sourceFile": "components/crud/CrudClientExample.tsx",
 		"exportName": "CrudClientExample"
+	},
+	{
+		"id": "crud-server",
+		"label": "Server",
+		"group": "crud",
+		"groupLabel": "CRUD",
+		"sourceFile": "components/crud/CrudServerExample.tsx",
+		"exportName": "CrudServerExample"
 	},
 	{
 		"id": "controlled-state",

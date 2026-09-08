@@ -821,6 +821,55 @@ describe('createTable — system columns', () => {
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
+	it('creating: { mode: row } alone appends no __actions__ column', () => {
+		// The column would stand empty until someone pressed the create trigger, and mounting it
+		// on open would take its fixed width off the `1fr` tracks — every column jumping on each
+		// open and again on each close. Such a grid puts save / cancel in the toolbar instead.
+		const table = createTable({ data: DATA, columns: COLUMNS, creating: { mode: 'row', onSave: () => {} } })
+		expect(columnIds(table)).not.toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('creating: { mode: row } shares the __actions__ column another feature asked for', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			creating: { mode: 'row', onSave: () => {} },
+			deleting: { onDelete: () => {} },
+		})
+		expect(columnIds(table).at(-1)).toBe(ACTIONS_COLUMN_ID)
+	})
+
+	it('creating: { mode: row } widens the shared __actions__ column to the save / cancel pair', () => {
+		const sizeOf = (config: Parameters<typeof createTable<(typeof DATA)[number]>>[0]) =>
+			createTable(config)
+				.getAllColumns()
+				.find((col) => col.id === ACTIONS_COLUMN_ID)
+				?.getSize()
+
+		const deleteOnly = sizeOf({ data: DATA, columns: COLUMNS, deleting: { onDelete: () => {} } })
+		const withDraft = sizeOf({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: () => {} },
+			creating: { mode: 'row', onSave: () => {} },
+		})
+
+		expect(withDraft).toBeGreaterThan(deleteOnly ?? 0)
+	})
+
+	it('creating: { mode: pin-row } alone appends the __actions__ column', () => {
+		// The pinned draft row is permanent, so the cell always holds its save button — the
+		// column is never the empty strip that `mode: 'row'` would leave behind.
+		const table = createTable({ data: DATA, columns: COLUMNS, creating: { mode: 'pin-row', onSave: () => {} } })
+		expect(columnIds(table).at(-1)).toBe(ACTIONS_COLUMN_ID)
+	})
+
+	it('creating: { mode: modal } alone appends no __actions__ column', () => {
+		// The modal carries its own footer buttons, so nothing is rendered per row.
+		const table = createTable({ data: DATA, columns: COLUMNS, creating: { mode: 'modal', onSave: () => {} } })
+		expect(columnIds(table)).not.toContain(ACTIONS_COLUMN_ID)
+	})
+
 	it('pinning: { row: { top: true } } alone appends the __actions__ column', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, pinning: { row: { top: true } } })
 		const ids = columnIds(table)

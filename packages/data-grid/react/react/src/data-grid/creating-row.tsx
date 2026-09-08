@@ -5,6 +5,7 @@ import {
 	resolveColumnFormConfig,
 	SELECTION_COLUMN_ID,
 } from '@ez-kit/data-grid-core'
+import { useEffect } from 'react'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
@@ -20,6 +21,9 @@ import type { InputProps } from '../types'
 import type { FieldState } from '@ez-kit/data-grid-core'
 import type { ColumnMeta } from '@tanstack/table-core'
 import type { ChangeEvent, ComponentType, ReactNode } from 'react'
+
+/** Marks the draft row, so a keydown anywhere inside it can be told from one outside. */
+const CREATING_ROW_ATTR = 'data-creating-row'
 
 /**
  * Inline creating row rendered inside <tbody>.
@@ -44,10 +48,34 @@ export function CreatingRow() {
 	const creatingConfig = table.options.creating
 	const isPinRow = creatingConfig?.mode === 'pin-row'
 
+	// Enter commits the draft, Escape abandons it — the same pair a cell edit answers to
+	// (`cell.tsx`), and the only way to finish the row when its save / cancel buttons live in the
+	// toolbar rather than in an actions cell. A pinned draft row is never cancelled: it has no
+	// closed state to return to.
+	useEffect(() => {
+		const onKeyDown = (event: globalThis.KeyboardEvent): void => {
+			// Already handled by something nearer the user — a select popover closing on Escape.
+			if (event.defaultPrevented) return
+			if (!(event.target instanceof Element) || event.target.closest(`[${CREATING_ROW_ATTR}]`) === null) return
+			if (event.key === 'Enter') {
+				event.preventDefault()
+				void table.creating.commit()
+			} else if (event.key === 'Escape' && !isPinRow) {
+				event.preventDefault()
+				table.creating.cancel()
+			}
+		}
+
+		document.addEventListener('keydown', onKeyDown)
+		return () => {
+			document.removeEventListener('keydown', onKeyDown)
+		}
+	}, [table, isPinRow])
+
 	return (
 		<Tr
 			data-slot='tr'
-			data-creating-row
+			{...{ [CREATING_ROW_ATTR]: '' }}
 		>
 			{getVisualLeafColumns(table).map((col) => {
 				const meta = col.columnDef.meta

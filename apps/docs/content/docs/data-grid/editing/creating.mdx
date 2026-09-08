@@ -11,7 +11,11 @@ the input its column's `cell.type` implies.
 
 ## Usage
 
-The creating flow supports three modes. The default `mode: 'row'` appends an inline draft row at the bottom of the table.
+The creating flow supports three modes. The default `mode: 'row'` opens an inline draft row at the
+top of the body. Its save and cancel controls share the row-actions column when the grid has one —
+`editing`, `deleting`, row `pinning` or `rowActions.actions` — and otherwise take the place of the
+create trigger in the toolbar, so no column is mounted for a draft that is closed most of the time.
+**Enter** commits the draft and **Escape** abandons it either way.
 
 <DataGridDocsExample exampleId='creating-row' />
 
@@ -19,13 +23,11 @@ The creating flow supports three modes. The default `mode: 'row'` appends an inl
 
 <DataGridDocsExample exampleId='creating-modal' />
 
-Or pin the draft as a blank row at the top of the table so it stays visible while scrolling.
+`mode: 'pin-row'` keeps that draft row permanently open — there is no create trigger and nothing to
+cancel; saving simply clears the row for the next entry. Its save button always has a row-actions
+column to sit in, since the row is always there.
 
 <DataGridDocsExample exampleId='creating-pin-row' />
-
-With per-field validation:
-
-<DataGridDocsExample exampleId='creating-validation' />
 
 ```tsx
 <DataGrid
