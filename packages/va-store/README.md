@@ -12,11 +12,11 @@ pnpm add @ez-kit/va-store valtio
 
 ### `createContextStore(factory)`
 
-Wraps a Valtio proxy in React context. Returns `Provider`, `useSnapshot`, `useStore`, `Item`, and `StoreItem`. Multiple `Provider` instances are fully independent.
+Wraps a Valtio proxy in React context. Returns `Provider`, `useSnapshot`, `useStore`, `Subscribe`, and `Store`. Multiple `Provider` instances are fully independent.
 
 Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the raw proxy from `useStore()`. (`useContextStore()` was renamed to `useStore()`: across `@ez-kit`, `useStore()` is the raw handle and only the read hook is manager-specific.)
 
-`Item` is the render-prop read (`{ snap, store }`); `StoreItem` is its write-only counterpart — it hands over the raw proxy without subscribing, so store mutations never re-render it.
+The two components mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()` (`{ snap, store }`), `Store` the render-prop form of `useStore()` — it hands over the raw proxy without subscribing, so store mutations never re-render it.
 
 ```tsx
 import { type ContextStoreInit, createContextStore } from '@ez-kit/va-store'
@@ -37,6 +37,45 @@ const state = counter.useStore() // write → state.count += 1
 
 → [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/create-context-store)
 
+### History
+
+`pipe(proxy(...), withHistory(options?))` adds an undo/redo stack, backed by the same
+`@ez-kit/store-core/history` engine every `@ez-kit/*` store uses:
+
+```tsx
+import { pipe, useHistory, withHistory } from '@ez-kit/va-store'
+import { proxy } from 'valtio'
+
+const state = pipe(proxy({ count: 0 }), withHistory())
+
+function Toolbar() {
+	const { undo, redo, canUndo, canRedo } = useHistory(state)
+	return (
+		<>
+			<button
+				disabled={!canUndo}
+				onClick={undo}
+			>
+				Undo
+			</button>
+			<button
+				disabled={!canRedo}
+				onClick={redo}
+			>
+				Redo
+			</button>
+		</>
+	)
+}
+```
+
+Applying `withHistory`'s enhancer flips on Valtio's `unstable_enableOp` globally for the process — it's how
+`subscribe` gets real operation payloads instead of always-empty ones, and it's what lets
+`shouldRecord` inspect which paths changed. This is harmless (every other `subscribe()` call in
+this codebase ignores its op argument) but it is process-wide: once any store in your app calls
+`withHistory`, every Valtio proxy's `subscribe` callbacks start receiving populated `ops` instead
+of `[]`.
+
 ### Persist
 
 Mirror a Valtio store into an external substrate — the URL, `localStorage`/`sessionStorage`, IndexedDB, or your own — and back, in both directions. The proxy stays the **synchronous** source of truth; the substrate is a throttled, rehydratable projection of it.
@@ -44,8 +83,8 @@ Mirror a Valtio store into an external substrate — the URL, `localStorage`/`se
 One source-agnostic engine drives every substrate. Its only interchange language is `Keyed = Map<string, string>`; a **source adapter** teaches the engine how to read and write one substrate through a tiny port (`get` / `set` / optional `subscribe`). Codecs, key naming, throttling, loop-breaking, and hydration are shared, so a single field can sync to two substrates at once and async sources (IndexedDB) never stall the synchronous URL.
 
 ```tsx
-import { createStore } from '@ez-kit/va-store'
-import { persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { createContextStore } from '@ez-kit/va-store'
+import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { persistUrl } from '@ez-kit/va-store/persist/url'
 import { reactRouterAdapter } from '@ez-kit/va-store/persist/url/react-router'
 import { persistLocalStorage, localStorageAdapter } from '@ez-kit/va-store/persist/storage'
@@ -57,9 +96,9 @@ class Filters {
 	@persistLocalStorage() density = 'comfortable' // → localStorage
 }
 
-// Persistence is a plugin on the base store. Request-scoped, SSR-correct.
-// `persist()` with no fields discovers the decorators.
-const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
+// Persistence is a capability attached to the proxy in the factory. Request-scoped, SSR-correct.
+// `withPersist` with no `fields` discovers the decorators.
+const filtersStore = createContextStore(() => pipe(proxy(new Filters()), withPersist()))
 
 function Page() {
 	return (
@@ -72,7 +111,9 @@ function Page() {
 }
 ```
 
-Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `persist({ fields: (field) => [field((s) => s.q, urlField())] })` — and `persist` infers the state type from `createStore<T>`.
+Read with `useSnapshot()`, write through the raw proxy from `useStore()`. Storage adapters are inert on the server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. Can't use build-time decorators? Pass the accessor builder instead — `pipe(proxy({ q: '' }), withPersist({ fields: (field) => [field((s) => s.q, urlField())] }))` — and the builder's selectors are typed against the proxy `pipe` feeds the enhancer.
+
+`withPersist` composes with [`withHistory`](#history) — `pipe(proxy({ … }), withHistory(), withPersist())`, in attachment order — as they're both [capabilities](https://ez-kit-docs.vercel.app/docs/va-store/capabilities) attached to the same proxy.
 
 Subpaths (optional peers, install only what you use):
 

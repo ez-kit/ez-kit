@@ -86,7 +86,7 @@ export type CachedStoreFactory<TInstance extends object, TDefaultValue extends o
 	init: CachedStoreFactoryInit<TDefaultValue>,
 ) => TInstance
 
-export type CachedItemProps<TSelected> = {
+export type CachedSubscribeProps<TSelected> = {
 	selector: (snap: unknown) => TSelected
 	children: (state: TSelected) => ReactElement
 }
@@ -102,9 +102,9 @@ export type CachedStoreGroup<TInstance extends object, TDefaultValue extends obj
 	 * can never re-render the caller.
 	 */
 	useInstance: () => TInstance
-	Item: <TSelected>(props: CachedItemProps<TSelected>) => ReactElement
+	Subscribe: <TSelected>(props: CachedSubscribeProps<TSelected>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live instance or `undefined`. Never creates. */
-	fromCache: (target: CacheAddress) => TInstance | undefined
+	getFromCache: (target: CacheAddress) => TInstance | undefined
 	/** Reactive, passive cross-tree read at `(path, id)`. Snapshot is `undefined` when no live entry. */
 	useFromCache: <TSelected>(target: CacheAddress, selector: (snap: unknown) => TSelected) => TSelected
 	/** Remove this group's entry at `(path, id)` immediately. */
@@ -118,7 +118,7 @@ export type CacheReact<TInstance extends object> = {
 	useCacheKeys: (prefix?: readonly string[]) => CacheRecord[]
 	createCachedStore: <TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TInstance, TDefaultValue>,
-		options: CachedStoreOptions<TInstance>,
+		options: CachedStoreOptions,
 	) => CachedStoreGroup<TInstance, TDefaultValue>
 }
 
@@ -173,7 +173,7 @@ export function createCacheReact<TInstance extends object>(
 		const cache = cacheRef.current
 
 		useEffect(() => {
-			// Imperative access (fromCache/remove) is client-only; the cache never becomes "active" on the server.
+			// Imperative access (getFromCache/remove) is client-only; the cache never becomes "active" on the server.
 			if (typeof window === 'undefined') return
 			if (IS_DEV && multipleProvidersMessage && activeCache.current !== null && activeCache.current !== cache) {
 				console.warn(multipleProvidersMessage)
@@ -226,12 +226,11 @@ export function createCacheReact<TInstance extends object>(
 
 	function createCachedStore<TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TInstance, TDefaultValue>,
-		options: CachedStoreOptions<TInstance>,
+		options: CachedStoreOptions,
 	): CachedStoreGroup<TInstance, TDefaultValue> {
 		const { name } = options
 		registerGroupName(name)
 		const groupGcTime = options.gcTime
-		const plugins = options.plugins ?? []
 
 		const StoreContext = createContext<TInstance | null>(null)
 		const MISSING_GROUP_PROVIDER = `Missing <${name}.Provider>`
@@ -246,7 +245,7 @@ export function createCacheReact<TInstance extends object>(
 			return useRead(useGroupInstance(), selector)
 		}
 
-		function Item<TSelected>({ selector, children }: CachedItemProps<TSelected>): ReactElement {
+		function Subscribe<TSelected>({ selector, children }: CachedSubscribeProps<TSelected>): ReactElement {
 			return children(useSelector(selector))
 		}
 
@@ -267,7 +266,7 @@ export function createCacheReact<TInstance extends object>(
 			const [instance] = useState<TInstance>(() => {
 				if (typeof window === 'undefined') return factory({ defaultValue })
 				const context: PluginContext = { services, id: storeId, isServer: false }
-				return cache.getOrCreate(storeId, () => factory({ defaultValue }), { gcTime, plugins, context })
+				return cache.getOrCreate(storeId, () => factory({ defaultValue }), { gcTime, context })
 			})
 
 			useEffect(() => {
@@ -304,7 +303,7 @@ export function createCacheReact<TInstance extends object>(
 			)
 		}
 
-		function fromCache(target: CacheAddress): TInstance | undefined {
+		function getFromCache(target: CacheAddress): TInstance | undefined {
 			return activeCache.current?.getInstance(toStoreId(target, name)) as TInstance | undefined
 		}
 
@@ -328,7 +327,7 @@ export function createCacheReact<TInstance extends object>(
 			activeCache.current?.remove(toStoreId(target, name))
 		}
 
-		return { Provider, useSelector, useInstance: useGroupInstance, Item, fromCache, useFromCache, remove }
+		return { Provider, useSelector, useInstance: useGroupInstance, Subscribe, getFromCache, useFromCache, remove }
 	}
 
 	return { Provider, Scope, useCache, useCacheKeys, createCachedStore }

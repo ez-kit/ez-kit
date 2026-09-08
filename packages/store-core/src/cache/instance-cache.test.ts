@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { attachCapability } from '../capability'
 import { createServiceRegistry } from '../service'
 
 import { createInstanceCache } from './instance-cache'
 
-import type { PluginContext, StorePlugin } from '../plugin'
+import type { PluginContext } from '../plugin'
 import type { StoreId } from '../store-id'
 import type { MockInstance } from 'vitest'
 
@@ -30,14 +31,15 @@ describe('createInstanceCache', () => {
 		const cache = createInstanceCache()
 		const setupA = vi.fn(() => undefined)
 		const setupB = vi.fn(() => undefined)
-		const create = vi.fn(() => ({ value: 1 }))
 		const id = idOf([], 'a')
-		const plugins: StorePlugin<{ value: number }>[] = [
-			{ name: 'a', setup: setupA },
-			{ name: 'b', setup: setupB },
-		]
+		const create = vi.fn(() => {
+			const instance = { value: 1 }
+			attachCapability(instance, { name: 'a', setup: setupA })
+			attachCapability(instance, { name: 'b', setup: setupB })
+			return instance
+		})
 
-		const instance = cache.getOrCreate(id, create, { gcTime: GC_TIME, plugins, context: ctxFor(id) })
+		const instance = cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 
 		expect(instance).toEqual({ value: 1 })
 		expect(create).toHaveBeenCalledTimes(1)
@@ -49,15 +51,36 @@ describe('createInstanceCache', () => {
 	it('returns the same instance on hit without re-running create or setup', () => {
 		const cache = createInstanceCache()
 		const setup = vi.fn(() => undefined)
-		const create = vi.fn(() => ({ value: 1 }))
 		const id = idOf([], 'a')
-		const plugins: StorePlugin<{ value: number }>[] = [{ name: 'a', setup }]
+		const create = vi.fn(() => {
+			const instance = { value: 1 }
+			attachCapability(instance, { name: 'a', setup })
+			return instance
+		})
 
-		const first = cache.getOrCreate(id, create, { gcTime: GC_TIME, plugins, context: ctxFor(id) })
-		const second = cache.getOrCreate(id, create, { gcTime: GC_TIME, plugins, context: ctxFor(id) })
+		const first = cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
+		const second = cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 
 		expect(second).toBe(first)
 		expect(create).toHaveBeenCalledTimes(1)
+		expect(setup).toHaveBeenCalledTimes(1)
+	})
+
+	it('runs capability setup on miss only, never on a hit', () => {
+		const setup = vi.fn(() => undefined)
+		const create = (): { count: number } => {
+			const instance = { count: 0 }
+			attachCapability(instance, { name: 'probe', setup })
+			return instance
+		}
+		const id = idOf([], 'a')
+		const context = ctxFor(id)
+
+		const cache = createInstanceCache()
+		const first = cache.getOrCreate(id, create, { gcTime: 0, context })
+		const second = cache.getOrCreate(id, create, { gcTime: 0, context })
+
+		expect(second).toBe(first)
 		expect(setup).toHaveBeenCalledTimes(1)
 	})
 
@@ -65,9 +88,13 @@ describe('createInstanceCache', () => {
 		const cache = createInstanceCache()
 		const cleanup = vi.fn()
 		const id = idOf([], 'a')
-		const plugins: StorePlugin<object>[] = [{ name: 'a', setup: () => cleanup }]
+		const create = (): object => {
+			const instance = {}
+			attachCapability(instance, { name: 'a', setup: () => cleanup })
+			return instance
+		}
 
-		cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, plugins, context: ctxFor(id) })
+		cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
 		cache.clear()
 
@@ -79,9 +106,13 @@ describe('createInstanceCache', () => {
 		const cache = createInstanceCache()
 		const cleanup = vi.fn()
 		const id = idOf([], 'a')
-		const plugins: StorePlugin<object>[] = [{ name: 'a', setup: () => cleanup }]
+		const create = (): object => {
+			const instance = {}
+			attachCapability(instance, { name: 'a', setup: () => cleanup })
+			return instance
+		}
 
-		cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, plugins, context: ctxFor(id) })
+		cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
 		cache.removeObserver(id)
 
@@ -95,9 +126,13 @@ describe('createInstanceCache', () => {
 		const cache = createInstanceCache()
 		const cleanup = vi.fn()
 		const id = idOf([], 'a')
-		const plugins: StorePlugin<object>[] = [{ name: 'a', setup: () => cleanup }]
+		const create = (): object => {
+			const instance = {}
+			attachCapability(instance, { name: 'a', setup: () => cleanup })
+			return instance
+		}
 
-		const first = cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, plugins, context: ctxFor(id) })
+		const first = cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
 		cache.removeObserver(id)
 		vi.advanceTimersByTime(GC_TIME / 2)
@@ -112,9 +147,13 @@ describe('createInstanceCache', () => {
 		const cache = createInstanceCache()
 		const cleanup = vi.fn()
 		const id = idOf([], 'a')
-		const plugins: StorePlugin<object>[] = [{ name: 'a', setup: () => cleanup }]
+		const create = (): object => {
+			const instance = {}
+			attachCapability(instance, { name: 'a', setup: () => cleanup })
+			return instance
+		}
 
-		cache.getOrCreate(id, () => ({}), { gcTime: Infinity, plugins, context: ctxFor(id) })
+		cache.getOrCreate(id, create, { gcTime: Infinity, context: ctxFor(id) })
 		cache.addObserver(id)
 		cache.removeObserver(id)
 		vi.advanceTimersByTime(60 * 60 * 1000)
@@ -130,17 +169,25 @@ describe('createInstanceCache', () => {
 		const usersId = idOf(['users'], 'u1')
 		const orgId = idOf(['org'], 'o1')
 
-		cache.getOrCreate(usersId, () => ({}), {
-			gcTime: Infinity,
-			plugins: [{ name: 'u', setup: () => cleanupUsers }],
-			context: ctxFor(usersId),
-		})
+		cache.getOrCreate(
+			usersId,
+			() => {
+				const instance = {}
+				attachCapability(instance, { name: 'u', setup: () => cleanupUsers })
+				return instance
+			},
+			{ gcTime: Infinity, context: ctxFor(usersId) },
+		)
 		cache.addObserver(usersId)
-		cache.getOrCreate(orgId, () => ({}), {
-			gcTime: Infinity,
-			plugins: [{ name: 'o', setup: () => cleanupOrg }],
-			context: ctxFor(orgId),
-		})
+		cache.getOrCreate(
+			orgId,
+			() => {
+				const instance = {}
+				attachCapability(instance, { name: 'o', setup: () => cleanupOrg })
+				return instance
+			},
+			{ gcTime: Infinity, context: ctxFor(orgId) },
+		)
 		cache.addObserver(orgId)
 
 		cache.clear(['users'])
@@ -154,7 +201,7 @@ describe('createInstanceCache', () => {
 	it('reflects live entries in keys and the membership snapshot', () => {
 		const cache = createInstanceCache()
 		const id = idOf(['users'], 'u1')
-		cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, plugins: [], context: ctxFor(id) })
+		cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
 
 		expect(cache.keys()).toEqual([{ path: ['users'], name: 'group', id: 'u1' }])
@@ -165,12 +212,13 @@ describe('createInstanceCache', () => {
 		const cache = createInstanceCache()
 		const cleanup = vi.fn()
 		const id = idOf([], 'a')
+		const create = (): object => {
+			const instance = {}
+			attachCapability(instance, { name: 'a', setup: () => cleanup })
+			return instance
+		}
 
-		cache.getOrCreate(id, () => ({}), {
-			gcTime: GC_TIME,
-			plugins: [{ name: 'a', setup: () => cleanup }],
-			context: ctxFor(id),
-		})
+		cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
 		cache.removeObserver(id)
 		vi.advanceTimersByTime(GC_TIME)
@@ -209,12 +257,13 @@ describe('createInstanceCache — eviction deadline under clock drift', () => {
 		const cache = createInstanceCache()
 		const cleanup = vi.fn()
 		const id = idOf([], 'a')
+		const create = (): object => {
+			const instance = {}
+			attachCapability(instance, { name: 'a', setup: () => cleanup })
+			return instance
+		}
 
-		cache.getOrCreate(id, () => ({}), {
-			gcTime: GC_TIME,
-			plugins: [{ name: 'a', setup: () => cleanup }],
-			context: ctxFor(id),
-		})
+		cache.getOrCreate(id, create, { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
 		cache.removeObserver(id)
 
@@ -230,7 +279,7 @@ describe('createInstanceCache — eviction deadline under clock drift', () => {
 		const cache = createInstanceCache()
 		const id = idOf([], 'a')
 
-		cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, plugins: [], context: ctxFor(id) })
+		cache.getOrCreate(id, () => ({}), { gcTime: GC_TIME, context: ctxFor(id) })
 		cache.addObserver(id)
 		cache.removeObserver(id)
 

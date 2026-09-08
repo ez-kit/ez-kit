@@ -1,4 +1,4 @@
-import type { PluginContext, StorePlugin } from '../plugin'
+import type { PluginContext } from '../plugin'
 
 /** Structural coordinate of one live entry, as surfaced by `keys()` / `useCacheKeys()`. */
 export type CacheRecord = {
@@ -25,18 +25,15 @@ export type StoreCacheOptions = {
 	gcTime?: number
 }
 
-/** Options passed to `getOrCreate` controlling lifetime and the plugins bound to the new instance. */
-export type CreateOptions<T> = {
+/** Options passed to `getOrCreate` controlling lifetime and the plugin context for the new instance. */
+export type CreateOptions = {
 	gcTime: number
-	plugins: readonly StorePlugin<T>[]
 	context: PluginContext
 }
 
-export type CachedStoreOptions<T> = {
+export type CachedStoreOptions = {
 	/** Group namespace; must be unique within a cache. Visible in `keys()` / `useCacheKeys()`. */
 	name: string
 	/** Store-group default `gcTime`, overriding the cache default. */
 	gcTime?: number
-	/** Plugins bound to each entry's instance lifetime (run on create, cleaned up on clear). */
-	plugins?: readonly StorePlugin<T>[]
 }

@@ -27,7 +27,7 @@ export function PlaceholderIcon({ children }: { children: ReactNode }) {
 /**
  * Centred icon + title + hint used by every full-height fallback state.
  * `EmptyState` and `NoResultsState` differ only in those three values plus
- * `hookClass` — the `dg-*` class `global.css` colours them through.
+ * `hookClass` — the `dg-*` class `styles.css` colours them through.
  */
 export function StatePlaceholder({
 	hookClass,

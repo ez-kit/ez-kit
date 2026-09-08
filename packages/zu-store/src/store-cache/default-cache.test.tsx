@@ -7,7 +7,6 @@ import { CacheProvider, createCachedStore } from './default-cache'
 
 import type { ContextStoreInit } from '../create-context-store'
 import type { CachedStoreOptions } from '@ez-kit/store-core/cache'
-import type { StoreApi } from 'zustand/vanilla'
 
 type TableState = {
 	filter: string
@@ -97,7 +96,7 @@ describe('default cache — top-level exports', () => {
 // Type-level checks (not executed) — `name` is required in CachedStoreOptions.
 function _typeChecks(): void {
 	// @ts-expect-error name is required
-	const _missingName: CachedStoreOptions<StoreApi<TableState>> = { gcTime: 1000 }
+	const _missingName: CachedStoreOptions = { gcTime: 1000 }
 	// @ts-expect-error options is required (no bare factory call)
 	createCachedStore(tableFactory)
 	void _missingName

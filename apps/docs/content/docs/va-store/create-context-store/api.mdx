@@ -1,0 +1,251 @@
+---
+title: API
+description: Every signature, prop and option of createContextStore in one place.
+---
+
+# `createContextStore` — API
+
+The reference. For what these are _for_ and how they behave in practice, read the [guide](../create-context-store).
+
+## Signature
+
+```ts
+type ContextStoreInit<TDefaultValue> = { defaultValue: TDefaultValue }
+
+type CreateContextStoreOptions<TState extends object> = {
+	name?: string
+	controlled?: ControlledConfig<TState>
+}
+
+function createContextStore<TState extends object, TDefaultValue = undefined>(
+	factory: (init: ContextStoreInit<TDefaultValue>) => TState,
+	options?: CreateContextStoreOptions<TState>,
+): {
+	Provider: (
+		props: PropsWithChildren<{
+			defaultValue: TDefaultValue
+			value?: Partial<TState>
+			onValueChange?: (value: Partial<TState>) => void
+		}>,
+	) => ReactElement
+	useSnapshot: (options?: { sync?: boolean }) => Snapshot<TState>
+	useStore: () => TState
+	Subscribe: (props: { children: (arg: { snap: Snapshot<TState>; store: TState }) => ReactElement }) => ReactElement
+	Store: (props: { children: (store: TState) => ReactElement }) => ReactElement
+}
+```
+
+`TState` is your proxy's own type throughout this page.
+
+| Parameter | Type                                                | Description                                                                                     |
+| --------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `factory` | `(init: ContextStoreInit<TDefaultValue>) => TState` | Creates the Valtio proxy. Runs once per `Provider` mount. Receives the `defaultValue` envelope. |
+| `options` | `CreateContextStoreOptions<TState>`                 | Optional. Carries [`controlled`](#the-controlled-option) and [`name`](#the-name-option).        |
+
+> **Rule of thumb:** read from snapshots (`useSnapshot`), mutate the source proxy (`useStore`).
+
+## `Provider`
+
+Creates and provides the proxy. The factory runs **once per mount** (held in a `useRef`), so changing `defaultValue` after the first render won't recreate it.
+
+```tsx
+<counterStore.Provider defaultValue={{ initialCount: 10 }}>
+	<App />
+</counterStore.Provider>
+```
+
+| Prop            | Type                               | Required                          | Description                                                                         |
+| --------------- | ---------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------- |
+| `defaultValue`  | `TDefaultValue`                    | when the seed has required fields | Seed handed to the factory. Applied **once**, at proxy creation.                    |
+| `value`         | `Partial<TState>`                  | no                                | The fields the parent controls. Applied on mount and on every real change.          |
+| `onValueChange` | `(value: Partial<TState>) => void` | no                                | Fired when the store itself changes a controlled field. Receives only what changed. |
+| `children`      | `ReactNode`                        | no                                | The subtree the proxy is provided to.                                               |
+
+`onValueChange` receives only the controlled keys that actually changed, built by **key presence** — see [choosing between the modes](../create-context-store#choosing-between-them). Object-typed fields are emitted from the **snapshot**, never the live proxy.
+
+## `useSnapshot(options?)`
+
+Returns Valtio's readonly snapshot. The component re-renders only when the properties it actually reads change — no selector required.
+
+```tsx
+const snap = counterStore.useSnapshot()
+return <span>{snap.count}</span>
+```
+
+| Option | Type      | Required | Description                                                                                  |
+| ------ | --------- | -------- | -------------------------------------------------------------------------------------------- |
+| `sync` | `boolean` | no       | Valtio's synchronous re-render mode. Use for inputs that must stay in lockstep with the DOM. |
+
+The options object passes straight through to Valtio's `useSnapshot`. Returns `Snapshot<TState>`. Throws `Missing Provider for createContextStore` outside a `Provider`.
+
+<Callout type='warn'>
+	The snapshot is **readonly**, and deeply so at the type level. Writes go through the proxy from `useStore()`; a
+	snapshot is never the write path.
+</Callout>
+
+## `useStore()`
+
+Returns the raw, **mutable** proxy — the write path. It does **not** subscribe the calling component, so pair it with `useSnapshot()` when the same component also renders that state.
+
+```tsx
+const state = counterStore.useStore()
+
+const onClick = () => {
+	state.count += 1
+}
+```
+
+Returns `TState`. It is the same object the factory produced, so Valtio's vanilla utilities take it directly:
+
+```tsx
+import { subscribe } from 'valtio'
+
+const state = counterStore.useStore()
+
+useEffect(() => subscribe(state, () => console.log('changed')), [state])
+```
+
+<Callout type='warn'>
+	`useStore()` is the **raw handle**, not a read. Reading state is `useSnapshot()` — the same split as
+	[`@ez-kit/zu-store`](../../zu-store/create-context-store), where the raw handle is also `useStore()` and reads go
+	through `useSelector()`.
+</Callout>
+
+<Callout type='warn'>
+	The React Compiler ESLint ruleset (`react-hooks/immutability`) flags mutating any value returned from a hook, so it
+	warns on `state.count += 1`. Either keep actions on the proxy or disable the rule at the mutation site with `//
+	eslint-disable-next-line react-hooks/immutability`.
+</Callout>
+
+## `Subscribe`
+
+Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Subscribe` can both render and mutate without a separate `useStore()` consumer.
+
+```tsx
+<counterStore.Subscribe>
+	{({ snap, store }) => (
+		<button
+			onClick={() => {
+				store.count += 1
+			}}
+		>
+			{snap.count}
+		</button>
+	)}
+</counterStore.Subscribe>
+```
+
+| Prop       | Type                                                               | Required | Description                                          |
+| ---------- | ------------------------------------------------------------------ | -------- | ---------------------------------------------------- |
+| `children` | `(arg: { snap: Snapshot<TState>; store: TState }) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
+
+The render argument's type is exported as `SubscribeRenderArg<TState>`. There is no `selector` and no `shallow` prop — Valtio tracks the properties the render prop actually reads, so the [zu-store selector rules](../../zu-store/create-context-store#selecting-more-than-one-value) have no counterpart here.
+
+## `Store`
+
+The render-prop form of `useStore()`, and the write-only counterpart to `Subscribe`. Its child receives just the raw proxy, and — because nothing subscribes to a snapshot — store mutations never re-render it.
+
+```tsx
+<counterStore.Store>
+	{(store) => (
+		<button
+			onClick={() => {
+				store.count += 1
+			}}
+		>
+			increment
+		</button>
+	)}
+</counterStore.Store>
+```
+
+| Prop       | Type                              | Required | Description                             |
+| ---------- | --------------------------------- | -------- | --------------------------------------- |
+| `children` | `(store: TState) => ReactElement` | yes      | Render prop, called with the raw proxy. |
+
+`Subscribe` subscribes, `Store` does not — that is the whole difference. `Store` is not memoised: it still renders whenever its parent renders; what it guarantees is that a store mutation on its own is never the cause.
+
+## The `controlled` option
+
+Declared once, where you define the store — not at the call site. Every key is optional, and a key you never mention is still controllable; it just uses the defaults.
+
+```ts
+type ControlledConfig<TState> = {
+	[K in keyof TState]?: ControlledFieldConfig<TState, K>
+}
+
+type ControlledFieldConfig<TState, K extends keyof TState> = {
+	equals?: (previous: TState[K], next: TState[K]) => boolean
+	set?: (store: TState, value: TState[K]) => void
+}
+```
+
+| Handle   | Answers              | Default                                             |
+| -------- | -------------------- | --------------------------------------------------- |
+| `equals` | "did this change?"   | `Object.is`                                         |
+| `set`    | "how do I write it?" | direct assignment, batched into one `Object.assign` |
+
+`set` receives the raw **proxy**, so it is the hook for stores whose writes must go through a method:
+
+```ts
+const store = createContextStore(createMyStore, {
+	controlled: {
+		users: {
+			set: (store, users) => {
+				store.replaceUsers(users)
+			},
+		},
+	},
+})
+```
+
+Because the default write is `Object.assign` on the proxy, a `set` **accessor** on a class-based store is invoked automatically — `controlled.set` is only for the method-based shape. See [class-based stores](../create-context-store#class-based-stores).
+
+`equals` is a plain `(a, b) => boolean`, so any comparator of your own works. See [deriving `value` on the fly](../create-context-store#deriving-value-on-the-fly) for when you need one.
+
+## Capabilities
+
+`createContextStore` takes no `plugins` option. A capability — [`withPersist`](../persist), [`withHistory`](../history) — is attached to the proxy itself, inside the factory: `createContextStore(() => pipe(proxy({ … }), withPersist()))`. `createContextStore` discovers whatever capabilities the factory attached and runs their `setup` when the proxy is created, in attachment order, with the returned cleanup run in reverse on unmount.
+
+A capability that reaches app-level services (as `withPersist` does) needs a [`StoreProvider`](../persist) above it. The same factory-position wrapping is how [`createCachedStore`](../cache) attaches a capability too — there the lifetime is the cache entry's rather than the Provider's. See [Capabilities](../../capabilities) for the full shape of `StorePlugin`, attachment order, and writing your own.
+
+## The `name` option
+
+A label for the store, defaulting to `'store'`. It reaches two places: the `StoreId` handed to plugins as `ctx.id` (`{ path: [], name, id: 'singleton' }`), and the missing-Provider message — `Missing Provider for filters` instead of `Missing Provider for store`.
+
+```ts
+const filtersStore = createContextStore(createFilters, { name: 'filters' })
+```
+
+| Option | Type     | Required | Description                                                                           |
+| ------ | -------- | -------- | ------------------------------------------------------------------------------------- |
+| `name` | `string` | no       | Names the store in `ctx.id` and in the missing-Provider error. Defaults to `'store'`. |
+
+`name` is a label, not a behaviour switch. In particular it does **not** affect persisted keys: those come from each field's path plus an explicit `prefix`, and `withPersist` reads only `ctx.services` and `ctx.isServer`, never `ctx.id`. Set it when a named store reads better in a throw, or when a capability of your own keys off `ctx.id`.
+
+On [`createCachedStore`](../cache) the same option carries real weight — there `name` is the group namespace and part of every entry's identity.
+
+## Exports
+
+| Export                                             | Kind  | Purpose                                                        |
+| -------------------------------------------------- | ----- | -------------------------------------------------------------- |
+| `createContextStore`                               | value | The factory itself.                                            |
+| `shallowEqual`                                     | value | Shallow comparator for `controlled.<key>.equals`.              |
+| `ContextStoreInit<TDefaultValue>`                  | type  | The envelope your factory's parameter should be typed with.    |
+| `CreateContextStoreOptions<TState>`                | type  | The second argument's type.                                    |
+| `CreateContextStoreFactory<TState, TDefaultValue>` | type  | The factory argument's type.                                   |
+| `CreateContextStoreResult<TState, TDefaultValue>`  | type  | The returned bundle — `Provider`, hooks, `Subscribe`, `Store`. |
+| `SubscribeRenderArg<TState>`                       | type  | `Subscribe`'s render argument — `{ snap, store }`.             |
+| `UseSnapshotOptions`                               | type  | `useSnapshot`'s options — `{ sync? }`.                         |
+| `ControlledConfig<TState>`                         | type  | The `controlled` option's type.                                |
+| `ControlledFieldConfig<TState, K>`                 | type  | One field's entry in `controlled`.                             |
+
+These are re-exported from `@ez-kit/va-store`, so you can name the `controlled` option's type without reaching for `@ez-kit/store-core` directly.
+
+## Errors
+
+| Message                                   | Cause                                                                         |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| `Missing Provider for createContextStore` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside a `Provider`. |
+
+There is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. A store given a [`name`](#the-name-option) reports it instead — `Missing Provider for filters`.

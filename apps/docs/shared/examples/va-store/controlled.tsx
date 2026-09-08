@@ -1,8 +1,15 @@
 'use client'
 
 import { type ContextStoreInit, createContextStore } from '@ez-kit/va-store'
-import { useCallback, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 import { proxy } from 'valtio'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 type Theme = 'light' | 'dark'
 
@@ -38,47 +45,51 @@ const panelStore = createContextStore(({ defaultValue }: ContextStoreInit<PanelD
 })
 
 function Panel() {
+	const noteId = useId()
 	const snap = panelStore.useSnapshot()
 
 	return (
-		<div
-			className={`flex flex-col gap-3 rounded-md border p-3 ${
-				snap.theme === 'dark'
-					? 'border-fd-foreground bg-fd-foreground text-fd-background'
-					: 'border-fd-border bg-fd-card'
-			}`}
+		<Card
+			size='sm'
+			className='gap-3 px-4'
 		>
-			<p className='text-xs uppercase tracking-wider opacity-70'>inside the store</p>
+			<Badge variant='outline'>inside the store</Badge>
 
-			<div className='flex items-center gap-2 text-sm'>
-				<span className='opacity-70'>theme (mirror):</span>
-				<code className='font-mono'>{snap.theme}</code>
+			<div className='flex items-center gap-2'>
+				<Label className='text-muted-foreground'>theme (mirror)</Label>
+				<Badge variant='secondary'>{snap.theme}</Badge>
 			</div>
 
 			<div className='flex items-center gap-3'>
-				<span className='text-sm opacity-70'>count (controlled):</span>
+				<Label className='text-muted-foreground'>count (controlled)</Label>
 				<output className='min-w-[3ch] text-center font-mono text-lg tabular-nums'>{snap.count}</output>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={snap.increment}
-					className='rounded-md border border-current px-3 py-1 text-sm font-medium opacity-80 hover:opacity-100'
 				>
 					+1
-				</button>
+				</Button>
 			</div>
 
-			<label className='flex items-center gap-2 text-sm'>
-				<span className='opacity-70'>note (uncontrolled):</span>
-				<input
+			<div className='flex items-center gap-2'>
+				<Label
+					htmlFor={noteId}
+					className='text-muted-foreground'
+				>
+					note (uncontrolled)
+				</Label>
+				<Input
+					id={noteId}
+					className='w-48'
 					value={snap.note}
+					placeholder='type here…'
 					onChange={(event) => {
 						snap.setNote(event.target.value)
 					}}
-					className='rounded-md border border-current bg-transparent px-2 py-1 text-sm'
-					placeholder='type here…'
 				/>
-			</label>
-		</div>
+			</div>
+		</Card>
 	)
 }
 
@@ -95,43 +106,42 @@ export default function ControlledExample() {
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<div className='flex flex-col gap-3 rounded-md border border-fd-border bg-fd-muted/40 p-3'>
-				<p className='text-xs uppercase tracking-wider text-fd-muted-foreground'>owned by the parent</p>
+			<Card
+				size='sm'
+				className='gap-3 px-4'
+			>
+				<Badge variant='outline'>owned by the parent</Badge>
 
-				<div className='flex flex-wrap items-center gap-2'>
-					<span className='text-sm text-fd-muted-foreground'>theme:</span>
-					{(['light', 'dark'] as const).map((option) => (
-						<button
-							key={option}
-							type='button'
-							onClick={() => {
-								setTheme(option)
-							}}
-							className={`rounded-md border px-3 py-1 text-sm font-medium ${
-								theme === option
-									? 'border-fd-primary bg-fd-primary text-fd-primary-foreground'
-									: 'border-fd-border bg-fd-card hover:bg-fd-muted'
-							}`}
-						>
-							{option}
-						</button>
-					))}
+				<div className='flex flex-wrap items-center gap-3'>
+					<Label className='text-muted-foreground'>theme</Label>
+					<ToggleGroup
+						type='single'
+						variant='outline'
+						size='sm'
+						value={theme}
+						onValueChange={(next) => {
+							if (next) setTheme(next as Theme)
+						}}
+					>
+						<ToggleGroupItem value='light'>light</ToggleGroupItem>
+						<ToggleGroupItem value='dark'>dark</ToggleGroupItem>
+					</ToggleGroup>
 				</div>
 
-				<div className='flex flex-wrap items-center gap-2'>
-					<span className='text-sm text-fd-muted-foreground'>count:</span>
-					<output className='min-w-[3ch] text-center font-mono text-sm tabular-nums'>{count}</output>
-					<button
-						type='button'
+				<div className='flex flex-wrap items-center gap-3'>
+					<Label className='text-muted-foreground'>count</Label>
+					<output className='min-w-[3ch] text-center font-mono tabular-nums'>{count}</output>
+					<Button
+						variant='outline'
+						size='sm'
 						onClick={() => {
 							setCount(0)
 						}}
-						className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 					>
-						reset from parent
-					</button>
+						Reset from parent
+					</Button>
 				</div>
-			</div>
+			</Card>
 
 			<panelStore.Provider
 				defaultValue={{ note: 'seeded once' }}
@@ -141,11 +151,10 @@ export default function ControlledExample() {
 				<Panel />
 			</panelStore.Provider>
 
-			<p className='text-xs text-fd-muted-foreground'>
-				<code className='font-mono'>theme</code> only ever flows down — nothing inside writes it.{' '}
-				<code className='font-mono'>count</code> is written inside the store, lifted through{' '}
-				<code className='font-mono'>onValueChange</code>, and flows back down. <code className='font-mono'>note</code>{' '}
-				was seeded from <code className='font-mono'>defaultValue</code> and the parent never sees it.
+			<p className='text-xs text-muted-foreground'>
+				<code>theme</code> only ever flows down — nothing inside writes it. <code>count</code> is written inside the
+				store, lifted through <code>onValueChange</code>, and flows back down. <code>note</code> was seeded from{' '}
+				<code>defaultValue</code> and the parent never sees it.
 			</p>
 		</div>
 	)

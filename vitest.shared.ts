@@ -16,7 +16,7 @@ export const vitestSharedConfig: ViteUserConfig = {
 			 */
 			include: ['src/**/*.{ts,tsx}'],
 			/** A test file must not count itself, and the test kit is a fixture, not shipped code. */
-			exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test-kit.tsx'],
+			exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test-kit.{ts,tsx}'],
 		},
 	},
 }

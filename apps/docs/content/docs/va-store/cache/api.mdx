@@ -1,0 +1,287 @@
+---
+title: API
+description: Every signature, prop and option of the Valtio store cache in one place.
+---
+
+# `createStoreCache` — API
+
+The reference. For what these are _for_ and how they behave in practice, read the [guide](../cache).
+
+## Exports
+
+The default cache is exposed as top-level exports — use these for the common one-cache-per-app case, no factory call required:
+
+```ts
+import {
+	CacheProvider, // mount once; owns the cache storage for its React tree
+	CacheScope, // contributes inherited path segments to descendant Providers
+	useCache, // () => { keys(prefix?), clear(prefix?) }
+	useCacheKeys, // (prefix?) => CacheRecord[] — reactive: re-renders on membership change
+	createCachedStore, // (factory, { name, gcTime? }) => CachedStoreGroup
+	createStoreCache, // build an isolated cache instead of using the default one
+	toTree, // pure utility: (records) => CacheTree
+} from '@ez-kit/va-store'
+```
+
+The surface matches [`@ez-kit/zu-store`](../../zu-store/store-cache/api) name-for-name; only the per-group read members differ, because reads here are snapshots rather than selectors.
+
+## `CacheProvider`
+
+Owns the real storage, created per React tree — so SSR requests and tests are isolated by construction. Mount it once above your store groups; unmounting it drops the whole cache.
+
+```tsx
+<CacheProvider>
+	<App />
+</CacheProvider>
+```
+
+| Prop       | Type        | Required | Description                            |
+| ---------- | ----------- | -------- | -------------------------------------- |
+| `children` | `ReactNode` | no       | The subtree the cache is available to. |
+
+Takes no configuration: the cache default `gcTime` belongs to the cache instance, so change it with [`createStoreCache`](#createstorecacheoptions). A group `Provider` mounted without a `CacheProvider` ancestor throws [`Missing CacheProvider`](#errors).
+
+## `CacheScope`
+
+Contributes path segments to every descendant store-group `Provider` — of every group, not just one. Nested `Scope`s concatenate, outermost first.
+
+```tsx
+<CacheScope path={['customer', customerId]}>
+	<usersTable.Provider id='list' />
+</CacheScope>
+```
+
+| Prop       | Type        | Required | Description                                                     |
+| ---------- | ----------- | -------- | --------------------------------------------------------------- |
+| `path`     | `string[]`  | yes      | Segments contributed to descendants: `[...inherited, ...path]`. |
+| `children` | `ReactNode` | no       | The subtree namespaced by this scope.                           |
+
+## `useCache()`
+
+Returns the controller of the nearest `CacheProvider`. Both members are **non-reactive** — calling them does not subscribe the component to anything.
+
+```tsx
+const { keys, clear } = useCache()
+```
+
+| Member  | Type                                            | Description                                                                                  |
+| ------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `keys`  | `(prefix?: readonly string[]) => CacheRecord[]` | Flat snapshot of live entries, optionally filtered to those whose path starts with `prefix`. |
+| `clear` | `(prefix?: readonly string[]) => void`          | Evicts every entry under `prefix` (all groups). No argument clears the whole cache.          |
+
+`clear` overrides `alwaysCache`. Members are closures, so destructuring is safe.
+
+## `useCacheKeys(prefix?)`
+
+Reactive counterpart of `keys()`. Re-renders when cache **membership** changes — entries added or removed; mutations inside cached proxies do not trigger it.
+
+```tsx
+const records = useCacheKeys(['customer', '42'])
+```
+
+| Parameter | Type                | Required | Description                               |
+| --------- | ------------------- | -------- | ----------------------------------------- |
+| `prefix`  | `readonly string[]` | no       | Restricts the result to one path subtree. |
+
+Returns `CacheRecord[]`. Throws `Missing CacheProvider` outside a `CacheProvider`.
+
+## `toTree(records)`
+
+Pure function, not a cache member: takes any coordinate list — the output of `keys()` or `useCacheKeys()`, or an array you assembled by hand for a test — and returns the nested view. For a reactive nested view, compose `toTree(useCacheKeys(prefix))` at the call site.
+
+```ts
+toTree([{ path: ['page-1'], name: 'users', id: 'main' }])
+// → { 'page-1': { users: ['main'] } }
+```
+
+| Parameter | Type                     | Description          |
+| --------- | ------------------------ | -------------------- |
+| `records` | `readonly CacheRecord[]` | Coordinates to nest. |
+
+Returns `CacheTree`.
+
+## `createCachedStore(factory, options)`
+
+Defines a **store group**: one namespace under which entries live, keyed by `(path, id)`.
+
+```ts
+function createCachedStore<TState extends object, TDefaultValue extends object = Record<string, never>>(
+	factory: (init: { defaultValue: TDefaultValue }) => TState,
+	options: CachedStoreOptions<TState>,
+): CachedStoreGroup<TState, TDefaultValue>
+```
+
+| Parameter | Type                                                | Description                                                                       |
+| --------- | --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `factory` | `(init: { defaultValue: TDefaultValue }) => TState` | Creates the Valtio proxy. Runs **once per key**, when the entry is first created. |
+| `options` | `CachedStoreOptions<TState>`                        | Required — it carries the group `name`.                                           |
+
+### `options`
+
+| Option   | Type     | Required | Description                                                                             |
+| -------- | -------- | -------- | --------------------------------------------------------------------------------------- |
+| `name`   | `string` | yes      | Group namespace, visible in `keys()` / `useCacheKeys()`. Must be unique within a cache. |
+| `gcTime` | `number` | no       | Group default eviction delay in ms, overriding the cache default (5 min).               |
+
+Call it once at module top-level. Calling it twice with the same `name` on one cache `console.warn`s in development.
+
+There is no `plugins` option here either — a capability is attached inside the `factory`, exactly as with [`createContextStore`](../create-context-store/api#capabilities): `cache.createCachedStore(() => pipe(proxy({ … }), withPersist()), { name })`. That factory-position wrapping is what makes a store [cached **and** persisted](../persist/cache) — note the lifetime differs from a plain `createContextStore`: here the capability lives as long as the cache entry, not as long as one `Provider` mount.
+
+### The returned group
+
+| Member                                             | Purpose                                                                                 |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `Provider`                                         | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.    |
+| `useSnapshot` / `useStore` / `Subscribe` / `Store` | Read and write the entry under the `Provider` — same semantics as `createContextStore`. |
+| `getFromCache({ path?, id })`                      | Imperative get-if-alive → the raw proxy or `undefined`.                                 |
+| `useFromCache({ path?, id }, selector)`            | Reactive, passive cross-tree read.                                                      |
+| `remove({ path?, id })`                            | Drop one entry immediately.                                                             |
+
+## `Provider`
+
+Registers an observer on the entry at `(resolvedPath, id)`, creating it if it is not alive. `resolvedPath = [...inheritedScope, ...path]`.
+
+```tsx
+<usersTable.Provider
+	id='users'
+	defaultValue={{ filter: 'active' }}
+>
+	<UsersTable />
+</usersTable.Provider>
+```
+
+| Prop           | Type            | Required                          | Description                                                                                     |
+| -------------- | --------------- | --------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `id`           | `string`        | yes                               | Identity of the entry within its group, at the resolved path.                                   |
+| `path`         | `string[]`      | no                                | Appended **after** the inherited `CacheScope` path. Defaults to `[]`.                           |
+| `defaultValue` | `TDefaultValue` | when the seed has required fields | Seed handed to the factory. Applied **only** when the entry is first created.                   |
+| `gcTime`       | `number`        | no                                | Eviction delay in ms after the last observer unmounts. Birth-config — fixed by the first mount. |
+| `alwaysCache`  | `boolean`       | no                                | Never auto-evict (`gcTime: Infinity`). Birth-config. `remove` / `clear` still drop the entry.   |
+| `children`     | `ReactNode`     | no                                | The subtree that reads this entry.                                                              |
+
+`gcTime` resolves first-match-wins: `alwaysCache` → `Provider.gcTime` → group `gcTime` → cache default (5 min). `gcTime={0}` opts this mounting point out of keep-alive — see [the guide](../cache#opting-one-place-out-of-keep-alive). `gcTime`, `alwaysCache` and `defaultValue` are read only by the mount that **creates** the entry; later mounts attach to the live proxy and ignore them.
+
+## `useSnapshot()`
+
+Returns the readonly, auto-tracked snapshot of the entry under the nearest group `Provider`. The component re-renders only when the properties it actually reads change.
+
+```tsx
+const snap = usersTable.useSnapshot()
+```
+
+Returns `Snapshot<TState>`. Unlike [`createContextStore`'s](../create-context-store/api#usesnapshotoptions), it takes **no options** — there is no `sync` on a cached group.
+
+## `useStore()`
+
+Returns the raw, mutable proxy for the entry, without subscribing. Mutate it directly:
+
+```tsx
+const store = usersTable.useStore()
+store.filter = 'all'
+```
+
+Returns `TState`. It reads the group instance from context rather than through a snapshot, so it registers no subscription at all.
+
+## `Subscribe`
+
+Render-prop receiving `{ snap, store }`, mirroring [`createContextStore`'s](../create-context-store/api#subscribe).
+
+| Prop       | Type                                                               | Required | Description                                          |
+| ---------- | ------------------------------------------------------------------ | -------- | ---------------------------------------------------- |
+| `children` | `(arg: { snap: Snapshot<TState>; store: TState }) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
+
+There is no `selector` and no `shallow` prop — the zu-store group's selector API has no counterpart here.
+
+## `Store`
+
+Write-only render-prop receiving just the raw proxy. Nothing subscribes, so store mutations never re-render its children.
+
+| Prop       | Type                              | Required | Description                             |
+| ---------- | --------------------------------- | -------- | --------------------------------------- |
+| `children` | `(store: TState) => ReactElement` | yes      | Render prop, called with the raw proxy. |
+
+## `getFromCache(target)`
+
+Imperative get-if-alive. Never creates an entry.
+
+```ts
+const live = usersTable.getFromCache({ path: ['page-1'], id: 'users' })
+if (live) live.filter = 'all'
+```
+
+| Parameter | Type           | Description                                                                             |
+| --------- | -------------- | --------------------------------------------------------------------------------------- |
+| `target`  | `CacheAddress` | Absolute `{ path?, id }`; `path` defaults to `[]` (root), not to the surrounding scope. |
+
+Returns `TState | undefined` — the raw proxy, so writing to it is a real store write. Client-only: it resolves through the most recently activated `CacheProvider`, so inside the tree prefer the hooks.
+
+## `useFromCache(target, selector)`
+
+Reactive, **passive** cross-tree read: it reflects the cache but never keeps a proxy alive.
+
+```tsx
+const filter = usersTable.useFromCache({ path: ['page-1'], id: 'users' }, (snap) => snap?.filter ?? 'none')
+```
+
+| Parameter  | Type                                         | Description                                              |
+| ---------- | -------------------------------------------- | -------------------------------------------------------- |
+| `target`   | `CacheAddress`                               | Absolute `{ path?, id }` of the entry to read.           |
+| `selector` | `(snap: Snapshot<TState> \| undefined) => T` | Receives `undefined` when no entry is alive at `target`. |
+
+The selector runs against the entry's **snapshot**, so Valtio's property tracking applies as usual: the component re-renders only when the fields the selector actually touched change.
+
+## `remove(target)`
+
+Drops one entry immediately, overriding `alwaysCache`. Takes the same absolute `CacheAddress` as `getFromCache`. For a whole subtree across groups, use `useCache().clear(prefix)`.
+
+## `createStoreCache(options?)`
+
+Builds an **isolated** cache with the same surface as the default one, exposed as instance members:
+
+```ts
+function createStoreCache(options?: { gcTime?: number }): {
+	Provider // ↔ CacheProvider
+	Scope // ↔ CacheScope
+	useCache // ↔ useCache
+	useCacheKeys // ↔ useCacheKeys
+	createCachedStore // ↔ createCachedStore
+}
+```
+
+| Option   | Type     | Default | Description                                                              |
+| -------- | -------- | ------- | ------------------------------------------------------------------------ |
+| `gcTime` | `number` | 300 000 | Cache-wide default eviction delay in ms, used when nothing overrides it. |
+
+A store group is bound to the cache that created it: mounting it under another cache's `Provider` throws `Missing CacheProvider`.
+
+## Types
+
+| Type                                        | Purpose                                                                            |
+| ------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `CacheAddress`                              | `{ path?: string[]; id: string }` — the absolute address reads and `remove` take.  |
+| `CacheRecord`                               | `{ path: string[]; name: string; id: string }` — one coordinate from `keys()`.     |
+| `CacheTree`                                 | `{ [segment: string]: CacheTree \| string[] }` — the nested view `toTree` returns. |
+| `CachedProviderProps<TDefaultValue>`        | The group `Provider`'s props.                                                      |
+| `CachedStoreFactory<TState, TDefaultValue>` | The factory argument's type.                                                       |
+| `CachedStoreOptions<TState>`                | The `createCachedStore` options object.                                            |
+| `CachedStoreGroup<TState, TDefaultValue>`   | The returned group — `Provider`, hooks, render props, `getFromCache`, `remove`.    |
+| `CachedSubscribeProps<TState>`              | The group `Subscribe`'s props.                                                     |
+| `CachedSubscribeRenderArg<TState>`          | Its render argument — `{ snap, store }`.                                           |
+| `CachedStoreProps<TState>`                  | The group `Store`'s props.                                                         |
+| `ScopeProps`                                | `CacheScope`'s props.                                                              |
+| `StoreCache`                                | What `createStoreCache` returns.                                                   |
+| `StoreCacheController`                      | What `useCache()` returns — `{ keys, clear }`.                                     |
+| `StoreCacheOptions`                         | `createStoreCache`'s options — `{ gcTime? }`.                                      |
+
+All are re-exported from `@ez-kit/va-store`; none require reaching for `@ez-kit/store-core` directly.
+
+## Errors
+
+| Message                   | Cause                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `Missing CacheProvider`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.   |
+| `Missing <name.Provider>` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside that group's own `Provider` (`name` is the group name). |
+
+`getFromCache` and `remove` throw nothing: they resolve through the most recently activated `CacheProvider` and are a no-op — `undefined` — when none is mounted.
+
+Two development-only `console.warn`s cover the ambiguous setups: two `CacheProvider`s mounted concurrently for the same cache, and `createCachedStore` called twice with the same `name`.

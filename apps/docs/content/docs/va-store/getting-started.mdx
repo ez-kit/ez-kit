@@ -13,7 +13,7 @@ description: Install @ez-kit/va-store, create your first context-scoped Valtio s
 pnpm add @ez-kit/va-store valtio
 ```
 
-`valtio` is a **peer dependency** — pin whatever 2.x version your app already uses. Router, storage, and validator integrations used by [Persist](./va-store/persist) are optional peers; install only what you reach for (`react-router`, `next`, `zod`).
+`valtio` is a **peer dependency** — pin whatever 2.x version your app already uses. Router, storage, and validator integrations used by [Persist](./persist) are optional peers; install only what you reach for (`react-router`, `next`, `zod`).
 
 ## Your first store
 
@@ -43,7 +43,7 @@ Render it inside its `Provider`, read with `useSnapshot`, and **mutate the proxy
 
 ## The read/write model
 
-Valtio optimises re-renders per accessed property, so — unlike [`@ez-kit/zu-store`](./zu-store) — there are **no selectors**:
+Valtio optimises re-renders per accessed property, so — unlike [`@ez-kit/zu-store`](../zu-store) — there are **no selectors**:
 
 | Action | How                                                                                                       |
 | ------ | --------------------------------------------------------------------------------------------------------- |
@@ -60,8 +60,8 @@ Valtio optimises re-renders per accessed property, so — unlike [`@ez-kit/zu-st
 
 ## What's next
 
-- [`createContextStore`](./va-store/create-context-store) — the full factory API: `Provider`, hooks, `Item`, default values.
-- [Persist](./va-store/persist) — sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate with typed codecs and decorators.
+- [`createContextStore`](./create-context-store) — the full factory API: `Provider`, hooks, `Subscribe`, default values.
+- [Persist](./persist) — sync a store to the URL, localStorage/sessionStorage, IndexedDB, or your own substrate with typed codecs and decorators.
 
 ## TypeScript & decorators
 
@@ -78,6 +78,6 @@ Plain `createContextStore` needs **no special TypeScript config**. The decorator
 ```
 
 <Callout type='info'>
-	Prefer no build-time decorator support? The [accessor API](./va-store/persist/fields) is fully equivalent and needs no
-	transpilation. Full decorator setup lives in [Persist → TypeScript](./va-store/persist/typescript).
+	Prefer no build-time decorator support? The [accessor API](./persist/fields) is fully equivalent and needs no
+	transpilation. Full decorator setup lives in [Persist → TypeScript](./persist/typescript).
 </Callout>

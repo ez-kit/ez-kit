@@ -1,0 +1,94 @@
+---
+title: Capabilities
+description: The one extension seam every capability shares — attach behavior to the proxy in the factory, and createContextStore runs its setup and cleanup around the Provider's lifetime.
+---
+
+# Capabilities
+
+There is exactly one extension seam: a **capability** attached to the proxy itself, in the factory. `createContextStore` (and [`createCachedStore`](./cache)) never take a `plugins` option — they discover whatever a `with*` wrapper attached to the instance and run it for you.
+
+```tsx
+import { createContextStore, pipe, withHistory } from '@ez-kit/va-store'
+import { withPersist } from '@ez-kit/va-store/persist'
+import { proxy } from 'valtio'
+
+const store = createContextStore(() => pipe(proxy({ q: '' }), withHistory(), withPersist()))
+```
+
+Every wrapper is curried: `withHistory(options)` builds an enhancer, and `pipe` applies the enhancers left to right onto the bare proxy. Each one mutates the proxy it's given and returns it — same identity, widened type — so they chain freely: `pipe(proxy({ … }), withHistory(), withPersist())` is a store with both an undo/redo stack and URL/storage mirroring.
+
+Currying is what makes the options type-check: the enhancer's state type comes from the value `pipe` feeds it, so `withHistory({ shouldRecord: (prev, next) => … })` types `prev` and `next` as the store's own state with no annotation. Applying an enhancer outside `pipe` gives it nothing to infer from, so name the state yourself there: `withHistory<Filters>()(proxy({ q: '' }))`.
+
+## What ships
+
+| Capability                 | Adds                                         | Docs                 |
+| -------------------------- | -------------------------------------------- | -------------------- |
+| [`withHistory`](./history) | `history` — undo/redo/goto, `useHistory()`   | [History](./history) |
+| [`withPersist`](./persist) | `$url` / `$persist` control handles, engines | [Persist](./persist) |
+
+## Attachment order
+
+A wrapper calls `attachCapability(target, plugin)` at construction time, before the proxy is ever subscribed to. The registry is a list, in **attachment order** — the innermost wrapper first:
+
+```tsx
+pipe(proxy({ q: '' }), withHistory(), withPersist())
+// capabilitiesOf(store) → [historyPlugin, persistPlugin]
+```
+
+`withHistory` wraps the bare proxy, so it attaches first; `withPersist` wraps the already-historied proxy, so it attaches second. `createContextStore`'s Provider runs every attached plugin's `setup` in that same order on mount, and runs the returned cleanups in **reverse** order on unmount — the last thing attached is the first thing torn down.
+
+This is also why the persist + history recipe reads `pipe(proxy(…), withHistory(), withPersist())` and not the other way around: persist hydration is itself a write the history capability observes, so history needs to already be attached (and its subscription already listening) by the time persist's `setup` runs and pushes the first hydrated value in. See [History → cost and recipes](./history#persist--history) for the concrete `defaultPaused` + `resume()` pattern this enables.
+
+## The registry is invisible
+
+`attachCapability` stores the list under a non-enumerable, `Symbol.for`-keyed property. It never reaches `Object.keys`, a spread, `JSON.stringify`, or a `withHistory` recorded past/future state. It is also **own-only** — a capability attached to a prototype is not inherited by an object created from it (`Object.create(target)` sees no capabilities of its own).
+
+## Writing your own
+
+A capability is a plain object satisfying `StorePlugin<T>`, attached with `attachCapability`:
+
+```tsx
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { attachCapability } from '@ez-kit/store-core'
+import { proxy } from 'valtio'
+
+import type { PluginCleanup, PluginContext, StoreEnhancer, StorePlugin } from '@ez-kit/store-core'
+
+function withLogging<T extends object>(label: string): StoreEnhancer<T, T> {
+	return (target: T) => {
+		const plugin: StorePlugin<T> = {
+			name: 'logging',
+			setup(instance, ctx: PluginContext): PluginCleanup {
+				console.log(`[${label}] mounted`, { isServer: ctx.isServer })
+				return () => console.log(`[${label}] unmounted`)
+			},
+		}
+		attachCapability(target, plugin)
+		return target
+	}
+}
+
+const store = createContextStore(() => pipe(proxy({ q: '' }), withLogging('filters')))
+```
+
+`setup(instance, ctx)` runs once when the store's `Provider` mounts; `ctx` carries `services` (app-level services published by an ancestor `ServicesProvider` / `StoreProvider`), `id` (the store's `StoreId`), and `isServer`. The returned cleanup — or `undefined`, if there's nothing to tear down — runs once on unmount.
+
+`capabilitiesOf(target)` reads the list back (used internally by `createContextStore`'s Provider, and available to you for introspection or testing):
+
+```tsx
+import { capabilitiesOf } from '@ez-kit/store-core'
+
+capabilitiesOf(store).map((plugin) => plugin.name) // → ['history', 'persist']
+```
+
+Attaching the same capability name twice — `pipe(store, withHistory(), withHistory())`, or two of your own plugins both named `'logging'` — throws:
+
+```
+[store-core] capability "history" is already attached to this store. Wrap the store in withHistory only once.
+```
+
+That's a construction-time check, not a runtime one: it fires the moment the second `attachCapability` call runs, before the store is ever rendered.
+
+## Server rendering
+
+`setup` only runs on mount — a server render never calls it, so a capability's side effects (subscribing to an engine, logging, timers) never run during SSR. `attachCapability` itself is synchronous and side-effect-free, so the registry is populated identically on server and client; `ctx.isServer` is how a capability's `setup` tells the two apart on the one render where it does run.

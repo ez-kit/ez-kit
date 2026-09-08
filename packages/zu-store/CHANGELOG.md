@@ -1,5 +1,122 @@
 # @ez-kit/zu-store
 
+## 0.7.0
+
+### Minor Changes
+
+- b0580ea: Rename the render-prop slots: `Item` → `Subscribe`, and va-store's `StoreItem` → `Store`.
+
+  **Breaking.** `Item` collided with the ecosystem-wide meaning of `Item` (`Select.Item`, `DropdownMenu.Item`, `ListBox.Item`), where it names one entry of a collection. These components name a subscription boundary, not a row. `Subscribe` says what it does and matches the shape TanStack Form uses for the same job. In va-store the two components now mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()`, `Store` the render-prop form of `useStore()` — the latter still hands over the raw proxy without subscribing.
+
+  Renamed alongside them, on `createContextStore`, `createStore` and the `createStoreCache` groups:
+  - `ItemProps` → `SubscribeProps`, `ItemRenderArg` → `SubscribeRenderArg`
+  - `CachedItemProps` → `CachedSubscribeProps`, `CachedItemRenderArg` → `CachedSubscribeRenderArg`
+  - `StoreItemProps` → `StoreProps`, `CachedStoreItemProps` → `CachedStoreProps`
+
+  Migration is a rename: `<store.Item>` → `<store.Subscribe>`, `<store.StoreItem>` → `<store.Store>`.
+
+- b0580ea: Rename the cached store group's imperative read: `fromCache` → `getFromCache`.
+
+  **Breaking.** `fromCache` was the only member of the group named as a prepositional phrase rather than a verb, next to
+  `remove`, `keys` and `clear`. `getFromCache({ path, id })` states the operation and reads as the imperative counterpart of
+  the hook, which keeps its name — `useFromCache({ path, id }, selector)`, where `use` already carries the verb. Same shape
+  as `queryClient.getQueryData` beside `useQuery`.
+
+- b0580ea: Add a `shallow` prop to `Subscribe`, on both `createContextStore` and `createStoreCache` groups.
+
+  `Subscribe` read through `useSelector`, so its `selector` was always compared with `Object.is` and had no shallow counterpart — a selector that builds an object or array (`(s) => ({ a: s.a, b: s.b })`) threw `Maximum update depth exceeded` on mount, with `useShallowSelector` in a surrounding component the only way out. `shallow` makes `Subscribe` compare the selection shallowly, exactly as `useShallowSelector` does:
+
+  ```tsx
+  <counterStore.Subscribe
+  	selector={(s) => ({ count: s.count, label: s.label })}
+  	shallow
+  >
+  	{({ count, label }) => <span>{`${String(count)} · ${label}`}</span>}
+  </counterStore.Subscribe>
+  ```
+
+  The prop defaults to `false`, so existing `Subscribe` usage is unchanged. It selects one of two internal components — one reading through `useSelector`, one through `useShallowSelector` — so toggling it on a mounted `Subscribe` remounts the render-prop subtree. `shallow` describes the selector, which is written once per call site, so that is not a state a real tree passes through.
+
+- b0580ea: Extract persist into `@ez-kit/store-persist` and give Zustand stores URL/storage-as-state
+
+  `persist()` used to live inside `@ez-kit/va-store` and reach the store through Valtio's `subscribe`
+  and an in-place path write, so it was unusable from a Zustand store. The whole engine — bindings,
+  codecs, URL/storage/IndexedDB adapters, provider — now lives in `@ez-kit/store-persist` and reaches
+  a store only through a `StorePort`.
+  - **`@ez-kit/store-core`** gains `StorePort` (`getState` / `write` / `subscribe`), the path helpers
+    behind it (`readPath`, `parentOf`, `writePath`, `setPath`, `findPropertyDescriptor`) and
+    `useCapabilities`, the shared mount seam both binding packages now use.
+  - **`@ez-kit/zu-store`** gains the persist front: `pipe(createStore()(init), withPersist({ fields }))`,
+    the `@ez-kit/zu-store/persist*` subpaths, a `StoreProvider`, `pipe` re-exported from store-core, and
+    a `plugins` option on `createContextStore` for capabilities declared on the factory. Its port
+    rebuilds only the touched paths and issues **one** `setState` per batch, so a multi-field hydration
+    is a single state change.
+  - **`@ez-kit/va-store`** keeps every `@ez-kit/va-store/persist*` import path unchanged — they now
+    re-export the shared package with the Valtio port bound — and gains the same `plugins` option plus a
+    `./persist/testing` subpath (`createFakePersistAdapter`, previously internal).
+
+  Because a binding carries its own port, one mounted `PersistProvider` serves Valtio and Zustand
+  stores in the same tree.
+
+  **Breaking:** the default storage key changed from `va-store` to `ez-kit` (it is no longer a
+  Valtio-only engine), so a store that relied on the default now starts from an empty blob. Pass
+  `localStorageAdapter({ storageKey: 'va-store' })` to keep reading existing data. Error message
+  prefixes changed from `[va-store] persist:` to `[store-persist]:` for the same reason.
+
+- b0580ea: Fix several `withHistory` correctness issues in the shared `@ez-kit/store-core/history` engine, which
+  `@ez-kit/zu-store`'s `withHistory` middleware builds on:
+  - **`goto` no longer trims.** Jumping to an absolute timeline position used to run the same `limit`-cap
+    trim as `record`, which could silently delete a reachable state instead of just reordering the
+    existing timeline — `goto` introduces no new entries, so there was never anything for a cap to defend
+    against. It now only reorders `[...pasts, current, ...futures]`.
+  - **`undo` and `redo` are mutually inverse under an over-limit seed.** Trimming an over-limit stack
+    (reachable via `defaultPasts` / `defaultFutures`, not just accumulation) used to drop from the wrong
+    end on `undo`, discarding the very state `undo` had just put back instead of the farthest one. `undo`
+    now trims `futures` from the tail, so the next `redo` lands where `undo` left it.
+  - **`isPaused` is observable during `skip`.** A subscriber reading the published snapshot from inside
+    `skip(fn)` now sees `isPaused: true` for `fn`'s duration, not just once it returns — useful for UI
+    (e.g. a dimmed undo button) that reacts to the published state rather than calling `isPaused`
+    directly.
+  - **History publishes before the restore write**, not after — a subscriber reacting to `undo` / `redo`
+    / `goto`'s resulting write now sees the new `pasts` / `futures` split already in place.
+  - **Redundant `pause()` / `resume()` no longer notify.** Calling either when already in that state is
+    now a no-op — no snapshot publish — instead of firing a needless notification.
+  - **`HistorySnapshot`'s fields (`pasts`, `futures`, `limit`, `isPaused`) are now `readonly`**, matching
+    that a subscriber should never mutate a published snapshot in place.
+
+- b0580ea: Add `useHistory(store)` and `useTimeline(store)` — the two history hooks `@ez-kit/va-store` already
+  ships, in Zustand's shape.
+
+  `useHistory` takes one subscription to the `history` sub-store and returns the stacks, the controls
+  and derived `canUndo` / `canRedo` as a single object, so a toolbar stops hand-selecting four fields
+  off `store.history`:
+
+  ```diff
+  - const canUndo = useStore(store.history, (h) => h.pasts.length > 0)
+  - const undo = useStore(store.history, (h) => h.undo)
+  + const { undo, canUndo } = useHistory(store)
+  ```
+
+  `useTimeline` assembles `[...pasts, current, ...futures]` with the index the store sits on, for the
+  UIs that render the timeline itself — a step strip, a "3 of 7" read-out, anything driving `goto()`.
+  It stays a separate hook because reading `current` means subscribing to the store's whole state; on
+  `useHistory` that cost would land on every caller, including a toolbar that only wanted `undo`.
+
+  Also declares the optional peers the persist subpaths need (`next`, `react-router`, `zod`), which
+  were reachable only transitively through `@ez-kit/store-persist`, and puts the
+  `persist/url/react-router` bundle under a size-limit budget.
+
+### Patch Changes
+
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+  - @ez-kit/store-core@0.4.0
+  - @ez-kit/store-persist@0.1.0
+
 ## 0.6.0
 
 ### Minor Changes

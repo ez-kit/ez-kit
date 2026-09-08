@@ -1,19 +1,18 @@
+import { attachCapability, pipe } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement, useSyncExternalStore } from 'react'
 import { proxy } from 'valtio'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createStore, type StoreInit } from '../create-store'
-import { paramString } from '../persist/codecs'
-import { persist } from '../persist/plugin'
-import { PERSIST_ENGINES } from '../persist/service'
-import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '../persist/url/adapter'
+import { createContextStore, type ContextStoreInit } from '../create-context-store'
+import { paramString, PERSIST_ENGINES, withPersist } from '../persist'
+import { createUrlPort, URL_SOURCE, UrlHistory, urlMetaMerge } from '../persist/url'
 import { createStoreCache } from '../store-cache'
 
 import { StoreProvider } from './index'
 
-import type { RenderScopedAdapter } from '../persist/provider'
-import type { UrlDriver } from '../persist/url/adapter'
+import type { RenderScopedAdapter } from '../persist'
+import type { UrlDriver } from '../persist/url'
 
 /**
  * A spy URL adapter over a shared in-memory location. `commit` counts navigations so a test can assert
@@ -64,18 +63,17 @@ describe('StoreProvider — service resolution', () => {
 	it('exposes the PERSIST_ENGINES service to a plugin under StoreProvider', async () => {
 		const { adapter } = createSpyUrlAdapter()
 		let resolvedSources: readonly string[] = []
-		const store = createStore<{ count: number }, { count?: number }>(
-			({ defaultValue }: StoreInit<{ count?: number }>) => proxy({ count: defaultValue.count ?? 0 }),
-			{
-				plugins: [
-					{
-						name: 'probe',
-						setup: (_proxy, ctx) => {
-							resolvedSources = ctx.services.get(PERSIST_ENGINES).sources()
-							return undefined
-						},
+		const store = createContextStore<{ count: number }, { count?: number }>(
+			({ defaultValue }: ContextStoreInit<{ count?: number }>) => {
+				const state = proxy({ count: defaultValue.count ?? 0 })
+				attachCapability(state, {
+					name: 'probe',
+					setup: (_proxy, ctx) => {
+						resolvedSources = ctx.services.get(PERSIST_ENGINES).sources()
+						return undefined
 					},
-				],
+				})
+				return state
 			},
 		)
 		function View(): ReactElement {
@@ -98,10 +96,16 @@ describe('StoreProvider — service resolution', () => {
 	it('drives a cached, persisted store via the cache layer under StoreProvider', async () => {
 		const { adapter } = createSpyUrlAdapter('?q=cached')
 		const cache = createStoreCache()
-		const group = cache.createCachedStore<{ q: string }>(() => proxy({ q: '' }), {
-			name: 'cached-persist',
-			plugins: [persist({ fields: (field) => [field((s) => s.q, { source: URL_SOURCE, parser: paramString() })] })],
-		})
+		const group = cache.createCachedStore<{ q: string }>(
+			() =>
+				pipe(
+					proxy({ q: '' }),
+					withPersist({
+						fields: (field) => [field((s) => s.q, { source: URL_SOURCE, parser: paramString() })],
+					}),
+				),
+			{ name: 'cached-persist' },
+		)
 
 		function QView(): ReactElement {
 			const snap = group.useSnapshot()
@@ -128,16 +132,22 @@ describe('StoreProvider — single writer for one source', () => {
 	it('routes many url-bound stores through one engine (commits coalesce, no races)', async () => {
 		const { adapter, commitSpy } = createSpyUrlAdapter()
 
-		const storeA = createStore<{ a: string }>(() => proxy({ a: '' }), {
-			plugins: [
-				persist({ fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })] }),
-			],
-		})
-		const storeB = createStore<{ b: string }>(() => proxy({ b: '' }), {
-			plugins: [
-				persist({ fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })] }),
-			],
-		})
+		const storeA = createContextStore<{ a: string }>(() =>
+			pipe(
+				proxy({ a: '' }),
+				withPersist({
+					fields: (field) => [field((s) => s.a, { source: URL_SOURCE, key: 'a', parser: paramString() })],
+				}),
+			),
+		)
+		const storeB = createContextStore<{ b: string }>(() =>
+			pipe(
+				proxy({ b: '' }),
+				withPersist({
+					fields: (field) => [field((s) => s.b, { source: URL_SOURCE, key: 'b', parser: paramString() })],
+				}),
+			),
+		)
 
 		function Editor(): ReactElement {
 			const a = storeA.useStore()

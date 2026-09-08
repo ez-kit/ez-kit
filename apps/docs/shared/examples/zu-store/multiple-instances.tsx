@@ -3,6 +3,10 @@
 import { type ContextStoreInit, createContextStore } from '@ez-kit/zu-store'
 import { createStore } from 'zustand/vanilla'
 
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+
 type CounterState = {
 	count: number
 	increment: () => void
@@ -27,17 +31,20 @@ function Counter({ label }: { label: string }) {
 	const increment = counterStore.useSelector((s) => s.increment)
 
 	return (
-		<div className='flex items-center gap-3 rounded-md border border-fd-border bg-fd-card p-3'>
-			<span className='text-xs uppercase tracking-wider text-fd-muted-foreground'>{label}</span>
+		<Card
+			size='sm'
+			className='flex-row items-center gap-3 px-4'
+		>
+			<Badge variant='secondary'>{label}</Badge>
 			<output className='min-w-[3ch] text-center font-mono text-lg tabular-nums'>{count}</output>
-			<button
-				type='button'
+			<Button
+				variant='outline'
+				size='sm'
 				onClick={increment}
-				className='rounded-md border border-fd-border bg-fd-background px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 			>
 				+1
-			</button>
-		</div>
+			</Button>
+		</Card>
 	)
 }
 

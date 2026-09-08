@@ -2,11 +2,16 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createStore } from '@ez-kit/va-store'
-import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { type FieldsBuilder, PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { LOCAL_STORAGE_SOURCE, localStorageField } from '@ez-kit/va-store/persist/storage'
 import { urlField } from '@ez-kit/va-store/persist/url'
+import { useId } from 'react'
 import { proxy } from 'valtio'
+
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 
 import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 import { BlobReadout, createMemoryStorageAdapter } from './_memory-storage'
@@ -24,9 +29,9 @@ const fields: FieldsBuilder<ListState> = (field) => [
 	field((s) => s.density, localStorageField()),
 ]
 
-const listStore = createStore<ListState>(() => proxy<ListState>({ q: '', density: 'comfortable' }), {
-	plugins: [persist({ fields })],
-})
+const listStore = createContextStore<ListState>(() =>
+	pipe(proxy<ListState>({ q: '', density: 'comfortable' }), withPersist({ fields })),
+)
 
 // Seed the URL with a shared link (?q=boots). Storage starts empty — first-present-wins means the
 // shared `q` is never clobbered by a restored value.
@@ -34,6 +39,8 @@ const url = createMemoryUrlAdapter('q=boots')
 const storage = createMemoryStorageAdapter(LOCAL_STORAGE_SOURCE)
 
 function ListControls() {
+	const queryId = useId()
+	const densityId = useId()
 	const snap = listStore.useSnapshot()
 	const store = listStore.useStore()
 	const search = url.useSearch()
@@ -41,31 +48,33 @@ function ListControls() {
 
 	return (
 		<div>
-			<div className='flex flex-wrap items-center gap-3'>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>q (URL)</span>
-					<input
+			<div className='flex flex-wrap items-center gap-4'>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={queryId}>q (URL)</Label>
+					<Input
+						id={queryId}
+						className='w-40'
 						value={snap.q}
+						placeholder='search…'
 						onChange={(event) => {
 							store.q = event.target.value
 						}}
-						placeholder='search…'
-						className='w-40 rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					/>
-				</label>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>density (storage)</span>
-					<select
+				</div>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={densityId}>density (storage)</Label>
+					<NativeSelect
+						id={densityId}
+						size='sm'
 						value={snap.density}
 						onChange={(event) => {
 							store.density = event.target.value as ListState['density']
 						}}
-						className='rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					>
-						<option value='comfortable'>comfortable</option>
-						<option value='compact'>compact</option>
-					</select>
-				</label>
+						<NativeSelectOption value='comfortable'>comfortable</NativeSelectOption>
+						<NativeSelectOption value='compact'>compact</NativeSelectOption>
+					</NativeSelect>
+				</div>
 			</div>
 			<UrlReadout search={search} />
 			<BlobReadout blob={blob} />

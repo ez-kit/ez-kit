@@ -19,8 +19,8 @@ test('shadcn example page renders an isolated grid without docs chrome', async (
 	await expect(page.locator(FUMADOCS_SIDEBAR)).toHaveCount(0)
 })
 
-// shadcn's global.css (packages/data-grid/react/shadcn/src/global.css:88) defines `--sidebar`
-// on `:root` as one of its shadcn/ui theme tokens; heroui's global.css defines no `--sidebar`
+// shadcn's styles.css (packages/data-grid/react/shadcn/src/styles.css:87) defines `--sidebar`
+// on `:root` as one of its shadcn/ui theme tokens; heroui's styles.css defines no `--sidebar`
 // token at all. (`--color-surface`, heroui's own `@theme inline` token, was tried first but
 // Tailwind v4 does not emit `@theme inline` declarations as runtime `:root` custom properties,
 // so it is always empty regardless of which kit loaded — confirmed empirically via a computed-style

@@ -1,5 +1,199 @@
 # @ez-kit/va-store
 
+## 0.3.0
+
+### Minor Changes
+
+- b0580ea: Rename the render-prop slots: `Item` → `Subscribe`, and va-store's `StoreItem` → `Store`.
+
+  **Breaking.** `Item` collided with the ecosystem-wide meaning of `Item` (`Select.Item`, `DropdownMenu.Item`, `ListBox.Item`), where it names one entry of a collection. These components name a subscription boundary, not a row. `Subscribe` says what it does and matches the shape TanStack Form uses for the same job. In va-store the two components now mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()`, `Store` the render-prop form of `useStore()` — the latter still hands over the raw proxy without subscribing.
+
+  Renamed alongside them, on `createContextStore`, `createStore` and the `createStoreCache` groups:
+  - `ItemProps` → `SubscribeProps`, `ItemRenderArg` → `SubscribeRenderArg`
+  - `CachedItemProps` → `CachedSubscribeProps`, `CachedItemRenderArg` → `CachedSubscribeRenderArg`
+  - `StoreItemProps` → `StoreProps`, `CachedStoreItemProps` → `CachedStoreProps`
+
+  Migration is a rename: `<store.Item>` → `<store.Subscribe>`, `<store.StoreItem>` → `<store.Store>`.
+
+- b0580ea: Rename the cached store group's imperative read: `fromCache` → `getFromCache`.
+
+  **Breaking.** `fromCache` was the only member of the group named as a prepositional phrase rather than a verb, next to
+  `remove`, `keys` and `clear`. `getFromCache({ path, id })` states the operation and reads as the imperative counterpart of
+  the hook, which keeps its name — `useFromCache({ path, id }, selector)`, where `use` already carries the verb. Same shape
+  as `queryClient.getQueryData` beside `useQuery`.
+
+- b0580ea: **Breaking:** `createStore` is removed — `createContextStore` is now the only store factory.
+
+  The two were the same function: `createContextStore` was a one-line call onto `createStore` with a
+  fixed store name, forwarding the same `plugins` and `controlled` and returning the same
+  `{ Provider, useSnapshot, useStore, Subscribe, Store }`. `createContextStore` now takes the `name`
+  option itself, so nothing is lost.
+  - `createStore(factory, options)` → `createContextStore(factory, options)`.
+  - Types `StoreInit`, `StoreFactory`, `CreateStoreOptions` and `CreateStoreResult` are gone; use
+    `ContextStoreInit`, `CreateContextStoreFactory`, `CreateContextStoreOptions` and
+    `CreateContextStoreResult`, which are the same shapes.
+  - The default store name is now `'store'` for every store, so a missing Provider throws
+    `Missing Provider for store` where `createContextStore` previously threw
+    `Missing Provider for createContextStore`. Pass `{ name: 'filters' }` for a better message.
+
+  `createCachedStore` is untouched: keep-alive is a lifetime/identity concern that owns instance
+  creation (it is the layer that runs plugins), so it stays a separate factory rather than a plugin.
+
+- b0580ea: **Breaking:** the `plugins` option is removed from `createContextStore` and `CachedStoreOptions` (so
+  `createCachedStore` no longer takes it either). A capability is now attached to the store instance
+  itself, inside the factory, instead of passed as an array to the store options:
+
+  ```tsx
+  // Before
+  createContextStore(() => proxy(new Filters()), { plugins: [persist()] })
+
+  // After
+  createContextStore(() => pipe(proxy(new Filters()), withPersist()))
+  ```
+
+  `@ez-kit/store-core` exports the new seam: `attachCapability(target, plugin)` registers a
+  `StorePlugin` on the instance, under a non-enumerable, own-only property — invisible to
+  `Object.keys`, a spread, `JSON.stringify`, and prototype inheritance — and `capabilitiesOf(target)`
+  reads the list back, in **attachment order** (the innermost wrapper first). `createContextStore` and
+  `createCachedStore` run every attached plugin's `setup` in that order on mount and the returned
+  cleanups in reverse order on unmount, exactly as the old `plugins` option did. Attaching the same
+  capability name twice (`pipe(store, withHistory(), withHistory())`) now throws instead of silently
+  double-registering.
+
+  `@ez-kit/va-store`'s `persist()` plugin is replaced by `withPersist(options?)`, a factory-position
+  wrapper that mutates and returns the proxy it is applied to: `pipe(proxy({ … }), withPersist({ fields }))`.
+  It composes with the new `withHistory` capability in the same chain — `pipe(proxy({ … }), withHistory(), withPersist())`.
+  `persist()` itself still exists (it's what `withPersist` attaches under the hood) for anyone building
+  a capability chain of their own, but `withPersist` is the documented entry point.
+
+  See [Capabilities](https://ez-kit-docs.vercel.app/docs/va-store/capabilities) for the full shape and
+  how to write your own.
+
+- b0580ea: Extract persist into `@ez-kit/store-persist` and give Zustand stores URL/storage-as-state
+
+  `persist()` used to live inside `@ez-kit/va-store` and reach the store through Valtio's `subscribe`
+  and an in-place path write, so it was unusable from a Zustand store. The whole engine — bindings,
+  codecs, URL/storage/IndexedDB adapters, provider — now lives in `@ez-kit/store-persist` and reaches
+  a store only through a `StorePort`.
+  - **`@ez-kit/store-core`** gains `StorePort` (`getState` / `write` / `subscribe`), the path helpers
+    behind it (`readPath`, `parentOf`, `writePath`, `setPath`, `findPropertyDescriptor`) and
+    `useCapabilities`, the shared mount seam both binding packages now use.
+  - **`@ez-kit/zu-store`** gains the persist front: `pipe(createStore()(init), withPersist({ fields }))`,
+    the `@ez-kit/zu-store/persist*` subpaths, a `StoreProvider`, `pipe` re-exported from store-core, and
+    a `plugins` option on `createContextStore` for capabilities declared on the factory. Its port
+    rebuilds only the touched paths and issues **one** `setState` per batch, so a multi-field hydration
+    is a single state change.
+  - **`@ez-kit/va-store`** keeps every `@ez-kit/va-store/persist*` import path unchanged — they now
+    re-export the shared package with the Valtio port bound — and gains the same `plugins` option plus a
+    `./persist/testing` subpath (`createFakePersistAdapter`, previously internal).
+
+  Because a binding carries its own port, one mounted `PersistProvider` serves Valtio and Zustand
+  stores in the same tree.
+
+  **Breaking:** the default storage key changed from `va-store` to `ez-kit` (it is no longer a
+  Valtio-only engine), so a store that relied on the default now starts from an empty blob. Pass
+  `localStorageAdapter({ storageKey: 'va-store' })` to keep reading existing data. Error message
+  prefixes changed from `[va-store] persist:` to `[store-persist]:` for the same reason.
+
+- b0580ea: Add `pipe` and the `StoreEnhancer<In, Out>` type, and make every `with*` wrapper curried. A
+  capability chain is now written in attachment order instead of inside out:
+
+  ```tsx
+  // Before
+  createContextStore(() => withPersist(withHistory(proxy({ q: '' }), { defaultPaused: true }), { fields }))
+
+  // After
+  createContextStore(() => pipe(proxy({ q: '' }), withHistory({ defaultPaused: true }), withPersist({ fields })))
+  ```
+
+  `pipe(base, ...enhancers)` is `enhancers.reduce((target, enhance) => enhance(target), base)` with
+  overloads that carry the widened type through each step, so the chain's result type still names every
+  capability it picked up. Reading it top to bottom now matches the order the Provider replays each
+  capability's `setup` in, which is the order the persist + history recipe depends on.
+
+  `withHistory(target, options?)` and `withPersist(target, options?)` are therefore replaced by
+  `withHistory(options?)` and `withPersist(options?)`, which return the enhancer. Currying is what types
+  the options: the enhancer's state type comes from the value `pipe` feeds it, so
+  `withHistory({ shouldRecord: (prev, next) => prev.q !== next.q })` types both parameters as the store's
+  own state without an annotation. An enhancer applied outside `pipe` has nothing to infer from, so name
+  the state there: `withHistory<Filters>()(proxy({ q: '' }))`.
+
+  Both wrappers still mutate the proxy they are applied to and return the same identity, and nothing is
+  attached until the enhancer runs — a named enhancer (`const historic = withHistory<Filters>({ limit: 50 })`)
+  can seed several stores, each with its own stack.
+
+- b0580ea: **Breaking:** `withPersist` now returns `T & { $url: UrlHandle; $persist: PersistHandle }`, so the
+  persist control handles are typed on a par with `withHistory`'s `history`.
+
+  `store.$url.runWithMeta({ history: UrlHistory.Push }, () => { … })` type-checks straight off
+  `useStore()`. `urlHandle()` / `persistHandle()` are unchanged and remain the way to reach a handle on
+  a proxy whose type has been widened away.
+
+  To make that type true rather than aspirational, both slots are now attached whatever the store
+  declares. A store with no field for a slot gets an inert handle there — it runs the mutation without
+  engine meta, exactly as a not-yet-connected handle does — and that handle's `source` is `null`, so
+  `PersistHandle['source']` is now `string | null`. As a result `urlHandle()` / `persistHandle()` no
+  longer throw for a `withPersist`ed proxy; the "no handle on this proxy" error now means only that the
+  proxy never went through `withPersist`.
+  - **Bindings are now built in the factory phase**, not on mount: `withPersist` constructs them and
+    attaches the handles right away, so `$url`/`$persist` are on the returned type. Connecting a
+    binding to its engine — and capturing its pristine default — still happens at connect time, in the
+    capability's `setup`, exactly as before. There is no behaviour change: a field that is both
+    controlled and persisted still keeps its controlled value across the first mount.
+
+- b0580ea: Add `useTimeline(store)` — the assembled timeline of a `withHistory` store.
+
+  `goto(index)` addresses `[...pasts, current, ...futures]`, but `current` was the one part of that a
+  caller had to rebuild by hand, field by field, from a snapshot. `useTimeline` returns it assembled:
+  `steps` (the full timeline), `index` (`pasts.length`, so `steps[index] === current`), `current` (the
+  live state shaped like a step — the store's fields, without `history`), and `goto`.
+
+  It is a separate hook rather than more fields on `useHistory` because assembling `current` means
+  `useSnapshot(store)`, and valtio re-renders a component on any store write once it snapshots the
+  store — even one that reads nothing off the snapshot. On `useHistory` that cost would land on every
+  caller, including a toolbar that only wanted `undo` / `redo`; on `useTimeline` it lands only where
+  the state is rendered anyway.
+
+- b0580ea: Add `withHistory` and `useHistory` — an undo/redo/goto capability for any Valtio proxy, built on the
+  same manager-agnostic `@ez-kit/store-core/history` engine `@ez-kit/zu-store`'s `withHistory` uses:
+
+  ```tsx
+  import { createContextStore, pipe, useHistory, withHistory } from '@ez-kit/va-store'
+  import { proxy } from 'valtio'
+
+  const store = createContextStore(() => pipe(proxy({ count: 0 }), withHistory()))
+
+  function Toolbar() {
+  	const { undo, redo, canUndo, canRedo } = useHistory(store.useStore())
+  	// …
+  }
+  ```
+
+  `withHistory` composes with `withPersist` in a `pipe` — `pipe(proxy({ … }), withHistory(), withPersist())` — as
+  capabilities attached to the same proxy (see the `@ez-kit/store-core`/`@ez-kit/va-store` capability
+  changeset in this release). `store.history` is enumerable and `ref()`-wrapped, so `snapshot()` exposes
+  the same live object rather than a deep-cloned copy, and its `toJSON()` returns `undefined` so it never
+  reaches `JSON.stringify(store)`.
+
+  Applying the enhancer flips on Valtio's `unstable_enableOp` globally for the process (needed for
+  `shouldRecord` and `sync: true`'s per-operation granularity) — harmless for `subscribe()` callers that
+  ignore their `ops` argument, but process-wide once any store calls it.
+
+  See [History](https://ez-kit-docs.vercel.app/docs/va-store/history) for the full option table, the
+  honest cost of using history (deep clone on record; `ref`/class-typed values don't time-travel), and
+  the `defaultPaused` + `useHydrated` recipe for combining it with `withPersist`.
+
+### Patch Changes
+
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+- Updated dependencies [b0580ea]
+  - @ez-kit/store-core@0.4.0
+  - @ez-kit/store-persist@0.1.0
+
 ## 0.2.0
 
 ### Minor Changes

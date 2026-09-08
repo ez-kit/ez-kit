@@ -83,7 +83,71 @@ The store returned by `createStore<T>()(withHistory(initializer))` is a full `St
 
 ## Reading history
 
-There are three idiomatic patterns. **Pick the one that matches what your code is doing**, not the first one you remember.
+There are four idiomatic patterns. **Pick the one that matches what your code is doing**, not the first one you remember.
+
+### `useHistory(store)` — the whole control surface
+
+```tsx
+const { undo, redo, goto, clear, pause, resume, skip, isPaused, pasts, futures, limit, canUndo, canRedo } =
+	useHistory(store)
+```
+
+One subscription to the `history` sub-store, flattened into one object, with `canUndo` / `canRedo` derived (`pasts.length > 0` / `futures.length > 0`). The methods are stable references — call them from event handlers without re-subscribing.
+
+```tsx
+import { useHistory } from '@ez-kit/zu-store'
+
+function Toolbar() {
+	const { undo, redo, canUndo, canRedo } = useHistory(store)
+	return (
+		<>
+			<button
+				onClick={undo}
+				disabled={!canUndo}
+			>
+				Undo
+			</button>
+			<button
+				onClick={redo}
+				disabled={!canRedo}
+			>
+				Redo
+			</button>
+		</>
+	)
+}
+```
+
+It subscribes to the history sub-store and nothing else, so a write the stack never records — paused, `skip`ped, or filtered out by `shouldRecord` — does not re-render it. Every recorded write does, which is exactly what a button reading `canUndo` needs. Reach for a selector (below) instead when a component renders one slice of history and must not re-render for the rest.
+
+### `useTimeline(store)` — the assembled timeline
+
+```tsx
+const { steps, index, current, goto } = useTimeline(store)
+```
+
+`steps` is `[...pasts, current, ...futures]`, `index` is where the store sits on it (`pasts.length`, so `steps[index] === current`), and `current` is the live state. That is what a step strip, a "step 3 of 7" read-out, or anything driving `goto()` needs, and it saves rebuilding `current` from the store by hand.
+
+It is a separate hook rather than more fields on `useHistory` because assembling `current` means subscribing to the store's **whole state**: the caller re-renders on every write, recorded or not. On `useHistory` that cost would land on every caller, including a toolbar that only wanted `undo` / `redo` and would then re-render on every keystroke. Here it lands only where the state is being rendered anyway.
+
+```tsx
+import { useTimeline } from '@ez-kit/zu-store'
+
+function Strip() {
+	const { steps, index, goto } = useTimeline(store)
+	return steps.map((step, at) => (
+		<button
+			key={at}
+			aria-current={at === index}
+			onClick={() => {
+				goto(at)
+			}}
+		>
+			<Preview state={step} />
+		</button>
+	))
+}
+```
 
 ### Imperative one-shot read
 
@@ -97,7 +161,7 @@ function ToolbarUndoButton() {
 
 ### Reactive subscription in React
 
-When the UI needs to **render** based on history state — for example, disabling a button when there is nothing to undo, or rendering a history slider — use `useStore` with a selector.
+When a component renders one slice of history and must not re-render for the rest — a single disabled flag in an otherwise expensive tree — select that slice with `useStore` instead of taking the whole object through `useHistory`.
 
 ```tsx
 import { useStore } from 'zustand'
@@ -128,17 +192,17 @@ const unsubscribe = store.history.subscribe((state, prev) => {
 })
 ```
 
-### Anti-pattern: subscribing to the whole history sub-store
+### Anti-pattern: subscribing for an action you only call
 
 ```tsx
-// ❌ Don't do this — re-renders on EVERY recorded write
+// ❌ Don't do this — re-renders on EVERY recorded write, to render nothing new
 function Toolbar() {
-	const history = useStore(store.history)
-	return <button onClick={history.undo}>Undo</button>
+	const { undo } = useHistory(store)
+	return <button onClick={undo}>Undo</button>
 }
 ```
 
-Without a selector, the component re-renders every time `pasts` or `futures` changes. If you only need to call an action, read it once with `getState()`. If you need to render based on a slice, select that slice.
+The button renders the same markup whatever the stacks hold, so subscribing to them buys nothing. Read the action once with `getState()` instead. `useHistory` earns its subscription the moment the component renders something derived from history — `canUndo`, a step count, the paused state.
 
 ## Options
 
@@ -331,10 +395,12 @@ In versions before `0.4.0`, `withHistory` was a store wrapper: it took an alread
 
 ```diff
 - import { useHistoryStore } from '@ez-kit/zu-store'
-- const undo = useHistoryStore(store, (h) => h.undo)
-+ import { useStore } from 'zustand'
-+ const undo = useStore(store.history, (h) => h.undo)
+- const canUndo = useHistoryStore(store, (h) => h.pasts.length > 0)
++ import { useHistory } from '@ez-kit/zu-store'
++ const { canUndo } = useHistory(store)
 ```
+
+`useStore(store.history, selector)` remains available for a component that needs one slice and nothing else.
 
 ### `shouldPush` is renamed to `shouldRecord`
 

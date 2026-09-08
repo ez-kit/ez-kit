@@ -119,20 +119,20 @@ describe('@ez-kit/va-store createContextStore', () => {
 		expect(screen.getByTestId('tracked-count')).toHaveTextContent('2')
 	})
 
-	it('supports the Item render-prop receiving { snap, store }', () => {
+	it('supports the Subscribe render-prop receiving { snap, store }', () => {
 		render(
 			<counter.Provider defaultValue={{ count: 5, label: 'boot' }}>
-				<counter.Item>{({ snap }) => <span data-testid='item-count'>{snap.count}</span>}</counter.Item>
+				<counter.Subscribe>{({ snap }) => <span data-testid='item-count'>{snap.count}</span>}</counter.Subscribe>
 			</counter.Provider>,
 		)
 
 		expect(screen.getByTestId('item-count')).toHaveTextContent('5')
 	})
 
-	it('Item exposes the raw store so it can both read and write', async () => {
+	it('Subscribe exposes the raw store so it can both read and write', async () => {
 		render(
 			<counter.Provider defaultValue={{ count: 0, label: 'boot' }}>
-				<counter.Item>
+				<counter.Subscribe>
 					{({ snap, store }) => (
 						<button
 							type='button'
@@ -144,7 +144,7 @@ describe('@ez-kit/va-store createContextStore', () => {
 							{snap.count}
 						</button>
 					)}
-				</counter.Item>
+				</counter.Subscribe>
 			</counter.Provider>,
 		)
 
@@ -196,7 +196,7 @@ describe('@ez-kit/va-store createContextStore', () => {
 			return <div />
 		}
 
-		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for createContextStore')
+		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for store')
 	})
 
 	it('throws when useStore is used without a Provider', () => {
@@ -205,7 +205,17 @@ describe('@ez-kit/va-store createContextStore', () => {
 			return <div />
 		}
 
-		expect(() => render(<BrokenWriter />)).toThrowError('Missing Provider for createContextStore')
+		expect(() => render(<BrokenWriter />)).toThrowError('Missing Provider for store')
+	})
+
+	it('names the store in the missing-Provider error when `name` is set', () => {
+		const named = createContextStore(createCounterStore, { name: 'filters' })
+		function BrokenConsumer() {
+			named.useStore()
+			return <div />
+		}
+
+		expect(() => render(<BrokenConsumer />)).toThrowError('Missing Provider for filters')
 	})
 
 	it('re-renders a useSnapshot consumer when the field it reads changes', async () => {

@@ -1,0 +1,84 @@
+import { capabilitiesOf, pipe } from '@ez-kit/store-core'
+import { PERSIST_HANDLE, URL_HANDLE } from '@ez-kit/store-persist/internals'
+import { proxy } from 'valtio'
+import { describe, expect, it } from 'vitest'
+
+import { paramString, persistHandle, urlHandle, withPersist } from './index'
+
+import type { PersistPluginOptions } from './index'
+
+/** A store with a URL field and no storage field — so `$persist` is the unbacked slot. */
+const urlField: PersistPluginOptions<{ q: string }> = {
+	fields: (field) => [field((state) => state.q, { source: 'url', parser: paramString() })],
+}
+
+describe('withPersist', () => {
+	it('returns the same proxy identity', () => {
+		const state = proxy({ q: '' })
+		expect(pipe(state, withPersist({}))).toBe(state)
+	})
+
+	it('registers exactly one persist capability', () => {
+		const state = pipe(proxy({ q: '' }), withPersist({}))
+		expect(capabilitiesOf(state).map((plugin) => plugin.name)).toEqual(['persist'])
+	})
+
+	it('keeps the proxy free of extra enumerable keys', () => {
+		const state = pipe(proxy({ q: '' }), withPersist({}))
+		expect(Object.keys(state)).toEqual(['q'])
+	})
+
+	it('attaches both control handles in the factory phase, before any Provider mounts', () => {
+		const state = pipe(proxy({ q: '' }), withPersist({}))
+
+		// Typed off the return value rather than via `urlHandle()` — that is the point of the widening.
+		expect(typeof state.$url.runWithMeta).toBe('function')
+		expect(typeof state.$persist.runWithMeta).toBe('function')
+	})
+
+	it('names the source of a backed slot and leaves an unbacked one null', () => {
+		const state = pipe(proxy({ q: '' }), withPersist(urlField))
+
+		expect(state.$url.source).toBe('url')
+		// No storage field is declared, so `$persist` exists only to keep the return type true.
+		expect(state.$persist.source).toBeNull()
+	})
+
+	it('runs the mutation of an unbacked, unconnected handle instead of dropping it', () => {
+		const state = pipe(proxy({ q: '' }), withPersist(urlField))
+
+		state.$persist.runWithMeta({}, () => {
+			state.q = 'typed'
+		})
+
+		expect(state.q).toBe('typed')
+	})
+
+	it('resolves an unbacked slot through the accessors instead of throwing', () => {
+		// The accessors used to throw "no $persist handle on this proxy" for a store that declared no
+		// storage field. Both slots now exist so the widened return type is true, so the throw is gone
+		// for anything that went through `withPersist` — the handle is simply inert.
+		const state = pipe(proxy({ q: '' }), withPersist(urlField))
+
+		expect(urlHandle(state).source).toBe('url')
+		expect(persistHandle(state).source).toBeNull()
+	})
+
+	it('still throws for a proxy that never went through withPersist', () => {
+		// What the accessors' error means now: not "no field for that source", but "this proxy was
+		// never persisted at all".
+		const bare = proxy({ q: '' })
+
+		expect(() => urlHandle(bare)).toThrow(/no "\$url" handle/)
+		expect(() => persistHandle(bare)).toThrow(/no "\$persist" handle/)
+	})
+
+	it('keeps both handles non-enumerable, so they stay out of snapshots and JSON', () => {
+		const state = pipe(proxy({ q: '' }), withPersist(urlField))
+
+		expect(Object.keys(state)).toEqual(['q'])
+		expect(Object.prototype.propertyIsEnumerable.call(state, URL_HANDLE)).toBe(false)
+		expect(Object.prototype.propertyIsEnumerable.call(state, PERSIST_HANDLE)).toBe(false)
+		expect(JSON.stringify(state)).toBe('{"q":""}')
+	})
+})
