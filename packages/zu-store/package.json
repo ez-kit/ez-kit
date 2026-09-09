@@ -19,6 +19,10 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
+		"./history": {
+			"types": "./dist/history/index.d.ts",
+			"import": "./dist/history/index.js"
+		},
 		"./persist": {
 			"types": "./dist/persist/index.d.ts",
 			"import": "./dist/persist/index.js"
@@ -67,6 +71,10 @@
 		{
 			"path": "dist/index.js",
 			"limit": "6.5 KB"
+		},
+		{
+			"path": "dist/history/index.js",
+			"limit": "2 KB"
 		},
 		{
 			"path": "dist/persist/index.js",

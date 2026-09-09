@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { proxy } from 'valtio'
 import { describe, expect, it } from 'vitest'
-import { createStore } from 'zustand/vanilla'
 
 import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 import { CacheProvider, createCachedStore } from './default-cache'
@@ -13,28 +13,30 @@ type TableState = {
 	setFilter: (filter: string) => void
 }
 
-const tableFactory = ({ defaultValue }: ContextStoreInit<{ filter?: string }>) =>
-	createStore<TableState>((set) => ({
+const tableFactory = ({ defaultValue }: ContextStoreInit<{ filter?: string }>) => {
+	const state: TableState = proxy({
 		filter: defaultValue.filter ?? 'all',
-		setFilter: (filter) => {
-			set({ filter })
+		setFilter: (filter: string) => {
+			state.filter = filter
 		},
-	}))
+	})
+	return state
+}
 
 describe('default cache — top-level exports', () => {
-	it('keeps state alive across unmount/remount without calling createStoreCache', () => {
+	it('keeps state alive across unmount/remount without calling createStoreCache', async () => {
 		const table = createCachedStore(tableFactory, { name: 'default-keepalive' })
 
 		function FilterView() {
-			return <span data-testid='r'>{table.useSelector((s) => s.filter)}</span>
+			return <span data-testid='r'>{table.useSnapshot().filter}</span>
 		}
 		function ArchiveButton() {
-			const setFilter = table.useSelector((s) => s.setFilter)
+			const state = table.useStore()
 			return (
 				<button
 					type='button'
 					onClick={() => {
-						setFilter('archived')
+						state.setFilter('archived')
 					}}
 				>
 					archive
@@ -63,7 +65,10 @@ describe('default cache — top-level exports', () => {
 		expect(screen.getByTestId('r')).toHaveTextContent('active')
 
 		fireEvent.click(screen.getByRole('button', { name: 'archive' }))
-		expect(screen.getByTestId('r')).toHaveTextContent('archived')
+		// Valtio notifies its subscribers in a microtask, so the re-render is not synchronous.
+		await waitFor(() => {
+			expect(screen.getByTestId('r')).toHaveTextContent('archived')
+		})
 
 		rerender(<App show={false} />)
 		rerender(<App show />)
@@ -77,7 +82,7 @@ describe('default cache — top-level exports', () => {
 		const custom = createStoreCache()
 
 		function Consumer() {
-			table.useSelector((s) => s.filter)
+			table.useSnapshot()
 			return null
 		}
 

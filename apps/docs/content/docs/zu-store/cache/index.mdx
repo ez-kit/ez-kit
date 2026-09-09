@@ -11,7 +11,7 @@ description: Keep context-store instances alive across Provider unmount/remount 
 
 The package ships a **ready-made default cache** — import `CacheProvider` and `createCachedStore` directly and you are done; no instance to create. This page uses the default cache throughout. If you need an isolated cache or several independent caches, see [Custom or multiple caches](#custom-or-multiple-caches) at the end.
 
-This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./store-cache/api).
+This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./cache/api).
 
 ## Keep-alive in action
 
@@ -451,7 +451,7 @@ function App() {
 }
 ```
 
-A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `Missing StoreCacheProvider`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useCacheKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
+A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `Missing CacheProvider`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useCacheKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
 
 ## Gotchas
 

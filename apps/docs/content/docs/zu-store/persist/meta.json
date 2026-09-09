@@ -11,6 +11,7 @@
 		"deep-dive-storage",
 		"custom-adapter",
 		"fields",
-		"parsers"
+		"parsers",
+		"typescript"
 	]
 }

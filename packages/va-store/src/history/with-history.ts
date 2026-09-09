@@ -4,14 +4,23 @@ import { proxy, ref, snapshot, subscribe, unstable_enableOp } from 'valtio'
 import { deepClone } from 'valtio/utils'
 
 import type { StoreEnhancer } from '@ez-kit/store-core'
-import type { HistoryApi, HistoryOptions, HistorySnapshot } from '@ez-kit/store-core/history'
+import type { HistoryApi, HistoryOptions as CoreHistoryOptions, HistorySnapshot } from '@ez-kit/store-core/history'
 
-/** Valtio declares this shape as `INTERNAL_Op`; a public signature cannot depend on an internal type. */
-export type ValtioOp =
+/**
+ * One recorded Valtio operation — the meta this package's history carries, mirroring `zu-store`'s
+ * `HistoryActionTag`. Spelled out here because Valtio declares the shape as `INTERNAL_Op`, and a
+ * public signature cannot depend on an internal type.
+ */
+export type HistoryOp =
 	| readonly ['set', readonly (string | symbol)[], unknown, unknown]
 	| readonly ['delete', readonly (string | symbol)[], unknown]
 
-export type ValtioHistoryOptions<T extends object> = HistoryOptions<T, readonly ValtioOp[]> & {
+/**
+ * `@ez-kit/store-core/history`'s `HistoryOptions` bound to this package's {@link HistoryOp} meta,
+ * plus the one Valtio-specific knob. See `zu-store`'s `HistoryOptions` for the same options bound to
+ * a Zustand action tag.
+ */
+export type HistoryOptions<T extends object> = CoreHistoryOptions<T, readonly HistoryOp[]> & {
 	/** Record one entry per operation instead of one per microtask batch. Defaults to `false`. */
 	sync?: boolean
 }
@@ -21,7 +30,7 @@ export type ValtioHistoryOptions<T extends object> = HistoryOptions<T, readonly 
  * feeds the stack a `(prev, next)` pair it just observed, so a caller invoking it by hand would push
  * a state the store was never in. `zu-store`'s middleware keeps it internal for the same reason.
  */
-export type StoreHistory<T extends object> = Omit<HistoryApi<T, readonly ValtioOp[]>, 'record'> & {
+export type StoreHistory<T extends object> = Omit<HistoryApi<T, readonly HistoryOp[]>, 'record'> & {
 	/** Live stacks, as their own proxy — subscribe with `useSnapshot` or `useHistory`. */
 	state: HistorySnapshot<T>
 	toJSON: () => undefined
@@ -73,7 +82,7 @@ function applyState<T extends object>(target: T, state: T): void {
  * microtask, or record each one immediately.
  */
 export function withHistory<T extends object>(
-	options: ValtioHistoryOptions<NoInfer<T>> = {},
+	options: HistoryOptions<NoInfer<T>> = {},
 ): StoreEnhancer<T, T & { history: StoreHistory<T> }> {
 	return (target: T) => {
 		// Valtio only populates `subscribe`'s op payloads once this is called — off by default (the
@@ -88,7 +97,7 @@ export function withHistory<T extends object>(
 		// reads these placeholders.
 		const stacks = proxy<HistorySnapshot<T>>({ pasts: [], futures: [], limit: 0, isPaused: false })
 
-		const api = createHistoryStack<T, readonly ValtioOp[]>(
+		const api = createHistoryStack<T, readonly HistoryOp[]>(
 			{
 				read: () => omitHistoryKey(snapshot(target) as T),
 				write: (state) => {
@@ -104,7 +113,7 @@ export function withHistory<T extends object>(
 		// a cheap "did anything actually change since we last looked" test. `omitHistoryKey` always allocates
 		// a fresh object (the key is always present), so comparing its output would never be reference-equal.
 		let lastSnapshot = snapshot(target) as T
-		let pendingOps: ValtioOp[] = []
+		let pendingOps: HistoryOp[] = []
 		let flushScheduled = false
 
 		function flushBatch(): void {
@@ -133,7 +142,7 @@ export function withHistory<T extends object>(
 		 * forgetting to add one. `flushBatch()` is a no-op when nothing is pending, so this costs nothing for
 		 * a member (like `resume`, see the report) that in practice never has anything to flush.
 		 */
-		function buildFlushingHistoryMethods(): Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused' | 'record'> {
+		function buildFlushingHistoryMethods(): Omit<HistoryApi<T, readonly HistoryOp[]>, 'isPaused' | 'record'> {
 			const methods: Record<string, unknown> = {}
 			for (const [key, member] of Object.entries(api)) {
 				if (typeof member !== 'function') continue
@@ -145,7 +154,7 @@ export function withHistory<T extends object>(
 					return (member as (...args: unknown[]) => unknown)(...args)
 				}
 			}
-			return methods as Omit<HistoryApi<T, readonly ValtioOp[]>, 'isPaused' | 'record'>
+			return methods as Omit<HistoryApi<T, readonly HistoryOp[]>, 'isPaused' | 'record'>
 		}
 
 		const host = target as T & { history: StoreHistory<T> }

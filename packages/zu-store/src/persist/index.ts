@@ -42,9 +42,9 @@ export function withPersist<TStore extends StoreApi<object>>(
 }
 
 /**
- * The persist capability as a bare plugin, for `createContextStore(factory, { plugins: [persist(…)] })`
- * or a hand-written `attachCapability(store, persist(…))`. Same options, same behaviour;
- * {@link withPersist} is this plus the handles and the attachment.
+ * The persist capability as a bare plugin, for a store that is wired by hand —
+ * `attachCapability(store, persist({ fields }))`. Same options, same behaviour; {@link withPersist}
+ * is this plus the `$url` / `$persist` handles and the attachment.
  */
 export function persist<TStore extends StoreApi<object>>(
 	options: PersistPluginOptions<ExtractState<TStore>> = {},

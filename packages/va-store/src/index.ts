@@ -23,7 +23,7 @@ export { StoreProvider } from './store-provider'
 export type { StoreProviderProps } from './store-provider'
 
 export { useHistory, useTimeline, withHistory } from './history'
-export type { StoreHistory, Timeline, ValtioHistoryOptions, ValtioOp } from './history'
+export type { HistoryOp, HistoryOptions, HistorySnapshot, StoreHistory, Timeline } from './history'
 
 export { pipe, shallowEqual } from '@ez-kit/store-core'
 export type { ControlledConfig, ControlledFieldConfig, StoreEnhancer } from '@ez-kit/store-core'

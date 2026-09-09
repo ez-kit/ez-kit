@@ -5,7 +5,7 @@ import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
-import { createStoreCache } from './create-store-cache'
+import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 
 import type { ContextStoreInit } from '../create-context-store'
 
@@ -88,9 +88,7 @@ describe('createStoreCache — provider & context', () => {
 			table.useSelector((s) => s.filter)
 			return null
 		}
-		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrowError(
-			'Missing StoreCacheProvider',
-		)
+		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrowError(MISSING_CACHE_PROVIDER)
 	})
 
 	it('throws when useFromCache is used without a cache Provider', () => {
@@ -100,7 +98,7 @@ describe('createStoreCache — provider & context', () => {
 			table.useFromCache({ id: 'x' }, (s) => s?.filter)
 			return null
 		}
-		expect(() => render(<Badge />)).toThrowError('Missing StoreCacheProvider')
+		expect(() => render(<Badge />)).toThrowError(MISSING_CACHE_PROVIDER)
 	})
 })
 

@@ -5,7 +5,7 @@ description: Every signature, prop and option of the store cache in one place.
 
 # `createStoreCache` — API
 
-The reference. For what these are _for_ and how they behave in practice, read the [guide](../store-cache).
+The reference. For what these are _for_ and how they behave in practice, read the [guide](../cache).
 
 ## Exports
 
@@ -39,7 +39,7 @@ Owns the real storage, created per React tree — so SSR requests and tests are 
 | ---------- | ----------- | -------- | -------------------------------------- |
 | `children` | `ReactNode` | no       | The subtree the cache is available to. |
 
-Takes no configuration: the cache default `gcTime` belongs to the cache instance, so change it with [`createStoreCache`](#createstorecacheoptions). A group `Provider` mounted without a `CacheProvider` ancestor throws [`Missing StoreCacheProvider`](#errors).
+Takes no configuration: the cache default `gcTime` belongs to the cache instance, so change it with [`createStoreCache`](#createstorecacheoptions). A group `Provider` mounted without a `CacheProvider` ancestor throws [`Missing CacheProvider`](#errors).
 
 ## `CacheScope`
 
@@ -83,7 +83,7 @@ const records = useCacheKeys(['customer', '42'])
 | --------- | ------------------- | -------- | ----------------------------------------- |
 | `prefix`  | `readonly string[]` | no       | Restricts the result to one path subtree. |
 
-Returns `CacheRecord[]`. Throws `Missing StoreCacheProvider` outside a `CacheProvider`.
+Returns `CacheRecord[]`. Throws `Missing CacheProvider` outside a `CacheProvider`.
 
 ## `toTree(records)`
 
@@ -157,7 +157,7 @@ Registers an observer on the entry at `(resolvedPath, id)`, creating it if it is
 | `alwaysCache`  | `boolean`       | no                                | Never auto-evict (`gcTime: Infinity`). Birth-config. `remove` / `clear` still drop the entry.   |
 | `children`     | `ReactNode`     | no                                | The subtree that reads this entry.                                                              |
 
-`gcTime` resolves first-match-wins: `alwaysCache` → `Provider.gcTime` → group `gcTime` → cache default (5 min). `gcTime={0}` opts this mounting point out of keep-alive — see [the guide](../store-cache#opting-one-place-out-of-keep-alive). `gcTime`, `alwaysCache` and `defaultValue` are read only by the mount that **creates** the entry; later mounts attach to the live store and ignore them.
+`gcTime` resolves first-match-wins: `alwaysCache` → `Provider.gcTime` → group `gcTime` → cache default (5 min). `gcTime={0}` opts this mounting point out of keep-alive — see [the guide](../cache#opting-one-place-out-of-keep-alive). `gcTime`, `alwaysCache` and `defaultValue` are read only by the mount that **creates** the entry; later mounts attach to the live store and ignore them.
 
 ## `useSelector(selector)`
 
@@ -246,7 +246,7 @@ function createStoreCache(options?: { gcTime?: number }): {
 | -------- | -------- | ------- | ------------------------------------------------------------------------ |
 | `gcTime` | `number` | 300 000 | Cache-wide default eviction delay in ms, used when nothing overrides it. |
 
-A store group is bound to the cache that created it: mounting it under another cache's `Provider` throws `Missing StoreCacheProvider`.
+A store group is bound to the cache that created it: mounting it under another cache's `Provider` throws `Missing CacheProvider`.
 
 ## Types
 
@@ -269,10 +269,10 @@ All are re-exported from `@ez-kit/zu-store`; none require reaching for `@ez-kit/
 
 ## Errors
 
-| Message                      | Cause                                                                                                                                |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `Missing StoreCacheProvider` | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.                |
-| `Missing <name.Provider>`    | `useSelector` / `useShallowSelector` / `useStore` / `Subscribe` used outside that group's own `Provider` (`name` is the group name). |
+| Message                   | Cause                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `Missing CacheProvider`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.                |
+| `Missing <name.Provider>` | `useSelector` / `useShallowSelector` / `useStore` / `Subscribe` used outside that group's own `Provider` (`name` is the group name). |
 
 `getFromCache` and `remove` throw nothing: they resolve through the most recently activated `CacheProvider` and are a no-op — `undefined` — when none is mounted.
 

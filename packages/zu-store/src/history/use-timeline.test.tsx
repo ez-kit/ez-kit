@@ -4,8 +4,7 @@ import { createStore } from 'zustand/vanilla'
 
 import { useHistory } from './use-history'
 import { useTimeline } from './use-timeline'
-
-import { withHistory } from './index'
+import { withHistory } from './with-history'
 
 type Doc = { title: string; body: string }
 

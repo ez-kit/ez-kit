@@ -4,7 +4,7 @@ import { createContext, type PropsWithChildren, type ReactElement, useContext, u
 import { useStore as useZustandStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
-import type { ControlledConfig, StoreId, StorePlugin } from '@ez-kit/store-core'
+import type { ControlledConfig, StoreId } from '@ez-kit/store-core'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
 const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
@@ -13,9 +13,6 @@ const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
 const SINGLETON_ID = 'singleton'
 const DEFAULT_STORE_NAME = 'store'
 const EMPTY_PATH: readonly string[] = []
-/** Shared empty list, so a factory without `plugins` hands `useCapabilities` a stable identity. */
-const EMPTY_PLUGINS: readonly StorePlugin<never>[] = []
-
 /** Seed envelope passed to a `createContextStore` factory. */
 export type ContextStoreInit<TDefaultValue> = {
 	defaultValue: TDefaultValue
@@ -25,17 +22,11 @@ export type CreateContextStoreFactory<TStore extends StoreApi<unknown>, TDefault
 	init: ContextStoreInit<TDefaultValue>,
 ) => TStore
 
-export type CreateContextStoreOptions<TStore extends StoreApi<unknown>, TState> = {
+export type CreateContextStoreOptions<TState> = {
 	/** Group name used to synthesize this store's `StoreId`. Defaults to a stable `'store'`. */
 	name?: string
 	/** Per-key overrides for fields controlled via the Provider's `value` prop. */
 	controlled?: ControlledConfig<TState>
-	/**
-	 * Plugins to run for every instance this factory creates, after the capabilities the factory chain
-	 * attached to the store itself (`pipe(createStore()(…), withPersist())`). Use it for a plugin that
-	 * is not written as a `with*` wrapper, or one that belongs to the factory rather than to the store.
-	 */
-	plugins?: readonly StorePlugin<TStore>[]
 }
 
 /**
@@ -118,13 +109,12 @@ function applyControlledEntries<TStore extends StoreApi<unknown>, TState extends
 
 export function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = undefined>(
 	createStore: CreateContextStoreFactory<TStore, TDefaultValue>,
-	options: CreateContextStoreOptions<TStore, ExtractState<TStore>> = {},
+	options: CreateContextStoreOptions<ExtractState<TStore>> = {},
 ): CreateContextStoreResult<TStore, TDefaultValue> {
 	type TState = ExtractState<TStore>
 	const StoreContext = createContext<TStore | null>(null)
 	const controlled: ControlledConfig<TState> = options.controlled ?? {}
 	const storeId: StoreId = { path: EMPTY_PATH, name: options.name ?? DEFAULT_STORE_NAME, id: SINGLETON_ID }
-	const plugins = options.plugins ?? EMPTY_PLUGINS
 
 	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>): ReactElement {
 		const { children, defaultValue, value, onValueChange } = props as PropsWithChildren<{
@@ -160,7 +150,7 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 			}
 		}
 
-		useCapabilities(store, services, storeId, plugins)
+		useCapabilities(store, services, storeId)
 
 		useLayoutEffect(() => {
 			const isInitialSync = !hasSyncedInitialRef.current

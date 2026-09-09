@@ -15,7 +15,7 @@ import type {
 } from '@ez-kit/store-core/cache'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
-export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider'
+export const MISSING_CACHE_PROVIDER = 'Missing CacheProvider'
 
 const MULTIPLE_PROVIDERS_WARNING =
 	'[zu-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +

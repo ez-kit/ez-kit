@@ -1,0 +1,89 @@
+---
+title: TypeScript
+description: How persist types flow in the Zustand binding — fields typed against the store's state, handles typed on the store handle, and why there are no decorators here.
+---
+
+# TypeScript
+
+Persist needs **no special TypeScript or bundler configuration** in this package — no decorators, no `Symbol.metadata`, no `experimentalDecorators`. What follows is how the types line up, so you can annotate things when inference needs help.
+
+## Two type positions: state and handle
+
+A Zustand store is a **handle** (`StoreApi<TState>`) that hands out state, and persist touches both halves:
+
+- the **`fields` builder** selects from `TState` — the state the store holds;
+- the **`$url` / `$persist` handles** hang off the store handle itself, beside `getState` / `setState`.
+
+```ts
+import { pipe } from '@ez-kit/zu-store'
+import { paramNumber, paramString, withPersist } from '@ez-kit/zu-store/persist'
+import { UrlHistory } from '@ez-kit/zu-store/persist/url'
+import { createStore } from 'zustand/vanilla'
+
+type Filters = { q: string; page: number }
+
+const store = pipe(
+	createStore<Filters>()(() => ({ q: '', page: 1 })),
+	withPersist({
+		// `state` is `Filters`, inferred from the store the enhancer is applied to.
+		fields: (field) => [
+			field((state) => state.q, { source: 'url', parser: paramString() }),
+			field((state) => state.page, { source: 'url', parser: paramNumber() }),
+		],
+	}),
+)
+
+store.$url.runWithMeta({ history: UrlHistory.Push }, () => {
+	store.setState({ page: 2 })
+})
+```
+
+`withPersist` returns the store handle **widened** by `PersistHandles`, so `$url` and `$persist` type-check straight off `useStore()` — no accessor call, no cast. Both slots are always present; a store that declares no field for one of them gets an inert handle there.
+
+## Annotating the store explicitly
+
+Inference flows from the store into the field selectors, so the annotation — when you want one — goes on the **store type**, not on each field:
+
+```ts
+import type { StoreApi } from 'zustand/vanilla'
+
+const store = pipe(
+	createStore<Filters>()(() => ({ q: '', page: 1 })),
+	withPersist<StoreApi<Filters>>({ fields }),
+)
+```
+
+A standalone `fields` builder is typed with `FieldsBuilder<TState>` — parameterised by the **state**, not the handle:
+
+```ts
+import type { FieldsBuilder } from '@ez-kit/zu-store/persist'
+
+const filterFields: FieldsBuilder<Filters> = (field) => [
+	field((state) => state.q, { source: 'url', parser: paramString() }),
+]
+```
+
+## Inside `createContextStore`
+
+`createContextStore` is generic over the **store type**, so a persisted store declares what the factory returns:
+
+```tsx
+const filtersStore = createContextStore<StoreApi<Filters>>(() =>
+	pipe(
+		createStore<Filters>()(() => ({ q: '', page: 1 })),
+		withPersist({ fields: filterFields }),
+	),
+)
+```
+
+## Why there are no decorators here
+
+`@ez-kit/va-store` additionally offers a decorator API (`@persistUrl`, `@persistLocalStorage`, …) because a Valtio store is often written as a class whose fields the decorators can annotate in place. A Zustand store is a state object produced by an initializer — there is no field declaration to decorate — so this package ships the accessor front only. It is fully equivalent: every source, codec and option available there is available here through `field()`.
+
+## Validating what comes back
+
+Values arriving from a URL or from storage are untrusted input, and a parser is where that is checked. `zodParam(schema)` turns a Zod schema into one — see [Parsers](./parsers):
+
+```ts
+import { zodParam } from '@ez-kit/zu-store/persist/validators/zod'
+```

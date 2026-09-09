@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
-import { withHistory } from './index'
+import { withHistory } from './with-history'
 
 type PaintState = {
 	color: string

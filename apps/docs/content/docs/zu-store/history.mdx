@@ -9,6 +9,8 @@ description: A real Zustand middleware that adds undo / redo / goto to any store
 
 Because it follows the canonical middleware shape and registers a `StoreMutators` entry under `'ez-kit/history'`, it composes cleanly with `persist`, `devtools`, `subscribeWithSelector`, and `immer`.
 
+`withHistory`, `useHistory`, `useTimeline` and their types are exported from the package root and, unchanged, from the `@ez-kit/zu-store/history` subpath — reach for the subpath when you want history without pulling the rest of the package into the bundle. The same split exists in [`@ez-kit/va-store`](../va-store/history), and both are built on the shared stack engine in `@ez-kit/store-core/history`, so the option and stack vocabulary (`limit`, `defaultPaused`, `shouldRecord`, `pasts` / `futures`) is identical across the two.
+
 ## Basic usage
 
 <LivePreview
@@ -205,6 +207,18 @@ function Toolbar() {
 The button renders the same markup whatever the stacks hold, so subscribing to them buys nothing. Read the action once with `getState()` instead. `useHistory` earns its subscription the moment the component renders something derived from history — `canUndo`, a step count, the paused state.
 
 ## Options
+
+`withHistory(initializer, options?)` takes the shared history options, bound to this package's `HistoryActionTag` meta — the same set `@ez-kit/va-store` documents, minus its Valtio-only `sync`:
+
+| Option           | Type                                                     | Default | Description                                                                          |
+| ---------------- | -------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
+| `limit`          | `number`                                                 | `100`   | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
+| `defaultPaused`  | `boolean`                                                | `false` | Start with recording paused — `resume()` flips it on.                                |
+| `defaultPasts`   | `T[]`                                                    | `[]`    | Seed the undo stack. Trimmed to `limit` like any other write.                        |
+| `defaultFutures` | `T[]`                                                    | `[]`    | Seed the redo stack. Trimmed to `limit` like any other write.                        |
+| `shouldRecord`   | `(prev: T, next: T, meta?: HistoryActionTag) => boolean` | —       | Veto a write: return `false` to skip recording it. `meta` is the write's action tag. |
+
+Each is covered in turn below.
 
 ### `limit`
 

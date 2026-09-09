@@ -1,4 +1,17 @@
-import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
+import {
+	FORM_API_TYPE_ARGS,
+	FORM_VALUE_TYPE_ARGS,
+	ROW_TYPE_ARGS,
+	STATE_SEED_TYPE_ARGS,
+	STATE_TYPE_ARGS,
+	STORE_SEED_TYPE_ARGS,
+	STORE_SELECTED_TYPE_ARGS,
+	TypeModule,
+	type TypeRef,
+} from './type-resolver'
+
+/** The persist field types are generic over the field's value; any scalar answers the same key question. */
+const PERSIST_VALUE_TYPE_ARGS = '<string>'
 
 /**
  * The explicit page → type map behind `docs-option-names.test.ts`.
@@ -7,18 +20,18 @@ import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, ty
  * the docs tree: an unmapped page is *visibly* absent rather than silently
  * skipped, which is the only way coverage stays an honest number.
  *
- * Scope: **every** page under `content/docs/data-grid/**`, plus the four
- * `form/` pages that carry at least one option table. A page with no option
- * table still gets an entry with two empty arrays — that is the point. While
- * coverage was partial, an unmapped page was checked by nothing, and the two
- * worst pages in the docs were unmapped ones: `columns/resizing.mdx`
+ * Scope: **every** page under the {@link SCANNED_ROOTS} subtrees —
+ * `data-grid/**`, `form/**`, `zu-store/**` and `va-store/**`. A page with no
+ * option table still gets an entry with two empty arrays — that is the point.
+ * While coverage was partial, an unmapped page was checked by nothing, and the
+ * two worst pages in the docs were unmapped ones: `columns/resizing.mdx`
  * documented a `sizing` option that never existed, and the whole `editing/**`
  * section documented a `meta.editType` / `onCellEdit` API that never existed.
- * With the set closed, `everyPageIsMapped` fails the moment a page is added
- * without being classified, so the hole cannot reopen. `form/index.mdx` and
- * `form/ai.mdx` are absent for the opposite reason: every table on them
- * documents exported symbols or URLs, so an entry would carry a maintenance
- * obligation while checking nothing.
+ * With the set closed — and with the test walking the roots on disk, not
+ * trusting this list to be current — a page added tomorrow fails the suite
+ * until it is classified. The two pages in {@link DELIBERATELY_UNMAPPED} are
+ * exempt for the opposite reason: every table on them documents exported
+ * symbols or URLs, so an entry would carry upkeep while checking nothing.
  *
  * ## Adding a page
  *
@@ -29,6 +42,35 @@ import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, ty
  *    table that documents something else. Every table in the file must be
  *    accounted for — the test fails on an unclassified table.
  */
+
+/**
+ * Docs subtrees whose every `.mdx` must be classified. The test walks these directories and fails on
+ * any page that is neither in {@link DocPage} nor in {@link DELIBERATELY_UNMAPPED} — so the map cannot
+ * quietly fall behind the docs tree the way it did before coverage was closed.
+ */
+export const SCANNED_ROOTS: readonly string[] = [
+	'content/docs/data-grid',
+	'content/docs/form',
+	'content/docs/zu-store',
+	'content/docs/va-store',
+]
+
+/** A page under a scanned root that is deliberately not classified, with the reason it checks nothing. */
+export type UnmappedPage = {
+	readonly page: string
+	readonly reason: string
+}
+
+export const DELIBERATELY_UNMAPPED: readonly UnmappedPage[] = [
+	{
+		page: 'content/docs/form/index.mdx',
+		reason: 'Every table documents exported symbols or URLs, so an entry would carry upkeep while checking nothing.',
+	},
+	{
+		page: 'content/docs/form/ai.mdx',
+		reason: 'Lists the llms.txt endpoints — URLs, not config keys.',
+	},
+]
 
 /** In-scope documentation pages, relative to `apps/docs/`. */
 export const DocPage = {
@@ -79,6 +121,19 @@ export const DocPage = {
 	FormLayout: 'content/docs/form/layout.mdx',
 	FormNativeApi: 'content/docs/form/native-api.mdx',
 	FormSchema: 'content/docs/form/schema.mdx',
+	FormBasicConcepts: 'content/docs/form/basic-concepts.mdx',
+	FormComposition: 'content/docs/form/composition.mdx',
+	FormExamples: 'content/docs/form/examples.mdx',
+	FormGettingStarted: 'content/docs/form/getting-started.mdx',
+	FormInstallationHeroui: 'content/docs/form/installation/heroui.mdx',
+	FormInstallationShadcn: 'content/docs/form/installation/shadcn.mdx',
+	FormReactivity: 'content/docs/form/reactivity.mdx',
+	FormSelectCreatable: 'content/docs/form/select/creatable.mdx',
+	FormSelectIndex: 'content/docs/form/select/index.mdx',
+	FormSelectOptionSources: 'content/docs/form/select/option-sources.mdx',
+	FormSelectSearchable: 'content/docs/form/select/searchable.mdx',
+	FormSubmission: 'content/docs/form/submission.mdx',
+	FormValidation: 'content/docs/form/validation.mdx',
 	PaginationInfiniteScroll: 'content/docs/data-grid/pagination/infinite-scroll.mdx',
 	PaginationIndex: 'content/docs/data-grid/pagination/index.mdx',
 	Production: 'content/docs/data-grid/production.mdx',
@@ -89,6 +144,53 @@ export const DocPage = {
 	Sorting: 'content/docs/data-grid/sorting.mdx',
 	StateModel: 'content/docs/data-grid/state-model.mdx',
 	Virtualization: 'content/docs/data-grid/virtualization.mdx',
+
+	// --- @ez-kit/zu-store ---
+	ZuAi: 'content/docs/zu-store/ai.mdx',
+	ZuCacheApi: 'content/docs/zu-store/cache/api.mdx',
+	ZuCacheIndex: 'content/docs/zu-store/cache/index.mdx',
+	ZuCapabilities: 'content/docs/zu-store/capabilities.mdx',
+	ZuCreateContextStoreApi: 'content/docs/zu-store/create-context-store/api.mdx',
+	ZuCreateContextStoreIndex: 'content/docs/zu-store/create-context-store/index.mdx',
+	ZuGettingStarted: 'content/docs/zu-store/getting-started.mdx',
+	ZuHistory: 'content/docs/zu-store/history.mdx',
+	ZuIndex: 'content/docs/zu-store/index.mdx',
+	ZuPersistCache: 'content/docs/zu-store/persist/cache.mdx',
+	ZuPersistCombined: 'content/docs/zu-store/persist/combined.mdx',
+	ZuPersistCustomAdapter: 'content/docs/zu-store/persist/custom-adapter.mdx',
+	ZuPersistDeepDiveStorage: 'content/docs/zu-store/persist/deep-dive-storage.mdx',
+	ZuPersistDeepDiveUrl: 'content/docs/zu-store/persist/deep-dive-url.mdx',
+	ZuPersistFields: 'content/docs/zu-store/persist/fields.mdx',
+	ZuPersistIndex: 'content/docs/zu-store/persist/index.mdx',
+	ZuPersistParsers: 'content/docs/zu-store/persist/parsers.mdx',
+	ZuPersistQuickStartStorage: 'content/docs/zu-store/persist/quick-start-storage.mdx',
+	ZuPersistQuickStartUrl: 'content/docs/zu-store/persist/quick-start-url.mdx',
+	ZuPersistTypescript: 'content/docs/zu-store/persist/typescript.mdx',
+	ZuUseStoreState: 'content/docs/zu-store/use-store-state.mdx',
+
+	// --- @ez-kit/va-store ---
+	VaAi: 'content/docs/va-store/ai.mdx',
+	VaCacheApi: 'content/docs/va-store/cache/api.mdx',
+	VaCacheIndex: 'content/docs/va-store/cache/index.mdx',
+	VaCapabilities: 'content/docs/va-store/capabilities.mdx',
+	VaCreateContextStoreApi: 'content/docs/va-store/create-context-store/api.mdx',
+	VaCreateContextStoreIndex: 'content/docs/va-store/create-context-store/index.mdx',
+	VaGettingStarted: 'content/docs/va-store/getting-started.mdx',
+	VaHistory: 'content/docs/va-store/history.mdx',
+	VaIndex: 'content/docs/va-store/index.mdx',
+	VaPersistCache: 'content/docs/va-store/persist/cache.mdx',
+	VaPersistCombined: 'content/docs/va-store/persist/combined.mdx',
+	VaPersistCustomAdapter: 'content/docs/va-store/persist/custom-adapter.mdx',
+	VaPersistDecorators: 'content/docs/va-store/persist/decorators.mdx',
+	VaPersistDeepDiveStorage: 'content/docs/va-store/persist/deep-dive-storage.mdx',
+	VaPersistDeepDiveUrl: 'content/docs/va-store/persist/deep-dive-url.mdx',
+	VaPersistFields: 'content/docs/va-store/persist/fields.mdx',
+	VaPersistIndex: 'content/docs/va-store/persist/index.mdx',
+	VaPersistMigration: 'content/docs/va-store/persist/migration.mdx',
+	VaPersistParsers: 'content/docs/va-store/persist/parsers.mdx',
+	VaPersistQuickStartStorage: 'content/docs/va-store/persist/quick-start-storage.mdx',
+	VaPersistQuickStartUrl: 'content/docs/va-store/persist/quick-start-url.mdx',
+	VaPersistTypescript: 'content/docs/va-store/persist/typescript.mdx',
 } as const
 
 export type DocPage = (typeof DocPage)[keyof typeof DocPage]
@@ -191,6 +293,73 @@ export const FORM_TYPE = {
 	},
 	/** The instance `useForm` returns: TanStack's own API plus the flat field components. */
 	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
+} as const satisfies Record<string, TypeRef>
+
+/**
+ * Types that govern the mapped `zu-store/` and `va-store/` tables.
+ *
+ * Both bindings re-export the cache types from `@ez-kit/store-core/cache`
+ * unchanged, so those are read from the shared package — except the two the
+ * bindings define themselves (`CachedSubscribeProps`, and `va-store`'s
+ * `CachedStoreProps`), which differ per manager and are read from the binding.
+ *
+ * The generic instantiations follow the binding's own vocabulary: `zu-store`
+ * types are generic over a **store handle** (`StoreApi<TState>`), `va-store`
+ * types over the **state object** itself.
+ */
+export const STORE_TYPE = {
+	/**
+	 * `zu-store`'s surface. The cache types originate in `@ez-kit/store-core/cache`, but they are read
+	 * here through the binding that re-exports them — which is both what a consumer imports and the only
+	 * package the docs app depends on.
+	 */
+	ZuScopeProps: { module: TypeModule.ZuStore, name: 'ScopeProps' },
+	ZuStoreCacheController: { module: TypeModule.ZuStore, name: 'StoreCacheController' },
+	ZuCachedStoreOptions: { module: TypeModule.ZuStore, name: 'CachedStoreOptions' },
+	ZuStoreCacheOptions: { module: TypeModule.ZuStore, name: 'StoreCacheOptions' },
+	ZuCachedProviderProps: { module: TypeModule.ZuStore, name: 'CachedProviderProps', typeArgs: STATE_TYPE_ARGS },
+	ZuControlledFieldConfig: { module: TypeModule.ZuStore, name: 'ControlledFieldConfig', typeArgs: STATE_TYPE_ARGS },
+	/** Generic over the Zustand **handle** — this binding's vocabulary. */
+	ZuCachedStoreGroup: { module: TypeModule.ZuStore, name: 'CachedStoreGroup', typeArgs: STORE_SEED_TYPE_ARGS },
+	ZuCachedSubscribeProps: {
+		module: TypeModule.ZuStore,
+		name: 'CachedSubscribeProps',
+		typeArgs: STORE_SELECTED_TYPE_ARGS,
+	},
+	ZuHistoryOptions: { module: TypeModule.ZuStore, name: 'HistoryOptions', typeArgs: STATE_TYPE_ARGS },
+	ZuAccessorFieldOptions: {
+		module: TypeModule.ZuStorePersist,
+		name: 'AccessorFieldOptions',
+		typeArgs: PERSIST_VALUE_TYPE_ARGS,
+	},
+
+	/** `va-store`'s surface: the same cache types, plus the ones generic over the **state** object. */
+	VaScopeProps: { module: TypeModule.VaStore, name: 'ScopeProps' },
+	VaStoreCacheController: { module: TypeModule.VaStore, name: 'StoreCacheController' },
+	VaCachedStoreOptions: { module: TypeModule.VaStore, name: 'CachedStoreOptions' },
+	VaStoreCacheOptions: { module: TypeModule.VaStore, name: 'StoreCacheOptions' },
+	VaCachedProviderProps: { module: TypeModule.VaStore, name: 'CachedProviderProps', typeArgs: STATE_TYPE_ARGS },
+	VaControlledFieldConfig: { module: TypeModule.VaStore, name: 'ControlledFieldConfig', typeArgs: STATE_TYPE_ARGS },
+	VaCachedStoreGroup: { module: TypeModule.VaStore, name: 'CachedStoreGroup', typeArgs: STATE_SEED_TYPE_ARGS },
+	VaCachedSubscribeProps: { module: TypeModule.VaStore, name: 'CachedSubscribeProps', typeArgs: STATE_TYPE_ARGS },
+	VaCachedStoreProps: { module: TypeModule.VaStore, name: 'CachedStoreProps', typeArgs: STATE_TYPE_ARGS },
+	VaHistoryOptions: { module: TypeModule.VaStore, name: 'HistoryOptions', typeArgs: STATE_TYPE_ARGS },
+	VaCreateContextStoreOptions: {
+		module: TypeModule.VaStore,
+		name: 'CreateContextStoreOptions',
+		typeArgs: STATE_TYPE_ARGS,
+	},
+	VaUseSnapshotOptions: { module: TypeModule.VaStore, name: 'UseSnapshotOptions' },
+	VaAccessorFieldOptions: {
+		module: TypeModule.VaStorePersist,
+		name: 'AccessorFieldOptions',
+		typeArgs: PERSIST_VALUE_TYPE_ARGS,
+	},
+	VaPersistFieldOptions: {
+		module: TypeModule.VaStorePersist,
+		name: 'PersistFieldOptions',
+		typeArgs: PERSIST_VALUE_TYPE_ARGS,
+	},
 } as const satisfies Record<string, TypeRef>
 
 /** Zero-based index of the table column that names the option. */
@@ -769,6 +938,303 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 		nonOptionTables: [],
 	},
+
+	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormGettingStarted, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormInstallationHeroui, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormInstallationShadcn, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormReactivity, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectCreatable, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectIndex, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectOptionSources, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectSearchable, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSubmission, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormValidation, optionTables: [], nonOptionTables: [] },
+	// --- @ez-kit/zu-store ---------------------------------------------------
+	{
+		page: DocPage.ZuAi,
+		optionTables: [],
+		nonOptionTables: [{ heading: 'Use with AI', reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		optionTables: [
+			{ heading: '`CacheScope`', roots: [STORE_TYPE.ZuScopeProps], expectedCount: 2 },
+			{ heading: '`useCache()`', roots: [STORE_TYPE.ZuStoreCacheController], expectedCount: 2 },
+			{ heading: '`options`', roots: [STORE_TYPE.ZuCachedStoreOptions], expectedCount: 2 },
+			{ heading: 'The returned group', roots: [STORE_TYPE.ZuCachedStoreGroup], expectedCount: 5 },
+			{ heading: '`Provider`', roots: [STORE_TYPE.ZuCachedProviderProps], expectedCount: 6 },
+			{ heading: '`Subscribe`', roots: [STORE_TYPE.ZuCachedSubscribeProps], expectedCount: 3 },
+			{ heading: '`createStoreCache(options?)`', roots: [STORE_TYPE.ZuStoreCacheOptions], expectedCount: 1 },
+		],
+		nonOptionTables: [
+			{
+				heading: '`CacheProvider`',
+				reason: 'The default cache provider takes only `children`; its props type is internal.',
+			},
+			{ heading: '`useCacheKeys(prefix?)`', reason: 'Documents the hook argument, not a key of any object.' },
+			{ heading: '`toTree(records)`', reason: 'Documents the function argument, not a key of any object.' },
+			{ heading: '`createCachedStore(factory, options)`', reason: 'Documents the two positional arguments.' },
+			{ heading: '`useSelector(selector)`', reason: 'Documents the hook argument.' },
+			{ heading: '`getFromCache(target)`', reason: 'Documents the method argument.' },
+			{ heading: '`useFromCache(target, selector)`', reason: 'Documents the two method arguments.' },
+			{ heading: 'Types', reason: 'Lists the exported type names themselves, not keys of any of them.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{ page: DocPage.ZuCacheIndex, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.ZuCapabilities,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What ships', reason: 'Names the two shipped capability wrappers — exports, not keys.' },
+		],
+	},
+	{
+		page: DocPage.ZuCreateContextStoreApi,
+		optionTables: [
+			{ heading: 'The `controlled` option', roots: [STORE_TYPE.ZuControlledFieldConfig], expectedCount: 2 },
+		],
+		nonOptionTables: [
+			{ heading: 'Signature', reason: 'Documents the two positional arguments of `createContextStore`.' },
+			{
+				heading: '`Provider`',
+				reason: "The Provider's props type is internal to the factory result; the table documents its three props.",
+			},
+			{ heading: '`useSelector(selector)`', reason: 'Documents the hook argument.' },
+			{ heading: '`useShallowSelector(selector)`', reason: 'Documents the hook argument.' },
+			{ heading: '`Subscribe`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: 'Exports', reason: 'Lists the exported names themselves.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{
+		page: DocPage.ZuCreateContextStoreIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Reading state', reason: 'Prose comparison of the read hooks; the first column names no key.' },
+			{ heading: '`defaultValue` vs `value`', reason: 'Prose comparison of the two seeding props.' },
+		],
+	},
+	{
+		page: DocPage.ZuGettingStarted,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The read/write model',
+				reason: 'Prose table of read and write paths; the first column names no key.',
+			},
+		],
+	},
+	{
+		page: DocPage.ZuHistory,
+		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.ZuHistoryOptions], expectedCount: 5 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.ZuIndex,
+		optionTables: [],
+		nonOptionTables: [{ heading: "What's in the box", reason: 'Table of contents: page links, not config keys.' }],
+	},
+	{ page: DocPage.ZuPersistCache, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistCombined, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.ZuPersistCustomAdapter,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Two shapes', reason: 'Compares the two adapter shapes in prose; the first column names no key.' },
+		],
+	},
+	{ page: DocPage.ZuPersistDeepDiveStorage, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistDeepDiveUrl, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.ZuPersistFields,
+		optionTables: [{ heading: 'Key placement', roots: [STORE_TYPE.ZuAccessorFieldOptions], expectedCount: 3 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.ZuPersistIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'One engine, many sources',
+				reason: 'Lists the shipped sources in prose; the first column names no key.',
+			},
+			{ heading: 'On this topic', reason: 'Table of contents: page links.' },
+		],
+	},
+	{
+		page: DocPage.ZuPersistParsers,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Parsers', reason: 'Names the exported parser factories, called rather than passed as keys.' },
+			{ heading: 'Auto-resolution', reason: 'Maps runtime types to parsers; the first column names TypeScript types.' },
+		],
+	},
+	{ page: DocPage.ZuPersistQuickStartStorage, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistQuickStartUrl, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistTypescript, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuUseStoreState, optionTables: [], nonOptionTables: [] },
+
+	// --- @ez-kit/va-store ---------------------------------------------------
+	{
+		page: DocPage.VaAi,
+		optionTables: [],
+		nonOptionTables: [{ heading: 'Use with AI', reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
+	},
+	{
+		page: DocPage.VaCacheApi,
+		optionTables: [
+			{ heading: '`CacheScope`', roots: [STORE_TYPE.VaScopeProps], expectedCount: 2 },
+			{ heading: '`useCache()`', roots: [STORE_TYPE.VaStoreCacheController], expectedCount: 2 },
+			{ heading: '`options`', roots: [STORE_TYPE.VaCachedStoreOptions], expectedCount: 2 },
+			{ heading: 'The returned group', roots: [STORE_TYPE.VaCachedStoreGroup], expectedCount: 5 },
+			{ heading: '`Provider`', roots: [STORE_TYPE.VaCachedProviderProps], expectedCount: 6 },
+			{ heading: '`Subscribe`', roots: [STORE_TYPE.VaCachedSubscribeProps], expectedCount: 1 },
+			{ heading: '`Store`', roots: [STORE_TYPE.VaCachedStoreProps], expectedCount: 1 },
+			{ heading: '`createStoreCache(options?)`', roots: [STORE_TYPE.VaStoreCacheOptions], expectedCount: 1 },
+		],
+		nonOptionTables: [
+			{
+				heading: '`CacheProvider`',
+				reason: 'The default cache provider takes only `children`; its props type is internal.',
+			},
+			{ heading: '`useCacheKeys(prefix?)`', reason: 'Documents the hook argument, not a key of any object.' },
+			{ heading: '`toTree(records)`', reason: 'Documents the function argument, not a key of any object.' },
+			{ heading: '`createCachedStore(factory, options)`', reason: 'Documents the two positional arguments.' },
+			{ heading: '`getFromCache(target)`', reason: 'Documents the method argument.' },
+			{ heading: '`useFromCache(target, selector)`', reason: 'Documents the two method arguments.' },
+			{ heading: 'Types', reason: 'Lists the exported type names themselves, not keys of any of them.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{ page: DocPage.VaCacheIndex, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaCapabilities,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What ships', reason: 'Names the two shipped capability wrappers — exports, not keys.' },
+		],
+	},
+	{
+		page: DocPage.VaCreateContextStoreApi,
+		optionTables: [
+			{ heading: '`useSnapshot(options?)`', roots: [STORE_TYPE.VaUseSnapshotOptions], expectedCount: 1 },
+			{ heading: 'The `controlled` option', roots: [STORE_TYPE.VaControlledFieldConfig], expectedCount: 2 },
+			{ heading: 'The `name` option', roots: [STORE_TYPE.VaCreateContextStoreOptions], expectedCount: 1 },
+		],
+		nonOptionTables: [
+			{ heading: 'Signature', reason: 'Documents the two positional arguments of `createContextStore`.' },
+			{
+				heading: '`Provider`',
+				reason: "The Provider's props type is internal to the factory result; the table documents its four props.",
+			},
+			{ heading: '`Subscribe`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: '`Store`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: 'Exports', reason: 'Lists the exported names themselves.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{
+		page: DocPage.VaCreateContextStoreIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Reading and writing',
+				reason: 'Prose comparison of the read and write paths; the first column names no key.',
+			},
+			{ heading: '`defaultValue` vs `value`', reason: 'Prose comparison of the two seeding props.' },
+		],
+	},
+	{
+		page: DocPage.VaGettingStarted,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The read/write model',
+				reason: 'Prose table of read and write paths; the first column names no key.',
+			},
+		],
+	},
+	{
+		page: DocPage.VaHistory,
+		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.VaHistoryOptions], expectedCount: 6 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.VaIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: "What's in the box", reason: 'Table of contents: page links, not config keys.' },
+			{
+				heading: 'Coming from `@ez-kit/zu-store`?',
+				reason: "Maps this package's hooks to the Zustand binding's; the first column names hooks.",
+			},
+		],
+	},
+	{ page: DocPage.VaPersistCache, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.VaPersistCombined, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistCustomAdapter,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Two shapes', reason: 'Compares the two adapter shapes in prose; the first column names no key.' },
+		],
+	},
+	{
+		page: DocPage.VaPersistDecorators,
+		optionTables: [{ heading: 'Key placement', roots: [STORE_TYPE.VaPersistFieldOptions], expectedCount: 3 }],
+		nonOptionTables: [],
+	},
+	{ page: DocPage.VaPersistDeepDiveStorage, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistDeepDiveUrl,
+		optionTables: [
+			{
+				heading: 'Key naming',
+				roots: [STORE_TYPE.VaAccessorFieldOptions, STORE_TYPE.VaPersistFieldOptions],
+				expectedCount: 3,
+			},
+		],
+		nonOptionTables: [],
+	},
+	{ page: DocPage.VaPersistFields, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'One engine, many sources',
+				reason: 'Lists the shipped sources in prose; the first column names no key.',
+			},
+			{ heading: 'Two ways to declare fields', reason: 'Names the decorator and accessor call forms, not keys.' },
+			{ heading: 'On this topic', reason: 'Table of contents: page links.' },
+		],
+	},
+	{
+		page: DocPage.VaPersistMigration,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Summary', reason: 'Maps removed APIs to their replacements; the first column names old exports.' },
+		],
+	},
+	{
+		page: DocPage.VaPersistParsers,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Parsers', reason: 'Names the exported parser factories, called rather than passed as keys.' },
+			{ heading: 'Auto-resolution', reason: 'Maps runtime types to parsers; the first column names TypeScript types.' },
+		],
+	},
+	{ page: DocPage.VaPersistQuickStartStorage, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.VaPersistQuickStartUrl, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistTypescript,
+		optionTables: [],
+		nonOptionTables: [{ heading: 'Toolchain notes', reason: 'Lists toolchains and their decorator support.' }],
+	},
 ]
 
 /**
@@ -829,5 +1295,45 @@ export const OPTION_EXCEPTIONS: readonly OptionException[] = [
 		name: 'type',
 		reason:
 			'The cell-def discriminant (`cell.type`), which selects *which* config type applies — it sits beside `config`, not inside it, and is covered by the `cell` row on columns/index.mdx.',
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		heading: 'The returned group',
+		name: 'getFromCache({ path?, id })',
+		reason:
+			'An imperative method, written with its call signature so the address argument is visible. The bare ' +
+			'`getFromCache` key is covered by the other rows of this table.',
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		heading: 'The returned group',
+		name: 'useFromCache({ path?, id }, selector)',
+		reason: 'A hook, written with its call signature — the two arguments are the point of the row.',
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		heading: 'The returned group',
+		name: 'remove({ path?, id })',
+		reason: 'An imperative method, written with its call signature.',
+	},
+	{
+		page: DocPage.VaCacheApi,
+		heading: 'The returned group',
+		name: 'getFromCache({ path?, id })',
+		reason:
+			'An imperative method, written with its call signature so the address argument is visible. The bare ' +
+			'`getFromCache` key is covered by the other rows of this table.',
+	},
+	{
+		page: DocPage.VaCacheApi,
+		heading: 'The returned group',
+		name: 'useFromCache({ path?, id }, selector)',
+		reason: 'A hook, written with its call signature — the two arguments are the point of the row.',
+	},
+	{
+		page: DocPage.VaCacheApi,
+		heading: 'The returned group',
+		name: 'remove({ path?, id })',
+		reason: 'An imperative method, written with its call signature.',
 	},
 ]
