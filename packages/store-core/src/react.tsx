@@ -5,16 +5,13 @@ import { createContext, useContext, useEffect, type ReactElement, type ReactNode
 import { capabilitiesOf } from './capability'
 import { createServiceRegistry, type ServiceRegistry } from './service'
 
-import type { PluginCleanup, PluginContext, StorePlugin } from './plugin'
+import type { PluginCleanup, PluginContext } from './plugin'
 import type { StoreId } from './store-id'
 
 /** Shared empty registry — used as the default when no `ServicesProvider` is mounted above a consumer. */
 const EMPTY_REGISTRY: ServiceRegistry = createServiceRegistry()
 
 const ServicesContext = createContext<ServiceRegistry>(EMPTY_REGISTRY)
-
-/** Shared empty plugin list, so the default `extra` argument keeps a stable identity. */
-const EMPTY_PLUGINS: readonly StorePlugin<never>[] = []
 
 export type ServicesProviderProps = {
 	registry: ServiceRegistry
@@ -41,24 +38,22 @@ export function useServices(): ServiceRegistry {
 const IS_SERVER = typeof window === 'undefined'
 
 /**
- * Run the `setup` of every capability attached to `store` (via `attachCapability`, i.e. by a `with*`
- * wrapper in the factory chain) plus any `extra` plugins the store's own options declared, once per
- * instance, in attachment order — extras last, so a hand-passed plugin sees a fully wrapped store.
- * Cleanups run in reverse on unmount.
+ * Run the `setup` of every capability attached to `store` — by a `with*` wrapper in the factory
+ * chain, or by a hand-written `attachCapability` — once per instance, in attachment order. Cleanups
+ * run in reverse on unmount.
+ *
+ * The instance itself is the only channel: a capability that is not attached to the store does not
+ * run, so there is nothing to reconcile between a config list and the wrappers a store was actually
+ * built with.
  *
  * Lives here rather than in each binding package because the sequencing is the contract: `setup`
- * runs in an effect (never during render), capabilities before extras, cleanups mirrored. Two
- * copies of that would drift, and the order is what `pipe(store, withHistory(), withPersist())`
- * relies on to have history already listening when persist pushes its hydrated value in.
+ * runs in an effect (never during render), in attachment order, cleanups mirrored. Two copies of
+ * that would drift, and the order is what `pipe(store, withHistory(), withPersist())` relies on to
+ * have history already listening when persist pushes its hydrated value in.
  */
-export function useCapabilities<T extends object>(
-	store: T,
-	services: ServiceRegistry,
-	id: StoreId,
-	extra: readonly StorePlugin<T>[] = EMPTY_PLUGINS,
-): void {
+export function useCapabilities(store: object, services: ServiceRegistry, id: StoreId): void {
 	useEffect(() => {
-		const plugins = [...capabilitiesOf(store), ...extra]
+		const plugins = capabilitiesOf(store)
 		if (plugins.length === 0) return
 		const context: PluginContext = { services, id, isServer: IS_SERVER }
 		const cleanups: PluginCleanup[] = plugins.map((plugin) => plugin.setup(store, context))
@@ -67,7 +62,7 @@ export function useCapabilities<T extends object>(
 				if (cleanup) cleanup()
 			}
 		}
-		// `id` is a per-factory constant and `extra` a per-factory array; both are stable by construction.
+		// `id` is a per-factory constant, stable by construction.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [store, services])
 }

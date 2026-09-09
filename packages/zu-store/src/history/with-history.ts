@@ -5,8 +5,6 @@ import type { HistoryActionTag, HistoryOptions, HistoryState } from './types'
 import type { HistoryApi } from '@ez-kit/store-core/history'
 import type { StateCreator, StoreApi, StoreMutatorIdentifier } from 'zustand/vanilla'
 
-export type { HistoryActionTag, HistoryOptions, HistoryState }
-
 type WithHistoryStore<S> = S extends { getState: () => infer T } ? S & { history: StoreApi<HistoryState<T>> } : S
 
 declare module 'zustand/vanilla' {

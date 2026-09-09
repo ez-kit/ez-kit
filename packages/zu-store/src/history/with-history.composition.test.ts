@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { createStore } from 'zustand/vanilla'
 
-import { withHistory } from './index'
+import { withHistory } from './with-history'
 
 type CounterState = {
 	count: number
