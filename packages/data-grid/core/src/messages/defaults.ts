@@ -119,6 +119,53 @@ export const defaultMessages: GridMessages = {
 		pickDate: 'Pick a date',
 		pickRange: 'Pick a range',
 	},
+	operators: {
+		text: {
+			contains: 'Contains',
+			equals: 'Equals',
+			notEquals: 'Not equals',
+			startsWith: 'Starts with',
+			endsWith: 'Ends with',
+		},
+		number: {
+			equals: 'Equals',
+			notEquals: 'Not equals',
+			greaterThan: 'Greater than',
+			greaterOrEqual: 'Greater than or equal',
+			lessThan: 'Less than',
+			lessOrEqual: 'Less than or equal',
+			between: 'Between',
+		},
+		date: {
+			equals: 'Equals',
+			notEquals: 'Not equals',
+			greaterThan: 'After',
+			greaterOrEqual: 'On or after',
+			lessThan: 'Before',
+			lessOrEqual: 'On or before',
+			between: 'Between',
+		},
+		boolean: {
+			equals: 'Is',
+			notEquals: 'Is not',
+		},
+		multi: {
+			in: 'Is any of',
+			notIn: 'Is none of',
+		},
+		empty: {
+			isEmpty: 'Is empty',
+			isNotEmpty: 'Is not empty',
+		},
+		presets: {
+			today: 'Today',
+			yesterday: 'Yesterday',
+			last7: 'Last 7 days',
+			last30: 'Last 30 days',
+			thisMonth: 'This month',
+			lastMonth: 'Last month',
+		},
+	},
 	fallbacks: {
 		loading: 'Loading',
 		empty: 'No data',

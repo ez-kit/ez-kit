@@ -215,6 +215,36 @@ export type GridMessages = {
 		/** An empty date-range picker's trigger text. */
 		pickRange: string
 	}
+	/**
+	 * Filter-operator labels, grouped the way the built-in operator sets are.
+	 *
+	 * The same id means the same comparison whatever the column's cell type is — only the
+	 * wording changes, which is exactly what these groups hold: `greaterThan` reads "Greater
+	 * than" on a number column and "After" on a date one. A custom operator registered through
+	 * `filtering.operators.items` carries its own `label` and is not looked up here.
+	 */
+	operators: {
+		/** Text columns, and the `image` / `link` types that filter as text. */
+		text: Record<'contains' | 'equals' | 'notEquals' | 'startsWith' | 'endsWith', string>
+		/** Number columns, and `progress`. */
+		number: Record<
+			'equals' | 'notEquals' | 'greaterThan' | 'greaterOrEqual' | 'lessThan' | 'lessOrEqual' | 'between',
+			string
+		>
+		/** Date columns — the same comparisons as `number`, spoken as a calendar. */
+		date: Record<
+			'equals' | 'notEquals' | 'greaterThan' | 'greaterOrEqual' | 'lessThan' | 'lessOrEqual' | 'between',
+			string
+		>
+		/** Boolean columns. Equality only — a boolean has no ordering. */
+		boolean: Record<'equals' | 'notEquals', string>
+		/** `select` / `badge` columns, which filter by set membership. */
+		multi: Record<'in' | 'notIn', string>
+		/** The emptiness pair, shared by every cell type's default set. */
+		empty: Record<'isEmpty' | 'isNotEmpty', string>
+		/** The date-range presets offered beside a `between` date filter. */
+		presets: Record<'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth', string>
+	}
 	/** Loading / empty / no-results states and the infinite-scroll row. */
 	fallbacks: {
 		/** Accessible name of the loading state. */

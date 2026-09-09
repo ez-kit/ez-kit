@@ -1,4 +1,9 @@
-import { BetweenInputVariant, DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
+import {
+	BetweenInputVariant,
+	DATE_RANGE_PRESETS,
+	localizeDateRangePresets,
+	localizeOperators,
+} from '@ez-kit/data-grid-core'
 
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
@@ -121,9 +126,10 @@ function resolveFilterItems(
 function resolveBetweenPresets(
 	configPresets: boolean | DateRangePreset[] | undefined,
 	betweenType: BetweenInputType,
+	messages: GridMessages['operators']['presets'],
 ): DateRangePreset[] | undefined {
 	if (betweenType !== 'date') return undefined
-	if (configPresets === true) return DATE_RANGE_PRESETS
+	if (configPresets === true) return localizeDateRangePresets(DATE_RANGE_PRESETS, messages)
 	if (Array.isArray(configPresets) && configPresets.length > 0) return configPresets
 	return undefined
 }
@@ -150,7 +156,12 @@ export function renderFilterInput({
 	table,
 }: RenderFilterInputArgs): ReactNode {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+	// Core settled *which* operators the column offers; the dictionary says what they are
+	// called. Applied here, where they reach the control, so the exported operator lists stay
+	// the plain data they are.
 	const resolvedOperators = filteringMeta?.operators
+		? localizeOperators(filteringMeta.operators, meta?.cell?.type, messages.operators)
+		: undefined
 	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
 	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
 	// the rest of the grid stays responsive.
@@ -167,7 +178,7 @@ export function renderFilterInput({
 			: undefined
 
 	// ── operator-aware path ────────────────────────────────────────────────
-	if (resolvedOperators && resolvedOperators.length > 0) {
+	if (filteringMeta && resolvedOperators && resolvedOperators.length > 0) {
 		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
 		const currentOperatorId =
 			sv !== undefined ? sv.operator : (filteringMeta.defaultOperator ?? resolvedOperators.at(0)?.id ?? '')
@@ -208,7 +219,7 @@ export function renderFilterInput({
 		if (currentOperatorId === 'between') {
 			const betweenCfg = filteringMeta.betweenOperator
 			const betweenType = meta?.cell?.type === 'date' ? 'date' : 'number'
-			const resolvedPresets = resolveBetweenPresets(betweenCfg?.presets, betweenType)
+			const resolvedPresets = resolveBetweenPresets(betweenCfg?.presets, betweenType, messages.operators.presets)
 			const onPresetSelect = resolvedPresets
 				? (preset: DateRangePreset) => {
 						header.column.setFilterValue({ operator: 'between', value: preset.getRange() })

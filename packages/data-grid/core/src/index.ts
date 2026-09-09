@@ -133,6 +133,10 @@ export {
 	EMPTY_OPERATORS,
 	FilterOperator,
 	IN_OPERATORS,
+	// The two label overlays: the operator lists are settled in core, their wording comes from
+	// the grid's dictionary, and the React layer applies these where the controls are rendered.
+	localizeDateRangePresets,
+	localizeOperators,
 	NUMBER_OPERATORS,
 	SELECT_BADGE_OPERATORS,
 	TEXT_OPERATORS,

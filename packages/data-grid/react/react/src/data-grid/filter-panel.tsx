@@ -1,10 +1,12 @@
+import { localizeOperators } from '@ez-kit/data-grid-core'
+
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { BadgeItem, BetweenValue, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { BadgeItem, BetweenValue, GridMessages, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -51,13 +53,17 @@ function formatFilterValue(
 	filterValue: unknown,
 	meta: ColumnMeta<unknown, unknown> | undefined,
 	anyLabel: string,
+	operatorMessages: GridMessages['operators'],
 ): { display: string; hasValue: boolean } {
 	if (filterValue == null || filterValue === '') return { display: anyLabel, hasValue: false }
 
 	if (typeof filterValue === 'object' && 'operator' in filterValue) {
 		const sv = filterValue as StructuredFilterValue
 		const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
-		const op = filteringMeta?.operators?.find((o) => o.id === sv.operator)
+		const rawOperators = filteringMeta?.operators
+		const op = (rawOperators ? localizeOperators(rawOperators, meta?.cell?.type, operatorMessages) : undefined)?.find(
+			(o) => o.id === sv.operator,
+		)
 		const inner = sv.value
 
 		// `requiresInput === false` operators (e.g. isEmpty / isNotEmpty) — show operator label.
@@ -181,7 +187,12 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 		const headerDef = column.columnDef.header
 		const label = typeof headerDef === 'string' ? headerDef : column.id
 		const filterValue = column.getFilterValue()
-		const { display, hasValue } = formatFilterValue(filterValue, meta, table.grid.messages.filtering.any)
+		const { display, hasValue } = formatFilterValue(
+			filterValue,
+			meta,
+			table.grid.messages.filtering.any,
+			table.grid.messages.operators,
+		)
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const headerLike = { id: column.id, column } as unknown as Header<any, unknown>
