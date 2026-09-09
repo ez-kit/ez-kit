@@ -26,6 +26,14 @@ export enum TypeModule {
 	FormCore = '@ez-kit/form-core',
 	/** `@ez-kit/form-react` — React form adapter; owns the kit contract, the consumer field props and the renderer props. */
 	FormReact = '@ez-kit/form-react',
+	/** `@ez-kit/zu-store` — Zustand binding; owns its context-store and cache surface. */
+	ZuStore = '@ez-kit/zu-store',
+	/** `@ez-kit/zu-store/persist` — the Zustand-bound persist front. */
+	ZuStorePersist = '@ez-kit/zu-store/persist',
+	/** `@ez-kit/va-store` — Valtio binding; owns its context-store and cache surface. */
+	VaStore = '@ez-kit/va-store',
+	/** `@ez-kit/va-store/persist` — the Valtio-bound persist front. */
+	VaStorePersist = '@ez-kit/va-store/persist',
 }
 
 /** A named exported type, plus the type arguments it needs to be instantiated. */
@@ -45,7 +53,14 @@ const PROBE_FILE_PATH = resolve(DOCS_ROOT, PROBE_FILE_NAME)
 const PROBE_ALIAS_PREFIX = 'DocsOptionProbe'
 /** Row shape used to instantiate generic config types (`UseDataGridConfig<TRow>` etc.). */
 const PROBE_ROW_TYPE_NAME = 'DocsProbeRow'
-const PROBE_ROW_DECLARATION = `type ${PROBE_ROW_TYPE_NAME} = { id: string }`
+/** Zustand handle over the probe row — what the `zu-store` cache and store types are generic over. */
+const PROBE_STORE_TYPE_NAME = 'DocsProbeStore'
+const PROBE_ROW_DECLARATION = [
+	`type ${PROBE_ROW_TYPE_NAME} = { id: string }`,
+	`type ${PROBE_STORE_TYPE_NAME} = StoreApi<${PROBE_ROW_TYPE_NAME}>`,
+].join('\n')
+/** Import the probe file always carries, so store-generic types can be instantiated. */
+const PROBE_PRELUDE = "import type { StoreApi } from 'zustand/vanilla'"
 /** Type-argument list for row-generic config types, e.g. `UseDataGridConfig<TRow>`. */
 export const ROW_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}>`
 /**
@@ -61,6 +76,17 @@ export const FORM_VALUE_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, string>`
  * the overloads collapse to and which leaves the key set untouched.
  */
 export const FORM_API_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, ${new Array(10).fill('undefined').join(', ')}, never>`
+/** Type-argument list for the `zu-store` types generic over a store handle, e.g. `CachedStoreGroup<TStore, TDefault>`. */
+export const STORE_TYPE_ARGS = `<${PROBE_STORE_TYPE_NAME}>`
+/** As {@link STORE_TYPE_ARGS}, plus the seed type the cached-group types take second. */
+export const STORE_SEED_TYPE_ARGS = `<${PROBE_STORE_TYPE_NAME}, ${PROBE_ROW_TYPE_NAME}>`
+/** Type-argument list for a `va-store` type generic over the state object itself. */
+export const STATE_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}>`
+/** As {@link STATE_TYPE_ARGS}, plus the seed type the cached-group types take second. */
+export const STATE_SEED_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, ${PROBE_ROW_TYPE_NAME}>`
+/** `<TSelected>`-carrying prop types (`CachedSubscribeProps<TStore, TSelected>`). */
+export const STORE_SELECTED_TYPE_ARGS = `<${PROBE_STORE_TYPE_NAME}, string>`
+export const STATE_SELECTED_TYPE_ARGS = `<${PROBE_ROW_TYPE_NAME}, string>`
 export const PATH_SEPARATOR = '.'
 /** How many suggestions a "did you mean" hint lists. */
 const SUGGESTION_LIMIT = 5
@@ -111,7 +137,7 @@ function buildProbeSource(refs: readonly TypeRef[]): { source: string; aliasByKe
 	})
 
 	return {
-		source: [...imports, '', PROBE_ROW_DECLARATION, '', ...aliases, ''].join('\n'),
+		source: [PROBE_PRELUDE, ...imports, '', PROBE_ROW_DECLARATION, '', ...aliases, ''].join('\n'),
 		aliasByKey,
 	}
 }

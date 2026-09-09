@@ -23,19 +23,19 @@ export const MISSING_CACHE_PROVIDER = 'Missing CacheProvider'
 
 const MULTIPLE_PROVIDERS_WARNING =
 	'[va-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
-	'Imperative access via fromCache/remove targets the most recently activated cache and is ambiguous in this state.'
+	'Imperative access via getFromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
-/** Render-prop argument for a cached group `Item`: `snap` for reads, `store` (raw proxy) for writes. */
-export type CachedItemRenderArg<TState extends object> = {
+/** Render-prop argument for a cached group `Subscribe`: `snap` for reads, `store` (raw proxy) for writes. */
+export type CachedSubscribeRenderArg<TState extends object> = {
 	snap: Snapshot<TState>
 	store: TState
 }
 
-export type CachedItemProps<TState extends object> = {
-	children: (arg: CachedItemRenderArg<TState>) => ReactElement
+export type CachedSubscribeProps<TState extends object> = {
+	children: (arg: CachedSubscribeRenderArg<TState>) => ReactElement
 }
 
-export type CachedStoreItemProps<TState extends object> = {
+export type CachedStoreProps<TState extends object> = {
 	children: (store: TState) => ReactElement
 }
 
@@ -50,15 +50,15 @@ export type CachedStoreGroup<TState extends object, TDefaultValue extends object
 	useSnapshot: () => Snapshot<TState>
 	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never re-renders. */
 	useStore: () => TState
-	/** Render-prop receiving `{ snap, store }`, mirroring `createContextStore`'s `Item`. */
-	Item: (props: CachedItemProps<TState>) => ReactElement
+	/** Render-prop receiving `{ snap, store }`, mirroring `createContextStore`'s `Subscribe`. */
+	Subscribe: (props: CachedSubscribeProps<TState>) => ReactElement
 	/**
-	 * Write-only render-prop receiving the raw proxy, mirroring `createContextStore`'s `StoreItem`.
+	 * Write-only render-prop receiving the raw proxy, mirroring `createContextStore`'s `Store`.
 	 * Does not subscribe, so store mutations never re-render its children.
 	 */
-	StoreItem: (props: CachedStoreItemProps<TState>) => ReactElement
+	Store: (props: CachedStoreProps<TState>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live proxy or `undefined`. Never creates. */
-	fromCache: (target: CacheAddress) => TState | undefined
+	getFromCache: (target: CacheAddress) => TState | undefined
 	/**
 	 * Reactive, passive cross-tree read at `(path, id)`. The selector receives the entry's snapshot,
 	 * or `undefined` when no entry is live. Never creates an entry and never keeps one alive.
@@ -78,7 +78,7 @@ export type StoreCache = {
 	useCacheKeys: CacheReact<object>['useCacheKeys']
 	createCachedStore: <TState extends object, TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TState, TDefaultValue>,
-		options: CachedStoreOptions<TState>,
+		options: CachedStoreOptions,
 	) => CachedStoreGroup<TState, TDefaultValue>
 }
 
@@ -99,7 +99,7 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 
 	function createCachedStore<TState extends object, TDefaultValue extends object = Record<string, never>>(
 		factory: CachedStoreFactory<TState, TDefaultValue>,
-		groupOptions: CachedStoreOptions<TState>,
+		groupOptions: CachedStoreOptions,
 	): CachedStoreGroup<TState, TDefaultValue> {
 		const group = cache.createCachedStore<TDefaultValue>(factory, groupOptions)
 
@@ -111,16 +111,16 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 			return group.useInstance() as TState
 		}
 
-		function Item({ children }: CachedItemProps<TState>): ReactElement {
+		function Subscribe({ children }: CachedSubscribeProps<TState>): ReactElement {
 			return children({ snap: useSnapshot(), store: useStore() })
 		}
 
-		function StoreItem({ children }: CachedStoreItemProps<TState>): ReactElement {
+		function Store({ children }: CachedStoreProps<TState>): ReactElement {
 			return children(useStore())
 		}
 
-		function fromCache(target: CacheAddress): TState | undefined {
-			return group.fromCache(target) as TState | undefined
+		function getFromCache(target: CacheAddress): TState | undefined {
+			return group.getFromCache(target) as TState | undefined
 		}
 
 		function useFromCache<TSelected>(
@@ -138,9 +138,9 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 			Provider: group.Provider,
 			useSnapshot,
 			useStore,
-			Item,
-			StoreItem,
-			fromCache,
+			Subscribe,
+			Store,
+			getFromCache,
 			useFromCache,
 			remove,
 		}

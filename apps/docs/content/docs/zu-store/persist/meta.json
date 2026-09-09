@@ -1,0 +1,17 @@
+{
+	"title": "Persist",
+	"description": "Sync a Zustand store to the URL, storage, or any substrate",
+	"pages": [
+		"index",
+		"quick-start-url",
+		"quick-start-storage",
+		"combined",
+		"cache",
+		"deep-dive-url",
+		"deep-dive-storage",
+		"custom-adapter",
+		"fields",
+		"parsers",
+		"typescript"
+	]
+}

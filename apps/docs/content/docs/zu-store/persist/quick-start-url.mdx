@@ -1,0 +1,130 @@
+---
+title: Quick start — URL
+description: Sync a few fields to the URL query string — declare them, mount a router adapter, done. A store write updates the URL; deep links and Back/forward update the store.
+---
+
+# Quick start — URL
+
+The shortest path to URL-as-state: declare which fields sync, mount the URL adapter under a `StoreProvider`, and read/write the store as usual.
+
+<LivePreview
+	path='zu-store/persist-url'
+	title='URL-synced filters'
+/>
+
+<Callout type='warn'>
+	The demo uses an isolated in-memory URL adapter so it doesn't hijack this page's address bar. In an app you swap it
+	for `reactRouterAdapter` or `nextAdapter` — that is the only difference.
+</Callout>
+
+## The three pieces
+
+```tsx
+import { createContextStore, pipe, StoreProvider } from '@ez-kit/zu-store'
+import { type FieldsBuilder, withPersist } from '@ez-kit/zu-store/persist'
+import { urlField } from '@ez-kit/zu-store/persist/url'
+import { reactRouterAdapter } from '@ez-kit/zu-store/persist/url/react-router'
+import { createStore } from 'zustand/vanilla'
+
+type Filters = { q: string; page: number }
+
+// 1. Declare which fields sync, and where. Primitives need no parser — it's auto-resolved.
+const fields: FieldsBuilder<Filters> = (field) => [
+	field((state) => state.q, urlField()),
+	field((state) => state.page, urlField()),
+]
+
+// 2. Attach the capability to the store through `pipe`.
+const filtersStore = createContextStore(() =>
+	pipe(
+		createStore<Filters>()(() => ({ q: '', page: 1 })),
+		withPersist({ fields }),
+	),
+)
+
+// 3. Mount the URL adapter once, app-level, and render the store under it.
+function Page() {
+	return (
+		<StoreProvider persist={[reactRouterAdapter]}>
+			<filtersStore.Provider>
+				<FilterControls />
+			</filtersStore.Provider>
+		</StoreProvider>
+	)
+}
+```
+
+The `persist` array is read once and may call hooks (router adapters do), so declare it at module scope or memoize it — keep its length and order stable across renders.
+
+`fields` selectors are typed against the store's **state**, not its handle: `withPersist` reads `ExtractState` off the store `pipe` hands it, so `field((state) => state.q, …)` needs no annotation. Anything no field selects — your actions, derived values, transient UI state — is never persisted.
+
+## Read and write
+
+Nothing changes about how you use the store: read with `useSelector()`, write through an action or the handle from `useStore()`.
+
+```tsx
+function FilterControls() {
+	const q = filtersStore.useSelector((state) => state.q)
+	const store = filtersStore.useStore()
+	return (
+		<input
+			value={q}
+			onChange={(event) => {
+				store.setState({ q: event.target.value }) // → ?q=…
+			}}
+		/>
+	)
+}
+```
+
+An action defined in the store reads better and is what the live example above uses:
+
+```tsx
+createStore<Filters & { setQuery: (q: string) => void }>()((set) => ({
+	q: '',
+	page: 1,
+	setQuery: (q) => {
+		set({ q })
+	},
+}))
+```
+
+## Attaching the plugin by hand
+
+`withPersist` is the bare `persist` plugin plus the attachment plus the typed handles. When a store is built somewhere the `pipe` chain can't reach, attach it directly — same plugin, same moment:
+
+```tsx
+import { attachCapability } from '@ez-kit/zu-store'
+import { persist } from '@ez-kit/zu-store/persist'
+
+const filtersStore = createContextStore(() => {
+	const store = createStore<Filters>()(() => ({ q: '', page: 1 }))
+	attachCapability(store, persist({ fields }))
+	return store
+})
+```
+
+`attachCapability` is not persist-specific — it takes any `StorePlugin`.
+
+## Custom URL keys
+
+By default a field's URL key is its property name — `q` becomes `?q=…`. Pass `key` to publish it under a different one:
+
+```ts
+pipe(
+	createStore<Filters>()(() => ({ q: '', page: 1 })),
+	withPersist({
+		fields: (field) => [
+			field((state) => state.q, urlField({ key: 'search' })), // → ?search=…
+			field((state) => state.page, urlField()), // → ?page=…
+		],
+	}),
+)
+```
+
+Nothing else changes: the state property stays `q`, only the query string reads `?search=`. This is the knob for a URL you don't control — a key another page, a legacy link or an analytics tool already expects. The full semantics (`key`, `absolute`, `prefix`, nested paths) are on [Fields → key placement](./fields#key-placement).
+
+## Where to go next
+
+- Persist to the browser instead of the URL: [Quick start — storage](./quick-start-storage).
+- History push/replace, router adapters and SSR live in the [URL deep dive](./deep-dive-url).

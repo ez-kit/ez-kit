@@ -1,0 +1,110 @@
+{
+	"name": "@ez-kit/store-persist",
+	"version": "0.1.0",
+	"description": "Source-agnostic persist engine for the @ez-kit store packages: URL / storage / IndexedDB as state, bound to any store manager through a StorePort.",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ez-kit/ez-kit",
+		"directory": "packages/store-persist"
+	},
+	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/store-persist#readme",
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./internals": {
+			"types": "./dist/internals.d.ts",
+			"import": "./dist/internals.js"
+		},
+		"./storage": {
+			"types": "./dist/storage/index.d.ts",
+			"import": "./dist/storage/index.js"
+		},
+		"./url": {
+			"types": "./dist/url/index.d.ts",
+			"import": "./dist/url/index.js"
+		},
+		"./url/react-router": {
+			"types": "./dist/url/react-router.d.ts",
+			"import": "./dist/url/react-router.js"
+		},
+		"./url/next": {
+			"types": "./dist/url/next.d.ts",
+			"import": "./dist/url/next.js"
+		},
+		"./validators/zod": {
+			"types": "./dist/validators/zod.d.ts",
+			"import": "./dist/validators/zod.js"
+		},
+		"./testing": {
+			"types": "./dist/testing/index.d.ts",
+			"import": "./dist/testing/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"dependencies": {
+		"@ez-kit/store-core": "workspace:*"
+	},
+	"scripts": {
+		"build": "tsup",
+		"lint": "eslint . --max-warnings=0",
+		"lint:fix": "eslint . --max-warnings=0 --fix",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"test": "vitest run",
+		"size": "size-limit",
+		"clean": "rimraf dist coverage"
+	},
+	"size-limit": [
+		{
+			"path": "dist/index.js",
+			"limit": "7 KB"
+		},
+		{
+			"path": "dist/storage/index.js",
+			"limit": "2 KB"
+		},
+		{
+			"path": "dist/url/index.js",
+			"limit": "1 KB"
+		},
+		{
+			"path": "dist/url/react-router.js",
+			"limit": "1 KB"
+		}
+	],
+	"devDependencies": {
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"fake-indexeddb": "^6.2.5",
+		"next": "16.2.4",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4",
+		"react-router": "^7.9.0",
+		"zod": "^4.3.6"
+	},
+	"peerDependencies": {
+		"next": ">=14.0.0",
+		"react": ">=18.0.0",
+		"react-router": ">=6.0.0",
+		"zod": ">=3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"next": {
+			"optional": true
+		},
+		"react-router": {
+			"optional": true
+		},
+		"zod": {
+			"optional": true
+		}
+	}
+}

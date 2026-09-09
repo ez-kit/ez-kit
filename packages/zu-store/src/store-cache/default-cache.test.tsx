@@ -2,12 +2,11 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
-import { createStoreCache } from './create-store-cache'
+import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 import { CacheProvider, createCachedStore } from './default-cache'
 
 import type { ContextStoreInit } from '../create-context-store'
 import type { CachedStoreOptions } from '@ez-kit/store-core/cache'
-import type { StoreApi } from 'zustand/vanilla'
 
 type TableState = {
 	filter: string
@@ -90,14 +89,14 @@ describe('default cache — top-level exports', () => {
 					</table.Provider>
 				</custom.Provider>,
 			),
-		).toThrowError('Missing StoreCacheProvider')
+		).toThrowError(MISSING_CACHE_PROVIDER)
 	})
 })
 
 // Type-level checks (not executed) — `name` is required in CachedStoreOptions.
 function _typeChecks(): void {
 	// @ts-expect-error name is required
-	const _missingName: CachedStoreOptions<StoreApi<TableState>> = { gcTime: 1000 }
+	const _missingName: CachedStoreOptions = { gcTime: 1000 }
 	// @ts-expect-error options is required (no bare factory call)
 	createCachedStore(tableFactory)
 	void _missingName

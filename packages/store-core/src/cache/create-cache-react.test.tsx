@@ -1,9 +1,11 @@
 import { act, render } from '@testing-library/react'
+import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { attachCapability } from '../capability'
 
 import { createCacheReact } from './create-cache-react'
 
-import type { StorePlugin } from '../plugin'
 import type { ReactElement } from 'react'
 
 type Fake = { id: string }
@@ -30,11 +32,14 @@ describe('createCacheReact', () => {
 		const api = freshApi()
 		const setup = vi.fn(() => cleanup)
 		const cleanup = vi.fn()
-		const plugins: StorePlugin<Fake>[] = [{ name: 'p', setup }]
-		const group = api.createCachedStore<{ id: string }>((init) => ({ id: init.defaultValue.id }), {
-			name: 'fake',
-			plugins,
-		})
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, { name: 'p', setup })
+				return instance
+			},
+			{ name: 'fake' },
+		)
 
 		// Keep the cache Provider mounted across renders; toggle only the group Provider child.
 		function Tree({ show }: { show: boolean }): ReactElement {
@@ -45,7 +50,9 @@ describe('createCacheReact', () => {
 							id='x'
 							defaultValue={{ id: 'x' }}
 						>
-							<group.Item selector={(snap) => (snap as Fake).id}>{(value) => <span>{value}</span>}</group.Item>
+							<group.Subscribe selector={(snap) => (snap as Fake).id}>
+								{(value) => <span>{value}</span>}
+							</group.Subscribe>
 						</group.Provider>
 					) : null}
 				</api.Provider>
@@ -77,10 +84,14 @@ describe('createCacheReact', () => {
 		const api = freshApi()
 		const cleanup = vi.fn()
 		const setup = vi.fn(() => cleanup)
-		const group = api.createCachedStore<{ id: string }>((init) => ({ id: init.defaultValue.id }), {
-			name: 'fake',
-			plugins: [{ name: 'p', setup }],
-		})
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, { name: 'p', setup })
+				return instance
+			},
+			{ name: 'fake' },
+		)
 
 		const view = render(
 			<api.Provider>
@@ -107,18 +118,20 @@ describe('createCacheReact', () => {
 	it('accumulates nested Scope paths into the StoreId path', () => {
 		const api = freshApi()
 		const seen: string[][] = []
-		const group = api.createCachedStore<{ id: string }>((init) => ({ id: init.defaultValue.id }), {
-			name: 'fake',
-			plugins: [
-				{
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, {
 					name: 'capture',
 					setup: (_instance, ctx) => {
 						seen.push([...ctx.id.path])
 						return undefined
 					},
-				},
-			],
-		})
+				})
+				return instance
+			},
+			{ name: 'fake' },
+		)
 
 		render(
 			<api.Provider>
@@ -161,5 +174,38 @@ describe('createCacheReact', () => {
 		)
 
 		expect(JSON.parse(view.getByTestId('keys').textContent)).toEqual([{ path: [], name: 'fake', id: 'x' }])
+	})
+
+	it('skips capability setup during server rendering', () => {
+		const api = freshApi()
+		const setup = vi.fn(() => undefined)
+		const group = api.createCachedStore<{ id: string }>(
+			(init) => {
+				const instance = { id: init.defaultValue.id }
+				attachCapability(instance, { name: 'probe', setup })
+				return instance
+			},
+			{ name: 'fake' },
+		)
+
+		// Simulate SSR: `ProviderInner` branches on `typeof window === 'undefined'` to skip the cache
+		// (and, with it, capability setup) and build an ephemeral instance per render instead.
+		vi.stubGlobal('window', undefined)
+		try {
+			renderToString(
+				<api.Provider>
+					<group.Provider
+						id='a'
+						defaultValue={{ id: 'a' }}
+					>
+						{null}
+					</group.Provider>
+				</api.Provider>,
+			)
+		} finally {
+			vi.unstubAllGlobals()
+		}
+
+		expect(setup).not.toHaveBeenCalled()
 	})
 })

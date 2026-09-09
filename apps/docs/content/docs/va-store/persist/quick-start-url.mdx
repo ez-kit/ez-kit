@@ -13,16 +13,16 @@ The shortest path to URL-as-state: declare which fields sync, mount the URL adap
 />
 
 <Callout type='warn'>
-	The interactive demo is declared with the [accessor API](./va-store/persist/fields) so it runs in this in-browser
-	sandbox, and uses an isolated in-memory URL adapter so it doesn't hijack this page's address bar. The behavior and URL
-	output match the decorator form below exactly.
+	The interactive demo is declared with the [accessor API](./fields) so it runs in this in-browser sandbox, and uses an
+	isolated in-memory URL adapter so it doesn't hijack this page's address bar. The behavior and URL output match the
+	decorator form below exactly.
 </Callout>
 
 ## The three pieces
 
 ```tsx
-import { createStore } from '@ez-kit/va-store'
-import { persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { persistUrl } from '@ez-kit/va-store/persist/url'
 import { reactRouterAdapter } from '@ez-kit/va-store/persist/url/react-router'
 import { proxy } from 'valtio'
@@ -33,9 +33,8 @@ class Filters {
 	@persistUrl() page = 1
 }
 
-// 2. Build a request-scoped store with the `persist()` plugin. Omit `fields` → decorators are
-//    discovered on the instance.
-const filtersStore = createStore(() => proxy(new Filters()), { plugins: [persist()] })
+// 2. Wrap the proxy in `withPersist`. Omit `fields` → decorators are discovered on the instance.
+const filtersStore = createContextStore(() => pipe(proxy(new Filters()), withPersist()))
 
 // 3. Mount the URL adapter once, app-level, and render the store under it.
 function Page() {
@@ -70,8 +69,48 @@ function FilterControls() {
 }
 ```
 
+## Custom URL keys
+
+By default a field's URL key is its property name — `q` becomes `?q=…`. Pass `key` to publish it
+under a different one, on either front:
+
+```tsx
+class Filters {
+	@persistUrl({ key: 'search' }) q = '' // → ?search=…
+	@persistUrl() page = 1 // → ?page=…
+}
+```
+
+```ts
+pipe(
+	proxy({ q: '', page: 1 }),
+	withPersist({
+		fields: (field) => [field((s) => s.q, urlField({ key: 'search' })), field((s) => s.page, urlField())],
+	}),
+)
+```
+
+Nothing else changes: the store property stays `q`, only the query string reads `?search=`. This is
+the knob for a URL you don't control — a key another page, a legacy link or an analytics tool
+already expects.
+
+For a **nested** field the default key is the whole path joined with dots, and `key` renames only
+its last segment:
+
+```ts
+// state: { filters: { price: { min: 0 } } }
+field((s) => s.filters.price.min, urlField()) // → ?filters.price.min=0
+field((s) => s.filters.price.min, urlField({ key: 'from' })) // → ?filters.price.from=0
+field((s) => s.filters.price.min, urlField({ key: 'from', absolute: true })) // → ?from=0
+```
+
+`absolute` drops the ancestor segments entirely, and `prefix` is prepended verbatim
+(`urlField({ prefix: 'cart.' })` → `?cart.q=…`) — useful when two stores would otherwise claim the
+same key. The full semantics, identical across both fronts, are on
+[Decorators → Key placement](./decorators#key-placement).
+
 ## Where to go next
 
-- Can't use build-time decorators? The [accessor API](./va-store/persist/fields) is equivalent and needs no transpilation.
-- Persist to the browser instead of the URL: [Quick start — storage](./va-store/persist/quick-start-storage).
-- History push/replace, key prefixes, Next.js, and SSR live in the [URL deep dive](./va-store/persist/deep-dive-url).
+- Can't use build-time decorators? The [accessor API](./fields) is equivalent and needs no transpilation.
+- Persist to the browser instead of the URL: [Quick start — storage](./quick-start-storage).
+- History push/replace, key prefixes, Next.js, and SSR live in the [URL deep dive](./deep-dive-url).

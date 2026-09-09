@@ -2,17 +2,24 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo shows the raw mutable proxy from useStore() */
 
-import { createStore } from '@ez-kit/va-store'
+import { createContextStore, pipe } from '@ez-kit/va-store'
 import {
 	type FieldsBuilder,
 	paramArray,
 	paramEnum,
 	paramString,
-	persist,
 	PersistProvider,
+	withPersist,
 } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
+import { useId } from 'react'
 import { proxy } from 'valtio'
+
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 
@@ -36,9 +43,8 @@ const fields: FieldsBuilder<SearchState> = (field) => [
 	field((s) => s.sort, urlField({ parser: paramEnum<Sort>(['relevance', 'newest']) })),
 ]
 
-const searchStore = createStore<SearchState>(
-	() => proxy<SearchState>({ q: '', page: 1, inStock: false, tags: [], sort: 'relevance' }),
-	{ plugins: [persist({ fields })] },
+const searchStore = createContextStore<SearchState>(() =>
+	pipe(proxy<SearchState>({ q: '', page: 1, inStock: false, tags: [], sort: 'relevance' }), withPersist({ fields })),
 )
 
 const { adapter, useSearch } = createMemoryUrlAdapter('q=boots&tags=red,suede&sort=newest&page=2')
@@ -46,69 +52,73 @@ const { adapter, useSearch } = createMemoryUrlAdapter('q=boots&tags=red,suede&so
 const ALL_TAGS = ['red', 'suede', 'sale', 'new']
 
 function SearchControls() {
+	const queryId = useId()
+	const sortId = useId()
+	const inStockId = useId()
 	const snap = searchStore.useSnapshot()
 	const store = searchStore.useStore()
 	const search = useSearch()
 
 	return (
-		<div>
-			<div className='flex flex-wrap items-center gap-3'>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>q</span>
-					<input
+		<div className='flex flex-col gap-4'>
+			<div className='flex flex-wrap items-center gap-4'>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={queryId}>q</Label>
+					<Input
+						id={queryId}
+						className='w-32'
 						value={snap.q}
+						placeholder='search…'
 						onChange={(event) => {
 							store.q = event.target.value
 						}}
-						placeholder='search…'
-						className='w-32 rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					/>
-				</label>
-				<label className='flex items-center gap-2 text-sm'>
-					<span className='text-fd-muted-foreground'>sort</span>
-					<select
+				</div>
+				<div className='flex items-center gap-2'>
+					<Label htmlFor={sortId}>sort</Label>
+					<NativeSelect
+						id={sortId}
+						size='sm'
 						value={snap.sort}
 						onChange={(event) => {
 							store.sort = event.target.value as Sort
 						}}
-						className='rounded-md border border-fd-border bg-fd-background px-2 py-1 text-sm'
 					>
-						<option value='relevance'>relevance</option>
-						<option value='newest'>newest</option>
-					</select>
-				</label>
-				<label className='flex items-center gap-2 text-sm'>
-					<input
-						type='checkbox'
+						<NativeSelectOption value='relevance'>relevance</NativeSelectOption>
+						<NativeSelectOption value='newest'>newest</NativeSelectOption>
+					</NativeSelect>
+				</div>
+				<div className='flex items-center gap-2'>
+					<Checkbox
+						id={inStockId}
 						checked={snap.inStock}
-						onChange={(event) => {
-							store.inStock = event.target.checked
+						onCheckedChange={(checked) => {
+							store.inStock = checked === true
 						}}
 					/>
-					<span className='text-fd-muted-foreground'>inStock</span>
-				</label>
+					<Label htmlFor={inStockId}>inStock</Label>
+				</div>
 			</div>
-			<div className='mt-2 flex flex-wrap items-center gap-2 text-sm'>
-				<span className='text-fd-muted-foreground'>tags</span>
-				{ALL_TAGS.map((tag) => {
-					const active = snap.tags.includes(tag)
-					return (
-						<button
+			<div className='flex flex-wrap items-center gap-3'>
+				<Label>tags</Label>
+				<ToggleGroup
+					type='multiple'
+					variant='outline'
+					size='sm'
+					value={[...snap.tags]}
+					onValueChange={(next) => {
+						store.tags = next
+					}}
+				>
+					{ALL_TAGS.map((tag) => (
+						<ToggleGroupItem
 							key={tag}
-							type='button'
-							onClick={() => {
-								store.tags = active ? store.tags.filter((t) => t !== tag) : [...store.tags, tag]
-							}}
-							className={`rounded-full border px-2 py-0.5 text-xs ${
-								active
-									? 'border-fd-primary bg-fd-primary/10 text-fd-primary'
-									: 'border-fd-border bg-fd-card hover:bg-fd-muted'
-							}`}
+							value={tag}
 						>
 							{tag}
-						</button>
-					)
-				})}
+						</ToggleGroupItem>
+					))}
+				</ToggleGroup>
 			</div>
 			<UrlReadout search={search} />
 		</div>

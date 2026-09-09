@@ -1,11 +1,14 @@
 'use client'
 
-import { createStore } from '@ez-kit/va-store'
-import { type FieldsBuilder, persist, PersistProvider } from '@ez-kit/va-store/persist'
+import { createContextStore, pipe } from '@ez-kit/va-store'
+import { type FieldsBuilder, PersistProvider, withPersist } from '@ez-kit/va-store/persist'
 import { urlField } from '@ez-kit/va-store/persist/url'
 import { zodParam } from '@ez-kit/va-store/persist/validators/zod'
+import { StarIcon } from 'lucide-react'
 import { proxy } from 'valtio'
 import { z } from 'zod'
+
+import { Button } from '@/components/ui/button'
 
 import { createMemoryUrlAdapter, UrlReadout } from './_memory-adapter'
 
@@ -20,9 +23,9 @@ const fields: FieldsBuilder<RatingState> = (field) => [
 	field((s) => s.rating, urlField({ parser: zodParam(ratingSchema) })),
 ]
 
-const ratingStore = createStore<RatingState>(() => proxy<RatingState>({ rating: 3 }), {
-	plugins: [persist({ fields })],
-})
+const ratingStore = createContextStore<RatingState>(() =>
+	pipe(proxy<RatingState>({ rating: 3 }), withPersist({ fields })),
+)
 
 const { adapter, useSearch } = createMemoryUrlAdapter()
 
@@ -37,21 +40,21 @@ function RatingControls() {
 		<div>
 			<div className='flex items-center gap-1'>
 				{STARS.map((value) => (
-					<button
+					<Button
 						key={value}
-						type='button'
+						variant='ghost'
+						size='icon-sm'
+						aria-label={`Set rating to ${String(value)}`}
 						onClick={() => {
 							store.rating = value
 						}}
-						aria-label={`Set rating to ${String(value)}`}
-						className={`text-2xl leading-none ${value <= snap.rating ? 'text-amber-500' : 'text-fd-muted-foreground/40'}`}
 					>
-						★
-					</button>
+						<StarIcon className={value <= snap.rating ? 'fill-current' : 'text-muted-foreground'} />
+					</Button>
 				))}
 				<span className='ml-2 font-mono text-sm tabular-nums'>{snap.rating}/5</span>
 			</div>
-			<p className='mt-2 text-xs text-fd-muted-foreground'>
+			<p className='mt-2 text-xs text-muted-foreground'>
 				Try an out-of-range deep link like <code>?rating=99</code> — it is rejected and the default (3) is kept.
 			</p>
 			<UrlReadout search={search} />

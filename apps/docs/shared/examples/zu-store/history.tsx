@@ -1,9 +1,13 @@
 'use client'
 
-import { withHistory } from '@ez-kit/zu-store'
+import { useHistory, useTimeline, withHistory } from '@ez-kit/zu-store'
+import { MinusIcon, PlusIcon, Redo2Icon, Undo2Icon } from 'lucide-react'
 import { useMemo } from 'react'
-import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
+
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
 
 type CounterState = {
 	count: number
@@ -28,84 +32,78 @@ function createHistoricalStore() {
 export default function HistoryExample() {
 	const store = useMemo(() => createHistoricalStore(), [])
 
-	const count = useStore(store, (s) => s.count)
-	const increment = useStore(store, (s) => s.increment)
-	const decrement = useStore(store, (s) => s.decrement)
-
-	const pastsCount = useStore(store.history, (h) => h.pasts.length)
-	const futuresCount = useStore(store.history, (h) => h.futures.length)
-	const undo = useStore(store.history, (h) => h.undo)
-	const redo = useStore(store.history, (h) => h.redo)
-	const clear = useStore(store.history, (h) => h.clear)
-	const goto = useStore(store.history, (h) => h.goto)
-
-	const timelineLength = pastsCount + 1 + futuresCount
+	const { undo, redo, clear, canUndo, canRedo, pasts, futures } = useHistory(store)
+	const { steps, index, current, goto } = useTimeline(store)
+	const { count, increment, decrement } = current
 
 	return (
-		<div className='flex flex-col gap-3'>
+		<div className='flex flex-col gap-4'>
 			<div className='flex items-center gap-3'>
-				<button
-					type='button'
-					onClick={increment}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
-				>
-					+1
-				</button>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='icon-sm'
+					aria-label='Decrement'
 					onClick={decrement}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted'
 				>
-					−1
-				</button>
+					<MinusIcon />
+				</Button>
 				<output className='min-w-[3ch] text-center font-mono text-lg tabular-nums'>{count}</output>
+				<Button
+					variant='outline'
+					size='icon-sm'
+					aria-label='Increment'
+					onClick={increment}
+				>
+					<PlusIcon />
+				</Button>
 			</div>
 
 			<div className='flex flex-wrap items-center gap-2'>
-				<button
-					type='button'
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={undo}
-					disabled={pastsCount === 0}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted disabled:cursor-not-allowed disabled:opacity-40'
+					disabled={!canUndo}
 				>
+					<Undo2Icon />
 					Undo
-				</button>
-				<button
-					type='button'
+				</Button>
+				<Button
+					variant='outline'
+					size='sm'
 					onClick={redo}
-					disabled={futuresCount === 0}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium hover:bg-fd-muted disabled:cursor-not-allowed disabled:opacity-40'
+					disabled={!canRedo}
 				>
+					<Redo2Icon />
 					Redo
-				</button>
-				<button
-					type='button'
+				</Button>
+				<Button
+					variant='ghost'
+					size='sm'
 					onClick={clear}
-					className='rounded-md border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium text-fd-muted-foreground hover:bg-fd-muted hover:text-fd-foreground'
 				>
 					Clear history
-				</button>
-				<span className='ml-1 text-xs text-fd-muted-foreground'>
-					pasts: <span className='font-mono'>{pastsCount}</span> · futures:{' '}
-					<span className='font-mono'>{futuresCount}</span>
+				</Button>
+				<span className='text-xs text-muted-foreground'>
+					pasts <span className='font-mono tabular-nums'>{pasts.length}</span> · futures{' '}
+					<span className='font-mono tabular-nums'>{futures.length}</span>
 				</span>
 			</div>
 
-			{timelineLength > 1 && (
+			{steps.length > 1 && (
 				<div className='flex items-center gap-3'>
-					<span className='text-xs text-fd-muted-foreground'>Jump:</span>
-					<input
-						type='range'
+					<Label className='text-muted-foreground'>Jump</Label>
+					<Slider
+						className='flex-1'
 						min={0}
-						max={timelineLength - 1}
-						value={pastsCount}
-						onChange={(e) => {
-							goto(Number(e.target.value))
+						max={steps.length - 1}
+						value={[index]}
+						onValueChange={([next]) => {
+							goto(next ?? 0)
 						}}
-						className='flex-1 accent-fd-primary'
 					/>
-					<span className='font-mono text-xs tabular-nums text-fd-muted-foreground'>
-						{pastsCount} / {timelineLength - 1}
+					<span className='font-mono text-xs tabular-nums text-muted-foreground'>
+						{index} / {steps.length - 1}
 					</span>
 				</div>
 			)}

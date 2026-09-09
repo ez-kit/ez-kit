@@ -10,14 +10,17 @@ export type {
 
 export { useStoreState } from './use-store-state'
 
-export { withHistory } from './middlewares'
-export type { HistoryActionTag, HistoryOptions, HistoryState } from './middlewares'
+export { useHistory, useTimeline, withHistory } from './history'
+export type { HistoryActionTag, HistoryOptions, HistorySnapshot, HistoryState, Timeline } from './history'
 
 export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore } from './store-cache'
-export type { StoreCache, CachedStoreGroup, CachedItemProps } from './store-cache'
+export type { StoreCache, CachedStoreGroup, CachedSubscribeProps } from './store-cache'
 
-export { shallowEqual } from '@ez-kit/store-core'
-export type { ControlledConfig, ControlledFieldConfig } from '@ez-kit/store-core'
+export { StoreProvider } from './store-provider'
+export type { StoreProviderProps } from './store-provider'
+
+export { pipe, shallowEqual } from '@ez-kit/store-core'
+export type { ControlledConfig, ControlledFieldConfig, StoreEnhancer } from '@ez-kit/store-core'
 
 export { toTree } from '@ez-kit/store-core/cache'
 export type {

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 
-import type { StoreInit } from '../create-store'
+import type { ContextStoreInit } from '../create-context-store'
 import type { Snapshot } from 'valtio'
 
 type FormState = {
@@ -20,7 +20,7 @@ const GC_TIME = 200
 /** A multiple of gcTime, not a hair over it, so a loaded CI runner cannot race the eviction timer. */
 const PAST_GC_TIME = GC_TIME * 2
 
-const formFactory = ({ defaultValue }: StoreInit<FormDefaultValue>) =>
+const formFactory = ({ defaultValue }: ContextStoreInit<FormDefaultValue>) =>
 	proxy<FormState>({
 		dirty: defaultValue.dirty ?? false,
 		name: defaultValue.name ?? '',
@@ -102,7 +102,7 @@ describe('valtio createStoreCache — surface', () => {
 
 		// `useSnapshot()` yields the readonly snapshot — a distinct object from the live cached proxy that
 		// `useStore()` returns. Under the old semantics `useStore()` handed back that same proxy.
-		expect(raw).toBe(form.fromCache({ id: 'main' }))
+		expect(raw).toBe(form.getFromCache({ id: 'main' }))
 		expect(snapshot).not.toBe(raw)
 		expect(snapshot?.name).toBe('seed')
 	})
@@ -147,7 +147,7 @@ describe('valtio createStoreCache — surface', () => {
 		})
 	})
 
-	it('exposes { snap, store } via the Item render-prop', () => {
+	it('exposes { snap, store } via the Subscribe render-prop', () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'surface-item' })
 
@@ -157,7 +157,7 @@ describe('valtio createStoreCache — surface', () => {
 					id='main'
 					defaultValue={{ name: 'render-prop' }}
 				>
-					<form.Item>{({ snap }) => <span data-testid='item'>{snap.name}</span>}</form.Item>
+					<form.Subscribe>{({ snap }) => <span data-testid='item'>{snap.name}</span>}</form.Subscribe>
 				</form.Provider>
 			</cache.Provider>,
 		)
@@ -166,11 +166,11 @@ describe('valtio createStoreCache — surface', () => {
 	})
 })
 
-describe('valtio createStoreCache — StoreItem', () => {
+describe('valtio createStoreCache — Store', () => {
 	it('writes through the raw proxy without re-rendering its own child', async () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'store-item' })
-		let storeItemRenders = 0
+		let storeRenders = 0
 
 		render(
 			<cache.Provider>
@@ -178,10 +178,10 @@ describe('valtio createStoreCache — StoreItem', () => {
 					id='main'
 					defaultValue={{ name: 'seed' }}
 				>
-					<form.Item>{({ snap }) => <span data-testid='name'>{snap.name}</span>}</form.Item>
-					<form.StoreItem>
+					<form.Subscribe>{({ snap }) => <span data-testid='name'>{snap.name}</span>}</form.Subscribe>
+					<form.Store>
 						{(store) => {
-							storeItemRenders += 1
+							storeRenders += 1
 							return (
 								<button
 									type='button'
@@ -193,12 +193,12 @@ describe('valtio createStoreCache — StoreItem', () => {
 								</button>
 							)
 						}}
-					</form.StoreItem>
+					</form.Store>
 				</form.Provider>
 			</cache.Provider>,
 		)
 
-		const rendersAfterMount = storeItemRenders
+		const rendersAfterMount = storeRenders
 
 		expect(screen.getByTestId('name')).toHaveTextContent('seed')
 		fireEvent.click(screen.getByRole('button', { name: 'rename' }))
@@ -206,7 +206,7 @@ describe('valtio createStoreCache — StoreItem', () => {
 			expect(screen.getByTestId('name')).toHaveTextContent('Ann')
 		})
 
-		expect(storeItemRenders).toBe(rendersAfterMount)
+		expect(storeRenders).toBe(rendersAfterMount)
 	})
 })
 
@@ -296,7 +296,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 			/>,
 		)
 		expect(screen.getByTestId('name')).toHaveTextContent('first')
-		const live = form.fromCache({ id: 'form' })
+		const live = form.getFromCache({ id: 'form' })
 
 		rerender(
 			<App
@@ -312,7 +312,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 		)
 
 		expect(screen.getByTestId('name')).toHaveTextContent('first')
-		expect(form.fromCache({ id: 'form' })).toBe(live)
+		expect(form.getFromCache({ id: 'form' })).toBe(live)
 	})
 
 	it('seeds a fresh proxy from defaultValue after the entry is evicted', async () => {
@@ -355,7 +355,7 @@ describe('valtio createStoreCache — cache-hit returns same live proxy', () => 
 		await act(async () => {
 			await new Promise((resolve) => setTimeout(resolve, PAST_GC_TIME))
 		})
-		expect(form.fromCache({ id: 'form' })).toBeUndefined()
+		expect(form.getFromCache({ id: 'form' })).toBeUndefined()
 
 		// Remount: the entry is gone, so the new defaultValue seeds a fresh proxy.
 		rerender(
@@ -464,7 +464,7 @@ describe('valtio createStoreCache — useFromCache', () => {
 		)
 
 		expect(screen.getByTestId('badge')).toHaveTextContent(NO_ENTRY)
-		expect(form.fromCache({ id: 'main' })).toBeUndefined()
+		expect(form.getFromCache({ id: 'main' })).toBeUndefined()
 	})
 })
 
@@ -491,7 +491,7 @@ describe('valtio createStoreCache — SSR ephemerality', () => {
 		)
 
 		expect(html).toContain('server-seed')
-		expect(form.fromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
+		expect(form.getFromCache({ path: ['page-1'], id: 'main' })).toBeUndefined()
 	})
 
 	it('does not share state across separate server renders', () => {
@@ -525,5 +525,100 @@ describe('valtio createStoreCache — SSR ephemerality', () => {
 
 		expect(one).toContain('first')
 		expect(two).toContain('second')
+	})
+})
+
+describe('valtio createStoreCache — gcTime={0} opt-out', () => {
+	it('evicts on unmount with gcTime={0}, and reseeds from defaultValue on remount', async () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'gc-zero' })
+
+		function App({ show }: { show: boolean }) {
+			return (
+				<cache.Provider>
+					{show ? (
+						<form.Provider
+							id='draft'
+							gcTime={0}
+							defaultValue={{ name: 'seed' }}
+						>
+							<span />
+						</form.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(<App show={true} />)
+		act(() => {
+			const live = form.getFromCache({ id: 'draft' })
+			if (live) live.name = 'edited'
+		})
+		expect(form.getFromCache({ id: 'draft' })?.name).toBe('edited')
+
+		// Last observer leaves: with gcTime={0} the entry goes on the next macrotask, not after a window.
+		rerender(<App show={false} />)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0))
+		})
+		expect(form.getFromCache({ id: 'draft' })).toBeUndefined()
+
+		// A fresh entry: the factory runs again, so `defaultValue` seeds it as on first mount.
+		rerender(<App show={true} />)
+		expect(form.getFromCache({ id: 'draft' })?.name).toBe('seed')
+	})
+
+	it('cancels a pending gcTime={0} eviction when an observer returns in the same commit', async () => {
+		const cache = createStoreCache()
+		const form = cache.createCachedStore(formFactory, { name: 'gc-zero-handoff' })
+
+		// Two Providers on one key: the handoff a route cross-fade or a re-parented subtree performs.
+		function App({ a, b }: { a: boolean; b: boolean }) {
+			return (
+				<cache.Provider>
+					{a ? (
+						<form.Provider
+							id='draft'
+							gcTime={0}
+							defaultValue={{ name: 'seed' }}
+						>
+							<span />
+						</form.Provider>
+					) : null}
+					{b ? (
+						<form.Provider
+							id='draft'
+							gcTime={0}
+							defaultValue={{ name: 'seed' }}
+						>
+							<span />
+						</form.Provider>
+					) : null}
+				</cache.Provider>
+			)
+		}
+
+		const { rerender } = render(
+			<App
+				a={true}
+				b={false}
+			/>,
+		)
+		act(() => {
+			const live = form.getFromCache({ id: 'draft' })
+			if (live) live.name = 'edited'
+		})
+
+		// One commit: the first Provider's cleanup and the second's effect both run before any timer.
+		rerender(
+			<App
+				a={false}
+				b={true}
+			/>,
+		)
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0))
+		})
+		expect(form.getFromCache({ id: 'draft' })?.name).toBe('edited')
 	})
 })

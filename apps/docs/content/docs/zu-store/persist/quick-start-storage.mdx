@@ -1,0 +1,79 @@
+---
+title: Quick start — storage
+description: Persist the same store to localStorage. One concept changes — the source — plus useHydrated() to avoid a flash.
+---
+
+# Quick start — storage
+
+Storage works exactly like the URL — same store, same declaration. Only the **source** changes: a field declares `localStorageField()` instead of `urlField()`, and you mount `localStorageAdapter()` instead of a router adapter.
+
+<LivePreview
+	path='zu-store/persist-storage'
+	title='localStorage-persisted preferences'
+/>
+
+<Callout type='warn'>
+	The demo uses an isolated in-memory store, so it neither reads nor writes your real `localStorage`. The blob read-out
+	shows the exact JSON the real adapter would persist.
+</Callout>
+
+## The three pieces
+
+```tsx
+import { createContextStore, pipe, StoreProvider } from '@ez-kit/zu-store'
+import { type FieldsBuilder, withPersist } from '@ez-kit/zu-store/persist'
+import { localStorageAdapter, localStorageField } from '@ez-kit/zu-store/persist/storage'
+import { createStore } from 'zustand/vanilla'
+
+type Prefs = { theme: 'light' | 'dark'; fontScale: number }
+
+const fields: FieldsBuilder<Prefs> = (field) => [
+	field((state) => state.theme, localStorageField()),
+	field((state) => state.fontScale, localStorageField()),
+]
+
+const prefsStore = createContextStore(() =>
+	pipe(
+		createStore<Prefs>()(() => ({ theme: 'light', fontScale: 1 })),
+		withPersist({ fields }),
+	),
+)
+
+function Page() {
+	return (
+		<StoreProvider persist={[localStorageAdapter()]}>
+			<prefsStore.Provider>
+				<PrefControls />
+			</prefsStore.Provider>
+		</StoreProvider>
+	)
+}
+```
+
+Storage adapters are **client-only** and inert on the server (`get()` is empty, `set()` is a no-op), so they never break SSR. Swap `localStorageAdapter` for `sessionStorageAdapter` to scope persistence to the tab session.
+
+## The one new concept: hydration
+
+Reading storage synchronously during render would mismatch server HTML (the server has no `localStorage`), so a stored-but-non-default value can't appear in the very first paint — the store shows defaults, and the real value arrives a tick later. For the common case this _silent fill_ needs no code.
+
+When the flash matters (layout shift, firing analytics on default values), gate on `useHydrated()`:
+
+```tsx
+import { useHydrated } from '@ez-kit/zu-store/persist'
+
+function PrefControls() {
+	const theme = prefsStore.useSelector((state) => state.theme)
+	// Pass the store handle — the same one `withPersist` bound.
+	const hydrated = useHydrated(prefsStore.useStore())
+
+	if (!hydrated) return <Skeleton />
+	return <Theme value={theme} />
+}
+```
+
+`useHydrated()` is a per-store aggregate: it flips to `true` once **every** mounted source has applied its first read. For a URL-only store it is effectively immediate; for async sources (IndexedDB) it waits for the resolve.
+
+## Where to go next
+
+- Combine this with the URL on one store: [Combined](./combined).
+- Blob shape, schema `version`/`migrate`, and cross-tab sync: [storage deep dive](./deep-dive-storage).

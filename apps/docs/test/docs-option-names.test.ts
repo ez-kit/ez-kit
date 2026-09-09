@@ -1,13 +1,16 @@
-import { resolve } from 'node:path'
+import { readdirSync } from 'node:fs'
+import { relative, resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
 import { readDocTables, type DocTable } from './docs-options/mdx-tables'
 import {
+	DELIBERATELY_UNMAPPED,
 	OPTION_EXCEPTIONS,
 	OptionColumn,
 	PAGE_ENTRIES,
 	DocPage,
+	SCANNED_ROOTS,
 	type OptionTable,
 	type PageEntry,
 } from './docs-options/page-type-map'
@@ -134,7 +137,41 @@ function checkTable(page: DocPage, table: OptionTable): TableCheck {
 	return { failures, checkedCount }
 }
 
+/** Every `.mdx` under a scanned root, as a docs-relative path — the ground truth `DocPage` must cover. */
+function pagesOnDisk(): string[] {
+	const found: string[] = []
+	const walk = (directory: string): void => {
+		for (const entry of readdirSync(directory, { withFileTypes: true })) {
+			const child = resolve(directory, entry.name)
+			if (entry.isDirectory()) walk(child)
+			else if (entry.name.endsWith('.mdx')) found.push(relative(DOCS_ROOT, child))
+		}
+	}
+	for (const root of SCANNED_ROOTS) walk(resolve(DOCS_ROOT, root))
+	return found.sort()
+}
+
 describe('docs option names', () => {
+	it('every page on disk under a scanned root is listed in DocPage', () => {
+		// `DocPage` is hand-written, so without this the map could silently fall behind the docs tree:
+		// a page added tomorrow would be checked by nothing at all, which is exactly the hole the
+		// original audit found. Scanning the directories closes it — a new page fails here until it is
+		// either listed or explicitly recorded as deliberately unmapped.
+		const listed = new Set<string>(Object.values(DocPage))
+		const deliberate = new Set(DELIBERATELY_UNMAPPED.map((entry) => entry.page))
+		const unlisted = pagesOnDisk().filter((page) => !listed.has(page) && !deliberate.has(page))
+
+		expect(unlisted, `\nUnlisted docs pages:\n${unlisted.join('\n')}\n`).toEqual([])
+	})
+
+	it('every deliberately unmapped page still exists', () => {
+		// An entry whose file is gone pre-approves nothing and hides the fact that the exemption is stale.
+		const onDisk = new Set(pagesOnDisk())
+		const missing = DELIBERATELY_UNMAPPED.filter((entry) => !onDisk.has(entry.page)).map((entry) => entry.page)
+
+		expect(missing, `\nStale DELIBERATELY_UNMAPPED entries:\n${missing.join('\n')}\n`).toEqual([])
+	})
+
 	it('every page in DocPage is mapped', () => {
 		// The guard that keeps coverage total. `DocPage` lists every page under
 		// `content/docs/data-grid/**` plus the mapped `form/` pages, so this asserts each of

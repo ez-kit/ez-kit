@@ -9,6 +9,13 @@ Standalone hook that binds **one field** of a Zustand store to a `[value, setVal
 
 Works with **any `StoreApi`**, not just stores created through `createContextStore`.
 
+<Callout type='info'>
+	This hook is **Zustand-only** and has no `@ez-kit/va-store` counterpart, by design. It exists because a Zustand read
+	needs a selector and a write needs `setState` — two different calls for one field. A Valtio store has neither: read
+	the field off `useSnapshot()` and assign to it on `useStore()`, and you already have the `[value, setValue]` pair
+	without a hook to package it.
+</Callout>
+
 ## Signature
 
 ```ts

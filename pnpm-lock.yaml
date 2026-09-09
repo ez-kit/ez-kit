@@ -548,6 +548,37 @@ importers:
         specifier: ^19.2.4
         version: 19.2.5(react@19.2.5)
 
+  packages/store-persist:
+    dependencies:
+      '@ez-kit/store-core':
+        specifier: workspace:*
+        version: link:../store-core
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
+      next:
+        specifier: 16.2.4
+        version: 16.2.4(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.101.0)
+      react:
+        specifier: ^19.2.4
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.5(react@19.2.5)
+      react-router:
+        specifier: ^7.9.0
+        version: 7.17.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+
   packages/twc:
     dependencies:
       class-variance-authority:
@@ -575,6 +606,9 @@ importers:
       '@ez-kit/store-core':
         specifier: workspace:*
         version: link:../store-core
+      '@ez-kit/store-persist':
+        specifier: workspace:*
+        version: link:../store-persist
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
@@ -609,6 +643,9 @@ importers:
       '@ez-kit/store-core':
         specifier: workspace:*
         version: link:../store-core
+      '@ez-kit/store-persist':
+        specifier: workspace:*
+        version: link:../store-persist
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
@@ -616,12 +653,21 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
+      next:
+        specifier: 16.2.4
+        version: 16.2.4(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(sass@1.101.0)
       react:
         specifier: ^19.2.4
         version: 19.2.5
       react-dom:
         specifier: ^19.2.4
         version: 19.2.5(react@19.2.5)
+      react-router:
+        specifier: ^7.9.0
+        version: 7.17.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
       zustand:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(immer@11.1.8)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
