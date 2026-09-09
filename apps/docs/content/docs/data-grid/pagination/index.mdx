@@ -157,6 +157,16 @@ on, so nothing invents a total: `'range'` degrades to the page counter, the coun
 `of N`, and page links are dropped entirely — they cannot be enumerated without a page count.
 Supply `rowCount` whenever the server knows it; it is what turns `'range'` into a real range.
 
+### A page past the end
+
+A page that sits past the end of the total reports `0–0 of N` rather than an impossible range.
+Under `pagination.manual` TanStack leaves `autoResetPageIndex` off, so the grid does not rewind by
+itself — with one exception: when a trusted `rowCount` actually **shrinks** beneath the current
+page, the grid clamps `pageIndex` to the last valid page through the normal `onChange` /
+`onStateChange` flow. A deep link to an already-out-of-range page is left alone — the initial
+`rowCount: data?.rowCount ?? 0` of a pending fetch means "not loaded yet", not "no rows", and
+clamping on it would reset the page mid-request. That is when you still see `0–0 of N`.
+
 ### Empty grid
 
 When the total is known to be zero — a client-side grid with no rows, or a server-paginated grid
