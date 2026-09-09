@@ -94,22 +94,24 @@ const components = {
  * })
  */
 // Annotated, not inferred. The declaration emitter prints an *inferred* type structurally, so
-// without this the bundled `.d.ts` re-printed all nine registry entries into every signature that
-// mentions them — and a `CellDef` union built over that blob is large enough that TypeScript
-// stops contextually typing `cell.component` and hands its parameter back as an implicit `any`.
-// Naming the bundle's type keeps the registry a *name* in the emitted signatures.
+// without this the bundled `.d.ts` re-prints the whole bundle into every signature that mentions
+// it. Naming the bundle's type keeps `KitCellTypes` — which is itself declared rather than read
+// off the runtime object, see `blocks/cell-types.ts` — a name in the emitted signatures.
 const bundle: DataGridBundle<KitCellTypes> = createDataGrid<KitCellTypes>({
 	components,
 	cellTypes,
 })
 
-const { DataGrid, GridComponentsProvider, useDataGrid, extendDataGrid } = bundle
+const { DataGrid, GridComponentsProvider, useDataGrid } = bundle
 
 // Annotated one by one rather than destructured: a destructured binding is re-inferred by the
-// declaration emitter, which prints the registry structurally again. Indexing the bundle's type
-// keeps `KitCellTypes` a name in the two signatures that carry a `CellDef` union.
+// declaration emitter, which re-prints the signature instead of naming it, and a re-printed
+// `DataGridBundle<KitCellTypes & TExtra>` degenerates to an error type at the call site — the
+// consumer then gets an unchecked `createColumns` off the extended bundle. Indexing the bundle's
+// type keeps `KitCellTypes` a name in the three signatures that carry a `CellDef` union.
 const createColumns: DataGridBundle<KitCellTypes>['createColumns'] = bundle.createColumns
 const createColumnHelper: DataGridBundle<KitCellTypes>['createColumnHelper'] = bundle.createColumnHelper
+const extendDataGrid: DataGridBundle<KitCellTypes>['extendDataGrid'] = bundle.extendDataGrid
 
 // `cellTypes` / `KitCellTypes` are re-exported here (not just consumed internally by
 // `createDataGrid` above) because this file is the registry consumer's actual entry point —

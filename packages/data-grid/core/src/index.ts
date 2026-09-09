@@ -59,6 +59,7 @@ export type {
 	BaseCellTypes,
 	BooleanCellConfig,
 	CellDef,
+	CellTypeContractOf,
 	CellTypeRegistryShape,
 	ConfigOf,
 	CellType,

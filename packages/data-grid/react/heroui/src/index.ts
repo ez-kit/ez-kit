@@ -9,10 +9,9 @@ export {
 	createColumnHelper,
 } from './data-grid'
 export { cellTypes } from './blocks/cell-types'
-// Exported so the bundled `.d.ts` can refer to the registry **by name**. Left unexported, the
-// declaration emitter re-prints all nine entries structurally into every signature that mentions
-// them — and a `CellDef` union built over that structural blob is large enough that TypeScript
-// stops contextually typing `cell.component`, handing its parameter back as an implicit `any`.
+// Exported so a consumer can name what its columns are checked against. What keeps the emitted
+// signatures honest is that `KitCellTypes` is *declared* rather than `typeof cellTypes` — see
+// `blocks/cell-types.ts`; merely exporting the alias was tried first and did not help.
 export type { KitCellTypes } from './blocks/cell-types'
 
 /**

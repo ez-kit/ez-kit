@@ -402,6 +402,26 @@ export type CellTypeRegistryShape = Record<string, { __config?: unknown }>
 export type ConfigOf<TDefinition> = TDefinition extends { __config?: infer TConfig } ? TConfig : never
 
 /**
+ * A registry projected down to the part a column is typed against: its ids, and the `config`
+ * each id declares. The renderer slots are dropped.
+ *
+ * Exists **only to prove** that a kit's hand-declared registry type still describes its runtime
+ * `cellTypes` object — see either kit's `blocks/cell-types.ts`. It must never be the type a kit
+ * publishes `createColumns` against: mapping the registry at the publication boundary turns every
+ * arm of {@link CellDef} permissive, which trades away the per-type `config` checking this whole
+ * mechanism exists for.
+ *
+ * The distinction that makes the proof worth having: a **declared** type survives the declaration
+ * emitter as a name, while `typeof cellTypes` — an object of nine real `ComponentType` slots — is
+ * re-printed structurally into the bundled `.d.ts`, and over that blob `CellDef` degenerates to an
+ * error type. A consumer then gets no checking at all through the published types, while the
+ * package's own source tree still checks fine.
+ */
+export type CellTypeContractOf<TRegistry> = {
+	[TKey in keyof TRegistry]: { __config?: ConfigOf<TRegistry[TKey]> }
+}
+
+/**
  * One arm of {@link CellDef}: a registered type id, plus the `config` that id declared.
  *
  * `config` is **required** when the declared config has a required field (`select` needs
