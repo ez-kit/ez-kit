@@ -7,6 +7,7 @@ import { Checkbox } from './blocks/core/Checkbox'
 import { Menu } from './blocks/core/Menu'
 import { Td } from './blocks/core/Td'
 import { Tfoot } from './blocks/core/Tfoot'
+import { Th } from './blocks/core/Th'
 import { Toolbar } from './blocks/core/Toolbar'
 import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
@@ -38,7 +39,7 @@ import { SortMenu } from './blocks/sorting/SortMenu'
 import { VisibilityMenu } from './blocks/visibility/VisibilityMenu'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
-import { Table, TableBody, TableHead, TableHeader, TableRow } from './components/ui/table'
+import { Table, TableBody, TableHeader, TableRow } from './components/ui/table'
 
 import type { KitCellTypes } from './blocks/cell-types'
 import type { DataGridBundle, FullGridComponents } from '@ez-kit/data-grid-react'
@@ -50,7 +51,7 @@ const components = {
 		Tbody: TableBody,
 		Tfoot,
 		Tr: TableRow,
-		Th: TableHead,
+		Th,
 		Td,
 		Button,
 		Input,
