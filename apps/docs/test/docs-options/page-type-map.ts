@@ -58,6 +58,7 @@ export const DocPage = {
 	StatePersistence: 'content/docs/data-grid/state/persistence.mdx',
 	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
 	Theming: 'content/docs/data-grid/theming.mdx',
+	Localization: 'content/docs/data-grid/localization.mdx',
 	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
 	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
@@ -461,6 +462,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.Theming,
 		optionTables: [],
 		nonOptionTables: [{ heading: 'Where to look', reason: 'Maps a UI kit to where its design tokens live.' }],
+	},
+	{
+		page: DocPage.Localization,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		nonOptionTables: [],
 	},
 	{
 		page: DocPage.ExamplesIndex,

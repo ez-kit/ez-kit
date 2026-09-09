@@ -1,0 +1,129 @@
+---
+title: Localization
+description: Every string the grid renders comes from one dictionary. Replace any subset of it with `messages` — per grid, or app-wide.
+---
+
+# Localization
+
+The grid holds no text of its own. Every user-facing string — visible labels, `placeholder`s and
+`aria-label`s alike — lives in a single dictionary, `GridMessages`, whose English default is
+`defaultMessages`. `messages` replaces any part of it.
+
+That includes the accessible names. A grid whose buttons you translated but whose `aria-label`s
+stayed English is not localized; it just hides the English where only a screen reader finds it.
+
+## One string
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	messages={{ pagination: { rowsPerPage: 'Строк на странице' } }}
+/>
+```
+
+Overrides merge **per entry**, so naming one string keeps the rest of its group: the six other
+`pagination` entries stay English until you say otherwise.
+
+## App-wide
+
+Set it once on `DataGridOptionsProvider` and every grid below it inherits the dictionary. A single
+grid can still override one string of it — the provider, factory defaults and the instance are the
+same three option layers everything else uses.
+
+```tsx
+import { DataGridOptionsProvider } from '@ez-kit/data-grid-react'
+
+import { ru } from './grid-messages.ru'
+
+export function Providers({ children }: { children: ReactNode }) {
+	return <DataGridOptionsProvider defaults={{ messages: ru }}>{children}</DataGridOptionsProvider>
+}
+```
+
+```ts
+// grid-messages.ru.ts
+import type { PartialGridMessages } from '@ez-kit/data-grid-react'
+
+export const ru: PartialGridMessages = {
+	selection: { selectRow: 'Выбрать строку', selectAll: 'Выбрать все строки', clear: 'Снять выделение' },
+	pagination: { rowsPerPage: 'Строк на странице', page: 'Страница', of: 'из' },
+	fallbacks: { empty: 'Нет данных', noResults: 'Ничего не найдено' },
+}
+```
+
+`PartialGridMessages` types any subset, group by group, so a typo in a key is a compile error
+rather than a string that silently stays English.
+
+## Strings that depend on the render
+
+Entries whose text varies take a **typed context object** and return a string. They are ordinary
+functions, which is the whole surface an `Intl.PluralRules` call or an ICU message needs:
+
+```ts
+const ru: PartialGridMessages = {
+	filtering: { placeholder: ({ columnId }) => `Фильтр по ${columnId}` },
+	selection: { count: ({ count }) => `Выбрано: ${count}` },
+	draft: {
+		sorts: ({ count }) => `${count} ${plural(count, ['сортировка', 'сортировки', 'сортировок'])}`,
+	},
+}
+```
+
+The grid ships no plural rules of its own — the English default writes `1 sort` / `2 sorts` and
+stops there, because pluralization is the language's business, not the grid's.
+
+## Filter operators
+
+Operator labels are in the dictionary too, grouped the way the built-in operator sets are. The same
+id means the same comparison whatever the column's cell type is, and only the wording changes —
+which is exactly what the groups hold:
+
+```ts
+const ru: PartialGridMessages = {
+	operators: {
+		text: {
+			contains: 'Содержит',
+			equals: 'Равно',
+			notEquals: 'Не равно',
+			startsWith: 'Начинается с',
+			endsWith: 'Заканчивается на',
+		},
+		date: { greaterThan: 'После', lessThan: 'До' /* … */ },
+		empty: { isEmpty: 'Пусто', isNotEmpty: 'Не пусто' },
+	},
+}
+```
+
+A custom operator registered through `filtering.operators.items` carries its own `label` and is
+never looked up here.
+
+## Reading the dictionary yourself
+
+A custom cell renderer, toolbar control or kit component reads the resolved dictionary with
+`useGridMessages()` — complete by construction, so no call site needs a fallback:
+
+```tsx
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
+function MyPageSizerLabel() {
+	const messages = useGridMessages()
+	return <span>{messages.pagination.rowsPerPage}</span>
+}
+```
+
+Outside a `<DataGrid>` it returns `defaultMessages` rather than throwing, so a component of yours
+still renders in a story or a test.
+
+## What ships
+
+**English only.** No `ru` / `de` bundles and no separate locales package: the key set is still
+moving before 1.0, and a bundled translation that lags the keys is worse than no translation —
+the gaps are invisible until they render. Write the dictionary your app needs; it is a plain
+object.
+
+## Options
+
+| Option     | Type                  | Description                                                                                                                                                       |
+| ---------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `messages` | `PartialGridMessages` | Replaces any subset of the strings the grid renders, merged per entry onto `defaultMessages`. Set on the grid, or on `DataGridOptionsProvider` for the whole app. |
