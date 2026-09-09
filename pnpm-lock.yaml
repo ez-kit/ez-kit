@@ -310,12 +310,6 @@ importers:
       '@ez-kit/data-grid-react':
         specifier: workspace:*
         version: link:../react
-      '@heroui/react':
-        specifier: ^3.0.3
-        version: 3.0.3(@react-spectrum/provider@3.11.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tailwindcss@4.2.4)
-      '@heroui/styles':
-        specifier: ^3.0.3
-        version: 3.0.3(tailwind-merge@3.5.0)(tailwindcss@4.2.4)
       '@internationalized/date':
         specifier: ^3.5.0
         version: 3.12.1
@@ -323,6 +317,12 @@ importers:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.5)
     devDependencies:
+      '@heroui/react':
+        specifier: ^3.0.3
+        version: 3.0.3(@react-spectrum/provider@3.11.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tailwindcss@4.2.4)
+      '@heroui/styles':
+        specifier: ^3.0.3
+        version: 3.0.3(tailwind-merge@3.5.0)(tailwindcss@4.2.4)
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14

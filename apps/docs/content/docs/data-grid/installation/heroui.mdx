@@ -8,13 +8,20 @@ description: Install the data grid for a HeroUI-based React app — packages, CS
 ## 1. Install packages
 
 ```bash
-pnpm add @ez-kit/data-grid-heroui
+pnpm add @ez-kit/data-grid-heroui @heroui/react @heroui/styles
 ```
 
-The kit is the only package you install. It depends on `@ez-kit/data-grid-react` and
-`@ez-kit/data-grid-core`, so both arrive with it, and it re-exports their whole surface — every
-hook, type and constant is importable from `@ez-kit/data-grid-heroui` itself. Adding them to your own
-`package.json` buys nothing and lets their versions drift out of step with the kit's.
+`@heroui/react` and `@heroui/styles` (v3) are **peer dependencies**, as are `react` and
+`react-dom` (18 or 19). HeroUI is peer rather than bundled on purpose: it is built on React
+Aria, whose components talk to each other through React context. A second, differently
+versioned copy of `@heroui/react` in your tree would create a second set of contexts — and,
+since the kit's stylesheet `@import`s `@heroui/styles`, a second copy of HeroUI's entire CSS.
+pnpm and npm resolve peers for you; add them explicitly if your package manager does not.
+
+Everything else arrives with the kit. It depends on `@ez-kit/data-grid-react` and
+`@ez-kit/data-grid-core` and re-exports their whole surface — every hook, type and constant is
+importable from `@ez-kit/data-grid-heroui` itself. Adding those two to your own `package.json`
+buys nothing and lets their versions drift out of step with the kit's.
 
 ## 2. Import the stylesheet
 

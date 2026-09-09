@@ -43,18 +43,20 @@
 	],
 	"dependencies": {
 		"@ez-kit/data-grid-react": "workspace:*",
-		"@heroui/react": "^3.0.3",
-		"@heroui/styles": "^3.0.3",
 		"@internationalized/date": "^3.5.0",
 		"lucide-react": "^0.577.0"
 	},
 	"devDependencies": {
+		"@heroui/react": "^3.0.3",
+		"@heroui/styles": "^3.0.3",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4"
 	},
 	"peerDependencies": {
+		"@heroui/react": "^3.0.0",
+		"@heroui/styles": "^3.0.0",
 		"react": ">=18.0.0",
 		"react-dom": ">=18.0.0"
 	}
