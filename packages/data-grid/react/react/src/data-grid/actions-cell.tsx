@@ -16,21 +16,19 @@ import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { RowActionGroups } from './build-action-items'
 import type { GridMenuItem, GridMenuSection } from '../menu'
-import type { DataTable, RowActionItem, RowActionsContext, RowPinningConfig } from '@ez-kit/data-grid-core'
+import type {
+	DataTable,
+	RowActionItem,
+	RowActionsContext,
+	RowPinningConfig,
+	GridMessages,
+} from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactElement } from 'react'
 
 type ActionsCellProps = {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>
-}
-
-const LABELS: Record<RowActionId, string> = {
-	[RowActionId.Edit]: 'Edit',
-	[RowActionId.Delete]: 'Delete',
-	[RowActionId.PinTop]: 'Pin Top',
-	[RowActionId.PinBottom]: 'Pin Bottom',
-	[RowActionId.Unpin]: 'Unpin',
 }
 
 const ICONS: Record<RowActionId, GridMenuIcon> = {
@@ -44,9 +42,6 @@ const ICONS: Record<RowActionId, GridMenuIcon> = {
 const ACTIONS_SECTION = 'row-actions'
 const CUSTOM_SECTION = 'row-actions-custom'
 const PIN_SECTION = 'row-pinning'
-
-const ROW_ACTIONS_LABEL = 'Row actions'
-const ROW_PINNING_LABEL = 'Row pinning'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
@@ -101,6 +96,7 @@ function buildPinItems(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	row: Row<any>,
 	config: RowPinningConfig,
+	messages: GridMessages['rowActions'],
 ): GridMenuItem[] {
 	const isPinned = row.getIsPinned()
 	const items: GridMenuItem[] = []
@@ -108,7 +104,7 @@ function buildPinItems(
 	if (config.top) {
 		items.push({
 			id: RowActionId.PinTop,
-			label: LABELS[RowActionId.PinTop],
+			label: messages.pinTop,
 			icon: ICONS[RowActionId.PinTop],
 			disabled: isPinned === 'top',
 			onAction: () => {
@@ -119,7 +115,7 @@ function buildPinItems(
 	if (config.bottom) {
 		items.push({
 			id: RowActionId.PinBottom,
-			label: LABELS[RowActionId.PinBottom],
+			label: messages.pinBottom,
 			icon: ICONS[RowActionId.PinBottom],
 			disabled: isPinned === 'bottom',
 			onAction: () => {
@@ -130,7 +126,7 @@ function buildPinItems(
 	if (isPinned) {
 		items.push({
 			id: RowActionId.Unpin,
-			label: LABELS[RowActionId.Unpin],
+			label: messages.unpin,
 			icon: ICONS[RowActionId.Unpin],
 			onAction: () => {
 				row.pin(false, false, false)
@@ -167,6 +163,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const table = useDataGridTable()
 	const { ActionsCell: Renderer } = useGridComponents().rowActions
 	const { Menu } = useGridComponents().core
+	const messages = table.grid.messages.rowActions
 
 	// Stable booleans — non-target rows stay `false` across any editing change.
 	const isEditing = useDataGridState((s) => s.editing.rowId === row.id)
@@ -198,7 +195,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		)
 	}
 
-	const pinItems = pinConfig ? buildPinItems(row, pinConfig) : []
+	const pinItems = pinConfig ? buildPinItems(row, pinConfig, messages) : []
 	const buildActions = table.options.rowActions?.actions
 	// The augmented option is `RowActionsConfig<object, unknown>` — the row type and the node
 	// type are both erased at the `table.options` boundary — so the row/table this cell holds
@@ -219,7 +216,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		if (hasEditing) {
 			actions.push({
 				id: RowActionId.Edit,
-				label: LABELS[RowActionId.Edit],
+				label: messages.edit,
 				icon: ICONS[RowActionId.Edit],
 				onAction: () => {
 					table.editing.start(row.id)
@@ -229,7 +226,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 		if (hasDeleting) {
 			actions.push({
 				id: RowActionId.Delete,
-				label: LABELS[RowActionId.Delete],
+				label: messages.delete,
 				icon: ICONS[RowActionId.Delete],
 				destructive: true,
 				onAction: () => {
@@ -247,7 +244,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 			<Menu
 				variant={GridMenuVariant.Row}
 				sections={sections}
-				aria-label={ROW_ACTIONS_LABEL}
+				aria-label={messages.menu}
 			/>
 		)
 	}
@@ -289,7 +286,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				<Menu
 					variant={GridMenuVariant.Row}
 					sections={overflowSections}
-					aria-label={customItems.length > 0 ? ROW_ACTIONS_LABEL : ROW_PINNING_LABEL}
+					aria-label={customItems.length > 0 ? messages.menu : messages.pinning}
 				/>
 			)}
 		</>

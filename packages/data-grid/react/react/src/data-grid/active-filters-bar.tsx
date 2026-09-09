@@ -125,7 +125,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	if (typeof globalFilter === 'string' && globalFilter.length > 0) {
 		chips.push({
 			key: 'global',
-			label: 'Search',
+			label: table.grid.messages.globalFiltering.label,
 			value: globalFilter,
 			onRemove: () => {
 				table.setGlobalFilter(undefined)

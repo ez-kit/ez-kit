@@ -16,6 +16,7 @@ import type {
 	SelectItem,
 	StructuredFilterValue,
 	BetweenInputType,
+	GridMessages,
 } from '@ez-kit/data-grid-core'
 import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
@@ -34,6 +35,12 @@ export type RenderFilterInputArgs = {
 	 * keystroke. A column's own `filtering.debounce` overrides it.
 	 */
 	debounce: number
+	/**
+	 * The grid's resolved dictionary — the placeholders below come from it, never from a literal
+	 * in this module. Required, unlike `table`: a filter input with no placeholder is a worse
+	 * stub than one with no draft support.
+	 */
+	messages: GridMessages
 	/**
 	 * The live table instance, used only to wire "Enter applies the whole draft" on the
 	 * fallback text inputs under `draft`. Optional so existing callers/tests that
@@ -139,6 +146,7 @@ export function renderFilterInput({
 	BetweenInput,
 	MultiSelectFilter,
 	debounce: tableDebounce,
+	messages,
 	table,
 }: RenderFilterInputArgs): ReactNode {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
@@ -232,7 +240,7 @@ export function renderFilterInput({
 						items={items}
 						selectedValues={selectedValues}
 						onChange={onValueChange}
-						placeholder={`Filter ${header.column.id}…`}
+						placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
 					/>
 					{operatorSelect}
 				</>
@@ -283,7 +291,7 @@ export function renderFilterInput({
 			<>
 				<FilterTextInput
 					Input={Input}
-					placeholder={`Filter ${header.column.id}…`}
+					placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
 					value={(inputValue ?? '') as string}
 					onCommit={onValueChange}
 					debounce={debounce}
@@ -332,7 +340,7 @@ export function renderFilterInput({
 	return (
 		<FilterTextInput
 			Input={Input}
-			placeholder={`Filter ${header.column.id}…`}
+			placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
 			value={(filterValue ?? '') as string}
 			onCommit={onChange}
 			debounce={debounce}

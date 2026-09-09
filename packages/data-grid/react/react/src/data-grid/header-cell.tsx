@@ -156,7 +156,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 						onChange={() => {
 							table.toggleAllRowsSelected(!isAllSelected)
 						}}
-						aria-label='Select all rows'
+						aria-label={table.grid.messages.selection.selectAll}
 					/>
 				)}
 			</Th>
@@ -187,11 +187,15 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const draftSortIndex = computeDraftSortIndex(table, header.column.id)
 	const draftSortAttrs = draftSortIndex >= 0 ? { 'data-draft-sorting': String(draftSortIndex) } : {}
 
-	const menuSections = buildColumnMenuSections(header, {
-		canSort: canSort && !header.isPlaceholder,
-		canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
-		canHide: isMenuEligible && header.column.getCanHide(),
-	})
+	const menuSections = buildColumnMenuSections(
+		header,
+		{
+			canSort: canSort && !header.isPlaceholder,
+			canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
+			canHide: isMenuEligible && header.column.getCanHide(),
+		},
+		table.grid.messages.columnMenu,
+	)
 
 	const filteringVariant = table.grid.filtering.variant
 	const canFilter =
@@ -210,6 +214,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 				BetweenInput,
 				MultiSelectFilter,
 				debounce: table.grid.filtering.debounce,
+				messages: table.grid.messages,
 				table,
 			})
 		: null
@@ -244,7 +249,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 			<Menu
 				variant={GridMenuVariant.Column}
 				sections={menuSections}
-				aria-label='Column options'
+				aria-label={table.grid.messages.columnMenu.trigger}
 			/>
 		) : null
 

@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, createColumns } from '@ez-kit/data-grid-core'
+import { defaultMessages, DEFAULT_PAGE_SIZE, createColumns } from '@ez-kit/data-grid-core'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -50,7 +50,10 @@ describe('DATA_GRID_DEFAULTS — named default values', () => {
 	})
 
 	it('global search input defaults', () => {
-		expect(DATA_GRID_DEFAULTS.globalFiltering.placeholder).toBe('Search…')
+		// The placeholder is a *string*, so it lives in the dictionary, not here — that is the
+		// only place a consumer can replace it.
+		expect(defaultMessages.globalFiltering.placeholder).toBe('Search…')
+		expect(DATA_GRID_DEFAULTS.globalFiltering).not.toHaveProperty('placeholder')
 		// No debounce of its own — the search box shares the column-filter timing.
 		expect(DATA_GRID_DEFAULTS.globalFiltering).not.toHaveProperty('debounce')
 	})
@@ -141,7 +144,7 @@ describe('useDataGrid — effective defaults resolve to named defaults', () => {
 	it('globalFiltering: true → placeholder/debounce are the named defaults', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, globalFiltering: true }))
 		const cfg = result.current.grid.globalFiltering
-		expect(cfg?.placeholder).toBe(DATA_GRID_DEFAULTS.globalFiltering.placeholder)
+		expect(cfg?.placeholder).toBe(defaultMessages.globalFiltering.placeholder)
 		expect(cfg?.debounce).toBe(DATA_GRID_DEFAULTS.filtering.debounce)
 	})
 

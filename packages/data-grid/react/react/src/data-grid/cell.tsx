@@ -195,6 +195,7 @@ type SystemSubProps = {
 
 function SelectionCell({ row, chrome }: SystemSubProps) {
 	const { Td, Checkbox } = useGridComponents().core
+	const { messages } = useDataGridTable().grid
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
 	// re-derive correctly. Refining this to per-row keys breaks indeterminate
 	// state for parent rows (which depends on children).
@@ -215,7 +216,7 @@ function SelectionCell({ row, chrome }: SystemSubProps) {
 				onChange={() => {
 					row.toggleSelected()
 				}}
-				aria-label='Select row'
+				aria-label={messages.selection.selectRow}
 			/>
 		</Td>
 	)

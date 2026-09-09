@@ -117,7 +117,7 @@ export function CreatingRow() {
 								<Checkbox
 									value={false}
 									disabled
-									aria-label='Select row'
+									aria-label={table.grid.messages.selection.selectRow}
 								/>
 							</Td>
 						)

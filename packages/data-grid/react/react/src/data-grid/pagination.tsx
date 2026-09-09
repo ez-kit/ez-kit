@@ -162,7 +162,7 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 			? undefined
 			: typeof labelOption === 'function'
 				? labelOption(labelModel)
-				: buildPaginationLabel(labelOption, labelModel)
+				: buildPaginationLabel(labelOption, labelModel, table.grid.messages.pagination)
 
 	return (
 		<PaginationComponent

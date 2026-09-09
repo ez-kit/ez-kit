@@ -1,4 +1,4 @@
-import { createTable, featureConfig, isFeatureEnabled, PaginationMode } from '@ez-kit/data-grid-core'
+import { createTable, featureConfig, isFeatureEnabled, PaginationMode, resolveMessages } from '@ez-kit/data-grid-core'
 import { useEffect, useRef } from 'react'
 
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
@@ -32,6 +32,7 @@ import type {
 	GlobalFilteringConfig,
 	LoadMoreDirection,
 	PaginationConfig,
+	PartialGridMessages,
 	RowActionsConfig,
 	RowVirtualizationConfig,
 	SelectionConfig,
@@ -725,6 +726,26 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	layout?: LayoutConfig
 	/**
+	 * Replaces any subset of the user-facing strings the grid renders, group by group.
+	 *
+	 * Every string the packages can render — visible text, `placeholder`s and `aria-label`s
+	 * alike — comes from {@link GridMessages}, whose English default is
+	 * {@link defaultMessages}. Overrides merge per entry, so naming one string keeps the rest
+	 * of its group.
+	 *
+	 * Set it on {@link DataGridOptionsProvider} for an app-wide locale; set it here to change
+	 * one grid's wording.
+	 *
+	 * @example
+	 * ```tsx
+	 * messages: {
+	 *   pagination: { rowsPerPage: 'Строк на странице' },
+	 *   filtering: { placeholder: ({ columnId }) => `Фильтр по ${columnId}` },
+	 * }
+	 * ```
+	 */
+	messages?: PartialGridMessages
+	/**
 	 * Pagination config. Page-based by default; set `mode: PaginationMode.Infinite` for infinite
 	 * scroll. The React layer adds `trigger` / `threshold` detection tuning on top of
 	 * the headless {@link PaginationConfig}.
@@ -828,9 +849,17 @@ export function useDataGrid<TRow extends object>(
 		state,
 		onStateChange,
 		layout,
+		messages: messageOverrides,
 		rowProps,
 		...restConfig
 	} = config
+
+	// Folded onto the English dictionary once per render, so nothing downstream ever reads a
+	// partial: `table.grid.messages` is always the complete {@link GridMessages}. The three
+	// option layers merged themselves upstream — `mergeGridOptionLayers` deep-merges, so a
+	// provider-wide locale and an instance's single-string override compose without either
+	// erasing the other's groups.
+	const messages = resolveMessages(messageOverrides)
 
 	// Split `selection` into the headless core part (`onChange` / `multi`) passed to
 	// createTable and the React-only `bar` stored on the instance for SelectionBar to read.
@@ -1016,13 +1045,13 @@ export function useDataGrid<TRow extends object>(
 		if (!isFeatureEnabled(rawGlobalFiltering)) return undefined
 		if (typeof rawGlobalFiltering !== 'object') {
 			return {
-				placeholder: DATA_GRID_DEFAULTS.globalFiltering.placeholder,
+				placeholder: messages.globalFiltering.placeholder,
 				debounce: filteringDebounce,
 				toolbar: true,
 			}
 		}
 		return {
-			placeholder: rawGlobalFiltering.placeholder ?? DATA_GRID_DEFAULTS.globalFiltering.placeholder,
+			placeholder: rawGlobalFiltering.placeholder ?? messages.globalFiltering.placeholder,
 			// Falls back to the shared column-filter debounce, not to a second default of its
 			// own: one gesture, one timing, unless this box explicitly asks for another.
 			debounce: rawGlobalFiltering.debounce ?? filteringDebounce,
@@ -1120,6 +1149,7 @@ export function useDataGrid<TRow extends object>(
 
 	table.grid = {
 		cellTypes,
+		messages,
 		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,

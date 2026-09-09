@@ -1,3 +1,5 @@
+import { defaultMessages } from '@ez-kit/data-grid-core'
+
 import { DATA_GRID_DEFAULTS } from './defaults'
 
 import type { CellTypeRegistry } from './cell-types-context'
@@ -18,6 +20,7 @@ import type {
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
 } from './use-data-grid'
+import type { GridMessages } from '@ez-kit/data-grid-core'
 import type { RowData } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
 
@@ -43,6 +46,12 @@ import type { ComponentType, ReactNode } from 'react'
 export type ResolvedGridOptions = {
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
+	/**
+	 * Every user-facing string, **complete** — the English dictionary with the grid's `messages`
+	 * folded onto it. Never partial, so a component reads `messages.pagination.rowsPerPage`
+	 * without a fallback of its own, and a UI kit has no reason to hold a literal.
+	 */
+	messages: GridMessages
 	/**
 	 * Per-row DOM props resolver. Row-erased here, like `expanding.component` and the cell registry —
 	 * every reader of `table.grid` is a component with no `TRow` of its own.
@@ -201,6 +210,7 @@ declare module '@tanstack/table-core' {
 export function defaultResolvedGridOptions(): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
+		messages: defaultMessages,
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
 		pinning: { column: false, row: false },
 		filtering: {

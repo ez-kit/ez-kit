@@ -1,8 +1,8 @@
 import { PaginationLabel } from '../types'
 
+import type { GridMessages } from '@ez-kit/data-grid-core'
+
 const RANGE_SEPARATOR = '–'
-const OF_LABEL = 'of'
-const PAGE_LABEL = 'Page'
 
 /**
  * The live page state a label is built from — and exactly what a `pagination.label` renderer
@@ -31,12 +31,17 @@ export type PaginationLabelModel = {
  * under it (e.g. a filter narrows 500 rows to 5 while the user sits on page 3). Both ends are
  * therefore clamped to the total — an unclamped `from` reported the inverted `21–5 of 5`.
  */
-function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number): string {
+function buildRangeLabel(
+	pageIndex: number,
+	pageSize: number,
+	rowCount: number,
+	messages: GridMessages['pagination'],
+): string {
 	const firstRow = pageIndex * pageSize + 1
 	const isPastEnd = firstRow > rowCount
 	const from = isPastEnd ? 0 : firstRow
 	const to = isPastEnd ? 0 : Math.min(firstRow + pageSize - 1, rowCount)
-	return `${String(from)}${RANGE_SEPARATOR}${String(to)} ${OF_LABEL} ${String(rowCount)}`
+	return `${String(from)}${RANGE_SEPARATOR}${String(to)} ${messages.of} ${String(rowCount)}`
 }
 
 /**
@@ -45,9 +50,13 @@ function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number):
  * A `pageCount` of `0` (empty grid) is a known total but not a meaningful one — "Page 1 of 0"
  * is nonsense, so it degrades to the bare page number like the unknown case.
  */
-function buildPageLabel(pageIndex: number, pageCount: number | undefined): string {
-	const current = `${PAGE_LABEL} ${String(pageIndex + 1)}`
-	return pageCount === undefined || pageCount === 0 ? current : `${current} ${OF_LABEL} ${String(pageCount)}`
+function buildPageLabel(
+	pageIndex: number,
+	pageCount: number | undefined,
+	messages: GridMessages['pagination'],
+): string {
+	const current = `${messages.page} ${String(pageIndex + 1)}`
+	return pageCount === undefined || pageCount === 0 ? current : `${current} ${messages.of} ${String(pageCount)}`
 }
 
 /**
@@ -61,10 +70,14 @@ function buildPageLabel(pageIndex: number, pageCount: number | undefined): strin
  * a grid that cannot be trusted to know the total must show position rather than invent one.
  * `page` never needs a fallback — a page index is always known.
  */
-export function buildPaginationLabel(label: PaginationLabel, model: PaginationLabelModel): string {
+export function buildPaginationLabel(
+	label: PaginationLabel,
+	model: PaginationLabelModel,
+	messages: GridMessages['pagination'],
+): string {
 	const { pageIndex, pageSize, pageCount, rowCount } = model
 	if (label === PaginationLabel.Range && rowCount !== undefined) {
-		return buildRangeLabel(pageIndex, pageSize, rowCount)
+		return buildRangeLabel(pageIndex, pageSize, rowCount, messages)
 	}
-	return buildPageLabel(pageIndex, pageCount)
+	return buildPageLabel(pageIndex, pageCount, messages)
 }

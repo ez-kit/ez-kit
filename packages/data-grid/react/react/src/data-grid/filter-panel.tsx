@@ -10,11 +10,11 @@ import type { ReactNode } from 'react'
 
 const MAX_INLINE_VALUES = 2
 
-function formatBetweenValue(value: BetweenValue): { display: string; hasValue: boolean } {
+function formatBetweenValue(value: BetweenValue, anyLabel: string): { display: string; hasValue: boolean } {
 	const { from, to } = value
 	const fromDefined = from !== undefined && from !== ''
 	const toDefined = to !== undefined && to !== ''
-	if (!fromDefined && !toDefined) return { display: 'Any', hasValue: false }
+	if (!fromDefined && !toDefined) return { display: anyLabel, hasValue: false }
 	if (fromDefined && toDefined) return { display: `${String(from)} – ${String(to)}`, hasValue: true }
 	if (fromDefined) return { display: `≥ ${String(from)}`, hasValue: true }
 	return { display: `≤ ${String(to)}`, hasValue: true }
@@ -38,8 +38,9 @@ function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown>
 function formatMultiValue(
 	values: unknown[],
 	meta: ColumnMeta<unknown, unknown> | undefined,
+	anyLabel: string,
 ): { display: string; hasValue: boolean } {
-	if (values.length === 0) return { display: 'Any', hasValue: false }
+	if (values.length === 0) return { display: anyLabel, hasValue: false }
 	const labels = values.map((v) => resolveOptionLabel(String(v), meta))
 	if (labels.length <= MAX_INLINE_VALUES) return { display: labels.join(', '), hasValue: true }
 	const inline = labels.slice(0, MAX_INLINE_VALUES).join(', ')
@@ -49,8 +50,9 @@ function formatMultiValue(
 function formatFilterValue(
 	filterValue: unknown,
 	meta: ColumnMeta<unknown, unknown> | undefined,
+	anyLabel: string,
 ): { display: string; hasValue: boolean } {
-	if (filterValue == null || filterValue === '') return { display: 'Any', hasValue: false }
+	if (filterValue == null || filterValue === '') return { display: anyLabel, hasValue: false }
 
 	if (typeof filterValue === 'object' && 'operator' in filterValue) {
 		const sv = filterValue as StructuredFilterValue
@@ -65,21 +67,21 @@ function formatFilterValue(
 
 		// Between value
 		if (inner !== null && typeof inner === 'object' && ('from' in inner || 'to' in inner)) {
-			return formatBetweenValue(inner)
+			return formatBetweenValue(inner, anyLabel)
 		}
 
 		// Multi value (in / notIn)
 		if (Array.isArray(inner)) {
-			return formatMultiValue(inner, meta)
+			return formatMultiValue(inner, meta, anyLabel)
 		}
 
 		// Plain inner value
-		if (inner == null || inner === '') return { display: 'Any', hasValue: false }
+		if (inner == null || inner === '') return { display: anyLabel, hasValue: false }
 		return { display: String(inner), hasValue: true }
 	}
 
 	// Plain (non-operator) filter value
-	if (Array.isArray(filterValue)) return formatMultiValue(filterValue, meta)
+	if (Array.isArray(filterValue)) return formatMultiValue(filterValue, meta, anyLabel)
 	return { display: String(filterValue), hasValue: true }
 }
 
@@ -179,7 +181,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 		const headerDef = column.columnDef.header
 		const label = typeof headerDef === 'string' ? headerDef : column.id
 		const filterValue = column.getFilterValue()
-		const { display, hasValue } = formatFilterValue(filterValue, meta)
+		const { display, hasValue } = formatFilterValue(filterValue, meta, table.grid.messages.filtering.any)
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const headerLike = { id: column.id, column } as unknown as Header<any, unknown>
@@ -193,6 +195,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 			BetweenInput,
 			MultiSelectFilter,
 			debounce: filteringDebounce,
+			messages: table.grid.messages,
 			table,
 		})
 

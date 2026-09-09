@@ -90,9 +90,12 @@ export const DATA_GRID_DEFAULTS = {
 			px: 200,
 		},
 	},
-	/** Cross-column global search input. Debounce falls back to `filtering.debounce`. */
+	/**
+	 * Cross-column global search input. Debounce falls back to `filtering.debounce`, and the
+	 * placeholder to `messages.globalFiltering.placeholder` — a default string belongs in the
+	 * dictionary, which is the only place a consumer can replace it.
+	 */
 	globalFiltering: {
-		placeholder: 'Search…',
 		/** Auto-mounted in the toolbar as soon as global search is enabled. */
 		toolbar: true,
 	},

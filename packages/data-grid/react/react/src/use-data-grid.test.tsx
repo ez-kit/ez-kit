@@ -1,4 +1,4 @@
-import { createColumns } from '@ez-kit/data-grid-core'
+import { createColumns, defaultMessages } from '@ez-kit/data-grid-core'
 import { act, render, renderHook } from '@testing-library/react'
 import { useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -127,11 +127,15 @@ describe('useDataGrid', () => {
 
 		expect(result.current.getState().pagination.pageIndex).toBe(0)
 		expect(
-			buildPaginationLabel(PaginationLabel.Range, {
-				pageIndex: result.current.getState().pagination.pageIndex,
-				pageSize: 10,
-				rowCount: result.current.getRowCount(),
-			}),
+			buildPaginationLabel(
+				PaginationLabel.Range,
+				{
+					pageIndex: result.current.getState().pagination.pageIndex,
+					pageSize: 10,
+					rowCount: result.current.getRowCount(),
+				},
+				defaultMessages.pagination,
+			),
 		).toBe('1–5 of 5')
 	})
 
