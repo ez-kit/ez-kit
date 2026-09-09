@@ -1,17 +1,12 @@
 'use client'
 
-import { buildPageWindow, PAGE_GAP } from '@ez-kit/data-grid-react'
+import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react'
 import { Pagination as HeroPagination } from '@heroui/react'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
 const LABEL_CLASS = 'dg-pagination-label'
-const PREVIOUS_LABEL = 'Previous'
-const NEXT_LABEL = 'Next'
-const PAGINATION_ARIA_LABEL = 'Pagination'
-const FIRST_ARIA_LABEL = 'Go to first page'
-const LAST_ARIA_LABEL = 'Go to last page'
 
 export function Pagination({
 	links,
@@ -29,6 +24,7 @@ export function Pagination({
 	onLastPage,
 	onPageChange,
 }: PaginationProps) {
+	const messages = useGridMessages()
 	// Page links need a known page count; without one they degrade to prev/next.
 	const showLinks = links && pageCount !== undefined
 	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
@@ -36,7 +32,7 @@ export function Pagination({
 
 	return (
 		<HeroPagination
-			aria-label={PAGINATION_ARIA_LABEL}
+			aria-label={messages.pagination.navigation}
 			className='mt-3'
 			data-slot='pagination'
 			data-links={links || undefined}
@@ -47,7 +43,7 @@ export function Pagination({
 				{edges && (
 					<HeroPagination.Item>
 						<HeroPagination.Link
-							aria-label={FIRST_ARIA_LABEL}
+							aria-label={messages.pagination.first}
 							isDisabled={!canPreviousPage}
 							onPress={onFirstPage}
 						>
@@ -60,7 +56,7 @@ export function Pagination({
 						isDisabled={!canPreviousPage}
 						onPress={onPreviousPage}
 					>
-						{PREVIOUS_LABEL}
+						{messages.pagination.previous}
 					</HeroPagination.Previous>
 				</HeroPagination.Item>
 				{pages.map((page, slot) =>
@@ -86,13 +82,13 @@ export function Pagination({
 						isDisabled={!canNextPage}
 						onPress={onNextPage}
 					>
-						{NEXT_LABEL}
+						{messages.pagination.next}
 					</HeroPagination.Next>
 				</HeroPagination.Item>
 				{edges && (
 					<HeroPagination.Item>
 						<HeroPagination.Link
-							aria-label={LAST_ARIA_LABEL}
+							aria-label={messages.pagination.last}
 							isDisabled={!canNextPage}
 							onPress={onLastPage}
 						>

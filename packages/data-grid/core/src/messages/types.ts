@@ -154,6 +154,8 @@ export type GridMessages = {
 	}
 	/** Pagination controls and the page label. */
 	pagination: {
+		/** Accessible name of the pagination landmark itself. */
+		navigation: string
 		/** The word before the page number in the `'page'` label — `Page 2 of 5`. */
 		page: string
 		/** The word between the count and the total in both labels — `1–10 of 50`. */
@@ -198,6 +200,14 @@ export type GridMessages = {
 		confirm: string
 		/** Dismiss button. */
 		cancel: string
+		/** Default prompt title. `deleting.confirmation.title` overrides it per grid. */
+		title: string
+		/** Default prompt body, and the tail of the bulk one. */
+		description: string
+		/** Default prompt title when a selection is being deleted. */
+		bulkTitle: string
+		/** Default bulk prompt body — `Delete 3 rows? …`. */
+		bulkDescription: (ctx: CountContext) => string
 	}
 	/** The deferred-apply (draft) bar. */
 	draft: {

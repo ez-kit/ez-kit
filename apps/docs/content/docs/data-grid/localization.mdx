@@ -12,6 +12,8 @@ The grid holds no text of its own. Every user-facing string — visible labels, 
 That includes the accessible names. A grid whose buttons you translated but whose `aria-label`s
 stayed English is not localized; it just hides the English where only a screen reader finds it.
 
+<DataGridDocsExample exampleId='localization' />
+
 ## One string
 
 ```tsx
@@ -114,6 +116,13 @@ function MyPageSizerLabel() {
 
 Outside a `<DataGrid>` it returns `defaultMessages` rather than throwing, so a component of yours
 still renders in a story or a test.
+
+## What the dictionary does not cover
+
+A UI kit's own internals keep their own strings: HeroUI's icons, for instance, carry English
+accessible names (`Search icon`, `Chevron down icon`) that come from `@heroui/react`, not from this
+grid. Everything the grid itself renders — including every `aria-label` it writes — is in the
+dictionary.
 
 ## What ships
 

@@ -40,7 +40,7 @@ import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { BulkConfirmationConfig, ConfirmationConfig, DataTable } from '@ez-kit/data-grid-core'
+import type { BulkConfirmationConfig, ConfirmationConfig, DataTable, GridMessages } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -89,28 +89,18 @@ export type DataGridUncontrolledProps<TRow extends object> = DataGridSharedProps
  */
 export type DataGridProps<TRow extends object> = DataGridControlledProps<TRow> | DataGridUncontrolledProps<TRow>
 
-const DEFAULT_CONFIRM_TITLE = 'Are you sure?'
-const DEFAULT_CONFIRM_DESCRIPTION = 'This action cannot be undone.'
-const DEFAULT_BULK_CONFIRM_TITLE = 'Delete selected rows?'
-const ROW_NOUN_SINGULAR = 'row'
-const ROW_NOUN_PLURAL = 'rows'
-
-function defaultBulkConfirmDescription(count: number): string {
-	const noun = count === 1 ? ROW_NOUN_SINGULAR : ROW_NOUN_PLURAL
-	return `Delete ${String(count)} ${noun}? ${DEFAULT_CONFIRM_DESCRIPTION}`
-}
-
 function resolveConfirmationText(
 	options: ConfirmationConfig,
 	row: Row<unknown> | undefined,
+	messages: GridMessages['deleting'],
 ): { title: string; description: string } {
-	const title = options.title ?? DEFAULT_CONFIRM_TITLE
+	const title = options.title ?? messages.title
 	const desc = options.description
 	let description: string
 	if (typeof desc === 'function') {
-		description = row ? desc(row) : DEFAULT_CONFIRM_DESCRIPTION
+		description = row ? desc(row) : messages.description
 	} else {
-		description = desc ?? DEFAULT_CONFIRM_DESCRIPTION
+		description = desc ?? messages.description
 	}
 	return { title, description }
 }
@@ -122,10 +112,12 @@ function resolveConfirmationText(
 function resolveBulkConfirmationText(
 	options: BulkConfirmationConfig,
 	rows: Row<unknown>[],
+	messages: GridMessages['deleting'],
 ): { title: string; description: string } {
-	const title = options.title ?? DEFAULT_BULK_CONFIRM_TITLE
+	const title = options.title ?? messages.bulkTitle
 	const desc = options.description
-	const description = typeof desc === 'function' ? desc(rows) : (desc ?? defaultBulkConfirmDescription(rows.length))
+	const description =
+		typeof desc === 'function' ? desc(rows) : (desc ?? messages.bulkDescription({ count: rows.length }))
 	return { title, description }
 }
 
@@ -163,7 +155,7 @@ function ConfirmDialogRenderer() {
 	const bulkOptions = bulkConfirmationOptions(table)
 	if (pendingBulk && bulkOptions) {
 		const { selectedRows } = buildSelectionBarArgs(table)
-		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows)
+		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows, table.grid.messages.deleting)
 		return (
 			<ConfirmDialog
 				open
@@ -189,7 +181,9 @@ function ConfirmDialogRenderer() {
 	const options: ConfirmationConfig = featureConfig(confirmation) ?? {}
 	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
-		pendingId !== null ? resolveConfirmationText(options, pendingRow) : { title: '', description: '' }
+		pendingId !== null
+			? resolveConfirmationText(options, pendingRow, table.grid.messages.deleting)
+			: { title: '', description: '' }
 
 	return (
 		<ConfirmDialog

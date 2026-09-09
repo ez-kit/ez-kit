@@ -806,5 +806,13 @@
 		"groupLabel": "Examples",
 		"sourceFile": "components/example-task-board.tsx",
 		"exportName": "ExampleTaskBoardExample"
+	},
+	{
+		"id": "localization",
+		"label": "Localization",
+		"group": "localization",
+		"groupLabel": "Localization",
+		"sourceFile": "components/localization.tsx",
+		"exportName": "LocalizationExample"
 	}
 ]

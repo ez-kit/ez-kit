@@ -47,6 +47,7 @@ export function Pagination({
 			// that is also where a footer-placed PageSizer lands — so both kits use the layout
 			// heroui's `.pagination` already has.
 			className='mt-3 justify-between'
+			aria-label={messages.pagination.navigation}
 			data-slot='pagination'
 			data-links={links || undefined}
 			data-edges={edges || undefined}
@@ -67,6 +68,10 @@ export function Pagination({
 				)}
 				<PaginationItem>
 					<PaginationPrevious
+						// The vendored primitive defaults both to English; a block overrides them by
+						// prop rather than by editing `components/ui/**`.
+						text={messages.pagination.previous}
+						aria-label={messages.pagination.previous}
 						aria-disabled={!canPreviousPage}
 						className={canPreviousPage ? undefined : DISABLED_CLASS}
 						onClick={canPreviousPage ? onPreviousPage : undefined}
@@ -92,6 +97,8 @@ export function Pagination({
 				)}
 				<PaginationItem>
 					<PaginationNext
+						text={messages.pagination.next}
+						aria-label={messages.pagination.next}
 						aria-disabled={!canNextPage}
 						className={canNextPage ? undefined : DISABLED_CLASS}
 						onClick={canNextPage ? onNextPage : undefined}

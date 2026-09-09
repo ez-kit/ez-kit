@@ -87,6 +87,7 @@ export const defaultMessages: GridMessages = {
 		label: 'Search',
 	},
 	pagination: {
+		navigation: 'Pagination',
 		page: 'Page',
 		of: 'of',
 		rowsPerPage: 'Rows per page',
@@ -109,6 +110,11 @@ export const defaultMessages: GridMessages = {
 	deleting: {
 		confirm: 'Delete',
 		cancel: 'Cancel',
+		title: 'Are you sure?',
+		description: 'This action cannot be undone.',
+		bulkTitle: 'Delete selected rows?',
+		bulkDescription: ({ count }) =>
+			`Delete ${String(count)} ${count === 1 ? 'row' : 'rows'}? This action cannot be undone.`,
 	},
 	draft: {
 		label: 'Unapplied',

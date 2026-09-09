@@ -163,6 +163,16 @@ export default tseslint.config(
 						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a component. Read it with useGridMessages() / table.grid.messages.',
 				},
 				{
+					// The same wording hoisted into a module constant and referenced as `{FOO_LABEL}`
+					// reads as an expression, so neither selector above sees it — this is how
+					// heroui's `PREVIOUS_LABEL` / `PAGINATION_ARIA_LABEL` survived the first sweep.
+					// Matched on the naming convention the packages actually use; `LABEL_CLASS` and
+					// friends stay legal because they do not end in one of these words.
+					selector: 'VariableDeclarator[id.name=/_(LABEL|TEXT|TITLE|PLACEHOLDER)$/] > Literal[value=/[A-Za-z]{2}/]',
+					message:
+						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a module constant. Read it with useGridMessages() / table.grid.messages.',
+				},
+				{
 					selector:
 						'JSXAttribute[name.name=/^(aria-label|placeholder|title|alt|aria-description)$/] > Literal[value=/[A-Za-z]{2}/]',
 					message:
