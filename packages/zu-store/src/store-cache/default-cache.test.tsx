@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
-import { createStoreCache } from './create-store-cache'
+import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 import { CacheProvider, createCachedStore } from './default-cache'
 
 import type { ContextStoreInit } from '../create-context-store'
@@ -89,7 +89,7 @@ describe('default cache — top-level exports', () => {
 					</table.Provider>
 				</custom.Provider>,
 			),
-		).toThrowError('Missing StoreCacheProvider')
+		).toThrowError(MISSING_CACHE_PROVIDER)
 	})
 })
 
