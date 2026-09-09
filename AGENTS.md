@@ -256,8 +256,8 @@ copy is worse than no copy: it reads as authoritative while naming exports that 
 Coverage over the documented packages is **total**: the explicit page → type map in
 `apps/docs/test/docs-options/page-type-map.ts` classifies every page under the four scanned roots —
 `content/docs/data-grid/**`, `form/**`, `zu-store/**` and `va-store/**` — keyed by file path **plus
-the heading above each table** so multiple tables in one file map independently: 113 pages / 89
-option tables / 429 checked names today, of which the store packages contribute 43 pages / 24 tables
+the heading above each table** so multiple tables in one file map independently: 114 pages / 90
+option tables / 430 checked names today, of which the store packages contribute 43 pages / 24 tables
 / 67 names. Pages with no option table still get an entry with two empty arrays, and that is the
 point: while coverage was partial, an unmapped page was checked by nothing, and the two worst pages
 in the docs were unmapped ones — `columns/resizing.mdx` documented a `sizing` option that never
