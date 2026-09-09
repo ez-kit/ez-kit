@@ -28,6 +28,8 @@ export type GridMessages = {
 	}
 	/** Row selection: the checkboxes and the selection bar. */
 	selection: {
+		/** The selection bar's built-in bulk-delete action. */
+		delete: string
 		/** Accessible name of a row's selection checkbox. */
 		selectRow: string
 		/** Accessible name of the header's select-all checkbox. */
@@ -94,6 +96,14 @@ export type GridMessages = {
 		remove: string
 		/** Shown when no column is sorted yet. */
 		empty: string
+		/** Label of the toolbar's sort trigger. */
+		trigger: string
+		/** Ascending direction. */
+		ascending: string
+		/** Descending direction. */
+		descending: string
+		/** Clears every sort at once. */
+		reset: string
 		/** Prefix of the first sort row. */
 		sortBy: string
 		/** Prefix of every sort row after the first. */
@@ -105,6 +115,8 @@ export type GridMessages = {
 	visibility: {
 		/** Accessible name of the toolbar's visibility trigger. */
 		menu: string
+		/** Label of that trigger. */
+		trigger: string
 	}
 	/** Per-column filtering. */
 	filtering: {
@@ -161,15 +173,20 @@ export type GridMessages = {
 	editing: {
 		/** Default dialog title. */
 		title: string
-		/** Commit button. */
-		save: string
-		/** Dismiss button. */
-		cancel: string
 	}
 	/** The creating form. */
 	creating: {
 		/** Default dialog title. */
 		title: string
+		/** Default label of the button that opens the form — `<DataGrid.CreateTrigger>`. */
+		trigger: string
+	}
+	/**
+	 * The form chrome shared by editing and creating. Its two buttons say the same thing in
+	 * both flows — only the title differs, which is why that is what each feature keeps — and
+	 * the shell that renders them does not know which flow opened it.
+	 */
+	form: {
 		/** Commit button. */
 		save: string
 		/** Dismiss button. */
@@ -249,6 +266,8 @@ export type GridMessages = {
 	fallbacks: {
 		/** Accessible name of the loading state. */
 		loading: string
+		/** Retries a failed page load. */
+		retry: string
 		/** Title of the empty state — no rows at all. */
 		empty: string
 		/** Title of the no-results state — rows exist, filters match none. */

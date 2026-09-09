@@ -61,15 +61,15 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 						<ListBox>
 							<ListBox.Item
 								id='asc'
-								textValue='Ascending'
+								textValue={messages.sorting.ascending}
 							>
-								Ascending
+								{messages.sorting.ascending}
 							</ListBox.Item>
 							<ListBox.Item
 								id='desc'
-								textValue='Descending'
+								textValue={messages.sorting.descending}
 							>
-								Descending
+								{messages.sorting.descending}
 							</ListBox.Item>
 						</ListBox>
 					</Select.Popover>
@@ -102,7 +102,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 					variant='outline'
 				>
 					<ArrowUpDown size={16} />
-					Sort
+					{messages.sorting.trigger}
 					{activeCount > 0 ? (
 						<span className='ml-0.5 rounded-full bg-accent px-1.5 py-0 text-xs leading-5 font-medium text-accent-foreground'>
 							{activeCount}
@@ -147,7 +147,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 								onPress={onResetSorting}
 								isDisabled={activeCount === 0}
 							>
-								Reset Sorting
+								{messages.sorting.reset}
 							</Button>
 						</div>
 					</div>

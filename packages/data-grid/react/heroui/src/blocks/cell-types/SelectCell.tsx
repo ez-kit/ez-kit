@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Description, FieldError, Label, ListBox, Select } from '@heroui/react'
 
 import type { CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
@@ -33,6 +34,7 @@ function SelectCellInput({
 	description,
 	errors,
 }: FieldState<SelectCellConfig>) {
+	const messages = useGridMessages()
 	const hasError = errors.length > 0
 	const items = config?.items ?? []
 	const selectValue = value != null && value !== '' ? String(value) : ALL_SENTINEL
@@ -56,9 +58,9 @@ function SelectCellInput({
 				<ListBox>
 					<ListBox.Item
 						id={ALL_SENTINEL}
-						textValue='All'
+						textValue={messages.cells.all}
 					>
-						All
+						{messages.cells.all}
 					</ListBox.Item>
 					{items.map((item) => (
 						<ListBox.Item

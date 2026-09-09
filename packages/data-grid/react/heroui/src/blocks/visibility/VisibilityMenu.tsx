@@ -29,7 +29,7 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 				variant='outline'
 			>
 				<Columns2 size={16} />
-				Columns
+				{messages.visibility.trigger}
 			</Button>
 			<Dropdown.Popover placement='bottom end'>
 				<Dropdown.Menu

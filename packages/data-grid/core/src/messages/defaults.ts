@@ -17,6 +17,7 @@ export const defaultMessages: GridMessages = {
 		label: 'Data grid',
 	},
 	selection: {
+		delete: 'Delete',
 		selectRow: 'Select row',
 		selectAll: 'Select all rows',
 		clear: 'Clear selection',
@@ -55,12 +56,17 @@ export const defaultMessages: GridMessages = {
 		direction: 'Sort direction',
 		remove: 'Remove sort',
 		empty: 'No sorts applied. Add one to start sorting.',
+		trigger: 'Sort',
+		ascending: 'Ascending',
+		descending: 'Descending',
+		reset: 'Reset Sorting',
 		sortBy: 'sort by',
 		thenBy: 'then by',
 		add: 'Add Sort',
 	},
 	visibility: {
 		menu: 'Column visibility',
+		trigger: 'Columns',
 	},
 	filtering: {
 		trigger: 'Filter',
@@ -91,11 +97,12 @@ export const defaultMessages: GridMessages = {
 	},
 	editing: {
 		title: 'Edit',
-		save: 'Save',
-		cancel: 'Cancel',
 	},
 	creating: {
 		title: 'Create',
+		trigger: '+ Add',
+	},
+	form: {
 		save: 'Save',
 		cancel: 'Cancel',
 	},
@@ -168,6 +175,7 @@ export const defaultMessages: GridMessages = {
 	},
 	fallbacks: {
 		loading: 'Loading',
+		retry: 'Retry',
 		empty: 'No data',
 		noResults: 'No results',
 		refreshing: 'Refreshing',

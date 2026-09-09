@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Loader2 } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -14,6 +15,7 @@ import type { FormShellProps } from '@ez-kit/data-grid-react'
  * and reflects `isPending` on the Save button (disabled + spinner).
  */
 export function FormShell({ open, title, formError, isPending, onSave, onCancel, children }: FormShellProps) {
+	const messages = useGridMessages()
 	return (
 		<Dialog
 			open={open}
@@ -41,14 +43,14 @@ export function FormShell({ open, title, formError, isPending, onSave, onCancel,
 						variant='outline'
 						onClick={onCancel}
 					>
-						Cancel
+						{messages.form.cancel}
 					</Button>
 					<Button
 						onClick={() => void onSave()}
 						disabled={isPending}
 					>
 						{isPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : null}
-						Save
+						{messages.form.save}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

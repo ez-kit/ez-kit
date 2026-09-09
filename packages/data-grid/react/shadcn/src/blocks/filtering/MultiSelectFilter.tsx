@@ -115,7 +115,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 								className='h-6 text-xs'
 								onClick={clear}
 							>
-								Clear
+								{messages.filtering.clear}
 							</Button>
 						</div>
 					)}

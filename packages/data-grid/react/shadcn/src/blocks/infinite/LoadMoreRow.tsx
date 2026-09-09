@@ -35,7 +35,7 @@ export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger
 					size='sm'
 					onClick={onRetry}
 				>
-					Retry
+					{messages.fallbacks.retry}
 				</Button>
 			</div>
 		)
@@ -64,7 +64,7 @@ export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger
 					size='sm'
 					onClick={onTrigger}
 				>
-					Load more
+					{messages.fallbacks.loadMore}
 				</Button>
 			</div>
 		)

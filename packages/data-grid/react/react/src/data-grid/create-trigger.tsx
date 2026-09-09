@@ -43,14 +43,14 @@ export function CreateTrigger({ children }: DataGridCreateTriggerProps = {}) {
 						table.creating.cancel()
 					}}
 				>
-					Cancel
+					{table.grid.messages.form.cancel}
 				</Button>
 				<Button
 					data-slot='creating-save'
 					disabled={isPending}
 					onClick={() => void table.creating.commit()}
 				>
-					Save
+					{table.grid.messages.form.save}
 				</Button>
 			</>
 		)
@@ -63,7 +63,7 @@ export function CreateTrigger({ children }: DataGridCreateTriggerProps = {}) {
 				table.creating.start()
 			}}
 		>
-			{children ?? '+ Add'}
+			{children ?? table.grid.messages.creating.trigger}
 		</Button>
 	)
 }

@@ -30,10 +30,10 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 								variant='outline'
 								onClick={onCancel}
 							>
-								Cancel
+								{messages.form.cancel}
 							</Button>
 						) : null}
-						{onSave ? <Button onClick={onSave}>{messages.editing.save}</Button> : null}
+						{onSave ? <Button onClick={onSave}>{messages.form.save}</Button> : null}
 					</DialogFooter>
 				) : null}
 			</DialogContent>

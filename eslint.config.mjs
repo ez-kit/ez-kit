@@ -138,5 +138,38 @@ export default tseslint.config(
 			'@next/next/no-html-link-for-pages': 'off',
 		},
 	},
+	{
+		// No user-facing string literal in the data-grid packages: every one of them belongs in
+		// `GridMessages` (`packages/data-grid/core/src/messages`), which is the only place a
+		// consumer can replace it. Without this the literals come back one PR at a time, and a
+		// grid that is 90% localizable is not localizable — the English that leaks is usually an
+		// `aria-label`, where nobody sees it until a screen reader does.
+		//
+		// `components/ui/**` is out of scope: those are the kits' vendored primitives, whose
+		// own defaults a block overrides by passing a prop.
+		files: [
+			'packages/data-grid/react/react/src/**/*.tsx',
+			'packages/data-grid/react/shadcn/src/blocks/**/*.tsx',
+			'packages/data-grid/react/heroui/src/blocks/**/*.tsx',
+		],
+		ignores: ['**/*.test.tsx', '**/test-utils.tsx'],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				{
+					// Two letters in a row: `0`, `–` and `+${n}` are formatting, not wording.
+					selector: 'JSXText[value=/[A-Za-z]{2}/]',
+					message:
+						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a component. Read it with useGridMessages() / table.grid.messages.',
+				},
+				{
+					selector:
+						'JSXAttribute[name.name=/^(aria-label|placeholder|title|alt|aria-description)$/] > Literal[value=/[A-Za-z]{2}/]',
+					message:
+						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a component. Read it with useGridMessages() / table.grid.messages.',
+				},
+			],
+		},
+	},
 	eslintConfigPrettier,
 )

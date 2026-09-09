@@ -86,7 +86,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 							size='sm'
 							onClick={onDelete}
 						>
-							Delete
+							{messages.selection.delete}
 						</Button>
 					)}
 
@@ -159,7 +159,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 						size='sm'
 						onClick={onDelete}
 					>
-						Delete
+						{messages.selection.delete}
 					</Button>
 				)}
 

@@ -60,13 +60,13 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 						value='asc'
 						className='text-xs'
 					>
-						Ascending
+						{messages.sorting.ascending}
 					</SelectItem>
 					<SelectItem
 						value='desc'
 						className='text-xs'
 					>
-						Descending
+						{messages.sorting.descending}
 					</SelectItem>
 				</SelectContent>
 			</Select>
@@ -98,7 +98,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 					data-slot='sort-menu-trigger'
 				>
 					<ArrowUpDown className='h-4 w-4' />
-					Sort
+					{messages.sorting.trigger}
 					{activeCount > 0 ? (
 						<span className='ml-0.5 rounded-full bg-primary px-1.5 py-0 text-xs leading-5 font-medium text-primary-foreground'>
 							{activeCount}
@@ -143,7 +143,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 						onClick={onResetSorting}
 						disabled={activeCount === 0}
 					>
-						Reset Sorting
+						{messages.sorting.reset}
 					</Button>
 				</div>
 			</PopoverContent>

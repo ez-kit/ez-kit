@@ -1,10 +1,12 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Button, Modal } from '@heroui/react'
 
 import type { ConfirmDialogProps } from '@ez-kit/data-grid-react'
 
 export function ConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
+	const messages = useGridMessages()
 	return (
 		<Modal.Backdrop
 			isOpen={open}
@@ -23,13 +25,13 @@ export function ConfirmDialog({ open, title, description, onConfirm, onCancel }:
 							variant='ghost'
 							onPress={onCancel}
 						>
-							Cancel
+							{messages.deleting.cancel}
 						</Button>
 						<Button
 							variant='danger'
 							onPress={onConfirm}
 						>
-							Confirm
+							{messages.deleting.confirm}
 						</Button>
 					</Modal.Footer>
 				</Modal.Dialog>

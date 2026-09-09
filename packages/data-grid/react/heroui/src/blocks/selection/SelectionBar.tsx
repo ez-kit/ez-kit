@@ -118,7 +118,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 							onPress={onDelete}
 						>
 							<Trash2 size={16} />
-							Delete
+							{messages.selection.delete}
 						</Button>
 					)}
 					{actionButtons}
@@ -164,7 +164,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 						onPress={onDelete}
 					>
 						<Trash2 size={16} />
-						Delete
+						{messages.selection.delete}
 					</ActionBarItem>
 				)}
 				{actionButtons}

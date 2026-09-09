@@ -1,10 +1,12 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Button, Modal as HeroModal } from '@heroui/react'
 
 import type { ModalProps } from '@ez-kit/data-grid-react'
 
 export function Modal({ open, onClose, onSave, onCancel, title, children }: ModalProps) {
+	const messages = useGridMessages()
 	return (
 		<HeroModal.Backdrop
 			isOpen={open}
@@ -27,7 +29,7 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 									variant='ghost'
 									onPress={onCancel}
 								>
-									Cancel
+									{messages.form.cancel}
 								</Button>
 							) : null}
 							{onSave ? (
@@ -35,7 +37,7 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 									variant='primary'
 									onPress={onSave}
 								>
-									Save
+									{messages.form.save}
 								</Button>
 							) : null}
 						</HeroModal.Footer>

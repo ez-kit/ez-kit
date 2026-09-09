@@ -69,7 +69,7 @@ function BooleanFilterInput({ id, value, onChange, onBlur, label, description, e
 				<SelectContent>
 					<SelectItem value={ALL_SENTINEL}>{messages.cells.all}</SelectItem>
 					<SelectItem value={TRUE_KEY}>{messages.cells.yes}</SelectItem>
-					<SelectItem value={FALSE_KEY}>No</SelectItem>
+					<SelectItem value={FALSE_KEY}>{messages.cells.no}</SelectItem>
 				</SelectContent>
 			</Select>
 			{description !== undefined && <FieldDescription>{description}</FieldDescription>}
