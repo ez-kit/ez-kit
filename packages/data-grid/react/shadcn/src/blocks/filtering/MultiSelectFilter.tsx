@@ -1,6 +1,6 @@
 'use client'
 
-import { buildMultiSelectLabel } from '@ez-kit/data-grid-react'
+import { buildMultiSelectLabel, useGridMessages } from '@ez-kit/data-grid-react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -14,6 +14,7 @@ import type { ReactNode } from 'react'
 const TRIGGER_BASE = 'h-7 min-w-[8rem] justify-between gap-2 px-2 text-xs font-normal'
 
 export function MultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
+	const messages = useGridMessages()
 	const [query, setQuery] = useState('')
 
 	const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues])
@@ -60,7 +61,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 				<div className='flex flex-col gap-2'>
 					<Input
 						type='search'
-						placeholder='Search…'
+						placeholder={messages.filtering.search}
 						value={query}
 						onChange={(e) => {
 							setQuery(e.target.value)
@@ -73,7 +74,7 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 						className='max-h-56 overflow-auto'
 					>
 						{filteredOptions.length === 0 ? (
-							<div className='px-2 py-1 text-xs text-muted-foreground'>No results</div>
+							<div className='px-2 py-1 text-xs text-muted-foreground'>{messages.filtering.noResults}</div>
 						) : (
 							filteredOptions.map((opt) => {
 								const isSelected = selectedSet.has(opt.value)

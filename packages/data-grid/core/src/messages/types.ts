@@ -34,6 +34,8 @@ export type GridMessages = {
 		selectAll: string
 		/** Accessible name of the selection bar's dismiss button. */
 		clear: string
+		/** How the selection bar reports how many rows are selected. */
+		count: (ctx: CountContext) => string
 	}
 	/** Row expansion. */
 	expanding: {
@@ -92,6 +94,12 @@ export type GridMessages = {
 		remove: string
 		/** Shown when no column is sorted yet. */
 		empty: string
+		/** Prefix of the first sort row. */
+		sortBy: string
+		/** Prefix of every sort row after the first. */
+		thenBy: string
+		/** The button that appends a sort. */
+		add: string
 	}
 	/** The toolbar column-visibility menu. */
 	visibility: {
@@ -180,6 +188,19 @@ export type GridMessages = {
 		label: string
 		/** Accessible name of the pending-changes control. */
 		pending: string
+		/** Commits the pending query. */
+		apply: string
+		/** Discards it. */
+		reset: string
+		/**
+		 * The pending-sorts segment — `2 sorts`. A function, because the plural rule is the
+		 * language's, not the grid's: an override reaches for `Intl.PluralRules` here.
+		 */
+		sorts: (ctx: CountContext) => string
+		/** The pending-filters segment — `2 filters`. */
+		filters: (ctx: CountContext) => string
+		/** The pending-search segment. Never counted — there is only ever one search. */
+		search: string
 	}
 	/** Values and pickers a cell type renders, in any of its slots. */
 	cells: {
@@ -211,6 +232,12 @@ export type GridMessages = {
 		/** Shown when loading the next page failed. */
 		loadMoreError: string
 	}
+}
+
+/** What an entry that reports a quantity is given. */
+export type CountContext = {
+	/** How many of the thing there are. Always ≥ 1 — a zero segment is not rendered. */
+	count: number
 }
 
 /** What {@link GridMessages.filtering.placeholder} is given. */

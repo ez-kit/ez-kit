@@ -1,5 +1,7 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,6 +16,7 @@ import {
 import type { ConfirmDialogProps } from '@ez-kit/data-grid-react'
 
 export function ConfirmDialog({ open, title, description, onConfirm, onCancel }: ConfirmDialogProps) {
+	const messages = useGridMessages()
 	return (
 		<AlertDialog
 			open={open}
@@ -27,8 +30,8 @@ export function ConfirmDialog({ open, title, description, onConfirm, onCancel }:
 					<AlertDialogDescription>{description}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-					<AlertDialogAction onClick={onConfirm}>Delete</AlertDialogAction>
+					<AlertDialogCancel onClick={onCancel}>{messages.deleting.cancel}</AlertDialogCancel>
+					<AlertDialogAction onClick={onConfirm}>{messages.deleting.confirm}</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

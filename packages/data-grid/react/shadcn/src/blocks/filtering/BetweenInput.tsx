@@ -1,6 +1,6 @@
 'use client'
 
-import { BetweenBranch, useBetweenValue } from '@ez-kit/data-grid-react'
+import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react'
 import { format, isValid, parseISO } from 'date-fns'
 import { useState } from 'react'
 
@@ -79,6 +79,7 @@ function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode
  * react-aria has and react-day-picker does not.
  */
 function CalendarRange({ value, onChange }: Pick<BetweenInputProps, 'value' | 'onChange'>) {
+	const messages = useGridMessages()
 	const [anchor, setAnchor] = useState<Date | undefined>(undefined)
 
 	const fromDate = toDate(value.from)
@@ -97,7 +98,7 @@ function CalendarRange({ value, onChange }: Pick<BetweenInputProps, 'value' | 'o
 				? `${format(fromDate, DISPLAY_FORMAT)} – …`
 				: toDateVal
 					? `… – ${format(toDateVal, DISPLAY_FORMAT)}`
-					: 'Pick a range'
+					: messages.cells.pickRange
 
 	const handleSelect = (_range: DateRange | undefined, triggerDate: Date): void => {
 		if (!anchor) {
@@ -143,6 +144,7 @@ function CalendarRange({ value, onChange }: Pick<BetweenInputProps, 'value' | 'o
 }
 
 export function BetweenInput(props: BetweenInputProps) {
+	const messages = useGridMessages()
 	const { value, onChange } = props
 	const { branch, presets, slider, numbers, dates } = useBetweenValue(props)
 	const presetRow = presets ? <PresetRow {...presets} /> : null
@@ -206,7 +208,7 @@ export function BetweenInput(props: BetweenInputProps) {
 		<div className='flex items-center gap-1'>
 			<Input
 				type='number'
-				placeholder='From'
+				placeholder={messages.filtering.from}
 				className='h-7 w-24 text-xs'
 				value={numbers.from}
 				{...(numbers.min === undefined ? {} : { min: numbers.min })}
@@ -218,7 +220,7 @@ export function BetweenInput(props: BetweenInputProps) {
 			<span className='text-muted-foreground text-xs'>–</span>
 			<Input
 				type='number'
-				placeholder='To'
+				placeholder={messages.filtering.to}
 				className='h-7 w-24 text-xs'
 				value={numbers.to}
 				{...(numbers.min === undefined ? {} : { min: numbers.min })}

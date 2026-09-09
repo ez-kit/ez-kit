@@ -76,7 +76,12 @@ export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'
+export { useGridMessages } from './use-grid-messages'
 export type { ResolvedGridOptions } from './resolved-options'
+
+// The dictionary, re-exported from core so a UI kit reading `useGridOptions().messages` can
+// name its type without depending on core directly.
+export type { CountContext, FilterPlaceholderContext, GridMessages, PartialGridMessages } from '@ez-kit/data-grid-core'
 
 // Grid overflow menu — one model for the column header menu and the row actions menu
 export { GridMenuIcon, GridMenuVariant, isGridMenuItemSlot, toMenuSections } from './menu'

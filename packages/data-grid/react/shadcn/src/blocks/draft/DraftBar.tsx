@@ -1,20 +1,12 @@
 'use client'
 
-import { ActionBarVariant } from '@ez-kit/data-grid-react'
+import { ActionBarVariant, useGridMessages } from '@ez-kit/data-grid-react'
 import { Check, RotateCcw } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { cn } from '@grid-shadcn/lib/utils'
 
-import type { DraftBarProps } from '@ez-kit/data-grid-react'
-
-/** Wording for each deferred axis, singular and plural. */
-const AXIS_LABELS = {
-	sorting: ['sort', 'sorts'],
-	columnFilters: ['filter', 'filters'],
-} as const
-
-const SEARCH_LABEL = 'search'
+import type { DraftBarProps, GridMessages } from '@ez-kit/data-grid-react'
 
 type PendingPart = { axis: string; label: string }
 
@@ -23,18 +15,18 @@ type PendingPart = { axis: string; label: string }
  * their query: sorting, filters, then search. Empty axes are dropped rather than
  * rendered as a zero — a "0 filters" pill is noise, not information.
  */
-function pendingParts(pending: DraftBarProps['pending']): PendingPart[] {
+function pendingParts(pending: DraftBarProps['pending'], messages: GridMessages['draft']): PendingPart[] {
 	const parts: PendingPart[] = []
 
-	for (const axis of ['sorting', 'columnFilters'] as const) {
-		const count = pending[axis]
-		if (count <= 0) continue
-		const [one, many] = AXIS_LABELS[axis]
-		parts.push({ axis, label: `${String(count)} ${count === 1 ? one : many}` })
+	// The wording — including the plural rule, which is the language's and not the grid's —
+	// comes from the dictionary entry for each axis.
+	if (pending.sorting > 0) parts.push({ axis: 'sorting', label: messages.sorts({ count: pending.sorting }) })
+	if (pending.columnFilters > 0) {
+		parts.push({ axis: 'columnFilters', label: messages.filters({ count: pending.columnFilters }) })
 	}
 
 	// Only ever 0 or 1 — a single value, so it lists as a bare word rather than "1 search".
-	if (pending.globalFilter > 0) parts.push({ axis: 'globalFilter', label: SEARCH_LABEL })
+	if (pending.globalFilter > 0) parts.push({ axis: 'globalFilter', label: messages.search })
 
 	return parts
 }
@@ -58,9 +50,10 @@ function pendingParts(pending: DraftBarProps['pending']): PendingPart[] {
  * so "not yet real" reads the same wherever it appears in the grid.
  */
 export function DraftBar({ open, pending, selectedCount, variant, onApply, onReset }: DraftBarProps) {
+	const messages = useGridMessages()
 	if (!open) return null
 
-	const parts = pendingParts(pending)
+	const parts = pendingParts(pending, messages.draft)
 
 	const content = (
 		<>
@@ -70,7 +63,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 						data-slot='draft-bar-selected-chip'
 						className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-muted-foreground text-sm tabular-nums'
 					>
-						{selectedCount} selected
+						{messages.selection.count({ count: selectedCount })}
 					</span>
 
 					<div
@@ -86,7 +79,9 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 				data-slot='draft-bar-pending'
 				className='flex items-center gap-1.5 pr-1 pl-1 text-sm'
 			>
-				<span className='font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wider'>Unapplied</span>
+				<span className='font-medium text-[0.6875rem] text-muted-foreground uppercase tracking-wider'>
+					{messages.draft.label}
+				</span>
 
 				{parts.map((part) => (
 					<span
@@ -108,7 +103,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 					onClick={onReset}
 				>
 					<RotateCcw />
-					Reset
+					{messages.draft.reset}
 				</Button>
 
 				<Button
@@ -118,7 +113,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 					onClick={onApply}
 				>
 					<Check />
-					Apply
+					{messages.draft.apply}
 				</Button>
 			</div>
 		</>
@@ -129,7 +124,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 			<div
 				role='toolbar'
 				aria-orientation='horizontal'
-				aria-label='Pending changes'
+				aria-label={messages.draft.pending}
 				data-testid='draft-bar'
 				data-slot='draft-bar'
 				data-variant='inline'
@@ -155,7 +150,7 @@ export function DraftBar({ open, pending, selectedCount, variant, onApply, onRes
 			<div
 				role='toolbar'
 				aria-orientation='horizontal'
-				aria-label='Pending changes'
+				aria-label={messages.draft.pending}
 				data-testid='draft-bar'
 				data-slot='draft-bar'
 				data-variant='floating'

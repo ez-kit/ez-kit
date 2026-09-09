@@ -1,6 +1,12 @@
 'use client'
 
-import { DataGrid, getVisualLeafColumns, useDataGridState, useDataGridTable } from '@ez-kit/data-grid-react'
+import {
+	DataGrid,
+	getVisualLeafColumns,
+	useDataGridState,
+	useDataGridTable,
+	useGridMessages,
+} from '@ez-kit/data-grid-react'
 import { Table as HeroTable, cn } from '@heroui/react'
 import { Children, createContext, Fragment, isValidElement, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -14,13 +20,14 @@ const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>
 const FooterContext = createContext(false)
 
 export function Table({ children, ...props }: TableProps) {
+	const messages = useGridMessages()
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable>
 	const { collection, footer } = splitFooter(children)
 
 	return (
 		<HeroTable {...heroProps}>
 			<HeroTable.ScrollContainer data-slot='table-scroll-container'>
-				<HeroTable.Content aria-label='Data grid'>{collection}</HeroTable.Content>
+				<HeroTable.Content aria-label={messages.grid.label}>{collection}</HeroTable.Content>
 				{footer === null ? null : <FooterPortal>{footer}</FooterPortal>}
 			</HeroTable.ScrollContainer>
 		</HeroTable>

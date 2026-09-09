@@ -1,23 +1,26 @@
 'use client'
 
-import { SortDirection } from '@ez-kit/data-grid-react'
+import { SortDirection, useGridMessages } from '@ez-kit/data-grid-react'
 import { Button, ListBox, Popover, Select } from '@heroui/react'
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 
 import type { SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
 
 function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
+	const messages = useGridMessages()
 	return (
 		<div
 			data-slot='sort-row'
 			className='flex items-center gap-2'
 		>
-			<span className='w-14 shrink-0 text-xs opacity-70'>{index === 0 ? 'sort by' : 'then by'}</span>
+			<span className='w-14 shrink-0 text-xs opacity-70'>
+				{index === 0 ? messages.sorting.sortBy : messages.sorting.thenBy}
+			</span>
 
 			<div className='flex-1 min-w-0'>
 				<Select
 					value={item.columnId}
-					aria-label='Sort column'
+					aria-label={messages.sorting.menu}
 					onChange={(value) => {
 						if (value != null) item.onChangeColumn(String(value))
 					}}
@@ -45,7 +48,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 			<div className='w-[7.5rem] shrink-0'>
 				<Select
 					value={item.direction}
-					aria-label='Sort direction'
+					aria-label={messages.sorting.direction}
 					onChange={(value) => {
 						if (value === SortDirection.Asc || value === SortDirection.Desc) item.onChangeDirection(value)
 					}}
@@ -77,7 +80,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 				isIconOnly
 				variant='ghost'
 				size='sm'
-				aria-label='Remove sort'
+				aria-label={messages.sorting.remove}
 				onPress={item.onRemove}
 			>
 				<Trash2 size={14} />
@@ -87,6 +90,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 }
 
 export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortMenuProps) {
+	const messages = useGridMessages()
 	const activeCount = items.length
 
 	return (
@@ -108,13 +112,13 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 			</Popover.Trigger>
 			<Popover.Content>
 				<Popover.Dialog
-					aria-label='Sort'
+					aria-label={messages.sorting.menu}
 					data-slot='sort-menu'
 					className='p-3'
 				>
 					<div className='min-w-[26rem] flex flex-col gap-3'>
 						{activeCount === 0 ? (
-							<p className='m-0 text-xs opacity-70'>No sorts applied. Add one to start sorting.</p>
+							<p className='m-0 text-xs opacity-70'>{messages.sorting.empty}</p>
 						) : (
 							<div className='flex flex-col gap-2'>
 								{items.map((item, index) => (
@@ -135,7 +139,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 								isDisabled={!canAddSort}
 							>
 								<Plus size={14} />
-								Add Sort
+								{messages.sorting.add}
 							</Button>
 							<Button
 								variant='ghost'

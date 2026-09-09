@@ -20,6 +20,7 @@ export const defaultMessages: GridMessages = {
 		selectRow: 'Select row',
 		selectAll: 'Select all rows',
 		clear: 'Clear selection',
+		count: ({ count }) => `${String(count)} selected`,
 	},
 	expanding: {
 		expand: 'Expand row',
@@ -54,6 +55,9 @@ export const defaultMessages: GridMessages = {
 		direction: 'Sort direction',
 		remove: 'Remove sort',
 		empty: 'No sorts applied. Add one to start sorting.',
+		sortBy: 'sort by',
+		thenBy: 'then by',
+		add: 'Add Sort',
 	},
 	visibility: {
 		menu: 'Column visibility',
@@ -102,6 +106,11 @@ export const defaultMessages: GridMessages = {
 	draft: {
 		label: 'Unapplied',
 		pending: 'Pending changes',
+		apply: 'Apply',
+		reset: 'Reset',
+		sorts: ({ count }) => `${String(count)} ${count === 1 ? 'sort' : 'sorts'}`,
+		filters: ({ count }) => `${String(count)} ${count === 1 ? 'filter' : 'filters'}`,
+		search: 'search',
 	},
 	cells: {
 		all: 'All',

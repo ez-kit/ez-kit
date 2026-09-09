@@ -1,6 +1,6 @@
 'use client'
 
-import { ActionBarVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
+import { ActionBarVariant, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react'
 import { X } from 'lucide-react'
 import { Fragment } from 'react'
 
@@ -53,6 +53,7 @@ function renderActions(actions: GridMenuItem[] | undefined): ReactNode {
 }
 
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
+	const messages = useGridMessages()
 	const actionButtons = renderActions(actions)
 	const hasActions = Boolean(onDelete) || actionButtons !== null || start !== undefined || end !== undefined
 
@@ -70,7 +71,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 			>
 				<div
 					data-slot='action-bar-selection'
-					aria-label={`${String(count)} selected`}
+					aria-label={messages.selection.count({ count })}
 					className='font-medium tabular-nums'
 				>
 					{count}
@@ -98,7 +99,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 						size='icon'
 						data-slot='selection-bar-close'
 						onClick={onClear}
-						aria-label='Clear selection'
+						aria-label={messages.selection.clear}
 					>
 						<X />
 					</Button>
@@ -133,7 +134,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 				{/* Selected count badge */}
 				<div
 					data-slot='action-bar-selection'
-					aria-label={`${String(count)} selected`}
+					aria-label={messages.selection.count({ count })}
 					className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-sm tabular-nums'
 				>
 					{count}
@@ -181,7 +182,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 					size='icon'
 					data-slot='selection-bar-close'
 					onClick={onClear}
-					aria-label='Clear selection'
+					aria-label={messages.selection.clear}
 				>
 					<X />
 				</Button>

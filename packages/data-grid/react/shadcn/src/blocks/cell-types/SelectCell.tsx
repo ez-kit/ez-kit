@@ -1,5 +1,7 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 
@@ -34,6 +36,7 @@ function SelectCellInput({
 	description,
 	errors,
 }: FieldState<SelectCellConfig>) {
+	const messages = useGridMessages()
 	const hasError = errors.length > 0
 	const items = config?.items ?? []
 	const selectValue = value != null && value !== '' ? String(value) : ALL_SENTINEL
@@ -51,10 +54,10 @@ function SelectCellInput({
 					onBlur={onBlur}
 					aria-invalid={hasError || undefined}
 				>
-					<SelectValue placeholder='All' />
+					<SelectValue placeholder={messages.cells.all} />
 				</SelectTrigger>
 				<SelectContent>
-					<SelectItem value={ALL_SENTINEL}>All</SelectItem>
+					<SelectItem value={ALL_SENTINEL}>{messages.cells.all}</SelectItem>
 					{items.map((item) => (
 						<SelectItem
 							key={item.value}

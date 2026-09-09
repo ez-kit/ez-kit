@@ -1,11 +1,14 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@grid-shadcn/components/ui/dialog'
 
 import type { ModalProps } from '@ez-kit/data-grid-react'
 
 export function Modal({ open, onClose, onSave, onCancel, title, children }: ModalProps) {
+	const messages = useGridMessages()
 	return (
 		<Dialog
 			open={open}
@@ -30,7 +33,7 @@ export function Modal({ open, onClose, onSave, onCancel, title, children }: Moda
 								Cancel
 							</Button>
 						) : null}
-						{onSave ? <Button onClick={onSave}>Save</Button> : null}
+						{onSave ? <Button onClick={onSave}>{messages.editing.save}</Button> : null}
 					</DialogFooter>
 				) : null}
 			</DialogContent>

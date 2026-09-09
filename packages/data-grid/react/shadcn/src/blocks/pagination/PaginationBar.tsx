@@ -1,4 +1,6 @@
-import { buildPageWindow, PAGE_GAP } from '@ez-kit/data-grid-react'
+'use client'
+
+import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react'
 import { ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react'
 
 import {
@@ -32,6 +34,7 @@ export function Pagination({
 	onLastPage,
 	onPageChange,
 }: PaginationProps) {
+	const messages = useGridMessages()
 	// Page links need a known page count; without one they degrade to prev/next.
 	const showLinks = links && pageCount !== undefined
 	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
@@ -53,7 +56,7 @@ export function Pagination({
 				{edges && (
 					<PaginationItem>
 						<PaginationLink
-							aria-label='Go to first page'
+							aria-label={messages.pagination.first}
 							aria-disabled={!canPreviousPage}
 							className={canPreviousPage ? undefined : DISABLED_CLASS}
 							onClick={canPreviousPage ? onFirstPage : undefined}
@@ -97,7 +100,7 @@ export function Pagination({
 				{edges && (
 					<PaginationItem>
 						<PaginationLink
-							aria-label='Go to last page'
+							aria-label={messages.pagination.last}
 							aria-disabled={!canNextPage}
 							className={canNextPage ? undefined : DISABLED_CLASS}
 							onClick={canNextPage ? onLastPage : undefined}

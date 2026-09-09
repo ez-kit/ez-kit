@@ -1,6 +1,6 @@
 'use client'
 
-import { ActionBarVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
+import { ActionBarVariant, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react'
 import { Button, Chip } from '@heroui/react'
 import { Trash2, X } from 'lucide-react'
 import { Fragment } from 'react'
@@ -85,6 +85,7 @@ function renderActions(actions: GridMenuItem[] | undefined, inline: boolean): Re
 }
 
 export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
+	const messages = useGridMessages()
 	const isInline = variant === ActionBarVariant.Inline
 	const actionButtons = renderActions(actions, isInline)
 	const hasActions = Boolean(onDelete) || actionButtons !== null || start !== undefined || end !== undefined
@@ -103,7 +104,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 			>
 				<span
 					data-slot='action-bar-selection'
-					aria-label={`${String(count)} selected`}
+					aria-label={messages.selection.count({ count })}
 					className='font-medium tabular-nums'
 				>
 					{count}
@@ -126,7 +127,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 						size='sm'
 						variant='ghost'
 						isIconOnly
-						aria-label='Clear selection'
+						aria-label={messages.selection.clear}
 						onPress={onClear}
 					>
 						<X size={16} />
@@ -149,7 +150,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 			<ActionBarGroup>
 				<Chip
 					data-slot='action-bar-selection'
-					aria-label={`${String(count)} selected`}
+					aria-label={messages.selection.count({ count })}
 					className='tabular-nums'
 				>
 					{count}
@@ -174,7 +175,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 					size='sm'
 					variant='ghost'
 					isIconOnly
-					aria-label='Clear selection'
+					aria-label={messages.selection.clear}
 					onPress={onClear}
 				>
 					<X size={16} />

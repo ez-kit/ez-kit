@@ -1,19 +1,21 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { ListBox, Select } from '@heroui/react'
 
 import type { PageSizerProps } from '@ez-kit/data-grid-react'
 
 export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
+	const messages = useGridMessages()
 	return (
 		<div
 			data-slot='page-sizer'
 			className='flex items-center gap-2'
 		>
-			<span className='dg-page-sizer-label text-sm whitespace-nowrap'>Rows per page</span>
+			<span className='dg-page-sizer-label text-sm whitespace-nowrap'>{messages.pagination.rowsPerPage}</span>
 			<Select
 				value={String(pageSize)}
-				aria-label='Rows per page'
+				aria-label={messages.pagination.rowsPerPage}
 				className='w-20'
 				onChange={(key) => {
 					if (key != null) onPageSizeChange(Number(key))
