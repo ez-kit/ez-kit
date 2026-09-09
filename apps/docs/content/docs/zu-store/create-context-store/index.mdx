@@ -134,7 +134,7 @@ const filters = counterStore.useSelector((s) => s.filters)
 </counterStore.Subscribe>
 ```
 
-The rule does not change — only where you state it. Without `shallow` that selector loops exactly as `useSelector` would; with it, `Subscribe` behaves as `useShallowSelector`. The `Subscribe` on a [`createStoreCache`](./store-cache) group takes the same prop, with the same meaning.
+The rule does not change — only where you state it. Without `shallow` that selector loops exactly as `useSelector` would; with it, `Subscribe` behaves as `useShallowSelector`. The `Subscribe` on a [`createStoreCache`](./cache) group takes the same prop, with the same meaning.
 
 ### Not the same thing as `shallowEqual`
 
@@ -315,5 +315,5 @@ This is deliberate — there is no implicit module-level fallback, because the w
 ## Next
 
 - [API reference](./create-context-store/api) — every signature, prop and option in one place.
-- [`createStoreCache`](./store-cache) — keep a store alive across unmounts.
+- [`createStoreCache`](./cache) — keep a store alive across unmounts.
 - [`useStoreState`](./use-store-state) — a `useState`-shaped handle onto one field.

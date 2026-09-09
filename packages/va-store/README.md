@@ -37,6 +37,43 @@ const state = counter.useStore() // write → state.count += 1
 
 → [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/create-context-store)
 
+### `createCachedStore(factory, options)` / `createStoreCache(options?)`
+
+Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by
+`(path, name, id)`, in memory (no `localStorage`) — so table filters or pagination survive a navigation.
+`createContextStore` is left untouched; this is a separate, opt-in primitive with the same surface as
+[`@ez-kit/zu-store`](https://www.npmjs.com/package/@ez-kit/zu-store)'s.
+
+```tsx
+import { CacheProvider, CacheScope, createCachedStore } from '@ez-kit/va-store'
+import { proxy } from 'valtio'
+
+const usersTable = createCachedStore(({ defaultValue }) => proxy({ filter: defaultValue.filter ?? 'all' }), {
+	name: 'users',
+})
+
+// once, high in the tree
+<CacheProvider>
+	{/* <CacheScope> namespaces by location so two pages never collide on the same id */}
+	<CacheScope path={['page-1']}>
+		<usersTable.Provider id='users' defaultValue={{ filter: 'active' }}>
+			<UsersTable />
+		</usersTable.Provider>
+	</CacheScope>
+</CacheProvider>
+
+// imperatively, from anywhere — address the absolute { path, id }
+const live = usersTable.getFromCache({ path: ['page-1'], id: 'users' })
+if (live) live.filter = 'archived'
+```
+
+A capability attached in the factory lives as long as the **cache entry**, not as long as one `Provider`
+mount — so a cached, persisted store keeps syncing while nothing renders it.
+
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/cache)
+
+---
+
 ### History
 
 `pipe(proxy(...), withHistory(options?))` adds an undo/redo stack, backed by the same

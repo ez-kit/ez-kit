@@ -11,7 +11,9 @@ Persistence is now a **capability** attached to the proxy itself, not a bespoke 
 
 <Callout type='info'>
 	If you are migrating from a `{ plugins: [persist()] }` option instead — an intermediate shape this package shipped
-	briefly — the change is the same one described below: move the wrapping into the factory as `pipe(proxy(…), withPersist(options))`. See [Capabilities](../../capabilities) for why the option was replaced by a factory-position wrapper.
+	briefly, and which no longer exists — the change is the same one described below: move the wrapping into the factory
+	as `pipe(proxy(…), withPersist(options))`. See [Capabilities](../capabilities) for why the option was replaced by a
+	factory-position wrapper.
 </Callout>
 
 ## The read/write split — one read hook, one write hook

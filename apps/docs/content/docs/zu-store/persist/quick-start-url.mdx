@@ -89,19 +89,22 @@ createStore<Filters & { setQuery: (q: string) => void }>()((set) => ({
 }))
 ```
 
-## As a factory plugin
+## Attaching the plugin by hand
 
-A capability can also be declared on the factory instead of on the store value — the form to reach for when the store is built somewhere you don't control:
+`withPersist` is the bare `persist` plugin plus the attachment plus the typed handles. When a store is built somewhere the `pipe` chain can't reach, attach it directly — same plugin, same moment:
 
 ```tsx
+import { attachCapability } from '@ez-kit/zu-store'
 import { persist } from '@ez-kit/zu-store/persist'
 
-const filtersStore = createContextStore(() => createStore<Filters>()(() => ({ q: '', page: 1 })), {
-	plugins: [persist({ fields })],
+const filtersStore = createContextStore(() => {
+	const store = createStore<Filters>()(() => ({ q: '', page: 1 }))
+	attachCapability(store, persist({ fields }))
+	return store
 })
 ```
 
-Both forms run the same plugin at the same moment. `plugins` is not persist-specific — it takes any `StorePlugin`, and its entries run after whatever the factory chain attached to the store itself.
+`attachCapability` is not persist-specific — it takes any `StorePlugin`.
 
 ## Custom URL keys
 

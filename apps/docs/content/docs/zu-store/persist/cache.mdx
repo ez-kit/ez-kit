@@ -5,7 +5,7 @@ description: One store that is BOTH cached and persisted — kept alive across u
 
 # Cached stores
 
-`withPersist` attaches its capability to the store handle itself, inside the factory — so it composes with [`createCachedStore`](../store-cache) exactly the way it composes with `createContextStore`: call it inside the factory function you hand to `createCachedStore`. A single store can be **both** kept alive in the cache **and** synced to the URL or storage — composed, not bolted together.
+`withPersist` attaches its capability to the store handle itself, inside the factory — so it composes with [`createCachedStore`](../cache) exactly the way it composes with `createContextStore`: call it inside the factory function you hand to `createCachedStore`. A single store can be **both** kept alive in the cache **and** synced to the URL or storage — composed, not bolted together.
 
 A cache-hit returns the same already-bound store, so its persist binding (and any in-progress edits) survive a remount within `gcTime` — the substrate is never re-read on the way back.
 
@@ -72,7 +72,7 @@ function FiltersPanel() {
 <Callout type='info'>
 	A non-cached `createContextStore(() => pipe(createStore()(…), withPersist()))` is request-scoped — a fresh store per
 	`Provider` mount, persisted but not kept alive. Add the cache only when the store should outlive its `Provider`. See
-	[createStoreCache](../store-cache) for the keep-alive lifecycle.
+	[createStoreCache](../cache) for the keep-alive lifecycle.
 </Callout>
 
 ## First-present-wins still holds
