@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/zu-store",
-	"version": "0.7.0",
+	"version": "0.8.0",
 	"description": "Zustand store factory bound to React context, with undo/redo history and a keep-alive store cache.",
 	"keywords": [
 		"zustand",

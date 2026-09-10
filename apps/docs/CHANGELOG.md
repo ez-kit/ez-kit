@@ -1,5 +1,14 @@
 # @ez-kit/docs
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [3d5b53c]
+- Updated dependencies [ff74e84]
+  - @ez-kit/zu-store@0.8.0
+  - @ez-kit/va-store@0.4.0
+
 ## 0.0.6
 
 ### Patch Changes
