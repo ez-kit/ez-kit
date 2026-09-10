@@ -1,5 +1,7 @@
 import { findPropertyDescriptor } from '@ez-kit/store-core'
 
+import { PACKAGE_TAG } from './package-tag'
+
 import type { FieldDescriptor } from './types'
 
 function isPlainData(value: unknown): boolean {
@@ -26,13 +28,13 @@ export function validateBinding(root: object, fields: FieldDescriptor[]): void {
 		let parent: unknown = root
 		for (const segment of path.slice(0, -1)) {
 			if (parent === null || typeof parent !== 'object' || !(segment in parent)) {
-				throw new Error(`[store-persist]: path "${label}" is unreachable — "${segment}" is missing at bind time.`)
+				throw new Error(`${PACKAGE_TAG} path "${label}" is unreachable — "${segment}" is missing at bind time.`)
 			}
 			parent = (parent as Record<string, unknown>)[segment]
 		}
 
 		if (parent === null || typeof parent !== 'object') {
-			throw new Error(`[store-persist]: path "${label}" has no object parent at bind time.`)
+			throw new Error(`${PACKAGE_TAG} path "${label}" has no object parent at bind time.`)
 		}
 
 		const leaf = path.at(-1)
@@ -41,13 +43,13 @@ export function validateBinding(root: object, fields: FieldDescriptor[]): void {
 		}
 		const descriptor = findPropertyDescriptor(parent, leaf)
 		if (descriptor?.get && !descriptor.set) {
-			throw new Error(`[store-persist]: "${label}" is a getter-only property and cannot be written from the substrate.`)
+			throw new Error(`${PACKAGE_TAG} "${label}" is a getter-only property and cannot be written from the substrate.`)
 		}
 
 		const leafValue = (parent as Record<string, unknown>)[leaf]
 		if (!isPlainData(leafValue)) {
 			throw new Error(
-				`[store-persist]: "${label}" resolves to a class instance — sync its fields individually ` +
+				`${PACKAGE_TAG} "${label}" resolves to a class instance — sync its fields individually ` +
 					`instead of attaching a parser to the whole node.`,
 			)
 		}

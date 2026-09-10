@@ -45,7 +45,7 @@ Four ways in, for four different jobs. The rule underneath all of them: **read f
 const snap = counterStore.useSnapshot()   // read
 const state = counterStore.useStore()     // write: state.count += 1
 
-<counterStore.Subscribe>{({ snap, store }) => <button onClick={() => (store.count += 1)}>{snap.count}</button>}</counterStore.Subscribe>
+<counterStore.Subscribe>{(snap, store) => <button onClick={() => (store.count += 1)}>{snap.count}</button>}</counterStore.Subscribe>
 
 <counterStore.Store>{(store) => <button onClick={() => (store.count += 1)}>increment</button>}</counterStore.Store>
 ```
@@ -59,13 +59,6 @@ There is no selector to get right here: Valtio tracks the properties a component
 </Callout>
 
 `Subscribe` subscribes, `Store` does not — that is the whole difference between the two render props. Reach for `Store` when a subtree writes but renders nothing from the store, so a counter ticking elsewhere no longer drags it through a re-render.
-
-<Callout type='warn'>
-	**Breaking change.** `useContextStore()` has been renamed to `useStore()`. Across every `@ez-kit` store package
-	`useStore()` now means the same thing — the raw handle, no subscription — while reading keeps a manager-specific name:
-	`useSnapshot()` here, `useSelector()` in [`@ez-kit/zu-store`](../zu-store/create-context-store). Rename
-	`store.useContextStore()` → `store.useStore()`; reads through `useSnapshot()` are unaffected.
-</Callout>
 
 ## Multiple independent instances
 
@@ -287,7 +280,7 @@ A key that disappears from `value` simply stops being controlled. It keeps whate
 Using `useSnapshot`, `useStore`, `Subscribe`, or `Store` outside a `Provider` throws:
 
 ```
-Error: Missing Provider for createContextStore
+Error: [va-store] Missing Provider for store
 ```
 
 This is deliberate — there is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. Wrap the consuming subtree in a `Provider`.

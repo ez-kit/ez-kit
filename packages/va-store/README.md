@@ -14,9 +14,9 @@ pnpm add @ez-kit/va-store valtio
 
 Wraps a Valtio proxy in React context. Returns `Provider`, `useSnapshot`, `useStore`, `Subscribe`, and `Store`. Multiple `Provider` instances are fully independent.
 
-Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the raw proxy from `useStore()`. (`useContextStore()` was renamed to `useStore()`: across `@ez-kit`, `useStore()` is the raw handle and only the read hook is manager-specific.)
+Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the raw proxy from `useStore()`.
 
-The two components mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()` (`{ snap, store }`), `Store` the render-prop form of `useStore()` — it hands over the raw proxy without subscribing, so store mutations never re-render it.
+The two components mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()` (`(snap, store)`), `Store` the render-prop form of `useStore()` — it hands over the raw proxy without subscribing, so store mutations never re-render it.
 
 ```tsx
 import { type ContextStoreInit, createContextStore } from '@ez-kit/va-store'

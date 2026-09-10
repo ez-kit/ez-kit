@@ -4,7 +4,7 @@ import { useStore } from 'zustand'
 
 import { useHistory } from './use-history'
 
-import type { HistoryState } from './types'
+import type { StoreHistory } from './types'
 import type { StoreApi } from 'zustand/vanilla'
 
 export type Timeline<T> = {
@@ -27,7 +27,7 @@ export type Timeline<T> = {
  * not. Folded into `useHistory`, that cost would land on every caller, including a toolbar that only
  * wanted `undo` / `redo`. Here it lands only on a caller that renders the state anyway.
  */
-export function useTimeline<T>(store: StoreApi<T> & { history: StoreApi<HistoryState<T>> }): Timeline<T> {
+export function useTimeline<T>(store: StoreApi<T> & { history: StoreApi<StoreHistory<T>> }): Timeline<T> {
 	const { pasts, futures, goto } = useHistory(store)
 	const current = useStore(store)
 

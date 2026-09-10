@@ -311,7 +311,7 @@ describe('withHistory', () => {
 				defaultValue={{ count: 0 }}
 				value={{ count: 7 }}
 			>
-				<store.Subscribe>{({ snap }) => <span>{snap.count}</span>}</store.Subscribe>
+				<store.Subscribe>{(snap) => <span>{snap.count}</span>}</store.Subscribe>
 				<Probe />
 			</store.Provider>,
 		)

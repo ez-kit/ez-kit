@@ -39,7 +39,7 @@ Owns the real storage, created per React tree — so SSR requests and tests are 
 | ---------- | ----------- | -------- | -------------------------------------- |
 | `children` | `ReactNode` | no       | The subtree the cache is available to. |
 
-Takes no configuration: the cache default `gcTime` belongs to the cache instance, so change it with [`createStoreCache`](#createstorecacheoptions). A group `Provider` mounted without a `CacheProvider` ancestor throws [`Missing CacheProvider`](#errors).
+Takes no configuration: the cache default `gcTime` belongs to the cache instance, so change it with [`createStoreCache`](#createstorecacheoptions). A group `Provider` mounted without a `CacheProvider` ancestor throws [`[zu-store] Missing <CacheProvider>`](#errors).
 
 ## `CacheScope`
 
@@ -83,7 +83,7 @@ const records = useCacheKeys(['customer', '42'])
 | --------- | ------------------- | -------- | ----------------------------------------- |
 | `prefix`  | `readonly string[]` | no       | Restricts the result to one path subtree. |
 
-Returns `CacheRecord[]`. Throws `Missing CacheProvider` outside a `CacheProvider`.
+Returns `CacheRecord[]`. Throws `[zu-store] Missing <CacheProvider>` outside a `CacheProvider`.
 
 ## `toTree(records)`
 
@@ -131,6 +131,7 @@ Call it once at module top-level. Calling it twice with the same `name` on one c
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `Provider`                                                      | Keyed observer: `id` (required), `path?`, `defaultValue`, `gcTime?`, `alwaysCache?`.           |
 | `useSelector` / `useShallowSelector` / `useStore` / `Subscribe` | Read the store under the `Provider` — same selector/shallow semantics as `createContextStore`. |
+| `Store`                                                         | Write-only render-prop slot: the raw handle, no subscription — mirrors `createContextStore`'s. |
 | `getFromCache({ path?, id })`                                   | Imperative get-if-alive → `StoreApi` or `undefined`.                                           |
 | `useFromCache({ path?, id }, selector)`                         | Reactive, passive cross-tree read.                                                             |
 | `remove({ path?, id })`                                         | Drop one entry immediately.                                                                    |
@@ -189,11 +190,25 @@ Returns the raw `StoreApi` for the entry, without subscribing. Use it to read st
 
 Render-prop alternative to `useSelector`, identical to [`createContextStore`'s](../create-context-store/api#subscribe).
 
-| Prop       | Type                         | Required | Description                                                     |
-| ---------- | ---------------------------- | -------- | --------------------------------------------------------------- |
-| `selector` | `(state: TState) => T`       | yes      | Picks the slice to subscribe to.                                |
-| `shallow`  | `boolean`                    | no       | Compare shallowly instead of by reference. Defaults to `false`. |
-| `children` | `(value: T) => ReactElement` | yes      | Render prop, called with the selected value.                    |
+| Prop       | Type                                        | Required | Description                                                                    |
+| ---------- | ------------------------------------------- | -------- | ------------------------------------------------------------------------------ |
+| `selector` | `(state: TState) => T`                      | yes      | Picks the slice to subscribe to.                                               |
+| `shallow`  | `boolean`                                   | no       | Compare shallowly instead of by reference. Defaults to `false`.                |
+| `children` | `(value: T, store: TStore) => ReactElement` | yes      | Render prop, called with the selected value and this group's raw store handle. |
+
+## `Store`
+
+Write-only counterpart of `Subscribe`, identical to [`createContextStore`'s](../create-context-store/api#store): hands over this group's raw store handle without subscribing, so store writes never re-render its children.
+
+```tsx
+<usersTable.Store>
+	{(store) => <button onClick={() => store.setState({ filter: 'all' })}>Reset</button>}
+</usersTable.Store>
+```
+
+| Prop       | Type                              | Required | Description                                    |
+| ---------- | --------------------------------- | -------- | ---------------------------------------------- |
+| `children` | `(store: TStore) => ReactElement` | yes      | Render prop, called with the raw store handle. |
 
 ## `getFromCache(target)`
 
@@ -246,7 +261,7 @@ function createStoreCache(options?: { gcTime?: number }): {
 | -------- | -------- | ------- | ------------------------------------------------------------------------ |
 | `gcTime` | `number` | 300 000 | Cache-wide default eviction delay in ms, used when nothing overrides it. |
 
-A store group is bound to the cache that created it: mounting it under another cache's `Provider` throws `Missing CacheProvider`.
+A store group is bound to the cache that created it: mounting it under another cache's `Provider` throws `[zu-store] Missing <CacheProvider>`.
 
 ## Types
 
@@ -260,6 +275,7 @@ A store group is bound to the cache that created it: mounting it under another c
 | `CachedStoreOptions<TStore>`           | The `createCachedStore` options object.                                            |
 | `CachedStoreGroup<TStore, TDefault>`   | The returned group — `Provider`, hooks, `getFromCache`, `useFromCache`, `remove`.  |
 | `CachedSubscribeProps<TStore, T>`      | The group `Subscribe`'s props.                                                     |
+| `CachedStoreProps<TStore>`             | The group `Store`'s props.                                                         |
 | `ScopeProps`                           | `CacheScope`'s props.                                                              |
 | `StoreCache`                           | What `createStoreCache` returns.                                                   |
 | `StoreCacheController`                 | What `useCache()` returns — `{ keys, clear }`.                                     |
@@ -269,10 +285,10 @@ All are re-exported from `@ez-kit/zu-store`; none require reaching for `@ez-kit/
 
 ## Errors
 
-| Message                   | Cause                                                                                                                                |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `Missing CacheProvider`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.                |
-| `Missing <name.Provider>` | `useSelector` / `useShallowSelector` / `useStore` / `Subscribe` used outside that group's own `Provider` (`name` is the group name). |
+| Message                                | Cause                                                                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[zu-store] Missing <CacheProvider>`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.                          |
+| `[store-core] Missing <name.Provider>` | `useSelector` / `useShallowSelector` / `useStore` / `Subscribe` / `Store` used outside that group's own `Provider` (`name` is the group name). |
 
 `getFromCache` and `remove` throw nothing: they resolve through the most recently activated `CacheProvider` and are a no-op — `undefined` — when none is mounted.
 

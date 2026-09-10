@@ -4,10 +4,12 @@ import { createContext, type PropsWithChildren, type ReactElement, useContext, u
 import { useStore as useZustandStore } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 
+import { PACKAGE_TAG } from '../package-tag'
+
 import type { ControlledConfig, StoreId } from '@ez-kit/store-core'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
-const MISSING_PROVIDER_ERROR = 'Missing Provider for createContextStore'
+const missingProviderError = (name: string): string => `${PACKAGE_TAG} Missing Provider for ${name}`
 
 /** Synthetic id for a non-cached store. There is one instance per Provider, hence a fixed `id`. */
 const SINGLETON_ID = 'singleton'
@@ -42,7 +44,11 @@ type ProviderProps<TDefaultValue, TState> = (undefined extends TDefaultValue
 
 type SelectedProps<TStore extends StoreApi<unknown>, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
-	children: (state: TSelected) => ReactElement
+	/**
+	 * Receives the selected value and, second, the raw store handle — the same one `useStore()`
+	 * returns — so a render prop that also writes needs no hook beside it.
+	 */
+	children: (state: TSelected, store: TStore) => ReactElement
 }
 
 type SubscribeProps<TStore extends StoreApi<unknown>, TSelected> = SelectedProps<TStore, TSelected> & {
@@ -52,6 +58,11 @@ type SubscribeProps<TStore extends StoreApi<unknown>, TSelected> = SelectedProps
 	 * a fresh reference on every run never settles under the default `Object.is`.
 	 */
 	shallow?: boolean
+}
+
+/** Render-prop argument for the write-only `Store` slot: the raw store handle, no subscription. */
+type StoreProps<TStore extends StoreApi<unknown>> = {
+	children: (store: TStore) => ReactElement
 }
 
 export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultValue> = {
@@ -70,11 +81,17 @@ export type CreateContextStoreResult<TStore extends StoreApi<unknown>, TDefaultV
 	 * reference unless `shallow` is set.
 	 */
 	Subscribe: <TSelected>(props: SubscribeProps<TStore, TSelected>) => ReactElement
+	/**
+	 * Write-only slot: hands the raw store handle from `useStore()` to its children without
+	 * subscribing, so store writes never re-render them. It is **not** memoised — it still renders
+	 * whenever its parent does.
+	 */
+	Store: (props: StoreProps<TStore>) => ReactElement
 }
 
-function getStoreFromContext<TStore extends StoreApi<unknown>>(store: TStore | null): TStore {
+function getStoreFromContext<TStore extends StoreApi<unknown>>(store: TStore | null, name: string): TStore {
 	if (!store) {
-		throw new Error(MISSING_PROVIDER_ERROR)
+		throw new Error(missingProviderError(name))
 	}
 
 	return store
@@ -114,7 +131,8 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 	type TState = ExtractState<TStore>
 	const StoreContext = createContext<TStore | null>(null)
 	const controlled: ControlledConfig<TState> = options.controlled ?? {}
-	const storeId: StoreId = { path: EMPTY_PATH, name: options.name ?? DEFAULT_STORE_NAME, id: SINGLETON_ID }
+	const name = options.name ?? DEFAULT_STORE_NAME
+	const storeId: StoreId = { path: EMPTY_PATH, name, id: SINGLETON_ID }
 
 	function Provider(props: PropsWithChildren<ProviderProps<TDefaultValue, TState>>): ReactElement {
 		const { children, defaultValue, value, onValueChange } = props as PropsWithChildren<{
@@ -203,7 +221,7 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 	}
 
 	function useStore(): TStore {
-		const store = getStoreFromContext(useContext(StoreContext))
+		const store = getStoreFromContext(useContext(StoreContext), name)
 		return store
 	}
 
@@ -218,11 +236,11 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 	}
 
 	function SubscribeByReference<TSelected>({ selector, children }: SelectedProps<TStore, TSelected>): ReactElement {
-		return children(useSelector(selector))
+		return children(useSelector(selector), useStore())
 	}
 
 	function SubscribeShallow<TSelected>({ selector, children }: SelectedProps<TStore, TSelected>): ReactElement {
-		return children(useShallowSelector(selector))
+		return children(useShallowSelector(selector), useStore())
 	}
 
 	/**
@@ -243,11 +261,16 @@ export function createContextStore<TStore extends StoreApi<unknown>, TDefaultVal
 		)
 	}
 
+	function Store({ children }: StoreProps<TStore>): ReactElement {
+		return children(useStore())
+	}
+
 	return {
 		Provider,
 		useStore,
 		useSelector,
 		useShallowSelector,
 		Subscribe,
+		Store,
 	}
 }

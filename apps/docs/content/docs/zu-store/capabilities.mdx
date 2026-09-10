@@ -69,7 +69,7 @@ const filtersStore = createContextStore(() => {
 })
 ```
 
-Both routes run the same plugin at the same moment, under the same lifecycle, in one list. There is no second, factory-level channel to reconcile with the wrappers a store was actually built with — `createContextStore` has no `plugins` option.
+Both routes run the same plugin at the same moment, under the same lifecycle, in one list. The store instance is the only channel, so there is nothing to reconcile against the wrappers a store was actually built with.
 
 ## The registry is invisible
 
@@ -78,6 +78,14 @@ Both routes run the same plugin at the same moment, under the same lifecycle, in
 ## Writing your own
 
 A capability is a plain object satisfying `StorePlugin<T>`, attached with `attachCapability`:
+
+<Callout type='info'>
+	`attachCapability`, `capabilitiesOf` and the plugin types come from `@ez-kit/store-core`, not from `@ez-kit/zu-store`
+	— so writing your own capability means installing it explicitly (`pnpm add @ez-kit/store-core`). It arrives with the
+	binding as a transitive dependency, which pnpm's default isolated `node_modules` does not make importable. The four
+	store packages version independently, so take the range from your binding's own `@ez-kit/store-core` dependency rather
+	than assuming it matches the binding's version.
+</Callout>
 
 ```tsx
 import { attachCapability } from '@ez-kit/store-core'
