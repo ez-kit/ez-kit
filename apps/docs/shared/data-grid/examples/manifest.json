@@ -822,5 +822,13 @@
 		"groupLabel": "Columns",
 		"sourceFile": "components/column-ordering.tsx",
 		"exportName": "ColumnOrderingExample"
+	},
+	{
+		"id": "grouped-headers",
+		"label": "Grouped headers",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/grouped-headers.tsx",
+		"exportName": "GroupedHeadersExample"
 	}
 ]

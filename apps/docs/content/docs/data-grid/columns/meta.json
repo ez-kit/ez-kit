@@ -1,5 +1,14 @@
 {
 	"title": "Columns",
 	"description": "Defining columns \u2014 accessors, cell types, visibility, resizing",
-	"pages": ["index", "column-helper", "cell-types", "custom-cell-types", "ordering", "visibility", "resizing"]
+	"pages": [
+		"index",
+		"column-helper",
+		"cell-types",
+		"custom-cell-types",
+		"grouped-headers",
+		"ordering",
+		"visibility",
+		"resizing"
+	]
 }

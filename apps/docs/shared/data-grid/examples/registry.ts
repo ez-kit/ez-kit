@@ -77,6 +77,7 @@ export const exampleModules: Record<string, () => Promise<Record<string, Compone
 	'components/production/ProductionExample.tsx': () => import('./components/production/ProductionExample'),
 	'components/production/ProductionFeedExample.tsx': () => import('./components/production/ProductionFeedExample'),
 	'components/column-ordering.tsx': () => import('./components/column-ordering'),
+	'components/grouped-headers.tsx': () => import('./components/grouped-headers'),
 	'components/localization.tsx': () => import('./components/localization'),
 	'components/production/ProductionOneHandlerExample.tsx': () =>
 		import('./components/production/ProductionOneHandlerExample'),

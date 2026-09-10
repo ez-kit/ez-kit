@@ -103,6 +103,7 @@ export const DocPage = {
 	Localization: 'content/docs/data-grid/localization.mdx',
 	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
+	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
 	ColumnsOrdering: 'content/docs/data-grid/columns/ordering.mdx',
 	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
@@ -632,6 +633,16 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.Theming,
 		optionTables: [],
 		nonOptionTables: [{ heading: 'Where to look', reason: 'Maps a UI kit to where its design tokens live.' }],
+	},
+	{
+		page: DocPage.ColumnsGroupedHeaders,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 3 }],
+		nonOptionTables: [
+			{
+				heading: 'What belongs on the group and what on the leaf',
+				reason: 'Two columns of option names as prose, not a name → type table.',
+			},
+		],
 	},
 	{
 		page: DocPage.ColumnsOrdering,
