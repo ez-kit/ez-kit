@@ -66,7 +66,7 @@ type HistoryOptions<T> = {
 	shouldRecord?: (prev: T, next: T, action?: string | { type: string }) => boolean
 }
 
-type HistoryState<T> = {
+type StoreHistory<T> = {
 	readonly pasts: readonly T[]
 	readonly futures: readonly T[]
 	readonly limit: number
@@ -81,7 +81,7 @@ type HistoryState<T> = {
 }
 ```
 
-The store returned by `createStore<T>()(withHistory(initializer))` is a full `StoreApi<T>` plus a `history: StoreApi<HistoryState<T>>` property.
+The store returned by `createStore<T>()(withHistory(initializer))` is a full `StoreApi<T>` plus a `history: StoreApi<StoreHistory<T>>` property.
 
 ## Reading history
 
@@ -373,62 +373,3 @@ const draftStore = createContextStore(({ initialTitle = '' }: { initialTitle?: s
 ```
 
 Each `<draftStore.Provider>` then has its own independent history stack.
-
-## Migrating from the wrapper API
-
-In versions before `0.4.0`, `withHistory` was a store wrapper: it took an already-instantiated store and returned an extended one. The new version is a real `StateCreator` middleware. The migration is mechanical.
-
-### Initialization site
-
-```diff
-- const store = withHistory(
--   createStore<T>()((set) => ({ /* … */ })),
--   { limit: 50 },
-- )
-+ const store = createStore<T>()(
-+   withHistory(
-+     (set) => ({ /* … */ }),
-+     { limit: 50 },
-+   ),
-+ )
-```
-
-### Per-call skip
-
-```diff
-- store.setState(partial, false, { skipHistory: true })
-- store.set(partial, { skipHistory: true })
-+ store.history.getState().skip(() => store.setState(partial))
-```
-
-### `store.set(...)` is removed
-
-`store.set` no longer exists. Use the standard `store.setState(...)` everywhere.
-
-### `useHistoryStore` is removed
-
-```diff
-- import { useHistoryStore } from '@ez-kit/zu-store'
-- const canUndo = useHistoryStore(store, (h) => h.pasts.length > 0)
-+ import { useHistory } from '@ez-kit/zu-store'
-+ const { canUndo } = useHistory(store)
-```
-
-`useStore(store.history, selector)` remains available for a component that needs one slice and nothing else.
-
-### `shouldPush` is renamed to `shouldRecord`
-
-```diff
-- withHistory(store, { shouldPush: (prev, next) => prev.kind !== next.kind })
-+ withHistory(initializer, { shouldRecord: (prev, next) => prev.kind !== next.kind })
-```
-
-`shouldRecord` also gains a third optional `action` argument, mirroring the `devtools` convention.
-
-### `HistoryStore<T>` and `SetOptions` types are removed
-
-The returned store is a plain `StoreApi<T>` extended via the `'ez-kit/history'` mutator. No bespoke wrapper type. Type inference handles the `.history` property automatically.
-
-### Actions now record history automatically
-
-Any action that mutates state through the inner `set` (e.g. `(set) => ({ inc: () => set(...) })`) **will** appear in `pasts`. If a particular action should not be recorded — UI-only mutations, cursor or hover updates — wrap its write in `api.history.getState().skip(...)`.

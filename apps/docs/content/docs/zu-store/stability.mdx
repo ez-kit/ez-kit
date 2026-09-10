@@ -1,0 +1,64 @@
+---
+title: Stability
+description: What the @ez-kit store packages promise across versions — which import paths are covered by semver, how the four packages version independently of one another, and where the boundary between public API and engine internals runs.
+---
+
+# Stability
+
+The four store packages — `@ez-kit/zu-store`, `@ez-kit/va-store`, `@ez-kit/store-core` and
+`@ez-kit/store-persist` — live in one repository and reached 1.0 together, but they version
+**independently** from there. Each one's number tracks its own changes: a feature in
+`@ez-kit/zu-store` does not move `@ez-kit/va-store`, and a fix in `@ez-kit/store-persist` does not
+move either binding. Read a version as a statement about that package alone, and never infer
+compatibility from two numbers matching — the dependency ranges in the binding's `package.json` are
+what say which versions of the foundation it works with.
+
+A breaking change to `@ez-kit/store-core` or `@ez-kit/store-persist` that surfaces through a binding
+is a breaking change in that binding too, and ships as a major there when it does.
+
+You install one binding. `store-core` and `store-persist` arrive as its dependencies, and everything
+an application needs from them for everyday use is re-exported from the binding, so an app has
+exactly one import path per concern.
+
+Writing **your own capability** is the one exception: `attachCapability`, `capabilitiesOf` and the
+`StorePlugin` contract are imported from `@ez-kit/store-core` itself, which means listing it in your
+own dependencies — it reaches you only as a transitive dependency of `@ez-kit/zu-store`, and a
+transitive dependency is not importable under pnpm's default isolated `node_modules`. See
+[Capabilities](./capabilities).
+
+## What semver covers
+
+| Import path                                                                          | Covered | For                                              |
+| ------------------------------------------------------------------------------------ | ------- | ------------------------------------------------ |
+| `@ez-kit/zu-store`, `@ez-kit/va-store`                                               | yes     | everyday use — the store factory, cache, history |
+| `.../history`, `.../persist`, `.../persist/storage`, `.../persist/url`               | yes     | the feature subpaths                             |
+| `.../persist/url/next`, `.../persist/url/react-router`, `.../persist/validators/zod` | yes     | the optional-peer adapters                       |
+| `.../persist/testing`                                                                | yes     | the fake adapter, for your own tests             |
+| `@ez-kit/store-core`, `@ez-kit/store-persist` (except `/internals`)                  | yes     | the shared foundation both bindings are built on |
+
+Writing a **custom source adapter** — a cookie, a REST endpoint, a WebSocket, a test double — is on
+that list: it is a `SourcePort` (`get` / `set` / optional `subscribe` over `Keyed`), and every type it
+needs is on the `persist` entry above. See [Custom adapter](./persist/custom-adapter).
+
+What is **not** covered: the engine's own assembly primitives on `@ez-kit/store-persist/internals`
+(binding a new state manager to this engine is not a supported extension point yet — a custom source
+adapter needs none of them), anything reached through a deep file path (`@ez-kit/zu-store/dist/...`),
+anything a type only structurally exposes without being exported by name, and the exact wording of
+error and warning messages. Their **prefix** is stable — every message these packages emit starts
+with `[zu-store]`, `[va-store]`, `[store-core]` or `[store-persist]`, so it can be filtered — but
+match on that tag, never on the sentence after it.
+
+## Environment support
+
+| Requirement | Range                                                            |
+| ----------- | ---------------------------------------------------------------- |
+| React       | 18 or newer                                                      |
+| Zustand     | 5.x (`@ez-kit/zu-store`)                                         |
+| Valtio      | 2 or newer (`@ez-kit/va-store`)                                  |
+| Node        | 20 or newer, for tooling that runs the package outside a browser |
+| Modules     | ESM only — there is no CommonJS build                            |
+
+`next`, `react-router` and `zod` are **optional** peers: they are needed only by the subpath that
+names them, and nothing else in the package reaches for them.
+
+Dropping a major version of React, Zustand or Valtio is a breaking change and ships as one.

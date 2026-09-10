@@ -1,3 +1,5 @@
+import { PACKAGE_TAG } from '../package-tag'
+
 import type { Codec } from './codec'
 
 /** Canonical serialized form for `true`/`false`. */
@@ -18,7 +20,7 @@ export function paramBoolean(): Codec<boolean> {
 			if (raw === FALSE || raw === FALSE_ALIAS) {
 				return false
 			}
-			throw new Error(`paramBoolean: "${raw}" is not a boolean`)
+			throw new Error(`${PACKAGE_TAG} paramBoolean: "${raw}" is not a boolean`)
 		},
 	}
 }

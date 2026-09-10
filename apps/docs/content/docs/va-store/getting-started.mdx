@@ -52,12 +52,6 @@ Valtio optimises re-renders per accessed property, so — unlike [`@ez-kit/zu-st
 
 `useStore()` returns the **raw mutable proxy** and does not subscribe the component; `useSnapshot()` returns an immutable, render-safe view. Read from snapshots, write to the proxy.
 
-<Callout type='warn'>
-	**Breaking change.** `useContextStore()` has been renamed to `useStore()`. Every `@ez-kit` store package now spells
-	the raw handle `useStore()`; only the read hook is manager-specific (`useSnapshot()` here). There is still exactly one
-	read path and one write path.
-</Callout>
-
 ## What's next
 
 - [`createContextStore`](./create-context-store) — the full factory API: `Provider`, hooks, `Subscribe`, default values.

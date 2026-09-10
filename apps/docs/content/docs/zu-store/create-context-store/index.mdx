@@ -38,6 +38,7 @@ Four ways in, for four different jobs.
 | an object or array of values                       | `useShallowSelector` |
 | the raw handle, without subscribing                | `useStore`           |
 | a value inside JSX, without touching the component | `Subscribe`          |
+| to write from JSX, without subscribing             | `Store`              |
 
 ```tsx
 const count = counterStore.useSelector((s) => s.count)
@@ -50,7 +51,11 @@ const { count, label } = counterStore.useShallowSelector((s) => ({
 const store = counterStore.useStore()
 
 <counterStore.Subscribe selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Subscribe>
+
+<counterStore.Store>{(store) => <button onClick={() => store.setState({ count: 0 })}>Reset</button>}</counterStore.Store>
 ```
+
+`Subscribe` also hands the raw handle to its render prop as a second argument, so a slot that reads **and** writes needs neither `Store` nor a hook beside it. `Store` is the write-only half: no subscription, so store writes never re-render it.
 
 <Callout type='warn'>
 	`useStore()` is the **raw handle**, not a read. Reading state is `useSelector()` / `useShallowSelector()` — the same
@@ -304,10 +309,10 @@ A key that disappears from `value` simply stops being controlled. It keeps whate
 
 ### Consuming outside a `Provider`
 
-Using `useStore`, `useSelector`, `useShallowSelector`, or `Subscribe` outside a `Provider` throws:
+Using `useStore`, `useSelector`, `useShallowSelector`, `Subscribe`, or `Store` outside a `Provider` throws:
 
 ```
-Error: Missing Provider for createContextStore
+Error: [zu-store] Missing Provider for store
 ```
 
 This is deliberate — there is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. Wrap the consuming subtree in a `Provider`.

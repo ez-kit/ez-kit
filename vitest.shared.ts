@@ -17,6 +17,16 @@ export const vitestSharedConfig: ViteUserConfig = {
 			include: ['src/**/*.{ts,tsx}'],
 			/** A test file must not count itself, and the test kit is a fixture, not shipped code. */
 			exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/test-kit.{ts,tsx}'],
+			/**
+			 * The repo's 80% floor, enforced rather than merely reported: `pnpm test:coverage` fails
+			 * below it. Plain `pnpm test` runs without coverage and is unaffected.
+			 */
+			thresholds: {
+				statements: 80,
+				branches: 80,
+				functions: 80,
+				lines: 80,
+			},
 		},
 	},
 }

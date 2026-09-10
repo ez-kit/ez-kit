@@ -1,5 +1,7 @@
 import { serviceKey } from '@ez-kit/store-core'
 
+import { PACKAGE_TAG } from './package-tag'
+
 import type { PersistEngine } from './engine'
 import type { ServiceKey } from '@ez-kit/store-core'
 
@@ -26,7 +28,7 @@ export const PERSIST_ENGINES: ServiceKey<PersistEngines> = serviceKey<PersistEng
 
 /** Error thrown by {@link PersistEngines.get} when a source has no mounted engine. */
 export function engineNotMountedError(source: string): Error {
-	return new Error(`[store-persist]: no engine mounted for source "${source}"`)
+	return new Error(`${PACKAGE_TAG} no engine mounted for source "${source}"`)
 }
 
 /** Build a {@link PersistEngines} view over a source → engine map (one writer per source). */

@@ -6,6 +6,7 @@ import {
 	STATE_TYPE_ARGS,
 	STORE_SEED_TYPE_ARGS,
 	STORE_SELECTED_TYPE_ARGS,
+	STORE_TYPE_ARGS,
 	TypeModule,
 	type TypeRef,
 } from './type-resolver'
@@ -166,6 +167,7 @@ export const DocPage = {
 	ZuPersistQuickStartStorage: 'content/docs/zu-store/persist/quick-start-storage.mdx',
 	ZuPersistQuickStartUrl: 'content/docs/zu-store/persist/quick-start-url.mdx',
 	ZuPersistTypescript: 'content/docs/zu-store/persist/typescript.mdx',
+	ZuStability: 'content/docs/zu-store/stability.mdx',
 	ZuUseStoreState: 'content/docs/zu-store/use-store-state.mdx',
 
 	// --- @ez-kit/va-store ---
@@ -186,11 +188,11 @@ export const DocPage = {
 	VaPersistDeepDiveUrl: 'content/docs/va-store/persist/deep-dive-url.mdx',
 	VaPersistFields: 'content/docs/va-store/persist/fields.mdx',
 	VaPersistIndex: 'content/docs/va-store/persist/index.mdx',
-	VaPersistMigration: 'content/docs/va-store/persist/migration.mdx',
 	VaPersistParsers: 'content/docs/va-store/persist/parsers.mdx',
 	VaPersistQuickStartStorage: 'content/docs/va-store/persist/quick-start-storage.mdx',
 	VaPersistQuickStartUrl: 'content/docs/va-store/persist/quick-start-url.mdx',
 	VaPersistTypescript: 'content/docs/va-store/persist/typescript.mdx',
+	VaStability: 'content/docs/va-store/stability.mdx',
 } as const
 
 export type DocPage = (typeof DocPage)[keyof typeof DocPage]
@@ -326,6 +328,7 @@ export const STORE_TYPE = {
 		name: 'CachedSubscribeProps',
 		typeArgs: STORE_SELECTED_TYPE_ARGS,
 	},
+	ZuCachedStoreProps: { module: TypeModule.ZuStore, name: 'CachedStoreProps', typeArgs: STORE_TYPE_ARGS },
 	ZuHistoryOptions: { module: TypeModule.ZuStore, name: 'HistoryOptions', typeArgs: STATE_TYPE_ARGS },
 	ZuAccessorFieldOptions: {
 		module: TypeModule.ZuStorePersist,
@@ -964,9 +967,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`CacheScope`', roots: [STORE_TYPE.ZuScopeProps], expectedCount: 2 },
 			{ heading: '`useCache()`', roots: [STORE_TYPE.ZuStoreCacheController], expectedCount: 2 },
 			{ heading: '`options`', roots: [STORE_TYPE.ZuCachedStoreOptions], expectedCount: 2 },
-			{ heading: 'The returned group', roots: [STORE_TYPE.ZuCachedStoreGroup], expectedCount: 5 },
+			{ heading: 'The returned group', roots: [STORE_TYPE.ZuCachedStoreGroup], expectedCount: 6 },
 			{ heading: '`Provider`', roots: [STORE_TYPE.ZuCachedProviderProps], expectedCount: 6 },
 			{ heading: '`Subscribe`', roots: [STORE_TYPE.ZuCachedSubscribeProps], expectedCount: 3 },
+			{ heading: '`Store`', roots: [STORE_TYPE.ZuCachedStoreProps], expectedCount: 1 },
 			{ heading: '`createStoreCache(options?)`', roots: [STORE_TYPE.ZuStoreCacheOptions], expectedCount: 1 },
 		],
 		nonOptionTables: [
@@ -985,6 +989,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{ page: DocPage.ZuCacheIndex, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.ZuStability,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What semver covers', reason: 'Lists import paths and what they are for — not config keys.' },
+			{ heading: 'Environment support', reason: 'Lists peer/runtime version ranges — not config keys.' },
+		],
+	},
 	{
 		page: DocPage.ZuCapabilities,
 		optionTables: [],
@@ -1006,6 +1018,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: '`useSelector(selector)`', reason: 'Documents the hook argument.' },
 			{ heading: '`useShallowSelector(selector)`', reason: 'Documents the hook argument.' },
 			{ heading: '`Subscribe`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: '`Store`', reason: "The render-prop component's props type is internal to the factory result." },
 			{ heading: 'Exports', reason: 'Lists the exported names themselves.' },
 			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
 		],
@@ -1112,6 +1125,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{ page: DocPage.VaCacheIndex, optionTables: [], nonOptionTables: [] },
 	{
+		page: DocPage.VaStability,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What semver covers', reason: 'Lists import paths and what they are for — not config keys.' },
+			{ heading: 'Environment support', reason: 'Lists peer/runtime version ranges — not config keys.' },
+		],
+	},
+	{
 		page: DocPage.VaCapabilities,
 		optionTables: [],
 		nonOptionTables: [
@@ -1211,13 +1232,6 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			},
 			{ heading: 'Two ways to declare fields', reason: 'Names the decorator and accessor call forms, not keys.' },
 			{ heading: 'On this topic', reason: 'Table of contents: page links.' },
-		],
-	},
-	{
-		page: DocPage.VaPersistMigration,
-		optionTables: [],
-		nonOptionTables: [
-			{ heading: 'Summary', reason: 'Maps removed APIs to their replacements; the first column names old exports.' },
 		],
 	},
 	{

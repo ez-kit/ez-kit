@@ -12,6 +12,7 @@
 		"history",
 		"persist",
 		"use-store-state",
+		"stability",
 		"ai"
 	]
 }

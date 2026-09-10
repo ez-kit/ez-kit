@@ -1,4 +1,5 @@
 declare const SERVICE: unique symbol
+import { PACKAGE_TAG } from './package-tag'
 
 /**
  * A branded service key. Carries the service value type `S` at compile time while remaining a stable
@@ -27,7 +28,7 @@ function fromEntries(entries: readonly (readonly [ServiceKey<unknown>, unknown])
 function registryFromMap(byId: ReadonlyMap<string, unknown>): ServiceRegistry {
 	return {
 		get<S>(key: ServiceKey<S>): S {
-			if (!byId.has(key.id)) throw new Error(`[store-core] service not mounted: ${key.id}`)
+			if (!byId.has(key.id)) throw new Error(`${PACKAGE_TAG} service not mounted: ${key.id}`)
 			return byId.get(key.id) as S
 		},
 		safeGet<S>(key: ServiceKey<S>): S | undefined {

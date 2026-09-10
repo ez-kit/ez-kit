@@ -33,8 +33,9 @@ function createContextStore<TStore extends StoreApi<unknown>, TDefaultValue = un
 	Subscribe: <T>(props: {
 		selector: (state: ExtractState<TStore>) => T
 		shallow?: boolean
-		children: (value: T) => ReactElement
+		children: (value: T, store: TStore) => ReactElement
 	}) => ReactElement
+	Store: (props: { children: (store: TStore) => ReactElement }) => ReactElement
 }
 ```
 
@@ -75,7 +76,7 @@ const count = counterStore.useSelector((s) => s.count)
 | ---------- | ---------------------- | -------------------------------- |
 | `selector` | `(state: TState) => T` | Picks the slice to subscribe to. |
 
-Returns `T`. Throws `Missing Provider for createContextStore` when called outside a `Provider`.
+Returns `T`. Throws when called outside a `Provider` — see [Errors](#errors).
 
 <Callout type='warn'>
 	Only for a value the selector **reaches for**, never one it **builds**. Returning a fresh object or array from
@@ -127,11 +128,11 @@ Render-prop alternative to `useSelector`. Handy in JSX-heavy code, or to keep a 
 <counterStore.Subscribe selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Subscribe>
 ```
 
-| Prop       | Type                         | Required | Description                                                     |
-| ---------- | ---------------------------- | -------- | --------------------------------------------------------------- |
-| `selector` | `(state: TState) => T`       | yes      | Picks the slice to subscribe to.                                |
-| `shallow`  | `boolean`                    | no       | Compare shallowly instead of by reference. Defaults to `false`. |
-| `children` | `(value: T) => ReactElement` | yes      | Render prop, called with the selected value.                    |
+| Prop       | Type                                        | Required | Description                                                           |
+| ---------- | ------------------------------------------- | -------- | --------------------------------------------------------------------- |
+| `selector` | `(state: TState) => T`                      | yes      | Picks the slice to subscribe to.                                      |
+| `shallow`  | `boolean`                                   | no       | Compare shallowly instead of by reference. Defaults to `false`.       |
+| `children` | `(value: T, store: TStore) => ReactElement` | yes      | Render prop, called with the selected value and the raw store handle. |
 
 `shallow` is the `Subscribe` counterpart of `useShallowSelector`, and the same rule decides it: set it whenever `selector` **builds** its result. Omitted, the comparison is `Object.is` and an object-returning selector loops on mount.
 
@@ -145,6 +146,30 @@ Render-prop alternative to `useSelector`. Handy in JSX-heavy code, or to keep a 
 ```
 
 The prop is read on every render, so toggling it at runtime is safe — it selects which selector the subscription receives, never which hooks run.
+
+The second render argument is the raw store handle — the same one [`useStore()`](#usestore) returns — so a render prop that also writes needs no hook beside it:
+
+```tsx
+<counterStore.Subscribe selector={(s) => s.count}>
+	{(count, store) => <button onClick={() => store.setState({ count: count + 1 })}>{count}</button>}
+</counterStore.Subscribe>
+```
+
+## `Store`
+
+Write-only counterpart of `Subscribe`: hands over the raw store handle **without** subscribing, so store writes never re-render its children. Use it where a subtree only writes — a toolbar, a reset button — and reading would cost a render it does not need.
+
+```tsx
+<counterStore.Store>
+	{(store) => <button onClick={() => store.setState({ count: 0 })}>Reset</button>}
+</counterStore.Store>
+```
+
+| Prop       | Type                              | Required | Description                                    |
+| ---------- | --------------------------------- | -------- | ---------------------------------------------- |
+| `children` | `(store: TStore) => ReactElement` | yes      | Render prop, called with the raw store handle. |
+
+It is **not** memoised: it still renders whenever its parent does. What it avoids is re-rendering on store writes, not re-rendering altogether.
 
 ## The `controlled` option
 
@@ -191,7 +216,7 @@ const store = createContextStore(createMyStore, {
 | `ContextStoreInit<TDefaultValue>`                  | type  | The envelope your factory's parameter should be typed with.                                 |
 | `CreateContextStoreOptions<TState>`                | type  | The second argument's type.                                                                 |
 | `CreateContextStoreFactory<TStore, TDefaultValue>` | type  | The factory argument's type.                                                                |
-| `CreateContextStoreResult<TStore, TDefaultValue>`  | type  | The returned bundle — `Provider`, hooks and `Subscribe`.                                    |
+| `CreateContextStoreResult<TStore, TDefaultValue>`  | type  | The returned bundle — `Provider`, hooks, `Subscribe` and `Store`.                           |
 | `ControlledConfig<TState>`                         | type  | The `controlled` option's type.                                                             |
 | `ControlledFieldConfig<TState, K>`                 | type  | One field's entry in `controlled`.                                                          |
 
@@ -199,8 +224,10 @@ These are re-exported from `@ez-kit/zu-store`, so you can name the `controlled` 
 
 ## Errors
 
-| Message                                   | Cause                                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `Missing Provider for createContextStore` | `useStore` / `useSelector` / `useShallowSelector` / `Subscribe` used outside a `Provider`. |
+| Message                                  | Cause                                                                                                |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `[zu-store] Missing Provider for <name>` | `useStore` / `useSelector` / `useShallowSelector` / `Subscribe` / `Store` used outside a `Provider`. |
+
+`<name>` is the store's `name` option, or `store` when it is not set.
 
 There is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation.

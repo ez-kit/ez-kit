@@ -1,3 +1,5 @@
+import { PACKAGE_TAG } from '../package-tag'
+
 import type { Codec } from './codec'
 
 /** Parser for `bigint` fields. Serializes to its decimal string; bad input throws (→ default). */
@@ -8,7 +10,7 @@ export function paramBigInt(): Codec<bigint> {
 			try {
 				return BigInt(raw)
 			} catch {
-				throw new Error(`paramBigInt: "${raw}" is not a bigint`)
+				throw new Error(`${PACKAGE_TAG} paramBigInt: "${raw}" is not a bigint`)
 			}
 		},
 	}

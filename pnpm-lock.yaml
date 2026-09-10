@@ -551,7 +551,7 @@ importers:
   packages/store-persist:
     dependencies:
       '@ez-kit/store-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../store-core
     devDependencies:
       '@types/react':
@@ -604,10 +604,10 @@ importers:
   packages/va-store:
     dependencies:
       '@ez-kit/store-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../store-core
       '@ez-kit/store-persist':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../store-persist
     devDependencies:
       '@types/react':
@@ -641,10 +641,10 @@ importers:
   packages/zu-store:
     dependencies:
       '@ez-kit/store-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../store-core
       '@ez-kit/store-persist':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../store-persist
     devDependencies:
       '@types/react':

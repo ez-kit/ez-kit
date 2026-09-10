@@ -559,7 +559,7 @@ describe('withHistory — sub-store isolation', () => {
 })
 
 describe('withHistory — type-level surface', () => {
-	it('store has a `history` property typed as a StoreApi<HistoryState<T>>', () => {
+	it('store has a `history` property typed as a StoreApi<StoreHistory<T>>', () => {
 		const store = createStore<PaintState>()(withHistory(() => ({ color: 'red', size: 10 })))
 		const h = store.history.getState()
 		expect(typeof h.undo).toBe('function')

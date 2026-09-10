@@ -2,7 +2,7 @@
 
 import { useStore } from 'zustand'
 
-import type { HistoryState } from './types'
+import type { StoreHistory } from './types'
 import type { StoreApi } from 'zustand/vanilla'
 
 /**
@@ -16,8 +16,8 @@ import type { StoreApi } from 'zustand/vanilla'
  * this hook alone untouched; use {@link useTimeline} where the store's own state has to render.
  */
 export function useHistory<T>(
-	store: StoreApi<T> & { history: StoreApi<HistoryState<T>> },
-): HistoryState<T> & { canUndo: boolean; canRedo: boolean } {
+	store: StoreApi<T> & { history: StoreApi<StoreHistory<T>> },
+): StoreHistory<T> & { canUndo: boolean; canRedo: boolean } {
 	const state = useStore(store.history)
 
 	return {
