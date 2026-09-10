@@ -298,6 +298,9 @@ export {
 // identical.
 export type {
 	ColumnFiltersState,
+	// `ordering.column.onChange` is typed with it, so a consumer lifting that handler out of the
+	// JSX has to be able to name it without depending on `@tanstack/table-core`.
+	ColumnOrderState,
 	ColumnPinningState,
 	ColumnSizingState,
 	ExpandedState,
