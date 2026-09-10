@@ -1,4 +1,4 @@
-import { ColumnPinSide } from '@ez-kit/data-grid-core'
+import { canMoveColumn, ColumnMoveDirection, ColumnPinSide, moveColumn } from '@ez-kit/data-grid-core'
 
 import { GridMenuIcon, toMenuSections } from '../menu'
 import { SortDirection } from '../types'
@@ -16,11 +16,14 @@ export const ColumnActionId = {
 	PinRight: 'pin-right',
 	Unpin: 'unpin',
 	Hide: 'hide',
+	MoveStart: 'move-start',
+	MoveEnd: 'move-end',
 } as const
 
 export type ColumnActionId = (typeof ColumnActionId)[keyof typeof ColumnActionId]
 
 const SORTING_SECTION = 'sorting'
+const ORDER_SECTION = 'order'
 const PIN_SECTION = 'pin'
 const VISIBILITY_SECTION = 'visibility'
 
@@ -28,6 +31,7 @@ export type ColumnMenuCapabilities = {
 	canSort: boolean
 	canPin: boolean
 	canHide: boolean
+	canMove: boolean
 }
 
 /**
@@ -44,7 +48,7 @@ export type ColumnMenuCapabilities = {
 export function buildColumnMenuSections(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	header: Header<any, unknown>,
-	{ canSort, canPin, canHide }: ColumnMenuCapabilities,
+	{ canSort, canPin, canHide, canMove }: ColumnMenuCapabilities,
 	messages: GridMessages['columnMenu'],
 ): GridMenuSection[] {
 	const column = header.column
@@ -80,6 +84,28 @@ export function buildColumnMenuSections(
 				icon: GridMenuIcon.ClearSort,
 				onAction: () => {
 					column.clearSorting()
+				},
+			})
+		}
+	}
+
+	// Both directions are always listed, disabled at the ends: an entry that appears and
+	// disappears as the column travels makes the menu jump under the pointer, and the disabled
+	// state is also what says "this column is locked" rather than saying nothing at all.
+	const order: GridMenuSection = { id: ORDER_SECTION, label: messages.order, items: [] }
+	if (canMove) {
+		const table = header.getContext().table
+		for (const [id, direction, icon, label] of [
+			[ColumnActionId.MoveStart, ColumnMoveDirection.Start, GridMenuIcon.MoveStart, messages.moveStart],
+			[ColumnActionId.MoveEnd, ColumnMoveDirection.End, GridMenuIcon.MoveEnd, messages.moveEnd],
+		] as const) {
+			order.items.push({
+				id,
+				label,
+				icon,
+				disabled: !canMoveColumn(table, column.id, direction),
+				onAction: () => {
+					table.setColumnOrder(moveColumn(table, column.id, direction))
 				},
 			})
 		}
@@ -131,5 +157,5 @@ export function buildColumnMenuSections(
 		})
 	}
 
-	return toMenuSections([sorting, pin, visibility])
+	return toMenuSections([sorting, order, pin, visibility])
 }

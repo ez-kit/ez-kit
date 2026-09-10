@@ -78,6 +78,7 @@ function mapColumn<TRow extends object>(
 	const {
 		pinning,
 		visibility,
+		ordering,
 		sorting,
 		cell,
 		filtering,
@@ -107,6 +108,7 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'pinning', normalizeColumnPinning(pinning))
 	setIfDefined(meta, 'align', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
+	setIfDefined(meta, 'ordering', ordering)
 	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)
 	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
 	setIfDefined(meta, 'headerClassName', headerClassName)

@@ -814,5 +814,13 @@
 		"groupLabel": "Localization",
 		"sourceFile": "components/localization.tsx",
 		"exportName": "LocalizationExample"
+	},
+	{
+		"id": "column-ordering",
+		"label": "Column ordering",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-ordering.tsx",
+		"exportName": "ColumnOrderingExample"
 	}
 ]

@@ -41,6 +41,9 @@ export const defaultMessages: GridMessages = {
 		pinRight: 'Pin Right',
 		unpin: 'Unpin',
 		hide: 'Hide',
+		order: 'Order',
+		moveStart: 'Move left',
+		moveEnd: 'Move right',
 	},
 	rowActions: {
 		menu: 'Row actions',

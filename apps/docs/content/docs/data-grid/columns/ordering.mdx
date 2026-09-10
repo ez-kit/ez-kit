@@ -1,0 +1,81 @@
+---
+title: Ordering
+description: Let the user rearrange columns — from the header menu, or with `Alt+Arrow` on the focused header.
+---
+
+# Column ordering
+
+`ordering` lets the user decide where each column sits. It is grouped per axis, the way `pinning`
+is: `ordering.column` is the one that exists today.
+
+<DataGridDocsExample exampleId='column-ordering' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	ordering
+/>
+```
+
+`ordering: true` turns on every axis the grid supports, which today means columns.
+`ordering={{ column: { onChange } }}` also reports the new order.
+
+## What the user does
+
+- **The header menu** grows a _Move left_ / _Move right_ pair. Both entries are always listed and
+  disabled at the ends, so the menu never rearranges itself under the pointer.
+- **`Alt+ArrowLeft` / `Alt+ArrowRight`** move the focused column one step, without reopening the
+  menu each time. The menu closes on select in both kits, so this is the path for a column that
+  has to travel several places. Not yet wired in the HeroUI kit — see the note below.
+
+A step swaps the column with its **visible** neighbour. Hidden columns keep their own places: a
+column that is hidden and shown again comes back where it was, which is exactly why the order and
+the visibility are two separate pieces of state rather than one list of visible columns.
+
+## What cannot move
+
+- **System columns** — selection, expansion and row actions have a fixed place in the layout.
+- **`ordering: false` columns** — locked where they were declared. The menu offers them no move
+  entries, and their neighbours cannot step over them either.
+- **Across a pin band** — a move that crossed from the centre into the pinned edge would read as a
+  pin, not a reorder. Pin the column instead.
+- **Out of a header group** — a leaf dragged into a sibling group would split its parent's header
+  cell in two, so moves stay between siblings.
+
+## Reporting and restoring the order
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	ordering={{ column: { onChange: (columnOrder) => save(columnOrder) } }}
+	initialState={{ columnOrder: restore() }}
+/>
+```
+
+`onChange` receives the **complete** order as column ids, in visual order. That is deliberate:
+TanStack reads a partial `columnOrder` as "these first, then the rest as declared", so a partial
+list would quietly rearrange columns nobody touched.
+
+`columnOrder` is part of the persisted view state — see
+[State persistence](/docs/data-grid/state/persistence), where it travels with `columnVisibility`
+and `columnPinning` in the same deep link.
+
+## HeroUI: keyboard shortcut pending
+
+The header menu works in both kits. `Alt+Arrow` currently works in the shadcn kit only: HeroUI's
+table is a React Aria collection that builds the column header's own prop bag and replaces the
+handler the grid puts there. The menu path is unaffected.
+
+## Options
+
+| Option     | Type                        | Description                                                                                                          |
+| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ordering` | `boolean \| { column?: … }` | Reordering, per axis. `true` enables every axis the grid supports; `{ column: { onChange } }` reports the new order. |
+
+## Column options
+
+| Option     | Type    | Description                                                                                |
+| ---------- | ------- | ------------------------------------------------------------------------------------------ |
+| `ordering` | `false` | Lock this column where it was declared. It cannot move, and its neighbours cannot pass it. |

@@ -31,6 +31,7 @@ import type {
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
+	OrderingConfig,
 	PaginationConfig,
 	PartialGridMessages,
 	RowActionsConfig,
@@ -702,6 +703,17 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	visibility?: boolean | ReactVisibilityConfig
 	/**
+	 * Column reordering, grouped per axis like `pinning`.
+	 * - `true` — every axis this grid supports, which today means columns
+	 * - `{ column: { onChange } }` — and report the new order
+	 *
+	 * The header menu grows a "move" pair, and the focused header cell answers
+	 * `Alt+ArrowLeft` / `Alt+ArrowRight` — the menu closes on select in both kits, so a column
+	 * that has to travel several places is moved from the keyboard rather than by reopening the
+	 * menu once per step.
+	 */
+	ordering?: boolean | OrderingConfig
+	/**
 	 * Controlled table state. Pass a partial `TableState` to control specific portions
 	 * (e.g. only sorting) while leaving the rest internally managed.
 	 * Must be used together with `onStateChange` to reflect state updates back.
@@ -850,6 +862,7 @@ export function useDataGrid<TRow extends object>(
 		onStateChange,
 		layout,
 		messages: messageOverrides,
+		ordering: rawOrdering,
 		rowProps,
 		...restConfig
 	} = config
@@ -1085,6 +1098,9 @@ export function useDataGrid<TRow extends object>(
 			pagination: corePagination,
 			selection: coreSelection,
 			visibility: coreVisibility,
+			// Destructured out of `restConfig` above (the React layer resolves `grid.ordering`
+			// from it), so it has to be handed back: core owns the `onChange` funnel.
+			...(rawOrdering !== undefined ? { ordering: rawOrdering } : {}),
 			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
 		} as TableConfig<TRow>),
 	)
@@ -1147,6 +1163,12 @@ export function useDataGrid<TRow extends object>(
 	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
+	// Only the axes that exist: `ordering: true` means "every axis this grid supports", which is
+	// columns today. A row axis would have to arrive with its own handler (see `OrderingConfig`),
+	// so a grid written today cannot silently gain row dragging later.
+	const orderingCfg = featureConfig(rawOrdering)
+	const columnOrderingEnabled = rawOrdering === true || isFeatureEnabled(orderingCfg?.column)
+
 	table.grid = {
 		cellTypes,
 		messages,
@@ -1161,6 +1183,7 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
+		ordering: { column: columnOrderingEnabled },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {

@@ -1,5 +1,17 @@
 import { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-react'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, EyeOff, Pencil, PinOff, Trash2, X } from 'lucide-react'
+import {
+	ArrowDown,
+	ArrowLeft,
+	ArrowRight,
+	ArrowUp,
+	ChevronLeft,
+	ChevronRight,
+	EyeOff,
+	Pencil,
+	PinOff,
+	Trash2,
+	X,
+} from 'lucide-react'
 import { createElement } from 'react'
 
 import type { GridMenuItemDef } from '@ez-kit/data-grid-react'
@@ -30,6 +42,9 @@ const GRID_MENU_ICON_COMPONENTS: Record<GridMenuIcon, LucideIcon> = {
 	[GridMenuIcon.SortDesc]: ArrowDown,
 	[GridMenuIcon.ClearSort]: X,
 	[GridMenuIcon.Hide]: EyeOff,
+	// Chevrons, not the plain arrows: those already mean pinning in this menu.
+	[GridMenuIcon.MoveStart]: ChevronLeft,
+	[GridMenuIcon.MoveEnd]: ChevronRight,
 }
 
 /**

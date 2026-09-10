@@ -925,6 +925,16 @@ export type ColumnDefCommon<
 	 * polarity by nature — it turns hiding on for the grid as a whole.
 	 */
 	visibility?: false | ColumnVisibilityDef
+	/**
+	 * Whether this column can be moved when the table-level `ordering.column` feature is on.
+	 * `false` locks it where it was declared — the menu offers no move entries for it, and it
+	 * is not a landing spot for its neighbours either.
+	 *
+	 * Reads like every other per-column switch (`sorting: false`, `visibility: false`,
+	 * `resizing: false`): it turns the feature off for this column. No axis word here — a
+	 * column def is already a column.
+	 */
+	ordering?: false
 
 	/** Column-level filtering config. Set to false to disable. */
 	filtering?: false | ColumnFilteringConfig<TNode>
@@ -1169,6 +1179,8 @@ declare module '@tanstack/table-core' {
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: false | ColumnVisibilityDef
+		/** Resolved from `column.ordering` — `false` means the column cannot be moved. */
+		ordering?: false
 		isSystemColumn?: boolean
 		systemColumnType?: SystemColumnType
 		/**

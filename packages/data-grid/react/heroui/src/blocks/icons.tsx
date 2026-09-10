@@ -6,6 +6,8 @@ import {
 	ArrowRight,
 	ArrowUp,
 	ArrowUpToLine,
+	ChevronLeft,
+	ChevronRight,
 	EyeOff,
 	Pencil,
 	PinOff,
@@ -36,6 +38,9 @@ export const GRID_MENU_ICONS: Record<GridMenuIcon, ReactNode> = {
 	[GridMenuIcon.SortDesc]: <ArrowDown size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.ClearSort]: <X size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.Hide]: <EyeOff size={MENU_ICON_SIZE} />,
+	// Chevrons, not the plain arrows: those already mean pinning in this menu.
+	[GridMenuIcon.MoveStart]: <ChevronLeft size={MENU_ICON_SIZE} />,
+	[GridMenuIcon.MoveEnd]: <ChevronRight size={MENU_ICON_SIZE} />,
 }
 
 /**

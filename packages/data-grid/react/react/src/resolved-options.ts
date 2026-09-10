@@ -74,6 +74,14 @@ export type ResolvedGridOptions = {
 	 * `pinning.column` a third way and left `pinning.row` unreadable from here at all, so a kit
 	 * that wanted to know whether row pinning was on had to go back to `table.options`.
 	 */
+	/**
+	 * Reordering, resolved per axis — the same shape as `pinning` beside it, and for the same
+	 * reason: the axes are independent features.
+	 */
+	ordering: {
+		/** The column menu offers its move entries, and headers answer `Alt+Arrow`. */
+		column: boolean
+	}
 	pinning: {
 		/** The column menu offers its pin section. */
 		column: boolean
@@ -212,6 +220,7 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 		cellTypes: undefined,
 		messages: defaultMessages,
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
+		ordering: { column: false },
 		pinning: { column: false, row: false },
 		filtering: {
 			variant: DATA_GRID_DEFAULTS.filtering.variant,

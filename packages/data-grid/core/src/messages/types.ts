@@ -73,6 +73,18 @@ export type GridMessages = {
 		unpin: string
 		/** Hide the column. */
 		hide: string
+		/** Heading of the reordering section. */
+		order: string
+		/**
+		 * Move one step toward the start of the order.
+		 *
+		 * The key is logical — the order flips under RTL, so "start" is what the action means
+		 * whichever way the page runs. The English default is the LTR wording a reader expects;
+		 * an RTL locale writes its own words for the same key.
+		 */
+		moveStart: string
+		/** Move one step toward the end of the order. */
+		moveEnd: string
 	}
 	/** Built-in row actions. Custom actions carry their own `label`. */
 	rowActions: {

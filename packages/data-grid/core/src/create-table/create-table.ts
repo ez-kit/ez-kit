@@ -240,6 +240,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const paginationOnChange = paginationCfg?.onChange
 	const selectionOnChange = selectionCfg?.onChange
 	const visibilityOnChange = featureConfig(config.visibility)?.onChange
+	// `ordering` groups the axes, so the callback hangs off the axis, not the group — the same
+	// shape `pinning.column` / `pinning.row` already use.
+	const orderingCfgResolved = featureConfig(config.ordering)
+	const columnOrderingOnChange =
+		typeof orderingCfgResolved?.column === 'object' ? orderingCfgResolved.column.onChange : undefined
 	const pinningCfgResolved = featureConfig(config.pinning)
 	const columnPinningOnChange =
 		typeof pinningCfgResolved?.column === 'object' ? pinningCfgResolved.column.onChange : undefined
@@ -481,6 +486,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		}
 		if (visibilityOnChange && outwardPrev.columnVisibility !== outwardNext.columnVisibility) {
 			visibilityOnChange(outwardNext.columnVisibility)
+		}
+		if (columnOrderingOnChange && outwardPrev.columnOrder !== outwardNext.columnOrder) {
+			columnOrderingOnChange(outwardNext.columnOrder)
 		}
 		if (columnPinningOnChange && outwardPrev.columnPinning !== outwardNext.columnPinning) {
 			columnPinningOnChange(outwardNext.columnPinning)

@@ -142,6 +142,11 @@ export {
 	TEXT_OPERATORS,
 } from './features/operators'
 
+// Column reordering: the two pure helpers the UI drives it with. In core, not the React layer,
+// because the rules they encode (same pin band, same parent header, locked columns) are the
+// feature's semantics, not its chrome.
+export { canMoveColumn, ColumnMoveDirection, moveColumn } from './features/ordering'
+
 export { CreatingMode } from './features/creating'
 export type {
 	CreateDefaultValueContext,
@@ -204,7 +209,9 @@ export type {
 	GlobalFilteringConfig,
 	InitialTableState,
 	MultiSortConfig,
+	OrderingConfig,
 	PaginationConfig,
+	ColumnOrderingConfig,
 	ColumnPinningConfig,
 	VisibilityConfig,
 	PaginationTotals,

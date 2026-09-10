@@ -157,6 +157,8 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 	useDataGridState((s) => s.columnSizingInfo)
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
+	// `--grid-template-columns` is built from the visual leaf order, which a reorder changes.
+	useDataGridState((s) => s.columnOrder)
 	// Row-model affecting slices (used when virtualized to size the virtualizer).
 	const sorting = useDataGridState((s) => s.sorting)
 	const columnFilters = useDataGridState((s) => s.columnFilters)

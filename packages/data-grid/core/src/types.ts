@@ -11,6 +11,7 @@ import type { FeatureToggle } from './utils/feature-flag'
 import type {
 	Column,
 	ColumnFiltersState,
+	ColumnOrderState,
 	ColumnPinningState,
 	ColumnSizingState,
 	ExpandedState,
@@ -562,6 +563,37 @@ export type VisibilityConfig = FeatureToggle & {
 	onChange?: (visibility: VisibilityState) => void
 }
 
+/**
+ * Column reordering: which columns sit where, as the user arranges them.
+ *
+ * Distinct from {@link SortingConfig}, which orders **rows**, and from
+ * {@link VisibilityConfig}: hiding a column does not move it. A hidden column keeps its place in
+ * the order and comes back to it, which is exactly why the two are separate slices rather than
+ * one list of visible columns.
+ */
+export type ColumnOrderingConfig = FeatureToggle & {
+	/**
+	 * Called whenever the column order changes. Receives the full order as ids, in visual order
+	 * — never a partial list: TanStack reads a partial `columnOrder` as "these first, then the
+	 * rest as declared", so a partial write would quietly reorder columns nobody touched.
+	 */
+	onChange?: (columnOrder: ColumnOrderState) => void
+}
+
+/**
+ * Ordering, grouped per axis the way {@link PinningConfig} is — the two are independent
+ * features over two state slices, so each carries its own `onChange`.
+ *
+ * Only `column` exists today. Row ordering, if it lands, will be `row` here, and it can only
+ * ever turn on with a handler of its own: the grid does not own the data, so a new row order
+ * has to go somewhere. That is the same rule `editing` / `creating` / `deleting` already follow,
+ * and it is what keeps a bare `ordering: true` meaning exactly what it means today.
+ */
+export type OrderingConfig = FeatureToggle & {
+	/** Column reordering. `true` = enabled, or {@link ColumnOrderingConfig} for `onChange`. */
+	column?: boolean | ColumnOrderingConfig
+}
+
 export type ColumnPinningConfig = FeatureToggle & {
 	/** Called whenever column pinning changes. Receives the resolved {@link ColumnPinningState}. */
 	onChange?: (columnPinning: ColumnPinningState) => void
@@ -748,6 +780,18 @@ export type TableConfig<TRow extends object> = {
 	 * `ReactVisibilityConfig`, which extends this one.
 	 */
 	visibility?: boolean | VisibilityConfig
+	/**
+	 * Reordering, per axis.
+	 * - `true` — every axis this grid supports, which today means columns
+	 * - `{ column: true }` — column reordering, spelled out
+	 * - `{ column: { onChange } }` — and report the new order
+	 * - `false` / omitted — columns stay where they were declared
+	 *
+	 * Grouped per axis like {@link PinningConfig}, and for the same reason: reordering rows is
+	 * a different feature over a different slice, so it gets its own member and its own
+	 * `onChange` rather than sharing one.
+	 */
+	ordering?: boolean | OrderingConfig
 	/**
 	 * Pinning configuration. Column pinning and row pinning are gated independently:
 	 * - `true` — enable column menu UI + row pin top+bottom
