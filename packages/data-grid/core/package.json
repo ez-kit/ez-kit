@@ -35,7 +35,10 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "50 KB"
+			"limit": "14 KB",
+			"ignore": [
+				"@tanstack/table-core"
+			]
 		}
 	],
 	"dependencies": {

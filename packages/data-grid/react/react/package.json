@@ -38,7 +38,12 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "50 KB"
+			"limit": "27 KB",
+			"ignore": [
+				"@ez-kit/data-grid-core",
+				"@tanstack/react-virtual",
+				"@tanstack/table-core"
+			]
 		}
 	],
 	"dependencies": {

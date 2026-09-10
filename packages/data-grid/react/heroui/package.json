@@ -38,7 +38,12 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "500 KB"
+			"limit": "16 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
 		}
 	],
 	"dependencies": {

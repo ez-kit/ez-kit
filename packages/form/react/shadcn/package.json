@@ -36,7 +36,21 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "120 KB"
+			"limit": "13 KB",
+			"ignore": [
+				"@base-ui/react",
+				"@ez-kit/form-core",
+				"@ez-kit/form-react",
+				"class-variance-authority",
+				"clsx",
+				"date-fns",
+				"lucide-react",
+				"radix-ui",
+				"react-day-picker",
+				"tailwind-merge",
+				"tailwindcss",
+				"tw-animate-css"
+			]
 		}
 	],
 	"dependencies": {

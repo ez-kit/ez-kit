@@ -74,27 +74,51 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "6.5 KB"
+			"limit": "2.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/history/index.js",
-			"limit": "2 KB"
+			"limit": "1.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/index.js",
-			"limit": "6.5 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/storage/index.js",
-			"limit": "2 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/url/index.js",
-			"limit": "1 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/url/react-router.js",
-			"limit": "1 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		}
 	],
 	"devDependencies": {

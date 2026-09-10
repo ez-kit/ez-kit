@@ -218,8 +218,15 @@ Two consequences worth keeping:
 - Built with `tsup` → ESM output + `.d.ts` declarations into `dist/`
 - Each package extends `tsconfig.base.json` and uses `@/*` → `src/*` path alias
 - Tests live in `src/**/*.test.ts(x)` or `test/**/*.test.ts(x)`, run with Vitest in jsdom
-- Each package has a `size-limit` budget enforced in CI. The generator seeds 3 KB; every package then
-  tunes it to roughly its real size plus headroom, so a regression actually fails the check
+- Each package has a `size-limit` budget enforced in CI, tuned to roughly its real size plus ~15%
+  headroom so a regression actually fails the check. **Every entry `ignore`s the package's own
+  runtime `dependencies`**, so the number is the package's own code: a budget that counted
+  dependencies answered "how heavy is our dependency tree" and could be blown by someone else's
+  release — `@tanstack/table-core` shipping a minor would have failed CI in an unrelated PR. Peer
+  dependencies (`react`, `@heroui/*`, `zustand`, …) are excluded by `size-limit` itself, so they
+  never counted. A workspace package that depends on another (`data-grid-react` → `data-grid-core`)
+  ignores it too — that one has its own budget, and counting it twice hides where growth happened.
+  When adding a dependency, add it to the entry's `ignore` list
 - Packages declare `"sideEffects": false`
 
 ### The public origin lives in one place

@@ -39,7 +39,19 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "500 KB"
+			"limit": "19 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"class-variance-authority",
+				"clsx",
+				"date-fns",
+				"lucide-react",
+				"radix-ui",
+				"react-day-picker",
+				"shadcn",
+				"tailwind-merge",
+				"tailwindcss"
+			]
 		}
 	],
 	"dependencies": {
