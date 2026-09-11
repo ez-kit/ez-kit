@@ -882,6 +882,32 @@ export type ColumnDefCommon<
 	 * ```
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	/**
+	 * Child columns, which makes this def a **header group** rather than a column: it contributes
+	 * no cells, and its `header` spans its children across an extra header row. Groups nest, and
+	 * each level adds a row.
+	 *
+	 * A group needs an explicit `id` — there is no `accessorKey` to derive one from — and carries
+	 * nothing that acts on a value: the accessor, the cell type, `align`, `width`, and the
+	 * sorting / filtering / editing / visibility / resizing switches all belong on the leaves,
+	 * which is where the affordances render.
+	 *
+	 * Pin the **leaves**, not the group: pinning splits columns into left / centre / right, and a
+	 * group whose leaves land in different bands is drawn once per band.
+	 *
+	 * **Kit support:** the shadcn kit renders groups; the heroui kit drops the group row and
+	 * renders the leaves flat, with a warning in development. HeroUI's table is a React Aria
+	 * collection, and React Aria removed nested column support before its GA
+	 * (adobe/react-spectrum#5537, still unresolved in #5263).
+	 *
+	 * @example
+	 * ```tsx
+	 * { id: 'person', header: 'Person', columns: [
+	 *   { accessorKey: 'firstName', header: 'First' },
+	 *   { accessorKey: 'lastName', header: 'Last' },
+	 * ] }
+	 * ```
+	 */
 	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
 
 	/**

@@ -62,11 +62,12 @@ list would quietly rearrange columns nobody touched.
 [State persistence](/docs/data-grid/state/persistence), where it travels with `columnVisibility`
 and `columnPinning` in the same deep link.
 
-## HeroUI: keyboard shortcut pending
+## HeroUI: keyboard shortcut not wired
 
-The header menu works in both kits. `Alt+Arrow` currently works in the shadcn kit only: HeroUI's
-table is a React Aria collection that builds the column header's own prop bag and replaces the
-handler the grid puts there. The menu path is unaffected.
+The header menu works in both kits. `Alt+Arrow` works in the shadcn kit only: HeroUI's table is a
+React Aria collection that builds the column header's own prop bag and spreads it after whatever it
+was handed, so the handler the grid puts there is overwritten. Tracked in
+[#223](https://github.com/ez-kit/ez-kit/issues/223); the menu path is unaffected.
 
 ## Options
 
