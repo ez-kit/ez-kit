@@ -5,6 +5,7 @@ import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-c
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
 import { ActionBarVariant, FilteringVariant } from './types'
+import { useOrderedData } from './use-ordered-data'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
@@ -1231,10 +1232,16 @@ export function useDataGrid<TRow extends object>(
 	// `options.data` AFTER child components (Body / Cell) had already
 	// rendered with the previous data, leaving the UI one step behind until
 	// another unrelated state change forced a re-render.
-	const dataRef = useRef(config.data)
-	if (config.data !== dataRef.current) {
-		dataRef.current = config.data
-		table.setOptions((prev) => ({ ...prev, data: config.data }))
+	//
+	// What reaches the table is `data` projected through the uncontrolled row order — see
+	// `useOrderedData`. That slice is an empty array until someone moves a row, and the
+	// projection returns the same reference for it, so an ordinary grid syncs exactly what it
+	// always did.
+	const orderedData = useOrderedData(table, config.data)
+	const dataRef = useRef(orderedData)
+	if (orderedData !== dataRef.current) {
+		dataRef.current = orderedData
+		table.setOptions((prev) => ({ ...prev, data: orderedData }))
 	}
 
 	// Re-sync the manual-pagination server-data descriptors (`rowCount` / `pageCount`)
