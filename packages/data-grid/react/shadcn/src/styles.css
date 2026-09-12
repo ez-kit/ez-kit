@@ -141,8 +141,15 @@
 	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 50%, var(--background));
 }
 
+/* `data-selected` is what the react layer emits; `data-state='selected'` is upstream shadcn's
+ * own spelling, kept so a consumer's `<TableRow data-state>` still lands on the same surface.
+ * The background lives here rather than on the vendored primitive's class list because only
+ * this sheet knows the pinned-cell variable has to move with it — a pinned cell paints its own
+ * background and would otherwise stay unselected-looking inside a selected row. */
 [data-slot='table-row'][data-state='selected'],
-[data-slot='tr'][data-state='selected'] {
+[data-slot='tr'][data-state='selected'],
+[data-slot='tr'][data-row-selected='true'] {
+	background-color: var(--muted);
 	--dg-pin-cell-background: var(--muted);
 }
 
@@ -239,11 +246,11 @@
 	transition: opacity 150ms;
 }
 
-tr[data-expanded] {
+tr[data-expanded-row] {
 	display: block !important;
 	grid-template-columns: none !important;
 }
-tr[data-expanded] > td {
+tr[data-expanded-row] > td {
 	display: block;
 	width: 100%;
 	background-color: hsl(var(--muted) / 0.4);

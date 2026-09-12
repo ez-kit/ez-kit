@@ -3,8 +3,6 @@ title: History
 description: withHistory adds an undo/redo/goto stack to any Valtio proxy, backed by the same manager-agnostic @ez-kit/store-core/history engine every @ez-kit store uses.
 ---
 
-# History
-
 `withHistory` wraps a Valtio proxy with an undo/redo stack. It's a [capability](./capabilities) — build the enhancer, apply it to the proxy with [`pipe`](./capabilities) in the factory, read and drive it with `useHistory()`.
 
 ```tsx

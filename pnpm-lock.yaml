@@ -308,7 +308,7 @@ importers:
   packages/data-grid/react/heroui:
     dependencies:
       '@ez-kit/data-grid-react':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../react
       '@internationalized/date':
         specifier: ^3.5.0
@@ -339,7 +339,7 @@ importers:
   packages/data-grid/react/react:
     dependencies:
       '@ez-kit/data-grid-core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../core
       '@tanstack/react-virtual':
         specifier: ^3.13.23
@@ -364,7 +364,7 @@ importers:
   packages/data-grid/react/shadcn:
     dependencies:
       '@ez-kit/data-grid-react':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../react
       class-variance-authority:
         specifier: ^0.7.1

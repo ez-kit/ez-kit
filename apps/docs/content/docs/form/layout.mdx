@@ -3,8 +3,6 @@ title: Layout
 description: Sections, the column grid and colSpan — the same grouping in JSX and in a document.
 ---
 
-# Layout
-
 A form of any size stops being a list of fields and becomes groups of them: a heading, two or three columns, one field that needs the full width. That is all `Section` and `GridItem` do. They are **pure layout** — putting a field inside a section changes neither its `name`, nor the path its value lives at, nor its validation, nor whether it is submitted. Move a field between cells and the payload is byte-identical.
 
 Both entry points reach the same two kit components, so the DOM matches whichever way you write it.

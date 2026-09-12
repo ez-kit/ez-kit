@@ -106,7 +106,11 @@ export type SortingConfig = FeatureToggle & {
 	 * ```
 	 */
 	manual?: boolean
-	/** First click sorts descending. Default: false. */
+	/**
+	 * Force the first click to sort descending. Unset, TanStack infers the direction per column
+	 * from its first value: a string column starts ascending, every other type — number, date,
+	 * boolean — starts descending.
+	 */
 	descFirst?: boolean
 	/**
 	 * Allow a third click to clear the sort. Default: true.

@@ -1,6 +1,6 @@
 'use client'
 
-import { ActionsCellState, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
+import { ActionsCellState, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react'
 import { Button } from '@heroui/react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Fragment } from 'react'
@@ -52,8 +52,13 @@ function renderInlineActions(actions: GridMenuItem[]): ReactNode {
 /**
  * The row-actions cell in all three row states. `Editing` and `Creating` both reduce to the
  * same save / cancel pair — the creating row only differs in whether Cancel is offered.
+ *
+ * The built-in Edit and Delete are icon-only, so they take their `aria-label` from the grid's
+ * dictionary — the same `rowActions.edit` / `rowActions.delete` the menu placement renders as
+ * visible text. A custom inline action already labels itself from its own `item.label`.
  */
 export function ActionsCell(props: ActionsCellProps) {
+	const messages = useGridMessages().rowActions
 	if (props.state === ActionsCellState.Editing) {
 		return (
 			<SaveCancelButtons
@@ -84,6 +89,7 @@ export function ActionsCell(props: ActionsCellProps) {
 					variant='ghost'
 					size='sm'
 					isIconOnly
+					aria-label={messages.edit}
 					onPress={onEdit}
 				>
 					<Pencil className='size-4' />
@@ -94,6 +100,7 @@ export function ActionsCell(props: ActionsCellProps) {
 					variant='danger-soft'
 					size='sm'
 					isIconOnly
+					aria-label={messages.delete}
 					onPress={onDelete}
 				>
 					<Trash2 className='size-4' />

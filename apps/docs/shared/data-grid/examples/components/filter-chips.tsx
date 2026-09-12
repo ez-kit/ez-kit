@@ -42,6 +42,21 @@ export function FilterChipsOnlyExample() {
 	)
 }
 
+// `chips: 'below'` — the scalar *is* the position. Same grid as the auto-mount example above,
+// so the only visible difference is which side of the table the strip lands on.
+export function FilterChipsBelowExample() {
+	const data = useMemo(() => makeUsers(50), [])
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			filtering={{ variant: 'popover', chips: 'below', toolbar: true }}
+			globalFiltering
+			pagination={{ pageSize: 10 }}
+		/>
+	)
+}
+
 export function FilterChipsAlwaysExample() {
 	const data = useMemo(() => makeUsers(50), [])
 	return (

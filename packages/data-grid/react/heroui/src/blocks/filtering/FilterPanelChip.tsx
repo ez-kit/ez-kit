@@ -51,7 +51,10 @@ export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, childr
 					size='sm'
 					style={TRIGGER_STYLE}
 					data-slot='filter-panel-chip'
-					data-has-value={hasValue ? 'true' : 'false'}
+					// Present-or-absent, as in the shadcn kit: one flag spelled two ways across the kits
+					// (absent vs. `"false"`) makes every consumer selector and every browser test kit-
+					// specific, which is the thing these attributes exist to avoid.
+					data-has-value={hasValue || undefined}
 				>
 					<span style={LABEL_STYLE}>{label}:</span>{' '}
 					<span

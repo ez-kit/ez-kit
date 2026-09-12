@@ -1,3 +1,4 @@
+import { NO_HEADING } from './mdx-tables'
 import {
 	FORM_API_TYPE_ARGS,
 	FORM_VALUE_TYPE_ARGS,
@@ -96,6 +97,7 @@ export const DocPage = {
 	Index: 'content/docs/data-grid/index.mdx',
 	InstallationHeroui: 'content/docs/data-grid/installation/heroui.mdx',
 	InstallationShadcn: 'content/docs/data-grid/installation/shadcn.mdx',
+	KitParity: 'content/docs/data-grid/kit-parity.mdx',
 	StateServerSide: 'content/docs/data-grid/state/server-side.mdx',
 	StatePersistence: 'content/docs/data-grid/state/persistence.mdx',
 	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
@@ -432,6 +434,17 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
+		page: DocPage.KitParity,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Known divergences',
+				reason:
+					'The first column names a capability and links to its page ("Grouped headers", "`Alt+Arrow` column reordering); the other columns are per-kit support, not config keys.',
+			},
+		],
+	},
+	{
 		page: DocPage.ClientVsServer,
 		optionTables: [],
 		nonOptionTables: [
@@ -533,9 +546,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.LayoutIndex,
-		// The table sits under the page's own `# Layout` heading and names full paths
-		// from the grid config (`layout.maxHeight`, `layout.stickyHeader`, `layout.stickyFooter`).
-		optionTables: [{ heading: 'Layout', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
+		// The table opens the page, above any `##` heading, and names full paths from the
+		// grid config (`layout.maxHeight`, `layout.stickyHeader`, `layout.stickyFooter`).
+		optionTables: [{ heading: NO_HEADING, roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
 	{
@@ -551,7 +564,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.Ai,
 		optionTables: [],
-		nonOptionTables: [{ heading: 'Use with AI', reason: 'A list of documentation URLs.' }],
+		nonOptionTables: [{ heading: NO_HEADING, reason: 'A list of documentation URLs.' }],
 	},
 	{
 		page: DocPage.ColumnsCellTypes,
@@ -821,7 +834,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 3 }],
 		nonOptionTables: [
 			{
-				heading: 'Filter Variants',
+				heading: NO_HEADING,
 				reason:
 					"First column holds `variant` *values* ('inline', 'popover', 'panel'), one row each, not keys of a config object.",
 			},
@@ -888,7 +901,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// Rows are written `form.Field`, so the receiver prefix is stripped and
 			// the remainder resolved against the instance `useForm` returns.
 			{
-				heading: 'Native API',
+				heading: NO_HEADING,
 				roots: [FORM_TYPE.KitFormApi],
 				stripPrefix: FORM_RECEIVER_PREFIX,
 				expectedCount: 6,
@@ -1055,7 +1068,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.ZuAi,
 		optionTables: [],
-		nonOptionTables: [{ heading: 'Use with AI', reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
+		nonOptionTables: [{ heading: NO_HEADING, reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
 	},
 	{
 		page: DocPage.ZuCacheApi,
@@ -1168,7 +1181,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.ZuPersistParsers,
 		optionTables: [],
 		nonOptionTables: [
-			{ heading: 'Parsers', reason: 'Names the exported parser factories, called rather than passed as keys.' },
+			{ heading: NO_HEADING, reason: 'Names the exported parser factories, called rather than passed as keys.' },
 			{ heading: 'Auto-resolution', reason: 'Maps runtime types to parsers; the first column names TypeScript types.' },
 		],
 	},
@@ -1181,7 +1194,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.VaAi,
 		optionTables: [],
-		nonOptionTables: [{ heading: 'Use with AI', reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
+		nonOptionTables: [{ heading: NO_HEADING, reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
 	},
 	{
 		page: DocPage.VaCacheApi,
@@ -1323,7 +1336,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		page: DocPage.VaPersistParsers,
 		optionTables: [],
 		nonOptionTables: [
-			{ heading: 'Parsers', reason: 'Names the exported parser factories, called rather than passed as keys.' },
+			{ heading: NO_HEADING, reason: 'Names the exported parser factories, called rather than passed as keys.' },
 			{ heading: 'Auto-resolution', reason: 'Maps runtime types to parsers; the first column names TypeScript types.' },
 		],
 	},

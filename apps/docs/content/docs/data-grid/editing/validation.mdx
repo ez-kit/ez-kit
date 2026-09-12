@@ -3,8 +3,6 @@ title: Validation
 description: One validator per form — a function or a zod schema — plus when it runs and how server errors get back into the fields.
 ---
 
-# Validation
-
 Validation belongs to the form, not to the field. `editing.validate` and `creating.validate`
 each take **one** validator for the whole row, because cross-field rules ("end after start") are
 the ones that have nowhere else to live, and per-field rules express fine inside a schema.

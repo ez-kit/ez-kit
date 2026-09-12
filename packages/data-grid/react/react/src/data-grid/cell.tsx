@@ -268,9 +268,15 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	// Narrow boolean subscription. For non-target rows this remains stably `false`
 	// across any `editing` mutation → no re-render. Flips exactly once on
 	// start / cancel / commit of THIS row (or cell in cell-mode).
-	const isEditing = useDataGridState((s) =>
-		editMode === EditingMode.Cell ? s.editing.cellId === cellId : s.editing.rowId === row.id,
-	)
+	//
+	// `modal` never opens a cell. The dialog already holds the whole row's fields, and the
+	// feature sets the same `editing.rowId` whichever mode raised it — so a row-mode test here
+	// used to open the row *behind* the dialog as well, leaving two live editors bound to one
+	// set of values. shadcn hid it (Radix `aria-hidden`s the background), heroui did not.
+	const isEditing = useDataGridState((s) => {
+		if (editMode === EditingMode.Modal) return false
+		return editMode === EditingMode.Cell ? s.editing.cellId === cellId : s.editing.rowId === row.id
+	})
 
 	const isColumnEditable = meta?.editing !== false
 

@@ -3,8 +3,6 @@ title: Deep dive — storage
 description: The blob format, useHydrated() against flash/CLS, schema versioning and migrations, cross-tab sync, and graceful degradation.
 ---
 
-# Deep dive — storage
-
 The storage sources (`localStorage`, `sessionStorage`, IndexedDB) persist a store under a single key. They're ambient — no React context required to read or write — and inert on the server.
 
 ## The blob format

@@ -10,9 +10,12 @@ test.describe('Data-Grid docs section', () => {
 	test('getting-started page renders the flavor toggle', async ({ page }) => {
 		await page.goto('/docs/data-grid/getting-started')
 		await expect(page.locator('h1')).toContainText(/getting started/i)
-		await expect(page.getByRole('tablist', { name: /flavor/i })).toBeVisible()
-		await expect(page.getByRole('tab', { name: /shadcn/i })).toBeVisible()
-		await expect(page.getByRole('tab', { name: /heroui/i })).toBeVisible()
+		// Each embedded example carries its own switcher, and this page embeds two — so the
+		// assertion is about one toggle being present and complete, not about how many.
+		const flavors = page.getByRole('tablist', { name: /flavor/i }).first()
+		await expect(flavors).toBeVisible()
+		await expect(flavors.getByRole('tab', { name: /shadcn/i })).toBeVisible()
+		await expect(flavors.getByRole('tab', { name: /heroui/i })).toBeVisible()
 	})
 
 	test('sidebar lists the Data Grid section', async ({ page }) => {

@@ -3,8 +3,6 @@ title: withHistory
 description: A real Zustand middleware that adds undo / redo / goto to any store. Records actions automatically, composes with persist and subscribeWithSelector, filters writes by action tag.
 ---
 
-# `withHistory`
-
 `withHistory` is a real Zustand `StateCreator` middleware. It wraps an initializer (not a store), so it sees every write — including those issued from inside actions via the inner `set`. It exposes a separate `history` sub-store on the resulting `StoreApi<T>`, with `undo`, `redo`, `goto`, `clear`, `pause`, `resume`, and `skip`.
 
 Because it follows the canonical middleware shape and registers a `StoreMutators` entry under `'ez-kit/history'`, it composes cleanly with `persist`, `devtools`, `subscribeWithSelector`, and `immer`.

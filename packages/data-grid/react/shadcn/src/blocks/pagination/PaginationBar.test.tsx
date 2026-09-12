@@ -41,9 +41,16 @@ function makeUnknownTotalProps(overrides: Partial<PaginationProps> = {}): Pagina
 	return rest
 }
 
+/**
+ * The page numbers currently offered.
+ *
+ * Every control in this footer is a `<button>`: the block builds them out of `Button` rather
+ * than out of the vendored `PaginationLink`, whose `<a href>`-less anchor took no focus and
+ * carried no button role. A page link is the one whose text is a number.
+ */
 const pageLinks = (container: HTMLElement): string[] =>
-	Array.from(container.querySelectorAll('a'))
-		.map((a) => a.textContent)
+	Array.from(container.querySelectorAll('button'))
+		.map((control) => control.textContent)
 		.filter((t) => /^\d+$/.test(t))
 
 describe('shadcn Pagination — numbered', () => {

@@ -765,7 +765,11 @@ export type ColumnSortUndefined = (typeof ColumnSortUndefined)[keyof typeof Colu
  * ```
  */
 export type ColumnSortingConfig = {
-	/** First click sorts descending. Overrides table-level `sorting.descFirst`. */
+	/**
+	 * Force the first click to sort descending, overriding table-level `sorting.descFirst`.
+	 * Unset, the direction is inferred from the column's first value — string ascending,
+	 * anything else descending.
+	 */
 	descFirst?: boolean
 	/**
 	 * Built-in name, registry id (matches `sorting.fns`), or inline comparator.

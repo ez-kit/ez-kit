@@ -139,6 +139,13 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions,
 
 	return (
 		<ActionBar
+			// The floating bar is a selection bar first and an action bar second: `selection-bar`
+			// is what the inline variant above emits, what shadcn emits in both variants, and so
+			// what a stylesheet or a test addresses in either kit. `ActionBar` spreads incoming
+			// props over its own defaults, so this replaces the generic slot rather than adding to
+			// it; the inner `action-bar-*` parts keep their names.
+			data-slot='selection-bar'
+			data-variant='floating'
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) onClear()

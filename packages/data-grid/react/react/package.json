@@ -47,7 +47,7 @@
 		}
 	],
 	"dependencies": {
-		"@ez-kit/data-grid-core": "workspace:*",
+		"@ez-kit/data-grid-core": "workspace:^",
 		"@tanstack/react-virtual": "^3.13.23",
 		"@tanstack/table-core": "^8.21.3"
 	},

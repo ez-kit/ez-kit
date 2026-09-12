@@ -3,8 +3,6 @@ title: Active Filters
 description: The two surfaces that show what is currently filtered — a strip of removable chips and the Clear-all button — auto-mounted or placed by hand.
 ---
 
-# Active Filters
-
 Whatever [variant](/docs/data-grid/filtering/variants) the filter controls use, the grid can show
 what is filtered **right now**, apart from the controls themselves: a strip of removable chips, one
 per active filter, and a button that clears them all.
@@ -36,6 +34,8 @@ narrowing the table, not just the column filters.
 
 The strip renders above the table by default; `chips: 'below'` puts it under. The scalar **is** the
 position — the object form exists for nothing else today.
+
+<DataGridDocsExample exampleId='filter-chips-below' />
 
 The two flags are independent. `filtering: { chips: true }` alone mounts the strip and nothing
 else: each chip still removes its own filter, there is simply no button that clears them all — and

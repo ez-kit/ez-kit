@@ -168,6 +168,15 @@
 	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 40%, var(--surface-secondary));
 }
 
+/* A selected row, painted the way HeroUI paints its hover — same token, same compositing base
+ * — so selection reads as a stronger version of hover rather than as a different surface. The
+ * pinned-cell variable moves with it: a pinned cell paints its own background and would stay
+ * unselected-looking inside a selected row otherwise. */
+[data-slot='tr'][data-row-selected='true'] {
+	background-color: color-mix(in oklab, var(--surface) 70%, var(--surface-secondary));
+	--dg-pin-cell-background: color-mix(in oklab, var(--surface) 70%, var(--surface-secondary));
+}
+
 /* No `transition` on pinned cells here, deliberately — unlike shadcn (whose row carries
  * `transition-colors`), HeroUI paints `.table__cell` hover with no transition at all, so the
  * pinned column snapping instantly is what keeps it in step with the rest of the row. */
@@ -297,11 +306,11 @@
 	display: block;
 }
 
-tr[data-expanded] {
+tr[data-expanded-row] {
 	display: block !important;
 	grid-template-columns: none !important;
 }
-tr[data-expanded] > td {
+tr[data-expanded-row] > td {
 	display: block;
 	width: 100%;
 	background-color: color-mix(in oklab, var(--surface) 60%, var(--background));

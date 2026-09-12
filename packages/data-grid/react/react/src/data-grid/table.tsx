@@ -19,6 +19,11 @@ import type { CSSProperties, ReactNode } from 'react'
 
 const SCROLLING_OVERFLOWS = ['auto', 'scroll']
 
+/** Marks the resolved scrollport(s); the value lists the axes that element scrolls. */
+const SCROLLPORT_ATTR = 'data-scrollport'
+const SCROLLPORT_X = 'x'
+const SCROLLPORT_Y = 'y'
+
 function resolveScrollElement(wrapper: HTMLElement): HTMLElement {
 	const tagged = wrapper.querySelector("[data-slot='table-scroll-container']")
 	if (tagged instanceof HTMLElement) return tagged
@@ -205,6 +210,32 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 	// (handles both shadcn's inner overflow div and HeroUI's inner ScrollContainer).
 	useScrollShadows(wrapperRef, isVirtualized ? containerRef : undefined)
 
+	// One name for "the element that scrolls". Each kit builds its scrollport differently —
+	// shadcn scrolls the shared `table-scroll` div, HeroUI its own nested ScrollContainer, a
+	// virtualized grid a third element again — and the two axes are not always the same
+	// element either. The layer that already resolves them (for pin shadows and for infinite
+	// scroll) therefore stamps the winners, so CSS, tests and consumers ask one question
+	// instead of guessing per kit: `[data-scrollport~='x']` and `[data-scrollport~='y']`.
+	useEffect(() => {
+		const wrapper = wrapperRef.current
+		if (!wrapper) return
+		const horizontal = isVirtualized ? containerRef.current : resolveScrollElement(wrapper)
+		const scrollRoot = isVirtualized ? containerRef.current : scrollRef.current
+		const vertical = scrollRoot === null || isVirtualized ? scrollRoot : resolveVerticalScrollElement(scrollRoot)
+
+		const axes = new Map<HTMLElement, string[]>()
+		if (horizontal !== null) axes.set(horizontal, [SCROLLPORT_X])
+		if (vertical !== null) axes.set(vertical, [...(axes.get(vertical) ?? []), SCROLLPORT_Y])
+		for (const [element, list] of axes) element.setAttribute(SCROLLPORT_ATTR, list.join(' '))
+
+		return () => {
+			for (const element of axes.keys()) element.removeAttribute(SCROLLPORT_ATTR)
+		}
+		// wrapperRef, scrollRef and containerRef are stable refs; isVirtualized never changes
+		// after mount. Sticky mode can move the vertical bound onto a kit's own container.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [gridTemplateColumns, isStickyHeader, isStickyFooter])
+
 	// Re-evaluate shadow state immediately when column layout changes (pin/unpin, resize)
 	// so shadows update without requiring a scroll event.
 	useEffect(() => {
@@ -254,6 +285,11 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 	const tableEl = (
 		<Table
 			data-slot='table'
+			// `grid.label` is documented as "accessible name of the table element", so
+			// it is written here rather than left to each kit: the heroui adapter sets the same
+			// string on React Aria's grid (and keeps doing so), while shadcn renders the bare
+			// `<table>`, which had no name at all until this line.
+			aria-label={table.grid.messages.grid.label}
 			{...(isVirtualized ? { 'data-virtualized': 'true' } : {})}
 			style={
 				{

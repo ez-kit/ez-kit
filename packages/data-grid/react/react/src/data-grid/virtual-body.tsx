@@ -30,7 +30,7 @@ const LOAD_MORE_ALLOWANCE_PX = 56
  *
  * Each virtual row receives runtime `transform: translateY(start)` and `height`
  * inline styles — values come from the virtualizer and cannot move to CSS — plus
- * a `data-slot="virtual-row"` for the structural CSS that sets
+ * a `data-virtual="row"` for the structural CSS that sets
  * `position: absolute; left: 0; top: 0; width: 100%`. The explicit height makes
  * the row fill exactly the slot the virtualizer reserved for it: nothing measures
  * the rows back, so a kit whose natural row height differs from `estimateSize`
@@ -135,7 +135,10 @@ export function VirtualBody() {
 					data-virtual='load-more'
 					style={{ transform: `translateY(${String(totalSize)}px)` }}
 				>
-					<Td colSpan={columnCount}>
+					<Td
+						data-slot='td'
+						colSpan={columnCount}
+					>
 						<LoadMoreRow
 							columnCount={columnCount}
 							direction='forward'

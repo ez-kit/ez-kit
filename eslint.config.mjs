@@ -128,6 +128,15 @@ export default tseslint.config(
 		},
 	},
 	{
+		// Playwright specs are not React: a fixture's second argument is `use` by convention,
+		// which `react-hooks/rules-of-hooks` reads as React's `use` hook called outside a
+		// component. No React runs in this directory at all, so the plugin has nothing to say.
+		files: ['apps/docs/e2e/**/*.ts'],
+		rules: {
+			'react-hooks/rules-of-hooks': 'off',
+		},
+	},
+	{
 		files: ['apps/docs/**/*.{js,jsx,ts,tsx}'],
 		plugins: {
 			'@next/next': nextPlugin,

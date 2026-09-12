@@ -179,9 +179,12 @@ export function Tr({ children, ...props }: TrProps) {
 	const maybeRowId = propsWithData.id ?? propsWithData['data-row-id']
 	const rowId =
 		typeof maybeRowId === 'symbol' ? undefined : typeof maybeRowId === 'bigint' ? String(maybeRowId) : maybeRowId
-	const { 'data-row-id': _dataRowId, ...rest } = propsWithData
-	const heroProps = rest as unknown as ComponentProps<typeof HeroTable.Row>
+	const heroProps = propsWithData as unknown as ComponentProps<typeof HeroTable.Row>
 
+	// `data-row-id` is passed through, not consumed: React Aria needs the value as its
+	// collection `id` (it surfaces as `data-key`), but the attribute itself is part of the
+	// react layer's row contract — see `row.tsx` — and a kit that swallows it breaks any CSS
+	// or test written against `[data-row-id]` for that kit alone.
 	return (
 		<HeroTable.Row
 			{...heroProps}

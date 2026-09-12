@@ -3,8 +3,6 @@ title: Capabilities
 description: The two extension seams a zu-store store has — Zustand's own middleware, and a lifecycle-bound capability attached to the store handle that createContextStore sets up and tears down around the Provider.
 ---
 
-# Capabilities
-
 A `zu-store` store is extended in two places, and which one a wrapper uses follows from what it needs.
 
 - **A Zustand middleware** wraps the _initializer_ and changes how writes work. It is Zustand's own seam, it runs at `createStore` time, and it has no notion of mounting. [`withHistory`](./history) is one: it has to intercept every `set` to record it.

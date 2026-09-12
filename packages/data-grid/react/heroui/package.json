@@ -47,7 +47,7 @@
 		}
 	],
 	"dependencies": {
-		"@ez-kit/data-grid-react": "workspace:*",
+		"@ez-kit/data-grid-react": "workspace:^",
 		"@internationalized/date": "^3.5.0",
 		"lucide-react": "^0.577.0"
 	},

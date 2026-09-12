@@ -3,8 +3,6 @@ title: Migrating from createPersistStore
 description: createPersistStore and createPersistFields are gone — persist is now the withPersist capability. The same fields, decorators, codecs, and adapters carry over unchanged; only the store factory and provider change.
 ---
 
-# Migrating from `createPersistStore`
-
 Persistence is now a **capability** attached to the proxy itself, not a bespoke store factory. The dedicated `createPersistStore` and `createPersistFields` factories are removed; instead you wrap the proxy in [`withPersist`](../persist) inside [`createContextStore`](../create-context-store)'s factory — or a cached [`createCachedStore`](../cache)'s factory.
 
 **Everything else is unchanged** — `@persistUrl()` / `@persistLocalStorage()` / `@persistField()` decorators, the accessor builder (`urlField()`, `localStorageField()`, …), all codecs, every adapter (`localStorageAdapter`, `indexedDbAdapter`, the URL adapters), `useHydrated`, and the `$url` / `$persist` handles. Only the store factory and the top-level provider move.

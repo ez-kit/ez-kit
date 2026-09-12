@@ -232,6 +232,14 @@
 		"exportName": "FilterChipsOnlyExample"
 	},
 	{
+		"id": "filter-chips-below",
+		"label": "Active chips · Below the table",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-chips.tsx",
+		"exportName": "FilterChipsBelowExample"
+	},
+	{
 		"id": "filter-chips-always",
 		"label": "Active chips · Always show clear",
 		"group": "filtering",

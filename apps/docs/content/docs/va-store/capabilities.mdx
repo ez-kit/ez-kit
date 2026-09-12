@@ -3,8 +3,6 @@ title: Capabilities
 description: The one extension seam every capability shares — attach behavior to the proxy in the factory, and createContextStore runs its setup and cleanup around the Provider's lifetime.
 ---
 
-# Capabilities
-
 There is exactly one extension seam: a **capability** attached to the proxy itself, in the factory. `createContextStore` (and [`createCachedStore`](./cache)) never take a `plugins` option — they discover whatever a `with*` wrapper attached to the instance and run it for you.
 
 ```tsx

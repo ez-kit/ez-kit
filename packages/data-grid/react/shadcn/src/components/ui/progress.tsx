@@ -9,6 +9,12 @@ function Progress({ className, value, ...props }: React.ComponentProps<typeof Pr
 	return (
 		<ProgressPrimitive.Root
 			data-slot='progress'
+			// Upstream shadcn destructures `value` for the indicator's transform and never hands it
+			// back to the root, so Radix renders `data-state="indeterminate"` with no
+			// `aria-valuenow` — the bar looks right and announces nothing. Forwarded here rather
+			// than patched around in `blocks/`, because the missing attribute is on the element
+			// that carries `role="progressbar"`, and only the root can set it.
+			value={value}
 			className={cn('relative flex h-1 w-full items-center overflow-x-hidden rounded-full bg-muted', className)}
 			{...props}
 		>

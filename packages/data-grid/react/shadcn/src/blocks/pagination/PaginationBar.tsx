@@ -1,22 +1,62 @@
 'use client'
 
 import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react'
-import { ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react'
+import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react'
 
+import { Button } from '@grid-shadcn/components/ui/button'
 import {
 	Pagination as ShadcnPagination,
 	PaginationContent,
 	PaginationEllipsis,
-	PaginationLink,
 	PaginationItem,
-	PaginationPrevious,
-	PaginationNext,
 } from '@grid-shadcn/components/ui/pagination'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
+import type { ComponentProps, ReactNode } from 'react'
 
-const DISABLED_CLASS = 'pointer-events-none opacity-50'
 const LABEL_CLASS = 'flex items-center text-sm text-muted-foreground'
+
+type ControlProps = {
+	children: ReactNode
+	isDisabled?: boolean
+	isActive?: boolean
+	/** Overrides the control's `data-slot`; page numbers and edge jumps keep the default. */
+	slotName?: string
+} & Omit<ComponentProps<typeof Button>, 'asChild' | 'disabled' | 'variant'>
+
+/**
+ * One page control.
+ *
+ * Deliberately **not** the vendored `PaginationLink`: upstream shadcn's pagination navigates by
+ * href, so its control is an `<a>`, and this grid pages by `onClick` and passes no href. An
+ * `<a>` without one computes to the generic role and takes no focus — the controls were
+ * unreachable by keyboard, unannounced as buttons, and "disabled" only as `aria-disabled` plus
+ * `pointer-events: none`, which no assistive technology reads off a generic element.
+ *
+ * A real `<button>` fixes all of that and matches what the heroui kit already renders, so one
+ * selector and one screen-reader experience now cover both. The wrapper primitives
+ * (`Pagination`, `Content`, `Item`, `Ellipsis`) are still the vendored ones — per the rule,
+ * this override lives here rather than in `components/ui/**`.
+ *
+ * `disabled` is the native attribute, and `Button`'s base class already carries
+ * `disabled:pointer-events-none disabled:opacity-50`, so the look is unchanged.
+ */
+function PaginationControl({ children, isDisabled = false, isActive = false, slotName, ...props }: ControlProps) {
+	return (
+		<Button
+			type='button'
+			variant={isActive ? 'outline' : 'ghost'}
+			disabled={isDisabled}
+			// Present-or-absent rather than `data-active="false"`, as heroui writes it: one flag
+			// with two spellings makes every selector over it kit-specific.
+			{...(isActive ? { 'data-active': 'true', 'aria-current': 'page' as const } : {})}
+			data-slot={slotName ?? 'pagination-link'}
+			{...props}
+		>
+			{children}
+		</Button>
+	)
+}
 
 export function Pagination({
 	links,
@@ -52,30 +92,41 @@ export function Pagination({
 			data-links={links || undefined}
 			data-edges={edges || undefined}
 		>
-			{label !== undefined && <span className={LABEL_CLASS}>{label}</span>}
+			{/* Named `pagination-summary` after heroui's `Pagination.Summary`, which carries that slot
+			    of its own: the footer's text is one thing, and a consumer or a browser test should
+			    not have to know which kit it is reading it out of. */}
+			{label !== undefined && (
+				<span
+					data-slot='pagination-summary'
+					className={LABEL_CLASS}
+				>
+					{label}
+				</span>
+			)}
 			<PaginationContent>
 				{edges && (
 					<PaginationItem>
-						<PaginationLink
+						<PaginationControl
+							size='icon'
 							aria-label={messages.pagination.first}
-							aria-disabled={!canPreviousPage}
-							className={canPreviousPage ? undefined : DISABLED_CLASS}
-							onClick={canPreviousPage ? onFirstPage : undefined}
+							isDisabled={!canPreviousPage}
+							onClick={onFirstPage}
 						>
 							<ChevronsLeftIcon />
-						</PaginationLink>
+						</PaginationControl>
 					</PaginationItem>
 				)}
 				<PaginationItem>
-					<PaginationPrevious
-						// The vendored primitive defaults both to English; a block overrides them by
-						// prop rather than by editing `components/ui/**`.
-						text={messages.pagination.previous}
+					<PaginationControl
+						slotName='pagination-previous'
+						className='pl-1.5!'
 						aria-label={messages.pagination.previous}
-						aria-disabled={!canPreviousPage}
-						className={canPreviousPage ? undefined : DISABLED_CLASS}
-						onClick={canPreviousPage ? onPreviousPage : undefined}
-					/>
+						isDisabled={!canPreviousPage}
+						onClick={onPreviousPage}
+					>
+						<ChevronLeftIcon data-icon='inline-start' />
+						<span className='hidden sm:block'>{messages.pagination.previous}</span>
+					</PaginationControl>
 				</PaginationItem>
 				{pages.map((page, slot) =>
 					page === PAGE_GAP ? (
@@ -84,36 +135,40 @@ export function Pagination({
 						</PaginationItem>
 					) : (
 						<PaginationItem key={page}>
-							<PaginationLink
+							<PaginationControl
+								size='icon'
 								isActive={page === pageIndex}
 								onClick={() => {
 									onPageChange(page)
 								}}
 							>
 								{page + 1}
-							</PaginationLink>
+							</PaginationControl>
 						</PaginationItem>
 					),
 				)}
 				<PaginationItem>
-					<PaginationNext
-						text={messages.pagination.next}
+					<PaginationControl
+						slotName='pagination-next'
+						className='pr-1.5!'
 						aria-label={messages.pagination.next}
-						aria-disabled={!canNextPage}
-						className={canNextPage ? undefined : DISABLED_CLASS}
-						onClick={canNextPage ? onNextPage : undefined}
-					/>
+						isDisabled={!canNextPage}
+						onClick={onNextPage}
+					>
+						<span className='hidden sm:block'>{messages.pagination.next}</span>
+						<ChevronRightIcon data-icon='inline-end' />
+					</PaginationControl>
 				</PaginationItem>
 				{edges && (
 					<PaginationItem>
-						<PaginationLink
+						<PaginationControl
+							size='icon'
 							aria-label={messages.pagination.last}
-							aria-disabled={!canNextPage}
-							className={canNextPage ? undefined : DISABLED_CLASS}
-							onClick={canNextPage ? onLastPage : undefined}
+							isDisabled={!canNextPage}
+							onClick={onLastPage}
 						>
 							<ChevronsRightIcon />
-						</PaginationLink>
+						</PaginationControl>
 					</PaginationItem>
 				)}
 			</PaginationContent>
