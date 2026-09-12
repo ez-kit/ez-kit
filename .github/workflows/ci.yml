@@ -47,3 +47,59 @@ jobs:
 
       - name: Size
         run: pnpm size
+
+  e2e:
+    # The browser suite, sharded by Playwright project: one job for the docs site itself and one
+    # per UI kit. Sharding is by project rather than by worker because the config runs
+    # `workers: 1` on purpose — several of these specs measure geometry (sticky offsets, column
+    # widths after a resize, scroll positions), and parallel workers on a shared runner make
+    # those measurements disagree with themselves. Three jobs side by side keep the wall clock
+    # down without putting two browsers on one CPU.
+    #
+    # Not run on the release PR: `develop -> main` carries the tree `develop` just gated, and
+    # `main` receives nothing else, so a second browser suite there re-measures the same commit.
+    # `verify` still runs on that PR — it is the gate in front of `changeset publish`.
+    if: github.base_ref != 'main'
+    name: e2e (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    strategy:
+      # One kit failing is a fact worth having about the other; don't cancel its sibling.
+      fail-fast: false
+      matrix:
+        project: [docs, shadcn, heroui]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        # Only the browser these projects use. `--with-deps` pulls the system libraries the
+        # runner image does not ship.
+        run: pnpm --filter @ez-kit/docs exec playwright install --with-deps chromium
+
+      - name: Build docs
+        # Builds the workspace packages and the shadcn registry, then `next build` — the
+        # production server the Playwright config starts in CI needs the output to exist.
+        run: pnpm --filter @ez-kit/docs build
+
+      - name: Run
+        run: pnpm --filter @ez-kit/docs exec playwright test --project=${{ matrix.project }} --grep-invert @smoke
+
+      - name: Upload report
+        # The failure's own evidence: the HTML report carries the screenshot and the trace
+        # Playwright records on a retry, which is the difference between reading a CI failure
+        # and reproducing it.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: apps/docs/playwright-report
+          retention-days: 7

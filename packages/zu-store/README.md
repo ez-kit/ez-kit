@@ -1,6 +1,7 @@
 # @ez-kit/zu-store
 
-Zustand utilities for React — context-scoped stores and ergonomic field bindings.
+Zustand utilities for React — context-scoped stores, ergonomic field bindings, undo/redo, a keep-alive
+store cache, and a persist capability that mirrors state to the URL or storage.
 
 ## Install
 
@@ -12,9 +13,9 @@ pnpm add @ez-kit/zu-store zustand
 
 ### `createContextStore(factory)`
 
-Wraps a Zustand store in React context. Returns `Provider`, `useSelector`, `useShallowSelector`, `useStore`, and `Subscribe`. Multiple `Provider` instances are fully independent.
+Wraps a Zustand store in React context. Returns `Provider`, `useSelector`, `useShallowSelector`, `useStore`, `Subscribe`, and `Store`. Multiple `Provider` instances are fully independent.
 
-Reads go through `useSelector(selector)` (or `useShallowSelector` for object/array selections); `useStore()` hands back the raw `StoreApi` without subscribing the caller. `Subscribe` is the render-prop form of `useSelector`, and takes `shallow` for the same object/array case.
+Reads go through `useSelector(selector)` (or `useShallowSelector` for object/array selections); `useStore()` hands back the raw `StoreApi` without subscribing the caller. `Subscribe` is the render-prop form of `useSelector` — it takes `shallow` for the same object/array case, and hands the raw handle to its children as a second argument. `Store` is its write-only counterpart: the handle without a subscription, so store writes never re-render it.
 
 ```tsx
 const counterStore = createContextStore(({ defaultValue }: ContextStoreInit<{ count?: number }>) =>
@@ -81,7 +82,7 @@ usersTable.getFromCache({ path: ['page-1'], id: 'users' })?.setState({ filter: '
 
 Need an isolated cache or a custom default `gcTime`? Build your own with `createStoreCache({ gcTime })` — same surface, as instance members (`cache.Provider`, `cache.Scope`, `cache.useCache`, `cache.useCacheKeys`, `cache.createCachedStore`).
 
-→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/store-cache)
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/cache)
 
 ---
 
@@ -115,4 +116,75 @@ Avoid `useStore(store.history)` without a selector — it re-renders on every re
 
 For per-call history suppression — both from external `setState` and from inside actions — use `store.history.getState().skip(fn)`.
 
-→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/with-history)
+History is also available on its own subpath, `@ez-kit/zu-store/history`, for a bundle that pulls in
+nothing else from the package.
+
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/history)
+
+---
+
+### Persist
+
+Mirror a store into an external substrate — the URL, `localStorage`/`sessionStorage`, IndexedDB, or your
+own — and back, in both directions. The store stays the **synchronous** source of truth; the substrate is
+a throttled, rehydratable projection of it.
+
+One source-agnostic engine drives every substrate. Its only interchange language is
+`Keyed = Map<string, string>`; a **source adapter** teaches the engine how to read and write one
+substrate through a tiny port (`get` / `set` / optional `subscribe`). Codecs, key naming, throttling,
+loop-breaking, and hydration are shared, so a single field can sync to two substrates at once and async
+sources (IndexedDB) never stall the synchronous URL.
+
+```tsx
+import { createContextStore, pipe, StoreProvider } from '@ez-kit/zu-store'
+import { paramString, withPersist } from '@ez-kit/zu-store/persist'
+import { localStorageAdapter } from '@ez-kit/zu-store/persist/storage'
+import { reactRouterAdapter } from '@ez-kit/zu-store/persist/url/react-router'
+import { createStore } from 'zustand/vanilla'
+
+type Filters = { q: string; density: string }
+
+// Persistence is a capability attached to the store handle in the factory. Request-scoped, SSR-correct.
+const filtersStore = createContextStore(() =>
+	pipe(
+		createStore<Filters>()(() => ({ q: '', density: 'comfortable' })),
+		withPersist({
+			fields: (field) => [
+				field((state) => state.q, { source: 'url', parser: paramString() }),
+				field((state) => state.density, { source: 'localStorage', parser: paramString() }),
+			],
+		}),
+	),
+)
+
+function Page() {
+	return (
+		<StoreProvider persist={[reactRouterAdapter, localStorageAdapter()]}>
+			<filtersStore.Provider>
+				<FiltersView />
+			</filtersStore.Provider>
+		</StoreProvider>
+	)
+}
+```
+
+Read with `useSelector()`, write through the handle from `useStore()`. Storage adapters are inert on the
+server; gate on `useHydrated(store)` when the post-hydration fill would cause a flash. `withPersist`
+widens the handle with the typed `$url` / `$persist` control handles, and a multi-field hydration lands
+as a **single** `setState`, so selectors are notified once.
+
+It composes with [`withHistory`](#withhistoryinitializer-options) — `pipe(createStore()(withHistory(init)), withPersist())`,
+history innermost, so hydration is recorded (or paused) like any other write.
+
+Subpaths (optional peers, install only what you use):
+
+| Import                                      | Peer              |
+| ------------------------------------------- | ----------------- |
+| `@ez-kit/zu-store/persist`                  | — (zero-dep core) |
+| `@ez-kit/zu-store/persist/url`              | — (zero-dep core) |
+| `@ez-kit/zu-store/persist/storage`          | — (zero-dep core) |
+| `@ez-kit/zu-store/persist/url/react-router` | `react-router`    |
+| `@ez-kit/zu-store/persist/url/next`         | `next`            |
+| `@ez-kit/zu-store/persist/validators/zod`   | `zod`             |
+
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/zu-store/persist)

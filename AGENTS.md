@@ -49,6 +49,15 @@ and move on.
 - **`ColumnMeta` fields carry the name of the column option they hold.** `pinning`, `align`,
   `cell`, `filtering`, `editing`, `creating`, `visibility`. A resolved value never gets a third
   spelling (it was `cellType` / `config` / `cellView` for the three halves of `cell`).
+- **`placement` names a region; `position` names a spot on an axis.** `filtering.chips.position`
+  is `'above'` / `'below'` — where the strip sits relative to the table. `filtering.panel.placement`
+  and `pagination.pageSizer.placement` are `'toolbar'` / `'footer'` / `'above'` — which container
+  holds the control. Both take the scalar-or-object form, and the scalar **is** the value.
+- **A control with two homes is named for itself, not for a container.** `sorting.toolbar`,
+  `visibility.toolbar`, `globalFiltering.toolbar` and `filtering.toolbar` keep the one word for
+  "auto-mount my control into the toolbar" because those controls can live nowhere else.
+  `pagination.pageSizer` replaced `pagination.toolbar` when the page sizer gained a footer
+  placement: `toolbar: true, placement: 'footer'` is a config contradicting itself.
 - **The three system columns are configured like columns.** `selection.column`,
   `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
   `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the
@@ -136,6 +145,22 @@ The `version` job's PR bot uses the `CHANGESETS_TOKEN` PAT because the org block
 the default token from creating PRs. Local manual release stays possible with
 `pnpm changeset` / `pnpm version-packages` / `pnpm release`.
 
+**`@ez-kit/data-grid-shadcn` never goes in a changeset.** The kit ships as a shadcn registry item,
+not an npm package, so it is `private` and listed in `.changeset/config.json`'s `ignore` — and
+changesets refuses a changeset that names an ignored package beside a released one, failing the
+`version` job _after_ the merge, where it quietly stops the release PR from being written. A
+changeset naming only ignored packages is the mirror image: `version` neither consumes nor reports
+it, so it sits in `.changeset/` forever. `scripts/check-changesets.mjs` (first steps of `pnpm lint`,
+beside `check-site-url.mjs`) fails on both, so the PR that writes one finds out. A change to the
+shadcn kit that is worth a release note belongs on the package it is visible through — usually
+`@ez-kit/data-grid-react`, or `@ez-kit/docs`, which serves the registry JSON.
+
+The release PR (`develop → main`) re-runs `verify`, but **not** `e2e` (`if: github.base_ref !=
+'main'` in `ci.yml`): it carries exactly the tree `develop` just gated, and `main` receives nothing
+else, so a second three-job browser suite there re-measures the same commit. `verify` stays because
+it is the last gate in front of `changeset publish`; it is also the only check `main`'s branch
+protection requires.
+
 ## Architecture
 
 This is a **pnpm + Turborepo monorepo** of ESM-only React utility libraries.
@@ -191,10 +216,30 @@ Two consequences worth keeping:
 - **The port lives on the binding, not on the engine.** One engine per source is mounted app-wide, and
   the stores connected to it may come from different managers — so a Valtio and a Zustand store can
   share the URL in one tree.
-- **Consumers never import `@ez-kit/store-persist`.** Each binding package re-exports the entire
+- **Consumers never import `@ez-kit/store-persist`.** Each binding package re-exports the consumer
   surface with its own port pre-bound (`@ez-kit/va-store/persist*`, `@ez-kit/zu-store/persist*`), so
   there is exactly one import path per app. The only typed wrapper each binding writes itself is
   `withPersist`, because only it knows how to get from a store handle to its state type.
+- **That does not make the re-exported API internal.** What a binding re-exports is public in effect,
+  so a breaking change to the engine is a breaking change to every binding that re-exports it, and
+  ships as a major in each of them. The four store packages (`store-core`, `store-persist`,
+  `zu-store`, `va-store`) nonetheless **version independently** — they reached 1.0 together and go
+  their own way from there, so a feature in one binding does not bump the other, and an engine fix
+  does not bump a binding it did not change. Do not add a changesets `fixed`/`linked` group for them,
+  and do not read two matching version numbers as a compatibility statement: the binding's own
+  dependency range on `store-core` / `store-persist` is what says which versions pair.
+- **`@ez-kit/store-persist/internals` is the exception, and is NOT re-exported.** It holds the
+  engine's assembly primitives (`createPersistEngine`, `createBinding`, `applyPersist`,
+  `attachHandles`, `resolveFieldSpecs`, the handle symbols, …) — the pieces a _binding_ is built
+  from. Binding a new state manager is not a supported extension point yet, so those names carry no
+  semver promise and only this repo's own tests import them. Do not re-add a `./persist/internals`
+  subpath to a binding: it was removed deliberately, since it committed us to 22 engine-level names
+  with no documented consumer.
+
+  This is unrelated to writing a **custom source adapter**, which is fully public and documented:
+  implement `SourcePort` (`get` / `set` / optional `subscribe` over `Keyed`) and ship it as an
+  `AmbientAdapter` or a `RenderScopedAdapter`. Every type for that is on the binding's `persist`
+  entry — see `apps/docs/content/docs/*/persist/custom-adapter.mdx`.
 
 ### Package conventions
 
@@ -205,8 +250,15 @@ Two consequences worth keeping:
 - Built with `tsup` → ESM output + `.d.ts` declarations into `dist/`
 - Each package extends `tsconfig.base.json` and uses `@/*` → `src/*` path alias
 - Tests live in `src/**/*.test.ts(x)` or `test/**/*.test.ts(x)`, run with Vitest in jsdom
-- Each package has a `size-limit` budget enforced in CI. The generator seeds 3 KB; every package then
-  tunes it to roughly its real size plus headroom, so a regression actually fails the check
+- Each package has a `size-limit` budget enforced in CI, tuned to roughly its real size plus ~15%
+  headroom so a regression actually fails the check. **Every entry `ignore`s the package's own
+  runtime `dependencies`**, so the number is the package's own code: a budget that counted
+  dependencies answered "how heavy is our dependency tree" and could be blown by someone else's
+  release — `@tanstack/table-core` shipping a minor would have failed CI in an unrelated PR. Peer
+  dependencies (`react`, `@heroui/*`, `zustand`, …) are excluded by `size-limit` itself, so they
+  never counted. A workspace package that depends on another (`data-grid-react` → `data-grid-core`)
+  ignores it too — that one has its own budget, and counting it twice hides where growth happened.
+  When adding a dependency, add it to the entry's `ignore` list
 - Packages declare `"sideEffects": false`
 
 ### The public origin lives in one place
@@ -238,27 +290,37 @@ copy is worse than no copy: it reads as authoritative while naming exports that 
 
 **One file may hold several examples** — the manifest maps each `id` to a `sourceFile` **and** an `exportName`, so several ids can share one file (e.g. `filter-chips.tsx` exports the auto/always/custom variants). Examples are declared as `export function <Name>Example()`; that convention is load-bearing for both the registry lookup and the source panel.
 
-**Documented option names are type-checked** — `apps/docs/test/docs-option-names.test.ts` (helpers in `apps/docs/test/docs-options/`) resolves every option name in the data-grid and form docs' markdown option tables against the **real** exported types, via `ts.TypeChecker.getPropertiesOfType()` on a `ts.Program` built from `apps/docs/tsconfig.json`. Deliberately **not** a grep: `enableSorting`, `enableColumnFilters`, `enableRowSelection` and `manualPagination` all appear literally in `packages/data-grid/core/src/create-table.ts` (the core sets them as _internal_ TanStack options) while being illegal in the public config, so a substring check would bless exactly the defect class this test exists to catch. A fabricated name on a mapped page fails CI with file:line, the bogus name, the legal keys of the governing type, and a "did you mean". Package exports resolve to `./dist`, so the data-grid and form packages must be **built** before the test runs — the turbo `test` task's `dependsOn: ["^build"]` already enforces that.
+**Documented option names are type-checked** — `apps/docs/test/docs-option-names.test.ts` (helpers in `apps/docs/test/docs-options/`) resolves every option name in the data-grid, form, zu-store and va-store docs' markdown option tables against the **real** exported types, via `ts.TypeChecker.getPropertiesOfType()` on a `ts.Program` built from `apps/docs/tsconfig.json`. Deliberately **not** a grep: `enableSorting`, `enableColumnFilters`, `enableRowSelection` and `manualPagination` all appear literally in `packages/data-grid/core/src/create-table.ts` (the core sets them as _internal_ TanStack options) while being illegal in the public config, so a substring check would bless exactly the defect class this test exists to catch. A fabricated name on a mapped page fails CI with file:line, the bogus name, the legal keys of the governing type, and a "did you mean". Package exports resolve to `./dist`, so the data-grid, form and store packages must be **built** before the test runs — the turbo `test` task's `dependsOn: ["^build"]` already enforces that.
 
-Coverage over the data-grid docs is **total**: the explicit page → type map in
-`apps/docs/test/docs-options/page-type-map.ts` lists every page under `content/docs/data-grid/**`
-(52 today) plus the four `form/` pages that carry an option table, keyed by file path **plus the
-heading above each table** so multiple tables in one file map independently — 56 pages / 61 option
-tables / 340 checked names, of which 19 pages carry no option table and get an entry with two empty
-arrays. Those empty entries are the point: while coverage was partial, an unmapped page was checked
-by nothing, and the two worst pages in the docs were unmapped ones — `columns/resizing.mdx`
-documented a `sizing` option that never existed, and the whole `editing/**` section documented a
-`meta.editType` / `onCellEdit` API that never existed. An `everyPageIsMapped` guard now fails the
-moment a page is added to `DocPage` without being classified. `form/index.mdx` and `form/ai.mdx` are
-deliberately unmapped: every table on them documents exported symbols or URLs, so an entry would
-check nothing. To add a page: verify its tables against the real types by hand, add the path to
-`DocPage`, and add a `PAGE_ENTRIES` entry classifying **every** table on the page as either an
-`optionTables` entry (governing type + expected name count) or a `nonOptionTables` entry (with a
-reason) — an unclassified table fails the test, as does a table whose checked-name count drifts from
-what's recorded. Rows that intentionally document a non-key (e.g. the literal `false` a per-column
-slot accepts) go in `OPTION_EXCEPTIONS`, each with its reason.
+Coverage over the documented packages is **total**: the explicit page → type map in
+`apps/docs/test/docs-options/page-type-map.ts` classifies every page under the four scanned roots —
+`content/docs/data-grid/**`, `form/**`, `zu-store/**` and `va-store/**` — keyed by file path **plus
+the heading above each table** so multiple tables in one file map independently: 114 pages / 90
+option tables / 430 checked names today, of which the store packages contribute 43 pages / 24 tables
+/ 67 names. Pages with no option table still get an entry with two empty arrays, and that is the
+point: while coverage was partial, an unmapped page was checked by nothing, and the two worst pages
+in the docs were unmapped ones — `columns/resizing.mdx` documented a `sizing` option that never
+existed, and the whole `editing/**` section documented a `meta.editType` / `onCellEdit` API that
+never existed. Two guards keep the hole shut: the test **walks the scanned roots on disk** and fails
+on any `.mdx` that is in neither `DocPage` nor `DELIBERATELY_UNMAPPED` (so the map cannot fall behind
+the docs tree), and `everyPageIsMapped` fails the moment a listed page carries no `PAGE_ENTRIES`
+entry. `form/index.mdx` and `form/ai.mdx` are the only deliberate exemptions: every table on them
+documents exported symbols or URLs, so an entry would check nothing.
 
-**Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false` — the heroui bundle contains a dynamic `require` that RSC/Turbopack cannot run during SSR, so both kits deliberately share the one client-rendered path rather than letting shadcn SSR and heroui silently fall back.
+The store pages read their types **through the binding a consumer imports** (`@ez-kit/zu-store`,
+`@ez-kit/va-store` and their `/persist` subpaths), not through `@ez-kit/store-core` — that is what
+`apps/docs` depends on, and it is what the docs tell a reader to import. Note the two bindings'
+generic vocabulary differs, which the map encodes: `zu-store` types are generic over the Zustand
+**handle** (`STORE_TYPE_ARGS`), `va-store` types over the **state** object (`STATE_TYPE_ARGS`).
+
+To add a page: verify its tables against the real types by hand, add the path to `DocPage`, and add a
+`PAGE_ENTRIES` entry classifying **every** table on the page as either an `optionTables` entry
+(governing type + expected name count) or a `nonOptionTables` entry (with a reason) — an
+unclassified table fails the test, as does a table whose checked-name count drifts from what's
+recorded. Rows that intentionally document a non-key (the literal `false` a per-column slot accepts,
+a cache method written with its call signature) go in `OPTION_EXCEPTIONS`, each with its reason.
+
+**Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false`, so both kits share one path rather than letting shadcn SSR and heroui silently fall back. The reason originally given for that — a dynamic `require` in the heroui bundle that RSC could not run on the server — is **no longer true** and was corrected on 2026-09-11: `@heroui/react@3.0.3` contains no `require(` at all, and a page rendering the heroui grid through the normal server path prerenders at build time (`next build` marks it `○`, and the emitted HTML carries the full `<table>` and every row). Note `'use client'` was never the mechanism either way: a client component is still prerendered on the server, so the directive cannot skip an SSR a component could not survive. What remains is a choice about the docs — one code path for both kits — not a limitation of the heroui kit, and dropping `ssr: false` is now a live option rather than a blocked one.
 
 ### TypeScript
 

@@ -10,6 +10,8 @@ const SLICE_KIND: Record<PersistableStateKey, 'array' | 'object' | 'expanded' | 
 	pagination: 'object',
 	rowSelection: 'object',
 	columnVisibility: 'object',
+	// A list of column ids, in order — the one column slice that is not a record.
+	columnOrder: 'array',
 	columnPinning: 'object',
 	rowPinning: 'object',
 	expanded: 'expanded',

@@ -1,9 +1,11 @@
 import { CreatingMode } from '@ez-kit/data-grid-core'
 
 import { useGridComponents } from '../components-context'
+import { FilterPanelPlacement, PageSizerPlacement } from '../types'
 
 import { ClearFiltersButton } from './clear-filters-button'
 import { CreateTrigger } from './create-trigger'
+import { FilterPanel } from './filter-panel'
 import { GlobalFilterInput } from './global-filter-input'
 import { PageSizer } from './page-sizer'
 import { SortMenuTrigger } from './sort-menu-trigger'
@@ -43,8 +45,9 @@ export type DataGridToolbarProps = {
  * Toolbar area above the table.
  *
  * With no props it renders the auto-mounted defaults:
- * - PageSizer in the leading slot when `pagination.toolbar` resolves on (which it does by
+ * - PageSizer in the leading slot when `pagination.pageSizer` resolves to that placement (which it does by
  *   default as soon as `pagination.items` is set)
+ * - the filter panel's chips in the leading slot when `filtering.panel` places them there
  * - global search / Clear filters / "+ Add" / sort builder / column visibility in the trailing
  *   slot, each gated by its own feature flag
  *
@@ -64,7 +67,8 @@ export function Toolbar({ children, start: extraStart, end: extraEnd }: DataGrid
 	const hasVisibilityToolbar = Boolean(grid.visibility?.toolbar)
 	const hasSortingToolbar = Boolean(grid.sorting?.toolbar)
 
-	const hasPageSizerToolbar = grid.pagination.toolbar
+	const hasPageSizerToolbar = grid.pagination.pageSizer?.placement === PageSizerPlacement.Toolbar
+	const hasFilterPanelToolbar = grid.filtering.panel?.placement === FilterPanelPlacement.Toolbar
 	const hasGlobalFilterToolbar = Boolean(grid.globalFiltering?.toolbar)
 	const hasClearButtonToolbar = grid.filtering.toolbar !== undefined
 
@@ -72,14 +76,15 @@ export function Toolbar({ children, start: extraStart, end: extraEnd }: DataGrid
 		return <ToolbarComponent data-slot='toolbar'>{children}</ToolbarComponent>
 	}
 
-	const hasAutoStart = hasPageSizerToolbar
+	const hasAutoStart = hasPageSizerToolbar || hasFilterPanelToolbar
 	const hasAutoEnd =
 		hasGlobalFilterToolbar || hasClearButtonToolbar || hasCreating || hasSortingToolbar || hasVisibilityToolbar
 
 	const start =
 		hasAutoStart || extraStart !== undefined ? (
 			<>
-				{hasAutoStart && <PageSizer />}
+				{hasPageSizerToolbar && <PageSizer />}
+				{hasFilterPanelToolbar && <FilterPanel />}
 				{extraStart}
 			</>
 		) : null

@@ -1,54 +1,62 @@
 'use client'
 
-import { buildPageWindow, buildPaginationLabel, PAGE_GAP, PaginationVariant } from '@ez-kit/data-grid-react'
+import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react'
 import { Pagination as HeroPagination } from '@heroui/react'
+import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 import type { PaginationProps } from '@ez-kit/data-grid-react'
 
-const LABEL_CLASS = 'dg-pagination-label px-2 text-sm'
-const PREVIOUS_LABEL = 'Previous'
-const NEXT_LABEL = 'Next'
-const PAGINATION_ARIA_LABEL = 'Pagination'
+const LABEL_CLASS = 'dg-pagination-label'
 
 export function Pagination({
-	variant,
+	links,
+	edges,
+	label,
 	pageIndex,
-	pageSize,
 	pageCount,
-	rowCount,
 	siblings,
 	boundaries,
 	canPreviousPage,
 	canNextPage,
 	onPreviousPage,
 	onNextPage,
+	onFirstPage,
+	onLastPage,
 	onPageChange,
 }: PaginationProps) {
-	const label = buildPaginationLabel({ variant, pageIndex, pageSize, pageCount, rowCount })
-	// Page links need a known page count; without one `numbered` degrades to prev/next.
-	const showLinks = variant === PaginationVariant.Numbered && pageCount !== undefined
+	const messages = useGridMessages()
+	// Page links need a known page count; without one they degrade to prev/next.
+	const showLinks = links && pageCount !== undefined
 	// Windowed, never one link per page: 100 pages render as `1 … 4 5 6 … 100`, not 100 controls.
 	const pages = showLinks ? buildPageWindow({ pageIndex, pageCount, siblings, boundaries }) : []
 
 	return (
 		<HeroPagination
-			aria-label={PAGINATION_ARIA_LABEL}
+			aria-label={messages.pagination.navigation}
 			className='mt-3'
 			data-slot='pagination'
-			data-variant={variant}
+			data-links={links || undefined}
+			data-edges={edges || undefined}
 		>
-			{label !== undefined && (
-				<HeroPagination.Item>
-					<span className={LABEL_CLASS}>{label}</span>
-				</HeroPagination.Item>
-			)}
+			{label !== undefined && <HeroPagination.Summary className={LABEL_CLASS}>{label}</HeroPagination.Summary>}
 			<HeroPagination.Content>
+				{edges && (
+					<HeroPagination.Item>
+						<HeroPagination.Link
+							aria-label={messages.pagination.first}
+							isDisabled={!canPreviousPage}
+							onPress={onFirstPage}
+						>
+							<ChevronsLeft size={16} />
+						</HeroPagination.Link>
+					</HeroPagination.Item>
+				)}
 				<HeroPagination.Item>
 					<HeroPagination.Previous
 						isDisabled={!canPreviousPage}
 						onPress={onPreviousPage}
 					>
-						{PREVIOUS_LABEL}
+						{messages.pagination.previous}
 					</HeroPagination.Previous>
 				</HeroPagination.Item>
 				{pages.map((page, slot) =>
@@ -74,9 +82,20 @@ export function Pagination({
 						isDisabled={!canNextPage}
 						onPress={onNextPage}
 					>
-						{NEXT_LABEL}
+						{messages.pagination.next}
 					</HeroPagination.Next>
 				</HeroPagination.Item>
+				{edges && (
+					<HeroPagination.Item>
+						<HeroPagination.Link
+							aria-label={messages.pagination.last}
+							isDisabled={!canNextPage}
+							onPress={onLastPage}
+						>
+							<ChevronsRight size={16} />
+						</HeroPagination.Link>
+					</HeroPagination.Item>
+				)}
 			</HeroPagination.Content>
 		</HeroPagination>
 	)

@@ -5,7 +5,7 @@ import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createStore } from 'zustand/vanilla'
 
-import { createStoreCache } from './create-store-cache'
+import { createStoreCache, MISSING_CACHE_PROVIDER } from './create-store-cache'
 
 import type { ContextStoreInit } from '../create-context-store'
 
@@ -88,9 +88,7 @@ describe('createStoreCache — provider & context', () => {
 			table.useSelector((s) => s.filter)
 			return null
 		}
-		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrowError(
-			'Missing StoreCacheProvider',
-		)
+		expect(() => render(<table.Provider id='x'>{<Consumer />}</table.Provider>)).toThrowError(MISSING_CACHE_PROVIDER)
 	})
 
 	it('throws when useFromCache is used without a cache Provider', () => {
@@ -100,7 +98,7 @@ describe('createStoreCache — provider & context', () => {
 			table.useFromCache({ id: 'x' }, (s) => s?.filter)
 			return null
 		}
-		expect(() => render(<Badge />)).toThrowError('Missing StoreCacheProvider')
+		expect(() => render(<Badge />)).toThrowError(MISSING_CACHE_PROVIDER)
 	})
 })
 
@@ -869,6 +867,65 @@ describe('createStoreCache — useStore', () => {
 		// The raw handle is a passive read: state changed, but the holder must not re-render.
 		expect(readerRenders).toBe(before)
 		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('changed')
+	})
+})
+
+describe('createStoreCache — Store slot', () => {
+	it("hands the group's raw store handle to its child without subscribing it", () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'slot-1' })
+		let slotRenders = 0
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<table.Store>
+						{(handle) => {
+							slotRenders += 1
+							return (
+								<button
+									type='button'
+									onClick={() => {
+										handle.getState().setFilter('changed')
+									}}
+								>
+									change
+								</button>
+							)
+						}}
+					</table.Store>
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		const before = slotRenders
+		fireEvent.click(screen.getByRole('button', { name: 'change' }))
+
+		expect(table.getFromCache({ id: 'main' })?.getState().filter).toBe('changed')
+		// A write through the raw handle must not re-render the slot that handed it over.
+		expect(slotRenders).toBe(before)
+	})
+
+	it('hands the same handle to Subscribe as its second render argument', () => {
+		const cache = createStoreCache()
+		const table = cache.createCachedStore(tableFactory, { name: 'slot-2' })
+		const seen: unknown[] = []
+
+		render(
+			<cache.Provider>
+				<table.Provider id='main'>
+					<table.Subscribe selector={(state) => state.filter}>
+						{(filter, handle) => {
+							seen.push(handle)
+							return <span data-testid='filter'>{filter}</span>
+						}}
+					</table.Subscribe>
+				</table.Provider>
+			</cache.Provider>,
+		)
+
+		expect(screen.getByTestId('filter')).toHaveTextContent('all')
+		expect(seen[0]).toBe(table.getFromCache({ id: 'main' }))
 	})
 })
 

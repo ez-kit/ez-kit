@@ -3,8 +3,6 @@ title: Pagination
 description: Paginate grid rows — client-side by default, with controlled state for server-side fetching.
 ---
 
-# Pagination
-
 Pagination caps how many rows render at once. Client-side is the default and works out of the box; server-side pagination just means controlling the state and supplying the right slice of rows.
 
 ## Usage
@@ -50,7 +48,7 @@ deep-linked page is `initialState={{ pagination: { pageIndex: 2 } }}` and nothin
 `pageSize` to restate, and restating it wrong is exactly how a page opens on a size nobody asked
 for. Write both spellings of the size and the seed wins — `createTable` warns about it in
 development. Prefer form A for "this grid shows 25 rows" and form B for "restore the size this user
-picked". See [State model](./data-grid/state-model).
+picked". See [State model](/docs/data-grid/state).
 
 ## Page size selector
 
@@ -70,24 +68,26 @@ Picking a value calls `table.setPageSize`, so a server-paginated grid receives i
 `pagination.onChange` like any other page change. The option applies to page-based mode only —
 infinite scroll has no page size to select, so it is ignored there.
 
-## Variants
+## Footer controls
 
-`pagination.variant` picks which footer controls render. It is presentational only — paging
-behaviour is identical across variants, and the footer always sits below the table.
+The footer's presentation has three independent axes — which page controls render (`links`,
+`edges`) and what the text beside them says (`label`). All three are display only: paging
+behaviour is identical whichever you pick, and the footer always sits below the table.
 
-### Numbered
+### Page links
 
-The default: previous/next plus per-page links. The link strip is **windowed** — it shows the
-first and last pages, a window around the current page, and an ellipsis for each hidden run
-(`1 … 4 5 6 … 100`), so a large page count never renders one live control per page.
+`links` (on by default) renders a link per page beside previous/next. The strip is
+**windowed** — it shows the first and last pages, a window around the current page, and an
+ellipsis for each hidden run (`1 … 4 5 6 … 100`), so a large page count never renders one live
+control per page.
 
-<DataGridDocsExample exampleId='pagination-variant-numbered' />
+<DataGridDocsExample exampleId='pagination-links' />
 
 ```tsx
 <DataGrid
 	data={data}
 	columns={columns}
-	pagination={{ pageSize: 10, variant: 'numbered' }}
+	pagination={{ pageSize: 10, links: true }}
 />
 ```
 
@@ -97,61 +97,105 @@ only kicks in once there are more pages than the strip can hold.
 
 ```ts
 // Wider window: 2 neighbours each side, 1 page pinned at each end.
-pagination: { variant: 'numbered', siblings: 2, boundaries: 1 }
+pagination: { siblings: 2, boundaries: 1 }
 ```
 
-### Simple
+`links: false` leaves previous/next alone. Best when there are too many pages to make picking
+one by number meaningful, but the reader still wants to know where they are.
 
-Previous/next plus an "X–Y of N" range label, without per-page links. Best when there are too
-many pages to list, but the total still matters.
-
-<DataGridDocsExample exampleId='pagination-variant-simple' />
+<DataGridDocsExample exampleId='pagination-links-off' />
 
 ```ts
-pagination: { pageSize: 10, variant: 'simple' }
+pagination: { pageSize: 10, links: false }
 ```
 
-The range label needs a total. Client-side it is known automatically; server-side it comes from
-`rowCount` — the total is never guessed from the rows currently loaded. When it is unknown,
-`simple` falls back to the `compact` label rather than rendering prev/next with no context.
+### Edge jumps
 
-### Compact
+`edges: true` adds jump-to-first and jump-to-last buttons flanking previous/next. Worth turning
+on precisely when `links` is off — without page links they are the only way to reach either end.
 
-Previous/next plus a "Page X of Y" label. The smallest footer — best in dense layouts.
-
-<DataGridDocsExample exampleId='pagination-variant-compact' />
+<DataGridDocsExample exampleId='pagination-edges' />
 
 ```ts
-pagination: { pageSize: 10, variant: 'compact' }
+pagination: { pageSize: 10, links: false, edges: true, label: 'page' }
 ```
+
+### Label
+
+`label` picks what the footer says, independently of which controls render:
+
+| `label`    | Reads         | Notes                                                               |
+| ---------- | ------------- | ------------------------------------------------------------------- |
+| `'range'`  | `1–10 of 50`  | The default. Needs a row total; falls back to `'page'` without one. |
+| `'page'`   | `Page 3 of 5` | Drops to `Page 3` when the page count is unknown.                   |
+| `false`    | —             | No label at all.                                                    |
+| a function | anything      | Replaces the text — the hook for translating it.                    |
+
+```ts
+pagination: { label: 'page' }
+
+// Translated, from the same settled model the built-in forms read.
+pagination: {
+	label: ({ pageIndex, pageSize, rowCount }) =>
+		rowCount === undefined
+			? `Страница ${pageIndex + 1}`
+			: `${pageIndex * pageSize + 1}–${Math.min((pageIndex + 1) * pageSize, rowCount)} из ${rowCount}`,
+}
+```
+
+The range needs a total. Client-side it is known automatically; server-side it comes from
+`rowCount` — the total is never guessed from the rows currently loaded. A renderer receives both
+totals `undefined` exactly when the grid cannot be trusted to know them, so it never has to
+repeat that rule.
 
 ### When the total is unknown
 
 A manually paginated grid given neither `rowCount` nor `pageCount` knows only which page it is
-on, so every variant degrades rather than inventing a total:
+on, so nothing invents a total: `'range'` degrades to the page counter, the counter drops its
+`of N`, and page links are dropped entirely — they cannot be enumerated without a page count.
+Supply `rowCount` whenever the server knows it; it is what turns `'range'` into a real range.
 
-| Variant      | Total known                        | `pageCount` only    | Neither       |
-| ------------ | ---------------------------------- | ------------------- | ------------- |
-| `'numbered'` | `1–10 of 50` + windowed page links | windowed page links | no page links |
-| `'simple'`   | `1–10 of 50`                       | `Page 3 of 5`       | `Page 3`      |
-| `'compact'`  | `Page 1 of 5`                      | `Page 3 of 5`       | `Page 3`      |
+### A page past the end
 
-Supply `rowCount` whenever the server knows it — it is what turns `simple` into a real range.
-Page links are dropped when the page count is unknown, since they cannot be enumerated; each
-kit decides what to keep alongside prev/next (the native kit, for instance, keeps its
-jump-to-first control, which needs no total).
+A page that sits past the end of the total reports `0–0 of N` rather than an impossible range.
+Under `pagination.manual` TanStack leaves `autoResetPageIndex` off, so the grid does not rewind by
+itself — with one exception: when a trusted `rowCount` actually **shrinks** beneath the current
+page, the grid clamps `pageIndex` to the last valid page through the normal `onChange` /
+`onStateChange` flow. A deep link to an already-out-of-range page is left alone — the initial
+`rowCount: data?.rowCount ?? 0` of a pending fetch means "not loaded yet", not "no rows", and
+clamping on it would reset the page mid-request. That is when you still see `0–0 of N`.
 
 ### Empty grid
 
 When the total is known to be zero — a client-side grid with no rows, or a server-paginated grid
-that reports `rowCount: 0` / `pageCount: 0` — the footer is not rendered at all, for every
-variant. There is nothing to paginate, so the empty/no-results state stands on its own. This only
+that reports `rowCount: 0` / `pageCount: 0` — the footer is not rendered at all, whichever
+controls and label are configured. There is nothing to paginate, so the empty/no-results state stands on its own. This only
 applies to a **trusted** zero: a manual grid with an unknown total (neither `rowCount` nor
 `pageCount`) still shows `Page N`.
 
+## Where the page-size selector goes
+
+The selector mounts into `Toolbar.start` by default. `pageSizer: 'footer'` moves it into the
+pagination row instead, to the leading edge, with the page controls at the trailing one — the
+layout most shadcn-style tables use.
+
+<DataGridDocsExample exampleId='pagination-page-sizer-footer' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{ pageSize: 10, links: false, edges: true, label: 'page', pageSizer: 'footer' }}
+/>
+```
+
+The scalar **is** the placement; `{ placement: 'footer' }` says the same thing when there is more
+to write. `pageSizer: false` mounts nothing and leaves `items` intact, so a hand-placed
+`<DataGrid.PageSizer />` still reads the sizes.
+
 ## Server-side pagination
 
-Set `pagination.manual: true` and supply `rowCount`. See [Server-side Data](./data-grid/server-side)
+Set `pagination.manual: true` and supply `rowCount`. See [Server-side Data](/docs/data-grid/state/server-side)
 for the full pattern, including loading state.
 
 ```tsx
@@ -169,27 +213,29 @@ for the full pattern, including loading state.
 
 ## Options
 
-| Option                    | Type                                  | Description                                                                                                                                                                                                                     |
-| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pagination.pageSize`     | `number`                              | Rows per page at mount. `initialState.pagination.pageSize` overrides it when the seed names that key; a seed that only names `pageIndex` leaves it alone.                                                                       |
-| `pagination.variant`      | `'numbered' \| 'simple' \| 'compact'` | Footer controls: `'numbered'` (default), `'simple'`, `'compact'`. Display only.                                                                                                                                                 |
-| `pagination.siblings`     | `number`                              | `'numbered'` only. Pages kept either side of the current one. Default `1`.                                                                                                                                                      |
-| `pagination.boundaries`   | `number`                              | `'numbered'` only. Pages kept at each end of the link strip. Default `1`.                                                                                                                                                       |
-| `pagination.items`        | `number[]`                            | Selectable page sizes, fed to the kit's `PageSizerProps.items`. Page-based mode only. Also turns `toolbar` on unless you set it yourself.                                                                                       |
-| `pagination.toolbar`      | `boolean`                             | Auto-mount the page-size selector into `Toolbar.start`. Omitted — mounted iff `items` is set; `true` — mounted with the default sizes; `false` — never (a hand-placed `<DataGrid.PageSizer />` still works).                    |
-| `pagination.manual`       | `boolean`                             | Disable client-side paging. The grid calls `onChange` instead.                                                                                                                                                                  |
-| `pagination.rowCount`     | `number`                              | Server total rows. Derives `pageCount` automatically, and lets the footer read `1–10 of 137`. The preferred total under `manual`.                                                                                               |
-| `pagination.pageCount`    | `number`                              | Server total **pages**, for an API that reports only that. Mutually exclusive with `rowCount` — the type forbids both. Under `manual`, supply one of the two; with neither the footer only knows which page it is on.           |
-| `pagination.onChange`     | `({ pageIndex, pageSize }) => void`   | Called on every page or page-size change.                                                                                                                                                                                       |
-| `initialState.pagination` | `{ pageIndex?, pageSize? }`           | Seeds the slice **per key**, not wholesale: whichever key you omit keeps its resolved default — `pageIndex: 0`, and `pageSize` from `pagination.pageSize`. So a deep link to page 3 writes `{ pageIndex: 2 }` and nothing else. |
-| `state.pagination`        | same                                  | Controlled state — see [Controlled state](./data-grid/controlled-state).                                                                                                                                                        |
-| `pagination.enabled`      | `boolean`                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                                  |
+| Option                    | Type                                                  | Description                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pagination.pageSize`     | `number`                                              | Rows per page at mount. `initialState.pagination.pageSize` overrides it when the seed names that key; a seed that only names `pageIndex` leaves it alone.                                                                                                                                                                                                                  |
+| `pagination.links`        | `boolean`                                             | Render a link per page beside prev/next. Default `true`. Display only. Dropped when the page count is unknown.                                                                                                                                                                                                                                                             |
+| `pagination.edges`        | `boolean`                                             | Render jump-to-first / jump-to-last buttons. Default `false`. Display only.                                                                                                                                                                                                                                                                                                |
+| `pagination.siblings`     | `number`                                              | `links` only. Pages kept either side of the current one. Default `1`.                                                                                                                                                                                                                                                                                                      |
+| `pagination.boundaries`   | `number`                                              | `links` only. Pages kept at each end of the link strip. Default `1`.                                                                                                                                                                                                                                                                                                       |
+| `pagination.label`        | `'range' \| 'page' \| false \| (ctx) => ReactNode`    | What the footer says. `'range'` (default) reads `1–10 of 50` and falls back to the page counter without a total; `'page'` reads `Page 2 of 5`. `false` hides it; a function replaces the text and is the hook for translating it, receiving `{ pageIndex, pageSize, pageCount, rowCount }` with each total `undefined` exactly when the grid cannot be trusted to know it. |
+| `pagination.items`        | `number[]`                                            | Selectable page sizes, fed to the kit's `PageSizerProps.items`. Page-based mode only. Also turns `pageSizer` on unless you set it yourself.                                                                                                                                                                                                                                |
+| `pagination.pageSizer`    | `boolean \| 'toolbar' \| 'footer' \| PageSizerConfig` | Auto-mount the page-size selector, and where. Omitted — mounted iff `items` is set, in the toolbar; `'footer'` — in the pagination row instead; `false` — never (a hand-placed `<DataGrid.PageSizer />` still works).                                                                                                                                                      |
+| `pagination.manual`       | `boolean`                                             | Disable client-side paging. The grid calls `onChange` instead.                                                                                                                                                                                                                                                                                                             |
+| `pagination.rowCount`     | `number`                                              | Server total rows. Derives `pageCount` automatically, and lets the footer read `1–10 of 137`. The preferred total under `manual`.                                                                                                                                                                                                                                          |
+| `pagination.pageCount`    | `number`                                              | Server total **pages**, for an API that reports only that. Mutually exclusive with `rowCount` — the type forbids both. Under `manual`, supply one of the two; with neither the footer only knows which page it is on.                                                                                                                                                      |
+| `pagination.onChange`     | `({ pageIndex, pageSize }) => void`                   | Called on every page or page-size change.                                                                                                                                                                                                                                                                                                                                  |
+| `initialState.pagination` | `{ pageIndex?, pageSize? }`                           | Seeds the slice **per key**, not wholesale: whichever key you omit keeps its resolved default — `pageIndex: 0`, and `pageSize` from `pagination.pageSize`. So a deep link to page 3 writes `{ pageIndex: 2 }` and nothing else.                                                                                                                                            |
+| `state.pagination`        | same                                                  | Controlled state — see [Controlled state](/docs/data-grid/state/controlled).                                                                                                                                                                                                                                                                                               |
+| `pagination.enabled`      | `boolean`                                             | Explicit off-switch for a config that came from a defaults layer — the settings survive, the feature does not. Default `true`.                                                                                                                                                                                                                                             |
 
 ## Infinite scroll
 
 For append-on-scroll instead of a page footer, set `pagination.mode: 'infinite'` — see
 [Infinite Scroll](/docs/data-grid/pagination/infinite-scroll). It is mutually exclusive with the
-page-based footer, so `variant` does not apply to it.
+page-based footer, so the footer options above do not apply to it.
 
 For a "Load more" button instead of pages, use infinite mode with a manual trigger —
 `pagination: { mode: 'infinite', trigger: 'manual' }`. See

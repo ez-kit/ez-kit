@@ -16,7 +16,6 @@ export function ProductionOneHandlerExample() {
 				manual: true,
 				rowCount: orders.rowCount,
 				items: [10, 25, 50],
-				variant: 'numbered',
 				siblings: 1,
 			}}
 			sorting={{ manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true }}

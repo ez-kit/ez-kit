@@ -3,14 +3,13 @@ title: '@ez-kit/zu-store'
 description: Zustand vanilla stores wrapped in React context — multiple isolated instances, field-binding hooks, and optional undo/redo middleware.
 ---
 
-# `@ez-kit/zu-store`
-
 A tiny layer on top of [Zustand](https://github.com/pmndrs/zustand) that:
 
 - wraps a vanilla store in **React context**, so multiple isolated instances can coexist in the same tree;
 - exposes a [`useState`](https://react.dev/reference/react/useState)-style hook for binding a **single store field**;
 - ships a real **`withHistory`** Zustand middleware for undo / redo / goto, records actions automatically, composes with `persist` / `devtools` / `subscribeWithSelector`;
-- can **keep stores alive** across `Provider` unmount/remount with `createStoreCache`, so navigation state (filters, pagination) survives without `localStorage`.
+- can **keep stores alive** across `Provider` unmount/remount with `createStoreCache`, so navigation state (filters, pagination) survives without `localStorage`;
+- can **persist** any field to the URL, `localStorage` / `sessionStorage`, IndexedDB or your own substrate, through one `withPersist` capability with typed codecs.
 
 It exists because plain Zustand stores are module-level singletons by default — fine for app-wide state, awkward when you want a counter, modal, or form scoped to a subtree.
 
@@ -22,6 +21,8 @@ pnpm add @ez-kit/zu-store zustand
 
 `zustand` is a peer dependency — pin whatever 5.x version your app already uses.
 
+→ **[Getting Started](./zu-store/getting-started)** — install, your first store, and the read/write model.
+
 ## A minimal example
 
 <LivePreview
@@ -31,12 +32,15 @@ pnpm add @ez-kit/zu-store zustand
 
 ## What's in the box
 
-| Export                                                  | Purpose                                                                                                          |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| [`createContextStore`](./zu-store/create-context-store) | Factory: wraps a Zustand store in React context. Returns `Provider` + hooks.                                     |
-| [`createStoreCache`](./zu-store/store-cache)            | Keep context-store instances alive across `Provider` unmount/remount, keyed by name (table filters, pagination). |
-| [`useStoreState`](./zu-store/use-store-state)           | Binds one store field to a `[value, setValue]` tuple, like `useState`.                                           |
-| [`withHistory`](./zu-store/with-history)                | Zustand middleware: adds undo / redo / goto to any store, records actions automatically, composes idiomatically. |
+| Page                                                    | Purpose                                                                                                                    |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [Getting Started](./zu-store/getting-started)           | Install, first store, the selector/handle read-write model.                                                                |
+| [`createContextStore`](./zu-store/create-context-store) | Factory: wraps a Zustand store in React context. Returns `Provider` + hooks.                                               |
+| [Cache](./zu-store/cache)                               | `createStoreCache` — keep instances alive across `Provider` unmount/remount, keyed by name (filters, pagination).          |
+| [Capabilities](./zu-store/capabilities)                 | The one extension seam: attach behaviour to a store in the factory, write your own with `attachCapability`.                |
+| [History](./zu-store/history)                           | `withHistory` — a Zustand middleware adding undo / redo / goto, recording actions automatically.                           |
+| [Persist](./zu-store/persist)                           | Sync a store to the URL, localStorage/sessionStorage, IndexedDB or your own substrate: typed codecs, hydration, cross-tab. |
+| [`useStoreState`](./zu-store/use-store-state)           | Binds one store field to a `[value, setValue]` tuple, like `useState`.                                                     |
 
 ## Why not plain Zustand?
 

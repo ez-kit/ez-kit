@@ -13,7 +13,6 @@
 		"decorators",
 		"fields",
 		"parsers",
-		"typescript",
-		"migration"
+		"typescript"
 	]
 }

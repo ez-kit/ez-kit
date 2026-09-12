@@ -27,6 +27,10 @@ export const GridMenuIcon = {
 	SortDesc: 'sort-desc',
 	ClearSort: 'clear-sort',
 	Hide: 'hide',
+	/** Move a column one step toward the start of the order. Logical, like `align`. */
+	MoveStart: 'move-start',
+	/** Move a column one step toward the end of the order. */
+	MoveEnd: 'move-end',
 } as const
 
 export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]

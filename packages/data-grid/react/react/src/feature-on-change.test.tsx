@@ -57,6 +57,15 @@ describe('every feature onChange survives useDataGrid', () => {
 		expect(grid({ visibility: { toolbar: false } }).grid.visibility).toEqual({ toolbar: false })
 	})
 
+	it('ordering.column.onChange fires when a column moves', () => {
+		const onChange = vi.fn()
+		const table = grid({ ordering: { column: { onChange } } })
+		act(() => {
+			table.setColumnOrder(['email', 'name'])
+		})
+		expect(onChange).toHaveBeenCalledWith(['email', 'name'])
+	})
+
 	it('expanding.onChange fires when a row is expanded', () => {
 		const onChange = vi.fn()
 		const table = grid({ expanding: { onChange } })

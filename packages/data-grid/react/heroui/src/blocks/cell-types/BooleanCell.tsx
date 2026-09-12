@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Description, FieldError, Label, ListBox, Select, Switch } from '@heroui/react'
 
 import type { CellViewProps, FieldState } from '@ez-kit/data-grid-react'
@@ -50,6 +51,7 @@ function BooleanCellInput({ id, value, onChange, onBlur, label, description, err
  * the other options apply a strict boolean predicate.
  */
 function BooleanFilterInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+	const messages = useGridMessages()
 	const hasError = errors.length > 0
 	const selectedKey = value === true ? TRUE_KEY : value === false ? FALSE_KEY : ALL_SENTINEL
 	return (
@@ -75,21 +77,21 @@ function BooleanFilterInput({ id, value, onChange, onBlur, label, description, e
 				<ListBox>
 					<ListBox.Item
 						id={ALL_SENTINEL}
-						textValue='All'
+						textValue={messages.cells.all}
 					>
-						All
+						{messages.cells.all}
 					</ListBox.Item>
 					<ListBox.Item
 						id={TRUE_KEY}
-						textValue='Yes'
+						textValue={messages.cells.yes}
 					>
-						Yes
+						{messages.cells.yes}
 					</ListBox.Item>
 					<ListBox.Item
 						id={FALSE_KEY}
-						textValue='No'
+						textValue={messages.cells.no}
 					>
-						No
+						{messages.cells.no}
 					</ListBox.Item>
 				</ListBox>
 			</Select.Popover>

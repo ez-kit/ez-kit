@@ -5,6 +5,7 @@ import {
 	EXPAND_COLUMN_ID,
 	SELECTION_COLUMN_ID,
 } from '@ez-kit/data-grid-core'
+import { useEffect } from 'react'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
@@ -62,6 +63,19 @@ type CellChrome = {
 }
 
 const EMPTY_ERRORS: readonly string[] = Object.freeze([])
+
+/** Marks the one cell currently open for editing, so a pointer or focus event can be placed. */
+const EDITING_CELL_ATTR = 'data-editing-cell'
+
+/**
+ * Layers a kit renders in a portal on the editor's behalf — a select's listbox, a date picker's
+ * dialog. They sit outside the cell in the DOM while belonging to it, so interacting with one must
+ * not read as leaving the edit. Covers react-aria (heroui) and radix (shadcn) overlays alike.
+ */
+const OVERLAY_SELECTOR = '[role="dialog"], [role="listbox"], [role="menu"], [data-radix-popper-content-wrapper]'
+
+/** What an opened cell hands the caret to. Ordered by document position, so the first one wins. */
+const FOCUSABLE_SELECTOR = 'input, select, textarea, button, [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
 
 /**
  * Renders a single table body cell.
@@ -181,6 +195,7 @@ type SystemSubProps = {
 
 function SelectionCell({ row, chrome }: SystemSubProps) {
 	const { Td, Checkbox } = useGridComponents().core
+	const { messages } = useDataGridTable().grid
 	// Subscribe broadly to rowSelection so row.getIsSelected() / getIsSomeSelected()
 	// re-derive correctly. Refining this to per-row keys breaks indeterminate
 	// state for parent rows (which depends on children).
@@ -201,7 +216,7 @@ function SelectionCell({ row, chrome }: SystemSubProps) {
 				onChange={() => {
 					row.toggleSelected()
 				}}
-				aria-label='Select row'
+				aria-label={messages.selection.selectRow}
 			/>
 		</Td>
 	)
@@ -225,13 +240,14 @@ function ExpandCell({ row, chrome }: SystemSubProps) {
 			data-system-column='expand'
 			data-depth={row.depth}
 		>
-			<Chevron
-				expanded={isExpanded}
-				onClick={() => {
-					row.toggleExpanded()
-				}}
-				disabled={!canExpand}
-			/>
+			{canExpand ? (
+				<Chevron
+					expanded={isExpanded}
+					onClick={() => {
+						row.toggleExpanded()
+					}}
+				/>
+			) : null}
 		</Td>
 	)
 }
@@ -252,9 +268,15 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	// Narrow boolean subscription. For non-target rows this remains stably `false`
 	// across any `editing` mutation → no re-render. Flips exactly once on
 	// start / cancel / commit of THIS row (or cell in cell-mode).
-	const isEditing = useDataGridState((s) =>
-		editMode === 'cell' ? s.editing.cellId === cellId : s.editing.rowId === row.id,
-	)
+	//
+	// `modal` never opens a cell. The dialog already holds the whole row's fields, and the
+	// feature sets the same `editing.rowId` whichever mode raised it — so a row-mode test here
+	// used to open the row *behind* the dialog as well, leaving two live editors bound to one
+	// set of values. shadcn hid it (Radix `aria-hidden`s the background), heroui did not.
+	const isEditing = useDataGridState((s) => {
+		if (editMode === EditingMode.Modal) return false
+		return editMode === EditingMode.Cell ? s.editing.cellId === cellId : s.editing.rowId === row.id
+	})
 
 	const isColumnEditable = meta?.editing !== false
 
@@ -273,7 +295,7 @@ function BodyDataCell({ cell, row }: DataGridCellProps) {
 	// `editing: false` opts a column out at every mode, cell mode included: it used to be
 	// bypassed here, so a read-only column still became an input on double-click.
 	const handleDoubleClick =
-		editMode === 'cell' && isColumnEditable
+		editMode === EditingMode.Cell && isColumnEditable
 			? () => {
 					table.editing.startCell(row.id, columnId)
 				}
@@ -347,8 +369,66 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 
 	const editComp = resolveEditComponent(meta, cellTypes)
 
-	const onBlur =
-		editMode === 'cell' ? () => void table.editing.commitCell() : () => void table.editing.validateField(columnId)
+	const onBlur = () => void table.editing.validateField(columnId)
+
+	// Cell mode has no Save / Cancel pair — the actions column stays out of it — so leaving the
+	// cell is the commit, and the keyboard is the deliberate way out: Enter commits, Escape
+	// abandons (without which a mis-typed value could not be abandoned at all).
+	//
+	// All of it is listened for on the document rather than bound to the `Td` or the input: a kit's
+	// `Td` need not forward handlers (heroui's wraps react-aria's `Cell`, which drops them) and a
+	// custom `editing.component` inherits the behaviour without wiring anything. Only ever one cell
+	// edit is open, and this effect lives exactly as long as it does.
+	const isCellEdit = editMode === EditingMode.Cell
+	useEffect(() => {
+		if (!isCellEdit) return undefined
+
+		// `blur` is deliberately NOT the commit trigger. React-aria's grid moves DOM focus from the
+		// input to the cell itself on pointer-down, so a blur fires *inside* the cell before the
+		// press completes: the switch of a boolean column committed and closed without ever
+		// toggling. What ends the edit is the pointer or focus landing somewhere else entirely.
+		const isInsideEdit = (target: EventTarget | null): boolean => {
+			if (!(target instanceof Element)) return false
+			// An overlay belonging to the editor — a select's listbox, a date picker's dialog —
+			// renders in a portal outside the cell, so it has to count as inside.
+			return target.closest(`[${EDITING_CELL_ATTR}], ${OVERLAY_SELECTOR}`) !== null
+		}
+
+		const commitOnLeave = (event: Event): void => {
+			if (isInsideEdit(event.target)) return
+			void table.editing.commitCell()
+		}
+
+		const onKeyDown = (event: globalThis.KeyboardEvent): void => {
+			// Already handled by something nearer the user — a select popover closing on Escape.
+			if (event.defaultPrevented) return
+			if (event.key === 'Enter') {
+				event.preventDefault()
+				void table.editing.commitCell()
+			} else if (event.key === 'Escape') {
+				event.preventDefault()
+				table.editing.cancel()
+			}
+		}
+
+		document.addEventListener('keydown', onKeyDown)
+		document.addEventListener('pointerdown', commitOnLeave, true)
+		document.addEventListener('focusin', commitOnLeave, true)
+
+		// The opened cell takes the caret, so Enter and Escape reach it without a click first. The
+		// kit's own edit component is focused here rather than given an `autoFocus` prop, which the
+		// cell-type contract does not carry — only the fallback `Input` below ever had one.
+		const cellEl = document.querySelector(`[${EDITING_CELL_ATTR}]`)
+		if (cellEl && !cellEl.contains(document.activeElement)) {
+			cellEl.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
+		}
+
+		return () => {
+			document.removeEventListener('keydown', onKeyDown)
+			document.removeEventListener('pointerdown', commitOnLeave, true)
+			document.removeEventListener('focusin', commitOnLeave, true)
+		}
+	}, [isCellEdit, table])
 
 	const fieldState: FieldState = {
 		id: cellId,
@@ -371,12 +451,12 @@ function EditingCell({ cell, editMode, cellId, chrome }: EditingCellProps) {
 			{...chrome.pinnedAttrs}
 			{...chrome.alignAttrs}
 			{...(fieldError ? { 'data-error': true } : {})}
+			{...(isCellEdit ? { [EDITING_CELL_ATTR]: '' } : {})}
 		>
 			{editComp ? (
 				flexRender(editComp, fieldState)
 			) : (
 				<Input
-					{...(editMode === 'cell' ? { autoFocus: true } : {})}
 					value={(value ?? '') as string | number | readonly string[]}
 					onChange={(e) => {
 						table.editing.setValue(columnId, e.target.value)

@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Button, Dropdown, Label } from '@heroui/react'
 import { Columns2 } from 'lucide-react'
 
@@ -7,6 +8,7 @@ import type { VisibilityMenuProps, VisibilityColumnItem } from '@ez-kit/data-gri
 import type { Selection } from '@heroui/react'
 
 export function VisibilityMenu({ columns }: VisibilityMenuProps) {
+	const messages = useGridMessages()
 	const selectedKeys = new Set(columns.filter((col) => col.isVisible).map((col) => col.id))
 
 	/**
@@ -27,11 +29,11 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 				variant='outline'
 			>
 				<Columns2 size={16} />
-				Columns
+				{messages.visibility.trigger}
 			</Button>
 			<Dropdown.Popover placement='bottom end'>
 				<Dropdown.Menu
-					aria-label='Column visibility'
+					aria-label={messages.visibility.menu}
 					items={columns}
 					selectedKeys={selectedKeys}
 					selectionMode='multiple'

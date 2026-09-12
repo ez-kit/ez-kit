@@ -5,12 +5,14 @@
 	"root": true,
 	"pages": [
 		"index",
+		"getting-started",
 		"create-context-store",
-		"store-cache",
-		"use-store-state",
+		"cache",
 		"capabilities",
-		"with-history",
+		"history",
 		"persist",
+		"use-store-state",
+		"stability",
 		"ai"
 	]
 }

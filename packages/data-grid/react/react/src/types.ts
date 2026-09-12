@@ -1,4 +1,4 @@
-import type { GridMenuProps } from './menu'
+import type { GridMenuItem, GridMenuProps } from './menu'
 import type {
 	BetweenInputType,
 	BetweenInputVariant,
@@ -18,7 +18,6 @@ import type {
 	InputHTMLAttributes,
 	KeyboardEventHandler,
 	MouseEventHandler,
-	ReactElement,
 	ReactNode,
 	RefAttributes,
 	TdHTMLAttributes,
@@ -46,6 +45,15 @@ type ActionsCellIdleProps<TRow extends object = any> = {
 	hasDeleting: boolean
 	onEdit: () => void
 	onDelete: () => void
+	/**
+	 * The row's own actions that asked for `placement: 'inline'`, already resolved to the menu
+	 * model — render each as an icon button beside Edit and Delete, in order, and a
+	 * {@link GridMenuItemSlot} as its bare `component`.
+	 *
+	 * Empty for the overwhelming majority of grids. Their menu-placed siblings never reach a
+	 * kit this way: those go through the shared `Menu` with the pin entries.
+	 */
+	actions: GridMenuItem[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,31 +173,31 @@ export type GlobalFilterInputProps = {
 }
 
 /**
- * Named members of {@link PaginationVariant}. A convenience handle — the option and every prop
- * are typed as the string union, so `variant: 'simple'` is equally valid and needs no import.
- * Internal code (defaults, label builder, kits) references the members instead of repeating
+ * Named members of {@link PaginationLabel}. A convenience handle — the option and the label
+ * builder are typed as the string union, so `label: 'page'` is equally valid and needs no
+ * import. Internal code (defaults, label builder) references the members instead of repeating
  * the literals.
  *
  * A const object rather than an `enum` on purpose: enum members are a nominal type, so code
  * holding the public union could not be compared against them
  * (`@typescript-eslint/no-unsafe-enum-comparison`).
  */
-export const PaginationVariant = {
-	/** Prev/next plus a link per page. The default. */
-	Numbered: 'numbered',
-	/** Prev/next plus an "X–Y of N" range label; no page links. */
-	Simple: 'simple',
-	/** Prev/next plus a "Page X of Y" label; no page links. */
-	Compact: 'compact',
+export const PaginationLabel = {
+	/** `1–10 of 50` — the slice of the total on screen. Needs a total; falls back to {@link PaginationLabel.Page}. */
+	Range: 'range',
+	/** `Page 2 of 5`, or `Page 2` when the page count is unknown. */
+	Page: 'page',
 } as const
 
 /**
- * Presentation of the page-based pagination footer. A pure display concern —
- * the page-based logic is identical across variants, only the controls differ.
+ * Which of the two built-in forms the footer's label takes. The label is one axis of the
+ * footer's presentation, independent of which controls render (`pagination.links` /
+ * `pagination.edges`) — a numbered strip can carry the page counter and prev/next alone can
+ * carry the range.
  *
- * Derived from {@link PaginationVariant} so the union and the members cannot drift apart.
+ * Derived from {@link PaginationLabel} so the union and the members cannot drift apart.
  */
-export type PaginationVariant = (typeof PaginationVariant)[keyof typeof PaginationVariant]
+export type PaginationLabel = (typeof PaginationLabel)[keyof typeof PaginationLabel]
 
 export type PaginationProps = {
 	pageIndex: number
@@ -207,16 +215,32 @@ export type PaginationProps = {
 	 * from the loaded page. Use to render an "X–Y of N" label.
 	 */
 	rowCount?: number
-	/** Which set of controls to render. Resolved by the react layer; never undefined. */
-	variant: PaginationVariant
 	/**
-	 * `numbered` only. Pages kept either side of the current one in the page-link strip.
+	 * Render the page-number links beside prev/next. Resolved by the react layer; never
+	 * undefined. A kit still drops them when `pageCount` is unknown — they cannot be
+	 * enumerated without a total.
+	 */
+	links: boolean
+	/** Render jump-to-first / jump-to-last buttons. Resolved by the react layer; never undefined. */
+	edges: boolean
+	/**
+	 * `links` only. Pages kept either side of the current one in the page-link strip.
 	 * Resolved by the react layer; never undefined. Feed it to `buildPageWindow` rather than
 	 * looping over `pageCount` — see {@link https://github.com/ez-kit/ez-kit/issues/106}.
 	 */
 	siblings: number
-	/** `numbered` only. Pages kept at each end of the page-link strip. Never undefined. */
+	/** `links` only. Pages kept at each end of the page-link strip. Never undefined. */
 	boundaries: number
+	/**
+	 * The footer's label, already resolved by the react layer — the shared
+	 * {@link buildPaginationLabel} output, whatever a `pagination.label` renderer returned, or
+	 * `undefined` when the option is `false`.
+	 *
+	 * Render it as given. A kit that calls `buildPaginationLabel` for itself silently ignores
+	 * `pagination.label`, which is the drift this prop exists to remove: the label is content,
+	 * the kit owns only where it sits and how it looks.
+	 */
+	label?: ReactNode
 	canPreviousPage: boolean
 	canNextPage: boolean
 	onPreviousPage: () => void
@@ -522,6 +546,41 @@ export const FilterChipsPosition = {
 export type FilterChipsPosition = (typeof FilterChipsPosition)[keyof typeof FilterChipsPosition]
 
 /**
+ * Which region the auto-mounted page-size selector renders in.
+ *
+ * A *region*, which is why it is `placement` and not the `position` that
+ * {@link FilterChipsPosition} uses: that option names a spot on one axis (above or below the
+ * table), this one names which of two containers holds the control.
+ *
+ * Named members for internal reference; the option is typed as the plain string union, so
+ * `pageSizer: 'footer'` is equally valid and needs no import.
+ */
+export const PageSizerPlacement = {
+	/** Leading slot of the toolbar, above the table. The default. */
+	Toolbar: 'toolbar',
+	/** The pagination row under the table, before the pagination controls. */
+	Footer: 'footer',
+} as const
+
+export type PageSizerPlacement = (typeof PageSizerPlacement)[keyof typeof PageSizerPlacement]
+
+/**
+ * Which region holds the auto-mounted filter panel under
+ * {@link FilteringVariant.Panel}.
+ *
+ * `placement`, like {@link PageSizerPlacement} and for the same reason: the values name a
+ * container, not a spot on an axis the way `filtering.chips`' `position` does.
+ */
+export const FilterPanelPlacement = {
+	/** Its own strip between the toolbar and the table. The default. */
+	Above: 'above',
+	/** The leading slot of the toolbar, beside the other toolbar controls. */
+	Toolbar: 'toolbar',
+} as const
+
+export type FilterPanelPlacement = (typeof FilterPanelPlacement)[keyof typeof FilterPanelPlacement]
+
+/**
  * What makes an infinite-scroll grid load the next page.
  *
  * Named members for internal reference; the option is typed as the plain string union, so
@@ -619,8 +678,24 @@ export type SelectionBarProps = {
 	 * If user did not provide `onClear`, this calls `table.resetRowSelection()`.
 	 */
 	onClear: () => void
-	/** Already-resolved actions slot (ReactElement | undefined). */
-	actions?: ReactElement
+	/**
+	 * Custom action entries from `selection.bar.actions`, already resolved against the current
+	 * selection and namespaced. Rendered as buttons beside the built-in Delete, with the same
+	 * chrome the row-actions menu gives its entries: `icon` mapped through the kit's glyph map,
+	 * `destructive` in the kit's danger colour, `disabled` honoured.
+	 *
+	 * Absent when the bar config supplied none. An empty array is possible — the callback may
+	 * return `[]` for a selection that offers nothing — and renders no buttons.
+	 */
+	actions?: GridMenuItem[]
+	/**
+	 * Markup from the `start` / `end` slots of `<DataGrid.SelectionBar>`, rendered as-is at
+	 * either end of the bar's controls. This is the escape hatch for content that is not an
+	 * action — a bulk-target select, a counter — which `actions` deliberately cannot express.
+	 */
+	start?: ReactNode
+	/** See {@link SelectionBarProps.start}. */
+	end?: ReactNode
 }
 
 /**
@@ -657,7 +732,6 @@ export type DraftBarProps = {
 export type ChevronProps = {
 	expanded: boolean
 	onClick: () => void
-	disabled?: boolean
 }
 
 // ── DI registry ──────────────────────────────────────────────────────────

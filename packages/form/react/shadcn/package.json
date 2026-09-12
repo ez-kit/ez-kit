@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/form-shadcn",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Shadcn UI flavour of @ez-kit/form.",
 	"license": "MIT",
 	"repository": {
@@ -36,7 +36,21 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "120 KB"
+			"limit": "13 KB",
+			"ignore": [
+				"@base-ui/react",
+				"@ez-kit/form-core",
+				"@ez-kit/form-react",
+				"class-variance-authority",
+				"clsx",
+				"date-fns",
+				"lucide-react",
+				"radix-ui",
+				"react-day-picker",
+				"tailwind-merge",
+				"tailwindcss",
+				"tw-animate-css"
+			]
 		}
 	],
 	"dependencies": {
@@ -47,7 +61,7 @@
 		"clsx": "^2.1.1",
 		"date-fns": "^4.1.0",
 		"lucide-react": "^0.577.0",
-		"radix-ui": "^1.4.3",
+		"radix-ui": "^1.6.7",
 		"react-day-picker": "^10.0.1",
 		"tailwind-merge": "^3.5.0",
 		"tailwindcss": "^4.1.18",

@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/docs",
-	"version": "0.0.6",
+	"version": "0.0.8",
 	"private": true,
 	"description": "Documentation site for ez-kit packages (Fumadocs + Next.js).",
 	"type": "module",
@@ -16,8 +16,9 @@
 		"lint": "next typegen && eslint .",
 		"typecheck": "next typegen && fumadocs-mdx && tsc --project tsconfig.json --noEmit",
 		"test": "vitest run --passWithNoTests",
-		"test:visual": "playwright test",
-		"test:visual:update": "playwright test --update-snapshots",
+		"test:e2e": "playwright test --grep-invert @smoke",
+		"test:e2e:smoke": "playwright test --grep @smoke --workers=4",
+		"test:e2e:update": "playwright test --grep-invert @smoke --update-snapshots",
 		"size": "echo \"size check skipped for docs app\"",
 		"clean": "rimraf .next"
 	},
@@ -51,7 +52,7 @@
 		"next": "16.2.4",
 		"next-themes": "^0.4.6",
 		"qs": "^6.14.0",
-		"radix-ui": "^1.4.3",
+		"radix-ui": "^1.6.7",
 		"react": "^19.2.5",
 		"react-day-picker": "^10.0.0",
 		"react-dom": "^19.2.5",

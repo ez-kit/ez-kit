@@ -3,6 +3,8 @@ import { type ReactElement } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { createStore } from 'zustand/vanilla'
 
+import { PACKAGE_TAG } from '../package-tag'
+
 import { useRead } from './use-read'
 
 import type {
@@ -15,10 +17,10 @@ import type {
 } from '@ez-kit/store-core/cache'
 import type { ExtractState, StoreApi } from 'zustand/vanilla'
 
-export const MISSING_CACHE_PROVIDER = 'Missing StoreCacheProvider'
+export const MISSING_CACHE_PROVIDER = `${PACKAGE_TAG} Missing <CacheProvider>`
 
 const MULTIPLE_PROVIDERS_WARNING =
-	'[zu-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
+	`${PACKAGE_TAG} Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ` +
 	'Imperative access via getFromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
 /** The instance type this cache stores: any Zustand vanilla store. */
@@ -33,7 +35,16 @@ const FALLBACK_STORE: AnyStore = createStore<unknown>(() => ({}))
 
 type CachedSelectedProps<TStore extends AnyStore, TSelected> = {
 	selector: (state: ExtractState<TStore>) => TSelected
-	children: (state: TSelected) => ReactElement
+	/**
+	 * Receives the selected value and, second, this group's raw store handle — the same one
+	 * `useStore()` returns — exactly as on `createContextStore`'s `Subscribe`.
+	 */
+	children: (state: TSelected, store: TStore) => ReactElement
+}
+
+/** Render-prop argument for a cached group's write-only `Store` slot: the raw handle, no subscription. */
+export type CachedStoreProps<TStore extends AnyStore> = {
+	children: (store: TStore) => ReactElement
 }
 
 export type CachedSubscribeProps<TStore extends AnyStore, TSelected> = CachedSelectedProps<TStore, TSelected> & {
@@ -58,6 +69,11 @@ export type CachedStoreGroup<TStore extends AnyStore, TDefaultValue extends obje
 	 * including its `shallow` prop.
 	 */
 	Subscribe: <TSelected>(props: CachedSubscribeProps<TStore, TSelected>) => ReactElement
+	/**
+	 * Write-only slot: hands this group's raw store handle to its children without subscribing, so
+	 * store writes never re-render them. Mirrors `createContextStore`'s `Store`.
+	 */
+	Store: (props: CachedStoreProps<TStore>) => ReactElement
 	/** Imperative get-if-alive at `(path, id)`. Returns the live store or `undefined`. Never creates. */
 	getFromCache: (target: CacheAddress) => TStore | undefined
 	/** Reactive, passive cross-tree read at `(path, id)`. Does not keep the store alive. */
@@ -119,11 +135,11 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			selector,
 			children,
 		}: CachedSelectedProps<TStore, TSelected>): ReactElement {
-			return children(useSelector(selector))
+			return children(useSelector(selector), useStore())
 		}
 
 		function SubscribeShallow<TSelected>({ selector, children }: CachedSelectedProps<TStore, TSelected>): ReactElement {
-			return children(useShallowSelector(selector))
+			return children(useShallowSelector(selector), useStore())
 		}
 
 		/** One component per comparison, exactly as on `createContextStore`'s `Subscribe`. */
@@ -137,6 +153,10 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			) : (
 				<SubscribeByReference selector={selector}>{children}</SubscribeByReference>
 			)
+		}
+
+		function Store({ children }: CachedStoreProps<TStore>): ReactElement {
+			return children(useStore())
 		}
 
 		function getFromCache(target: CacheAddress): TStore | undefined {
@@ -162,6 +182,7 @@ export function createStoreCache(options: StoreCacheOptions = {}): StoreCache {
 			useShallowSelector,
 			useStore,
 			Subscribe,
+			Store,
 			getFromCache,
 			useFromCache,
 			remove,

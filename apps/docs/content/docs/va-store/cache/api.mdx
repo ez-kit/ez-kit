@@ -3,8 +3,6 @@ title: API
 description: Every signature, prop and option of the Valtio store cache in one place.
 ---
 
-# `createStoreCache` — API
-
 The reference. For what these are _for_ and how they behave in practice, read the [guide](../cache).
 
 ## Exports
@@ -23,7 +21,7 @@ import {
 } from '@ez-kit/va-store'
 ```
 
-The surface matches [`@ez-kit/zu-store`](../../zu-store/store-cache/api) name-for-name; only the per-group read members differ, because reads here are snapshots rather than selectors.
+The surface matches [`@ez-kit/zu-store`](../../zu-store/cache/api) name-for-name; only the per-group read members differ, because reads here are snapshots rather than selectors.
 
 ## `CacheProvider`
 
@@ -39,7 +37,7 @@ Owns the real storage, created per React tree — so SSR requests and tests are 
 | ---------- | ----------- | -------- | -------------------------------------- |
 | `children` | `ReactNode` | no       | The subtree the cache is available to. |
 
-Takes no configuration: the cache default `gcTime` belongs to the cache instance, so change it with [`createStoreCache`](#createstorecacheoptions). A group `Provider` mounted without a `CacheProvider` ancestor throws [`Missing CacheProvider`](#errors).
+Takes no configuration: the cache default `gcTime` belongs to the cache instance, so change it with [`createStoreCache`](#createstorecacheoptions). A group `Provider` mounted without a `CacheProvider` ancestor throws [`[va-store] Missing <CacheProvider>`](#errors).
 
 ## `CacheScope`
 
@@ -83,7 +81,7 @@ const records = useCacheKeys(['customer', '42'])
 | --------- | ------------------- | -------- | ----------------------------------------- |
 | `prefix`  | `readonly string[]` | no       | Restricts the result to one path subtree. |
 
-Returns `CacheRecord[]`. Throws `Missing CacheProvider` outside a `CacheProvider`.
+Returns `CacheRecord[]`. Throws `[va-store] Missing <CacheProvider>` outside a `CacheProvider`.
 
 ## `toTree(records)`
 
@@ -125,7 +123,7 @@ function createCachedStore<TState extends object, TDefaultValue extends object =
 
 Call it once at module top-level. Calling it twice with the same `name` on one cache `console.warn`s in development.
 
-There is no `plugins` option here either — a capability is attached inside the `factory`, exactly as with [`createContextStore`](../create-context-store/api#capabilities): `cache.createCachedStore(() => pipe(proxy({ … }), withPersist()), { name })`. That factory-position wrapping is what makes a store [cached **and** persisted](../persist/cache) — note the lifetime differs from a plain `createContextStore`: here the capability lives as long as the cache entry, not as long as one `Provider` mount.
+A capability is attached inside the `factory` here too, exactly as with [`createContextStore`](../create-context-store/api#capabilities): `cache.createCachedStore(() => pipe(proxy({ … }), withPersist()), { name })`. That factory-position wrapping is what makes a store [cached **and** persisted](../persist/cache) — note the lifetime differs from a plain `createContextStore`: here the capability lives as long as the cache entry, not as long as one `Provider` mount.
 
 ### The returned group
 
@@ -184,11 +182,11 @@ Returns `TState`. It reads the group instance from context rather than through a
 
 ## `Subscribe`
 
-Render-prop receiving `{ snap, store }`, mirroring [`createContextStore`'s](../create-context-store/api#subscribe).
+Render-prop receiving `(snap, store)`, mirroring [`createContextStore`'s](../create-context-store/api#subscribe).
 
-| Prop       | Type                                                               | Required | Description                                          |
-| ---------- | ------------------------------------------------------------------ | -------- | ---------------------------------------------------- |
-| `children` | `(arg: { snap: Snapshot<TState>; store: TState }) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
+| Prop       | Type                                                      | Required | Description                                          |
+| ---------- | --------------------------------------------------------- | -------- | ---------------------------------------------------- |
+| `children` | `(snap: Snapshot<TState>, store: TState) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
 
 There is no `selector` and no `shallow` prop — the zu-store group's selector API has no counterpart here.
 
@@ -252,7 +250,7 @@ function createStoreCache(options?: { gcTime?: number }): {
 | -------- | -------- | ------- | ------------------------------------------------------------------------ |
 | `gcTime` | `number` | 300 000 | Cache-wide default eviction delay in ms, used when nothing overrides it. |
 
-A store group is bound to the cache that created it: mounting it under another cache's `Provider` throws `Missing CacheProvider`.
+A store group is bound to the cache that created it: mounting it under another cache's `Provider` throws `[va-store] Missing <CacheProvider>`.
 
 ## Types
 
@@ -266,7 +264,6 @@ A store group is bound to the cache that created it: mounting it under another c
 | `CachedStoreOptions<TState>`                | The `createCachedStore` options object.                                            |
 | `CachedStoreGroup<TState, TDefaultValue>`   | The returned group — `Provider`, hooks, render props, `getFromCache`, `remove`.    |
 | `CachedSubscribeProps<TState>`              | The group `Subscribe`'s props.                                                     |
-| `CachedSubscribeRenderArg<TState>`          | Its render argument — `{ snap, store }`.                                           |
 | `CachedStoreProps<TState>`                  | The group `Store`'s props.                                                         |
 | `ScopeProps`                                | `CacheScope`'s props.                                                              |
 | `StoreCache`                                | What `createStoreCache` returns.                                                   |
@@ -277,10 +274,10 @@ All are re-exported from `@ez-kit/va-store`; none require reaching for `@ez-kit/
 
 ## Errors
 
-| Message                   | Cause                                                                                                                   |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `Missing CacheProvider`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.   |
-| `Missing <name.Provider>` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside that group's own `Provider` (`name` is the group name). |
+| Message                                | Cause                                                                                                                   |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `[va-store] Missing <CacheProvider>`   | A group `Provider`, `useCache`, `useCacheKeys` or `useFromCache` used without the owning cache's `Provider` above it.   |
+| `[store-core] Missing <name.Provider>` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside that group's own `Provider` (`name` is the group name). |
 
 `getFromCache` and `remove` throw nothing: they resolve through the most recently activated `CacheProvider` and are a no-op — `undefined` — when none is mounted.
 

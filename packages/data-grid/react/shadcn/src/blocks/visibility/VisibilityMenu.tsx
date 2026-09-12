@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Columns2 } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -9,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components
 import type { VisibilityMenuProps } from '@ez-kit/data-grid-react'
 
 export function VisibilityMenu({ columns }: VisibilityMenuProps) {
+	const messages = useGridMessages()
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
@@ -18,7 +20,7 @@ export function VisibilityMenu({ columns }: VisibilityMenuProps) {
 					className='h-8 gap-1.5'
 				>
 					<Columns2 className='h-4 w-4' />
-					Columns
+					{messages.visibility.trigger}
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent

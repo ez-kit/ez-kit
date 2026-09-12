@@ -147,7 +147,7 @@ describe('valtio createStoreCache — surface', () => {
 		})
 	})
 
-	it('exposes { snap, store } via the Subscribe render-prop', () => {
+	it('exposes (snap, store) via the Subscribe render-prop', () => {
 		const cache = createStoreCache()
 		const form = cache.createCachedStore(formFactory, { name: 'surface-item' })
 
@@ -157,7 +157,7 @@ describe('valtio createStoreCache — surface', () => {
 					id='main'
 					defaultValue={{ name: 'render-prop' }}
 				>
-					<form.Subscribe>{({ snap }) => <span data-testid='item'>{snap.name}</span>}</form.Subscribe>
+					<form.Subscribe>{(snap) => <span data-testid='item'>{snap.name}</span>}</form.Subscribe>
 				</form.Provider>
 			</cache.Provider>,
 		)
@@ -178,7 +178,7 @@ describe('valtio createStoreCache — Store', () => {
 					id='main'
 					defaultValue={{ name: 'seed' }}
 				>
-					<form.Subscribe>{({ snap }) => <span data-testid='name'>{snap.name}</span>}</form.Subscribe>
+					<form.Subscribe>{(snap) => <span data-testid='name'>{snap.name}</span>}</form.Subscribe>
 					<form.Store>
 						{(store) => {
 							storeRenders += 1

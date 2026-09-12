@@ -22,8 +22,12 @@ const LEADING_EDGE_PATTERN = /^\|/
 const TRAILING_EDGE_PATTERN = /(?<!\\)\|$/
 /** Turns the GFM escape `\|` back into the literal pipe it stands for. */
 const ESCAPED_PIPE_PATTERN = /\\\|/g
-/** Heading text used for a table that sits before any heading on the page. */
-const NO_HEADING = '(page root)'
+/**
+ * Heading text used for a table that sits before any heading on the page. Docs pages carry
+ * no `#` heading of their own — Fumadocs renders the frontmatter `title` as the page's `<h1>`
+ * — so a table in a page's opening section is tagged with this rather than the title.
+ */
+export const NO_HEADING = '(page root)'
 
 export type DocTableRow = {
 	/** 1-based line number of the row in the source file. */

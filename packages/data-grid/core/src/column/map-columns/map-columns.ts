@@ -7,7 +7,7 @@ import {
 import { setIfDefined } from '../../utils/set-if-defined'
 import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../normalize'
 
-import type { OperatorRegistry } from '../../features/operators'
+import type { ColumnOperatorsConfig, OperatorRegistry } from '../../features/operators'
 import type {
 	CellViewCtx,
 	ColumnCellMeta,
@@ -54,6 +54,12 @@ type ColumnMetaCreating<TRow> = false | ColumnCreatingConfig<TRow>
 export type MapColumnsOptions = {
 	/** Table-level faceted flag — used as default when column has no `filtering.faceted` override. */
 	tableFaceted?: boolean
+	/**
+	 * Table-level operator switch — the default when a column has no `filtering.operators` of
+	 * its own. `undefined` (the table never mentioned operators) keeps the per-column opt-in;
+	 * `false` wins over any column that asks for them.
+	 */
+	tableOperators?: boolean
 }
 
 export function mapColumns<TRow extends object>(
@@ -72,6 +78,7 @@ function mapColumn<TRow extends object>(
 	const {
 		pinning,
 		visibility,
+		ordering,
 		sorting,
 		cell,
 		filtering,
@@ -101,6 +108,7 @@ function mapColumn<TRow extends object>(
 	setIfDefined(meta, 'pinning', normalizeColumnPinning(pinning))
 	setIfDefined(meta, 'align', normalizeColumnAlign(align))
 	setIfDefined(meta, 'visibility', visibility)
+	setIfDefined(meta, 'ordering', ordering)
 	setIfDefined(meta, 'editing', editing as ColumnMetaEditing)
 	setIfDefined(meta, 'creating', creating as ColumnMetaCreating<TRow>)
 	setIfDefined(meta, 'headerClassName', headerClassName)
@@ -194,17 +202,36 @@ function mapColumn<TRow extends object>(
 	if (facetedEnabled) {
 		filteringMeta.faceted = true
 	}
-	if (filteringCfg?.operators && registry) {
+	// Same cascade as `faceted` above: the table states a default, the column overrides it in
+	// both directions. `operators: false` on the table is the stronger word — it means "no
+	// operator selectors in this grid", so a column asking for them does not get them.
+	const colOperators = filteringCfg?.operators
+	const tableOperators = options?.tableOperators
+	// A table-wide `true` reaches every column that can actually be filtered: not one that
+	// turned its filter off (`filtering: false`), and not a group header, which has no value
+	// of its own to compare.
+	const inheritsTableOperators = tableOperators === true && filtering !== false && columns === undefined
+	const operatorsEnabled =
+		tableOperators === false || colOperators === false ? false : colOperators !== undefined || inheritsTableOperators
+	if (operatorsEnabled && registry) {
 		const cellType = cellDef?.type
 		const columnId: string = id ?? accessorKey ?? '?'
 		const cellTypeOperators = DEFAULT_OPERATORS_BY_TYPE[cellType ?? 'text']
-		const resolved = resolveColumnOperators(filteringCfg.operators, registry, cellTypeOperators, columnId)
+		// A column inheriting the table's `true` offers its cell type's defaults — the same
+		// thing `operators: true` on the column itself means.
+		const operatorsConfig: true | ColumnOperatorsConfig = typeof colOperators === 'object' ? colOperators : true
+		const resolved = resolveColumnOperators(operatorsConfig, registry, cellTypeOperators, columnId)
 
 		if (resolved.length === 0) {
 			// `operators: true` on a cell type with no default set. Every built-in has one, so
 			// this can only be a project-registered type — which has to say which operators it
 			// offers, either through `defineCellType({ operators })` or per column.
-			if (IS_DEV) {
+			//
+			// Only when the column asked: under a table-wide `operators: true` the author said
+			// "wherever they apply", and a custom cell type that declares none is a column
+			// where they do not — falling back to a plain input is the answer, not a warning
+			// per such column.
+			if (IS_DEV && colOperators !== undefined) {
 				console.warn(
 					`[data-grid] Column "${columnId}" enables \`filtering.operators\`, but cell type ` +
 						`"${cellType ?? 'text'}" declares no operators, so the column falls back to a plain ` +
@@ -216,12 +243,12 @@ function mapColumn<TRow extends object>(
 			result.filterFn = createOperatorFilterFn(resolved)
 			filteringMeta.operators = resolved
 
-			if (typeof filteringCfg.operators === 'object' && filteringCfg.operators.betweenOperator) {
-				filteringMeta.betweenOperator = filteringCfg.operators.betweenOperator
+			if (typeof operatorsConfig === 'object' && operatorsConfig.betweenOperator) {
+				filteringMeta.betweenOperator = operatorsConfig.betweenOperator
 			}
 
 			const defaultOpId =
-				filteringCfg.defaultOperator ??
+				filteringCfg?.defaultOperator ??
 				(cellType ? DEFAULT_OPERATOR_ID_BY_TYPE[cellType] : undefined) ??
 				resolved[0]?.id
 			if (defaultOpId) {

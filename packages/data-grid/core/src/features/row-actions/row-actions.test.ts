@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { getActionsColumnSize, RowActionsVariant } from './row-actions'
+import { getActionsColumnSize, RowActionsPlacement } from './row-actions'
 
-const INLINE = { variant: RowActionsVariant.Inline, editing: false, deleting: false, pinning: false, custom: false }
+const INLINE = {
+	placement: RowActionsPlacement.Inline,
+	editing: false,
+	deleting: false,
+	pinning: false,
+	creating: false,
+	custom: false,
+}
 
 describe('getActionsColumnSize', () => {
 	it('reserves the overflow trigger once custom actions are supplied', () => {
@@ -19,13 +26,21 @@ describe('getActionsColumnSize', () => {
 		expect(pinAndCustom).toBe(pinOnly)
 	})
 
-	it('keeps the menu variant at one trigger whatever it holds', () => {
-		const bare = getActionsColumnSize({ ...INLINE, variant: RowActionsVariant.Menu })
+	it('reserves the inline form pair for a creating-only grid', () => {
+		const creatingOnly = getActionsColumnSize({ ...INLINE, creating: true })
+		const editingOnly = getActionsColumnSize({ ...INLINE, editing: true })
+
+		expect(creatingOnly).toBe(editingOnly)
+	})
+
+	it('keeps the menu placement at one trigger whatever it holds', () => {
+		const bare = getActionsColumnSize({ ...INLINE, placement: RowActionsPlacement.Menu })
 		const loaded = getActionsColumnSize({
-			variant: RowActionsVariant.Menu,
+			placement: RowActionsPlacement.Menu,
 			editing: false,
 			deleting: true,
 			pinning: true,
+			creating: false,
 			custom: true,
 		})
 

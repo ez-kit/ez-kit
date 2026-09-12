@@ -1,4 +1,4 @@
-import { pipe } from '@ez-kit/store-core'
+import { attachCapability, pipe } from '@ez-kit/store-core'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { describe, expect, it } from 'vitest'
@@ -27,10 +27,13 @@ const pipedStore = createContextStore<ReturnType<typeof makeStore>, { q?: string
 		pipe(makeStore(defaultValue.q ?? ''), withPersist({ fields: filterFields })),
 )
 
-/** The same capability declared on the factory instead of on the store value. */
-const pluggedStore = createContextStore<ReturnType<typeof makeStore>, { q?: string }>(
-	({ defaultValue }: ContextStoreInit<{ q?: string }>) => makeStore(defaultValue.q ?? ''),
-	{ plugins: [persist<ReturnType<typeof makeStore>>({ fields: filterFields })] },
+/** The same capability attached by hand — the seam `withPersist` is sugar over. */
+const attachedStore = createContextStore<ReturnType<typeof makeStore>, { q?: string }>(
+	({ defaultValue }: ContextStoreInit<{ q?: string }>) => {
+		const store = makeStore(defaultValue.q ?? '')
+		attachCapability(store, persist<ReturnType<typeof makeStore>>({ fields: filterFields }))
+		return store
+	},
 )
 
 function makeStore(q: string) {
@@ -51,7 +54,7 @@ function makeView(store: { useSelector: <T>(selector: (state: Filters) => T) => 
 
 const cases = [
 	{ name: 'pipe(store, withPersist())', store: pipedStore },
-	{ name: 'createContextStore(factory, { plugins: [persist()] })', store: pluggedStore },
+	{ name: 'attachCapability(store, persist())', store: attachedStore },
 ] as const
 
 describe('@ez-kit/zu-store persist', () => {

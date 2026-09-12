@@ -1,23 +1,26 @@
-import { createTable, featureConfig, isFeatureEnabled, PaginationMode } from '@ez-kit/data-grid-core'
+import { createTable, featureConfig, isFeatureEnabled, PaginationMode, resolveMessages } from '@ez-kit/data-grid-core'
 import { useEffect, useRef } from 'react'
 
 import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
-import { ActionBarVariant } from './types'
+import { ActionBarVariant, FilteringVariant } from './types'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
+import type { PaginationLabelModel } from './data-grid/pagination-label'
 import type { DataGridDefaultOptions } from './data-grid-options-context'
 import type { ResolvedGridOptions } from './resolved-options'
 import type {
 	FilterChipsPosition,
-	FilteringVariant,
+	FilterPanelPlacement,
 	LoadMoreThreshold,
 	LoadMoreTrigger,
-	PaginationVariant,
+	PageSizerPlacement,
+	PaginationLabel,
 } from './types'
 import type {
+	ActionItem,
 	VisibilityConfig,
 	CreatingConfig,
 	DataTable,
@@ -28,7 +31,9 @@ import type {
 	FilteringConfig,
 	GlobalFilteringConfig,
 	LoadMoreDirection,
+	OrderingConfig,
 	PaginationConfig,
+	PartialGridMessages,
 	RowActionsConfig,
 	RowVirtualizationConfig,
 	SelectionConfig,
@@ -88,20 +93,44 @@ export type SelectionBarConfig<TRow extends object = object> = FeatureToggle & {
 	 */
 	variant?: ActionBarVariant
 	/**
-	 * Replaces the bar's default clear behaviour — it does not observe it. Named `clear`, not
-	 * `onClear`: every `on*` in this API notifies, this one substitutes, and the `clearSelection`
-	 * argument is the default reset the replacement calls when it still wants it.
+	 * Called when the bar's Cancel is pressed. The grid resets the selection itself either
+	 * way — this notifies, like every other `on*` in the API, and never has to be told to
+	 * finish the job.
+	 *
+	 * `selectedRows` is the set as it stood *before* the reset, which is the reason to reach
+	 * for this over `selection.onChange`: that one fires after, with nothing left to report.
+	 *
+	 * To gate the clear itself — a confirmation before a large selection is discarded — draw
+	 * the bar yourself with `<DataGrid.SelectionBar>`; its render args carry `count`,
+	 * `onClear` and the rest.
 	 */
-	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
-	/** Rendered between Delete and Cancel. ReactElement or render-function. */
-	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	/**
+	 * Custom entries rendered between Delete and Cancel, built from the current selection.
+	 *
+	 * The counterpart of `rowActions.actions`, and deliberately the same {@link ActionItem}
+	 * shape: an "Export" offered both per row and for the selection is written once, and the
+	 * kit gives it the same glyph, danger colour and disabled state in both places. It used to
+	 * be a `ReactElement` here, which meant hand-drawing a button that never quite matched the
+	 * kit's own Delete beside it.
+	 *
+	 * An entry's `onSelect` takes no arguments — the callback that built it already closes over
+	 * `selectedRows`, `table` and `clearSelection`.
+	 *
+	 * Arbitrary markup that is not an action — a bulk-target select, a counter — goes in the
+	 * `start` / `end` slots of `<DataGrid.SelectionBar>`, the way `<DataGrid.Toolbar>` takes
+	 * its own: config carries data, the compound component carries markup.
+	 *
+	 * Return `[]` for a selection that offers nothing.
+	 */
+	actions?: (args: SelectionBarCallbackArgs<TRow>) => ActionItem<ReactElement>[]
 }
 
 /**
  * React-layer selection config. Extends the headless core {@link SelectionConfig}
- * (`onChange`, `multi`) with the React-only `bar` — a selection info bar that is inherently
- * React (its `actions` are `ReactElement`s), so it lives only in this layer and is never passed
- * down to the core `selection` config.
+ * (`onChange`, `multi`) with the React-only `bar` — a selection info bar whose entries carry
+ * React icons, so it lives only in this layer and is never passed down to the core `selection`
+ * config.
  */
 export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig<TRow, ReactNode> & {
 	/**
@@ -132,10 +161,10 @@ export type ReactSelectionConfig<TRow extends object = object> = SelectionConfig
 export type NormalizedSelectionBarConfig<TRow extends object = any> = {
 	/** Render mode of the shared action bar, defaulted. Never undefined. */
 	variant: ActionBarVariant
-	/** Replacement for the default clear behaviour, from `selection.bar.clear`. */
-	clear?: (args: SelectionBarCallbackArgs<TRow>) => void
-	/** Extra bar content, from `selection.bar.actions`. */
-	actions?: ReactElement | ((args: SelectionBarCallbackArgs<TRow>) => ReactElement)
+	/** Clear notification, from `selection.bar.onClear`. */
+	onClear?: (args: SelectionBarCallbackArgs<TRow>) => void
+	/** Custom action entries, from `selection.bar.actions`. */
+	actions?: (args: SelectionBarCallbackArgs<TRow>) => ActionItem<ReactElement>[]
 }
 
 /** Normalized virtualized config stored on the table instance. */
@@ -187,21 +216,50 @@ function normalizeVirtualization(
  */
 export type ReactPaginationConfig = PaginationConfig & {
 	/**
-	 * Page-based mode only. Which pagination-bar controls to render.
-	 * Default {@link PaginationVariant.Numbered}. Purely presentational — paging
-	 * behaviour is identical across variants.
+	 * Page-based mode only. Render a link per page beside prev/next, windowed by `siblings` /
+	 * `boundaries`. Default `true`. Purely presentational — paging behaviour is identical
+	 * whichever controls render. Links are dropped when the page count is unknown, since they
+	 * cannot be enumerated without a total.
 	 */
-	variant?: PaginationVariant
+	links?: boolean
 	/**
-	 * `numbered` variant only. How many pages stay either side of the current one in the page-link
+	 * Page-based mode only. Render jump-to-first / jump-to-last buttons flanking prev/next.
+	 * Default `false`. Worth turning on with `links: false`, where they are the only way to
+	 * reach either end.
+	 */
+	edges?: boolean
+	/**
+	 * `links` only. How many pages stay either side of the current one in the page-link
 	 * strip. Default {@link DATA_GRID_DEFAULTS.pagination.siblings} (1) → `1 … 4 5 6 … 100`.
 	 */
 	siblings?: number
 	/**
-	 * `numbered` variant only. How many pages stay at each end of the page-link strip.
+	 * `links` only. How many pages stay at each end of the page-link strip.
 	 * Default {@link DATA_GRID_DEFAULTS.pagination.boundaries} (1) → the `1` and `100` above.
 	 */
 	boundaries?: number
+	/**
+	 * Page-based mode only. The footer's label, an axis of its own — which controls render
+	 * does not decide it. {@link PaginationLabel.Range} (the default) reads `1–10 of 50` and
+	 * falls back to the page counter when the total is unknown; {@link PaginationLabel.Page}
+	 * reads `Page 2 of 5`. `false` shows no label at all; a function replaces the text, and is
+	 * the hook for translating it.
+	 *
+	 * Receives the same settled model the built-in rule reads, so a renderer never repeats the
+	 * trust rules: both totals are `undefined` exactly when the grid cannot be trusted to know
+	 * them (see {@link ReactPaginationConfig} above).
+	 *
+	 * @example
+	 * ```ts
+	 * pagination: {
+	 *   label: ({ pageIndex, pageSize, rowCount }) =>
+	 *     rowCount === undefined
+	 *       ? `Страница ${String(pageIndex + 1)}`
+	 *       : `${String(pageIndex * pageSize + 1)}–${String(Math.min((pageIndex + 1) * pageSize, rowCount))} из ${String(rowCount)}`,
+	 * }
+	 * ```
+	 */
+	label?: PaginationLabel | false | ((ctx: PaginationLabelModel) => ReactNode)
 	/**
 	 * Infinite mode only. Default: {@link LoadMoreTrigger.Auto} — loads when the edge enters
 	 * view. {@link LoadMoreTrigger.Manual} suppresses auto detection and renders a
@@ -230,20 +288,39 @@ export type ReactPaginationConfig = PaginationConfig & {
 	 */
 	items?: number[]
 	/**
-	 * Page-based mode only. Auto-mount the PageSizer control in `Toolbar.start`.
+	 * Page-based mode only. Auto-mount the PageSizer control, and say where.
 	 *
-	 * - omitted — mounted iff {@link ReactPaginationConfig.items} is set
-	 * - `true` — mounted, falling back to
+	 * - omitted — mounted iff {@link ReactPaginationConfig.items} is set, in the toolbar
+	 * - `true` — mounted in the toolbar, falling back to
 	 *   {@link DATA_GRID_DEFAULTS.pagination.items} when no list is given
+	 * - `'toolbar'` / `'footer'` — mounted there; the scalar **is** the placement
+	 * - {@link PageSizerConfig} — the same, spelled out
 	 * - `false` — never auto-mounted; `<DataGrid.PageSizer />` still works if placed by hand,
-	 *   because this flag governs mounting only and never erases
+	 *   because this option governs mounting only and never erases
 	 *   {@link ReactPaginationConfig.items}
 	 *
-	 * Same name and meaning as `sorting.toolbar`, `globalFiltering.toolbar`,
-	 * `filtering.toolbar` and `visibility.toolbar`: one word for "auto-mount my
-	 * control into the toolbar", on every feature that has one.
+	 * Named for the control it mounts rather than for a container, unlike `sorting.toolbar`,
+	 * `globalFiltering.toolbar`, `filtering.toolbar` and `visibility.toolbar`. Those controls
+	 * can live in one place, so `toolbar` states both the mounting and the destination; this
+	 * one has two homes, and `toolbar: true, placement: 'footer'` would be a config
+	 * contradicting itself.
 	 */
-	toolbar?: boolean
+	pageSizer?: boolean | PageSizerPlacement | PageSizerConfig
+}
+
+/**
+ * The object form of {@link ReactPaginationConfig.pageSizer}. Scalar-or-object, like the
+ * column options and like `filtering.chips`: the scalar is the placement, the object exists
+ * for when there is more to say.
+ */
+export type PageSizerConfig = FeatureToggle & {
+	/** Which region holds the control. Default: {@link PageSizerPlacement.Toolbar}. */
+	placement?: PageSizerPlacement
+}
+
+/** Normalized shape stored on the table instance for `Toolbar` / the default layout to read. */
+export type NormalizedPageSizerConfig = {
+	placement: PageSizerPlacement
 }
 
 /**
@@ -420,6 +497,19 @@ export type ReactFilteringConfig = {
 	 */
 	chips?: boolean | FilterChipsPosition | FilterChipsConfig
 	/**
+	 * {@link FilteringVariant.Panel} only. Where the auto-mounted panel renders.
+	 *
+	 * - omitted — its own strip between the toolbar and the table
+	 * - `'toolbar'` — the toolbar's leading slot, so the column filters sit beside the
+	 *   search box
+	 * - {@link FilterPanelConfig} — the same, spelled out
+	 *
+	 * The scalar **is** the placement, as with `chips`. It says nothing about *whether* the
+	 * panel mounts: `variant: 'panel'` took the controls out of the header, so the panel is
+	 * the grid's only filter UI and always mounts.
+	 */
+	panel?: FilterPanelPlacement | FilterPanelConfig
+	/**
 	 * Auto-mount filtering's toolbar control — the Clear-all button — into `Toolbar.end`
 	 * after `GlobalFilterInput`. Hidden when no filter is active unless `alwaysShow: true`.
 	 *
@@ -436,6 +526,21 @@ export type ReactFilteringConfig = {
 /** Normalized shape stored on the table instance for `DataGrid` root to read. */
 export type NormalizedFilterChipsConfig = {
 	position: FilterChipsPosition
+}
+
+/**
+ * The object form of {@link ReactFilteringConfig.panel}. Scalar-or-object, like `chips` and
+ * like the column options: the scalar is the placement, the object exists for when there is
+ * more to say.
+ */
+export type FilterPanelConfig = FeatureToggle & {
+	/** Which region holds the panel. Default: {@link FilterPanelPlacement.Above}. */
+	placement?: FilterPanelPlacement
+}
+
+/** Normalized shape stored on the table instance. `undefined` unless the variant is `panel`. */
+export type NormalizedFilterPanelConfig = {
+	placement: FilterPanelPlacement
 }
 
 /** Normalized shape stored on the table instance for `Toolbar` / `ClearFiltersButton` to read. */
@@ -568,6 +673,8 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * Enable filtering.
 	 * - `true` — inline filter inputs below each column header
 	 * - `{ variant: FilteringVariant.Popover }` — filter icon in header; click opens a popover with the filter input
+	 * - `{ variant: FilteringVariant.Panel }` — the controls leave the header for one auto-mounted
+	 *   `<DataGrid.FilterPanel />` above the table
 	 * - `{ variant: FilteringVariant.Inline, ...opts }` — same as `true` with extra FilteringConfig options
 	 */
 	filtering?: boolean | ReactFilteringConfig
@@ -596,6 +703,17 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	visibility?: boolean | ReactVisibilityConfig
 	/**
+	 * Column reordering, grouped per axis like `pinning`.
+	 * - `true` — every axis this grid supports, which today means columns
+	 * - `{ column: { onChange } }` — and report the new order
+	 *
+	 * The header menu grows a "move" pair, and the focused header cell answers
+	 * `Alt+ArrowLeft` / `Alt+ArrowRight` — the menu closes on select in both kits, so a column
+	 * that has to travel several places is moved from the keyboard rather than by reopening the
+	 * menu once per step.
+	 */
+	ordering?: boolean | OrderingConfig
+	/**
 	 * Controlled table state. Pass a partial `TableState` to control specific portions
 	 * (e.g. only sorting) while leaving the rest internally managed.
 	 * Must be used together with `onStateChange` to reflect state updates back.
@@ -619,6 +737,26 @@ export type UseDataGridConfig<TRow extends object> = {
 	 * beside `sorting` and `editing`.
 	 */
 	layout?: LayoutConfig
+	/**
+	 * Replaces any subset of the user-facing strings the grid renders, group by group.
+	 *
+	 * Every string the packages can render — visible text, `placeholder`s and `aria-label`s
+	 * alike — comes from {@link GridMessages}, whose English default is
+	 * {@link defaultMessages}. Overrides merge per entry, so naming one string keeps the rest
+	 * of its group.
+	 *
+	 * Set it on {@link DataGridOptionsProvider} for an app-wide locale; set it here to change
+	 * one grid's wording.
+	 *
+	 * @example
+	 * ```tsx
+	 * messages: {
+	 *   pagination: { rowsPerPage: 'Строк на странице' },
+	 *   filtering: { placeholder: ({ columnId }) => `Фильтр по ${columnId}` },
+	 * }
+	 * ```
+	 */
+	messages?: PartialGridMessages
 	/**
 	 * Pagination config. Page-based by default; set `mode: PaginationMode.Infinite` for infinite
 	 * scroll. The React layer adds `trigger` / `threshold` detection tuning on top of
@@ -723,9 +861,18 @@ export function useDataGrid<TRow extends object>(
 		state,
 		onStateChange,
 		layout,
+		messages: messageOverrides,
+		ordering: rawOrdering,
 		rowProps,
 		...restConfig
 	} = config
+
+	// Folded onto the English dictionary once per render, so nothing downstream ever reads a
+	// partial: `table.grid.messages` is always the complete {@link GridMessages}. The three
+	// option layers merged themselves upstream — `mergeGridOptionLayers` deep-merges, so a
+	// provider-wide locale and an instance's single-string override compose without either
+	// erasing the other's groups.
+	const messages = resolveMessages(messageOverrides)
 
 	// Split `selection` into the headless core part (`onChange` / `multi`) passed to
 	// createTable and the React-only `bar` stored on the instance for SelectionBar to read.
@@ -748,7 +895,7 @@ export function useDataGrid<TRow extends object>(
 		const cfg = featureConfig(selectionBar)
 		return {
 			variant: cfg?.variant ?? DEFAULT_ACTION_BAR_VARIANT,
-			...(cfg?.clear !== undefined ? { clear: cfg.clear } : {}),
+			...(cfg?.onClear !== undefined ? { onClear: cfg.onClear } : {}),
 			...(cfg?.actions !== undefined ? { actions: cfg.actions } : {}),
 		}
 	})()
@@ -758,19 +905,21 @@ export function useDataGrid<TRow extends object>(
 	const coreSelection: boolean | SelectionConfig<TRow, ReactNode> | undefined =
 		typeof rawSelection === 'object' ? (({ bar: _bar, ...rest }) => rest)(rawSelection) : rawSelection
 
-	// Split pagination into the headless core part (strip React-only detection tuning and
-	// the display-only `variant`) and the normalized infinite config stored on the instance
+	// Split pagination into the headless core part (strip React-only detection tuning and the
+	// display-only footer options) and the normalized infinite config stored on the instance
 	// for the infinite hook.
 	const corePagination: boolean | PaginationConfig | undefined =
 		typeof rawPagination === 'object'
 			? (({
 					trigger: _trigger,
 					threshold: _threshold,
-					variant: _variant,
+					links: _links,
+					edges: _edges,
 					siblings: _siblings,
 					boundaries: _boundaries,
 					items: _items,
-					toolbar: _toolbar,
+					pageSizer: _pageSizer,
+					label: _label,
 					...rest
 				}) => rest)(rawPagination)
 			: rawPagination
@@ -790,14 +939,33 @@ export function useDataGrid<TRow extends object>(
 		? (paginationCfg?.items ?? [...DATA_GRID_DEFAULTS.pagination.items])
 		: undefined
 
-	// Whether `<Toolbar>` mounts the PageSizer itself. Defaults to "yes when a list was
-	// supplied", so the one-field case is unchanged.
-	const pageSizerInToolbar: boolean =
-		isPagedPagination && (paginationCfg?.toolbar ?? paginationCfg?.items !== undefined)
+	// Whether the grid mounts the PageSizer itself, and where. Defaults to "yes when a list was
+	// supplied", in the toolbar — so the one-field case is unchanged.
+	const normalizedPageSizer: NormalizedPageSizerConfig | undefined = (() => {
+		if (!isPagedPagination) return undefined
+		const pageSizer = paginationCfg?.pageSizer
+		const defaultPlacement = DATA_GRID_DEFAULTS.pagination.pageSizer.placement
+		if (pageSizer === undefined) {
+			return paginationCfg?.items !== undefined ? { placement: defaultPlacement } : undefined
+		}
+		if (pageSizer === false) return undefined
+		if (pageSizer === true) return { placement: defaultPlacement }
+		if (typeof pageSizer === 'string') return { placement: pageSizer }
+		const config = featureConfig(pageSizer)
+		if (config === undefined) return undefined
+		return { placement: config.placement ?? defaultPlacement }
+	})()
 
-	const paginationVariant: PaginationVariant = paginationCfg?.variant ?? DATA_GRID_DEFAULTS.pagination.variant
+	// The footer's three display axes, each resolved once here so no UI kit ever has to fall
+	// back for itself. `label` keeps `false` distinct from an absent option: the first says
+	// "show no label", the second "use the default form".
+	const paginationControls = {
+		links: paginationCfg?.links ?? DATA_GRID_DEFAULTS.pagination.links,
+		edges: paginationCfg?.edges ?? DATA_GRID_DEFAULTS.pagination.edges,
+	}
+	const paginationLabel: PaginationLabel | false | ((ctx: PaginationLabelModel) => ReactNode) =
+		paginationCfg?.label ?? DATA_GRID_DEFAULTS.pagination.label
 
-	// Resolved once here — like the variant — so no UI kit ever has to fall back for itself.
 	const paginationWindow = {
 		siblings: paginationCfg?.siblings ?? DATA_GRID_DEFAULTS.pagination.siblings,
 		boundaries: paginationCfg?.boundaries ?? DATA_GRID_DEFAULTS.pagination.boundaries,
@@ -854,6 +1022,20 @@ export function useDataGrid<TRow extends object>(
 		return { position: config.position ?? DATA_GRID_DEFAULTS.filtering.chips.position }
 	})()
 
+	// Where the panel goes. Resolved only under the `panel` variant — under `inline` or
+	// `popover` the controls are in the header and there is no panel to place.
+	const normalizedFilterPanel: NormalizedFilterPanelConfig | undefined = (() => {
+		if (filteringVariant !== FilteringVariant.Panel) return undefined
+		const panel = filteringCfg?.panel
+		const defaultPlacement = DATA_GRID_DEFAULTS.filtering.panel.placement
+		if (panel === undefined) return { placement: defaultPlacement }
+		// The scalar: a placement and nothing else.
+		if (typeof panel === 'string') return { placement: panel }
+		const config = featureConfig(panel)
+		if (!config) return { placement: defaultPlacement }
+		return { placement: config.placement ?? defaultPlacement }
+	})()
+
 	const normalizedFilteringToolbar: NormalizedFilteringToolbarConfig | undefined = (() => {
 		const toolbar = filteringCfg?.toolbar
 		if (toolbar === undefined || toolbar === false) return undefined
@@ -865,7 +1047,7 @@ export function useDataGrid<TRow extends object>(
 
 	const coreFiltering: boolean | FilteringConfig | undefined =
 		typeof rawFiltering === 'object'
-			? (({ variant: _v, chips: _c, toolbar: _t, debounce: _d, ...rest }) => rest)(rawFiltering)
+			? (({ variant: _v, chips: _c, panel: _p, toolbar: _t, debounce: _d, ...rest }) => rest)(rawFiltering)
 			: rawFiltering
 
 	// Split `globalFiltering` into:
@@ -876,13 +1058,13 @@ export function useDataGrid<TRow extends object>(
 		if (!isFeatureEnabled(rawGlobalFiltering)) return undefined
 		if (typeof rawGlobalFiltering !== 'object') {
 			return {
-				placeholder: DATA_GRID_DEFAULTS.globalFiltering.placeholder,
+				placeholder: messages.globalFiltering.placeholder,
 				debounce: filteringDebounce,
 				toolbar: true,
 			}
 		}
 		return {
-			placeholder: rawGlobalFiltering.placeholder ?? DATA_GRID_DEFAULTS.globalFiltering.placeholder,
+			placeholder: rawGlobalFiltering.placeholder ?? messages.globalFiltering.placeholder,
 			// Falls back to the shared column-filter debounce, not to a second default of its
 			// own: one gesture, one timing, unless this box explicitly asks for another.
 			debounce: rawGlobalFiltering.debounce ?? filteringDebounce,
@@ -916,6 +1098,9 @@ export function useDataGrid<TRow extends object>(
 			pagination: corePagination,
 			selection: coreSelection,
 			visibility: coreVisibility,
+			// Destructured out of `restConfig` above (the React layer resolves `grid.ordering`
+			// from it), so it has to be handed back: core owns the `onChange` funnel.
+			...(rawOrdering !== undefined ? { ordering: rawOrdering } : {}),
 			onStateChange: (nextState) => onStateChangeRef.current?.(nextState),
 		} as TableConfig<TRow>),
 	)
@@ -978,8 +1163,15 @@ export function useDataGrid<TRow extends object>(
 	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
+	// Only the axes that exist: `ordering: true` means "every axis this grid supports", which is
+	// columns today. A row axis would have to arrive with its own handler (see `OrderingConfig`),
+	// so a grid written today cannot silently gain row dragging later.
+	const orderingCfg = featureConfig(rawOrdering)
+	const columnOrderingEnabled = rawOrdering === true || isFeatureEnabled(orderingCfg?.column)
+
 	table.grid = {
 		cellTypes,
+		messages,
 		...(rowProps !== undefined ? { rowProps: rowProps as unknown as RowPropsResolver<never> } : {}),
 		layout: {
 			stickyHeader: layout?.stickyHeader ?? false,
@@ -991,21 +1183,25 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
+		ordering: { column: columnOrderingEnabled },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {
 			variant: filteringVariant,
 			debounce: filteringDebounce,
 			chips: normalizedChips,
+			panel: normalizedFilterPanel,
 			toolbar: normalizedFilteringToolbar,
 		},
 		globalFiltering: normalizedGlobalFiltering,
 		pagination: {
-			variant: paginationVariant,
+			links: paginationControls.links,
+			edges: paginationControls.edges,
+			label: paginationLabel,
 			siblings: paginationWindow.siblings,
 			boundaries: paginationWindow.boundaries,
 			...(paginationItems !== undefined ? { items: paginationItems } : {}),
-			toolbar: pageSizerInToolbar,
+			pageSizer: normalizedPageSizer,
 			infinite: normalizedInfinite,
 		},
 		selection: { bar: normalizedSelectionBar },

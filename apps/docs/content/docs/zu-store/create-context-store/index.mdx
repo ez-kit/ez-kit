@@ -3,8 +3,6 @@ title: createContextStore
 description: Wrap a Zustand vanilla store in React context so every Provider gets its own isolated instance.
 ---
 
-# `createContextStore`
-
 Wraps a Zustand vanilla store in React context. Each `<Provider>` creates its own store instance (via `useRef`), so the same store factory can power multiple isolated subtrees.
 
 This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./create-context-store/api).
@@ -38,6 +36,7 @@ Four ways in, for four different jobs.
 | an object or array of values                       | `useShallowSelector` |
 | the raw handle, without subscribing                | `useStore`           |
 | a value inside JSX, without touching the component | `Subscribe`          |
+| to write from JSX, without subscribing             | `Store`              |
 
 ```tsx
 const count = counterStore.useSelector((s) => s.count)
@@ -50,7 +49,11 @@ const { count, label } = counterStore.useShallowSelector((s) => ({
 const store = counterStore.useStore()
 
 <counterStore.Subscribe selector={(s) => s.count}>{(count) => <span>{count}</span>}</counterStore.Subscribe>
+
+<counterStore.Store>{(store) => <button onClick={() => store.setState({ count: 0 })}>Reset</button>}</counterStore.Store>
 ```
+
+`Subscribe` also hands the raw handle to its render prop as a second argument, so a slot that reads **and** writes needs neither `Store` nor a hook beside it. `Store` is the write-only half: no subscription, so store writes never re-render it.
 
 <Callout type='warn'>
 	`useStore()` is the **raw handle**, not a read. Reading state is `useSelector()` / `useShallowSelector()` — the same
@@ -134,7 +137,7 @@ const filters = counterStore.useSelector((s) => s.filters)
 </counterStore.Subscribe>
 ```
 
-The rule does not change — only where you state it. Without `shallow` that selector loops exactly as `useSelector` would; with it, `Subscribe` behaves as `useShallowSelector`. The `Subscribe` on a [`createStoreCache`](./store-cache) group takes the same prop, with the same meaning.
+The rule does not change — only where you state it. Without `shallow` that selector loops exactly as `useSelector` would; with it, `Subscribe` behaves as `useShallowSelector`. The `Subscribe` on a [`createStoreCache`](./cache) group takes the same prop, with the same meaning.
 
 ### Not the same thing as `shallowEqual`
 
@@ -304,10 +307,10 @@ A key that disappears from `value` simply stops being controlled. It keeps whate
 
 ### Consuming outside a `Provider`
 
-Using `useStore`, `useSelector`, `useShallowSelector`, or `Subscribe` outside a `Provider` throws:
+Using `useStore`, `useSelector`, `useShallowSelector`, `Subscribe`, or `Store` outside a `Provider` throws:
 
 ```
-Error: Missing Provider for createContextStore
+Error: [zu-store] Missing Provider for store
 ```
 
 This is deliberate — there is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. Wrap the consuming subtree in a `Provider`.
@@ -315,5 +318,5 @@ This is deliberate — there is no implicit module-level fallback, because the w
 ## Next
 
 - [API reference](./create-context-store/api) — every signature, prop and option in one place.
-- [`createStoreCache`](./store-cache) — keep a store alive across unmounts.
+- [`createStoreCache`](./cache) — keep a store alive across unmounts.
 - [`useStoreState`](./use-store-state) — a `useState`-shaped handle onto one field.

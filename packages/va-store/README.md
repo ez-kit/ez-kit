@@ -14,9 +14,9 @@ pnpm add @ez-kit/va-store valtio
 
 Wraps a Valtio proxy in React context. Returns `Provider`, `useSnapshot`, `useStore`, `Subscribe`, and `Store`. Multiple `Provider` instances are fully independent.
 
-Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the raw proxy from `useStore()`. (`useContextStore()` was renamed to `useStore()`: across `@ez-kit`, `useStore()` is the raw handle and only the read hook is manager-specific.)
+Unlike `@ez-kit/zu-store`, there are no selectors — Valtio tracks accessed properties automatically. Read from `useSnapshot()`, mutate the raw proxy from `useStore()`.
 
-The two components mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()` (`{ snap, store }`), `Store` the render-prop form of `useStore()` — it hands over the raw proxy without subscribing, so store mutations never re-render it.
+The two components mirror the two hooks: `Subscribe` is the render-prop form of `useSnapshot()` (`(snap, store)`), `Store` the render-prop form of `useStore()` — it hands over the raw proxy without subscribing, so store mutations never re-render it.
 
 ```tsx
 import { type ContextStoreInit, createContextStore } from '@ez-kit/va-store'
@@ -36,6 +36,43 @@ const state = counter.useStore() // write → state.count += 1
 ```
 
 → [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/create-context-store)
+
+### `createCachedStore(factory, options)` / `createStoreCache(options?)`
+
+Keeps `createContextStore`-style stores alive across `Provider` unmount/remount, keyed by
+`(path, name, id)`, in memory (no `localStorage`) — so table filters or pagination survive a navigation.
+`createContextStore` is left untouched; this is a separate, opt-in primitive with the same surface as
+[`@ez-kit/zu-store`](https://www.npmjs.com/package/@ez-kit/zu-store)'s.
+
+```tsx
+import { CacheProvider, CacheScope, createCachedStore } from '@ez-kit/va-store'
+import { proxy } from 'valtio'
+
+const usersTable = createCachedStore(({ defaultValue }) => proxy({ filter: defaultValue.filter ?? 'all' }), {
+	name: 'users',
+})
+
+// once, high in the tree
+<CacheProvider>
+	{/* <CacheScope> namespaces by location so two pages never collide on the same id */}
+	<CacheScope path={['page-1']}>
+		<usersTable.Provider id='users' defaultValue={{ filter: 'active' }}>
+			<UsersTable />
+		</usersTable.Provider>
+	</CacheScope>
+</CacheProvider>
+
+// imperatively, from anywhere — address the absolute { path, id }
+const live = usersTable.getFromCache({ path: ['page-1'], id: 'users' })
+if (live) live.filter = 'archived'
+```
+
+A capability attached in the factory lives as long as the **cache entry**, not as long as one `Provider`
+mount — so a cached, persisted store keeps syncing while nothing renders it.
+
+→ [Full docs](https://ez-kit-docs.vercel.app/docs/va-store/cache)
+
+---
 
 ### History
 

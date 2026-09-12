@@ -1,12 +1,17 @@
+'use client'
+
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import type { ResizerProps } from '@ez-kit/data-grid-react'
 
 export function Resizer({ onMouseDown, onTouchStart, onDoubleClick, isResizing }: ResizerProps) {
+	const messages = useGridMessages()
 	return (
 		// eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
 		<div
 			data-slot='column-resizer'
 			role='separator'
-			aria-label='Resize column'
+			aria-label={messages.resizing.resize}
 			aria-orientation='vertical'
 			data-resizing={isResizing ? 'true' : undefined}
 			onMouseDown={onMouseDown}

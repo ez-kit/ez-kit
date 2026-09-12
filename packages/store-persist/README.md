@@ -15,6 +15,14 @@ import { withPersist, paramString, StoreProvider } from '@ez-kit/zu-store' // Zu
 See the [va-store persist docs](https://ez-kit-docs.vercel.app/docs/va-store/persist) for the full
 API — fields, codecs, adapters, migrations, `useHydrated`, the `$url` / `$persist` handles.
 
+**Stability.** It is published because both bindings depend on it at runtime — it will appear in your
+lock file whether or not you import it. Its API is **public, not internal**: each binding re-exports
+every subpath verbatim, so a change here is a change to `@ez-kit/zu-store` and `@ez-kit/va-store`'s
+own surface. The four store packages are therefore versioned together and release together, and this
+package's exports — `./internals` included — are frozen on the same terms as theirs. Import it
+directly only when writing a binding for another store manager or a custom source adapter;
+everything else goes through a binding.
+
 ## What this package is for
 
 It exists so persistence is written once and works for every store manager. Two layers make that

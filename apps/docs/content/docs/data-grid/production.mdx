@@ -3,8 +3,6 @@ title: Production example
 description: One grid with every feature turned on at once, reading and writing against a simulated server.
 ---
 
-# Production example
-
 Every other page in these docs isolates one feature. This one does the opposite: a single
 orders console with everything enabled at the same time, talking to a **simulated backend**.
 Nothing is filtered, sorted or paged in the browser — the grid sends a query, the fake server
@@ -79,7 +77,7 @@ sorting={{
 
 Per-feature `onChange` is the convenience layer. Underneath there is a single channel — pass a
 partial `TableState` to `state` and read every update back through one `onStateChange`, exactly as
-[Controlled state](/docs/data-grid/controlled-state) describes. Below is the grid from the top of
+[Controlled state](/docs/data-grid/state/controlled) describes. Below is the grid from the top of
 this page — same features, same modals, same bulk delete — with only the state plumbing changed:
 `use-orders-state.ts` holds the state, the query and the mutations, and the component holds nothing
 but the grid.
@@ -165,7 +163,7 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 	return (
 		<DataGridOptionsProvider<Order>
 			defaults={{
-				pagination: { manual: true, items: [10, 25, 50], variant: 'numbered', siblings: 1 },
+				pagination: { manual: true, items: [10, 25, 50], siblings: 1 },
 				sorting: { manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true },
 				filtering: {
 					manual: true,
@@ -234,7 +232,7 @@ and no trigger is ever rendered for a write that would have nothing to call.
 
 Providers nest, so a subtree can refine app-wide defaults without repeating them — a compact grid in a
 side panel wraps itself in a second provider with `pagination: { pageSize: 5 }` and inherits the rest.
-See [Default options](/docs/data-grid/default-options) for the full merge rules, including the
+See [Default options](/docs/data-grid/state/defaults) for the full merge rules, including the
 kit-level `createDataGrid({ defaults })` layer that sits **under** the provider.
 
 ### Last write wins
@@ -364,6 +362,6 @@ Row grouping, drag reordering and CSV export are not here because they are not b
 
 ## Where to go next
 
-- [Server-side Data](/docs/data-grid/server-side) — the minimal version of this wiring, one feature at a time.
-- [Controlled state](/docs/data-grid/controlled-state) — which slices you can own and what happens when you do.
-- [State persistence](/docs/data-grid/state-persistence) — put this grid's query into the URL so it survives a reload.
+- [Server-side Data](/docs/data-grid/state/server-side) — the minimal version of this wiring, one feature at a time.
+- [Controlled state](/docs/data-grid/state/controlled) — which slices you can own and what happens when you do.
+- [State persistence](/docs/data-grid/state/persistence) — put this grid's query into the URL so it survives a reload.

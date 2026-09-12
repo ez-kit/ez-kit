@@ -3,15 +3,13 @@ title: createCachedStore
 description: Keep a Valtio store alive across Provider unmount/remount — in memory, keyed by name — so filters, pagination, and in-progress edits survive navigation without persisting to storage.
 ---
 
-# `createCachedStore`
-
 `createContextStore` creates a fresh proxy on `Provider` mount and throws it away on unmount. That is exactly right for a modal or a one-off form — but not for a table whose filters and pagination should still be there when the user navigates away and back.
 
 `createCachedStore` is a **separate, opt-in** primitive that keeps the whole live proxy alive in an in-memory cache, keyed by a name you choose. Cache-hits return the **same** proxy object, so in-progress mutations survive unmount/remount within `gcTime`. `createContextStore` is unchanged.
 
 The package ships a **ready-made default cache**: import `CacheProvider` and `createCachedStore` directly and you are done; no instance to create. This page uses the default cache throughout. If you need an isolated cache or several independent caches, see [Custom or multiple caches](#custom-or-multiple-caches) at the end.
 
-The cache surface mirrors [`@ez-kit/zu-store`](../zu-store/store-cache) name-for-name — `createStoreCache` / `createCachedStore` / `CacheProvider` / `CacheScope` / `useCache` / `useCacheKeys`.
+The cache surface mirrors [`@ez-kit/zu-store`](../zu-store/cache) name-for-name — `createStoreCache` / `createCachedStore` / `CacheProvider` / `CacheScope` / `useCache` / `useCacheKeys`.
 
 This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./cache/api).
 
@@ -172,7 +170,7 @@ For a nested view of the same coordinates, compose `toTree(useCacheKeys(prefix))
 
 ## Namespacing with `Scope`
 
-A cache entry's identity has three axes: a **`path`** (where in the app it lives), the **`name`** (the group name), and the **`id`** (which instance). `CacheScope` contributes inherited `path` segments to every descendant `Provider`, so a reusable component mounted on two pages never collides. Nested `Scope`s concatenate (outermost first); the `path` prop on a `Provider` is appended after the inherited scope. This works exactly as it does in [`@ez-kit/zu-store`](../zu-store/store-cache#namespacing-with-scope).
+A cache entry's identity has three axes: a **`path`** (where in the app it lives), the **`name`** (the group name), and the **`id`** (which instance). `CacheScope` contributes inherited `path` segments to every descendant `Provider`, so a reusable component mounted on two pages never collides. Nested `Scope`s concatenate (outermost first); the `path` prop on a `Provider` is appended after the inherited scope. This works exactly as it does in [`@ez-kit/zu-store`](../zu-store/cache#namespacing-with-scope).
 
 ## Custom or multiple caches
 

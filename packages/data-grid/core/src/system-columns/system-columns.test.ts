@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { RowActionsVariant } from '../features/row-actions'
+import { RowActionsPlacement } from '../features/row-actions'
 
 import {
 	buildColumnList,
@@ -27,6 +27,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			creating: false,
 			customRowActions: false,
 		})
 		expect(cols).toHaveLength(1)
@@ -40,6 +41,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			creating: false,
 			customRowActions: false,
 		})
 		expect(cols[0]?.id).toBe(SELECTION_COLUMN_ID)
@@ -53,6 +55,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			creating: false,
 			customRowActions: false,
 		})
 		expect(cols[0]?.id).toBe(SELECTION_COLUMN_ID)
@@ -67,6 +70,7 @@ describe('buildColumnList', () => {
 			editing: true,
 			deleting: false,
 			pinning: false,
+			creating: false,
 			customRowActions: false,
 		})
 		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
@@ -79,6 +83,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: false,
+			creating: false,
 			customRowActions: false,
 		})
 		const actions = cols.find((c) => c.id === ACTIONS_COLUMN_ID)
@@ -92,6 +97,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: true,
+			creating: false,
 			customRowActions: false,
 		})
 		expect(cols[cols.length - 1]?.id).toBe(ACTIONS_COLUMN_ID)
@@ -99,9 +105,13 @@ describe('buildColumnList', () => {
 
 	it('actions column width grows with the number of inline actions', () => {
 		const sizeOf = (opts: { editing: boolean; deleting: boolean; pinning: boolean }) =>
-			buildColumnList([USER_COL], { selection: false, expanding: false, customRowActions: false, ...opts }).find(
-				(c) => c.id === ACTIONS_COLUMN_ID,
-			)?.size
+			buildColumnList([USER_COL], {
+				selection: false,
+				expanding: false,
+				creating: false,
+				customRowActions: false,
+				...opts,
+			}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 
 		const onePin = sizeOf({ editing: false, deleting: false, pinning: true })
 		const editDelete = sizeOf({ editing: true, deleting: true, pinning: false })
@@ -113,15 +123,16 @@ describe('buildColumnList', () => {
 		expect(all).toBeLessThan(150)
 	})
 
-	it('menu variant collapses the actions column to a single trigger', () => {
+	it('menu placement collapses the actions column to a single trigger', () => {
 		const inline = buildColumnList([USER_COL], {
 			selection: false,
 			expanding: false,
 			editing: false,
 			deleting: true,
 			pinning: true,
+			creating: false,
 			customRowActions: false,
-			rowActionsVariant: RowActionsVariant.Inline,
+			rowActionsPlacement: RowActionsPlacement.Inline,
 		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 		const menu = buildColumnList([USER_COL], {
 			selection: false,
@@ -129,8 +140,9 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: true,
+			creating: false,
 			customRowActions: false,
-			rowActionsVariant: RowActionsVariant.Menu,
+			rowActionsPlacement: RowActionsPlacement.Menu,
 		}).find((c) => c.id === ACTIONS_COLUMN_ID)?.size
 
 		expect(menu).toBeLessThan(inline ?? 0)
@@ -143,6 +155,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			creating: false,
 			customRowActions: true,
 		})
 
@@ -156,6 +169,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: false,
+			creating: false,
 			customRowActions: false,
 		}
 		const sizeOf = (customRowActions: boolean) =>
@@ -172,6 +186,7 @@ describe('buildColumnList', () => {
 			editing: true,
 			deleting: true,
 			pinning: false,
+			creating: false,
 			customRowActions: false,
 		})
 		const ids = cols.map((c) => c.id)

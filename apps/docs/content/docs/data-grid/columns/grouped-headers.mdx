@@ -1,0 +1,78 @@
+---
+title: Grouped headers
+description: A column whose `columns` are other columns renders a header that spans them — two header rows instead of one.
+---
+
+A column def with `columns` has no accessor of its own. It is a **group**: its header spans its
+children, and the leaf columns underneath carry everything else — the accessor, the cell type, the
+sorting and filtering affordances, the resize handle.
+
+<DataGridDocsExample exampleId='grouped-headers' />
+
+```tsx
+const columns = createColumns<Employee>([
+	{
+		id: 'person',
+		header: 'Person',
+		columns: [
+			{ accessorKey: 'name', header: 'Name' },
+			{ accessorKey: 'department', header: 'Department' },
+		],
+	},
+	{
+		id: 'employment',
+		header: 'Employment',
+		columns: [
+			{ accessorKey: 'joinedAt', header: 'Joined', cell: { type: 'date' } },
+			{ accessorKey: 'salary', header: 'Salary', align: 'end', cell: { type: 'number' } },
+		],
+	},
+])
+```
+
+A group needs an `id` because it has no `accessorKey` to derive one from. Groups nest: a group's
+`columns` may themselves be groups, and each level adds a header row.
+
+## What belongs on the group and what on the leaf
+
+The group row is chrome. Everything that acts on values belongs on the leaf:
+
+| On the group              | On the leaf                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `id`, `header`, `columns` | `accessorKey` / `accessorFn`, `cell`, `align`, `width`, `sorting`, `filtering`, `editing`, `creating`, `visibility`, `resizing` |
+
+A group header renders no sort trigger, no filter control and no column menu of its own — there is
+no single value under it to sort or filter by.
+
+## Kit support
+
+**shadcn renders grouped headers. HeroUI does not** — there the group row is dropped and the leaf
+row renders alone, with a warning in development.
+
+That is upstream, not a gap in this kit: HeroUI's table is a React Aria collection, and React Aria
+removed nested column support before its GA
+([#5537](https://github.com/adobe/react-spectrum/pull/5537)); the request to bring it back
+([#5263](https://github.com/adobe/react-spectrum/issues/5263)) has been open since 2023 with no API
+proposed. A `Column` nested inside a `Column` is not a collection node there. The alternative —
+painting a second header row outside the collection — would mean an accessibility tree React Aria
+does not know about and column widths to re-sync on every resize, reorder and hide, so the flat
+header is the deliberate choice.
+
+## Interaction with the other column features
+
+- **Visibility** — hiding every leaf of a group drops the group header with them; the row collapses
+  to what is left.
+- **Pinning** — pin the **leaves**, not the group. Pinning splits columns into left / centre /
+  right, and a group whose leaves end up in different halves is drawn once per half.
+- **Resizing** — the handle lives on the leaf. A group's width is the sum of its leaves, so it
+  follows them.
+- **Footers** — `footer` on a leaf renders in the footer row; a group's `footer` spans, the same way
+  its header does.
+
+## Options
+
+| Option    | Type                           | Description                                                                                                     |
+| --------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `columns` | `ColumnDef[]`                  | Child columns. Makes this def a header group: it renders a spanning header and contributes no cells of its own. |
+| `id`      | `string`                       | Required on a group — there is no `accessorKey` to derive it from.                                              |
+| `header`  | `string \| (ctx) => ReactNode` | The group's own header content.                                                                                 |

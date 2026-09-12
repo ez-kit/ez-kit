@@ -87,3 +87,67 @@ export function ExpandingTreeExample() {
 		/>
 	)
 }
+
+// ── custom sub-rows key ─────────────────────────────────────────────────────
+
+type Manager = {
+	id: number
+	name: string
+	role: string
+	headcount: number
+	reports?: Manager[]
+}
+
+const REPORTS_DATA: Manager[] = [
+	{
+		id: 1,
+		name: 'Dana Fox',
+		role: 'VP Engineering',
+		headcount: 12,
+		reports: [
+			{
+				id: 11,
+				name: 'Priya Nair',
+				role: 'Engineering Manager',
+				headcount: 5,
+				reports: [
+					{ id: 111, name: 'Alice Johnson', role: 'Senior Engineer', headcount: 1 },
+					{ id: 112, name: 'Tom Lee', role: 'Engineer', headcount: 1 },
+				],
+			},
+			{
+				id: 12,
+				name: 'Marc Oliveira',
+				role: 'Engineering Manager',
+				headcount: 6,
+				reports: [{ id: 121, name: 'Sara Kim', role: 'Engineer', headcount: 1 }],
+			},
+		],
+	},
+	{
+		id: 2,
+		name: 'Ivan Petrov',
+		role: 'VP Design',
+		headcount: 3,
+		reports: [{ id: 21, name: 'Carol White', role: 'Lead Designer', headcount: 1 }],
+	},
+]
+
+const reportsColumns = createColumns<Manager>([
+	{ accessorKey: 'name', header: 'Name' },
+	{ accessorKey: 'role', header: 'Role' },
+	{ accessorKey: 'headcount', header: 'Headcount', cell: { type: 'number' } },
+])
+
+export function ExpandingTreeSubRowsExample() {
+	return (
+		<DataGrid
+			data={REPORTS_DATA}
+			columns={reportsColumns}
+			expanding={{
+				mode: 'tree',
+				getSubRows: (row) => row.reports,
+			}}
+		/>
+	)
+}

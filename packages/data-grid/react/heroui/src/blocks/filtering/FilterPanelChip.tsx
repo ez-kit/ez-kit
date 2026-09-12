@@ -34,7 +34,6 @@ const DIALOG_STYLE = {
 	flexDirection: 'column' as const,
 	gap: '0.5rem',
 	minWidth: 220,
-	padding: '0.5rem',
 }
 
 export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, children }: FilterPanelChipProps) {
@@ -52,7 +51,10 @@ export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, childr
 					size='sm'
 					style={TRIGGER_STYLE}
 					data-slot='filter-panel-chip'
-					data-has-value={hasValue ? 'true' : 'false'}
+					// Present-or-absent, as in the shadcn kit: one flag spelled two ways across the kits
+					// (absent vs. `"false"`) makes every consumer selector and every browser test kit-
+					// specific, which is the thing these attributes exist to avoid.
+					data-has-value={hasValue || undefined}
 				>
 					<span style={LABEL_STYLE}>{label}:</span>{' '}
 					<span
@@ -85,7 +87,10 @@ export function FilterPanelChip({ label, valueDisplay, hasValue, onClear, childr
 				</Button>
 			</Popover.Trigger>
 			<Popover.Content>
-				<Popover.Dialog aria-label={`Filter ${label}`}>
+				<Popover.Dialog
+					aria-label={`Filter ${label}`}
+					className='p-2'
+				>
 					<div style={DIALOG_STYLE}>{children}</div>
 				</Popover.Dialog>
 			</Popover.Content>

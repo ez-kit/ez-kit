@@ -1,0 +1,57 @@
+---
+title: Pinning API
+description: Every option the pinning feature accepts — the grid config, the per-column def, and the two state slices.
+---
+
+The full surface of the feature. What each option is for, and when to reach for it, is on
+[Pinning](/docs/data-grid/pinning), [Column pinning](/docs/data-grid/pinning/columns) and
+[Row pinning](/docs/data-grid/pinning/rows).
+
+## Grid options
+
+| Option                    | Type                                          | Description                                                                                                                                                      |
+| ------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pinning`                 | `boolean \| PinningConfig`                    | The feature as a whole. `true` enables both axes with their defaults; the object form addresses them one at a time.                                              |
+| `pinning.column`          | `boolean \| ColumnPinningConfig`              | Column pinning. `true` adds the pin section to each column's ⋮ menu.                                                                                             |
+| `pinning.column.onChange` | `(columnPinning: ColumnPinningState) => void` | Called whenever column pinning changes. Use it to persist which columns a user pinned.                                                                           |
+| `pinning.row`             | `boolean \| RowPinningConfig`                 | Row pinning. `true` — top and bottom. Once enabled, the grid renders a per-row pin control in the row-actions column.                                            |
+| `pinning.row.top`         | `boolean`                                     | Offer "Pin to top". Default `true` under `row: true`.                                                                                                            |
+| `pinning.row.bottom`      | `boolean`                                     | Offer "Pin to bottom". Default `true` under `row: true`.                                                                                                         |
+| `pinning.row.onChange`    | `(rowPinning: RowPinningState) => void`       | Called whenever row pinning changes. Use it to persist which rows a user pinned.                                                                                 |
+| `pinning.enabled`         | `boolean`                                     | Explicit off-switch for a config that arrived from a defaults layer — the settings survive, the feature does not. Default `true`.                                |
+| `getRowId`                | `(row: TRow, index: number) => string`        | Only needed when the primary key is not `row.id` — the default already keys on it (falling back to the row index when it is missing), so pins survive a refetch. |
+
+Each axis carries its own `onChange` because they are two features over two separate state slices;
+there is no single callback for both.
+
+## Column def
+
+| Option                | Type                                             | Description                                                                                         |
+| --------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `pinning`             | `false \| 'left' \| 'right' \| ColumnPinningDef` | Per-column. The scalar is the common case; `false` removes the pin section from this column's menu. |
+| `pinning.side`        | `'left' \| 'right'`                              | The long form of the scalar — a **static** pin, enforced on every write path, with no pin control.  |
+| `pinning.initialSide` | `'left' \| 'right'`                              | A **seed**: the column starts pinned and the user may unpin or re-pin it from the ⋮ menu.           |
+
+A static pin is an invariant, not a seed — see
+[Seeds and invariants](/docs/data-grid/pinning/columns#seeds-and-invariants).
+
+## State
+
+| Option                       | Type                                    | Description                                                                                                          |
+| ---------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `initialState.columnPinning` | `{ left?: string[], right?: string[] }` | Uncontrolled seed for pinned columns at mount. **Merges** with the pins derived from the column defs.                |
+| `initialState.rowPinning`    | `{ top?: string[], bottom?: string[] }` | Uncontrolled seed for pinned rows at mount, keyed by the id `getRowId` returns.                                      |
+| `state.columnPinning`        | `{ left?: string[], right?: string[] }` | Controlled pinning state — pass alongside `onStateChange`. See [Controlled State](/docs/data-grid/state/controlled). |
+| `state.rowPinning`           | `{ top?: string[], bottom?: string[] }` | Controlled row pinning — same contract.                                                                              |
+
+The full precedence between a static pin, a seed, `initialState` and `state` is in the
+[State model](/docs/data-grid/state).
+
+## See also
+
+- [Pinning](/docs/data-grid/pinning) · [Column pinning](/docs/data-grid/pinning/columns) · [Row pinning](/docs/data-grid/pinning/rows)
+- [State model](/docs/data-grid/state)
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/types.ts)

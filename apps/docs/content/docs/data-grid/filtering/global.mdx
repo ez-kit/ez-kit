@@ -3,8 +3,6 @@ title: Global Filtering
 description: A single search box that filters rows across every searchable column at once.
 ---
 
-# Global Filtering
-
 Sometimes a user just wants one search box, not per-column filters. Global filtering runs a single string match across every column that opts in.
 
 ## Usage
@@ -43,7 +41,7 @@ Provide your own `fn` to change the match semantics — this one does a starts-w
 
 ### `globalFiltering`
 
-Global search has no `manual` flag of its own — setting `filtering.manual: true` makes both column filters **and** the global search server-side (see [Server-side Data](./data-grid/server-side)).
+Global search has no `manual` flag of its own — setting `filtering.manual: true` makes both column filters **and** the global search server-side (see [Server-side Data](/docs/data-grid/state/server-side)).
 
 | Option        | Type                                        | Description                                                                                                                                                                  |
 | ------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

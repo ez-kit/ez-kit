@@ -21,6 +21,5 @@ export default defineConfig({
 	test: {
 		...base.test,
 		setupFiles: [...(base.test?.setupFiles ?? []), fileURLToPath(new URL('./vitest.setup.docs.ts', import.meta.url))],
-		exclude: ['tests/**/*.visual.spec.ts'],
 	},
 })

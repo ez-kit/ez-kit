@@ -3,9 +3,7 @@ title: Capabilities
 description: The one extension seam every capability shares — attach behavior to the proxy in the factory, and createContextStore runs its setup and cleanup around the Provider's lifetime.
 ---
 
-# Capabilities
-
-There is exactly one extension seam: a **capability** attached to the proxy itself, in the factory. `createContextStore` (and [`createCachedStore`](./cache)) never take a `plugins` option — they discover whatever a `with*` wrapper attached to the instance and run it for you.
+There is exactly one extension seam: a **capability** attached to the proxy itself, in the factory. `createContextStore` (and [`createCachedStore`](./cache)) discover whatever a `with*` wrapper attached to the instance and run it for you.
 
 ```tsx
 import { createContextStore, pipe, withHistory } from '@ez-kit/va-store'
@@ -46,6 +44,14 @@ This is also why the persist + history recipe reads `pipe(proxy(…), withHistor
 ## Writing your own
 
 A capability is a plain object satisfying `StorePlugin<T>`, attached with `attachCapability`:
+
+<Callout type='info'>
+	`attachCapability`, `capabilitiesOf` and the plugin types come from `@ez-kit/store-core`, not from `@ez-kit/va-store`
+	— so writing your own capability means installing it explicitly (`pnpm add @ez-kit/store-core`). It arrives with the
+	binding as a transitive dependency, which pnpm's default isolated `node_modules` does not make importable. The four
+	store packages version independently, so take the range from your binding's own `@ez-kit/store-core` dependency rather
+	than assuming it matches the binding's version.
+</Callout>
 
 ```tsx
 import { createContextStore, pipe } from '@ez-kit/va-store'

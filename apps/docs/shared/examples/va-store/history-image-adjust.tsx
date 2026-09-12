@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/immutability -- valtio proxies are designed to be mutated directly; this demo writes through the raw mutable proxy from useStore() */
 
-import { createContextStore, pipe, useHistory, useTimeline, type ValtioOp, withHistory } from '@ez-kit/va-store'
+import { createContextStore, pipe, useHistory, useTimeline, type HistoryOp, withHistory } from '@ez-kit/va-store'
 import { RedoIcon, RotateCcwIcon, UndoIcon } from 'lucide-react'
 import { useId } from 'react'
 import { proxy } from 'valtio'
@@ -23,7 +23,7 @@ const COALESCE_MS = 400
  * `meta` is the batch's Valtio ops — `['set', path, value, previousValue]` — so `path[0]` is the key
  * that changed.
  */
-function createDragCoalescer(): (prev: Adjustments, next: Adjustments, meta?: readonly ValtioOp[]) => boolean {
+function createDragCoalescer(): (prev: Adjustments, next: Adjustments, meta?: readonly HistoryOp[]) => boolean {
 	let lastKey: string | symbol | undefined
 	let lastAt = 0
 

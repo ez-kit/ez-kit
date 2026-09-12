@@ -1,3 +1,5 @@
+import { PACKAGE_TAG } from '../package-tag'
+
 import { paramArray } from './param-array'
 import { paramBigInt } from './param-bigint'
 import { paramBoolean } from './param-boolean'
@@ -38,7 +40,7 @@ function describe(value: unknown): string {
 
 function unresolvable(pathLabel: string, value: unknown): never {
 	throw new Error(
-		`[store-persist]: cannot auto-resolve a parser for "${pathLabel}" (value: ${describe(value)}). ` +
+		`${PACKAGE_TAG} cannot auto-resolve a parser for "${pathLabel}" (value: ${describe(value)}). ` +
 			`Pass an explicit parser, e.g. @persistUrl({ parser: paramJson() }) or field(s => …, { parser: paramJson() }).`,
 	)
 }
@@ -60,7 +62,7 @@ export function resolveParser(value: unknown, pathLabel: string): AnyCodec {
 		const first: unknown = value[0]
 		if (first === undefined) {
 			throw new Error(
-				`[store-persist] cannot infer an item parser for the empty array "${pathLabel}". ` +
+				`${PACKAGE_TAG} cannot infer an item parser for the empty array "${pathLabel}". ` +
 					`Pass an explicit parser, e.g. field(s => …, { parser: paramArray(paramString()) }).`,
 			)
 		}

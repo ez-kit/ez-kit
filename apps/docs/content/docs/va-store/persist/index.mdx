@@ -3,8 +3,6 @@ title: Persist
 description: One engine binds a Valtio store to any external substrate — the URL, localStorage, sessionStorage, IndexedDB, or your own — through a tiny source-agnostic port.
 ---
 
-# Persist
-
 Mirror a Valtio store into an external substrate and back, in both directions. Mutating the store writes the substrate; an external change (a deep link, Back/forward, another tab, a restored value) writes the store. The proxy stays **synchronous and snappy** — the substrate is a throttled, rehydratable projection of it.
 
 ```bash
@@ -61,4 +59,3 @@ Both produce the same path-based descriptors and feed the same engine, so source
 | [Fields](./persist/fields)                             | The accessor API for plain proxies.                                     |
 | [Parsers](./persist/parsers)                           | Typed codecs, auto-resolution, Zod, custom parsers.                     |
 | [TypeScript](./persist/typescript)                     | Decorator build setup.                                                  |
-| [Migration](./persist/migration)                       | Moving off `createPersistStore` / `createPersistFields`.                |

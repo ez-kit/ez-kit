@@ -3,11 +3,16 @@ title: useStoreState
 description: Bind a single Zustand store field to a [value, setValue] tuple — the useState experience, backed by a store.
 ---
 
-# `useStoreState`
-
 Standalone hook that binds **one field** of a Zustand store to a `[value, setValue]` tuple. Same ergonomics as `useState`, but the state lives in a store you control — so multiple components stay in sync, and unmounting doesn't wipe it.
 
 Works with **any `StoreApi`**, not just stores created through `createContextStore`.
+
+<Callout type='info'>
+	This hook is **Zustand-only** and has no `@ez-kit/va-store` counterpart, by design. It exists because a Zustand read
+	needs a selector and a write needs `setState` — two different calls for one field. A Valtio store has neither: read
+	the field off `useSnapshot()` and assign to it on `useStore()`, and you already have the `[value, setValue]` pair
+	without a hook to package it.
+</Callout>
 
 ## Signature
 

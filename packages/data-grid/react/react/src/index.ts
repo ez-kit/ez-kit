@@ -38,8 +38,10 @@ export type {
 	FallbacksConfig,
 	FilterChipsConfig,
 	FilteringToolbarConfig,
+	FilterPanelConfig,
 	LoadingFallbackConfig,
 	NoResultsFallbackConfig,
+	PageSizerConfig,
 	// The resolved shapes `ResolvedGridOptions` is built from. That type is public and a UI kit
 	// reads it through `useGridOptions()`, so the names of its members have to be nameable too —
 	// they were not, and a kit lifting `grid.filtering.chips` into a helper had no type to write.
@@ -48,8 +50,10 @@ export type {
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
+	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
+	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	ReactExpandingConfig,
@@ -72,17 +76,22 @@ export { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 
 // Resolved options — what the grid decided, readable by any compound child or UI kit
 export { useGridOptions } from './use-grid-options'
+export { useGridMessages } from './use-grid-messages'
 export type { ResolvedGridOptions } from './resolved-options'
 
+// The dictionary, re-exported from core so a UI kit reading `useGridOptions().messages` can
+// name its type without depending on core directly.
+export type { CountContext, FilterPlaceholderContext, GridMessages, PartialGridMessages } from '@ez-kit/data-grid-core'
+
 // Grid overflow menu — one model for the column header menu and the row actions menu
-export { GridMenuIcon, GridMenuVariant, toMenuSections } from './menu'
-export type { GridMenuItem, GridMenuProps, GridMenuSection } from './menu'
+export { GridMenuIcon, GridMenuVariant, isGridMenuItemSlot, toMenuSections } from './menu'
+export type { GridMenuItem, GridMenuItemDef, GridMenuItemSlot, GridMenuProps, GridMenuSection } from './menu'
 export { buildColumnMenuSections, ColumnActionId } from './data-grid/column-menu-sections'
 export type { ColumnMenuCapabilities } from './data-grid/column-menu-sections'
 
 // Pagination footer label (shared by every UI kit — content, not styling)
 export { buildPaginationLabel } from './data-grid/pagination-label'
-export type { PaginationLabelInput } from './data-grid/pagination-label'
+export type { PaginationLabelModel } from './data-grid/pagination-label'
 
 // Numbered-pagination page window (shared by every UI kit — structure, not styling)
 export { buildPageWindow, PAGE_GAP, DEFAULT_PAGE_SIBLINGS, DEFAULT_PAGE_BOUNDARIES } from './data-grid/page-window'
@@ -168,6 +177,7 @@ export type {
 	DataGridFilterPanelProps,
 	DataGridFilterPanelRenderArgs,
 } from './data-grid/filter-panel'
+export type { DataGridColumnFilterProps } from './data-grid/column-filter'
 export type { DataGridPageSizerProps, DataGridPageSizerRenderArgs } from './data-grid/page-sizer'
 export type { DataGridDraftBarProps, DataGridDraftBarRenderArgs } from './data-grid/draft-bar'
 export type { DataGridFormModalProps, DataGridFormModalRenderArgs } from './data-grid/form-modal'
@@ -212,6 +222,7 @@ export type { DataGridDefaultOptions, DataGridOptionsProviderProps } from './dat
 // Utilities
 export { getCommonPinStyles } from './utils/pin-styles'
 export { getColumnSizeVars } from './utils/column-size-vars'
+export { getVisualLeafColumns } from './utils/visual-column-order'
 
 // UI-kit component contracts
 export type {
@@ -268,8 +279,10 @@ export {
 	FilterChipKind,
 	FilterChipsPosition,
 	FilteringVariant,
+	FilterPanelPlacement,
 	LoadMoreTrigger,
-	PaginationVariant,
+	PageSizerPlacement,
+	PaginationLabel,
 	RowActionId,
 	ActionsCellState,
 	ColumnSortDirection,
@@ -285,6 +298,9 @@ export {
 // identical.
 export type {
 	ColumnFiltersState,
+	// `ordering.column.onChange` is typed with it, so a consumer lifting that handler out of the
+	// JSX has to be able to name it without depending on `@tanstack/table-core`.
+	ColumnOrderState,
 	ColumnPinningState,
 	ColumnSizingState,
 	ExpandedState,

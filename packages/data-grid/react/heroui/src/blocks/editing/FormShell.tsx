@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Button, Modal as HeroModal } from '@heroui/react'
 
 import type { FormShellProps } from '@ez-kit/data-grid-react'
@@ -10,6 +11,7 @@ import type { FormShellProps } from '@ez-kit/data-grid-react'
  * and reflects `isPending` on the Save button.
  */
 export function FormShell({ open, title, formError, isPending, onSave, onCancel, children }: FormShellProps) {
+	const messages = useGridMessages()
 	return (
 		<HeroModal.Backdrop
 			isOpen={open}
@@ -38,14 +40,14 @@ export function FormShell({ open, title, formError, isPending, onSave, onCancel,
 							variant='ghost'
 							onPress={onCancel}
 						>
-							Cancel
+							{messages.form.cancel}
 						</Button>
 						<Button
 							variant='primary'
 							isPending={isPending}
 							onPress={() => void onSave()}
 						>
-							Save
+							{messages.form.save}
 						</Button>
 					</HeroModal.Footer>
 				</HeroModal.Dialog>

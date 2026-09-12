@@ -15,7 +15,17 @@ import type { ReactElement } from 'react'
 // module that describes the menu model a kit renders.
 export { GridMenuIcon, isGridMenuIcon } from '@ez-kit/data-grid-core'
 
-export type GridMenuItem = {
+/**
+ * One entry in the model above: described as data, or handed over whole.
+ *
+ * Everything the grid itself builds is a {@link GridMenuItemDef}. The slot form reaches a kit
+ * only from `rowActions.actions` / `selection.bar.actions`, where the author asked to draw the
+ * entry themselves — narrow with {@link isGridMenuItemSlot} before reading `label`.
+ */
+export type GridMenuItem = GridMenuItemDef | GridMenuItemSlot
+
+/** An entry the kit draws: its glyph, its danger colour, its disabled state. */
+export type GridMenuItemDef = {
 	/** Stable within the menu — kits key their collection items on it. */
 	id: string
 	/** Default wording; a kit may localize it. */
@@ -32,10 +42,32 @@ export type GridMenuItem = {
 	 * two apart; an entry with neither renders label-only.
 	 */
 	icon?: GridMenuIcon | ReactElement
+	/**
+	 * Class the kit puts on whatever it draws for this entry — the menu entry, or the inline
+	 * icon button when the entry asked for `placement: 'inline'`. Only ever set from an
+	 * `ActionItemDef`; nothing the grid builds itself carries one.
+	 */
+	className?: string
 	disabled?: boolean
 	/** Destructive entry — kits render it in their danger colour. */
 	destructive?: boolean
-	onSelect: () => void
+	/** Runs when the entry is chosen — by click, by Enter / Space, or by menu typeahead. */
+	onAction: () => void
+}
+
+/**
+ * An entry the author draws, from an `ActionItemSlot`. The kit contributes no chrome: in a bar
+ * `component` stands where the entry's button would have been, and in a menu — a collection
+ * that cannot hold loose nodes — it fills a menu entry the kit still wraps.
+ */
+export type GridMenuItemSlot = {
+	id: string
+	component: ReactElement
+}
+
+/** Narrows a {@link GridMenuItem} to the half that carries its own markup. */
+export function isGridMenuItemSlot(item: GridMenuItem): item is GridMenuItemSlot {
+	return 'component' in item
 }
 
 export type GridMenuSection = {

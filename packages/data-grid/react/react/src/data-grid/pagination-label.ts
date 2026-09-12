@@ -1,19 +1,19 @@
-import { PaginationVariant } from '../types'
+import { PaginationLabel } from '../types'
+
+import type { GridMessages } from '@ez-kit/data-grid-core'
 
 const RANGE_SEPARATOR = '–'
-const OF_LABEL = 'of'
-const PAGE_LABEL = 'Page'
 
 /**
- * Inputs for {@link buildPaginationLabel}. `pageCount` / `rowCount` are optional
- * because either can be genuinely unknown: a manually paginated grid that supplies
- * neither `rowCount` nor `pageCount` knows only which page it is on.
+ * The live page state a label is built from — and exactly what a `pagination.label` renderer
+ * receives, so a custom label never has to re-derive what the built-in rule already settled.
  *
- * Both are already normalized by the `Pagination` component — the `-1` "unknown"
- * sentinel that core hands to TanStack never reaches here.
+ * `pageCount` / `rowCount` are optional because either can be genuinely unknown: a manually
+ * paginated grid that supplies neither `rowCount` nor `pageCount` knows only which page it is
+ * on. Both are already normalized by the `Pagination` component — the `-1` "unknown" sentinel
+ * that core hands to TanStack never reaches here.
  */
-export type PaginationLabelInput = {
-	variant: PaginationVariant
+export type PaginationLabelModel = {
 	pageIndex: number
 	pageSize: number
 	// Explicitly `| undefined`: under `exactOptionalPropertyTypes` callers forward
@@ -31,12 +31,17 @@ export type PaginationLabelInput = {
  * under it (e.g. a filter narrows 500 rows to 5 while the user sits on page 3). Both ends are
  * therefore clamped to the total — an unclamped `from` reported the inverted `21–5 of 5`.
  */
-function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number): string {
+function buildRangeLabel(
+	pageIndex: number,
+	pageSize: number,
+	rowCount: number,
+	messages: GridMessages['pagination'],
+): string {
 	const firstRow = pageIndex * pageSize + 1
 	const isPastEnd = firstRow > rowCount
 	const from = isPastEnd ? 0 : firstRow
 	const to = isPastEnd ? 0 : Math.min(firstRow + pageSize - 1, rowCount)
-	return `${String(from)}${RANGE_SEPARATOR}${String(to)} ${OF_LABEL} ${String(rowCount)}`
+	return `${String(from)}${RANGE_SEPARATOR}${String(to)} ${messages.of} ${String(rowCount)}`
 }
 
 /**
@@ -45,30 +50,34 @@ function buildRangeLabel(pageIndex: number, pageSize: number, rowCount: number):
  * A `pageCount` of `0` (empty grid) is a known total but not a meaningful one — "Page 1 of 0"
  * is nonsense, so it degrades to the bare page number like the unknown case.
  */
-function buildPageLabel(pageIndex: number, pageCount: number | undefined): string {
-	const current = `${PAGE_LABEL} ${String(pageIndex + 1)}`
-	return pageCount === undefined || pageCount === 0 ? current : `${current} ${OF_LABEL} ${String(pageCount)}`
+function buildPageLabel(
+	pageIndex: number,
+	pageCount: number | undefined,
+	messages: GridMessages['pagination'],
+): string {
+	const current = `${messages.page} ${String(pageIndex + 1)}`
+	return pageCount === undefined || pageCount === 0 ? current : `${current} ${messages.of} ${String(pageCount)}`
 }
 
 /**
- * The footer's text label for a variant, or `undefined` when that variant shows none.
+ * The footer's text in one of the two built-in forms.
  *
- * One implementation shared by every UI kit: the label is content, not styling, and
- * three copies of this rule had already drifted apart. Kits still own placement,
- * markup and styling — they render the returned string however they like.
+ * One implementation shared by every UI kit: the label is content, not styling, and three
+ * copies of this rule had already drifted apart. Kits still own placement, markup and styling —
+ * they render the returned string however they like.
  *
- * Degradation is deliberate: `simple` is *defined* by its "X–Y of N" range, so when the
- * total is unknown it shows the page label rather than bare prev/next with no context.
+ * `range` degrades to `page` when the total is unknown: it is *defined* by its "X–Y of N", and
+ * a grid that cannot be trusted to know the total must show position rather than invent one.
+ * `page` never needs a fallback — a page index is always known.
  */
-export function buildPaginationLabel({
-	variant,
-	pageIndex,
-	pageSize,
-	pageCount,
-	rowCount,
-}: PaginationLabelInput): string | undefined {
-	if (variant === PaginationVariant.Compact) return buildPageLabel(pageIndex, pageCount)
-	if (rowCount !== undefined) return buildRangeLabel(pageIndex, pageSize, rowCount)
-	// No total to range over: `simple` still needs a label, `numbered` has its page links.
-	return variant === PaginationVariant.Simple ? buildPageLabel(pageIndex, pageCount) : undefined
+export function buildPaginationLabel(
+	label: PaginationLabel,
+	model: PaginationLabelModel,
+	messages: GridMessages['pagination'],
+): string {
+	const { pageIndex, pageSize, pageCount, rowCount } = model
+	if (label === PaginationLabel.Range && rowCount !== undefined) {
+		return buildRangeLabel(pageIndex, pageSize, rowCount, messages)
+	}
+	return buildPageLabel(pageIndex, pageCount, messages)
 }

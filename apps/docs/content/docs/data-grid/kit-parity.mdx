@@ -1,0 +1,76 @@
+---
+title: Kit parity
+description: Everything the shadcn and HeroUI kits do differently, in one place — read before you pick one.
+---
+
+The grid's behaviour lives in `@ez-kit/data-grid-core` and `@ez-kit/data-grid-react`, and a kit
+only draws it. So the two kits agree on almost everything: the same options, the same state, the
+same `data-*` attributes, the same message dictionary. The whole browser test suite is written
+once and run against both, which is how the short list below stays short — and honest.
+
+This page is the complete list. If a divergence is not here, it is a bug rather than a
+limitation: please [open an issue](https://github.com/ez-kit/ez-kit/issues/new).
+
+## Known divergences
+
+| Capability                                                        | shadcn | HeroUI       | Why                                                                     |
+| ----------------------------------------------------------------- | ------ | ------------ | ----------------------------------------------------------------------- |
+| [Grouped headers](/docs/data-grid/columns/grouped-headers)        | Full   | Renders flat | React Aria removed nested columns from its collection before GA         |
+| [`Alt+Arrow` column reordering](/docs/data-grid/columns/ordering) | Works  | Menu only    | React Aria's column spreads its own props last, overwriting the handler |
+
+Both are upstream constraints of React Aria, which HeroUI's table is built on, and both are
+narrow: the feature is still reachable in HeroUI, just not in that one shape. Neither affects the
+data, the state or the options you write — moving a grid between kits never means rewriting a
+config.
+
+### Grouped headers render flat in HeroUI
+
+`columns[].columns` builds a header that spans its children. HeroUI drops the group row and
+renders the leaf row alone, with a warning in development; the columns, their data and every other
+feature are unaffected. A `Column` nested inside a `Column` is not a collection node in React
+Aria ([#5537](https://github.com/adobe/react-spectrum/pull/5537) removed it,
+[#5263](https://github.com/adobe/react-spectrum/issues/5263) asks for it back), and painting a
+second header row outside the collection would mean an accessibility tree React Aria does not know
+about. See [Grouped headers → Kit support](/docs/data-grid/columns/grouped-headers).
+
+### `Alt+Arrow` reordering is shadcn-only
+
+With `ordering` on, a focused header answers `Alt+ArrowLeft` / `Alt+ArrowRight` in the shadcn kit.
+In HeroUI the column header's own prop bag is spread after the one the grid hands it, so the key
+handler is overwritten. **The column menu's Move left / Move right entries work in both kits**, so
+the capability is present either way — only the shortcut is missing. Tracked in
+[#223](https://github.com/ez-kit/ez-kit/issues/223).
+
+## Presentation, not capability
+
+One more difference, listed because the promise above says everything is listed — but it costs a
+reader nothing and changes no config:
+
+The **column visibility control** in the toolbar is a popover of labelled checkboxes under shadcn
+and a menu of checkable entries under HeroUI. Same columns, same toggles, same result; each kit
+reaches for the overlay its own design system uses for this. It matters only if you are writing a
+selector or an automated accessibility check against the control itself, in which case expect
+`checkbox` under shadcn and `menuitemcheckbox` under HeroUI.
+
+## What is deliberately the same
+
+Worth stating, because these are the places two kits most often drift apart:
+
+- **Options and state.** Nothing in a grid's config is kit-specific. The same `columns`, the same
+  `sorting` / `filtering` / `pagination` / `editing` objects, the same controlled state.
+- **The `data-*` contract.** `data-slot`, `data-row-id`, `data-column-id`, `data-pinned`,
+  `data-align`, `data-sort-direction`, `data-row-selected`, `data-scrollport` and the rest are
+  emitted by the shared React layer, so a stylesheet or a test written against them holds for
+  every kit. See [Theming](/docs/data-grid/theming).
+- **Every user-facing string.** One dictionary, one set of keys — see
+  [Localization](/docs/data-grid/localization).
+- **The delete confirmation is an `alertdialog` in both**, not a plain dialog: it asks something
+  destructive and irreversible, so a stray click on the backdrop is not an answer.
+- **Server rendering.** Both kits prerender. Nothing in either requires a client-only boundary.
+
+## Picking a kit
+
+Neither list above should decide it. Pick the one whose design system you are already in —
+[shadcn](/docs/data-grid/installation/shadcn) if your app is built on Radix and Tailwind,
+[HeroUI](/docs/data-grid/installation/heroui) if it is built on HeroUI — and treat grouped headers
+as the one capability to check against your design before committing.

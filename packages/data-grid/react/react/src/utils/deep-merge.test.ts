@@ -48,8 +48,8 @@ describe('deepMerge — `true` over a config object', () => {
 	// A call site writing the short form over a defaults layer that wrote the long one is
 	// restating the decision, not reversing it, so the config must survive.
 	it('keeps the target config when the source says `true`', () => {
-		const result = deepMerge({ pagination: { pageSize: 50, variant: 'simple' } }, { pagination: true })
-		expect(result.pagination).toEqual({ pageSize: 50, variant: 'simple' })
+		const result = deepMerge({ pagination: { pageSize: 50, links: false } }, { pagination: true })
+		expect(result.pagination).toEqual({ pageSize: 50, links: false })
 	})
 
 	it('still lets `false` turn a defaulted feature off', () => {

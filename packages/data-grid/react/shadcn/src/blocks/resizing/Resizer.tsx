@@ -1,3 +1,7 @@
+'use client'
+
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import { cn } from '@grid-shadcn/lib/utils'
 
 import type { ResizerProps } from '@ez-kit/data-grid-react'
@@ -8,12 +12,13 @@ import type { ResizerProps } from '@ez-kit/data-grid-react'
  * - Always visible when the column is resizable.
  */
 export function Resizer({ onMouseDown, onTouchStart, onDoubleClick, isResizing }: ResizerProps) {
+	const messages = useGridMessages()
 	return (
 		// eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
 		<div
 			data-slot='column-resizer'
 			role='separator'
-			aria-label='Resize column'
+			aria-label={messages.resizing.resize}
 			aria-orientation='vertical'
 			onMouseDown={onMouseDown}
 			onTouchStart={onTouchStart}

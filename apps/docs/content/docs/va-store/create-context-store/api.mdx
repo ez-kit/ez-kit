@@ -3,8 +3,6 @@ title: API
 description: Every signature, prop and option of createContextStore in one place.
 ---
 
-# `createContextStore` — API
-
 The reference. For what these are _for_ and how they behave in practice, read the [guide](../create-context-store).
 
 ## Signature
@@ -76,7 +74,7 @@ return <span>{snap.count}</span>
 | ------ | --------- | -------- | -------------------------------------------------------------------------------------------- |
 | `sync` | `boolean` | no       | Valtio's synchronous re-render mode. Use for inputs that must stay in lockstep with the DOM. |
 
-The options object passes straight through to Valtio's `useSnapshot`. Returns `Snapshot<TState>`. Throws `Missing Provider for createContextStore` outside a `Provider`.
+The options object passes straight through to Valtio's `useSnapshot`. Returns `Snapshot<TState>`. Throws `[va-store] Missing Provider for store` outside a `Provider` — see [Errors](#errors).
 
 <Callout type='warn'>
 	The snapshot is **readonly**, and deeply so at the type level. Writes go through the proxy from `useStore()`; a
@@ -119,11 +117,11 @@ useEffect(() => subscribe(state, () => console.log('changed')), [state])
 
 ## `Subscribe`
 
-Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Subscribe` can both render and mutate without a separate `useStore()` consumer.
+Render-prop alternative to `useSnapshot`. Its child receives two arguments — `snap` for reads (auto-tracked) and `store` (the raw proxy) for writes — so a single `Subscribe` can both render and mutate without a separate `useStore()` consumer.
 
 ```tsx
 <counterStore.Subscribe>
-	{({ snap, store }) => (
+	{(snap, store) => (
 		<button
 			onClick={() => {
 				store.count += 1
@@ -135,11 +133,11 @@ Render-prop alternative to `useSnapshot`. Its child receives `{ snap, store }` �
 </counterStore.Subscribe>
 ```
 
-| Prop       | Type                                                               | Required | Description                                          |
-| ---------- | ------------------------------------------------------------------ | -------- | ---------------------------------------------------- |
-| `children` | `(arg: { snap: Snapshot<TState>; store: TState }) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
+| Prop       | Type                                                      | Required | Description                                          |
+| ---------- | --------------------------------------------------------- | -------- | ---------------------------------------------------- |
+| `children` | `(snap: Snapshot<TState>, store: TState) => ReactElement` | yes      | Render prop, called with the snapshot and the proxy. |
 
-The render argument's type is exported as `SubscribeRenderArg<TState>`. There is no `selector` and no `shallow` prop — Valtio tracks the properties the render prop actually reads, so the [zu-store selector rules](../../zu-store/create-context-store#selecting-more-than-one-value) have no counterpart here.
+The arguments are positional, as in [zu-store's `Subscribe`](../../zu-store/create-context-store/api#subscribe). There is no `selector` and no `shallow` prop — Valtio tracks the properties the render prop actually reads, so the [zu-store selector rules](../../zu-store/create-context-store#selecting-more-than-one-value) have no counterpart here.
 
 ## `Store`
 
@@ -205,13 +203,13 @@ Because the default write is `Object.assign` on the proxy, a `set` **accessor** 
 
 ## Capabilities
 
-`createContextStore` takes no `plugins` option. A capability — [`withPersist`](../persist), [`withHistory`](../history) — is attached to the proxy itself, inside the factory: `createContextStore(() => pipe(proxy({ … }), withPersist()))`. `createContextStore` discovers whatever capabilities the factory attached and runs their `setup` when the proxy is created, in attachment order, with the returned cleanup run in reverse on unmount.
+A capability — [`withPersist`](../persist), [`withHistory`](../history) — is attached to the proxy itself, inside the factory: `createContextStore(() => pipe(proxy({ … }), withPersist()))`. `createContextStore` discovers whatever capabilities the factory attached and runs their `setup` when the proxy is created, in attachment order, with the returned cleanup run in reverse on unmount.
 
 A capability that reaches app-level services (as `withPersist` does) needs a [`StoreProvider`](../persist) above it. The same factory-position wrapping is how [`createCachedStore`](../cache) attaches a capability too — there the lifetime is the cache entry's rather than the Provider's. See [Capabilities](../../capabilities) for the full shape of `StorePlugin`, attachment order, and writing your own.
 
 ## The `name` option
 
-A label for the store, defaulting to `'store'`. It reaches two places: the `StoreId` handed to plugins as `ctx.id` (`{ path: [], name, id: 'singleton' }`), and the missing-Provider message — `Missing Provider for filters` instead of `Missing Provider for store`.
+A label for the store, defaulting to `'store'`. It reaches two places: the `StoreId` handed to plugins as `ctx.id` (`{ path: [], name, id: 'singleton' }`), and the missing-Provider message — `[va-store] Missing Provider for filters` instead of `[va-store] Missing Provider for store`.
 
 ```ts
 const filtersStore = createContextStore(createFilters, { name: 'filters' })
@@ -235,7 +233,6 @@ On [`createCachedStore`](../cache) the same option carries real weight — there
 | `CreateContextStoreOptions<TState>`                | type  | The second argument's type.                                    |
 | `CreateContextStoreFactory<TState, TDefaultValue>` | type  | The factory argument's type.                                   |
 | `CreateContextStoreResult<TState, TDefaultValue>`  | type  | The returned bundle — `Provider`, hooks, `Subscribe`, `Store`. |
-| `SubscribeRenderArg<TState>`                       | type  | `Subscribe`'s render argument — `{ snap, store }`.             |
 | `UseSnapshotOptions`                               | type  | `useSnapshot`'s options — `{ sync? }`.                         |
 | `ControlledConfig<TState>`                         | type  | The `controlled` option's type.                                |
 | `ControlledFieldConfig<TState, K>`                 | type  | One field's entry in `controlled`.                             |
@@ -244,8 +241,8 @@ These are re-exported from `@ez-kit/va-store`, so you can name the `controlled` 
 
 ## Errors
 
-| Message                                   | Cause                                                                         |
-| ----------------------------------------- | ----------------------------------------------------------------------------- |
-| `Missing Provider for createContextStore` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside a `Provider`. |
+| Message                                  | Cause                                                                                                                                                           |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[va-store] Missing Provider for <name>` | `useSnapshot` / `useStore` / `Subscribe` / `Store` used outside a `Provider`. `<name>` is the [`name` option](#the-name-option), or `store` when it is not set. |
 
-There is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. A store given a [`name`](#the-name-option) reports it instead — `Missing Provider for filters`.
+There is no implicit module-level fallback, because the whole point of `createContextStore` is per-tree isolation. A store given a [`name`](#the-name-option) reports it instead — `[va-store] Missing Provider for filters`.

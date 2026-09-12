@@ -1,6 +1,12 @@
 'use client'
 
-import { DataGrid, useDataGridState, useDataGridTable } from '@ez-kit/data-grid-react'
+import {
+	DataGrid,
+	getVisualLeafColumns,
+	useDataGridState,
+	useDataGridTable,
+	useGridMessages,
+} from '@ez-kit/data-grid-react'
 import { Table as HeroTable, cn } from '@heroui/react'
 import { Children, createContext, Fragment, isValidElement, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -14,13 +20,14 @@ const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>
 const FooterContext = createContext(false)
 
 export function Table({ children, ...props }: TableProps) {
+	const messages = useGridMessages()
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable>
 	const { collection, footer } = splitFooter(children)
 
 	return (
 		<HeroTable {...heroProps}>
 			<HeroTable.ScrollContainer data-slot='table-scroll-container'>
-				<HeroTable.Content aria-label='Data grid'>{collection}</HeroTable.Content>
+				<HeroTable.Content aria-label={messages.grid.label}>{collection}</HeroTable.Content>
 				{footer === null ? null : <FooterPortal>{footer}</FooterPortal>}
 			</HeroTable.ScrollContainer>
 		</HeroTable>
@@ -89,13 +96,53 @@ function FooterPortal({ children }: { children: ReactNode }) {
 export function Thead({ children, ...props }: TheadProps) {
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Header>
 	const rowHeaderId = useRowHeaderId()
+	const table = useDataGridTable()
+	// More than one level means the column defs nest (`columns[].columns`). This kit cannot render
+	// the group rows — see {@link warnGroupedHeadersUnsupported} — so it keeps the leaf row, which
+	// is the one that carries every affordance, and drops the rest.
+	const headerRows = Children.toArray(children)
+	const isGrouped = table.getHeaderGroups().length > 1 && headerRows.length > 1
+	if (isGrouped) warnGroupedHeadersUnsupported()
 
 	return (
 		<HeroTable.Header {...heroProps}>
 			<HeaderContext value={{ inHeader: true, ...(rowHeaderId === undefined ? {} : { rowHeaderId }) }}>
-				{children}
+				{isGrouped ? headerRows.at(-1) : children}
 			</HeaderContext>
 		</HeroTable.Header>
+	)
+}
+
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
+/** One warning per page, however many grouped grids render. */
+let hasWarnedGroupedHeaders = false
+
+/**
+ * Grouped headers render flat in this kit, and say so once in development.
+ *
+ * HeroUI's table is a React Aria collection, and React Aria **removed** nested column support
+ * before its GA — adobe/react-spectrum#5537 deleted it, and the request to bring it back
+ * (adobe/react-spectrum#5263) has been open since 2023 with no API proposed. A `Column` nested in
+ * a `Column` is not a collection node there: its children render as the parent cell's content, so
+ * the leaves register as nothing and the collection throws `Cell count must match column count`
+ * before a row is drawn.
+ *
+ * Dropping the group rows is the least bad answer available here. The alternative — painting a
+ * second header outside the collection — means a `role="columnheader"` structure React Aria does
+ * not know about, hand-written `aria-colspan`, and widths to re-sync on every resize, reorder and
+ * hide. A flat header is a missing decoration; that would be a lying accessibility tree.
+ *
+ * The shadcn kit renders grouped headers correctly.
+ */
+function warnGroupedHeadersUnsupported(): void {
+	if (!IS_DEV || hasWarnedGroupedHeaders) return
+	hasWarnedGroupedHeaders = true
+	console.warn(
+		'[@ez-kit/data-grid-heroui] Grouped headers (`columns[].columns`) render flat in this kit: ' +
+			'HeroUI builds on React Aria, which dropped nested column support before GA ' +
+			'(adobe/react-spectrum#5537, still unresolved in #5263). The leaf columns render as usual — ' +
+			'only the group row is missing. Use the shadcn kit if the group row matters.',
 	)
 }
 
@@ -132,9 +179,12 @@ export function Tr({ children, ...props }: TrProps) {
 	const maybeRowId = propsWithData.id ?? propsWithData['data-row-id']
 	const rowId =
 		typeof maybeRowId === 'symbol' ? undefined : typeof maybeRowId === 'bigint' ? String(maybeRowId) : maybeRowId
-	const { 'data-row-id': _dataRowId, ...rest } = propsWithData
-	const heroProps = rest as unknown as ComponentProps<typeof HeroTable.Row>
+	const heroProps = propsWithData as unknown as ComponentProps<typeof HeroTable.Row>
 
+	// `data-row-id` is passed through, not consumed: React Aria needs the value as its
+	// collection `id` (it surfaces as `data-key`), but the attribute itself is part of the
+	// react layer's row contract — see `row.tsx` — and a kit that swallows it breaks any CSS
+	// or test written against `[data-row-id]` for that kit alone.
 	return (
 		<HeroTable.Row
 			{...heroProps}
@@ -203,13 +253,15 @@ export function Td({ pinned, className, style, ...props }: TdProps) {
  * "A table must have at least one Column with the isRowHeader prop set to true".
  *
  * The first visible non-system column is the same one the old scan found, and the column model
- * cannot be hidden behind a component boundary.
+ * cannot be hidden behind a component boundary. It is read in *visual* order, so pinning a
+ * column moves the row header with it rather than leaving it on whatever column was declared
+ * first.
  */
 function useRowHeaderId(): string | undefined {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
-	for (const column of table.getVisibleLeafColumns()) {
+	for (const column of getVisualLeafColumns(table)) {
 		if (column.columnDef.meta?.isSystemColumn === true) continue
 		return column.id
 	}

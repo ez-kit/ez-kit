@@ -3,8 +3,6 @@ title: History
 description: withHistory adds an undo/redo/goto stack to any Valtio proxy, backed by the same manager-agnostic @ez-kit/store-core/history engine every @ez-kit store uses.
 ---
 
-# History
-
 `withHistory` wraps a Valtio proxy with an undo/redo stack. It's a [capability](./capabilities) — build the enhancer, apply it to the proxy with [`pipe`](./capabilities) in the factory, read and drive it with `useHistory()`.
 
 ```tsx
@@ -53,28 +51,28 @@ entries. The example passes a `shouldRecord` that vetoes a repeat write to the s
 ## Options
 
 ```ts
-type ValtioHistoryOptions<T extends object> = {
+type HistoryOptions<T extends object> = {
 	limit?: number
 	defaultPaused?: boolean
 	defaultPasts?: T[]
 	defaultFutures?: T[]
-	shouldRecord?: (prev: T, next: T, meta?: readonly ValtioOp[]) => boolean
+	shouldRecord?: (prev: T, next: T, meta?: readonly HistoryOp[]) => boolean
 	sync?: boolean
 }
 
 pipe(proxy({ count: 0 }), withHistory(options))
 ```
 
-| Option           | Type                                                        | Default | Description                                                                          |
-| ---------------- | ----------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
-| `limit`          | `number`                                                    | `100`   | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
-| `defaultPaused`  | `boolean`                                                   | `false` | Start with recording paused — `resume()` (or a change to this option) flips it on.   |
-| `defaultPasts`   | `T[]`                                                       | `[]`    | Seed the undo stack. Trimmed to `limit` like any other write.                        |
-| `defaultFutures` | `T[]`                                                       | `[]`    | Seed the redo stack. Trimmed to `limit` like any other write.                        |
-| `shouldRecord`   | `(prev: T, next: T, meta?: readonly ValtioOp[]) => boolean` | —       | Veto a write: return `false` to skip recording it. `meta` is the batch's Valtio ops. |
-| `sync`           | `boolean`                                                   | `false` | Record one entry **per operation** instead of one per microtask batch.               |
+| Option           | Type                                                         | Default | Description                                                                          |
+| ---------------- | ------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------ |
+| `limit`          | `number`                                                     | `100`   | Max entries kept per stack. Over the limit, the **oldest** entry is dropped.         |
+| `defaultPaused`  | `boolean`                                                    | `false` | Start with recording paused — `resume()` (or a change to this option) flips it on.   |
+| `defaultPasts`   | `T[]`                                                        | `[]`    | Seed the undo stack. Trimmed to `limit` like any other write.                        |
+| `defaultFutures` | `T[]`                                                        | `[]`    | Seed the redo stack. Trimmed to `limit` like any other write.                        |
+| `shouldRecord`   | `(prev: T, next: T, meta?: readonly HistoryOp[]) => boolean` | —       | Veto a write: return `false` to skip recording it. `meta` is the batch's Valtio ops. |
+| `sync`           | `boolean`                                                    | `false` | Record one entry **per operation** instead of one per microtask batch.               |
 
-`shouldRecord`'s `meta` is `readonly ValtioOp[]` — the exact shape Valtio's `subscribe` reports (`['set', path, value, previousValue]` or `['delete', path, previousValue]`), one array per recorded batch (or per op, with `sync: true`). This requires `unstable_enableOp(true)`, which `withHistory` turns on globally the first time it's called — see [the process-wide flag](#the-process-wide-op-flag) below.
+`shouldRecord`'s `meta` is `readonly HistoryOp[]` — the exact shape Valtio's `subscribe` reports (`['set', path, value, previousValue]` or `['delete', path, previousValue]`), one array per recorded batch (or per op, with `sync: true`). This requires `unstable_enableOp(true)`, which `withHistory` turns on globally the first time it's called — see [the process-wide flag](#the-process-wide-op-flag) below.
 
 ## `useHistory(store)`
 
@@ -174,4 +172,4 @@ Without `defaultPaused`, hydration **is** recorded as a step — useful if you g
 
 ### The process-wide `op` flag
 
-`withHistory` calls Valtio's `unstable_enableOp(true)` the first time it runs, which is how `subscribe` gets real operation payloads (`ValtioOp[]`) instead of always-empty arrays — required for `shouldRecord` and for `sync: true`'s per-operation granularity. This flag is global and idempotent, but it is **process-wide**: once any store in your app calls `withHistory`, every Valtio `subscribe()` callback anywhere in that process starts receiving populated `ops` instead of `[]`. Harmless for code that ignores its `ops` argument (the overwhelming majority), but worth knowing if you have code that branches on an empty ops array specifically.
+`withHistory` calls Valtio's `unstable_enableOp(true)` the first time it runs, which is how `subscribe` gets real operation payloads (`HistoryOp[]`) instead of always-empty arrays — required for `shouldRecord` and for `sync: true`'s per-operation granularity. This flag is global and idempotent, but it is **process-wide**: once any store in your app calls `withHistory`, every Valtio `subscribe()` callback anywhere in that process starts receiving populated `ops` instead of `[]`. Harmless for code that ignores its `ops` argument (the overwhelming majority), but worth knowing if you have code that branches on an empty ops array specifically.

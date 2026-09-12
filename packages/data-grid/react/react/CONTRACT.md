@@ -8,9 +8,9 @@ This document is the reference for that contract. The types referenced here
 (`GridComponents`, `FullGridComponents`, each `*Props`) are all exported from the
 package's public entry point.
 
-## The two obligations
+## The three obligations
 
-Every kit owes exactly two things:
+Every kit owes exactly three things:
 
 1. **Register components.** Pass a nested, feature-grouped object to the factory:
 
@@ -43,11 +43,37 @@ Every kit owes exactly two things:
    typography, hover/focus, motion) is yours: target the `data-slot` hooks the react
    layer emits (see [Structural `data-slot` hooks](#structural-data-slot-hooks)).
 
+3. **Write no user-facing text.** Every string the grid renders — visible labels,
+   `placeholder`s and `aria-label`s alike — lives in one dictionary, so a consumer can
+   replace any of it through `messages`. A kit reads it and holds no literal of its own:
+
+   ```tsx
+   import { useGridMessages } from '@ez-kit/data-grid-react'
+
+   export function PageSizer({ pageSize, items, onPageSizeChange }: PageSizerProps) {
+   	const messages = useGridMessages()
+   	return <span>{messages.pagination.rowsPerPage}</span>
+   }
+   ```
+
+   `useGridMessages()` returns the complete `GridMessages` — the English defaults with the
+   grid's `messages` folded on — so no call site needs a fallback. Outside a `<DataGrid>` it
+   returns `defaultMessages` rather than throwing, so a block still renders in a story or a
+   test. Entries whose text depends on the render are functions with a typed context:
+   `messages.filtering.placeholder({ columnId })`, `messages.selection.count({ count })`.
+
+   The in-repo kits enforce this with an ESLint rule that fails on a JSX-text or
+   `aria-label` / `placeholder` / `title` literal — and on a module constant named
+   `*_LABEL` / `*_TEXT` / `*_TITLE` / `*_PLACEHOLDER`, which is how the first sweep leaked.
+   A kit outside this repo is on its honour, but the same reasoning applies: a grid that is
+   90% localizable is not localizable, and the English that leaks is usually an `aria-label`,
+   invisible until a screen reader reads it in the wrong language.
+
 ## Full vs partial support
 
 - **`satisfies FullGridComponents`** — the kit advertises full support. A forgotten
-  component is a **compile error**. This is what the in-repo `shadcn`, `heroui`, and
-  `native` kits use. Recommended.
+  component is a **compile error**. This is what the in-repo `shadcn` and `heroui` kits
+  use. Recommended.
 - **`satisfies GridComponents`** — a partial kit that implements a subset. Legal, but
   any feature that references a missing component fails at runtime. In development the
   grid throws a named error (see [Dev-time guard](#dev-time-guard)) instead of React's
@@ -65,7 +91,7 @@ so "which feature owns which component" is defined in exactly one place.
 
 ## Recommended kit structure
 
-The in-repo kits (`shadcn`, `heroui`, `native`) organize their components into one folder
+The in-repo kits (`shadcn`, `heroui`) organize their components into one folder
 per feature, mirroring `FEATURE_COMPONENTS` so the file tree reads like the contract:
 
 ```
@@ -152,9 +178,14 @@ Per-row actions share one column: edit / delete buttons plus the row-pin menu.
 | `ActionsCell`    | `ActionsCellProps`    |
 | `RowActionsMenu` | `RowActionsMenuProps` |
 
-`RowActionsMenu` is item-driven: it receives `RowActionItem[]` and renders each one,
-mapping `item.id` (a `RowActionId`) to the kit's own icon. It holds only the pin
-actions under the default `inline` variant, and every action under `menu`.
+`RowActionsMenu` is item-driven: it receives the menu model and renders each entry,
+mapping `item.id` (a `RowActionId`) to the kit's own icon. Under the default
+`rowActions.placement: 'inline'` it holds the pin entries and any custom entry that
+did not ask to be a button; under `'menu'` it holds every action.
+
+`ActionsCell` in the `idle` state also receives `actions` — the custom entries that
+asked for `placement: 'inline'`. A kit renders each as an icon button beside its own
+Edit and Delete, and a slot entry as its bare `component`.
 
 ### `resizing`
 

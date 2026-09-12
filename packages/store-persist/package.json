@@ -1,7 +1,18 @@
 {
 	"name": "@ez-kit/store-persist",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Source-agnostic persist engine for the @ez-kit store packages: URL / storage / IndexedDB as state, bound to any store manager through a StorePort.",
+	"keywords": [
+		"react",
+		"persist",
+		"url-state",
+		"localstorage",
+		"sessionstorage",
+		"indexeddb",
+		"state-management",
+		"store",
+		"typescript"
+	],
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -9,6 +20,9 @@
 		"directory": "packages/store-persist"
 	},
 	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/store-persist#readme",
+	"bugs": {
+		"url": "https://github.com/ez-kit/ez-kit/issues"
+	},
 	"type": "module",
 	"sideEffects": false,
 	"files": [
@@ -51,7 +65,7 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"dependencies": {
-		"@ez-kit/store-core": "workspace:*"
+		"@ez-kit/store-core": "workspace:^"
 	},
 	"scripts": {
 		"build": "tsup",
@@ -59,25 +73,38 @@
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "7 KB"
+			"limit": "5.5 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		},
 		{
 			"path": "dist/storage/index.js",
-			"limit": "2 KB"
+			"limit": "2 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		},
 		{
 			"path": "dist/url/index.js",
-			"limit": "1 KB"
+			"limit": "1 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		},
 		{
 			"path": "dist/url/react-router.js",
-			"limit": "1 KB"
+			"limit": "1 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		}
 	],
 	"devDependencies": {
@@ -106,5 +133,8 @@
 		"zod": {
 			"optional": true
 		}
+	},
+	"engines": {
+		"node": ">=20"
 	}
 }

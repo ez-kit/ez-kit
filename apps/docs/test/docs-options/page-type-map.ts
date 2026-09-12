@@ -1,4 +1,19 @@
-import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, type TypeRef } from './type-resolver'
+import { NO_HEADING } from './mdx-tables'
+import {
+	FORM_API_TYPE_ARGS,
+	FORM_VALUE_TYPE_ARGS,
+	ROW_TYPE_ARGS,
+	STATE_SEED_TYPE_ARGS,
+	STATE_TYPE_ARGS,
+	STORE_SEED_TYPE_ARGS,
+	STORE_SELECTED_TYPE_ARGS,
+	STORE_TYPE_ARGS,
+	TypeModule,
+	type TypeRef,
+} from './type-resolver'
+
+/** The persist field types are generic over the field's value; any scalar answers the same key question. */
+const PERSIST_VALUE_TYPE_ARGS = '<string>'
 
 /**
  * The explicit page → type map behind `docs-option-names.test.ts`.
@@ -7,18 +22,18 @@ import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, ty
  * the docs tree: an unmapped page is *visibly* absent rather than silently
  * skipped, which is the only way coverage stays an honest number.
  *
- * Scope: **every** page under `content/docs/data-grid/**`, plus the four
- * `form/` pages that carry at least one option table. A page with no option
- * table still gets an entry with two empty arrays — that is the point. While
- * coverage was partial, an unmapped page was checked by nothing, and the two
- * worst pages in the docs were unmapped ones: `columns/resizing.mdx`
+ * Scope: **every** page under the {@link SCANNED_ROOTS} subtrees —
+ * `data-grid/**`, `form/**`, `zu-store/**` and `va-store/**`. A page with no
+ * option table still gets an entry with two empty arrays — that is the point.
+ * While coverage was partial, an unmapped page was checked by nothing, and the
+ * two worst pages in the docs were unmapped ones: `columns/resizing.mdx`
  * documented a `sizing` option that never existed, and the whole `editing/**`
  * section documented a `meta.editType` / `onCellEdit` API that never existed.
- * With the set closed, `everyPageIsMapped` fails the moment a page is added
- * without being classified, so the hole cannot reopen. `form/index.mdx` and
- * `form/ai.mdx` are absent for the opposite reason: every table on them
- * documents exported symbols or URLs, so an entry would carry a maintenance
- * obligation while checking nothing.
+ * With the set closed — and with the test walking the roots on disk, not
+ * trusting this list to be current — a page added tomorrow fails the suite
+ * until it is classified. The two pages in {@link DELIBERATELY_UNMAPPED} are
+ * exempt for the opposite reason: every table on them documents exported
+ * symbols or URLs, so an entry would carry upkeep while checking nothing.
  *
  * ## Adding a page
  *
@@ -30,41 +45,75 @@ import { FORM_API_TYPE_ARGS, FORM_VALUE_TYPE_ARGS, ROW_TYPE_ARGS, TypeModule, ty
  *    accounted for — the test fails on an unclassified table.
  */
 
+/**
+ * Docs subtrees whose every `.mdx` must be classified. The test walks these directories and fails on
+ * any page that is neither in {@link DocPage} nor in {@link DELIBERATELY_UNMAPPED} — so the map cannot
+ * quietly fall behind the docs tree the way it did before coverage was closed.
+ */
+export const SCANNED_ROOTS: readonly string[] = [
+	'content/docs/data-grid',
+	'content/docs/form',
+	'content/docs/zu-store',
+	'content/docs/va-store',
+]
+
+/** A page under a scanned root that is deliberately not classified, with the reason it checks nothing. */
+export type UnmappedPage = {
+	readonly page: string
+	readonly reason: string
+}
+
+export const DELIBERATELY_UNMAPPED: readonly UnmappedPage[] = [
+	{
+		page: 'content/docs/form/index.mdx',
+		reason: 'Every table documents exported symbols or URLs, so an entry would carry upkeep while checking nothing.',
+	},
+	{
+		page: 'content/docs/form/ai.mdx',
+		reason: 'Lists the llms.txt endpoints — URLs, not config keys.',
+	},
+]
+
 /** In-scope documentation pages, relative to `apps/docs/`. */
 export const DocPage = {
 	AdvancedReact: 'content/docs/data-grid/advanced/react.mdx',
 	AdvancedCore: 'content/docs/data-grid/advanced/core.mdx',
 	Ai: 'content/docs/data-grid/ai.mdx',
 	Architecture: 'content/docs/data-grid/architecture.mdx',
-	CellsCellTypes: 'content/docs/data-grid/cells/cell-types.mdx',
-	CellsCustomCellTypes: 'content/docs/data-grid/cells/custom-cell-types.mdx',
-	Composition: 'content/docs/data-grid/composition.mdx',
-	DefaultOptions: 'content/docs/data-grid/default-options.mdx',
-	Defaults: 'content/docs/data-grid/defaults.mdx',
+	ClientVsServer: 'content/docs/data-grid/client-vs-server.mdx',
+	ColumnsCellTypes: 'content/docs/data-grid/columns/cell-types.mdx',
+	ColumnsCustomCellTypes: 'content/docs/data-grid/columns/custom-cell-types.mdx',
+	LayoutComposition: 'content/docs/data-grid/layout/composition.mdx',
+	StateDefaults: 'content/docs/data-grid/state/defaults.mdx',
 	EditingCreating: 'content/docs/data-grid/editing/creating.mdx',
 	EditingCrudClient: 'content/docs/data-grid/editing/crud-client.mdx',
 	EditingCrudServer: 'content/docs/data-grid/editing/crud-server.mdx',
-	EditingDeleteConfirmation: 'content/docs/data-grid/editing/delete-confirmation.mdx',
+	EditingDeleting: 'content/docs/data-grid/editing/deleting.mdx',
 	EditingIndex: 'content/docs/data-grid/editing/index.mdx',
 	EditingValidation: 'content/docs/data-grid/editing/validation.mdx',
 	Fallbacks: 'content/docs/data-grid/fallbacks.mdx',
-	Footer: 'content/docs/data-grid/footer.mdx',
+	LayoutFooter: 'content/docs/data-grid/layout/footer.mdx',
 	Features: 'content/docs/data-grid/features.mdx',
 	GettingStarted: 'content/docs/data-grid/getting-started.mdx',
 	Index: 'content/docs/data-grid/index.mdx',
 	InstallationHeroui: 'content/docs/data-grid/installation/heroui.mdx',
 	InstallationShadcn: 'content/docs/data-grid/installation/shadcn.mdx',
-	ServerSide: 'content/docs/data-grid/server-side.mdx',
-	StatePersistence: 'content/docs/data-grid/state-persistence.mdx',
-	StickyHeader: 'content/docs/data-grid/sticky-header.mdx',
+	KitParity: 'content/docs/data-grid/kit-parity.mdx',
+	StateServerSide: 'content/docs/data-grid/state/server-side.mdx',
+	StatePersistence: 'content/docs/data-grid/state/persistence.mdx',
+	LayoutIndex: 'content/docs/data-grid/layout/index.mdx',
 	Theming: 'content/docs/data-grid/theming.mdx',
-	CellsDateCell: 'content/docs/data-grid/cells/date-cell.mdx',
+	Localization: 'content/docs/data-grid/localization.mdx',
+	ExamplesIndex: 'content/docs/data-grid/examples.mdx',
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
-	ColumnsColumnPinning: 'content/docs/data-grid/columns/column-pinning.mdx',
-	ColumnsColumnVisibility: 'content/docs/data-grid/columns/column-visibility.mdx',
+	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
+	ColumnsOrdering: 'content/docs/data-grid/columns/ordering.mdx',
+	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
+	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
+	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
 	ColumnsIndex: 'content/docs/data-grid/columns/index.mdx',
 	ColumnsResizing: 'content/docs/data-grid/columns/resizing.mdx',
-	ControlledState: 'content/docs/data-grid/controlled-state.mdx',
+	StateControlled: 'content/docs/data-grid/state/controlled.mdx',
 	ExpandingControlled: 'content/docs/data-grid/expanding/controlled.mdx',
 	ExpandingSubContent: 'content/docs/data-grid/expanding/sub-content.mdx',
 	ExpandingTree: 'content/docs/data-grid/expanding/tree.mdx',
@@ -73,22 +122,86 @@ export const DocPage = {
 	FilteringIndex: 'content/docs/data-grid/filtering/index.mdx',
 	FilteringMultiValue: 'content/docs/data-grid/filtering/multi-value.mdx',
 	FilteringOperators: 'content/docs/data-grid/filtering/operators.mdx',
-	FilteringPanel: 'content/docs/data-grid/filtering/panel.mdx',
+	FilteringActiveFilters: 'content/docs/data-grid/filtering/active-filters.mdx',
+	FilteringVariants: 'content/docs/data-grid/filtering/variants.mdx',
 	FormCustomKit: 'content/docs/form/custom-kit.mdx',
 	FormFields: 'content/docs/form/fields.mdx',
 	FormLayout: 'content/docs/form/layout.mdx',
 	FormNativeApi: 'content/docs/form/native-api.mdx',
 	FormSchema: 'content/docs/form/schema.mdx',
+	FormBasicConcepts: 'content/docs/form/basic-concepts.mdx',
+	FormComposition: 'content/docs/form/composition.mdx',
+	FormExamples: 'content/docs/form/examples.mdx',
+	FormGettingStarted: 'content/docs/form/getting-started.mdx',
+	FormInstallationHeroui: 'content/docs/form/installation/heroui.mdx',
+	FormInstallationShadcn: 'content/docs/form/installation/shadcn.mdx',
+	FormReactivity: 'content/docs/form/reactivity.mdx',
+	FormSelectCreatable: 'content/docs/form/select/creatable.mdx',
+	FormSelectIndex: 'content/docs/form/select/index.mdx',
+	FormSelectOptionSources: 'content/docs/form/select/option-sources.mdx',
+	FormSelectSearchable: 'content/docs/form/select/searchable.mdx',
+	FormSubmission: 'content/docs/form/submission.mdx',
+	FormValidation: 'content/docs/form/validation.mdx',
 	PaginationInfiniteScroll: 'content/docs/data-grid/pagination/infinite-scroll.mdx',
 	PaginationIndex: 'content/docs/data-grid/pagination/index.mdx',
+	PinningIndex: 'content/docs/data-grid/pinning/index.mdx',
 	Production: 'content/docs/data-grid/production.mdx',
-	RowActions: 'content/docs/data-grid/row-actions.mdx',
-	RowPinning: 'content/docs/data-grid/row-pinning.mdx',
+	RowActionsApi: 'content/docs/data-grid/row-actions/api.mdx',
+	RowActionsIndex: 'content/docs/data-grid/row-actions/index.mdx',
+	PinningRows: 'content/docs/data-grid/pinning/rows.mdx',
 	SelectionIndex: 'content/docs/data-grid/selection/index.mdx',
 	SelectionSelectionBar: 'content/docs/data-grid/selection/selection-bar.mdx',
 	Sorting: 'content/docs/data-grid/sorting.mdx',
-	StateModel: 'content/docs/data-grid/state-model.mdx',
+	StateIndex: 'content/docs/data-grid/state/index.mdx',
 	Virtualization: 'content/docs/data-grid/virtualization.mdx',
+
+	// --- @ez-kit/zu-store ---
+	ZuAi: 'content/docs/zu-store/ai.mdx',
+	ZuCacheApi: 'content/docs/zu-store/cache/api.mdx',
+	ZuCacheIndex: 'content/docs/zu-store/cache/index.mdx',
+	ZuCapabilities: 'content/docs/zu-store/capabilities.mdx',
+	ZuCreateContextStoreApi: 'content/docs/zu-store/create-context-store/api.mdx',
+	ZuCreateContextStoreIndex: 'content/docs/zu-store/create-context-store/index.mdx',
+	ZuGettingStarted: 'content/docs/zu-store/getting-started.mdx',
+	ZuHistory: 'content/docs/zu-store/history.mdx',
+	ZuIndex: 'content/docs/zu-store/index.mdx',
+	ZuPersistCache: 'content/docs/zu-store/persist/cache.mdx',
+	ZuPersistCombined: 'content/docs/zu-store/persist/combined.mdx',
+	ZuPersistCustomAdapter: 'content/docs/zu-store/persist/custom-adapter.mdx',
+	ZuPersistDeepDiveStorage: 'content/docs/zu-store/persist/deep-dive-storage.mdx',
+	ZuPersistDeepDiveUrl: 'content/docs/zu-store/persist/deep-dive-url.mdx',
+	ZuPersistFields: 'content/docs/zu-store/persist/fields.mdx',
+	ZuPersistIndex: 'content/docs/zu-store/persist/index.mdx',
+	ZuPersistParsers: 'content/docs/zu-store/persist/parsers.mdx',
+	ZuPersistQuickStartStorage: 'content/docs/zu-store/persist/quick-start-storage.mdx',
+	ZuPersistQuickStartUrl: 'content/docs/zu-store/persist/quick-start-url.mdx',
+	ZuPersistTypescript: 'content/docs/zu-store/persist/typescript.mdx',
+	ZuStability: 'content/docs/zu-store/stability.mdx',
+	ZuUseStoreState: 'content/docs/zu-store/use-store-state.mdx',
+
+	// --- @ez-kit/va-store ---
+	VaAi: 'content/docs/va-store/ai.mdx',
+	VaCacheApi: 'content/docs/va-store/cache/api.mdx',
+	VaCacheIndex: 'content/docs/va-store/cache/index.mdx',
+	VaCapabilities: 'content/docs/va-store/capabilities.mdx',
+	VaCreateContextStoreApi: 'content/docs/va-store/create-context-store/api.mdx',
+	VaCreateContextStoreIndex: 'content/docs/va-store/create-context-store/index.mdx',
+	VaGettingStarted: 'content/docs/va-store/getting-started.mdx',
+	VaHistory: 'content/docs/va-store/history.mdx',
+	VaIndex: 'content/docs/va-store/index.mdx',
+	VaPersistCache: 'content/docs/va-store/persist/cache.mdx',
+	VaPersistCombined: 'content/docs/va-store/persist/combined.mdx',
+	VaPersistCustomAdapter: 'content/docs/va-store/persist/custom-adapter.mdx',
+	VaPersistDecorators: 'content/docs/va-store/persist/decorators.mdx',
+	VaPersistDeepDiveStorage: 'content/docs/va-store/persist/deep-dive-storage.mdx',
+	VaPersistDeepDiveUrl: 'content/docs/va-store/persist/deep-dive-url.mdx',
+	VaPersistFields: 'content/docs/va-store/persist/fields.mdx',
+	VaPersistIndex: 'content/docs/va-store/persist/index.mdx',
+	VaPersistParsers: 'content/docs/va-store/persist/parsers.mdx',
+	VaPersistQuickStartStorage: 'content/docs/va-store/persist/quick-start-storage.mdx',
+	VaPersistQuickStartUrl: 'content/docs/va-store/persist/quick-start-url.mdx',
+	VaPersistTypescript: 'content/docs/va-store/persist/typescript.mdx',
+	VaStability: 'content/docs/va-store/stability.mdx',
 } as const
 
 export type DocPage = (typeof DocPage)[keyof typeof DocPage]
@@ -115,6 +228,7 @@ export const GRID_TYPE = {
 	ColumnSortingConfig: { module: TypeModule.Core, name: 'ColumnSortingConfig' },
 	ColumnFilteringConfig: { module: TypeModule.Core, name: 'ColumnFilteringConfig' },
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
+	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
@@ -129,6 +243,8 @@ export const GRID_TYPE = {
 	FilteringToolbarConfig: { module: TypeModule.React, name: 'FilteringToolbarConfig' },
 	VirtualizationConfig: { module: TypeModule.Core, name: 'VirtualizationConfig' },
 	SelectionBarConfig: { module: TypeModule.React, name: 'SelectionBarConfig', typeArgs: ROW_TYPE_ARGS },
+	ActionItemDef: { module: TypeModule.Core, name: 'ActionItemDef' },
+	ActionItemSlot: { module: TypeModule.Core, name: 'ActionItemSlot' },
 	RowActionItem: { module: TypeModule.Core, name: 'RowActionItem' },
 	SystemColumnDef: { module: TypeModule.Core, name: 'SystemColumnDef' },
 	EditingConfig: { module: TypeModule.Core, name: 'EditingConfig', typeArgs: ROW_TYPE_ARGS },
@@ -193,6 +309,74 @@ export const FORM_TYPE = {
 	KitFormApi: { module: TypeModule.FormReact, name: 'KitFormApi', typeArgs: FORM_API_TYPE_ARGS },
 } as const satisfies Record<string, TypeRef>
 
+/**
+ * Types that govern the mapped `zu-store/` and `va-store/` tables.
+ *
+ * Both bindings re-export the cache types from `@ez-kit/store-core/cache`
+ * unchanged, so those are read from the shared package — except the two the
+ * bindings define themselves (`CachedSubscribeProps`, and `va-store`'s
+ * `CachedStoreProps`), which differ per manager and are read from the binding.
+ *
+ * The generic instantiations follow the binding's own vocabulary: `zu-store`
+ * types are generic over a **store handle** (`StoreApi<TState>`), `va-store`
+ * types over the **state object** itself.
+ */
+export const STORE_TYPE = {
+	/**
+	 * `zu-store`'s surface. The cache types originate in `@ez-kit/store-core/cache`, but they are read
+	 * here through the binding that re-exports them — which is both what a consumer imports and the only
+	 * package the docs app depends on.
+	 */
+	ZuScopeProps: { module: TypeModule.ZuStore, name: 'ScopeProps' },
+	ZuStoreCacheController: { module: TypeModule.ZuStore, name: 'StoreCacheController' },
+	ZuCachedStoreOptions: { module: TypeModule.ZuStore, name: 'CachedStoreOptions' },
+	ZuStoreCacheOptions: { module: TypeModule.ZuStore, name: 'StoreCacheOptions' },
+	ZuCachedProviderProps: { module: TypeModule.ZuStore, name: 'CachedProviderProps', typeArgs: STATE_TYPE_ARGS },
+	ZuControlledFieldConfig: { module: TypeModule.ZuStore, name: 'ControlledFieldConfig', typeArgs: STATE_TYPE_ARGS },
+	/** Generic over the Zustand **handle** — this binding's vocabulary. */
+	ZuCachedStoreGroup: { module: TypeModule.ZuStore, name: 'CachedStoreGroup', typeArgs: STORE_SEED_TYPE_ARGS },
+	ZuCachedSubscribeProps: {
+		module: TypeModule.ZuStore,
+		name: 'CachedSubscribeProps',
+		typeArgs: STORE_SELECTED_TYPE_ARGS,
+	},
+	ZuCachedStoreProps: { module: TypeModule.ZuStore, name: 'CachedStoreProps', typeArgs: STORE_TYPE_ARGS },
+	ZuHistoryOptions: { module: TypeModule.ZuStore, name: 'HistoryOptions', typeArgs: STATE_TYPE_ARGS },
+	ZuAccessorFieldOptions: {
+		module: TypeModule.ZuStorePersist,
+		name: 'AccessorFieldOptions',
+		typeArgs: PERSIST_VALUE_TYPE_ARGS,
+	},
+
+	/** `va-store`'s surface: the same cache types, plus the ones generic over the **state** object. */
+	VaScopeProps: { module: TypeModule.VaStore, name: 'ScopeProps' },
+	VaStoreCacheController: { module: TypeModule.VaStore, name: 'StoreCacheController' },
+	VaCachedStoreOptions: { module: TypeModule.VaStore, name: 'CachedStoreOptions' },
+	VaStoreCacheOptions: { module: TypeModule.VaStore, name: 'StoreCacheOptions' },
+	VaCachedProviderProps: { module: TypeModule.VaStore, name: 'CachedProviderProps', typeArgs: STATE_TYPE_ARGS },
+	VaControlledFieldConfig: { module: TypeModule.VaStore, name: 'ControlledFieldConfig', typeArgs: STATE_TYPE_ARGS },
+	VaCachedStoreGroup: { module: TypeModule.VaStore, name: 'CachedStoreGroup', typeArgs: STATE_SEED_TYPE_ARGS },
+	VaCachedSubscribeProps: { module: TypeModule.VaStore, name: 'CachedSubscribeProps', typeArgs: STATE_TYPE_ARGS },
+	VaCachedStoreProps: { module: TypeModule.VaStore, name: 'CachedStoreProps', typeArgs: STATE_TYPE_ARGS },
+	VaHistoryOptions: { module: TypeModule.VaStore, name: 'HistoryOptions', typeArgs: STATE_TYPE_ARGS },
+	VaCreateContextStoreOptions: {
+		module: TypeModule.VaStore,
+		name: 'CreateContextStoreOptions',
+		typeArgs: STATE_TYPE_ARGS,
+	},
+	VaUseSnapshotOptions: { module: TypeModule.VaStore, name: 'UseSnapshotOptions' },
+	VaAccessorFieldOptions: {
+		module: TypeModule.VaStorePersist,
+		name: 'AccessorFieldOptions',
+		typeArgs: PERSIST_VALUE_TYPE_ARGS,
+	},
+	VaPersistFieldOptions: {
+		module: TypeModule.VaStorePersist,
+		name: 'PersistFieldOptions',
+		typeArgs: PERSIST_VALUE_TYPE_ARGS,
+	},
+} as const satisfies Record<string, TypeRef>
+
 /** Zero-based index of the table column that names the option. */
 export const OptionColumn = {
 	First: 0,
@@ -253,7 +437,51 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.Composition,
+		page: DocPage.KitParity,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Known divergences',
+				reason:
+					'The first column names a capability and links to its page ("Grouped headers", "`Alt+Arrow` column reordering); the other columns are per-kit support, not config keys.',
+			},
+		],
+	},
+	{
+		page: DocPage.ClientVsServer,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Choosing',
+				reason:
+					'A side-by-side comparison: the first column is a prose property of the mode ("`data` holds", "Sort / filter latency"), not a key anyone sets.',
+			},
+		],
+	},
+	{
+		// The narrative half of the split: prose and live examples, every table moved to
+		// `pinning/api.mdx` below. Mapped with two empty arrays so the page stays inside
+		// `everyPageIsMapped` rather than silently unchecked.
+		page: DocPage.PinningIndex,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.PinningApi,
+		optionTables: [
+			// `pinning.column.onChange` / `pinning.row.top` resolve through the `boolean | …Config`
+			// unions the resolver looks past; `getRowId` is here because a row pin is keyed by
+			// whatever it returns.
+			{ heading: 'Grid options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 9 },
+			// The per-column half: `pinning` on a column def, plus the two members of the object
+			// form it accepts beside the scalar.
+			{ heading: 'Column def', roots: [GRID_TYPE.ColumnDef], expectedCount: 3 },
+			{ heading: 'State', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.LayoutComposition,
 		optionTables: [],
 		nonOptionTables: [
 			{
@@ -279,7 +507,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.EditingDeleteConfirmation,
+		page: DocPage.EditingDeleting,
 		optionTables: [
 			{ heading: '`deleting`', roots: [GRID_TYPE.DeletingConfig], expectedCount: 4 },
 			{ heading: '`deleting.bulk`', roots: [GRID_TYPE.BulkDeletingConfig], expectedCount: 3 },
@@ -292,7 +520,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.Footer,
+		page: DocPage.LayoutFooter,
 		optionTables: [
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 2 },
 			{ heading: 'Mounting', roots: [GRID_TYPE.LayoutConfig], expectedCount: 2 },
@@ -320,8 +548,10 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.StickyHeader,
-		optionTables: [],
+		page: DocPage.LayoutIndex,
+		// The table opens the page, above any `##` heading, and names full paths from the
+		// grid config (`layout.maxHeight`, `layout.stickyHeader`, `layout.stickyFooter`).
+		optionTables: [{ heading: NO_HEADING, roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
 		nonOptionTables: [],
 	},
 	{
@@ -337,11 +567,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.Ai,
 		optionTables: [],
-		nonOptionTables: [{ heading: 'Use with AI', reason: 'A list of documentation URLs.' }],
+		nonOptionTables: [{ heading: NO_HEADING, reason: 'A list of documentation URLs.' }],
 	},
 	{
-		page: DocPage.CellsCellTypes,
-		optionTables: [{ heading: "`'link'`", roots: [GRID_TYPE.LinkCellConfig], expectedCount: 3 }],
+		page: DocPage.ColumnsCellTypes,
+		optionTables: [
+			{ heading: "`'date'`", roots: [GRID_TYPE.DateCellConfig], expectedCount: 3 },
+			{ heading: "`'link'`", roots: [GRID_TYPE.LinkCellConfig], expectedCount: 3 },
+		],
 		nonOptionTables: [
 			{
 				heading: 'Built-in cell types',
@@ -350,22 +583,20 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.CellsCustomCellTypes,
+		page: DocPage.ColumnsCustomCellTypes,
 		// The four renderer slots a `defineCellType` definition may carry.
 		optionTables: [{ heading: 'Declaring a config', roots: [GRID_TYPE.CellTypeDefinition], expectedCount: 4 }],
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.DefaultOptions,
-		// The keys a defaults layer deliberately cannot carry — real `UseDataGridConfig` keys,
-		// which is exactly what makes the row meaningful.
-		optionTables: [{ heading: 'What can be defaulted', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 }],
+		page: DocPage.StateDefaults,
+		optionTables: [
+			// The keys a defaults layer deliberately cannot carry — real `UseDataGridConfig` keys,
+			// which is exactly what makes the row meaningful.
+			{ heading: 'What can be defaulted', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
+			{ heading: 'Built-in default values', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 41 },
+		],
 		nonOptionTables: [{ heading: 'When to use which', reason: 'Maps a situation to an API, naming no keys.' }],
-	},
-	{
-		page: DocPage.Defaults,
-		optionTables: [{ heading: 'Reference', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 39 }],
-		nonOptionTables: [],
 	},
 	{
 		page: DocPage.EditingCreating,
@@ -396,7 +627,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [{ heading: 'Packages', reason: 'Lists the published packages and who imports them.' }],
 	},
 	{
-		page: DocPage.ServerSide,
+		page: DocPage.StateServerSide,
 		optionTables: [
 			// Each table is headed by the feature it configures and lists that config's own keys,
 			// so the governing type is the feature config, not the root.
@@ -420,6 +651,40 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [{ heading: 'Where to look', reason: 'Maps a UI kit to where its design tokens live.' }],
 	},
 	{
+		page: DocPage.ColumnsGroupedHeaders,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef], expectedCount: 3 }],
+		nonOptionTables: [
+			{
+				heading: 'What belongs on the group and what on the leaf',
+				reason: 'Two columns of option names as prose, not a name → type table.',
+			},
+		],
+	},
+	{
+		page: DocPage.ColumnsOrdering,
+		optionTables: [
+			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 },
+			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
+		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.Localization,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.ExamplesIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Where each surface comes from',
+				reason:
+					'Maps a rendered surface to the option that produces it — whole config expressions, not keys of one type.',
+			},
+		],
+	},
+	{
 		page: DocPage.AdvancedReact,
 		optionTables: [],
 		nonOptionTables: [
@@ -430,23 +695,13 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.CellsDateCell,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.DateCellConfig], expectedCount: 3 }],
+		// Prose and live examples only — its options table moved to `pinning/api.mdx`.
+		page: DocPage.PinningColumns,
+		optionTables: [],
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.ColumnsColumnPinning,
-		optionTables: [
-			// One table, two sources: `pinning` on a column def and `pinning` on the
-			// grid config, disambiguated in prose ("(column def)" / "(table)").
-			// `state.columnPinning` / `initialState.columnPinning` resolve as real
-			// `UseDataGridConfig` paths, so they need no exception.
-			{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 },
-		],
-		nonOptionTables: [],
-	},
-	{
-		page: DocPage.ColumnsColumnVisibility,
+		page: DocPage.ColumnsVisibility,
 		// The `enableHiding` row is gone — it was the raw TanStack pass-through that
 		// duplicated `visibility`, and `ColumnDef` no longer accepts it.
 		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig], expectedCount: 6 }],
@@ -485,7 +740,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.ControlledState,
+		page: DocPage.StateControlled,
 		optionTables: [
 			// The option names live in the second column ("State key"); the first is
 			// a prose slot label ("Row selection"). The governing type is the
@@ -565,6 +820,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringOperators,
 		optionTables: [
+			{ heading: '`TableOperatorsConfig`', roots: [GRID_TYPE.TableOperatorsConfig], expectedCount: 1 },
 			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
 			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 4 },
 			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 4 },
@@ -577,9 +833,20 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.FilteringPanel,
+		page: DocPage.FilteringVariants,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 3 }],
+		nonOptionTables: [
+			{
+				heading: NO_HEADING,
+				reason:
+					"First column holds `variant` *values* ('inline', 'popover', 'panel'), one row each, not keys of a config object.",
+			},
+		],
+	},
+	{
+		page: DocPage.FilteringActiveFilters,
 		optionTables: [
-			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 4 },
+			{ heading: '`filtering`', roots: [GRID_TYPE.ReactFilteringConfig], expectedCount: 2 },
 			{ heading: '`FilterChipsConfig`', roots: [GRID_TYPE.FilterChipsConfig], expectedCount: 1 },
 			{ heading: '`FilteringToolbarConfig`', roots: [GRID_TYPE.FilteringToolbarConfig], expectedCount: 1 },
 		],
@@ -637,7 +904,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			// Rows are written `form.Field`, so the receiver prefix is stripped and
 			// the remainder resolved against the instance `useForm` returns.
 			{
-				heading: 'Native API',
+				heading: NO_HEADING,
 				roots: [FORM_TYPE.KitFormApi],
 				stripPrefix: FORM_RECEIVER_PREFIX,
 				expectedCount: 6,
@@ -687,12 +954,12 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	},
 	{
 		page: DocPage.PaginationIndex,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 13 }],
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 15 }],
 		nonOptionTables: [
 			{
-				heading: 'When the total is unknown',
+				heading: 'Label',
 				reason:
-					'Compares the three `pagination.variant` values against data availability; the rows are values, not keys.',
+					'Lists the values `pagination.label` accepts (`range`, `page`, `false`, a renderer) against what each reads; the rows are values, not keys.',
 			},
 		],
 	},
@@ -708,11 +975,27 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		],
 	},
 	{
-		page: DocPage.RowActions,
+		// The narrative half of the split: prose and live examples, every table moved to
+		// `row-actions/api.mdx` below. Mapped with two empty arrays so the page stays inside
+		// `everyPageIsMapped` rather than silently unchecked.
+		page: DocPage.RowActionsIndex,
+		optionTables: [],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.RowActionsApi,
 		optionTables: [
 			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 4 },
-			// Rows are the fields of one custom entry, not keys of the grid config.
-			{ heading: 'Entry shape', roots: [GRID_TYPE.RowActionItem], expectedCount: 6 },
+			// Rows are the fields of one custom entry, not keys of the grid config. Three roots
+			// because the table documents one shape a reader meets in two places: the two halves
+			// of the shared `ActionItem` union — the described entry and the `component` an entry
+			// that draws itself carries instead — plus `RowActionItem`, the row's own extension,
+			// which is where `placement` and `width` live.
+			{
+				heading: 'Entry shape',
+				roots: [GRID_TYPE.ActionItemDef, GRID_TYPE.ActionItemSlot, GRID_TYPE.RowActionItem],
+				expectedCount: 10,
+			},
 			// The shared shape `selection.column` / `expanding.column` / `rowActions.column` all
 			// take, documented once here and linked to from the other two pages.
 			{ heading: 'The column itself', roots: [GRID_TYPE.SystemColumnDef], expectedCount: 6 },
@@ -720,8 +1003,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.RowPinning,
-		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
+		// Prose and live examples only — its options table moved to `pinning/api.mdx`.
+		page: DocPage.PinningRows,
+		optionTables: [],
 		nonOptionTables: [],
 	},
 	{
@@ -737,14 +1021,14 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		nonOptionTables: [],
 	},
 	{
-		page: DocPage.StateModel,
+		page: DocPage.StateIndex,
 		optionTables: [
 			// One table crossing both levels on purpose: the page's whole point is
 			// that a starting value can come from a column def *or* from the grid
 			// config, so the column-level rows resolve against `ColumnDef` and the
 			// grid-level ones against `UseDataGridConfig`.
 			{
-				heading: 'Where a starting value comes from',
+				heading: 'Precedence at a glance',
 				roots: [GRID_TYPE.ColumnDef, GRID_TYPE.UseDataGridConfig],
 				expectedCount: 8,
 			},
@@ -768,6 +1052,314 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Per-column `sorting`', roots: [GRID_TYPE.ColumnSortingConfig], expectedCount: 5 },
 		],
 		nonOptionTables: [],
+	},
+
+	{ page: DocPage.FormBasicConcepts, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormComposition, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormExamples, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormGettingStarted, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormInstallationHeroui, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormInstallationShadcn, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormReactivity, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectCreatable, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectIndex, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectOptionSources, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSelectSearchable, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormSubmission, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.FormValidation, optionTables: [], nonOptionTables: [] },
+	// --- @ez-kit/zu-store ---------------------------------------------------
+	{
+		page: DocPage.ZuAi,
+		optionTables: [],
+		nonOptionTables: [{ heading: NO_HEADING, reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		optionTables: [
+			{ heading: '`CacheScope`', roots: [STORE_TYPE.ZuScopeProps], expectedCount: 2 },
+			{ heading: '`useCache()`', roots: [STORE_TYPE.ZuStoreCacheController], expectedCount: 2 },
+			{ heading: '`options`', roots: [STORE_TYPE.ZuCachedStoreOptions], expectedCount: 2 },
+			{ heading: 'The returned group', roots: [STORE_TYPE.ZuCachedStoreGroup], expectedCount: 6 },
+			{ heading: '`Provider`', roots: [STORE_TYPE.ZuCachedProviderProps], expectedCount: 6 },
+			{ heading: '`Subscribe`', roots: [STORE_TYPE.ZuCachedSubscribeProps], expectedCount: 3 },
+			{ heading: '`Store`', roots: [STORE_TYPE.ZuCachedStoreProps], expectedCount: 1 },
+			{ heading: '`createStoreCache(options?)`', roots: [STORE_TYPE.ZuStoreCacheOptions], expectedCount: 1 },
+		],
+		nonOptionTables: [
+			{
+				heading: '`CacheProvider`',
+				reason: 'The default cache provider takes only `children`; its props type is internal.',
+			},
+			{ heading: '`useCacheKeys(prefix?)`', reason: 'Documents the hook argument, not a key of any object.' },
+			{ heading: '`toTree(records)`', reason: 'Documents the function argument, not a key of any object.' },
+			{ heading: '`createCachedStore(factory, options)`', reason: 'Documents the two positional arguments.' },
+			{ heading: '`useSelector(selector)`', reason: 'Documents the hook argument.' },
+			{ heading: '`getFromCache(target)`', reason: 'Documents the method argument.' },
+			{ heading: '`useFromCache(target, selector)`', reason: 'Documents the two method arguments.' },
+			{ heading: 'Types', reason: 'Lists the exported type names themselves, not keys of any of them.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{ page: DocPage.ZuCacheIndex, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.ZuStability,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What semver covers', reason: 'Lists import paths and what they are for — not config keys.' },
+			{ heading: 'Environment support', reason: 'Lists peer/runtime version ranges — not config keys.' },
+		],
+	},
+	{
+		page: DocPage.ZuCapabilities,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What ships', reason: 'Names the two shipped capability wrappers — exports, not keys.' },
+		],
+	},
+	{
+		page: DocPage.ZuCreateContextStoreApi,
+		optionTables: [
+			{ heading: 'The `controlled` option', roots: [STORE_TYPE.ZuControlledFieldConfig], expectedCount: 2 },
+		],
+		nonOptionTables: [
+			{ heading: 'Signature', reason: 'Documents the two positional arguments of `createContextStore`.' },
+			{
+				heading: '`Provider`',
+				reason: "The Provider's props type is internal to the factory result; the table documents its three props.",
+			},
+			{ heading: '`useSelector(selector)`', reason: 'Documents the hook argument.' },
+			{ heading: '`useShallowSelector(selector)`', reason: 'Documents the hook argument.' },
+			{ heading: '`Subscribe`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: '`Store`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: 'Exports', reason: 'Lists the exported names themselves.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{
+		page: DocPage.ZuCreateContextStoreIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Reading state', reason: 'Prose comparison of the read hooks; the first column names no key.' },
+			{ heading: '`defaultValue` vs `value`', reason: 'Prose comparison of the two seeding props.' },
+		],
+	},
+	{
+		page: DocPage.ZuGettingStarted,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The read/write model',
+				reason: 'Prose table of read and write paths; the first column names no key.',
+			},
+		],
+	},
+	{
+		page: DocPage.ZuHistory,
+		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.ZuHistoryOptions], expectedCount: 5 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.ZuIndex,
+		optionTables: [],
+		nonOptionTables: [{ heading: "What's in the box", reason: 'Table of contents: page links, not config keys.' }],
+	},
+	{ page: DocPage.ZuPersistCache, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistCombined, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.ZuPersistCustomAdapter,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Two shapes', reason: 'Compares the two adapter shapes in prose; the first column names no key.' },
+		],
+	},
+	{ page: DocPage.ZuPersistDeepDiveStorage, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistDeepDiveUrl, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.ZuPersistFields,
+		optionTables: [{ heading: 'Key placement', roots: [STORE_TYPE.ZuAccessorFieldOptions], expectedCount: 3 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.ZuPersistIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'One engine, many sources',
+				reason: 'Lists the shipped sources in prose; the first column names no key.',
+			},
+			{ heading: 'On this topic', reason: 'Table of contents: page links.' },
+		],
+	},
+	{
+		page: DocPage.ZuPersistParsers,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: NO_HEADING, reason: 'Names the exported parser factories, called rather than passed as keys.' },
+			{ heading: 'Auto-resolution', reason: 'Maps runtime types to parsers; the first column names TypeScript types.' },
+		],
+	},
+	{ page: DocPage.ZuPersistQuickStartStorage, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistQuickStartUrl, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuPersistTypescript, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.ZuUseStoreState, optionTables: [], nonOptionTables: [] },
+
+	// --- @ez-kit/va-store ---------------------------------------------------
+	{
+		page: DocPage.VaAi,
+		optionTables: [],
+		nonOptionTables: [{ heading: NO_HEADING, reason: 'Lists the llms.txt endpoints — URLs, not config keys.' }],
+	},
+	{
+		page: DocPage.VaCacheApi,
+		optionTables: [
+			{ heading: '`CacheScope`', roots: [STORE_TYPE.VaScopeProps], expectedCount: 2 },
+			{ heading: '`useCache()`', roots: [STORE_TYPE.VaStoreCacheController], expectedCount: 2 },
+			{ heading: '`options`', roots: [STORE_TYPE.VaCachedStoreOptions], expectedCount: 2 },
+			{ heading: 'The returned group', roots: [STORE_TYPE.VaCachedStoreGroup], expectedCount: 5 },
+			{ heading: '`Provider`', roots: [STORE_TYPE.VaCachedProviderProps], expectedCount: 6 },
+			{ heading: '`Subscribe`', roots: [STORE_TYPE.VaCachedSubscribeProps], expectedCount: 1 },
+			{ heading: '`Store`', roots: [STORE_TYPE.VaCachedStoreProps], expectedCount: 1 },
+			{ heading: '`createStoreCache(options?)`', roots: [STORE_TYPE.VaStoreCacheOptions], expectedCount: 1 },
+		],
+		nonOptionTables: [
+			{
+				heading: '`CacheProvider`',
+				reason: 'The default cache provider takes only `children`; its props type is internal.',
+			},
+			{ heading: '`useCacheKeys(prefix?)`', reason: 'Documents the hook argument, not a key of any object.' },
+			{ heading: '`toTree(records)`', reason: 'Documents the function argument, not a key of any object.' },
+			{ heading: '`createCachedStore(factory, options)`', reason: 'Documents the two positional arguments.' },
+			{ heading: '`getFromCache(target)`', reason: 'Documents the method argument.' },
+			{ heading: '`useFromCache(target, selector)`', reason: 'Documents the two method arguments.' },
+			{ heading: 'Types', reason: 'Lists the exported type names themselves, not keys of any of them.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{ page: DocPage.VaCacheIndex, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaStability,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What semver covers', reason: 'Lists import paths and what they are for — not config keys.' },
+			{ heading: 'Environment support', reason: 'Lists peer/runtime version ranges — not config keys.' },
+		],
+	},
+	{
+		page: DocPage.VaCapabilities,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'What ships', reason: 'Names the two shipped capability wrappers — exports, not keys.' },
+		],
+	},
+	{
+		page: DocPage.VaCreateContextStoreApi,
+		optionTables: [
+			{ heading: '`useSnapshot(options?)`', roots: [STORE_TYPE.VaUseSnapshotOptions], expectedCount: 1 },
+			{ heading: 'The `controlled` option', roots: [STORE_TYPE.VaControlledFieldConfig], expectedCount: 2 },
+			{ heading: 'The `name` option', roots: [STORE_TYPE.VaCreateContextStoreOptions], expectedCount: 1 },
+		],
+		nonOptionTables: [
+			{ heading: 'Signature', reason: 'Documents the two positional arguments of `createContextStore`.' },
+			{
+				heading: '`Provider`',
+				reason: "The Provider's props type is internal to the factory result; the table documents its four props.",
+			},
+			{ heading: '`Subscribe`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: '`Store`', reason: "The render-prop component's props type is internal to the factory result." },
+			{ heading: 'Exports', reason: 'Lists the exported names themselves.' },
+			{ heading: 'Errors', reason: 'Lists thrown error messages.' },
+		],
+	},
+	{
+		page: DocPage.VaCreateContextStoreIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'Reading and writing',
+				reason: 'Prose comparison of the read and write paths; the first column names no key.',
+			},
+			{ heading: '`defaultValue` vs `value`', reason: 'Prose comparison of the two seeding props.' },
+		],
+	},
+	{
+		page: DocPage.VaGettingStarted,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'The read/write model',
+				reason: 'Prose table of read and write paths; the first column names no key.',
+			},
+		],
+	},
+	{
+		page: DocPage.VaHistory,
+		optionTables: [{ heading: 'Options', roots: [STORE_TYPE.VaHistoryOptions], expectedCount: 6 }],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.VaIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: "What's in the box", reason: 'Table of contents: page links, not config keys.' },
+			{
+				heading: 'Coming from `@ez-kit/zu-store`?',
+				reason: "Maps this package's hooks to the Zustand binding's; the first column names hooks.",
+			},
+		],
+	},
+	{ page: DocPage.VaPersistCache, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.VaPersistCombined, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistCustomAdapter,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: 'Two shapes', reason: 'Compares the two adapter shapes in prose; the first column names no key.' },
+		],
+	},
+	{
+		page: DocPage.VaPersistDecorators,
+		optionTables: [{ heading: 'Key placement', roots: [STORE_TYPE.VaPersistFieldOptions], expectedCount: 3 }],
+		nonOptionTables: [],
+	},
+	{ page: DocPage.VaPersistDeepDiveStorage, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistDeepDiveUrl,
+		optionTables: [
+			{
+				heading: 'Key naming',
+				roots: [STORE_TYPE.VaAccessorFieldOptions, STORE_TYPE.VaPersistFieldOptions],
+				expectedCount: 3,
+			},
+		],
+		nonOptionTables: [],
+	},
+	{ page: DocPage.VaPersistFields, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistIndex,
+		optionTables: [],
+		nonOptionTables: [
+			{
+				heading: 'One engine, many sources',
+				reason: 'Lists the shipped sources in prose; the first column names no key.',
+			},
+			{ heading: 'Two ways to declare fields', reason: 'Names the decorator and accessor call forms, not keys.' },
+			{ heading: 'On this topic', reason: 'Table of contents: page links.' },
+		],
+	},
+	{
+		page: DocPage.VaPersistParsers,
+		optionTables: [],
+		nonOptionTables: [
+			{ heading: NO_HEADING, reason: 'Names the exported parser factories, called rather than passed as keys.' },
+			{ heading: 'Auto-resolution', reason: 'Maps runtime types to parsers; the first column names TypeScript types.' },
+		],
+	},
+	{ page: DocPage.VaPersistQuickStartStorage, optionTables: [], nonOptionTables: [] },
+	{ page: DocPage.VaPersistQuickStartUrl, optionTables: [], nonOptionTables: [] },
+	{
+		page: DocPage.VaPersistTypescript,
+		optionTables: [],
+		nonOptionTables: [{ heading: 'Toolchain notes', reason: 'Lists toolchains and their decorator support.' }],
 	},
 ]
 
@@ -809,8 +1401,8 @@ export const OPTION_EXCEPTIONS: readonly OptionException[] = [
 			'A literal value the whole per-column `filtering` slot accepts (`filtering: false`), not a key of `ColumnFilteringConfig`.',
 	},
 	{
-		page: DocPage.Defaults,
-		heading: 'Reference',
+		page: DocPage.StateDefaults,
+		heading: 'Built-in default values',
 		name: 'cell.config.target',
 		reason:
 			'A per-column cell-type config default (`column.cell.config.target` on a `link` cell), listed on the ' +
@@ -818,8 +1410,8 @@ export const OPTION_EXCEPTIONS: readonly OptionException[] = [
 			'grid config, and this one row belongs to a column def.',
 	},
 	{
-		page: DocPage.Defaults,
-		heading: 'Reference',
+		page: DocPage.StateDefaults,
+		heading: 'Built-in default values',
 		name: 'link',
 		reason: 'Not an option: the cell-type id in the "(`link` cells)" qualifier on the `cell.config.target` row above.',
 	},
@@ -829,5 +1421,45 @@ export const OPTION_EXCEPTIONS: readonly OptionException[] = [
 		name: 'type',
 		reason:
 			'The cell-def discriminant (`cell.type`), which selects *which* config type applies — it sits beside `config`, not inside it, and is covered by the `cell` row on columns/index.mdx.',
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		heading: 'The returned group',
+		name: 'getFromCache({ path?, id })',
+		reason:
+			'An imperative method, written with its call signature so the address argument is visible. The bare ' +
+			'`getFromCache` key is covered by the other rows of this table.',
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		heading: 'The returned group',
+		name: 'useFromCache({ path?, id }, selector)',
+		reason: 'A hook, written with its call signature — the two arguments are the point of the row.',
+	},
+	{
+		page: DocPage.ZuCacheApi,
+		heading: 'The returned group',
+		name: 'remove({ path?, id })',
+		reason: 'An imperative method, written with its call signature.',
+	},
+	{
+		page: DocPage.VaCacheApi,
+		heading: 'The returned group',
+		name: 'getFromCache({ path?, id })',
+		reason:
+			'An imperative method, written with its call signature so the address argument is visible. The bare ' +
+			'`getFromCache` key is covered by the other rows of this table.',
+	},
+	{
+		page: DocPage.VaCacheApi,
+		heading: 'The returned group',
+		name: 'useFromCache({ path?, id }, selector)',
+		reason: 'A hook, written with its call signature — the two arguments are the point of the row.',
+	},
+	{
+		page: DocPage.VaCacheApi,
+		heading: 'The returned group',
+		name: 'remove({ path?, id })',
+		reason: 'An imperative method, written with its call signature.',
 	},
 ]

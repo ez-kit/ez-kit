@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GridComponentsProvider } from '../components-context'
 import { prepareDataGridTable } from '../prepare-table'
 import { renderWithComponents } from '../test-utils'
-import { ActionBarVariant } from '../types'
+import { ActionBarVariant, PageSizerPlacement } from '../types'
 
 import { DataGrid } from './data-grid'
 
@@ -263,13 +263,13 @@ describe('<DataGrid>', () => {
 	})
 
 	it('renders a hand-placed PageSizer even when the toolbar is told not to mount one', () => {
-		// `toolbar` governs auto-mounting only — it must not erase the size list the
+		// `pageSizer` governs auto-mounting only — it must not erase the size list the
 		// hand-placed control reads.
 		// `makeTable` builds a bare core table, so the resolved options are set directly here:
-		// sizes present, auto-mount off — exactly what `pagination: { toolbar: false }` resolves to.
+		// sizes present, auto-mount off — exactly what `pagination: { pageSizer: false }` resolves to.
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.toolbar = false
+		delete table.grid.pagination.pageSizer
 		renderWithComponents(
 			<DataGrid table={table}>
 				<DataGrid.PageSizer />
@@ -281,7 +281,7 @@ describe('<DataGrid>', () => {
 	it('renders PageSizer select with the pagination.items values', () => {
 		const table = makeTable({ pagination: { pageSize: 5 } })
 		table.grid.pagination.items = [5, 10, 25]
-		table.grid.pagination.toolbar = true
+		table.grid.pagination.pageSizer = { placement: PageSizerPlacement.Toolbar }
 		renderWithComponents(<DataGrid table={table} />)
 		const select = screen.getByRole('combobox')
 		expect(select).toBeInTheDocument()

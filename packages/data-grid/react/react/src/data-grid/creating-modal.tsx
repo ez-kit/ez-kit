@@ -25,7 +25,7 @@ export function CreatingModal({ children }: DataGridCreatingModalProps = {}) {
 			{...(children !== undefined ? { children } : {})}
 			mode={ColumnFormMode.Creating}
 			feature='creating'
-			title='Create'
+			title={table.grid.messages.creating.title}
 			formError={state.formError}
 			commitStatus={state.commitStatus}
 			onSave={() => table.creating.commit()}

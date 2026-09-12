@@ -74,11 +74,6 @@ export function FilterPanelExample() {
 			data={DATA}
 			columns={COLUMNS}
 			filtering={{ variant: 'panel', faceted: true }}
-		>
-			<DataGrid.Toolbar />
-			<DataGrid.FilterPanel />
-			<DataGrid.Table />
-			<DataGrid.Pagination />
-		</DataGrid>
+		/>
 	)
 }

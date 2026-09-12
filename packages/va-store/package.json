@@ -1,7 +1,20 @@
 {
 	"name": "@ez-kit/va-store",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Valtio-backed React context store with a source-agnostic persist engine.",
+	"keywords": [
+		"valtio",
+		"react",
+		"store",
+		"context",
+		"state-management",
+		"proxy",
+		"undo-redo",
+		"history",
+		"persist",
+		"url-state",
+		"typescript"
+	],
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -9,6 +22,9 @@
 		"directory": "packages/va-store"
 	},
 	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/va-store#readme",
+	"bugs": {
+		"url": "https://github.com/ez-kit/ez-kit/issues"
+	},
 	"type": "module",
 	"sideEffects": false,
 	"files": [
@@ -26,10 +42,6 @@
 		"./persist": {
 			"types": "./dist/persist/index.d.ts",
 			"import": "./dist/persist/index.js"
-		},
-		"./persist/internals": {
-			"types": "./dist/persist/internals.d.ts",
-			"import": "./dist/persist/internals.js"
 		},
 		"./persist/storage": {
 			"types": "./dist/persist/storage/index.d.ts",
@@ -59,8 +71,8 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"dependencies": {
-		"@ez-kit/store-core": "workspace:*",
-		"@ez-kit/store-persist": "workspace:*"
+		"@ez-kit/store-core": "workspace:^",
+		"@ez-kit/store-persist": "workspace:^"
 	},
 	"scripts": {
 		"build": "tsup",
@@ -68,33 +80,58 @@
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "6.5 KB"
+			"limit": "2.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/history/index.js",
-			"limit": "2 KB"
+			"limit": "1.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/index.js",
-			"limit": "6.5 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/storage/index.js",
-			"limit": "2 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/url/index.js",
-			"limit": "1 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		},
 		{
 			"path": "dist/persist/url/react-router.js",
-			"limit": "1 KB"
+			"limit": "0.5 KB",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
 		}
 	],
 	"devDependencies": {
@@ -125,5 +162,8 @@
 		"zod": {
 			"optional": true
 		}
+	},
+	"engines": {
+		"node": ">=20"
 	}
 }

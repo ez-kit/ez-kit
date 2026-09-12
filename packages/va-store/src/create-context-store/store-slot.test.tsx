@@ -16,7 +16,7 @@ describe('createContextStore — Store', () => {
 
 		render(
 			<store.Provider defaultValue={{ count: 1 }}>
-				<store.Subscribe>{({ snap }) => <span data-testid='count'>{snap.count}</span>}</store.Subscribe>
+				<store.Subscribe>{(snap) => <span data-testid='count'>{snap.count}</span>}</store.Subscribe>
 				<store.Store>
 					{(state) => (
 						<button
@@ -47,7 +47,7 @@ describe('createContextStore — Store', () => {
 		render(
 			<store.Provider defaultValue={{ count: 1 }}>
 				<store.Subscribe>
-					{({ snap }) => {
+					{(snap) => {
 						itemRenders += 1
 						return <span data-testid='count'>{snap.count}</span>
 					}}

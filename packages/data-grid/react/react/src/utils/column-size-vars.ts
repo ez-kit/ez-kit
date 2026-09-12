@@ -1,3 +1,5 @@
+import { getVisualLeafColumns } from './visual-column-order'
+
 import type { DataTable } from '@ez-kit/data-grid-core'
 import type { CSSProperties } from 'react'
 
@@ -38,12 +40,14 @@ export function getColumnSizeVars(table: DataTable<any>): CSSProperties {
  * - Resizable tables: fixed pixel widths (drag handles need exact control).
  * - Pinned columns: always fixed (sticky `left`/`right` offsets depend on exact widths).
  * - Center columns without resizing: `minmax(size, 1fr)` so they fill available space.
+ *
+ * The tracks follow {@link getVisualLeafColumns} — left, centre, right — because that
+ * is the order the cells that occupy them are rendered in.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getGridTemplateColumns(table: DataTable<any>): string {
 	const isResizing = Boolean(table.options.enableColumnResizing)
-	return table
-		.getVisibleLeafColumns()
+	return getVisualLeafColumns(table)
 		.map((col) => {
 			const fixed = `calc(var(--col-${col.id}-size) * 1px)`
 			const isSystem = Boolean(col.columnDef.meta?.isSystemColumn)
