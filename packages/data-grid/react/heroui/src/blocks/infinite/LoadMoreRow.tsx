@@ -1,6 +1,6 @@
 'use client'
 
-import { LoadMoreTrigger } from '@ez-kit/data-grid-react'
+import { LoadMoreTrigger, useGridMessages } from '@ez-kit/data-grid-react'
 import { Button, Spinner } from '@heroui/react'
 import { AlertCircle } from 'lucide-react'
 
@@ -15,6 +15,7 @@ import type { LoadMoreRowProps } from '@ez-kit/data-grid-react'
  * - `trigger` is {@link LoadMoreTrigger.Manual} and more available → "Load more" button
  */
 export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger, onRetry }: LoadMoreRowProps) {
+	const messages = useGridMessages()
 	if (error != null) {
 		return (
 			<div
@@ -26,13 +27,13 @@ export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger
 					className='size-4 text-danger'
 					aria-hidden='true'
 				/>
-				<span>Couldn’t load more.</span>
+				<span>{messages.fallbacks.loadMoreError}</span>
 				<Button
 					size='sm'
 					variant='outline'
 					onPress={onRetry}
 				>
-					Retry
+					{messages.fallbacks.retry}
 				</Button>
 			</div>
 		)
@@ -43,13 +44,12 @@ export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger
 			<div
 				data-slot='load-more'
 				data-state='loading'
-				className='dg-load-more flex items-center justify-center gap-2 py-3 text-sm'
+				className='dg-load-more flex items-center justify-center py-3'
 			>
 				<Spinner
 					size='sm'
-					aria-label='Loading more'
+					aria-label={messages.fallbacks.loadingMore}
 				/>
-				<span>Loading more…</span>
 			</div>
 		)
 	}
@@ -65,7 +65,7 @@ export function LoadMoreRow({ isFetching, hasNextPage, error, trigger, onTrigger
 					variant='outline'
 					onPress={onTrigger}
 				>
-					Load more
+					{messages.fallbacks.loadMore}
 				</Button>
 			</div>
 		)

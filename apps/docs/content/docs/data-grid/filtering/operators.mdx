@@ -3,9 +3,7 @@ title: Filter Operators
 description: Switch the matching strategy per filter — equals, contains, starts with, between, before, after, and custom predicates.
 ---
 
-# Filter Operators
-
-Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `gt`, `lt`, `between`, and more. Operators are configured per column via `filtering.operators`, and the default set is picked from the column's `cell.type`.
+Each column can expose a list of operators the user picks from when filtering — `contains`, `equals`, `startsWith`, `gt`, `lt`, `between`, and more. Operators are opt-in: a column gets a selector from its own `filtering.operators`, or from the table-wide switch below. The default set is picked from the column's `cell.type`.
 
 ## Usage
 
@@ -18,6 +16,25 @@ const columns = createColumns<Employee>([
 	},
 ])
 ```
+
+### The whole table at once
+
+`filtering.operators` on the grid is the same switch one level up:
+
+```tsx
+// every filterable column gets the operators its cell type declares
+<DataGrid data={data} columns={columns} filtering={{ operators: true }} />
+
+// no column gets one, whatever the columns say
+<DataGrid data={data} columns={columns} filtering={{ operators: false }} />
+```
+
+A column overrides the table in both directions — `filtering: { operators: false }` opts one
+column out of a table-wide `true`, and `filtering: { operators: { items: […] } }` narrows what
+it offers. Omit the table-level option entirely and the decision stays per column, which is what
+the examples below do.
+
+<DataGridDocsExample exampleId='filter-operators-table' />
 
 ### Text operators
 
@@ -61,23 +78,25 @@ One vocabulary across cell types: the same id always means the same comparison, 
 label changes — `greaterThan` reads "Greater than" on a number column and "After" on a date
 one. The ids are the `FilterOperator` members; the bare string is equally valid.
 
-| Operator                         | Cell types                                         | Behavior                                                                         |
-| -------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `contains`                       | text, image, link                                  | substring match (case-insensitive)                                               |
-| `startsWith` / `endsWith`        | text, image, link                                  | prefix / suffix (case-insensitive)                                               |
-| `equals` / `notEquals`           | text, number, date, boolean, image, link, progress | equality, in the column's own terms                                              |
-| `greaterThan` / `lessThan`       | number, progress, date                             | strictly above / below. Labelled "After" / "Before" on date columns              |
-| `greaterOrEqual` / `lessOrEqual` | number, progress, date                             | at or above / below. Labelled "On or after" / "On or before" on date columns     |
-| `between`                        | number, progress, date                             | inclusive range                                                                  |
-| `in`                             | select, badge                                      | row value is one of a set (see [Multi-value](./data-grid/filtering/multi-value)) |
-| `notIn`                          | select, badge                                      | inverse of `in`                                                                  |
-| `isEmpty` / `isNotEmpty`         | every built-in except number and progress          | null / undefined / empty string — renders no value input                         |
+| Operator                         | Cell types                                         | Behavior                                                                             |
+| -------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `contains`                       | text, image, link                                  | substring match (case-insensitive)                                                   |
+| `startsWith` / `endsWith`        | text, image, link                                  | prefix / suffix (case-insensitive)                                                   |
+| `equals` / `notEquals`           | text, number, date, boolean, image, link, progress | equality, in the column's own terms                                                  |
+| `greaterThan` / `lessThan`       | number, progress, date                             | strictly above / below. Labelled "After" / "Before" on date columns                  |
+| `greaterOrEqual` / `lessOrEqual` | number, progress, date                             | at or above / below. Labelled "On or after" / "On or before" on date columns         |
+| `between`                        | number, progress, date                             | inclusive range                                                                      |
+| `in`                             | select, badge                                      | row value is one of a set (see [Multi-value](/docs/data-grid/filtering/multi-value)) |
+| `notIn`                          | select, badge                                      | inverse of `in`                                                                      |
+| `isEmpty` / `isNotEmpty`         | every built-in except number and progress          | null / undefined / empty string — renders no value input                             |
 
 An id the column does not offer selects nothing in the operator control and dispatches to no
 `filterFn`, so the filter would match every row. `createTable` warns about that in development,
 for both `defaultOperator` and `operators.items`.
 
 ## Custom operators
+
+Inline on the column, when one column needs it:
 
 ```ts
 filtering: {
@@ -86,6 +105,28 @@ filtering: {
 	},
 }
 ```
+
+Or once on the table, when several do — `filtering.operators.items` is the registry every
+column addresses by id:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ operators: { items: [{ id: 'fuzzy', label: 'Fuzzy match', filterFn: fuzzyMatch }] } }}
+/>
+// …and in a column: filtering: { operators: { items: ['contains', 'fuzzy'] } }
+```
+
+An id listed on a column resolves against its cell type's own operators first, then the
+registry — which is why `equals` compares numbers on a number column and dates on a date one.
+A table-level definition sharing a built-in id replaces that built-in everywhere.
+
+## `TableOperatorsConfig`
+
+| Option  | Type                  | Description                                                                                                                                                           |
+| ------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `items` | `FilterOperatorDef[]` | Custom operators (or overrides of built-ins), addressable by id from any column's `filtering.operators.items`. Writing the object switches operators on, like `true`. |
 
 ## `ColumnOperatorsConfig`
 
@@ -96,12 +137,12 @@ filtering: {
 
 ### `BetweenOperatorConfig`
 
-| Option    | Type                                 | Description                                                                                                                   |
-| --------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `variant` | `'inputs' \| 'slider' \| 'calendar'` | Control shape. Default `'inputs'`.                                                                                            |
-| `min`     | `number`                             | Minimum value for the `'slider'` variant.                                                                                     |
-| `max`     | `number`                             | Maximum value for the `'slider'` variant.                                                                                     |
-| `presets` | `boolean \| DateRangePreset[]`       | Show preset chips above the input(s). Only meaningful on `date` columns — see [Date range](./data-grid/filtering/date-range). |
+| Option    | Type                                 | Description                                                                                                                       |
+| --------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `variant` | `'inputs' \| 'slider' \| 'calendar'` | Control shape. Default `'inputs'`.                                                                                                |
+| `min`     | `number`                             | Minimum value for the `'slider'` variant.                                                                                         |
+| `max`     | `number`                             | Maximum value for the `'slider'` variant.                                                                                         |
+| `presets` | `boolean \| DateRangePreset[]`       | Show preset chips above the input(s). Only meaningful on `date` columns — see [Date range](/docs/data-grid/filtering/date-range). |
 
 ### `FilterOperatorDef`
 

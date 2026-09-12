@@ -1,7 +1,10 @@
+import { defaultMessages } from '@ez-kit/data-grid-core'
+
 import { DATA_GRID_DEFAULTS } from './defaults'
 
 import type { CellTypeRegistry } from './cell-types-context'
-import type { PaginationVariant } from './types'
+import type { PaginationLabelModel } from './data-grid/pagination-label'
+import type { PaginationLabel } from './types'
 import type {
 	ExpandedRowProps,
 	FilteringVariant,
@@ -9,14 +12,17 @@ import type {
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
 	NormalizedFilteringToolbarConfig,
+	NormalizedFilterPanelConfig,
 	NormalizedGlobalFilteringConfig,
 	NormalizedInfiniteConfig,
+	NormalizedPageSizerConfig,
 	NormalizedSelectionBarConfig,
 	NormalizedVirtualizationConfig,
 	RowPropsResolver,
 } from './use-data-grid'
+import type { GridMessages } from '@ez-kit/data-grid-core'
 import type { RowData } from '@tanstack/table-core'
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 /**
  * Everything `useDataGrid` decided, in one typed place.
@@ -41,6 +47,12 @@ export type ResolvedGridOptions = {
 	/** Cell-type renderers contributed via `useDataGrid({ cellTypes })`. */
 	cellTypes: CellTypeRegistry | undefined
 	/**
+	 * Every user-facing string, **complete** — the English dictionary with the grid's `messages`
+	 * folded onto it. Never partial, so a component reads `messages.pagination.rowsPerPage`
+	 * without a fallback of its own, and a UI kit has no reason to hold a literal.
+	 */
+	messages: GridMessages
+	/**
 	 * Per-row DOM props resolver. Row-erased here, like `expanding.component` and the cell registry —
 	 * every reader of `table.grid` is a component with no `TRow` of its own.
 	 */
@@ -62,6 +74,14 @@ export type ResolvedGridOptions = {
 	 * `pinning.column` a third way and left `pinning.row` unreadable from here at all, so a kit
 	 * that wanted to know whether row pinning was on had to go back to `table.options`.
 	 */
+	/**
+	 * Reordering, resolved per axis — the same shape as `pinning` beside it, and for the same
+	 * reason: the axes are independent features.
+	 */
+	ordering: {
+		/** The column menu offers its move entries, and headers answer `Alt+Arrow`. */
+		column: boolean
+	}
 	pinning: {
 		/** The column menu offers its pin section. */
 		column: boolean
@@ -85,15 +105,23 @@ export type ResolvedGridOptions = {
 		debounce: number
 		/** Active-filter chips strip. `undefined` when not auto-mounted. */
 		chips?: NormalizedFilterChipsConfig | undefined
+		/**
+		 * The auto-mounted filter panel and the region that holds it. `undefined` unless
+		 * {@link FilteringVariant.Panel} — the other variants keep the controls in the header.
+		 */
+		panel?: NormalizedFilterPanelConfig | undefined
 		/** Filtering's toolbar control (the Clear-all button). `undefined` when not auto-mounted. */
 		toolbar?: NormalizedFilteringToolbarConfig | undefined
 	}
 	/** Global search UI config. `undefined` when global search is off. */
 	globalFiltering?: NormalizedGlobalFilteringConfig | undefined
 	pagination: {
-		variant: PaginationVariant
+		/** Page-number links beside prev/next. Resolved. */
+		links: boolean
+		/** Jump-to-first / jump-to-last buttons. Resolved. */
+		edges: boolean
 		/**
-		 * `numbered` variant: pages kept either side of the current one. Resolved.
+		 * `links`: pages kept either side of the current one. Resolved.
 		 *
 		 * Flat, under the option's own name — it is `pagination.siblings` on the config and
 		 * `DATA_GRID_DEFAULTS.pagination.siblings` in the defaults table. It was nested under a
@@ -101,8 +129,15 @@ export type ResolvedGridOptions = {
 		 * way `pagination.pageSizer` gave one to `toolbar`.
 		 */
 		siblings: number
-		/** `numbered` variant: pages kept at each end of the strip. Resolved. */
+		/** `links`: pages kept at each end of the strip. Resolved. */
 		boundaries: number
+		/**
+		 * `pagination.label`, resolved to one of the two built-in forms, `false` for "no label",
+		 * or the consumer's renderer verbatim. Deliberately **not** resolved to a node here —
+		 * the label depends on the live page state, which this options object does not carry;
+		 * `<DataGrid.Pagination>` applies it where that state is at hand.
+		 */
+		label: PaginationLabel | false | ((ctx: PaginationLabelModel) => ReactNode)
 		/**
 		 * Sizes the PageSizer offers. Present whenever page-based pagination is on, whether or
 		 * not the toolbar auto-mounts the control — a hand-placed `<DataGrid.PageSizer />`
@@ -110,14 +145,15 @@ export type ResolvedGridOptions = {
 		 */
 		items?: number[] | undefined
 		/**
-		 * The toolbar auto-mounts the PageSizer. Governs mounting only, never the list above.
+		 * The auto-mounted PageSizer and the region that holds it. `undefined` when the grid
+		 * mounts no PageSizer. Governs mounting only, never the list above.
 		 *
-		 * `toolbar`, the one word every feature's resolved auto-mount flag uses — see
-		 * {@link NormalizedFeatureToolbarConfig}, `globalFiltering.toolbar`,
-		 * `filtering.toolbar`. It was `pageSizer`, so the built-in `Toolbar` read
-		 * `grid.pagination.pageSizer` on one line and `grid.globalFiltering?.toolbar` on the next.
+		 * Named for the control, not for a container, because it has two homes — the toolbar
+		 * and the pagination row. The features whose control has exactly one home keep the
+		 * `toolbar` flag ({@link NormalizedFeatureToolbarConfig}, `globalFiltering.toolbar`,
+		 * `filtering.toolbar`).
 		 */
-		toolbar: boolean
+		pageSizer?: NormalizedPageSizerConfig | undefined
 		/**
 		 * Infinite-scroll detection config. `undefined` unless `pagination.mode` is
 		 * `'infinite'`.
@@ -182,17 +218,20 @@ declare module '@tanstack/table-core' {
 export function defaultResolvedGridOptions(): ResolvedGridOptions {
 	return {
 		cellTypes: undefined,
+		messages: defaultMessages,
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
+		ordering: { column: false },
 		pinning: { column: false, row: false },
 		filtering: {
 			variant: DATA_GRID_DEFAULTS.filtering.variant,
 			debounce: DATA_GRID_DEFAULTS.filtering.debounce,
 		},
 		pagination: {
-			variant: DATA_GRID_DEFAULTS.pagination.variant,
+			links: DATA_GRID_DEFAULTS.pagination.links,
+			edges: DATA_GRID_DEFAULTS.pagination.edges,
+			label: DATA_GRID_DEFAULTS.pagination.label,
 			siblings: DATA_GRID_DEFAULTS.pagination.siblings,
 			boundaries: DATA_GRID_DEFAULTS.pagination.boundaries,
-			toolbar: false,
 		},
 		selection: {},
 		expanding: {},

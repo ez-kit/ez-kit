@@ -1,15 +1,23 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Description, FieldError, Label, ListBox, Select } from '@heroui/react'
 
 import type { CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
 const ALL_SENTINEL = '__all__'
 
 function SelectCellView({ value, config }: CellViewProps<SelectCellConfig>) {
 	const items = config?.items ?? []
 	const match = items.find((item) => item.value === String(value ?? ''))
-	return <>{match ? match.label : String(value ?? '')}</>
+	if (!match) return <>{String(value ?? '')}</>
+	return (
+		<span data-slot='select-cell-value'>
+			{(match.icon as ReactNode) ?? null}
+			{match.label}
+		</span>
+	)
 }
 
 /**
@@ -26,6 +34,7 @@ function SelectCellInput({
 	description,
 	errors,
 }: FieldState<SelectCellConfig>) {
+	const messages = useGridMessages()
 	const hasError = errors.length > 0
 	const items = config?.items ?? []
 	const selectValue = value != null && value !== '' ? String(value) : ALL_SENTINEL
@@ -49,9 +58,9 @@ function SelectCellInput({
 				<ListBox>
 					<ListBox.Item
 						id={ALL_SENTINEL}
-						textValue='All'
+						textValue={messages.cells.all}
 					>
-						All
+						{messages.cells.all}
 					</ListBox.Item>
 					{items.map((item) => (
 						<ListBox.Item
@@ -59,6 +68,7 @@ function SelectCellInput({
 							id={item.value}
 							textValue={item.label}
 						>
+							{(item.icon as ReactNode) ?? null}
 							{item.label}
 						</ListBox.Item>
 					))}

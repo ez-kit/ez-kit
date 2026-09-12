@@ -80,19 +80,31 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "7 KB"
+			"limit": "5.5 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		},
 		{
 			"path": "dist/storage/index.js",
-			"limit": "2 KB"
+			"limit": "2 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		},
 		{
 			"path": "dist/url/index.js",
-			"limit": "1 KB"
+			"limit": "1 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		},
 		{
 			"path": "dist/url/react-router.js",
-			"limit": "1 KB"
+			"limit": "1 KB",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
 		}
 	],
 	"devDependencies": {

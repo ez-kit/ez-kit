@@ -4,13 +4,14 @@ import type { CreatingConfig } from './features/creating'
 import type { DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
-import type { FilterOperatorDef } from './features/operators'
+import type { TableOperatorsConfig } from './features/operators'
 import type { RowActionsConfig } from './features/row-actions'
 import type { SetStateOptions } from './store/store'
 import type { FeatureToggle } from './utils/feature-flag'
 import type {
 	Column,
 	ColumnFiltersState,
+	ColumnOrderState,
 	ColumnPinningState,
 	ColumnSizingState,
 	ExpandedState,
@@ -105,7 +106,11 @@ export type SortingConfig = FeatureToggle & {
 	 * ```
 	 */
 	manual?: boolean
-	/** First click sorts descending. Default: false. */
+	/**
+	 * Force the first click to sort descending. Unset, TanStack infers the direction per column
+	 * from its first value: a string column starts ascending, every other type — number, date,
+	 * boolean — starts descending.
+	 */
 	descFirst?: boolean
 	/**
 	 * Allow a third click to clear the sort. Default: true.
@@ -157,8 +162,30 @@ export type FilteringConfig = FeatureToggle & {
 	 * either one turns client-side filtering off for both axes.
 	 */
 	manual?: boolean
-	/** Table-level custom operators (or built-in overrides). Referenced by column items by ID. */
-	operators?: FilterOperatorDef[]
+	/**
+	 * Operator selectors for the whole table — the switch, and the registry of custom
+	 * operators columns reference by id.
+	 *
+	 * - omitted — per-column opt-in only: a column gets an operator selector iff its own
+	 *   `filtering.operators` says so
+	 * - `true` — every filterable column gets one, offering the default operators for its
+	 *   `cell.type`
+	 * - `false` — no column gets one; `column.filtering.operators` is ignored, wherever it
+	 *   says otherwise
+	 * - {@link TableOperatorsConfig} — registers custom definitions (or overrides of
+	 *   built-ins) and switches the feature on, exactly as `true` does. The object form of a
+	 *   feature always defaults the way its bare `true` does, so that adding a custom
+	 *   operator to a working `operators: true` cannot silently take the selectors away.
+	 *
+	 * A column overrides the table in both directions: `operators: false` opts one column out
+	 * of a table-wide `true`, and `operators: { items }` narrows what it offers.
+	 *
+	 * @example Every column, plus one custom operator two of them reference by id
+	 * ```ts
+	 * filtering: { operators: { items: [{ id: 'fuzzy', label: 'Fuzzy', filterFn: fuzzy }] } }
+	 * ```
+	 */
+	operators?: boolean | TableOperatorsConfig
 	/**
 	 * Enable faceted row models (unique values + counts) for columns that opt in via
 	 * `column.filtering.faceted` or for all filterable columns when `true`. Used by
@@ -540,6 +567,37 @@ export type VisibilityConfig = FeatureToggle & {
 	onChange?: (visibility: VisibilityState) => void
 }
 
+/**
+ * Column reordering: which columns sit where, as the user arranges them.
+ *
+ * Distinct from {@link SortingConfig}, which orders **rows**, and from
+ * {@link VisibilityConfig}: hiding a column does not move it. A hidden column keeps its place in
+ * the order and comes back to it, which is exactly why the two are separate slices rather than
+ * one list of visible columns.
+ */
+export type ColumnOrderingConfig = FeatureToggle & {
+	/**
+	 * Called whenever the column order changes. Receives the full order as ids, in visual order
+	 * — never a partial list: TanStack reads a partial `columnOrder` as "these first, then the
+	 * rest as declared", so a partial write would quietly reorder columns nobody touched.
+	 */
+	onChange?: (columnOrder: ColumnOrderState) => void
+}
+
+/**
+ * Ordering, grouped per axis the way {@link PinningConfig} is — the two are independent
+ * features over two state slices, so each carries its own `onChange`.
+ *
+ * Only `column` exists today. Row ordering, if it lands, will be `row` here, and it can only
+ * ever turn on with a handler of its own: the grid does not own the data, so a new row order
+ * has to go somewhere. That is the same rule `editing` / `creating` / `deleting` already follow,
+ * and it is what keeps a bare `ordering: true` meaning exactly what it means today.
+ */
+export type OrderingConfig = FeatureToggle & {
+	/** Column reordering. `true` = enabled, or {@link ColumnOrderingConfig} for `onChange`. */
+	column?: boolean | ColumnOrderingConfig
+}
+
 export type ColumnPinningConfig = FeatureToggle & {
 	/** Called whenever column pinning changes. Receives the resolved {@link ColumnPinningState}. */
 	onChange?: (columnPinning: ColumnPinningState) => void
@@ -727,6 +785,18 @@ export type TableConfig<TRow extends object> = {
 	 */
 	visibility?: boolean | VisibilityConfig
 	/**
+	 * Reordering, per axis.
+	 * - `true` — every axis this grid supports, which today means columns
+	 * - `{ column: true }` — column reordering, spelled out
+	 * - `{ column: { onChange } }` — and report the new order
+	 * - `false` / omitted — columns stay where they were declared
+	 *
+	 * Grouped per axis like {@link PinningConfig}, and for the same reason: reordering rows is
+	 * a different feature over a different slice, so it gets its own member and its own
+	 * `onChange` rather than sharing one.
+	 */
+	ordering?: boolean | OrderingConfig
+	/**
 	 * Pinning configuration. Column pinning and row pinning are gated independently:
 	 * - `true` — enable column menu UI + row pin top+bottom
 	 * - `{ column: true }` — column menu only
@@ -740,7 +810,7 @@ export type TableConfig<TRow extends object> = {
 	 * `onSave` without which there is nothing to enable.
 	 *
 	 * `true` is accepted for one reason: a defaults layer
-	 * ({@link https://ez-kit.dev/docs/data-grid/default-options DataGridOptionsProvider} or
+	 * ({@link https://ez-kit.dev/docs/data-grid/state/defaults DataGridOptionsProvider} or
 	 * `createDataGrid({ defaults })`) can describe how creation *looks* for the whole app —
 	 * `mode`, `validateOn` — while only the grid that supplies `onSave` gets the feature.
 	 * `creating: true` at such a call site says "yes, this grid too", and the merge keeps the

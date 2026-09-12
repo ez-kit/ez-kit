@@ -1,8 +1,13 @@
+'use client'
+
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import { PlaceholderIcon, StatePlaceholder } from './StatePlaceholder'
 
 import type { EmptyStateProps } from '@ez-kit/data-grid-react'
 
 export function EmptyState(_props: EmptyStateProps) {
+	const messages = useGridMessages()
 	return (
 		<StatePlaceholder
 			icon={
@@ -17,7 +22,7 @@ export function EmptyState(_props: EmptyStateProps) {
 					<path d='M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3' />
 				</PlaceholderIcon>
 			}
-			title='No data'
+			title={messages.fallbacks.empty}
 			hint='Add a row to get started.'
 		/>
 	)

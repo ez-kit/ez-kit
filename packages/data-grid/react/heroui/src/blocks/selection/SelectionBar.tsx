@@ -1,23 +1,96 @@
 'use client'
 
-import { ActionBarVariant } from '@ez-kit/data-grid-react'
-import { Button } from '@heroui/react'
+import { ActionBarVariant, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react'
+import { Button, Chip } from '@heroui/react'
 import { Trash2, X } from 'lucide-react'
+import { Fragment } from 'react'
 
-import {
-	ActionBar,
-	ActionBarGroup,
-	ActionBarItem,
-	ActionBarSelection,
-	ActionBarSeparator,
-} from '../../components/ui/action-bar'
+import { ActionBar, ActionBarGroup, ActionBarItem, ActionBarSeparator } from '../../components/ui/action-bar'
+import { renderActionIcon } from '../icons'
 
-import type { SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { GridMenuItem, GridMenuItemDef, SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
-export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
-	const hasActions = Boolean(onDelete) || Boolean(actions)
+/**
+ * The primitive dismisses the bar after an item press, the way a menu closes behind a chosen
+ * entry. Here "dismissed" means `onOpenChange(false)` → clear the selection, which pulls the
+ * rows out from under the action that was just pressed: a bulk delete awaiting its confirmation
+ * dialog then had nothing left to delete. Cancelling the select event keeps the bar (and the
+ * selection) alive; the × is the only thing that clears it.
+ */
+const keepBarOpen = (event: Event) => {
+	event.preventDefault()
+}
 
-	if (variant === ActionBarVariant.Inline) {
+/**
+ * One `selection.bar.actions` entry as a button, matching the built-in Delete beside it: the
+ * kit's glyph for a named icon, its danger colour for a destructive entry, its disabled state.
+ * This is what the config buys over hand-drawn markup.
+ *
+ * The floating bar renders its controls as `ActionBarItem`s and the inline one as plain
+ * `Button`s, so the element is passed in rather than picked here.
+ */
+function ActionButton({ item, inline }: { item: GridMenuItemDef; inline: boolean }) {
+	const icon = renderActionIcon(item.icon)
+	const variant = item.destructive === true ? 'danger' : 'secondary'
+	const isDisabled = item.disabled === true
+
+	if (inline) {
+		return (
+			<Button
+				size='sm'
+				variant={variant}
+				isDisabled={isDisabled}
+				data-slot='selection-bar-action'
+				{...(item.className !== undefined ? { className: item.className } : {})}
+				onPress={item.onAction}
+			>
+				{icon}
+				{item.label}
+			</Button>
+		)
+	}
+
+	return (
+		<ActionBarItem
+			variant={variant}
+			isDisabled={isDisabled}
+			data-slot='selection-bar-action'
+			{...(item.className !== undefined ? { className: item.className } : {})}
+			onSelect={keepBarOpen}
+			onPress={item.onAction}
+		>
+			{icon}
+			{item.label}
+		</ActionBarItem>
+	)
+}
+
+/** The entries as buttons — `null` when the bar was given none, so separators can tell. */
+function renderActions(actions: GridMenuItem[] | undefined, inline: boolean): ReactNode {
+	if (actions === undefined || actions.length === 0) return null
+	return actions.map((item) =>
+		// An entry that brought its own markup stands where its button would have been. Both bars
+		// already take arbitrary nodes here — `start` / `end` sit in the same row.
+		isGridMenuItemSlot(item) ? (
+			<Fragment key={item.id}>{item.component}</Fragment>
+		) : (
+			<ActionButton
+				key={item.id}
+				item={item}
+				inline={inline}
+			/>
+		),
+	)
+}
+
+export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
+	const messages = useGridMessages()
+	const isInline = variant === ActionBarVariant.Inline
+	const actionButtons = renderActions(actions, isInline)
+	const hasActions = Boolean(onDelete) || actionButtons !== null || start !== undefined || end !== undefined
+
+	if (isInline) {
 		if (!open) return null
 
 		return (
@@ -31,11 +104,13 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 			>
 				<span
 					data-slot='action-bar-selection'
+					aria-label={messages.selection.count({ count })}
 					className='font-medium tabular-nums'
 				>
-					{count} selected
+					{count}
 				</span>
 				<div className='ml-auto flex items-center gap-2'>
+					{start}
 					{onDelete && (
 						<Button
 							size='sm'
@@ -43,15 +118,16 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 							onPress={onDelete}
 						>
 							<Trash2 size={16} />
-							Delete
+							{messages.selection.delete}
 						</Button>
 					)}
-					{actions}
+					{actionButtons}
+					{end}
 					<Button
 						size='sm'
 						variant='ghost'
 						isIconOnly
-						aria-label='Clear selection'
+						aria-label={messages.selection.clear}
 						onPress={onClear}
 					>
 						<X size={16} />
@@ -63,6 +139,13 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 
 	return (
 		<ActionBar
+			// The floating bar is a selection bar first and an action bar second: `selection-bar`
+			// is what the inline variant above emits, what shadcn emits in both variants, and so
+			// what a stylesheet or a test addresses in either kit. `ActionBar` spreads incoming
+			// props over its own defaults, so this replaces the generic slot rather than adding to
+			// it; the inner `action-bar-*` parts keep their names.
+			data-slot='selection-bar'
+			data-variant='floating'
 			open={open}
 			onOpenChange={(next) => {
 				if (!next) onClear()
@@ -72,24 +155,34 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 			sideOffset={16}
 		>
 			<ActionBarGroup>
-				<ActionBarSelection>{count} selected</ActionBarSelection>
+				<Chip
+					data-slot='action-bar-selection'
+					aria-label={messages.selection.count({ count })}
+					className='tabular-nums'
+				>
+					{count}
+				</Chip>
 				{hasActions && <ActionBarSeparator />}
+				{start}
 				{onDelete && (
 					<ActionBarItem
 						variant='danger'
+						onSelect={keepBarOpen}
 						onPress={onDelete}
 					>
 						<Trash2 size={16} />
-						Delete
+						{messages.selection.delete}
 					</ActionBarItem>
 				)}
-				{actions}
-				{hasActions && <ActionBarSeparator />}
+				{actionButtons}
+				{end}
+				{/* Always present: it divides the count (and any actions) from the close button. */}
+				<ActionBarSeparator />
 				<Button
 					size='sm'
 					variant='ghost'
 					isIconOnly
-					aria-label='Clear selection'
+					aria-label={messages.selection.clear}
 					onPress={onClear}
 				>
 					<X size={16} />

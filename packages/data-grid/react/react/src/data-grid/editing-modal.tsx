@@ -25,7 +25,7 @@ export function EditingModal({ children }: DataGridEditingModalProps = {}) {
 			{...(children !== undefined ? { children } : {})}
 			mode={ColumnFormMode.Editing}
 			feature='editing'
-			title='Edit'
+			title={table.grid.messages.editing.title}
 			formError={state.formError}
 			commitStatus={state.commitStatus}
 			onSave={() => table.editing.commit()}

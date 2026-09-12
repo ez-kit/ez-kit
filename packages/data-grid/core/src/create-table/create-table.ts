@@ -12,14 +12,14 @@ import {
 import { mapColumns } from '../column/map-columns'
 import { buildColumnInvariants, enforceColumnInvariants, mergePinningSeed } from '../column-state'
 import { DEFAULT_PAGE_SIZE, UNKNOWN_PAGE_COUNT } from '../defaults'
-import { CreatingFeature } from '../features/creating'
+import { CreatingFeature, CreatingMode } from '../features/creating'
 import { APPLIED_STATE_KEY, DeferredApplyFeature } from '../features/deferred-apply'
 import { DeletingFeature } from '../features/deleting'
-import { EditingFeature } from '../features/editing'
+import { EditingFeature, EditingMode } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
 import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
-import { RowActionsVariant } from '../features/row-actions'
+import { RowActionsPlacement } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
 import { ColumnResizeMode, ExpandingMode, GridDirection, MultiSortEvent, PaginationMode } from '../types'
@@ -163,7 +163,13 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const hasExpanding = isFeatureEnabled(config.expanding)
 	const hasResizing = isFeatureEnabled(config.resizing)
 	const hasEditing = isFeatureEnabled(config.editing)
+	// Cell editing is entered by double-clicking the cell itself, never from the actions column:
+	// the pencil there calls `editing.start(rowId)`, which is the row flow and opens nothing in
+	// this mode. So it is not a reason to mount the actions column, nor to reserve its width.
+	const hasRowEditAction = hasEditing && editingCfg?.mode !== EditingMode.Cell
 	const hasDeleting = isFeatureEnabled(config.deleting)
+	const hasInlineCreating = isFeatureEnabled(config.creating) && creatingCfg?.mode !== CreatingMode.Modal
+	const hasPinRowCreating = hasInlineCreating && creatingCfg?.mode === CreatingMode.PinRow
 
 	const hasDraft = isFeatureEnabled(config.draft)
 
@@ -191,8 +197,14 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		})
 
 	// ── operator registry ────────────────────────────────────────────────────
-	const tableFilteringOperators = filteringCfg?.operators
-	const operatorRegistry = buildOperatorRegistry(tableFilteringOperators)
+	// One option, two jobs: `items` seeds the registry, and the option's presence is the
+	// table-wide switch every column falls back to. `undefined` is a third state — neither on
+	// nor off — so a table that never mentions operators keeps the per-column opt-in.
+	const tableOperatorsCfg = filteringCfg?.operators
+	const operatorRegistry = buildOperatorRegistry(
+		typeof tableOperatorsCfg === 'object' ? tableOperatorsCfg.items : undefined,
+	)
+	const tableOperators: boolean | undefined = tableOperatorsCfg === undefined ? undefined : tableOperatorsCfg !== false
 
 	// ── faceted opt-in (table-level) ─────────────────────────────────────────
 	const tableFaceted = filteringCfg?.faceted === true
@@ -208,7 +220,10 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const facetedNeeded = tableFaceted || hasColumnFaceted
 
 	// ── map user columns → TanStack columns ──────────────────────────────────
-	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, { tableFaceted })
+	const mappedUserColumns = mapColumns(config.columns, operatorRegistry, {
+		tableFaceted,
+		...(tableOperators !== undefined ? { tableOperators } : {}),
+	})
 
 	const expandMode = expandingCfg?.mode ?? ExpandingMode.SubContent
 	const normalizedPinning = normalizePinning(config.pinning)
@@ -225,6 +240,11 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const paginationOnChange = paginationCfg?.onChange
 	const selectionOnChange = selectionCfg?.onChange
 	const visibilityOnChange = featureConfig(config.visibility)?.onChange
+	// `ordering` groups the axes, so the callback hangs off the axis, not the group — the same
+	// shape `pinning.column` / `pinning.row` already use.
+	const orderingCfgResolved = featureConfig(config.ordering)
+	const columnOrderingOnChange =
+		typeof orderingCfgResolved?.column === 'object' ? orderingCfgResolved.column.onChange : undefined
 	const pinningCfgResolved = featureConfig(config.pinning)
 	const columnPinningOnChange =
 		typeof pinningCfgResolved?.column === 'object' ? pinningCfgResolved.column.onChange : undefined
@@ -253,7 +273,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// escape hatch for one grid under a defaults layer that configured row actions app-wide.
 	const rowActionsEnabled = config.rowActions === undefined || isFeatureEnabled(config.rowActions)
 	const rowActionsCfg = featureConfig(config.rowActions)
-	const rowActionsVariant = rowActionsCfg?.variant ?? RowActionsVariant.Inline
+	const rowActionsPlacement = rowActionsCfg?.placement ?? RowActionsPlacement.Inline
 	const customRowActions = rowActionsCfg?.actions
 
 	// Row-erased on the way in, like every other structural setting the mapper carries: a system
@@ -262,13 +282,26 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const expandingColumn = featureConfig(config.expanding)?.column as SystemColumnDef | undefined
 	const rowActionsColumn = rowActionsCfg?.column as SystemColumnDef | undefined
 
+	// Where an inline draft row puts its save / cancel pair. It shares the actions cell with the
+	// row actions — but only when that column is there anyway, or when the draft row itself is
+	// permanent. `mode: 'row'` in a grid with no row actions deliberately does **not** mount it:
+	// the column would sit empty until someone pressed the create trigger, and mounting it on
+	// open would take its fixed width off the `1fr` tracks, so every column would jump on each
+	// open and again on each close. Such a grid puts the pair in the toolbar instead, in place of
+	// the create trigger (data-grid-react `create-trigger.tsx`) — the toolbar is already there,
+	// so nothing reflows. `mode: 'modal'` needs neither: the dialog has its own footer.
+	const hasOtherRowActions =
+		rowActionsEnabled && (hasRowEditAction || hasDeleting || hasPinning || customRowActions !== undefined)
+	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
+
 	const allColumns = buildColumnList(mappedUserColumns, {
 		selection: hasSelection,
 		expanding: hasExpanding,
-		editing: rowActionsEnabled && hasEditing,
+		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
-		rowActionsVariant,
+		creating: creatingInActionsColumn,
+		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
 		...(selectionColumn !== undefined ? { selectionColumn } : {}),
 		...(expandingColumn !== undefined ? { expandingColumn } : {}),
@@ -454,6 +487,9 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		if (visibilityOnChange && outwardPrev.columnVisibility !== outwardNext.columnVisibility) {
 			visibilityOnChange(outwardNext.columnVisibility)
 		}
+		if (columnOrderingOnChange && outwardPrev.columnOrder !== outwardNext.columnOrder) {
+			columnOrderingOnChange(outwardNext.columnOrder)
+		}
 		if (columnPinningOnChange && outwardPrev.columnPinning !== outwardNext.columnPinning) {
 			columnPinningOnChange(outwardNext.columnPinning)
 		}
@@ -567,7 +603,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		...(deletingCfg ? { deleting: deletingCfg } : {}),
 		// Read by the React layer to lay out the actions cell (inline vs. menu).
 		rowActions: {
-			variant: rowActionsVariant,
+			placement: rowActionsPlacement,
 			...(rowActionsEnabled && customRowActions ? { actions: customRowActions } : {}),
 		},
 		// The grid's text direction, declared once at the root. Set unconditionally: it is a fact

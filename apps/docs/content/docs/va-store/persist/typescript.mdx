@@ -3,8 +3,6 @@ title: TypeScript & build setup
 description: The exact TypeScript and bundler configuration the persist decorators need — Stage 3 decorators, Symbol.metadata, and the one-line polyfill for runtimes that lack it.
 ---
 
-# TypeScript & build setup
-
 This page covers the toolchain configuration the [decorator API](./decorators) needs. **Only the decorators (`@persistUrl`, `@persistLocalStorage`, …) need this** — the [accessor API](./fields) and plain `createContextStore` need no special setup.
 
 The decorators use **Stage 3 (standard) decorators** with `Symbol.metadata`. No `reflect-metadata`, no `emitDecoratorMetadata`.

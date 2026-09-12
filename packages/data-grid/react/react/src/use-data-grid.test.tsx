@@ -1,11 +1,11 @@
-import { createColumns } from '@ez-kit/data-grid-core'
+import { createColumns, defaultMessages } from '@ez-kit/data-grid-core'
 import { act, render, renderHook } from '@testing-library/react'
 import { useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { buildPaginationLabel } from './data-grid/pagination-label'
 import { DATA_GRID_DEFAULTS } from './defaults'
-import { PaginationVariant } from './types'
+import { PaginationLabel } from './types'
 import { useDataGrid } from './use-data-grid'
 
 import type {
@@ -127,12 +127,15 @@ describe('useDataGrid', () => {
 
 		expect(result.current.getState().pagination.pageIndex).toBe(0)
 		expect(
-			buildPaginationLabel({
-				variant: PaginationVariant.Simple,
-				pageIndex: result.current.getState().pagination.pageIndex,
-				pageSize: 10,
-				rowCount: result.current.getRowCount(),
-			}),
+			buildPaginationLabel(
+				PaginationLabel.Range,
+				{
+					pageIndex: result.current.getState().pagination.pageIndex,
+					pageSize: 10,
+					rowCount: result.current.getRowCount(),
+				},
+				defaultMessages.pagination,
+			),
 		).toBe('1–5 of 5')
 	})
 
@@ -486,11 +489,11 @@ describe('useDataGrid — pagination.items', () => {
 	})
 
 	it('falls back to the default list when page-based pagination carries no explicit one', () => {
-		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the toolbar
-		// mounts the control is `pagination.toolbar`, resolved separately.
+		// The list is data the hand-placed `<DataGrid.PageSizer />` reads; whether the grid
+		// mounts the control is `pagination.pageSizer`, resolved separately.
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSize: 5 } }))
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
-		expect(result.current.grid.pagination.toolbar).toBe(false)
+		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
 	})
 
 	it('stores the explicit options in page-based mode', () => {
@@ -541,10 +544,10 @@ describe('useDataGrid — selection.bar', () => {
 	})
 
 	it('carries the callbacks through, with the variant settled', () => {
-		const clear = vi.fn()
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { clear } } }))
+		const onClear = vi.fn()
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, selection: { bar: { onClear } } }))
 		const key = result.current.grid.selection.bar
-		expect(key).toEqual({ variant: 'floating', clear })
+		expect(key).toEqual({ variant: 'floating', onClear })
 	})
 
 	it('takes the render mode as a scalar', () => {

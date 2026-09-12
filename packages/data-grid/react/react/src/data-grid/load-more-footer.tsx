@@ -93,7 +93,10 @@ export function LoadMoreFooter() {
 			data-slot='load-more-row'
 			data-direction='forward'
 		>
-			<Td colSpan={columnCount}>
+			<Td
+				data-slot='td'
+				colSpan={columnCount}
+			>
 				<LoadMoreRow
 					columnCount={columnCount}
 					direction='forward'

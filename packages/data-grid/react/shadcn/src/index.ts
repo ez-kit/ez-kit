@@ -9,17 +9,16 @@ export {
 	createColumnHelper,
 } from './data-grid'
 export { cellTypes } from './blocks/cell-types'
-// Exported so the bundled `.d.ts` can refer to the registry **by name**. Left unexported, the
-// declaration emitter re-prints all nine entries structurally into every signature that mentions
-// them — and a `CellDef` union built over that structural blob is large enough that TypeScript
-// stops contextually typing `cell.component`, handing its parameter back as an implicit `any`.
+// Exported so a consumer can name what its columns are checked against. What keeps the emitted
+// signatures honest is that `KitCellTypes` is *declared* rather than `typeof cellTypes` — see
+// `blocks/cell-types.ts`; merely exporting the alias was tried first and did not help.
 export type { KitCellTypes } from './blocks/cell-types'
 
 /**
  * The whole adapter surface, so a kit consumer never needs `@ez-kit/data-grid-react` (or
  * `@ez-kit/data-grid-core`) as a second dependency to name a type. Previously a curated list
  * of nine values and nine types, which left most of the API — `ColumnSortingConfig`,
- * `CellType`, `RowActionsVariant`, the UI-kit component contracts — unnameable from here.
+ * `CellType`, `RowActionsPlacement`, the UI-kit component contracts — unnameable from here.
  *
  * A star re-export is safe alongside the bound names above: an explicit re-export shadows a
  * star of the same name, so every one of them stays the kit-bound version.

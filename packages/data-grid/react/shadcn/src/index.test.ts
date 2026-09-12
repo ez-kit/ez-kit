@@ -19,6 +19,7 @@ import {
 
 import type {
 	ColumnDef,
+	KitCellTypes,
 	ColumnFiltersState,
 	ColumnHelper,
 	DataGridProps,
@@ -109,9 +110,14 @@ describe('@ez-kit/data-grid-shadcn', () => {
 	// key union: the registry is what carries each type's own `cell.config`. Annotating with the
 	// headless helpers here would compile while checking nothing.
 	it('types a consumer that imports from the kit alone', () => {
-		type KitCellTypes = typeof cellTypes
+		// `KitCellTypes` is spelled out even though it currently *equals* `ColumnDef`'s default
+		// (this kit registers exactly the base nine, no more), because that equality is a fact
+		// about today's registry, not the thing being asserted: the day the kit adds or drops a
+		// type, these two lines are what notices the helpers stopped following it.
+		/* eslint-disable @typescript-eslint/no-unnecessary-type-arguments */
 		const columns: ColumnDef<User, KitCellTypes>[] = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 		const helper: ColumnHelper<User, KitCellTypes> = createColumnHelper<User>()
+		/* eslint-enable @typescript-eslint/no-unnecessary-type-arguments */
 		const sorting: SortingState = [{ id: 'name', desc: false }]
 		const columnFilters: ColumnFiltersState = [{ id: 'name', value: 'Ada' }]
 		const state: Partial<TableState> = { sorting, columnFilters }

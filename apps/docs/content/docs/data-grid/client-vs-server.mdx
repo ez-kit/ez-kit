@@ -1,0 +1,98 @@
+---
+title: Client vs Server
+description: Which side sorts, filters and paginates your rows — what the grid does for free, when to hand the work to your API, and how to mix the two.
+---
+
+Every data operation the grid offers — sorting, filtering, global search, pagination — can run in
+one of two places: **in the browser, over the rows you handed the grid**, or **on your server, with
+the grid only reporting what the user asked for**.
+
+The grid always owns the UI state. What changes between the two modes is who turns that state into
+rows.
+
+## Client-side — the default
+
+Pass the full dataset and enable the features you want. The grid sorts, filters and slices in
+memory; nothing else is wired.
+
+```tsx
+<DataGrid
+	data={users} // every row, already loaded
+	columns={columns}
+	sorting
+	filtering
+	pagination={{ pageSize: 20 }}
+/>
+```
+
+This is the right default for anything that arrives in one response — a few thousand rows at most.
+It costs no round trips: a sort is instant, a filter is instant, and the grid can count and facet
+the rows because it can see all of them.
+
+## Server-side
+
+Set `manual: true` on each feature you delegate. The grid still updates its own state immediately —
+the header arrow flips, the page number moves — then calls your `onChange` so you can fetch the
+matching rows. You pass the result back as `data`, plus the total row count so pagination knows how
+far it goes.
+
+```tsx
+<DataGrid
+	data={page.rows} // one page, fetched for the current state
+	columns={columns}
+	sorting={{ manual: true, onChange: (sorting) => fetchPage({ sorting }) }}
+	filtering={{ manual: true, onChange: (columnFilters) => fetchPage({ columnFilters }) }}
+	pagination={{ manual: true, rowCount: page.total, onChange: fetchPage }}
+	state={{ sorting, columnFilters, pagination, loading }}
+/>
+```
+
+Reach for this when the dataset does not fit in a response, when the source of truth changes under
+you, or when the ordering itself is the server's business — a relevance score, a permission-filtered
+view.
+
+The mechanics — every `manual` flag, the `state.loading` slice that drives the skeleton and refetch
+overlay, and a React Query wiring — are on [Server-side data](/docs/data-grid/state/server-side).
+
+## Choosing
+
+|                       | Client-side           | Server-side                              |
+| --------------------- | --------------------- | ---------------------------------------- |
+| `data` holds          | every row             | the current page                         |
+| Sort / filter latency | none                  | a round trip                             |
+| Row count             | derived               | you supply `pagination.rowCount`         |
+| Faceted filter values | derived from the rows | you supply them                          |
+| Practical ceiling     | a few thousand rows   | unbounded                                |
+| Extra wiring          | none                  | `manual`, `onChange`, controlled `state` |
+
+## Mixing the two
+
+`manual` is per feature, not per grid, so the split can follow where the work actually belongs. A
+common shape: the server pages and searches, because that is where the rows live, while sorting the
+20 rows already on screen stays instant in the browser.
+
+```tsx
+<DataGrid
+	data={page.rows}
+	columns={columns}
+	sorting // client-side, over the fetched page
+	filtering={{ manual: true }} // also what makes the global search server-side
+	pagination={{ manual: true, rowCount: page.total, onChange: fetchPage }}
+	globalFiltering={{ onChange: (globalFilter) => fetchPage({ globalFilter }) }}
+	state={{ pagination, globalFilter, loading }}
+/>
+```
+
+There is no `globalFiltering.manual` of its own — the global search follows `filtering.manual`, so
+delegating one delegates both.
+
+The one thing to be deliberate about is what a client-side operation is looking at: it sees the rows
+in `data` and nothing else. Sorting a server-paged grid client-side sorts _the current page_, which
+is what you want for a quick reorder and not what you want if the user expects the largest value in
+the whole table to come first.
+
+## See also
+
+- [Server-side data](/docs/data-grid/state/server-side) — the full wiring, loading status, React Query
+- [State model](/docs/data-grid/state) — who owns which value
+- [Pagination](/docs/data-grid/pagination)

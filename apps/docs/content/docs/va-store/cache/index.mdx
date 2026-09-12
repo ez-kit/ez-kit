@@ -3,8 +3,6 @@ title: createCachedStore
 description: Keep a Valtio store alive across Provider unmount/remount — in memory, keyed by name — so filters, pagination, and in-progress edits survive navigation without persisting to storage.
 ---
 
-# `createCachedStore`
-
 `createContextStore` creates a fresh proxy on `Provider` mount and throws it away on unmount. That is exactly right for a modal or a one-off form — but not for a table whose filters and pagination should still be there when the user navigates away and back.
 
 `createCachedStore` is a **separate, opt-in** primitive that keeps the whole live proxy alive in an in-memory cache, keyed by a name you choose. Cache-hits return the **same** proxy object, so in-progress mutations survive unmount/remount within `gcTime`. `createContextStore` is unchanged.

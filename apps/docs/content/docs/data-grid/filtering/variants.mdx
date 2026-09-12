@@ -1,0 +1,146 @@
+---
+title: Filter Variants
+description: The three presentations of a column filter — inline in the header, in a per-column popover, or collected into one panel — side by side.
+---
+
+`filtering.variant` decides **where** a column's filter control lives. The control itself does not
+change: the same input, operator selector and value list appear in all three, chosen from the
+column's `cell.type` and its `filtering.operators`.
+
+The variant is table-level. Every filterable column gets the same presentation — a grid whose
+columns each chose their own would give the user three places to look for one filter.
+
+| `variant`   | Where the control lives                                      | Reach for it when                                                                         |
+| ----------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `'inline'`  | In the header cell, under the column label. **The default.** | A few filterable columns, and filtering is the main thing the user does.                  |
+| `'popover'` | Behind a filter icon in the header, one popover per column.  | Many columns, or controls too tall for a header — operator selectors, sliders, calendars. |
+| `'panel'`   | Collected into one panel above the table.                    | The filter set is the interface: the user reads and edits several filters as one form.    |
+
+## `'inline'`
+
+The control sits in the header cell and is always visible, so an active filter is readable without
+opening anything. It is also the variant that costs header height — see
+[Layout](/docs/data-grid/layout) if the header has to stay compact.
+
+<DataGridDocsExample exampleId='base-filtering' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering
+/>
+```
+
+`filtering` on its own is this variant — `filtering: { variant: 'inline' }` is the same grid spelled
+out.
+
+## `'popover'`
+
+A filter icon appears in each column header; clicking it opens the control in a popover. The icon
+turns the primary colour while that column's filter is active, so the header still says _what_ is
+filtered without saying what to.
+
+<DataGridDocsExample exampleId='filter-popover-basic' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ variant: 'popover' }}
+/>
+```
+
+This is the variant to pair with richer comparisons: with `filtering: { operators }` on a column the
+popover renders an operator selector above the input, which is where a `between` slider or a date
+range gets the room it needs.
+
+<DataGridDocsExample exampleId='filter-popover-operators' />
+
+## `'panel'`
+
+Every filterable column becomes a chip in one panel above the table: `label: value`, or `Any` while
+empty. Clicking a chip opens its control; the X clears it. The header drops its filters and stays
+sortable.
+
+<DataGridDocsExample exampleId='filter-panel' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ variant: 'panel' }}
+/>
+```
+
+### Where the panel goes
+
+The panel auto-mounts between the toolbar and the table. `panel: 'toolbar'` moves it into the
+toolbar's leading slot instead, so the column filters sit beside the search box — the
+faceted-toolbar layout, without composing anything:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	globalFiltering
+	filtering={{ variant: 'panel', panel: 'toolbar' }}
+/>
+```
+
+The scalar **is** the placement; `{ placement: 'toolbar' }` says the same thing. See the
+[task board](/docs/data-grid/examples#task-board) for the whole layout.
+
+### One column at a time
+
+`<DataGrid.ColumnFilter columnId='status' />` renders a single column's chip — same control, same
+popover — wherever the layout wants it, so a grid can place two filters in its toolbar and leave
+the rest out. Its children take a render function over the same per-column shape the panel hands
+over (`label`, `valueDisplay`, `hasValue`, `input`, `onClear`).
+
+It renders nothing for a column that is not filterable, so no guard is needed around it.
+
+### The whole panel, placed by hand
+
+To put the panel somewhere neither placement covers — a sidebar, under the table — compose the
+grid yourself and place `<DataGrid.FilterPanel />` where you want it. Children replace the default
+layout, so mount the rest of the grid too:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	filtering={{ variant: 'panel' }}
+>
+	<DataGrid.Toolbar />
+	<DataGrid.Table />
+	<DataGrid.FilterPanel />
+	<DataGrid.Pagination />
+</DataGrid>
+```
+
+It renders nothing when the grid has no filtered row model or no filterable column, so a
+hand-placed panel is safe on a grid whose filtering a defaults layer switched off.
+
+## Options
+
+| Option    | Type                                        | Description                                                                                                                |
+| --------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `variant` | `'inline' \| 'popover' \| 'panel'`          | Where every column's filter control renders. Default `'inline'`.                                                           |
+| `chips`   | `boolean \| FilterChipsConfig`              | Removable chips for the active filters — see [Active filters](/docs/data-grid/filtering/active-filters).                   |
+| `panel`   | `'above' \| 'toolbar' \| FilterPanelConfig` | `'panel'` variant only. Which region holds the panel. Default `'above'` — its own strip between the toolbar and the table. |
+
+The names are also available as `FilteringVariant.Inline` and friends, for code that would otherwise
+repeat the literal.
+
+## See also
+
+- [Filtering](/docs/data-grid/filtering) — the rest of the feature's config
+- [Active filters](/docs/data-grid/filtering/active-filters) — the chips strip and the Clear-all button
+- [Operators](/docs/data-grid/filtering/operators) — what goes inside the control
+- [Global filtering](/docs/data-grid/filtering/global) — one search box, no per-column control
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/header-cell.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/header-cell.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid/filter-panel.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid/filter-panel.tsx)

@@ -1,3 +1,5 @@
+import { localizeOperators } from '@ez-kit/data-grid-core'
+
 import { useGridComponents } from '../components-context'
 import { DATA_GRID_DEFAULTS } from '../defaults'
 import { FilterChipKind } from '../types'
@@ -106,7 +108,11 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 		const column = table.getColumn(cf.id)
 		if (!column) continue
 		const filteringMeta = column.columnDef.meta?.filtering
-		const operators = filteringMeta === false ? undefined : filteringMeta?.operators
+		const rawOperators = filteringMeta === false ? undefined : filteringMeta?.operators
+		// Chips name the operator, so they read it through the dictionary like the control does.
+		const operators = rawOperators
+			? localizeOperators(rawOperators, column.columnDef.meta?.cell?.type, table.grid.messages.operators)
+			: undefined
 		const display = renderValueDisplay(cf.value, operators)
 		if (display == null || display === '') continue
 		const appliedFilter = applied.columnFilters.find((a) => a.id === cf.id)
@@ -125,7 +131,7 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 	if (typeof globalFilter === 'string' && globalFilter.length > 0) {
 		chips.push({
 			key: 'global',
-			label: 'Search',
+			label: table.grid.messages.globalFiltering.label,
 			value: globalFilter,
 			onRemove: () => {
 				table.setGlobalFilter(undefined)

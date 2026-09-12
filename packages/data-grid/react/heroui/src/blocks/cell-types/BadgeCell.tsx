@@ -5,6 +5,7 @@ import { Chip } from '@heroui/react'
 import { SelectCellInput } from './SelectCell'
 
 import type { BadgeCellConfig, BadgeVariant, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
 function mapBadgeVariant(variant: BadgeVariant | undefined): 'primary' | 'secondary' | 'soft' | undefined {
 	if (variant === 'outline') return 'soft'
@@ -17,6 +18,7 @@ function BadgeCellView({ value, config }: CellViewProps<BadgeCellConfig>) {
 	const match = items.find((item) => item.value === String(value ?? ''))
 	return (
 		<Chip variant={mapBadgeVariant(match?.variant)}>
+			{(match?.icon as ReactNode) ?? null}
 			<Chip.Label>{match ? match.label : String(value ?? '')}</Chip.Label>
 		</Chip>
 	)

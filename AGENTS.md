@@ -49,6 +49,15 @@ and move on.
 - **`ColumnMeta` fields carry the name of the column option they hold.** `pinning`, `align`,
   `cell`, `filtering`, `editing`, `creating`, `visibility`. A resolved value never gets a third
   spelling (it was `cellType` / `config` / `cellView` for the three halves of `cell`).
+- **`placement` names a region; `position` names a spot on an axis.** `filtering.chips.position`
+  is `'above'` / `'below'` — where the strip sits relative to the table. `filtering.panel.placement`
+  and `pagination.pageSizer.placement` are `'toolbar'` / `'footer'` / `'above'` — which container
+  holds the control. Both take the scalar-or-object form, and the scalar **is** the value.
+- **A control with two homes is named for itself, not for a container.** `sorting.toolbar`,
+  `visibility.toolbar`, `globalFiltering.toolbar` and `filtering.toolbar` keep the one word for
+  "auto-mount my control into the toolbar" because those controls can live nowhere else.
+  `pagination.pageSizer` replaced `pagination.toolbar` when the page sizer gained a footer
+  placement: `toolbar: true, placement: 'footer'` is a config contradicting itself.
 - **The three system columns are configured like columns.** `selection.column`,
   `expanding.column` and `rowActions.column` take `SystemColumnDef` — `header`, `width`,
   `pinning`, `align`, `headerClassName`, `cellClassName`, in the column vocabulary and with the
@@ -225,8 +234,15 @@ Two consequences worth keeping:
 - Built with `tsup` → ESM output + `.d.ts` declarations into `dist/`
 - Each package extends `tsconfig.base.json` and uses `@/*` → `src/*` path alias
 - Tests live in `src/**/*.test.ts(x)` or `test/**/*.test.ts(x)`, run with Vitest in jsdom
-- Each package has a `size-limit` budget enforced in CI. The generator seeds 3 KB; every package then
-  tunes it to roughly its real size plus headroom, so a regression actually fails the check
+- Each package has a `size-limit` budget enforced in CI, tuned to roughly its real size plus ~15%
+  headroom so a regression actually fails the check. **Every entry `ignore`s the package's own
+  runtime `dependencies`**, so the number is the package's own code: a budget that counted
+  dependencies answered "how heavy is our dependency tree" and could be blown by someone else's
+  release — `@tanstack/table-core` shipping a minor would have failed CI in an unrelated PR. Peer
+  dependencies (`react`, `@heroui/*`, `zustand`, …) are excluded by `size-limit` itself, so they
+  never counted. A workspace package that depends on another (`data-grid-react` → `data-grid-core`)
+  ignores it too — that one has its own budget, and counting it twice hides where growth happened.
+  When adding a dependency, add it to the entry's `ignore` list
 - Packages declare `"sideEffects": false`
 
 ### The public origin lives in one place
@@ -263,8 +279,8 @@ copy is worse than no copy: it reads as authoritative while naming exports that 
 Coverage over the documented packages is **total**: the explicit page → type map in
 `apps/docs/test/docs-options/page-type-map.ts` classifies every page under the four scanned roots —
 `content/docs/data-grid/**`, `form/**`, `zu-store/**` and `va-store/**` — keyed by file path **plus
-the heading above each table** so multiple tables in one file map independently: 113 pages / 89
-option tables / 429 checked names today, of which the store packages contribute 43 pages / 24 tables
+the heading above each table** so multiple tables in one file map independently: 114 pages / 90
+option tables / 430 checked names today, of which the store packages contribute 43 pages / 24 tables
 / 67 names. Pages with no option table still get an entry with two empty arrays, and that is the
 point: while coverage was partial, an unmapped page was checked by nothing, and the two worst pages
 in the docs were unmapped ones — `columns/resizing.mdx` documented a `sizing` option that never
@@ -288,7 +304,7 @@ unclassified table fails the test, as does a table whose checked-name count drif
 recorded. Rows that intentionally document a non-key (the literal `false` a per-column slot accepts,
 a cache method written with its call signature) go in `OPTION_EXCEPTIONS`, each with its reason.
 
-**Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false` — the heroui bundle contains a dynamic `require` that RSC/Turbopack cannot run during SSR, so both kits deliberately share the one client-rendered path rather than letting shadcn SSR and heroui silently fall back.
+**Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false`, so both kits share one path rather than letting shadcn SSR and heroui silently fall back. The reason originally given for that — a dynamic `require` in the heroui bundle that RSC could not run on the server — is **no longer true** and was corrected on 2026-09-11: `@heroui/react@3.0.3` contains no `require(` at all, and a page rendering the heroui grid through the normal server path prerenders at build time (`next build` marks it `○`, and the emitted HTML carries the full `<table>` and every row). Note `'use client'` was never the mechanism either way: a client component is still prerendered on the server, so the directive cannot skip an SSR a component could not survive. What remains is a choice about the docs — one code path for both kits — not a limitation of the heroui kit, and dropping `ssr: false` is now a live option rather than a blocked one.
 
 ### TypeScript
 

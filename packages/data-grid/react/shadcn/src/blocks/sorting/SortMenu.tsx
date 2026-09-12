@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { ArrowUpDown, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -9,12 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { SortDirection, SortMenuItem, SortMenuProps } from '@ez-kit/data-grid-react'
 
 function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
+	const messages = useGridMessages()
 	return (
 		<div
 			className='flex items-center gap-1.5'
 			data-slot='sort-row'
 		>
-			<span className='w-12 shrink-0 text-xs text-muted-foreground'>{index === 0 ? 'sort by' : 'then by'}</span>
+			<span className='w-12 shrink-0 text-xs text-muted-foreground'>
+				{index === 0 ? messages.sorting.sortBy : messages.sorting.thenBy}
+			</span>
 
 			<Select
 				value={item.columnId}
@@ -22,7 +26,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 			>
 				<SelectTrigger
 					className='h-8 flex-1 text-xs'
-					aria-label='Sort column'
+					aria-label={messages.sorting.menu}
 				>
 					<SelectValue />
 				</SelectTrigger>
@@ -47,7 +51,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 			>
 				<SelectTrigger
 					className='h-8 w-[7.5rem] text-xs'
-					aria-label='Sort direction'
+					aria-label={messages.sorting.direction}
 				>
 					<SelectValue />
 				</SelectTrigger>
@@ -56,13 +60,13 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 						value='asc'
 						className='text-xs'
 					>
-						Ascending
+						{messages.sorting.ascending}
 					</SelectItem>
 					<SelectItem
 						value='desc'
 						className='text-xs'
 					>
-						Descending
+						{messages.sorting.descending}
 					</SelectItem>
 				</SelectContent>
 			</Select>
@@ -72,7 +76,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 				size='icon'
 				className='h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive'
 				onClick={item.onRemove}
-				aria-label='Remove sort'
+				aria-label={messages.sorting.remove}
 			>
 				<Trash2 className='h-3.5 w-3.5' />
 			</Button>
@@ -81,6 +85,7 @@ function SortRow({ item, index }: { item: SortMenuItem; index: number }) {
 }
 
 export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortMenuProps) {
+	const messages = useGridMessages()
 	const activeCount = items.length
 
 	return (
@@ -93,7 +98,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 					data-slot='sort-menu-trigger'
 				>
 					<ArrowUpDown className='h-4 w-4' />
-					Sort
+					{messages.sorting.trigger}
 					{activeCount > 0 ? (
 						<span className='ml-0.5 rounded-full bg-primary px-1.5 py-0 text-xs leading-5 font-medium text-primary-foreground'>
 							{activeCount}
@@ -107,7 +112,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 				data-slot='sort-menu'
 			>
 				{activeCount === 0 ? (
-					<p className='mb-3 px-1 text-xs text-muted-foreground'>No sorts applied. Add one to start sorting.</p>
+					<p className='mb-3 px-1 text-xs text-muted-foreground'>{messages.sorting.empty}</p>
 				) : (
 					<div className='mb-3 space-y-2'>
 						{items.map((item, index) => (
@@ -129,7 +134,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 						disabled={!canAddSort}
 					>
 						<Plus className='h-3.5 w-3.5' />
-						Add Sort
+						{messages.sorting.add}
 					</Button>
 					<Button
 						variant='ghost'
@@ -138,7 +143,7 @@ export function SortMenu({ items, canAddSort, onAddSort, onResetSorting }: SortM
 						onClick={onResetSorting}
 						disabled={activeCount === 0}
 					>
-						Reset Sorting
+						{messages.sorting.reset}
 					</Button>
 				</div>
 			</PopoverContent>

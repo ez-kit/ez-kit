@@ -12,7 +12,7 @@ export type Employee = {
 	active: boolean
 }
 
-const INITIAL_EMPLOYEES: Employee[] = [
+export const INITIAL_EMPLOYEES: Employee[] = [
 	{
 		id: 1,
 		name: 'Alice Johnson',

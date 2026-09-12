@@ -27,7 +27,6 @@ export function DataGridOptions({ children }: { children: ReactNode }) {
 				pagination: {
 					manual: true,
 					items: [10, 25, 50],
-					variant: 'numbered',
 					siblings: 1,
 				},
 				sorting: { manual: true, multi: { max: 3, event: 'ctrl' }, toolbar: true },

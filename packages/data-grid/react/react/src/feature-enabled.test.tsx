@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { DATA_GRID_DEFAULTS } from './defaults'
+import { FilterPanelPlacement, PageSizerPlacement } from './types'
 import { useDataGrid } from './use-data-grid'
 
 type User = { id: number; name: string }
@@ -95,16 +96,16 @@ describe('useDataGrid — enabled: false suppresses the React-side config', () =
  * itself the switch, so options-without-control and control-with-default-options were both
  * unexpressible.
  */
-describe('useDataGrid — pagination.toolbar', () => {
+describe('useDataGrid — pagination.pageSizer', () => {
 	it('mounts the PageSizer when a size list is supplied, with no extra flag', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { items: [5, 10] } }))
-		expect(result.current.grid.pagination.toolbar).toBe(true)
+		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Toolbar })
 		expect(result.current.grid.pagination.items).toEqual([5, 10])
 	})
 
 	it('mounts nothing when pagination carries no size list', () => {
 		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: true }))
-		expect(result.current.grid.pagination.toolbar).toBe(false)
+		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
 	})
 
 	it('resolves the default size list even when the control is not auto-mounted', () => {
@@ -113,25 +114,69 @@ describe('useDataGrid — pagination.toolbar', () => {
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 	})
 
-	it('toolbar: true falls back to the named default size list', () => {
-		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: true } }))
-		expect(result.current.grid.pagination.toolbar).toBe(true)
+	it('pageSizer: true falls back to the named default size list', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSizer: true } }))
+		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Toolbar })
 		expect(result.current.grid.pagination.items).toEqual([...DATA_GRID_DEFAULTS.pagination.items])
 	})
 
-	it('toolbar: false keeps the size list as data without mounting the control', () => {
+	it('takes the scalar as the placement', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { toolbar: false, items: [5, 10] } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSizer: 'footer' } }),
 		)
-		expect(result.current.grid.pagination.toolbar).toBe(false)
+		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Footer })
+	})
+
+	it('reads the placement off the object form', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSizer: { placement: 'footer' } } }),
+		)
+		expect(result.current.grid.pagination.pageSizer).toEqual({ placement: PageSizerPlacement.Footer })
+	})
+
+	it('pageSizer: false keeps the size list as data without mounting the control', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { pageSizer: false, items: [5, 10] } }),
+		)
+		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
 		expect(result.current.grid.pagination.items).toEqual([5, 10])
 	})
 
 	it('never mounts the PageSizer in infinite mode', () => {
 		const { result } = renderHook(() =>
-			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', toolbar: true } }),
+			useDataGrid({ data: USERS, columns: COLUMNS, pagination: { mode: 'infinite', pageSizer: true } }),
 		)
-		expect(result.current.grid.pagination.toolbar).toBe(false)
+		expect(result.current.grid.pagination.pageSizer).toBeUndefined()
 		expect(result.current.grid.pagination.items).toBeUndefined()
+	})
+})
+
+describe('useDataGrid — filtering.panel', () => {
+	it('resolves a placement only under the panel variant', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: true }))
+		expect(result.current.grid.filtering.panel).toBeUndefined()
+	})
+
+	it('defaults the panel to its own strip above the table', () => {
+		const { result } = renderHook(() => useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel' } }))
+		expect(result.current.grid.filtering.panel).toEqual({ placement: FilterPanelPlacement.Above })
+	})
+
+	it('takes the scalar as the placement', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, filtering: { variant: 'panel', panel: 'toolbar' } }),
+		)
+		expect(result.current.grid.filtering.panel).toEqual({ placement: FilterPanelPlacement.Toolbar })
+	})
+
+	it('reads the placement off the object form', () => {
+		const { result } = renderHook(() =>
+			useDataGrid({
+				data: USERS,
+				columns: COLUMNS,
+				filtering: { variant: 'panel', panel: { placement: 'toolbar' } },
+			}),
+		)
+		expect(result.current.grid.filtering.panel).toEqual({ placement: FilterPanelPlacement.Toolbar })
 	})
 })

@@ -3,8 +3,6 @@ title: Deep dive — URL
 description: History push vs replace, key naming, the router adapters (react-router, Next.js), imperative control via $url, and SSR.
 ---
 
-# Deep dive — URL
-
 The URL source builds a `SourcePort` over a tiny router driver (`read()` / `commit()`). Key naming lives on the descriptor, so the engine's keys _are_ the URL keys — params it doesn't own are preserved untouched.
 
 <LivePreview

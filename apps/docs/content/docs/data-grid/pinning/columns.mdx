@@ -1,0 +1,77 @@
+---
+title: Column Pinning
+description: Pin columns to the left or right of the grid so they stay visible while the rest of the table scrolls horizontally.
+---
+
+Pinned columns stick to the table edge during horizontal scroll. Useful for keeping an id, a name,
+or the row-actions column in view while a wide grid scrolls past them.
+
+Every option on this page is listed in the [API reference](/docs/data-grid/pinning/api).
+
+## Usage
+
+`pinning={{ column: true }}` adds the pin section to each column's ⋮ menu; the columns that start
+pinned say so themselves:
+
+```tsx
+const columns = createColumns<Row>([
+	{ accessorKey: 'id', header: 'ID', pinning: { initialSide: 'left' } },
+	{ accessorKey: 'actions', header: 'Actions', pinning: { initialSide: 'right' } },
+])
+
+<DataGrid
+	data={data}
+	columns={columns}
+	pinning={{ column: true }}
+/>
+```
+
+Two columns start pinned left and two right — unpin any of them from its ⋮ menu, then scroll
+sideways:
+
+<DataGridDocsExample exampleId='column-pinning' />
+
+## Seeds and invariants
+
+A column the user is not meant to move takes the **scalar** form. It is an invariant, not a seed:
+the column keeps its pin no matter what `initialState`, controlled `state` or `table.setState` says,
+and its ⋮ menu has no pin section at all — a state that unpinned it could never be undone by the
+user.
+
+```tsx
+{ accessorKey: 'name', header: 'Name', pinning: 'left' }
+```
+
+**Name** below is statically pinned; open its menu and there is nothing to unpin with, while the
+other columns still offer the section:
+
+<DataGridDocsExample exampleId='column-pinning-static' />
+
+The same holds for the system columns (`__selection__`, `__expand__`, `__actions__`).
+
+`initialState.columnPinning` **merges** with the pins derived from the column defs rather than
+replacing them. A column you list in either array is yours; a column you leave out of both keeps its
+`initialSide`, and unmentioned seeds are placed outside your ids so a pinned selection column stays
+leftmost and a pinned actions column stays rightmost.
+
+See [State model](/docs/data-grid/state) for the full precedence.
+
+## How the kits render it
+
+The shadcn flavor renders pinned columns by reading `data-pinned` attributes on `<th>`/`<td>` and
+applying sticky positioning in CSS — this avoids touching the vendored shadcn primitives. The HeroUI
+flavor does the same against the HeroUI table primitives.
+
+Per [Architecture](/docs/data-grid/architecture) Principle III, pinning overrides live in the
+flavor's `blocks/` adapters; the vendored shadcn `components/ui/**` files are never modified.
+
+## See also
+
+- [API reference](/docs/data-grid/pinning/api)
+- [Pinning](/docs/data-grid/pinning) · [Row pinning](/docs/data-grid/pinning/rows)
+- [Columns](/docs/data-grid/columns)
+
+## Source
+
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/types.ts)
+- shadcn pinning blocks — [`packages/data-grid/react/shadcn/src/blocks/`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/shadcn/src/blocks/)

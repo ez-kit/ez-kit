@@ -3,8 +3,6 @@ title: Validation
 description: One validator per form — a function or a zod schema — plus when it runs and how server errors get back into the fields.
 ---
 
-# Validation
-
 Validation belongs to the form, not to the field. `editing.validate` and `creating.validate`
 each take **one** validator for the whole row, because cross-field rules ("end after start") are
 the ones that have nowhere else to live, and per-field rules express fine inside a schema.
@@ -141,8 +139,8 @@ The same three keys exist on `creating`, and the last two on a column's `editing
 
 ## See also
 
-- [Editing](./data-grid/editing) — the edit workflow itself
-- [Creating](./data-grid/editing/creating) — validating a new row
+- [Editing](/docs/data-grid/editing) — the edit workflow itself
+- [Creating](/docs/data-grid/editing/creating) — validating a new row
 
 ## Source
 

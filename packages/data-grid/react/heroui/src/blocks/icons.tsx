@@ -6,6 +6,8 @@ import {
 	ArrowRight,
 	ArrowUp,
 	ArrowUpToLine,
+	ChevronLeft,
+	ChevronRight,
 	EyeOff,
 	Pencil,
 	PinOff,
@@ -13,7 +15,7 @@ import {
 	X,
 } from 'lucide-react'
 
-import type { GridMenuItem } from '@ez-kit/data-grid-react'
+import type { GridMenuItemDef } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 
 /** HeroUI's `Dropdown.Item` lays out its own gutter, so menu icons only need a size. */
@@ -36,6 +38,9 @@ export const GRID_MENU_ICONS: Record<GridMenuIcon, ReactNode> = {
 	[GridMenuIcon.SortDesc]: <ArrowDown size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.ClearSort]: <X size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.Hide]: <EyeOff size={MENU_ICON_SIZE} />,
+	// Chevrons, not the plain arrows: those already mean pinning in this menu.
+	[GridMenuIcon.MoveStart]: <ChevronLeft size={MENU_ICON_SIZE} />,
+	[GridMenuIcon.MoveEnd]: <ChevronRight size={MENU_ICON_SIZE} />,
 }
 
 /**
@@ -55,7 +60,19 @@ export const GRID_MENU_ICON_PLACEHOLDER: ReactNode = (
  * the consumer's own element (a custom row action's `icon: <Copy />`) and is rendered as-is.
  * An entry with no icon gets the placeholder so its label stays aligned with its siblings'.
  */
-export function renderGridMenuIcon(icon: GridMenuItem['icon']): ReactNode {
+export function renderGridMenuIcon(icon: GridMenuItemDef['icon']): ReactNode {
 	if (icon === undefined) return GRID_MENU_ICON_PLACEHOLDER
+	return isGridMenuIcon(icon) ? GRID_MENU_ICONS[icon] : icon
+}
+
+/**
+ * The same glyph for an entry rendered as a button — the selection bar's custom actions.
+ *
+ * No placeholder here, unlike {@link renderGridMenuIcon}: buttons sit side by side rather than
+ * stacked, so an icon-less one has no column to keep its label aligned with, and a blank box
+ * would only pad it.
+ */
+export function renderActionIcon(icon: GridMenuItemDef['icon']): ReactNode {
+	if (icon === undefined) return null
 	return isGridMenuIcon(icon) ? GRID_MENU_ICONS[icon] : icon
 }

@@ -1,0 +1,5 @@
+{
+	"title": "Pinning",
+	"description": "Keep columns and rows in view while the rest of the grid scrolls",
+	"pages": ["index", "columns", "rows", "api"]
+}

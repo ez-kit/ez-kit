@@ -24,7 +24,7 @@ describe('prepareDataGridTable', () => {
 		expect(table.grid).toBeDefined()
 		// All features off: this is a table that never went through `useDataGrid`.
 		expect(table.grid.pinning.column).toBe(false)
-		expect(table.grid.pagination.toolbar).toBe(false)
+		expect(table.grid.pagination.pageSizer).toBeUndefined()
 	})
 
 	it('carries the store surface `useSyncExternalStore` needs, on the table itself', () => {

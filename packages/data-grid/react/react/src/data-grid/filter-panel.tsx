@@ -1,20 +1,22 @@
+import { localizeOperators } from '@ez-kit/data-grid-core'
+
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 
 import { renderFilterInput } from './render-filter-input'
 import { useDataGridState, useDataGridTable } from './table-context'
 
-import type { BadgeItem, BetweenValue, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
+import type { BadgeItem, BetweenValue, GridMessages, SelectItem, StructuredFilterValue } from '@ez-kit/data-grid-core'
 import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
 const MAX_INLINE_VALUES = 2
 
-function formatBetweenValue(value: BetweenValue): { display: string; hasValue: boolean } {
+function formatBetweenValue(value: BetweenValue, anyLabel: string): { display: string; hasValue: boolean } {
 	const { from, to } = value
 	const fromDefined = from !== undefined && from !== ''
 	const toDefined = to !== undefined && to !== ''
-	if (!fromDefined && !toDefined) return { display: 'Any', hasValue: false }
+	if (!fromDefined && !toDefined) return { display: anyLabel, hasValue: false }
 	if (fromDefined && toDefined) return { display: `${String(from)} – ${String(to)}`, hasValue: true }
 	if (fromDefined) return { display: `≥ ${String(from)}`, hasValue: true }
 	return { display: `≤ ${String(to)}`, hasValue: true }
@@ -38,8 +40,9 @@ function resolveOptionLabel(rawValue: string, meta: ColumnMeta<unknown, unknown>
 function formatMultiValue(
 	values: unknown[],
 	meta: ColumnMeta<unknown, unknown> | undefined,
+	anyLabel: string,
 ): { display: string; hasValue: boolean } {
-	if (values.length === 0) return { display: 'Any', hasValue: false }
+	if (values.length === 0) return { display: anyLabel, hasValue: false }
 	const labels = values.map((v) => resolveOptionLabel(String(v), meta))
 	if (labels.length <= MAX_INLINE_VALUES) return { display: labels.join(', '), hasValue: true }
 	const inline = labels.slice(0, MAX_INLINE_VALUES).join(', ')
@@ -49,13 +52,18 @@ function formatMultiValue(
 function formatFilterValue(
 	filterValue: unknown,
 	meta: ColumnMeta<unknown, unknown> | undefined,
+	anyLabel: string,
+	operatorMessages: GridMessages['operators'],
 ): { display: string; hasValue: boolean } {
-	if (filterValue == null || filterValue === '') return { display: 'Any', hasValue: false }
+	if (filterValue == null || filterValue === '') return { display: anyLabel, hasValue: false }
 
 	if (typeof filterValue === 'object' && 'operator' in filterValue) {
 		const sv = filterValue as StructuredFilterValue
 		const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
-		const op = filteringMeta?.operators?.find((o) => o.id === sv.operator)
+		const rawOperators = filteringMeta?.operators
+		const op = (rawOperators ? localizeOperators(rawOperators, meta?.cell?.type, operatorMessages) : undefined)?.find(
+			(o) => o.id === sv.operator,
+		)
 		const inner = sv.value
 
 		// `requiresInput === false` operators (e.g. isEmpty / isNotEmpty) — show operator label.
@@ -65,21 +73,21 @@ function formatFilterValue(
 
 		// Between value
 		if (inner !== null && typeof inner === 'object' && ('from' in inner || 'to' in inner)) {
-			return formatBetweenValue(inner)
+			return formatBetweenValue(inner, anyLabel)
 		}
 
 		// Multi value (in / notIn)
 		if (Array.isArray(inner)) {
-			return formatMultiValue(inner, meta)
+			return formatMultiValue(inner, meta, anyLabel)
 		}
 
 		// Plain inner value
-		if (inner == null || inner === '') return { display: 'Any', hasValue: false }
+		if (inner == null || inner === '') return { display: anyLabel, hasValue: false }
 		return { display: String(inner), hasValue: true }
 	}
 
 	// Plain (non-operator) filter value
-	if (Array.isArray(filterValue)) return formatMultiValue(filterValue, meta)
+	if (Array.isArray(filterValue)) return formatMultiValue(filterValue, meta, anyLabel)
 	return { display: String(filterValue), hasValue: true }
 }
 
@@ -142,25 +150,26 @@ export type DataGridFilterPanelProps = {
 	children?: ReactNode | ((args: DataGridFilterPanelRenderArgs) => ReactNode)
 }
 
-export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
+/**
+ * The filterable columns with their labels, value summaries and ready-made controls — what
+ * both `<FilterPanel>` and `<ColumnFilter>` render.
+ *
+ * `undefined` when the grid has nothing to filter (no filtered row model, or no filterable
+ * column), which is what makes both components render nothing in those states.
+ */
+export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefined {
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnFilters)
 	useDataGridState((s) => s.columnVisibility)
 	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Input } = gridComponents.core
-	const {
-		OperatorSelect,
-		BetweenInput,
-		FilterPanel: FilterPanelChrome,
-		FilterPanelChip,
-		MultiSelectFilter,
-	} = gridComponents.filtering
+	const { OperatorSelect, BetweenInput, MultiSelectFilter } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const filteringDebounce = table.grid.filtering.debounce
 
 	const hasFiltering = Boolean(table.options.getFilteredRowModel)
-	if (!hasFiltering) return null
+	if (!hasFiltering) return undefined
 
 	const filterableColumns = table.getAllLeafColumns().filter((column) => {
 		const meta = column.columnDef.meta
@@ -169,7 +178,7 @@ export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
 		return column.getCanFilter()
 	})
 
-	if (filterableColumns.length === 0) return null
+	if (filterableColumns.length === 0) return undefined
 
 	const hasActiveFilter = filterableColumns.some((c) => c.getFilterValue() !== undefined)
 
@@ -178,7 +187,12 @@ export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
 		const headerDef = column.columnDef.header
 		const label = typeof headerDef === 'string' ? headerDef : column.id
 		const filterValue = column.getFilterValue()
-		const { display, hasValue } = formatFilterValue(filterValue, meta)
+		const { display, hasValue } = formatFilterValue(
+			filterValue,
+			meta,
+			table.grid.messages.filtering.any,
+			table.grid.messages.operators,
+		)
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const headerLike = { id: column.id, column } as unknown as Header<any, unknown>
@@ -192,6 +206,7 @@ export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
 			BetweenInput,
 			MultiSelectFilter,
 			debounce: filteringDebounce,
+			messages: table.grid.messages,
 			table,
 		})
 
@@ -202,11 +217,21 @@ export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
 		return { column, label, valueDisplay: display, hasValue, input, onClear }
 	})
 
+	return { columns: resolvedColumns, hasActiveFilter }
+}
+
+export function FilterPanel({ children }: DataGridFilterPanelProps = {}) {
+	const { FilterPanel: FilterPanelChrome, FilterPanelChip } = useGridComponents().filtering
+	const resolved = useFilterPanelColumns()
+	if (resolved === undefined) return null
+
+	const { columns, hasActiveFilter } = resolved
+
 	if (children !== undefined) {
-		return typeof children === 'function' ? children({ columns: resolvedColumns, hasActiveFilter }) : children
+		return typeof children === 'function' ? children({ columns, hasActiveFilter }) : children
 	}
 
-	const chips = resolvedColumns.map(({ column, label, valueDisplay, hasValue, input, onClear }) => (
+	const chips = columns.map(({ column, label, valueDisplay, hasValue, input, onClear }) => (
 		<FilterPanelChip
 			key={column.id}
 			label={label}

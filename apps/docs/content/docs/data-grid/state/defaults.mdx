@@ -1,0 +1,238 @@
+---
+title: Defaults
+description: The built-in default value for every data grid option, and the three layers — kit, provider, instance — that override them.
+---
+
+Every data grid feature is **opt-in**: nothing turns on until you ask for it. But once a feature
+_is_ enabled, its sub-options fall back to sensible built-in values, so you rarely spell them out.
+`globalFiltering: true` gives you a `Search…` box that debounces at 250 ms; `pagination: true` gives
+you 10 rows per page.
+
+Those built-ins are the **floor**. Above them sit three layers you control, each merging under the
+next, so the value nearest the grid always wins:
+
+```
+library defaults  <  factory defaults  <  provider defaults  <  instance config
+```
+
+- **Instance config** — props on one `DataGrid`. Always wins.
+- **Provider defaults** — `DataGridOptionsProvider defaults={{…}}` over a React subtree.
+- **Factory defaults** — `createDataGrid({ defaults })`, baked into a custom kit bundle.
+
+## Per grid
+
+The most direct override — pass the option as a prop on the grid itself.
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pagination={{ pageSize: 25 }} // beats the default 10
+	globalFiltering={{ placeholder: 'Find users…' }} // beats 'Search…'
+/>
+```
+
+## Per subtree: `DataGridOptionsProvider`
+
+Wrap any part of your tree. Every grid beneath the provider inherits its `defaults`, merged under the grid's own config.
+
+<DataGridDocsExample exampleId='default-options' />
+
+```tsx
+import { DataGridOptionsProvider } from '@ez-kit/data-grid-react'
+
+function App() {
+	return (
+		<DataGridOptionsProvider defaults={{ sorting: true, pagination: { pageSize: 3 } }}>
+			{/* Inherits sorting + pageSize: 3 — no feature flags needed */}
+			<UsersGrid />
+
+			{/* Same provider, but this grid overrides pageSize and drops sorting */}
+			<AuditGrid />
+		</DataGridOptionsProvider>
+	)
+}
+
+function UsersGrid() {
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+		/>
+	)
+}
+
+function AuditGrid() {
+	// Deep-merged over the defaults: pageSize wins, sorting is turned off.
+	return (
+		<DataGrid
+			data={data}
+			columns={columns}
+			sorting={false}
+			pagination={{ pageSize: 5 }}
+		/>
+	)
+}
+```
+
+### Nested providers
+
+Providers compose. A child provider's `defaults` are deep-merged on top of its parent's, so a subtree can refine app-wide defaults without repeating them.
+
+```tsx
+<DataGridOptionsProvider defaults={{ sorting: true, layout: { stickyHeader: true } }}>
+	{/* inherits sorting + layout.stickyHeader */}
+	<DataGridOptionsProvider defaults={{ pagination: { pageSize: 25 } }}>
+		{/* inherits sorting + layout.stickyHeader + pageSize: 25 */}
+	</DataGridOptionsProvider>
+</DataGridOptionsProvider>
+```
+
+### Reading the merged defaults
+
+`useDataGridOptions()` returns the resolved defaults contributed by ancestor providers — useful for debugging or building tooling around your grids.
+
+```tsx
+import { useDataGridOptions } from '@ez-kit/data-grid-react'
+
+const defaults = useDataGridOptions() // { sorting: true, pagination: { pageSize: 3 } }
+```
+
+## Per kit: factory `defaults`
+
+When you build a custom kit with `createDataGrid`, pass `defaults` to bake defaults into the kit itself. Every grid built with that kit's `useDataGrid` inherits them — no provider required.
+
+```tsx
+import { createDataGrid } from '@ez-kit/data-grid-react'
+
+export const { DataGrid, useDataGrid } = createDataGrid({
+	components,
+	defaults: {
+		pagination: { pageSize: 20 },
+		fallbacks: { empty: 'No records' },
+	},
+})
+```
+
+## Merge semantics
+
+Options are combined with an **immutable, per-feature deep merge** ([`utils/deep-merge.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/utils/deep-merge.ts)):
+
+- Nested config objects combine — `pagination: true` from defaults plus `pagination: { pageSize: 20 }` at the call site resolve together.
+- Arrays, atomics, and React elements **replace** wholesale — they are not merged element-by-element.
+- `undefined` never overrides a defined default.
+
+Precedence, low → high:
+
+```
+factory defaults  <  provider defaults  <  instance config
+```
+
+### What can be defaulted
+
+`DataGridDefaultOptions<TRow>` is the mergeable subset of a grid's config — the feature toggles and their config objects (`sorting`, `pagination`, `filtering`, `globalFiltering`, `selection`, `visibility`, `expanding`, `pinning`, `resizing`, `layout`, `fallbacks`, …).
+
+It **excludes** the per-instance inputs that are meaningless as shared defaults:
+
+| Excluded key    | Why                                               |
+| --------------- | ------------------------------------------------- |
+| `data`          | Row data is always per-grid.                      |
+| `columns`       | Column definitions are always per-grid.           |
+| `state`         | Controlled state belongs to the owning component. |
+| `onStateChange` | Its handler belongs to the owning component.      |
+
+### Writes are enabled by their handler
+
+`creating`, `editing` and `deleting` can be defaulted like any other feature — the modal mode, the
+confirmation copy — but their `onSave` / `onDelete` handlers close over your data layer, so a defaults
+layer has none to give. It does not need one: **a write feature is switched on by its handler, not by
+the defaults that describe it.**
+
+```tsx
+<DataGridOptionsProvider defaults={{ creating: { mode: 'modal' }, deleting: { confirmation: true } }}>
+	{/* Creates in a modal, asks before deleting — it supplied the handlers. */}
+	<DataGrid
+		data={orders}
+		columns={columns}
+		creating={{ onSave }}
+		deleting={{ onDelete }}
+	/>
+
+	{/* Read-only, and opts out of nothing: no handlers, so no create and no delete. */}
+	<DataGrid
+		data={auditLog}
+		columns={columns}
+	/>
+</DataGridOptionsProvider>
+```
+
+The grid resolves the feature away rather than rendering a trigger whose commit would have nothing to
+call, so a shared default can describe every write in the app without forcing one onto grids that have
+no business performing it.
+
+## When to use which
+
+| Need                                              | Reach for                              |
+| ------------------------------------------------- | -------------------------------------- |
+| App-wide defaults, set in your own app tree       | `DataGridOptionsProvider`              |
+| A subtree that refines app defaults               | Nested `DataGridOptionsProvider`       |
+| Defaults shipped as part of a reusable/custom kit | `createDataGrid({ defaults })`         |
+| One-off options for a single grid                 | Props on that `DataGrid` (always wins) |
+
+## Built-in default values
+
+| Setting                             | Default                                  | Applies when                                              |
+| ----------------------------------- | ---------------------------------------- | --------------------------------------------------------- |
+| `direction`                         | `'ltr'`                                  | always — the grid's text direction                        |
+| `pagination.mode`                   | `'pages'`                                | `pagination` is enabled without a `mode`                  |
+| `pagination.pageSize`               | `10`                                     | `pagination` is enabled without a `pageSize`              |
+| `pagination.items`                  | `[10, 20, 50, 100]`                      | the PageSizer renders with no list supplied               |
+| `pagination.links`                  | `true`                                   | `pagination` is enabled without a `links`                 |
+| `pagination.edges`                  | `false`                                  | `pagination` is enabled without an `edges`                |
+| `pagination.label`                  | `'range'`                                | `pagination` is enabled without a `label`                 |
+| `pagination.siblings`               | `1`                                      | `pagination.links` (on by default)                        |
+| `pagination.boundaries`             | `1`                                      | `pagination.links` (on by default)                        |
+| `pagination.trigger`                | `'auto'`                                 | `pagination.mode: 'infinite'`                             |
+| `pagination.threshold.rows`         | `5`                                      | infinite + virtualized rows                               |
+| `pagination.threshold.px`           | `200`                                    | infinite + non-virtualized rows                           |
+| `globalFiltering.placeholder`       | `'Search…'`                              | `globalFiltering` is enabled                              |
+| `globalFiltering.debounce`          | inherits `filtering.debounce`            | `globalFiltering` is enabled                              |
+| `globalFiltering.toolbar`           | `true`                                   | `globalFiltering` is enabled                              |
+| `visibility.toolbar`                | `true`                                   | `visibility` is enabled                                   |
+| `filtering.variant`                 | `'inline'`                               | `filtering` is enabled without a `variant`                |
+| `filtering.debounce`                | `250` (ms — shared by every text filter) | `filtering` text inputs, no `debounce` set                |
+| `filtering.faceted`                 | `false`                                  | `filtering` is enabled                                    |
+| `filtering.chips.position`          | `'above'`                                | `filtering.chips` is enabled                              |
+| `filtering.toolbar.alwaysShow`      | `false`                                  | `filtering.toolbar` is enabled                            |
+| `sorting.descFirst`                 | `false`                                  | `sorting` is enabled                                      |
+| `sorting.clearable`                 | `true`                                   | `sorting` is enabled                                      |
+| `sorting.multi`                     | `false`                                  | `sorting` is enabled                                      |
+| `sorting.multi.event`               | `'shift'`                                | `sorting.multi` is on                                     |
+| `sorting.multi.removable`           | `true`                                   | `sorting.multi` is on                                     |
+| `selection.multi`                   | `true`                                   | `selection` is enabled                                    |
+| `selection.bar.variant`             | `'floating'`                             | the selection bar renders                                 |
+| `expanding.mode`                    | `'sub-content'`                          | `expanding` is enabled without a `mode`                   |
+| `resizing.mode`                     | `'onChange'`                             | `resizing` is enabled without a `mode`                    |
+| `virtualization.row.estimateSize`   | `50` (px)                                | `virtualization.row` is on                                |
+| `virtualization.row.overscan`       | `5` (rows)                               | `virtualization.row` is on                                |
+| `rowActions.placement`              | `'inline'`                               | the row-actions column renders                            |
+| `editing.mode`                      | `'row'`                                  | `editing` is enabled without a `mode`                     |
+| `editing.validateOn`                | `'submit'`                               | `editing` is enabled                                      |
+| `editing.debounce`                  | `200` (ms)                               | `editing.validateOn: 'change'`                            |
+| `creating.mode`                     | `'row'`                                  | `creating` is enabled without a `mode`                    |
+| `creating.validateOn`               | `'submit'`                               | `creating` is enabled                                     |
+| `creating.debounce`                 | `200` (ms)                               | `creating.validateOn: 'change'`                           |
+| `layout.maxHeight`                  | `400px`                                  | the body scrolls under a capped height                    |
+| `layout.maxHeight` (virtualized)    | `600px`                                  | `virtualization` is on — the container needs a set height |
+| `cell.config.target` (`link` cells) | `'_self'`                                | a `link` cell with no `target`                            |
+
+> Every one of these lives in the exported `DATA_GRID_DEFAULTS`, under the very path the option has — `DATA_GRID_DEFAULTS.pagination.items` defaults `pagination.items` — so a grid that wants to extend a default rather than restate it can read it. The table above and that constant are the same list, and both are complete: a default that exists only as a literal at its use site is one nobody can read, extend, or document. Values core resolves (`DEFAULT_PAGE_SIZE`, `DEFAULT_VALIDATE_DEBOUNCE_MS`, `DEFAULT_ROW_ESTIMATE_SIZE`, `DEFAULT_ROW_OVERSCAN`) are re-exported from `@ez-kit/data-grid-core` rather than restated, so the layers cannot drift.
+
+> `layout.maxHeight` is the one row applied by the structural stylesheet rather than by JS — it is the fallback baked into `--dg-table-max-height` / `--dg-virtual-height`.
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/defaults.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/defaults.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/defaults.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/defaults.ts)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/data-grid-options-context.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/data-grid-options-context.tsx)
+- `@ez-kit/data-grid-react` — [`packages/data-grid/react/react/src/create-data-grid.tsx`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/react/react/src/create-data-grid.tsx)

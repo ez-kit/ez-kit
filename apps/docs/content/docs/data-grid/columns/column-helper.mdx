@@ -3,8 +3,6 @@ title: Column Helper
 description: Define columns with full type inference, per-cell-type factories, and registered cell types using the column createColumn.
 ---
 
-# Column Helper
-
 `createColumnHelper<TRow>()` returns a builder that gives you typed column factories — you get autocomplete on accessor keys, the right `cell.type` set for you, and a clean place to declare each column's config and options.
 
 ## Base usage
@@ -135,7 +133,7 @@ The second parameter is the **registry**, not a union of its ids: the ids alone 
 
 <DataGridDocsExample exampleId='column-helper-registered' />
 
-See [Custom Cell Types](/docs/data-grid/cells/custom-cell-types) for the full renderer contract (`view` / `editing` / `creating` / `filter`).
+See [Custom Cell Types](/docs/data-grid/columns/custom-cell-types) for the full renderer contract (`view` / `editing` / `creating` / `filter`).
 
 ## Options
 

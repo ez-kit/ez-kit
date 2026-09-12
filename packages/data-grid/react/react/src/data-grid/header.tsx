@@ -123,6 +123,7 @@ export function Header<TRow extends object = any>({ sticky, children }: DataGrid
 	useDataGridState((s) => s.sorting)
 	useDataGridState((s) => s.columnFilters)
 	useDataGridState((s) => s.columnVisibility)
+	useDataGridState((s) => s.columnOrder)
 	useDataGridState((s) => s.columnPinning)
 	useDataGridState((s) => s.columnSizing)
 	useDataGridState((s) => s.columnSizingInfo)

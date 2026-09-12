@@ -1,8 +1,13 @@
+'use client'
+
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import { PlaceholderIcon, StatePlaceholder } from './StatePlaceholder'
 
 import type { NoResultsStateProps } from '@ez-kit/data-grid-react'
 
 export function NoResultsState(_props: NoResultsStateProps) {
+	const messages = useGridMessages()
 	return (
 		<StatePlaceholder
 			hookClass='dg-no-results-state'
@@ -17,7 +22,7 @@ export function NoResultsState(_props: NoResultsStateProps) {
 					<path d='M8 11h6' />
 				</PlaceholderIcon>
 			}
-			title='No results'
+			title={messages.fallbacks.noResults}
 			hint='Try adjusting your filters.'
 		/>
 	)

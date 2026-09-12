@@ -1,5 +1,7 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
+
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 import { Switch } from '@grid-shadcn/components/ui/switch'
@@ -43,6 +45,7 @@ function BooleanCellInput({ id, value, onChange, onBlur, label, description, err
  * Yes/No apply a strict boolean predicate.
  */
 function BooleanFilterInput({ id, value, onChange, onBlur, label, description, errors }: FieldState) {
+	const messages = useGridMessages()
 	const hasError = errors.length > 0
 	const selectValue = value === true ? TRUE_KEY : value === false ? FALSE_KEY : ALL_SENTINEL
 	return (
@@ -61,12 +64,12 @@ function BooleanFilterInput({ id, value, onChange, onBlur, label, description, e
 					onBlur={onBlur}
 					aria-invalid={hasError || undefined}
 				>
-					<SelectValue placeholder='All' />
+					<SelectValue placeholder={messages.cells.all} />
 				</SelectTrigger>
 				<SelectContent>
-					<SelectItem value={ALL_SENTINEL}>All</SelectItem>
-					<SelectItem value={TRUE_KEY}>Yes</SelectItem>
-					<SelectItem value={FALSE_KEY}>No</SelectItem>
+					<SelectItem value={ALL_SENTINEL}>{messages.cells.all}</SelectItem>
+					<SelectItem value={TRUE_KEY}>{messages.cells.yes}</SelectItem>
+					<SelectItem value={FALSE_KEY}>{messages.cells.no}</SelectItem>
 				</SelectContent>
 			</Select>
 			{description !== undefined && <FieldDescription>{description}</FieldDescription>}

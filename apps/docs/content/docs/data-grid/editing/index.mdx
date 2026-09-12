@@ -3,8 +3,6 @@ title: Editing
 description: Row, modal and cell editing — one handler, typed values, validation before commit.
 ---
 
-# Editing
-
 Editing is one option and one handler. `editing.onSave` receives the row id and the edited
 values; supply it and the grid mounts the edit affordance, the form inputs and the commit
 pipeline.
@@ -28,24 +26,75 @@ pipeline.
 
 The feature is enabled by its **handler**, not by its presence: a config without `onSave`
 resolves away rather than mounting an Edit button whose commit would call `undefined`. That is
-what lets a [defaults layer](./data-grid/default-options) describe how editing should _look_ for
+what lets a [defaults layer](/docs/data-grid/state/defaults) describe how editing should _look_ for
 a whole app while only the grids that supply `onSave` actually get it.
 
 ## Modes
 
 `mode` is what editing _does_, not how it looks.
 
-| `mode`    | Behaviour                                                                                                        |
-| --------- | ---------------------------------------------------------------------------------------------------------------- |
-| `'row'`   | The default. The row turns into inputs in place; the actions cell offers Save / Cancel.                          |
-| `'modal'` | A dialog collects the whole row. `<DataGrid.EditingModal />` is mounted for you when this mode is on.            |
-| `'cell'`  | One cell at a time. `table.editing.startCell(rowId, columnId)` opens it, `commitCell()` commits just that field. |
+| `mode`    | Behaviour                                                                                             |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| `'row'`   | The default. The row turns into inputs in place; the actions cell offers Save / Cancel.               |
+| `'modal'` | A dialog collects the whole row. `<DataGrid.EditingModal />` is mounted for you when this mode is on. |
+| `'cell'`  | One cell at a time. Double-click a cell to open it; Enter or leaving it commits, Escape cancels.      |
+
+### Row
+
+The row you picked turns into inputs in place, and the actions cell swaps Edit for Save / Cancel.
+
+<DataGridDocsExample exampleId='editing-mode-row' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'row', onSave }}
+/>
+```
+
+### Modal
+
+The same form, collected in a dialog instead of in the row. `<DataGrid.EditingModal />` is mounted
+for you — nothing to place by hand.
+
+<DataGridDocsExample exampleId='editing-mode-modal' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'modal', onSave }}
+/>
+```
+
+### Cell
+
+One field at a time: double-click a cell to open it. Columns marked `editing: false` stay
+read-only here too. `table.editing.startCell(rowId, columnId)` opens a cell programmatically.
+
+The opened cell takes the focus. **Enter** commits that one field, **Escape** abandons it, and
+clicking or tabbing anywhere outside the cell commits too — a control _inside_ it, a switch or a
+select's popover, does not. Which is why this mode adds no Edit pencil and no Save / Cancel pair to
+the [row actions](/docs/data-grid/row-actions) column — the pencil starts the _row_ flow, which
+opens nothing here, and there is no row-wide form left to save. With nothing else switched on, the
+actions column does not appear at all.
+
+<DataGridDocsExample exampleId='editing-mode-cell' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	editing={{ mode: 'cell', onSave }}
+/>
+```
 
 ## Which inputs a row gets
 
 From the columns, not from a second list. A column's `cell.type` decides the input its field
 renders — a `date` column gets the kit's date picker, a `select` column its select. See
-[Cell types](./data-grid/cells/cell-types).
+[Cell types](/docs/data-grid/columns/cell-types).
 
 Per column, the edit form is tuned under `editing`:
 
@@ -80,7 +129,7 @@ const columns = createColumns<User>([
 | ------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | `onSave`      | `({ rowId, values, signal }) => void \| Promise<void>` | Required. Commit the edit. `signal` aborts when the user cancels or the table unmounts.               |
 | `mode`        | `'row' \| 'modal' \| 'cell'`                           | What editing does. Default `'row'`.                                                                   |
-| `validate`    | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](./data-grid/editing/validation).                |
+| `validate`    | `ValidateConfig`                                       | A function, or `{ schema }` for zod. See [Validation](/docs/data-grid/editing/validation).            |
 | `validateOn`  | `'submit' \| 'blur' \| 'change'`                       | When a field validates. Default `'submit'`. A column overrides it under its own `editing.validateOn`. |
 | `debounce`    | `number`                                               | Debounce for `validateOn: 'change'`. Default `200`.                                                   |
 | `enabled`     | `boolean`                                              | Explicit off-switch for a config that came from a defaults layer.                                     |
@@ -101,10 +150,10 @@ table.editing.getState() // { rowId, cellId, values, errors, formError, commitSt
 
 ## See also
 
-- [Validation](./data-grid/editing/validation) — schemas, async checks, server errors
-- [Creating](./data-grid/editing/creating) — the new-row workflow
-- [Delete confirmation](./data-grid/editing/delete-confirmation) — the third write
-- [CRUD (server)](./data-grid/editing/crud-server) · [CRUD (client)](./data-grid/editing/crud-client)
+- [Validation](/docs/data-grid/editing/validation) — schemas, async checks, server errors
+- [Creating](/docs/data-grid/editing/creating) — the new-row workflow
+- [Delete confirmation](/docs/data-grid/editing/deleting) — the third write
+- [CRUD (server)](/docs/data-grid/editing/crud-server) · [CRUD (client)](/docs/data-grid/editing/crud-client)
 
 ## Source
 

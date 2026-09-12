@@ -3,8 +3,6 @@ title: Validation
 description: Standard-schema validators passed straight through to TanStack Form — no resolver, no adapter.
 ---
 
-# Validation
-
 There is **no resolver here**. `@ez-kit/form` does not wrap or rewrite your validators — it passes them through untouched, then renders whatever errors come back through the kit's error component.
 
 That means everything in the [TanStack Form validation guide](https://tanstack.com/form/latest/docs/framework/react/guides/validation) applies verbatim. What the package adds sits beside that rather than in front of it: the [`validate` prop](#per-field-validators) on a field, and the constraints a [document](#named-rules-validation-without-javascript) declares — two spellings of one small constraint vocabulary, both compiled into ordinary TanStack validators.

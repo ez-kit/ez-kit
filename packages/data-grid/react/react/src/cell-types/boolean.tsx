@@ -17,7 +17,10 @@ function BooleanCellInput(props: FieldState<BooleanCellConfig>): ReactNode {
 }
 
 /**
- * Shared `boolean` cell type — provides `edit` and `creating` only.
+ * Shared `boolean` cell type — provides `editing` only.
+ *
+ * A create form resolves `creating ?? editing`, so this one entry serves both; see
+ * {@link textCellType} for why the `creating` slot is deliberately not registered here.
  *
  * View and filter remain UI-kit specific because they involve visual idioms
  * (icons, switch vs check, tri-state filter) that don't fit a single shared
@@ -29,5 +32,4 @@ function BooleanCellInput(props: FieldState<BooleanCellConfig>): ReactNode {
  */
 export const booleanCellType = defineCellType<BooleanCellConfig>()({
 	editing: BooleanCellInput,
-	creating: BooleanCellInput,
 })

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATE_KEYS, PERSISTABLE_STATE_KEYS } from './state-keys'
 
 describe('state-keys', () => {
-	it('PERSISTABLE_STATE_KEYS lists all eleven persistable keys', () => {
+	it('PERSISTABLE_STATE_KEYS lists all twelve persistable keys', () => {
 		expect([...PERSISTABLE_STATE_KEYS]).toEqual([
 			'sorting',
 			'columnFilters',
@@ -11,6 +11,7 @@ describe('state-keys', () => {
 			'pagination',
 			'rowSelection',
 			'columnVisibility',
+			'columnOrder',
 			'columnPinning',
 			'rowPinning',
 			'expanded',
@@ -29,6 +30,7 @@ describe('state-keys', () => {
 			'globalFilter',
 			'pagination',
 			'columnVisibility',
+			'columnOrder',
 			'columnPinning',
 			'rowPinning',
 			'columnSizing',

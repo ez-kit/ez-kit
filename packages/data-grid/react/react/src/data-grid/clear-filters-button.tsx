@@ -58,7 +58,7 @@ export function ClearFiltersButton({
 			}}
 			{...(children !== undefined
 				? { children, ...(ariaLabel !== undefined ? { 'aria-label': ariaLabel } : {}) }
-				: { 'aria-label': ariaLabel ?? 'Clear filters' })}
+				: { 'aria-label': ariaLabel ?? table.grid.messages.filtering.clearAll })}
 		/>
 	)
 }
