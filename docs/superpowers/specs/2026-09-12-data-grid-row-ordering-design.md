@@ -168,9 +168,16 @@ always listed and disabled at the ends, mirroring `buildColumnMenuSections`.
 
 Two new `GridMenuIcon` members, `MoveUp` and `MoveDown`, mapped in both kits.
 
-Two new message keys under `messages.rowActions` — `moveUp`, `moveDown` — plus the
-section label. The wording reaches the builder through the resolved dictionary, never
+Three new message keys under `messages.rowActions` — `moveUp`, `moveDown`, and
+`ordering`. The wording reaches the builder through the resolved dictionary, never
 hardcoded in the builder, so both kits translate at once.
+
+`ordering` is the accessible name of the overflow trigger when the menu holds **only**
+the move entries, and it exists because the actions cell already picks that name from
+what is in the menu: today it reads `customItems.length > 0 ? messages.menu :
+messages.pinning`, which would call an order-only menu "Row pinning". The rule becomes:
+custom entries, or more than one built-in group → `menu`; only the pin group →
+`pinning`; only the order group → `ordering`.
 
 ### The actions column appears by itself
 
@@ -187,9 +194,29 @@ the header already uses: `onHeaderKeyDown` sits on the `Th` and is reached from 
 sortable div's `tabIndex={0}`. No roving tabindex, no focus model, nothing the grid
 does not already do.
 
-The handler reuses the header's two guards: it ignores the event unless `altKey` is
-held, and it bails on an interactive target so that `Option+Arrow` inside a text field
-keeps meaning "move by word".
+The handler keeps the header's first guard — it ignores the event unless `altKey` is
+held — and **narrows the second**. The header bails on any interactive target
+(`isInteractiveTarget`, matching `button, a[href], input, select, textarea, label,
+[role="button"], [role="link"]`) because focus there sits on the sortable div, which
+matches none of them. In a row the opposite is true: focus is always on a button or a
+checkbox, so that guard would refuse every event the feature exists to handle.
+
+The row therefore uses a new guard, `isTextEntryTarget`, which bails only where
+`Alt+Arrow` already means something to the focused control:
+
+```ts
+const TEXT_ENTRY_SELECTOR =
+	'textarea, select, [contenteditable=""], [contenteditable="true"], ' +
+	'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"])'
+```
+
+`Option+Arrow` moves by word in a text field, and `Alt+ArrowDown` opens a native
+`select` — both stay with the control. A checkbox or a button uses neither, so the row
+keeps the event.
+
+Both predicates live in a new `utils/interactive-target.ts`, with `isInteractiveTarget`
+moved there from `header-cell.tsx` unchanged: two callers now, and a private copy in one
+of them is how the two would drift.
 
 The row carries `data-movable="true"` when it can move, matching the header's attribute
 of the same name.
