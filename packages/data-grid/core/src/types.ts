@@ -5,6 +5,7 @@ import type { DraftConfig } from './features/deferred-apply'
 import type { DeletingConfig } from './features/deleting'
 import type { EditingConfig } from './features/editing'
 import type { TableOperatorsConfig } from './features/operators'
+import type { RowMove } from './features/ordering'
 import type { RowActionsConfig } from './features/row-actions'
 import type { SetStateOptions } from './store/store'
 import type { FeatureToggle } from './utils/feature-flag'
@@ -585,17 +586,41 @@ export type ColumnOrderingConfig = FeatureToggle & {
 }
 
 /**
+ * Row reordering: the order the user arranges rows into, one step at a time.
+ *
+ * `onChange` selects the **mode** rather than gating the feature:
+ *
+ * - omitted — uncontrolled. The grid keeps a `rowOrder` of its own, and an adapter renders the
+ *   moved order through `applyRowOrder`.
+ * - supplied — controlled. The grid stores nothing and only reports each move; the application
+ *   reorders its own data, or sends the move to a server.
+ *
+ * Distinct from {@link SortingConfig}, which also orders rows but computes that order from the
+ * data. The two cannot both be in force, so a move is unavailable while a sort is applied.
+ */
+export type RowOrderingConfig = FeatureToggle & {
+	/**
+	 * Called whenever the user moves a row. Its presence switches the feature to controlled.
+	 *
+	 * Receives one {@link RowMove}, not the full order {@link ColumnOrderingConfig} emits: a
+	 * grid always knows every column, but under server-driven pagination it holds one page of
+	 * rows and cannot name the order of the rest.
+	 */
+	onChange?: (move: RowMove) => void
+}
+
+/**
  * Ordering, grouped per axis the way {@link PinningConfig} is — the two are independent
  * features over two state slices, so each carries its own `onChange`.
  *
- * Only `column` exists today. Row ordering, if it lands, will be `row` here, and it can only
- * ever turn on with a handler of its own: the grid does not own the data, so a new row order
- * has to go somewhere. That is the same rule `editing` / `creating` / `deleting` already follow,
- * and it is what keeps a bare `ordering: true` meaning exactly what it means today.
+ * A bare `ordering: true` means **columns only**, and keeps meaning that. An axis turns on by
+ * being named, so upgrading cannot hand an existing grid an affordance nobody asked for.
  */
 export type OrderingConfig = FeatureToggle & {
 	/** Column reordering. `true` = enabled, or {@link ColumnOrderingConfig} for `onChange`. */
 	column?: boolean | ColumnOrderingConfig
+	/** Row reordering. `true` = enabled uncontrolled, or {@link RowOrderingConfig} for `onChange`. */
+	row?: boolean | RowOrderingConfig
 }
 
 export type ColumnPinningConfig = FeatureToggle & {
@@ -786,14 +811,17 @@ export type TableConfig<TRow extends object> = {
 	visibility?: boolean | VisibilityConfig
 	/**
 	 * Reordering, per axis.
-	 * - `true` — every axis this grid supports, which today means columns
+	 * - `true` — columns only, and it keeps meaning exactly that
 	 * - `{ column: true }` — column reordering, spelled out
 	 * - `{ column: { onChange } }` — and report the new order
-	 * - `false` / omitted — columns stay where they were declared
+	 * - `{ row: true }` — row reordering, uncontrolled: the grid keeps the order
+	 * - `{ row: { onChange } }` — row reordering, controlled: the grid reports each move
+	 * - `false` / omitted — nothing moves
 	 *
 	 * Grouped per axis like {@link PinningConfig}, and for the same reason: reordering rows is
 	 * a different feature over a different slice, so it gets its own member and its own
-	 * `onChange` rather than sharing one.
+	 * `onChange` rather than sharing one. An axis turns on only by being named, so a grid
+	 * written against `ordering: true` cannot silently gain row reordering on an upgrade.
 	 */
 	ordering?: boolean | OrderingConfig
 	/**

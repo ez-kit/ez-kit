@@ -19,6 +19,7 @@ import { EditingFeature, EditingMode } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
 import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
+import { RowOrderingFeature } from '../features/ordering'
 import { RowActionsPlacement } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
@@ -245,6 +246,13 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const orderingCfgResolved = featureConfig(config.ordering)
 	const columnOrderingOnChange =
 		typeof orderingCfgResolved?.column === 'object' ? orderingCfgResolved.column.onChange : undefined
+	// The row axis turns on only by being named: a bare `ordering: true` is columns, and keeps
+	// being columns, so an upgrade cannot hand an existing grid an affordance nobody asked for.
+	// Resolved to the config object the feature reads, or `undefined` when the axis is off —
+	// see `TableOptionsResolved.rowOrdering`.
+	const rowOrderingCfg = isFeatureEnabled(orderingCfgResolved?.row)
+		? (featureConfig(orderingCfgResolved?.row) ?? {})
+		: undefined
 	const pinningCfgResolved = featureConfig(config.pinning)
 	const columnPinningOnChange =
 		typeof pinningCfgResolved?.column === 'object' ? pinningCfgResolved.column.onChange : undefined
@@ -515,6 +523,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			DeletingFeature,
 			LoadingFeature,
 			InfiniteFeature,
+			RowOrderingFeature,
 		],
 		data: config.data,
 		columns: allColumns,
@@ -598,6 +607,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Sorting: named comparator registry, addressable from `column.sorting.fn`
 		...(sortingCfg?.fns ? { sortingFns: sortingCfg.fns } : {}),
 		// Feature configs
+		...(rowOrderingCfg ? { rowOrdering: rowOrderingCfg } : {}),
 		...(creatingCfg ? { creating: creatingCfg } : {}),
 		...(editingCfg ? { editing: editingCfg } : {}),
 		...(deletingCfg ? { deleting: deletingCfg } : {}),

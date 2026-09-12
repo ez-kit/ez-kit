@@ -1,3 +1,5 @@
+import { applyRowOrder } from './apply-row-order'
+
 import type { Row, Table } from '@tanstack/table-core'
 
 /**
@@ -79,9 +81,14 @@ export function canMoveRow<TRow>(table: Table<TRow>, rowId: string, direction: R
  * `ordering.row.onChange`, the uncontrolled path feeds it to {@link applyRowMove}.
  */
 export function moveRow<TRow>(table: Table<TRow>, rowId: string, direction: RowMoveDirection): RowMove | undefined {
-	if (table.getState().sorting.length > 0) return undefined
+	const state = table.getState()
+	if (state.sorting.length > 0) return undefined
 
-	const rows = table.getRowModel().rows
+	// Projected through `rowOrder` rather than read straight off the row model. An adapter
+	// rendering an uncontrolled order feeds `applyRowOrder`'s result back as `data`, which makes
+	// this projection a no-op — but a grid that has not done so yet would otherwise compute
+	// every move from the original positions, so a second step would undo the first.
+	const rows = applyRowOrder(table.getRowModel().rows, state.rowOrder, (row) => row.id)
 	const index = rows.findIndex((row) => row.id === rowId)
 	if (index === -1) return undefined
 
