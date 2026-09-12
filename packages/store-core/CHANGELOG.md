@@ -1,5 +1,69 @@
 # @ez-kit/store-core
 
+## 0.5.0
+
+### Minor Changes
+
+- 3d5b53c: One extension seam, one history vocabulary, matching subpath maps
+
+  **Breaking.** `createContextStore`'s `plugins` option is gone from both binding packages, and
+  `useCapabilities` no longer takes an `extra` list. A capability runs because it is attached to the
+  store instance — by a `with*` wrapper in the factory chain, or by a hand-written
+  `attachCapability(store, plugin)` — so there is no second, factory-level channel to reconcile with
+  the wrappers a store was actually built with. Migration: move `{ plugins: [persist({ fields })] }`
+  into the factory as `pipe(store, withPersist({ fields }))`, or call `attachCapability` there.
+
+  **Breaking (`@ez-kit/va-store`).** The two Valtio-prefixed history types are renamed to the names
+  their `@ez-kit/zu-store` counterparts already use: `ValtioHistoryOptions` → `HistoryOptions`,
+  `ValtioOp` → `HistoryOp`. Both packages now also re-export `HistorySnapshot`, so the live stacks
+  behind `store.history` can be annotated without reaching into `@ez-kit/store-core`.
+
+  **Breaking (`@ez-kit/zu-store`).** `CreateContextStoreOptions` lost its now-unused first type
+  parameter — it is `CreateContextStoreOptions<TState>`, matching `@ez-kit/va-store`.
+
+  **Breaking (`@ez-kit/zu-store`).** The cache's missing-provider error now reads
+  `Missing CacheProvider`, matching `@ez-kit/va-store` — the old `Missing StoreCacheProvider` named a
+  component that does not exist (the provider is `CacheProvider`, or `cache.Provider`). Only code that
+  matched on the message text is affected; the exported `MISSING_CACHE_PROVIDER` constant is unchanged.
+
+  **New (`@ez-kit/zu-store`).** History is available on its own subpath, `@ez-kit/zu-store/history`,
+  mirroring `@ez-kit/va-store/history`; the root export is unchanged.
+
+- ff74e84: Align the two store bindings ahead of 1.0, and give every package one message format.
+
+  `@ez-kit/zu-store` gains the `Store` slot `@ez-kit/va-store` already had — a write-only render prop
+  that hands over the raw store handle without subscribing, on both `createContextStore` and a
+  `createCachedStore` group. `Subscribe` now passes that handle to its children as a second argument
+  in both places, so a render prop that reads _and_ writes needs no hook beside it. Both are additive;
+  existing render props ignore the extra argument.
+
+  Two names are unified across the bindings, so the same concept is spelled the same way in both.
+  `@ez-kit/va-store`'s `Subscribe` render prop now takes its two arguments **positionally** —
+  `{(snap, store) => …}` instead of `{({ snap, store }) => …}` — matching `zu-store`'s
+  `{(state, store) => …}`, on both `createContextStore` and a `createCachedStore` group; the
+  `SubscribeRenderArg` / `CachedSubscribeRenderArg` types that existed only to name that object are
+  gone. And `@ez-kit/zu-store`'s `HistoryState<T>` is renamed **`StoreHistory<T>`**, the name
+  `va-store` already used for the same thing — the public `store.history` surface.
+
+  Every user-facing error and warning across the four packages now starts with its package tag —
+  `[zu-store]`, `[va-store]`, `[store-core]`, `[store-persist]` — with the tag held in one constant per
+  package instead of being spelled out at each call site. Two message texts changed as a result:
+  `zu-store`'s missing-Provider error now names the store, as `va-store`'s already did
+  (`[zu-store] Missing Provider for filters`), and the exported `MISSING_CACHE_PROVIDER` constant reads
+  `[zu-store] Missing <CacheProvider>` / `[va-store] Missing <CacheProvider>`. Match on the tag, not on
+  the sentence — the new **Stability** docs page says so explicitly, alongside which import paths
+  semver covers.
+
+  The `./persist/internals` subpath is **removed** from both bindings. It re-exported the engine's own
+  assembly primitives — the pieces a binding is built from — and binding a new state manager is not a
+  supported extension point yet, so it committed us to 22 engine-level names with no documented
+  consumer. Writing a **custom source adapter** is unaffected and stays fully public: implement
+  `SourcePort` and ship it as an `AmbientAdapter` or `RenderScopedAdapter`, with every type for it on
+  the binding's `persist` entry.
+
+  Also: `keywords`, `bugs` and `engines` on all four published packages, and an enforced 80% coverage
+  floor via a new `test:coverage` script.
+
 ## 0.4.0
 
 ### Minor Changes
