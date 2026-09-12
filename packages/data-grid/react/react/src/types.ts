@@ -274,6 +274,8 @@ export const RowActionId = {
 	PinTop: 'pin-top',
 	PinBottom: 'pin-bottom',
 	Unpin: 'unpin',
+	MoveUp: 'move-up',
+	MoveDown: 'move-down',
 } as const
 
 export type RowActionId = (typeof RowActionId)[keyof typeof RowActionId]
