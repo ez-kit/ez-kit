@@ -1,5 +1,201 @@
 # @ez-kit/data-grid-core
 
+## 0.3.0
+
+### Minor Changes
+
+- 71a834f: Rename an action entry's `onSelect` to `onAction`, and let an entry bring its own markup.
+
+  `rowActions.actions` / `selection.bar.actions` entries (and the `GridMenuItem` model kits render) now carry `onAction`. The same entry is a button in the selection bar and a menu entry under row actions, where it is chosen with Enter, Space or typeahead and no click happens — and React already gives `onSelect` to the DOM text-selection event, which is why both kits' menus call the one they mean `onAction`.
+
+  `ActionItem` also gained a second form: `{ id, component }` hands the entry over whole. The described form stays the one to reach for — it is what buys the kit's glyph, danger colour, disabled state and menu semantics — but an entry that shape cannot express (a picker, a split button, a counter) is no longer forced out into the bar's `start` / `end` slots. In the selection bar `component` replaces the entry's button; in a row-actions menu, which is a collection, it fills a menu entry the kit still wraps so keyboard navigation keeps working.
+
+- 71a834f: `select` and `badge` items take an `icon` — any element the kit draws before the label
+  (`{ value: 'done', label: 'Done', icon: <CircleCheck /> }`). It is the consumer's own element, not a
+  name from a set the grid owns, so the glyph comes from whatever icon library the application
+  already uses; core types it as `unknown` because core renders nothing and must not name a
+  framework's node type.
+
+  The same items feed the column's filter list, so one item states the icon once and the cell, the
+  select and the faceted filter all draw it. Status/priority columns of the kind every issue tracker
+  has no longer need a custom `cell.component`.
+
+- 71a834f: fix(data-grid): stop `editing.mode: 'cell'` from drawing a row-edit affordance
+
+  The row actions column offered its Edit pencil in cell mode, where it called the row flow and
+  opened no cell at all — the only visible effect was the column swapping itself for a Save /
+  Cancel pair that committed a form nobody filled in. Cell mode now adds neither: with nothing
+  else switched on, the actions column no longer appears.
+
+  The keyboard replaces them, since a cell edit has no buttons of its own: the opened cell takes the
+  focus, **Enter** commits it and **Escape** abandons it. Previously blur was the only way out, and
+  blur commits, so a mis-typed value could not be abandoned at all.
+
+  Leaving the cell is now what commits, and it is read from the pointer and from focus landing
+  elsewhere rather than from the input's `blur`. React-aria's grid moves focus from the input to the
+  cell on pointer-down, so a blur fired _inside_ the cell before a press completed: a boolean column's
+  switch committed and closed without ever toggling.
+
+- 71a834f: Column reordering: `ordering`.
+
+  ```tsx
+  <DataGrid
+  	data={data}
+  	columns={columns}
+  	ordering
+  />
+  ```
+
+  Grouped per axis like `pinning`, because reordering rows is a different feature over a different
+  slice: `ordering.column` is the one that exists today, and `ordering: true` means "every axis this
+  grid supports". A row axis could only ever arrive with a handler of its own — the grid does not own
+  the data — so a grid written today cannot silently gain row dragging in a later minor.
+
+  The header menu grows a _Move left_ / _Move right_ pair, always listed and disabled at the ends so
+  the menu does not rearrange itself under the pointer, and `Alt+ArrowLeft` / `Alt+ArrowRight` move
+  the focused column without reopening it (shadcn kit for now — HeroUI's React Aria collection
+  replaces the handler the grid puts on the column header).
+
+  A step swaps the column with its **visible** neighbour, so a hidden column keeps its place and
+  comes back to it. Moves stay inside the pin band and inside the header group: crossing a band would
+  read as a pin, and leaving a group would split its parent header. System columns and
+  `ordering: false` columns do not move and cannot be stepped over. `onChange` reports the complete
+  order — a partial `columnOrder` reads to TanStack as "these first, then the rest as declared".
+
+  `columnOrder` joins the persisted view state, beside `columnVisibility` and `columnPinning`.
+
+  Also fixed, and the reason the feature is worth having at all: the header, the body and the table
+  shell never subscribed to `columnOrder`, so a programmatic `setColumnOrder` changed the state and
+  repainted nothing.
+
+- 71a834f: fix(data-grid): give an inline creating row somewhere to put its save / cancel
+
+  Those two buttons render in the `__actions__` column, which was mounted only for `editing`,
+  `deleting`, row `pinning` or custom row actions. A grid whose only row-level feature was `creating`
+  therefore opened a draft row that could never be committed — the flow worked solely alongside a
+  second feature that happened to bring the column with it.
+
+  Where the pair goes now depends on whether that column exists for its own reasons:
+  - It does (`editing` / `deleting` / row `pinning` / `rowActions.actions`) — the pair renders there,
+    as before, and the column reserves the same width an inline editing row does.
+  - `creating.mode: 'pin-row'` — the column is mounted for it. The pinned draft row is permanent, so
+    the cell always holds its save button.
+  - `creating.mode: 'row'` alone — **no** column. It would stand empty until someone pressed the
+    create trigger, and mounting it on open would take its fixed width off the `1fr` tracks, jumping
+    every column on each open and again on each close. The toolbar's create trigger becomes the
+    Save / Cancel pair instead, which reflows nothing and sits right above the draft row.
+
+  `creating.mode: 'modal'` keeps its own dialog footer and mounts no column, as before — and its
+  create trigger stays a trigger, since swapping it would show a second Cancel / Save pair behind the
+  open dialog.
+
+  The draft row now also answers to **Enter** (commit) and **Escape** (abandon), the pair a cell edit
+  already took — so the buttons are never the only way to finish the row. A pinned draft row ignores
+  Escape: it has no closed state to return to.
+
+- 71a834f: Every user-facing string the grid renders now comes from one dictionary, and `messages` replaces
+  any part of it.
+
+  Before this there was no point at which a consumer could change a single word: the text was
+  hardcoded across the react package and both kits — visible labels, `placeholder`s, the operator
+  labels, and 23 `aria-label`s. A non-English app shipped a grid whose screen-reader text stayed in
+  another language than its UI, which is the half of the problem nobody sees until it matters.
+
+  ```tsx
+  <DataGrid
+  	data={data}
+  	columns={columns}
+  	messages={{ pagination: { rowsPerPage: 'Строк на странице' } }}
+  />
+  ```
+
+  - `GridMessages` is nested by feature, the way the config is: `messages.pagination.*`,
+    `messages.filtering.*`, `messages.operators.date.*`. `defaultMessages` is the English default and
+    the only place a string is written.
+  - Overrides merge **per entry**, through the three existing option layers — set a locale once on
+    `DataGridOptionsProvider`, override one string on a single grid.
+  - Entries whose text depends on the render take a typed context and return a string
+    (`filtering.placeholder({ columnId })`, `selection.count({ count })`, `draft.sorts({ count })`),
+    so a plural rule is `Intl.PluralRules` in your own function rather than something the grid
+    guesses.
+  - Both kits read the dictionary through the new `useGridMessages()`, which falls back to
+    `defaultMessages` outside a `<DataGrid>` rather than throwing.
+  - An ESLint rule fails the build on any new user-facing literal in the react package or either
+    kit's `blocks/`, so the dictionary cannot quietly go stale.
+
+  Ships **English only** — no bundled locales while the key set is still settling.
+
+  **Breaking:**
+  - `buildPaginationLabel(label, model)` and `buildColumnMenuSections(header, capabilities)` take the
+    relevant dictionary group as a final argument: `buildPaginationLabel(label, model, messages.pagination)`,
+    `buildColumnMenuSections(header, capabilities, messages.columnMenu)`. Both are exported for kits
+    that re-render the label or the menu themselves.
+  - `DATA_GRID_DEFAULTS.globalFiltering.placeholder` is gone — the default lives at
+    `messages.globalFiltering.placeholder`, where it can be replaced. The `globalFiltering.placeholder`
+    option is unchanged.
+
+- 71a834f: Fix the kit-bound `createColumns` / `createColumnHelper` type-checking nothing through the
+  published `.d.ts`. Imported from a built kit, `cell: { type: 'nope' }`, a `select` column with no
+  `config`, and a typo inside a known config all compiled and ran — surfacing as a blank cell — and
+  `cell.component`'s parameter came back as an implicit `any`, so the form the docs teach did not
+  compile under `strict`. The same code checked correctly against the kits' sources, which is why
+  several audits missed it.
+
+  Each kit now **declares** its `KitCellTypes` (the ids it registers and the config each declares)
+  instead of deriving it from `typeof cellTypes`: a declared type survives the declaration emitter as
+  a name, while the runtime registry — nine entries of real component types — is re-printed
+  structurally, and over that blob the column types degenerate to an error type. A bidirectional
+  compile-time proof in each kit keeps the declaration matching the registry it describes. The kits'
+  `extendDataGrid` is annotated for the same reason, so the merged registry keeps checking too.
+
+  **Breaking (types only):** `KitCellTypes` is now the cell-type contract rather than the type of the
+  runtime `cellTypes` object — it no longer carries the renderer slots. Read those from `cellTypes`
+  or `CellTypeRegistry` instead. Columns that only compiled because of the defect now report the
+  error they always should have.
+
+  `@ez-kit/data-grid-core` gains `CellTypeContractOf`, the projection those proofs are written with.
+
+- 71a834f: Replace `rowActions.variant` with `rowActions.placement`, and let a custom row action be an inline button.
+
+  One word at two levels instead of two words for one question. `rowActions.placement: 'inline' | 'menu'` is what `variant` was — where the built-in edit / delete pair lives — and an entry of `rowActions.actions` now carries the same `placement` for itself. `placement` names the container a control sits in, which is what this option always meant and what `filtering.panel.placement` and `pagination.pageSizer.placement` already say.
+
+  Custom entries were menu-only, so `variant: 'inline'` governed the built-ins and quietly did nothing for the actions an application contributed — the same `ActionItem` that is a button in the selection bar could never be one in a row. An entry that should sit beside Edit and Delete now asks for it with `placement: 'inline'`, which makes its `icon` required at the type level (an icon button with no icon is a blank square) and is never implicit: an entry defaults to the menu whatever the column's placement is.
+
+  The grid stops auto-sizing the actions column once entries are promoted this way, and says so: `actions` is a function of the row, so how many buttons a row renders is unknown when the column is built. Set `rowActions.column.width`; in development the cell reports the width it needs. An inline `{ id, component }` entry declares its own `width`, defaulting to one button and warning.
+
+  An entry's `icon` is now the consumer's own element only — the built-in `GridMenuIcon` names (`'edit'`, `'delete'`, `'pin-top'`, …) are no longer accepted there. That vocabulary is semantic and each kit maps a name to the glyph it draws for _that grid affordance_, so lending `'delete'` to an application's Archive handed it the icon the kit means by the grid's own Delete.
+
+  Entries also take `className`, applied to whatever the kit draws for them — the menu entry, the bar button, or the inline button.
+
+- 71a834f: data-grid: `selection.bar.actions` now takes the same action entries `rowActions.actions` does
+
+  **Breaking.** The selection bar's `actions` was `ReactElement | ((args) => ReactElement)` — finished
+  markup — while the per-row `rowActions.actions` was `(ctx) => RowActionItem[]` — data the kit
+  renders. Offering the same action in both places meant rewriting a description as a hand-drawn
+  button that never matched the kit's own Delete beside it.
+  - `selection.bar.actions` is now `(args) => ActionItem[]`. An entry's `icon`, `destructive` and
+    `disabled` are rendered by the kit, so an action written once looks right in the row menu and in
+    the bar.
+  - Core's `RowActionItem` is renamed `ActionItem` — it is contributed from two places now, and only
+    one of them is a row. `rowActions.actions` is otherwise unchanged.
+  - Arbitrary markup that is not an action moves to the new `start` / `end` slots of
+    `<DataGrid.SelectionBar>`, mirroring `<DataGrid.Toolbar>`: the config carries data, the compound
+    component carries markup. `children` still replaces the bar wholesale.
+  - Kit `SelectionBarProps` gains `actions: GridMenuItem[]` (was `ReactElement`) plus `start` / `end`.
+
+  Migration: `actions: <button onClick={onExport}>Export</button>` becomes
+  `actions: ({ selectedRows }) => [{ id: 'export', label: 'Export', onSelect: () => onExport(selectedRows) }]`.
+
+- 71a834f: `filtering.operators` is now the table-wide switch for operator selectors, not only the custom-operator registry.
+  - `filtering: { operators: true }` gives every filterable column the default operators for its `cell.type`.
+  - `filtering: { operators: false }` gives none of them one, overriding any column that asks.
+  - `filtering: { operators: { items } }` registers custom operators (addressable by id from a column's `filtering.operators.items`) **and** switches selectors on, the way the bare `true` does — so adding a custom operator to a working `operators: true` cannot silently take the selectors away.
+  - Omitting the option keeps the previous behaviour: the decision stays per column.
+
+  A column overrides the table in both directions — `filtering: { operators: false }` opts one column out of a table-wide `true`, `filtering: { operators: { items } }` narrows what it offers. Group headers and columns with `filtering: false` never inherit.
+
+  **Breaking:** the table-level option changed shape from `FilterOperatorDef[]` to `boolean | TableOperatorsConfig`. Move a custom-operator array into `items`: `filtering: { operators: [myOp] }` → `filtering: { operators: { items: [myOp] } }`. Note the object form now also enables selectors on every column that has not opted out.
+
 ## 0.2.0
 
 ### Minor Changes

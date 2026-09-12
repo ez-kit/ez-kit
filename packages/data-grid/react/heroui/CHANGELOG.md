@@ -1,5 +1,444 @@
 # @ez-kit/data-grid-heroui
 
+## 0.3.0
+
+### Minor Changes
+
+- 71a834f: Rename an action entry's `onSelect` to `onAction`, and let an entry bring its own markup.
+
+  `rowActions.actions` / `selection.bar.actions` entries (and the `GridMenuItem` model kits render) now carry `onAction`. The same entry is a button in the selection bar and a menu entry under row actions, where it is chosen with Enter, Space or typeahead and no click happens — and React already gives `onSelect` to the DOM text-selection event, which is why both kits' menus call the one they mean `onAction`.
+
+  `ActionItem` also gained a second form: `{ id, component }` hands the entry over whole. The described form stays the one to reach for — it is what buys the kit's glyph, danger colour, disabled state and menu semantics — but an entry that shape cannot express (a picker, a split button, a counter) is no longer forced out into the bar's `start` / `end` slots. In the selection bar `component` replaces the entry's button; in a row-actions menu, which is a collection, it fills a menu entry the kit still wraps so keyboard navigation keeps working.
+
+- 71a834f: `select` and `badge` items take an `icon` — any element the kit draws before the label
+  (`{ value: 'done', label: 'Done', icon: <CircleCheck /> }`). It is the consumer's own element, not a
+  name from a set the grid owns, so the glyph comes from whatever icon library the application
+  already uses; core types it as `unknown` because core renders nothing and must not name a
+  framework's node type.
+
+  The same items feed the column's filter list, so one item states the icon once and the cell, the
+  select and the faceted filter all draw it. Status/priority columns of the kind every issue tracker
+  has no longer need a custom `cell.component`.
+
+- 71a834f: Column reordering: `ordering`.
+
+  ```tsx
+  <DataGrid
+  	data={data}
+  	columns={columns}
+  	ordering
+  />
+  ```
+
+  Grouped per axis like `pinning`, because reordering rows is a different feature over a different
+  slice: `ordering.column` is the one that exists today, and `ordering: true` means "every axis this
+  grid supports". A row axis could only ever arrive with a handler of its own — the grid does not own
+  the data — so a grid written today cannot silently gain row dragging in a later minor.
+
+  The header menu grows a _Move left_ / _Move right_ pair, always listed and disabled at the ends so
+  the menu does not rearrange itself under the pointer, and `Alt+ArrowLeft` / `Alt+ArrowRight` move
+  the focused column without reopening it (shadcn kit for now — HeroUI's React Aria collection
+  replaces the handler the grid puts on the column header).
+
+  A step swaps the column with its **visible** neighbour, so a hidden column keeps its place and
+  comes back to it. Moves stay inside the pin band and inside the header group: crossing a band would
+  read as a pin, and leaving a group would split its parent header. System columns and
+  `ordering: false` columns do not move and cannot be stepped over. `onChange` reports the complete
+  order — a partial `columnOrder` reads to TanStack as "these first, then the rest as declared".
+
+  `columnOrder` joins the persisted view state, beside `columnVisibility` and `columnPinning`.
+
+  Also fixed, and the reason the feature is worth having at all: the header, the body and the table
+  shell never subscribed to `columnOrder`, so a programmatic `setColumnOrder` changed the state and
+  repainted nothing.
+
+- 71a834f: Place the filter panel, and place one column's filter anywhere.
+
+  `filtering.panel` takes `'above'` (the default — its own strip between the toolbar and the table) or
+  `'toolbar'`, which mounts the panel's chips in the toolbar's leading slot: the faceted-toolbar
+  layout, from config alone. The scalar is the placement, as with `filtering.chips`.
+
+  `<DataGrid.ColumnFilter columnId='status' />` renders a single column's chip — the same control,
+  operator select and popover the panel builds — wherever a layout wants it, with a render-prop over
+  the same per-column shape. Until now the only way to reach one column's control was to take
+  `<FilterPanel>`'s whole column list and filter it down to one.
+
+- 71a834f: Every user-facing string the grid renders now comes from one dictionary, and `messages` replaces
+  any part of it.
+
+  Before this there was no point at which a consumer could change a single word: the text was
+  hardcoded across the react package and both kits — visible labels, `placeholder`s, the operator
+  labels, and 23 `aria-label`s. A non-English app shipped a grid whose screen-reader text stayed in
+  another language than its UI, which is the half of the problem nobody sees until it matters.
+
+  ```tsx
+  <DataGrid
+  	data={data}
+  	columns={columns}
+  	messages={{ pagination: { rowsPerPage: 'Строк на странице' } }}
+  />
+  ```
+
+  - `GridMessages` is nested by feature, the way the config is: `messages.pagination.*`,
+    `messages.filtering.*`, `messages.operators.date.*`. `defaultMessages` is the English default and
+    the only place a string is written.
+  - Overrides merge **per entry**, through the three existing option layers — set a locale once on
+    `DataGridOptionsProvider`, override one string on a single grid.
+  - Entries whose text depends on the render take a typed context and return a string
+    (`filtering.placeholder({ columnId })`, `selection.count({ count })`, `draft.sorts({ count })`),
+    so a plural rule is `Intl.PluralRules` in your own function rather than something the grid
+    guesses.
+  - Both kits read the dictionary through the new `useGridMessages()`, which falls back to
+    `defaultMessages` outside a `<DataGrid>` rather than throwing.
+  - An ESLint rule fails the build on any new user-facing literal in the react package or either
+    kit's `blocks/`, so the dictionary cannot quietly go stale.
+
+  Ships **English only** — no bundled locales while the key set is still settling.
+
+  **Breaking:**
+  - `buildPaginationLabel(label, model)` and `buildColumnMenuSections(header, capabilities)` take the
+    relevant dictionary group as a final argument: `buildPaginationLabel(label, model, messages.pagination)`,
+    `buildColumnMenuSections(header, capabilities, messages.columnMenu)`. Both are exported for kits
+    that re-render the label or the menu themselves.
+  - `DATA_GRID_DEFAULTS.globalFiltering.placeholder` is gone — the default lives at
+    `messages.globalFiltering.placeholder`, where it can be replaced. The `globalFiltering.placeholder`
+    option is unchanged.
+
+- 71a834f: Declare `@heroui/react` and `@heroui/styles` as **peer** dependencies instead of bundling them.
+
+  HeroUI v3 is built on React Aria, whose components talk to each other through React context, and
+  this kit's `styles.css` `@import`s `@heroui/styles`. As direct dependencies, a consumer who already
+  had HeroUI could end up with a second, differently versioned copy — a second set of contexts, and
+  HeroUI's whole stylesheet emitted twice. `@ez-kit/form-heroui` already declared them as peers; this
+  brings the data-grid kit in line.
+
+  **Breaking (install only):** install HeroUI alongside the kit —
+  `pnpm add @ez-kit/data-grid-heroui @heroui/react @heroui/styles`. pnpm and npm resolve peers
+  automatically, so most consumers need no change.
+
+- 71a834f: data-grid-heroui: the toolbar keeps its slot name, and `data-has-value` is spelled once
+
+  **`data-slot="toolbar"` reaches the DOM.** The React layer passes the attribute to whatever
+  `Toolbar` a kit supplies; this kit's destructured `children` / `start` / `end` and dropped the
+  rest, so the toolbar region simply had no name in heroui — `[data-slot="toolbar"]` matched
+  nothing, and `filtering: { panel: 'toolbar' }` could not be told apart from the default
+  placement by anything but the eye. Same omission `Tr` had with `data-row-id`, same fix: spread
+  the remaining props. `role="toolbar"` stays.
+
+  **`data-has-value` on a filter-panel chip is present or absent, never `"false"`.** The chip
+  wrote `hasValue ? 'true' : 'false'` where the shadcn one writes `hasValue || undefined`, so one
+  flag had two spellings and every selector over it had to know which kit it was looking at. It
+  now matches shadcn. A stylesheet or test keyed on `[data-has-value="false"]` must switch to
+  `:not([data-has-value])`.
+
+  Both were found by the new browser specs for filtering, which assert the layer's `data-*`
+  contract against a real layout rather than against jsdom.
+
+- 71a834f: Fix the kit-bound `createColumns` / `createColumnHelper` type-checking nothing through the
+  published `.d.ts`. Imported from a built kit, `cell: { type: 'nope' }`, a `select` column with no
+  `config`, and a typo inside a known config all compiled and ran — surfacing as a blank cell — and
+  `cell.component`'s parameter came back as an implicit `any`, so the form the docs teach did not
+  compile under `strict`. The same code checked correctly against the kits' sources, which is why
+  several audits missed it.
+
+  Each kit now **declares** its `KitCellTypes` (the ids it registers and the config each declares)
+  instead of deriving it from `typeof cellTypes`: a declared type survives the declaration emitter as
+  a name, while the runtime registry — nine entries of real component types — is re-printed
+  structurally, and over that blob the column types degenerate to an error type. A bidirectional
+  compile-time proof in each kit keeps the declaration matching the registry it describes. The kits'
+  `extendDataGrid` is annotated for the same reason, so the merged registry keeps checking too.
+
+  **Breaking (types only):** `KitCellTypes` is now the cell-type contract rather than the type of the
+  runtime `cellTypes` object — it no longer carries the renderer slots. Read those from `cellTypes`
+  or `CellTypeRegistry` instead. Columns that only compiled because of the defect now report the
+  error they always should have.
+
+  `@ez-kit/data-grid-core` gains `CellTypeContractOf`, the projection those proofs are written with.
+
+- 71a834f: **Breaking.** Split the pagination footer's presentation into the three axes it always had.
+  `pagination.variant` is gone, and with it the exported `PaginationVariant`. It conflated two
+  independent decisions — which controls render and what the label says — into one three-value
+  enum whose members named neither: `numbered` meant page links, `compact` meant edge jumps (the
+  _most_ controls, under a name promising the fewest), and `simple` meant nothing at all. The
+  fourth combination, page links **with** edge jumps, was unreachable, and the label form could
+  not be chosen at all: it was derived from the variant.
+
+  The footer is now configured by what it actually renders:
+
+  | was                   | now                                            |
+  | --------------------- | ---------------------------------------------- |
+  | `variant: 'numbered'` | the default — nothing to write                 |
+  | `variant: 'simple'`   | `{ links: false }`                             |
+  | `variant: 'compact'`  | `{ links: false, edges: true, label: 'page' }` |
+  - `pagination.links` (default `true`) — a link per page beside prev/next, windowed by
+    `siblings` / `boundaries` as before, and still dropped when the page count is unknown.
+  - `pagination.edges` (default `false`) — jump-to-first / jump-to-last buttons.
+  - `pagination.label` now also takes the two built-in forms by name: `'range'` (the default,
+    `1–10 of 50`) and `'page'` (`Page 2 of 5`), beside the `false` and renderer forms it already
+    accepted. `'range'` still falls back to the page counter when the grid cannot be trusted to
+    know the total — that rule is now a property of the label alone, not of a variant.
+
+  `PaginationProps` follows: kits receive `links` / `edges` instead of `variant`, and both mark
+  their footer with `data-links` / `data-edges` rather than `data-variant`. `buildPaginationLabel`
+  takes the form as its first argument (`buildPaginationLabel('range', model)`), and the model it
+  and a `pagination.label` renderer receive — now exported as `PaginationLabelModel`, replacing
+  `PaginationLabelInput` — no longer carries `variant`: a renderer decides its own wording.
+
+  Also in this change, from the work that preceded it: the label is resolved once in
+  `<DataGrid.Pagination>` and handed to kits as `PaginationProps.label`, so a kit deriving its own
+  label can no longer ignore `pagination.label`; both kits lay the footer out the same way (label
+  at the leading edge, page controls at the trailing one), and in heroui the label moved into the
+  `Pagination.Summary` slot meant for it.
+
+- 71a834f: Say where the page-size selector goes: `pagination.pageSizer` replaces `pagination.toolbar`, taking
+  `true` / `'toolbar'` / `'footer'` / `{ placement }`. `'footer'` mounts the control in the pagination
+  row, to the leading edge with the page controls at the trailing one — the layout most shadcn-style
+  tables use. The default is unchanged (`'toolbar'`, mounted as soon as `pagination.items` is set), and
+  so is `false`, which mounts nothing while leaving `items` for a hand-placed `<DataGrid.PageSizer />`.
+
+  The option is named for the control rather than for a container because it now has two homes:
+  `toolbar: true, placement: 'footer'` would be a config contradicting itself. The features whose
+  control can only live in the toolbar keep the `toolbar` flag. The resolved option follows suit —
+  `grid.pagination.pageSizer` is `{ placement } | undefined` instead of a boolean.
+
+- 71a834f: Replace `rowActions.variant` with `rowActions.placement`, and let a custom row action be an inline button.
+
+  One word at two levels instead of two words for one question. `rowActions.placement: 'inline' | 'menu'` is what `variant` was — where the built-in edit / delete pair lives — and an entry of `rowActions.actions` now carries the same `placement` for itself. `placement` names the container a control sits in, which is what this option always meant and what `filtering.panel.placement` and `pagination.pageSizer.placement` already say.
+
+  Custom entries were menu-only, so `variant: 'inline'` governed the built-ins and quietly did nothing for the actions an application contributed — the same `ActionItem` that is a button in the selection bar could never be one in a row. An entry that should sit beside Edit and Delete now asks for it with `placement: 'inline'`, which makes its `icon` required at the type level (an icon button with no icon is a blank square) and is never implicit: an entry defaults to the menu whatever the column's placement is.
+
+  The grid stops auto-sizing the actions column once entries are promoted this way, and says so: `actions` is a function of the row, so how many buttons a row renders is unknown when the column is built. Set `rowActions.column.width`; in development the cell reports the width it needs. An inline `{ id, component }` entry declares its own `width`, defaulting to one button and warning.
+
+  An entry's `icon` is now the consumer's own element only — the built-in `GridMenuIcon` names (`'edit'`, `'delete'`, `'pin-top'`, …) are no longer accepted there. That vocabulary is semantic and each kit maps a name to the glyph it draws for _that grid affordance_, so lending `'delete'` to an application's Archive handed it the icon the kit means by the grid's own Delete.
+
+  Entries also take `className`, applied to whatever the kit draws for them — the menu entry, the bar button, or the inline button.
+
+- 71a834f: Drop the word "selected" from the floating selection bar — the count now reads as a bare badge (a HeroUI `Chip` in the heroui kit) followed by the separator and the actions, with the full label moved to `aria-label` for screen readers.
+- 71a834f: data-grid: `selection.bar.actions` now takes the same action entries `rowActions.actions` does
+
+  **Breaking.** The selection bar's `actions` was `ReactElement | ((args) => ReactElement)` — finished
+  markup — while the per-row `rowActions.actions` was `(ctx) => RowActionItem[]` — data the kit
+  renders. Offering the same action in both places meant rewriting a description as a hand-drawn
+  button that never matched the kit's own Delete beside it.
+  - `selection.bar.actions` is now `(args) => ActionItem[]`. An entry's `icon`, `destructive` and
+    `disabled` are rendered by the kit, so an action written once looks right in the row menu and in
+    the bar.
+  - Core's `RowActionItem` is renamed `ActionItem` — it is contributed from two places now, and only
+    one of them is a row. `rowActions.actions` is otherwise unchanged.
+  - Arbitrary markup that is not an action moves to the new `start` / `end` slots of
+    `<DataGrid.SelectionBar>`, mirroring `<DataGrid.Toolbar>`: the config carries data, the compound
+    component carries markup. `children` still replaces the bar wholesale.
+  - Kit `SelectionBarProps` gains `actions: GridMenuItem[]` (was `ReactElement`) plus `start` / `end`.
+
+  Migration: `actions: <button onClick={onExport}>Export</button>` becomes
+  `actions: ({ selectedRows }) => [{ id: 'export', label: 'Export', onSelect: () => onExport(selectedRows) }]`.
+
+### Patch Changes
+
+- 71a834f: fix(data-grid): space the fields of a create / edit modal
+
+  The generated form stacked its fields as bare `<div>`s with nothing between them, so a label sat
+  directly under the input above it and, where a column had a `description`, that description read
+  as belonging to the next field. The shared layer now stamps `data-slot="auto-form"` on the form and
+  `data-slot="auto-form-field"` on each field — attributes only, no styling — and both kits stack
+  them with a gap.
+
+- 71a834f: Render `ClearFiltersButton`'s own children as its label. Both kits hardcoded the `FilterX` icon and
+  dropped the `children` the React layer passes them, so `<DataGrid.ClearFiltersButton>Reset</DataGrid.ClearFiltersButton>`
+  rendered an icon-only square instead of "Reset". Children now replace the icon and the button stops
+  being icon-only when they are present; without children nothing changes.
+- 71a834f: fix(data-grid): give a create form the same inputs an edit form gets
+
+  The shared `text`, `number` and `boolean` cell types registered `creating` with the very same
+  component as `editing`. Redundant on its own — a create form already resolves `creating ?? editing`
+  — but a UI kit spreads those base types and overrides only `editing`, so the inherited `creating`
+  kept winning in create mode. The three most common columns therefore rendered the DI primitives in
+  a draft row or create modal while the edit row rendered the kit's own field: on HeroUI a bare
+  `<input>` instead of `TextField`, a plain checkbox instead of the `Switch`. The slot is gone from
+  all three; kits register `editing` and both forms use it.
+
+  The HeroUI kit also stretches an input rendered directly into a cell — the fallback for a column
+  with no `cell.type`, in an editing cell or the creating row. Outside HeroUI's `TextField` an
+  `<input>` keeps its intrinsic ~180px width, which under-fills a wide column and, since cells do
+  not clip, spills over the neighbouring one.
+
+- 71a834f: data-grid: a selected row says so, and the selection bar has one name
+
+  **`data-row-selected="true"` on a selected row.** Nothing marked selection on the `<tr>`, so a
+  selected row was indistinguishable from any other in the DOM — and invisible on screen: the
+  shadcn primitive's `data-[state=selected]:bg-muted` had no attribute to match, so picking a row
+  changed nothing but the checkbox. Both kits' stylesheets now paint `[data-row-selected='true']`,
+  pinned cells included.
+
+  The row derives the flag through `row.getIsSelected()` (a parent counts as selected through its
+  children) behind a boolean selector, so only the row whose selectedness flipped re-renders —
+  the body still does not subscribe to `rowSelection`.
+
+  The name avoids `data-selected` deliberately: React Aria's `Row` writes that attribute itself,
+  as a literal after spreading incoming props, from a selection manager the grid does not drive —
+  so anything passed down is erased in any RAC-based kit, heroui included.
+
+  **`data-slot="selection-bar"` in both kits.** heroui's floating variant delegated to its generic
+  `ActionBar` and came out as `data-slot="action-bar"`, while shadcn — and heroui's own inline
+  variant — emitted `selection-bar`. The floating bar now carries the same name, with
+  `data-state="open"` telling whether it is up (shadcn keeps it mounted and faded; heroui
+  unmounts it). The inner `action-bar-*` parts keep their names.
+
+- 71a834f: Make the expanded sub-content panel reachable in both kits.
+
+  The panel row carried two defects that cancelled each other out of sight:
+  - It rendered `<Tr data-expanded='true'>` without passing `data-slot`, so the kit's own default
+    won (`data-slot="table-row"` / `table-cell"` under shadcn) and the panel became the one row in
+    the body that `[data-slot="tr"]` did not match.
+  - `data-expanded` is a name React Aria reserves on its rows and strips from whatever a kit passes,
+    so under heroui the attribute never reached the DOM at all — and since **both** kits style the
+    panel through `tr[data-expanded]`, the heroui panel has been rendering with none of its own
+    styling: no block layout, no tinted background, no padding.
+
+  The panel now emits `data-slot="tr"` / `data-slot="td"` like every other row and cell in the body,
+  and is marked `data-expanded-row="true"`. Both stylesheets follow. This is the same trap that
+  turned `data-selected` into `data-row-selected`, and the new name follows the creating draft row's
+  `data-creating-row`.
+
+  **Breaking for anyone styling or querying `tr[data-expanded]`** — which, under heroui, was never
+  matching anything.
+
+- 71a834f: data-grid: auto-mount the filter panel under `filtering.variant: 'panel'`
+
+  `variant: 'panel'` was the one variant that did nothing on its own. It takes every
+  filter control out of the header, and the default layout mounted no panel — so a
+  grid that asked for the panel and did not hand-compose its children had no filter
+  UI at all, silently. The other filtering surfaces (the chips strip, the Clear-all
+  button) already auto-mount from their own config; this one now does too, between
+  the toolbar and the table.
+
+  Children remain the escape hatch for placing the panel elsewhere, and
+  `<DataGrid.FilterPanel />` still renders nothing when the grid has no filtered row
+  model or no filterable column.
+
+- 71a834f: Grouped headers (`columns[].columns`) render flat instead of crashing the grid.
+
+  The kit fed every level of the header into React Aria's collection as sibling columns, so a
+  two-group / four-leaf header registered six columns against four cells per row and the collection
+  threw before a row was drawn: `Cell count must match column count. Found 4 cells and 6 columns.`
+
+  There is no shape that fixes it here. React Aria **removed** nested column support before its GA
+  ([#5537](https://github.com/adobe/react-spectrum/pull/5537)), and the request to bring it back
+  ([#5263](https://github.com/adobe/react-spectrum/issues/5263)) has been open since 2023 with no API
+  proposed — a `Column` nested inside a `Column` is not a collection node there, verified in a
+  browser with and without this kit's own components in the way.
+
+  So the group rows are dropped and the leaf row renders alone, with one warning in development
+  naming the limitation. Every leaf column keeps its sorting, filtering, menu and resize handle; only
+  the group row is missing. **The shadcn kit renders grouped headers correctly.**
+
+- 71a834f: Raise the delete confirmation as an `alertdialog` rather than a plain dialog.
+
+  `ConfirmDialog` serves one feature, `deleting`, and what it asks is always destructive and always
+  irreversible — the WAI-ARIA alertdialog pattern, not the dialog one. It was built on HeroUI's
+  `Modal` (`role="dialog"`), so a screen reader read the prompt only once focus landed inside it
+  rather than announcing it, and a stray click on the backdrop dismissed the question as if it had
+  been answered. It now uses HeroUI's `AlertDialog`, which carries `role="alertdialog"` and does not
+  dismiss on an outside click. The shadcn kit has been on Radix's `AlertDialog` all along; this
+  closes the gap between them.
+
+  Escape still cancels. HeroUI defaults `isKeyboardDismissDisabled` to `true` for an alert dialog;
+  that is turned back off here, because Escape is the _safe_ answer to a delete prompt and a
+  confirmation a keyboard user cannot back out of makes refusing harder than confirming.
+
+- 71a834f: Colour destructive menu entries red again in the heroui kit — Delete rendered fully black in both the row-actions and column menus. HeroUI's `variant='danger'` reaches only two things: `.menu-item--danger [data-slot="label"]`, which no bare text node satisfies, and the item indicator. So each `Dropdown.Item` now wraps its wording in HeroUI's `<Label>`, and tints its glyph with the same `--danger` token by hand — which is what HeroUI's own with-icons example does.
+- 71a834f: Divide overflow-menu sections in the heroui kit. `Dropdown.Section` groups its entries but draws no rule — HeroUI's own examples place a `<Separator />` between sections by hand — so the row-actions menu ran the pin entries straight on from Delete, and the column menu ran Hide on from the sort entries. The shadcn kit has separated them all along.
+- 71a834f: heroui: keep `data-row-id` on body rows
+
+  The `Tr` adapter consumed the attribute — it read the value into React Aria's collection `id`
+  and then dropped it — so `[data-row-id]`, documented as part of the react layer's row contract,
+  selected nothing under heroui while working under shadcn. It is now passed through alongside
+  the `id`; React Aria's own `data-key` is unaffected.
+
+- 71a834f: Fix the heroui selection bar clearing the selection out from under the action that was just pressed. `ActionBarItem` dismisses the bar after a press, the way a menu closes behind a chosen entry, and for this bar "dismissed" means `onOpenChange(false)` → clear the selection — so a bulk delete awaiting its confirmation dialog found nothing left to delete and removed no rows. The bar's items now cancel that select event; the × remains the only control that clears the selection.
+- 71a834f: Stop one wide column from stretching every other one. The table box was floored at `max-content`,
+  and a grid's max-content size resolves every `minmax(…, 1fr)` track to the _largest_ track minimum —
+  so a 360px Title column pushed six 110–180px columns to 360px each and ran the table off the
+  viewport. `min-content` is the sum of the track minimums, which is the floor this actually needs
+  for its horizontal scroll.
+- 71a834f: Drop the "Loading more…" caption from the infinite-scroll loader row in both kits — the fetching
+  state is now the kit's spinner alone, matching the wordless refetch overlay. shadcn uses its own
+  `Spinner` component (`components/ui/spinner`) instead of a hand-spun `Loader2`; heroui already
+  used `Spinner` and only loses the text beside it. The label the caption carried survives as the
+  spinner's `aria-label`, so a screen reader still announces the load. The error state and the
+  manual "Load more" button keep their text — neither can be a spinner.
+- 71a834f: Give the loading skeleton the same `data-slot` as every other row.
+
+  `LoadingRow` is drawn by the kit — the shared layer hands it only a `columnCount` — and neither
+  kit stamped the contract onto it, so the kit's own default won (`data-slot="table-row"` /
+  `"table-cell"` under shadcn) and the skeleton became the one row in the body that
+  `[data-slot="tr"]` did not match. A stylesheet or a selector written against the documented
+  attributes skipped the whole loading state.
+
+  Both kits now emit `data-slot="tr"` / `data-slot="td"` and mark the row `data-loading-row="true"`.
+  It still carries no `data-row-id`: like the creating draft row and the expanded panel, it is a row
+  of the table and not a row of the data.
+
+- 71a834f: Render the first/last page buttons under `pagination.variant: 'compact'`. The React layer has always
+  supplied `onFirstPage` / `onLastPage`, but neither kit's `Pagination` destructured them, so the one
+  variant that navigates without page links had no way to reach either end. `numbered` already lists
+  the boundary pages and `simple` deliberately offers only prev/next, so both stay unchanged.
+- 71a834f: data-grid: lay the column grid out in the order the cells are rendered in
+
+  Pinning a second column to one edge left a gap between it and the column already
+  pinned there, with the scrolling body visible through it.
+
+  The row's `grid-template-columns` was built from `table.getVisibleLeafColumns()`,
+  which — despite the name — is `getAllLeafColumns().filter(visible)`: the
+  **declaration** order, with pinning ignored. Every rendered row and header group is
+  `[...left, ...centre, ...right]` instead. The two agree only while the pinned
+  columns sit at the declaration order's own extremes, which is the default (selection
+  first, actions last) and is why this went unnoticed. Pin anything else and the cells
+  land in the wrong tracks, take a neighbour's width, and the sticky offsets — which
+  are computed per pin group, so in visual order — miss by the difference between the
+  two declared widths.
+
+  The new `getVisualLeafColumns(table)` export returns the visual order, and the grid
+  template, the creating row and the HeroUI row-header lookup all read it.
+
+- 71a834f: Render every number field in the kit through one `NumberField` control. HeroUI shows the decrement/increment buttons only when `NumberField.Group` + `DecrementButton`/`IncrementButton` are composed in, so the cell editor — which rendered a bare `Input` — looked like a plain text field; it now has its steppers. The column filter and both ends of a between-filter use the same control without steppers (a filter value is typed, not stepped), so they gain `NumberField`'s parsing and formatting and share the editor's border and background instead of being raw `<input type='number'>`.
+- 71a834f: Give the row-actions cell's icon buttons an accessible name.
+
+  Edit, Delete and the inline editing row's Save / Cancel are icon-only in both kits and carried no
+  label of any kind — a screen reader announced four indistinguishable "button"s at the end of every
+  row, and the destructive one among them was unannounced as such.
+
+  They now take `aria-label` from the grid's message dictionary: `rowActions.edit` / `rowActions.delete`
+  — the same strings the menu placement already renders as visible text — and `form.save` /
+  `form.cancel` for the pair. Nothing visual changes, and a custom inline action was already labelled
+  from its own `item.label`.
+
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+- Updated dependencies [71a834f]
+  - @ez-kit/data-grid-react@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
