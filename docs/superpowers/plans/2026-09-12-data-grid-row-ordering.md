@@ -27,6 +27,28 @@
 
 ### Task 0: Probe whether HeroUI swallows `Alt+Arrow` on a row
 
+**Probe result (2026-09-12): HeroUI does not deliver the event, by either route. Take branch three.**
+
+Run on `http://localhost:3585`, examples `base-selection` and `row-actions-inline`.
+
+- **shadcn** — focus a row's selection checkbox, press `Alt+ArrowDown`: the console logs
+  `[probe] row got ArrowDown`. The handler on `<Tr>` works.
+- **HeroUI, row** — same steps: nothing logs. React Aria's `Row` does not forward the
+  `onKeyDown` it is handed, exactly as its `Column` does not in #223.
+- **HeroUI, actions cell** — the fallback is unreachable rather than overwritten. React Aria
+  owns focus inside the grid and parks it on the `<tr>`: calling `.focus()` on a button inside
+  a row, and even `.click()`ing it, leaves `document.activeElement` as the `TR`
+  (`tabIndex=0`), never anything inside the actions cell. A wrapper we own cannot receive a
+  key event that never reaches it. `ArrowRight` from the focused row moved focus out of the
+  grid altogether rather than into a cell.
+
+So: ship the menu entries in both kits, attach the keyboard handler to the row (shadcn-only in
+practice), and record the shortcut as a third divergence in `kit-parity.mdx` — Task 10, Step 4
+is **required**, and Task 11's keyboard E2E is skipped for the HeroUI project.
+
+Task 9 keeps the row as the attachment point: the fallback is not available, and the handler is
+correct markup regardless of which kit forwards it.
+
 This is a **spike**. Its output is an answer that shapes Task 10, not code you keep. Do it first; do not start Task 1 until it is answered.
 
 Background: `Alt+Arrow` column reordering does not work in the HeroUI kit ([#223](https://github.com/ez-kit/ez-kit/issues/223)) because React Aria's `Column` spreads its own prop bag after the one the grid supplies. `packages/data-grid/react/heroui/src/blocks/core/table-adapters.tsx:163` forwards row props into `HeroTable.Row` the same way, and React Aria rows additionally run their own keyboard delegate.
