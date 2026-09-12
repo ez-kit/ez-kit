@@ -97,6 +97,25 @@ export type GridMessages = {
 		pinTop: string
 		pinBottom: string
 		unpin: string
+		/** Heading of the reordering section. */
+		order: string
+		/**
+		 * Accessible name of the overflow trigger when the menu holds only the move entries.
+		 *
+		 * The trigger is named for what is inside it: `menu` once an application contributed
+		 * entries or more than one built-in group is present, `pinning` for a pin-only menu,
+		 * this for an order-only one.
+		 */
+		ordering: string
+		/**
+		 * Move one row up.
+		 *
+		 * Physical, unlike the column menu's logical `moveStart` / `moveEnd`: the vertical axis
+		 * does not flip under RTL, so "up" means the same thing whichever way the page runs.
+		 */
+		moveUp: string
+		/** Move one row down. */
+		moveDown: string
 	}
 	/** The toolbar sort menu — the multi-sort editor, not the column header's. */
 	sorting: {
