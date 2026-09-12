@@ -4,7 +4,7 @@ description: Let the user rearrange columns — from the header menu, or with `A
 ---
 
 `ordering` lets the user decide where each column sits. It is grouped per axis, the way `pinning`
-is: `ordering.column` is the one that exists today.
+is: this page is `ordering.column`, and [`ordering.row`](/docs/data-grid/row-ordering) moves rows.
 
 <DataGridDocsExample exampleId='column-ordering' />
 
@@ -16,8 +16,10 @@ is: `ordering.column` is the one that exists today.
 />
 ```
 
-`ordering: true` turns on every axis the grid supports, which today means columns.
-`ordering={{ column: { onChange } }}` also reports the new order.
+`ordering: true` means columns, and keeps meaning columns — the row axis turns on only by being
+named, so this option cannot gain an affordance under you. `ordering={{ column: { onChange } }}`
+also reports the new order, and [`{ row: true }`](/docs/data-grid/row-ordering) is the other
+axis.
 
 ## What the user does
 
@@ -69,9 +71,9 @@ was handed, so the handler the grid puts there is overwritten. Tracked in
 
 ## Options
 
-| Option     | Type                        | Description                                                                                                          |
-| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `ordering` | `boolean \| { column?: … }` | Reordering, per axis. `true` enables every axis the grid supports; `{ column: { onChange } }` reports the new order. |
+| Option     | Type                        | Description                                                                                             |
+| ---------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `ordering` | `boolean \| { column?: … }` | Reordering, per axis. `true` enables the column axis; `{ column: { onChange } }` reports the new order. |
 
 ## Column options
 

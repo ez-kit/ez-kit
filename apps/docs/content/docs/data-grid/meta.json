@@ -18,6 +18,7 @@
 		"pagination",
 		"selection",
 		"row-actions",
+		"row-ordering",
 		"pinning",
 		"expanding",
 		"editing",

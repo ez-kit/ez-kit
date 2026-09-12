@@ -219,6 +219,13 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 	},
 	{
 		category: 'Rows & Selection',
+		feature: 'Row reordering (menu + keyboard)',
+		description: 'Move a row one step up or down from its action menu, or with Alt+Arrow.',
+		status: FeatureStatus.Done,
+		doc: 'row-ordering',
+	},
+	{
+		category: 'Rows & Selection',
 		feature: 'Row drag reorder',
 		description: 'Reorder rows by dragging them to a new position.',
 		status: FeatureStatus.Planned,
@@ -293,7 +300,8 @@ export const FEATURE_MATRIX: readonly FeatureRow[] = [
 		category: 'State & Tooling',
 		feature: 'i18n / messages',
 		description: 'Override all built-in labels and messages for internationalization.',
-		status: FeatureStatus.Planned,
+		status: FeatureStatus.Done,
+		doc: 'localization',
 	},
 	{
 		category: 'State & Tooling',

@@ -1,0 +1,119 @@
+---
+title: Row ordering
+description: Let the user rearrange rows — from the row's action menu, or with `Alt+Arrow` on a focused row.
+---
+
+`ordering.row` lets the user move a row one step up or down. It is the row axis of the same
+option [column reordering](/docs/data-grid/columns/ordering) uses, grouped the way `pinning` is.
+
+<DataGridDocsExample exampleId='row-ordering' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	getRowId={(row) => row.id}
+	ordering={{ row: true }}
+/>
+```
+
+The axis turns on **only by being named**. A bare `ordering: true` means columns, and keeps
+meaning columns — so a grid already written that way cannot gain a second affordance on an
+upgrade.
+
+## `getRowId` is not optional here
+
+The order is recorded as row ids. Without a `getRowId` of your own, a row with no `id` field
+falls back to its **index** — which changes the moment a row moves, so the recorded order would
+point at whichever rows later sit in those positions. The grid says so in development, but set it
+and the problem never arises.
+
+## What the user does
+
+- **The row's action menu** grows a _Move up_ / _Move down_ pair. Both entries are always listed
+  and disabled where the step is unavailable, so the menu never rearranges itself under the
+  pointer — and a disabled entry is also what says "this row is already at the top".
+- **`Alt+ArrowUp` / `Alt+ArrowDown`** move a row with focus inside it one step, without reopening
+  the menu each time. Not wired in the HeroUI kit — see the note below.
+
+Row ordering has no column of its own: like [row pinning](/docs/data-grid/pinning/rows), its
+entries live in the actions cell, so turning it on is enough to make that column appear.
+
+## The two modes
+
+`onChange` selects the mode rather than gating the feature.
+
+**Uncontrolled** — `ordering={{ row: true }}`. The grid keeps the order and renders it. A later
+`data` prop is re-projected through it, so a fresh page from the server does not discard the
+arrangement the user made. A row that arrives without being in the order keeps its declared
+position rather than being appended to the end.
+
+**Controlled** — supply `onChange` and the grid stores nothing, reorders nothing, and only
+reports each move. This is the mode for a server-backed list, and the only one that works under
+server-driven pagination, where the grid holds one page and cannot speak for the rest.
+
+<DataGridDocsExample exampleId='row-ordering-controlled' />
+
+```tsx
+<DataGrid
+	data={rows}
+	columns={columns}
+	getRowId={(row) => row.id}
+	ordering={{ row: { onChange: (move) => reorder(move) } }}
+/>
+```
+
+The payload is one move, not a full order:
+
+```ts
+type RowMove = {
+	/** The row that moved. */
+	rowId: string
+	/** The row it swapped with — where `rowId` now sits. */
+	targetRowId: string
+	direction: 'up' | 'down'
+}
+```
+
+Two ids and a direction are the largest fact the grid actually has, and they are enough to splice
+an array or to `PATCH` a position. Column reordering emits the complete order instead, because a
+grid always knows every column — it does not always know every row.
+
+## What cannot move
+
+- **A sorted grid.** Sorting computes the order from the data, so a manual move would be
+  recomputed away on the next render and the row would visibly spring back. Both entries are
+  disabled while a sort is applied.
+- **Across a page edge.** A move is defined over the rows on screen, and a row that vanished onto
+  the next page is not a move anyone can follow. The arrows are disabled at the first and last
+  row of the page.
+- **Across a pinning band.** A step from the centre into the pinned top or bottom would read as a
+  pin, not a reorder. [Pin the row](/docs/data-grid/pinning/rows) instead.
+- **Out of its own subtree.** With [tree data](/docs/data-grid/expanding/tree) a row moves among
+  its siblings: changing a row's parent is a different operation with a different meaning.
+
+A filter is **not** in that list. Filtering removes rows, it does not order them, so a step lands
+the row next to the neighbour the user can actually see.
+
+## HeroUI: keyboard shortcut not wired
+
+The menu entries work in both kits. `Alt+Arrow` works in the shadcn kit only, and for a slightly
+worse reason than the column case: React Aria's row forwards no key handler, **and** it owns
+focus inside the grid — focusing a button in a row moves focus back up to the row element React
+Aria controls — so there is no element inside the row for the grid to attach the shortcut to
+either. Same upstream cause as [#223](https://github.com/ez-kit/ez-kit/issues/223); see
+[Kit parity](/docs/data-grid/kit-parity).
+
+## Not persisted state
+
+The row order is deliberately **not** part of the [persisted view
+state](/docs/data-grid/state/persistence) that `sorting`, `columnOrder` and the rest travel in.
+It describes the data rather than how a view is configured, it grows with the row count, and a
+deep link carrying a thousand ids is not a deep link. An application that needs to persist an
+order should use controlled mode, which hands it every move.
+
+## Options
+
+| Option     | Type                                 | Description                                                                                                                               |
+| ---------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `ordering` | `boolean \| { row?: …, column?: … }` | Reordering, per axis. `{ row: true }` keeps the order in the grid; `{ row: { onChange } }` reports each move and leaves the order to you. |
