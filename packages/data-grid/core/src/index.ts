@@ -38,12 +38,23 @@ export type { ColumnHelper } from './column/create-column-helper'
 // Menu / row-action icon vocabulary — semantic names each UI kit maps to its own glyphs
 export { GridMenuIcon, isGridMenuIcon } from './menu-icon'
 
+// Every user-facing string, and the English dictionary that is their default
+export { defaultMessages, resolveMessages } from './messages'
+export type { CountContext, FilterPlaceholderContext, GridMessages, PartialGridMessages } from './messages'
+
 // System column IDs
 export { ACTIONS_COLUMN_ID, EXPAND_COLUMN_ID, SELECTION_COLUMN_ID } from './system-columns'
 
+// One custom action entry — contributed per row (`rowActions.actions`) or for the whole
+// selection (`selection.bar.actions`), and rendered by the kit either way.
+export type { ActionItem, ActionItemDef, ActionItemSlot } from './action-item'
+
 // Row actions (edit / delete / row-pin menu share the `__actions__` column)
-export { RowActionsVariant } from './features/row-actions'
-export type { RowActionsConfig, RowActionsContext, RowActionItem } from './features/row-actions'
+// `ACTION_BUTTON_SIZE` / `getActionsCellWidth` are the cell's own geometry, exported because
+// the grid stops auto-sizing the column once an author promotes entries to inline buttons —
+// they are how that author writes `rowActions.column.width` in the kit's own units.
+export { ACTION_BUTTON_SIZE, getActionsCellWidth, RowActionsPlacement } from './features/row-actions'
+export type { RowActionItem, RowActionsConfig, RowActionsContext } from './features/row-actions'
 
 // Types
 export type {
@@ -52,6 +63,7 @@ export type {
 	BaseCellTypes,
 	BooleanCellConfig,
 	CellDef,
+	CellTypeContractOf,
 	CellTypeRegistryShape,
 	ConfigOf,
 	CellType,
@@ -103,6 +115,7 @@ export type {
 	FilterItem,
 	OperatorRegistry,
 	StructuredFilterValue,
+	TableOperatorsConfig,
 } from './features/operators'
 // Every built-in operator list, so extending one reads as extending it —
 // `items: [...SELECT_BADGE_OPERATORS, myOperator]`. `SELECT_BADGE_OPERATORS` and
@@ -120,10 +133,19 @@ export {
 	EMPTY_OPERATORS,
 	FilterOperator,
 	IN_OPERATORS,
+	// The two label overlays: the operator lists are settled in core, their wording comes from
+	// the grid's dictionary, and the React layer applies these where the controls are rendered.
+	localizeDateRangePresets,
+	localizeOperators,
 	NUMBER_OPERATORS,
 	SELECT_BADGE_OPERATORS,
 	TEXT_OPERATORS,
 } from './features/operators'
+
+// Column reordering: the two pure helpers the UI drives it with. In core, not the React layer,
+// because the rules they encode (same pin band, same parent header, locked columns) are the
+// feature's semantics, not its chrome.
+export { canMoveColumn, ColumnMoveDirection, moveColumn } from './features/ordering'
 
 export { CreatingMode } from './features/creating'
 export type {
@@ -187,7 +209,9 @@ export type {
 	GlobalFilteringConfig,
 	InitialTableState,
 	MultiSortConfig,
+	OrderingConfig,
 	PaginationConfig,
+	ColumnOrderingConfig,
 	ColumnPinningConfig,
 	VisibilityConfig,
 	PaginationTotals,

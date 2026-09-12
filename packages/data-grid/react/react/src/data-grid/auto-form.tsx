@@ -62,7 +62,10 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 	}
 
 	return (
-		<div>
+		// The two slots carry no styling of their own — they exist so a kit can stack the
+		// generated fields (each composite renders its own label / input / error, and nothing
+		// between them otherwise separates one field from the next).
+		<div data-slot='auto-form'>
 			{table.getAllColumns().map((col) => {
 				const meta = col.columnDef.meta
 				if (meta?.isSystemColumn) return null
@@ -101,13 +104,28 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				//    for rendering label/description/error from FieldState.
 				const customComp = resolveColumnComponent(colDef)
 				if (customComp) {
-					return <div key={col.id}>{flexRender(customComp, field)}</div>
+					return (
+						<div
+							key={col.id}
+							data-slot='auto-form-field'
+						>
+							{flexRender(customComp, field)}
+						</div>
+					)
 				}
 
 				// 2. registry by cell type — kit composite renders the full Field shell.
 				if (meta?.cell?.type) {
 					const regComp = resolveRegistryComponent(meta, mode, cellTypes)
-					if (regComp) return <div key={col.id}>{flexRender(regComp, field)}</div>
+					if (regComp)
+						return (
+							<div
+								key={col.id}
+								data-slot='auto-form-field'
+							>
+								{flexRender(regComp, field)}
+							</div>
+						)
 				}
 
 				// 3. fallback: kits without a composite registry entry (e.g. native)
@@ -115,6 +133,7 @@ export function AutoForm({ mode }: AutoFormProps): ReactNode {
 				return (
 					<div
 						key={col.id}
+						data-slot='auto-form-field'
 						{...(fieldError ? { 'data-error': true } : {})}
 					>
 						<label htmlFor={field.id}>{label}</label>

@@ -271,6 +271,92 @@ describe('mapColumns', () => {
 	})
 })
 
+// The table-level switch, cascading exactly the way `tableFaceted` above does: the table
+// states a default, the column overrides it in both directions.
+describe('mapColumns — table-level operators switch', () => {
+	const registry = buildOperatorRegistry()
+
+	it('tableOperators: true gives a column with no filtering config its cell type defaults', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'age', cell: { type: 'number' } }], registry, {
+			tableOperators: true,
+		})
+		expect(filteringMeta(result[0])?.operators?.map((o) => o.id)).toEqual([
+			'equals',
+			'notEquals',
+			'greaterThan',
+			'greaterOrEqual',
+			'lessThan',
+			'lessOrEqual',
+			'between',
+		])
+		expect(result[0]?.filterFn).toBeTypeOf('function')
+	})
+
+	it('a column narrows the inherited set with its own items', () => {
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'name', filtering: { operators: { items: ['contains', 'equals'] } } }],
+			registry,
+			{ tableOperators: true },
+		)
+		expect(filteringMeta(result[0])?.operators?.map((o) => o.id)).toEqual(['contains', 'equals'])
+	})
+
+	it('column operators: false opts one column out of a table-wide true', () => {
+		const result = mapColumns<Row>(
+			[
+				{ accessorKey: 'name', filtering: { operators: false } },
+				{ accessorKey: 'age', cell: { type: 'number' } },
+			],
+			registry,
+			{ tableOperators: true },
+		)
+		expect(filteringMeta(result[0])?.operators).toBeUndefined()
+		expect(result[0]?.filterFn).toBeUndefined()
+		expect(filteringMeta(result[1])?.operators).toBeDefined()
+	})
+
+	it('a column that turned filtering off never inherits operators', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: false }], registry, {
+			tableOperators: true,
+		})
+		expect(result[0]?.meta?.filtering).toBe(false)
+		expect(result[0]?.filterFn).toBeUndefined()
+	})
+
+	it('a group header inherits nothing — it has no value of its own to compare', () => {
+		const result = mapColumns<Row>([{ id: 'group', header: 'Group', columns: [{ accessorKey: 'name' }] }], registry, {
+			tableOperators: true,
+		})
+		expect(filteringMeta(result[0])?.operators).toBeUndefined()
+		expect(filteringMeta(result[0]?.columns?.[0] as TanStackColumnDef<Row>)?.operators).toBeDefined()
+	})
+
+	it('tableOperators: false wins over a column that asks for operators', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name', filtering: { operators: true } }], registry, {
+			tableOperators: false,
+		})
+		expect(filteringMeta(result[0])?.operators).toBeUndefined()
+		expect(result[0]?.filterFn).toBeUndefined()
+	})
+
+	it('no table-level word keeps the per-column opt-in', () => {
+		const result = mapColumns<Row>([{ accessorKey: 'name' }], registry)
+		expect(filteringMeta(result[0])?.operators).toBeUndefined()
+	})
+
+	// A custom cell type that declares no operators is a column where the table-wide "wherever
+	// they apply" simply does not apply — a plain input, and no warning per such column.
+	it('inherited operators fall back to a plain input silently for a type with no defaults', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		const result = mapColumns<Row>([{ accessorKey: 'name', cell: { type: 'rating' } }], registry, {
+			tableOperators: true,
+		})
+		expect(filteringMeta(result[0])?.operators).toBeUndefined()
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+})
+
 describe('mapColumns — header/footer renderers', () => {
 	it('keeps a string header as-is', () => {
 		const result = mapColumns<Row>([{ accessorKey: 'name', header: 'Name' }])

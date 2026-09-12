@@ -198,6 +198,56 @@ describe('createTable — filtering', () => {
 	})
 })
 
+// The table-level operator switch, end to end: `filtering.operators` is both the word that
+// turns selectors on for every column and the registry the columns reference by id.
+describe('createTable — filtering.operators', () => {
+	const operatorIds = (table: ReturnType<typeof createTable<Row>>, columnId: string) => {
+		const meta = table.getColumn(columnId)?.columnDef.meta?.filtering
+		return meta === false ? undefined : meta?.operators?.map((o) => o.id)
+	}
+
+	it('filtering: { operators: true } gives every column its cell type defaults', () => {
+		const table = createTable({ data: DATA, columns: COLUMNS, filtering: { operators: true } })
+		expect(operatorIds(table, 'name')).toContain('contains')
+		expect(operatorIds(table, 'age')).toContain('contains')
+	})
+
+	it('filtering: { operators: false } silences a column that asks for them', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'name', filtering: { operators: true } },
+			{ accessorKey: 'age' },
+		])
+		const table = createTable({ data: DATA, columns, filtering: { operators: false } })
+		expect(operatorIds(table, 'name')).toBeUndefined()
+	})
+
+	it('filtering omitting operators keeps the per-column opt-in', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'name', filtering: { operators: true } },
+			{ accessorKey: 'age' },
+		])
+		const table = createTable({ data: DATA, columns, filtering: true })
+		expect(operatorIds(table, 'name')).toContain('contains')
+		expect(operatorIds(table, 'age')).toBeUndefined()
+	})
+
+	it('registers custom operators from `items` and resolves them by id from a column', () => {
+		const columns = createColumns<Row>([
+			{ accessorKey: 'name', filtering: { operators: { items: ['contains', 'fuzzy'] } } },
+			{ accessorKey: 'age' },
+		])
+		const table = createTable({
+			data: DATA,
+			columns,
+			filtering: { operators: { items: [{ id: 'fuzzy', label: 'Fuzzy', filterFn: () => true }] } },
+		})
+		expect(operatorIds(table, 'name')).toEqual(['contains', 'fuzzy'])
+		// The object form switches the feature on like `true` does, so the column that said
+		// nothing gets its defaults too.
+		expect(operatorIds(table, 'age')).toContain('contains')
+	})
+})
+
 // ── global filtering ──────────────────────────────────────────────────────────
 
 describe('createTable — globalFiltering', () => {
@@ -744,10 +794,80 @@ describe('createTable — system columns', () => {
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
 	})
 
+	it('editing: { mode: cell } alone appends no __actions__ column', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', onSave: () => Promise.resolve() },
+		})
+		// The pencil there starts the row flow, which opens nothing in cell mode — so the column
+		// would be an empty strip whose width is reserved for a button that must not be drawn.
+		expect(columnIds(table)).not.toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('editing: { mode: cell } still shares the __actions__ column another feature asked for', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			editing: { mode: 'cell', onSave: () => Promise.resolve() },
+			deleting: { onDelete: () => {} },
+		})
+		expect(columnIds(table).at(-1)).toBe(ACTIONS_COLUMN_ID)
+	})
+
 	it('deleting: true appends __actions__ column after user columns', () => {
 		const table = createTable({ data: DATA, columns: COLUMNS, deleting: { onDelete: () => {} } })
 		const ids = columnIds(table)
 		expect(ids.at(-1)).toBe(ACTIONS_COLUMN_ID)
+	})
+
+	it('creating: { mode: row } alone appends no __actions__ column', () => {
+		// The column would stand empty until someone pressed the create trigger, and mounting it
+		// on open would take its fixed width off the `1fr` tracks — every column jumping on each
+		// open and again on each close. Such a grid puts save / cancel in the toolbar instead.
+		const table = createTable({ data: DATA, columns: COLUMNS, creating: { mode: 'row', onSave: () => {} } })
+		expect(columnIds(table)).not.toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('creating: { mode: row } shares the __actions__ column another feature asked for', () => {
+		const table = createTable({
+			data: DATA,
+			columns: COLUMNS,
+			creating: { mode: 'row', onSave: () => {} },
+			deleting: { onDelete: () => {} },
+		})
+		expect(columnIds(table).at(-1)).toBe(ACTIONS_COLUMN_ID)
+	})
+
+	it('creating: { mode: row } widens the shared __actions__ column to the save / cancel pair', () => {
+		const sizeOf = (config: Parameters<typeof createTable<(typeof DATA)[number]>>[0]) =>
+			createTable(config)
+				.getAllColumns()
+				.find((col) => col.id === ACTIONS_COLUMN_ID)
+				?.getSize()
+
+		const deleteOnly = sizeOf({ data: DATA, columns: COLUMNS, deleting: { onDelete: () => {} } })
+		const withDraft = sizeOf({
+			data: DATA,
+			columns: COLUMNS,
+			deleting: { onDelete: () => {} },
+			creating: { mode: 'row', onSave: () => {} },
+		})
+
+		expect(withDraft).toBeGreaterThan(deleteOnly ?? 0)
+	})
+
+	it('creating: { mode: pin-row } alone appends the __actions__ column', () => {
+		// The pinned draft row is permanent, so the cell always holds its save button — the
+		// column is never the empty strip that `mode: 'row'` would leave behind.
+		const table = createTable({ data: DATA, columns: COLUMNS, creating: { mode: 'pin-row', onSave: () => {} } })
+		expect(columnIds(table).at(-1)).toBe(ACTIONS_COLUMN_ID)
+	})
+
+	it('creating: { mode: modal } alone appends no __actions__ column', () => {
+		// The modal carries its own footer buttons, so nothing is rendered per row.
+		const table = createTable({ data: DATA, columns: COLUMNS, creating: { mode: 'modal', onSave: () => {} } })
+		expect(columnIds(table)).not.toContain(ACTIONS_COLUMN_ID)
 	})
 
 	it('pinning: { row: { top: true } } alone appends the __actions__ column', () => {

@@ -5,6 +5,7 @@ import { Badge } from '@grid-shadcn/components/ui/badge'
 import { SelectCellInput } from './SelectCell'
 
 import type { BadgeCellConfig, CellViewProps, FieldState } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
 
 function BadgeCellView({ value, config }: CellViewProps<BadgeCellConfig>) {
 	const items = config?.items ?? []
@@ -14,7 +15,12 @@ function BadgeCellView({ value, config }: CellViewProps<BadgeCellConfig>) {
 		return <Badge>{String(value ?? '')}</Badge>
 	}
 
-	return <Badge variant={match.variant ?? 'default'}>{match.label}</Badge>
+	return (
+		<Badge variant={match.variant ?? 'default'}>
+			{(match.icon as ReactNode) ?? null}
+			{match.label}
+		</Badge>
+	)
 }
 
 // Badge edit/filter UX is identical to Select — same compound, same payload.

@@ -3,15 +3,17 @@ title: Creating Rows
 description: New-row workflow — a creating modal/inline row driven by the grid's typed column definitions.
 ---
 
-# Creating Rows
-
 The grid ships a "creating" flow: `<DataGrid.CreateTrigger>` renders the button, and clicking it
 opens a draft row or a modal whose inputs come from the columns themselves — each field renders
 the input its column's `cell.type` implies.
 
 ## Usage
 
-The creating flow supports three modes. The default `mode: 'row'` appends an inline draft row at the bottom of the table.
+The creating flow supports three modes. The default `mode: 'row'` opens an inline draft row at the
+top of the body. Its save and cancel controls share the row-actions column when the grid has one —
+`editing`, `deleting`, row `pinning` or `rowActions.actions` — and otherwise take the place of the
+create trigger in the toolbar, so no column is mounted for a draft that is closed most of the time.
+**Enter** commits the draft and **Escape** abandons it either way.
 
 <DataGridDocsExample exampleId='creating-row' />
 
@@ -19,13 +21,11 @@ The creating flow supports three modes. The default `mode: 'row'` appends an inl
 
 <DataGridDocsExample exampleId='creating-modal' />
 
-Or pin the draft as a blank row at the top of the table so it stays visible while scrolling.
+`mode: 'pin-row'` keeps that draft row permanently open — there is no create trigger and nothing to
+cancel; saving simply clears the row for the next entry. Its save button always has a row-actions
+column to sit in, since the row is always there.
 
 <DataGridDocsExample exampleId='creating-pin-row' />
-
-With per-field validation:
-
-<DataGridDocsExample exampleId='creating-validation' />
 
 ```tsx
 <DataGrid
@@ -93,11 +93,11 @@ Both accept a plain value as well as a function. Rules:
   them.
 
 Seeding the create form through `initialState.creating` is a **type error** — see
-[State model](./data-grid/state-model).
+[State model](/docs/data-grid/state).
 
 ## Validation
 
-One validator for the whole form, exactly as in [editing](./data-grid/editing/validation) — a
+One validator for the whole form, exactly as in [editing](/docs/data-grid/editing/validation) — a
 function, or `{ schema }` for zod. The modal stays open until it passes.
 
 <DataGridDocsExample exampleId='creating-validation' />
@@ -112,7 +112,7 @@ creating: {
 ```
 
 Throw `ValidationError` from `onSave` to put a server's rejection back into the fields. Full
-details in [Validation](./data-grid/editing/validation).
+details in [Validation](/docs/data-grid/editing/validation).
 
 ## Options
 
@@ -128,9 +128,9 @@ details in [Validation](./data-grid/editing/validation).
 
 ## See also
 
-- [Validation](./data-grid/editing/validation) — full validation patterns
-- [Inline editing](./data-grid/editing) — once a row exists
-- [State model](./data-grid/state-model) — where a starting value can come from, and which one wins
+- [Validation](/docs/data-grid/editing/validation) — full validation patterns
+- [Inline editing](/docs/data-grid/editing) — once a row exists
+- [State model](/docs/data-grid/state) — where a starting value can come from, and which one wins
 
 ## Source
 

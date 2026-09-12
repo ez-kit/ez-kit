@@ -1,6 +1,6 @@
 'use client'
 
-import { GridMenuVariant } from '@ez-kit/data-grid-react'
+import { GridMenuVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
 import { EllipsisVertical, MoreHorizontal } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -42,17 +42,29 @@ export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuPro
 					<div key={section.id}>
 						{index > 0 && <DropdownMenuSeparator />}
 						{section.label !== undefined && <DropdownMenuLabel>{section.label}</DropdownMenuLabel>}
-						{section.items.map((item) => (
-							<DropdownMenuItem
-								key={item.id}
-								onClick={item.onSelect}
-								disabled={item.disabled ?? false}
-								variant={item.destructive ? 'destructive' : 'default'}
-							>
-								{renderGridMenuIcon(item.icon)}
-								{item.label}
-							</DropdownMenuItem>
-						))}
+						{section.items.map((item) =>
+							isGridMenuItemSlot(item) ? (
+								// The author's own entry. It still sits in a `DropdownMenuItem`: the menu is a
+								// roving-focus collection, and a loose node inside it is unreachable by keyboard.
+								<DropdownMenuItem
+									key={item.id}
+									asChild
+								>
+									{item.component}
+								</DropdownMenuItem>
+							) : (
+								<DropdownMenuItem
+									key={item.id}
+									onClick={item.onAction}
+									disabled={item.disabled ?? false}
+									variant={item.destructive ? 'destructive' : 'default'}
+									{...(item.className !== undefined ? { className: item.className } : {})}
+								>
+									{renderGridMenuIcon(item.icon)}
+									{item.label}
+								</DropdownMenuItem>
+							),
+						)}
 					</div>
 				))}
 			</DropdownMenuContent>

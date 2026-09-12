@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { format, isValid, parseISO } from 'date-fns'
 
 import { Button } from '@grid-shadcn/components/ui/button'
@@ -43,11 +44,12 @@ function DateCellInput({
 	errors,
 	config,
 }: FieldState<DateCellConfig>) {
+	const messages = useGridMessages()
 	const hasError = errors.length > 0
 	const selected = toDate(value)
 	const minDate = config?.min ? toDate(config.min) : undefined
 	const maxDate = config?.max ? toDate(config.max) : undefined
-	const displayLabel = selected ? format(selected, DISPLAY_FORMAT) : 'Pick a date'
+	const displayLabel = selected ? format(selected, DISPLAY_FORMAT) : messages.cells.pickDate
 	const disabledMatchers: Matcher[] = []
 	if (minDate) disabledMatchers.push({ before: minDate })
 	if (maxDate) disabledMatchers.push({ after: maxDate })

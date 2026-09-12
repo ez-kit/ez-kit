@@ -1,10 +1,11 @@
 'use client'
 
-import { BetweenBranch, useBetweenValue } from '@ez-kit/data-grid-react'
-import { Button, Input, Popover, RangeCalendar, Slider } from '@heroui/react'
+import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react'
+import { Button, Popover, RangeCalendar, Slider } from '@heroui/react'
 import { parseDate } from '@internationalized/date'
 
 import { DateCellInput } from '../cell-types/DateCell'
+import { NumberFieldControl } from '../core/NumberField'
 
 import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
 import type { CalendarDate } from '@internationalized/date'
@@ -15,6 +16,7 @@ const ROW_CLASS = 'flex gap-2 items-center'
 const COLUMN_CLASS = 'flex flex-col gap-2'
 const PRESET_ROW_CLASS = 'flex flex-wrap gap-1'
 const TRIGGER_CLASS = 'min-w-[12rem] text-xs'
+const RANGE_END_CLASS = 'flex-1'
 
 function toCalendarDate(value: unknown): CalendarDate | null {
 	if (typeof value !== 'string' || !value) return null
@@ -58,6 +60,7 @@ function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode
 }
 
 export function BetweenInput(props: BetweenInputProps) {
+	const messages = useGridMessages()
 	const { value, onChange } = props
 	const { branch, presets, slider, numbers, dates } = useBetweenValue(props)
 	const presetRow = presets ? <PresetRow {...presets} /> : null
@@ -67,12 +70,12 @@ export function BetweenInput(props: BetweenInputProps) {
 			presetRow,
 			<div
 				role='group'
-				aria-label='Range filter'
+				aria-label={messages.filtering.range}
 				className='flex items-center gap-2 min-w-[220px]'
 			>
 				<span className={`${LABEL_CLASS} text-right`}>{slider.values[0]}</span>
 				<Slider
-					aria-label='Range'
+					aria-label={messages.filtering.range}
 					minValue={slider.min}
 					maxValue={slider.max}
 					value={slider.values}
@@ -109,7 +112,7 @@ export function BetweenInput(props: BetweenInputProps) {
 					? `${fromDate.toString()} – …`
 					: toDateVal
 						? `… – ${toDateVal.toString()}`
-						: 'Pick a range'
+						: messages.cells.pickRange
 
 		return withPresets(
 			presetRow,
@@ -124,9 +127,9 @@ export function BetweenInput(props: BetweenInputProps) {
 					</Button>
 				</Popover.Trigger>
 				<Popover.Content>
-					<Popover.Dialog aria-label='Date range'>
+					<Popover.Dialog aria-label={messages.filtering.dateRange}>
 						<RangeCalendar
-							aria-label='Date range'
+							aria-label={messages.filtering.dateRange}
 							value={rangeValue}
 							onChange={(next) => {
 								onChange({ from: next.start.toString(), to: next.end.toString() })
@@ -180,25 +183,27 @@ export function BetweenInput(props: BetweenInputProps) {
 	return withPresets(
 		presetRow,
 		<div className={ROW_CLASS}>
-			<Input
-				type='number'
-				placeholder='From'
-				value={numbers.from}
-				{...(numbers.min === undefined ? {} : { min: numbers.min })}
-				{...(numbers.max === undefined ? {} : { max: numbers.max })}
-				onChange={(e) => {
-					numbers.onFromChange(e.target.valueAsNumber)
+			<NumberFieldControl
+				className={RANGE_END_CLASS}
+				aria-label={messages.filtering.from}
+				placeholder={messages.filtering.from}
+				value={numbers.from === '' ? undefined : numbers.from}
+				minValue={numbers.min}
+				maxValue={numbers.max}
+				onChange={(next) => {
+					numbers.onFromChange(next ?? NaN)
 				}}
 			/>
 			<span aria-hidden>–</span>
-			<Input
-				type='number'
-				placeholder='To'
-				value={numbers.to}
-				{...(numbers.min === undefined ? {} : { min: numbers.min })}
-				{...(numbers.max === undefined ? {} : { max: numbers.max })}
-				onChange={(e) => {
-					numbers.onToChange(e.target.valueAsNumber)
+			<NumberFieldControl
+				className={RANGE_END_CLASS}
+				aria-label={messages.filtering.to}
+				placeholder={messages.filtering.to}
+				value={numbers.to === '' ? undefined : numbers.to}
+				minValue={numbers.min}
+				maxValue={numbers.max}
+				onChange={(next) => {
+					numbers.onToChange(next ?? NaN)
 				}}
 			/>
 		</div>,

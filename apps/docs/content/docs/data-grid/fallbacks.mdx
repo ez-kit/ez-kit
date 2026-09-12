@@ -3,8 +3,6 @@ title: Fallbacks
 description: Loading, empty, and no-results states — three slots the grid renders when there's nothing else to show.
 ---
 
-# Fallbacks
-
 The grid distinguishes three "nothing to show" states and gives each its own slot:
 
 - **Loading** — initial fetch, refresh, or while controlled `state.loading` reports a pending or in-flight request.
@@ -29,7 +27,7 @@ Fallbacks render automatically whenever the grid has no visible rows. Switch bet
 
 ## Loading
 
-Pass `state.loading` (see [Controlled State](./data-grid/controlled-state)) — the grid renders `<LoadingBody />` instead of rows. The slot is a `LoadingState` object, not a boolean: `isPending` is the initial load, `isFetching` a refetch, and `isError` / `error` the last failure.
+Pass `state.loading` (see [Controlled State](/docs/data-grid/state/controlled)) — the grid renders `<LoadingBody />` instead of rows. The slot is a `LoadingState` object, not a boolean: `isPending` is the initial load, `isFetching` a refetch, and `isError` / `error` the last failure.
 
 ```tsx
 <DataGrid

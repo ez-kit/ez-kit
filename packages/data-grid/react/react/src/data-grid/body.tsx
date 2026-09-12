@@ -88,6 +88,8 @@ export function Body<TRow extends object = any>({ children }: DataGridBodyProps<
 	useDataGridState((s) => s.pagination)
 	useDataGridState((s) => s.expanded)
 	useDataGridState((s) => s.rowPinning)
+	// Cells come out of `row.getVisibleCells()` in column order, so a reorder repaints rows.
+	useDataGridState((s) => s.columnOrder)
 
 	// Read before the early returns below: the offset hooks must run on every render.
 	const hasPinning = Boolean(table.options.enableRowPinning)

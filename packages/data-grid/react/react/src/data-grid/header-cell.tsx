@@ -1,4 +1,10 @@
-import { SELECTION_COLUMN_ID } from '@ez-kit/data-grid-core'
+import {
+	canMoveColumn,
+	ColumnMoveDirection,
+	GridDirection,
+	moveColumn,
+	SELECTION_COLUMN_ID,
+} from '@ez-kit/data-grid-core'
 
 import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
@@ -156,7 +162,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 						onChange={() => {
 							table.toggleAllRowsSelected(!isAllSelected)
 						}}
-						aria-label='Select all rows'
+						aria-label={table.grid.messages.selection.selectAll}
 					/>
 				)}
 			</Th>
@@ -187,11 +193,45 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const draftSortIndex = computeDraftSortIndex(table, header.column.id)
 	const draftSortAttrs = draftSortIndex >= 0 ? { 'data-draft-sorting': String(draftSortIndex) } : {}
 
-	const menuSections = buildColumnMenuSections(header, {
-		canSort: canSort && !header.isPlaceholder,
-		canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
-		canHide: isMenuEligible && header.column.getCanHide(),
-	})
+	// One flag for both affordances the feature has — the menu pair and the keyboard shortcut —
+	// so they can never disagree about whether this column may move.
+	const canMove = table.grid.ordering.column && isMenuEligible && meta?.ordering !== false
+
+	/**
+	 * `Alt+ArrowLeft` / `Alt+ArrowRight` move the column one step.
+	 *
+	 * The menu pair is the discoverable affordance, but both kits' menus close on select, so a
+	 * column that has to travel five places would mean five open-click cycles. The shortcut is
+	 * the repeatable path, and it is also the keyboard equivalent a drag handle will need
+	 * anyway (WCAG 2.1.1).
+	 *
+	 * Physical arrow keys, logical move: under RTL `ArrowLeft` is the *end* of the order, which
+	 * is what the arrow points at on screen either way.
+	 */
+	const onHeaderKeyDown = canMove
+		? (e: KeyboardEvent) => {
+				if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+				// Option+Arrow moves by word inside a text field — never steal it from a filter
+				// input or any other control living in the header.
+				if (isInteractiveTarget(e)) return
+				const towardsStart = (e.key === 'ArrowLeft') !== (table.options.columnResizeDirection === GridDirection.Rtl)
+				const direction = towardsStart ? ColumnMoveDirection.Start : ColumnMoveDirection.End
+				if (!canMoveColumn(table, header.column.id, direction)) return
+				e.preventDefault()
+				table.setColumnOrder(moveColumn(table, header.column.id, direction))
+			}
+		: undefined
+
+	const menuSections = buildColumnMenuSections(
+		header,
+		{
+			canSort: canSort && !header.isPlaceholder,
+			canPin: table.grid.pinning.column && isMenuEligible && !isPinningDisabled && !isStaticPin,
+			canHide: isMenuEligible && header.column.getCanHide(),
+			canMove,
+		},
+		table.grid.messages.columnMenu,
+	)
 
 	const filteringVariant = table.grid.filtering.variant
 	const canFilter =
@@ -210,6 +250,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 				BetweenInput,
 				MultiSelectFilter,
 				debounce: table.grid.filtering.debounce,
+				messages: table.grid.messages,
 				table,
 			})
 		: null
@@ -244,7 +285,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 			<Menu
 				variant={GridMenuVariant.Column}
 				sections={menuSections}
-				aria-label='Column options'
+				aria-label={table.grid.messages.columnMenu.trigger}
 			/>
 		) : null
 
@@ -298,6 +339,8 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 			colSpan={header.colSpan}
 			style={pinVars}
 			pinned={pinned}
+			{...(onHeaderKeyDown ? { onKeyDown: onHeaderKeyDown } : {})}
+			{...(canMove ? { 'data-movable': 'true' } : {})}
 			{...(meta?.headerClassName !== undefined ? { className: meta.headerClassName } : {})}
 			{...(pinned ? { 'data-pinned': pinned } : {})}
 			{...getAlignAttrs(meta, 'header')}

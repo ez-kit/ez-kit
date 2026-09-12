@@ -55,7 +55,10 @@ const columns = createColumns<Employee>([
 export function ExpandingControlledExample() {
 	const [tableState, setTableState] = useState<Partial<TableState>>({ expanded: {} })
 	const expanded = (tableState.expanded ?? {}) as Record<string, boolean>
-	const allIds = EMPLOYEES.map((_, i) => String(i))
+	// The grid keys a row by its `id` field when the data has one, falling back to the index —
+	// so these are `'1'`…`'4'`, not `'0'`…`'3'`. Building them from the index instead left the
+	// last row closed behind "Expand all" and an id in the map that matched no row at all.
+	const allIds = EMPLOYEES.map((employee) => String(employee.id))
 	const allExpanded = allIds.every((id) => expanded[id])
 
 	return (

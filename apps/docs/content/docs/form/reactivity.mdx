@@ -3,8 +3,6 @@ title: Reactivity
 description: Why a form re-renders what it re-renders, what form.Subscribe is for, and why you should never wrap a field in it.
 ---
 
-# Reactivity
-
 `form.state` is a **snapshot**. Read it in a component body and you get the values as they were when that component last rendered; nothing tells React to render again when they move on. It is fine for a one-shot read inside an event handler or a submit path, and wrong for anything you put on screen.
 
 Everything rendered _from_ form state goes through a subscription instead.

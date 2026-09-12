@@ -1,5 +1,6 @@
 import { useGridComponents } from '../components-context'
 
+import { buildPaginationLabel } from './pagination-label'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { ReactNode } from 'react'
@@ -100,7 +101,7 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 
 	// Known-empty grid: a *trusted* total of zero means there is nothing to paginate, so the
 	// whole footer is hidden and the empty/no-results state stands alone. This unifies the
-	// variants — otherwise `compact` claims `Page 1` while `simple` shows `0–0 of 0` for the
+	// label forms — otherwise `page` claims `Page 1` while `range` shows `0–0 of 0` for the
 	// same empty table. An *unknown* total is deliberately excluded: it is `undefined` by the
 	// normalization above (never `0`), so a manual grid given neither count still renders `Page N`.
 	//
@@ -151,11 +152,25 @@ export function Pagination({ children }: DataGridPaginationProps = {}) {
 			: children
 	}
 
+	// The label is content, so it is settled here rather than in each kit: `false` suppresses it,
+	// a renderer replaces it, and a built-in form goes through the one shared rule. A kit that
+	// still called `buildPaginationLabel` itself would ignore `pagination.label` in three places.
+	const { links, edges, label: labelOption } = table.grid.pagination
+	const labelModel = { pageIndex, pageSize, pageCount, rowCount }
+	const label =
+		labelOption === false
+			? undefined
+			: typeof labelOption === 'function'
+				? labelOption(labelModel)
+				: buildPaginationLabel(labelOption, labelModel, table.grid.messages.pagination)
+
 	return (
 		<PaginationComponent
+			{...(label !== undefined ? { label } : {})}
 			{...(rowCount !== undefined ? { rowCount } : {})}
 			{...(pageCount !== undefined ? { pageCount } : {})}
-			variant={table.grid.pagination.variant}
+			links={links}
+			edges={edges}
 			siblings={siblings}
 			boundaries={boundaries}
 			pageIndex={pageIndex}

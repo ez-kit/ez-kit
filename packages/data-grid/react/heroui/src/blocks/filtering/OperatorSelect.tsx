@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { ListBox, Select } from '@heroui/react'
 
 import type { OperatorSelectProps } from '@ez-kit/data-grid-react'
@@ -27,11 +28,12 @@ const VALUE_CLASS = 'text-xs'
 const ITEM_CLASS = 'text-xs'
 
 export function OperatorSelect({ operators, currentOperatorId, onChange }: OperatorSelectProps) {
+	const messages = useGridMessages()
 	return (
 		<Select
 			className={SELECT_CLASS}
 			value={currentOperatorId}
-			aria-label='Filter operator'
+			aria-label={messages.filtering.operator}
 			onChange={(value) => {
 				if (value != null) onChange(String(value))
 			}}

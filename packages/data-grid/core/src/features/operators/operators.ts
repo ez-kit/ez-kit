@@ -1,4 +1,7 @@
+import { defaultMessages } from '../../messages'
+
 import type { BaseCellTypes, SelectItem } from '../../column/types'
+import type { GridMessages } from '../../messages'
 
 /**
  * The filter operators this package ships. A closed set, spelled **once** — the same id means
@@ -171,7 +174,7 @@ function endOfMonthUtc(d: Date): Date {
 export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	{
 		id: 'today',
-		label: 'Today',
+		label: defaultMessages.operators.presets.today,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(today), to: isoDate(today) }
@@ -179,7 +182,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'yesterday',
-		label: 'Yesterday',
+		label: defaultMessages.operators.presets.yesterday,
 		getRange: (now = new Date()) => {
 			const y = addDaysUtc(toUtcMidnight(now), -1)
 			return { from: isoDate(y), to: isoDate(y) }
@@ -187,7 +190,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'last7',
-		label: 'Last 7 days',
+		label: defaultMessages.operators.presets.last7,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(addDaysUtc(today, -6)), to: isoDate(today) }
@@ -195,7 +198,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'last30',
-		label: 'Last 30 days',
+		label: defaultMessages.operators.presets.last30,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(addDaysUtc(today, -29)), to: isoDate(today) }
@@ -203,7 +206,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'thisMonth',
-		label: 'This month',
+		label: defaultMessages.operators.presets.thisMonth,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			return { from: isoDate(startOfMonthUtc(today)), to: isoDate(endOfMonthUtc(today)) }
@@ -211,7 +214,7 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 	},
 	{
 		id: 'lastMonth',
-		label: 'Last month',
+		label: defaultMessages.operators.presets.lastMonth,
 		getRange: (now = new Date()) => {
 			const today = toUtcMidnight(now)
 			const lastMonthAnchor = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1))
@@ -219,6 +222,19 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 		},
 	},
 ]
+
+/**
+ * Table-level operator configuration when not using the simple `true` / `false` shorthand.
+ *
+ * `items` here is the **registry**: custom operator definitions (or overrides of built-ins)
+ * that any column can then reference by id from its own
+ * {@link ColumnOperatorsConfig.items}. It is not a column's offered list — a column narrows
+ * what it offers on the column, where the cell type is known.
+ */
+export type TableOperatorsConfig = {
+	/** Custom operators (or built-in overrides), addressable from column `items` by id. */
+	items?: FilterOperatorDef[]
+}
 
 /** Column-level operator configuration when not using the simple `true` shorthand. */
 export type ColumnOperatorsConfig = {
@@ -242,13 +258,13 @@ export type ColumnOperatorsConfig = {
 export const EMPTY_OPERATORS: FilterOperatorDef<never>[] = [
 	{
 		id: FilterOperator.IsEmpty,
-		label: 'Is empty',
+		label: defaultMessages.operators.empty.isEmpty,
 		requiresInput: false,
 		filterFn: (rowValue) => rowValue == null || rowValue === '',
 	},
 	{
 		id: FilterOperator.IsNotEmpty,
-		label: 'Is not empty',
+		label: defaultMessages.operators.empty.isNotEmpty,
 		requiresInput: false,
 		filterFn: (rowValue) => rowValue != null && rowValue !== '',
 	},
@@ -257,7 +273,7 @@ export const EMPTY_OPERATORS: FilterOperatorDef<never>[] = [
 export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 	{
 		id: FilterOperator.Contains,
-		label: 'Contains',
+		label: defaultMessages.operators.text.contains,
 		filterFn: (rowValue, filterValue) => {
 			if (rowValue == null) return false
 			return String(rowValue).toLowerCase().includes(filterValue.toLowerCase())
@@ -265,17 +281,17 @@ export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 	},
 	{
 		id: FilterOperator.Equals,
-		label: 'Equals',
+		label: defaultMessages.operators.text.equals,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '').toLowerCase() === filterValue.toLowerCase(),
 	},
 	{
 		id: FilterOperator.NotEquals,
-		label: 'Not equals',
+		label: defaultMessages.operators.text.notEquals,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '').toLowerCase() !== filterValue.toLowerCase(),
 	},
 	{
 		id: FilterOperator.StartsWith,
-		label: 'Starts with',
+		label: defaultMessages.operators.text.startsWith,
 		filterFn: (rowValue, filterValue) =>
 			String(rowValue ?? '')
 				.toLowerCase()
@@ -283,7 +299,7 @@ export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 	},
 	{
 		id: FilterOperator.EndsWith,
-		label: 'Ends with',
+		label: defaultMessages.operators.text.endsWith,
 		filterFn: (rowValue, filterValue) =>
 			String(rowValue ?? '')
 				.toLowerCase()
@@ -297,37 +313,37 @@ export const TEXT_OPERATORS: FilterOperatorDef<string>[] = [
 export const NUMBER_OPERATORS: FilterOperatorDef<number>[] = [
 	{
 		id: FilterOperator.Equals,
-		label: 'Equals',
+		label: defaultMessages.operators.number.equals,
 		filterFn: (rowValue, filterValue) => Number(rowValue) === filterValue,
 	},
 	{
 		id: FilterOperator.NotEquals,
-		label: 'Not equals',
+		label: defaultMessages.operators.number.notEquals,
 		filterFn: (rowValue, filterValue) => Number(rowValue) !== filterValue,
 	},
 	{
 		id: FilterOperator.GreaterThan,
-		label: 'Greater than',
+		label: defaultMessages.operators.number.greaterThan,
 		filterFn: (rowValue, filterValue) => Number(rowValue) > filterValue,
 	},
 	{
 		id: FilterOperator.GreaterOrEqual,
-		label: 'Greater than or equal',
+		label: defaultMessages.operators.number.greaterOrEqual,
 		filterFn: (rowValue, filterValue) => Number(rowValue) >= filterValue,
 	},
 	{
 		id: FilterOperator.LessThan,
-		label: 'Less than',
+		label: defaultMessages.operators.number.lessThan,
 		filterFn: (rowValue, filterValue) => Number(rowValue) < filterValue,
 	},
 	{
 		id: FilterOperator.LessOrEqual,
-		label: 'Less than or equal',
+		label: defaultMessages.operators.number.lessOrEqual,
 		filterFn: (rowValue, filterValue) => Number(rowValue) <= filterValue,
 	},
 	{
 		id: FilterOperator.Between,
-		label: 'Between',
+		label: defaultMessages.operators.number.between,
 		filterFn: (rowValue, filterValue) => {
 			const val = Number(rowValue)
 			const fv = filterValue as unknown as BetweenValue<number>
@@ -357,7 +373,7 @@ export type FilterItem = SelectItem & {
 export const IN_OPERATORS: FilterOperatorDef<string[]>[] = [
 	{
 		id: FilterOperator.In,
-		label: 'Is any of',
+		label: defaultMessages.operators.multi.in,
 		filterFn: (rowValue, filterValue) => {
 			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
 			const v = rowValue == null ? '' : String(rowValue)
@@ -366,7 +382,7 @@ export const IN_OPERATORS: FilterOperatorDef<string[]>[] = [
 	},
 	{
 		id: FilterOperator.NotIn,
-		label: 'Is none of',
+		label: defaultMessages.operators.multi.notIn,
 		filterFn: (rowValue, filterValue) => {
 			if (!Array.isArray(filterValue) || filterValue.length === 0) return true
 			const v = rowValue == null ? '' : String(rowValue)
@@ -384,37 +400,37 @@ export const IN_OPERATORS: FilterOperatorDef<string[]>[] = [
 export const DATE_OPERATORS: FilterOperatorDef<string>[] = [
 	{
 		id: FilterOperator.Equals,
-		label: 'Equals',
+		label: defaultMessages.operators.date.equals,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') === filterValue,
 	},
 	{
 		id: FilterOperator.NotEquals,
-		label: 'Not equals',
+		label: defaultMessages.operators.date.notEquals,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') !== filterValue,
 	},
 	{
 		id: FilterOperator.GreaterThan,
-		label: 'After',
+		label: defaultMessages.operators.date.greaterThan,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') > filterValue,
 	},
 	{
 		id: FilterOperator.GreaterOrEqual,
-		label: 'On or after',
+		label: defaultMessages.operators.date.greaterOrEqual,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') >= filterValue,
 	},
 	{
 		id: FilterOperator.LessThan,
-		label: 'Before',
+		label: defaultMessages.operators.date.lessThan,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') < filterValue,
 	},
 	{
 		id: FilterOperator.LessOrEqual,
-		label: 'On or before',
+		label: defaultMessages.operators.date.lessOrEqual,
 		filterFn: (rowValue, filterValue) => String(rowValue ?? '') <= filterValue,
 	},
 	{
 		id: FilterOperator.Between,
-		label: 'Between',
+		label: defaultMessages.operators.date.between,
 		filterFn: (rowValue, filterValue) => {
 			const val = String(rowValue ?? '')
 			const fv = filterValue as unknown as BetweenValue<string>
@@ -442,12 +458,12 @@ function toBoolean(value: unknown): boolean {
 export const BOOLEAN_OPERATORS: FilterOperatorDef<boolean>[] = [
 	{
 		id: FilterOperator.Equals,
-		label: 'Is',
+		label: defaultMessages.operators.boolean.equals,
 		filterFn: (rowValue, filterValue) => Boolean(rowValue) === toBoolean(filterValue),
 	},
 	{
 		id: FilterOperator.NotEquals,
-		label: 'Is not',
+		label: defaultMessages.operators.boolean.notEquals,
 		filterFn: (rowValue, filterValue) => Boolean(rowValue) !== toBoolean(filterValue),
 	},
 	...(EMPTY_OPERATORS as FilterOperatorDef<boolean>[]),
@@ -607,4 +623,67 @@ export function createOperatorFilterFn(resolvedOperators: FilterOperatorDef[]): 
 	}
 
 	return fn
+}
+
+/**
+ * Which group of {@link GridMessages.operators} names a cell type's operators.
+ *
+ * Mirrors {@link DEFAULT_OPERATORS_BY_TYPE}: the types that share an operator set share its
+ * wording too — `progress` reads as a number, `image` / `link` as text, `badge` as `select`.
+ */
+const OPERATOR_GROUP_BY_CELL_TYPE: Record<string, 'text' | 'number' | 'date' | 'boolean' | 'multi'> = {
+	text: 'text',
+	number: 'number',
+	date: 'date',
+	boolean: 'boolean',
+	select: 'multi',
+	badge: 'multi',
+	progress: 'number',
+	image: 'text',
+	link: 'text',
+}
+
+/**
+ * Re-labels a resolved operator list from the grid's dictionary.
+ *
+ * The list itself is settled in core, where the ids and the comparisons live; the wording is
+ * the consumer's, so it is applied here rather than baked into the exported arrays. An id the
+ * dictionary does not name — a custom operator registered through `filtering.operators.items` —
+ * keeps the `label` its author wrote.
+ *
+ * Returns the same array when nothing changed, so a grid on the English default does not
+ * re-create the list on every render.
+ */
+export function localizeOperators(
+	defs: FilterOperatorDef[],
+	cellType: string | undefined,
+	messages: GridMessages['operators'],
+): FilterOperatorDef[] {
+	const group = messages[OPERATOR_GROUP_BY_CELL_TYPE[cellType ?? 'text'] ?? 'text'] as Record<
+		string,
+		string | undefined
+	>
+	const empty = messages.empty as Record<string, string | undefined>
+	const multi = messages.multi as Record<string, string | undefined>
+
+	const next = defs.map((def) => {
+		const label = group[def.id] ?? empty[def.id] ?? multi[def.id]
+		return label === undefined || label === def.label ? def : { ...def, label }
+	})
+	// Reference equality per entry, rather than a flag the closure sets: a `let` assigned only
+	// inside the callback still reads as `false` to control-flow analysis at the return.
+	return next.some((def, index) => def !== defs[index]) ? next : defs
+}
+
+/** Re-labels the built-in date-range presets from the dictionary, on the same terms. */
+export function localizeDateRangePresets(
+	presets: DateRangePreset[],
+	messages: GridMessages['operators']['presets'],
+): DateRangePreset[] {
+	const table = messages as Record<string, string | undefined>
+	const next = presets.map((preset) => {
+		const label = table[preset.id]
+		return label === undefined || label === preset.label ? preset : { ...preset, label }
+	})
+	return next.some((preset, index) => preset !== presets[index]) ? next : presets
 }

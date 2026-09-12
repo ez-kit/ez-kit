@@ -1,0 +1,66 @@
+---
+title: Row Pinning
+description: Pin rows to the top or bottom of the grid so they stay visible while the rest of the table scrolls.
+---
+
+Pinned rows stay anchored to the top or bottom of the table. Useful for summary rows, "you are here"
+markers, or the row someone just edited and wants to keep an eye on.
+
+Every option on this page is listed in the [API reference](/docs/data-grid/pinning/api).
+
+## Usage
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pinning={{ row: { top: true, bottom: true } }}
+	layout={{ stickyHeader: true }}
+/>
+```
+
+The example runs in a scrollable container with a sticky header — that is what makes the effect
+visible. Pin a row from its ⋮ menu, then scroll: it stays stuck while the rest passes underneath.
+
+<DataGridDocsExample exampleId='row-pinning-sticky-header' />
+
+The pin control lives in the row actions column, next to edit and delete — see
+[Row actions](/docs/data-grid/row-actions). Enabling row pinning is enough to create that column;
+you do not need editing or deleting.
+
+`{ top: true, bottom: true }` offers both edges. Narrow it to one when only one makes sense:
+
+```tsx
+pinning={{ row: { top: true } }} // "Pin to top" only
+```
+
+## Rows pinned from the start
+
+`initialState.rowPinning` seeds the pins by **row id**, which is the value `getRowId` returns —
+`row.id` by default. The user can still unpin them:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	pinning={{ row: { top: true, bottom: true } }}
+	initialState={{ rowPinning: { top: ['3'], bottom: ['58'] } }}
+/>
+```
+
+<DataGridDocsExample exampleId='row-pinning-initial' />
+
+For a pin that has to survive a reload, pass `pinning.row.onChange` and restore what you stored into
+the same seed — or hold the slice yourself with `state.rowPinning`, see
+[Controlled State](/docs/data-grid/state/controlled).
+
+## See also
+
+- [API reference](/docs/data-grid/pinning/api)
+- [Row actions](/docs/data-grid/row-actions)
+- [Column pinning](/docs/data-grid/pinning/columns)
+- [Pinning](/docs/data-grid/pinning) · [Layout](/docs/data-grid/layout)
+
+## Source
+
+- `@ez-kit/data-grid-core` — [`packages/data-grid/core/src/types.ts`](https://github.com/ez-kit/ez-kit/blob/main/packages/data-grid/core/src/types.ts)

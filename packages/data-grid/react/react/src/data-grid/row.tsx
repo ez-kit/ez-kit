@@ -2,7 +2,7 @@ import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
 
 import { DataGridCell } from './cell'
-import { useDataGridTable } from './table-context'
+import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
@@ -54,6 +54,7 @@ export type DataGridRowProps<TRow extends object = any> = {
  * Emits structural data attributes:
  * - `data-slot="tr"` (identity)
  * - `data-row-id` (table row id)
+ * - `data-row-selected="true"` while the row is selected
  * - `data-depth` (sub-row depth for expansion)
  * - `data-pinned="top" | "bottom"` for pinned rows (offset from `--dg-row-pin-offset`)
  * - `data-virtual="row"` for virtualized rows (positioned via runtime `transform`)
@@ -76,6 +77,18 @@ export function DataGridRow<TRow extends object = any>({
 	// is the very one it was written against.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const resolveRowProps = table.grid.rowProps as RowPropsResolver<any> | undefined
+	// Selection state is derived, not read: a parent row counts as selected through its
+	// children, which only TanStack knows. The selector therefore ignores its argument and
+	// re-derives on every store change — it returns a boolean, so `useSyncExternalStore` bails
+	// out unless *this* row's selectedness actually flipped, and the body (which deliberately
+	// does not subscribe to `rowSelection`) keeps its narrow re-render.
+	//
+	// The attribute is `data-row-selected`, not the obvious `data-selected`, because React Aria
+	// reserves that one: its `Row` writes `data-selected={state.isSelected || undefined}` as a
+	// literal *after* spreading incoming props, so a kit built on RAC (heroui) always erases a
+	// value passed from here — RAC's selection manager is idle, since the grid's selection lives
+	// in TanStack. `data-row-*` is this layer's own namespace and nothing overwrites it.
+	const isSelected = useDataGridState(() => row.getIsSelected())
 	const { className: consumerClassName, style: consumerStyle, ...consumerProps } = resolveRowProps?.(row) ?? {}
 	const cells = row.getVisibleCells()
 
@@ -85,6 +98,7 @@ export function DataGridRow<TRow extends object = any>({
 			ref={ref}
 			data-slot='tr'
 			data-row-id={row.id}
+			data-row-selected={isSelected ? 'true' : undefined}
 			data-depth={row.depth > 0 ? row.depth : undefined}
 			style={consumerStyle !== undefined || style !== undefined ? { ...consumerStyle, ...style } : undefined}
 			className={joinClassNames(consumerClassName)}

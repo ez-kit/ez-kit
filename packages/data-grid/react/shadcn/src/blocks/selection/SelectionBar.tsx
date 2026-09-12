@@ -1,15 +1,61 @@
 'use client'
 
-import { ActionBarVariant } from '@ez-kit/data-grid-react'
+import { ActionBarVariant, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react'
 import { X } from 'lucide-react'
+import { Fragment } from 'react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { cn } from '@grid-shadcn/lib/utils'
 
-import type { SelectionBarProps } from '@ez-kit/data-grid-react'
+import { renderActionIcon } from '../icons'
 
-export function SelectionBar({ open, count, variant, onDelete, onClear, actions }: SelectionBarProps) {
-	const hasActions = Boolean(onDelete) || Boolean(actions)
+import type { GridMenuItem, GridMenuItemDef, SelectionBarProps } from '@ez-kit/data-grid-react'
+import type { ReactNode } from 'react'
+
+/**
+ * One `selection.bar.actions` entry as a button, matching the built-in Delete beside it: the
+ * kit's glyph for a named icon, its danger colour for a destructive entry, its disabled state.
+ * This is what the config buys over hand-drawn markup.
+ */
+function ActionButton({ item }: { item: GridMenuItemDef }) {
+	const icon = renderActionIcon(item.icon)
+
+	return (
+		<Button
+			variant={item.destructive === true ? 'destructive' : 'outline'}
+			size='sm'
+			disabled={item.disabled === true}
+			data-slot='selection-bar-action'
+			{...(item.className !== undefined ? { className: item.className } : {})}
+			onClick={item.onAction}
+		>
+			{icon}
+			{item.label}
+		</Button>
+	)
+}
+
+/** The entries as buttons — `undefined` when the bar was given none, so separators can tell. */
+function renderActions(actions: GridMenuItem[] | undefined): ReactNode {
+	if (actions === undefined || actions.length === 0) return null
+	return actions.map((item) =>
+		// An entry that brought its own markup stands where its button would have been — the bar
+		// is plain flex, so it needs no wrapper of ours.
+		isGridMenuItemSlot(item) ? (
+			<Fragment key={item.id}>{item.component}</Fragment>
+		) : (
+			<ActionButton
+				key={item.id}
+				item={item}
+			/>
+		),
+	)
+}
+
+export function SelectionBar({ open, count, variant, onDelete, onClear, actions, start, end }: SelectionBarProps) {
+	const messages = useGridMessages()
+	const actionButtons = renderActions(actions)
+	const hasActions = Boolean(onDelete) || actionButtons !== null || start !== undefined || end !== undefined
 
 	if (variant === ActionBarVariant.Inline) {
 		if (!open) return null
@@ -25,30 +71,35 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 			>
 				<div
 					data-slot='action-bar-selection'
+					aria-label={messages.selection.count({ count })}
 					className='font-medium tabular-nums'
 				>
-					{count} selected
+					{count}
 				</div>
 
 				<div className='ml-auto flex items-center gap-2'>
+					{start}
+
 					{onDelete && (
 						<Button
 							variant='destructive'
 							size='sm'
 							onClick={onDelete}
 						>
-							Delete
+							{messages.selection.delete}
 						</Button>
 					)}
 
-					{actions}
+					{actionButtons}
+
+					{end}
 
 					<Button
 						variant='ghost'
 						size='icon'
 						data-slot='selection-bar-close'
 						onClick={onClear}
-						aria-label='Clear selection'
+						aria-label={messages.selection.clear}
 					>
 						<X />
 					</Button>
@@ -83,9 +134,10 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 				{/* Selected count badge */}
 				<div
 					data-slot='action-bar-selection'
+					aria-label={messages.selection.count({ count })}
 					className='flex items-center gap-1 rounded-sm border px-2 py-1 font-medium text-sm tabular-nums'
 				>
-					{count} selected
+					{count}
 				</div>
 
 				{/* Separator — only when there are action buttons to divide from the count */}
@@ -98,6 +150,8 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 					/>
 				)}
 
+				{start}
+
 				{/* Delete — only when handler provided */}
 				{onDelete && (
 					<Button
@@ -105,12 +159,14 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 						size='sm'
 						onClick={onDelete}
 					>
-						Delete
+						{messages.selection.delete}
 					</Button>
 				)}
 
-				{/* Custom actions slot */}
-				{actions}
+				{/* Custom actions — `selection.bar.actions`, rendered by this kit */}
+				{actionButtons}
+
+				{end}
 
 				{/* Separator before Cancel */}
 				<div
@@ -126,7 +182,7 @@ export function SelectionBar({ open, count, variant, onDelete, onClear, actions 
 					size='icon'
 					data-slot='selection-bar-close'
 					onClick={onClear}
-					aria-label='Clear selection'
+					aria-label={messages.selection.clear}
 				>
 					<X />
 				</Button>

@@ -3,8 +3,6 @@ title: Searchable select and multiselect
 description: A select or multiselect that queries as the user types — and still shows the labels of values the current results do not contain.
 ---
 
-# Searchable select and multiselect
-
 Everything in [Option sources](/docs/form/select/option-sources) assumes a source returns **the whole list**. That assumption is doing more work than it looks: because the list is complete, the option carrying the value in form state is always on it, so the kit can draw its label by finding the matching entry.
 
 Server-side search breaks that permanently. The source now returns only the **page matching the last query**. Form state holds `city: 4821`, the current results are Lisbon and Porto, and no option carries `4821` — so the control renders blank, forever. It is the transient "the value arrived before its option" case from [`loading`](/docs/form/select#options-that-arrive-later) made permanent.

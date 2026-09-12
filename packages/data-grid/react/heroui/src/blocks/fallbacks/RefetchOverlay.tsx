@@ -1,5 +1,6 @@
 'use client'
 
+import { useGridMessages } from '@ez-kit/data-grid-react'
 import { Spinner } from '@heroui/react'
 
 import type { RefetchOverlayProps } from '@ez-kit/data-grid-react'
@@ -14,6 +15,7 @@ import type { RefetchOverlayProps } from '@ez-kit/data-grid-react'
  * Uses `position: absolute` to overlay the tbody without shifting layout.
  */
 export function RefetchOverlay(_props: RefetchOverlayProps) {
+	const messages = useGridMessages()
 	return (
 		<div
 			data-slot='refetch-overlay-inner'
@@ -29,7 +31,7 @@ export function RefetchOverlay(_props: RefetchOverlayProps) {
 			}}
 		>
 			<Spinner
-				aria-label='Refreshing'
+				aria-label={messages.fallbacks.refreshing}
 				size='md'
 			/>
 		</div>

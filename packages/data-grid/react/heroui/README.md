@@ -5,10 +5,12 @@
 ## Install
 
 ```bash
-pnpm add @ez-kit/data-grid-heroui
+pnpm add @ez-kit/data-grid-heroui @heroui/react @heroui/styles
 ```
 
-One package. The kit re-exports the whole adapter surface, so you never need `@ez-kit/data-grid-react` or `@ez-kit/data-grid-core` as a second dependency — not even to name a type. `@heroui/react` and `@heroui/styles` come in as dependencies of the kit.
+`@heroui/react` and `@heroui/styles` (v3) are **peer dependencies**, alongside `react` and `react-dom`: HeroUI is built on React Aria, whose components talk to each other through React context, and this kit's stylesheet `@import`s `@heroui/styles` — a second copy of either in your tree means a second set of contexts and a second copy of HeroUI's CSS.
+
+Nothing else to add. The kit re-exports the whole adapter surface, so you never need `@ez-kit/data-grid-react` or `@ez-kit/data-grid-core` as a second dependency — not even to name a type.
 
 ## Usage
 

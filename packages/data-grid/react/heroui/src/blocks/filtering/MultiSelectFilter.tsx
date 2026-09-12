@@ -5,6 +5,7 @@ import { ListBox, Select } from '@heroui/react'
 
 import type { MultiSelectFilterProps } from '@ez-kit/data-grid-react'
 import type { Key } from '@heroui/react'
+import type { ReactNode } from 'react'
 
 const ROW_STYLE = {
 	display: 'flex',
@@ -55,7 +56,10 @@ export function MultiSelectFilter({ items, selectedValues, onChange, placeholder
 							textValue={opt.label}
 						>
 							<div style={ROW_STYLE}>
-								<span>{opt.label}</span>
+								<span>
+									{(opt.icon as ReactNode) ?? null}
+									{opt.label}
+								</span>
 								{opt.count !== undefined && (
 									<span
 										data-slot='count'

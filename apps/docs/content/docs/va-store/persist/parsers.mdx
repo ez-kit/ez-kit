@@ -3,8 +3,6 @@ title: Parsers
 description: The typed codecs that convert each field to and from its string form — the built-in catalogue, auto-resolution, Zod validation, and the round-trip contract for custom parsers.
 ---
 
-# Parsers
-
 A parser converts one typed leaf to/from a string. The substrate (URL, storage blob, IndexedDB record) only ever stores strings, so the **same** parsers round-trip a value through every source. Reads never throw into render — invalid input falls back to the field's default.
 
 | Parser              | Type      | Notes                              |

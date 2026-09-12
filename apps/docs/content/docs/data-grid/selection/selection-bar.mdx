@@ -3,8 +3,6 @@ title: Selection Bar
 description: Floating or inline action bar that appears when rows are selected — bulk delete, export, custom actions.
 ---
 
-# Selection Bar
-
 When at least one row is selected, render an action bar that operates on the selection set.
 
 ## Floating
@@ -41,11 +39,67 @@ selection: {
 }
 ```
 
+## Custom actions
+
+`selection.bar.actions` builds the entries the bar offers for the selection. It is **data**, not
+markup — the same `ActionItem` shape [`rowActions.actions`](/docs/data-grid/row-actions/api#entry-shape) takes — so the
+kit draws each entry with the chrome its own Delete button has: your own icon element, the kit's
+danger colour for `destructive`, its disabled state for `disabled`.
+
+<DataGridDocsExample exampleId='selection-custom-action' />
+
+```tsx
+// One action, offered in both places, written once.
+const exportAction = (rows: Row<Product>[]) => ({
+	id: 'export',
+	label: 'Export',
+	icon: <Download />,
+	onAction: () => exportRows(rows),
+})
+
+rowActions: { actions: ({ row }) => [exportAction([row])] },
+selection: {
+	bar: { actions: ({ selectedRows }) => [exportAction(selectedRows)] },
+}
+```
+
+An entry's `onAction` takes no arguments: the callback that built it already closes over
+`selectedRows`, `table` and `clearSelection`. Return `[]` for a selection that offers nothing.
+
+An entry that this shape cannot express hands over its markup instead — `{ id, component }`, and
+the kit draws nothing around it:
+
+```tsx
+selection={{
+	bar: {
+		actions: ({ selectedRows }) => [
+			{ id: 'assign', component: <BulkAssign rows={selectedRows} /> },
+		],
+	},
+}}
+```
+
+The example above offers one entry of each kind: Export is described, the assignee picker is not.
+In the bar `component` stands exactly where the entry's button would have been. Prefer the
+described form while it fits: it is what keeps an entry matching the built-in Delete beside it in
+both kits. See [Drawing an entry yourself](/docs/data-grid/row-actions#drawing-an-entry-yourself).
+
+## Slots
+
+Content that is not an action — a bulk-target select, a counter — goes in the `start` / `end` slots
+of `<DataGrid.SelectionBar>`, rendered around the kit's own controls. Same split as
+[`<DataGrid.Toolbar>`](/docs/data-grid/layout/composition): the config carries data, the compound component
+carries markup, and `children` still replaces the bar wholesale.
+
+```tsx
+<DataGrid.SelectionBar end={<WarehousePicker />} />
+```
+
 ## The Delete button
 
 The bar's Delete button is **not** configured here. Bulk delete is the `deleting` feature
 operating on more than one row, so its handler and its prompt live next to the per-row ones — see
-[Delete confirmation](./data-grid/editing/delete-confirmation). The bar renders the button
+[Delete confirmation](/docs/data-grid/editing/deleting). The bar renders the button
 whenever `deleting.bulk` resolves to on.
 
 ```tsx
@@ -76,11 +130,11 @@ The bar is configured under `selection.bar` — `true` for the default bar, `'in
 for nothing but the render mode, or an object with the keys below. It renders only while
 `selection` is enabled. Everything here is presentational.
 
-| `selection.bar` key | Type                                                | Description                                                                                       |
-| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                             |
-| `clear`             | `({ table, selectedRows, clearSelection }) => void` | Replaces the default clear behaviour (not a notification — call `clearSelection` to still reset). |
-| `actions`           | `ReactElement \| (args) => ReactElement`            | Extra controls rendered between Delete and Cancel.                                                |
+| `selection.bar` key | Type                                                | Description                                                                               |
+| ------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `variant`           | `'floating' \| 'inline'`                            | Default `'floating'`.                                                                     |
+| `onClear`           | `({ table, selectedRows, clearSelection }) => void` | Notified after the bar clears the selection; `selectedRows` is the set it held.           |
+| `actions`           | `(args) => ActionItem[]`                            | Custom entries rendered between Delete and Cancel. See [Custom actions](#custom-actions). |
 
 ## Source
 

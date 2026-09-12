@@ -40,6 +40,30 @@
 		"exportName": "BaseSelectionExample"
 	},
 	{
+		"id": "selection-delete",
+		"label": "Bulk delete",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/selection-bar-basics.tsx",
+		"exportName": "SelectionDeleteExample"
+	},
+	{
+		"id": "selection-clear",
+		"label": "Clearing the selection",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/selection-bar-basics.tsx",
+		"exportName": "SelectionClearExample"
+	},
+	{
+		"id": "selection-custom-action",
+		"label": "Custom bar action",
+		"group": "base",
+		"groupLabel": "Base",
+		"sourceFile": "components/base/selection-bar-basics.tsx",
+		"exportName": "SelectionCustomActionExample"
+	},
+	{
 		"id": "base-sticky",
 		"label": "Sticky Header",
 		"group": "base",
@@ -86,6 +110,14 @@
 		"groupLabel": "Sorting",
 		"sourceFile": "components/sort-toolbar.tsx",
 		"exportName": "SortToolbarExample"
+	},
+	{
+		"id": "filter-operators-table",
+		"label": "Operators · Whole table",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-operators-table.tsx",
+		"exportName": "FilterOperatorsTableExample"
 	},
 	{
 		"id": "filter-operators-text",
@@ -192,6 +224,22 @@
 		"exportName": "FilterChipsAutoExample"
 	},
 	{
+		"id": "filter-chips-only",
+		"label": "Active chips · Chips only",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-chips.tsx",
+		"exportName": "FilterChipsOnlyExample"
+	},
+	{
+		"id": "filter-chips-below",
+		"label": "Active chips · Below the table",
+		"group": "filtering",
+		"groupLabel": "Filtering",
+		"sourceFile": "components/filter-chips.tsx",
+		"exportName": "FilterChipsBelowExample"
+	},
+	{
 		"id": "filter-chips-always",
 		"label": "Active chips · Always show clear",
 		"group": "filtering",
@@ -280,6 +328,14 @@
 		"exportName": "SelectionBarInlineExample"
 	},
 	{
+		"id": "deleting-rollback",
+		"label": "Failure semantics",
+		"group": "selection",
+		"groupLabel": "Selection",
+		"sourceFile": "components/deleting/rollback.tsx",
+		"exportName": "DeletingRollbackExample"
+	},
+	{
 		"id": "delete-confirmation",
 		"label": "Delete Confirmation",
 		"group": "selection",
@@ -302,6 +358,22 @@
 		"groupLabel": "Columns",
 		"sourceFile": "components/column-pinning.tsx",
 		"exportName": "ColumnPinningExample"
+	},
+	{
+		"id": "column-pinning-static",
+		"label": "Static Pin",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/pinning/static-column.tsx",
+		"exportName": "ColumnPinningStaticExample"
+	},
+	{
+		"id": "pinning-both",
+		"label": "Both Axes",
+		"group": "pinning",
+		"groupLabel": "Pinning",
+		"sourceFile": "components/pinning/both-axes.tsx",
+		"exportName": "PinningBothAxesExample"
 	},
 	{
 		"id": "resizing-on-change",
@@ -442,6 +514,30 @@
 		"exportName": "CreatingValidationExample"
 	},
 	{
+		"id": "editing-mode-row",
+		"label": "Row mode",
+		"group": "editing",
+		"groupLabel": "Editing",
+		"sourceFile": "components/editing/modes.tsx",
+		"exportName": "EditingRowModeExample"
+	},
+	{
+		"id": "editing-mode-modal",
+		"label": "Modal mode",
+		"group": "editing",
+		"groupLabel": "Editing",
+		"sourceFile": "components/editing/modes.tsx",
+		"exportName": "EditingModalModeExample"
+	},
+	{
+		"id": "editing-mode-cell",
+		"label": "Cell mode",
+		"group": "editing",
+		"groupLabel": "Editing",
+		"sourceFile": "components/editing/modes.tsx",
+		"exportName": "EditingCellModeExample"
+	},
+	{
 		"id": "editing-validation",
 		"label": "Editing",
 		"group": "validation",
@@ -466,12 +562,36 @@
 		"exportName": "ExpandingTreeExample"
 	},
 	{
+		"id": "expanding-tree-sub-rows",
+		"label": "Tree · custom sub-rows key",
+		"group": "expanding",
+		"groupLabel": "Expanding",
+		"sourceFile": "components/expanding/tree.tsx",
+		"exportName": "ExpandingTreeSubRowsExample"
+	},
+	{
 		"id": "expanding-controlled",
 		"label": "Controlled",
 		"group": "expanding",
 		"groupLabel": "Expanding",
 		"sourceFile": "components/expanding/controlled.tsx",
 		"exportName": "ExpandingControlledExample"
+	},
+	{
+		"id": "row-actions-inline",
+		"label": "Inline Placement",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/placement.tsx",
+		"exportName": "RowActionsInlineExample"
+	},
+	{
+		"id": "row-actions-menu",
+		"label": "Menu Placement",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/placement.tsx",
+		"exportName": "RowActionsMenuExample"
 	},
 	{
 		"id": "row-actions-custom",
@@ -482,12 +602,36 @@
 		"exportName": "RowActionsCustomExample"
 	},
 	{
+		"id": "row-actions-custom-inline",
+		"label": "Custom Actions Inline",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/custom-actions.tsx",
+		"exportName": "RowActionsInlineCustomExample"
+	},
+	{
+		"id": "row-actions-component",
+		"label": "Custom Component",
+		"group": "row-actions",
+		"groupLabel": "Row Actions",
+		"sourceFile": "components/row-actions/action-component.tsx",
+		"exportName": "RowActionsComponentExample"
+	},
+	{
 		"id": "row-pinning-sticky-header",
 		"label": "Sticky Header",
 		"group": "row-pinning",
 		"groupLabel": "Row Pinning",
 		"sourceFile": "components/row-pinning/sticky-header.tsx",
 		"exportName": "RowPinningStickyHeaderExample"
+	},
+	{
+		"id": "row-pinning-initial",
+		"label": "Initial Pins",
+		"group": "row-pinning",
+		"groupLabel": "Row Pinning",
+		"sourceFile": "components/pinning/initial-rows.tsx",
+		"exportName": "RowPinningInitialExample"
 	},
 	{
 		"id": "virtualized",
@@ -502,6 +646,14 @@
 		"groupLabel": "CRUD",
 		"sourceFile": "components/crud/CrudClientExample.tsx",
 		"exportName": "CrudClientExample"
+	},
+	{
+		"id": "crud-server",
+		"label": "Server",
+		"group": "crud",
+		"groupLabel": "CRUD",
+		"sourceFile": "components/crud/CrudServerExample.tsx",
+		"exportName": "CrudServerExample"
 	},
 	{
 		"id": "controlled-state",
@@ -522,28 +674,36 @@
 		"exportName": "FallbacksExample"
 	},
 	{
-		"id": "pagination-variant-numbered",
-		"label": "Numbered (default)",
+		"id": "pagination-links",
+		"label": "Page links (default)",
 		"group": "pagination",
 		"groupLabel": "Pagination",
-		"sourceFile": "components/pagination-variants.tsx",
-		"exportName": "PaginationVariantNumberedExample"
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationLinksExample"
 	},
 	{
-		"id": "pagination-variant-simple",
-		"label": "Simple",
+		"id": "pagination-links-off",
+		"label": "Prev / next only",
 		"group": "pagination",
 		"groupLabel": "Pagination",
-		"sourceFile": "components/pagination-variants.tsx",
-		"exportName": "PaginationVariantSimpleExample"
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationLinksOffExample"
 	},
 	{
-		"id": "pagination-variant-compact",
-		"label": "Compact",
+		"id": "pagination-edges",
+		"label": "Edge jumps",
 		"group": "pagination",
 		"groupLabel": "Pagination",
-		"sourceFile": "components/pagination-variants.tsx",
-		"exportName": "PaginationVariantCompactExample"
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationEdgesExample"
+	},
+	{
+		"id": "pagination-page-sizer-footer",
+		"label": "Page sizer in the footer",
+		"group": "pagination",
+		"groupLabel": "Pagination",
+		"sourceFile": "components/pagination-footer.tsx",
+		"exportName": "PaginationPageSizerFooterExample"
 	},
 	{
 		"id": "infinite-scroll-auto",
@@ -646,5 +806,37 @@
 		"groupLabel": "Columns",
 		"sourceFile": "components/column-footers.tsx",
 		"exportName": "StickyFooterExample"
+	},
+	{
+		"id": "example-task-board",
+		"label": "Task board",
+		"group": "examples",
+		"groupLabel": "Examples",
+		"sourceFile": "components/example-task-board.tsx",
+		"exportName": "ExampleTaskBoardExample"
+	},
+	{
+		"id": "localization",
+		"label": "Localization",
+		"group": "localization",
+		"groupLabel": "Localization",
+		"sourceFile": "components/localization.tsx",
+		"exportName": "LocalizationExample"
+	},
+	{
+		"id": "column-ordering",
+		"label": "Column ordering",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/column-ordering.tsx",
+		"exportName": "ColumnOrderingExample"
+	},
+	{
+		"id": "grouped-headers",
+		"label": "Grouped headers",
+		"group": "columns",
+		"groupLabel": "Columns",
+		"sourceFile": "components/grouped-headers.tsx",
+		"exportName": "GroupedHeadersExample"
 	}
 ]

@@ -1,5 +1,13 @@
 @import '@ez-kit/data-grid-react/styles.css';
 
+/* The generated create / edit form: each field composite renders its own label, control and
+ * error, and nothing between them separates one field from the next. Stack them with a gap. */
+[data-slot='auto-form'] {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
 [data-slot='active-filters-bar'] {
 	display: flex;
 	flex-wrap: wrap;
@@ -133,8 +141,15 @@
 	--dg-pin-cell-background: color-mix(in oklab, var(--muted) 50%, var(--background));
 }
 
+/* `data-selected` is what the react layer emits; `data-state='selected'` is upstream shadcn's
+ * own spelling, kept so a consumer's `<TableRow data-state>` still lands on the same surface.
+ * The background lives here rather than on the vendored primitive's class list because only
+ * this sheet knows the pinned-cell variable has to move with it — a pinned cell paints its own
+ * background and would otherwise stay unselected-looking inside a selected row. */
 [data-slot='table-row'][data-state='selected'],
-[data-slot='tr'][data-state='selected'] {
+[data-slot='tr'][data-state='selected'],
+[data-slot='tr'][data-row-selected='true'] {
+	background-color: var(--muted);
 	--dg-pin-cell-background: var(--muted);
 }
 
@@ -231,11 +246,11 @@
 	transition: opacity 150ms;
 }
 
-tr[data-expanded] {
+tr[data-expanded-row] {
 	display: block !important;
 	grid-template-columns: none !important;
 }
-tr[data-expanded] > td {
+tr[data-expanded-row] > td {
 	display: block;
 	width: 100%;
 	background-color: hsl(var(--muted) / 0.4);
@@ -245,6 +260,16 @@ tr[data-expanded] > td {
 [data-system-column='expand'] {
 	padding-inline: 0.25rem;
 	justify-content: center;
+}
+
+/* Leaf rows render no chevron (nothing left to expand), so reserve the button's height
+ * here — otherwise a leaf row would sit lower than its parent and the tree would look
+ * ragged. 2rem is the icon-button height in this kit. */
+[data-system-column='expand']:empty::before {
+	content: '';
+	display: block;
+	width: 0;
+	height: 2rem;
 }
 
 tr[data-depth='1'] [data-system-column='expand'] {
@@ -313,4 +338,40 @@ tr[data-depth='5'] [data-system-column='expand'] + td {
 	background-color: transparent;
 	border: 1px dashed var(--border);
 	color: var(--muted-foreground);
+}
+
+/* ---- Footer page sizer ----
+ * `pagination: { pageSizer: 'footer' }` puts the size control in the pagination row instead of
+ * the toolbar, so the two share one line: sizer to the leading edge, pagination controls to the
+ * trailing one. The shared React package ships the `data-slot` and no styling, so the row's
+ * layout has to live here. The nested pagination's own top margin would double the gap. */
+
+[data-slot='pagination-row'] {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	margin-top: 0.75rem;
+}
+
+/* Both kits' pagination roots are full-width centred bars of their own (`mx-auto w-full
+ * justify-center`); inside this row they are one of two items, so the width and the centring
+ * have to come back off or the controls wrap onto their own line. */
+
+[data-slot='pagination-row'] [data-slot='pagination'] {
+	width: auto;
+	margin: 0;
+	justify-content: flex-end;
+}
+
+/* ---- Icon-bearing option values ----
+ * `select` / `badge` items may carry an `icon`; the glyph and the label are one line, so the
+ * cell's value wrapper lays them out rather than letting the icon wrap above the text. */
+
+[data-slot='select-cell-value'] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	white-space: nowrap;
 }

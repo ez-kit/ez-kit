@@ -128,6 +128,15 @@ export default tseslint.config(
 		},
 	},
 	{
+		// Playwright specs are not React: a fixture's second argument is `use` by convention,
+		// which `react-hooks/rules-of-hooks` reads as React's `use` hook called outside a
+		// component. No React runs in this directory at all, so the plugin has nothing to say.
+		files: ['apps/docs/e2e/**/*.ts'],
+		rules: {
+			'react-hooks/rules-of-hooks': 'off',
+		},
+	},
+	{
 		files: ['apps/docs/**/*.{js,jsx,ts,tsx}'],
 		plugins: {
 			'@next/next': nextPlugin,
@@ -136,6 +145,49 @@ export default tseslint.config(
 			...nextPlugin.configs.recommended.rules,
 			...nextPlugin.configs['core-web-vitals'].rules,
 			'@next/next/no-html-link-for-pages': 'off',
+		},
+	},
+	{
+		// No user-facing string literal in the data-grid packages: every one of them belongs in
+		// `GridMessages` (`packages/data-grid/core/src/messages`), which is the only place a
+		// consumer can replace it. Without this the literals come back one PR at a time, and a
+		// grid that is 90% localizable is not localizable — the English that leaks is usually an
+		// `aria-label`, where nobody sees it until a screen reader does.
+		//
+		// `components/ui/**` is out of scope: those are the kits' vendored primitives, whose
+		// own defaults a block overrides by passing a prop.
+		files: [
+			'packages/data-grid/react/react/src/**/*.tsx',
+			'packages/data-grid/react/shadcn/src/blocks/**/*.tsx',
+			'packages/data-grid/react/heroui/src/blocks/**/*.tsx',
+		],
+		ignores: ['**/*.test.tsx', '**/test-utils.tsx'],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				{
+					// Two letters in a row: `0`, `–` and `+${n}` are formatting, not wording.
+					selector: 'JSXText[value=/[A-Za-z]{2}/]',
+					message:
+						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a component. Read it with useGridMessages() / table.grid.messages.',
+				},
+				{
+					// The same wording hoisted into a module constant and referenced as `{FOO_LABEL}`
+					// reads as an expression, so neither selector above sees it — this is how
+					// heroui's `PREVIOUS_LABEL` / `PAGINATION_ARIA_LABEL` survived the first sweep.
+					// Matched on the naming convention the packages actually use; `LABEL_CLASS` and
+					// friends stay legal because they do not end in one of these words.
+					selector: 'VariableDeclarator[id.name=/_(LABEL|TEXT|TITLE|PLACEHOLDER)$/] > Literal[value=/[A-Za-z]{2}/]',
+					message:
+						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a module constant. Read it with useGridMessages() / table.grid.messages.',
+				},
+				{
+					selector:
+						'JSXAttribute[name.name=/^(aria-label|placeholder|title|alt|aria-description)$/] > Literal[value=/[A-Za-z]{2}/]',
+					message:
+						'User-facing text belongs in GridMessages (packages/data-grid/core/src/messages), not in a component. Read it with useGridMessages() / table.grid.messages.',
+				},
+			],
 		},
 	},
 	eslintConfigPrettier,

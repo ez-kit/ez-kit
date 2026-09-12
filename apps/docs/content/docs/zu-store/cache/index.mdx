@@ -3,8 +3,6 @@ title: createStoreCache
 description: Keep context-store instances alive across Provider unmount/remount — in memory, keyed by name — so table filters, pagination, and scroll position survive navigation without localStorage.
 ---
 
-# `createStoreCache`
-
 `createContextStore` creates a fresh store on `Provider` mount and throws it away on unmount. That is exactly what you want for a modal or a one-off form — but not for a table whose filters and pagination should still be there when the user navigates away and back.
 
 `createCachedStore` is a **separate, opt-in** primitive that keeps the whole live store instance alive in an in-memory cache, keyed by a name you choose. `createContextStore` is unchanged.

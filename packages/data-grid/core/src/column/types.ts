@@ -176,6 +176,15 @@ export type InputComponentProps<TConfig = unknown> = {
 export type SelectItem = {
 	value: string
 	label: string
+	/**
+	 * Optional glyph the adapter renders before the label — React: `icon: <Circle />`.
+	 *
+	 * Typed `unknown` for the same reason {@link ColumnRenderer}'s `TNode` is `unknown` here:
+	 * core renders nothing and must not name a framework's node type. The adapter is what turns
+	 * it into a node, and the same item feeds both the cell and the column's filter list, so one
+	 * icon is stated once.
+	 */
+	icon?: unknown
 }
 /**
  * Visual variant of a badge rendered by the `badge` cell type. The names are the kits' shared
@@ -201,6 +210,15 @@ export type BadgeItem = {
 	value: string
 	label: string
 	variant?: BadgeVariant
+	/**
+	 * Optional glyph the adapter renders before the label — React: `icon: <Circle />`.
+	 *
+	 * Typed `unknown` for the same reason {@link ColumnRenderer}'s `TNode` is `unknown` here:
+	 * core renders nothing and must not name a framework's node type. The adapter is what turns
+	 * it into a node, and the same item feeds both the cell and the column's filter list, so one
+	 * icon is stated once.
+	 */
+	icon?: unknown
 }
 
 export type SelectCellConfig = {
@@ -382,6 +400,26 @@ export type CellTypeRegistryShape = Record<string, { __config?: unknown }>
  * inference sites for one type parameter, and they drift.
  */
 export type ConfigOf<TDefinition> = TDefinition extends { __config?: infer TConfig } ? TConfig : never
+
+/**
+ * A registry projected down to the part a column is typed against: its ids, and the `config`
+ * each id declares. The renderer slots are dropped.
+ *
+ * Exists **only to prove** that a kit's hand-declared registry type still describes its runtime
+ * `cellTypes` object — see either kit's `blocks/cell-types.ts`. It must never be the type a kit
+ * publishes `createColumns` against: mapping the registry at the publication boundary turns every
+ * arm of {@link CellDef} permissive, which trades away the per-type `config` checking this whole
+ * mechanism exists for.
+ *
+ * The distinction that makes the proof worth having: a **declared** type survives the declaration
+ * emitter as a name, while `typeof cellTypes` — an object of nine real `ComponentType` slots — is
+ * re-printed structurally into the bundled `.d.ts`, and over that blob `CellDef` degenerates to an
+ * error type. A consumer then gets no checking at all through the published types, while the
+ * package's own source tree still checks fine.
+ */
+export type CellTypeContractOf<TRegistry> = {
+	[TKey in keyof TRegistry]: { __config?: ConfigOf<TRegistry[TKey]> }
+}
 
 /**
  * One arm of {@link CellDef}: a registered type id, plus the `config` that id declared.
@@ -727,7 +765,11 @@ export type ColumnSortUndefined = (typeof ColumnSortUndefined)[keyof typeof Colu
  * ```
  */
 export type ColumnSortingConfig = {
-	/** First click sorts descending. Overrides table-level `sorting.descFirst`. */
+	/**
+	 * Force the first click to sort descending, overriding table-level `sorting.descFirst`.
+	 * Unset, the direction is inferred from the column's first value — string ascending,
+	 * anything else descending.
+	 */
 	descFirst?: boolean
 	/**
 	 * Built-in name, registry id (matches `sorting.fns`), or inline comparator.
@@ -844,6 +886,32 @@ export type ColumnDefCommon<
 	 * ```
 	 */
 	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	/**
+	 * Child columns, which makes this def a **header group** rather than a column: it contributes
+	 * no cells, and its `header` spans its children across an extra header row. Groups nest, and
+	 * each level adds a row.
+	 *
+	 * A group needs an explicit `id` — there is no `accessorKey` to derive one from — and carries
+	 * nothing that acts on a value: the accessor, the cell type, `align`, `width`, and the
+	 * sorting / filtering / editing / visibility / resizing switches all belong on the leaves,
+	 * which is where the affordances render.
+	 *
+	 * Pin the **leaves**, not the group: pinning splits columns into left / centre / right, and a
+	 * group whose leaves land in different bands is drawn once per band.
+	 *
+	 * **Kit support:** the shadcn kit renders groups; the heroui kit drops the group row and
+	 * renders the leaves flat, with a warning in development. HeroUI's table is a React Aria
+	 * collection, and React Aria removed nested column support before its GA
+	 * (adobe/react-spectrum#5537, still unresolved in #5263).
+	 *
+	 * @example
+	 * ```tsx
+	 * { id: 'person', header: 'Person', columns: [
+	 *   { accessorKey: 'firstName', header: 'First' },
+	 *   { accessorKey: 'lastName', header: 'Last' },
+	 * ] }
+	 * ```
+	 */
 	columns?: ColumnDef<TRow, TCellTypes, TNode>[]
 
 	/**
@@ -887,6 +955,16 @@ export type ColumnDefCommon<
 	 * polarity by nature — it turns hiding on for the grid as a whole.
 	 */
 	visibility?: false | ColumnVisibilityDef
+	/**
+	 * Whether this column can be moved when the table-level `ordering.column` feature is on.
+	 * `false` locks it where it was declared — the menu offers no move entries for it, and it
+	 * is not a landing spot for its neighbours either.
+	 *
+	 * Reads like every other per-column switch (`sorting: false`, `visibility: false`,
+	 * `resizing: false`): it turns the feature off for this column. No axis word here — a
+	 * column def is already a column.
+	 */
+	ordering?: false
 
 	/** Column-level filtering config. Set to false to disable. */
 	filtering?: false | ColumnFilteringConfig<TNode>
@@ -1131,6 +1209,8 @@ declare module '@tanstack/table-core' {
 		editing?: false | ColumnEditingConfig
 		creating?: false | ColumnCreatingConfig<TData, TValue>
 		visibility?: false | ColumnVisibilityDef
+		/** Resolved from `column.ordering` — `false` means the column cannot be moved. */
+		ordering?: false
 		isSystemColumn?: boolean
 		systemColumnType?: SystemColumnType
 		/**

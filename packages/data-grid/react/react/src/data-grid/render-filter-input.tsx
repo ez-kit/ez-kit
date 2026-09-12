@@ -1,4 +1,9 @@
-import { BetweenInputVariant, DATE_RANGE_PRESETS } from '@ez-kit/data-grid-core'
+import {
+	BetweenInputVariant,
+	DATE_RANGE_PRESETS,
+	localizeDateRangePresets,
+	localizeOperators,
+} from '@ez-kit/data-grid-core'
 
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
@@ -16,6 +21,7 @@ import type {
 	SelectItem,
 	StructuredFilterValue,
 	BetweenInputType,
+	GridMessages,
 } from '@ez-kit/data-grid-core'
 import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
@@ -34,6 +40,12 @@ export type RenderFilterInputArgs = {
 	 * keystroke. A column's own `filtering.debounce` overrides it.
 	 */
 	debounce: number
+	/**
+	 * The grid's resolved dictionary — the placeholders below come from it, never from a literal
+	 * in this module. Required, unlike `table`: a filter input with no placeholder is a worse
+	 * stub than one with no draft support.
+	 */
+	messages: GridMessages
 	/**
 	 * The live table instance, used only to wire "Enter applies the whole draft" on the
 	 * fallback text inputs under `draft`. Optional so existing callers/tests that
@@ -76,14 +88,16 @@ function resolveFilterItems(
 	if (meta?.cell?.type === 'select' || meta?.cell?.type === 'badge') {
 		const items = (meta.cell.config as { items?: (SelectItem | BadgeItem)[] } | undefined)?.items
 		if (items && items.length > 0) {
+			// `icon` rides along: one item states the glyph, and the cell and this list both draw it.
+			const asFilterItem = ({ value, label, icon }: SelectItem | BadgeItem): FilterItem =>
+				icon !== undefined ? { value, label, icon } : { value, label }
 			return facetMap
 				? items.map((item): FilterItem => {
 						const count = facetMap.get(item.value)
-						return count !== undefined
-							? { value: item.value, label: item.label, count }
-							: { value: item.value, label: item.label }
+						const base = asFilterItem(item)
+						return count !== undefined ? { ...base, count } : base
 					})
-				: items.map((item): FilterItem => ({ value: item.value, label: item.label }))
+				: items.map(asFilterItem)
 		}
 	}
 
@@ -112,9 +126,10 @@ function resolveFilterItems(
 function resolveBetweenPresets(
 	configPresets: boolean | DateRangePreset[] | undefined,
 	betweenType: BetweenInputType,
+	messages: GridMessages['operators']['presets'],
 ): DateRangePreset[] | undefined {
 	if (betweenType !== 'date') return undefined
-	if (configPresets === true) return DATE_RANGE_PRESETS
+	if (configPresets === true) return localizeDateRangePresets(DATE_RANGE_PRESETS, messages)
 	if (Array.isArray(configPresets) && configPresets.length > 0) return configPresets
 	return undefined
 }
@@ -137,10 +152,16 @@ export function renderFilterInput({
 	BetweenInput,
 	MultiSelectFilter,
 	debounce: tableDebounce,
+	messages,
 	table,
 }: RenderFilterInputArgs): ReactNode {
 	const filteringMeta = meta?.filtering === false ? undefined : meta?.filtering
+	// Core settled *which* operators the column offers; the dictionary says what they are
+	// called. Applied here, where they reach the control, so the exported operator lists stay
+	// the plain data they are.
 	const resolvedOperators = filteringMeta?.operators
+		? localizeOperators(filteringMeta.operators, meta?.cell?.type, messages.operators)
+		: undefined
 	// A column's own `filtering.debounce` wins over the table's, the same way `editing.debounce`
 	// and `creating.debounce` do at their two levels. One dear endpoint can wait a second while
 	// the rest of the grid stays responsive.
@@ -157,7 +178,7 @@ export function renderFilterInput({
 			: undefined
 
 	// ── operator-aware path ────────────────────────────────────────────────
-	if (resolvedOperators && resolvedOperators.length > 0) {
+	if (filteringMeta && resolvedOperators && resolvedOperators.length > 0) {
 		const sv = header.column.getFilterValue() as StructuredFilterValue | undefined
 		const currentOperatorId =
 			sv !== undefined ? sv.operator : (filteringMeta.defaultOperator ?? resolvedOperators.at(0)?.id ?? '')
@@ -198,7 +219,7 @@ export function renderFilterInput({
 		if (currentOperatorId === 'between') {
 			const betweenCfg = filteringMeta.betweenOperator
 			const betweenType = meta?.cell?.type === 'date' ? 'date' : 'number'
-			const resolvedPresets = resolveBetweenPresets(betweenCfg?.presets, betweenType)
+			const resolvedPresets = resolveBetweenPresets(betweenCfg?.presets, betweenType, messages.operators.presets)
 			const onPresetSelect = resolvedPresets
 				? (preset: DateRangePreset) => {
 						header.column.setFilterValue({ operator: 'between', value: preset.getRange() })
@@ -230,7 +251,7 @@ export function renderFilterInput({
 						items={items}
 						selectedValues={selectedValues}
 						onChange={onValueChange}
-						placeholder={`Filter ${header.column.id}…`}
+						placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
 					/>
 					{operatorSelect}
 				</>
@@ -281,7 +302,7 @@ export function renderFilterInput({
 			<>
 				<FilterTextInput
 					Input={Input}
-					placeholder={`Filter ${header.column.id}…`}
+					placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
 					value={(inputValue ?? '') as string}
 					onCommit={onValueChange}
 					debounce={debounce}
@@ -330,7 +351,7 @@ export function renderFilterInput({
 	return (
 		<FilterTextInput
 			Input={Input}
-			placeholder={`Filter ${header.column.id}…`}
+			placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
 			value={(filterValue ?? '') as string}
 			onCommit={onChange}
 			debounce={debounce}

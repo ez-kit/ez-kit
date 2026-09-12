@@ -3,7 +3,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
-import { FilterChipsPosition } from '../types'
+import { FilterChipsPosition, FilterPanelPlacement, PageSizerPlacement } from '../types'
 import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
 import { resolveActionBarVariant } from './action-bar-variant'
@@ -11,6 +11,7 @@ import { ActiveFiltersBar } from './active-filters-bar'
 import { Body } from './body'
 import { DataGridCell } from './cell'
 import { ClearFiltersButton } from './clear-filters-button'
+import { ColumnFilter } from './column-filter'
 import { ComponentGuard } from './component-guard'
 import { CreateTrigger } from './create-trigger'
 import { CreatingModal } from './creating-modal'
@@ -39,7 +40,7 @@ import { VisibilityTrigger } from './visibility-trigger'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridComponents } from '../contract'
-import type { BulkConfirmationConfig, ConfirmationConfig, DataTable } from '@ez-kit/data-grid-core'
+import type { BulkConfirmationConfig, ConfirmationConfig, DataTable, GridMessages } from '@ez-kit/data-grid-core'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -88,28 +89,18 @@ export type DataGridUncontrolledProps<TRow extends object> = DataGridSharedProps
  */
 export type DataGridProps<TRow extends object> = DataGridControlledProps<TRow> | DataGridUncontrolledProps<TRow>
 
-const DEFAULT_CONFIRM_TITLE = 'Are you sure?'
-const DEFAULT_CONFIRM_DESCRIPTION = 'This action cannot be undone.'
-const DEFAULT_BULK_CONFIRM_TITLE = 'Delete selected rows?'
-const ROW_NOUN_SINGULAR = 'row'
-const ROW_NOUN_PLURAL = 'rows'
-
-function defaultBulkConfirmDescription(count: number): string {
-	const noun = count === 1 ? ROW_NOUN_SINGULAR : ROW_NOUN_PLURAL
-	return `Delete ${String(count)} ${noun}? ${DEFAULT_CONFIRM_DESCRIPTION}`
-}
-
 function resolveConfirmationText(
 	options: ConfirmationConfig,
 	row: Row<unknown> | undefined,
+	messages: GridMessages['deleting'],
 ): { title: string; description: string } {
-	const title = options.title ?? DEFAULT_CONFIRM_TITLE
+	const title = options.title ?? messages.title
 	const desc = options.description
 	let description: string
 	if (typeof desc === 'function') {
-		description = row ? desc(row) : DEFAULT_CONFIRM_DESCRIPTION
+		description = row ? desc(row) : messages.description
 	} else {
-		description = desc ?? DEFAULT_CONFIRM_DESCRIPTION
+		description = desc ?? messages.description
 	}
 	return { title, description }
 }
@@ -121,10 +112,12 @@ function resolveConfirmationText(
 function resolveBulkConfirmationText(
 	options: BulkConfirmationConfig,
 	rows: Row<unknown>[],
+	messages: GridMessages['deleting'],
 ): { title: string; description: string } {
-	const title = options.title ?? DEFAULT_BULK_CONFIRM_TITLE
+	const title = options.title ?? messages.bulkTitle
 	const desc = options.description
-	const description = typeof desc === 'function' ? desc(rows) : (desc ?? defaultBulkConfirmDescription(rows.length))
+	const description =
+		typeof desc === 'function' ? desc(rows) : (desc ?? messages.bulkDescription({ count: rows.length }))
 	return { title, description }
 }
 
@@ -152,20 +145,31 @@ function ConfirmDialogRenderer() {
 	// state mutations (editing, sorting, etc.) leave these stable.
 	const pendingId = useDataGridState((s) => s.deleting.pendingRowId)
 	const pendingBulk = useDataGridState((s) => s.deleting.pendingBulk)
+	// Confirming clears the pending target, which closes the dialog, which fires the kit's
+	// close handler — the same `onCancel` a dismissal uses. Without this flag that close would
+	// abort the delete request the confirm just started.
+	const hasConfirmed = useRef(false)
 
 	// A staged bulk delete takes precedence: it is the gesture the user just made. Core owns
 	// both the staging and the run, so this only renders the prompt and reports the answer.
 	const bulkOptions = bulkConfirmationOptions(table)
 	if (pendingBulk && bulkOptions) {
 		const { selectedRows } = buildSelectionBarArgs(table)
-		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows)
+		const { title, description } = resolveBulkConfirmationText(bulkOptions, selectedRows, table.grid.messages.deleting)
 		return (
 			<ConfirmDialog
 				open
 				title={title}
 				description={description}
-				onConfirm={() => void table.deleting.bulk.confirm()}
+				onConfirm={() => {
+					hasConfirmed.current = true
+					void table.deleting.bulk.confirm()
+				}}
 				onCancel={() => {
+					if (hasConfirmed.current) {
+						hasConfirmed.current = false
+						return
+					}
 					table.deleting.bulk.cancel()
 				}}
 			/>
@@ -177,15 +181,24 @@ function ConfirmDialogRenderer() {
 	const options: ConfirmationConfig = featureConfig(confirmation) ?? {}
 	const pendingRow = pendingId !== null ? table.getRowModel().rows.find((r) => r.id === pendingId) : undefined
 	const { title, description } =
-		pendingId !== null ? resolveConfirmationText(options, pendingRow) : { title: '', description: '' }
+		pendingId !== null
+			? resolveConfirmationText(options, pendingRow, table.grid.messages.deleting)
+			: { title: '', description: '' }
 
 	return (
 		<ConfirmDialog
 			open={pendingId !== null}
 			title={title}
 			description={description}
-			onConfirm={() => void table.deleting.confirm()}
+			onConfirm={() => {
+				hasConfirmed.current = true
+				void table.deleting.confirm()
+			}}
 			onCancel={() => {
+				if (hasConfirmed.current) {
+					hasConfirmed.current = false
+					return
+				}
 				table.deleting.cancel()
 			}}
 		/>
@@ -203,16 +216,40 @@ function DefaultLayout() {
 	const chipsAbove = chipsConfig?.position === FilterChipsPosition.Above ? <ActiveFiltersBar /> : null
 	const chipsBelow = chipsConfig?.position === FilterChipsPosition.Below ? <ActiveFiltersBar /> : null
 
+	// The panel variant moves every column's filter control out of the header, so unless the
+	// panel is mounted the grid has no filter UI at all. It is auto-mounted for the same reason
+	// the chips strip and the Clear-all button are: the option that asks for it is the same one
+	// that took the controls out of the header. `<FilterPanel />` renders nothing when the grid
+	// has no filtered row model or no filterable column, so this costs nothing when it applies
+	// to a grid that does not filter.
+	// The toolbar placement mounts the panel itself, in its leading slot.
+	const filterPanel = table.grid.filtering.panel?.placement === FilterPanelPlacement.Above ? <FilterPanel /> : null
+
+	// `pageSizer: 'footer'` puts the size control next to the pagination controls instead of in
+	// the toolbar. The two then share one row, which is the only reason this wrapper exists: the
+	// element carries a `data-slot` for the kits' CSS to lay out and no styling of its own, per
+	// the no-styles-in-this-package rule.
+	const paginationRow =
+		table.grid.pagination.pageSizer?.placement === PageSizerPlacement.Footer ? (
+			<div data-slot='pagination-row'>
+				<PageSizer />
+				<Pagination />
+			</div>
+		) : (
+			<Pagination />
+		)
+
 	if (variant === ActionBarVariant.Inline) {
 		return (
 			<>
 				<DraftBar />
 				<SelectionBar />
 				<Toolbar />
+				{filterPanel}
 				{chipsAbove}
 				<DataGridTable />
 				{chipsBelow}
-				<Pagination />
+				{paginationRow}
 			</>
 		)
 	}
@@ -220,10 +257,11 @@ function DefaultLayout() {
 	return (
 		<>
 			<Toolbar />
+			{filterPanel}
 			{chipsAbove}
 			<DataGridTable />
 			{chipsBelow}
-			<Pagination />
+			{paginationRow}
 			<DraftBar />
 			<SelectionBar />
 		</>
@@ -366,6 +404,7 @@ type DataGridType = typeof DataGridRoot & {
 	Cell: typeof DataGridCell
 	Pagination: typeof Pagination
 	PageSizer: typeof PageSizer
+	ColumnFilter: typeof ColumnFilter
 	SelectionBar: typeof SelectionBar
 	DraftBar: typeof DraftBar
 	CreateTrigger: typeof CreateTrigger
@@ -396,6 +435,7 @@ DataGrid.Row = DataGridRow
 DataGrid.Cell = DataGridCell
 DataGrid.Pagination = Pagination
 DataGrid.PageSizer = PageSizer
+DataGrid.ColumnFilter = ColumnFilter
 DataGrid.SelectionBar = SelectionBar
 DataGrid.DraftBar = DraftBar
 DataGrid.CreateTrigger = CreateTrigger

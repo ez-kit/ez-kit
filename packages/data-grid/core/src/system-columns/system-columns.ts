@@ -1,6 +1,6 @@
 import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../column/normalize'
 import { ColumnPinSide, SystemColumnType } from '../column/types'
-import { getActionsColumnSize, RowActionsVariant } from '../features/row-actions'
+import { getActionsColumnSize, RowActionsPlacement } from '../features/row-actions'
 import { setIfDefined } from '../utils/set-if-defined'
 
 import type { SystemColumnDef, TanStackColumnDef } from '../column/types'
@@ -17,15 +17,23 @@ type SystemColumnsOptions = {
 	deleting: boolean
 	/** Row pinning — its menu lives in the actions column alongside edit / delete. */
 	pinning: boolean
-	/** Defaults to {@link RowActionsVariant.Inline}. */
-	rowActionsVariant?: RowActionsVariant
+	/**
+	 * Whether an inline creating row can appear (`creating.mode` is `'row'` or `'pin-row'`).
+	 *
+	 * Its save / cancel pair is rendered in the actions cell, so a grid whose only row-level
+	 * feature is `creating` still needs the column — without it the draft row has no way to
+	 * commit.
+	 */
+	creating: boolean
+	/** Defaults to {@link RowActionsPlacement.Inline}. */
+	rowActionsPlacement?: RowActionsPlacement
 	/**
 	 * Whether `rowActions.actions` was supplied.
 	 *
-	 * Required, like `editing` / `deleting` / `pinning` and unlike `rowActionsVariant?`: those
+	 * Required, like `editing` / `deleting` / `pinning` and unlike `rowActionsPlacement?`: those
 	 * three decide whether the column exists at all and this is a fourth such feature — a grid
 	 * whose only per-row action is a custom one still needs the column, and its entries still
-	 * need the overflow trigger's width reserved. `rowActionsVariant` has an honest default
+	 * need the overflow trigger's width reserved. `rowActionsPlacement` has an honest default
 	 * (Inline); "does the consumer supply actions?" has none, and silently defaulting it to
 	 * false is exactly how the option went missing before.
 	 */
@@ -141,7 +149,7 @@ export function buildColumnList<TRow extends object>(
 
 	result.push(...userColumns)
 
-	const needsActions = opts.editing || opts.deleting || opts.pinning || opts.customRowActions
+	const needsActions = opts.editing || opts.deleting || opts.pinning || opts.creating || opts.customRowActions
 	if (needsActions) {
 		result.push(
 			buildSystemColumn({
@@ -151,8 +159,9 @@ export function buildColumnList<TRow extends object>(
 					editing: opts.editing,
 					deleting: opts.deleting,
 					pinning: opts.pinning,
+					creating: opts.creating,
 					custom: opts.customRowActions,
-					variant: opts.rowActionsVariant ?? RowActionsVariant.Inline,
+					placement: opts.rowActionsPlacement ?? RowActionsPlacement.Inline,
 				}),
 				defaultPinning: ColumnPinSide.Right,
 				def: opts.rowActionsColumn,

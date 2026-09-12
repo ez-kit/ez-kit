@@ -1,0 +1,5 @@
+{
+	"title": "Layout",
+	"description": "How the table is laid out — sticky header, footer row, and composing the shell yourself",
+	"pages": ["index", "footer", "composition"]
+}

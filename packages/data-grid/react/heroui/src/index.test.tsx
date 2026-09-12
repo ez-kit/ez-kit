@@ -201,8 +201,10 @@ describe('@ez-kit/data-grid-heroui', () => {
 		)
 
 		expect(screen.queryByRole('slider')).not.toBeInTheDocument()
-		expect(screen.getByPlaceholderText('From')).toHaveValue(5)
-		expect(screen.getByPlaceholderText('To')).toHaveValue(25)
+		// HeroUI's NumberField renders a text input (react-aria formats the value itself),
+		// so the DOM value is the formatted string rather than a numeric one.
+		expect(screen.getByPlaceholderText('From')).toHaveValue('5')
+		expect(screen.getByPlaceholderText('To')).toHaveValue('25')
 	})
 
 	it('BetweenInput renders preset chips when presets[] is provided for a date column', () => {

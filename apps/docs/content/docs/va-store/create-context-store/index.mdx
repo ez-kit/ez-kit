@@ -3,8 +3,6 @@ title: createContextStore
 description: Wrap a Valtio proxy in React context so every Provider gets its own isolated instance — read from snapshots, mutate the proxy.
 ---
 
-# `createContextStore`
-
 Wraps a Valtio proxy in React context. Each `<Provider>` creates its own proxy instance (via `useRef`), so the same factory can power multiple isolated subtrees. There are no selectors — `useSnapshot` tracks the properties you actually read.
 
 This page is the guide — what the pieces are for and how they behave. Every signature, prop and option is listed on [API reference](./create-context-store/api).

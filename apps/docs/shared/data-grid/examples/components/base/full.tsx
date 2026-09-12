@@ -4,10 +4,10 @@ import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
-import { columns, INITIAL_DATA, type User } from '../_data'
+import { columns, makeUsers, type User } from '../_data'
 
 export function BaseFullExample() {
-	const [data, setData] = useState(INITIAL_DATA)
+	const [data, setData] = useState(() => makeUsers(1000))
 
 	return (
 		<DataGrid
@@ -15,7 +15,7 @@ export function BaseFullExample() {
 			columns={columns}
 			sorting
 			filtering
-			pagination={{ pageSize: 10, items: [3, 5, 10] }}
+			pagination={{ pageSize: 10, items: [10, 25, 50, 100] }}
 			visibility
 			selection
 			editing={{
