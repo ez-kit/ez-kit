@@ -81,6 +81,13 @@ export type ResolvedGridOptions = {
 	ordering: {
 		/** The column menu offers its move entries, and headers answer `Alt+Arrow`. */
 		column: boolean
+		/**
+		 * The row menu offers its move entries, and rows answer `Alt+ArrowUp` / `Alt+ArrowDown`.
+		 *
+		 * The shortcut reaches the row only in kits whose `Tr` forwards `onKeyDown`; React Aria
+		 * does not, so under heroui the menu entries are the whole affordance. See `kit-parity`.
+		 */
+		row: boolean
 	}
 	pinning: {
 		/** The column menu offers its pin section. */
@@ -220,7 +227,7 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 		cellTypes: undefined,
 		messages: defaultMessages,
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
-		ordering: { column: false },
+		ordering: { column: false, row: false },
 		pinning: { column: false, row: false },
 		filtering: {
 			variant: DATA_GRID_DEFAULTS.filtering.variant,

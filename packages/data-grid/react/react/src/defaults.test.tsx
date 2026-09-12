@@ -241,3 +241,29 @@ describe('useDataGrid — overrides beat the named defaults', () => {
 		expect(merged.pagination).toEqual({ pageSize: OVERRIDE_PAGE_SIZE })
 	})
 })
+
+describe('grid.ordering — the two axes resolve independently', () => {
+	const gridOrdering = (ordering: DataGridCore.OrderingConfig | boolean | undefined) => {
+		const { result } = renderHook(() =>
+			useDataGrid({ data: USERS, columns: COLUMNS, ...(ordering === undefined ? {} : { ordering }) }),
+		)
+		return result.current.grid.ordering
+	}
+
+	it('names the row axis to turn it on', () => {
+		expect(gridOrdering({ row: true })).toEqual({ column: false, row: true })
+	})
+
+	it('keeps a bare `true` columns-only', () => {
+		// An upgrade must not hand a grid written against `ordering: true` a second affordance.
+		expect(gridOrdering(true)).toEqual({ column: true, row: false })
+	})
+
+	it('honours `enabled: false` on the row axis', () => {
+		expect(gridOrdering({ row: { enabled: false } })).toEqual({ column: false, row: false })
+	})
+
+	it('leaves both axes off when the option is absent', () => {
+		expect(gridOrdering(undefined)).toEqual({ column: false, row: false })
+	})
+})

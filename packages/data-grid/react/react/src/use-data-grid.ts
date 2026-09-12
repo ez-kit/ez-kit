@@ -703,14 +703,17 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	visibility?: boolean | ReactVisibilityConfig
 	/**
-	 * Column reordering, grouped per axis like `pinning`.
-	 * - `true` — every axis this grid supports, which today means columns
+	 * Reordering, grouped per axis like `pinning`.
+	 * - `true` — columns only, and it keeps meaning exactly that
 	 * - `{ column: { onChange } }` — and report the new order
+	 * - `{ row: true }` — row reordering, uncontrolled: the grid keeps the order
+	 * - `{ row: { onChange } }` — row reordering, controlled: the grid reports each move
 	 *
 	 * The header menu grows a "move" pair, and the focused header cell answers
 	 * `Alt+ArrowLeft` / `Alt+ArrowRight` — the menu closes on select in both kits, so a column
 	 * that has to travel several places is moved from the keyboard rather than by reopening the
-	 * menu once per step.
+	 * menu once per step. The row axis is the same shape one level down: two entries in the
+	 * row's action menu, and `Alt+ArrowUp` / `Alt+ArrowDown` on a row with focus inside it.
 	 */
 	ordering?: boolean | OrderingConfig
 	/**
@@ -1163,11 +1166,14 @@ export function useDataGrid<TRow extends object>(
 	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
-	// Only the axes that exist: `ordering: true` means "every axis this grid supports", which is
-	// columns today. A row axis would have to arrive with its own handler (see `OrderingConfig`),
-	// so a grid written today cannot silently gain row dragging later.
+	// Only the axes that were named: `ordering: true` means columns, and keeps meaning columns
+	// (see `OrderingConfig`), so a grid written against it cannot silently gain row reordering
+	// on an upgrade.
 	const orderingCfg = featureConfig(rawOrdering)
 	const columnOrderingEnabled = rawOrdering === true || isFeatureEnabled(orderingCfg?.column)
+	// The row axis turns on only by being named — a bare `true` stays columns-only, so an
+	// upgrade cannot hand an existing grid an affordance nobody asked for.
+	const rowOrderingEnabled = isFeatureEnabled(orderingCfg?.row)
 
 	table.grid = {
 		cellTypes,
@@ -1183,7 +1189,7 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
-		ordering: { column: columnOrderingEnabled },
+		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {
