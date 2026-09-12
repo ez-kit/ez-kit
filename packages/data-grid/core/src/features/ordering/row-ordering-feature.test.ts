@@ -91,3 +91,42 @@ describe('row ordering feature', () => {
 		expect(table.ordering.canMoveRow('a', RowMoveDirection.Down)).toBe(false)
 	})
 })
+
+describe('row ordering row identity', () => {
+	it('warns when the rows have no id to order by', () => {
+		// Arrange
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		// Act
+		createTable<{ name: string }>({
+			data: [{ name: 'A' }],
+			columns: createColumns<{ name: string }>([{ accessorKey: 'name', header: 'Name' }]),
+			ordering: { row: true },
+		})
+
+		// Assert
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('getRowId'))
+		warn.mockRestore()
+	})
+
+	it('stays quiet when the rows carry an id', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		makeTable({ row: true })
+
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+
+	it('stays quiet when the feature is off', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		createTable<{ name: string }>({
+			data: [{ name: 'A' }],
+			columns: createColumns<{ name: string }>([{ accessorKey: 'name', header: 'Name' }]),
+		})
+
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+})

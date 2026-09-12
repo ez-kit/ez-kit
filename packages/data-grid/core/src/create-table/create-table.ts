@@ -368,6 +368,21 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		)
 	}
 
+	// Row ordering records an order as row ids, and a row with no `id` field falls back to its
+	// index — which changes the moment a row moves, so the recorded order would refer to
+	// whichever rows now sit in those positions. This is the feature's one real
+	// misconfiguration, and it is silent without saying so.
+	if (IS_DEV && rowOrderingCfg !== undefined && config.getRowId === undefined) {
+		const first = config.data[0] as Record<string, unknown> | undefined
+		if (first !== undefined && first.id == null) {
+			console.warn(
+				'[data-grid] `ordering: { row: ... }` needs a stable `getRowId`. These rows have no `id`, ' +
+					'so a row id is its index, which changes as soon as a row moves — the order would then ' +
+					'refer to the wrong rows.',
+			)
+		}
+	}
+
 	const initialState: Partial<TableState> = enforceColumnInvariants(
 		{
 			// Consumer-provided seed wins over computed defaults (e.g. loading, sorting).
