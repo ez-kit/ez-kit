@@ -2,6 +2,8 @@ import { createCacheReact } from '@ez-kit/store-core/cache'
 import { type ReactElement } from 'react'
 import { proxy, type Snapshot } from 'valtio'
 
+import { PACKAGE_TAG } from '../package-tag'
+
 import { useRead } from './use-read'
 
 import type {
@@ -19,20 +21,15 @@ import type {
  */
 const FALLBACK_PROXY: object = proxy({})
 
-export const MISSING_CACHE_PROVIDER = 'Missing CacheProvider'
+export const MISSING_CACHE_PROVIDER = `${PACKAGE_TAG} Missing <CacheProvider>`
 
 const MULTIPLE_PROVIDERS_WARNING =
-	'[va-store] Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ' +
+	`${PACKAGE_TAG} Multiple <cache.Provider> instances are mounted concurrently for the same createStoreCache. ` +
 	'Imperative access via getFromCache/remove targets the most recently activated cache and is ambiguous in this state.'
 
-/** Render-prop argument for a cached group `Subscribe`: `snap` for reads, `store` (raw proxy) for writes. */
-export type CachedSubscribeRenderArg<TState extends object> = {
-	snap: Snapshot<TState>
-	store: TState
-}
-
 export type CachedSubscribeProps<TState extends object> = {
-	children: (arg: CachedSubscribeRenderArg<TState>) => ReactElement
+	/** Receives the auto-tracked snapshot for reads and, second, the raw proxy for writes. */
+	children: (snap: Snapshot<TState>, store: TState) => ReactElement
 }
 
 export type CachedStoreProps<TState extends object> = {
@@ -50,7 +47,7 @@ export type CachedStoreGroup<TState extends object, TDefaultValue extends object
 	useSnapshot: () => Snapshot<TState>
 	/** Returns the raw, mutable Valtio proxy for this group's entry. Mutate it directly; never re-renders. */
 	useStore: () => TState
-	/** Render-prop receiving `{ snap, store }`, mirroring `createContextStore`'s `Subscribe`. */
+	/** Render-prop receiving `(snap, store)`, mirroring `createContextStore`'s `Subscribe`. */
 	Subscribe: (props: CachedSubscribeProps<TState>) => ReactElement
 	/**
 	 * Write-only render-prop receiving the raw proxy, mirroring `createContextStore`'s `Store`.
@@ -112,7 +109,7 @@ export function createStoreCache(options: Parameters<typeof createCacheReact>[1]
 		}
 
 		function Subscribe({ children }: CachedSubscribeProps<TState>): ReactElement {
-			return children({ snap: useSnapshot(), store: useStore() })
+			return children(useSnapshot(), useStore())
 		}
 
 		function Store({ children }: CachedStoreProps<TState>): ReactElement {

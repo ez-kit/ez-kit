@@ -1,11 +1,11 @@
 import { createHistoryStack } from '@ez-kit/store-core/history'
 import { createStore } from 'zustand/vanilla'
 
-import type { HistoryActionTag, HistoryOptions, HistoryState } from './types'
+import type { HistoryActionTag, HistoryOptions, StoreHistory } from './types'
 import type { HistoryApi } from '@ez-kit/store-core/history'
 import type { StateCreator, StoreApi, StoreMutatorIdentifier } from 'zustand/vanilla'
 
-type WithHistoryStore<S> = S extends { getState: () => infer T } ? S & { history: StoreApi<HistoryState<T>> } : S
+type WithHistoryStore<S> = S extends { getState: () => infer T } ? S & { history: StoreApi<StoreHistory<T>> } : S
 
 declare module 'zustand/vanilla' {
 	/* eslint-disable @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars -- declaration merging requires `interface` */
@@ -30,7 +30,7 @@ const withHistoryImpl: WithHistoryImpl =
 	(initializer, options = {}) =>
 	(set, get, api) => {
 		type T = ReturnType<typeof get>
-		type HState = HistoryState<T>
+		type HState = StoreHistory<T>
 
 		let recordingEnabled = false
 

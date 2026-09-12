@@ -26,4 +26,4 @@ export type HistoryOptions<T> = CoreHistoryOptions<T, HistoryActionTag>
  * part of the public sub-store. `HistorySnapshot`'s fields are `readonly` at the source
  * (`@ez-kit/store-core/history`), so no extra `Readonly<...>` wrap is needed here.
  */
-export type HistoryState<T> = HistorySnapshot<T> & Omit<HistoryApi<T, HistoryActionTag>, 'isPaused' | 'record'>
+export type StoreHistory<T> = HistorySnapshot<T> & Omit<HistoryApi<T, HistoryActionTag>, 'isPaused' | 'record'>

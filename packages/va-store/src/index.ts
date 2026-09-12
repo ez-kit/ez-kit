@@ -6,18 +6,11 @@ export type {
 	CreateContextStoreFactory,
 	CreateContextStoreOptions,
 	CreateContextStoreResult,
-	SubscribeRenderArg,
 	UseSnapshotOptions,
 } from './create-context-store'
 
 export { createStoreCache, CacheProvider, CacheScope, useCache, useCacheKeys, createCachedStore } from './store-cache'
-export type {
-	StoreCache,
-	CachedStoreGroup,
-	CachedSubscribeProps,
-	CachedSubscribeRenderArg,
-	CachedStoreProps,
-} from './store-cache'
+export type { StoreCache, CachedStoreGroup, CachedSubscribeProps, CachedStoreProps } from './store-cache'
 
 export { StoreProvider } from './store-provider'
 export type { StoreProviderProps } from './store-provider'

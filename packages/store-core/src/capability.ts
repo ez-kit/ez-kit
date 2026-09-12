@@ -1,3 +1,5 @@
+import { PACKAGE_TAG } from './package-tag'
+
 import type { StorePlugin } from './plugin'
 
 /**
@@ -37,7 +39,7 @@ export function attachCapability<T extends object>(target: T, plugin: StorePlugi
 
 	if (list.some((existing) => existing.name === plugin.name)) {
 		throw new Error(
-			`[store-core] capability "${plugin.name}" is already attached to this store. ` +
+			`${PACKAGE_TAG} capability "${plugin.name}" is already attached to this store. ` +
 				`Wrap the store in with${capitalize(plugin.name)} only once.`,
 		)
 	}

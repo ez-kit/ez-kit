@@ -251,6 +251,6 @@ describe('@ez-kit/zu-store', () => {
 			return createElement('div')
 		}
 
-		expect(() => render(createElement(BrokenConsumer))).toThrowError('Missing Provider for createContextStore')
+		expect(() => render(createElement(BrokenConsumer))).toThrowError('[zu-store] Missing Provider for store')
 	})
 })

@@ -11,7 +11,7 @@ import { StoreProvider } from '../store-provider'
 
 import { withHistory } from './with-history'
 
-import type { HistoryOptions, HistoryState } from './types'
+import type { HistoryOptions, StoreHistory } from './types'
 import type { StoreApi } from 'zustand/vanilla'
 
 const flush = () =>
@@ -29,7 +29,7 @@ type Filters = { q: string }
 function makeFiltersHandle(historyOptions?: HistoryOptions<Filters>) {
 	return pipe(
 		createStore<Filters>()(withHistory(() => ({ q: '' }), historyOptions)),
-		withPersist<StoreApi<Filters> & { history: StoreApi<HistoryState<Filters>> }>({
+		withPersist<StoreApi<Filters> & { history: StoreApi<StoreHistory<Filters>> }>({
 			fields: (field) => [field((state) => state.q, { source: 'url', parser: paramString() })],
 		}),
 	)

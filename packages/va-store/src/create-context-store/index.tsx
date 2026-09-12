@@ -3,10 +3,12 @@ import { useCapabilities, useServices } from '@ez-kit/store-core/react'
 import { createContext, type PropsWithChildren, type ReactElement, useContext, useLayoutEffect, useRef } from 'react'
 import { snapshot, subscribe as subscribeValtio, useSnapshot as useValtioSnapshot, type Snapshot } from 'valtio'
 
+import { PACKAGE_TAG } from '../package-tag'
+
 import type { ControlledConfig, StoreId } from '@ez-kit/store-core'
 
 /** Names the store in the error, so `createContextStore(f, { name: 'filters' })` reports `filters`. */
-const missingProviderError = (name: string): string => `Missing Provider for ${name}`
+const missingProviderError = (name: string): string => `${PACKAGE_TAG} Missing Provider for ${name}`
 
 /** Synthetic id for a non-cached store. There is one instance per Provider, hence a fixed `id`. */
 const SINGLETON_ID = 'singleton'
@@ -43,14 +45,13 @@ type ProviderProps<TDefaultValue, TState extends object> = (undefined extends TD
 	onValueChange?: (value: Partial<TState>) => void
 }
 
-/** Render-prop argument for `Subscribe`: `snap` for reads, `store` (raw proxy, as from `useStore()`) for writes. */
-export type SubscribeRenderArg<TState extends object> = {
-	snap: Snapshot<TState>
-	store: TState
-}
-
 type SubscribeProps<TState extends object> = {
-	children: (arg: SubscribeRenderArg<TState>) => ReactElement
+	/**
+	 * Receives the auto-tracked snapshot for reads and, second, the raw proxy — the same one
+	 * `useStore()` returns — so a render prop that also writes needs no hook beside it. Positional,
+	 * as in `zu-store`'s `Subscribe`.
+	 */
+	children: (snap: Snapshot<TState>, store: TState) => ReactElement
 }
 
 type StoreProps<TState extends object> = {
@@ -224,7 +225,7 @@ export function createContextStore<TState extends object, TDefaultValue = undefi
 	}
 
 	function Subscribe({ children }: SubscribeProps<TState>): ReactElement {
-		return children({ snap: useSnapshot(), store: useStore() })
+		return children(useSnapshot(), useStore())
 	}
 
 	function Store({ children }: StoreProps<TState>): ReactElement {

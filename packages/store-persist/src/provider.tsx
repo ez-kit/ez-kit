@@ -3,6 +3,7 @@ import { ServicesProvider, useServices } from '@ez-kit/store-core/react'
 import { createContext, type ReactElement, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react'
 
 import { createPersistEngine, type CreateEngineOptions, type PersistEngine } from './engine'
+import { PACKAGE_TAG } from './package-tag'
 import { createPersistEngines, PERSIST_ENGINES } from './service'
 
 import type { MetaMerge, SourcePort, SyncSourcePort } from './types'
@@ -124,7 +125,7 @@ export function PersistProvider({ adapters, children }: PersistProviderProps): R
 			signatureRef.current = signature
 		} else if (signatureRef.current !== signature) {
 			console.error(
-				`[store-persist] PersistProvider: the \`adapters\` array changed between renders ` +
+				`${PACKAGE_TAG} PersistProvider: the \`adapters\` array changed between renders ` +
 					`("${signatureRef.current}" → "${signature}"). It MUST be stable in length and order across renders ` +
 					`(render-scoped adapters call hooks). Declare it at module scope or wrap it in useMemo.`,
 			)

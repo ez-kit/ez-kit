@@ -1,3 +1,4 @@
+import { PACKAGE_TAG } from './package-tag'
 import { URL_SOURCE, type UrlMeta } from './url/adapter'
 
 import type { PersistBinding } from './binding'
@@ -93,7 +94,7 @@ function requireHandle(store: object, name: string): PersistHandle {
 	const handle = (store as Record<string, PersistHandle | undefined>)[name]
 	if (!handle) {
 		throw new Error(
-			`[store-persist] no "${name}" handle on this store. Ensure the store uses the persist() plugin with a ` +
+			`${PACKAGE_TAG} no "${name}" handle on this store. Ensure the store uses the persist() plugin with a ` +
 				`${name === URL_HANDLE ? 'URL' : 'storage'} field, and resolve the handle after the store is created.`,
 		)
 	}

@@ -1,3 +1,5 @@
+import { PACKAGE_TAG } from '../package-tag'
+
 import { type MigrationConfig, packBlob, runMigration, STORAGE_VERSION } from './blob'
 
 import type { AmbientAdapter } from '../provider'
@@ -43,7 +45,7 @@ export function createStoragePort(
 		if (!warned) {
 			warned = true
 			// Documented behavior: storage failures degrade silently after one diagnostic.
-			console.warn('[store-persist]: storage unavailable, continuing without persistence', error)
+			console.warn(`${PACKAGE_TAG} storage unavailable, continuing without persistence`, error)
 		}
 	}
 

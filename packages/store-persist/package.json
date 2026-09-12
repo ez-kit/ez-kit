@@ -2,6 +2,17 @@
 	"name": "@ez-kit/store-persist",
 	"version": "0.1.0",
 	"description": "Source-agnostic persist engine for the @ez-kit store packages: URL / storage / IndexedDB as state, bound to any store manager through a StorePort.",
+	"keywords": [
+		"react",
+		"persist",
+		"url-state",
+		"localstorage",
+		"sessionstorage",
+		"indexeddb",
+		"state-management",
+		"store",
+		"typescript"
+	],
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -9,6 +20,9 @@
 		"directory": "packages/store-persist"
 	},
 	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/store-persist#readme",
+	"bugs": {
+		"url": "https://github.com/ez-kit/ez-kit/issues"
+	},
 	"type": "module",
 	"sideEffects": false,
 	"files": [
@@ -51,7 +65,7 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"dependencies": {
-		"@ez-kit/store-core": "workspace:*"
+		"@ez-kit/store-core": "workspace:^"
 	},
 	"scripts": {
 		"build": "tsup",
@@ -59,6 +73,7 @@
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
@@ -118,5 +133,8 @@
 		"zod": {
 			"optional": true
 		}
+	},
+	"engines": {
+		"node": ">=20"
 	}
 }

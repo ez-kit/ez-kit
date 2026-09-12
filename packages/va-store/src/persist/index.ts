@@ -6,8 +6,10 @@
  * Valtio proxy, and the substrate half (provider, adapters, codecs, handles) is re-exported
  * unchanged, so an app imports one name from one place.
  *
- * Low-level engine primitives live on `@ez-kit/va-store/persist/internals`, source adapters on
- * `./storage` and `./url` — the same split as before this package's persist core was extracted.
+ * Source adapters live on `./storage` and `./url`. The engine's own assembly primitives are NOT
+ * re-exported here: they stay internal to `@ez-kit/store-persist`, since binding a new state manager
+ * is not a supported extension point yet. Writing a custom source adapter needs none of them — it is
+ * a `SourcePort`, and every type for it is on this entry.
  */
 
 import { applyPersist, persist as corePersist } from '@ez-kit/store-persist'

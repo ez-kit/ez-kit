@@ -2,6 +2,15 @@
 	"name": "@ez-kit/store-core",
 	"version": "0.4.0",
 	"description": "Shared foundation for the @ez-kit store packages: store ids, service registry, plugin contract and the manager-agnostic instance cache.",
+	"keywords": [
+		"react",
+		"state-management",
+		"store",
+		"plugin",
+		"cache",
+		"undo-redo",
+		"typescript"
+	],
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -9,6 +18,9 @@
 		"directory": "packages/store-core"
 	},
 	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/store-core#readme",
+	"bugs": {
+		"url": "https://github.com/ez-kit/ez-kit/issues"
+	},
 	"type": "module",
 	"sideEffects": false,
 	"files": [
@@ -40,6 +52,7 @@
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
@@ -69,5 +82,8 @@
 	},
 	"peerDependencies": {
 		"react": ">=18.0.0"
+	},
+	"engines": {
+		"node": ">=20"
 	}
 }

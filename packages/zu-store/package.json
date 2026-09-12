@@ -2,6 +2,18 @@
 	"name": "@ez-kit/zu-store",
 	"version": "0.7.0",
 	"description": "Zustand store factory bound to React context, with undo/redo history and a keep-alive store cache.",
+	"keywords": [
+		"zustand",
+		"react",
+		"store",
+		"context",
+		"state-management",
+		"undo-redo",
+		"history",
+		"persist",
+		"url-state",
+		"typescript"
+	],
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -9,6 +21,9 @@
 		"directory": "packages/zu-store"
 	},
 	"homepage": "https://github.com/ez-kit/ez-kit/tree/main/packages/zu-store#readme",
+	"bugs": {
+		"url": "https://github.com/ez-kit/ez-kit/issues"
+	},
 	"type": "module",
 	"sideEffects": false,
 	"files": [
@@ -26,10 +41,6 @@
 		"./persist": {
 			"types": "./dist/persist/index.d.ts",
 			"import": "./dist/persist/index.js"
-		},
-		"./persist/internals": {
-			"types": "./dist/persist/internals.d.ts",
-			"import": "./dist/persist/internals.js"
 		},
 		"./persist/storage": {
 			"types": "./dist/persist/storage/index.d.ts",
@@ -64,6 +75,7 @@
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
 		"clean": "rimraf dist coverage"
 	},
@@ -128,8 +140,8 @@
 		"zustand": "^5.0.12"
 	},
 	"dependencies": {
-		"@ez-kit/store-core": "workspace:*",
-		"@ez-kit/store-persist": "workspace:*"
+		"@ez-kit/store-core": "workspace:^",
+		"@ez-kit/store-persist": "workspace:^"
 	},
 	"peerDependencies": {
 		"next": ">=14.0.0",
@@ -148,5 +160,8 @@
 		"zod": {
 			"optional": true
 		}
+	},
+	"engines": {
+		"node": ">=20"
 	}
 }

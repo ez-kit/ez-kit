@@ -11,6 +11,7 @@ import {
 	type ReactNode,
 } from 'react'
 
+import { PACKAGE_TAG } from '../package-tag'
 import { useServices } from '../react'
 import { serializeStoreId } from '../store-id'
 
@@ -28,7 +29,7 @@ const EMPTY_RECORDS: readonly CacheRecord[] = []
 /** Default `useFromCache` placeholder, for managers whose read hook accepts any object. */
 const EMPTY_FALLBACK: object = {}
 
-export const MISSING_CACHE_PROVIDER = 'Missing cache Provider for createCacheReact'
+export const MISSING_CACHE_PROVIDER = `${PACKAGE_TAG} Missing cache Provider for createCacheReact`
 
 /**
  * User-facing messages a consumer package can override so errors/warnings name its own public API
@@ -160,7 +161,7 @@ export function createCacheReact<TInstance extends object>(
 		if (!IS_DEV) return
 		if (registeredGroupNames.has(name)) {
 			console.warn(
-				`[store-core] createCachedStore({ name: '${name}' }) was called more than once on the same cache. ` +
+				`${PACKAGE_TAG} createCachedStore({ name: '${name}' }) was called more than once on the same cache. ` +
 					'Give each group a unique name, or call createCachedStore once at module top-level.',
 			)
 		}
@@ -233,7 +234,7 @@ export function createCacheReact<TInstance extends object>(
 		const groupGcTime = options.gcTime
 
 		const StoreContext = createContext<TInstance | null>(null)
-		const MISSING_GROUP_PROVIDER = `Missing <${name}.Provider>`
+		const MISSING_GROUP_PROVIDER = `${PACKAGE_TAG} Missing <${name}.Provider>`
 
 		function useGroupInstance(): TInstance {
 			const instance = useContext(StoreContext)

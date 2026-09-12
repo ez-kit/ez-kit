@@ -119,10 +119,10 @@ describe('@ez-kit/va-store createContextStore', () => {
 		expect(screen.getByTestId('tracked-count')).toHaveTextContent('2')
 	})
 
-	it('supports the Subscribe render-prop receiving { snap, store }', () => {
+	it('supports the Subscribe render-prop receiving (snap, store)', () => {
 		render(
 			<counter.Provider defaultValue={{ count: 5, label: 'boot' }}>
-				<counter.Subscribe>{({ snap }) => <span data-testid='item-count'>{snap.count}</span>}</counter.Subscribe>
+				<counter.Subscribe>{(snap) => <span data-testid='item-count'>{snap.count}</span>}</counter.Subscribe>
 			</counter.Provider>,
 		)
 
@@ -133,7 +133,7 @@ describe('@ez-kit/va-store createContextStore', () => {
 		render(
 			<counter.Provider defaultValue={{ count: 0, label: 'boot' }}>
 				<counter.Subscribe>
-					{({ snap, store }) => (
+					{(snap, store) => (
 						<button
 							type='button'
 							onClick={() => {

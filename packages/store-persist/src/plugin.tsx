@@ -4,6 +4,7 @@ import { resolveFieldSpecs, type FieldsBuilder } from './accessor'
 import { applyKeyed, ApplyMode, captureDefaults, createBinding, type PersistBinding } from './binding'
 import { discoverPersistFields } from './decorators'
 import { attachHandles, type SourceBinding } from './handle'
+import { PACKAGE_TAG } from './package-tag'
 import { PERSIST_ENGINES } from './service'
 import { groupBySource, type PersistSpec } from './spec'
 
@@ -93,7 +94,7 @@ function markHydrated(hydration: Hydration): void {
 function connectBinding(engine: PersistEngine | undefined, source: string, binding: PersistBinding): () => void {
 	if (!engine) {
 		if (IS_DEV) {
-			console.warn(`[store-persist]: no engine mounted for source "${source}"; binding is inert (no-op).`)
+			console.warn(`${PACKAGE_TAG} no engine mounted for source "${source}"; binding is inert (no-op).`)
 		}
 		return () => undefined
 	}

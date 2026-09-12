@@ -200,14 +200,30 @@ Two consequences worth keeping:
 - **The port lives on the binding, not on the engine.** One engine per source is mounted app-wide, and
   the stores connected to it may come from different managers — so a Valtio and a Zustand store can
   share the URL in one tree.
-- **Consumers never import `@ez-kit/store-persist`.** Each binding package re-exports the entire
+- **Consumers never import `@ez-kit/store-persist`.** Each binding package re-exports the consumer
   surface with its own port pre-bound (`@ez-kit/va-store/persist*`, `@ez-kit/zu-store/persist*`), so
   there is exactly one import path per app. The only typed wrapper each binding writes itself is
   `withPersist`, because only it knows how to get from a store handle to its state type.
-- **That does not make its API internal.** Its subpaths are re-exported verbatim by both bindings, so
-  the API is public in effect: the four store packages (`store-core`, `store-persist`, `zu-store`,
-  `va-store`) version and release as one, and a breaking change to the engine — `./internals`
-  included — is a breaking change to the bindings, to be released as such.
+- **That does not make the re-exported API internal.** What a binding re-exports is public in effect,
+  so a breaking change to the engine is a breaking change to every binding that re-exports it, and
+  ships as a major in each of them. The four store packages (`store-core`, `store-persist`,
+  `zu-store`, `va-store`) nonetheless **version independently** — they reached 1.0 together and go
+  their own way from there, so a feature in one binding does not bump the other, and an engine fix
+  does not bump a binding it did not change. Do not add a changesets `fixed`/`linked` group for them,
+  and do not read two matching version numbers as a compatibility statement: the binding's own
+  dependency range on `store-core` / `store-persist` is what says which versions pair.
+- **`@ez-kit/store-persist/internals` is the exception, and is NOT re-exported.** It holds the
+  engine's assembly primitives (`createPersistEngine`, `createBinding`, `applyPersist`,
+  `attachHandles`, `resolveFieldSpecs`, the handle symbols, …) — the pieces a _binding_ is built
+  from. Binding a new state manager is not a supported extension point yet, so those names carry no
+  semver promise and only this repo's own tests import them. Do not re-add a `./persist/internals`
+  subpath to a binding: it was removed deliberately, since it committed us to 22 engine-level names
+  with no documented consumer.
+
+  This is unrelated to writing a **custom source adapter**, which is fully public and documented:
+  implement `SourcePort` (`get` / `set` / optional `subscribe` over `Keyed`) and ship it as an
+  `AmbientAdapter` or a `RenderScopedAdapter`. Every type for that is on the binding's `persist`
+  entry — see `apps/docs/content/docs/*/persist/custom-adapter.mdx`.
 
 ### Package conventions
 

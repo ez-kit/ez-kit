@@ -449,7 +449,7 @@ function App() {
 }
 ```
 
-A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `Missing CacheProvider`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useCacheKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
+A store group is **bound to the cache that created it**. A group from the top-level `createCachedStore` works only under `<CacheProvider>`; a group from `sessionCache.createCachedStore` works only under `<sessionCache.Provider>`. Mounting a group under the wrong provider throws `[zu-store] Missing <CacheProvider>`. Everything else on this page applies unchanged — just read `sessionCache.Provider` / `sessionCache.Scope` / `sessionCache.useCacheKeys` for `CacheProvider` / `CacheScope` / `useCacheKeys`.
 
 ## Gotchas
 
