@@ -1,7 +1,6 @@
 ---
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-heroui': patch
-'@ez-kit/data-grid-shadcn': patch
 ---
 
 data-grid: lay the column grid out in the order the cells are rendered in

@@ -145,6 +145,22 @@ The `version` job's PR bot uses the `CHANGESETS_TOKEN` PAT because the org block
 the default token from creating PRs. Local manual release stays possible with
 `pnpm changeset` / `pnpm version-packages` / `pnpm release`.
 
+**`@ez-kit/data-grid-shadcn` never goes in a changeset.** The kit ships as a shadcn registry item,
+not an npm package, so it is `private` and listed in `.changeset/config.json`'s `ignore` — and
+changesets refuses a changeset that names an ignored package beside a released one, failing the
+`version` job _after_ the merge, where it quietly stops the release PR from being written. A
+changeset naming only ignored packages is the mirror image: `version` neither consumes nor reports
+it, so it sits in `.changeset/` forever. `scripts/check-changesets.mjs` (first steps of `pnpm lint`,
+beside `check-site-url.mjs`) fails on both, so the PR that writes one finds out. A change to the
+shadcn kit that is worth a release note belongs on the package it is visible through — usually
+`@ez-kit/data-grid-react`, or `@ez-kit/docs`, which serves the registry JSON.
+
+The release PR (`develop → main`) re-runs `verify`, but **not** `e2e` (`if: github.base_ref !=
+'main'` in `ci.yml`): it carries exactly the tree `develop` just gated, and `main` receives nothing
+else, so a second three-job browser suite there re-measures the same commit. `verify` stays because
+it is the last gate in front of `changeset publish`; it is also the only check `main`'s branch
+protection requires.
+
 ## Architecture
 
 This is a **pnpm + Turborepo monorepo** of ESM-only React utility libraries.

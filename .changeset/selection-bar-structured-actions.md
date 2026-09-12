@@ -2,7 +2,6 @@
 '@ez-kit/data-grid-core': minor
 '@ez-kit/data-grid-react': minor
 '@ez-kit/data-grid-heroui': minor
-'@ez-kit/data-grid-shadcn': minor
 ---
 
 data-grid: `selection.bar.actions` now takes the same action entries `rowActions.actions` does

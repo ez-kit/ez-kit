@@ -1,5 +1,4 @@
 ---
-'@ez-kit/data-grid-shadcn': patch
 '@ez-kit/form-shadcn': patch
 ---
 

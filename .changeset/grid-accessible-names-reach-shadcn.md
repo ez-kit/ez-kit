@@ -1,6 +1,5 @@
 ---
 '@ez-kit/data-grid-react': patch
-'@ez-kit/data-grid-shadcn': patch
 ---
 
 Three accessible names that the dictionary defines and the shadcn kit was not rendering. The
