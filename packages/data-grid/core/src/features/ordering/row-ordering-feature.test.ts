@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
+import { ACTIONS_COLUMN_ID } from '../../system-columns'
 
 import { RowMoveDirection } from './row-ordering'
 
@@ -128,5 +129,21 @@ describe('row ordering row identity', () => {
 
 		expect(warn).not.toHaveBeenCalled()
 		warn.mockRestore()
+	})
+})
+
+describe('row ordering and the actions column', () => {
+	it('summons the actions column on its own', () => {
+		// Row pinning already does this — the move entries live in that cell, so the column has
+		// to be there even in a grid with no edit, delete or custom action.
+		const table = makeTable({ row: true })
+
+		expect(table.getAllLeafColumns().map((column) => column.id)).toContain(ACTIONS_COLUMN_ID)
+	})
+
+	it('does not summon it for the column axis', () => {
+		const table = makeTable({ column: true })
+
+		expect(table.getAllLeafColumns().map((column) => column.id)).not.toContain(ACTIONS_COLUMN_ID)
 	})
 })

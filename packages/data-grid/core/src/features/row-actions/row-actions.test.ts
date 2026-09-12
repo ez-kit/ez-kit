@@ -7,6 +7,7 @@ const INLINE = {
 	editing: false,
 	deleting: false,
 	pinning: false,
+	ordering: false,
 	creating: false,
 	custom: false,
 }
@@ -39,6 +40,7 @@ describe('getActionsColumnSize', () => {
 			placement: RowActionsPlacement.Menu,
 			editing: false,
 			deleting: true,
+			ordering: false,
 			pinning: true,
 			creating: false,
 			custom: true,

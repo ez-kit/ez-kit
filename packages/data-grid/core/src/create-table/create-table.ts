@@ -299,7 +299,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// the create trigger (data-grid-react `create-trigger.tsx`) — the toolbar is already there,
 	// so nothing reflows. `mode: 'modal'` needs neither: the dialog has its own footer.
 	const hasOtherRowActions =
-		rowActionsEnabled && (hasRowEditAction || hasDeleting || hasPinning || customRowActions !== undefined)
+		rowActionsEnabled &&
+		(hasRowEditAction || hasDeleting || hasPinning || rowOrderingCfg !== undefined || customRowActions !== undefined)
 	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
 
 	const allColumns = buildColumnList(mappedUserColumns, {
@@ -308,6 +309,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
+		ordering: rowActionsEnabled && rowOrderingCfg !== undefined,
 		creating: creatingInActionsColumn,
 		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
