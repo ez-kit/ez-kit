@@ -1,7 +1,6 @@
 ---
 '@ez-kit/data-grid-react': patch
 '@ez-kit/data-grid-heroui': patch
-'@ez-kit/data-grid-shadcn': patch
 ---
 
 data-grid: auto-mount the filter panel under `filtering.variant: 'panel'`

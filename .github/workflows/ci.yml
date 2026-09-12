@@ -55,6 +55,11 @@ jobs:
     # widths after a resize, scroll positions), and parallel workers on a shared runner make
     # those measurements disagree with themselves. Three jobs side by side keep the wall clock
     # down without putting two browsers on one CPU.
+    #
+    # Not run on the release PR: `develop -> main` carries the tree `develop` just gated, and
+    # `main` receives nothing else, so a second browser suite there re-measures the same commit.
+    # `verify` still runs on that PR — it is the gate in front of `changeset publish`.
+    if: github.base_ref != 'main'
     name: e2e (${{ matrix.project }})
     runs-on: ubuntu-latest
     strategy:

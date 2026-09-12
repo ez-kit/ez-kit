@@ -1,6 +1,5 @@
 ---
 '@ez-kit/data-grid-react': minor
-'@ez-kit/data-grid-shadcn': patch
 '@ez-kit/data-grid-heroui': patch
 '@ez-kit/docs': patch
 ---
