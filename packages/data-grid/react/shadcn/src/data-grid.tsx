@@ -5,6 +5,7 @@ import { createDataGrid } from '@ez-kit/data-grid-react'
 import { cellTypes } from './blocks/cell-types'
 import { Checkbox } from './blocks/core/Checkbox'
 import { Menu } from './blocks/core/Menu'
+import { Modal } from './blocks/core/Modal'
 import { Td } from './blocks/core/Td'
 import { Tfoot } from './blocks/core/Tfoot'
 import { Th } from './blocks/core/Th'
@@ -12,7 +13,6 @@ import { Toolbar } from './blocks/core/Toolbar'
 import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
 import { FormShell } from './blocks/editing/FormShell'
-import { Modal } from './blocks/editing/Modal'
 import { NumberInput } from './blocks/editing/NumberInput'
 import { Chevron } from './blocks/expanding/Chevron'
 import { EmptyState } from './blocks/fallbacks/EmptyState'
@@ -59,6 +59,7 @@ const components = {
 		Toolbar,
 		Menu,
 		NumberInput,
+		Modal,
 	},
 	pagination: { Pagination, PageSizer },
 	sorting: { SortIndicator, SortMenu },
@@ -73,7 +74,7 @@ const components = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell },
+	editing: { FormShell },
 	deleting: { ConfirmDialog },
 	selection: { SelectionBar },
 	draft: { DraftBar },
