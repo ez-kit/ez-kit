@@ -1,5 +1,30 @@
 # @ez-kit/data-grid-heroui
 
+## 0.4.0
+
+### Minor Changes
+
+- a85577e: Add row reordering. `ordering: { row: true }` puts Move up / Move down in a row's action menu and answers `Alt+ArrowUp` / `Alt+ArrowDown`; the grid keeps the order and renders it. Supply `ordering: { row: { onChange } }` to own the order yourself — the grid then stores nothing and reports one `RowMove` per step. A bare `ordering: true` still means columns only.
+- 9a95f22: Move `Modal` into the `core` component group, and forward refs to `Th` and `Button`
+
+  `Modal` was registered under `editing`, but nothing about it is editing-specific — `open` /
+  `onClose` / `title` / `children` / `onSave` / `onCancel` is what any grid dialog needs. It now
+  sits in `core`, beside the other primitives, so a feature that wants a dialog reaches for it
+  instead of registering a shell of its own. A kit registers it as `core: { …, Modal }`; kits that
+  implemented only the `editing` tier need the one-line move.
+
+  `ThProps` and `ButtonProps` now carry `RefAttributes`, as `TheadProps` and `TrProps` already did.
+  A header is the element a pointer drag reorders a column by, and a drag handle is a button held
+  the same way — both are handed to a drag library through a ref, which these two props types had
+  no channel for. A kit that does not forward the ref still renders and still typechecks; the
+  affordance just never attaches.
+
+### Patch Changes
+
+- Updated dependencies [a85577e]
+- Updated dependencies [9a95f22]
+  - @ez-kit/data-grid-react@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @ez-kit/data-grid-core
 
+## 0.4.0
+
+### Minor Changes
+
+- a85577e: Add row reordering. `ordering: { row: true }` puts Move up / Move down in a row's action menu and answers `Alt+ArrowUp` / `Alt+ArrowDown`; the grid keeps the order and renders it. Supply `ordering: { row: { onChange } }` to own the order yourself — the grid then stores nothing and reports one `RowMove` per step. A bare `ordering: true` still means columns only.
+
 ## 0.3.0
 
 ### Minor Changes
