@@ -56,10 +56,19 @@ jobs:
     # those measurements disagree with themselves. Three jobs side by side keep the wall clock
     # down without putting two browsers on one CPU.
     #
-    # Not run on the release PR: `develop -> main` carries the tree `develop` just gated, and
-    # `main` receives nothing else, so a second browser suite there re-measures the same commit.
-    # `verify` still runs on that PR — it is the gate in front of `changeset publish`.
-    if: github.base_ref != 'main'
+    # Not run on the two PRs that carry no source change:
+    #
+    # - the release PR (`develop -> main`) carries the tree `develop` just gated, and `main`
+    #   receives nothing else;
+    # - the version PR (`changeset-release/develop -> develop`) touches only `version` fields,
+    #   CHANGELOGs and the consumed changeset files. Every internal dependency is declared
+    #   `workspace:^` / `workspace:*`, so changesets rewrites no range and the lockfile does not
+    #   move — nothing this suite renders or measures differs from the commit it branched from.
+    #
+    # `verify` still runs on both: on the release PR it is the gate in front of `changeset
+    # publish`, and on the version PR `pnpm lint` runs `check-site-url.mjs` over the CHANGELOGs
+    # it has just written from changeset summaries, where a stale origin would otherwise ship.
+    if: github.base_ref != 'main' && github.head_ref != 'changeset-release/develop'
     name: e2e (${{ matrix.project }})
     runs-on: ubuntu-latest
     strategy:

@@ -25,7 +25,7 @@ export const GridFeature = {
 	Pagination: 'pagination',
 	Sorting: 'sorting',
 	Filtering: 'filtering',
-	/** The two write forms — the modal shell they share, and the number input they field. */
+	/** The two write forms — the form shell they share. The dialog around it is `core.Modal`. */
 	Editing: 'editing',
 	/** Row deletion: the confirmation dialog. */
 	Deleting: 'deleting',
@@ -75,6 +75,11 @@ export const FEATURE_COMPONENTS = {
 		// filter and any cell type that fields a number reach for it, none of which involves
 		// editing.
 		'NumberInput',
+		// The generic dialog shell. It sits here, not in `editing`, because nothing about it is
+		// editing-specific — `open` / `onClose` / `title` / `children` / `onSave` / `onCancel` is
+		// what any grid dialog needs, and a feature that wants one is meant to reach for this
+		// rather than register a shell of its own.
+		'Modal',
 	] as const,
 	[GridFeature.Pagination]: ['Pagination', 'PageSizer'] as const,
 	[GridFeature.Sorting]: ['SortIndicator', 'SortMenu'] as const,
@@ -89,10 +94,10 @@ export const FEATURE_COMPONENTS = {
 		'BetweenInput',
 		'MultiSelectFilter',
 	] as const,
-	// `Modal` and `FormShell` are shared by editing **and** creating — one modal shell serves
-	// both forms (`DataGridFormModalProps` is one type), so they stay in the one group rather
-	// than being duplicated into a `creating` one.
-	[GridFeature.Editing]: ['Modal', 'FormShell'] as const,
+	// `FormShell` is shared by editing **and** creating — one shell serves both forms
+	// (`DataGridFormModalProps` is one type), so it stays in the one group rather than being
+	// duplicated into a `creating` one. The dialog it renders into is `core.Modal`.
+	[GridFeature.Editing]: ['FormShell'] as const,
 	[GridFeature.Deleting]: ['ConfirmDialog'] as const,
 	[GridFeature.Selection]: ['SelectionBar'] as const,
 	[GridFeature.Draft]: ['DraftBar'] as const,

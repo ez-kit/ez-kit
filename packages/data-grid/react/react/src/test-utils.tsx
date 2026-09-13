@@ -778,6 +778,7 @@ export const testComponents: FullGridComponents = {
 		Tr: TestTr,
 		Th: TestTh,
 		Td: TestTd,
+		Modal: TestModal,
 		Button: TestButton,
 		Input: TestInput,
 		Checkbox: TestCheckbox,
@@ -816,7 +817,6 @@ export const testComponents: FullGridComponents = {
 		MultiSelectFilter: TestMultiSelectFilter,
 	},
 	editing: {
-		Modal: TestModal,
 		FormShell: TestFormShell,
 	},
 	deleting: {

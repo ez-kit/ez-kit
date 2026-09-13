@@ -27,6 +27,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -41,6 +42,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -55,6 +57,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -70,6 +73,7 @@ describe('buildColumnList', () => {
 			editing: true,
 			deleting: false,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -83,6 +87,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -97,6 +102,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: true,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		})
@@ -108,6 +114,7 @@ describe('buildColumnList', () => {
 			buildColumnList([USER_COL], {
 				selection: false,
 				expanding: false,
+				ordering: false,
 				creating: false,
 				customRowActions: false,
 				...opts,
@@ -130,6 +137,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: true,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 			rowActionsPlacement: RowActionsPlacement.Inline,
@@ -140,6 +148,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: true,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 			rowActionsPlacement: RowActionsPlacement.Menu,
@@ -155,6 +164,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: false,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: true,
 		})
@@ -169,6 +179,7 @@ describe('buildColumnList', () => {
 			editing: false,
 			deleting: true,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		}
@@ -186,6 +197,7 @@ describe('buildColumnList', () => {
 			editing: true,
 			deleting: true,
 			pinning: false,
+			ordering: false,
 			creating: false,
 			customRowActions: false,
 		})

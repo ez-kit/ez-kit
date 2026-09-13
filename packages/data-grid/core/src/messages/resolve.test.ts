@@ -17,6 +17,15 @@ describe('resolveMessages', () => {
 		expect(messages.selection.selectRow).toBe(defaultMessages.selection.selectRow)
 	})
 
+	it('gives the row move entries defaults and lets them be overridden', () => {
+		const messages = resolveMessages({ rowActions: { moveUp: 'Выше', moveDown: 'Ниже' } })
+
+		expect(messages.rowActions.moveUp).toBe('Выше')
+		expect(messages.rowActions.moveDown).toBe('Ниже')
+		expect(messages.rowActions.order).toBe('Order')
+		expect(messages.rowActions.ordering).toBe('Row order')
+	})
+
 	it('lets a later layer win over an earlier one, entry by entry', () => {
 		const messages = resolveMessages(
 			{ selection: { selectRow: 'Выбрать строку', clear: 'Снять выделение' } },

@@ -5,6 +5,7 @@ import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-c
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
 import { ActionBarVariant, FilteringVariant } from './types'
+import { useOrderedData } from './use-ordered-data'
 import { useSafeLayoutEffect } from './utils/use-safe-layout-effect'
 
 import type { CellTypeRegistry } from './cell-types-context'
@@ -703,14 +704,17 @@ export type UseDataGridConfig<TRow extends object> = {
 	 */
 	visibility?: boolean | ReactVisibilityConfig
 	/**
-	 * Column reordering, grouped per axis like `pinning`.
-	 * - `true` — every axis this grid supports, which today means columns
+	 * Reordering, grouped per axis like `pinning`.
+	 * - `true` — columns only, and it keeps meaning exactly that
 	 * - `{ column: { onChange } }` — and report the new order
+	 * - `{ row: true }` — row reordering, uncontrolled: the grid keeps the order
+	 * - `{ row: { onChange } }` — row reordering, controlled: the grid reports each move
 	 *
 	 * The header menu grows a "move" pair, and the focused header cell answers
 	 * `Alt+ArrowLeft` / `Alt+ArrowRight` — the menu closes on select in both kits, so a column
 	 * that has to travel several places is moved from the keyboard rather than by reopening the
-	 * menu once per step.
+	 * menu once per step. The row axis is the same shape one level down: two entries in the
+	 * row's action menu, and `Alt+ArrowUp` / `Alt+ArrowDown` on a row with focus inside it.
 	 */
 	ordering?: boolean | OrderingConfig
 	/**
@@ -1163,11 +1167,14 @@ export function useDataGrid<TRow extends object>(
 	const virtualizationConfig = normalizeVirtualization(config.virtualization)
 	const expandingCfg = featureConfig(rawExpanding)
 
-	// Only the axes that exist: `ordering: true` means "every axis this grid supports", which is
-	// columns today. A row axis would have to arrive with its own handler (see `OrderingConfig`),
-	// so a grid written today cannot silently gain row dragging later.
+	// Only the axes that were named: `ordering: true` means columns, and keeps meaning columns
+	// (see `OrderingConfig`), so a grid written against it cannot silently gain row reordering
+	// on an upgrade.
 	const orderingCfg = featureConfig(rawOrdering)
 	const columnOrderingEnabled = rawOrdering === true || isFeatureEnabled(orderingCfg?.column)
+	// The row axis turns on only by being named — a bare `true` stays columns-only, so an
+	// upgrade cannot hand an existing grid an affordance nobody asked for.
+	const rowOrderingEnabled = isFeatureEnabled(orderingCfg?.row)
 
 	table.grid = {
 		cellTypes,
@@ -1183,7 +1190,7 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
-		ordering: { column: columnOrderingEnabled },
+		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {
@@ -1225,10 +1232,27 @@ export function useDataGrid<TRow extends object>(
 	// `options.data` AFTER child components (Body / Cell) had already
 	// rendered with the previous data, leaving the UI one step behind until
 	// another unrelated state change forced a re-render.
-	const dataRef = useRef(config.data)
-	if (config.data !== dataRef.current) {
-		dataRef.current = config.data
-		table.setOptions((prev) => ({ ...prev, data: config.data }))
+	//
+	// What reaches the table is `data` projected through the uncontrolled row order — see
+	// `useOrderedData`. That slice is an empty array until someone moves a row, and the
+	// projection returns the same reference for it, so an ordinary grid syncs exactly what it
+	// always did.
+	const orderedData = useOrderedData(table, config.data)
+	const dataRef = useRef(orderedData)
+	const dataSourceRef = useRef(config.data)
+	if (orderedData !== dataRef.current) {
+		// A row move rewrites `data` without the dataset having changed at all, and TanStack's
+		// `autoResetPageIndex` cannot tell the two apart: it fires on any new `data` identity, so
+		// moving a row on page three would drop the user back on page one. Suppressed for exactly
+		// that render, and left to its default (`!manualPagination`) whenever the `data` prop
+		// itself is what changed — a genuinely new dataset should still reset the page.
+		const isReorderOnly = config.data === dataSourceRef.current
+		dataRef.current = orderedData
+		dataSourceRef.current = config.data
+		table.setOptions((prev) => {
+			const { autoResetPageIndex: _default, ...rest } = prev
+			return isReorderOnly ? { ...rest, data: orderedData, autoResetPageIndex: false } : { ...rest, data: orderedData }
+		})
 	}
 
 	// Re-sync the manual-pagination server-data descriptors (`rowCount` / `pageCount`)

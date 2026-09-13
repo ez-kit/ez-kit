@@ -1,5 +1,8 @@
+import { RowMoveDirection } from '@ez-kit/data-grid-core'
+
 import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
+import { isTextEntryTarget } from '../utils/interactive-target'
 
 import { DataGridCell } from './cell'
 import { useDataGridState, useDataGridTable } from './table-context'
@@ -7,7 +10,7 @@ import { useDataGridState, useDataGridTable } from './table-context'
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
-import type { CSSProperties, ReactNode, Ref } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react'
 
 /**
  * What a `<DataGrid.Row>` render function receives.
@@ -58,6 +61,7 @@ export type DataGridRowProps<TRow extends object = any> = {
  * - `data-depth` (sub-row depth for expansion)
  * - `data-pinned="top" | "bottom"` for pinned rows (offset from `--dg-row-pin-offset`)
  * - `data-virtual="row"` for virtualized rows (positioned via runtime `transform`)
+ * - `data-movable="true"` while row reordering is on
  *
  * Consumer props from `rowProps` are applied first, so those structural attributes always win;
  * `className` is the exception and is merged rather than overwritten.
@@ -89,6 +93,37 @@ export function DataGridRow<TRow extends object = any>({
 	// value passed from here — RAC's selection manager is idle, since the grid's selection lives
 	// in TanStack. `data-row-*` is this layer's own namespace and nothing overwrites it.
 	const isSelected = useDataGridState(() => row.getIsSelected())
+
+	const canMove = table.grid.ordering.row
+	/**
+	 * `Alt+ArrowUp` / `Alt+ArrowDown` move the row one step.
+	 *
+	 * On the `<tr>`, reached by bubbling from whatever inside the row has focus — the selection
+	 * checkbox, an inline action button, the overflow trigger. Same arrangement the header uses,
+	 * where the handler sits on the `<th>` and is reached from the sort affordance's
+	 * `tabIndex={0}`: no roving tabindex and no focus model of the grid's own.
+	 *
+	 * The menu entries are the discoverable affordance, but both kits' menus close on select, so
+	 * a row travelling five places would mean five open-click cycles. This is the repeatable
+	 * path, and the keyboard equivalent WCAG 2.1.1 asks of a drag handle anyway.
+	 *
+	 * Note it reaches the row only in a kit whose `Tr` forwards `onKeyDown`. React Aria's `Row`
+	 * does not — the same upstream constraint that keeps `Alt+Arrow` column reordering out of
+	 * the heroui kit (#223) — so there the menu entries are the whole affordance.
+	 */
+	const onRowKeyDown = canMove
+		? (e: KeyboardEvent<HTMLTableRowElement>) => {
+				if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return
+				// Only a control that owns `Alt+Arrow` keeps it — a text field moving by word, a
+				// native select opening. A checkbox or a button does not, and a row has nothing
+				// else to focus, so the header's broader guard would refuse every event here.
+				if (isTextEntryTarget(e)) return
+				const direction = e.key === 'ArrowUp' ? RowMoveDirection.Up : RowMoveDirection.Down
+				if (!table.ordering.canMoveRow(row.id, direction)) return
+				e.preventDefault()
+				table.ordering.moveRow(row.id, direction)
+			}
+		: undefined
 	const { className: consumerClassName, style: consumerStyle, ...consumerProps } = resolveRowProps?.(row) ?? {}
 	const cells = row.getVisibleCells()
 
@@ -104,6 +139,8 @@ export function DataGridRow<TRow extends object = any>({
 			className={joinClassNames(consumerClassName)}
 			data-pinned={dataPinned}
 			data-virtual={dataVirtual}
+			{...(onRowKeyDown ? { onKeyDown: onRowKeyDown } : {})}
+			{...(canMove ? { 'data-movable': 'true' } : {})}
 		>
 			{children === undefined
 				? cells.map((cell) => (

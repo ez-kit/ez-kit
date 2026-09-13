@@ -141,6 +141,8 @@ type ActionsColumnSizeInput = {
 	editing: boolean
 	deleting: boolean
 	pinning: boolean
+	/** Whether row reordering is on — its two entries share the overflow trigger with pinning. */
+	ordering: boolean
 	/**
 	 * Whether an inline creating row can appear (`creating.mode` is `'row'` or `'pin-row'`).
 	 *
@@ -182,13 +184,14 @@ export function getActionsColumnSize({
 	editing,
 	deleting,
 	pinning,
+	ordering,
 	creating,
 	custom,
 	placement,
 }: ActionsColumnSizeInput): number {
-	// Pin entries and menu-placed custom entries share one overflow trigger, so they cost one
-	// button between them, not one each.
-	const hasOverflow = pinning || custom
+	// Pin entries, move entries and menu-placed custom entries share one overflow trigger, so
+	// they cost one button between them, not one each.
+	const hasOverflow = pinning || ordering || custom
 	const actionCount =
 		placement === RowActionsPlacement.Menu ? 1 : Number(editing) + Number(deleting) + Number(hasOverflow)
 	// A row in an inline form — editing or creating — swaps its buttons for save + cancel,

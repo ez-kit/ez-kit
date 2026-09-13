@@ -19,6 +19,7 @@ import { EditingFeature, EditingMode } from '../features/editing'
 import { InfiniteFeature } from '../features/infinite'
 import { LoadingFeature } from '../features/loading'
 import { buildOperatorRegistry } from '../features/operators'
+import { RowOrderingFeature } from '../features/ordering'
 import { RowActionsPlacement } from '../features/row-actions'
 import { createStore } from '../store'
 import { buildColumnList, extractPinningState } from '../system-columns'
@@ -245,6 +246,13 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	const orderingCfgResolved = featureConfig(config.ordering)
 	const columnOrderingOnChange =
 		typeof orderingCfgResolved?.column === 'object' ? orderingCfgResolved.column.onChange : undefined
+	// The row axis turns on only by being named: a bare `ordering: true` is columns, and keeps
+	// being columns, so an upgrade cannot hand an existing grid an affordance nobody asked for.
+	// Resolved to the config object the feature reads, or `undefined` when the axis is off —
+	// see `TableOptionsResolved.rowOrdering`.
+	const rowOrderingCfg = isFeatureEnabled(orderingCfgResolved?.row)
+		? (featureConfig(orderingCfgResolved?.row) ?? {})
+		: undefined
 	const pinningCfgResolved = featureConfig(config.pinning)
 	const columnPinningOnChange =
 		typeof pinningCfgResolved?.column === 'object' ? pinningCfgResolved.column.onChange : undefined
@@ -291,7 +299,8 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 	// the create trigger (data-grid-react `create-trigger.tsx`) — the toolbar is already there,
 	// so nothing reflows. `mode: 'modal'` needs neither: the dialog has its own footer.
 	const hasOtherRowActions =
-		rowActionsEnabled && (hasRowEditAction || hasDeleting || hasPinning || customRowActions !== undefined)
+		rowActionsEnabled &&
+		(hasRowEditAction || hasDeleting || hasPinning || rowOrderingCfg !== undefined || customRowActions !== undefined)
 	const creatingInActionsColumn = hasPinRowCreating || (hasInlineCreating && hasOtherRowActions)
 
 	const allColumns = buildColumnList(mappedUserColumns, {
@@ -300,6 +309,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		editing: rowActionsEnabled && hasRowEditAction,
 		deleting: rowActionsEnabled && hasDeleting,
 		pinning: rowActionsEnabled && hasPinning,
+		ordering: rowActionsEnabled && rowOrderingCfg !== undefined,
 		creating: creatingInActionsColumn,
 		rowActionsPlacement,
 		customRowActions: rowActionsEnabled && customRowActions !== undefined,
@@ -358,6 +368,21 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 				`\`initialState.pagination.pageSize\` (${String(userInitialState.pagination.pageSize)}) are set. ` +
 				`The seed wins; the option is ignored. Set one of them.`,
 		)
+	}
+
+	// Row ordering records an order as row ids, and a row with no `id` field falls back to its
+	// index — which changes the moment a row moves, so the recorded order would refer to
+	// whichever rows now sit in those positions. This is the feature's one real
+	// misconfiguration, and it is silent without saying so.
+	if (IS_DEV && rowOrderingCfg !== undefined && config.getRowId === undefined) {
+		const first = config.data[0] as Record<string, unknown> | undefined
+		if (first !== undefined && first.id == null) {
+			console.warn(
+				'[data-grid] `ordering: { row: ... }` needs a stable `getRowId`. These rows have no `id`, ' +
+					'so a row id is its index, which changes as soon as a row moves — the order would then ' +
+					'refer to the wrong rows.',
+			)
+		}
 	}
 
 	const initialState: Partial<TableState> = enforceColumnInvariants(
@@ -515,6 +540,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 			DeletingFeature,
 			LoadingFeature,
 			InfiniteFeature,
+			RowOrderingFeature,
 		],
 		data: config.data,
 		columns: allColumns,
@@ -598,6 +624,7 @@ export function createTable<TRow extends object>(config: TableConfig<TRow>): Dat
 		// Sorting: named comparator registry, addressable from `column.sorting.fn`
 		...(sortingCfg?.fns ? { sortingFns: sortingCfg.fns } : {}),
 		// Feature configs
+		...(rowOrderingCfg ? { rowOrdering: rowOrderingCfg } : {}),
 		...(creatingCfg ? { creating: creatingCfg } : {}),
 		...(editingCfg ? { editing: editingCfg } : {}),
 		...(deletingCfg ? { deleting: deletingCfg } : {}),

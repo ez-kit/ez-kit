@@ -142,10 +142,22 @@ export {
 	TEXT_OPERATORS,
 } from './features/operators'
 
-// Column reordering: the two pure helpers the UI drives it with. In core, not the React layer,
-// because the rules they encode (same pin band, same parent header, locked columns) are the
-// feature's semantics, not its chrome.
-export { canMoveColumn, ColumnMoveDirection, moveColumn } from './features/ordering'
+// Reordering: the pure helpers the UI drives it with, per axis. In core, not the React layer,
+// because the rules they encode (same pin band, same parent, locked columns) are the feature's
+// semantics, not its chrome. `applyRowOrder` is here for the same reason an adapter needs it:
+// rendering an uncontrolled row order means reordering `data`, and the rule for a row the order
+// does not name belongs to the feature.
+export {
+	applyRowMove,
+	applyRowOrder,
+	canMoveColumn,
+	canMoveRow,
+	ColumnMoveDirection,
+	moveColumn,
+	moveRow,
+	RowMoveDirection,
+} from './features/ordering'
+export type { RowMove, RowOrderState } from './features/ordering'
 
 export { CreatingMode } from './features/creating'
 export type {
@@ -212,6 +224,7 @@ export type {
 	OrderingConfig,
 	PaginationConfig,
 	ColumnOrderingConfig,
+	RowOrderingConfig,
 	ColumnPinningConfig,
 	VisibilityConfig,
 	PaginationTotals,

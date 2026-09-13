@@ -7,12 +7,12 @@ import { Button } from './blocks/core/Button'
 import { Checkbox } from './blocks/core/Checkbox'
 import { Input } from './blocks/core/Input'
 import { Menu } from './blocks/core/Menu'
+import { Modal } from './blocks/core/Modal'
 import { Table, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/core/table-adapters'
 import { Toolbar } from './blocks/core/Toolbar'
 import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
 import { FormShell } from './blocks/editing/FormShell'
-import { Modal } from './blocks/editing/Modal'
 import { NumberInput } from './blocks/editing/NumberInput'
 import { Chevron } from './blocks/expanding/Chevron'
 import { EmptyState } from './blocks/fallbacks/EmptyState'
@@ -42,7 +42,7 @@ import type { KitCellTypes } from './blocks/cell-types'
 import type { DataGridBundle, FullGridComponents } from '@ez-kit/data-grid-react'
 
 const components = {
-	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu, NumberInput },
+	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu, NumberInput, Modal },
 	pagination: { Pagination, PageSizer },
 	sorting: { SortIndicator, SortMenu },
 	filtering: {
@@ -56,7 +56,7 @@ const components = {
 		BetweenInput,
 		MultiSelectFilter,
 	},
-	editing: { Modal, FormShell },
+	editing: { FormShell },
 	deleting: { ConfirmDialog },
 	selection: { SelectionBar },
 	draft: { DraftBar },

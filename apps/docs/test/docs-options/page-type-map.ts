@@ -108,6 +108,7 @@ export const DocPage = {
 	ColumnsColumnHelper: 'content/docs/data-grid/columns/column-helper.mdx',
 	ColumnsGroupedHeaders: 'content/docs/data-grid/columns/grouped-headers.mdx',
 	ColumnsOrdering: 'content/docs/data-grid/columns/ordering.mdx',
+	RowOrdering: 'content/docs/data-grid/row-ordering.mdx',
 	PinningApi: 'content/docs/data-grid/pinning/api.mdx',
 	PinningColumns: 'content/docs/data-grid/pinning/columns.mdx',
 	ColumnsVisibility: 'content/docs/data-grid/columns/visibility.mdx',
@@ -666,6 +667,11 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 			{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 },
 			{ heading: 'Column options', roots: [GRID_TYPE.ColumnDef], expectedCount: 1 },
 		],
+		nonOptionTables: [],
+	},
+	{
+		page: DocPage.RowOrdering,
+		optionTables: [{ heading: 'Options', roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 1 }],
 		nonOptionTables: [],
 	},
 	{

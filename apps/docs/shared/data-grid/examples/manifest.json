@@ -832,6 +832,38 @@
 		"exportName": "ColumnOrderingExample"
 	},
 	{
+		"id": "row-ordering",
+		"label": "Row ordering",
+		"group": "rows",
+		"groupLabel": "Rows",
+		"sourceFile": "components/row-ordering.tsx",
+		"exportName": "RowOrderingExample"
+	},
+	{
+		"id": "row-ordering-controlled",
+		"label": "Row ordering (controlled)",
+		"group": "rows",
+		"groupLabel": "Rows",
+		"sourceFile": "components/row-ordering.tsx",
+		"exportName": "RowOrderingControlledExample"
+	},
+	{
+		"id": "row-ordering-paginated",
+		"label": "Row ordering (paginated)",
+		"group": "rows",
+		"groupLabel": "Rows",
+		"sourceFile": "components/row-ordering.tsx",
+		"exportName": "RowOrderingPaginatedExample"
+	},
+	{
+		"id": "row-ordering-tree",
+		"label": "Row ordering (tree)",
+		"group": "rows",
+		"groupLabel": "Rows",
+		"sourceFile": "components/row-ordering.tsx",
+		"exportName": "RowOrderingTreeExample"
+	},
+	{
 		"id": "grouped-headers",
 		"label": "Grouped headers",
 		"group": "columns",

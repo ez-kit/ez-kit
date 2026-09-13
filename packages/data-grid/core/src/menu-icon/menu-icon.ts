@@ -31,6 +31,10 @@ export const GridMenuIcon = {
 	MoveStart: 'move-start',
 	/** Move a column one step toward the end of the order. */
 	MoveEnd: 'move-end',
+	/** Move a row one step up. Physical, like `pinning` — the vertical axis does not flip. */
+	MoveUp: 'move-up',
+	/** Move a row one step down. */
+	MoveDown: 'move-down',
 } as const
 
 export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]
