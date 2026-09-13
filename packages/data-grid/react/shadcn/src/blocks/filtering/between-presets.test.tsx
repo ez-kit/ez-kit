@@ -15,7 +15,6 @@ function makeProps(overrides: Partial<BetweenInputProps> = {}): BetweenInputProp
 	return {
 		value: {},
 		onChange: vi.fn(),
-		variant: 'inputs',
 		type: 'date',
 		presets: PRESETS,
 		onPresetSelect: vi.fn(),

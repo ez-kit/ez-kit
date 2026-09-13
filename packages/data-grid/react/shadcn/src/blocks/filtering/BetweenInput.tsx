@@ -17,8 +17,6 @@ import { Input } from '@grid-shadcn/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 import { Slider } from '@grid-shadcn/components/ui/slider'
 
-import { DateCellInput } from '../cell-types/DateCell'
-
 import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 import type { DateRange } from 'react-day-picker'
@@ -172,7 +170,7 @@ function CalendarRange({ value, onChange }: Pick<BetweenInputProps, 'value' | 'o
 export function BetweenInput(props: BetweenInputProps) {
 	const messages = useGridMessages()
 	const { value, onChange } = props
-	const { branch, presets, slider, numbers, dates } = useBetweenValue(props)
+	const { branch, presets, slider, numbers } = useBetweenValue(props)
 	const presetMenu = presets ? <PresetMenu {...presets} /> : null
 
 	if (branch === BetweenBranch.Slider) {
@@ -192,40 +190,13 @@ export function BetweenInput(props: BetweenInputProps) {
 		)
 	}
 
-	if (branch === BetweenBranch.Calendar) {
+	if (branch === BetweenBranch.DateRange) {
 		return withPresets(
 			presetMenu,
 			<CalendarRange
 				value={value}
 				onChange={onChange}
 			/>,
-		)
-	}
-
-	if (branch === BetweenBranch.DateInputs) {
-		return withPresets(
-			presetMenu,
-			<div className='flex items-center gap-1'>
-				<DateCellInput
-					id='between-from'
-					value={dates.from}
-					onChange={dates.onFromChange}
-					onBlur={() => {}}
-					error={undefined}
-					errors={[]}
-					isValidating={false}
-				/>
-				<span className='text-muted-foreground text-xs'>–</span>
-				<DateCellInput
-					id='between-to'
-					value={dates.to}
-					onChange={dates.onToChange}
-					onBlur={() => {}}
-					error={undefined}
-					errors={[]}
-					isValidating={false}
-				/>
-			</div>,
 		)
 	}
 
