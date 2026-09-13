@@ -12,7 +12,6 @@ function setup(overrides: Partial<BetweenInputProps> = {}) {
 	const props: BetweenInputProps = {
 		value: {},
 		onChange,
-		variant: 'inputs',
 		type: 'number',
 		...overrides,
 	}
@@ -21,35 +20,42 @@ function setup(overrides: Partial<BetweenInputProps> = {}) {
 }
 
 describe('branch resolution', () => {
-	it('resolves the slider branch regardless of value type', () => {
-		expect(setup({ variant: 'slider', type: 'number' }).controller.branch).toBe(BetweenBranch.Slider)
-		expect(setup({ variant: 'slider', type: 'date' }).controller.branch).toBe(BetweenBranch.Slider)
+	it('resolves a date column to the one date-range control', () => {
+		expect(setup({ type: 'date' }).controller.branch).toBe(BetweenBranch.DateRange)
 	})
 
-	it('resolves the calendar branch only for date columns', () => {
-		expect(setup({ variant: 'calendar', type: 'date' }).controller.branch).toBe(BetweenBranch.Calendar)
-		expect(setup({ variant: 'calendar', type: 'number' }).controller.branch).toBe(BetweenBranch.NumberInputs)
+	it('resolves the slider only for a number column with both bounds', () => {
+		expect(setup({ slider: true, min: 0, max: 10 }).controller.branch).toBe(BetweenBranch.Slider)
 	})
 
-	it('falls back to paired date inputs for date columns', () => {
-		expect(setup({ variant: 'inputs', type: 'date' }).controller.branch).toBe(BetweenBranch.DateInputs)
+	it('falls back to number inputs when the slider has no bounded domain', () => {
+		expect(setup({ slider: true, min: 0 }).controller.branch).toBe(BetweenBranch.NumberInputs)
+		expect(setup({ slider: true }).controller.branch).toBe(BetweenBranch.NumberInputs)
+	})
+
+	it('ignores the slider on a date column', () => {
+		expect(setup({ slider: true, min: 0, max: 10, type: 'date' }).controller.branch).toBe(BetweenBranch.DateRange)
+	})
+
+	it('resolves number inputs by default', () => {
+		expect(setup().controller.branch).toBe(BetweenBranch.NumberInputs)
 	})
 })
 
 describe('slider bounds', () => {
-	it('defaults the bounds when the column configures none', () => {
-		const { controller } = setup({ variant: 'slider' })
-		expect(controller.slider.min).toBe(0)
-		expect(controller.slider.max).toBe(100)
+	it('takes the bounds the column declared', () => {
+		const { controller } = setup({ slider: true, min: 10, max: 90 })
+		expect(controller.slider.min).toBe(10)
+		expect(controller.slider.max).toBe(90)
 	})
 
 	it('falls each unset end back to its own bound', () => {
-		const { controller } = setup({ variant: 'slider', min: 10, max: 90, value: { from: 42 } })
+		const { controller } = setup({ slider: true, min: 10, max: 90, value: { from: 42 } })
 		expect(controller.slider.values).toEqual([42, 90])
 	})
 
 	it('ignores an emitted value that is not a numeric pair', () => {
-		const { controller, onChange } = setup({ variant: 'slider' })
+		const { controller, onChange } = setup({ slider: true, min: 0, max: 100 })
 		controller.slider.onChange(5)
 		controller.slider.onChange(['a', 'b'])
 		expect(onChange).not.toHaveBeenCalled()
@@ -129,13 +135,5 @@ describe('presets', () => {
 			value: { from: 'a', to: 'other' },
 		})
 		expect(controller.presets?.activeId).toBeNull()
-	})
-})
-
-describe('date inputs', () => {
-	it('sets one end without disturbing the other', () => {
-		const { controller, onChange } = setup({ type: 'date', value: { from: '2026-01-01', to: '2026-02-01' } })
-		controller.dates.onToChange('2026-03-01')
-		expect(onChange).toHaveBeenCalledWith({ from: '2026-01-01', to: '2026-03-01' })
 	})
 })

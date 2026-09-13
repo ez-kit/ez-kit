@@ -101,7 +101,6 @@ export type { PageWindowInput, PageWindowItem } from './data-grid/page-window'
 export { useBetweenValue, BetweenBranch } from './data-grid/use-between-value'
 export type {
 	BetweenController,
-	BetweenDateController,
 	BetweenNumberController,
 	BetweenPresetsController,
 	BetweenSliderController,

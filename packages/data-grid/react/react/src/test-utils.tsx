@@ -400,10 +400,15 @@ function TestOperatorSelect({ operators, currentOperatorId, onChange }: Operator
 		</select>
 	)
 }
-function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: BetweenInputProps) {
+function TestBetweenInput({ value, onChange, type, slider, presets, onPresetSelect }: BetweenInputProps) {
 	const inputType = type === 'number' ? 'number' : 'date'
 	const inputs = (
-		<div style={{ display: 'flex', gap: '4px' }}>
+		// `data-slider` is how a test observes that the column's slider flag reached the kit: this
+		// double renders two fields either way.
+		<div
+			data-slider={slider === true ? 'true' : undefined}
+			style={{ display: 'flex', gap: '4px' }}
+		>
 			<input
 				type={inputType}
 				placeholder='From'

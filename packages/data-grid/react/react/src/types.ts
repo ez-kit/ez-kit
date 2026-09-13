@@ -1,7 +1,6 @@
 import type { GridMenuItem, GridMenuProps } from './menu'
 import type {
 	BetweenInputType,
-	BetweenInputVariant,
 	BetweenValue,
 	ColumnPinSide,
 	DateRangePreset,
@@ -446,13 +445,14 @@ export type OperatorSelectProps = {
 export type BetweenInputProps = {
 	value: BetweenValue
 	onChange: (value: BetweenValue) => void
-	variant: BetweenInputVariant
 	type: BetweenInputType
+	/** Render the number range as a slider. Only ever `true` when both bounds are resolved. */
+	slider?: boolean | undefined
 	min?: number
 	max?: number
-	/** Preset list to render above the inputs/slider/calendar. Already resolved by the adapter. */
+	/** Preset list to offer beside the control. Already resolved by the adapter. */
 	presets?: DateRangePreset[]
-	/** Called when the user clicks a preset chip. Adapter wires it to setFilterValue with the preset's range. */
+	/** Called when the user picks a preset. Adapter wires it to setFilterValue with the preset's range. */
 	onPresetSelect?: (preset: DateRangePreset) => void
 }
 

@@ -1,4 +1,4 @@
-import { BetweenInputType, BetweenInputVariant } from '@ez-kit/data-grid-core'
+import { BetweenInputType } from '@ez-kit/data-grid-core'
 
 import type { BetweenInputProps } from '../types'
 import type { BetweenValue, DateRangePreset } from '@ez-kit/data-grid-core'
@@ -8,16 +8,15 @@ import type { BetweenValue, DateRangePreset } from '@ez-kit/data-grid-core'
  * every UI kit branches identically — the dispatch order is part of the behaviour, not styling.
  */
 export const BetweenBranch = {
+	/** A two-handle range slider. Number columns that declared a bounded domain. */
 	Slider: 'slider',
-	Calendar: 'calendar',
-	DateInputs: 'date-inputs',
+	/** One trigger opening a range calendar. Every date column. */
+	DateRange: 'date-range',
+	/** Two number fields. */
 	NumberInputs: 'number-inputs',
 } as const
 
 export type BetweenBranch = (typeof BetweenBranch)[keyof typeof BetweenBranch]
-
-const DEFAULT_SLIDER_MIN = 0
-const DEFAULT_SLIDER_MAX = 100
 
 /** Empty string, not `undefined` — a controlled `<input type='number'>` needs a defined value. */
 const EMPTY_INPUT = ''
@@ -52,26 +51,28 @@ export type BetweenNumberController = {
 	onToChange: (raw: number) => void
 }
 
-export type BetweenDateController = {
-	from: unknown
-	to: unknown
-	onFromChange: (next: unknown) => void
-	onToChange: (next: unknown) => void
-}
-
 export type BetweenController = {
 	branch: BetweenBranch
 	/** `null` when the column configures no presets — the kit then renders no preset menu. */
 	presets: BetweenPresetsController | null
 	slider: BetweenSliderController
 	numbers: BetweenNumberController
-	dates: BetweenDateController
 }
 
-function resolveBranch(variant: BetweenInputProps['variant'], type: BetweenInputProps['type']): BetweenBranch {
-	if (variant === BetweenInputVariant.Slider) return BetweenBranch.Slider
-	if (variant === BetweenInputVariant.Calendar && type === BetweenInputType.Date) return BetweenBranch.Calendar
-	if (type === BetweenInputType.Date) return BetweenBranch.DateInputs
+/**
+ * A date column has exactly one control, so the only real decision is whether a number column's
+ * range is bounded enough to be a slider. `slider` without both bounds is the author's mistake —
+ * `mapColumns` warns about it — and two fields are the honest fallback, where this used to invent
+ * a `0..100` domain.
+ */
+function resolveBranch(
+	type: BetweenInputProps['type'],
+	slider: boolean | undefined,
+	min: number | undefined,
+	max: number | undefined,
+): BetweenBranch {
+	if (type === BetweenInputType.Date) return BetweenBranch.DateRange
+	if (slider === true && min !== undefined && max !== undefined) return BetweenBranch.Slider
 	return BetweenBranch.NumberInputs
 }
 
@@ -108,29 +109,32 @@ function readNumericPair(next: unknown): [number, number] | null {
  * Lives here rather than in each kit because these are the parts that silently drifted when
  * they were copied — the shadcn flavour had lost `min`/`max` on its number inputs entirely.
  *
- * The calendar branch deliberately gets no controller: the kits model dates differently
+ * The date-range branch deliberately gets no controller: the kits model dates differently
  * (`Date` + date-fns vs `CalendarDate` + `@internationalized/date`), so there is nothing
  * kit-agnostic to share there.
  */
 export function useBetweenValue({
 	value,
 	onChange,
-	variant,
 	type,
+	slider,
 	min,
 	max,
 	presets,
 	onPresetSelect,
 }: BetweenInputProps): BetweenController {
-	const sliderMin = min ?? DEFAULT_SLIDER_MIN
-	const sliderMax = max ?? DEFAULT_SLIDER_MAX
+	// `resolveBranch` only returns `Slider` when both bounds are defined, so these fallbacks are
+	// unreachable on that branch. They exist so the controller can state `min` / `max` as `number`
+	// for the kits, which read them off every branch.
+	const sliderMin = min ?? 0
+	const sliderMax = max ?? 0
 
 	const setEnd = (end: keyof BetweenValue, next: unknown): void => {
 		onChange({ ...value, [end]: next })
 	}
 
 	return {
-		branch: resolveBranch(variant, type),
+		branch: resolveBranch(type, slider, min, max),
 		presets:
 			presets && presets.length > 0 && onPresetSelect
 				? { items: presets, onSelect: onPresetSelect, activeId: findActivePreset(presets, value) }
@@ -158,16 +162,6 @@ export function useBetweenValue({
 			},
 			onToChange: (raw) => {
 				setEnd('to', Number.isNaN(raw) ? undefined : raw)
-			},
-		},
-		dates: {
-			from: value.from,
-			to: value.to,
-			onFromChange: (next) => {
-				setEnd('from', next)
-			},
-			onToChange: (next) => {
-				setEnd('to', next)
 			},
 		},
 	}

@@ -119,7 +119,7 @@ const DATE_COLUMNS_WITH_PRESETS = createColumns<DateRow>([
 		filtering: {
 			operators: {
 				items: ['equals', 'between'],
-				betweenOperator: { variant: 'inputs', presets: true },
+				betweenOperator: { presets: true },
 			},
 			defaultOperator: 'between',
 		},
@@ -159,5 +159,41 @@ describe('renderFilterInput — between preset row (date)', () => {
 		expect(range?.from).toBe(range?.to)
 		// `today` preset returns ISO date-only string (YYYY-MM-DD, length 10).
 		expect(range?.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+	})
+})
+
+type NumberRow = { id: number; salary: number }
+
+const NUMBER_DATA: NumberRow[] = [
+	{ id: 1, salary: 50 },
+	{ id: 2, salary: 90 },
+]
+
+function setupNumber(betweenOperator: { slider?: boolean; min?: number; max?: number }): void {
+	const columns = createColumns<NumberRow>([
+		{
+			accessorKey: 'salary',
+			header: 'Salary',
+			cell: { type: 'number' },
+			filtering: { operators: { items: ['between'], betweenOperator }, defaultOperator: 'between' },
+		},
+	])
+	const table = prepareDataGridTable(createTable<NumberRow>({ data: NUMBER_DATA, columns, filtering: true }))
+	render(
+		<GridComponentsProvider>
+			<DataGrid table={table} />
+		</GridComponentsProvider>,
+	)
+}
+
+describe('renderFilterInput — between slider flag (number)', () => {
+	it('forwards the slider flag the column declared', () => {
+		setupNumber({ slider: true, min: 0, max: 100 })
+		expect(document.querySelector('[data-slider="true"]')).not.toBeNull()
+	})
+
+	it('omits the slider flag when the column did not ask for one', () => {
+		setupNumber({ min: 0, max: 100 })
+		expect(document.querySelector('[data-slider]')).toBeNull()
 	})
 })

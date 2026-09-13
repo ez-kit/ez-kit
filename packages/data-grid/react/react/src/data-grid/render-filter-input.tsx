@@ -1,9 +1,4 @@
-import {
-	BetweenInputVariant,
-	DATE_RANGE_PRESETS,
-	localizeDateRangePresets,
-	localizeOperators,
-} from '@ez-kit/data-grid-core'
+import { DATE_RANGE_PRESETS, localizeDateRangePresets, localizeOperators } from '@ez-kit/data-grid-core'
 
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
@@ -230,8 +225,8 @@ export function renderFilterInput({
 					<BetweenInput
 						value={(inputValue as BetweenValue | undefined) ?? {}}
 						onChange={onValueChange}
-						variant={betweenCfg?.variant ?? BetweenInputVariant.Inputs}
 						type={betweenType}
+						{...(betweenCfg?.slider === true ? { slider: true } : {})}
 						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
 						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
 						{...(resolvedPresets ? { presets: resolvedPresets } : {})}
