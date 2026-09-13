@@ -74,6 +74,19 @@ describe('row ordering feature', () => {
 		expect(table.getState().rowOrder).toEqual([])
 	})
 
+	it('moves a row the current order does not name yet', () => {
+		// The order is written over every row the table holds, not over the rendered ones. A
+		// grid that showed a subset when the first move happened — one page, one filter — would
+		// otherwise hold an order naming only those rows, and every later move outside it would
+		// be dropped while its menu entry stayed enabled.
+		const table = makeTable({ row: true })
+		table.setState((prev) => ({ ...prev, rowOrder: ['b', 'a'] }))
+
+		table.ordering.moveRow('c', RowMoveDirection.Up)
+
+		expect(table.getState().rowOrder).toEqual(['b', 'c', 'a'])
+	})
+
 	it('leaves the row axis off for a bare `ordering: true`', () => {
 		// `true` means columns only, and keeps meaning that — an upgrade must not hand an
 		// existing grid an affordance nobody asked for.
@@ -90,6 +103,125 @@ describe('row ordering feature', () => {
 		const table = makeTable({ row: { enabled: false } })
 
 		expect(table.ordering.canMoveRow('a', RowMoveDirection.Down)).toBe(false)
+	})
+})
+
+describe('row ordering under a partial row model', () => {
+	type Wide = { id: string; name: string; group: string }
+
+	const WIDE: Wide[] = [
+		{ id: '0', name: 'A', group: 'x' },
+		{ id: '1', name: 'B', group: 'y' },
+		{ id: '2', name: 'C', group: 'x' },
+		{ id: '3', name: 'D', group: 'y' },
+		{ id: '4', name: 'E', group: 'x' },
+		{ id: '5', name: 'F', group: 'y' },
+	]
+
+	function makeWideTable(extra: Partial<Parameters<typeof createTable<Wide>>[0]> = {}) {
+		return createTable<Wide>({
+			data: WIDE,
+			columns: createColumns<Wide>([
+				{ accessorKey: 'name', header: 'Name' },
+				{ accessorKey: 'group', header: 'Group' },
+			]),
+			getRowId: (row) => row.id,
+			ordering: { row: true },
+			...extra,
+		})
+	}
+
+	it('keeps moving rows after a move made on another page', () => {
+		// Arrange
+		const table = makeWideTable({ pagination: { pageSize: 3 } })
+		table.ordering.moveRow('0', RowMoveDirection.Down)
+		table.setPageIndex(1)
+
+		// Act
+		table.ordering.moveRow('3', RowMoveDirection.Down)
+
+		// Assert
+		expect(table.getState().rowOrder).toEqual(['1', '0', '2', '4', '3', '5'])
+	})
+
+	it('keeps moving rows a filter hid when the move was made', () => {
+		// Arrange
+		const table = makeWideTable({ filtering: true })
+		table.setColumnFilters([{ id: 'group', value: 'x' }])
+		table.ordering.moveRow('0', RowMoveDirection.Down)
+		table.setColumnFilters([])
+
+		// Act
+		table.ordering.moveRow('1', RowMoveDirection.Down)
+
+		// Assert
+		expect(table.getState().rowOrder).toEqual(['2', '1', '0', '3', '4', '5'])
+	})
+})
+
+describe('row ordering and tree sub-rows', () => {
+	type Node = { id: string; name: string; children?: Node[] }
+
+	const TREE: Node[] = [
+		{
+			id: 'p1',
+			name: 'P1',
+			children: [
+				{ id: 'c1', name: 'C1' },
+				{ id: 'c2', name: 'C2' },
+			],
+		},
+		{ id: 'p2', name: 'P2' },
+	]
+
+	function makeTreeTable(ordering: OrderingConfig) {
+		const table = createTable<Node>({
+			data: TREE,
+			columns: createColumns<Node>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+			ordering,
+			expanding: { mode: 'tree', getSubRows: (row) => row.children },
+		})
+		table.toggleAllRowsExpanded(true)
+		return table
+	}
+
+	it('offers no uncontrolled move to a sub-row', () => {
+		// The uncontrolled order is a list of ids over the top-level `data` array, so a child's
+		// position — which lives inside its parent's row object — is not something it can
+		// express. An enabled entry that records a move and renders identically is the defect
+		// this guards against; the entry is disabled instead.
+		const table = makeTreeTable({ row: true })
+
+		expect(table.ordering.canMoveRow('c1', RowMoveDirection.Down)).toBe(false)
+
+		table.ordering.moveRow('c1', RowMoveDirection.Down)
+
+		expect(table.getState().rowOrder).toEqual([])
+	})
+
+	it('still moves a top-level row in a tree', () => {
+		const table = makeTreeTable({ row: true })
+
+		table.ordering.moveRow('p1', RowMoveDirection.Down)
+
+		expect(table.getState().rowOrder).toEqual(['p2', 'p1'])
+	})
+
+	it('reports a sub-row move when controlled', () => {
+		// Controlled mode owns the data and can splice a child list, so the limit does not apply.
+		const onChange = vi.fn()
+		const table = makeTreeTable({ row: { onChange } })
+
+		expect(table.ordering.canMoveRow('c1', RowMoveDirection.Down)).toBe(true)
+
+		table.ordering.moveRow('c1', RowMoveDirection.Down)
+
+		expect(onChange).toHaveBeenCalledWith({
+			rowId: 'c1',
+			targetRowId: 'c2',
+			direction: RowMoveDirection.Down,
+		})
 	})
 })
 

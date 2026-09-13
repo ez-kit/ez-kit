@@ -86,11 +86,19 @@ grid always knows every column — it does not always know every row.
   disabled while a sort is applied.
 - **Across a page edge.** A move is defined over the rows on screen, and a row that vanished onto
   the next page is not a move anyone can follow. The arrows are disabled at the first and last
-  row of the page.
-- **Across a pinning band.** A step from the centre into the pinned top or bottom would read as a
-  pin, not a reorder. [Pin the row](/docs/data-grid/pinning/rows) instead.
-- **Out of its own subtree.** With [tree data](/docs/data-grid/expanding/tree) a row moves among
-  its siblings: changing a row's parent is a different operation with a different meaning.
+  row of the page. What the grid _records_ is the order of every row it holds, though, so a move
+  made on one page does not strand the rows on the others.
+
+<DataGridDocsExample exampleId='row-ordering-paginated' />- **Across a pinning band.** A step from the centre into the
+pinned top or bottom would read as a pin, not a reorder. [Pin the row](/docs/data-grid/pinning/rows) instead. - **Out of
+its own subtree.** With [tree data](/docs/data-grid/expanding/tree) a row moves among its siblings: changing a row's
+parent is a different operation with a different meaning. An expanded parent still steps over its own children to reach
+the sibling below them. - **A sub-row, in uncontrolled mode.** The order the grid keeps is a list of ids over the
+top-level `data` array, and a child's position lives inside its parent's row object — so the move has nowhere to be
+recorded. The entries are disabled for sub-rows there. Controlled mode has no such limit: the application owns the data
+and is told about the move like any other.
+
+<DataGridDocsExample exampleId='row-ordering-tree' />
 
 A filter is **not** in that list. Filtering removes rows, it does not order them, so a step lands
 the row next to the neighbour the user can actually see.

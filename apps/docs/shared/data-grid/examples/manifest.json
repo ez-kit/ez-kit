@@ -848,6 +848,22 @@
 		"exportName": "RowOrderingControlledExample"
 	},
 	{
+		"id": "row-ordering-paginated",
+		"label": "Row ordering (paginated)",
+		"group": "rows",
+		"groupLabel": "Rows",
+		"sourceFile": "components/row-ordering.tsx",
+		"exportName": "RowOrderingPaginatedExample"
+	},
+	{
+		"id": "row-ordering-tree",
+		"label": "Row ordering (tree)",
+		"group": "rows",
+		"groupLabel": "Rows",
+		"sourceFile": "components/row-ordering.tsx",
+		"exportName": "RowOrderingTreeExample"
+	},
+	{
 		"id": "grouped-headers",
 		"label": "Grouped headers",
 		"group": "columns",

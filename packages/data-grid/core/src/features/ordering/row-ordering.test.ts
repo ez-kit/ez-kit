@@ -63,6 +63,61 @@ describe('canMoveRow', () => {
 	})
 })
 
+describe('canMoveRow in a tree', () => {
+	type Node = { id: string; name: string; children?: Node[] }
+
+	const TREE: Node[] = [
+		{
+			id: 'p1',
+			name: 'P1',
+			children: [
+				{ id: 'c1', name: 'C1' },
+				{ id: 'c2', name: 'C2' },
+			],
+		},
+		{ id: 'p2', name: 'P2', children: [{ id: 'c3', name: 'C3' }] },
+	]
+
+	function makeTreeTable() {
+		const table = createTable<Node>({
+			data: TREE,
+			columns: createColumns<Node>([{ accessorKey: 'name', header: 'Name' }]),
+			getRowId: (row) => row.id,
+			ordering: { row: { onChange: () => undefined } },
+			expanding: { mode: 'tree', getSubRows: (row) => row.children },
+		})
+		table.toggleAllRowsExpanded(true)
+		return table
+	}
+
+	it('steps a parent over its own expanded children', () => {
+		// What follows an expanded `p1` in the rendered list is `c1`, not `p2`. Treating that
+		// child as a boundary would leave every expanded row unable to move in either direction.
+		const table = makeTreeTable()
+
+		expect(moveRow(table, 'p1', RowMoveDirection.Down)).toEqual({
+			rowId: 'p1',
+			targetRowId: 'p2',
+			direction: RowMoveDirection.Down,
+		})
+		expect(moveRow(table, 'p2', RowMoveDirection.Up)).toEqual({
+			rowId: 'p2',
+			targetRowId: 'p1',
+			direction: RowMoveDirection.Up,
+		})
+	})
+
+	it('keeps a child inside its own subtree', () => {
+		// `c2` is the last child of `p1`; the next rendered row is `p2`, a different parent.
+		// Crossing there would change the row's parent, which is a different operation.
+		const table = makeTreeTable()
+
+		expect(canMoveRow(table, 'c2', RowMoveDirection.Down)).toBe(false)
+		expect(canMoveRow(table, 'c1', RowMoveDirection.Up)).toBe(false)
+		expect(canMoveRow(table, 'c1', RowMoveDirection.Down)).toBe(true)
+	})
+})
+
 describe('moveRow', () => {
 	it('describes the swap and performs none of it', () => {
 		const table = makeTable()

@@ -1239,9 +1239,20 @@ export function useDataGrid<TRow extends object>(
 	// always did.
 	const orderedData = useOrderedData(table, config.data)
 	const dataRef = useRef(orderedData)
+	const dataSourceRef = useRef(config.data)
 	if (orderedData !== dataRef.current) {
+		// A row move rewrites `data` without the dataset having changed at all, and TanStack's
+		// `autoResetPageIndex` cannot tell the two apart: it fires on any new `data` identity, so
+		// moving a row on page three would drop the user back on page one. Suppressed for exactly
+		// that render, and left to its default (`!manualPagination`) whenever the `data` prop
+		// itself is what changed — a genuinely new dataset should still reset the page.
+		const isReorderOnly = config.data === dataSourceRef.current
 		dataRef.current = orderedData
-		table.setOptions((prev) => ({ ...prev, data: orderedData }))
+		dataSourceRef.current = config.data
+		table.setOptions((prev) => {
+			const { autoResetPageIndex: _default, ...rest } = prev
+			return isReorderOnly ? { ...rest, data: orderedData, autoResetPageIndex: false } : { ...rest, data: orderedData }
+		})
 	}
 
 	// Re-sync the manual-pagination server-data descriptors (`rowCount` / `pageCount`)

@@ -48,13 +48,27 @@ export type RowMove = {
  *
  * Either mismatch **ends** the search rather than skipping past it, exactly as `findNeighbour`
  * does for a column: what lies beyond a boundary is not this row's neighbour at all.
+ *
+ * Rows **deeper** than this one are the exception, and are stepped over rather than treated as a
+ * boundary. An expanded parent is followed in the rendered list by its own children, and a
+ * sibling below them is still the sibling below: stopping at the first child would mean an
+ * expanded row could never move at all, which is the opposite of moving among siblings.
  */
 function findNeighbour<TRow>(rows: Row<TRow>[], index: number, direction: RowMoveDirection): Row<TRow> | undefined {
 	const row = rows[index]
 	if (!row) return undefined
 
 	const step = direction === RowMoveDirection.Up ? -1 : 1
-	const candidate = rows[index + step]
+	// Skip the subtree between this row and its sibling — descendants of this row going down,
+	// descendants of the sibling above going up. Anything at this depth or shallower is the
+	// candidate, and the two checks below decide whether it is a neighbour or a boundary.
+	let cursor = index + step
+	let candidate = rows[cursor]
+	while (candidate !== undefined && candidate.depth > row.depth) {
+		cursor += step
+		candidate = rows[cursor]
+	}
+
 	if (!candidate) return undefined
 	if (candidate.getIsPinned() !== row.getIsPinned()) return undefined
 	if (candidate.parentId !== row.parentId) return undefined
