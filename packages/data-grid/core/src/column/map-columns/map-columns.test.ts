@@ -377,3 +377,81 @@ describe('mapColumns — header/footer renderers', () => {
 		expect(result[0]?.footer).toBe(footer)
 	})
 })
+
+// The two arms of `BetweenOperatorConfig` cannot be checked against the column's `cell.type`,
+// so the option that landed on the wrong kind of column is caught here instead.
+describe('mapColumns — betweenOperator warnings', () => {
+	const registry = buildOperatorRegistry()
+
+	it('warns when presets are configured on a column that is not a date', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		mapColumns<Row>(
+			[
+				{
+					accessorKey: 'age',
+					cell: { type: 'number' },
+					filtering: {
+						defaultOperator: 'between',
+						operators: { items: ['between'], betweenOperator: { presets: true } },
+					},
+				},
+			],
+			registry,
+		)
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`betweenOperator.presets`'))
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('age'))
+		warn.mockRestore()
+	})
+
+	it('warns when the slider is asked for without both bounds', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		mapColumns<Row>(
+			[
+				{
+					accessorKey: 'age',
+					cell: { type: 'number' },
+					filtering: {
+						defaultOperator: 'between',
+						operators: { items: ['between'], betweenOperator: { slider: true, min: 0 } },
+					},
+				},
+			],
+			registry,
+		)
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`betweenOperator.slider: true`'))
+		warn.mockRestore()
+	})
+
+	it('stays quiet when each arm meets the column it belongs to', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		mapColumns<Row>(
+			[
+				{
+					accessorKey: 'age',
+					cell: { type: 'number' },
+					filtering: {
+						defaultOperator: 'between',
+						operators: { items: ['between'], betweenOperator: { slider: true, min: 0, max: 10 } },
+					},
+				},
+				{
+					accessorKey: 'name',
+					cell: { type: 'date' },
+					filtering: {
+						defaultOperator: 'between',
+						operators: { items: ['between'], betweenOperator: { presets: true } },
+					},
+				},
+			],
+			registry,
+		)
+
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+})

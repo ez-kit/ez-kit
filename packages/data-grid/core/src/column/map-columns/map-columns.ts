@@ -244,7 +244,34 @@ function mapColumn<TRow extends object>(
 			filteringMeta.operators = resolved
 
 			if (typeof operatorsConfig === 'object' && operatorsConfig.betweenOperator) {
-				filteringMeta.betweenOperator = operatorsConfig.betweenOperator
+				const betweenConfig = operatorsConfig.betweenOperator
+
+				// The two arms of `BetweenOperatorConfig` cannot be checked against the column's
+				// `cell.type`: it is a sibling field, and a union arm has no inference variable to
+				// carry a type across it. So the option that landed on the wrong kind of column is
+				// caught here, where the cell type is finally known.
+				if (IS_DEV && betweenConfig.presets !== undefined && cellType !== 'date') {
+					console.warn(
+						`[data-grid] Column "${columnId}" sets \`betweenOperator.presets\`, but its cell type is ` +
+							`"${cellType ?? 'text'}". Date-range presets only apply to \`cell: { type: 'date' }\` ` +
+							`columns and are ignored here.`,
+					)
+				}
+
+				// A slider over an unknown domain can express nothing, so it needs a stated one. This
+				// used to be a silent `0..100`, which is an invention rather than the column's data.
+				if (
+					IS_DEV &&
+					betweenConfig.slider === true &&
+					(betweenConfig.min === undefined || betweenConfig.max === undefined)
+				) {
+					console.warn(
+						`[data-grid] Column "${columnId}" sets \`betweenOperator.slider: true\` without both ` +
+							`\`min\` and \`max\`. The filter falls back to two number fields.`,
+					)
+				}
+
+				filteringMeta.betweenOperator = betweenConfig
 			}
 
 			const defaultOpId =
