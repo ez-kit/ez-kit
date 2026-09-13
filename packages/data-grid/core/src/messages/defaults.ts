@@ -86,6 +86,7 @@ export const defaultMessages: GridMessages = {
 		to: 'To',
 		range: 'Range',
 		dateRange: 'Date range',
+		presets: 'Quick ranges',
 		search: 'Search…',
 		noResults: 'No results',
 	},

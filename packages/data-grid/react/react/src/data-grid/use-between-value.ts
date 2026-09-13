@@ -25,6 +25,12 @@ const EMPTY_INPUT = ''
 export type BetweenPresetsController = {
 	items: DateRangePreset[]
 	onSelect: (preset: DateRangePreset) => void
+	/**
+	 * Id of the preset whose range the filter currently holds, or `null` when the range was
+	 * typed by hand, is half-set, or matches none. Kits name the trigger after it and tick the
+	 * matching entry — computed here so the two kits cannot disagree on what "active" means.
+	 */
+	activeId: string | null
 }
 
 export type BetweenSliderController = {
@@ -55,7 +61,7 @@ export type BetweenDateController = {
 
 export type BetweenController = {
 	branch: BetweenBranch
-	/** `null` when the column configures no presets — the kit then renders no preset row. */
+	/** `null` when the column configures no presets — the kit then renders no preset menu. */
 	presets: BetweenPresetsController | null
 	slider: BetweenSliderController
 	numbers: BetweenNumberController
@@ -71,6 +77,21 @@ function resolveBranch(variant: BetweenInputProps['variant'], type: BetweenInput
 
 function toNumberInputValue(value: unknown): number | typeof EMPTY_INPUT {
 	return typeof value === 'number' && !Number.isNaN(value) ? value : EMPTY_INPUT
+}
+
+/**
+ * Which preset the current range came from, by value rather than by memory of the last click:
+ * a range the user then edited by hand stops being "Last 7 days", and one restored from a deep
+ * link is recognised without any click having happened in this session.
+ */
+function findActivePreset(items: DateRangePreset[], value: BetweenValue): string | null {
+	if (value.from === undefined || value.to === undefined) return null
+	return (
+		items.find((preset) => {
+			const range = preset.getRange()
+			return range.from === value.from && range.to === value.to
+		})?.id ?? null
+	)
 }
 
 function readNumericPair(next: unknown): [number, number] | null {
@@ -110,7 +131,10 @@ export function useBetweenValue({
 
 	return {
 		branch: resolveBranch(variant, type),
-		presets: presets && presets.length > 0 && onPresetSelect ? { items: presets, onSelect: onPresetSelect } : null,
+		presets:
+			presets && presets.length > 0 && onPresetSelect
+				? { items: presets, onSelect: onPresetSelect, activeId: findActivePreset(presets, value) }
+				: null,
 		slider: {
 			min: sliderMin,
 			max: sliderMax,

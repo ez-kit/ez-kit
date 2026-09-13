@@ -107,6 +107,29 @@ describe('presets', () => {
 		expect(controller.presets?.items).toBe(PRESETS)
 		expect(controller.presets?.onSelect).toBe(onPresetSelect)
 	})
+
+	it('has no active preset while the range is unset', () => {
+		const { controller } = setup({ presets: PRESETS, onPresetSelect: vi.fn() })
+		expect(controller.presets?.activeId).toBeNull()
+	})
+
+	it('names the preset whose range the current value equals', () => {
+		const { controller } = setup({
+			presets: PRESETS,
+			onPresetSelect: vi.fn(),
+			value: { from: 'a', to: 'b' },
+		})
+		expect(controller.presets?.activeId).toBe('last-7')
+	})
+
+	it('has no active preset when only one end matches', () => {
+		const { controller } = setup({
+			presets: PRESETS,
+			onPresetSelect: vi.fn(),
+			value: { from: 'a', to: 'other' },
+		})
+		expect(controller.presets?.activeId).toBeNull()
+	})
 })
 
 describe('date inputs', () => {

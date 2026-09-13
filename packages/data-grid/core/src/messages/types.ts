@@ -171,6 +171,8 @@ export type GridMessages = {
 		range: string
 		/** Accessible name of a date-range filter. */
 		dateRange: string
+		/** Accessible name of the date-range preset menu, and its trigger while none is active. */
+		presets: string
 		/** Placeholder of the search box inside a multi-select filter. */
 		search: string
 		/** Shown when a multi-select filter's search matches nothing. */

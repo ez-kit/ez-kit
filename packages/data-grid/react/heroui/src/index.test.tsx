@@ -1,5 +1,6 @@
 import { prepareDataGridTable, createTable, createColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { BetweenInput } from './blocks/filtering/BetweenInput'
@@ -207,30 +208,48 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(screen.getByPlaceholderText('To')).toHaveValue('25')
 	})
 
-	it('BetweenInput renders preset chips when presets[] is provided for a date column', () => {
-		const onChange = vi.fn()
+	const PRESETS = [
+		{ id: 'today', label: 'Today', getRange: () => ({ from: '2026-05-14', to: '2026-05-14' }) },
+		{ id: 'last7', label: 'Last 7 days', getRange: () => ({ from: '2026-05-08', to: '2026-05-14' }) },
+	]
+
+	it('BetweenInput offers the presets behind one menu when presets[] is provided for a date column', async () => {
 		const onPresetSelect = vi.fn()
-		const presets = [
-			{ id: 'today', label: 'Today', getRange: () => ({ from: '2026-05-14', to: '2026-05-14' }) },
-			{ id: 'last7', label: 'Last 7 days', getRange: () => ({ from: '2026-05-08', to: '2026-05-14' }) },
-		]
 		render(
 			<BetweenInput
 				value={{}}
-				onChange={onChange}
+				onChange={vi.fn()}
 				variant='inputs'
 				type='date'
-				presets={presets}
+				presets={PRESETS}
 				onPresetSelect={onPresetSelect}
 			/>,
 		)
 
-		const todayBtn = screen.getByRole('button', { name: 'Today' })
-		expect(todayBtn).toBeInTheDocument()
-		expect(screen.getByRole('button', { name: 'Last 7 days' })).toBeInTheDocument()
+		// One trigger, not one button per preset: inline in a column header, a chip row wrapped
+		// onto three lines and pushed the whole header row down with it.
+		expect(screen.queryByRole('button', { name: 'Today' })).not.toBeInTheDocument()
 
-		fireEvent.click(todayBtn)
-		expect(onPresetSelect).toHaveBeenCalledWith(presets[0])
+		await userEvent.click(screen.getByRole('button', { name: 'Quick ranges' }))
+		await userEvent.click(screen.getByRole('menuitem', { name: 'Today' }))
+
+		expect(onPresetSelect).toHaveBeenCalledWith(PRESETS[0])
+	})
+
+	it('BetweenInput names the preset the current range came from', () => {
+		render(
+			<BetweenInput
+				value={{ from: '2026-05-08', to: '2026-05-14' }}
+				onChange={vi.fn()}
+				variant='inputs'
+				type='date'
+				presets={PRESETS}
+				onPresetSelect={vi.fn()}
+			/>,
+		)
+
+		const trigger = screen.getByRole('button', { name: 'Last 7 days' })
+		expect(trigger).toHaveAttribute('data-active-preset', 'last7')
 	})
 
 	it('BetweenInput renders RangeCalendar trigger when variant="calendar" and type="date"', () => {

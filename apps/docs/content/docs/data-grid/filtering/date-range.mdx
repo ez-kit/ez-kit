@@ -7,7 +7,11 @@ For date columns (`cell: { type: 'date' }`), the `between` operator renders a ra
 
 ## Usage
 
-Built-in presets (Today, Yesterday, Last 7/30 days, This/Last month) sit alongside the two-input range picker via `betweenOperator: { variant: 'inputs', presets: true }`.
+Built-in presets (Today, Yesterday, Last 7/30 days, This/Last month) sit beside the two-input range
+picker via `betweenOperator: { variant: 'inputs', presets: true }`, behind one menu trigger — the
+filter also renders inline in the column header, where a chip per preset wrapped onto several lines
+and took the height of the whole header row with it. Picking one fills both ends; the trigger then
+names the preset the range came from, and stops naming it as soon as either end is edited by hand.
 
 <DataGridDocsExample exampleId='filter-date-range-built-in' />
 
