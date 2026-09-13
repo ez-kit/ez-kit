@@ -19,18 +19,20 @@ Every kit owes exactly three things:
    import type { FullGridComponents } from '@ez-kit/data-grid-react'
 
    const components = {
-   	core: { Table, Thead, Tbody, Tr, Th, Td, Button, Input, Checkbox, Toolbar },
+   	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu, NumberInput, Modal },
    	pagination: { Pagination, PageSizer },
-   	sorting: { SortIndicator, SortMenu, ColumnMenu },
+   	sorting: { SortIndicator, SortMenu },
    	// …one group per feature (see the tables below)
    } satisfies FullGridComponents
 
    export const { DataGrid, useDataGrid, extendDataGrid } = createDataGrid({ components })
    ```
 
-   The group keys are the feature names (`core`, `pagination`, `'column-visibility'`,
-   `'fallback-states'`, …). A partial kit may omit whole groups or individual members
-   (type it `satisfies GridComponents`); overrides are merged group-by-group.
+   The group keys are the feature names, spelled exactly as the options are — `core`,
+   `pagination`, `sorting`, `filtering`, `editing`, `deleting`, `selection`, `draft`,
+   `rowActions`, `resizing`, `visibility`, `fallbacks`, `infinite`, `expanding`. A partial kit
+   may omit whole groups or individual members (type it `satisfies GridComponents`); overrides
+   are merged group-by-group.
 
 2. **Apply the structural CSS once** at the kit or app root:
 
@@ -81,12 +83,13 @@ Every kit owes exactly three things:
 
 Opt into individual feature groups with the tier types
 (`GridCoreComponents`, `GridPaginationComponents`, `GridSortingComponents`,
-`GridFilteringComponents`, `GridEditingComponents`, `GridSelectionComponents`,
-`GridRowActionsComponents`, `GridResizingComponents`, `GridVisibilityComponents`,
-`GridFallbackComponents`, `GridInfiniteComponents`, `GridExpandingComponents`).
+`GridFilteringComponents`, `GridEditingComponents`, `GridDeletingComponents`,
+`GridSelectionComponents`, `GridDraftComponents`, `GridRowActionsComponents`,
+`GridResizingComponents`, `GridVisibilityComponents`, `GridFallbackComponents`,
+`GridInfiniteComponents`, `GridExpandingComponents`).
 
 All of these — plus the flat `COMPONENT_FEATURE` lookup — are derived from a single
-exported map, `FEATURE_COMPONENTS: Record<GridFeature, readonly (keyof GridComponents)[]>`,
+exported map, `FEATURE_COMPONENTS: Record<GridFeature, readonly (keyof GridComponentRegistry)[]>`,
 so "which feature owns which component" is defined in exactly one place.
 
 ## Recommended kit structure
@@ -96,9 +99,13 @@ per feature, mirroring `FEATURE_COMPONENTS` so the file tree reads like the cont
 
 ```
 src/blocks/
-  core/  pagination/  sorting/  filtering/  editing/  selection/
-  pinning/  resizing/  column-visibility/  fallback-states/  infinite/  expanding/
+  core/  pagination/  sorting/  filtering/  editing/  selection/  draft/
+  row-actions/  resizing/  visibility/  fallbacks/  infinite/  expanding/  cell-types/
 ```
+
+Two folders do not correspond to a group one-for-one: `deleting` owns a single component and
+its file sits in `editing/` beside the forms it belongs with, and `cell-types/` is not a
+contract group at all — it is the kit's own cell-type registry, the second extension axis.
 
 This is a convention, not a requirement — the factory only cares about the registered
 component object — but it keeps a kit discoverable as it grows.
@@ -111,18 +118,22 @@ exported — read them for the exact shape.
 
 ### `core` — always required to render a grid
 
-| Component  | Props           | Notes                                                          |
-| ---------- | --------------- | -------------------------------------------------------------- |
-| `Table`    | `TableProps`    | Table root. Emits `data-slot="table"`.                         |
-| `Thead`    | `TheadProps`    | Emits `data-slot="thead"`.                                     |
-| `Tbody`    | `TbodyProps`    | Emits `data-slot="tbody"`.                                     |
-| `Tr`       | `TrProps`       | Emits `data-slot="tr"`.                                        |
-| `Th`       | `ThProps`       | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="th"`. |
-| `Td`       | `TdProps`       | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="td"`. |
-| `Button`   | `ButtonProps`   | Generic button used by triggers/actions.                       |
-| `Input`    | `InputProps`    | Generic text input.                                            |
-| `Checkbox` | `CheckboxProps` | Row/all selection. `indeterminate`, `onChange(checked)`.       |
-| `Toolbar`  | `ToolbarProps`  | Chrome around search/actions. `start` / `end` / `children`.    |
+| Component     | Props              | Notes                                                               |
+| ------------- | ------------------ | ------------------------------------------------------------------- |
+| `Table`       | `TableProps`       | Table root. Emits `data-slot="table"`.                              |
+| `Thead`       | `TheadProps`       | Emits `data-slot="thead"`.                                          |
+| `Tbody`       | `TbodyProps`       | Emits `data-slot="tbody"`.                                          |
+| `Tr`          | `TrProps`          | Emits `data-slot="tr"`.                                             |
+| `Th`          | `ThProps`          | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="th"`.      |
+| `Td`          | `TdProps`          | `pinned?: 'left' \| 'right' \| false`. Emits `data-slot="td"`.      |
+| `Button`      | `ButtonProps`      | Generic button used by triggers/actions.                            |
+| `Input`       | `InputProps`       | Generic text input.                                                 |
+| `Checkbox`    | `CheckboxProps`    | Row/all selection. `indeterminate`, `onChange(checked)`.            |
+| `Tfoot`       | `TfootProps`       | Emits `data-slot="tfoot"`.                                          |
+| `Toolbar`     | `ToolbarProps`     | Chrome around search/actions. `start` / `end` / `children`.         |
+| `Menu`        | `GridMenuProps`    | The one overflow menu: `sections` of icon/label entries, `variant`. |
+| `NumberInput` | `NumberInputProps` | A primitive, beside `Input` — the number filter reaches for it too. |
+| `Modal`       | `ModalProps`       | Generic dialog shell. Any feature needing a dialog uses this.       |
 
 ### `pagination`
 
@@ -133,11 +144,10 @@ exported — read them for the exact shape.
 
 ### `sorting`
 
-| Component       | Props                                                   |
-| --------------- | ------------------------------------------------------- |
-| `SortIndicator` | `SortIndicatorProps`                                    |
-| `SortMenu`      | `SortMenuProps`                                         |
-| `ColumnMenu`    | `ColumnMenuProps` (pin / visibility / sorting sections) |
+| Component       | Props                |
+| --------------- | -------------------- |
+| `SortIndicator` | `SortIndicatorProps` |
+| `SortMenu`      | `SortMenuProps`      |
 
 ### `filtering`
 
@@ -155,13 +165,18 @@ exported — read them for the exact shape.
 
 ### `editing`
 
-| Component             | Props                                             |
-| --------------------- | ------------------------------------------------- |
-| `Modal`               | `ModalProps`                                      |
-| `FormShell`           | `FormShellProps` (creating / editing modal shell) |
-| `CreatingActionsCell` | `CreatingActionsCellProps`                        |
-| `ConfirmDialog`       | `ConfirmDialogProps` (delete confirmation)        |
-| `NumberInput`         | `NumberInputProps`                                |
+| Component   | Props                                             |
+| ----------- | ------------------------------------------------- |
+| `FormShell` | `FormShellProps` (creating / editing modal shell) |
+
+One shell serves both write forms — creating and editing are one `DataGridFormModalProps` — and
+the dialog it renders into is `core.Modal`.
+
+### `deleting`
+
+| Component       | Props                                      |
+| --------------- | ------------------------------------------ |
+| `ConfirmDialog` | `ConfirmDialogProps` (delete confirmation) |
 
 ### `selection`
 
@@ -169,23 +184,30 @@ exported — read them for the exact shape.
 | -------------- | ------------------------------------------- |
 | `SelectionBar` | `SelectionBarProps` (`floating` / `inline`) |
 
-### `row-actions`
+### `draft`
+
+| Component  | Props           |
+| ---------- | --------------- |
+| `DraftBar` | `DraftBarProps` |
+
+### `rowActions`
 
 Per-row actions share one column: edit / delete buttons plus the row-pin menu.
 
-| Component        | Props                 |
-| ---------------- | --------------------- |
-| `ActionsCell`    | `ActionsCellProps`    |
-| `RowActionsMenu` | `RowActionsMenuProps` |
+| Component     | Props              |
+| ------------- | ------------------ |
+| `ActionsCell` | `ActionsCellProps` |
 
-`RowActionsMenu` is item-driven: it receives the menu model and renders each entry,
-mapping `item.id` (a `RowActionId`) to the kit's own icon. Under the default
-`rowActions.placement: 'inline'` it holds the pin entries and any custom entry that
-did not ask to be a button; under `'menu'` it holds every action.
+The menu half is **not** a slot of its own — the entries go through `core.Menu` with
+`variant: 'row'`, the same component the column header opens with `variant: 'column'`. Under the
+default `rowActions.placement: 'inline'` that menu holds the pin entries and any custom entry
+that did not ask to be a button; under `'menu'` it holds every action.
 
-`ActionsCell` in the `idle` state also receives `actions` — the custom entries that
-asked for `placement: 'inline'`. A kit renders each as an icon button beside its own
-Edit and Delete, and a slot entry as its bare `component`.
+`ActionsCellProps` is a discriminated union over the three states a row can be in (`idle`,
+`editing`, `creating`), so each state carries exactly the callbacks it can use. In `idle` the
+cell also receives `actions` — the custom entries that asked for `placement: 'inline'`, already
+resolved to the menu model. A kit renders each as an icon button beside its own Edit and Delete,
+and a `GridMenuItemSlot` entry as its bare `component`.
 
 ### `resizing`
 
@@ -193,13 +215,13 @@ Edit and Delete, and a slot entry as its bare `component`.
 | --------- | -------------- |
 | `Resizer` | `ResizerProps` |
 
-### `column-visibility`
+### `visibility`
 
 | Component        | Props                 |
 | ---------------- | --------------------- |
 | `VisibilityMenu` | `VisibilityMenuProps` |
 
-### `fallback-states`
+### `fallbacks`
 
 | Component        | Props                 |
 | ---------------- | --------------------- |
@@ -227,13 +249,22 @@ kit's CSS targets these; the react package never sets a color, border, or spacin
 them. Slots currently emitted:
 
 ```
-table                     table-wrapper           table-scroll
-table-scroll-container     thead                   tbody
-tr                         th                      td
-toolbar                    header-main             header-extras
-sort-trigger               create-trigger          global-filter-input
-filter-panel               active-filters-bar      pin-shadow-overlay
-load-more-row              loading-body-cell
+table                    table-wrapper             table-scroll
+table-scroll-container   table-row                 thead
+tbody                    tfoot                     tr
+th                       td                        toolbar
+header-main              header-extras             sort-trigger
+column-resizer           pin-shadow-overlay        create-trigger
+global-filter-input      filter                    filter-chip
+filter-panel             filter-panel-chrome       filter-panel-chip
+filter-panel-chip-value  active-filters-bar        clear-filters-button
+between-presets          auto-form                 auto-form-field
+creating-save            creating-cancel           row-action
+selection-bar            selection-bar-action      count
+draft-bar                draft-bar-selected-chip   pagination-row
+loading-body-cell        empty-state-cell          no-results-cell
+refetch-overlay          refetch-overlay-inner     load-more-row
+load-more-button         load-more-spinner         load-more-error
 ```
 
 Kits may add their own `data-slot`/`data-*` attributes inside their components; the
@@ -248,7 +279,7 @@ are missing it throws, e.g.:
 ```
 [data-grid] Missing required UI-kit component(s):
   - Table (core)
-  - ConfirmDialog (editing)
+  - ConfirmDialog (deleting)
 Register them via createDataGrid({ components }) or a local <DataGrid components={{…}} /> override.
 ```
 

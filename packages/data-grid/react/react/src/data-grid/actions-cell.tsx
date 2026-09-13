@@ -12,6 +12,7 @@ import { GridMenuIcon, GridMenuVariant, toMenuSections } from '../menu'
 import { ActionsCellState, RowActionId } from '../types'
 
 import { splitRowActionItems } from './build-action-items'
+import { buildRowOrderItems } from './build-row-order-items'
 import { useDataGridTable, useDataGridState } from './table-context'
 
 import type { RowActionGroups } from './build-action-items'
@@ -37,11 +38,14 @@ const ICONS: Record<RowActionId, GridMenuIcon> = {
 	[RowActionId.PinTop]: GridMenuIcon.PinTop,
 	[RowActionId.PinBottom]: GridMenuIcon.PinBottom,
 	[RowActionId.Unpin]: GridMenuIcon.Unpin,
+	[RowActionId.MoveUp]: GridMenuIcon.MoveUp,
+	[RowActionId.MoveDown]: GridMenuIcon.MoveDown,
 }
 
 const ACTIONS_SECTION = 'row-actions'
 const CUSTOM_SECTION = 'row-actions-custom'
 const PIN_SECTION = 'row-pinning'
+const ORDER_SECTION = 'row-ordering'
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
@@ -138,6 +142,23 @@ function buildPinItems(
 }
 
 /**
+ * What to call the overflow trigger, which is named for what is inside it.
+ *
+ * The generic name once an application contributed entries, or once more than one built-in
+ * group is in there; the specific one when a single group is all the menu holds. Without the
+ * `order` arm an ordering-only menu would announce itself as "Row pinning".
+ */
+function overflowLabel(
+	messages: GridMessages['rowActions'],
+	counts: { custom: number; pin: number; order: number },
+): string {
+	if (counts.custom > 0) return messages.menu
+	if (counts.pin > 0 && counts.order > 0) return messages.menu
+	if (counts.order > 0) return messages.ordering
+	return messages.pinning
+}
+
+/**
  * Renders the per-row actions column: edit / delete plus the row-pin menu.
  *
  * Two layouts, chosen by `rowActions.variant`:
@@ -196,6 +217,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	}
 
 	const pinItems = pinConfig ? buildPinItems(row, pinConfig, messages) : []
+	const orderItems = table.grid.ordering.row ? buildRowOrderItems(row, table, messages) : []
 	const buildActions = table.options.rowActions?.actions
 	// The augmented option is `RowActionsConfig<object, unknown>` — the row type and the node
 	// type are both erased at the `table.options` boundary — so the row/table this cell holds
@@ -239,6 +261,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 			{ id: ACTIONS_SECTION, items: actions },
 			{ id: CUSTOM_SECTION, items: customItems },
 			{ id: PIN_SECTION, items: pinItems },
+			{ id: ORDER_SECTION, items: orderItems },
 		])
 		return (
 			<Menu
@@ -255,6 +278,7 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	const overflowSections: GridMenuSection[] = toMenuSections([
 		{ id: CUSTOM_SECTION, items: customItems },
 		{ id: PIN_SECTION, items: pinItems },
+		{ id: ORDER_SECTION, items: orderItems },
 	])
 
 	if (IS_DEV) {
@@ -286,7 +310,11 @@ export function ActionsCell({ row }: ActionsCellProps) {
 				<Menu
 					variant={GridMenuVariant.Row}
 					sections={overflowSections}
-					aria-label={customItems.length > 0 ? messages.menu : messages.pinning}
+					aria-label={overflowLabel(messages, {
+						custom: customItems.length,
+						pin: pinItems.length,
+						order: orderItems.length,
+					})}
 				/>
 			)}
 		</>

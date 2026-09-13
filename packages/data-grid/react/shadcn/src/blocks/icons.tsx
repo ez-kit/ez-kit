@@ -4,8 +4,10 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	ArrowUp,
+	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
+	ChevronUp,
 	EyeOff,
 	Pencil,
 	PinOff,
@@ -45,6 +47,8 @@ const GRID_MENU_ICON_COMPONENTS: Record<GridMenuIcon, LucideIcon> = {
 	// Chevrons, not the plain arrows: those already mean pinning in this menu.
 	[GridMenuIcon.MoveStart]: ChevronLeft,
 	[GridMenuIcon.MoveEnd]: ChevronRight,
+	[GridMenuIcon.MoveUp]: ChevronUp,
+	[GridMenuIcon.MoveDown]: ChevronDown,
 }
 
 /**

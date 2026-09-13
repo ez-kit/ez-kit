@@ -17,10 +17,11 @@ limitation: please [open an issue](https://github.com/ez-kit/ez-kit/issues/new).
 | ----------------------------------------------------------------- | ------ | ------------ | ----------------------------------------------------------------------- |
 | [Grouped headers](/docs/data-grid/columns/grouped-headers)        | Full   | Renders flat | React Aria removed nested columns from its collection before GA         |
 | [`Alt+Arrow` column reordering](/docs/data-grid/columns/ordering) | Works  | Menu only    | React Aria's column spreads its own props last, overwriting the handler |
+| [`Alt+Arrow` row reordering](/docs/data-grid/row-ordering)        | Works  | Menu only    | React Aria's row owns focus inside the grid and forwards no key handler |
 
-Both are upstream constraints of React Aria, which HeroUI's table is built on, and both are
-narrow: the feature is still reachable in HeroUI, just not in that one shape. Neither affects the
-data, the state or the options you write — moving a grid between kits never means rewriting a
+All three are upstream constraints of React Aria, which HeroUI's table is built on, and all
+three are narrow: the feature is still reachable in HeroUI, just not in that one shape. None of
+them affects the data, the state or the options you write — moving a grid between kits never means rewriting a
 config.
 
 ### Grouped headers render flat in HeroUI
@@ -39,6 +40,17 @@ With `ordering` on, a focused header answers `Alt+ArrowLeft` / `Alt+ArrowRight` 
 In HeroUI the column header's own prop bag is spread after the one the grid hands it, so the key
 handler is overwritten. **The column menu's Move left / Move right entries work in both kits**, so
 the capability is present either way — only the shortcut is missing. Tracked in
+[#223](https://github.com/ez-kit/ez-kit/issues/223).
+
+### `Alt+Arrow` row reordering is shadcn-only
+
+With `ordering: { row: true }` on, a row with focus inside it answers `Alt+ArrowUp` /
+`Alt+ArrowDown` in the shadcn kit. In HeroUI it does not, and for a slightly worse reason than
+the column case: React Aria's row does not forward the grid's `onKeyDown`, **and** it owns focus
+inside the grid — focusing a button in a row moves focus back up to the `<tr>` React Aria
+controls. So there is no element inside the row for the grid to attach the shortcut to either.
+**The menu's Move up / Move down entries work in both kits**, so the capability is present
+either way; only the shortcut is missing. Same upstream cause as
 [#223](https://github.com/ez-kit/ez-kit/issues/223).
 
 ## Presentation, not capability

@@ -53,6 +53,10 @@ export const defaultMessages: GridMessages = {
 		pinTop: 'Pin Top',
 		pinBottom: 'Pin Bottom',
 		unpin: 'Unpin',
+		order: 'Order',
+		ordering: 'Row order',
+		moveUp: 'Move up',
+		moveDown: 'Move down',
 	},
 	sorting: {
 		menu: 'Sort column',

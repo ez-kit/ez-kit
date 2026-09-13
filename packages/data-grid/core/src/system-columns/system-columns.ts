@@ -18,6 +18,11 @@ type SystemColumnsOptions = {
 	/** Row pinning — its menu lives in the actions column alongside edit / delete. */
 	pinning: boolean
 	/**
+	 * Row reordering — like row pinning it has no column of its own: its two entries join the
+	 * actions cell, so an ordering-only grid still gets that column.
+	 */
+	ordering: boolean
+	/**
 	 * Whether an inline creating row can appear (`creating.mode` is `'row'` or `'pin-row'`).
 	 *
 	 * Its save / cancel pair is rendered in the actions cell, so a grid whose only row-level
@@ -149,7 +154,8 @@ export function buildColumnList<TRow extends object>(
 
 	result.push(...userColumns)
 
-	const needsActions = opts.editing || opts.deleting || opts.pinning || opts.creating || opts.customRowActions
+	const needsActions =
+		opts.editing || opts.deleting || opts.pinning || opts.ordering || opts.creating || opts.customRowActions
 	if (needsActions) {
 		result.push(
 			buildSystemColumn({
@@ -159,6 +165,7 @@ export function buildColumnList<TRow extends object>(
 					editing: opts.editing,
 					deleting: opts.deleting,
 					pinning: opts.pinning,
+					ordering: opts.ordering,
 					creating: opts.creating,
 					custom: opts.customRowActions,
 					placement: opts.rowActionsPlacement ?? RowActionsPlacement.Inline,

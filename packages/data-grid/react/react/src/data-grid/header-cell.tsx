@@ -10,6 +10,7 @@ import { useCellTypes } from '../cell-types-context'
 import { useGridComponents } from '../components-context'
 import { GridMenuVariant } from '../menu'
 import { ColumnSortDirection, FilteringVariant, SortDirection } from '../types'
+import { isInteractiveTarget } from '../utils/interactive-target'
 import { getCommonPinStyles } from '../utils/pin-styles'
 
 import { getAlignAttrs } from './align-attrs'
@@ -88,23 +89,6 @@ function computeDraftSortIndex(table: DataTable<any>, columnId: string): number 
 }
 
 /** Elements that own their click, so the sort affordance must not also fire. */
-const INTERACTIVE_SELECTOR = 'button, a[href], input, select, textarea, label, [role="button"], [role="link"]'
-
-/**
- * Whether a click originated inside something interactive that the consumer put in the header.
- *
- * The column's `header` content sits inside the sort affordance, because clicking a column's name
- * to sort it is how every table works. That made any button or link placed there fire the sort as
- * well — the click bubbled straight into the handler. Ignoring clicks that start on an interactive
- * descendant keeps both behaviours: the name still sorts, a control in the header does not.
- */
-function isInteractiveTarget(event: MouseEvent | KeyboardEvent): boolean {
-	const target = event.target
-	if (!(target instanceof Element)) return false
-	const interactive = target.closest(INTERACTIVE_SELECTOR)
-	return interactive !== null && interactive !== event.currentTarget
-}
-
 /**
  * One header cell: the `<th>`, its sort affordance, filter control, column menu and resize handle.
  *

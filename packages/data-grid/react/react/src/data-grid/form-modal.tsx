@@ -81,7 +81,9 @@ export function FormModalHost({
 	onCancel,
 	feature,
 }: FormModalHostProps) {
-	const { Modal, FormShell } = useGridComponents().editing
+	const components = useGridComponents()
+	const { Modal } = components.core
+	const { FormShell } = components.editing
 	const isPending = commitStatus !== CommitStatus.Idle
 	const form = <AutoForm mode={mode} />
 
