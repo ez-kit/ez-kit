@@ -109,10 +109,19 @@ export type TbodyProps = HTMLAttributes<HTMLTableSectionElement>
 export type TfootProps = HTMLAttributes<HTMLTableSectionElement>
 /** Like {@link TheadProps}, the ref must reach the rendered row: pinned rows are measured there. */
 export type TrProps = HTMLAttributes<HTMLTableRowElement> & RefAttributes<HTMLTableRowElement>
-/** `pinned` is the core `ColumnPinSide`, widened with `false` for the unpinned majority. */
-export type ThProps = ThHTMLAttributes<HTMLTableCellElement> & { pinned?: ColumnPinSide | false }
+/**
+ * `pinned` is the core `ColumnPinSide`, widened with `false` for the unpinned majority.
+ *
+ * The ref must reach the rendered cell, as on {@link TheadProps} and {@link TrProps}: a header
+ * is the element a pointer drag reorders a column by, and a drag library is handed the node
+ * through a ref. A kit that swallows it still renders correctly and still typechecks — the
+ * affordance just never attaches.
+ */
+export type ThProps = ThHTMLAttributes<HTMLTableCellElement> &
+	RefAttributes<HTMLTableCellElement> & { pinned?: ColumnPinSide | false }
 export type TdProps = TdHTMLAttributes<HTMLTableCellElement> & { pinned?: ColumnPinSide | false }
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>
+/** The ref must reach the rendered button — a drag handle is a button a drag library holds by ref. */
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & RefAttributes<HTMLButtonElement>
 export type InputProps = InputHTMLAttributes<HTMLInputElement>
 
 export type CheckboxProps = {
