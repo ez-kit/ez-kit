@@ -185,11 +185,17 @@ beside `check-site-url.mjs`) fails on both, so the PR that writes one finds out.
 shadcn kit that is worth a release note belongs on the package it is visible through — usually
 `@ez-kit/data-grid-react`, or `@ez-kit/docs`, which serves the registry JSON.
 
-The release PR (`develop → main`) re-runs `verify`, but **not** `e2e` (`if: github.base_ref !=
-'main'` in `ci.yml`): it carries exactly the tree `develop` just gated, and `main` receives nothing
-else, so a second three-job browser suite there re-measures the same commit. `verify` stays because
-it is the last gate in front of `changeset publish`; it is also the only check `main`'s branch
-protection requires.
+The two PRs that carry no source change re-run `verify` but **not** `e2e` (the job's `if:` in
+`ci.yml` excludes both). The release PR (`develop → main`) carries exactly the tree `develop` just
+gated, and `main` receives nothing else. The version PR (`changeset-release/develop → develop`)
+touches only `version` fields, CHANGELOGs and the changeset files it consumes — every internal
+dependency is declared `workspace:^` / `workspace:*`, so changesets rewrites no range and the
+lockfile does not move. In both cases a second three-job browser suite re-measures the same commit.
+
+`verify` stays on both. On the release PR it is the last gate in front of `changeset publish`, and
+the only check `main`'s branch protection requires. On the version PR it is the one run where
+`pnpm lint` sees the CHANGELOGs that were just written from changeset summaries, so a stale
+`ez-kit*` origin in a changeset body is caught by `check-site-url.mjs` before it ships.
 
 ## Architecture
 
