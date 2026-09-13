@@ -83,23 +83,6 @@ export type BetweenValue<T = unknown> = {
 }
 
 /**
- * How a between-range filter presents itself.
- *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `variant: 'slider'` is equally valid and needs no import.
- */
-export const BetweenInputVariant = {
-	/** Two plain bound inputs. The default. */
-	Inputs: 'inputs',
-	/** A two-handle range slider — requires resolved `min` / `max`. */
-	Slider: 'slider',
-	/** A date-range calendar. */
-	Calendar: 'calendar',
-} as const
-
-export type BetweenInputVariant = (typeof BetweenInputVariant)[keyof typeof BetweenInputVariant]
-
-/**
  * What kind of value a between-range filter bounds — which decides how the kit parses and
  * formats each bound. Derived from the column's cell type, not configured directly.
  *
@@ -114,23 +97,57 @@ export const BetweenInputType = {
 
 export type BetweenInputType = (typeof BetweenInputType)[keyof typeof BetweenInputType]
 
-/** UI configuration for the between operator. */
-export type BetweenOperatorConfig = {
-	/** Presentation of the range control. Default: {@link BetweenInputVariant.Inputs}. */
-	variant?: BetweenInputVariant
-	/** Minimum value for slider variant. */
-	min?: number
-	/** Maximum value for slider variant. */
-	max?: number
+/**
+ * The between operator's configuration on a **number** column.
+ *
+ * See {@link BetweenOperatorConfig} for why this is one of two arms.
+ */
+export type NumberBetweenConfig = {
 	/**
-	 * Show preset chips above the between input(s). Only meaningful when the
-	 * column's `cell.type === 'date'`.
-	 * - `true` — render the built-in {@link DATE_RANGE_PRESETS}
-	 * - {@link DateRangePreset}[] — render a custom subset (or extra presets)
-	 * - `false` / omitted — no preset row
+	 * Render the range as a two-handle slider. Requires both {@link NumberBetweenConfig.min} and
+	 * {@link NumberBetweenConfig.max}: a slider over an unknown domain can express nothing, so
+	 * without them the control falls back to two number fields and warns in development.
+	 */
+	slider?: boolean
+	/** Lower bound. Clamps the number fields, and is the slider's floor. */
+	min?: number
+	/** Upper bound. Clamps the number fields, and is the slider's ceiling. */
+	max?: number
+	presets?: never
+}
+
+/**
+ * The between operator's configuration on a **date** column.
+ *
+ * See {@link BetweenOperatorConfig} for why this is one of two arms.
+ */
+export type DateBetweenConfig = {
+	/**
+	 * Date-range presets offered beside the range control.
+	 * - `true` — the built-in {@link DATE_RANGE_PRESETS}
+	 * - {@link DateRangePreset}[] — a custom list
+	 * - `false` / omitted — no presets
 	 */
 	presets?: boolean | DateRangePreset[]
+	slider?: never
+	min?: never
+	max?: never
 }
+
+/**
+ * UI configuration for the between operator, in two arms that do not mix.
+ *
+ * `between` is one operator — which comparison it performs never changes — so nothing here says
+ * how the control should *look*; that is the kit's business. What does differ is the value type:
+ * a bounded number range can be a slider, a date range cannot, and date presets mean nothing on a
+ * number column. `?: never` on each arm's foreign keys is what makes `{ slider: true, presets: true }`
+ * a compile error.
+ *
+ * TypeScript cannot check these against the column's `cell.type` — it is a sibling field with no
+ * inference variable to carry it across (see the `ColumnInputRenderer` note in `column/types.ts`) —
+ * so `mapColumns` warns in development instead.
+ */
+export type BetweenOperatorConfig = NumberBetweenConfig | DateBetweenConfig
 
 /**
  * Date range preset for the `between` operator's date variants.
