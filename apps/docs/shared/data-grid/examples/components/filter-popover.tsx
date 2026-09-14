@@ -48,7 +48,7 @@ const withOperatorsColumns = createColumns<Employee>([
 		cell: { type: 'number' },
 		filtering: {
 			operators: {
-				betweenOperator: { variant: 'slider', min: 50000, max: 130000 },
+				betweenOperator: { slider: true, min: 50000, max: 130000 },
 			},
 		},
 	},

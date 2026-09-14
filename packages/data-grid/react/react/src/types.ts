@@ -1,10 +1,11 @@
 import type { GridMenuItem, GridMenuProps } from './menu'
 import type {
 	BetweenInputType,
-	BetweenInputVariant,
 	BetweenValue,
-	ColumnPinSide,
+	DatePreset,
 	DateRangePreset,
+	DateValuePreset,
+	ColumnPinSide,
 	FilterOperatorDef,
 	LoadMoreDirection,
 	FilterItem,
@@ -426,10 +427,15 @@ export type FilterChipProps = {
 	isDraft: boolean
 }
 
-export type ClearFiltersButtonProps = {
-	/** True when no filter is active; kit can render the button in a disabled state. */
+/**
+ * The kit's clear button. Singular because it clears *a* filter, and which one is the caller's
+ * business: the toolbar's `<DataGrid.ClearFiltersButton />` hands it every filter in the table,
+ * and a column's filter row hands it that one column. The label is what tells them apart.
+ */
+export type ClearFilterButtonProps = {
+	/** True when there is nothing to clear; kit can render the button in a disabled state. */
 	disabled: boolean
-	/** Clear every column filter and the global filter. */
+	/** Clears whatever the caller wired up — every filter, or one column's. */
 	onClick: () => void
 	/** Optional custom contents. When absent the kit renders its default (icon-only). */
 	children?: ReactNode
@@ -446,17 +452,14 @@ export type OperatorSelectProps = {
 export type BetweenInputProps = {
 	value: BetweenValue
 	onChange: (value: BetweenValue) => void
-	variant: BetweenInputVariant
 	type: BetweenInputType
+	/** Render the number range as a slider. Only ever `true` when both bounds are resolved. */
+	slider?: boolean | undefined
 	min?: number
 	max?: number
-	/** Preset list to render above the inputs/slider/calendar. Already resolved by the adapter. */
-	presets?: DateRangePreset[]
-	/** Called when the user clicks a preset chip. Adapter wires it to setFilterValue with the preset's range. */
-	onPresetSelect?: (preset: DateRangePreset) => void
 }
 
-export type { DateRangePreset, FilterItem }
+export type { DatePreset, DateRangePreset, DateValuePreset, FilterItem }
 
 export type MultiSelectFilterProps = {
 	/** The values on offer. Counts (when present) come from faceted unique values. */
@@ -783,7 +786,7 @@ export type GridComponentRegistry = {
 	FilterPanel?: ComponentType<FilterPanelProps>
 	FilterPanelChip?: ComponentType<FilterPanelChipProps>
 	FilterChip?: ComponentType<FilterChipProps>
-	ClearFiltersButton?: ComponentType<ClearFiltersButtonProps>
+	ClearFilterButton?: ComponentType<ClearFilterButtonProps>
 	SelectionBar?: ComponentType<SelectionBarProps>
 	DraftBar?: ComponentType<DraftBarProps>
 	ConfirmDialog?: ComponentType<ConfirmDialogProps>

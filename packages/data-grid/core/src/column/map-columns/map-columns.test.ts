@@ -377,3 +377,107 @@ describe('mapColumns — header/footer renderers', () => {
 		expect(result[0]?.footer).toBe(footer)
 	})
 })
+
+// The two arms of `BetweenOperatorConfig` cannot be checked against the column's `cell.type`,
+// so the option that landed on the wrong kind of column is caught here instead.
+describe('mapColumns — date presets', () => {
+	const registry = buildOperatorRegistry()
+
+	it('resolves `presets: true` to the built-in ranges and single dates', () => {
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'name', cell: { type: 'date' }, filtering: { presets: true, operators: true } }],
+			registry,
+		)
+
+		const presets = filteringMeta(result[0])?.presets
+		expect(presets?.some((preset) => preset.id === 'last7' && 'getRange' in preset)).toBe(true)
+		expect(presets?.some((preset) => preset.id === 'weekAgo' && 'getDate' in preset)).toBe(true)
+	})
+
+	it('keeps a custom list as it was written', () => {
+		const custom = [{ id: 'q1', label: 'Q1', getRange: () => ({ from: '2026-01-01', to: '2026-03-31' }) }]
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'name', cell: { type: 'date' }, filtering: { presets: custom, operators: true } }],
+			registry,
+		)
+
+		expect(filteringMeta(result[0])?.presets).toBe(custom)
+	})
+
+	it('resolves nothing when the column asks for no presets', () => {
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'name', cell: { type: 'date' }, filtering: { operators: true } }],
+			registry,
+		)
+
+		expect(filteringMeta(result[0])?.presets).toBeUndefined()
+	})
+
+	it('warns and resolves nothing on a column that is not a date', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		const result = mapColumns<Row>(
+			[{ accessorKey: 'age', cell: { type: 'number' }, filtering: { presets: true, operators: true } }],
+			registry,
+		)
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`filtering.presets`'))
+		expect(filteringMeta(result[0])?.presets).toBeUndefined()
+		warn.mockRestore()
+	})
+})
+
+describe('mapColumns — betweenOperator warnings', () => {
+	const registry = buildOperatorRegistry()
+
+	it('warns when the slider is asked for without both bounds', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		mapColumns<Row>(
+			[
+				{
+					accessorKey: 'age',
+					cell: { type: 'number' },
+					filtering: {
+						defaultOperator: 'between',
+						operators: { items: ['between'], betweenOperator: { slider: true, min: 0 } },
+					},
+				},
+			],
+			registry,
+		)
+
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('`betweenOperator.slider: true`'))
+		warn.mockRestore()
+	})
+
+	it('stays quiet when each arm meets the column it belongs to', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+		mapColumns<Row>(
+			[
+				{
+					accessorKey: 'age',
+					cell: { type: 'number' },
+					filtering: {
+						defaultOperator: 'between',
+						operators: { items: ['between'], betweenOperator: { slider: true, min: 0, max: 10 } },
+					},
+				},
+				{
+					accessorKey: 'name',
+					cell: { type: 'date' },
+					filtering: {
+						defaultOperator: 'between',
+						presets: true,
+						operators: { items: ['between'] },
+					},
+				},
+			],
+			registry,
+		)
+
+		expect(warn).not.toHaveBeenCalled()
+		warn.mockRestore()
+	})
+})

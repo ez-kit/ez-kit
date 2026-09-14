@@ -83,23 +83,6 @@ export type BetweenValue<T = unknown> = {
 }
 
 /**
- * How a between-range filter presents itself.
- *
- * Named members for internal reference; the option is typed as the plain string union, so
- * `variant: 'slider'` is equally valid and needs no import.
- */
-export const BetweenInputVariant = {
-	/** Two plain bound inputs. The default. */
-	Inputs: 'inputs',
-	/** A two-handle range slider — requires resolved `min` / `max`. */
-	Slider: 'slider',
-	/** A date-range calendar. */
-	Calendar: 'calendar',
-} as const
-
-export type BetweenInputVariant = (typeof BetweenInputVariant)[keyof typeof BetweenInputVariant]
-
-/**
  * What kind of value a between-range filter bounds — which decides how the kit parses and
  * formats each bound. Derived from the column's cell type, not configured directly.
  *
@@ -114,35 +97,60 @@ export const BetweenInputType = {
 
 export type BetweenInputType = (typeof BetweenInputType)[keyof typeof BetweenInputType]
 
-/** UI configuration for the between operator. */
+/**
+ * UI configuration for the between operator.
+ *
+ * Number-only, and that is the whole type: `between` is one operator whose comparison never
+ * changes, so nothing here says how the control looks — that is the kit's business — and the date
+ * side has nothing to configure here either. Date presets are not a `between` thing: they fill
+ * whichever operator is current, so they live on the column's `filtering.presets`.
+ */
 export type BetweenOperatorConfig = {
-	/** Presentation of the range control. Default: {@link BetweenInputVariant.Inputs}. */
-	variant?: BetweenInputVariant
-	/** Minimum value for slider variant. */
-	min?: number
-	/** Maximum value for slider variant. */
-	max?: number
 	/**
-	 * Show preset chips above the between input(s). Only meaningful when the
-	 * column's `cell.type === 'date'`.
-	 * - `true` — render the built-in {@link DATE_RANGE_PRESETS}
-	 * - {@link DateRangePreset}[] — render a custom subset (or extra presets)
-	 * - `false` / omitted — no preset row
+	 * Render the range as a two-handle slider. Requires both {@link BetweenOperatorConfig.min} and
+	 * {@link BetweenOperatorConfig.max}: a slider over an unknown domain can express nothing, so
+	 * without them the control falls back to two number fields and warns in development.
 	 */
-	presets?: boolean | DateRangePreset[]
+	slider?: boolean
+	/** Lower bound. Clamps the number fields, and is the slider's floor. */
+	min?: number
+	/** Upper bound. Clamps the number fields, and is the slider's ceiling. */
+	max?: number
 }
 
 /**
- * Date range preset for the `between` operator's date variants.
+ * A preset that fills a date **range** — the `between` operator.
  *
- * `getRange(now)` returns ISO-8601 date-only strings (`'YYYY-MM-DD'`) so the
- * value is timezone-stable and round-trips through the existing
- * date-as-string fast path in {@link DATE_OPERATORS} (`between`).
+ * `getRange(now)` returns ISO-8601 date-only strings (`'YYYY-MM-DD'`) so the value is
+ * timezone-stable and round-trips through the existing date-as-string fast path in
+ * {@link DATE_OPERATORS}.
  */
 export type DateRangePreset = {
 	id: string
 	label: string
 	getRange: (now?: Date) => BetweenValue<string>
+}
+
+/**
+ * A preset that fills a **single** date — every date operator that takes one value (`equals`,
+ * `lessThan`, `greaterThan`, …).
+ *
+ * A range preset cannot serve those: "Last 7 days" has no single date to mean, and picking one of
+ * its ends silently turns "the last week" into "after last Tuesday". The two kinds are separate
+ * types so a control can offer only the ones its current operator can actually take.
+ */
+export type DateValuePreset = {
+	id: string
+	label: string
+	getDate: (now?: Date) => string
+}
+
+/** Either kind of date preset — what a column's `filtering.presets` holds. */
+export type DatePreset = DateRangePreset | DateValuePreset
+
+/** Narrows a {@link DatePreset} to the half that fills both ends of a range. */
+export function isDateRangePreset(preset: DatePreset): preset is DateRangePreset {
+	return 'getRange' in preset
 }
 
 /** UTC midnight floor for a given `Date`. Keeps arithmetic timezone-stable. */
@@ -220,6 +228,44 @@ export const DATE_RANGE_PRESETS: DateRangePreset[] = [
 			const lastMonthAnchor = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1))
 			return { from: isoDate(startOfMonthUtc(lastMonthAnchor)), to: isoDate(endOfMonthUtc(lastMonthAnchor)) }
 		},
+	},
+]
+
+/**
+ * The built-in single-date presets, for the operators that take one value.
+ *
+ * Deliberately not the range list with an end picked off it: `today` and `yesterday` are the only
+ * two that mean the same thing either way, and the rest ("Last 7 days") would have to be bent into
+ * a date they do not name.
+ */
+export const DATE_VALUE_PRESETS: DateValuePreset[] = [
+	{
+		id: 'today',
+		label: defaultMessages.operators.presets.today,
+		getDate: (now = new Date()) => isoDate(toUtcMidnight(now)),
+	},
+	{
+		id: 'yesterday',
+		label: defaultMessages.operators.presets.yesterday,
+		getDate: (now = new Date()) => isoDate(addDaysUtc(toUtcMidnight(now), -1)),
+	},
+	{
+		id: 'weekAgo',
+		label: defaultMessages.operators.presets.weekAgo,
+		getDate: (now = new Date()) => isoDate(addDaysUtc(toUtcMidnight(now), -7)),
+	},
+	{
+		id: 'monthAgo',
+		label: defaultMessages.operators.presets.monthAgo,
+		getDate: (now = new Date()) => {
+			const today = toUtcMidnight(now)
+			return isoDate(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, today.getUTCDate())))
+		},
+	},
+	{
+		id: 'startOfMonth',
+		label: defaultMessages.operators.presets.startOfMonth,
+		getDate: (now = new Date()) => isoDate(startOfMonthUtc(toUtcMidnight(now))),
 	},
 ]
 
@@ -676,10 +722,10 @@ export function localizeOperators(
 }
 
 /** Re-labels the built-in date-range presets from the dictionary, on the same terms. */
-export function localizeDateRangePresets(
-	presets: DateRangePreset[],
+export function localizeDatePresets(
+	presets: DatePreset[],
 	messages: GridMessages['operators']['presets'],
-): DateRangePreset[] {
+): DatePreset[] {
 	const table = messages as Record<string, string | undefined>
 	const next = presets.map((preset) => {
 		const label = table[preset.id]

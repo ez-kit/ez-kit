@@ -1,4 +1,6 @@
 import {
+	DATE_RANGE_PRESETS,
+	DATE_VALUE_PRESETS,
 	DEFAULT_OPERATOR_ID_BY_TYPE,
 	DEFAULT_OPERATORS_BY_TYPE,
 	createOperatorFilterFn,
@@ -7,7 +9,7 @@ import {
 import { setIfDefined } from '../../utils/set-if-defined'
 import { normalizeColumnAlign, normalizeColumnPinning, normalizeColumnWidth } from '../normalize'
 
-import type { ColumnOperatorsConfig, OperatorRegistry } from '../../features/operators'
+import type { ColumnOperatorsConfig, DatePreset, OperatorRegistry } from '../../features/operators'
 import type {
 	CellViewCtx,
 	ColumnCellMeta,
@@ -39,6 +41,36 @@ type ColumnMetaClassName = string | ((ctx: CellViewCtx<unknown, unknown>) => str
  */
 type ColumnMetaEditing = false | ColumnEditingConfig
 type ColumnMetaCreating<TRow> = false | ColumnCreatingConfig<TRow>
+
+const DATE_CELL_TYPE = 'date'
+
+/**
+ * The column's `filtering.presets`, resolved to the list a control offers.
+ *
+ * Presets are dates, so they mean nothing on any other cell type. TypeScript cannot say that —
+ * `presets` and `cell` are sibling fields of one column object, with no inference variable to
+ * carry the type across (see the `ColumnInputRenderer` note in `column/types.ts`) — so the option
+ * that landed on the wrong column is caught here, where the cell type is finally known.
+ */
+function resolveDatePresets(
+	configured: boolean | DatePreset[] | undefined,
+	cellType: string | undefined,
+	columnId: string,
+): DatePreset[] | undefined {
+	if (configured === undefined || configured === false) return undefined
+	if (cellType !== DATE_CELL_TYPE) {
+		if (IS_DEV) {
+			console.warn(
+				`[data-grid] Column "${columnId}" sets \`filtering.presets\`, but its cell type is ` +
+					`"${cellType ?? 'text'}". Presets fill a date, so they only apply to ` +
+					`\`cell: { type: 'date' }\` columns and are ignored here.`,
+			)
+		}
+		return undefined
+	}
+	if (configured === true) return [...DATE_RANGE_PRESETS, ...DATE_VALUE_PRESETS]
+	return configured.length > 0 ? configured : undefined
+}
 
 /**
  * Converts our ColumnDef[] to TanStack ColumnDef[].
@@ -196,6 +228,8 @@ function mapColumn<TRow extends object>(
 	setIfDefined(filteringMeta, 'component', filteringCfg?.component)
 	setIfDefined(filteringMeta, 'debounce', filteringCfg?.debounce)
 	setIfDefined(filteringMeta, 'items', filteringCfg?.items)
+	const resolvedPresets = resolveDatePresets(filteringCfg?.presets, cellDef?.type, id ?? accessorKey ?? '?')
+	setIfDefined(filteringMeta, 'presets', resolvedPresets)
 	const colFaceted = filteringCfg?.faceted
 	const tableFaceted = options?.tableFaceted ?? false
 	const facetedEnabled = colFaceted === true || (colFaceted !== false && tableFaceted)
@@ -244,7 +278,22 @@ function mapColumn<TRow extends object>(
 			filteringMeta.operators = resolved
 
 			if (typeof operatorsConfig === 'object' && operatorsConfig.betweenOperator) {
-				filteringMeta.betweenOperator = operatorsConfig.betweenOperator
+				const betweenConfig = operatorsConfig.betweenOperator
+
+				// A slider over an unknown domain can express nothing, so it needs a stated one. This
+				// used to be a silent `0..100`, which is an invention rather than the column's data.
+				if (
+					IS_DEV &&
+					betweenConfig.slider === true &&
+					(betweenConfig.min === undefined || betweenConfig.max === undefined)
+				) {
+					console.warn(
+						`[data-grid] Column "${columnId}" sets \`betweenOperator.slider: true\` without both ` +
+							`\`min\` and \`max\`. The filter falls back to two number fields.`,
+					)
+				}
+
+				filteringMeta.betweenOperator = betweenConfig
 			}
 
 			const defaultOpId =

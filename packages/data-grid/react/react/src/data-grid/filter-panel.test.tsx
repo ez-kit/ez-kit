@@ -51,7 +51,7 @@ function makeTable(config?: Partial<Parameters<typeof createTable<Row>>[0]>) {
 function Wrapper({ table, children }: { table: DataTable<Row>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext value={table}>{children}</TableContext>
+			<TableContext.Provider value={table}>{children}</TableContext.Provider>
 		</GridComponentsProvider>
 	)
 }

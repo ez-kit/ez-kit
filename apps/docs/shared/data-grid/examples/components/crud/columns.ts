@@ -42,7 +42,7 @@ export const crudColumns = createColumns<Employee>([
 		filtering: {
 			operators: {
 				items: ['equals', 'between'],
-				betweenOperator: { variant: 'slider', min: 40000, max: 200000 },
+				betweenOperator: { slider: true, min: 40000, max: 200000 },
 			},
 		},
 	},

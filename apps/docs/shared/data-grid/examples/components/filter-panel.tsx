@@ -49,7 +49,7 @@ const COLUMNS = createColumns<Order>([
 		filtering: {
 			operators: {
 				items: ['equals', 'between'],
-				betweenOperator: { variant: 'slider', min: 0, max: 5000 },
+				betweenOperator: { slider: true, min: 0, max: 5000 },
 			},
 			defaultOperator: 'between',
 		},
@@ -61,7 +61,6 @@ const COLUMNS = createColumns<Order>([
 		filtering: {
 			operators: {
 				items: ['between'],
-				betweenOperator: { variant: 'inputs', presets: true },
 			},
 			defaultOperator: 'between',
 		},

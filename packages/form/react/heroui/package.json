@@ -1,6 +1,6 @@
 {
 	"name": "@ez-kit/form-heroui",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "HeroUI flavour of @ez-kit/form.",
 	"license": "MIT",
 	"repository": {
@@ -64,7 +64,7 @@
 		"@heroui/styles": "^3.0.0",
 		"@tanstack/form-core": "^1.33.2",
 		"@tanstack/react-form": "^1.33.2",
-		"react": ">=18.0.0",
-		"react-dom": ">=18.0.0"
+		"react": ">=19.0.0",
+		"react-dom": ">=19.0.0"
 	}
 }

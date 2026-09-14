@@ -1,26 +1,30 @@
-import {
-	BetweenInputVariant,
-	DATE_RANGE_PRESETS,
-	localizeDateRangePresets,
-	localizeOperators,
-} from '@ez-kit/data-grid-core'
+import { FilterOperator, GridMenuIcon, localizeDatePresets, localizeOperators } from '@ez-kit/data-grid-core'
 
+import { GridMenuVariant, toMenuSections } from '../menu'
+
+import { activePresetId, presetValue, presetsForOperator } from './date-presets'
 import { FilterTextInput } from './filter-text-input'
 import { flexRender } from './flex-render'
 
 import type { CellTypeRegistry } from '../cell-types-context'
-import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSelectProps } from '../types'
+import type { GridMenuProps } from '../menu'
+import type {
+	BetweenInputProps,
+	ClearFilterButtonProps,
+	InputProps,
+	MultiSelectFilterProps,
+	OperatorSelectProps,
+} from '../types'
 import type {
 	InputComponentProps,
 	BadgeItem,
 	BetweenValue,
 	DataTable,
-	DateRangePreset,
+	DatePreset,
 	FieldState,
 	FilterItem,
 	SelectItem,
 	StructuredFilterValue,
-	BetweenInputType,
 	GridMessages,
 } from '@ez-kit/data-grid-core'
 import type { Column, ColumnMeta, Header } from '@tanstack/table-core'
@@ -33,6 +37,13 @@ export type RenderFilterInputArgs = {
 	Input: ComponentType<InputProps>
 	cellTypes: CellTypeRegistry
 	OperatorSelect: ComponentType<OperatorSelectProps>
+	/** The kit's generic menu — the date-preset trigger beside a date filter renders through it. */
+	Menu: ComponentType<GridMenuProps>
+	/**
+	 * The kit's clear button. It serves the toolbar's clear-all and, here, one column's filter —
+	 * what it clears is `onClick`'s business, and the label tells the two apart.
+	 */
+	ClearFilterButton: ComponentType<ClearFilterButtonProps>
 	BetweenInput: ComponentType<BetweenInputProps>
 	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
 	/**
@@ -116,22 +127,10 @@ function resolveFilterItems(
 	return []
 }
 
-/**
- * Resolves the preset list for a `between` operator config.
- * - Only applies to date-typed columns; number columns ignore presets.
- * - `true` → built-in {@link DATE_RANGE_PRESETS}
- * - array → custom list as-is
- * - `false` / undefined → `undefined` (no preset row)
- */
-function resolveBetweenPresets(
-	configPresets: boolean | DateRangePreset[] | undefined,
-	betweenType: BetweenInputType,
-	messages: GridMessages['operators']['presets'],
-): DateRangePreset[] | undefined {
-	if (betweenType !== 'date') return undefined
-	if (configPresets === true) return localizeDateRangePresets(DATE_RANGE_PRESETS, messages)
-	if (Array.isArray(configPresets) && configPresets.length > 0) return configPresets
-	return undefined
+/** A preset's label in the table's own wording — the dictionary keys the built-ins by id. */
+function localizePresetLabel(preset: DatePreset, messages: GridMessages): string {
+	const [localized] = localizeDatePresets([preset], messages.operators.presets)
+	return localized?.label ?? preset.label
 }
 
 /**
@@ -149,6 +148,8 @@ export function renderFilterInput({
 	Input,
 	cellTypes,
 	OperatorSelect,
+	Menu,
+	ClearFilterButton,
 	BetweenInput,
 	MultiSelectFilter,
 	debounce: tableDebounce,
@@ -216,27 +217,70 @@ export function renderFilterInput({
 			return operatorSelect
 		}
 
-		if (currentOperatorId === 'between') {
+		// The presets sit beside whichever control the current operator renders, not inside it:
+		// every branch below that takes a value gets them. `in` / `notIn` is the exception — a
+		// multi-select takes a set of column values, which no date preset names.
+		// `between` draws a range picker and the rest draw a single date input, and both take a
+		// preset. The menu offers only the kind the operator can accept.
+		const offeredPresets = filteringMeta.presets ? presetsForOperator(filteringMeta.presets, currentOperatorId) : []
+		const activeId = activePresetId(offeredPresets, inputValue)
+		const activePreset = offeredPresets.find((preset) => preset.id === activeId)
+		const presetMenu =
+			offeredPresets.length > 0 ? (
+				<Menu
+					variant={GridMenuVariant.Filter}
+					triggerIcon={GridMenuIcon.Calendar}
+					{...(activePreset ? { triggerLabel: localizePresetLabel(activePreset, messages) } : {})}
+					aria-label={messages.filtering.presets}
+					sections={toMenuSections([
+						{
+							id: 'date-presets',
+							items: offeredPresets.map((preset) => ({
+								id: preset.id,
+								label: localizePresetLabel(preset, messages),
+								onAction: () => {
+									header.column.setFilterValue({
+										operator: currentOperatorId,
+										value: presetValue(preset),
+									})
+								},
+							})),
+						},
+					])}
+				/>
+			) : null
+
+		// Shown only with something to clear. A text or number filter can be emptied by hand, but a
+		// date picker and a multi-select cannot — the filter could be changed and never taken off,
+		// which on a narrow range leaves the grid empty with no way out of it.
+		const clearButton =
+			inputValue === undefined || inputValue === '' ? null : (
+				<ClearFilterButton
+					disabled={false}
+					onClick={() => {
+						header.column.setFilterValue(undefined)
+					}}
+					aria-label={messages.filtering.clear}
+				/>
+			)
+
+		if (currentOperatorId === FilterOperator.Between) {
 			const betweenCfg = filteringMeta.betweenOperator
 			const betweenType = meta?.cell?.type === 'date' ? 'date' : 'number'
-			const resolvedPresets = resolveBetweenPresets(betweenCfg?.presets, betweenType, messages.operators.presets)
-			const onPresetSelect = resolvedPresets
-				? (preset: DateRangePreset) => {
-						header.column.setFilterValue({ operator: 'between', value: preset.getRange() })
-					}
-				: undefined
 			return (
 				<>
-					<BetweenInput
-						value={(inputValue as BetweenValue | undefined) ?? {}}
-						onChange={onValueChange}
-						variant={betweenCfg?.variant ?? BetweenInputVariant.Inputs}
-						type={betweenType}
-						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
-						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
-						{...(resolvedPresets ? { presets: resolvedPresets } : {})}
-						{...(onPresetSelect ? { onPresetSelect } : {})}
-					/>
+					<div data-slot='filter-control'>
+						<BetweenInput
+							value={(inputValue as BetweenValue | undefined) ?? {}}
+							onChange={onValueChange}
+							type={betweenType}
+							{...(betweenCfg?.slider === true ? { slider: true } : {})}
+							{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
+							{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
+						/>
+						{presetMenu}
+						{clearButton}
+					</div>
 					{operatorSelect}
 				</>
 			)
@@ -263,11 +307,15 @@ export function renderFilterInput({
 		if (columnFilterInput) {
 			return (
 				<>
-					{flexRender(columnFilterInput, {
-						value: inputValue,
-						onChange: onValueChange,
-						...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
-					})}
+					<div data-slot='filter-control'>
+						{flexRender(columnFilterInput, {
+							value: inputValue,
+							onChange: onValueChange,
+							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+						})}
+						{presetMenu}
+						{clearButton}
+					</div>
 					{operatorSelect}
 				</>
 			)
@@ -291,7 +339,14 @@ export function renderFilterInput({
 				}
 				return (
 					<>
-						{(comp as (p: FieldState) => ReactNode)(field)}
+						<div data-slot='filter-control'>
+							{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
+							    this header cell's fiber, and swapping one renderer for another — which is what
+							    changing the operator does — reorders them. */}
+							{flexRender(comp, field)}
+							{presetMenu}
+							{clearButton}
+						</div>
 						{operatorSelect}
 					</>
 				)
@@ -300,14 +355,18 @@ export function renderFilterInput({
 
 		return (
 			<>
-				<FilterTextInput
-					Input={Input}
-					placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
-					value={(inputValue ?? '') as string}
-					onCommit={onValueChange}
-					debounce={debounce}
-					{...(onEnterApply ? { onEnterApply } : {})}
-				/>
+				<div data-slot='filter-control'>
+					<FilterTextInput
+						Input={Input}
+						placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
+						value={(inputValue ?? '') as string}
+						onCommit={onValueChange}
+						debounce={debounce}
+						{...(onEnterApply ? { onEnterApply } : {})}
+					/>
+					{presetMenu}
+					{clearButton}
+				</div>
 				{operatorSelect}
 			</>
 		)
