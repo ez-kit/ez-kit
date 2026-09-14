@@ -87,6 +87,27 @@ and move on.
   only for the ones whose need is unambiguous at render time — the structural primitives plus a
   few gated by a config that is definitively present. Everything outside that list still reaches
   React as `undefined` and crashes on first render.
+- **The grid shell's two boxes are optional slots, and `ref` is the scrollport declaration.**
+  `core.TableWrapper` / `core.TableScroll` are the first members of `FEATURE_OPTIONAL_COMPONENTS`,
+  a tier beside `FEATURE_COMPONENTS` that a feature _accepts_ without requiring. They stay out of
+  `ComponentsFor`, which is what `FullGridComponents` makes mandatory, so adding one is additive:
+  an external kit that wrote `satisfies FullGridComponents` keeps compiling and keeps its current
+  rendering. A key belongs in that tier only when the package has a correct answer without it —
+  here, a plain `div`. This is the pattern for any post-1.0 slot with a sane default; it does not
+  reopen the `core` primitives question, which is about slots that have none.
+  The contract is: **spread every prop you receive** (`data-slot` above all — the structural
+  stylesheet targets the slot, not the element), and **land `ref` on the element that actually
+  scrolls**. That `ref` _is_ the declaration: it is what the pin shadows read, what infinite
+  scroll measures, what the row virtualizer drives, and what gets stamped `data-scrollport`.
+  It replaced `resolveScrollElement` / `resolveVerticalScrollElement` and a `getComputedStyle`
+  overflow probe, which existed because the shared div stayed the scrollport whatever a kit
+  nested inside it — HeroUI then spent ~65 lines of stylesheet relocating the bound back out, and
+  #103 and #105 both came from that arrangement. Do not reintroduce DOM sniffing for the
+  scrollport: a kit whose scroller is not the shared div registers the slot.
+  Note the slot only works when the kit's scroller is at or above the shell's box in its own
+  tree. HeroUI's is below its `.table-root`, which is why the kit hoists `Table.Root` +
+  `Table.ScrollContainer` into `TableScroll` and its `Table` slot renders `Table.Content` — so
+  `data-slot='table'` lands on the real `<table>` and the root takes `data-slot='table-root'`.
 - **`layout.classNames` is a nested bag, and its keys accumulate.** Every other class option is
   a flat `<thing>ClassName` string (`headerClassName`, `cellClassName`, `footerClassName`), so
   `layout.wrapperClassName` / `layout.scrollClassName` was considered and rejected: those two are

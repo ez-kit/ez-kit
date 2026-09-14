@@ -109,11 +109,44 @@ export const FEATURE_COMPONENTS = {
 	[GridFeature.Expanding]: ['Chevron'] as const,
 } satisfies Record<GridFeature, readonly (keyof GridComponentRegistry)[]>
 
+/**
+ * Components a feature **accepts but does not require**, beside the ones {@link FEATURE_COMPONENTS}
+ * makes mandatory. A key belongs here only when the package has a correct answer without it — the
+ * shell's two boxes fall back to a plain `div` — so registering one is an upgrade rather than an
+ * obligation.
+ *
+ * They are kept out of {@link FEATURE_COMPONENTS} deliberately: `ComponentsFor` is what
+ * {@link FullGridComponents} makes required, so a key added there is a compile error in every
+ * external kit that wrote `satisfies FullGridComponents`. Listed here instead, a new slot is
+ * additive — an existing kit keeps compiling and keeps its current rendering.
+ */
+export const FEATURE_OPTIONAL_COMPONENTS = {
+	[GridFeature.Core]: ['TableWrapper', 'TableScroll'] as const,
+	[GridFeature.Pagination]: [] as const,
+	[GridFeature.Sorting]: [] as const,
+	[GridFeature.Filtering]: [] as const,
+	[GridFeature.Editing]: [] as const,
+	[GridFeature.Deleting]: [] as const,
+	[GridFeature.Selection]: [] as const,
+	[GridFeature.Draft]: [] as const,
+	[GridFeature.RowActions]: [] as const,
+	[GridFeature.Resizing]: [] as const,
+	[GridFeature.Visibility]: [] as const,
+	[GridFeature.Fallbacks]: [] as const,
+	[GridFeature.Infinite]: [] as const,
+	[GridFeature.Expanding]: [] as const,
+} satisfies Record<GridFeature, readonly (keyof GridComponentRegistry)[]>
+
 // ── tier types (derived from FEATURE_COMPONENTS) ─────────────────────────────
 
 /** The required-components obligation for a single feature. */
 type ComponentsFor<F extends GridFeature> = Required<
 	Pick<GridComponentRegistry, (typeof FEATURE_COMPONENTS)[F][number]>
+>
+
+/** What a feature additionally accepts — never required, in any shape. */
+type OptionalComponentsFor<F extends GridFeature> = Partial<
+	Pick<GridComponentRegistry, (typeof FEATURE_OPTIONAL_COMPONENTS)[F][number]>
 >
 
 /** Minimum to render a basic table. Always required whenever a grid mounts. */
@@ -140,7 +173,7 @@ export type GridExpandingComponents = ComponentsFor<typeof GridFeature.Expanding
  * component within a group is optional — this is the shape a *partial* kit implements.
  */
 export type GridComponents = {
-	[F in GridFeature]?: Partial<ComponentsFor<F>>
+	[F in GridFeature]?: Partial<ComponentsFor<F>> & OptionalComponentsFor<F>
 }
 
 /**
@@ -148,14 +181,20 @@ export type GridComponents = {
  * Register with `satisfies FullGridComponents` to catch a missing component at compile time.
  */
 export type FullGridComponents = {
-	[F in GridFeature]: ComponentsFor<F>
+	[F in GridFeature]: ComponentsFor<F> & OptionalComponentsFor<F>
 }
 
 // ── flat lookup (derived from FEATURE_COMPONENTS) ─────────────────────────────
 
 /** Every injectable component key → the feature that owns it. Flattened from {@link FEATURE_COMPONENTS}. */
 export const COMPONENT_FEATURE = Object.fromEntries(
-	(Object.entries(FEATURE_COMPONENTS) as [GridFeature, readonly (keyof GridComponentRegistry)[]][]).flatMap(
-		([feature, keys]) => keys.map((key) => [key, feature] as const),
-	),
+	(Object.entries(FEATURE_COMPONENTS) as [GridFeature, readonly (keyof GridComponentRegistry)[]][])
+		.flatMap(([feature, keys]) => keys.map((key) => [key, feature] as const))
+		// The optional ones answer the same question — "which group holds this key" — so a kit
+		// looking one up must not be told it belongs nowhere.
+		.concat(
+			(
+				Object.entries(FEATURE_OPTIONAL_COMPONENTS) as [GridFeature, readonly (keyof GridComponentRegistry)[]][]
+			).flatMap(([feature, keys]) => keys.map((key) => [key, feature] as const)),
+		),
 ) as Record<keyof GridComponentRegistry, GridFeature>

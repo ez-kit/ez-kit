@@ -40,10 +40,54 @@ export const DataGrid = createDataGrid({
 
 The shared React layer renders to your components via `data-*` attributes. Your CSS targets those attributes. The constitution's Principle II keeps the contract clean: **no styling in the shared layer**.
 
+### The shell's two boxes
+
+Around the table the shared layer renders a wrapper and, inside it, the scrollport. Both are
+**optional slots**: register nothing and you get plain `div`s, which is all most kits need.
+
+```tsx
+core: {
+	TableWrapper, // the outer box — the pin-shadow overlay is positioned against it
+	TableScroll,  // the scrollport
+	// …
+}
+```
+
+Register one when your kit's own markup has to be there — typically because it nests a scroll
+container of its own. Two obligations come with it:
+
+1. **Spread every prop you receive.** `data-slot` above all: the structural stylesheet targets the
+   slot, not the element, so the height, overflow and sticky rules follow the attribute onto your
+   element. `className` and `style` carry the height custom properties.
+2. **Land `ref` on the element that actually scrolls.** That ref is how the shared layer knows
+   where the scrollport is — it drives the pin shadows, infinite-scroll edge detection, the row
+   virtualizer, and the `data-scrollport` attribute. A kit whose scroller is nested points the ref
+   at the nested element, not at its own outermost box.
+
+```tsx
+const TableScroll = forwardRef<HTMLDivElement, TableScrollProps>(function TableScroll(props, ref) {
+	return (
+		<KitTable>
+			<KitTable.ScrollContainer
+				ref={ref}
+				{...props}
+			/>
+		</KitTable>
+	)
+})
+```
+
+The HeroUI flavor does exactly this, which is why its `Table` slot renders only the table element.
+The slot works when your scroller sits at or above the shell's box in your own tree; if it sits
+below your table element, hoist the enclosing markup into the slot as that kit does.
+
 ## Rules
 
 - This package MUST NOT import any UI kit (constitution Principle I).
-- This package MUST NOT add styling (`style={{}}`, `className`, Tailwind) to elements; only **semantic `data-*` attributes** (constitution Principle II).
+- This package MUST NOT author styling (`style={{}}`, a literal `className`, Tailwind) — only
+  **semantic `data-*` attributes**, and classes it was _given_ (`layout.classNames`,
+  `column.cellClassName`, `rowProps().className`) passed through untouched (constitution
+  Principle II).
 - Public API is exported exclusively from `src/index.ts`.
 
 ## See also

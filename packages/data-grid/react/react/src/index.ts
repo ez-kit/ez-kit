@@ -263,6 +263,8 @@ export type {
 	ThProps,
 	TheadProps,
 	TableProps,
+	TableScrollProps,
+	TableWrapperProps,
 	ToolbarProps,
 	TrProps,
 } from './types'

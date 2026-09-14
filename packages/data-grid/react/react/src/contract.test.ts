@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { COMPONENT_FEATURE, FEATURE_COMPONENTS, GridFeature } from './contract'
+import { COMPONENT_FEATURE, FEATURE_COMPONENTS, FEATURE_OPTIONAL_COMPONENTS, GridFeature } from './contract'
 
 describe('COMPONENT_FEATURE', () => {
-	it('maps every injectable component key to a feature (40 total)', () => {
-		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(40)
+	it('maps every injectable component key to a feature (40 required + 2 optional)', () => {
+		expect(Object.keys(COMPONENT_FEATURE)).toHaveLength(42)
 	})
 
 	it('groups the always-rendered structural primitives under core', () => {
@@ -13,14 +13,28 @@ describe('COMPONENT_FEATURE', () => {
 		}
 	})
 
-	it('is derived from FEATURE_COMPONENTS (flat lookup matches the nested groups)', () => {
-		for (const [feature, keys] of Object.entries(FEATURE_COMPONENTS)) {
-			for (const key of keys) {
-				expect(COMPONENT_FEATURE[key]).toBe(feature)
+	it('is derived from both group maps (flat lookup matches the nested groups)', () => {
+		const maps: Record<string, readonly string[]>[] = [FEATURE_COMPONENTS, FEATURE_OPTIONAL_COMPONENTS]
+		for (const map of maps) {
+			for (const [feature, keys] of Object.entries(map)) {
+				for (const key of keys) {
+					expect(COMPONENT_FEATURE[key as keyof typeof COMPONENT_FEATURE]).toBe(feature)
+				}
 			}
 		}
-		const grouped = Object.values(FEATURE_COMPONENTS).reduce((sum, keys) => sum + keys.length, 0)
-		expect(grouped).toBe(Object.keys(COMPONENT_FEATURE).length)
+		const countKeys = (map: Record<string, readonly string[]>) =>
+			Object.values(map).reduce((sum, keys) => sum + keys.length, 0)
+		expect(countKeys(maps[0] ?? {}) + countKeys(maps[1] ?? {})).toBe(Object.keys(COMPONENT_FEATURE).length)
+	})
+
+	// The optional tier exists to stay out of `ComponentsFor`, which is what `FullGridComponents`
+	// makes required — a key that leaked into both would break every external kit on upgrade.
+	it('keeps the optional keys out of the required groups', () => {
+		const required = new Set(Object.values(FEATURE_COMPONENTS).flat() as string[])
+		for (const key of Object.values(FEATURE_OPTIONAL_COMPONENTS).flat() as string[]) {
+			expect(required.has(key), `${key} is listed as both required and optional`).toBe(false)
+		}
+		expect(FEATURE_OPTIONAL_COMPONENTS[GridFeature.Core]).toEqual(['TableWrapper', 'TableScroll'])
 	})
 
 	it('assigns feature-specific components to their feature', () => {

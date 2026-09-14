@@ -11,7 +11,16 @@ import { Table as HeroTable, cn } from '@heroui/react'
 import { Children, createContext, forwardRef, Fragment, isValidElement, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import type { TableProps, TbodyProps, TdProps, TfootProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
+import type {
+	TableProps,
+	TableScrollProps,
+	TbodyProps,
+	TdProps,
+	TfootProps,
+	ThProps,
+	TheadProps,
+	TrProps,
+} from '@ez-kit/data-grid-react'
 import type { ComponentProps, Key, ReactNode } from 'react'
 
 const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>({ inHeader: false })
@@ -19,18 +28,55 @@ const HeaderContext = createContext<{ inHeader: boolean; rowHeaderId?: string }>
 /** Inside the footer, rows and cells are plain elements — see {@link Table}. */
 const FooterContext = createContext(false)
 
+/**
+ * The grid shell's scrollport, for this kit.
+ *
+ * HeroUI's own scroll container is the element that has to own both axes: `.table-root` is
+ * `overflow: clip` over a `minmax(0, 1fr)` grid track — a hard width boundary nothing outside
+ * it can scroll past — so the scrollport cannot live above it. Registering this slot is how the
+ * kit says so: the shared layer's props land on the container that actually scrolls, and its
+ * `ref` is what the pin shadows, infinite scroll and the row virtualizer drive.
+ *
+ * Before this existed, the shared layer's own div was the scrollport and this container nested
+ * inside it, competing for the same axes (CSS Overflow 3 makes a non-`visible` value on one axis
+ * compute the other to `auto`, so the inner one won while nothing bounded its height). ~55 lines
+ * of this kit's stylesheet existed to relocate the bound back out, and two bugs (#103, #105) came
+ * from the arrangement. Both are gone with it.
+ *
+ * The root gets a `data-slot` of its own: HeroUI hardcodes `data-slot="table"` on it, which would
+ * now collide with the real `<table>` that the shared layer stamps that slot on.
+ */
+export function TableScroll({ children, ...props }: TableScrollProps) {
+	const heroProps = props as unknown as ComponentProps<typeof HeroTable.ScrollContainer>
+
+	return (
+		<HeroTable data-slot='table-root'>
+			<HeroTable.ScrollContainer {...heroProps}>{children}</HeroTable.ScrollContainer>
+		</HeroTable>
+	)
+}
+
+/**
+ * The table itself. `HeroTable` and its scroll container moved up into {@link TableScroll}, so
+ * this renders only the collection — which means the shared layer's `data-slot='table'` and its
+ * `--grid-template-columns` land on the real `<table>` rather than on HeroUI's root, and the
+ * `thead` / `tbody` / `tr` rules inherit the template from the element that owns it.
+ */
 export function Table({ children, ...props }: TableProps) {
 	const messages = useGridMessages()
-	const heroProps = props as unknown as ComponentProps<typeof HeroTable>
+	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Content>
 	const { collection, footer } = splitFooter(children)
 
 	return (
-		<HeroTable {...heroProps}>
-			<HeroTable.ScrollContainer data-slot='table-scroll-container'>
-				<HeroTable.Content aria-label={messages.grid.label}>{collection}</HeroTable.Content>
-				{footer === null ? null : <FooterPortal>{footer}</FooterPortal>}
-			</HeroTable.ScrollContainer>
-		</HeroTable>
+		<>
+			<HeroTable.Content
+				aria-label={messages.grid.label}
+				{...heroProps}
+			>
+				{collection}
+			</HeroTable.Content>
+			{footer === null ? null : <FooterPortal>{footer}</FooterPortal>}
+		</>
 	)
 }
 

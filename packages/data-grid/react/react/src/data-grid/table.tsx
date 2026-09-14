@@ -17,49 +17,9 @@ import type { NormalizedVirtualizationConfig } from '../use-data-grid'
 import type { HeaderGroup, Row, Table as TanStackTable } from '@tanstack/table-core'
 import type { CSSProperties, ReactNode } from 'react'
 
-const SCROLLING_OVERFLOWS = ['auto', 'scroll']
-
-/** Marks the resolved scrollport(s); the value lists the axes that element scrolls. */
+/** Marks the scrollport; the value lists the axes that element scrolls. */
 const SCROLLPORT_ATTR = 'data-scrollport'
-const SCROLLPORT_X = 'x'
-const SCROLLPORT_Y = 'y'
-
-function resolveScrollElement(wrapper: HTMLElement): HTMLElement {
-	const tagged = wrapper.querySelector("[data-slot='table-scroll-container']")
-	if (tagged instanceof HTMLElement) return tagged
-
-	for (const el of wrapper.querySelectorAll('*')) {
-		if (el instanceof HTMLElement) {
-			const { overflowX } = getComputedStyle(el)
-			if (SCROLLING_OVERFLOWS.includes(overflowX)) return el
-		}
-	}
-
-	return wrapper
-}
-
-/**
- * The element that scrolls *vertically* under `scrollRoot` — i.e. the one holding
- * the bounded height, which is what infinite-scroll edge detection and
- * scroll-to-top must act on.
- *
- * Usually that is `scrollRoot` (the `table-scroll` div) itself: it owns the
- * `max-height` in sticky-header mode and no kit nests anything bounded inside it.
- * A kit may relocate the bound onto its own nested scroll container, though —
- * HeroUI does, because its `.table-root` clips horizontally and only the kit's
- * inner container can own that axis, so the vertical bound has to join it there.
- * Probe the computed overflow instead of assuming a kit: an inner container that
- * scrolls horizontally but grows freely in height (HeroUI's default, and the
- * reason this is not just `querySelector`) is NOT the vertical scroller, and
- * treating it as one reports "already at the bottom" forever.
- */
-export function resolveVerticalScrollElement(scrollRoot: HTMLElement): HTMLElement {
-	const tagged = scrollRoot.querySelector("[data-slot='table-scroll-container']")
-	if (tagged instanceof HTMLElement && SCROLLING_OVERFLOWS.includes(getComputedStyle(tagged).overflowY)) {
-		return tagged
-	}
-	return scrollRoot
-}
+const SCROLLPORT_AXES = 'x y'
 
 function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): void {
 	const scrolledLeft = scrollEl.scrollLeft > 0
@@ -71,12 +31,12 @@ function updateScrollShadows(scrollEl: HTMLElement, wrapperEl: HTMLElement): voi
 
 function useScrollShadows(
 	wrapperRef: { current: HTMLElement | null },
-	scrollRef?: { current: HTMLElement | null },
+	scrollRef: { current: HTMLElement | null },
 ): void {
 	useEffect(() => {
 		const wrapper = wrapperRef.current
-		if (!wrapper) return
-		const scrollEl = scrollRef?.current ?? resolveScrollElement(wrapper)
+		const scrollEl = scrollRef.current
+		if (!wrapper || !scrollEl) return
 		const update = () => {
 			updateScrollShadows(scrollEl, wrapper)
 		}
@@ -152,7 +112,11 @@ export type DataGridTableProps<TRow extends object = any> = {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function DataGridTable<TRow extends object = any>({ children }: DataGridTableProps<TRow> = {}) {
-	const { Table } = useGridComponents().core
+	// The shell's two boxes are optional slots: a kit that registers neither gets these plain
+	// divs, which is what both kits in this repo used until HeroUI needed its own scrollport.
+	// A registered one must spread what it receives and land `ref` on the right element — see
+	// `TableWrapperProps` / `TableScrollProps`.
+	const { Table, TableWrapper: Wrapper = 'div', TableScroll: Scroll = 'div' } = useGridComponents().core
 	const table = useDataGridTable<TRow>()
 
 	// Narrow subscriptions: re-render only when slices that actually affect
@@ -211,58 +175,44 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 		enabled: isVirtualized,
 	})
 
-	// Virtualized: containerRef IS the scroll element; pass it directly to skip DOM traversal.
-	// Non-virtualization: resolveScrollElement finds the real scroll element inside wrapperRef
-	// (handles both shadcn's inner overflow div and HeroUI's inner ScrollContainer).
-	useScrollShadows(wrapperRef, isVirtualized ? containerRef : undefined)
+	// One name for "the element that scrolls", known rather than hunted for: the `TableScroll`
+	// slot's contract is that its `ref` lands on that element, so a kit that nests its own
+	// container (HeroUI) points here at the container, and a kit that registers no slot gets the
+	// plain div this file renders. Virtualized mode uses its own ref, which the virtualizer drives.
+	const scrollElementRef = isVirtualized ? containerRef : scrollRef
+	useScrollShadows(wrapperRef, scrollElementRef)
 
-	// One name for "the element that scrolls". Each kit builds its scrollport differently —
-	// shadcn scrolls the shared `table-scroll` div, HeroUI its own nested ScrollContainer, a
-	// virtualized grid a third element again — and the two axes are not always the same
-	// element either. The layer that already resolves them (for pin shadows and for infinite
-	// scroll) therefore stamps the winners, so CSS, tests and consumers ask one question
-	// instead of guessing per kit: `[data-scrollport~='x']` and `[data-scrollport~='y']`.
+	// Publish the scrollport so CSS, tests and consumers can name it without knowing which kit
+	// is mounted: `[data-scrollport~='x']` / `[data-scrollport~='y']`. Both axes belong to one
+	// element now — the one the slot's `ref` points at — where this used to resolve them
+	// separately by walking the DOM and probing computed overflow, because the shared div was
+	// the scrollport whatever the kit did with it.
 	useEffect(() => {
-		const wrapper = wrapperRef.current
-		if (!wrapper) return
-		const horizontal = isVirtualized ? containerRef.current : resolveScrollElement(wrapper)
-		const scrollRoot = isVirtualized ? containerRef.current : scrollRef.current
-		const vertical = scrollRoot === null || isVirtualized ? scrollRoot : resolveVerticalScrollElement(scrollRoot)
-
-		const axes = new Map<HTMLElement, string[]>()
-		if (horizontal !== null) axes.set(horizontal, [SCROLLPORT_X])
-		if (vertical !== null) axes.set(vertical, [...(axes.get(vertical) ?? []), SCROLLPORT_Y])
-		for (const [element, list] of axes) element.setAttribute(SCROLLPORT_ATTR, list.join(' '))
-
+		const scrollEl = scrollElementRef.current
+		if (!scrollEl) return
+		scrollEl.setAttribute(SCROLLPORT_ATTR, SCROLLPORT_AXES)
 		return () => {
-			for (const element of axes.keys()) element.removeAttribute(SCROLLPORT_ATTR)
+			scrollEl.removeAttribute(SCROLLPORT_ATTR)
 		}
-		// wrapperRef, scrollRef and containerRef are stable refs; isVirtualized never changes
-		// after mount. Sticky mode can move the vertical bound onto a kit's own container.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [gridTemplateColumns, isStickyHeader, isStickyFooter])
+	}, [scrollElementRef])
 
 	// Re-evaluate shadow state immediately when column layout changes (pin/unpin, resize)
 	// so shadows update without requiring a scroll event.
 	useEffect(() => {
 		const wrapper = wrapperRef.current
-		if (!wrapper) return
-		const scrollEl = isVirtualized ? containerRef.current : resolveScrollElement(wrapper)
-		if (!scrollEl) return
+		const scrollEl = scrollElementRef.current
+		if (!wrapper || !scrollEl) return
 		updateScrollShadows(scrollEl, wrapper)
-		// wrapperRef and containerRef are stable refs; isVirtualized never changes after mount
+		// wrapperRef and scrollElementRef are stable refs.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [gridTemplateColumns])
 
 	// ── infinite scroll ───────────────────────────────────────────────────────
-	// Shared scroll element for edge detection and reset-to-top: the element that scrolls
-	// *vertically*. Deliberately NOT resolveScrollElement — that finds the first *horizontal*
-	// scroller for the pin shadows, which is a different element whenever a kit nests its own
-	// horizontally-scrolling container. See resolveVerticalScrollElement.
+	// Edge detection and reset-to-top act on the same element as everything else: the one the
+	// scroll slot declared. Two resolvers used to live here, one per axis, because the shared
+	// div stayed the scrollport and the real scroller had to be found underneath it.
 	const getScrollElement = useCallback((): HTMLElement | null => {
-		if (isVirtualized) return containerRef.current
-		const scrollRoot = scrollRef.current
-		return scrollRoot ? resolveVerticalScrollElement(scrollRoot) : null
+		return scrollElementRef.current
 		// isVirtualized never changes after mount; refs are stable.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
@@ -322,23 +272,23 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 		return (
 			<InfiniteProvider getScrollElement={getScrollElement}>
 				<VirtualProvider rowVirtualizer={rowVirtualizer}>
-					<div
+					<Wrapper
 						ref={wrapperRef}
 						data-slot='table-wrapper'
 						data-virtualized='true'
 						className={classNames?.wrapper}
 						style={heightVars}
 					>
-						<div
+						<Scroll
 							ref={containerRef}
 							data-slot='table-scroll'
 							data-virtualized='true'
 							className={classNames?.scroll}
 						>
 							{tableEl}
-						</div>
+						</Scroll>
 						<PinShadowOverlay />
-					</div>
+					</Wrapper>
 				</VirtualProvider>
 			</InfiniteProvider>
 		)
@@ -346,13 +296,13 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 
 	return (
 		<InfiniteProvider getScrollElement={getScrollElement}>
-			<div
+			<Wrapper
 				ref={wrapperRef}
 				data-slot='table-wrapper'
 				className={classNames?.wrapper}
 				style={heightVars}
 			>
-				<div
+				<Scroll
 					ref={scrollRef}
 					data-slot='table-scroll'
 					className={classNames?.scroll}
@@ -360,9 +310,9 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 					{...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {})}
 				>
 					{tableEl}
-				</div>
+				</Scroll>
 				<PinShadowOverlay />
-			</div>
+			</Wrapper>
 		</InfiniteProvider>
 	)
 }
