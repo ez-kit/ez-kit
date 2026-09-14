@@ -3,21 +3,20 @@ title: Date Range Filter
 description: Filter rows by a date range — between two dates, before a date, after a date, or by named presets.
 ---
 
-For date columns (`cell: { type: 'date' }`), the `between` operator renders a range picker and supports named presets (today, last 7 days, last 30 days, this month).
+For date columns (`cell: { type: 'date' }`), the `between` operator renders one range control — a
+trigger showing the committed range, opening a two-month range calendar — and supports named presets
+(today, last 7 days, last 30 days, this month). The filter is written once both ends are chosen, so a
+half-drawn range never reaches the table or a server-driven query.
 
 ## Usage
 
-Built-in presets (Today, Yesterday, Last 7/30 days, This/Last month) sit beside the two-input range
-picker via `betweenOperator: { variant: 'inputs', presets: true }`, behind one menu trigger — the
-filter also renders inline in the column header, where a chip per preset wrapped onto several lines
-and took the height of the whole header row with it. Picking one fills both ends; the trigger then
-names the preset the range came from, and stops naming it as soon as either end is edited by hand.
+Built-in presets (Today, Yesterday, Last 7/30 days, This/Last month) sit beside the range control via
+`betweenOperator: { presets: true }`, behind one menu trigger — the filter also renders inline in the
+column header, where a chip per preset wrapped onto several lines and took the height of the whole
+header row with it. Picking one fills both ends; the trigger then names the preset the range came
+from, and stops naming it as soon as either end is edited by hand.
 
 <DataGridDocsExample exampleId='filter-date-range-built-in' />
-
-Switch to `variant: 'calendar'` for a true range calendar where the user drags across a month to select both endpoints at once.
-
-<DataGridDocsExample exampleId='filter-date-range-calendar' />
 
 Supply your own `presets` array — quarterly ranges, year-long windows, or anything else that fits your domain — via `betweenOperator: { presets: [...] }`.
 
@@ -32,7 +31,7 @@ const columns = createColumns<Release>([
 		filtering: {
 			operators: {
 				items: ['equals', 'lessThan', 'greaterThan', 'between'],
-				betweenOperator: { variant: 'inputs', presets: true },
+				betweenOperator: { presets: true },
 			},
 			defaultOperator: 'between',
 		},
@@ -44,10 +43,13 @@ const columns = createColumns<Release>([
 
 ### `betweenOperator`
 
-| Option    | Type                                 | Description                                                                                                        |
-| --------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `variant` | `'inputs' \| 'slider' \| 'calendar'` | Picker shape. `'inputs'` and `'calendar'` apply to date columns; `'slider'` is number-only.                        |
-| `presets` | `boolean \| DateRangePreset[]`       | `true` renders the built-in presets; pass an array to use a custom set instead. Only meaningful on `date` columns. |
+On a date column the config has exactly one option — how the control looks is the UI kit's business,
+not the column's. The number-only half (`slider`, `min`, `max`) is documented under
+[Operators](/docs/data-grid/filtering/operators); writing it beside `presets` is a compile error.
+
+| Option    | Type                           | Description                                                                                                        |
+| --------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `presets` | `boolean \| DateRangePreset[]` | `true` renders the built-in presets; pass an array to use a custom set instead. Only meaningful on `date` columns. |
 
 ### `DateRangePreset`
 
