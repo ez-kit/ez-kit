@@ -288,14 +288,6 @@
 		"exportName": "FilterDateRangeBuiltInExample"
 	},
 	{
-		"id": "filter-date-range-calendar",
-		"label": "Date range · Range calendar",
-		"group": "filtering",
-		"groupLabel": "Filtering",
-		"sourceFile": "components/filter-date-range.tsx",
-		"exportName": "FilterDateRangeCalendarExample"
-	},
-	{
 		"id": "filter-date-range-custom",
 		"label": "Date range · Custom presets",
 		"group": "filtering",

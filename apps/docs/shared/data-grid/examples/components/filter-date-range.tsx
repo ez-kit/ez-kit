@@ -30,23 +30,7 @@ const presetsBuiltInColumns = createColumns<Release>([
 		filtering: {
 			operators: {
 				items: ['equals', 'lessThan', 'greaterThan', 'between'],
-				betweenOperator: { variant: 'inputs', presets: true },
-			},
-			defaultOperator: 'between',
-		},
-	},
-])
-
-const calendarColumns = createColumns<Release>([
-	{ accessorKey: 'title', header: 'Title' },
-	{
-		accessorKey: 'releasedAt',
-		header: 'Released',
-		cell: { type: 'date' },
-		filtering: {
-			operators: {
-				items: ['between'],
-				betweenOperator: { variant: 'calendar', presets: true },
+				betweenOperator: { presets: true },
 			},
 			defaultOperator: 'between',
 		},
@@ -80,7 +64,7 @@ const customPresetsColumns = createColumns<Release>([
 		filtering: {
 			operators: {
 				items: ['between'],
-				betweenOperator: { variant: 'inputs', presets: customPresets },
+				betweenOperator: { presets: customPresets },
 			},
 			defaultOperator: 'between',
 		},
@@ -92,16 +76,6 @@ export function FilterDateRangeBuiltInExample() {
 		<DataGrid
 			data={DATA}
 			columns={presetsBuiltInColumns}
-			filtering
-		/>
-	)
-}
-
-export function FilterDateRangeCalendarExample() {
-	return (
-		<DataGrid
-			data={DATA}
-			columns={calendarColumns}
 			filtering
 		/>
 	)
