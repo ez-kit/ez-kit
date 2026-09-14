@@ -1,5 +1,79 @@
 # @ez-kit/data-grid-react
 
+## 0.5.0
+
+### Minor Changes
+
+- 864da28: `betweenOperator.variant` is removed, `betweenOperator` is number-only, and date presets moved up to
+  the column's `filtering.presets`, where they serve every date operator rather than only `between`.
+
+  `between` is one operator, so nothing in its config should say how the control looks — that is the
+  kit's business:
+  - **Number columns** — `betweenOperator: { slider?: boolean; min?: number; max?: number }`. The
+    slider needs a bounded domain: `slider: true` without both bounds falls back to two number fields
+    and warns in development, where it used to invent a `0..100` range.
+  - **Date columns** — one range control in every kit (a trigger showing the committed range, opening a
+    two-month range calendar), and `filtering: { presets: true }` for the presets.
+
+  Presets are no longer a `between` thing. A preset fills the current operator's value, and the two
+  kinds fill different shapes: a `DateRangePreset` (`getRange`) fills `between`, a `DateValuePreset`
+  (`getDate`) fills `equals`, `lessThan`, `greaterThan` and the rest. The control offers only the kind
+  the current operator can take — a range has no single date to mean, so bending one into a date would
+  turn "the last week" into "on last Tuesday". Built-in single dates: Today, Yesterday, A week ago,
+  A month ago, Start of month.
+
+  A column's filter can also be cleared from the filter row now: a clear button sits beside the
+  control whenever the column has a value. A text or number filter could always be emptied by hand,
+  but a date picker and a multi-select could not — the filter could be changed and never taken off,
+  which on a narrow range left the grid empty with no way out of it in the UI unless the table also
+  showed the active-filter chips. It renders through the kit's existing `ClearFiltersButton`, which
+  now serves both the toolbar's clear-all and one column.
+
+  The preset menu now renders through the kit's `core.Menu`, which gains a `filter` variant plus
+  optional `triggerLabel` / `triggerIcon`; `GridMenuIcon` gains `calendar`. A kit that implements the
+  component contract has to render that variant.
+
+  Migration:
+  - `variant: 'slider'` → `slider: true` (add `min` / `max` if they were missing)
+  - `variant: 'inputs'` / `variant: 'calendar'` on a date column → remove the option
+  - `operators: { betweenOperator: { presets } }` → `filtering: { presets }`, one level up
+  - the `BetweenInputVariant` export is gone; `BetweenInputProps` no longer takes `presets` /
+    `onPresetSelect`, and `localizeDateRangePresets` is now `localizeDatePresets`
+
+- 864da28: Date filter presets now sit behind one menu trigger instead of a chip per preset. The filter also
+  renders inline in a column header, where six wrapped chips took the height of the whole header row
+  with them.
+
+  The trigger names the preset the current value came from — computed from the value rather than
+  remembered from the last click, so one restored from a deep link is recognised and an edited one
+  stops being named. `messages.filtering.presets` labels the menu.
+
+### Patch Changes
+
+- f12aac9: Make the React 18 support these packages already declared actually hold, and correct the one place
+  where it could not.
+
+  The packages have advertised `react: ">=18.0.0"` while the source used two spellings React 19
+  introduced: the `<Context value>` JSX shorthand, and `ref` as a plain prop on a function component.
+  Both fail silently on React 18 — the shorthand renders a context object as an element, and a
+  stripped `ref` leaves the shared layer measuring nothing, so the sticky header published no height
+  and pinned rows stacked on one another. Providers are now written as `<Context.Provider>`, and
+  every component the layer hands a ref to (`DataGrid.Row`, the kits' `Thead` / `Tr`, shadcn's
+  `Button` and `ComboboxChips`) forwards it with `forwardRef`.
+
+  `DataGrid.Row` is consequently a `forwardRef` component rather than a plain function. It is used
+  and typed exactly as before — `ref` stays part of `DataGridRowProps`, and the generic
+  (`<DataGrid.Row<Order>>`) still applies — but code that inspected it as a value, rather than
+  rendering it, now sees an exotic component object instead of a function.
+
+  `@ez-kit/data-grid-heroui` and `@ez-kit/form-heroui` narrow their `react` / `react-dom` peer range
+  to `>=19.0.0`. Their own peer `@heroui/react@3` requires `react: ">=19.0.0"`, so the `>=18` these
+  kits advertised was never installable; the range now says what upstream already enforced.
+
+- Updated dependencies [864da28]
+- Updated dependencies [864da28]
+  - @ez-kit/data-grid-core@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
