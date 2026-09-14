@@ -2,23 +2,15 @@
 
 import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react'
 import { format, isValid, parseISO } from 'date-fns'
-import { CalendarClock, Check } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 import { Calendar } from '@grid-shadcn/components/ui/calendar'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@grid-shadcn/components/ui/dropdown-menu'
 import { Input } from '@grid-shadcn/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 import { Slider } from '@grid-shadcn/components/ui/slider'
 
-import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
-import type { ReactNode } from 'react'
+import type { BetweenInputProps } from '@ez-kit/data-grid-react'
 import type { DateRange } from 'react-day-picker'
 
 const ISO_DATE_FORMAT = 'yyyy-MM-dd'
@@ -29,59 +21,6 @@ function toDate(value: unknown): Date | undefined {
 	if (typeof value !== 'string' || !value) return undefined
 	const d = parseISO(value)
 	return isValid(d) ? d : undefined
-}
-
-/**
- * The presets as a menu rather than a row of chips: this control also renders inline in the
- * column header, where six wrapped chips pushed the whole header row to three lines tall.
- * One trigger keeps the filter on the line it shares with the operator select, in every
- * context the between-input is mounted in.
- */
-function PresetMenu({ items, onSelect, activeId }: BetweenPresetsController) {
-	const messages = useGridMessages()
-	const active = items.find((preset) => preset.id === activeId)
-
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button
-					type='button'
-					variant='outline'
-					size='sm'
-					className='h-7 shrink-0 gap-1 px-2 text-xs font-normal'
-					data-slot='between-presets'
-					data-active-preset={activeId ?? undefined}
-				>
-					<CalendarClock className='h-3.5 w-3.5' />
-					{active ? active.label : <span className='sr-only'>{messages.filtering.presets}</span>}
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align='start'>
-				{items.map((preset) => (
-					<DropdownMenuItem
-						key={preset.id}
-						onClick={() => {
-							onSelect(preset)
-						}}
-					>
-						{preset.label}
-						{preset.id === activeId && <Check className='ml-auto h-3.5 w-3.5' />}
-					</DropdownMenuItem>
-				))}
-			</DropdownMenuContent>
-		</DropdownMenu>
-	)
-}
-
-/** Trailing, so the menu sits next to the operator select `renderFilterInput` renders after it. */
-function withPresets(presetMenu: ReactNode | null, content: ReactNode): ReactNode {
-	if (!presetMenu) return content
-	return (
-		<div className='flex items-center gap-2'>
-			{content}
-			{presetMenu}
-		</div>
-	)
 }
 
 /**
@@ -170,12 +109,10 @@ function CalendarRange({ value, onChange }: Pick<BetweenInputProps, 'value' | 'o
 export function BetweenInput(props: BetweenInputProps) {
 	const messages = useGridMessages()
 	const { value, onChange } = props
-	const { branch, presets, slider, numbers } = useBetweenValue(props)
-	const presetMenu = presets ? <PresetMenu {...presets} /> : null
+	const { branch, slider, numbers } = useBetweenValue(props)
 
 	if (branch === BetweenBranch.Slider) {
-		return withPresets(
-			presetMenu,
+		return (
 			<div className='flex items-center gap-2 px-1'>
 				<span className='min-w-[2ch] text-right text-xs tabular-nums'>{slider.values[0]}</span>
 				<Slider
@@ -186,22 +123,20 @@ export function BetweenInput(props: BetweenInputProps) {
 					className='w-24'
 				/>
 				<span className='min-w-[2ch] text-xs tabular-nums'>{slider.values[1]}</span>
-			</div>,
+			</div>
 		)
 	}
 
 	if (branch === BetweenBranch.DateRange) {
-		return withPresets(
-			presetMenu,
+		return (
 			<CalendarRange
 				value={value}
 				onChange={onChange}
-			/>,
+			/>
 		)
 	}
 
-	return withPresets(
-		presetMenu,
+	return (
 		<div className='flex items-center gap-1'>
 			<Input
 				type='number'
@@ -226,6 +161,6 @@ export function BetweenInput(props: BetweenInputProps) {
 					numbers.onToChange(e.target.valueAsNumber)
 				}}
 			/>
-		</div>,
+		</div>
 	)
 }

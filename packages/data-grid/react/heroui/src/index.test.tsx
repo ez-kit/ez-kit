@@ -1,6 +1,5 @@
 import { prepareDataGridTable, createTable, createColumns } from '@ez-kit/data-grid-react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { BetweenInput } from './blocks/filtering/BetweenInput'
@@ -205,48 +204,6 @@ describe('@ez-kit/data-grid-heroui', () => {
 		// so the DOM value is the formatted string rather than a numeric one.
 		expect(screen.getByPlaceholderText('From')).toHaveValue('5')
 		expect(screen.getByPlaceholderText('To')).toHaveValue('25')
-	})
-
-	const PRESETS = [
-		{ id: 'today', label: 'Today', getRange: () => ({ from: '2026-05-14', to: '2026-05-14' }) },
-		{ id: 'last7', label: 'Last 7 days', getRange: () => ({ from: '2026-05-08', to: '2026-05-14' }) },
-	]
-
-	it('BetweenInput offers the presets behind one menu when presets[] is provided for a date column', async () => {
-		const onPresetSelect = vi.fn()
-		render(
-			<BetweenInput
-				value={{}}
-				onChange={vi.fn()}
-				type='date'
-				presets={PRESETS}
-				onPresetSelect={onPresetSelect}
-			/>,
-		)
-
-		// One trigger, not one button per preset: inline in a column header, a chip row wrapped
-		// onto three lines and pushed the whole header row down with it.
-		expect(screen.queryByRole('button', { name: 'Today' })).not.toBeInTheDocument()
-
-		await userEvent.click(screen.getByRole('button', { name: 'Quick ranges' }))
-		await userEvent.click(screen.getByRole('menuitem', { name: 'Today' }))
-
-		expect(onPresetSelect).toHaveBeenCalledWith(PRESETS[0])
-	})
-
-	it('BetweenInput names the preset the current range came from', () => {
-		render(
-			<BetweenInput
-				value={{ from: '2026-05-08', to: '2026-05-14' }}
-				onChange={vi.fn()}
-				type='date'
-				presets={PRESETS}
-				onPresetSelect={vi.fn()}
-			/>,
-		)
-
-		const trigger = screen.getByRole('button', { name: 'Last 7 days' })
-		expect(trigger).toHaveAttribute('data-active-preset', 'last7')
 	})
 
 	it('BetweenInput renders one range trigger for a date column', () => {

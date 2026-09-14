@@ -1,20 +1,16 @@
 'use client'
 
 import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react'
-import { Button, Dropdown, Label, Popover, RangeCalendar, Slider, useLocale } from '@heroui/react'
+import { Button, Popover, RangeCalendar, Slider, useLocale } from '@heroui/react'
 import { getLocalTimeZone, parseDate } from '@internationalized/date'
-import { CalendarClock, Check } from 'lucide-react'
 
 import { NumberFieldControl } from '../core/NumberField'
 
-import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
+import type { BetweenInputProps } from '@ez-kit/data-grid-react'
 import type { CalendarDate } from '@internationalized/date'
-import type { ReactNode } from 'react'
 
 const LABEL_CLASS = 'text-xs tabular-nums min-w-[2ch]'
 const ROW_CLASS = 'flex gap-2 items-center'
-const PRESET_TRIGGER_CLASS = 'text-xs shrink-0'
-const PRESET_CHECK_CLASS = 'ml-auto'
 const TRIGGER_CLASS = 'min-w-[12rem] text-xs'
 /**
  * `.range-calendar` is `container-type: inline-size`, so its own width is computed as if it had no
@@ -37,67 +33,6 @@ function toCalendarDate(value: unknown): CalendarDate | null {
 	} catch {
 		return null
 	}
-}
-
-/**
- * The presets as a menu rather than a row of chips: this control also renders inline in the
- * column header, where six wrapped chips pushed the whole header row to three lines tall.
- * One trigger keeps the filter on the line it shares with the operator select, in every
- * context the between-input is mounted in.
- */
-function PresetMenu({ items, onSelect, activeId }: BetweenPresetsController) {
-	const messages = useGridMessages()
-	const active = items.find((preset) => preset.id === activeId)
-
-	return (
-		// The Button is a direct child of `Dropdown`, not wrapped in `Dropdown.Trigger`: that
-		// element renders its own `<button>` around this one, which is invalid HTML and breaks
-		// hydration — same shape as the row menu in `core/Menu`.
-		<Dropdown>
-			<Button
-				variant='tertiary'
-				size='sm'
-				// Only while nothing is picked: an `aria-label` would otherwise override the visible
-				// preset name as the button's accessible name.
-				{...(active ? {} : { 'aria-label': messages.filtering.presets })}
-				data-slot='between-presets'
-				data-active-preset={activeId ?? undefined}
-				className={PRESET_TRIGGER_CLASS}
-			>
-				<CalendarClock
-					size={14}
-					aria-hidden
-				/>
-				{active ? <span>{active.label}</span> : null}
-			</Button>
-			<Dropdown.Popover>
-				<Dropdown.Menu
-					aria-label={messages.filtering.presets}
-					onAction={(key) => {
-						const preset = items.find((entry) => entry.id === key)
-						if (preset) onSelect(preset)
-					}}
-				>
-					{items.map((preset) => (
-						<Dropdown.Item
-							key={preset.id}
-							id={preset.id}
-							textValue={preset.label}
-						>
-							<Label>{preset.label}</Label>
-							{preset.id === activeId && (
-								<Check
-									size={14}
-									className={PRESET_CHECK_CLASS}
-									aria-hidden
-								/>
-							)}
-						</Dropdown.Item>
-					))}
-				</Dropdown.Menu>
-			</Dropdown.Popover>
-		</Dropdown>
-	)
 }
 
 /**
@@ -212,26 +147,13 @@ function DateRangeControl({ value, onChange }: Pick<BetweenInputProps, 'value' |
 	)
 }
 
-/** Trailing, so the menu sits next to the operator select `renderFilterInput` renders after it. */
-function withPresets(presetMenu: ReactNode | null, content: ReactNode): ReactNode {
-	if (!presetMenu) return content
-	return (
-		<div className={ROW_CLASS}>
-			{content}
-			{presetMenu}
-		</div>
-	)
-}
-
 export function BetweenInput(props: BetweenInputProps) {
 	const messages = useGridMessages()
 	const { value, onChange } = props
-	const { branch, presets, slider, numbers } = useBetweenValue(props)
-	const presetMenu = presets ? <PresetMenu {...presets} /> : null
+	const { branch, slider, numbers } = useBetweenValue(props)
 
 	if (branch === BetweenBranch.Slider) {
-		return withPresets(
-			presetMenu,
+		return (
 			<div
 				role='group'
 				aria-label={messages.filtering.range}
@@ -261,22 +183,20 @@ export function BetweenInput(props: BetweenInputProps) {
 					</Slider.Track>
 				</Slider>
 				<span className={LABEL_CLASS}>{slider.values[1]}</span>
-			</div>,
+			</div>
 		)
 	}
 
 	if (branch === BetweenBranch.DateRange) {
-		return withPresets(
-			presetMenu,
+		return (
 			<DateRangeControl
 				value={value}
 				onChange={onChange}
-			/>,
+			/>
 		)
 	}
 
-	return withPresets(
-		presetMenu,
+	return (
 		<div className={ROW_CLASS}>
 			<NumberFieldControl
 				className={RANGE_END_CLASS}
@@ -301,6 +221,6 @@ export function BetweenInput(props: BetweenInputProps) {
 					numbers.onToChange(next ?? NaN)
 				}}
 			/>
-		</div>,
+		</div>
 	)
 }

@@ -4,6 +4,7 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	ArrowUp,
+	CalendarClock,
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
@@ -43,6 +44,7 @@ const GRID_MENU_ICON_COMPONENTS: Record<GridMenuIcon, LucideIcon> = {
 	[GridMenuIcon.SortAsc]: ArrowUp,
 	[GridMenuIcon.SortDesc]: ArrowDown,
 	[GridMenuIcon.ClearSort]: X,
+	[GridMenuIcon.Calendar]: CalendarClock,
 	[GridMenuIcon.Hide]: EyeOff,
 	// Chevrons, not the plain arrows: those already mean pinning in this menu.
 	[GridMenuIcon.MoveStart]: ChevronLeft,
