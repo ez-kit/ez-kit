@@ -38,7 +38,7 @@ function setSelectionBarKey(table: DataTable<User>, value: ResolvedGridOptions['
 function Wrapper({ table, children }: { table: DataTable<User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext value={table}>{children}</TableContext>
+			<TableContext.Provider value={table}>{children}</TableContext.Provider>
 		</GridComponentsProvider>
 	)
 }

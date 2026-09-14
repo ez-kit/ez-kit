@@ -1,6 +1,6 @@
 import { createColumns } from '@ez-kit/data-grid-core'
 import { render } from '@testing-library/react'
-import { Fragment, useEffect, useState } from 'react'
+import { forwardRef, Fragment, useEffect, useState } from 'react'
 
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
@@ -56,18 +56,31 @@ import type { ReactElement, ReactNode } from 'react'
 function TestTable(props: TableProps) {
 	return <table {...props} />
 }
-function TestThead(props: TheadProps) {
-	return <thead {...props} />
-}
+// `forwardRef`, like the real kits: `TheadProps` and `TrProps` carry `RefAttributes`, and a kit
+// that leaves the ref in props forwards nothing on React 18 — the header height and the pinned-row
+// offsets are both measured through these.
+const TestThead = forwardRef<HTMLTableSectionElement, TheadProps>(function TestThead(props, ref) {
+	return (
+		<thead
+			{...props}
+			ref={ref}
+		/>
+	)
+})
 function TestTbody(props: TbodyProps) {
 	return <tbody {...props} />
 }
 function TestTfoot(props: TfootProps) {
 	return <tfoot {...props} />
 }
-function TestTr(props: TrProps) {
-	return <tr {...props} />
-}
+const TestTr = forwardRef<HTMLTableRowElement, TrProps>(function TestTr(props, ref) {
+	return (
+		<tr
+			{...props}
+			ref={ref}
+		/>
+	)
+})
 function TestTh(props: ThProps) {
 	return <th {...props} />
 }

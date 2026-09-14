@@ -45,6 +45,13 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # The packages promise `react: ">=18"`, and the React-19-only spellings that break that
+      # promise — the `<Context value>` JSX shorthand, `ref` as a plain prop — fail silently rather
+      # than loudly, and are invisible to a typecheck against React 19's types. Only a second run
+      # on React 18 catches a regression; see `vitestReact18Config` in vitest.shared.ts.
+      - name: Test (React 18)
+        run: pnpm test:react18
+
       - name: Size
         run: pnpm size
 

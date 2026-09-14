@@ -8,7 +8,7 @@ import {
 	useGridMessages,
 } from '@ez-kit/data-grid-react'
 import { Table as HeroTable, cn } from '@heroui/react'
-import { Children, createContext, Fragment, isValidElement, useContext, useState } from 'react'
+import { Children, createContext, forwardRef, Fragment, isValidElement, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import type { TableProps, TbodyProps, TdProps, TfootProps, ThProps, TheadProps, TrProps } from '@ez-kit/data-grid-react'
@@ -88,12 +88,16 @@ function FooterPortal({ children }: { children: ReactNode }) {
 				ref={setAnchor}
 				hidden
 			/>
-			{tableEl === null ? null : createPortal(<FooterContext value={true}>{children}</FooterContext>, tableEl)}
+			{tableEl === null
+				? null
+				: createPortal(<FooterContext.Provider value={true}>{children}</FooterContext.Provider>, tableEl)}
 		</>
 	)
 }
 
-export function Thead({ children, ...props }: TheadProps) {
+// `forwardRef` rather than a `ref` prop: the shared layer measures the header through this ref to
+// publish `--dg-header-height`, and on React 18 `ref` never reaches a function component's props.
+export const Thead = forwardRef<HTMLTableSectionElement, TheadProps>(function Thead({ children, ...props }, ref) {
 	const heroProps = props as unknown as ComponentProps<typeof HeroTable.Header>
 	const rowHeaderId = useRowHeaderId()
 	const table = useDataGridTable()
@@ -105,13 +109,16 @@ export function Thead({ children, ...props }: TheadProps) {
 	if (isGrouped) warnGroupedHeadersUnsupported()
 
 	return (
-		<HeroTable.Header {...heroProps}>
-			<HeaderContext value={{ inHeader: true, ...(rowHeaderId === undefined ? {} : { rowHeaderId }) }}>
+		<HeroTable.Header
+			{...heroProps}
+			ref={ref}
+		>
+			<HeaderContext.Provider value={{ inHeader: true, ...(rowHeaderId === undefined ? {} : { rowHeaderId }) }}>
 				{isGrouped ? headerRows.at(-1) : children}
-			</HeaderContext>
+			</HeaderContext.Provider>
 		</HeroTable.Header>
 	)
-}
+})
 
 const IS_DEV = process.env.NODE_ENV !== 'production'
 
@@ -160,16 +167,20 @@ export function Tfoot(props: TfootProps) {
 	return <tfoot {...props} />
 }
 
-export function Tr({ children, ...props }: TrProps) {
+// `forwardRef` for the same reason as {@link Thead}: pinned rows are measured through this ref.
+export const Tr = forwardRef<HTMLTableRowElement, TrProps>(function Tr({ children, ...props }, ref) {
 	const { inHeader } = useContext(HeaderContext)
 	const inFooter = useContext(FooterContext)
 
+	// Header rows render as a fragment and footer rows as a plain `<tr>`; neither is ever measured,
+	// so only the footer branch has an element to hand the ref to.
 	if (inHeader) return <>{children}</>
 	if (inFooter)
 		return (
 			<tr
 				className='table__row'
 				{...props}
+				ref={ref}
 			>
 				{children}
 			</tr>
@@ -189,11 +200,12 @@ export function Tr({ children, ...props }: TrProps) {
 		<HeroTable.Row
 			{...heroProps}
 			{...(rowId === undefined ? {} : { id: rowId })}
+			ref={ref}
 		>
 			{children}
 		</HeroTable.Row>
 	)
-}
+})
 
 export function Th({ pinned, className, ...props }: ThProps) {
 	const { rowHeaderId } = useContext(HeaderContext)

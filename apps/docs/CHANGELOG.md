@@ -1,5 +1,16 @@
 # @ez-kit/docs
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [a85577e]
+- Updated dependencies [9a95f22]
+  - @ez-kit/data-grid-core@0.4.0
+  - @ez-kit/data-grid-react@0.4.0
+  - @ez-kit/data-grid-heroui@0.4.0
+  - @ez-kit/data-grid-shadcn@0.2.0
+
 ## 0.0.8
 
 ### Patch Changes

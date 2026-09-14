@@ -16,6 +16,7 @@
 		"format:check": "node ./scripts/prettier.mjs --check",
 		"typecheck": "turbo run typecheck",
 		"test": "turbo run test",
+		"test:react18": "pnpm --filter @ez-kit/data-grid-react --filter @ez-kit/form-react run test:react18",
 		"size": "turbo run size",
 		"clean": "turbo run clean",
 		"changeset": "changeset",

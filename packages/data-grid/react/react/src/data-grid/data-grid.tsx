@@ -302,13 +302,13 @@ function DataGridControlled<TRow extends object>({
 	return (
 		<CellTypesProvider cellTypes={resolvedCellTypes}>
 			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-				<TableContext value={table}>
+				<TableContext.Provider value={table}>
 					{IS_DEV && <ComponentGuard />}
 					{children ?? <DefaultLayout />}
 					{table.options.creating?.mode === 'modal' && <CreatingModal />}
 					{table.options.editing?.mode === 'modal' && <EditingModal />}
 					{hasConfirmDialog(table) && <ConfirmDialogRenderer />}
-				</TableContext>
+				</TableContext.Provider>
 			</GridComponentsProvider>
 		</CellTypesProvider>
 	)

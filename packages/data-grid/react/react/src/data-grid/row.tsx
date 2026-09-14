@@ -1,4 +1,5 @@
 import { RowMoveDirection } from '@ez-kit/data-grid-core'
+import { forwardRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 import { joinClassNames } from '../utils/class-names'
@@ -10,7 +11,7 @@ import { useDataGridState, useDataGridTable } from './table-context'
 import type { PinSide } from './use-pinned-row-offsets'
 import type { RowPropsResolver } from '../use-data-grid'
 import type { Row } from '@tanstack/table-core'
-import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode, Ref } from 'react'
 
 /**
  * What a `<DataGrid.Row>` render function receives.
@@ -66,15 +67,14 @@ export type DataGridRowProps<TRow extends object = any> = {
  * Consumer props from `rowProps` are applied first, so those structural attributes always win;
  * `className` is the exception and is merged rather than overwritten.
  */
+// `forwardRef`, not a `ref` prop: React 19 passes `ref` through props, React 18 strips it before
+// the component sees it, and this package supports both. The generic is restored by the cast
+// below — `forwardRef` erases type parameters, and `<DataGrid.Row<Order>>` has to keep working.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function DataGridRow<TRow extends object = any>({
-	row,
-	style,
-	ref,
-	'data-pinned': dataPinned,
-	'data-virtual': dataVirtual,
-	children,
-}: DataGridRowProps<TRow>) {
+function DataGridRowImpl<TRow extends object = any>(
+	{ row, style, 'data-pinned': dataPinned, 'data-virtual': dataVirtual, children }: Omit<DataGridRowProps<TRow>, 'ref'>,
+	ref: Ref<HTMLTableRowElement>,
+) {
 	const { Tr } = useGridComponents().core
 	const table = useDataGridTable<TRow>()
 	// `table.grid` is row-erased, so the stored resolver is typed `Row<never>`; the row we hold
@@ -156,3 +156,12 @@ export function DataGridRow<TRow extends object = any>({
 		</Tr>
 	)
 }
+
+/**
+ * `forwardRef` erases the generic, so the exotic component is cast back to the generic call
+ * signature it was written with. `DataGridRowProps` keeps `ref` in props — that is how a React 19
+ * consumer reads it, and a React 18 one passes `ref` the same way at the call site.
+ */
+export const DataGridRow = forwardRef(DataGridRowImpl) as <TRow extends object = any>( // eslint-disable-line @typescript-eslint/no-explicit-any
+	props: DataGridRowProps<TRow>,
+) => ReactElement | null
