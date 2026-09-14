@@ -22,6 +22,14 @@ const NEEDLE = 'User 42'
 
 const STRIP = '[data-slot="active-filters-bar"]'
 /**
+ * The kit's clear button is `clear-filter-button`, singular: one component draws both the
+ * toolbar's clear-all and a single column's clear, so it clears *a* filter and which one is the
+ * caller's business. Only `<DataGrid.ClearFiltersButton />`, which really does clear them all,
+ * keeps the plural. Scoped to the toolbar for the same reason — the column controls in the
+ * popover variant render one each.
+ */
+const CLEAR_ALL = '[data-slot="toolbar"] [data-slot="clear-filter-button"]'
+/**
  * A chip is addressed by `data-chip-kind`, not by `data-slot="filter-chip"`: HeroUI's `Chip`
  * stamps its own `data-slot="chip"` after the caller's props, so the slot name never survives
  * in that kit (its `styles.css` says as much, and hooks its own draft styling off the mark
@@ -109,7 +117,7 @@ test.describe('the chips strip', () => {
 		await globalSearch(page).fill(NEEDLE)
 		await expect(page.locator(CHIP)).toHaveCount(2)
 
-		await page.locator('[data-slot="clear-filters-button"]').click()
+		await page.locator(CLEAR_ALL).click()
 
 		await expect(page.locator(STRIP)).toHaveCount(0)
 		await expect(grid.rows()).toHaveCount(10)
