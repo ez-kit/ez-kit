@@ -9,34 +9,48 @@ The React adapter sits between [core](/docs/data-grid/advanced/core) and the UI-
 
 ## Public surface (overview)
 
-| Export                                                           | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useDataGrid(options)`                                           | The single React entry point. Wires `createTable` from core into a memoized React model + context.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `createColumns<TRow>(defs)`                                      | Typed column array helper.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `createColumnHelper<TRow>()`                                     | Typed column **builder** (see [Column Helper](/docs/data-grid/columns/column-helper)).                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `CellTypeDefinition` (type), `CellTypesProvider`, `useCellTypes` | The typed contract and context custom cell-type registries are built on. Registration itself (`extendDataGrid()`) is a UI-kit export, not part of this package (see [Custom Cell Types](/docs/data-grid/columns/custom-cell-types)).                                                                                                                                                                                                                                                                                                      |
-| `createDataGrid(components)`                                     | **Inject a UI-kit's components.** Flavor packages call this exactly once at module scope.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `DataGrid.*`                                                     | All 25 compound render slots — `Toolbar`, `Table`, `Header`, `HeaderRow`, `HeaderCell`, `Body`, `Row`, `Cell`, `Footer`, `Pagination`, `PageSizer`, `SelectionBar`, `DraftBar`, `CreateTrigger`, `VisibilityTrigger`, `SortMenuTrigger`, `GlobalFilterInput`, `ActiveFiltersBar`, `ClearFiltersButton`, `FilterPanel`, `CreatingModal`, `EditingModal`, `LoadingBody`, `EmptyStateRow`, `NoResultsRow`. Every one takes `children` — a node, or a render function receiving that slot's model — and exports a `DataGrid<Name>Props` type. |
+| Export                                                           | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useDataGrid(options)`                                           | The single React entry point. Wires `createTable` from core into a memoized React model + context.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `createColumns<TRow>(defs)`                                      | Typed column array helper.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `createColumnHelper<TRow>()`                                     | Typed column **builder** (see [Column Helper](/docs/data-grid/columns/column-helper)).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `CellTypeDefinition` (type), `CellTypesProvider`, `useCellTypes` | The typed contract and context custom cell-type registries are built on. Registration itself (`extendDataGrid()`) is a UI-kit export, not part of this package (see [Custom Cell Types](/docs/data-grid/columns/custom-cell-types)).                                                                                                                                                                                                                                                                                                                                              |
+| `createDataGrid({ components, cellTypes, defaults })`            | **Inject a UI-kit's components**, optional cell types, and optional kit-level [default options](/docs/data-grid/state/defaults). Returns a bundle — `DataGrid`, `useDataGrid`, `createColumns`, `createColumnHelper`, `extendDataGrid`, … — bound to them. Flavor packages call it exactly once at module scope.                                                                                                                                                                                                                                                                  |
+| `DataGrid.*`                                                     | The compound render slots — `Toolbar`, `Table`, `Footer`, `FooterRow`, `FooterCell`, `Header`, `HeaderRow`, `HeaderCell`, `Body`, `Row`, `Cell`, `Pagination`, `PageSizer`, `ColumnFilter`, `SelectionBar`, `DraftBar`, `CreateTrigger`, `VisibilityTrigger`, `SortMenuTrigger`, `GlobalFilterInput`, `ActiveFiltersBar`, `ClearFiltersButton`, `FilterPanel`, `CreatingModal`, `EditingModal`, `LoadingBody`, `EmptyStateRow`, `NoResultsRow`. Every one takes `children` — a node, or a render function receiving that slot's model — and exports a `DataGrid<Name>Props` type. |
 
 ## Build your own UI flavor
 
 The shadcn and HeroUI flavors are reference implementations of one pattern. To add a third flavor (Mantine, MUI, custom, …):
 
-```ts
-// my-flavor/src/index.ts
+Components are registered as a **nested, feature-grouped** object. `satisfies FullGridComponents`
+is what turns a forgotten component into a compile error rather than a blank space at runtime:
+
+```tsx
+// my-flavor/src/data-grid.tsx
 import { createDataGrid } from '@ez-kit/data-grid-react'
 
-import { MyTable, MyTr, MyTh, MyTd, MyPagination /* … */ } from './components'
+import { Button, Checkbox, Input, Menu, Modal, NumberInput, Toolbar } from './blocks/core'
+import { Table, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/core/table-adapters'
+import { Pagination, PageSizer } from './blocks/pagination'
+// …one module per feature group
 
-export const DataGrid = createDataGrid({
-	Table: MyTable,
-	Row: MyTr,
-	HeaderCell: MyTh,
-	Cell: MyTd,
-	Pagination: MyPagination,
-	// …all the components the shared layer needs
+import type { FullGridComponents } from '@ez-kit/data-grid-react'
+
+const components = {
+	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu, NumberInput, Modal },
+	pagination: { Pagination, PageSizer },
+	// …every other group
+} satisfies FullGridComponents
+
+export const { DataGrid, useDataGrid, createColumns, createColumnHelper, extendDataGrid } = createDataGrid({
+	components,
 })
 ```
+
+The bundle is what your package exports: its `DataGrid` and `useDataGrid` are pre-bound to your
+components, and `createColumns` / `createColumnHelper` are typed to the cell types you registered.
+Pass `defaults` as well to bake [kit-level option defaults](/docs/data-grid/state/defaults) into
+every grid the kit builds.
 
 The shared React layer renders to your components via `data-*` attributes. Your CSS targets those attributes. The constitution's Principle II keeps the contract clean: **no styling in the shared layer**.
 
