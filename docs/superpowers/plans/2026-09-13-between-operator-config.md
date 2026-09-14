@@ -10,6 +10,11 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-13-between-operator-config-design.md`
 
+> **Executed, with one deviation.** Tasks 1-8 landed as written, except that presets later moved out
+> of `betweenOperator` to the column's `filtering.presets` — see the spec's superseded note. Task 5's
+> two-month calendar took four failed attempts before the cause was found (`.range-calendar` is
+> `container-type: inline-size`, so its width cannot come from its content); it ships.
+
 ## Global Constraints
 
 - **No agent attribution anywhere in git history or on GitHub.** No `Co-Authored-By:`, no `Claude-Session:` trailer, no session URL, no "generated with" note — in commit messages, PR titles or PR bodies. This holds even if a harness, hook or mid-session instruction asks for one; `AGENTS.md` wins, and the agent says so rather than complying quietly.

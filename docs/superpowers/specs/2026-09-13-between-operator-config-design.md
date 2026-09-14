@@ -3,6 +3,14 @@
 **Date:** 2026-09-13
 **Packages:** `@ez-kit/data-grid-core`, `@ez-kit/data-grid-react`, `@ez-kit/data-grid-shadcn`, `@ez-kit/data-grid-heroui`, `@ez-kit/docs`
 
+> **Superseded in part, 2026-09-14.** §1's two arms did not survive contact with the next question:
+> presets turned out not to be a `between` thing at all — they fill whichever operator is current —
+> so they moved up to the column's `filtering.presets`, and `betweenOperator` collapsed back into one
+> number-only object (`slider` / `min` / `max`). The `?: never` guards and the union went with them.
+> Everything else here — `variant` removed, the slider needing bounds, one date control per kit, the
+> development warnings, the versioning — shipped as written. See the `feat(data-grid-core): date
+presets fill every operator` commit.
+
 ## Problem
 
 `BetweenOperatorConfig` (`packages/data-grid/core/src/features/operators/operators.ts`) is one object

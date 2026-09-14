@@ -104,11 +104,10 @@ and move on.
   operator renders, so the adapter draws it — through the existing menu contract, which grew a
   `filter` variant and an optional `triggerLabel` / `triggerIcon` rather than gaining a
   `filtering.PresetMenu` slot named for the feature.
-- **`presets` is legal at two levels and the two do not collide.**
-  `column.filtering.operators.betweenOperator.presets` are the date-range chips of one operator on
-  one column. A future table-level saved-filter option is a different namespace two levels up, on
-  a different type. Considered as a rename candidate and dropped — this is not the one-word,
-  two-meanings defect the audits cleaned up.
+- **`presets` is legal at two levels and the two do not collide.** `column.filtering.presets` are
+  the date presets of one column. A future table-level saved-filter option is a different namespace
+  a level up, on a different type. Considered as a rename candidate and dropped — this is not the
+  one-word, two-meanings defect the audits cleaned up.
 
 ## Branching & Release Flow
 
