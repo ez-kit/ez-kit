@@ -70,7 +70,8 @@ Date columns (`cell: { type: 'date' }`) get date-aware operators (`equals`, `les
 
 Combine the date operators with `between` to filter rows falling inside a start–end date range. A date
 column always renders the same control: a trigger showing the committed range, opening a two-month
-range calendar.
+range calendar. Every date operator — not just `between` — can be filled from a preset; see
+[Date range](/docs/data-grid/filtering/date-range).
 
 <DataGridDocsExample exampleId='filter-operators-date-between' />
 
@@ -139,16 +140,16 @@ A table-level definition sharing a built-in id replaces that built-in everywhere
 
 ### `BetweenOperatorConfig`
 
-Two arms that do not mix: `slider` / `min` / `max` are number-only, `presets` is date-only, and
-writing one beside the other is a compile error. Nothing here says how the control looks — that is the
-UI kit's business — only what the column's values are.
+Number-only, and that is the whole type. `between` is one operator whose comparison never changes, so
+nothing here says how the control looks — that is the UI kit's business. Date presets are not a
+`between` thing either: they fill whichever operator is current, so they live on the column's
+[`filtering.presets`](/docs/data-grid/filtering/date-range).
 
-| Option    | Type                           | Description                                                                                                                                |
-| --------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `slider`  | `boolean`                      | Number columns. Renders the range as a two-handle slider. Requires both `min` and `max`; without them the filter falls back to two fields. |
-| `min`     | `number`                       | Number columns. Lower bound — clamps the fields, and is the slider's floor.                                                                |
-| `max`     | `number`                       | Number columns. Upper bound — clamps the fields, and is the slider's ceiling.                                                              |
-| `presets` | `boolean \| DateRangePreset[]` | Date columns. Preset ranges offered beside the control — see [Date range](/docs/data-grid/filtering/date-range).                           |
+| Option   | Type      | Description                                                                                                                          |
+| -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `slider` | `boolean` | Renders the range as a two-handle slider. Requires both `min` and `max`; without them the filter falls back to two fields and warns. |
+| `min`    | `number`  | Lower bound — clamps the fields, and is the slider's floor.                                                                          |
+| `max`    | `number`  | Upper bound — clamps the fields, and is the slider's ceiling.                                                                        |
 
 ### `FilterOperatorDef`
 

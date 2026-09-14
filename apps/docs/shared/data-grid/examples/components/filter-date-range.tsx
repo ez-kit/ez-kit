@@ -28,10 +28,8 @@ const presetsBuiltInColumns = createColumns<Release>([
 		header: 'Released',
 		cell: { type: 'date' },
 		filtering: {
-			operators: {
-				items: ['equals', 'lessThan', 'greaterThan', 'between'],
-				betweenOperator: { presets: true },
-			},
+			presets: true,
+			operators: { items: ['equals', 'lessThan', 'greaterThan', 'between'] },
 			defaultOperator: 'between',
 		},
 	},
@@ -62,10 +60,8 @@ const customPresetsColumns = createColumns<Release>([
 		header: 'Released',
 		cell: { type: 'date' },
 		filtering: {
-			operators: {
-				items: ['between'],
-				betweenOperator: { presets: customPresets },
-			},
+			presets: customPresets,
+			operators: { items: ['equals', 'lessThan', 'greaterThan', 'between'] },
 			defaultOperator: 'between',
 		},
 	},
