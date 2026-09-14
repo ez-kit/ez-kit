@@ -109,3 +109,39 @@ export function mergeGridOptionLayers<TRow extends object>(
 	const base = factoryDefaults ? deepMerge(factoryDefaults, providerDefaults) : providerDefaults
 	return deepMerge(base, config) as UseDataGridConfig<TRow>
 }
+
+/**
+ * The **factory** layer, carried through the tree rather than through an argument.
+ *
+ * `createDataGrid({ defaults })` binds its defaults into the `useDataGrid` it returns, which
+ * covers the controlled form (the caller builds the table, then passes it to `<DataGrid table={…} />`).
+ * The uncontrolled form runs `useDataGrid` *inside* `<DataGrid>`, where no such argument can
+ * reach it — so the bound `DataGrid` also provides them here and the hook picks them up.
+ *
+ * Deliberately **not** the same context as {@link DataGridOptionsProvider}: an app-level
+ * provider must outrank the kit's defaults, so the two layers cannot share one value.
+ *
+ * `undefined` means "no factory layer". A bare `<DataGrid>` sees that, and so does a grid
+ * nested among another grid's children — the shared core re-provides `undefined`, so the layer
+ * stops at the grid it configures.
+ */
+const GridFactoryDefaultsContext = createContext<AnyDefaultOptions | undefined>(undefined)
+
+export type GridFactoryDefaultsProviderProps = {
+	/** The kit-level defaults bound by `createDataGrid({ defaults })`. */
+	defaults: AnyDefaultOptions | undefined
+	children: ReactNode
+}
+
+/** Publishes the factory option layer to every `useDataGrid` call inside the bound `<DataGrid>`. */
+export function GridFactoryDefaultsProvider({ defaults, children }: GridFactoryDefaultsProviderProps) {
+	return <GridFactoryDefaultsContext.Provider value={defaults}>{children}</GridFactoryDefaultsContext.Provider>
+}
+
+/**
+ * Reads the factory option layer published by a bound `<DataGrid>`. Row type erased at the
+ * context boundary and re-applied by the caller, exactly as in {@link useDataGridOptions}.
+ */
+export function useGridFactoryDefaults<TRow extends object>(): DataGridDefaultOptions<TRow> | undefined {
+	return useContext(GridFactoryDefaultsContext) as DataGridDefaultOptions<TRow> | undefined
+}

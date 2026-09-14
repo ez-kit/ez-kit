@@ -1,7 +1,7 @@
 import { createTable, featureConfig, isFeatureEnabled, PaginationMode, resolveMessages } from '@ez-kit/data-grid-core'
 import { useEffect, useRef } from 'react'
 
-import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
+import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
 import { ActionBarVariant, FilteringVariant } from './types'
@@ -838,7 +838,9 @@ function writeFeatureOptions<TRow extends object>(
  *
  * @param instanceConfig Per-call grid config; the highest-priority option layer.
  * @param factoryDefaults Base defaults bound by `createDataGrid({ defaults })`.
- *   Internal — supplied by the kit factory, not by application call sites.
+ *   Internal — supplied by the kit factory, not by application call sites. Omitted when the
+ *   hook runs inside a bound `<DataGrid>` (the uncontrolled form), where the same layer
+ *   arrives through `GridFactoryDefaultsProvider` instead.
  *
  * @example
  * const instance = useDataGrid({ data: users, columns, sorting: true })
@@ -849,7 +851,10 @@ export function useDataGrid<TRow extends object>(
 	factoryDefaults?: DataGridDefaultOptions<TRow>,
 ): DataTable<TRow> {
 	const providerDefaults = useDataGridOptions<TRow>()
-	const config = mergeGridOptionLayers(factoryDefaults, providerDefaults, instanceConfig)
+	// The uncontrolled `<DataGrid data columns />` runs this hook itself, so the kit factory has
+	// no argument to bind its defaults to — the bound `DataGrid` publishes them as context instead.
+	const contextFactoryDefaults = useGridFactoryDefaults<TRow>()
+	const config = mergeGridOptionLayers(factoryDefaults ?? contextFactoryDefaults, providerDefaults, instanceConfig)
 	const creating = enabledByHandler(config.creating, 'onSave')
 	const editing = enabledByHandler(config.editing, 'onSave')
 	const deleting = enabledByHandler(config.deleting, 'onDelete')

@@ -4,6 +4,7 @@ import { CellTypesProvider, mergeCellTypes } from './cell-types-context'
 import { GridComponentsProvider } from './components-context'
 import { DataGrid } from './data-grid/data-grid'
 import { useDataGridState } from './data-grid/table-context'
+import { GridFactoryDefaultsProvider } from './data-grid-options-context'
 import { createColumnHelper } from './react-columns'
 import { useDataGrid } from './use-data-grid'
 
@@ -76,13 +77,22 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 	function BoundDataGrid(props: BoundProps) {
 		return (
 			<GridComponentsProvider components={components}>
-				{cellTypes != null ? (
-					<CellTypesProvider cellTypes={cellTypes}>
+				{/*
+				 * The uncontrolled form runs `useDataGrid` inside `<DataGrid>`, out of reach of the
+				 * bound hook below, so the factory layer is published here as well. It is a context of
+				 * its own rather than a `DataGridOptionsProvider`: this provider sits *inside* whatever
+				 * the consumer put around the grid, and an app-level `DataGridOptionsProvider` must
+				 * outrank the kit's defaults, not the other way round.
+				 */}
+				<GridFactoryDefaultsProvider defaults={defaults}>
+					{cellTypes != null ? (
+						<CellTypesProvider cellTypes={cellTypes}>
+							<DataGrid {...props} />
+						</CellTypesProvider>
+					) : (
 						<DataGrid {...props} />
-					</CellTypesProvider>
-				) : (
-					<DataGrid {...props} />
-				)}
+					)}
+				</GridFactoryDefaultsProvider>
 			</GridComponentsProvider>
 		)
 	}
@@ -107,10 +117,15 @@ export function createDataGrid<TCellTypes extends CellTypeRegistry = CellTypeReg
 			: (createColumnHelper<TRow>() as unknown as ColumnHelper<TRow, TCellTypes>)
 	}
 
-	// Bind the kit-level `defaults` as the base option layer for every call. The provider
-	// wraps the DataGrid render tree, but `useDataGrid` runs in the *consumer's* tree (the caller
-	// builds the instance, then passes it to `<DataGrid table={…} />`), so factory defaults must be
-	// threaded through the hook itself rather than via a wrapping provider.
+	// Bind the kit-level `defaults` as the base option layer for every call. `BoundDataGrid`
+	// publishes the same layer to its own subtree, which is what the uncontrolled form reads;
+	// this hook covers the controlled form, where `useDataGrid` runs in the *consumer's* tree —
+	// outside that provider — because the caller builds the instance before handing it to
+	// `<DataGrid table={…} />`.
+	//
+	// A defaults-less bundle passes `undefined`, which lets the hook fall back to an ambient
+	// factory layer — reachable only from inside another bound grid, and the shared core closes
+	// that layer off before any child renders, so the fallback never picks up a foreign kit's.
 	function useDataGridWithDefaults<TRow extends object>(config: UseDataGridConfig<TRow>): DataTable<TRow> {
 		return useDataGrid<TRow>(config, defaults as DataGridDefaultOptions<TRow> | undefined)
 	}
