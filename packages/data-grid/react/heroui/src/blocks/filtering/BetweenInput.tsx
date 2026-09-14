@@ -1,11 +1,10 @@
 'use client'
 
 import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react'
-import { Button, Dropdown, Label, Popover, RangeCalendar, Slider } from '@heroui/react'
-import { parseDate } from '@internationalized/date'
+import { Button, Dropdown, Label, Popover, RangeCalendar, Slider, useLocale } from '@heroui/react'
+import { getLocalTimeZone, parseDate } from '@internationalized/date'
 import { CalendarClock, Check } from 'lucide-react'
 
-import { DateCellInput } from '../cell-types/DateCell'
 import { NumberFieldControl } from '../core/NumberField'
 
 import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
@@ -17,6 +16,18 @@ const ROW_CLASS = 'flex gap-2 items-center'
 const PRESET_TRIGGER_CLASS = 'text-xs shrink-0'
 const PRESET_CHECK_CLASS = 'ml-auto'
 const TRIGGER_CLASS = 'min-w-[12rem] text-xs'
+/**
+ * `.range-calendar` is `container-type: inline-size`, so its own width is computed as if it had no
+ * content: nothing inside can widen it, and `w-max` collapses it instead. The width has to come from
+ * the parent, which is what HeroUI's own multi-month example does with `w-full max-w-none` — two
+ * 15.75rem months plus the gap between them.
+ */
+const POPOVER_CLASS = 'w-[34rem] max-w-none'
+const CALENDAR_CLASS = 'w-full max-w-none'
+const MONTH_CLASS = 'flex-1'
+const MONTHS_CLASS = 'flex gap-6'
+const NAV_SPACER_CLASS = 'size-6'
+const MONTH_HEADING_CLASS = 'flex-none text-sm font-medium'
 const RANGE_END_CLASS = 'flex-1'
 
 function toCalendarDate(value: unknown): CalendarDate | null {
@@ -89,6 +100,118 @@ function PresetMenu({ items, onSelect, activeId }: BetweenPresetsController) {
 	)
 }
 
+/**
+ * The one control every date column gets: a trigger carrying the committed range, opening a
+ * two-month range calendar. react-aria holds the first click as an internal anchor and calls
+ * `onChange` only once the second click closes the range, so a half-drawn range never reaches the
+ * filter — the same contract the shadcn kit implements by hand.
+ */
+function DateRangeControl({ value, onChange }: Pick<BetweenInputProps, 'value' | 'onChange'>) {
+	const messages = useGridMessages()
+	const { locale } = useLocale()
+	const fromDate = toCalendarDate(value.from)
+	const toDateVal = toCalendarDate(value.to)
+	const rangeValue = fromDate && toDateVal ? { start: fromDate, end: toDateVal } : null
+	const monthFormatter = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' })
+
+	const displayLabel =
+		fromDate && toDateVal
+			? `${fromDate.toString()} – ${toDateVal.toString()}`
+			: fromDate
+				? `${fromDate.toString()} – …`
+				: toDateVal
+					? `… – ${toDateVal.toString()}`
+					: messages.cells.pickRange
+
+	return (
+		<Popover>
+			<Popover.Trigger>
+				<Button
+					variant='tertiary'
+					size='sm'
+					className={TRIGGER_CLASS}
+				>
+					<span>{displayLabel}</span>
+				</Button>
+			</Popover.Trigger>
+			<Popover.Content className={POPOVER_CLASS}>
+				<Popover.Dialog
+					aria-label={messages.filtering.dateRange}
+					className={POPOVER_CLASS}
+				>
+					<RangeCalendar
+						aria-label={messages.filtering.dateRange}
+						className={CALENDAR_CLASS}
+						value={rangeValue}
+						visibleDuration={{ months: 2 }}
+						onChange={(next) => {
+							onChange({ from: next.start.toString(), to: next.end.toString() })
+						}}
+					>
+						{/*
+						 * The render prop is how the second month gets its name. Its heading cannot be
+						 * composed — HeroUI documents an `offset` on `RangeCalendar.Heading` but 3.0.3 does
+						 * not ship it — and it cannot be derived from a controlled `focusedValue` either:
+						 * the focused date is not the start of the visible range (react-aria centres the
+						 * range, and `selectionAlignment` only applies on the first render), so headings
+						 * built from it drift a month away from the grids under them. `state.visibleRange`
+						 * is the thing the grids themselves are rendered from.
+						 */}
+						{({ state }) => (
+							<>
+								<div className={MONTHS_CLASS}>
+									<div className={MONTH_CLASS}>
+										<RangeCalendar.Header>
+											<RangeCalendar.NavButton slot='previous' />
+											<RangeCalendar.YearPickerTrigger>
+												{/* Named from `visibleRange`, like the second month: HeroUI's own heading
+												    tracks the *focused* date, which after a selection is a month ahead of
+												    the grid under it. */}
+												<RangeCalendar.YearPickerTriggerHeading>
+													{monthFormatter.format(state.visibleRange.start.toDate(getLocalTimeZone()))}
+												</RangeCalendar.YearPickerTriggerHeading>
+												<RangeCalendar.YearPickerTriggerIndicator />
+											</RangeCalendar.YearPickerTrigger>
+											<div className={NAV_SPACER_CLASS} />
+										</RangeCalendar.Header>
+										<RangeCalendar.Grid>
+											<RangeCalendar.GridHeader>
+												{(day) => <RangeCalendar.HeaderCell>{day}</RangeCalendar.HeaderCell>}
+											</RangeCalendar.GridHeader>
+											<RangeCalendar.GridBody>{(date) => <RangeCalendar.Cell date={date} />}</RangeCalendar.GridBody>
+										</RangeCalendar.Grid>
+									</div>
+									<div className={MONTH_CLASS}>
+										<RangeCalendar.Header>
+											<div className={NAV_SPACER_CLASS} />
+											<span className={MONTH_HEADING_CLASS}>
+												{monthFormatter.format(state.visibleRange.start.add({ months: 1 }).toDate(getLocalTimeZone()))}
+											</span>
+											<RangeCalendar.NavButton slot='next' />
+										</RangeCalendar.Header>
+										<RangeCalendar.Grid offset={{ months: 1 }}>
+											<RangeCalendar.GridHeader>
+												{(day) => <RangeCalendar.HeaderCell>{day}</RangeCalendar.HeaderCell>}
+											</RangeCalendar.GridHeader>
+											<RangeCalendar.GridBody>{(date) => <RangeCalendar.Cell date={date} />}</RangeCalendar.GridBody>
+										</RangeCalendar.Grid>
+									</div>
+								</div>
+								{/* The year picker replaces the month grids while open, so it sits outside both. */}
+								<RangeCalendar.YearPickerGrid>
+									<RangeCalendar.YearPickerGridBody>
+										{({ year }) => <RangeCalendar.YearPickerCell year={year} />}
+									</RangeCalendar.YearPickerGridBody>
+								</RangeCalendar.YearPickerGrid>
+							</>
+						)}
+					</RangeCalendar>
+				</Popover.Dialog>
+			</Popover.Content>
+		</Popover>
+	)
+}
+
 /** Trailing, so the menu sits next to the operator select `renderFilterInput` renders after it. */
 function withPresets(presetMenu: ReactNode | null, content: ReactNode): ReactNode {
 	if (!presetMenu) return content
@@ -103,7 +226,7 @@ function withPresets(presetMenu: ReactNode | null, content: ReactNode): ReactNod
 export function BetweenInput(props: BetweenInputProps) {
 	const messages = useGridMessages()
 	const { value, onChange } = props
-	const { branch, presets, slider, numbers, dates } = useBetweenValue(props)
+	const { branch, presets, slider, numbers } = useBetweenValue(props)
 	const presetMenu = presets ? <PresetMenu {...presets} /> : null
 
 	if (branch === BetweenBranch.Slider) {
@@ -142,82 +265,13 @@ export function BetweenInput(props: BetweenInputProps) {
 		)
 	}
 
-	if (branch === BetweenBranch.Calendar) {
-		const fromDate = toCalendarDate(value.from)
-		const toDateVal = toCalendarDate(value.to)
-		const rangeValue = fromDate && toDateVal ? { start: fromDate, end: toDateVal } : null
-		const displayLabel =
-			fromDate && toDateVal
-				? `${fromDate.toString()} – ${toDateVal.toString()}`
-				: fromDate
-					? `${fromDate.toString()} – …`
-					: toDateVal
-						? `… – ${toDateVal.toString()}`
-						: messages.cells.pickRange
-
+	if (branch === BetweenBranch.DateRange) {
 		return withPresets(
 			presetMenu,
-			<Popover>
-				<Popover.Trigger>
-					<Button
-						variant='tertiary'
-						size='sm'
-						className={TRIGGER_CLASS}
-					>
-						<span>{displayLabel}</span>
-					</Button>
-				</Popover.Trigger>
-				<Popover.Content>
-					<Popover.Dialog aria-label={messages.filtering.dateRange}>
-						<RangeCalendar
-							aria-label={messages.filtering.dateRange}
-							value={rangeValue}
-							onChange={(next) => {
-								onChange({ from: next.start.toString(), to: next.end.toString() })
-							}}
-						>
-							<RangeCalendar.Header>
-								<RangeCalendar.Heading />
-								<RangeCalendar.NavButton slot='previous' />
-								<RangeCalendar.NavButton slot='next' />
-							</RangeCalendar.Header>
-							<RangeCalendar.Grid>
-								<RangeCalendar.GridHeader>
-									{(day) => <RangeCalendar.HeaderCell>{day}</RangeCalendar.HeaderCell>}
-								</RangeCalendar.GridHeader>
-								<RangeCalendar.GridBody>{(date) => <RangeCalendar.Cell date={date} />}</RangeCalendar.GridBody>
-							</RangeCalendar.Grid>
-						</RangeCalendar>
-					</Popover.Dialog>
-				</Popover.Content>
-			</Popover>,
-		)
-	}
-
-	if (branch === BetweenBranch.DateInputs) {
-		return withPresets(
-			presetMenu,
-			<div className={ROW_CLASS}>
-				<DateCellInput
-					id='between-from'
-					value={dates.from}
-					onChange={dates.onFromChange}
-					onBlur={() => {}}
-					error={undefined}
-					errors={[]}
-					isValidating={false}
-				/>
-				<span aria-hidden>–</span>
-				<DateCellInput
-					id='between-to'
-					value={dates.to}
-					onChange={dates.onToChange}
-					onBlur={() => {}}
-					error={undefined}
-					errors={[]}
-					isValidating={false}
-				/>
-			</div>,
+			<DateRangeControl
+				value={value}
+				onChange={onChange}
+			/>,
 		)
 	}
 

@@ -122,14 +122,14 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(onPageSizeChange).toHaveBeenCalledWith(25)
 	})
 
-	it('renders BetweenInput as slider with two thumbs when variant="slider"', () => {
+	it('renders BetweenInput as a slider when the column declared a bounded domain', () => {
 		const onChange = vi.fn()
 		render(
 			<BetweenInput
 				value={{ from: 10, to: 90 }}
 				onChange={onChange}
-				variant='slider'
 				type='number'
+				slider
 				min={0}
 				max={100}
 			/>,
@@ -190,13 +190,12 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(getValueSlot().textContent).toBe('2 selected')
 	})
 
-	it('renders BetweenInput as numeric inputs when variant="inputs"', () => {
+	it('renders BetweenInput as numeric inputs by default', () => {
 		const onChange = vi.fn()
 		render(
 			<BetweenInput
 				value={{ from: 5, to: 25 }}
 				onChange={onChange}
-				variant='inputs'
 				type='number'
 			/>,
 		)
@@ -219,7 +218,6 @@ describe('@ez-kit/data-grid-heroui', () => {
 			<BetweenInput
 				value={{}}
 				onChange={vi.fn()}
-				variant='inputs'
 				type='date'
 				presets={PRESETS}
 				onPresetSelect={onPresetSelect}
@@ -241,7 +239,6 @@ describe('@ez-kit/data-grid-heroui', () => {
 			<BetweenInput
 				value={{ from: '2026-05-08', to: '2026-05-14' }}
 				onChange={vi.fn()}
-				variant='inputs'
 				type='date'
 				presets={PRESETS}
 				onPresetSelect={vi.fn()}
@@ -252,13 +249,12 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(trigger).toHaveAttribute('data-active-preset', 'last7')
 	})
 
-	it('BetweenInput renders RangeCalendar trigger when variant="calendar" and type="date"', () => {
+	it('BetweenInput renders one range trigger for a date column', () => {
 		const onChange = vi.fn()
 		render(
 			<BetweenInput
 				value={{ from: '2026-05-10', to: '2026-05-12' }}
 				onChange={onChange}
-				variant='calendar'
 				type='date'
 			/>,
 		)
