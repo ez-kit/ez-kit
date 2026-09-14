@@ -226,7 +226,7 @@ export type {
 	ChevronProps,
 	SortIndicatorProps,
 	VisibilityMenuProps,
-	ClearFiltersButtonProps,
+	ClearFilterButtonProps,
 	ConfirmDialogProps,
 	DraftBarProps,
 	EmptyStateProps,

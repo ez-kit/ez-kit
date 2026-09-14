@@ -27,7 +27,7 @@ export type DataGridClearFiltersButtonProps = {
  * when `filtering.toolbar` is truthy. Can also be placed manually via
  * `<DataGrid.ClearFiltersButton />`.
  *
- * The visual is owned by the UI kit via the `ClearFiltersButton` DI slot; the
+ * The visual is owned by the UI kit via the `ClearFilterButton` DI slot; the
  * default rendering is icon-only.
  */
 export function ClearFiltersButton({
@@ -38,7 +38,7 @@ export function ClearFiltersButton({
 	const table = useDataGridTable()
 	useDataGridState((s) => s.columnFilters)
 	useDataGridState((s) => s.globalFilter as unknown)
-	const { ClearFiltersButton: Component } = useGridComponents().filtering
+	const { ClearFilterButton: Component } = useGridComponents().filtering
 
 	const cfg = table.grid.filtering.toolbar
 

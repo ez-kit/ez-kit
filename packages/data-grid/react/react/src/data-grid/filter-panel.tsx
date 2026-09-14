@@ -164,7 +164,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	useDataGridState((s) => s.columnPinning)
 	const gridComponents = useGridComponents()
 	const { Input, Menu } = gridComponents.core
-	const { OperatorSelect, BetweenInput, MultiSelectFilter, ClearFiltersButton } = gridComponents.filtering
+	const { OperatorSelect, BetweenInput, MultiSelectFilter, ClearFilterButton } = gridComponents.filtering
 	const cellTypes = useCellTypes()
 	const filteringDebounce = table.grid.filtering.debounce
 
@@ -204,7 +204,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 			cellTypes,
 			OperatorSelect,
 			Menu,
-			ClearFiltersButton,
+			ClearFilterButton,
 			BetweenInput,
 			MultiSelectFilter,
 			debounce: filteringDebounce,

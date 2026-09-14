@@ -4,9 +4,9 @@ import { FilterX } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
 
-import type { ClearFiltersButtonProps } from '@ez-kit/data-grid-react'
+import type { ClearFilterButtonProps } from '@ez-kit/data-grid-react'
 
-export function ClearFiltersButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
+export function ClearFilterButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFilterButtonProps) {
 	// Icon-only is the default; own children make it a labelled button, so it stops being a square.
 	const isIconOnly = children === undefined
 	return (
@@ -14,7 +14,7 @@ export function ClearFiltersButton({ disabled, onClick, children, 'aria-label': 
 			type='button'
 			variant='ghost'
 			size={isIconOnly ? 'icon' : 'sm'}
-			data-slot='clear-filters-button'
+			data-slot='clear-filter-button'
 			aria-label={ariaLabel}
 			disabled={disabled}
 			onClick={onClick}

@@ -10,7 +10,7 @@ import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridMenuProps } from '../menu'
 import type {
 	BetweenInputProps,
-	ClearFiltersButtonProps,
+	ClearFilterButtonProps,
 	InputProps,
 	MultiSelectFilterProps,
 	OperatorSelectProps,
@@ -43,7 +43,7 @@ export type RenderFilterInputArgs = {
 	 * The kit's clear button. It serves the toolbar's clear-all and, here, one column's filter —
 	 * what it clears is `onClick`'s business, and the label tells the two apart.
 	 */
-	ClearFiltersButton: ComponentType<ClearFiltersButtonProps>
+	ClearFilterButton: ComponentType<ClearFilterButtonProps>
 	BetweenInput: ComponentType<BetweenInputProps>
 	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
 	/**
@@ -149,7 +149,7 @@ export function renderFilterInput({
 	cellTypes,
 	OperatorSelect,
 	Menu,
-	ClearFiltersButton,
+	ClearFilterButton,
 	BetweenInput,
 	MultiSelectFilter,
 	debounce: tableDebounce,
@@ -255,7 +255,7 @@ export function renderFilterInput({
 		// which on a narrow range leaves the grid empty with no way out of it.
 		const clearButton =
 			inputValue === undefined || inputValue === '' ? null : (
-				<ClearFiltersButton
+				<ClearFilterButton
 					disabled={false}
 					onClick={() => {
 						header.column.setFilterValue(undefined)

@@ -88,7 +88,7 @@ export const FEATURE_COMPONENTS = {
 		'FilterPanel',
 		'FilterPanelChip',
 		'FilterChip',
-		'ClearFiltersButton',
+		'ClearFilterButton',
 		'GlobalFilterInput',
 		'OperatorSelect',
 		'BetweenInput',

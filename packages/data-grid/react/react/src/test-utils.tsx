@@ -17,7 +17,7 @@ import type {
 	CheckboxProps,
 	VisibilityMenuProps,
 	ConfirmDialogProps,
-	ClearFiltersButtonProps,
+	ClearFilterButtonProps,
 	DraftBarProps,
 	EmptyStateProps,
 	FilterChipProps,
@@ -576,11 +576,11 @@ function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipPro
 		</span>
 	)
 }
-function TestClearFiltersButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
+function TestClearFilterButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFilterButtonProps) {
 	return (
 		<button
 			type='button'
-			data-slot='clear-filters-button'
+			data-slot='clear-filter-button'
 			aria-label={ariaLabel}
 			disabled={disabled}
 			onClick={onClick}
@@ -787,7 +787,7 @@ export const testComponents: FullGridComponents = {
 		FilterPanel: TestFilterPanel,
 		FilterPanelChip: TestFilterPanelChip,
 		FilterChip: TestFilterChip,
-		ClearFiltersButton: TestClearFiltersButton,
+		ClearFilterButton: TestClearFilterButton,
 		GlobalFilterInput: ({ value, onChange, placeholder, onKeyDown }) => (
 			<input
 				data-slot='global-filter-input'
