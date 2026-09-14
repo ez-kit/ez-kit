@@ -1,11 +1,12 @@
 import { BetweenInputType } from '@ez-kit/data-grid-core'
 
 import type { BetweenInputProps } from '../types'
-import type { BetweenValue, DateRangePreset } from '@ez-kit/data-grid-core'
+import type { BetweenValue } from '@ez-kit/data-grid-core'
 
 /**
- * Which shape the between-filter renders. Derived from `variant` + `type` in one place so
- * every UI kit branches identically — the dispatch order is part of the behaviour, not styling.
+ * Which shape the between-filter renders. Derived from the column's value type and its slider
+ * bounds in one place, so every UI kit branches identically — the dispatch is behaviour, not
+ * styling.
  */
 export const BetweenBranch = {
 	/** A two-handle range slider. Number columns that declared a bounded domain. */
@@ -20,17 +21,6 @@ export type BetweenBranch = (typeof BetweenBranch)[keyof typeof BetweenBranch]
 
 /** Empty string, not `undefined` — a controlled `<input type='number'>` needs a defined value. */
 const EMPTY_INPUT = ''
-
-export type BetweenPresetsController = {
-	items: DateRangePreset[]
-	onSelect: (preset: DateRangePreset) => void
-	/**
-	 * Id of the preset whose range the filter currently holds, or `null` when the range was
-	 * typed by hand, is half-set, or matches none. Kits name the trigger after it and tick the
-	 * matching entry — computed here so the two kits cannot disagree on what "active" means.
-	 */
-	activeId: string | null
-}
 
 export type BetweenSliderController = {
 	min: number
@@ -53,8 +43,6 @@ export type BetweenNumberController = {
 
 export type BetweenController = {
 	branch: BetweenBranch
-	/** `null` when the column configures no presets — the kit then renders no preset menu. */
-	presets: BetweenPresetsController | null
 	slider: BetweenSliderController
 	numbers: BetweenNumberController
 }
@@ -80,21 +68,6 @@ function toNumberInputValue(value: unknown): number | typeof EMPTY_INPUT {
 	return typeof value === 'number' && !Number.isNaN(value) ? value : EMPTY_INPUT
 }
 
-/**
- * Which preset the current range came from, by value rather than by memory of the last click:
- * a range the user then edited by hand stops being "Last 7 days", and one restored from a deep
- * link is recognised without any click having happened in this session.
- */
-function findActivePreset(items: DateRangePreset[], value: BetweenValue): string | null {
-	if (value.from === undefined || value.to === undefined) return null
-	return (
-		items.find((preset) => {
-			const range = preset.getRange()
-			return range.from === value.from && range.to === value.to
-		})?.id ?? null
-	)
-}
-
 function readNumericPair(next: unknown): [number, number] | null {
 	if (!Array.isArray(next)) return null
 	const [from, to] = next as unknown[]
@@ -104,7 +77,7 @@ function readNumericPair(next: unknown): [number, number] | null {
 
 /**
  * Everything a `BetweenInput` needs that is not a visual choice: which branch to render,
- * the slider's resolved bounds, `NaN`-safe number handlers, and the preset gate.
+ * the slider's resolved bounds, and `NaN`-safe number handlers.
  *
  * Lives here rather than in each kit because these are the parts that silently drifted when
  * they were copied — the shadcn flavour had lost `min`/`max` on its number inputs entirely.
@@ -113,16 +86,7 @@ function readNumericPair(next: unknown): [number, number] | null {
  * (`Date` + date-fns vs `CalendarDate` + `@internationalized/date`), so there is nothing
  * kit-agnostic to share there.
  */
-export function useBetweenValue({
-	value,
-	onChange,
-	type,
-	slider,
-	min,
-	max,
-	presets,
-	onPresetSelect,
-}: BetweenInputProps): BetweenController {
+export function useBetweenValue({ value, onChange, type, slider, min, max }: BetweenInputProps): BetweenController {
 	// `resolveBranch` only returns `Slider` when both bounds are defined, so these fallbacks are
 	// unreachable on that branch. They exist so the controller can state `min` / `max` as `number`
 	// for the kits, which read them off every branch.
@@ -135,10 +99,6 @@ export function useBetweenValue({
 
 	return {
 		branch: resolveBranch(type, slider, min, max),
-		presets:
-			presets && presets.length > 0 && onPresetSelect
-				? { items: presets, onSelect: onPresetSelect, activeId: findActivePreset(presets, value) }
-				: null,
 		slider: {
 			min: sliderMin,
 			max: sliderMax,

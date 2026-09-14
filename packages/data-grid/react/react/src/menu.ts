@@ -83,6 +83,12 @@ export const GridMenuVariant = {
 	Column: 'column',
 	/** Row overflow — a trigger matching the inline row action buttons. */
 	Row: 'row',
+	/**
+	 * Beside a filter control — a trigger sized to the filter row, carrying
+	 * {@link GridMenuProps.triggerIcon} and, when the menu has a current choice,
+	 * {@link GridMenuProps.triggerLabel} beside it.
+	 */
+	Filter: 'filter',
 } as const
 
 export type GridMenuVariant = (typeof GridMenuVariant)[keyof typeof GridMenuVariant]
@@ -91,6 +97,17 @@ export type GridMenuProps = {
 	variant: GridMenuVariant
 	/** Already filtered: a section reaches the kit only when it has entries. */
 	sections: GridMenuSection[]
+	/**
+	 * What the trigger names, when the menu has a current choice worth showing without opening it
+	 * — the date preset a filter came from, say. Absent means the trigger is its glyph alone.
+	 *
+	 * A kit that renders this must drop its `aria-label` in favour of it: an `aria-label` overrides
+	 * the visible text as the accessible name, which would leave the trigger reading one thing and
+	 * announcing another.
+	 */
+	triggerLabel?: string
+	/** Glyph the trigger carries. Kits map it through the same icon vocabulary as the entries. */
+	triggerIcon?: GridMenuIcon
 	'aria-label': string
 }
 

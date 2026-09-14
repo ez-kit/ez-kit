@@ -231,6 +231,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 				Input,
 				cellTypes,
 				OperatorSelect,
+				Menu,
 				BetweenInput,
 				MultiSelectFilter,
 				debounce: table.grid.filtering.debounce,

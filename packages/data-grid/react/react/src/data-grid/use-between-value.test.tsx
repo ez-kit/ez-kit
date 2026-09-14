@@ -5,8 +5,6 @@ import { BetweenBranch, useBetweenValue } from './use-between-value'
 
 import type { BetweenInputProps } from '../types'
 
-const PRESETS = [{ id: 'last-7', label: 'Last 7 days', getRange: () => ({ from: 'a', to: 'b' }) }]
-
 function setup(overrides: Partial<BetweenInputProps> = {}) {
 	const onChange = vi.fn()
 	const props: BetweenInputProps = {
@@ -94,46 +92,5 @@ describe('number inputs', () => {
 		const { controller, onChange } = setup({ value: { from: 3, to: 9 } })
 		controller.numbers.onToChange(12)
 		expect(onChange).toHaveBeenCalledWith({ from: 3, to: 12 })
-	})
-})
-
-describe('presets', () => {
-	it('is null when the column configures none', () => {
-		expect(setup().controller.presets).toBeNull()
-		expect(setup({ presets: [] }).controller.presets).toBeNull()
-	})
-
-	it('is null when presets exist but nothing handles a selection', () => {
-		expect(setup({ presets: PRESETS }).controller.presets).toBeNull()
-	})
-
-	it('exposes the presets once both halves are configured', () => {
-		const onPresetSelect = vi.fn()
-		const { controller } = setup({ presets: PRESETS, onPresetSelect })
-		expect(controller.presets?.items).toBe(PRESETS)
-		expect(controller.presets?.onSelect).toBe(onPresetSelect)
-	})
-
-	it('has no active preset while the range is unset', () => {
-		const { controller } = setup({ presets: PRESETS, onPresetSelect: vi.fn() })
-		expect(controller.presets?.activeId).toBeNull()
-	})
-
-	it('names the preset whose range the current value equals', () => {
-		const { controller } = setup({
-			presets: PRESETS,
-			onPresetSelect: vi.fn(),
-			value: { from: 'a', to: 'b' },
-		})
-		expect(controller.presets?.activeId).toBe('last-7')
-	})
-
-	it('has no active preset when only one end matches', () => {
-		const { controller } = setup({
-			presets: PRESETS,
-			onPresetSelect: vi.fn(),
-			value: { from: 'a', to: 'other' },
-		})
-		expect(controller.presets?.activeId).toBeNull()
 	})
 })

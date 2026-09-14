@@ -177,14 +177,18 @@ function TestResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerProps)
  * can click "Pin Top" without first driving a popover. The trigger is still rendered so tests
  * can assert the menu exists at all.
  */
-function TestMenu({ sections, 'aria-label': ariaLabel }: GridMenuProps) {
+function TestMenu({ sections, triggerLabel, 'aria-label': ariaLabel }: GridMenuProps) {
 	return (
 		<div style={{ display: 'inline-flex' }}>
+			{/* Entries render unconditionally — this double has no open state — so a test reads them
+			    without driving a popover. `triggerLabel` is what the trigger shows when the menu has a
+			    current choice, and then it is the trigger's accessible name too. */}
 			<button
 				type='button'
-				aria-label={ariaLabel}
+				data-slot='menu-trigger'
+				{...(triggerLabel === undefined ? { 'aria-label': ariaLabel } : {})}
 			>
-				⋮
+				{triggerLabel ?? '⋮'}
 			</button>
 			{sections.flatMap((section) =>
 				section.items.map((item) =>
@@ -400,7 +404,7 @@ function TestOperatorSelect({ operators, currentOperatorId, onChange }: Operator
 		</select>
 	)
 }
-function TestBetweenInput({ value, onChange, type, slider, presets, onPresetSelect }: BetweenInputProps) {
+function TestBetweenInput({ value, onChange, type, slider }: BetweenInputProps) {
 	const inputType = type === 'number' ? 'number' : 'date'
 	const inputs = (
 		// `data-slider` is how a test observes that the column's slider flag reached the kit: this
@@ -440,28 +444,7 @@ function TestBetweenInput({ value, onChange, type, slider, presets, onPresetSele
 			/>
 		</div>
 	)
-	if (!presets || presets.length === 0 || !onPresetSelect) return inputs
-	return (
-		<div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-			<div
-				data-slot='between-presets'
-				style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}
-			>
-				{presets.map((p) => (
-					<button
-						key={p.id}
-						type='button'
-						onClick={() => {
-							onPresetSelect(p)
-						}}
-					>
-						{p.label}
-					</button>
-				))}
-			</div>
-			{inputs}
-		</div>
-	)
+	return inputs
 }
 function TestMultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
 	const toggle = (value: string): void => {

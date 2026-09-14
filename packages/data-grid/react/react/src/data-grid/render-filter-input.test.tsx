@@ -1,6 +1,6 @@
 import { createTable, createColumns } from '@ez-kit/data-grid-core'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
 import { prepareDataGridTable } from '../prepare-table'
@@ -117,10 +117,8 @@ const DATE_COLUMNS_WITH_PRESETS = createColumns<DateRow>([
 		header: 'Joined',
 		cell: { type: 'date' },
 		filtering: {
-			operators: {
-				items: ['equals', 'between'],
-				betweenOperator: { presets: true },
-			},
+			presets: true,
+			operators: { items: ['equals', 'between'] },
 			defaultOperator: 'between',
 		},
 	},
@@ -138,18 +136,46 @@ function setupDate(): DataTable<DateRow> {
 	return table
 }
 
-describe('renderFilterInput — between preset row (date)', () => {
-	it('renders built-in preset buttons when betweenOperator.presets: true on a date column', () => {
+/** The operator control is an unlabelled `<select>` in the test kit — the date column has one. */
+function selectOperator(operatorId: string): void {
+	const [select] = screen.getAllByRole('combobox')
+	if (!select) throw new Error('expected an operator select')
+	fireEvent.change(select, { target: { value: operatorId } })
+}
+
+describe('renderFilterInput — date presets', () => {
+	it('offers the built-in ranges to between', () => {
 		setupDate()
-		// Built-in DATE_RANGE_PRESETS includes "Today" and "This month".
+
 		expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument()
 		expect(screen.getByRole('button', { name: 'This month' })).toBeInTheDocument()
+		// A single-date preset means nothing to `between`.
+		expect(screen.queryByRole('button', { name: 'A week ago' })).not.toBeInTheDocument()
 	})
 
-	it('clicking a preset dispatches setFilterValue with the resolved range', () => {
+	it('offers the single dates to an operator that takes one value', () => {
+		setupDate()
+		selectOperator('equals')
+
+		expect(screen.getByRole('button', { name: 'A week ago' })).toBeInTheDocument()
+		// A range means nothing to an operator that compares against one date.
+		expect(screen.queryByRole('button', { name: 'This month' })).not.toBeInTheDocument()
+	})
+
+	it('writes the date itself when a single-date preset is picked', () => {
 		const table = setupDate()
-		const todayBtn = screen.getByRole('button', { name: 'Today' })
-		fireEvent.click(todayBtn)
+		selectOperator('equals')
+
+		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
+
+		const filterValue = table.getColumn('joinedAt')?.getFilterValue() as StructuredFilterValue | undefined
+		expect(filterValue?.operator).toBe('equals')
+		expect(filterValue?.value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+	})
+
+	it('clicking a range preset dispatches setFilterValue with the resolved range', () => {
+		const table = setupDate()
+		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
 
 		const filterValue = table.getColumn('joinedAt')?.getFilterValue() as StructuredFilterValue | undefined
 		expect(filterValue?.operator).toBe('between')
@@ -195,5 +221,21 @@ describe('renderFilterInput — between slider flag (number)', () => {
 	it('omits the slider flag when the column did not ask for one', () => {
 		setupNumber({ min: 0, max: 100 })
 		expect(document.querySelector('[data-slider]')).toBeNull()
+	})
+})
+
+describe('renderFilterInput — cell-type filter renderer', () => {
+	it('mounts the renderer instead of calling it, so switching operators keeps hooks in order', () => {
+		// `flexRender` exists for exactly this: a renderer invoked as `Comp(props)` smuggles its
+		// hooks into the header cell's fiber, and swapping one renderer for another — which is what
+		// changing the operator does — reorders them. React only says so through `console.error`.
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+		setupDate()
+		selectOperator('equals')
+		selectOperator('between')
+
+		expect(error).not.toHaveBeenCalled()
+		error.mockRestore()
 	})
 })

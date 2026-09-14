@@ -2,8 +2,10 @@ import type { GridMenuItem, GridMenuProps } from './menu'
 import type {
 	BetweenInputType,
 	BetweenValue,
-	ColumnPinSide,
+	DatePreset,
 	DateRangePreset,
+	DateValuePreset,
+	ColumnPinSide,
 	FilterOperatorDef,
 	LoadMoreDirection,
 	FilterItem,
@@ -450,13 +452,9 @@ export type BetweenInputProps = {
 	slider?: boolean | undefined
 	min?: number
 	max?: number
-	/** Preset list to offer beside the control. Already resolved by the adapter. */
-	presets?: DateRangePreset[]
-	/** Called when the user picks a preset. Adapter wires it to setFilterValue with the preset's range. */
-	onPresetSelect?: (preset: DateRangePreset) => void
 }
 
-export type { DateRangePreset, FilterItem }
+export type { DatePreset, DateRangePreset, DateValuePreset, FilterItem }
 
 export type MultiSelectFilterProps = {
 	/** The values on offer. Counts (when present) come from faceted unique values. */

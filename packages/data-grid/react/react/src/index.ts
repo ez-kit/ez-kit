@@ -99,12 +99,7 @@ export type { PageWindowInput, PageWindowItem } from './data-grid/page-window'
 
 // Between-filter controller (shared by every UI kit — behaviour, not styling)
 export { useBetweenValue, BetweenBranch } from './data-grid/use-between-value'
-export type {
-	BetweenController,
-	BetweenNumberController,
-	BetweenPresetsController,
-	BetweenSliderController,
-} from './data-grid/use-between-value'
+export type { BetweenController, BetweenNumberController, BetweenSliderController } from './data-grid/use-between-value'
 
 // Multi-select filter trigger label (shared by every UI kit — content, not styling)
 export { buildMultiSelectLabel } from './data-grid/multi-select-label'
