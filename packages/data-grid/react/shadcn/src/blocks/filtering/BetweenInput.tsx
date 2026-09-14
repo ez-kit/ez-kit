@@ -10,10 +10,7 @@ import { Input } from '@grid-shadcn/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@grid-shadcn/components/ui/popover'
 import { Slider } from '@grid-shadcn/components/ui/slider'
 
-import { DateCellInput } from '../cell-types/DateCell'
-
-import type { BetweenInputProps, BetweenPresetsController } from '@ez-kit/data-grid-react'
-import type { ReactNode } from 'react'
+import type { BetweenInputProps } from '@ez-kit/data-grid-react'
 import type { DateRange } from 'react-day-picker'
 
 const ISO_DATE_FORMAT = 'yyyy-MM-dd'
@@ -24,40 +21,6 @@ function toDate(value: unknown): Date | undefined {
 	if (typeof value !== 'string' || !value) return undefined
 	const d = parseISO(value)
 	return isValid(d) ? d : undefined
-}
-
-function PresetRow({ items, onSelect }: BetweenPresetsController) {
-	return (
-		<div
-			data-slot='between-presets'
-			className='flex flex-wrap gap-1'
-		>
-			{items.map((p) => (
-				<Button
-					key={p.id}
-					type='button'
-					variant='secondary'
-					size='sm'
-					className='h-6 px-2 text-xs'
-					onClick={() => {
-						onSelect(p)
-					}}
-				>
-					{p.label}
-				</Button>
-			))}
-		</div>
-	)
-}
-
-function withPresets(presetRow: ReactNode | null, content: ReactNode): ReactNode {
-	if (!presetRow) return content
-	return (
-		<div className='flex flex-col gap-2'>
-			{presetRow}
-			{content}
-		</div>
-	)
 }
 
 /**
@@ -146,12 +109,10 @@ function CalendarRange({ value, onChange }: Pick<BetweenInputProps, 'value' | 'o
 export function BetweenInput(props: BetweenInputProps) {
 	const messages = useGridMessages()
 	const { value, onChange } = props
-	const { branch, presets, slider, numbers, dates } = useBetweenValue(props)
-	const presetRow = presets ? <PresetRow {...presets} /> : null
+	const { branch, slider, numbers } = useBetweenValue(props)
 
 	if (branch === BetweenBranch.Slider) {
-		return withPresets(
-			presetRow,
+		return (
 			<div className='flex items-center gap-2 px-1'>
 				<span className='min-w-[2ch] text-right text-xs tabular-nums'>{slider.values[0]}</span>
 				<Slider
@@ -162,49 +123,20 @@ export function BetweenInput(props: BetweenInputProps) {
 					className='w-24'
 				/>
 				<span className='min-w-[2ch] text-xs tabular-nums'>{slider.values[1]}</span>
-			</div>,
+			</div>
 		)
 	}
 
-	if (branch === BetweenBranch.Calendar) {
-		return withPresets(
-			presetRow,
+	if (branch === BetweenBranch.DateRange) {
+		return (
 			<CalendarRange
 				value={value}
 				onChange={onChange}
-			/>,
+			/>
 		)
 	}
 
-	if (branch === BetweenBranch.DateInputs) {
-		return withPresets(
-			presetRow,
-			<div className='flex items-center gap-1'>
-				<DateCellInput
-					id='between-from'
-					value={dates.from}
-					onChange={dates.onFromChange}
-					onBlur={() => {}}
-					error={undefined}
-					errors={[]}
-					isValidating={false}
-				/>
-				<span className='text-muted-foreground text-xs'>–</span>
-				<DateCellInput
-					id='between-to'
-					value={dates.to}
-					onChange={dates.onToChange}
-					onBlur={() => {}}
-					error={undefined}
-					errors={[]}
-					isValidating={false}
-				/>
-			</div>,
-		)
-	}
-
-	return withPresets(
-		presetRow,
+	return (
 		<div className='flex items-center gap-1'>
 			<Input
 				type='number'
@@ -229,6 +161,6 @@ export function BetweenInput(props: BetweenInputProps) {
 					numbers.onToChange(e.target.valueAsNumber)
 				}}
 			/>
-		</div>,
+		</div>
 	)
 }

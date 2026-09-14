@@ -23,7 +23,7 @@ const DANGER_ICON_STYLE: CSSProperties = { display: 'contents', color: 'var(--da
  * `Dropdown.Item` carries an explicit `id`, so React can never reconcile one entry's fiber
  * onto another's.
  */
-export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuProps) {
+export function Menu({ variant, sections, triggerLabel, triggerIcon, 'aria-label': ariaLabel }: GridMenuProps) {
 	const flat: GridMenuItem[] = sections.flatMap((section) => section.items)
 
 	const onAction = (key: Key) => {
@@ -35,7 +35,23 @@ export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuPro
 
 	return (
 		<Dropdown>
-			{variant === GridMenuVariant.Column ? (
+			{variant === GridMenuVariant.Filter ? (
+				/*
+				 * Sized to the filter row, beside the control it fills. A direct child of `Dropdown`,
+				 * like the row trigger below — `Dropdown.Trigger` would wrap it in a second `<button>`.
+				 * `aria-label` is dropped once the trigger carries a label: it would override the
+				 * visible text as the accessible name.
+				 */
+				<Button
+					variant='tertiary'
+					size='sm'
+					className='text-xs shrink-0'
+					{...(triggerLabel === undefined ? { 'aria-label': ariaLabel } : {})}
+				>
+					{triggerIcon ? renderGridMenuIcon(triggerIcon) : null}
+					{triggerLabel === undefined ? null : <span>{triggerLabel}</span>}
+				</Button>
+			) : variant === GridMenuVariant.Column ? (
 				<Dropdown.Trigger>
 					<span
 						aria-label={ariaLabel}

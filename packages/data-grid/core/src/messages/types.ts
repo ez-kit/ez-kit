@@ -171,6 +171,8 @@ export type GridMessages = {
 		range: string
 		/** Accessible name of a date-range filter. */
 		dateRange: string
+		/** Accessible name of the date-range preset menu, and its trigger while none is active. */
+		presets: string
 		/** Placeholder of the search box inside a multi-select filter. */
 		search: string
 		/** Shown when a multi-select filter's search matches nothing. */
@@ -300,8 +302,15 @@ export type GridMessages = {
 		multi: Record<'in' | 'notIn', string>
 		/** The emptiness pair, shared by every cell type's default set. */
 		empty: Record<'isEmpty' | 'isNotEmpty', string>
-		/** The date-range presets offered beside a `between` date filter. */
-		presets: Record<'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth', string>
+		/**
+		 * The date presets offered beside a date filter. The first six are ranges, for `between`;
+		 * the last three are single dates, for the operators that take one (`equals`, `lessThan`,
+		 * `greaterThan`, …). `today` and `yesterday` serve both — a one-day range and the day itself.
+		 */
+		presets: Record<
+			'today' | 'yesterday' | 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'weekAgo' | 'monthAgo' | 'startOfMonth',
+			string
+		>
 	}
 	/** Loading / empty / no-results states and the infinite-scroll row. */
 	fallbacks: {

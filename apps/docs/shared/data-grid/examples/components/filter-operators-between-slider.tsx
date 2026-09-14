@@ -18,7 +18,7 @@ const columns = createColumns<Employee>([
 		filtering: {
 			operators: {
 				items: ['equals', 'between'],
-				betweenOperator: { variant: 'slider', min: SALARY_SLIDER_MIN, max: SALARY_SLIDER_MAX },
+				betweenOperator: { slider: true, min: SALARY_SLIDER_MIN, max: SALARY_SLIDER_MAX },
 			},
 		},
 	},

@@ -6,6 +6,7 @@ import {
 	ArrowRight,
 	ArrowUp,
 	ArrowUpToLine,
+	CalendarClock,
 	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
@@ -38,6 +39,7 @@ export const GRID_MENU_ICONS: Record<GridMenuIcon, ReactNode> = {
 	[GridMenuIcon.Unpin]: <PinOff size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.SortAsc]: <ArrowUp size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.SortDesc]: <ArrowDown size={MENU_ICON_SIZE} />,
+	[GridMenuIcon.Calendar]: <CalendarClock size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.ClearSort]: <X size={MENU_ICON_SIZE} />,
 	[GridMenuIcon.Hide]: <EyeOff size={MENU_ICON_SIZE} />,
 	// Chevrons, not the plain arrows: those already mean pinning in this menu.

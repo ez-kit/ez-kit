@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	BetweenInputType,
-	BetweenInputVariant,
 	GridDirection,
 	ColumnResizeMode,
 	ColumnSortUndefined,
@@ -70,7 +69,6 @@ describe('closed sets keep the bare-string form valid for consumers', () => {
 		expect(FilterChipKind.Global).toBe('global')
 		expect(FilteringVariant.Popover).toBe('popover')
 		expect(FilterChipsPosition.Below).toBe('below')
-		expect(BetweenInputVariant.Slider).toBe('slider')
 		expect(BetweenInputType.Date).toBe('date')
 	})
 

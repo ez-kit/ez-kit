@@ -17,7 +17,7 @@ import type {
 	CheckboxProps,
 	VisibilityMenuProps,
 	ConfirmDialogProps,
-	ClearFiltersButtonProps,
+	ClearFilterButtonProps,
 	DraftBarProps,
 	EmptyStateProps,
 	FilterChipProps,
@@ -190,14 +190,18 @@ function TestResizer({ onMouseDown, onTouchStart, onDoubleClick }: ResizerProps)
  * can click "Pin Top" without first driving a popover. The trigger is still rendered so tests
  * can assert the menu exists at all.
  */
-function TestMenu({ sections, 'aria-label': ariaLabel }: GridMenuProps) {
+function TestMenu({ sections, triggerLabel, 'aria-label': ariaLabel }: GridMenuProps) {
 	return (
 		<div style={{ display: 'inline-flex' }}>
+			{/* Entries render unconditionally — this double has no open state — so a test reads them
+			    without driving a popover. `triggerLabel` is what the trigger shows when the menu has a
+			    current choice, and then it is the trigger's accessible name too. */}
 			<button
 				type='button'
-				aria-label={ariaLabel}
+				data-slot='menu-trigger'
+				{...(triggerLabel === undefined ? { 'aria-label': ariaLabel } : {})}
 			>
-				⋮
+				{triggerLabel ?? '⋮'}
 			</button>
 			{sections.flatMap((section) =>
 				section.items.map((item) =>
@@ -413,10 +417,15 @@ function TestOperatorSelect({ operators, currentOperatorId, onChange }: Operator
 		</select>
 	)
 }
-function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: BetweenInputProps) {
+function TestBetweenInput({ value, onChange, type, slider }: BetweenInputProps) {
 	const inputType = type === 'number' ? 'number' : 'date'
 	const inputs = (
-		<div style={{ display: 'flex', gap: '4px' }}>
+		// `data-slider` is how a test observes that the column's slider flag reached the kit: this
+		// double renders two fields either way.
+		<div
+			data-slider={slider === true ? 'true' : undefined}
+			style={{ display: 'flex', gap: '4px' }}
+		>
 			<input
 				type={inputType}
 				placeholder='From'
@@ -448,28 +457,7 @@ function TestBetweenInput({ value, onChange, type, presets, onPresetSelect }: Be
 			/>
 		</div>
 	)
-	if (!presets || presets.length === 0 || !onPresetSelect) return inputs
-	return (
-		<div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-			<div
-				data-slot='between-presets'
-				style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}
-			>
-				{presets.map((p) => (
-					<button
-						key={p.id}
-						type='button'
-						onClick={() => {
-							onPresetSelect(p)
-						}}
-					>
-						{p.label}
-					</button>
-				))}
-			</div>
-			{inputs}
-		</div>
-	)
+	return inputs
 }
 function TestMultiSelectFilter({ items, selectedValues, onChange, placeholder }: MultiSelectFilterProps) {
 	const toggle = (value: string): void => {
@@ -601,11 +589,11 @@ function TestFilterChip({ label, value, onRemove, kind, isDraft }: FilterChipPro
 		</span>
 	)
 }
-function TestClearFiltersButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFiltersButtonProps) {
+function TestClearFilterButton({ disabled, onClick, children, 'aria-label': ariaLabel }: ClearFilterButtonProps) {
 	return (
 		<button
 			type='button'
-			data-slot='clear-filters-button'
+			data-slot='clear-filter-button'
 			aria-label={ariaLabel}
 			disabled={disabled}
 			onClick={onClick}
@@ -812,7 +800,7 @@ export const testComponents: FullGridComponents = {
 		FilterPanel: TestFilterPanel,
 		FilterPanelChip: TestFilterPanelChip,
 		FilterChip: TestFilterChip,
-		ClearFiltersButton: TestClearFiltersButton,
+		ClearFilterButton: TestClearFilterButton,
 		GlobalFilterInput: ({ value, onChange, placeholder, onKeyDown }) => (
 			<input
 				data-slot='global-filter-input'

@@ -20,7 +20,7 @@ import { LoadingRow } from './blocks/fallbacks/LoadingRow'
 import { NoResultsState } from './blocks/fallbacks/NoResultsState'
 import { RefetchOverlay } from './blocks/fallbacks/RefetchOverlay'
 import { BetweenInput } from './blocks/filtering/BetweenInput'
-import { ClearFiltersButton } from './blocks/filtering/ClearFiltersButton'
+import { ClearFilterButton } from './blocks/filtering/ClearFilterButton'
 import { FilterChip } from './blocks/filtering/FilterChip'
 import { FilterPanel } from './blocks/filtering/FilterPanel'
 import { FilterPanelChip } from './blocks/filtering/FilterPanelChip'
@@ -50,7 +50,7 @@ const components = {
 		FilterPanel,
 		FilterPanelChip,
 		FilterChip,
-		ClearFiltersButton,
+		ClearFilterButton,
 		GlobalFilterInput,
 		OperatorSelect,
 		BetweenInput,

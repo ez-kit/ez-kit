@@ -231,6 +231,7 @@ export const GRID_TYPE = {
 	ColumnOperatorsConfig: { module: TypeModule.Core, name: 'ColumnOperatorsConfig' },
 	TableOperatorsConfig: { module: TypeModule.Core, name: 'TableOperatorsConfig' },
 	BetweenOperatorConfig: { module: TypeModule.Core, name: 'BetweenOperatorConfig' },
+	DateValuePreset: { module: TypeModule.Core, name: 'DateValuePreset' },
 	FilterOperatorDef: { module: TypeModule.Core, name: 'FilterOperatorDef' },
 	DateRangePreset: { module: TypeModule.Core, name: 'DateRangePreset' },
 	DateCellConfig: { module: TypeModule.Core, name: 'DateCellConfig' },
@@ -780,8 +781,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.FilteringDateRange,
 		optionTables: [
-			{ heading: '`betweenOperator`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 2 },
+			{ heading: '`filtering.presets`', roots: [GRID_TYPE.ColumnFilteringConfig], expectedCount: 1 },
 			{ heading: '`DateRangePreset`', roots: [GRID_TYPE.DateRangePreset], expectedCount: 3 },
+			{ heading: '`DateValuePreset`', roots: [GRID_TYPE.DateValuePreset], expectedCount: 3 },
 			{
 				heading: '`cell` (date)',
 				roots: [GRID_TYPE.DateCellConfig],
@@ -828,7 +830,7 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 		optionTables: [
 			{ heading: '`TableOperatorsConfig`', roots: [GRID_TYPE.TableOperatorsConfig], expectedCount: 1 },
 			{ heading: '`ColumnOperatorsConfig`', roots: [GRID_TYPE.ColumnOperatorsConfig], expectedCount: 2 },
-			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 4 },
+			{ heading: '`BetweenOperatorConfig`', roots: [GRID_TYPE.BetweenOperatorConfig], expectedCount: 3 },
 			{ heading: '`FilterOperatorDef`', roots: [GRID_TYPE.FilterOperatorDef], expectedCount: 4 },
 		],
 		nonOptionTables: [

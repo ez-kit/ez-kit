@@ -1,7 +1,7 @@
-import { GridMenuVariant } from '@ez-kit/data-grid-react'
+import { GridMenuIcon, GridMenuVariant } from '@ez-kit/data-grid-react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { Menu } from './Menu'
 
@@ -78,5 +78,64 @@ describe('heroui Menu', () => {
 			'Delete',
 			'Pin Top',
 		])
+	})
+})
+
+describe('Menu — filter variant', () => {
+	const SECTIONS = [
+		{
+			id: 'date-presets',
+			items: [
+				{ id: 'today', label: 'Today', onAction: vi.fn() },
+				{ id: 'weekAgo', label: 'A week ago', onAction: vi.fn() },
+			],
+		},
+	]
+
+	it('names the trigger by its aria-label while nothing is chosen', () => {
+		render(
+			<Menu
+				variant={GridMenuVariant.Filter}
+				sections={SECTIONS}
+				triggerIcon={GridMenuIcon.Calendar}
+				aria-label='Quick ranges'
+			/>,
+		)
+
+		expect(screen.getByRole('button', { name: 'Quick ranges' })).toBeInTheDocument()
+	})
+
+	it('names the trigger by the current choice once it has one', () => {
+		render(
+			<Menu
+				variant={GridMenuVariant.Filter}
+				sections={SECTIONS}
+				triggerIcon={GridMenuIcon.Calendar}
+				triggerLabel='A week ago'
+				aria-label='Quick ranges'
+			/>,
+		)
+
+		// The visible label wins: an `aria-label` would leave the button reading one thing and
+		// announcing another.
+		expect(screen.getByRole('button', { name: 'A week ago' })).toBeInTheDocument()
+		expect(screen.queryByRole('button', { name: 'Quick ranges' })).not.toBeInTheDocument()
+	})
+
+	it('runs the entry that was picked', async () => {
+		const onAction = vi.fn()
+		render(
+			<Menu
+				variant={GridMenuVariant.Filter}
+				sections={[{ id: 'date-presets', items: [{ id: 'today', label: 'Today', onAction }] }]}
+				triggerIcon={GridMenuIcon.Calendar}
+				aria-label='Quick ranges'
+			/>,
+		)
+
+		await userEvent.click(screen.getByRole('button', { name: 'Quick ranges' }))
+		await userEvent.click(screen.getByRole('menuitem', { name: 'Today' }))
+
+		expect(onAction).toHaveBeenCalledTimes(1)
 	})
 })

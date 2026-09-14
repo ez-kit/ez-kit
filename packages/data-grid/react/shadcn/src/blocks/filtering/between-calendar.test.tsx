@@ -9,7 +9,6 @@ function makeProps(overrides: Partial<BetweenInputProps> = {}): BetweenInputProp
 	return {
 		value: {},
 		onChange: vi.fn(),
-		variant: 'calendar',
 		type: 'date',
 		...overrides,
 	}

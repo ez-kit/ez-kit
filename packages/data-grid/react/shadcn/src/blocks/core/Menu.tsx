@@ -21,23 +21,42 @@ import type { GridMenuProps } from '@ez-kit/data-grid-react'
  * The grid's overflow menu — column header options and row actions both render through here.
  * Only the trigger differs between the two, so `variant` is the only thing that branches.
  */
-export function Menu({ variant, sections, 'aria-label': ariaLabel }: GridMenuProps) {
+export function Menu({ variant, sections, triggerLabel, triggerIcon, 'aria-label': ariaLabel }: GridMenuProps) {
 	const isColumn = variant === GridMenuVariant.Column
+	const isFilter = variant === GridMenuVariant.Filter
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				{/* Row variant matches the edit / delete buttons so the three line up. */}
-				<Button
-					variant='ghost'
-					size='icon'
-					{...(isColumn ? { className: 'h-5 w-5' } : {})}
-				>
-					{isColumn ? <EllipsisVertical className='h-3 w-3' /> : <MoreHorizontal />}
-					<span className='sr-only'>{ariaLabel}</span>
-				</Button>
+				{isFilter ? (
+					/*
+					 * Sized to the filter row, beside the control it fills. `aria-label` is dropped
+					 * once the trigger carries a label: it would override the visible text as the
+					 * accessible name, leaving the button reading one thing and announcing another.
+					 */
+					<Button
+						type='button'
+						variant='outline'
+						size='sm'
+						className='h-7 shrink-0 gap-1 px-2 text-xs font-normal'
+						{...(triggerLabel === undefined ? { 'aria-label': ariaLabel } : {})}
+					>
+						{triggerIcon ? renderGridMenuIcon(triggerIcon) : null}
+						{triggerLabel}
+					</Button>
+				) : (
+					/* Row variant matches the edit / delete buttons so the three line up. */
+					<Button
+						variant='ghost'
+						size='icon'
+						{...(isColumn ? { className: 'h-5 w-5' } : {})}
+					>
+						{isColumn ? <EllipsisVertical className='h-3 w-3' /> : <MoreHorizontal />}
+						<span className='sr-only'>{ariaLabel}</span>
+					</Button>
+				)}
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align={isColumn ? 'start' : 'end'}>
+			<DropdownMenuContent align={isColumn || isFilter ? 'start' : 'end'}>
 				{sections.map((section, index) => (
 					<div key={section.id}>
 						{index > 0 && <DropdownMenuSeparator />}

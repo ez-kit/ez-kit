@@ -27,6 +27,23 @@
 	gap: 0.25rem;
 }
 
+/* The filter's value control and its date-preset menu are one group; the operator select sits
+ * beside them. They were laid out by the between-input's own wrapper until the preset menu moved
+ * out of it, so the row lives here now — where the rest of this kit's grid layout already is. */
+[data-slot='filter-control'] {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+/* The control takes the room it is given; the preset trigger keeps its own width at the end of
+ * the row, so every filter control lines up on the column's width whatever the operator is. */
+[data-slot='filter-control'] > *:first-child {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
 /* A column with no `cell.type` falls back to the kit's bare `Input` (data-grid-react
  * `cell.tsx` / `creating-row.tsx`), which lands straight in the cell rather than inside
  * HeroUI's `TextField` — and it is that field's flex column that normally stretches an input

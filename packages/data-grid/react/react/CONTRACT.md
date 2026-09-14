@@ -151,17 +151,17 @@ exported — read them for the exact shape.
 
 ### `filtering`
 
-| Component            | Props                                                  |
-| -------------------- | ------------------------------------------------------ |
-| `FilterPopover`      | `FilterPopoverProps`                                   |
-| `FilterPanel`        | `FilterPanelProps`                                     |
-| `FilterPanelChip`    | `FilterPanelChipProps`                                 |
-| `FilterChip`         | `FilterChipProps`                                      |
-| `ClearFiltersButton` | `ClearFiltersButtonProps`                              |
-| `GlobalFilterInput`  | `GlobalFilterInputProps` (debounce applied upstream)   |
-| `OperatorSelect`     | `OperatorSelectProps`                                  |
-| `BetweenInput`       | `BetweenInputProps` (`inputs` / `slider` / `calendar`) |
-| `MultiSelectFilter`  | `MultiSelectFilterProps`                               |
+| Component           | Props                                                  |
+| ------------------- | ------------------------------------------------------ |
+| `FilterPopover`     | `FilterPopoverProps`                                   |
+| `FilterPanel`       | `FilterPanelProps`                                     |
+| `FilterPanelChip`   | `FilterPanelChipProps`                                 |
+| `FilterChip`        | `FilterChipProps`                                      |
+| `ClearFilterButton` | `ClearFilterButtonProps`                               |
+| `GlobalFilterInput` | `GlobalFilterInputProps` (debounce applied upstream)   |
+| `OperatorSelect`    | `OperatorSelectProps`                                  |
+| `BetweenInput`      | `BetweenInputProps` (`inputs` / `slider` / `calendar`) |
+| `MultiSelectFilter` | `MultiSelectFilterProps`                               |
 
 ### `editing`
 
@@ -257,7 +257,7 @@ header-main              header-extras             sort-trigger
 column-resizer           pin-shadow-overlay        create-trigger
 global-filter-input      filter                    filter-chip
 filter-panel             filter-panel-chrome       filter-panel-chip
-filter-panel-chip-value  active-filters-bar        clear-filters-button
+filter-panel-chip-value  active-filters-bar        clear-filter-button
 between-presets          auto-form                 auto-form-field
 creating-save            creating-cancel           row-action
 selection-bar            selection-bar-action      count

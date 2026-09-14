@@ -124,7 +124,7 @@ export const orderColumns = createColumns<Order>([
 		header: 'Total, $',
 		width: { default: 150, min: 120 },
 		cell: { type: 'number' },
-		filtering: { operators: { betweenOperator: { variant: 'inputs' } } },
+		filtering: { operators: true },
 	},
 	{
 		accessorKey: 'fulfilled',

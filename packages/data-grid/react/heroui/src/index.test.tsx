@@ -121,14 +121,14 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(onPageSizeChange).toHaveBeenCalledWith(25)
 	})
 
-	it('renders BetweenInput as slider with two thumbs when variant="slider"', () => {
+	it('renders BetweenInput as a slider when the column declared a bounded domain', () => {
 		const onChange = vi.fn()
 		render(
 			<BetweenInput
 				value={{ from: 10, to: 90 }}
 				onChange={onChange}
-				variant='slider'
 				type='number'
+				slider
 				min={0}
 				max={100}
 			/>,
@@ -189,13 +189,12 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(getValueSlot().textContent).toBe('2 selected')
 	})
 
-	it('renders BetweenInput as numeric inputs when variant="inputs"', () => {
+	it('renders BetweenInput as numeric inputs by default', () => {
 		const onChange = vi.fn()
 		render(
 			<BetweenInput
 				value={{ from: 5, to: 25 }}
 				onChange={onChange}
-				variant='inputs'
 				type='number'
 			/>,
 		)
@@ -207,39 +206,12 @@ describe('@ez-kit/data-grid-heroui', () => {
 		expect(screen.getByPlaceholderText('To')).toHaveValue('25')
 	})
 
-	it('BetweenInput renders preset chips when presets[] is provided for a date column', () => {
-		const onChange = vi.fn()
-		const onPresetSelect = vi.fn()
-		const presets = [
-			{ id: 'today', label: 'Today', getRange: () => ({ from: '2026-05-14', to: '2026-05-14' }) },
-			{ id: 'last7', label: 'Last 7 days', getRange: () => ({ from: '2026-05-08', to: '2026-05-14' }) },
-		]
-		render(
-			<BetweenInput
-				value={{}}
-				onChange={onChange}
-				variant='inputs'
-				type='date'
-				presets={presets}
-				onPresetSelect={onPresetSelect}
-			/>,
-		)
-
-		const todayBtn = screen.getByRole('button', { name: 'Today' })
-		expect(todayBtn).toBeInTheDocument()
-		expect(screen.getByRole('button', { name: 'Last 7 days' })).toBeInTheDocument()
-
-		fireEvent.click(todayBtn)
-		expect(onPresetSelect).toHaveBeenCalledWith(presets[0])
-	})
-
-	it('BetweenInput renders RangeCalendar trigger when variant="calendar" and type="date"', () => {
+	it('BetweenInput renders one range trigger for a date column', () => {
 		const onChange = vi.fn()
 		render(
 			<BetweenInput
 				value={{ from: '2026-05-10', to: '2026-05-12' }}
 				onChange={onChange}
-				variant='calendar'
 				type='date'
 			/>,
 		)

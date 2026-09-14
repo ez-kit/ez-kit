@@ -3,6 +3,7 @@ import type { CreateDefaultValueContext } from '../features/creating'
 import type {
 	BetweenOperatorConfig,
 	ColumnOperatorsConfig,
+	DatePreset,
 	FilterOperatorDef,
 	FilterOperatorId,
 	FilterItem,
@@ -478,6 +479,18 @@ export type ColumnFilteringConfig<TNode = unknown, TConfig = unknown> = {
 	/** Operator configuration. `true` = default operators for the column's cell type. */
 	operators?: boolean | ColumnOperatorsConfig
 	/**
+	 * Date presets offered beside the filter control, on `cell: { type: 'date' }` columns.
+	 *
+	 * - `true` — the built-in {@link DATE_RANGE_PRESETS} and {@link DATE_VALUE_PRESETS}
+	 * - {@link DatePreset}[] — a custom list, of either kind or both
+	 * - `false` / omitted — no presets
+	 *
+	 * Here rather than under `operators.betweenOperator` because a preset is not a `between`
+	 * thing: the control offers whichever presets the **current** operator can take — ranges for
+	 * `between`, single dates for `equals` / `lessThan` / `greaterThan` and the rest.
+	 */
+	presets?: boolean | DatePreset[]
+	/**
 	 * Which operator this column's filter opens with. Defaults to the one its cell type
 	 * declares (`contains` for text, `equals` for number / date / boolean, `in` for
 	 * select / badge).
@@ -550,6 +563,8 @@ export type ColumnFilteringMeta = {
 	operators?: FilterOperatorDef[]
 	/** Between-operator UI config, from `filtering.operators.betweenOperator`. */
 	betweenOperator?: BetweenOperatorConfig
+	/** Resolved date presets, from `filtering.presets`. */
+	presets?: DatePreset[]
 	/**
 	 * The operator this column's filter opens with — `filtering.defaultOperator`, else the one
 	 * its cell type declares, else the first of {@link ColumnFilteringMeta.operators}.
