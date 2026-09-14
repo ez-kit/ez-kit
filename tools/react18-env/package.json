@@ -1,0 +1,16 @@
+{
+	"name": "@ez-kit/react18-env",
+	"version": "0.0.0",
+	"private": true,
+	"description": "React 18 and its Testing Library stack, installed in their own workspace package so pnpm links them to each other rather than to the repo's React 19. Consumed only by the `test:react18` runs — see vitest.shared.ts.",
+	"license": "MIT",
+	"dependencies": {
+		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.2",
+		"@testing-library/user-event": "^14.6.1",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"use-sync-external-store": "^1.6.0"
+	}
+}

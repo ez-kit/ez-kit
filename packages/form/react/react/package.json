@@ -31,7 +31,8 @@
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"size": "size-limit",
-		"clean": "rimraf dist coverage"
+		"clean": "rimraf dist coverage",
+		"test:react18": "vitest run --config vitest.react18.config.ts"
 	},
 	"size-limit": [
 		{
@@ -56,6 +57,7 @@
 		"@ez-kit/form-core": "workspace:*"
 	},
 	"devDependencies": {
+		"@ez-kit/react18-env": "workspace:*",
 		"@tanstack/form-core": "^1.33.2",
 		"@tanstack/react-form": "^1.33.2",
 		"@types/react": "^19.2.14",

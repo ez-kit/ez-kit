@@ -158,7 +158,7 @@ export type CellTypesProviderProps = {
 export function CellTypesProvider({ cellTypes, children }: CellTypesProviderProps) {
 	const parent = useContext(CellTypesContext)
 	const merged = useMemo(() => mergeCellTypes(parent, cellTypes), [parent, cellTypes])
-	return <CellTypesContext value={merged}>{children}</CellTypesContext>
+	return <CellTypesContext.Provider value={merged}>{children}</CellTypesContext.Provider>
 }
 
 export function useCellTypes(): CellTypeRegistry {

@@ -84,7 +84,7 @@ export function DataGridOptionsProvider<TRow extends object>({
 		() => deepMerge(parent as OptionsRecord, defaults as OptionsRecord) as AnyDefaultOptions,
 		[parent, defaults],
 	)
-	return <DataGridOptionsContext value={merged}>{children}</DataGridOptionsContext>
+	return <DataGridOptionsContext.Provider value={merged}>{children}</DataGridOptionsContext.Provider>
 }
 
 /**

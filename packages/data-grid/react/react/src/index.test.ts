@@ -15,7 +15,10 @@ describe('@ez-kit/data-grid-react', () => {
 		expect(DataGrid.Table).toBeTypeOf('function')
 		expect(DataGrid.Header).toBeTypeOf('function')
 		expect(DataGrid.Body).toBeTypeOf('function')
-		expect(DataGrid.Row).toBeTypeOf('function')
+		// `Row` is the one sub-component wrapped in `forwardRef` — pinned rows are measured through
+		// its ref, and React 18 does not pass `ref` through props. `forwardRef` returns an object
+		// carrying `$$typeof`, not a function, so this one is checked as the exotic component it is.
+		expect(DataGrid.Row).toMatchObject({ $$typeof: Symbol.for('react.forward_ref') })
 		expect(DataGrid.Cell).toBeTypeOf('function')
 		expect(DataGrid.Pagination).toBeTypeOf('function')
 		expect(DataGrid.CreateTrigger).toBeTypeOf('function')
