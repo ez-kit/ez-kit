@@ -11,7 +11,9 @@ import type { CalendarDate } from '@internationalized/date'
 
 const LABEL_CLASS = 'text-xs tabular-nums min-w-[2ch]'
 const ROW_CLASS = 'flex gap-2 items-center'
-const TRIGGER_CLASS = 'min-w-[12rem] text-xs'
+// `w-full`, not just a minimum: the filter row stretches the control it is given, and HeroUI's
+// popover trigger passes that width down to a button that would otherwise stay at its own size.
+const TRIGGER_CLASS = 'w-full min-w-[12rem] text-xs'
 /**
  * `.range-calendar` is `container-type: inline-size`, so its own width is computed as if it had no
  * content: nothing inside can widen it, and `w-max` collapses it instead. The width has to come from

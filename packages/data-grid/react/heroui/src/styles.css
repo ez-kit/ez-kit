@@ -37,9 +37,10 @@
 	min-width: 0;
 }
 
-/* Each child keeps its own width — stretching the first one pushed the preset trigger against
- * the far edge of a wide column instead of leaving it beside the control it fills. */
-[data-slot='filter-control'] > * {
+/* The control takes the room it is given; the preset trigger keeps its own width at the end of
+ * the row, so every filter control lines up on the column's width whatever the operator is. */
+[data-slot='filter-control'] > *:first-child {
+	flex: 1 1 auto;
 	min-width: 0;
 }
 
