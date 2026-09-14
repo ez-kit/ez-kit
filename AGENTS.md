@@ -7,7 +7,7 @@ Guidance for coding agents working in this repository. This file is the single s
 
 ### No styles in `packages/data-grid/react/react`
 
-The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may only add semantic `data-*` attributes to elements so that UI kit CSS can target them.
+The shared React package (`data-grid/react/react`) must contain **zero visual styling** — no inline `style={{}}`, no Tailwind/className-based styles. All visual styling belongs exclusively in the UI kit packages (`shadcn`, `heroui`). The react package may add semantic `data-*` attributes to elements so that UI kit CSS can target them, and may pass through a class it was **given** — `column.headerClassName` / `cellClassName`, `rowProps().className`, `layout.classNames` — without authoring one. The test is authorship, not the attribute: a literal class name written in this package is the violation.
 
 ### Vendored shadcn primitives are immutable
 
@@ -87,6 +87,18 @@ and move on.
   only for the ones whose need is unambiguous at render time — the structural primitives plus a
   few gated by a config that is definitively present. Everything outside that list still reaches
   React as `undefined` and crashes on first render.
+- **`layout.classNames` is a nested bag, and its keys accumulate.** Every other class option is
+  a flat `<thing>ClassName` string (`headerClassName`, `cellClassName`, `footerClassName`), so
+  `layout.wrapperClassName` / `layout.scrollClassName` was considered and rejected: those two are
+  the two boxes of one shell, not two independent slots, and the bag keeps them named for the
+  `data-slot` each one carries. The keys also **join** across option layers instead of replacing —
+  the only option that does. A kit's frame and an app's addition are both wanted, and a layer
+  cannot restate what it did not write, whereas naming `pageSize` is a decision that overrides the
+  one below. Nothing de-conflicts the result: the package knows nothing about Tailwind, and a
+  consumer that needs `border-0` to beat `border` runs its own value through `cn()` first.
+  Note a kit that ships a stylesheet does **not** need this — a `[data-slot='table-scroll']` rule
+  reaches both boxes, and the shadcn kit frames the grid that way. The option exists for the thing
+  a stylesheet cannot do: class one grid rather than every grid.
 - **`betweenOperator` is number-only, and it names no look.** `slider` / `min` / `max` is the whole
   type. The removed `variant` encoded what the control looked like, which is the kit's business — and
   its `'inputs'` / `'calendar'` values were two spellings of one date-range picker. A date column has

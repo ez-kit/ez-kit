@@ -609,6 +609,11 @@ export type ReactSortingConfig = {
  *
  * Class only — the structural rules (positioning, overflow, the height custom properties) stay
  * with `@ez-kit/data-grid-react/styles.css`, and the look stays with the kit.
+ *
+ * Unlike every other option, these **accumulate** across layers rather than replace: a kit's
+ * frame and an app's addition on the same grid both land on the element. Nothing de-conflicts
+ * them — this package knows nothing about Tailwind — so a consumer that needs `border-0` to
+ * beat `border` runs its own value through `cn()` / `twMerge` first.
  */
 export type LayoutClassNames = {
 	/** The outer box, outside the scrollport — where a border, radius or shadow belongs. */
@@ -667,7 +672,8 @@ export type LayoutConfig = {
 	/**
 	 * Classes for the grid shell's two boxes. Usually written once by a kit through
 	 * `createDataGrid({ defaults })`, so every grid it builds gets the kit's frame without the
-	 * app restating it; an app overrides either key on the grid that needs it.
+	 * app restating it; an app adds to either key on the grid that needs it, and the two are
+	 * joined rather than one replacing the other.
 	 *
 	 * @example
 	 * layout: { classNames: { wrapper: 'rounded-md border' } }

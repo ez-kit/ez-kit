@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from '../create-data-grid'
+import { DataGridOptionsProvider } from '../data-grid-options-context'
 import { renderGrid, testComponents, TEST_COLUMNS, TEST_ROWS, renderWithComponents } from '../test-utils'
 
 const WRAPPER = "[data-slot='table-wrapper']"
@@ -55,7 +56,7 @@ describe('layout.classNames', () => {
 
 	// The point of putting this in the config rather than on a React prop: the kit states it
 	// once and every grid it builds is framed, in both call shapes.
-	it('comes from a kit’s factory defaults, and the grid can still override a key', () => {
+	it('comes from a kit’s factory defaults, and the grid adds to it rather than replacing it', () => {
 		const { DataGrid: Bound } = createDataGrid({
 			components: testComponents,
 			defaults: { layout: { classNames: { wrapper: 'kit-frame', scroll: 'kit-port' } } },
@@ -69,9 +70,48 @@ describe('layout.classNames', () => {
 			/>,
 		)
 
-		expect(container.querySelector(WRAPPER)).toHaveClass('app-frame')
-		expect(container.querySelector(WRAPPER)).not.toHaveClass('kit-frame')
-		// The key the grid did not name still comes from the kit.
-		expect(container.querySelector(SCROLL)).toHaveClass('kit-port')
+		// Both land: classes compose, so a kit's frame survives an app that adds to it. The
+		// grid's own class comes last, which is all the ordering this package promises — it
+		// knows nothing about Tailwind and de-conflicts nothing.
+		expect(container.querySelector(WRAPPER)).toHaveClass('kit-frame', 'app-frame')
+		expect(container.querySelector(WRAPPER)?.className).toBe('kit-frame app-frame')
+		// The key the grid did not name still comes from the kit alone.
+		expect(container.querySelector(SCROLL)?.className).toBe('kit-port')
+	})
+
+	// Both orderings a consumer can build must behave the same, or "classes accumulate" would
+	// hold only on the path that happens to be tested.
+	it('accumulates through a DataGridOptionsProvider, and through nested ones', () => {
+		const { DataGrid: Bound } = createDataGrid({
+			components: testComponents,
+			defaults: { layout: { classNames: { wrapper: 'kit-frame' } } },
+		})
+
+		const { container } = renderWithComponents(
+			<DataGridOptionsProvider defaults={{ layout: { classNames: { wrapper: 'app-frame' } } }}>
+				<DataGridOptionsProvider defaults={{ layout: { classNames: { wrapper: 'section-frame' } } }}>
+					<Bound
+						data={TEST_ROWS}
+						columns={TEST_COLUMNS}
+						layout={{ classNames: { wrapper: 'grid-frame' } }}
+					/>
+				</DataGridOptionsProvider>
+			</DataGridOptionsProvider>,
+		)
+
+		expect(container.querySelector(WRAPPER)?.className).toBe('kit-frame app-frame section-frame grid-frame')
+	})
+
+	// A class is additional to the structural contract, never instead of it: the stylesheet
+	// targets the `data-slot`, and the height custom properties ride the wrapper's `style`.
+	it('leaves the wrapper’s own slot and height variables intact', () => {
+		const { container } = renderGrid({
+			layout: { maxHeight: '32rem', classNames: { wrapper: 'kit-frame' } },
+		})
+
+		const wrapper = container.querySelector(WRAPPER)
+		expect(wrapper).toHaveClass('kit-frame')
+		expect(wrapper?.getAttribute('data-slot')).toBe('table-wrapper')
+		expect(wrapper?.getAttribute('style')).toContain('--dg-table-max-height: 32rem')
 	})
 })
