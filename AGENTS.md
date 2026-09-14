@@ -87,6 +87,13 @@ and move on.
   only for the ones whose need is unambiguous at render time — the structural primitives plus a
   few gated by a config that is definitively present. Everything outside that list still reaches
   React as `undefined` and crashes on first render.
+- **The `between` config has two arms, and neither names a look.** `slider` / `min` / `max` are
+  number-only, `presets` is date-only, and `?: never` on each arm's foreign keys keeps them from
+  mixing. The removed `variant` encoded what the control looked like, which is the kit's business —
+  and its `'inputs'` / `'calendar'` values were two spellings of one date-range picker. A date column
+  has exactly one control. The arms cannot be checked against the column's `cell.type` (a sibling
+  field with no inference variable to carry it across — see the `ColumnInputRenderer` note in
+  `column/types.ts`), so `mapColumns` warns in development instead.
 - **`presets` is legal at two levels and the two do not collide.**
   `column.filtering.operators.betweenOperator.presets` are the date-range chips of one operator on
   one column. A future table-level saved-filter option is a different namespace two levels up, on
