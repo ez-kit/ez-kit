@@ -104,6 +104,22 @@
 	--dg-pin-cell-background: var(--background);
 }
 
+/* The filter's value control and its date-preset menu are one group; the operator select sits
+ * beside them. They were laid out by the between-input's own wrapper until the preset menu moved
+ * out of it, so the row lives here now — where the rest of this kit's grid layout already is. */
+[data-slot='filter-control'] {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+/* Each child keeps its own width — stretching the first one pushed the preset trigger against
+ * the far edge of a wide column instead of leaving it beside the control it fills. */
+[data-slot='filter-control'] > * {
+	min-width: 0;
+}
+
 [data-slot='table-scroll'] {
 	@apply rounded-sm border border-border;
 }

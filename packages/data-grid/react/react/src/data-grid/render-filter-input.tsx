@@ -243,15 +243,17 @@ export function renderFilterInput({
 			const betweenType = meta?.cell?.type === 'date' ? 'date' : 'number'
 			return (
 				<>
-					<BetweenInput
-						value={(inputValue as BetweenValue | undefined) ?? {}}
-						onChange={onValueChange}
-						type={betweenType}
-						{...(betweenCfg?.slider === true ? { slider: true } : {})}
-						{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
-						{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
-					/>
-					{presetMenu}
+					<div data-slot='filter-control'>
+						<BetweenInput
+							value={(inputValue as BetweenValue | undefined) ?? {}}
+							onChange={onValueChange}
+							type={betweenType}
+							{...(betweenCfg?.slider === true ? { slider: true } : {})}
+							{...(betweenCfg?.min !== undefined ? { min: betweenCfg.min } : {})}
+							{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
+						/>
+						{presetMenu}
+					</div>
 					{operatorSelect}
 				</>
 			)
@@ -278,12 +280,14 @@ export function renderFilterInput({
 		if (columnFilterInput) {
 			return (
 				<>
-					{flexRender(columnFilterInput, {
-						value: inputValue,
-						onChange: onValueChange,
-						...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
-					})}
-					{presetMenu}
+					<div data-slot='filter-control'>
+						{flexRender(columnFilterInput, {
+							value: inputValue,
+							onChange: onValueChange,
+							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
+						})}
+						{presetMenu}
+					</div>
 					{operatorSelect}
 				</>
 			)
@@ -307,11 +311,13 @@ export function renderFilterInput({
 				}
 				return (
 					<>
-						{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
-						    this header cell's fiber, and swapping one renderer for another — which is what
-						    changing the operator does — reorders them. */}
-						{flexRender(comp, field)}
-						{presetMenu}
+						<div data-slot='filter-control'>
+							{/* Mounted, not called: invoking a renderer as `Comp(props)` smuggles its hooks into
+							    this header cell's fiber, and swapping one renderer for another — which is what
+							    changing the operator does — reorders them. */}
+							{flexRender(comp, field)}
+							{presetMenu}
+						</div>
 						{operatorSelect}
 					</>
 				)
@@ -320,15 +326,17 @@ export function renderFilterInput({
 
 		return (
 			<>
-				<FilterTextInput
-					Input={Input}
-					placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
-					value={(inputValue ?? '') as string}
-					onCommit={onValueChange}
-					debounce={debounce}
-					{...(onEnterApply ? { onEnterApply } : {})}
-				/>
-				{presetMenu}
+				<div data-slot='filter-control'>
+					<FilterTextInput
+						Input={Input}
+						placeholder={messages.filtering.placeholder({ columnId: header.column.id })}
+						value={(inputValue ?? '') as string}
+						onCommit={onValueChange}
+						debounce={debounce}
+						{...(onEnterApply ? { onEnterApply } : {})}
+					/>
+					{presetMenu}
+				</div>
 				{operatorSelect}
 			</>
 		)
