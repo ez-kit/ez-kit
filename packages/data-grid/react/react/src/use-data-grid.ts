@@ -598,6 +598,26 @@ export type ReactSortingConfig = {
 } & SortingConfig
 
 /**
+ * Classes for the grid shell's own two boxes — the only elements the React layer renders
+ * itself, and therefore the only ones a kit cannot reach through `components`.
+ *
+ * They exist because the shell is where a box *outside* the scrollport lives: a border or a
+ * radius drawn on anything the kit supplies scrolls away with the content, since every one of
+ * those components sits inside `table-scroll`. The alternative was a global
+ * `[data-slot='table-wrapper']` selector, which is exactly the kit-bypassing rule this package
+ * is built to avoid.
+ *
+ * Class only — the structural rules (positioning, overflow, the height custom properties) stay
+ * with `@ez-kit/data-grid-react/styles.css`, and the look stays with the kit.
+ */
+export type LayoutClassNames = {
+	/** The outer box, outside the scrollport — where a border, radius or shadow belongs. */
+	wrapper?: string
+	/** The scrollport itself — where a scrollbar or an inner edge treatment belongs. */
+	scroll?: string
+}
+
+/**
  * Presentational layout of the grid shell. Purely visual — nothing here changes the row model.
  */
 export type LayoutConfig = {
@@ -644,6 +664,15 @@ export type LayoutConfig = {
 	 * Omitted, the stylesheet defaults apply: `400px` capped, `600px` virtualized.
 	 */
 	maxHeight?: string
+	/**
+	 * Classes for the grid shell's two boxes. Usually written once by a kit through
+	 * `createDataGrid({ defaults })`, so every grid it builds gets the kit's frame without the
+	 * app restating it; an app overrides either key on the grid that needs it.
+	 *
+	 * @example
+	 * layout: { classNames: { wrapper: 'rounded-md border' } }
+	 */
+	classNames?: LayoutClassNames
 }
 
 /**
@@ -1193,6 +1222,7 @@ export function useDataGrid<TRow extends object>(
 			footer: layout?.footer ?? table.getAllFlatColumns().some((column) => column.columnDef.footer !== undefined),
 			stickyFooter: layout?.stickyFooter ?? false,
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
+			...(layout?.classNames !== undefined ? { classNames: layout.classNames } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
 		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled },

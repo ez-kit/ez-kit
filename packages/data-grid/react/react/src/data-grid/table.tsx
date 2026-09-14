@@ -178,7 +178,13 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 	const virtualizationConfig = table.grid.virtualization
 
 	const isVirtualized = Boolean(virtualizationConfig)
-	const { stickyHeader: isStickyHeader, footer: hasFooter, stickyFooter: isStickyFooter, maxHeight } = table.grid.layout
+	const {
+		stickyHeader: isStickyHeader,
+		footer: hasFooter,
+		stickyFooter: isStickyFooter,
+		maxHeight,
+		classNames,
+	} = table.grid.layout
 
 	// One option, two custom properties: capped height for the normal scroll container,
 	// definite height for the virtualized one (which cannot size itself from its content).
@@ -320,12 +326,14 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 						ref={wrapperRef}
 						data-slot='table-wrapper'
 						data-virtualized='true'
+						className={classNames?.wrapper}
 						style={heightVars}
 					>
 						<div
 							ref={containerRef}
 							data-slot='table-scroll'
 							data-virtualized='true'
+							className={classNames?.scroll}
 						>
 							{tableEl}
 						</div>
@@ -341,11 +349,13 @@ export function DataGridTable<TRow extends object = any>({ children }: DataGridT
 			<div
 				ref={wrapperRef}
 				data-slot='table-wrapper'
+				className={classNames?.wrapper}
 				style={heightVars}
 			>
 				<div
 					ref={scrollRef}
 					data-slot='table-scroll'
+					className={classNames?.scroll}
 					{...(isStickyHeader ? { 'data-sticky-header': 'true' } : {})}
 					{...(isStickyFooter ? { 'data-sticky-footer': 'true' } : {})}
 				>

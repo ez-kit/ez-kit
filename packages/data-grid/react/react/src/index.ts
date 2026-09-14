@@ -64,6 +64,7 @@ export type {
 	ReactSelectionConfig,
 	ReactSortingConfig,
 	RowPropsResolver,
+	LayoutClassNames,
 	LayoutConfig,
 	SelectionBarCallbackArgs,
 	SelectionBarConfig,
