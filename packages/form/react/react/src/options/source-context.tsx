@@ -41,7 +41,7 @@ export function FormOptionSources({
 	value: OptionSourceRegistry
 	children: ReactNode
 }): ReactNode {
-	return <OptionSourceContext value={value}>{children}</OptionSourceContext>
+	return <OptionSourceContext.Provider value={value}>{children}</OptionSourceContext.Provider>
 }
 
 /** The registered sources, or an empty registry when no provider is mounted. */
@@ -67,7 +67,7 @@ export function SchemaTranslate({
 	translate: Translate | undefined
 	children: ReactNode
 }): ReactNode {
-	return <SchemaTranslateContext value={translate}>{children}</SchemaTranslateContext>
+	return <SchemaTranslateContext.Provider value={translate}>{children}</SchemaTranslateContext.Provider>
 }
 
 export function useSchemaTranslate(): Translate | undefined {

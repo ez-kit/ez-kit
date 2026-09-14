@@ -206,10 +206,12 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 	)
 }
 
-function ComboboxChips({
-	className,
-	...props
-}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> & ComboboxPrimitive.Chips.Props) {
+// `forwardRef`, not a bare `ref` prop: this kit supports React 18, where `ref` is stripped before
+// a function component sees its props. `searchable-multi-select.tsx` anchors its popup here.
+const ComboboxChips = React.forwardRef<
+	React.ComponentRef<typeof ComboboxPrimitive.Chips>,
+	React.ComponentPropsWithoutRef<typeof ComboboxPrimitive.Chips> & ComboboxPrimitive.Chips.Props
+>(function ComboboxChips({ className, ...props }, ref) {
 	return (
 		<ComboboxPrimitive.Chips
 			data-slot='combobox-chips'
@@ -218,9 +220,10 @@ function ComboboxChips({
 				className,
 			)}
 			{...props}
+			ref={ref}
 		/>
 	)
-}
+})
 
 function ComboboxChip({
 	className,

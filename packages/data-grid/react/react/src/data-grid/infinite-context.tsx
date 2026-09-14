@@ -23,7 +23,7 @@ export function InfiniteProvider({
 	getScrollElement: () => HTMLElement | null
 	children: ReactNode
 }) {
-	return <InfiniteContext value={{ getScrollElement }}>{children}</InfiniteContext>
+	return <InfiniteContext.Provider value={{ getScrollElement }}>{children}</InfiniteContext.Provider>
 }
 
 export function useInfiniteContext(): InfiniteContextValue {

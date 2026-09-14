@@ -40,11 +40,11 @@ function renderPagination(
 	const table = result.current
 
 	renderWithComponents(
-		<TableContext value={table}>
+		<TableContext.Provider value={table}>
 			<GridComponentsProvider components={{ pagination: { Pagination: Spy } }}>
 				<Pagination />
 			</GridComponentsProvider>
-		</TableContext>,
+		</TableContext.Provider>,
 	)
 
 	return { props: captured, table: table }

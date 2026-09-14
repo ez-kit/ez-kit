@@ -20,16 +20,23 @@ function Table({ className, style, ...props }: React.ComponentProps<'table'>) {
 	)
 }
 
-function TableHeader({ className, style, ...props }: React.ComponentProps<'thead'>) {
+// `forwardRef`, not a bare `ref` prop: this kit supports React 18, where `ref` never reaches a
+// function component's props. The shared layer measures the header through this ref to publish
+// `--dg-header-height`, and a swallowed ref leaves pinned-top rows stacked under the sticky header.
+const TableHeader = React.forwardRef<HTMLTableSectionElement, React.ComponentProps<'thead'>>(function TableHeader(
+	{ className, style, ...props },
+	ref,
+) {
 	return (
 		<thead
 			data-slot='table-header'
 			className={cn('[&_tr]:border-b', className)}
 			style={{ display: 'block', ...style }}
 			{...props}
+			ref={ref}
 		/>
 	)
-}
+})
 
 function TableBody({ className, style, ...props }: React.ComponentProps<'tbody'>) {
 	return (
@@ -52,7 +59,11 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
 	)
 }
 
-function TableRow({ className, style, ...props }: React.ComponentProps<'tr'>) {
+// `forwardRef` for the same reason as {@link TableHeader}: pinned rows are measured through it.
+const TableRow = React.forwardRef<HTMLTableRowElement, React.ComponentProps<'tr'>>(function TableRow(
+	{ className, style, ...props },
+	ref,
+) {
 	return (
 		<tr
 			data-slot='table-row'
@@ -66,9 +77,10 @@ function TableRow({ className, style, ...props }: React.ComponentProps<'tr'>) {
 				...style,
 			}}
 			{...props}
+			ref={ref}
 		/>
 	)
-}
+})
 
 function TableHead({
 	className,

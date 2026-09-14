@@ -35,7 +35,7 @@ function setClearCfg(table: DataTable<User>, value: NormalizedFilteringToolbarCo
 function Wrapper({ table, children }: { table: DataTable<User>; children: ReactNode }) {
 	return (
 		<GridComponentsProvider components={testComponents}>
-			<TableContext value={table}>{children}</TableContext>
+			<TableContext.Provider value={table}>{children}</TableContext.Provider>
 		</GridComponentsProvider>
 	)
 }

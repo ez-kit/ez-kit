@@ -17,7 +17,7 @@ export function VirtualProvider({
 	rowVirtualizer: RowVirtualizer
 	children: React.ReactNode
 }) {
-	return <VirtualContext value={{ rowVirtualizer }}>{children}</VirtualContext>
+	return <VirtualContext.Provider value={{ rowVirtualizer }}>{children}</VirtualContext.Provider>
 }
 
 export function useVirtualContext(): VirtualContextValue {

@@ -39,16 +39,16 @@ const buttonVariants = cva(
 	},
 )
 
-function Button({
-	className,
-	variant = 'default',
-	size = 'default',
-	asChild = false,
-	...props
-}: React.ComponentProps<'button'> &
-	VariantProps<typeof buttonVariants> & {
-		asChild?: boolean
-	}) {
+// `forwardRef`, not a bare `ref` prop: this kit supports React 18, where `ref` is stripped before
+// a function component sees its props. Callers inside the kit (the calendar's focus effect, the
+// action bar's roving tabindex) and consumers alike reach the `<button>` through it.
+const Button = React.forwardRef<
+	HTMLButtonElement,
+	React.ComponentProps<'button'> &
+		VariantProps<typeof buttonVariants> & {
+			asChild?: boolean
+		}
+>(function Button({ className, variant = 'default', size = 'default', asChild = false, ...props }, ref) {
 	const Comp = asChild ? Slot.Root : 'button'
 
 	return (
@@ -58,8 +58,9 @@ function Button({
 			data-size={size}
 			className={cn(buttonVariants({ variant, size, className }))}
 			{...props}
+			ref={ref}
 		/>
 	)
-}
+})
 
 export { Button, buttonVariants }

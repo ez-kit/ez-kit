@@ -60,7 +60,7 @@ export function GridComponentsProvider({ components, children }: GridComponentsP
 		[parentComponents, components],
 	)
 
-	return <GridComponentsContext value={value}>{children}</GridComponentsContext>
+	return <GridComponentsContext.Provider value={value}>{children}</GridComponentsContext.Provider>
 }
 
 export function useGridComponents(): FullGridComponents {
