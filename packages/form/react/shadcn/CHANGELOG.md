@@ -1,5 +1,12 @@
 # @ez-kit/form-shadcn
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [f12aac9]
+  - @ez-kit/form-react@0.3.1
+
 ## 0.3.1
 
 ### Patch Changes
