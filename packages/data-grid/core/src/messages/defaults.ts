@@ -185,6 +185,9 @@ export const defaultMessages: GridMessages = {
 			last30: 'Last 30 days',
 			thisMonth: 'This month',
 			lastMonth: 'Last month',
+			weekAgo: 'A week ago',
+			monthAgo: 'A month ago',
+			startOfMonth: 'Start of month',
 		},
 	},
 	fallbacks: {

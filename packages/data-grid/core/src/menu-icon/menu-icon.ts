@@ -35,6 +35,8 @@ export const GridMenuIcon = {
 	MoveUp: 'move-up',
 	/** Move a row one step down. */
 	MoveDown: 'move-down',
+	/** A date affordance — the trigger of a date-preset menu. */
+	Calendar: 'calendar',
 } as const
 
 export type GridMenuIcon = (typeof GridMenuIcon)[keyof typeof GridMenuIcon]

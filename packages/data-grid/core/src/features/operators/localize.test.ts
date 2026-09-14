@@ -6,7 +6,7 @@ import {
 	DATE_OPERATORS,
 	DATE_RANGE_PRESETS,
 	FilterOperator,
-	localizeDateRangePresets,
+	localizeDatePresets,
 	localizeOperators,
 	NUMBER_OPERATORS,
 	TEXT_OPERATORS,
@@ -78,13 +78,13 @@ describe('localizeOperators', () => {
 	})
 })
 
-describe('localizeDateRangePresets', () => {
+describe('localizeDatePresets', () => {
 	it('renames a preset and leaves the rest', () => {
 		const messages = resolveMessages({
 			operators: { presets: { ...defaultMessages.operators.presets, today: 'Сегодня' } },
 		})
 
-		const localized = localizeDateRangePresets(DATE_RANGE_PRESETS, messages.operators.presets)
+		const localized = localizeDatePresets(DATE_RANGE_PRESETS, messages.operators.presets)
 
 		expect(localized.find((preset) => preset.id === 'today')?.label).toBe('Сегодня')
 		expect(localized.find((preset) => preset.id === 'yesterday')?.label).toBe('Yesterday')
