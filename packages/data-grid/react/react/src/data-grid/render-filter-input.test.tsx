@@ -239,3 +239,32 @@ describe('renderFilterInput — cell-type filter renderer', () => {
 		error.mockRestore()
 	})
 })
+
+describe('renderFilterInput — clearing one column', () => {
+	it('offers no clear button while the column has no filter', () => {
+		setupDate()
+
+		expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument()
+	})
+
+	it('clears the column when the button is pressed', () => {
+		const table = setupDate()
+		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
+		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeDefined()
+
+		fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+
+		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeUndefined()
+	})
+
+	it('clears a column whose operator takes a single date', () => {
+		const table = setupDate()
+		selectOperator('equals')
+		fireEvent.click(screen.getByRole('button', { name: 'Today' }))
+		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeDefined()
+
+		fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+
+		expect(table.getColumn('joinedAt')?.getFilterValue()).toBeUndefined()
+	})
+})

@@ -22,6 +22,13 @@ the current operator can take — a range has no single date to mean, so bending
 turn "the last week" into "on last Tuesday". Built-in single dates: Today, Yesterday, A week ago,
 A month ago, Start of month.
 
+A column's filter can also be cleared from the filter row now: a clear button sits beside the
+control whenever the column has a value. A text or number filter could always be emptied by hand,
+but a date picker and a multi-select could not — the filter could be changed and never taken off,
+which on a narrow range left the grid empty with no way out of it in the UI unless the table also
+showed the active-filter chips. It renders through the kit's existing `ClearFiltersButton`, which
+now serves both the toolbar's clear-all and one column.
+
 The preset menu now renders through the kit's `core.Menu`, which gains a `filter` variant plus
 optional `triggerLabel` / `triggerIcon`; `GridMenuIcon` gains `calendar`. A kit that implements the
 component contract has to render that variant.

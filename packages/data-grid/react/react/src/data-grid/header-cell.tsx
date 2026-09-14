@@ -104,7 +104,8 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 	const { Th, Input, Checkbox, Menu } = gridComponents.core
 	const { Resizer } = gridComponents.resizing
 	const { SortIndicator } = gridComponents.sorting
-	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter } = gridComponents.filtering
+	const { OperatorSelect, BetweenInput, FilterPopover, MultiSelectFilter, ClearFiltersButton } =
+		gridComponents.filtering
 	const cellTypes = useCellTypes()
 
 	const meta = header.column.columnDef.meta
@@ -232,6 +233,7 @@ export function DataGridHeaderCell<TRow extends object = any>({ header, children
 				cellTypes,
 				OperatorSelect,
 				Menu,
+				ClearFiltersButton,
 				BetweenInput,
 				MultiSelectFilter,
 				debounce: table.grid.filtering.debounce,

@@ -8,7 +8,13 @@ import { flexRender } from './flex-render'
 
 import type { CellTypeRegistry } from '../cell-types-context'
 import type { GridMenuProps } from '../menu'
-import type { BetweenInputProps, InputProps, MultiSelectFilterProps, OperatorSelectProps } from '../types'
+import type {
+	BetweenInputProps,
+	ClearFiltersButtonProps,
+	InputProps,
+	MultiSelectFilterProps,
+	OperatorSelectProps,
+} from '../types'
 import type {
 	InputComponentProps,
 	BadgeItem,
@@ -33,6 +39,11 @@ export type RenderFilterInputArgs = {
 	OperatorSelect: ComponentType<OperatorSelectProps>
 	/** The kit's generic menu — the date-preset trigger beside a date filter renders through it. */
 	Menu: ComponentType<GridMenuProps>
+	/**
+	 * The kit's clear button. It serves the toolbar's clear-all and, here, one column's filter —
+	 * what it clears is `onClick`'s business, and the label tells the two apart.
+	 */
+	ClearFiltersButton: ComponentType<ClearFiltersButtonProps>
 	BetweenInput: ComponentType<BetweenInputProps>
 	MultiSelectFilter?: ComponentType<MultiSelectFilterProps>
 	/**
@@ -138,6 +149,7 @@ export function renderFilterInput({
 	cellTypes,
 	OperatorSelect,
 	Menu,
+	ClearFiltersButton,
 	BetweenInput,
 	MultiSelectFilter,
 	debounce: tableDebounce,
@@ -238,6 +250,20 @@ export function renderFilterInput({
 				/>
 			) : null
 
+		// Shown only with something to clear. A text or number filter can be emptied by hand, but a
+		// date picker and a multi-select cannot — the filter could be changed and never taken off,
+		// which on a narrow range leaves the grid empty with no way out of it.
+		const clearButton =
+			inputValue === undefined || inputValue === '' ? null : (
+				<ClearFiltersButton
+					disabled={false}
+					onClick={() => {
+						header.column.setFilterValue(undefined)
+					}}
+					aria-label={messages.filtering.clear}
+				/>
+			)
+
 		if (currentOperatorId === FilterOperator.Between) {
 			const betweenCfg = filteringMeta.betweenOperator
 			const betweenType = meta?.cell?.type === 'date' ? 'date' : 'number'
@@ -253,6 +279,7 @@ export function renderFilterInput({
 							{...(betweenCfg?.max !== undefined ? { max: betweenCfg.max } : {})}
 						/>
 						{presetMenu}
+						{clearButton}
 					</div>
 					{operatorSelect}
 				</>
@@ -287,6 +314,7 @@ export function renderFilterInput({
 							...(meta?.cell?.config !== undefined ? { config: meta.cell.config } : {}),
 						})}
 						{presetMenu}
+						{clearButton}
 					</div>
 					{operatorSelect}
 				</>
@@ -317,6 +345,7 @@ export function renderFilterInput({
 							    changing the operator does — reorders them. */}
 							{flexRender(comp, field)}
 							{presetMenu}
+							{clearButton}
 						</div>
 						{operatorSelect}
 					</>
@@ -336,6 +365,7 @@ export function renderFilterInput({
 						{...(onEnterApply ? { onEnterApply } : {})}
 					/>
 					{presetMenu}
+					{clearButton}
 				</div>
 				{operatorSelect}
 			</>
