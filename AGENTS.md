@@ -157,6 +157,15 @@ and move on.
   gated. Before this, `e2e` ran on every PR, cost ~6 minutes per kit and changed nothing — #233
   merged with both kits red, and the failure then hid on `develop`, where the suite does not run,
   until the next PR happened to surface it (#237).
+- **The release PR `develop → main` is merged with a merge commit — never squash, never rebase.** The
+  two branches are long-lived and keep merging into each other, so the merge has to record `develop`
+  as a parent of `main`. A squash writes a commit whose _only_ parent is `main`'s previous tip: the
+  released content lands, but git no longer knows `develop` produced it. The next release PR then
+  takes the pre-release commit as its merge base, sees every file that release touched as changed
+  independently on both sides, and conflicts on all of them — with identical content. That is what
+  #234 did to #238: `main` and `develop` had byte-identical trees and ~30 conflicting files.
+  Recovering costs a `git merge -s ours origin/main` on `develop` to re-link the two histories.
+  Feature PRs into `develop` are unaffected — squash those freely; this rule is about `main` only.
 - Issues close on merge into `develop`, not on release. GitHub itself only honours `Closes #N` when a PR merges into the **default** branch (`main`), so every PR into `develop` would otherwise leave its issue open — and strand its project-board card in **In review**, since the board moves items to Done on the _issue closed_ event. `.github/workflows/close-linked-issues.yml` restores the expected behaviour: on merge into `develop` or `integration/**` it parses closing keywords from the PR body **and its commit messages**, then closes those issues. It authenticates with the `CHANGESETS_TOKEN` PAT because the repo keeps `default_workflow_permissions: read`, which caps `GITHUB_TOKEN` below the required `issues: write`. That PAT therefore needs **`Issues: Read and write`** on top of the permissions the version-PR bot uses — if it is rotated or reissued without it, the job fails with `403 Resource not accessible by personal access token` and issues silently pile up open.
 - Git hooks (husky): pre-commit runs `lint-staged` (Prettier + ESLint on staged files only), commit-msg enforces Conventional Commits via commitlint, pre-push runs `pnpm ci:fast`.
 - **No agent attribution anywhere in git history or on GitHub.** Commit messages, PR titles and PR
