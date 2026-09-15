@@ -1,11 +1,12 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 
 import { Field, FieldDescription, FieldError, FieldLabel } from '@grid-shadcn/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@grid-shadcn/components/ui/select'
 
-import type { CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
+import type { CellTypeDefinition, CellViewProps, FieldState, SelectCellConfig } from '@ez-kit/data-grid-react'
 import type { ReactNode } from 'react'
 
 const ALL_SENTINEL = '__all__'
@@ -75,4 +76,19 @@ function SelectCellInput({
 	)
 }
 
-export { SelectCellInput, SelectCellView }
+/**
+ * This kit's `select` registry entry — importable on its own, so a consumer can register only the
+ * cell types it uses. `blocks/cell-types.ts` composes the default registry from these.
+ *
+ * Annotated rather than inferred, and restating the phantom `__config` the spread carries: see
+ * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
+ * bundled declarations.
+ */
+const selectCellType: CellTypeDefinition<SelectCellConfig> & { __config?: SelectCellConfig } = {
+	...baseCellTypes.select,
+	view: SelectCellView,
+	editing: SelectCellInput,
+	filtering: SelectCellInput,
+}
+
+export { SelectCellInput, selectCellType, SelectCellView }

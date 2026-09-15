@@ -1,6 +1,6 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { AlertDialog, Button } from '@heroui/react'
 
 import type { ConfirmDialogProps } from '@ez-kit/data-grid-react'

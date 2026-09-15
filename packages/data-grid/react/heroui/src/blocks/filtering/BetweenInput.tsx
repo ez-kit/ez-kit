@@ -1,6 +1,6 @@
 'use client'
 
-import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react'
+import { BetweenBranch, useBetweenValue, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, Popover, RangeCalendar, Slider, useLocale } from '@heroui/react'
 import { getLocalTimeZone, parseDate } from '@internationalized/date'
 
