@@ -189,7 +189,12 @@ export function persist<TStore extends object, TState extends object = object>(
 					const engine = engines.safeGet(source)
 					if (!engine) continue
 					const seed = engine.snapshot()
-					if (!(seed instanceof Promise)) {
+					if (seed instanceof Promise) {
+						// An async source cannot seed synchronously — `connect` below reads it again and
+						// reports a rejection through the provider's `onError`. Settle this copy so a failing
+						// port does not raise an unhandled rejection here, where nothing consumes the value.
+						seed.catch(() => undefined)
+					} else {
 						applyKeyed(binding, seed, ApplyMode.Hydrate)
 					}
 				}

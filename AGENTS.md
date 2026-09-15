@@ -440,6 +440,24 @@ packages, touched no spec, and the stale selector matched nothing from the momen
 slot assembled at runtime rather than written as a literal is invisible here; a spec that must
 address one is the case to reconsider this check, not to widen the regex.
 
+**What a partial import drags in is pinned per export** — `apps/docs/test/tree-shaking.test.ts`
+(helper in `apps/docs/test/tree-shaking/`) bundles a package's **built** entry with esbuild, once
+per case, and asserts the **complete** set of `@ez-kit/*` entry points the named imports reach.
+`sideEffects: false` and ESM output are necessary for tree shaking and nowhere near sufficient: one
+top-level call or property read a bundler cannot prove pure anchors everything behind it, and
+nothing in the build says so. Both store packages did exactly that — their default cache was a bare
+`createStoreCache()` plus a destructure — so importing only `createContextStore` carried the whole
+`store-core/cache` graph, ~2 KB gzipped, for a cache the app never mounted. `size-limit` could not
+see it: it measures each entry point whole, not what a partial import pulls along.
+
+Each case records the full set rather than a forbidden list, so anything _newly_ reached fails —
+a forbidden list only catches the regressions someone already thought of. A module's own path is
+not nameable (shared code lands in hash-named chunks), so each one is folded onto the entry point
+it sits under, which is the specifier a reader would have to write to import it. The sets are read
+against a whole-surface `import *`, without which a bundle that resolved nothing would satisfy
+every case. To add one, name the export and run the test — the failure prints the set to record,
+and a name the entry does not export fails the bundle outright.
+
 **Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false`, so both kits share one path rather than letting shadcn SSR and heroui silently fall back. The reason originally given for that — a dynamic `require` in the heroui bundle that RSC could not run on the server — is **no longer true** and was corrected on 2026-09-11: `@heroui/react@3.0.3` contains no `require(` at all, and a page rendering the heroui grid through the normal server path prerenders at build time (`next build` marks it `○`, and the emitted HTML carries the full `<table>` and every row). Note `'use client'` was never the mechanism either way: a client component is still prerendered on the server, so the directive cannot skip an SSR a component could not survive. What remains is a choice about the docs — one code path for both kits — not a limitation of the heroui kit, and dropping `ssr: false` is now a live option rather than a blocked one.
 
 ### TypeScript
