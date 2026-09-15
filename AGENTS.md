@@ -146,7 +146,17 @@ and move on.
 
 - `develop` is the default integration branch — all feature branches fork from and merge into `develop`.
 - `main` is release-only: a `develop → main` PR **is** a release. `main` is the Vercel **production** branch (docs deploy on release) and the npm release point. `develop` and feature branches get Vercel **preview** URLs.
-- CI (`.github/workflows/ci.yml`) gates every PR into `develop` and `main` with `build → lint → typecheck → test → size` (job name `verify`).
+- CI (`.github/workflows/ci.yml`) gates every PR into `develop` and `main` with `build → lint → typecheck → test → size`
+  (job name `verify`). A PR into `develop` is additionally gated on the browser suite, through the
+  `e2e gate` job. That indirection is not decoration: the `e2e` matrix jobs cannot be required
+  checks themselves, because when the matrix is skipped by its `if:` GitHub reports one check
+  named `e2e (${{ matrix.project }})` — unexpanded, the matrix never having expanded — so
+  `e2e (shadcn)` and its siblings would sit pending forever on precisely the two PRs that skip the
+  suite. `e2e gate` has a fixed name, runs `if: always()`, and passes on `success` or `skipped`
+  and on nothing else. `main` is **not** gated on it: a release PR carries the tree `develop` just
+  gated. Before this, `e2e` ran on every PR, cost ~6 minutes per kit and changed nothing — #233
+  merged with both kits red, and the failure then hid on `develop`, where the suite does not run,
+  until the next PR happened to surface it (#237).
 - **The release PR `develop → main` is merged with a merge commit — never squash, never rebase.** The
   two branches are long-lived and keep merging into each other, so the merge has to record `develop`
   as a parent of `main`. A squash writes a commit whose _only_ parent is `main`'s previous tip: the
@@ -244,7 +254,7 @@ shadcn kit that is worth a release note belongs on the package it is visible thr
 `@ez-kit/data-grid-react`, or `@ez-kit/docs`, which serves the registry JSON.
 
 The two PRs that carry no source change re-run `verify` but **not** `e2e` (the job's `if:` in
-`ci.yml` excludes both). The release PR (`develop → main`) carries exactly the tree `develop` just
+`ci.yml` excludes both; `e2e gate` still reports, and passes, because a skipped suite is a pass). The release PR (`develop → main`) carries exactly the tree `develop` just
 gated, and `main` receives nothing else. The version PR (`changeset-release/develop → develop`)
 touches only `version` fields, CHANGELOGs and the changeset files it consumes — every internal
 dependency is declared `workspace:^` / `workspace:*`, so changesets rewrites no range and the
@@ -413,6 +423,22 @@ To add a page: verify its tables against the real types by hand, add the path to
 unclassified table fails the test, as does a table whose checked-name count drifts from what's
 recorded. Rows that intentionally document a non-key (the literal `false` a per-column slot accepts,
 a cache method written with its call signature) go in `OPTION_EXCEPTIONS`, each with its reason.
+
+**e2e locators are checked against the slots the kits render** — `apps/docs/test/e2e-slots.test.ts`
+(helper in `apps/docs/test/e2e-slots/`) collects every `data-slot="…"` literal the browser specs
+address and every one the three data-grid React packages write onto an element, and fails with
+`file:line` on a spec slot no package authors. Both sides are string literals in source and the JSX
+attribute _is_ the DOM attribute the selector matches, so comparing the literals compares the
+relationship rather than approximating it — but comments are stripped first, since a spec
+explaining in prose which slot a kit stamps (HeroUI's `Chip` overwrites the caller's with its own
+`chip`) is not addressing it. Package unit tests are excluded from the authored side for the same
+reason: they name slots nothing renders. This is a weaker guarantee than
+`docs-option-names.test.ts` gives — it cannot say _which_ kit renders a slot, or whether the
+element is reachable in the state the spec drives it to — but it is the guarantee that was missing,
+and it runs in `verify`. #233 renamed `clear-filters-button` to `clear-filter-button` in all three
+packages, touched no spec, and the stale selector matched nothing from the moment it landed. A new
+slot assembled at runtime rather than written as a literal is invisible here; a spec that must
+address one is the case to reconsider this check, not to widen the regex.
 
 **Live preview vs. source panel** — these come from two different places, which is why an example can render correctly while its source reads wrong (or vice versa). The live preview is an **iframe** of the real `(embed)/examples/<kit>/<slug>` route, so it always executes the actual component. The source panel is **text**: it is read from the file on disk and never executed. Examples render client-only via `next/dynamic` with `ssr: false`, so both kits share one path rather than letting shadcn SSR and heroui silently fall back. The reason originally given for that — a dynamic `require` in the heroui bundle that RSC could not run on the server — is **no longer true** and was corrected on 2026-09-11: `@heroui/react@3.0.3` contains no `require(` at all, and a page rendering the heroui grid through the normal server path prerenders at build time (`next build` marks it `○`, and the emitted HTML carries the full `<table>` and every row). Note `'use client'` was never the mechanism either way: a client component is still prerendered on the server, so the directive cannot skip an SSR a component could not survive. What remains is a choice about the docs — one code path for both kits — not a limitation of the heroui kit, and dropping `ssr: false` is now a live option rather than a blocked one.
 
