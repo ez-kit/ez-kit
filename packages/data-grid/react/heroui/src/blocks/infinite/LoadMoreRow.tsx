@@ -1,6 +1,6 @@
 'use client'
 
-import { LoadMoreTrigger, useGridMessages } from '@ez-kit/data-grid-react'
+import { LoadMoreTrigger, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, Spinner } from '@heroui/react'
 import { AlertCircle } from 'lucide-react'
 

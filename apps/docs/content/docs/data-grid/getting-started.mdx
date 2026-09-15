@@ -46,7 +46,74 @@ return (
 
 Pick one mode for the lifetime of a given grid — switching between them remounts the grid and resets its state.
 
-## 3. Next steps
+## 3. Decide how you build the grid
+
+The imports above are the zero-config path: `DataGrid` arrives with every feature's components and all nine cell types registered. That is the right start, and for many grids it is also the right finish — but it is not free, so it is worth knowing what the alternative is before the choice hardens.
+
+### The two shapes
+
+```tsx
+// A — everything, in one import.
+import { DataGrid, useDataGrid, createColumns } from '@ez-kit/data-grid-heroui'
+```
+
+```tsx
+// B — src/lib/data-grid.ts, written once in your project.
+import { createDataGrid } from '@ez-kit/data-grid-heroui'
+import { coreComponents } from '@ez-kit/data-grid-heroui/core'
+import { fallbacksComponents } from '@ez-kit/data-grid-heroui/fallbacks'
+import { paginationComponents } from '@ez-kit/data-grid-heroui/pagination'
+import { sortingComponents } from '@ez-kit/data-grid-heroui/sorting'
+import { numberCellType } from '@ez-kit/data-grid-heroui/cell-types/number'
+import { textCellType } from '@ez-kit/data-grid-heroui/cell-types/text'
+
+export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+	components: {
+		core: coreComponents,
+		pagination: paginationComponents,
+		sorting: sortingComponents,
+		fallbacks: fallbacksComponents,
+	},
+	cellTypes: { text: textCellType, number: numberCellType },
+})
+```
+
+Everything downstream is identical — `import { DataGrid, createColumns } from '@/lib/data-grid'` and carry on. Both flavors expose the same subpaths; swap `heroui` for `shadcn`.
+
+### What B saves
+
+A grid built the second way never reaches the code it did not name. Measured with esbuild against the shadcn flavor (minified, gzipped, React external), the four-group composition above is **115 kB** against **152 kB** for shape A — 24%. What stays out: the date picker and `react-day-picker`, the filter panel and its popovers, both write forms, the confirm dialog, the selection and draft bars, the row-actions cell, the resizer, the visibility menu, and the seven cell types the grid does not use.
+
+That is the whole saving, and it does not grow with your data or your column count — it is a fixed amount of code that either ships or does not.
+
+### Which to pick
+
+**Use A when the grid uses most of what it ships.** An admin table with filtering, inline editing, row selection and bulk actions is already reaching for ten of the fourteen groups; composing them by hand buys a few kilobytes and costs you a file to maintain.
+
+**Use B when the grid is small, or when it is on a page where bytes matter.** A read-only report with three text columns and pagination pays for a date picker it will never render, and that is the case shape B exists for.
+
+**If you are unsure, write shape B anyway.** Not for the bytes — because `createDataGrid` is where cell types are registered, and a project that starts with `import { DataGrid }` has nowhere to add a custom one later without first introducing this file and rewiring its imports. Starting with it costs seven lines and removes that migration. Adding a custom cell type then reads:
+
+```tsx
+cellTypes: { text: textCellType, number: numberCellType, rating: ratingCellType },
+```
+
+### Every group at once
+
+When you want shape B's factory but every feature's components, name the aggregate rather than listing fourteen imports:
+
+```tsx
+import { allComponents, cellTypes, createDataGrid } from '@ez-kit/data-grid-heroui'
+
+export const { DataGrid, useDataGrid, createColumns } = createDataGrid({
+	components: allComponents,
+	cellTypes,
+})
+```
+
+This is the same bundle as shape A — naming `allComponents` reaches every group, and `cellTypes` every one of the nine types. It buys the factory, not the saving. Use it when you want one place to register a custom cell type and have no interest in trimming anything else; drop a group or a cell type from those two objects the day you do.
+
+## 4. Next steps
 
 Once you have a grid rendering, branch out into the per-capability pages:
 

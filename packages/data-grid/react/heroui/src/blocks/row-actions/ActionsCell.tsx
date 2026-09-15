@@ -1,6 +1,6 @@
 'use client'
 
-import { ActionsCellState, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react'
+import { ActionsCellState, isGridMenuItemSlot, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button } from '@heroui/react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Fragment } from 'react'

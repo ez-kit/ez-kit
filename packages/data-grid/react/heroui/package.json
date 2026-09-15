@@ -22,12 +22,132 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
+		"./cell-types": {
+			"types": "./dist/cell-types/index.d.ts",
+			"import": "./dist/cell-types/index.js",
+			"default": "./dist/cell-types/index.js"
+		},
+		"./cell-types/text": {
+			"types": "./dist/cell-types/text.d.ts",
+			"import": "./dist/cell-types/text.js",
+			"default": "./dist/cell-types/text.js"
+		},
+		"./cell-types/number": {
+			"types": "./dist/cell-types/number.d.ts",
+			"import": "./dist/cell-types/number.js",
+			"default": "./dist/cell-types/number.js"
+		},
+		"./cell-types/boolean": {
+			"types": "./dist/cell-types/boolean.d.ts",
+			"import": "./dist/cell-types/boolean.js",
+			"default": "./dist/cell-types/boolean.js"
+		},
+		"./cell-types/date": {
+			"types": "./dist/cell-types/date.d.ts",
+			"import": "./dist/cell-types/date.js",
+			"default": "./dist/cell-types/date.js"
+		},
+		"./cell-types/select": {
+			"types": "./dist/cell-types/select.d.ts",
+			"import": "./dist/cell-types/select.js",
+			"default": "./dist/cell-types/select.js"
+		},
+		"./cell-types/badge": {
+			"types": "./dist/cell-types/badge.d.ts",
+			"import": "./dist/cell-types/badge.js",
+			"default": "./dist/cell-types/badge.js"
+		},
+		"./cell-types/image": {
+			"types": "./dist/cell-types/image.d.ts",
+			"import": "./dist/cell-types/image.js",
+			"default": "./dist/cell-types/image.js"
+		},
+		"./cell-types/link": {
+			"types": "./dist/cell-types/link.d.ts",
+			"import": "./dist/cell-types/link.js",
+			"default": "./dist/cell-types/link.js"
+		},
+		"./cell-types/progress": {
+			"types": "./dist/cell-types/progress.d.ts",
+			"import": "./dist/cell-types/progress.js",
+			"default": "./dist/cell-types/progress.js"
+		},
+		"./core": {
+			"types": "./dist/core/index.d.ts",
+			"import": "./dist/core/index.js",
+			"default": "./dist/core/index.js"
+		},
+		"./pagination": {
+			"types": "./dist/pagination/index.d.ts",
+			"import": "./dist/pagination/index.js",
+			"default": "./dist/pagination/index.js"
+		},
+		"./sorting": {
+			"types": "./dist/sorting/index.d.ts",
+			"import": "./dist/sorting/index.js",
+			"default": "./dist/sorting/index.js"
+		},
+		"./filtering": {
+			"types": "./dist/filtering/index.d.ts",
+			"import": "./dist/filtering/index.js",
+			"default": "./dist/filtering/index.js"
+		},
+		"./editing": {
+			"types": "./dist/editing/index.d.ts",
+			"import": "./dist/editing/index.js",
+			"default": "./dist/editing/index.js"
+		},
+		"./deleting": {
+			"types": "./dist/deleting/index.d.ts",
+			"import": "./dist/deleting/index.js",
+			"default": "./dist/deleting/index.js"
+		},
+		"./selection": {
+			"types": "./dist/selection/index.d.ts",
+			"import": "./dist/selection/index.js",
+			"default": "./dist/selection/index.js"
+		},
+		"./draft": {
+			"types": "./dist/draft/index.d.ts",
+			"import": "./dist/draft/index.js",
+			"default": "./dist/draft/index.js"
+		},
+		"./row-actions": {
+			"types": "./dist/row-actions/index.d.ts",
+			"import": "./dist/row-actions/index.js",
+			"default": "./dist/row-actions/index.js"
+		},
+		"./resizing": {
+			"types": "./dist/resizing/index.d.ts",
+			"import": "./dist/resizing/index.js",
+			"default": "./dist/resizing/index.js"
+		},
+		"./visibility": {
+			"types": "./dist/visibility/index.d.ts",
+			"import": "./dist/visibility/index.js",
+			"default": "./dist/visibility/index.js"
+		},
+		"./fallbacks": {
+			"types": "./dist/fallbacks/index.d.ts",
+			"import": "./dist/fallbacks/index.js",
+			"default": "./dist/fallbacks/index.js"
+		},
+		"./infinite": {
+			"types": "./dist/infinite/index.d.ts",
+			"import": "./dist/infinite/index.js",
+			"default": "./dist/infinite/index.js"
+		},
+		"./expanding": {
+			"types": "./dist/expanding/index.d.ts",
+			"import": "./dist/expanding/index.js",
+			"default": "./dist/expanding/index.js"
+		},
 		"./styles.css": "./dist/styles.css"
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap && cp src/styles.css dist/styles.css",
+		"build": "tsup && cp src/styles.css dist/styles.css",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -39,6 +159,222 @@
 		{
 			"path": "dist/index.js",
 			"limit": "16 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/index.js",
+			"limit": "3 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/text.js",
+			"limit": "500 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/number.js",
+			"limit": "800 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/boolean.js",
+			"limit": "900 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/date.js",
+			"limit": "1 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/select.js",
+			"limit": "800 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/badge.js",
+			"limit": "1 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/image.js",
+			"limit": "600 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/link.js",
+			"limit": "700 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/cell-types/progress.js",
+			"limit": "700 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/core/index.js",
+			"limit": "3.3 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/pagination/index.js",
+			"limit": "1.1 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/sorting/index.js",
+			"limit": "1.3 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/filtering/index.js",
+			"limit": "3.5 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/editing/index.js",
+			"limit": "600 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/deleting/index.js",
+			"limit": "600 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/selection/index.js",
+			"limit": "4.2 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/draft/index.js",
+			"limit": "4.1 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/row-actions/index.js",
+			"limit": "1.2 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/resizing/index.js",
+			"limit": "500 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/visibility/index.js",
+			"limit": "1.05 kB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/fallbacks/index.js",
+			"limit": "1.2 KB",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/infinite/index.js",
+			"limit": "700 B",
+			"ignore": [
+				"@ez-kit/data-grid-react",
+				"@internationalized/date",
+				"lucide-react"
+			]
+		},
+		{
+			"path": "dist/expanding/index.js",
+			"limit": "500 B",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",

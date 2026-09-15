@@ -1,6 +1,6 @@
 'use client'
 
-import { useGridMessages } from '@ez-kit/data-grid-react'
+import { useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { Button, Modal as HeroModal } from '@heroui/react'
 
 import type { FormShellProps } from '@ez-kit/data-grid-react'

@@ -7,6 +7,10 @@ export {
 	extendDataGrid,
 	createColumns,
 	createColumnHelper,
+	// Every group this kit registers, for a grid that uses most of them. Composing only the
+	// groups a grid renders — `@ez-kit/data-grid-shadcn/core`, `/sorting`, … — is what keeps the
+	// rest out of the bundle.
+	allComponents,
 } from './data-grid'
 export { cellTypes } from './blocks/cell-types'
 // Exported so a consumer can name what its columns are checked against. What keeps the emitted

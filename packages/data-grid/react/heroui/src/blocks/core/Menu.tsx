@@ -1,6 +1,6 @@
 'use client'
 
-import { GridMenuVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react'
+import { GridMenuVariant, isGridMenuItemSlot } from '@ez-kit/data-grid-react/kit'
 import { Button, Dropdown, Header, Label, Separator } from '@heroui/react'
 import { EllipsisVertical, MoreHorizontal } from 'lucide-react'
 

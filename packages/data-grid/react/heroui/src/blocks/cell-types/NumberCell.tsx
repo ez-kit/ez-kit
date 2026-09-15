@@ -1,10 +1,11 @@
 'use client'
 
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { Description, FieldError, Label } from '@heroui/react'
 
 import { NumberFieldControl } from '../core/NumberField'
 
-import type { FieldState } from '@ez-kit/data-grid-react'
+import type { CellTypeDefinition, FieldState, NumberCellConfig } from '@ez-kit/data-grid-react'
 
 type NumberCellFieldProps = FieldState & {
 	withSteppers: boolean
@@ -67,4 +68,18 @@ function NumberFilterInput(props: FieldState) {
 	)
 }
 
-export { NumberCellInput, NumberFilterInput }
+/**
+ * This kit's `number` registry entry — importable on its own, so a consumer can register only the
+ * cell types it uses. `blocks/cell-types.ts` composes the default registry from these.
+ *
+ * Annotated rather than inferred, and restating the phantom `__config` the spread carries: see
+ * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
+ * bundled declarations.
+ */
+const numberCellType: CellTypeDefinition<NumberCellConfig> & { __config?: NumberCellConfig } = {
+	...baseCellTypes.number,
+	editing: NumberCellInput,
+	filtering: NumberFilterInput,
+}
+
+export { NumberCellInput, numberCellType, NumberFilterInput }

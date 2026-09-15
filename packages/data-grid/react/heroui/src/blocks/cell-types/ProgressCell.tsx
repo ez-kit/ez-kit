@@ -1,8 +1,9 @@
 'use client'
 
+import { baseCellTypes } from '@ez-kit/data-grid-react/cell-types'
 import { Description, FieldError, Input, Label, NumberField, ProgressBar } from '@heroui/react'
 
-import type { CellViewProps, FieldState, ProgressCellConfig } from '@ez-kit/data-grid-react'
+import type { CellTypeDefinition, CellViewProps, FieldState, ProgressCellConfig } from '@ez-kit/data-grid-react'
 
 function ProgressCellView({ value, config }: CellViewProps<ProgressCellConfig>) {
 	const max = config?.max ?? 100
@@ -46,4 +47,18 @@ function ProgressCellInput({ id, value, onChange, onBlur, label, description, er
 	)
 }
 
-export { ProgressCellInput, ProgressCellView }
+/**
+ * This kit's `progress` registry entry — importable on its own, so a consumer can register only the
+ * cell types it uses. `blocks/cell-types.ts` composes the default registry from these.
+ *
+ * Annotated rather than inferred, and restating the phantom `__config` the spread carries: see
+ * the note on `KitCellTypes` in `../cell-types.ts` for what an inferred type does to the
+ * bundled declarations.
+ */
+const progressCellType: CellTypeDefinition<ProgressCellConfig> & { __config?: ProgressCellConfig } = {
+	...baseCellTypes.progress,
+	view: ProgressCellView,
+	editing: ProgressCellInput,
+}
+
+export { ProgressCellInput, progressCellType, ProgressCellView }

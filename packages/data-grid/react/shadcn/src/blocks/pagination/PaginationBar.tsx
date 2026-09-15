@@ -1,6 +1,6 @@
 'use client'
 
-import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react'
+import { buildPageWindow, PAGE_GAP, useGridMessages } from '@ez-kit/data-grid-react/kit'
 import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react'
 
 import { Button } from '@grid-shadcn/components/ui/button'
