@@ -93,9 +93,28 @@ const myRouterAdapter: RenderScopedAdapter = {
 
 Keep the port instance stable across renders (a `ref`); the provider reads `persist` once, so its length and order must be stable too.
 
+## When the substrate fails
+
+A synchronous source cannot fail into the engine: the URL port never throws, and the built-in storage adapter absorbs a quota or private-mode error behind a single `console.warn`. An **async** port can — a REST call 500s, an IndexedDB transaction aborts — and a rejected `get()` or `set()` reaches your app through the persist layer's error handler, tagged with the `source` that produced it:
+
+```tsx
+<StoreProvider
+	persist={[remote]}
+	onPersistError={(error, { source }) => {
+		notify(`Could not sync ${source}`, error)
+	}}
+>
+	…
+</StoreProvider>
+```
+
+Mounting `PersistProvider` directly, the same handler is its `onError` prop; on `StoreProvider` it carries the layer's name because that provider mounts two. The handler is read at call time, so a fresh closure each render costs nothing — it does not re-create the engines.
+
+Leave it unset and a rejection is swallowed, exactly as before: persistence is best-effort and the store stays the source of truth. An adapter that can recover on its own — a retry, a write queue — should still do that internally rather than push every transient failure at the application.
+
 ## Checklist
 
 - `get()` returns the substrate as `Keyed`; unknown/foreign keys you don't own should be preserved on `set`.
-- `set()` honors `ctx.diff.removed` to delete keys, and is best-effort (never throw into render).
+- `set()` honors `ctx.diff.removed` to delete keys, and is best-effort (never throw into render); an async `set()` may reject, which surfaces as `onPersistError` rather than an unhandled rejection.
 - `subscribe` reports **external** changes only — the writing context must not notify itself.
 - Async (`Promise`) returns are fine; they keep that source's engine independent of the synchronous ones.

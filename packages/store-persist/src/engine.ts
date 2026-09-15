@@ -24,8 +24,9 @@ export type CreateEngineOptions = {
 	defaultMeta?: unknown
 	/**
 	 * Receives errors from an async port's `get()`/`set()` (e.g. IndexedDB rejection). Synchronous
-	 * ports (URL, localStorage) never invoke this. When unset, async rejections are swallowed — async
-	 * adapters are expected to handle their own I/O errors internally.
+	 * ports (URL, localStorage) never invoke this. `PersistProvider` binds this to its own `onError`
+	 * prop, tagged with the source id, which is how an application observes a failing async adapter.
+	 * When unset, async rejections are swallowed and the store stays the source of truth.
 	 */
 	onError?: (error: unknown) => void
 }
