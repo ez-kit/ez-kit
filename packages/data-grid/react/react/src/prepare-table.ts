@@ -1,3 +1,4 @@
+import { createGridContextStore } from './grid-context'
 import { defaultResolvedGridOptions } from './resolved-options'
 
 import type { DataTable } from '@ez-kit/data-grid-core'
@@ -5,11 +6,13 @@ import type { DataTable } from '@ez-kit/data-grid-core'
 /**
  * Makes a headless {@link DataTable} renderable by the React layer, and returns it.
  *
- * The only thing it does is seed `table.grid` — the React layer's resolved options — so that
- * `table.grid` is **always** an object and no compound component has to guard the property
- * itself. `useDataGrid` overwrites it wholesale on its first render; a table built straight
- * from `createTable` (a headless test, or a consumer driving the compound components by hand)
- * keeps the all-features-off defaults and still renders.
+ * The only thing it does is seed the two fields the React layer hangs on the table — `grid`,
+ * its resolved options, and `gridContext`, the store behind the `context` option — so that
+ * both are **always** present and no compound component has to guard the property itself.
+ * `useDataGrid` overwrites `grid` wholesale on its first render and writes the context store's
+ * value when the merged option changes; a table built straight from `createTable` (a headless
+ * test, or a consumer driving the compound components by hand) keeps the all-features-off
+ * defaults and an empty context, and still renders.
  *
  * This replaced a `DataGridInstance` wrapper that carried `{ table, store, subscribe,
  * getSnapshot }`. Three of those four were the same functions already on the table —
@@ -20,5 +23,6 @@ import type { DataTable } from '@ez-kit/data-grid-core'
  */
 export function prepareDataGridTable<TRow extends object>(table: DataTable<TRow>): DataTable<TRow> {
 	table.grid = defaultResolvedGridOptions()
+	table.gridContext = createGridContextStore()
 	return table
 }
