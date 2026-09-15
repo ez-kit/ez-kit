@@ -15,18 +15,25 @@ Read with `require.resolve` from inside each consuming package:
 | ----------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `@tanstack/table-core`  | **9.2.4**  | `node_modules/.pnpm/@tanstack+table-core@9.2.4/node_modules/@tanstack/table-core`                                               |
 | `@tanstack/react-table` | **9.2.4**  | `node_modules/.pnpm/@tanstack+react-table@9.2.4_react-dom@19.2.5_react@19.2.5__react@19.2.5/node_modules/@tanstack/react-table` |
-| `@tanstack/react-store` | **0.11.1** | transitive, via `react-table`'s `"@tanstack/react-store": "^0.11.1"`                                                            |
-| `@tanstack/store`       | **0.11.1** | transitive, via `react-store`                                                                                                   |
+| `@tanstack/react-store` | **0.11.1** | for the grid: transitive, via `react-table`'s `"@tanstack/react-store": "^0.11.1"`                                              |
+| `@tanstack/store`       | **0.11.1** | for the grid: transitive, via `react-store`                                                                                     |
 
 **v8 is now gone from the workspace entirely.** `@tanstack/table-core` was a direct dependency of
-only `data-grid-core` and `data-grid-react`; the shadcn and heroui kits and the docs app reach it
-transitively through `@ez-kit/data-grid-react`. After the bump, `grep -n table-core pnpm-lock.yaml`
+only `data-grid-core` and `data-grid-react`. No other workspace package names `@tanstack/table-core`
+at all: the shadcn and heroui kits depend on `@ez-kit/data-grid-react` and nothing TanStack-Table
+directly, and `apps/docs` depends on `@ez-kit/data-grid-core`, `-react`, `-shadcn` and `-heroui` —
+so every one of them reaches table-core only through a workspace package. After the bump,
+`grep -n table-core pnpm-lock.yaml`
 returns `9.2.4` and nothing else — there is no `@tanstack/table-core@8.21.3` entry left. A stale
 `@tanstack+table-core@8.21.3` directory remains in `node_modules/.pnpm` from the previous install
 and is not resolved by anything; do not read it by mistake.
 
-`@tanstack/react-store@0.11.0` / `@tanstack/store@0.11.0` directories are likewise stale leftovers
-in `node_modules/.pnpm`; the lockfile resolves **0.11.1** for both.
+`@tanstack/react-store@0.11.0` and `@tanstack/store@0.11.0` are **not** leftovers — they remain live in
+the lockfile, resolved by `@tanstack/react-form@1.33.2`, which depends on `@tanstack/react-store: 0.11.0`
+(`pnpm-lock.yaml:10861`), which in turn depends on `@tanstack/store: 0.11.0` (`pnpm-lock.yaml:10868`).
+`react-table@9.2.4` and `table-core@9.2.4` resolve **0.11.1** for both. The workspace therefore has two
+`@tanstack/store` copies side by side: atoms created under `react-form` and atoms created under the grid
+are not the same module instance, so they cannot be shared or compared by identity across the two.
 
 `react-table@9.2.4` pins `"@tanstack/table-core": "9.2.4"` exactly, so the adapter and the core can
 never drift apart.
