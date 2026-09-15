@@ -19,12 +19,17 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
+		},
+		"./features": {
+			"types": "./dist/features/index.d.ts",
+			"import": "./dist/features/index.js",
+			"default": "./dist/features/index.js"
 		}
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap",
+		"build": "tsup",
 		"lint": "eslint . --max-warnings=0",
 		"lint:fix": "eslint . --max-warnings=0 --fix",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
@@ -34,14 +39,26 @@
 	},
 	"size-limit": [
 		{
+			"name": "index",
 			"path": "dist/index.js",
 			"limit": "14 KB",
 			"ignore": [
-				"@tanstack/table-core"
+				"@tanstack/table-core",
+				"@tanstack/store"
+			]
+		},
+		{
+			"name": "features (provisional limit — re-measured against the first green build in task 13)",
+			"path": "dist/features/index.js",
+			"limit": "6 KB",
+			"ignore": [
+				"@tanstack/table-core",
+				"@tanstack/store"
 			]
 		}
 	],
 	"dependencies": {
+		"@tanstack/store": "0.11.1",
 		"@tanstack/table-core": "^9.2.4"
 	},
 	"devDependencies": {

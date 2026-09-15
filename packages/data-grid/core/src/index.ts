@@ -103,7 +103,11 @@ export type {
 	SystemColumnDef,
 } from './column/types'
 
-export type { TableState } from '@tanstack/table-core'
+// The registered feature set's type, which every public type here is generic over. The feature
+// *values* are deliberately not re-exported from this entry — they live on
+// `@ez-kit/data-grid-core/features`, which is what keeps a feature out of a bundle that never
+// registers it.
+export type { TableFeatures, TableState } from '@tanstack/table-core'
 
 export type {
 	BetweenOperatorConfig,

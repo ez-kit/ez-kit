@@ -10,19 +10,25 @@ import type {
 } from '../features/operators'
 import type { FieldState, ValidateOn } from '../features/validation'
 import type {
+	CellData,
 	ColumnDef as TableCoreColumnDef,
 	ColumnMeta as TableCoreColumnMeta,
 	HeaderContext,
 	RowData,
+	TableFeatures,
 } from '@tanstack/table-core'
 
 /** Comparator signature for custom sort functions. Compatible with TanStack `SortingFn`. */
 export type SortingFn = (rowA: unknown, rowB: unknown, columnId: string) => number
 
-export type TanStackColumnDef<TRow extends RowData, TValue = unknown> = TableCoreColumnDef<TRow, TValue> & {
+export type TanStackColumnDef<
+	TFeatures extends TableFeatures,
+	TRow extends RowData,
+	TValue = unknown,
+> = TableCoreColumnDef<TFeatures, TRow, TValue> & {
 	accessorKey?: string
-	columns?: TanStackColumnDef<TRow, unknown>[]
-	meta?: TableCoreColumnMeta<TRow, TValue>
+	columns?: TanStackColumnDef<TFeatures, TRow, unknown>[]
+	meta?: TableCoreColumnMeta<TFeatures, TRow, TValue>
 }
 
 /**
@@ -876,12 +882,17 @@ export type ColumnDefCommon<
 	 * The return type is `unknown` because core is framework-agnostic: it never calls this,
 	 * it hands it to the adapter, which renders it (React: any `ReactNode`).
 	 *
+	 * The context's feature set is the bare `TableFeatures` bound rather than the table's own:
+	 * {@link ColumnDef} deliberately keeps its parameters, so there is no `TFeatures` in scope
+	 * here to thread. A column option is already ignored when the table-level feature is off, so
+	 * the error this would catch is one the table caught a level up.
+	 *
 	 * @example
 	 * ```tsx
 	 * { accessorKey: 'total', header: () => <span>Total <InfoIcon /></span> }
 	 * ```
 	 */
-	header?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	header?: string | ColumnRenderer<HeaderContext<TableFeatures, TRow, unknown>, TNode>
 	/**
 	 * Column footer, same shape as {@link ColumnDef.header}.
 	 *
@@ -900,7 +911,7 @@ export type ColumnDefCommon<
 	 *   footer: ({ table }) => table.getFilteredRowModel().rows.reduce((sum, r) => sum + r.original.amount, 0) }
 	 * ```
 	 */
-	footer?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	footer?: string | ColumnRenderer<HeaderContext<TableFeatures, TRow, unknown>, TNode>
 	/**
 	 * Child columns, which makes this def a **header group** rather than a column: it contributes
 	 * no cells, and its `header` spans its children across an extra header row. Groups nest, and
@@ -1156,7 +1167,7 @@ export type SystemColumnType = (typeof SystemColumnType)[keyof typeof SystemColu
  *
  * Reached as `selection.column`, `expanding.column` and `rowActions.column`.
  */
-export type SystemColumnDef<TRow extends object = object, TNode = unknown> = {
+export type SystemColumnDef<TFeatures extends TableFeatures, TRow extends object = object, TNode = unknown> = {
 	/**
 	 * Header content. Omitted, the column keeps its built-in header: the select-all checkbox
 	 * for selection, nothing for expand and actions.
@@ -1165,7 +1176,7 @@ export type SystemColumnDef<TRow extends object = object, TNode = unknown> = {
 	 * that for a grid where selecting every row is not on offer (`selection.multi: false`,
 	 * which renders no checkbox anyway).
 	 */
-	header?: string | ColumnRenderer<HeaderContext<TRow, unknown>, TNode>
+	header?: string | ColumnRenderer<HeaderContext<TFeatures, TRow, unknown>, TNode>
 	/**
 	 * Width in pixels. Defaults: `44` for selection and expand, and for actions a width
 	 * derived from how many buttons the widest row state renders.
@@ -1199,7 +1210,11 @@ export type SystemColumnDef<TRow extends object = object, TNode = unknown> = {
 /** Augment TanStack's ColumnMeta with our custom fields. */
 declare module '@tanstack/table-core' {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-	interface ColumnMeta<TData, TValue> {
+	interface ColumnMeta<
+		in out TFeatures extends TableFeatures,
+		in out TData extends RowData,
+		TValue extends CellData = CellData,
+	> {
 		/**
 		 * Resolved pinning from `column.pinning`, normalized off the scalar form.
 		 *
@@ -1240,6 +1255,6 @@ declare module '@tanstack/table-core' {
 		// than `unknown` because it must stay mutually assignable — a def written against a
 		// concrete row type has to land here, and be readable back out.
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		systemHeader?: string | ColumnRenderer<HeaderContext<any, unknown>, unknown>
+		systemHeader?: string | ColumnRenderer<HeaderContext<TFeatures, any, unknown>, unknown>
 	}
 }

@@ -15,6 +15,7 @@ import type {
 	ColumnOrderState,
 	ColumnPinningState,
 	ColumnSizingState,
+	ColumnVisibilityState,
 	ExpandedState,
 	FilterFn,
 	PaginationState,
@@ -24,14 +25,20 @@ import type {
 	RowData,
 	RowModel,
 	Table as TanStackTable,
-	TableOptionsResolved,
+	TableFeatures,
+	TableOptions,
 	TableState,
 	Updater,
-	VisibilityState,
 } from '@tanstack/table-core'
 
 export type { SortingFn } from './column/types'
-export type { TableState as TableSnapshot }
+/**
+ * The whole state object of a grid, named for how the grid hands it out.
+ *
+ * Generic over the registered feature set, like TanStack's `TableState` it aliases: a slice
+ * exists on the state only when the feature that owns it is in the set.
+ */
+export type TableSnapshot<TFeatures extends TableFeatures> = TableState<TFeatures>
 
 /** Single sort entry: column id + direction. Order in the array = sort priority for multi-sort. */
 export type SortingStateEntry = { id: string; desc: boolean }
@@ -212,7 +219,7 @@ export type FilteringConfig = FeatureToggle & {
  * Receives the row, the column id being inspected, the user-entered value, and
  * an `addMeta` callback for stashing match metadata (e.g. for highlighting).
  */
-export type GlobalFilterFn<TRow extends RowData = RowData> = FilterFn<TRow>
+export type GlobalFilterFn<TFeatures extends TableFeatures, TRow extends RowData = RowData> = FilterFn<TFeatures, TRow>
 
 /**
  * The match functions available to global search by name.
@@ -288,7 +295,7 @@ export type GlobalFilterFnId = BuiltInGlobalFilterFn | (string & {})
  * })
  * ```
  */
-export type GlobalFilteringConfig = FeatureToggle & {
+export type GlobalFilteringConfig<TFeatures extends TableFeatures> = FeatureToggle & {
 	/**
 	 * Server-side global search: the grid stops filtering rows itself and hands the
 	 * search value to {@link GlobalFilteringConfig.onChange}, expecting the data it
@@ -308,11 +315,11 @@ export type GlobalFilteringConfig = FeatureToggle & {
 	 *
 	 * Default: {@link BuiltInGlobalFilterFn.IncludesString} (case-insensitive substring).
 	 */
-	fn?: GlobalFilterFnId | GlobalFilterFn
+	fn?: GlobalFilterFnId | GlobalFilterFn<TFeatures>
 	/**
 	 * Named global filter functions, addressable from {@link GlobalFilteringConfig.fn} by id.
 	 */
-	fns?: Record<string, GlobalFilterFn>
+	fns?: Record<string, GlobalFilterFn<TFeatures>>
 	/**
 	 * Called whenever the global-search value changes. Receives the current
 	 * global filter (typically a string). Use this to mirror search state into
@@ -478,7 +485,11 @@ export type PaginationConfig = FeatureToggle &
  * under the same name and for the same reason, is on {@link ExpandingConfig} and
  * {@link RowActionsConfig}: one system-column vocabulary, one node type across all three.
  */
-export type SelectionConfig<TRow extends object = object, TNode = unknown> = FeatureToggle & {
+export type SelectionConfig<
+	TFeatures extends TableFeatures,
+	TRow extends object = object,
+	TNode = unknown,
+> = FeatureToggle & {
 	/**
 	 * Called when row selection changes.
 	 *
@@ -503,7 +514,7 @@ export type SelectionConfig<TRow extends object = object, TNode = unknown> = Fea
 	 * Presentation of the auto-injected `__selection__` column — its width, which edge it
 	 * pins to, its alignment. See {@link SystemColumnDef}.
 	 */
-	column?: SystemColumnDef<TRow, TNode>
+	column?: SystemColumnDef<TFeatures, TRow, TNode>
 }
 
 /**
@@ -531,6 +542,7 @@ export type ExpandingMode = (typeof ExpandingMode)[keyof typeof ExpandingMode]
  * only ever drift.
  */
 export type ExpandingConfig<
+	TFeatures extends TableFeatures,
 	TRow extends object = object,
 	TRenderExpanded = unknown,
 	TNode = unknown,
@@ -543,7 +555,7 @@ export type ExpandingConfig<
 	 * Sub-content mode: per-row expandability callback.
 	 * When omitted and `expanding.component` is provided, every row is expandable.
 	 */
-	getRowCanExpand?: (row: Row<TRow>) => boolean
+	getRowCanExpand?: (row: Row<TFeatures, TRow>) => boolean
 	/**
 	 * Sub-content mode: the detail-panel renderer.
 	 *
@@ -557,15 +569,15 @@ export type ExpandingConfig<
 	 * Presentation of the auto-injected `__expand__` chevron column — its width, which edge it
 	 * pins to, its alignment. See {@link SystemColumnDef}.
 	 */
-	column?: SystemColumnDef<TRow, TNode>
+	column?: SystemColumnDef<TFeatures, TRow, TNode>
 }
 
 export type VisibilityConfig = FeatureToggle & {
 	/**
-	 * Called whenever column visibility changes. Receives the resolved {@link VisibilityState}.
+	 * Called whenever column visibility changes. Receives the resolved {@link ColumnVisibilityState}.
 	 * Use it to persist which columns a user hid.
 	 */
-	onChange?: (visibility: VisibilityState) => void
+	onChange?: (visibility: ColumnVisibilityState) => void
 }
 
 /**
@@ -737,7 +749,10 @@ export type ResizingConfig = FeatureToggle & {
  * at runtime. To seed values for a create form, use {@link CreatingConfig.defaultValues} (table
  * level) or a column's `creating.defaultValue` (per-column), not `initialState`.
  */
-export type InitialTableState = Omit<Partial<TableState>, 'editing' | 'creating' | 'deleting' | 'pagination'> & {
+export type InitialTableState<TFeatures extends TableFeatures> = Omit<
+	Partial<TableState<TFeatures>>,
+	'editing' | 'creating' | 'deleting' | 'pagination'
+> & {
 	/**
 	 * Seeded per key, unlike every other slice. `Partial<TableState>` only makes the slice
 	 * itself optional — TanStack's `PaginationState` still requires **both** `pageIndex` and
@@ -757,7 +772,21 @@ export type InitialTableState = Omit<Partial<TableState>, 'editing' | 'creating'
 	pagination?: Partial<PaginationState>
 }
 
-export type TableConfig<TRow extends object> = {
+export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = {
+	/**
+	 * The features registered on this table, built once with `tableFeatures()` from
+	 * `@ez-kit/data-grid-core/features`.
+	 *
+	 * Required, and deliberately without a default. The default could only be the all-in set,
+	 * which is what every consumer who never thought about it would then ship — and the point
+	 * of composing a set is that a table pays for what it registers. Requiring it is also what
+	 * turns `sorting: {…}` without `rowSortingFeature` from a silent no-op into a compile
+	 * error: a config field exists on this type only when its feature is in the set.
+	 *
+	 * Registering a feature does not switch it on. That stays the config's job, so a shared
+	 * grid with a wide set can turn half of it off per use site.
+	 */
+	features: TFeatures
 	data: TRow[]
 	/**
 	 * Columns, from `createColumns` / `createColumnHelper` or written inline.
@@ -810,10 +839,10 @@ export type TableConfig<TRow extends object> = {
 	 * - {@link GlobalFilteringConfig} — fine-grained control
 	 * - `false` / omitted — disabled
 	 */
-	globalFiltering?: boolean | GlobalFilteringConfig
+	globalFiltering?: boolean | GlobalFilteringConfig<TFeatures>
 	pagination?: boolean | PaginationConfig
-	selection?: boolean | SelectionConfig<TRow>
-	expanding?: boolean | ExpandingConfig<TRow>
+	selection?: boolean | SelectionConfig<TFeatures, TRow>
+	expanding?: boolean | ExpandingConfig<TFeatures, TRow>
 	/**
 	 * Column visibility (hide/show columns). `false` / omitted disables hiding for all
 	 * columns; `true` enables it (per-column `visibility` controls still apply).
@@ -910,7 +939,7 @@ export type TableConfig<TRow extends object> = {
 	 * {@link InitialTableState} for why. To seed create-form values use
 	 * {@link TableConfig.creating}'s `defaultValues`, or a column's `creating.defaultValue`.
 	 */
-	initialState?: InitialTableState
+	initialState?: InitialTableState<TFeatures>
 	/**
 	 * Called whenever the table state changes (sorting, filtering, pagination, etc.).
 	 * Receives the **resolved** next state — assign it to your own state to implement
@@ -921,32 +950,41 @@ export type TableConfig<TRow extends object> = {
 	 * over carries the applied snapshot on `sorting` / `columnFilters` / `globalFilter`
 	 * rather than the pending draft.
 	 * @example
-	 * const [tableState, setTableState] = useState<Partial<TableState>>({})
+	 * const [tableState, setTableState] = useState<Partial<TableState<TFeatures>>>({})
 	 * useDataGrid({ ..., state: tableState, onStateChange: (state) => setTableState(state) })
 	 */
-	onStateChange?: (state: TableState) => void
+	onStateChange?: (state: TableState<TFeatures>) => void
 }
 
 /**
  * Extended TanStack table instance returned by createTable().
  * Adds subscribe/getSnapshot for useSyncExternalStore, setData/appendData, and
  * the infinite-scroll status setters (see {@link InfiniteState}).
+ *
+ * An intersection rather than an `interface … extends`: v9's `Table<TFeatures, TData>` resolves
+ * the registered feature set through a mapped type, so its members are not statically known and
+ * an interface cannot extend it.
  */
-// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
-export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
-	options: TableOptionsResolved<TRow>
-	getState: () => TableState
-	getRowModel: () => RowModel<TRow>
-	getAllColumns: () => Column<TRow, unknown>[]
-	getColumn: (columnId: string) => Column<TRow, unknown> | undefined
-	getRow: (id: string, searchAll?: boolean) => Row<TRow>
-	initialState: TableState
-	setOptions: (newOptions: Updater<TableOptionsResolved<TRow>>) => void
-	setState: (updater: Updater<TableState>) => void
+// `TanStackTable` reads as `any` here for as long as the seven feature modules still carry v8's
+// `declare module '@tanstack/table-core' { interface Table<TData> … }`, which redeclares the name
+// this file imports with v8's arity. The disable goes with those blocks: ESLint reports an unused
+// directive as a warning and every lint script runs `--max-warnings=0`, so whichever task ports
+// the last of them is forced to delete this line.
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+export type DataTable<TFeatures extends TableFeatures, TRow extends RowData> = TanStackTable<TFeatures, TRow> & {
+	options: TableOptions<TFeatures, TRow>
+	getState: () => TableState<TFeatures>
+	getRowModel: () => RowModel<TFeatures, TRow>
+	getAllColumns: () => Column<TFeatures, TRow, unknown>[]
+	getColumn: (columnId: string) => Column<TFeatures, TRow, unknown> | undefined
+	getRow: (id: string, searchAll?: boolean) => Row<TFeatures, TRow>
+	initialState: TableState<TFeatures>
+	setOptions: (newOptions: Updater<TableOptions<TFeatures, TRow>>) => void
+	setState: (updater: Updater<TableState<TFeatures>>) => void
 	/** Subscribe to all state changes. Returns an unsubscribe function. */
 	subscribe: (listener: () => void) => () => void
 	/** Returns a stable snapshot of current state for useSyncExternalStore. */
-	getSnapshot: () => TableState
+	getSnapshot: () => TableState<TFeatures>
 	/**
 	 * The snapshot as of construction, frozen.
 	 *
@@ -954,7 +992,7 @@ export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
 	 * caller: React's `useSyncExternalStore` needs a server snapshot that never moves, and
 	 * "the state this table started with" is a fact about the table, not about React.
 	 */
-	getInitialSnapshot: () => TableState
+	getInitialSnapshot: () => TableState<TFeatures>
 	/** Reactively replace the data array. */
 	setData: (data: TRow[]) => void
 	/**
@@ -982,7 +1020,7 @@ export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
 	 * subscribers are not woken mid-render — pair it with
 	 * {@link DataTable.notifyStateSubscribers} from a layout effect.
 	 */
-	syncControlledState: (partial: Partial<TableState>, options?: SetStateOptions) => void
+	syncControlledState: (partial: Partial<TableState<TFeatures>>, options?: SetStateOptions) => void
 	/**
 	 * Call every state subscriber with the current snapshot. Exists to flush a
 	 * {@link DataTable.syncControlledState} write made with `{ silent: true }`.
@@ -991,4 +1029,4 @@ export interface DataTable<TRow extends RowData> extends TanStackTable<TRow> {
 }
 
 /** Public alias. */
-export type Table<TRow extends object> = DataTable<TRow>
+export type Table<TFeatures extends TableFeatures, TRow extends object> = DataTable<TFeatures, TRow>
