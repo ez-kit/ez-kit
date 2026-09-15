@@ -583,6 +583,19 @@ export type ColumnOrderingConfig = FeatureToggle & {
 	 * rest as declared", so a partial write would quietly reorder columns nobody touched.
 	 */
 	onChange?: (columnOrder: ColumnOrderState) => void
+	/**
+	 * Offer the two move controls in the Columns toggle as well, which then becomes a column
+	 * panel: it lists **every** non-system leaf column rather than only the hideable ones, so
+	 * that the list reads as the column order itself and a step lands on the row next to it.
+	 *
+	 * A column the author locked with `visibility: false` is listed but its toggle is not
+	 * offered — the invariant that such a column can never be hidden is untouched, and the row
+	 * is there because the column still has a place in the order and may still be moved.
+	 *
+	 * Opt-in, default `false`: the Columns toggle is a visibility control in every grid written
+	 * so far, and gaining a second job is a change those grids did not ask for.
+	 */
+	visibilityMenu?: boolean
 }
 
 /**

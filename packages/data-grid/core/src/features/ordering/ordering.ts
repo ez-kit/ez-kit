@@ -17,6 +17,23 @@ export const ColumnMoveDirection = {
 export type ColumnMoveDirection = (typeof ColumnMoveDirection)[keyof typeof ColumnMoveDirection]
 
 /**
+ * Which columns count as neighbours for a step.
+ *
+ * A step always moves a column past what the user can see — but *where* they are looking decides
+ * what that means. In the header they see the table, so a hidden column is not a place to land.
+ * In the column panel they see a list that includes the hidden ones, and a step that jumped over
+ * a row sitting right there would look like it moved two places.
+ */
+export const ColumnMoveScope = {
+	/** Only visible columns. The header's step, and what every caller gets by default. */
+	Visible: 'visible',
+	/** Every column, hidden ones included. The column panel's step. */
+	All: 'all',
+} as const
+
+export type ColumnMoveScope = (typeof ColumnMoveScope)[keyof typeof ColumnMoveScope]
+
+/**
  * Whether this column may be moved at all.
  *
  * Two locks, both per column: a system column (selection / expand / row actions) has a fixed
@@ -36,8 +53,10 @@ function isMovable(column: Column<never>): boolean {
  *   move that crossed a band would look like a pin, not a reorder;
  * - under the same parent header — the header groups are built from the leaf order, so a leaf
  *   dragged into a sibling group splits its parent's header cell in two;
- * - visible — a step should move the column past what the user can see. Hidden columns keep
- *   their own places; they are neither skipped over silently nor landed on.
+ * - a neighbour under the `scope`: {@link ColumnMoveScope.Visible} passes over hidden columns,
+ *   because a step should move the column past what the user can see, and in the table they
+ *   cannot see those. {@link ColumnMoveScope.All} counts them, because the column panel lists
+ *   them.
  *
  * Both ends are also checked for {@link isMovable}: a locked column is not a landing spot.
  */
@@ -45,6 +64,7 @@ function findNeighbour(
 	columns: Column<never>[],
 	index: number,
 	direction: ColumnMoveDirection,
+	scope: ColumnMoveScope,
 ): Column<never> | undefined {
 	const column = columns[index]
 	if (!column) return undefined
@@ -60,7 +80,7 @@ function findNeighbour(
 		// what lies beyond is not a neighbour of this column at all.
 		if (candidate.getIsPinned() !== pinned) return undefined
 		if (candidate.parent?.id !== parentId) return undefined
-		if (!candidate.getIsVisible()) continue
+		if (scope === ColumnMoveScope.Visible && !candidate.getIsVisible()) continue
 		return isMovable(candidate) ? candidate : undefined
 	}
 	return undefined
@@ -71,12 +91,13 @@ export function canMoveColumn<TRow extends object>(
 	table: Table<TRow>,
 	columnId: string,
 	direction: ColumnMoveDirection,
+	scope: ColumnMoveScope = ColumnMoveScope.Visible,
 ): boolean {
 	const columns = table.getAllLeafColumns() as unknown as Column<never>[]
 	const index = columns.findIndex((column) => column.id === columnId)
 	const column = columns[index]
 	if (!column || !isMovable(column)) return false
-	return findNeighbour(columns, index, direction) !== undefined
+	return findNeighbour(columns, index, direction, scope) !== undefined
 }
 
 /**
@@ -91,6 +112,7 @@ export function moveColumn<TRow extends object>(
 	table: Table<TRow>,
 	columnId: string,
 	direction: ColumnMoveDirection,
+	scope: ColumnMoveScope = ColumnMoveScope.Visible,
 ): ColumnOrderState {
 	const columns = table.getAllLeafColumns() as unknown as Column<never>[]
 	const order = columns.map((column) => column.id)
@@ -98,7 +120,7 @@ export function moveColumn<TRow extends object>(
 	const column = columns[index]
 	if (!column || !isMovable(column)) return order
 
-	const neighbour = findNeighbour(columns, index, direction)
+	const neighbour = findNeighbour(columns, index, direction, scope)
 	if (!neighbour) return order
 
 	const targetIndex = order.indexOf(neighbour.id)

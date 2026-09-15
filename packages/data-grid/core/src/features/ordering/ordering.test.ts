@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createColumns } from '../../column/create-columns'
 import { createTable } from '../../create-table'
 
-import { canMoveColumn, ColumnMoveDirection, moveColumn } from './ordering'
+import { canMoveColumn, ColumnMoveDirection, ColumnMoveScope, moveColumn } from './ordering'
 
 import type { ColumnDef } from '../../column/types'
 
@@ -125,5 +125,50 @@ describe('moveColumn', () => {
 		const table = makeTable(FLAT, { selection: true })
 
 		expect(canMoveColumn(table, '__selection__', ColumnMoveDirection.End)).toBe(false)
+	})
+})
+
+describe('ColumnMoveScope.All', () => {
+	const WITH_HIDDEN: ColumnDef<Row>[] = [
+		{ accessorKey: 'name', header: 'Name' },
+		{ accessorKey: 'email', header: 'Email', visibility: { initialHidden: true } },
+		{ accessorKey: 'age', header: 'Age' },
+	]
+
+	it('lands on a hidden neighbour instead of stepping past it', () => {
+		// The column panel lists hidden columns, so a step there moves past the row the user
+		// can see in *that* surface — one place, not two.
+		const table = makeTable(WITH_HIDDEN, { visibility: true })
+
+		expect(moveColumn(table, 'age', ColumnMoveDirection.Start, ColumnMoveScope.All)).toEqual(['name', 'age', 'email'])
+	})
+
+	it('leaves a column with only a hidden neighbour movable', () => {
+		const table = makeTable(WITH_HIDDEN, { visibility: true })
+
+		expect(canMoveColumn(table, 'email', ColumnMoveDirection.Start, ColumnMoveScope.All)).toBe(true)
+		expect(canMoveColumn(table, 'email', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(true)
+	})
+
+	it('is still bound by pin bands, header groups and locks', () => {
+		// Widening which neighbours count says nothing about which moves are legal.
+		const table = makeTable(
+			[
+				{ accessorKey: 'name', header: 'Name' },
+				{ accessorKey: 'email', header: 'Email', pinning: 'left', visibility: { initialHidden: true } },
+				{ accessorKey: 'age', header: 'Age', ordering: false },
+			],
+			{ pinning: true, visibility: true },
+		)
+
+		expect(canMoveColumn(table, 'email', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(false)
+		expect(canMoveColumn(table, 'age', ColumnMoveDirection.Start, ColumnMoveScope.All)).toBe(false)
+		expect(canMoveColumn(table, 'name', ColumnMoveDirection.End, ColumnMoveScope.All)).toBe(false)
+	})
+
+	it('defaults to the visible scope, so the header is unchanged', () => {
+		const table = makeTable(WITH_HIDDEN, { visibility: true })
+
+		expect(moveColumn(table, 'age', ColumnMoveDirection.Start)).toEqual(['age', 'name', 'email'])
 	})
 })

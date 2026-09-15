@@ -74,6 +74,8 @@ export const defaultMessages: GridMessages = {
 	visibility: {
 		menu: 'Column visibility',
 		trigger: 'Columns',
+		moveStart: 'Move up',
+		moveEnd: 'Move down',
 	},
 	filtering: {
 		trigger: 'Filter',

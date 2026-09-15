@@ -251,19 +251,19 @@ describe('grid.ordering — the two axes resolve independently', () => {
 	}
 
 	it('names the row axis to turn it on', () => {
-		expect(gridOrdering({ row: true })).toEqual({ column: false, row: true })
+		expect(gridOrdering({ row: true })).toEqual({ column: false, row: true, visibilityMenu: false })
 	})
 
 	it('keeps a bare `true` columns-only', () => {
 		// An upgrade must not hand a grid written against `ordering: true` a second affordance.
-		expect(gridOrdering(true)).toEqual({ column: true, row: false })
+		expect(gridOrdering(true)).toEqual({ column: true, row: false, visibilityMenu: false })
 	})
 
 	it('honours `enabled: false` on the row axis', () => {
-		expect(gridOrdering({ row: { enabled: false } })).toEqual({ column: false, row: false })
+		expect(gridOrdering({ row: { enabled: false } })).toEqual({ column: false, row: false, visibilityMenu: false })
 	})
 
 	it('leaves both axes off when the option is absent', () => {
-		expect(gridOrdering(undefined)).toEqual({ column: false, row: false })
+		expect(gridOrdering(undefined)).toEqual({ column: false, row: false, visibilityMenu: false })
 	})
 })

@@ -148,6 +148,18 @@ export type GridMessages = {
 		menu: string
 		/** Label of that trigger. */
 		trigger: string
+		/**
+		 * Accessible name of the control that moves a column one step toward the start of the
+		 * order, offered when `ordering.column.visibilityMenu` turns this menu into a column
+		 * panel.
+		 *
+		 * The key is logical and the wording is not, exactly like `columnMenu.moveStart`: the
+		 * order flips under RTL, so "start" is what the action means, while what it reads
+		 * belongs to the surface — a vertical list, where the start of the order is the top.
+		 */
+		moveStart: string
+		/** Accessible name of the control that moves a column one step toward the end. */
+		moveEnd: string
 	}
 	/** Per-column filtering. */
 	filtering: {
