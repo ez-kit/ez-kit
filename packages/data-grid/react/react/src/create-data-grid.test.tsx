@@ -1,9 +1,10 @@
-import { createColumns } from '@ez-kit/data-grid-core'
+import { createColumns, defaultMessages } from '@ez-kit/data-grid-core'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { createDataGrid } from './create-data-grid'
 import { DataGrid } from './data-grid/data-grid'
+import { DataGridOptionsProvider } from './data-grid-options-context'
 import { testComponents } from './test-utils'
 
 type Row = { id: number; name: string }
@@ -81,5 +82,163 @@ describe('extendDataGrid (folded into createDataGrid)', () => {
 			/>,
 		)
 		expect(screen.getByText('Alice')).toBeInTheDocument()
+	})
+})
+
+// ── Factory defaults reach *both* call shapes ─────────────────────────────────
+// Regression: `createDataGrid({ defaults })` bound its layer to the returned `useDataGrid`
+// only, so `<DataGrid table={useDataGrid(...)} />` saw the kit's dictionary while
+// `<DataGrid data columns />` — which runs the hook itself, inside the component — did not,
+// and rendered the English fallbacks instead.
+describe('createDataGrid({ defaults })', () => {
+	const SELECT_ROW = 'Выбрать строку'
+	const SELECT_ALL = 'Выбрать все'
+	const KIT = {
+		components: testComponents,
+		defaults: { selection: true, messages: { selection: { selectRow: SELECT_ROW, selectAll: SELECT_ALL } } },
+	}
+
+	it('applies to the controlled form', () => {
+		const { DataGrid: Bound, useDataGrid } = createDataGrid(KIT)
+		function Grid() {
+			const table = useDataGrid<Row>({ data: ROWS, columns: ROW_COLUMNS })
+			return <Bound table={table} />
+		}
+		render(<Grid />)
+		expect(screen.getAllByLabelText(SELECT_ROW).length).toBe(ROWS.length)
+	})
+
+	it('applies to the uncontrolled form', () => {
+		const { DataGrid: Bound } = createDataGrid(KIT)
+		render(
+			<Bound
+				data={ROWS}
+				columns={ROW_COLUMNS}
+			/>,
+		)
+		expect(screen.getAllByLabelText(SELECT_ROW).length).toBe(ROWS.length)
+	})
+
+	it('a `messages` prop on the grid beats the factory dictionary', () => {
+		const { DataGrid: Bound } = createDataGrid(KIT)
+		render(
+			<Bound
+				data={ROWS}
+				columns={ROW_COLUMNS}
+				messages={{ selection: { selectRow: 'Отметить строку' } }}
+			/>,
+		)
+		expect(screen.getAllByLabelText('Отметить строку').length).toBe(ROWS.length)
+		// The strings the grid did not name still come from the factory layer.
+		expect(screen.getByLabelText(SELECT_ALL)).toBeInTheDocument()
+	})
+
+	it('an app-level DataGridOptionsProvider beats the factory dictionary, and the grid beats both', () => {
+		const { DataGrid: Bound } = createDataGrid(KIT)
+		render(
+			<DataGridOptionsProvider
+				defaults={{ messages: { selection: { selectRow: 'Провайдер', selectAll: 'Провайдер: все' } } }}
+			>
+				<Bound
+					data={ROWS}
+					columns={ROW_COLUMNS}
+					messages={{ selection: { selectRow: 'Грид' } }}
+				/>
+			</DataGridOptionsProvider>,
+		)
+		expect(screen.getAllByLabelText('Грид').length).toBe(ROWS.length)
+		expect(screen.getByLabelText('Провайдер: все')).toBeInTheDocument()
+	})
+
+	// `messages` and the feature toggles take different routes out of the merge
+	// (`resolveMessages` vs the resolved feature options), so a dictionary arriving is no
+	// evidence that the rest of the layer did. Assert one option that shows in the DOM.
+	it('carries options other than messages into the uncontrolled form', () => {
+		const { DataGrid: Bound } = createDataGrid({
+			components: testComponents,
+			defaults: { pagination: { pageSize: 1 } },
+		})
+		render(
+			<Bound
+				data={ROWS}
+				columns={ROW_COLUMNS}
+			/>,
+		)
+		expect(screen.getByText('Alice')).toBeInTheDocument()
+		expect(screen.queryByText('Bob')).not.toBeInTheDocument()
+	})
+
+	// The layer belongs to the grid the kit configures, not to everything rendered beneath it.
+	it('does not leak into a grid nested among the children', () => {
+		const { DataGrid: Bound } = createDataGrid(KIT)
+		render(
+			<Bound
+				data={ROWS}
+				columns={ROW_COLUMNS}
+			>
+				<DataGrid
+					data={ROWS}
+					columns={ROW_COLUMNS}
+					selection
+				/>
+			</Bound>,
+		)
+		// The inner grid is the only one rendered here, and it stands on the English dictionary.
+		expect(screen.getAllByLabelText(defaultMessages.selection.selectRow).length).toBe(ROWS.length)
+		expect(screen.queryByLabelText(SELECT_ROW)).not.toBeInTheDocument()
+	})
+
+	// Same boundary as above, reached through the controlled form: a second kit's bound hook,
+	// running among the outer grid's children, must not pick up the outer kit's layer.
+	it('does not leak into another kit’s grid nested among the children', () => {
+		const { DataGrid: Bound } = createDataGrid(KIT)
+		const { DataGrid: Plain, useDataGrid } = createDataGrid({ components: testComponents })
+		function Inner() {
+			const table = useDataGrid<Row>({ data: ROWS, columns: ROW_COLUMNS, selection: true })
+			return <Plain table={table} />
+		}
+		render(
+			<Bound
+				data={ROWS}
+				columns={ROW_COLUMNS}
+			>
+				<Inner />
+			</Bound>,
+		)
+		expect(screen.getAllByLabelText(defaultMessages.selection.selectRow).length).toBe(ROWS.length)
+		expect(screen.queryByLabelText(SELECT_ROW)).not.toBeInTheDocument()
+	})
+
+	it('a bundle built without defaults still renders the English dictionary', () => {
+		const { DataGrid: Bound } = createDataGrid({ components: testComponents })
+		render(
+			<Bound
+				data={ROWS}
+				columns={ROW_COLUMNS}
+				selection
+			/>,
+		)
+		expect(screen.getAllByLabelText(defaultMessages.selection.selectRow).length).toBe(ROWS.length)
+	})
+
+	it('extendDataGrid keeps the defaults in both forms', () => {
+		const { extendDataGrid } = createDataGrid(KIT)
+		const { DataGrid: Extended, useDataGrid } = extendDataGrid({ rating: { view: () => null } })
+
+		const inline = render(
+			<Extended
+				data={ROWS}
+				columns={ROW_COLUMNS}
+			/>,
+		)
+		expect(screen.getAllByLabelText(SELECT_ROW).length).toBe(ROWS.length)
+		inline.unmount()
+
+		function Grid() {
+			const table = useDataGrid<Row>({ data: ROWS, columns: ROW_COLUMNS })
+			return <Extended table={table} />
+		}
+		render(<Grid />)
+		expect(screen.getAllByLabelText(SELECT_ROW).length).toBe(ROWS.length)
 	})
 })

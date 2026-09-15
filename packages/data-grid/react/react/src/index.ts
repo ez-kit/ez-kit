@@ -64,6 +64,7 @@ export type {
 	ReactSelectionConfig,
 	ReactSortingConfig,
 	RowPropsResolver,
+	LayoutClassNames,
 	LayoutConfig,
 	SelectionBarCallbackArgs,
 	SelectionBarConfig,
@@ -262,6 +263,8 @@ export type {
 	ThProps,
 	TheadProps,
 	TableProps,
+	TableScrollProps,
+	TableWrapperProps,
 	ToolbarProps,
 	TrProps,
 } from './types'

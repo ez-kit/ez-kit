@@ -8,7 +8,7 @@ import { Checkbox } from './blocks/core/Checkbox'
 import { Input } from './blocks/core/Input'
 import { Menu } from './blocks/core/Menu'
 import { Modal } from './blocks/core/Modal'
-import { Table, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/core/table-adapters'
+import { Table, TableScroll, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/core/table-adapters'
 import { Toolbar } from './blocks/core/Toolbar'
 import { DraftBar } from './blocks/draft/DraftBar'
 import { ConfirmDialog } from './blocks/editing/ConfirmDialog'
@@ -42,7 +42,23 @@ import type { KitCellTypes } from './blocks/cell-types'
 import type { DataGridBundle, FullGridComponents } from '@ez-kit/data-grid-react'
 
 const components = {
-	core: { Table, Thead, Tbody, Tfoot, Tr, Th, Td, Button, Input, Checkbox, Toolbar, Menu, NumberInput, Modal },
+	core: {
+		Table,
+		TableScroll,
+		Thead,
+		Tbody,
+		Tfoot,
+		Tr,
+		Th,
+		Td,
+		Button,
+		Input,
+		Checkbox,
+		Toolbar,
+		Menu,
+		NumberInput,
+		Modal,
+	},
 	pagination: { Pagination, PageSizer },
 	sorting: { SortIndicator, SortMenu },
 	filtering: {
