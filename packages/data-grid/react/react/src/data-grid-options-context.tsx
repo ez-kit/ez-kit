@@ -1,8 +1,9 @@
 import { createContext, useContext, useMemo } from 'react'
 
+import { joinClassNames } from './utils/class-names'
 import { deepMerge } from './utils/deep-merge'
 
-import type { UseDataGridConfig } from './use-data-grid'
+import type { LayoutClassNames, UseDataGridConfig } from './use-data-grid'
 import type { CreatingConfig, DeletingConfig, EditingConfig } from '@ez-kit/data-grid-core'
 import type { ReactNode } from 'react'
 
@@ -53,6 +54,49 @@ type PartialBy<TConfig, TKey extends keyof TConfig> = Omit<TConfig, TKey> & Part
 /** Untyped record view used when handing options to the row-agnostic {@link deepMerge}. */
 type OptionsRecord = Record<string, unknown>
 
+/** Just enough of `layout` to reach its classes while the row type is erased. */
+type LayoutRecord = { classNames?: LayoutClassNames }
+
+/**
+ * Joins the two layers' classes per key instead of letting the upper one replace the lower.
+ *
+ * Classes are the one option that composes rather than decides: a kit's frame and an app's
+ * accent on the same grid are both wanted, and a layer has no way to restate what it did not
+ * write. Every other option replaces, because naming it is a decision that overrides the one
+ * below — `pageSize: 50` over `pageSize: 20` means fifty, not seventy.
+ *
+ * Conflicts are not resolved here. This package emits no styling and knows nothing about
+ * Tailwind, so it cannot tell `border` and `border-0` apart — a consumer that needs that runs
+ * its own value through `cn()` / `twMerge` before handing it over.
+ */
+function joinLayoutClassNames(
+	base: LayoutClassNames | undefined,
+	over: LayoutClassNames | undefined,
+): LayoutClassNames | undefined {
+	if (base === undefined || over === undefined) return over ?? base
+	const wrapper = joinClassNames(base.wrapper, over.wrapper)
+	const scroll = joinClassNames(base.scroll, over.scroll)
+	return {
+		...(wrapper !== undefined ? { wrapper } : {}),
+		...(scroll !== undefined ? { scroll } : {}),
+	}
+}
+
+/**
+ * Lays `over` on top of `base`: {@link deepMerge} for every option, then the class join on the
+ * one that accumulates. Used wherever two option layers meet, so the two orderings a consumer
+ * can build — nested providers, and factory / provider / instance — behave the same.
+ */
+function mergeOptionLayers(base: OptionsRecord, over: OptionsRecord): OptionsRecord {
+	const merged = deepMerge(base, over)
+	const classNames = joinLayoutClassNames(
+		(base.layout as LayoutRecord | undefined)?.classNames,
+		(over.layout as LayoutRecord | undefined)?.classNames,
+	)
+	if (classNames === undefined) return merged
+	return { ...merged, layout: { ...(merged.layout as LayoutRecord | undefined), classNames } }
+}
+
 const EMPTY_OPTIONS: AnyDefaultOptions = {}
 
 /**
@@ -81,7 +125,7 @@ export function DataGridOptionsProvider<TRow extends object>({
 }: DataGridOptionsProviderProps<TRow>) {
 	const parent = useContext(DataGridOptionsContext)
 	const merged = useMemo(
-		() => deepMerge(parent as OptionsRecord, defaults as OptionsRecord) as AnyDefaultOptions,
+		() => mergeOptionLayers(parent as OptionsRecord, defaults as OptionsRecord) as AnyDefaultOptions,
 		[parent, defaults],
 	)
 	return <DataGridOptionsContext.Provider value={merged}>{children}</DataGridOptionsContext.Provider>
@@ -100,12 +144,51 @@ export function useDataGridOptions<TRow extends object>(): DataGridDefaultOption
  * Composes the three option layers into the final instance config.
  * Precedence, low → high: factory `defaults` < provider `defaults` < instance `config`.
  * Deep and immutable — nested feature settings combine; instance values win on conflict.
+ * The exception is `layout.classNames`, which accumulates: see {@link joinLayoutClassNames}.
  */
 export function mergeGridOptionLayers<TRow extends object>(
 	factoryDefaults: DataGridDefaultOptions<TRow> | undefined,
 	providerDefaults: DataGridDefaultOptions<TRow>,
 	config: UseDataGridConfig<TRow>,
 ): UseDataGridConfig<TRow> {
-	const base = factoryDefaults ? deepMerge(factoryDefaults, providerDefaults) : providerDefaults
-	return deepMerge(base, config) as UseDataGridConfig<TRow>
+	const base = factoryDefaults
+		? (mergeOptionLayers(factoryDefaults, providerDefaults) as typeof providerDefaults)
+		: providerDefaults
+	return mergeOptionLayers(base, config) as UseDataGridConfig<TRow>
+}
+
+/**
+ * The **factory** layer, carried through the tree rather than through an argument.
+ *
+ * `createDataGrid({ defaults })` binds its defaults into the `useDataGrid` it returns, which
+ * covers the controlled form (the caller builds the table, then passes it to `<DataGrid table={…} />`).
+ * The uncontrolled form runs `useDataGrid` *inside* `<DataGrid>`, where no such argument can
+ * reach it — so the bound `DataGrid` also provides them here and the hook picks them up.
+ *
+ * Deliberately **not** the same context as {@link DataGridOptionsProvider}: an app-level
+ * provider must outrank the kit's defaults, so the two layers cannot share one value.
+ *
+ * `undefined` means "no factory layer". A bare `<DataGrid>` sees that, and so does a grid
+ * nested among another grid's children — the shared core re-provides `undefined`, so the layer
+ * stops at the grid it configures.
+ */
+const GridFactoryDefaultsContext = createContext<AnyDefaultOptions | undefined>(undefined)
+
+export type GridFactoryDefaultsProviderProps = {
+	/** The kit-level defaults bound by `createDataGrid({ defaults })`. */
+	defaults: AnyDefaultOptions | undefined
+	children: ReactNode
+}
+
+/** Publishes the factory option layer to every `useDataGrid` call inside the bound `<DataGrid>`. */
+export function GridFactoryDefaultsProvider({ defaults, children }: GridFactoryDefaultsProviderProps) {
+	return <GridFactoryDefaultsContext.Provider value={defaults}>{children}</GridFactoryDefaultsContext.Provider>
+}
+
+/**
+ * Reads the factory option layer published by a bound `<DataGrid>`. Row type erased at the
+ * context boundary and re-applied by the caller, exactly as in {@link useDataGridOptions}.
+ */
+export function useGridFactoryDefaults<TRow extends object>(): DataGridDefaultOptions<TRow> | undefined {
+	return useContext(GridFactoryDefaultsContext) as DataGridDefaultOptions<TRow> | undefined
 }

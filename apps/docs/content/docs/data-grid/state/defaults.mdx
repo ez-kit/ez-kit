@@ -100,7 +100,7 @@ const defaults = useDataGridOptions() // { sorting: true, pagination: { pageSize
 
 ## Per kit: factory `defaults`
 
-When you build a custom kit with `createDataGrid`, pass `defaults` to bake defaults into the kit itself. Every grid built with that kit's `useDataGrid` inherits them — no provider required.
+When you build a custom kit with `createDataGrid`, pass `defaults` to bake defaults into the kit itself. Every grid built with that kit inherits them — no provider required — in both call shapes: the grid you build yourself with the kit's `useDataGrid`, and the inline `<DataGrid data columns />` that builds its own.
 
 ```tsx
 import { createDataGrid } from '@ez-kit/data-grid-react'

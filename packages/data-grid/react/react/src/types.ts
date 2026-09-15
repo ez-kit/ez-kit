@@ -98,6 +98,38 @@ export type ActionsCellProps<TRow extends object = any> =
 
 // ── primitive component props ─────────────────────────────────────────────
 
+/**
+ * The grid shell's outer box — the positioning context the pin-shadow overlay is drawn against,
+ * the element the shadow custom properties are written to, and the one `Header` finds with
+ * `closest("[data-slot='table-wrapper']")`.
+ *
+ * Optional: a kit that registers nothing gets a plain `div`, which is what both kits in this
+ * repo use. A kit that registers one **must spread every prop it receives** — `data-slot`,
+ * `data-virtualized`, `className`, `style` (it carries the height custom properties) — because
+ * the structural stylesheet targets the `data-slot`, not the element, and **must forward `ref`
+ * to the element that establishes the positioning context**.
+ */
+export type TableWrapperProps = HTMLAttributes<HTMLDivElement> & RefAttributes<HTMLDivElement>
+/**
+ * The grid shell's scrollport.
+ *
+ * Optional, with the same spread obligation as {@link TableWrapperProps}, and one rule of its
+ * own: **`ref` must land on the element that actually scrolls.** That is what the pin shadows
+ * read, what infinite scroll measures, what the row virtualizer drives, and what gets stamped
+ * `data-scrollport` — so a kit that nests its own scroll container puts the ref on that
+ * container rather than on its outermost box.
+ *
+ * @example — a kit whose own scroller is nested
+ * const TableScroll = forwardRef<HTMLDivElement, TableScrollProps>(function TableScroll(props, ref) {
+ *   return (
+ *     <KitTable>
+ *       <KitTable.ScrollContainer ref={ref} {...props} />
+ *     </KitTable>
+ *   )
+ * })
+ */
+export type TableScrollProps = HTMLAttributes<HTMLDivElement> & RefAttributes<HTMLDivElement>
+
 export type TableProps = HTMLAttributes<HTMLTableElement>
 /**
  * The thead adapter must forward `ref` to the rendered element: the shared layer measures the
@@ -758,6 +790,10 @@ export type ChevronProps = {
  */
 export type GridComponentRegistry = {
 	// layout
+	/** Optional — see {@link TableWrapperProps}. Falls back to a plain `div`. */
+	TableWrapper?: ComponentType<TableWrapperProps>
+	/** Optional — see {@link TableScrollProps}. Falls back to a plain `div`. */
+	TableScroll?: ComponentType<TableScrollProps>
 	Table?: ComponentType<TableProps>
 	Thead?: ComponentType<TheadProps>
 	Tbody?: ComponentType<TbodyProps>

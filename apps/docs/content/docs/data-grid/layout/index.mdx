@@ -14,11 +14,55 @@ once its body starts scrolling.
 />
 ```
 
-| Option                | Type               | Description                                                                                                            |
-| --------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `layout.maxHeight`    | `string \| number` | Bounds the scroll container. Omitted, the structural stylesheet's `400px` applies (`600px` when virtualization is on). |
-| `layout.stickyHeader` | `boolean`          | Keeps the header row at the top of the scroll container.                                                               |
-| `layout.stickyFooter` | `boolean`          | The same at the bottom edge, for a totals row — see [Footer](/docs/data-grid/layout/footer).                           |
+| Option                      | Type               | Description                                                                                                            |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `layout.maxHeight`          | `string \| number` | Bounds the scroll container. Omitted, the structural stylesheet's `400px` applies (`600px` when virtualization is on). |
+| `layout.stickyHeader`       | `boolean`          | Keeps the header row at the top of the scroll container.                                                               |
+| `layout.stickyFooter`       | `boolean`          | The same at the bottom edge, for a totals row — see [Footer](/docs/data-grid/layout/footer).                           |
+| `layout.classNames.wrapper` | `string`           | Class for the outer box, outside the scrollport — where a border, radius or shadow belongs.                            |
+| `layout.classNames.scroll`  | `string`           | Class for the scrollport itself.                                                                                       |
+
+## Framing the shell
+
+The grid shell is the one part of the table this package renders itself: an outer wrapper, and the
+scrollport inside it. Everything the table renders below that — the table element, header, rows,
+cells — comes from the kit and sits _inside_ the scrollport.
+
+A kit that ships a stylesheet can already reach both boxes with a `[data-slot='table-scroll']`
+rule, and the shadcn kit frames the grid exactly that way. `layout.classNames` is for what a
+stylesheet cannot do: class **one** grid rather than every grid, from the call site.
+
+Typically the kit states the frame once:
+
+```tsx
+export const { DataGrid } = createDataGrid({
+	components,
+	defaults: { layout: { classNames: { wrapper: 'rounded-md border' } } },
+})
+```
+
+and a grid adds to it where it needs to:
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	layout={{ classNames: { wrapper: 'shadow-lg' } }}
+/>
+```
+
+Classes **accumulate** — unlike every other option, where the higher layer replaces the lower one.
+The wrapper above ends up with `rounded-md border shadow-lg`, in that order. Nothing de-conflicts
+them: this package emits no styling and knows nothing about Tailwind, so if you need `border-0` to
+beat the kit's `border`, run your own value through `cn()` / `twMerge` before passing it.
+
+Class only: positioning, overflow and the height custom properties stay in the structural
+stylesheet, and the look stays with the kit.
+
+Which box to use: the **wrapper** is the outer one — a shadow the scrollport would clip, or a frame
+that has to enclose the pin-shadow overlay, belongs there. The **scroll** box is the scroller
+itself; a border or radius on it is stable, because a scroll container's own border does not move
+with its content.
 
 ## Sticky header
 

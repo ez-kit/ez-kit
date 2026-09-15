@@ -8,6 +8,7 @@ import type { PaginationLabel } from './types'
 import type {
 	ExpandedRowProps,
 	FilteringVariant,
+	LayoutClassNames,
 	NormalizedFallbacksConfig,
 	NormalizedFeatureToolbarConfig,
 	NormalizedFilterChipsConfig,
@@ -67,6 +68,8 @@ export type ResolvedGridOptions = {
 		stickyFooter: boolean
 		/** Explicit scroll-container height, as a CSS length. `undefined` → stylesheet default. */
 		maxHeight?: string | undefined
+		/** Classes for the shell's wrapper / scrollport boxes. `undefined` → neither is classed. */
+		classNames?: LayoutClassNames | undefined
 	}
 	/**
 	 * Pinning, resolved per axis — the two halves of the `pinning` option under the two names

@@ -3,6 +3,7 @@ import { useRef } from 'react'
 
 import { CellTypesProvider, mergeCellTypes } from '../cell-types-context'
 import { GridComponentsProvider, useGridComponents } from '../components-context'
+import { GridFactoryDefaultsProvider } from '../data-grid-options-context'
 import { FilterChipsPosition, FilterPanelPlacement, PageSizerPlacement } from '../types'
 import { ActionBarVariant, useDataGrid, type UseDataGridConfig } from '../use-data-grid'
 
@@ -300,17 +301,23 @@ function DataGridControlled<TRow extends object>({
 	const resolvedCellTypes = mergeCellTypes(tableCellTypes ?? {}, cellTypes ?? {})
 
 	return (
-		<CellTypesProvider cellTypes={resolvedCellTypes}>
-			<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
-				<TableContext.Provider value={table}>
-					{IS_DEV && <ComponentGuard />}
-					{children ?? <DefaultLayout />}
-					{table.options.creating?.mode === 'modal' && <CreatingModal />}
-					{table.options.editing?.mode === 'modal' && <EditingModal />}
-					{hasConfirmDialog(table) && <ConfirmDialogRenderer />}
-				</TableContext.Provider>
-			</GridComponentsProvider>
-		</CellTypesProvider>
+		// The factory option layer a bound `<DataGrid>` publishes has done its job by the time we
+		// get here — this table is built. Close it off so it stops at the grid it configures:
+		// without this, a nested `<DataGrid data columns />` rendered among `children` would
+		// silently inherit the outer kit's defaults instead of standing on its own.
+		<GridFactoryDefaultsProvider defaults={undefined}>
+			<CellTypesProvider cellTypes={resolvedCellTypes}>
+				<GridComponentsProvider {...(components !== undefined ? { components } : {})}>
+					<TableContext.Provider value={table}>
+						{IS_DEV && <ComponentGuard />}
+						{children ?? <DefaultLayout />}
+						{table.options.creating?.mode === 'modal' && <CreatingModal />}
+						{table.options.editing?.mode === 'modal' && <EditingModal />}
+						{hasConfirmDialog(table) && <ConfirmDialogRenderer />}
+					</TableContext.Provider>
+				</GridComponentsProvider>
+			</CellTypesProvider>
+		</GridFactoryDefaultsProvider>
 	)
 }
 

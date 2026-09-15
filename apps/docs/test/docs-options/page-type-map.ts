@@ -552,8 +552,9 @@ export const PAGE_ENTRIES: readonly PageEntry[] = [
 	{
 		page: DocPage.LayoutIndex,
 		// The table opens the page, above any `##` heading, and names full paths from the
-		// grid config (`layout.maxHeight`, `layout.stickyHeader`, `layout.stickyFooter`).
-		optionTables: [{ heading: NO_HEADING, roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 3 }],
+		// grid config (`layout.maxHeight`, `layout.stickyHeader`, `layout.stickyFooter`, and the
+		// two keys of `layout.classNames`).
+		optionTables: [{ heading: NO_HEADING, roots: [GRID_TYPE.UseDataGridConfig], expectedCount: 5 }],
 		nonOptionTables: [],
 	},
 	{

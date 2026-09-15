@@ -24,10 +24,12 @@
  * Flooring the box at the summed column widths keeps the containing block as wide
  * as the content; `minmax(…, 1fr)` tracks still stretch past it when there's room.
  *
- * Keyed on the element, not on `data-slot` alone: a kit may stamp `data-slot="table"`
- * on a wrapper around the real table (HeroUI's `.table-root`, which is also the element
- * that clips and scrolls). Flooring *that* box would push the overflow out of its own
- * scroller instead of into it. Such kits floor their inner table themselves. */
+ * Keyed on the element, not on `data-slot` alone. It used to be that a kit could stamp
+ * `data-slot="table"` on a wrapper around the real table — HeroUI's `.table-root`, which also
+ * clipped and scrolled — and flooring *that* box would have pushed the overflow out of its own
+ * scroller instead of into it. Since the shell's scrollport became a slot of its own, such a
+ * kit registers `TableScroll` and the `table` slot lands on the real `<table>`; the element
+ * qualifier stays because it costs nothing and keeps the rule honest about what it floors. */
 table[data-slot='table'] {
 	min-width: var(--dg-table-min-width, 0px);
 }

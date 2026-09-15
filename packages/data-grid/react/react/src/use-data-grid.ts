@@ -1,7 +1,7 @@
 import { createTable, featureConfig, isFeatureEnabled, PaginationMode, resolveMessages } from '@ez-kit/data-grid-core'
 import { useEffect, useRef } from 'react'
 
-import { mergeGridOptionLayers, useDataGridOptions } from './data-grid-options-context'
+import { mergeGridOptionLayers, useDataGridOptions, useGridFactoryDefaults } from './data-grid-options-context'
 import { DATA_GRID_DEFAULTS, DEFAULT_FILTER_DEBOUNCE_MS } from './defaults'
 import { prepareDataGridTable } from './prepare-table'
 import { ActionBarVariant, FilteringVariant } from './types'
@@ -598,6 +598,31 @@ export type ReactSortingConfig = {
 } & SortingConfig
 
 /**
+ * Classes for the grid shell's own two boxes — the only elements the React layer renders
+ * itself, and therefore the only ones a kit cannot reach through `components`.
+ *
+ * They exist because the shell is where a box *outside* the scrollport lives: a border or a
+ * radius drawn on anything the kit supplies scrolls away with the content, since every one of
+ * those components sits inside `table-scroll`. The alternative was a global
+ * `[data-slot='table-wrapper']` selector, which is exactly the kit-bypassing rule this package
+ * is built to avoid.
+ *
+ * Class only — the structural rules (positioning, overflow, the height custom properties) stay
+ * with `@ez-kit/data-grid-react/styles.css`, and the look stays with the kit.
+ *
+ * Unlike every other option, these **accumulate** across layers rather than replace: a kit's
+ * frame and an app's addition on the same grid both land on the element. Nothing de-conflicts
+ * them — this package knows nothing about Tailwind — so a consumer that needs `border-0` to
+ * beat `border` runs its own value through `cn()` / `twMerge` first.
+ */
+export type LayoutClassNames = {
+	/** The outer box, outside the scrollport — where a border, radius or shadow belongs. */
+	wrapper?: string
+	/** The scrollport itself — where a scrollbar or an inner edge treatment belongs. */
+	scroll?: string
+}
+
+/**
  * Presentational layout of the grid shell. Purely visual — nothing here changes the row model.
  */
 export type LayoutConfig = {
@@ -644,6 +669,16 @@ export type LayoutConfig = {
 	 * Omitted, the stylesheet defaults apply: `400px` capped, `600px` virtualized.
 	 */
 	maxHeight?: string
+	/**
+	 * Classes for the grid shell's two boxes. Usually written once by a kit through
+	 * `createDataGrid({ defaults })`, so every grid it builds gets the kit's frame without the
+	 * app restating it; an app adds to either key on the grid that needs it, and the two are
+	 * joined rather than one replacing the other.
+	 *
+	 * @example
+	 * layout: { classNames: { wrapper: 'rounded-md border' } }
+	 */
+	classNames?: LayoutClassNames
 }
 
 /**
@@ -838,7 +873,9 @@ function writeFeatureOptions<TRow extends object>(
  *
  * @param instanceConfig Per-call grid config; the highest-priority option layer.
  * @param factoryDefaults Base defaults bound by `createDataGrid({ defaults })`.
- *   Internal — supplied by the kit factory, not by application call sites.
+ *   Internal — supplied by the kit factory, not by application call sites. Omitted when the
+ *   hook runs inside a bound `<DataGrid>` (the uncontrolled form), where the same layer
+ *   arrives through `GridFactoryDefaultsProvider` instead.
  *
  * @example
  * const instance = useDataGrid({ data: users, columns, sorting: true })
@@ -849,7 +886,10 @@ export function useDataGrid<TRow extends object>(
 	factoryDefaults?: DataGridDefaultOptions<TRow>,
 ): DataTable<TRow> {
 	const providerDefaults = useDataGridOptions<TRow>()
-	const config = mergeGridOptionLayers(factoryDefaults, providerDefaults, instanceConfig)
+	// The uncontrolled `<DataGrid data columns />` runs this hook itself, so the kit factory has
+	// no argument to bind its defaults to — the bound `DataGrid` publishes them as context instead.
+	const contextFactoryDefaults = useGridFactoryDefaults<TRow>()
+	const config = mergeGridOptionLayers(factoryDefaults ?? contextFactoryDefaults, providerDefaults, instanceConfig)
 	const creating = enabledByHandler(config.creating, 'onSave')
 	const editing = enabledByHandler(config.editing, 'onSave')
 	const deleting = enabledByHandler(config.deleting, 'onDelete')
@@ -1188,6 +1228,7 @@ export function useDataGrid<TRow extends object>(
 			footer: layout?.footer ?? table.getAllFlatColumns().some((column) => column.columnDef.footer !== undefined),
 			stickyFooter: layout?.stickyFooter ?? false,
 			...(layout?.maxHeight !== undefined ? { maxHeight: layout.maxHeight } : {}),
+			...(layout?.classNames !== undefined ? { classNames: layout.classNames } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
 		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled },
