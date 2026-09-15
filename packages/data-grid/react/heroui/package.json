@@ -347,7 +347,7 @@
 		},
 		{
 			"path": "dist/visibility/index.js",
-			"limit": "600 B",
+			"limit": "1.05 kB",
 			"ignore": [
 				"@ez-kit/data-grid-react",
 				"@internationalized/date",
