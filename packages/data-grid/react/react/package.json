@@ -110,8 +110,9 @@
 	],
 	"dependencies": {
 		"@ez-kit/data-grid-core": "workspace:^",
+		"@tanstack/react-table": "^9.2.4",
 		"@tanstack/react-virtual": "^3.13.23",
-		"@tanstack/table-core": "^8.21.3"
+		"@tanstack/table-core": "^9.2.4"
 	},
 	"devDependencies": {
 		"@ez-kit/react18-env": "workspace:*",
