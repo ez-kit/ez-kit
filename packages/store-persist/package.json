@@ -80,28 +80,56 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "5.5 KB",
+			"limit": "5250 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/storage/index.js",
-			"limit": "2 KB",
+			"limit": "1750 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/index.js",
-			"limit": "1 KB",
+			"limit": "620 B",
 			"ignore": [
 				"@ez-kit/store-core"
 			]
 		},
 		{
 			"path": "dist/url/react-router.js",
-			"limit": "1 KB",
+			"limit": "590 B",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
+		},
+		{
+			"path": "dist/url/next.js",
+			"limit": "650 B",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
+		},
+		{
+			"path": "dist/validators/zod.js",
+			"limit": "250 B",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
+		},
+		{
+			"path": "dist/testing/index.js",
+			"limit": "600 B",
+			"ignore": [
+				"@ez-kit/store-core"
+			]
+		},
+		{
+			"path": "dist/internals.js",
+			"limit": "4 KB",
 			"ignore": [
 				"@ez-kit/store-core"
 			]

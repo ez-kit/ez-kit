@@ -82,7 +82,7 @@
 	"size-limit": [
 		{
 			"path": "dist/index.js",
-			"limit": "2.5 KB",
+			"limit": "2.2 KB",
 			"ignore": [
 				"@ez-kit/store-core",
 				"@ez-kit/store-persist"
@@ -90,7 +90,7 @@
 		},
 		{
 			"path": "dist/history/index.js",
-			"limit": "1 KB",
+			"limit": "650 B",
 			"ignore": [
 				"@ez-kit/store-core",
 				"@ez-kit/store-persist"
@@ -98,7 +98,7 @@
 		},
 		{
 			"path": "dist/persist/index.js",
-			"limit": "0.5 KB",
+			"limit": "400 B",
 			"ignore": [
 				"@ez-kit/store-core",
 				"@ez-kit/store-persist"
@@ -106,7 +106,7 @@
 		},
 		{
 			"path": "dist/persist/storage/index.js",
-			"limit": "0.5 KB",
+			"limit": "400 B",
 			"ignore": [
 				"@ez-kit/store-core",
 				"@ez-kit/store-persist"
@@ -114,7 +114,7 @@
 		},
 		{
 			"path": "dist/persist/url/index.js",
-			"limit": "0.5 KB",
+			"limit": "400 B",
 			"ignore": [
 				"@ez-kit/store-core",
 				"@ez-kit/store-persist"
@@ -122,7 +122,31 @@
 		},
 		{
 			"path": "dist/persist/url/react-router.js",
-			"limit": "0.5 KB",
+			"limit": "400 B",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
+		},
+		{
+			"path": "dist/persist/url/next.js",
+			"limit": "400 B",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
+		},
+		{
+			"path": "dist/persist/validators/zod.js",
+			"limit": "400 B",
+			"ignore": [
+				"@ez-kit/store-core",
+				"@ez-kit/store-persist"
+			]
+		},
+		{
+			"path": "dist/persist/testing/index.js",
+			"limit": "400 B",
 			"ignore": [
 				"@ez-kit/store-core",
 				"@ez-kit/store-persist"
