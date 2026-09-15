@@ -336,7 +336,33 @@ export type VisibilityColumnItem = {
 	id: string
 	label: string
 	isVisible: boolean
+	/**
+	 * Whether the visibility toggle is offered for this column.
+	 *
+	 * Always `true` in the default Columns toggle, which lists nothing else. It is only
+	 * `ordering.column.visibilityMenu` that puts a locked column on the list — there because it
+	 * holds a place in the column order and may still be moved, with its toggle rendered
+	 * disabled rather than left out, so the rows stay a single column of controls.
+	 */
+	canHide: boolean
 	onToggle: () => void
+	/**
+	 * The two one-step moves along the column order, or absent when this menu does not offer
+	 * reordering at all — which is the default.
+	 *
+	 * The vocabulary is logical, the same `start` / `end` the core step uses, because the order
+	 * flips under RTL. What glyph stands for each is the kit's decision: both kits here draw a
+	 * vertical pair, the list running from the start of the order at the top.
+	 *
+	 * Present on every listed column once the menu offers moves, with both flags `false` for a
+	 * column the author locked — the disabled pair is what says "this one is fixed".
+	 */
+	ordering?: {
+		canMoveStart: boolean
+		canMoveEnd: boolean
+		onMoveStart: () => void
+		onMoveEnd: () => void
+	}
 }
 
 export type VisibilityMenuProps = {

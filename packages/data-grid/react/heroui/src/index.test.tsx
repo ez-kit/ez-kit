@@ -222,7 +222,7 @@ describe('@ez-kit/data-grid-heroui', () => {
 	it('toggles column visibility items', () => {
 		const onToggle = vi.fn()
 
-		render(<VisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, onToggle }]} />)
+		render(<VisibilityMenu columns={[{ id: 'name', label: 'Name', isVisible: true, canHide: true, onToggle }]} />)
 
 		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
 		if (!columnsButton) throw new Error('expected columns button')
@@ -230,6 +230,42 @@ describe('@ez-kit/data-grid-heroui', () => {
 		fireEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Name' }))
 
 		expect(onToggle).toHaveBeenCalledTimes(1)
+	})
+
+	/**
+	 * The column-panel mode leaves the selection menu behind: a react-aria menu item owns the
+	 * press that lands on it, so a move button inside one would toggle the column on its way to
+	 * moving it. This asserts the branch actually happened — the rows are checkboxes with their
+	 * own buttons beside them, not `menuitemcheckbox` entries.
+	 */
+	it('draws a dialog of checkboxes once a column carries moves', () => {
+		const onMoveEnd = vi.fn()
+		const columns = [
+			{
+				id: 'name',
+				label: 'Name',
+				isVisible: true,
+				canHide: false,
+				onToggle: vi.fn(),
+				ordering: { canMoveStart: false, canMoveEnd: true, onMoveStart: vi.fn(), onMoveEnd },
+			},
+		]
+
+		render(<VisibilityMenu columns={columns} />)
+		const [columnsButton] = screen.getAllByRole('button', { name: /columns/i })
+		if (!columnsButton) throw new Error('expected columns button')
+		fireEvent.click(columnsButton)
+
+		expect(screen.queryByRole('menuitemcheckbox')).toBeNull()
+		// `visibility: false` reaches the kit as `canHide: false` — listed, but not offered.
+		expect(screen.getByRole('checkbox', { name: 'Name' })).toBeDisabled()
+
+		const moveUp = screen.getByRole('button', { name: /move up/i })
+		const moveDown = screen.getByRole('button', { name: /move down/i })
+		expect(moveUp).toBeDisabled()
+		fireEvent.click(moveDown)
+
+		expect(onMoveEnd).toHaveBeenCalledTimes(1)
 	})
 })
 

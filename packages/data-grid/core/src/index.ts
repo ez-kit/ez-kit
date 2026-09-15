@@ -156,6 +156,7 @@ export {
 	canMoveColumn,
 	canMoveRow,
 	ColumnMoveDirection,
+	ColumnMoveScope,
 	moveColumn,
 	moveRow,
 	RowMoveDirection,

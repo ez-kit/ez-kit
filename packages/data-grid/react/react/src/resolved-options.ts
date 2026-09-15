@@ -91,6 +91,12 @@ export type ResolvedGridOptions = {
 		 * does not, so under heroui the menu entries are the whole affordance. See `kit-parity`.
 		 */
 		row: boolean
+		/**
+		 * The Columns toggle offers the same two moves, and lists every non-system column
+		 * rather than only the hideable ones. Off unless `ordering.column.visibilityMenu`
+		 * asked for it; always `false` while the column axis itself is off.
+		 */
+		visibilityMenu: boolean
 	}
 	pinning: {
 		/** The column menu offers its pin section. */
@@ -230,7 +236,7 @@ export function defaultResolvedGridOptions(): ResolvedGridOptions {
 		cellTypes: undefined,
 		messages: defaultMessages,
 		layout: { stickyHeader: false, footer: false, stickyFooter: false },
-		ordering: { column: false, row: false },
+		ordering: { column: false, row: false, visibilityMenu: false },
 		pinning: { column: false, row: false },
 		filtering: {
 			variant: DATA_GRID_DEFAULTS.filtering.variant,
