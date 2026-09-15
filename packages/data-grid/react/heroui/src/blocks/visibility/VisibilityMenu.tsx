@@ -61,8 +61,13 @@ function ColumnPanel({ columns, messages }: { columns: VisibilityColumnItem[]; m
 									<Checkbox.Control>
 										<Checkbox.Indicator />
 									</Checkbox.Control>
+									{/*
+									 * A plain span, not `Label`: HeroUI's `Checkbox` root already *is* the
+									 * `<label>`, and nesting a second one inside it is invalid markup. The
+									 * name still resolves — an implicit label names the control it wraps.
+									 */}
 									<Checkbox.Content>
-										<Label className='truncate'>{col.label}</Label>
+										<span className='truncate'>{col.label}</span>
 									</Checkbox.Content>
 								</Checkbox>
 								<Button

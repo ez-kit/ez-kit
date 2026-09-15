@@ -23,12 +23,28 @@ const LOCKED_VISIBILITY = 'Name'
 /** `ordering: false` — listed and hideable, but fixed where it was declared. */
 const LOCKED_ORDERING = 'Salary'
 
-const columnsTrigger = (page: Page) => page.getByRole('button', { name: 'Columns' })
+/**
+ * Addressed by slot, not by role. HeroUI's `Popover.Trigger` wraps its child in a pressable
+ * `div role='button'`, so the accessible name "Columns" resolves to both that wrapper and the
+ * kit's own `<button>` inside it — the same arrangement `SortMenu` already has. The slot is
+ * authored on exactly one element per kit.
+ */
+const columnsTrigger = (page: Page) => page.locator('[data-slot="column-visibility-trigger"]')
 
 const panelRows = (page: Page) => page.locator('[data-slot="column-visibility-item"]')
 
 /** One panel row, found by the column label it carries. */
 const panelRow = (page: Page, label: string): Locator => panelRows(page).filter({ hasText: label })
+
+/**
+ * The row's visibility control, clicked the way a user clicks it — on the label.
+ *
+ * Not the `checkbox` role: HeroUI's checkbox is a visually hidden `<input>` behind a `<label>`
+ * that intercepts the pointer, so a click on the input itself never lands. Both kits wrap the
+ * checkbox and its name in exactly one `<label>`, which is what makes this one locator work for
+ * both. The role is still what the disabled-state assertions read, since those never click.
+ */
+const toggle = (row: Locator) => row.locator('label')
 
 const moveUp = (row: Locator) => row.locator('[data-slot="column-visibility-move-start"]')
 const moveDown = (row: Locator) => row.locator('[data-slot="column-visibility-move-end"]')
@@ -97,14 +113,14 @@ test.describe('the column panel', () => {
 
 	test('lands on a hidden row rather than jumping over it', async ({ page }) => {
 		// Hide `department`, which stays listed — the panel is the order, hidden rows and all.
-		await panelRow(page, 'Department').getByRole('checkbox').click()
+		await toggle(panelRow(page, 'Department')).click()
 		await expect.poll(() => columnOrder(page)).toEqual(['name', 'joinedAt', 'salary'])
 
 		await moveUp(panelRow(page, 'Joined')).click()
 
 		// One step: `joinedAt` passed `department`, not `department` and `name` both.
 		await expect.poll(() => columnOrder(page)).toEqual(['name', 'joinedAt', 'salary'])
-		await panelRow(page, 'Department').getByRole('checkbox').click()
+		await toggle(panelRow(page, 'Department')).click()
 
 		await expect.poll(() => columnOrder(page)).toEqual(['name', 'joinedAt', 'department', 'salary'])
 	})
