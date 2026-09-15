@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Land PR 0 (the on-v8 preparation refactor) and the opening task of PR 1 (install v9 and record its real API), so the remaining migration tasks can be planned against facts instead of documentation.
+**Goal:** Land PR 0 (the on-v8 preparation refactor) and the whole of PR 1 (the core engine on v9), so `@ez-kit/data-grid-core` lints, type-checks, tests and builds against TanStack Table 9.2.4. Tasks 1–2 were planned and executed first, against documentation only as far as the install; everything from Task 3 is planned against the installed API recorded in `api-notes.md`.
 
 **Architecture:** `createTable` in `@ez-kit/data-grid-core` currently does three things in one 732-line function: resolve config into TanStack options, own a hand-written store, and assemble the live table. Task 1 splits the first out as a pure function — that is the boundary v9 needs anyway, since core will resolve options while the React adapter owns the hook. Task 2 installs v9 on the integration branch and produces an API inventory from the installed `.d.ts` files.
 
@@ -25,9 +25,14 @@
   human's call, so no task from Task 3 on contains a `git push` or a `gh pr create` step. (Task 1's
   Step 10 and Task 2's Step 1 predate this and are already history.)
 - Never use bare `git stash` / `git stash pop` — the stash stack is shared across worktrees.
-- From Task 2 until PR 2 the repository does not build: `pnpm run ci`, `pnpm build` and
-  `pnpm --filter @ez-kit/data-grid-core typecheck` are red by design (design §7). Each task states
-  a criterion that is checkable anyway — see "Working on a tree that does not build" below.
+- From Task 2 until Task 13 the package does not compile, and the repository does not build until
+  PR 2: `pnpm run ci`, `pnpm build` and `pnpm --filter @ez-kit/data-grid-core typecheck` are red by
+  design (design §7). No task before Task 13 may use any of those three as its criterion, or run
+  any command that depends on a successful build. Each task states a criterion that is checkable
+  anyway — see "Working on a tree that does not build" below.
+- **Design §7's PR 3 row is re-scoped:** the core-side half of design §5 (`sortFn`, logical column
+  pinning) moves into PR 1 as Task 4, because PR 1's own criterion cannot be met without it. The
+  reasoning is in the PR 1 remainder's orientation section; PR 3 keeps everything outside core.
 
 ## File Structure
 
@@ -413,7 +418,7 @@ These three answers are the inputs to the next planning pass.
 
 ## PR 1 remainder — orientation
 
-Tasks 3–10 finish design §7 row "1. Core engine". They all land on `integration/tanstack-v9`,
+Tasks 3–13 finish design §7 row "1. Core engine". They all land on `integration/tanstack-v9`,
 which **stays local** — pushing it and opening any PR is the human's call, so no task below
 contains a `git push` or a `gh pr create` step.
 
@@ -421,7 +426,7 @@ contains a `git push` or a `gh pr create` step.
 
 Design §7 accepts that the repository is red from Task 2 until PR 2. `pnpm run ci`,
 `pnpm build` and `pnpm --filter @ez-kit/data-grid-core typecheck` therefore cannot be a
-task's criterion until Task 10. Two checks work while the tree is broken, and every task
+task's criterion until Task 13. Three checks work while the tree is broken, and every task
 below states which of them it uses:
 
 - **Owned-file typecheck.** `tsc` reports every error with a `src/…(line,col)` prefix, so a
@@ -436,21 +441,27 @@ below states which of them it uses:
   Substitute the task's own file list. `|| echo` is there because `grep` exits 1 on no match,
   which is the success case.
 
-- **Error-count delta.** Before starting, record the baseline; after finishing, the total must
-  not be higher than baseline plus what the task knowingly introduces (each task says what it
-  knowingly introduces, and why):
-
-  ```bash
-  pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
-    | grep -c 'error TS' > /tmp/…/tsc-baseline.txt   # scratchpad, not the repo
-  ```
-
 - **Per-file lint.** `eslint` runs on a file list without the package compiling:
   `pnpm --filter @ez-kit/data-grid-core exec eslint <files> --max-warnings=0`.
 - **Targeted vitest.** Vitest transpiles per module graph and does **not** typecheck, so a test
-  runs as long as the modules it imports are runtime-valid. From Task 5 on, every task has at
-  least one test file it must make pass. Before Task 5 nothing in core runs, because every
-  feature test goes through `createTable` (verified: all seven feature test files import it).
+  runs as long as the modules it imports are runtime-valid. Which tests are runnable when is not
+  uniform, and each task says which it runs:
+  - **From Task 3**, `features/entry.ts` imports nothing but `table-core`, so a smoke test over it
+    runs.
+  - **From Task 4**, `column-state.test.ts`, `system-columns.test.ts` and `map-columns.test.ts`
+    run — verified: none of the three imports `createTable`.
+  - **From Task 5**, `create-table-options.test.ts` runs (after change 1 the resolver imports no
+    feature module).
+  - **From Task 6**, everything that goes through `createTable` becomes reachable. All seven
+    feature test files do, which is why none of them can run before then.
+
+Also record the package's total error count before starting, in the session scratchpad and never
+in the repo, so a later task can tell a fix from a regression:
+
+```bash
+pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
+  | grep -c 'error TS' > "$SCRATCH/tsc-baseline.txt"
+```
 
 A task is done when its stated criterion passes. "The monorepo gate is red" is never a reason
 to skip a task's own criterion, and never a reason to claim one passed.
@@ -460,42 +471,72 @@ to skip a task's own criterion, and never a reason to claim one passed.
 Recorded where the reader needs them; each is argued in the task that implements it.
 
 1. **`draft` gets one atom set** (api-notes §4) — the three live axes are external atoms, the
-   `applied` snapshot is an ordinary internal slice. Task 9.
+   `applied` snapshot is an ordinary internal slice. Task 12.
 2. **The draft atoms are created by the caller, not by `createTableOptions`.** `useTable` merges
    `tableOptions` into the table on **every render** (api-notes §5.2) and replaces `atoms`
    wholesale, so atoms built inside the options resolver would be new objects every render and
    the draft would reset on each keystroke. `createTableOptions` stays pure and takes them as an
-   argument. Task 4 defines the parameter; Task 9 the factory.
+   argument. Task 5 defines the parameter; Task 12 the factory.
 3. **`ColumnMeta` stays a global declaration merge**, widened to v9's **three** type parameters,
    rather than moving to the `columnMeta` feature slot. Task 3.
 4. **Non-feature config leaves TanStack options.** `rowActions`, row `pinning`, `virtualization`
    and `direction` are read only by the React layer; they move to a `grid` bag returned beside
-   `options`, which deletes `row-actions.ts`'s global `declare module` outright. Task 4.
+   `options`, which deletes `row-actions.ts`'s global `declare module` outright. This is forced
+   rather than chosen: its merge target, `TableOptionsResolved`, does not exist in v9. Task 5.
 5. **`getInitialSnapshot` is deleted, not wrapped.** Neither PR-2 branch needs a core API:
    `table.initialState` is public and stable by reference (api-notes §4), so a PR 2 that keeps
    `useSyncExternalStore` writes `() => table.initialState` as its `getServerSnapshot` inline.
-   Task 5.
-6. **`table.getState()` gets no shim.** Reads become `table.store.state` (whole snapshot) or
-   `table.atoms.<slice>.get()` (one slice), per design §3. Task 5 onward.
+   Task 6.
+6. **`table.getState()` gets no shim.** Reads become `table.store.state` (whole snapshot) or, from
+   inside a feature, the accessor in decision 7.
+7. **Feature state is reached through one shared accessor module, never through `table.atoms` /
+   `table.baseAtoms` directly.** This is not a style preference. Inside a `TableFeature` hook the
+   table is `Table<TFeatures, TData>` with `TFeatures` unresolved, so `Atoms<TFeatures>` and
+   `BaseAtoms<TFeatures>` have **no provable key** and `table.atoms.editing.get()` fails with
+   `TS2339` — the optional-chained spelling included. The `*_All` variants that
+   `coreTablesFeature.types.d.ts:42-54` describes as "what `Table` uses so feature code can access
+   any slice atom" are **not** what a feature receives; `Table_CoreProperties` declares the
+   narrow ones, and that doc comment is stale. Upstream's own custom-feature skill reaches its
+   slice through an explicit cast (`skills/custom-features/SKILL.md`, `readDensity`). One cast,
+   written once, in a module that also encodes the ownership rule — see Task 7.
+
+### The core-side vocabulary renames move into PR 1 (re-scoping design §7)
+
+Design §7 puts §5 (`sortFn`, logical column pinning) in PR 3, and PR 1's criterion at
+`--filter data-grid-core` green. Those two cannot both hold: `map-columns.ts:187` writes
+`setIfDefined(result, 'sortingFn', …)` and `column-state.ts` writes `columnPinning: { left, right }`
+into a `Partial<TableState>` whose `ColumnPinningState` is now `{ start, end }` — so core does not
+type-check while either stands, and the pinning error surfaces inside Task 5's own owned-file
+grep.
+
+**Task 4 therefore takes the core-side half of design §5**, and PR 3 keeps everything outside
+core: `react/react/src/utils/pin-styles.ts`, the literal `getIsPinned()` comparisons in both
+kits, the `--dg-pin-*` CSS variables and both kits' shadow variables, the shadcn registry
+payload, the docs, and the RTL e2e cases. This is a deliberate re-scoping of the design's PR 3
+row, not drift, and there is no cost to React from it: React does not build during PR 1 either
+way. A `left` ↔ `start` translation shim at the core boundary was considered and **rejected** —
+a shim introduced to postpone a rename outlives the rename.
 
 ### Counts, measured against the tree rather than the design
 
-| Thing                                    | Design says     | Counted today                                                                                                                                                                                                                                                                                   |
-| ---------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `getState()` in core source              | 26              | **26** ✓ (`create-table.ts` 4, creating 6, editing 6, deleting 5, draft 3, row-ordering 2)                                                                                                                                                                                                      |
-| `getState()` in core tests               | (153 repo-wide) | **113**, in 7 files                                                                                                                                                                                                                                                                             |
-| custom features                          | 7               | **7** ✓ — but `row-actions.ts` also carries a global `declare module`, an 8th augmentation with no feature behind it                                                                                                                                                                            |
-| stock features to re-export              | 16              | **17** (api-notes §2 — `cellSpanningFeature`)                                                                                                                                                                                                                                                   |
-| core generic types to thread `TFeatures` | ~23             | **39** exported declarations are generic over `TRow`/`TData`; only **21** of them name a table-core type and therefore need `TFeatures`. The other 18 (`CreatingSaveContext<TData>`, `ValidateConfig<TData>`, …) are generic over the row alone and stay two-parameter. Task 3 lists both sets. |
+| Thing                                    | Design says     | Counted today                                                                                                                                                                                                                                                         |
+| ---------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getState()` in core source              | 26              | **26 lines / 27 occurrences** in 7 files. `create-table.ts` 4, creating 6, editing 6, deleting 5, draft 3, `row-ordering-feature.ts` 1, `row-ordering.ts` 1 — the last being a **whole-snapshot** read (`const state = table.getState()` at `:98`), not a slice read. |
+| `getState()` in core tests               | (153 repo-wide) | **113 lines / 115 occurrences** in 7 files, the seventh being `system-columns/system-column-def.test.ts` (1 site, owned by Task 6).                                                                                                                                   |
+| `getState()` in react source             | 20              | **17.** Out of PR 1's scope; recorded so the PR 2 pass does not inherit the design's figure.                                                                                                                                                                          |
+| custom features                          | 7               | **7** ✓ — plus 9 `declare module '@tanstack/table-core'` blocks in core source: the seven features, `row-actions.ts` (an eighth with no feature behind it, deleted in Task 5) and `column/types.ts`'s `ColumnMeta` (Task 3).                                          |
+| stock features to re-export              | 16              | **17** (api-notes §2 — `cellSpanningFeature`).                                                                                                                                                                                                                        |
+| core generic types to thread `TFeatures` | ~23             | **21** of the 39 exported declarations generic over `TRow`/`TData`; the other 18 name no table-core type and keep their parameters. Task 3 lists both sets.                                                                                                           |
 
 ### Files (PR 1 remainder)
 
-| File                                             | Responsibility                                                                                                                                             |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/data-grid/core/src/features/entry.ts`  | **New (Task 3).** The `@ez-kit/data-grid-core/features` payload: stock re-exports, row-model factories, `tableFeatures`, and our seven as they are ported. |
-| `packages/data-grid/core/tsup.config.ts`         | **New (Task 3).** Two named entries; replaces the inline `tsup src/index.ts` script.                                                                       |
-| `packages/data-grid/core/src/store/**`           | **Deleted (Task 5).** The hand-written store, in full.                                                                                                     |
-| `packages/data-grid/core/src/features/*/`\*`.ts` | **Modified (Tasks 6–9).** Each feature onto the v9 plugin API, with its own `*_FeatureMap` merges.                                                         |
+| File                                             | Responsibility                                                                                                                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/data-grid/core/src/features/entry.ts`  | **New (Task 3).** The `@ez-kit/data-grid-core/features` payload: stock re-exports, row-model factories, `tableFeatures`, and our seven as they are ported.                              |
+| `packages/data-grid/core/tsup.config.ts`         | **New (Task 3).** Two named entries; replaces the inline `tsup src/index.ts` script.                                                                                                    |
+| `packages/data-grid/core/src/feature-state/`     | **New (Task 7).** `readOwnSlice` / `readForeignSlice` / `writeOwnSlice` / `writeForeignSlice` — the one place a feature touches state, and the one place the ownership rule is written. |
+| `packages/data-grid/core/src/store/**`           | **Deleted (Task 6).** The hand-written store, in full.                                                                                                                                  |
+| `packages/data-grid/core/src/features/*/`\*`.ts` | **Modified (Tasks 8–12).** Each feature onto the v9 plugin API, with its own `*_FeatureMap` merges.                                                                                     |
 
 ---
 
@@ -506,6 +547,7 @@ Recorded where the reader needs them; each is argued in the task that implements
 **Files:**
 
 - Create: `packages/data-grid/core/src/features/entry.ts`
+- Create: `packages/data-grid/core/src/features/entry.test.ts`
 - Create: `packages/data-grid/core/tsup.config.ts`
 - Modify: `packages/data-grid/core/package.json` (`exports`, `build`, `size-limit`, `dependencies`)
 - Modify: `packages/data-grid/core/src/types.ts`
@@ -551,7 +593,7 @@ export {
 	createPaginatedRowModel,
 	createSortedRowModel,
 } from '@tanstack/table-core'
-// our seven are appended here by Tasks 6–9, and `allDataGridFeatures` by Task 10.
+// our seven are appended here by Tasks 8–12, and `allDataGridFeatures` by Task 13.
 ```
 
 ```ts
@@ -567,7 +609,7 @@ export interface DataTable<TFeatures extends TableFeatures, TRow extends RowData
 	TFeatures,
 	TRow
 > {
-	/* …, narrowed in Task 5 */
+	/* …, narrowed in Task 6 */
 }
 
 export type Table<TFeatures extends TableFeatures, TRow extends object> = DataTable<TFeatures, TRow>
@@ -591,13 +633,8 @@ lies.
 
 - [ ] **Step 1: Record the typecheck baseline**
 
-```bash
-mkdir -p "$SCRATCH" && pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json \
-  --noEmit --pretty false 2>&1 | grep -c 'error TS' | tee "$SCRATCH/tsc-baseline.txt"
-```
-
-(`$SCRATCH` is the session scratchpad, never the repo.) This number only ever has to come down
-by Task 10; it is recorded so a later task can tell a fix from a regression.
+Per "Working on a tree that does not build" above. This number only ever has to come down by
+Task 13; it is recorded so a later task can tell a fix from a regression.
 
 - [ ] **Step 2: Create the entry module**
 
@@ -608,11 +645,67 @@ and the alphabetical rule are satisfiable.
 Name the file `entry.ts`, **not** `index.ts`. `src/features/` is a directory of feature folders,
 and a barrel at `src/features/index.ts` would make `import … from '../features'` resolve to
 everything — one careless intra-package import would pull all seven features into any module,
-which is the exact reachability the tree-shaking test added in PR 4 exists to prevent. Nothing
-inside the package may import from this file; feature modules keep importing each other by their
-own paths (`'../features/creating'`).
+which is the reachability the tree-shaking test added in PR 4 exists to prevent. Nothing inside
+the package imports from this file; feature modules keep importing each other by their own paths
+(`'../features/creating'`).
 
-- [ ] **Step 3: Give the package a second build entry**
+That rule has one deliberate exception, added in Task 12: `create-table.ts` imports
+`createDraftAtoms` from `./features/deferred-apply` directly. It is one named function from one
+feature module, not the barrel, and Task 13 Step 4 accounts for what it costs the main entry's
+bundle.
+
+- [ ] **Step 3: Write the smoke test**
+
+Cheap, runnable here, and it catches this task's actual failure mode — a re-export spelled with a
+name that exists but is the wrong one, which lint cannot see:
+
+```ts
+// src/features/entry.test.ts
+import { describe, expect, it } from 'vitest'
+
+import * as features from './entry'
+
+const STOCK = [
+	'cellSelectionFeature',
+	'cellSpanningFeature',
+	'columnFacetingFeature',
+	'columnFilteringFeature',
+	'columnGroupingFeature',
+	'columnOrderingFeature',
+	'columnPinningFeature',
+	'columnResizingFeature',
+	'columnSizingFeature',
+	'columnVisibilityFeature',
+	'globalFilteringFeature',
+	'rowAggregationFeature',
+	'rowExpandingFeature',
+	'rowPaginationFeature',
+	'rowPinningFeature',
+	'rowSelectionFeature',
+	'rowSortingFeature',
+] as const
+
+describe('@ez-kit/data-grid-core/features', () => {
+	it('re-exports all 17 stock features', () => {
+		for (const name of STOCK) expect(features[name], name).toBeDefined()
+		expect(Object.keys(features).filter((k) => k.endsWith('Feature'))).toHaveLength(STOCK.length)
+	})
+
+	it('re-exports the nine row-model factories as callable factories', () => {
+		expect(typeof features.createSortedRowModel()).toBe('function')
+		expect(typeof features.createCoreRowModel()).toBe('function')
+	})
+
+	it('does not re-export coreReactivityFeature — useTable and createTable each inject their own', () => {
+		expect(features).not.toHaveProperty('coreReactivityFeature')
+	})
+})
+```
+
+The length assertion is what makes the first case non-vacuous: it fails on a missing export and
+on a surplus one, so Tasks 8–12 must update it as they append, which is the point.
+
+- [ ] **Step 4: Give the package a second build entry**
 
 Replace the inline build script with a config, mirroring `packages/zu-store/tsup.config.ts`:
 
@@ -645,20 +738,20 @@ and in `package.json`: `"build": "tsup"`, plus
 Add a second `size-limit` entry for `dist/features/index.js`. Per AGENTS.md every entry ignores
 the package's own runtime dependencies, so both entries carry
 `"ignore": ["@tanstack/table-core", "@tanstack/store"]`. Give the new entry a deliberately loose
-limit (`"6 KB"`) with a comment that it is re-measured in PR 6 after the first green build —
+limit (`"6 KB"`) with a comment that it is re-measured in Task 13 after the first green build —
 guessing a number now and calling it a budget would be a budget that measures nothing.
 
-- [ ] **Step 4: Add `@tanstack/store` as a direct dependency**
+- [ ] **Step 5: Add `@tanstack/store` as a direct dependency**
 
 ```bash
 pnpm --filter @ez-kit/data-grid-core add @tanstack/store@0.11.1
 ```
 
-Task 9 imports `createAtom` from it for the draft atoms. Pin the version `react-table@9.2.4`
-already resolves (api-notes §0) so the workspace does not gain a third `@tanstack/store` copy —
-atoms from two copies are not the same module instance.
+Task 12 imports `createAtom` and `batch` from it. Pin the version `react-table@9.2.4` already
+resolves (api-notes §0) so the workspace does not gain a third `@tanstack/store` copy — atoms
+from two copies are not the same module instance.
 
-- [ ] **Step 5: Thread `TFeatures` through the 21 declarations that need it**
+- [ ] **Step 6: Thread `TFeatures` through the 21 declarations that need it**
 
 The parameter goes **first**, matching upstream's `Table<TFeatures, TData>` order, and is
 constrained `TFeatures extends TableFeatures` with no default — a default would silently
@@ -685,9 +778,11 @@ declare module '@tanstack/table-core' {
 }
 ```
 
-The variance annotations and the `CellData` default are copied from the upstream declaration at
-`dist/types/ColumnDef.d.ts:17`; TypeScript rejects a merge whose parameter list differs, so this
-is not stylistic.
+The parameter list is copied from the upstream declaration at `dist/types/ColumnDef.d.ts:17`.
+**Arity is the load-bearing part** — TypeScript rejects a merge whose parameter _count_ differs
+(`TS2428`), which is what would happen to today's two-parameter version. The `in out` variance
+annotations and the `CellData` default are copied for fidelity and readability, not because
+omitting them would fail; a merge without them compiles.
 
 **`ColumnDef<TRow, TCellTypes, TNode>` keeps its parameters** — design §1 settles this, and
 nothing here reopens it. Our `ColumnDef` is our own type; it is `mapColumns`' _output_
@@ -703,7 +798,7 @@ The 18 declarations generic over the row alone — `CreatingSaveContext<TData>`,
 a parameter a type does not use is the churn AGENTS.md's settled-decisions section exists to
 stop, and each of these would then need it threaded through every kit that names it.
 
-- [ ] **Step 6: Export the new names from the package index**
+- [ ] **Step 7: Export the new names from the package index**
 
 `src/index.ts` gains `export type { TableFeatures } from '@tanstack/table-core'` and keeps its
 existing re-exports. It does **not** re-export the feature values — those are the `/features`
@@ -718,21 +813,23 @@ grep -nE "rowSortingFeature|stockFeatures|createSortedRowModel" packages/data-gr
 
 Expected: no output.
 
-- [ ] **Step 7: Criterion**
+- [ ] **Step 8: Criterion**
 
 ```bash
+pnpm --filter @ez-kit/data-grid-core exec vitest run src/features/entry.test.ts
 pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
   | grep -E '^src/(features/entry|column/types|types)\.ts\(' || echo 'OWNED FILES CLEAN'
 pnpm --filter @ez-kit/data-grid-core exec eslint \
-  src/features/entry.ts src/types.ts src/column/types.ts src/index.ts tsup.config.ts --max-warnings=0
+  src/features/entry.ts src/features/entry.test.ts src/types.ts src/column/types.ts \
+  src/index.ts tsup.config.ts --max-warnings=0
 ```
 
-Expected: `OWNED FILES CLEAN`, and lint silent. The package total goes **up** in this task and
-that is expected and knowingly introduced: every call site of `TableConfig`, `DataTable` and
-`TanStackColumnDef` now passes one argument too few. Tasks 4–9 consume that debt; Task 10 clears
-it.
+Expected: the smoke test green, `OWNED FILES CLEAN`, lint silent. The package total goes **up**
+in this task and that is expected and knowingly introduced: every call site of `TableConfig`,
+`DataTable` and `TanStackColumnDef` now passes one argument too few. Tasks 4–12 consume that
+debt; Task 13 clears it.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add packages/data-grid/core/
@@ -749,20 +846,164 @@ ColumnMeta's augmentation takes v9's three parameters."
 
 ---
 
-### Task 4: `createTableOptions` onto the v9 option shape
+### Task 4: The core-side vocabulary renames — `sortFn`, and logical column pinning
+
+Design §7 assigns §5 to PR 3. The core-side half moves here instead, because PR 1's own criterion
+cannot be met without it — see "The core-side vocabulary renames move into PR 1" above, which
+records the re-scoping and its reason. Everything outside core stays in PR 3.
+
+It runs before `createTableOptions` (Task 5) so that Task 5's owned-file grep is achievable: the
+`ColumnPinningState` mismatch surfaces inside `create-table-options.ts` otherwise, with no
+instruction covering it.
 
 **Branch:** `integration/tanstack-v9`.
 
 **Files:**
 
-- Modify: `packages/data-grid/core/src/create-table/create-table-options.ts`
-- Modify: `packages/data-grid/core/src/features/row-actions/row-actions.ts` (delete its `declare module` block)
+- Modify: `packages/data-grid/core/src/column/map-columns/map-columns.ts` and its test
+- Modify: `packages/data-grid/core/src/column-state/column-state.ts` and its test
+- Modify: `packages/data-grid/core/src/system-columns/system-columns.ts` and its test
+- Modify: `packages/data-grid/core/src/column/types.ts` (`ColumnPinSide`)
+- Modify: `packages/data-grid/core/src/column/normalize.ts`
+- Modify: `packages/data-grid/core/src/types.ts`
+- Modify: `packages/data-grid/core/src/create-table/create-table-options.ts` (the pinning reads)
 
 **Interfaces:**
 
-Consumes from Task 3: `TableConfig<TFeatures, TRow>`, the `/features` entry, `@tanstack/store`.
+Produces, for Task 5 and for PR 3:
 
-Produces, for Tasks 5, 9 and PR 2:
+```ts
+// column/types.ts — the public vocabulary
+/**
+ * Which edge a column is pinned to. **Logical**, like `align`: `'start'` is the left edge in
+ * LTR and the right edge in RTL. v9 removed the physical `'left'` / `'right'` everywhere, so
+ * the AGENTS.md entry that recorded pinning as physical is rewritten rather than defended —
+ * design §D2 and §5. Row pinning stays `top` / `bottom`: a vertical axis does not flip.
+ */
+export const ColumnPinSide = { Start: 'start', End: 'end' } as const
+export type ColumnPinSide = (typeof ColumnPinSide)[keyof typeof ColumnPinSide]
+
+// column-state/column-state.ts
+export type ColumnInvariants = {
+	readonly forcedStart: readonly string[]
+	readonly forcedEnd: readonly string[]
+	readonly alwaysVisible: readonly string[]
+}
+export function mergePinningSeed(
+	seed: { start: readonly string[]; end: readonly string[] },
+	user?: Partial<ColumnPinningState>,
+): ColumnPinningState
+
+// system-columns/system-columns.ts
+export function extractPinningState<TRow extends object>(
+	columns: TanStackColumnDef<TFeatures, TRow>[],
+): { start: string[]; end: string[] }
+```
+
+**The whole change, as a list.** Every item is a rename; none is a logic change. If a diff hunk
+changes what a branch decides rather than what it is spelled, it is a mistake.
+
+1. `map-columns.ts:187` — `setIfDefined(result, 'sortingFn', sorting.fn)` → `'sortFn'`, and the
+   doc comment at `:82` that names it. `map-columns.test.ts:41-49` asserts on `result[0]?.sortingFn`
+   twice; both become `sortFn`. (api-notes §6 confirms `sortFn` on the column def and that no
+   `sortingFn` spelling survives in `dist`.)
+2. `column/types.ts` — `ColumnPinSide.Left/Right` → `Start/End` with values `'start'` / `'end'`,
+   and the doc comment rewritten per the Interfaces block. `ColumnPinningDef.side` /
+   `.initialSide` keep their names and now take the new values.
+3. `column/normalize.ts:13` — the comment's `pinning: 'left'` example.
+4. `column-state.ts` — `forcedLeft` / `forcedRight` → `forcedStart` / `forcedEnd`;
+   `mergePinningSeed`'s `seed.left` / `.right` and `user.left` / `.right` → `.start` / `.end`;
+   `enforceColumnInvariants`'s two `enforcePinnedSide` calls and the `nextPinning.left` /
+   `.right` writes. The comment at `:63-64` explaining why unmentioned seeds go in front or last
+   keeps its meaning and gains the new words.
+5. `system-columns.ts` — `extractPinningState` returns `{ start, end }`; its
+   `position === ColumnPinSide.Left` test becomes `.Start`.
+6. `create-table-options.ts:157, 368, 412` — `const { left: pinnedLeft, right: pinnedRight }`,
+   the `mergePinningSeed({ left, right }, …)` call and the `ColumnPinningState` import site.
+7. `types.ts:641` — the `columnPinning` `onChange` payload type. It already names table-core's
+   `ColumnPinningState`, so the type is right automatically; what changes is the surrounding
+   prose and any `left`/`right` example in the doc comment.
+
+**What this task does NOT touch.** Row pinning (`RowPinningConfig`, `data-pinned="top"|"bottom"`)
+— a vertical axis has no logical names, and design §5 says so explicitly. `columnResizeDirection`
+— api-notes §6 confirms it stays `'ltr' | 'rtl'` upstream. And anything outside
+`packages/data-grid/core`.
+
+- [ ] **Step 1: Run the three affected tests first, to fix the baseline**
+
+```bash
+pnpm --filter @ez-kit/data-grid-core exec vitest run \
+  src/column/map-columns src/column-state src/system-columns/system-columns.test.ts
+```
+
+Expected: all green **before** the rename. None of these three imports `createTable` (verified),
+so they are the only core tests that run at this point, and they are exactly the ones this task
+touches. If any is already red, that is a Task 3 regression and it is fixed before continuing.
+
+- [ ] **Step 2: Apply the seven renames**
+
+Mechanically, per the list. Do not use a blanket `sed`: `column-state.ts` contains the English
+words "left" and "right" in prose (`:62`, `:110`) that must not change, and `column/types.ts`
+uses "left edge" / "right edge" in the `align` doc comment, which stays because `align` is
+already logical and its comment is explaining exactly that.
+
+- [ ] **Step 3: Update the three test files**
+
+`map-columns.test.ts` (2 assertions), `column-state.test.ts` (the `{left,right}` fixtures and
+`forcedLeft`/`forcedRight` expectations), `system-columns.test.ts` (the `extractPinningState`
+result shape).
+
+- [ ] **Step 4: Criterion**
+
+```bash
+pnpm --filter @ez-kit/data-grid-core exec vitest run \
+  src/column/map-columns src/column-state src/system-columns/system-columns.test.ts
+pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
+  | grep -E '^src/(column/map-columns/|column-state/|system-columns/system-columns\.ts|column/normalize)' \
+  || echo 'OWNED FILES CLEAN'
+git grep -n "sortingFn\|forcedLeft\|forcedRight\|ColumnPinSide.Left\|ColumnPinSide.Right" -- packages/data-grid/core/src
+```
+
+Expected: tests green, `OWNED FILES CLEAN`, and the final grep silent.
+
+`system-column-def.test.ts` also names pinning but imports `createTable`, so it cannot run here;
+Task 6 owns it.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/data-grid/core/src/
+git commit -m "feat(data-grid-core)!: logical column pinning and sortFn inside core
+
+v9 removed the physical left/right pinning vocabulary, so ColumnPinSide becomes
+start/end and every core-side carrier follows: ColumnInvariants, mergePinningSeed,
+enforceColumnInvariants, extractPinningState. sortingFn becomes sortFn on the
+column def.
+
+The design scheduled this for the pinning PR, but core cannot type-check while
+it stands, so the core half moves forward. The React adapter, both kits, the CSS
+variables and the registry payload are unchanged and stay in that PR.
+
+Row pinning keeps top/bottom: a vertical axis does not flip under RTL."
+```
+
+---
+
+### Task 5: `createTableOptions` onto the v9 option shape
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: `packages/data-grid/core/src/create-table/create-table-options.ts` and its test
+- Modify: `packages/data-grid/core/src/features/row-actions/row-actions.ts` (delete its `declare module`)
+
+**Interfaces:**
+
+Consumes from Tasks 3–4: `TableConfig<TFeatures, TRow>`, the `/features` entry, `@tanstack/store`,
+the `start` / `end` pinning vocabulary.
+
+Produces, for Tasks 6 and 12 and for PR 2:
 
 ```ts
 import type { Atom } from '@tanstack/store'
@@ -781,16 +1022,15 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 	externals?: { atoms?: ExternalAtoms<TFeatures> },
 ) {
 	// …
-	return { options, initialState, columnInvariants, deferred, onChange, grid }
+	return { options, deferred, grid }
 }
 ```
 
-- `options` — a `TableOptions<TFeatures, TRow>` in all but the annotation (still inferred; the
-  reason in Task 1's Step 3 is unchanged). Carries `features`, `data`, `columns`, `getRowId`,
-  `initialState`, the `enableX` gates, the manual-mode flags, and `atoms` when `externals.atoms`
-  was given.
-- `grid: GridOptions` — new, per decision 4.
-- `initialState`, `columnInvariants`, `deferred`, `onChange` — unchanged from Task 1.
+**The return type shrinks from five members to three.** `initialState` is folded into
+`options.initialState`, which is where v9 reads it. `columnInvariants` and `onChange` lose their
+external consumer when the funnel dies (Task 6) and become internal to this function — see
+change 7 below, which is where they now do their work. `deferred` survives because Task 12's
+`createTable` needs it to decide whether to build draft atoms.
 
 **What changes inside the function.**
 
@@ -806,33 +1046,68 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
    `enableColumnPinning: false`, `enableRowSelection`, `enableMultiRowSelection`,
    `enableColumnResizing`, `enableRowPinning`. Those are what design §1 means by "config gates
    behaviour, not presence".
-3. **`sortingFns` → `sortFns`, and it moves.** api-notes §6 confirms the rename; api-notes §1
-   confirms `sortFns` is a **feature slot**, not a table option. A named comparator registry is
-   therefore something the consumer puts in `tableFeatures({ sortFns: … })`. `sorting.fns` stays
-   in our config as the ergonomic spelling and is **warned about in development** when
+3. **The table-level `sortingFns` registry moves to the feature set.** api-notes §1 shows
+   `sortFns` is a **feature slot**, not a table option, so a named comparator registry is
+   something the consumer puts in `tableFeatures({ sortFns: … })`. `sorting.fns` stays in our
+   config as the ergonomic spelling and is **warned about in development** when
    `config.features.sortFns` is absent — it cannot be forwarded, because options cannot reach
-   the feature set.
+   the feature set. (The column-level `sortFn` rename was Task 4.)
 4. **`columnResizeDirection` becomes conditional.** It is an option of `columnResizingFeature`
    and does not exist without it. `config.direction` still reaches the React layer through
    `grid.direction` unconditionally — it is a fact about the grid, which is why it was set
    unconditionally before.
 5. **`rowActions`, `pinning`, `virtualization` leave `options` for `grid`**, and
-   `row-actions.ts`'s `declare module '@tanstack/table-core'` block is deleted with them. This is
-   the `TableOptionsResolved` half of the leak design §2 names; the other half (per-feature
-   `editing` / `creating` / `deleting` / `rowOrdering` / `draft` options) moves to
-   `TableOptions_FeatureMap` in Tasks 6–9, so those five keys stay on `options` and are simply
+   `row-actions.ts`'s `declare module '@tanstack/table-core'` block is deleted with them. Its
+   merge target, `TableOptionsResolved`, does not exist in v9, so this is a hard compile error
+   from the moment the bump resolves — not a tidy-up. The other half of the leak design §2 names
+   (per-feature `editing` / `creating` / `deleting` / `rowOrdering` / `draft` options) moves to
+   `TableOptions_FeatureMap` in Tasks 8–12, so those five keys stay on `options` and are simply
    untyped until their feature's task lands.
 6. **`atoms` is passed through**, spread conditionally (`exactOptionalPropertyTypes`):
    `...(externals?.atoms !== undefined ? { atoms: externals.atoms } : {})`.
+7. **This task owns the `on<Slice>Change` wiring, unconditionally.** No later task adds it, and
+   Task 6 does not check whether it was done. Each of the eleven per-feature callbacks becomes an
+   upstream `on<Slice>Change` option built here, and each handler does three things in order:
+   enforce the column invariants, write through the owning atom, then call the consumer's
+   callback.
+
+   ```ts
+   const onColumnPinningChange = (updater: Updater<ColumnPinningState>): void => {
+   	const prev = table.atoms.columnPinning.get() // through the accessor — Task 7
+   	const next = enforceColumnInvariants({ columnPinning: functionalUpdate(updater, prev) }, columnInvariants)
+   	makeStateUpdater('columnPinning', table)(next.columnPinning!)
+   	config.pinning?.column?.onChange?.(next.columnPinning!)
+   }
+   ```
+
+   Two notes carried over verbatim from the funnel's comments, because both are still true:
+   - **Selection.** Supplying `onRowSelectionChange` _replaces_ the built-in writer — verified at
+     `dist/features/row-selection/rowSelectionFeature.utils.js:29-31`, where `table_setRowSelection`
+     does nothing but call the option. So every handler we supply must write the state itself
+     (`makeStateUpdater`) before invoking the consumer's callback, or the feature stops working.
+     This is what the funnel's comment warned about; in v9 it applies to all eleven, not just
+     selection.
+   - **Resizing.** Forward `onColumnSizingChange` only. `columnResizing` (v8's `columnSizingInfo`)
+     churns on every pointer move mid-drag.
+
+   `enforceColumnInvariants` is what the funnel ran on every write, and these handlers are where
+   that job now lives. Only `onColumnPinningChange` and `onColumnVisibilityChange` need it —
+   those are the two slices an invariant constrains.
+
+   The handlers close over `table`, which does not exist while options are being built. Build
+   them in `getDefaultTableOptions` instead, which receives the table (api-notes §3) — or, if
+   that proves awkward for a per-instance config, have `createTable` bind them after
+   construction via `setOptions`. **Decide this in the task and write down which**, because Task
+   6 reads the result.
 
 - [ ] **Step 1: Add the registered-vs-configured development guard**
 
 `sorting: {…}` without `rowSortingFeature` is a compile error under Task 3, but only when the
-call site is typed — a config assembled through `as` or read from JSON is not. Add one dev-only
+call site is typed — a config assembled through a cast or read from JSON is not. Add one dev-only
 check near the top of the function, beside the existing `warnUnreachableSeed` block:
 
 ```ts
-const REQUIRED_FEATURE: Partial<Record<keyof TableConfig<TableFeatures, object>, string>> = {
+const REQUIRED_FEATURE = {
 	sorting: 'rowSortingFeature',
 	filtering: 'columnFilteringFeature',
 	globalFiltering: 'globalFilteringFeature',
@@ -841,11 +1116,12 @@ const REQUIRED_FEATURE: Partial<Record<keyof TableConfig<TableFeatures, object>,
 	visibility: 'columnVisibilityFeature',
 	expanding: 'rowExpandingFeature',
 	resizing: 'columnResizingFeature',
-}
+} as const satisfies Partial<Record<keyof TableConfig<TableFeatures, object>, string>>
 
 if (IS_DEV) {
 	for (const [option, feature] of Object.entries(REQUIRED_FEATURE)) {
-		if (isFeatureEnabled(config[option as keyof typeof config] as never) && !(feature in config.features)) {
+		const value = (config as Record<string, unknown>)[option]
+		if (isFeatureEnabled(value as FeatureOption<object>) && !(feature in config.features)) {
 			console.warn(
 				`[data-grid] \`${option}\` is configured, but \`${feature}\` is not in \`features\` — ` +
 					`the option has no effect. Add it to your \`tableFeatures({ … })\` call.`,
@@ -855,22 +1131,27 @@ if (IS_DEV) {
 }
 ```
 
-Note `resizing` needs **two**: `columnResizingFeature` requires `columnSizingFeature`
-(`FeatureSlotPrereqs`, api-notes §1). Upstream turns the missing prerequisite into a string
-literal type at the key, so `tableFeatures` already catches it at compile time — do not
-duplicate that check here; warn only about `columnResizingFeature` itself.
+One cast, to `Record<string, unknown>`, at the point where a string key indexes a typed object —
+which is the honest description of what is happening. Do **not** write `as never`: it is
+`any`-equivalent for argument positions, it disables exactly the check the guard exists to
+perform, and it ships in a package linted at `--max-warnings=0` under `typescript-eslint` strict.
 
-- [ ] **Step 2: Apply changes 1–6 above**
+Note `resizing` needs **two** features: `columnResizingFeature` requires `columnSizingFeature`
+(`FeatureSlotPrereqs`, api-notes §1). Upstream turns the missing prerequisite into a string
+literal type at the key, so `tableFeatures` already catches it at compile time — do not duplicate
+that check here; warn only about `columnResizingFeature` itself.
+
+- [ ] **Step 2: Apply changes 1–7 above**
 
 Move code rather than rewriting it wherever the logic is unchanged — the gates, the invariants,
-the seed merging and every comment on them are untouched by v9 and a rewrite would put behaviour
+the seed merging and every comment on them are untouched by v9, and a rewrite would put behaviour
 changes where a reviewer is not looking for them.
 
 - [ ] **Step 3: Update the existing unit test**
 
 `create-table-options.test.ts` (Task 1) asserts `options.getSortedRowModel` is a function when
 sorting is on. That assertion is now wrong by design. Replace it with the v9 statement of the
-same intent:
+same intent — and note the positive half, which the absence assertions alone do not cover:
 
 ```ts
 it('gates sorting at the table level rather than by attaching a row model', () => {
@@ -878,15 +1159,35 @@ it('gates sorting at the table level rather than by attaching a row model', () =
 	const on = createTableOptions({ features, data: rows, columns, sorting: true })
 	const off = createTableOptions({ features, data: rows, columns })
 
+	// positive: the resolver produces a usable v9 option object
+	expect(on.options.features).toBe(features)
+	expect(on.options.data).toBe(rows)
+	expect(on.options.columns.map((c) => c.id ?? c.accessorKey)).toEqual(['name', 'age'])
+	expect(on.options.initialState).toBeDefined()
+	expect(typeof on.options.onSortingChange).toBe('function')
+
+	// negative: the row model is a feature slot now, not an option
 	expect(on.options).not.toHaveProperty('getSortedRowModel')
 	expect(on.options.enableSorting).toBeUndefined()
 	expect(off.options.enableSorting).toBe(false)
-	expect(on.options.features).toBe(features)
 })
 ```
 
-Every other case in that file gains a `features` field in its config literal. The purity case
-and the draft-throw case keep their assertions unchanged.
+The first block is what stops the test passing against a resolver that returns `{}`. Every other
+case in the file gains a `features` field in its config literal; the purity case and the
+draft-throw case keep their assertions unchanged.
+
+Add one case for the `grid` bag, since nothing else asserts it exists:
+
+```ts
+it('returns non-TanStack config in `grid`, not in `options`', () => {
+	const { options, grid } = createTableOptions({ features, data: rows, columns, direction: 'rtl' })
+	expect(grid.direction).toBe('rtl')
+	expect(grid.rowActions.placement).toBe(RowActionsPlacement.Inline)
+	expect(options).not.toHaveProperty('rowActions')
+	expect(options).not.toHaveProperty('virtualization')
+})
+```
 
 - [ ] **Step 4: Criterion**
 
@@ -897,8 +1198,8 @@ pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty
   || echo 'OWNED FILES CLEAN'
 ```
 
-Expected: the test file green, `OWNED FILES CLEAN`. This is the first test that runs on v9 —
-`createTableOptions` imports no feature module after change 1, so nothing broken is in its graph.
+Expected: the test file green, `OWNED FILES CLEAN`. `createTableOptions` imports no feature module
+after change 1, so nothing broken is in its graph.
 
 - [ ] **Step 5: Commit**
 
@@ -907,18 +1208,29 @@ git add packages/data-grid/core/src/
 git commit -m "feat(data-grid-core)!: resolve v9 table options instead of v8 ones
 
 Row models are feature slots in v9, so the getXRowModel attachments go and the
-enableX gates stay — config gates behaviour, not presence. sortingFns becomes
-the sortFns feature slot. rowActions, row pinning and virtualization move out
-of TanStack options into a grid bag, which removes row-actions' global module
-augmentation."
+enableX gates stay — config gates behaviour, not presence. The sortingFns
+registry becomes the sortFns feature slot. rowActions, row pinning and
+virtualization move out of TanStack options into a grid bag, which removes
+row-actions' augmentation of TableOptionsResolved — a type v9 does not have.
+
+The eleven per-feature callbacks become on<Slice>Change options. Each writes the
+state itself before calling the consumer: supplying the option replaces the
+built-in writer, so a handler that only forwards would stop the feature working."
 ```
 
 ---
 
-### Task 5: `createTable` on `constructTable`; delete the store and the outward funnel
+### Task 6: `createTable` on `constructTable`; delete the store and the outward funnel
 
-This is where the lights come back on: after it, core constructs a real v9 table and three test
-files run.
+This is where the lights come back on: after it, core constructs a real v9 table and every test
+that goes through `createTable` becomes reachable.
+
+**It is the largest task in PR 1 — roughly 1600 lines touched — and it has no seam.** The
+production half (`create-table.ts`, 237 lines → ~25) has no runnable criterion without its test
+half, and the test half is meaningless without the production half; the only inner boundary,
+`create-table-resizing.test.ts` at 77 lines, is too small to be a task. The size is the work
+being atomic, not the task being unfocused. A reviewer should read it as one change: the table
+stops being ours and starts being v9's.
 
 **Branch:** `integration/tanstack-v9`.
 
@@ -928,12 +1240,14 @@ files run.
 - Modify: `packages/data-grid/core/src/create-table/index.ts`
 - Modify: `packages/data-grid/core/src/types.ts` (`DataTable`)
 - Delete: `packages/data-grid/core/src/store/store.ts`, `packages/data-grid/core/src/store/index.ts`
-- Modify: `packages/data-grid/core/src/create-table/create-table.test.ts`
+- Modify: `packages/data-grid/core/src/create-table/create-table.test.ts` (18 `getState()` sites)
 - Modify: `packages/data-grid/core/src/create-table/create-table-resizing.test.ts`
+- Modify: `packages/data-grid/core/src/system-columns/system-column-def.test.ts` (1 `getState()` site)
 
 **Interfaces:**
 
-Consumes from Task 4: `createTableOptions(config, externals?)` and its `grid` field.
+Consumes from Task 5: `createTableOptions(config, externals?)` returning `{ options, deferred, grid }`,
+and whichever of the two `on<Slice>Change` binding routes Task 5 chose.
 
 Produces:
 
@@ -957,17 +1271,18 @@ Everything else on `DataTable` is **deleted**: `getState`, `setState`, `subscrib
 `getSnapshot`, `getInitialSnapshot`, `syncControlledState`, `notifyStateSubscribers`, and the
 re-declared `options` / `getRowModel` / `getAllColumns` / `getColumn` / `getRow` / `initialState`
 / `setOptions` narrowings, which existed only to pin v8's non-generic types. `appendData` and
-`prependData` move to `infiniteFeature` in Task 6 and do not exist between these two tasks.
+`prependData` move to `infiniteFeature` in Task 8 and do not exist between these two tasks.
 
 **What PR 2 gets instead, so it is not blocked.** Whole-state observation is
 `table.store.subscribe(fn)`; the current snapshot is `table.store.state`; a slice is
-`table.atoms.<slice>.get()`; a server snapshot is `() => table.initialState`. Controlled state is
-`options.state.<slice>` + `on<Slice>Change`, which `createTableOptions` already resolves — the
+`table.atoms.<slice>.get()` (from outside a feature `TFeatures` is resolved, so this compiles —
+decision 7 applies only inside feature hooks); a server snapshot is `() => table.initialState`.
+Controlled state is `options.state.<slice>` + `on<Slice>Change`, which Task 5 resolves — the
 one-way mirror `syncControlledState` performed is upstream's job in v9
 (`table_syncExternalStateToBaseAtoms`, called from `constructTable`). No core API is needed for
 any of it, under either PR-2 branch.
 
-**The new body, in full.** It is ~25 lines where it was 237:
+**The new body.** ~25 lines where it was 237:
 
 ```ts
 import { constructTable } from '@tanstack/table-core'
@@ -1000,20 +1315,13 @@ export function createTable<TFeatures extends TableFeatures, TRow extends object
 }
 ```
 
+**This body is provisional in one respect, stated here so it does not read as final:** Task 12
+replaces the `createTableOptions(config)` call with a three-statement block that builds the draft
+atoms first and passes them through `externals`. Nothing else in it changes.
+
 Gone with it: `createStore`, the `ref` wrapper, `toOutward`, `outwardUnchanged`, `syncApplied`,
 `onStateChange` and its eleven-branch dispatch, `DRAFT_AXES`, the second `createStore` from
-`table.initialState`, and the `setOptions` call that switched to fully-controlled mode. The
-per-feature callbacks the funnel dispatched are now upstream's `on<Slice>Change` options, which
-`createTableOptions` wires from `onChange` — **add that wiring here if Task 4 left it unwired**,
-one `on<Slice>Change` per entry, with two notes carried over verbatim from the funnel's comments:
-
-- **Selection.** The funnel's comment says `onRowSelectionChange` _replaces_ the built-in writer,
-  so supplying it to carry a callback stopped selection from being recorded. That is still true
-  in v9 — `makeStateUpdater` is what a default handler does (api-notes §3). So our handler must
-  call `makeStateUpdater('rowSelection', table)(updater)` itself and _then_ the consumer
-  callback. The same applies to every other slice we forward.
-- **Resizing.** Forward `onColumnSizingChange` only. `columnResizing` (v8's `columnSizingInfo`)
-  churns on every pointer move mid-drag.
+`table.initialState`, and the `setOptions` call that switched to fully-controlled mode.
 
 - [ ] **Step 1: Rewrite `create-table.ts` and delete `src/store/`**
 
@@ -1021,38 +1329,42 @@ one `on<Slice>Change` per entry, with two notes carried over verbatim from the f
 git rm -r packages/data-grid/core/src/store
 ```
 
-Then remove `SetStateOptions` from `src/types.ts`'s imports and from `syncControlledState`'s
-signature, which is itself deleted.
+Then remove `SetStateOptions` from `src/types.ts`'s imports, along with `syncControlledState`
+whose signature named it.
 
 - [ ] **Step 2: Narrow `DataTable`**
 
 Per the Interfaces block. Keep the doc comment on `setData`; drop the rest with the members they
 described.
 
-- [ ] **Step 3: Migrate `create-table.test.ts` and `create-table-resizing.test.ts`**
+- [ ] **Step 3: Migrate the three test files**
 
-Every config literal gains `features: tableFeatures({ … })` naming exactly the features that
-test exercises — which is itself worth doing carefully, because these literals become the
-worked examples PR 4's docs are written from. The 18 `getState()` reads become
-`table.store.state` (or `table.atoms.<slice>.get()` where the assertion is about one slice).
-Anything asserting on `subscribe` / `getSnapshot` / `syncControlledState` is rewritten against
-`table.store.subscribe` / `table.store.state` / `options.state`, or deleted with a note in the
-commit body if it was testing the deleted plumbing rather than a behaviour.
+`create-table.test.ts`, `create-table-resizing.test.ts`, `system-column-def.test.ts`. Every config
+literal gains `features: tableFeatures({ … })` naming exactly the features that test exercises —
+itself worth doing carefully, because these literals become the worked examples PR 4's docs are
+written from. The 19 `getState()` reads become `table.store.state`, or
+`table.atoms.<slice>.get()` where the assertion is about one slice.
 
-Do **not** touch the feature test files here; they belong to Tasks 6–9 and will still fail.
+For assertions on `subscribe` / `getSnapshot` / `syncControlledState`: rewrite each against
+`table.store.subscribe` / `table.store.state` / `options.state`. Where an assertion tested the
+deleted plumbing rather than a behaviour — the `silent` / `notify` protocol is the clear case —
+delete it, and **list each deleted assertion by name in the commit body**. "Deleted with a note"
+is not enough at 1283 lines: a reviewer cannot otherwise distinguish a deletion-for-plumbing from
+a deletion-for-inconvenience, and that distinction is the whole review.
+
+Do **not** touch the feature test files here; they belong to Tasks 8–12 and will still fail.
 
 - [ ] **Step 4: Criterion**
 
 ```bash
 pnpm --filter @ez-kit/data-grid-core exec vitest run \
-  src/create-table/create-table.test.ts \
-  src/create-table/create-table-resizing.test.ts \
-  src/create-table/create-table-options.test.ts
+  src/create-table src/system-columns src/column-state src/column/map-columns
+pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
+  | grep -E '^src/(create-table/|types\.ts|system-columns/system-column-def)' || echo 'OWNED FILES CLEAN'
 ```
 
-Expected: all three green. A v9 table constructs, sorts, filters, paginates, resizes and pins
-under a stock-only feature set. Plus owned-file typecheck over `create-table.ts`, `types.ts`,
-`create-table/index.ts`.
+Expected: all green. A v9 table constructs, sorts, filters, paginates, resizes and pins under a
+stock-only feature set, and Task 4's three test files still pass.
 
 - [ ] **Step 5: Commit**
 
@@ -1066,12 +1378,224 @@ and syncApplied — v9 owns state in atoms and emits per slice.
 
 DataTable drops subscribe, getSnapshot, getInitialSnapshot, syncControlledState
 and notifyStateSubscribers: every one existed only to marry that store to
-useSyncExternalStore. Readers use table.store / table.atoms."
+useSyncExternalStore. Readers use table.store / table.atoms.
+
+Assertions deleted with the plumbing they covered: <list each by name>."
 ```
 
 ---
 
-### Task 6: The three state-only features — `loadingFeature`, `infiniteFeature`, `rowOrderingFeature`
+### Task 7: The feature state accessor — one cast, and the ownership rule made mechanical
+
+Every task from here writes feature code, and feature code cannot touch `table.atoms` or
+`table.baseAtoms` directly. This task builds the one module that can, and makes the
+own-slice / foreign-slice distinction a matter of which function you call.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Create: `packages/data-grid/core/src/feature-state/feature-state.ts`
+- Create: `packages/data-grid/core/src/feature-state/feature-state.test.ts`
+- Create: `packages/data-grid/core/src/feature-state/index.ts`
+
+**Interfaces:**
+
+Consumed by Tasks 8–12; every state read and write in a ported feature goes through one of these
+four and through nothing else.
+
+```ts
+import type { TableState_All, Updater } from '@tanstack/table-core'
+
+/** Any table, seen from inside a feature hook — `TFeatures` is unresolved there. */
+type AnyTable = { readonly options: { readonly atoms?: object | undefined }; readonly baseAtoms: object }
+
+type SliceKey = keyof TableState_All
+type SliceOf<K extends SliceKey> = Exclude<TableState_All[K], undefined>
+
+/**
+ * Read a slice **this feature declares**. The feature's own `getInitialState` seeded it, so the
+ * atom is guaranteed to exist and the return type is not optional.
+ */
+export function readOwnSlice<K extends SliceKey>(table: AnyTable, key: K): SliceOf<K>
+
+/**
+ * Read a slice **another feature declares**. It may not be registered on this table, so the
+ * caller must handle `undefined` — `readForeignSlice(table, 'rowSelection') ?? {}`.
+ */
+export function readForeignSlice<K extends SliceKey>(table: AnyTable, key: K): SliceOf<K> | undefined
+
+/** Write a slice **this feature declares**. Throws in development if the slice is absent. */
+export function writeOwnSlice<K extends SliceKey>(table: AnyTable, key: K, updater: Updater<SliceOf<K>>): void
+
+/**
+ * Write a slice **another feature declares**, or do nothing when that feature is not registered.
+ */
+export function writeForeignSlice<K extends SliceKey>(table: AnyTable, key: K, updater: Updater<SliceOf<K>>): void
+```
+
+**Why four functions and not one.** Both writers are built on upstream's `makeStateUpdater`, so
+the _mechanism_ is shared — but two things differ, and one of them is not documentary.
+
+- **The ownership rule.** A feature must never write a foreign slice through `baseAtoms`: when
+  the consumer supplied `atoms.<slice>`, `baseAtoms.<slice>` is not the owning atom and the write
+  goes nowhere, silently. `makeStateUpdater` resolves that correctly
+  (`(instance.options.atoms?.[key] ?? instance.baseAtoms[key]).set(…)`, `dist/utils.js:69-73`), so
+  routing both through it is what makes the rule hold. Having the rule appear as a _name at the
+  call site_ is what makes it reviewable: `writeForeignSlice(table, 'rowSelection', …)` says what
+  it is doing, and a reviewer who sees `writeOwnSlice(table, 'rowSelection', …)` inside
+  `deletingFeature` knows it is wrong without reading the feature's declarations.
+- **Presence.** This is the mechanical difference. `makeStateUpdater` does
+  `instance.baseAtoms[key].set(…)` with no guard, so on an unregistered slice it throws
+  `TypeError: Cannot read properties of undefined`. For an own slice that throw is correct — it
+  means the feature's `getInitialState` failed to seed, which is a bug. For a foreign slice it is
+  wrong: the feature is legitimately optional and must no-op. So `writeForeignSlice` checks
+  presence and `writeOwnSlice` does not, and the same asymmetry gives the two readers different
+  return types.
+
+**The cast, written once.** `Atoms<TFeatures>` and `BaseAtoms<TFeatures>` have no provable key
+while `TFeatures` is unresolved, which is why `table.atoms.editing.get()` fails with `TS2339`
+inside a feature. Upstream's own custom-feature skill solves it with an inline cast
+(`skills/custom-features/SKILL.md`, `readDensity`); this module is that cast, hoisted:
+
+```ts
+type AtomBag = {
+	atoms: Record<string, { get: () => unknown } | undefined>
+	baseAtoms: Record<string, { set: (u: unknown) => void } | undefined>
+	options: { atoms?: Record<string, unknown> | undefined }
+}
+
+const bag = (table: AnyTable): AtomBag => table as unknown as AtomBag
+
+export function readForeignSlice<K extends SliceKey>(table: AnyTable, key: K): SliceOf<K> | undefined {
+	return bag(table).atoms[key]?.get() as SliceOf<K> | undefined
+}
+
+export function readOwnSlice<K extends SliceKey>(table: AnyTable, key: K): SliceOf<K> {
+	const atom = bag(table).atoms[key]
+	if (atom === undefined) {
+		throw new Error(`[data-grid] state slice "${key}" is missing — its feature did not seed getInitialState.`)
+	}
+	return atom.get() as SliceOf<K>
+}
+
+export function writeOwnSlice<K extends SliceKey>(table: AnyTable, key: K, updater: Updater<SliceOf<K>>): void {
+	makeStateUpdater(key, table)(updater as never)
+}
+
+export function writeForeignSlice<K extends SliceKey>(table: AnyTable, key: K, updater: Updater<SliceOf<K>>): void {
+	if (bag(table).baseAtoms[key] === undefined) return
+	makeStateUpdater(key, table)(updater as never)
+}
+```
+
+The `as never` on `makeStateUpdater`'s argument is the one place a cast of that kind is
+acceptable in this package, and it is not `any`-laundering: `makeStateUpdater`'s own declaration
+types its updater as `Updater<TableState<any>[…]>`, so the type information is already gone
+upstream of us. Our signature restores it for every caller. Put the `eslint-disable` for it here,
+with that sentence as the comment, and nowhere else.
+
+**Reading from outside a feature is unaffected.** A consumer, a test, or the React adapter has
+`TFeatures` resolved, so `table.atoms.sorting.get()` compiles there and is the right thing to
+write. This module is for feature hooks only; say so in its file header.
+
+- [ ] **Step 1: Write the failing tests first**
+
+Against a real constructed table — `createTable` works from Task 6, and a stock feature set gives
+real slices to read and write:
+
+```ts
+// src/feature-state/feature-state.test.ts
+import { createAtom } from '@tanstack/store'
+import { rowSelectionFeature, rowSortingFeature, tableFeatures } from '@tanstack/table-core'
+import { describe, expect, it } from 'vitest'
+
+import { createTable } from '../create-table'
+
+import { readForeignSlice, readOwnSlice, writeForeignSlice, writeOwnSlice } from './feature-state'
+
+const columns = [{ accessorKey: 'name' as const }]
+const data = [{ name: 'Ada' }]
+
+describe('feature-state', () => {
+	it('reads and writes a registered slice', () => {
+		const table = createTable({ features: tableFeatures({ rowSortingFeature }), data, columns, sorting: true })
+		expect(readOwnSlice(table, 'sorting')).toEqual([])
+		writeOwnSlice(table, 'sorting', [{ id: 'name', desc: true }])
+		expect(readOwnSlice(table, 'sorting')).toEqual([{ id: 'name', desc: true }])
+	})
+
+	it('readForeignSlice returns undefined for an unregistered slice, readOwnSlice throws', () => {
+		const table = createTable({ features: tableFeatures({ rowSortingFeature }), data, columns })
+		expect(readForeignSlice(table, 'rowSelection')).toBeUndefined()
+		expect(() => readOwnSlice(table, 'rowSelection')).toThrow(/rowSelection/)
+	})
+
+	it('writeForeignSlice is a no-op for an unregistered slice', () => {
+		const table = createTable({ features: tableFeatures({ rowSortingFeature }), data, columns })
+		expect(() => {
+			writeForeignSlice(table, 'rowSelection', {})
+		}).not.toThrow()
+	})
+
+	// The rule this module exists to enforce. baseAtoms is NOT the owning atom when the
+	// consumer supplied one, so a write that reached for it directly would go nowhere.
+	it('writeForeignSlice writes through a consumer-supplied external atom', () => {
+		const external = createAtom<Record<string, boolean>>({ a: true })
+		const features = tableFeatures({ rowSortingFeature, rowSelectionFeature })
+		const table = createTable({ features, data, columns, selection: true, atoms: { rowSelection: external } })
+
+		writeForeignSlice(table, 'rowSelection', {})
+
+		expect(external.get()).toEqual({})
+		expect(readForeignSlice(table, 'rowSelection')).toEqual({})
+	})
+})
+```
+
+The last case is the one that matters: it is the property Tasks 10 and 12 depend on, proved once,
+here, rather than once per feature.
+
+Note it needs `createTable` to accept an `atoms` passthrough from config. If Task 5's
+`externals` parameter is the only route, give the test `createTableOptions` + `constructTable`
+directly rather than adding a config field for it — **do not widen the public config to make a
+test convenient.**
+
+- [ ] **Step 2: Implement the module**
+
+- [ ] **Step 3: Criterion**
+
+```bash
+pnpm --filter @ez-kit/data-grid-core exec vitest run src/feature-state
+pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
+  | grep -E '^src/feature-state/' || echo 'OWNED FILES CLEAN'
+pnpm --filter @ez-kit/data-grid-core exec eslint src/feature-state --max-warnings=0
+```
+
+Expected: four cases green, `OWNED FILES CLEAN`, lint silent — the `eslint-disable` for the one
+`as never` is the only suppression in the module, and there are no others in the package.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add packages/data-grid/core/src/feature-state/
+git commit -m "feat(data-grid-core): add the feature state accessor
+
+Inside a TableFeature hook the table's TFeatures is unresolved, so Atoms<TFeatures>
+and BaseAtoms<TFeatures> have no provable key and table.atoms.<slice>.get() does
+not compile. Upstream solves this with an inline cast per feature; this hoists it
+into one module.
+
+readOwnSlice / writeOwnSlice and readForeignSlice / writeForeignSlice differ in
+more than name: a foreign slice may not be registered, so its reader returns
+undefined and its writer no-ops, while an own slice missing is a seeding bug and
+throws. Both writers route through makeStateUpdater, which picks the owning atom
+— writing baseAtoms directly goes nowhere when the consumer supplied their own."
+```
+
+---
+
+### Task 8: The three state-only features — `loadingFeature`, `infiniteFeature`, `rowOrderingFeature`
 
 Grouped because all three are `getInitialState` plus at most one table method, and the port is
 the same three moves in each: rename into upstream's register, replace the global
@@ -1082,13 +1606,20 @@ the same three moves in each: rename into upstream's register, replace the globa
 
 **Files:**
 
-- Modify: `packages/data-grid/core/src/features/loading/loading.ts`
-- Modify: `packages/data-grid/core/src/features/infinite/infinite.ts`
-- Modify: `packages/data-grid/core/src/features/ordering/row-ordering-feature.ts`
-- Modify: their three `*.test.ts` siblings
-- Modify: `packages/data-grid/core/src/features/entry.ts`
+- Modify: `packages/data-grid/core/src/features/loading/loading.ts` and `loading.test.ts`
+- Modify: `packages/data-grid/core/src/features/infinite/infinite.ts` and `infinite.test.ts`
+- Modify: `packages/data-grid/core/src/features/ordering/row-ordering-feature.ts` and its test
+- Modify: `packages/data-grid/core/src/features/ordering/row-ordering.ts` — it holds the second
+  of the task's two `getState()` reads, and it is a **whole-snapshot** read
+  (`const state = table.getState()` at `:98`), not a slice read
+- Modify: `packages/data-grid/core/src/features/ordering/ordering.test.ts` and
+  `row-ordering.test.ts` — both construct tables through `createTable`, so both need `features:`;
+  neither holds a `getState()` site
+- Modify: `packages/data-grid/core/src/features/entry.ts` and `entry.test.ts`
 
 **Interfaces:**
+
+Consumes from Task 7: `readOwnSlice` / `writeOwnSlice` / `readForeignSlice` / `writeForeignSlice`.
 
 Produces, appended to `src/features/entry.ts`:
 
@@ -1147,14 +1678,15 @@ declare module '@tanstack/table-core' {
 1. **The `Plugins` key, the `assignTableAPIs` first argument and the `*_FeatureMap` key must be
    the same string** — it is what makes the key legal in `tableFeatures({…})` and what
    `ExtractFeatureMapTypes` matches on (api-notes §1, §3).
-2. **`Cell_FeatureMap` and `Header_FeatureMap` take no type parameters** (api-notes §3). None of
-   these three touches them, but the next three tasks are where the mistake would be made by
-   symmetry, so it is stated once here.
+2. **`Cell_FeatureMap` and `Header_FeatureMap` take no type parameters**, unlike the other eight
+   (api-notes §3). None of these three touches them, but the next four tasks are where the mistake
+   would be made by symmetry, so it is stated once here. `TableState_FeatureMap` takes none either.
 3. **A slice only gets an atom if it is in `initialState`.** `constructTable` builds
    `baseAtoms` / `atoms` from `Object.keys(table.initialState)` after every feature's
    `getInitialState` has run (`dist/core/table/constructTable.js:84-100`). Each of these features
    already seeds its slice there, so nothing extra is needed — but a feature that assigned state
-   lazily would get no atom at all, and would fail at the first `table.atoms.<slice>.get()`.
+   lazily would get no atom at all, and `readOwnSlice` would throw on it. That throw exists for
+   exactly this mistake.
 
 **The mechanical port, shown once on `infiniteFeature`** (the other two are the same shape, and
 `loadingFeature` has no table half at all):
@@ -1170,7 +1702,7 @@ export const infiniteFeature: TableFeature = {
 		assignTableAPIs('infiniteFeature', table, {
 			table_setInfiniteStatus: {
 				fn: (partial: Partial<InfiniteState>) => {
-					table.baseAtoms.infinite.set((prev) => ({ ...prev, ...partial }))
+					writeOwnSlice(table, 'infinite', (prev) => ({ ...prev, ...partial }))
 				},
 			},
 			table_appendData: {
@@ -1189,61 +1721,56 @@ export const infiniteFeature: TableFeature = {
 ```
 
 Note the `table_` prefix — `getFunctionNameInfo` strips it, so the installed name is
-`setInfiniteStatus` (api-notes §3). Note also that the write goes to **`baseAtoms`**, not
-`atoms`: `atoms.<slice>` is a readonly derived atom. `infinite` is grid-owned and never
-externally owned, so `baseAtoms` is right; a slice that _could_ be externally owned must go
-through `makeStateUpdater`, which picks the owning atom.
+`setInfiniteStatus` (api-notes §3). Note the write goes through `writeOwnSlice`: `infinite` is
+this feature's slice, and Task 7's module is the only route to it.
 
 `appendData` / `prependData` land here rather than on `DataTable` because they belong to
 `infinite` (design §3) and because doing so makes them a live demonstration of D1: a grid
 assembled without `infiniteFeature` does not have them, and the type says so.
 
 `rowOrderingFeature` keeps `moveRow` / `canMoveRow` / `applyRowOrder` exactly as they are — they
-are pure helpers over a table and only their two `table.getState().rowOrder` reads change, to
-`table.atoms.rowOrder.get()`.
+are pure helpers over a table. Two reads change: `row-ordering-feature.ts`'s
+`table.getState().rowOrder` becomes `readOwnSlice(table, 'rowOrder')`, and `row-ordering.ts:98`'s
+whole-snapshot `table.getState()` becomes per-slice reads of whichever slices its body actually
+uses — read the body and name them; do not translate it to `table.store.state`, which would
+subscribe the caller to everything.
 
 - [ ] **Step 1: Port the three feature modules per the shapes above**
 
 Delete every `declare module '@tanstack/table-core' { interface TableState … }` block and the
 `// Re-exported so index.ts can source …` comments above them: rollup-dts dropping a global
 augmentation was a v8 problem, and with the state declared under a feature key in the `/features`
-entry's own graph it no longer applies. Verify that claim in Step 4 rather than assuming it.
+entry's own graph it should no longer apply. That claim is **verified in Task 13**, where the
+package can actually build — not here, where it cannot.
 
 - [ ] **Step 2: Rename the exports**
 
 `LoadingFeature` → `loadingFeature`, `InfiniteFeature` → `infiniteFeature`,
-`RowOrderingFeature` → `rowOrderingFeature`. Design §1 requires the register; a `git grep -n
-'LoadingFeature\|InfiniteFeature\|RowOrderingFeature'` afterwards must find only the new
-spellings in core.
+`RowOrderingFeature` → `rowOrderingFeature`. Design §1 requires the register. Afterwards
+`git grep -n 'LoadingFeature\|InfiniteFeature\|RowOrderingFeature' -- packages/data-grid/core`
+must find only the new spellings.
 
-- [ ] **Step 3: Migrate the three test files**
+Update `entry.test.ts`'s `*Feature` count assertion from 17 to 20 as the three are appended.
 
-`loading.test.ts`, `infinite.test.ts` and `row-ordering-feature.test.ts`. Each config literal
-gains `features: tableFeatures({ loadingFeature })` (etc.); `row-ordering-feature.test.ts`'s 11
-`getState()` reads become `table.atoms.rowOrder.get()`.
+- [ ] **Step 3: Migrate the five test files**
+
+`loading.test.ts`, `infinite.test.ts`, `row-ordering-feature.test.ts` (11 `getState()` reads →
+`table.atoms.rowOrder.get()`; from a test `TFeatures` is resolved, so the accessor module is not
+needed), plus `ordering.test.ts` and `row-ordering.test.ts`, which need only `features:` on each
+config literal — they hold no `getState()` site, but both call `createTable` and would otherwise
+fail the criterion below.
 
 - [ ] **Step 4: Criterion**
 
 ```bash
 pnpm --filter @ez-kit/data-grid-core exec vitest run \
-  src/features/loading src/features/infinite src/features/ordering
+  src/features/loading src/features/infinite src/features/ordering src/features/entry.test.ts
 pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
   | grep -E '^src/features/(loading|infinite|ordering)/' || echo 'OWNED FILES CLEAN'
 ```
 
-Expected: green, `OWNED FILES CLEAN`, and `create-table*.test.ts` from Task 5 still green.
-
-Then confirm the declaration-merge claim survives the bundle, since that is the thing a unit test
-cannot see:
-
-```bash
-pnpm --filter @ez-kit/data-grid-core build
-grep -n "TableState_FeatureMap" packages/data-grid/core/dist/features/index.d.ts
-```
-
-Expected: the merges appear in the emitted `.d.ts`. If they do not, the re-export trick the old
-comments described is still needed and the comment comes back, corrected — record which it was in
-the commit body.
+Expected: green — all four files under `src/features/ordering`, both entry-point cases,
+`OWNED FILES CLEAN` — and Task 6's `create-table*.test.ts` still green.
 
 - [ ] **Step 5: Commit**
 
@@ -1264,7 +1791,7 @@ belong and where omitting the feature removes them."
 
 ---
 
-### Task 7: `editingFeature` — the one feature with a row prototype
+### Task 9: `editingFeature` — the one feature with a row prototype
 
 Taken alone because it is the only feature that touches `assignRowPrototype`, and that is the
 mechanism api-notes §3 spends the most words on.
@@ -1273,9 +1800,8 @@ mechanism api-notes §3 spends the most words on.
 
 **Files:**
 
-- Modify: `packages/data-grid/core/src/features/editing/editing.ts`
-- Modify: `packages/data-grid/core/src/features/editing/editing.test.ts`
-- Modify: `packages/data-grid/core/src/features/entry.ts`
+- Modify: `packages/data-grid/core/src/features/editing/editing.ts` and `editing.test.ts`
+- Modify: `packages/data-grid/core/src/features/entry.ts` and `entry.test.ts`
 
 **Interfaces:**
 
@@ -1297,7 +1823,7 @@ declare module '@tanstack/table-core' {
 		editingFeature: { editing?: EditingConfig<TData> }
 	}
 	interface Table_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
-		editingFeature: { editing: EditingApi<TData> }
+		editingFeature: { editing: EditingApi<TData>; _editingAbort: { controller?: AbortController } }
 	}
 	interface Row_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
 		editingFeature: { getIsEditing: () => boolean }
@@ -1309,15 +1835,9 @@ declare module '@tanstack/table-core' {
 
 1. **The `AbortController` leaves the closure for instance data.** v9 requires mutable per-table
    data in `initTableInstanceData`, with `constructTableAPIs` doing assignment only (api-notes
-   §3). So:
+   §3):
 
    ```ts
-   declare module '@tanstack/table-core' {
-     interface Table_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
-       editingFeature: { editing: EditingApi<TData>; _editingAbort: { controller?: AbortController } }
-     }
-   }
-
    initTableInstanceData: (table) => { table._editingAbort = {} },
    resetTableInstanceData: (table) => {
      table._editingAbort.controller?.abort()
@@ -1326,9 +1846,9 @@ declare module '@tanstack/table-core' {
    ```
 
    A box (`{ controller?: … }`) rather than the controller directly, so `resetController` can
-   swap it without reassigning a property that `assignTableAPIs` installed. `resetTableInstanceData`
-   runs after `table.reset()` restores internally owned atoms — aborting an in-flight validation
-   at that point is correct and is behaviour we do not have today.
+   swap it without reassigning a property that `assignTableAPIs` installed.
+   `resetTableInstanceData` runs after `table.reset()` restores internally owned atoms — aborting
+   an in-flight validation at that point is correct, and is behaviour we do not have today.
 
 2. **`createTable` → `constructTableAPIs` + `assignTableAPIs`.** Every local const in today's
    closure (`getConfig`, `getState`, `writeState`, `runValidate`, `resolveColumnEditing`,
@@ -1339,8 +1859,8 @@ declare module '@tanstack/table-core' {
 
    The one API surface stays exactly as it is — `table.editing` is a single object with the same
    seven members, assigned through one `table_editing` key. Do not fan it out into seven table
-   methods; `EditingApi` is the documented shape and AGENTS.md's settled decisions name
-   `editing` as the option and the group.
+   methods; `EditingApi` is the documented shape and AGENTS.md's settled decisions name `editing`
+   as the option and the group.
 
 3. **`createRow` → `assignRowPrototype`.** The v9 form, with the two mechanical details from
    api-notes §3 — the `row_` prefix that gets stripped, and `fn` receiving the row first:
@@ -1349,7 +1869,7 @@ declare module '@tanstack/table-core' {
    assignRowPrototype: (prototype, table) => {
      assignPrototypeAPIs('editingFeature', prototype, table, {
        row_getIsEditing: {
-         fn: (row) => row.table.atoms.editing?.get().rowId === row.id,
+         fn: (row) => readOwnSlice(row.table, 'editing').rowId === row.id,
        },
      })
    },
@@ -1357,37 +1877,38 @@ declare module '@tanstack/table-core' {
 
    **Route B (`row.table`), not the closure.** Both work — the prototype is per table, so closing
    over the hook's `table` is sound — but every stock feature reads state through `row.table`, and
-   a method that does not capture anything stays correct if the prototype is ever reused. There
-   is no `assignRowAPIs`; `assignPrototypeAPIs` inside the hook is the only route (api-notes §7.3).
+   a method that captures nothing stays correct if the prototype is ever reused. There is no
+   `assignRowAPIs`; `assignPrototypeAPIs` inside the hook is the only route (api-notes §7.3).
 
-   `atoms.editing?.get()` with the optional chain, not `atoms.editing.get()`: inside feature code
-   the broadened `Atoms_All` makes every key optional (api-notes §4), which is what lets this
-   compile for a feature set the function is not generic over.
+**Reads and writes go through Task 7's accessor, with one spelling and no exceptions.** The six
+`table.getState().editing` reads become `readOwnSlice(table, 'editing')`; the four
+`table.setState((prev) => …)` writes become `writeOwnSlice(table, 'editing', (prev) => …)`.
+`editing` is this feature's slice, so the _own_ pair is correct throughout. Do **not** write
+`table.atoms.editing.get()` or `table.baseAtoms.editing.set(…)` anywhere in this file — neither
+compiles here (decision 7), and the optional-chained spelling does not either.
 
-**Reads and writes.** The six `table.getState().editing` reads become
-`table.atoms.editing.get()`. The four `table.setState((prev) => …)` writes become
-`table.baseAtoms.editing.set((prev) => …)` — `editing` is grid-owned and never externally
-controlled, so `baseAtoms` is the owning atom. Note what this buys: `writeState` no longer
-rebuilds the whole `TableState` to change one slice, and a subscriber to another slice is no
-longer woken by a keystroke in a form field.
+Note what the change buys beyond compiling: `writeState` no longer rebuilds the whole
+`TableState` to change one slice, so a subscriber to another slice is no longer woken by a
+keystroke in a form field.
 
-The `apply`-style multi-slice write in `commit` (if any survives) is the one case needing
-`batch` from `@tanstack/store`, so two atom writes land as one notification. Check for it; if
-`editing` writes only its own slice, no batching is needed.
+If any single operation writes two slices — check `commit` — wrap the pair in `batch` from
+`@tanstack/store` so they land as one notification, preserving what the single `setState` gave
+for free. If `editing` only ever writes its own slice, no batching is needed; say which it was.
 
 - [ ] **Step 1: Port `editing.ts` per the three moves**
 
-- [ ] **Step 2: Rename `EditingFeature` → `editingFeature` and export from `entry.ts`**
+- [ ] **Step 2: Rename `EditingFeature` → `editingFeature`**, export from `entry.ts`, and bump
+      `entry.test.ts`'s count to 21.
 
 - [ ] **Step 3: Migrate `editing.test.ts`** — `features: tableFeatures({ editingFeature })` in
-      each config, and the 15 `getState()` reads onto `table.atoms.editing.get()`.
+      each config, and the 15 `getState()` reads onto `table.atoms.editing.get()` (a test has
+      `TFeatures` resolved and does not need the accessor).
 
 - [ ] **Step 4: Prove the prototype method survives what the design flagged**
 
 Design §2 asks for an explicit audit: prototype-bound methods break under destructuring,
 spreading, `Object.keys` and `JSON.stringify`, and `getIsEditing` is our only such method. Add a
-characterization test to `editing.test.ts` so the breakage is caught here rather than at runtime
-in a kit:
+characterization test so the breakage is caught here rather than at runtime in a kit:
 
 ```ts
 it('getIsEditing is on the prototype, so it does not survive a spread', () => {
@@ -1396,7 +1917,7 @@ it('getIsEditing is on the prototype, so it does not survive a spread', () => {
 	expect(Object.hasOwn(row, 'getIsEditing')).toBe(false)
 	expect(Object.keys(row)).not.toContain('getIsEditing')
 	expect({ ...row }.getIsEditing).toBeUndefined()
-	// bound callback passing still works, because fn reads `this`
+	// bound callback passing still works, because fn reads the row it is given
 	const bound = row.getIsEditing.bind(row)
 	expect(bound()).toBe(false)
 })
@@ -1408,10 +1929,14 @@ in the React package today. This test is what keeps that true.
 - [ ] **Step 5: Criterion**
 
 ```bash
-pnpm --filter @ez-kit/data-grid-core exec vitest run src/features/editing
+pnpm --filter @ez-kit/data-grid-core exec vitest run src/features/editing src/features/entry.test.ts
 pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
   | grep -E '^src/features/editing/' || echo 'OWNED FILES CLEAN'
+git grep -n "atoms\.\|baseAtoms\." -- packages/data-grid/core/src/features/editing/editing.ts
 ```
+
+Expected: green, `OWNED FILES CLEAN`, and the last grep **silent** — the feature reaches state
+only through the accessor.
 
 - [ ] **Step 6: Commit**
 
@@ -1421,27 +1946,27 @@ git commit -m "feat(data-grid-core)!: port editing to the v9 plugin API
 
 Table methods move to constructTableAPIs + assignTableAPIs, the per-table
 AbortController to initTableInstanceData / resetTableInstanceData, and
-row.getIsEditing to assignRowPrototype — reading table through row.table, as
+row.getIsEditing to assignRowPrototype — reading the table through row.table, as
 every stock feature does.
 
-State reads and writes go through table.atoms.editing / baseAtoms.editing, so a
-keystroke in a form field no longer rebuilds the whole state object."
+State goes through the feature-state accessor, so a keystroke in a form field no
+longer rebuilds the whole state object."
 ```
 
 ---
 
-### Task 8: `creatingFeature` and `deletingFeature`
+### Task 10: `creatingFeature`
 
-Together because both are table-API-only and both reuse the `AbortController`-in-instance-data
-pattern Task 7 establishes — porting them apart would invite two spellings of it.
+`creating` and `editing` are near-twins; this task follows Task 9's shapes exactly, and any
+divergence between the two ports is a defect in one of them.
 
 **Branch:** `integration/tanstack-v9`.
 
 **Files:**
 
-- Modify: `packages/data-grid/core/src/features/creating/creating.ts` and its test
-- Modify: `packages/data-grid/core/src/features/deleting/deleting.ts` and its test
-- Modify: `packages/data-grid/core/src/features/entry.ts`
+- Modify: `packages/data-grid/core/src/features/creating/creating.ts` (490 lines) and
+  `creating.test.ts` (551 lines, 30 `getState()` sites)
+- Modify: `packages/data-grid/core/src/features/entry.ts` and `entry.test.ts`
 
 **Interfaces:**
 
@@ -1449,107 +1974,203 @@ pattern Task 7 establishes — porting them apart would invite two spellings of 
 // entry.ts
 export { creatingFeature, CreatingMode } from './creating'
 export type {
+	CreateDefaultValueContext,
+	CreateDefaultValuesContext,
 	CreatingApi,
 	CreatingConfig,
 	CreatingSaveContext,
 	CreatingState,
-	CreateDefaultValueContext,
-	CreateDefaultValuesContext,
 } from './creating'
-export { deletingFeature } from './deleting'
-export type { BulkDeletingApi, BulkDeletingConfig, DeletingApi, DeletingConfig, DeletingState } from './deleting'
 ```
 
 ```ts
 declare module '@tanstack/table-core' {
 	interface Plugins {
 		creatingFeature: TableFeature
-		deletingFeature: TableFeature
 	}
 	interface TableState_FeatureMap {
 		creatingFeature: { creating: CreatingState }
-		deletingFeature: { deleting: DeletingState }
 	}
 	interface TableOptions_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
 		creatingFeature: { creating?: CreatingConfig<TData> }
-		deletingFeature: { deleting?: DeletingConfig<TData> }
 	}
 	interface Table_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
 		creatingFeature: { creating: CreatingApi<TData>; _creatingAbort: { controller?: AbortController } }
-		deletingFeature: { deleting: DeletingApi; _deletingAbort: { controller?: AbortController } }
 	}
 }
 ```
 
 - [ ] **Step 1: Port `creating.ts`**
 
-Same three moves as Task 7 minus the row prototype: instance data for the controller, hoisted
-helpers, one `table_creating` key carrying the whole `CreatingApi`. Its 6 `getState()` reads
-become `table.atoms.creating.get()`; its writes go to `table.baseAtoms.creating.set(…)`.
+The same three moves as Task 9 minus the row prototype: instance data for the `AbortController`
+(same `{ controller?: AbortController }` box, same `initTableInstanceData` /
+`resetTableInstanceData` pair), hoisted helpers, one `table_creating` key carrying the whole
+`CreatingApi`. Its 6 `getState()` reads become `readOwnSlice(table, 'creating')`; its writes
+become `writeOwnSlice(table, 'creating', …)`.
 
-- [ ] **Step 2: Port `deleting.ts`**
+`creating` writes only its own slice — confirm that while porting, and if any operation writes a
+second, wrap the pair in `batch` and say so.
 
-Same, with one thing that is not the same. `deselect` writes **`rowSelection`**, a slice this
-feature does not own and which the consumer may control or externally own. That write must go
-through `makeStateUpdater`, not `baseAtoms`:
+- [ ] **Step 2: Rename `CreatingFeature` → `creatingFeature`**, export from `entry.ts`, bump
+      `entry.test.ts`'s count to 22.
+
+- [ ] **Step 3: Migrate `creating.test.ts`** — `features:` on every config literal, 30
+      `getState()` reads onto `table.atoms.creating.get()`.
+
+- [ ] **Step 4: Criterion**
+
+```bash
+pnpm --filter @ez-kit/data-grid-core exec vitest run src/features/creating src/features/entry.test.ts
+pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
+  | grep -E '^src/features/creating/' || echo 'OWNED FILES CLEAN'
+git grep -n "atoms\.\|baseAtoms\." -- packages/data-grid/core/src/features/creating/creating.ts
+```
+
+Expected: green, `OWNED FILES CLEAN`, last grep silent.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/data-grid/core/src/features/
+git commit -m "feat(data-grid-core)!: port creating to the v9 plugin API
+
+Follows editing exactly: assignTableAPIs for the API object, instance data for
+the AbortController, and the feature-state accessor for reads and writes."
+```
+
+---
+
+### Task 11: `deletingFeature` — and the foreign-slice write in practice
+
+Split from `creating` because they share no code: separate modules, separate tests, separate
+entry lines. What binds them is the `AbortController` pattern, which Task 9 established, so
+splitting costs one cross-reference. `deleting` also carries the one thing neither twin does —
+a write to a slice it does not own.
+
+**Branch:** `integration/tanstack-v9`.
+
+**Files:**
+
+- Modify: `packages/data-grid/core/src/features/deleting/deleting.ts` (316 lines) and
+  `deleting.test.ts` (282 lines, 19 `getState()` sites)
+- Modify: `packages/data-grid/core/src/features/entry.ts` and `entry.test.ts`
+
+**Interfaces:**
 
 ```ts
-import { makeStateUpdater } from '@tanstack/table-core'
+// entry.ts
+export { deletingFeature } from './deleting'
+export type {
+	BulkConfirmationConfig,
+	BulkDeletingApi,
+	BulkDeletingConfig,
+	BulkDeletingContext,
+	ConfirmationConfig,
+	DeletingApi,
+	DeletingConfig,
+	DeletingContext,
+	DeletingState,
+} from './deleting'
+```
 
-const deselect = (table, rowIds: string[]): void => {
-	if (rowIds.length === 0) return
-	const removed = new Set(rowIds)
-	makeStateUpdater(
-		'rowSelection',
-		table,
-	)((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => !removed.has(id))))
+```ts
+declare module '@tanstack/table-core' {
+	interface Plugins {
+		deletingFeature: TableFeature
+	}
+	interface TableState_FeatureMap {
+		deletingFeature: { deleting: DeletingState }
+	}
+	interface TableOptions_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
+		deletingFeature: { deleting?: DeletingConfig<TData> }
+	}
+	interface Table_FeatureMap<TFeatures extends TableFeatures, TData extends RowData> {
+		deletingFeature: { deleting: DeletingApi; _deletingAbort: { controller?: AbortController } }
+	}
 }
 ```
 
-`makeStateUpdater(key, instance)` reads `options.atoms` and `baseAtoms` and writes the owning one
-(api-notes §3). Writing `baseAtoms.rowSelection` directly would go nowhere whenever the consumer
-supplied `atoms.rowSelection` — the exact failure the design's "writes must go to the owning
-atom" note warns about, and it would be silent.
+- [ ] **Step 1: Write the failing test first**
 
-Also: `deleting` writes `rowSelection` **and** its own slice in the same gesture. Wrap the pair in
+`deselect` writes `rowSelection`, a slice `deletingFeature` does not own. Task 7 proved that
+`writeForeignSlice` reaches a consumer-supplied atom; this proves `deleting` actually calls it,
+which is a different claim. Write it before the port, against the v8 implementation, so it fails
+for the right reason:
+
+```ts
+it('clears the selection after a bulk delete even when the consumer owns rowSelection', async () => {
+	const external = createAtom<Record<string, boolean>>({ '1': true, '2': true })
+	const table = makeTable({ atoms: { rowSelection: external } }) // helper, per Task 7 Step 1
+
+	await table.deleting.bulk.delete(['1', '2'])
+
+	expect(external.get()).toEqual({})
+})
+
+it('a bulk delete on a table with no rowSelectionFeature does not throw', async () => {
+	const table = makeTable({ features: tableFeatures({ deletingFeature }) })
+	await expect(table.deleting.bulk.delete(['1'])).resolves.not.toThrow()
+})
+```
+
+The second case is the other half of the foreign-write contract: the feature is legitimately
+optional, so the write must no-op rather than crash.
+
+- [ ] **Step 2: Port `deleting.ts`**
+
+Same shape as Tasks 9 and 10 — instance data for the controller, hoisted helpers, one
+`table_deleting` key — with one difference that is not cosmetic:
+
+```ts
+const deselect = (table: AnyTable, rowIds: string[]): void => {
+	if (rowIds.length === 0) return
+	const removed = new Set(rowIds)
+	writeForeignSlice(table, 'rowSelection', (prev) =>
+		Object.fromEntries(Object.entries(prev).filter(([id]) => !removed.has(id))),
+	)
+}
+```
+
+`writeForeignSlice`, not `writeOwnSlice`: `rowSelection` belongs to `rowSelectionFeature`, may be
+absent, and may be externally owned. Task 7's module is where that rule lives; this is its first
+real caller.
+
+`deleting` writes `rowSelection` **and** its own slice in the same gesture. Wrap the pair in
 `batch` from `@tanstack/store` so one notification reaches subscribers, preserving the property
 the old single `setState` gave for free.
 
-- [ ] **Step 3: Rename and export** — `CreatingFeature` → `creatingFeature`,
-      `DeletingFeature` → `deletingFeature`.
+- [ ] **Step 3: Rename `DeletingFeature` → `deletingFeature`**, export from `entry.ts`, bump
+      `entry.test.ts`'s count to 23.
 
-- [ ] **Step 4: Migrate both test files** — 30 `getState()` reads in `creating.test.ts`, 19 in
-      `deleting.test.ts`, plus `features:` on every config literal.
+- [ ] **Step 4: Migrate the rest of `deleting.test.ts`** — `features:` on every config literal,
+      19 `getState()` reads onto `table.atoms.<slice>.get()`.
 
 - [ ] **Step 5: Criterion**
 
 ```bash
-pnpm --filter @ez-kit/data-grid-core exec vitest run src/features/creating src/features/deleting
+pnpm --filter @ez-kit/data-grid-core exec vitest run src/features/deleting src/features/entry.test.ts
 pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
-  | grep -E '^src/features/(creating|deleting)/' || echo 'OWNED FILES CLEAN'
+  | grep -E '^src/features/deleting/' || echo 'OWNED FILES CLEAN'
+git grep -n "atoms\.\|baseAtoms\." -- packages/data-grid/core/src/features/deleting/deleting.ts
 ```
 
-Add one case to `deleting.test.ts` that the old implementation could not express: a table given
-an external `atoms.rowSelection` still has its selection cleared by a bulk delete. That is the
-`makeStateUpdater` decision above, made testable.
+Expected: green including both Step 1 cases, `OWNED FILES CLEAN`, last grep silent.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add packages/data-grid/core/src/features/
-git commit -m "feat(data-grid-core)!: port creating and deleting to the v9 plugin API
+git commit -m "feat(data-grid-core)!: port deleting to the v9 plugin API
 
-Both follow editing: assignTableAPIs for the API object, instance data for the
-AbortController, atoms for reads and writes.
-
-deleting's post-bulk deselect writes rowSelection — a slice it does not own — so
-it goes through makeStateUpdater, which picks the owning atom. Writing baseAtoms
-directly would silently do nothing for a consumer who supplied their own."
+Follows editing and creating, with one difference: the post-bulk deselect writes
+rowSelection, a slice deleting does not own, so it goes through writeForeignSlice
+— which reaches a consumer-supplied atom and no-ops when the feature is absent.
+Covered by two tests written before the port."
 ```
 
 ---
 
-### Task 9: `draftFeature` — rebuilt on externally-owned atoms
+### Task 12: `draftFeature` — rebuilt on externally-owned atoms
 
 Design §2 calls this "rethought, not ported", and api-notes §4 settles the shape the design left
 open: `atoms` is `Partial`, ownership is per slice, so **one atom set**.
@@ -1558,10 +2179,9 @@ open: `atoms` is `Partial`, ownership is per slice, so **one atom set**.
 
 **Files:**
 
-- Modify: `packages/data-grid/core/src/features/deferred-apply/deferred-apply.ts`
-- Modify: `packages/data-grid/core/src/features/deferred-apply/deferred-apply.test.ts`
-- Modify: `packages/data-grid/core/src/create-table/create-table.ts` (call the factory)
-- Modify: `packages/data-grid/core/src/features/entry.ts`
+- Modify: `packages/data-grid/core/src/features/deferred-apply/deferred-apply.ts` and its test
+- Modify: `packages/data-grid/core/src/create-table/create-table.ts` (build the atoms)
+- Modify: `packages/data-grid/core/src/features/entry.ts` and `entry.test.ts`
 
 **Interfaces:**
 
@@ -1573,12 +2193,23 @@ export type DraftAtoms = {
 	globalFilter: Atom<unknown>
 }
 
+/** The seeds `createDraftAtoms` needs, read off the table's `initialState`. */
+export type DraftSeed = Partial<TableState_All> & { draft?: Partial<AppliedState> }
+
 /**
- * Create the three live draft atoms. **Call once per table instance, never per render:**
- * `useTable` merges the options object into the table on every render and replaces `atoms`
- * wholesale, so a fresh set each render would reset the draft on every keystroke.
+ * Create the three live draft atoms from a table initial state.
+ *
+ * The **applied** seed is `initialState.sorting` / `.columnFilters` / `.globalFilter` — a grid
+ * given an initial sort must not be born dirty. The **live** seed is `initialState.draft`, laid
+ * on top, which is how a draft restored from storage comes back pending. Where `draft` says
+ * nothing, the live atom starts at the applied value. This is exactly the rule
+ * `getInitialState` already encodes; the two read the same object and must not disagree.
+ *
+ * **Call once per table instance, never per render:** `useTable` merges the options object into
+ * the table on every render and replaces `atoms` wholesale, so a fresh set each render would
+ * reset the draft on every keystroke.
  */
-export function createDraftAtoms(seed?: Partial<AppliedState>): DraftAtoms
+export function createDraftAtoms(initialState?: DraftSeed): DraftAtoms
 
 export const draftFeature: TableFeature
 ```
@@ -1610,7 +2241,7 @@ filter inside `syncControlledState`, which exists because a consumer in controll
 back the last **applied** query, and accepting it would discard what the user is composing.
 Upstream's precedence — `options.atoms[key] > options.state[key] > baseAtoms[key]` (api-notes §4)
 — makes that structurally impossible instead of defended against. That is the whole reason the
-funnel could be deleted in Task 5, so this task is what pays for it.
+funnel could be deleted in Task 6, so this task is what pays for it.
 
 **Why one set and not two.** `ExternalAtoms` is `Partial`, so a table can have three external
 slices and keep the rest internal. The three live axes are external; `applied` is an ordinary
@@ -1618,7 +2249,7 @@ internal slice declared in `TableState_FeatureMap` exactly as today. A second se
 second copy of the same three values with nothing to reconcile them.
 
 **Why the caller creates them.** See decision 2 in the orientation above. `createTableOptions` is
-pure and takes them through `externals.atoms` (Task 4); `createTable` calls `createDraftAtoms`
+pure and takes them through `externals.atoms` (Task 5); `createTable` calls `createDraftAtoms`
 once; `useDataGrid` in PR 2 calls it in a `useState` initializer. `createDraftAtoms` uses
 `createAtom` from `@tanstack/store` — under the vanilla binding `wrapExternalAtoms` is `false`
 and the atoms are used directly, while `reactReactivity()` wraps and two-way mirrors them
@@ -1626,33 +2257,36 @@ and the atoms are used directly, while `reactReactivity()` wraps and two-way mir
 
 **The port.**
 
-- `getInitialState` keeps its exact logic — seed `applied` from `initialState.sorting` /
-  `columnFilters` / `globalFilter`, seed the live axes from `initialState.draft` on top — but the
-  live seed now goes into the atoms, so `createDraftAtoms(seed)` takes it and `getInitialState`
-  contributes only `applied`. Both halves read the same `initialState`, so the caller passes the
-  same object to both.
-- `get()` reads `table.atoms.sorting.get()` and friends — which resolve to the external atoms.
+- `getInitialState` keeps its exact logic for the `applied` slice — seeded from
+  `initialState.sorting` / `columnFilters` / `globalFilter`. It no longer seeds the live axes;
+  `createDraftAtoms` does that, from `initialState.draft`, per the doc comment above.
+- `get()` reads the three live axes. They are external atoms, so `readOwnSlice` is wrong and
+  `readForeignSlice` is misleading: read the `DraftAtoms` handle the feature was given. Store it
+  in instance data (`initTableInstanceData`), set from `table.options.atoms`, so the feature has
+  a typed handle rather than reaching back through the accessor for slices that belong to three
+  other features.
 - `isDirty()` / `getPendingCount()` are unchanged apart from their reads. `sameAxis` is unchanged.
 - `set()` writes the three atoms directly (they are `Atom`, writable), inside `batch`.
 - `apply()` keeps its dirty guard and its "one state change" invariant, now as one `batch`:
-  write `baseAtoms.applied`, reset `pagination.pageIndex` to 0 and clear `rowSelection` — the
-  last two through `makeStateUpdater`, for the reason Task 8 gives. Then call the consumer's
-  per-axis handlers with the newly applied values; that is what replaces the funnel's emission.
+  `writeOwnSlice(table, 'applied', …)`, then `writeForeignSlice(table, 'pagination', …)` to reset
+  `pageIndex` and `writeForeignSlice(table, 'rowSelection', {})`. Both of the latter are foreign
+  and both features are optional — a draft grid with no pagination and no selection is legal, and
+  `writeOwnSlice` there would throw. Then call the consumer's per-axis handlers with the newly
+  applied values; that is what replaces the funnel's emission.
 - `reset()` / `resetAxis()` write the atoms back to `applied`. Design §3 notes `table.reset()`
   resets only internal base atoms, so resetting the draft axes is this feature's job — which it
   already was, and now the types say so.
 
-- [ ] **Step 1: Write the failing test first**
+- [ ] **Step 1: Write the failing tests first**
 
 `deferred-apply.test.ts`'s "emission gating" block is the characterization coverage design §7
-relies on; it must pass unchanged in meaning. Before touching the feature, add the case the old
-architecture could not express:
+relies on; it must pass unchanged in meaning. Before touching the feature, add the two cases the
+old architecture could not express:
 
 ```ts
 it('a controlled state mirror does not clobber a pending draft', () => {
-	const atoms = createDraftAtoms()
 	const features = tableFeatures({ rowSortingFeature, draftFeature })
-	const table = createTable({ features, data, columns, sorting: { manual: true }, draft: true /* … */ })
+	const table = createTable({ features, data, columns, sorting: { manual: true }, draft: true })
 
 	table.draft.set({ sorting: [{ id: 'name', desc: false }] })
 	// the consumer mirrors back what it last saw — the APPLIED query, which is empty
@@ -1661,39 +2295,71 @@ it('a controlled state mirror does not clobber a pending draft', () => {
 	expect(table.draft.get().sorting).toEqual([{ id: 'name', desc: false }])
 	expect(table.draft.isDirty()).toBe(true)
 })
+
+// apply() writes pagination and rowSelection, which belong to two optional features.
+it('apply() works on a draft grid with neither pagination nor selection registered', () => {
+	const features = tableFeatures({ rowSortingFeature, draftFeature })
+	const table = createTable({ features, data, columns, sorting: { manual: true }, draft: true })
+
+	table.draft.set({ sorting: [{ id: 'name', desc: true }] })
+	expect(() => {
+		table.draft.apply()
+	}).not.toThrow()
+	expect(table.draft.isDirty()).toBe(false)
+})
 ```
 
-This is the `DRAFT_AXES` filter's behaviour, stated as a property of atom precedence rather than
-of our own guard.
+The first states the `DRAFT_AXES` filter's behaviour as a property of atom precedence rather than
+of our own guard. The second is the foreign-write contract at `apply()`'s two call sites, which
+Task 11 proved for `deleting` and which nothing else here would cover.
 
 - [ ] **Step 2: Port the feature and add `createDraftAtoms`**
 
 - [ ] **Step 3: Wire `createTable`**
+
+This replaces the first statement of Task 6's body and nothing else:
 
 ```ts
 const draftAtoms =
 	'draftFeature' in config.features && isFeatureEnabled(config.draft)
 		? createDraftAtoms(config.initialState)
 		: undefined
-const { options, grid } = createTableOptions(config, draftAtoms ? { atoms: draftAtoms } : {})
+const { options, grid } = createTableOptions(config, draftAtoms !== undefined ? { atoms: draftAtoms } : {})
 ```
 
-- [ ] **Step 4: Rename and export** — `DeferredApplyFeature` → `draftFeature`, exported from
-      `entry.ts` with `DraftAxis`, `createDraftAtoms` and the five types. The directory keeps its
-      name for now; renaming `features/deferred-apply/` to `features/draft/` is churn that would
-      obscure this diff, and PR 6's tail is the place for it if it is wanted at all.
+`config.initialState` is the table initial state, which is exactly what `createDraftAtoms`'
+`DraftSeed` parameter declares — the applied half comes from its `sorting` / `columnFilters` /
+`globalFilter`, the live half from its `draft`. The feature's `getInitialState` receives the same
+object, which is why the two cannot disagree.
+
+Note this makes `create-table.ts` import one named function from one feature module — the
+deliberate exception to Task 3 Step 2's rule, recorded there, and accounted for in Task 13 Step 5.
+
+`config.initialState` must also _declare_ `draft`. Today that comes from a global
+`declare module` on `InitialTableState` (`deferred-apply.ts:85-88`) — v9 has no such interface to
+merge into, so the field moves onto our own `TableConfig['initialState']` type in this task,
+typed as `Partial<AppliedState>`. It is our config, not TanStack's, and it always should have
+been.
+
+- [ ] **Step 4: Rename and export**
+
+`DeferredApplyFeature` → `draftFeature`, exported from `entry.ts` with `DraftAxis`,
+`createDraftAtoms` and the five types; bump `entry.test.ts`'s count to 24. The directory keeps
+its name: renaming `features/deferred-apply/` to `features/draft/` is churn that would obscure
+this diff, and PR 6's tail is the place for it if it is wanted at all.
 
 - [ ] **Step 5: Criterion**
 
 ```bash
-pnpm --filter @ez-kit/data-grid-core exec vitest run src/features/deferred-apply
+pnpm --filter @ez-kit/data-grid-core exec vitest run \
+  src/features/deferred-apply src/features/entry.test.ts src/create-table
 pnpm --filter @ez-kit/data-grid-core exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 \
-  | grep -E '^src/(features/deferred-apply|create-table/create-table)\.?' || echo 'OWNED FILES CLEAN'
+  | grep -E '^src/(features/deferred-apply/|create-table/create-table\.ts)' || echo 'OWNED FILES CLEAN'
 ```
 
 Expected: the whole file green, the emission-gating block **unchanged in meaning** — if a gating
 assertion had to be weakened to pass, that is a behaviour regression, not a migration, and it
-goes back.
+goes back. `create-table*.test.ts` must still pass: Step 3 changed a statement they exercise.
 
 - [ ] **Step 6: Commit**
 
@@ -1712,13 +2378,13 @@ ownership is per slice. DeferredApplyFeature is now draftFeature."
 
 ---
 
-### Task 10: Close PR 1 — `allDataGridFeatures`, budgets, and the first green `--filter data-grid-core`
+### Task 13: Close PR 1 — `allDataGridFeatures`, budgets, and the first green `--filter data-grid-core`
 
 **Branch:** `integration/tanstack-v9`.
 
 **Files:**
 
-- Modify: `packages/data-grid/core/src/features/entry.ts`
+- Modify: `packages/data-grid/core/src/features/entry.ts` and `entry.test.ts`
 - Modify: `packages/data-grid/core/src/index.ts` and `src/index.test.ts`
 - Modify: `packages/data-grid/core/package.json` (`size-limit` numbers)
 - Modify: whatever core files the final typecheck still names
@@ -1757,8 +2423,8 @@ export const allDataGridFeatures = tableFeatures({
 **It must not include `coreReactivityFeature`.** `useTable` injects `reactReactivity()` and
 spreads it **before** the caller's set, so a value we supplied would win and break React
 rendering (api-notes §5.1). `createTable` supplies `storeReactivityBindings()` the same way, for
-the vanilla path (Task 5). Neither `allDataGridFeatures` nor any documented example ever names
-the key.
+the vanilla path (Task 6). Neither `allDataGridFeatures` nor any documented example ever names
+the key — `entry.test.ts`'s third case asserts it.
 
 - [ ] **Step 1: Add `allDataGridFeatures`**
 
@@ -1766,19 +2432,22 @@ the key.
 and self-maintaining across a table-core patch. The row-model slots must be listed explicitly —
 they are not features and are not in `stockFeatures`.
 
-- [ ] **Step 2: Update `src/index.test.ts`**
+- [ ] **Step 2: Guard the main entry's surface**
 
-It asserts the shape of the package's public surface. Add the assertion that makes D1 checkable
-from inside the package:
+`src/index.ts` exports no `*Feature` identifier today, so an assertion over it is green before
+and after this PR. It is worth adding anyway — as a **regression guard**, which is what it is,
+not as "the assertion that makes D1 checkable":
 
 ```ts
-it('does not export feature values from the main entry', async () => {
+// src/index.test.ts
+it('keeps feature values off the main entry — they belong to /features', async () => {
 	const main = await import('./index')
-	for (const name of Object.keys(main)) {
-		expect(name).not.toMatch(/Feature$/)
-	}
+	expect(Object.keys(main).filter((n) => n.endsWith('Feature'))).toEqual([])
 })
 ```
+
+What actually makes D1 checkable is the type error a consumer gets from omitting `features`, and
+the tree-shaking cases PR 4 adds — neither of which lives here.
 
 - [ ] **Step 3: Run the real criterion**
 
@@ -1789,29 +2458,48 @@ pnpm --filter @ez-kit/data-grid-core lint \
   && pnpm --filter @ez-kit/data-grid-core build
 ```
 
-This is design §7's PR 1 criterion, and it is the first point in PR 1 at which it can run. Every
-one of the 113 `getState()` test call sites has been migrated by the task that owned its file; if
-`typecheck` or `test` still names one, it belongs to a task that under-delivered — fix it here
-and say which task it was in the commit body, so the next planning pass knows.
+This is design §7's PR 1 criterion, and it is the first point at which it can run. All 113
+`getState()` test call sites across the seven files have been migrated by the task that owned
+each file — `create-table.test.ts` and `system-column-def.test.ts` in Task 6,
+`row-ordering-feature.test.ts` in Task 8, `editing.test.ts` in 9, `creating.test.ts` in 10,
+`deleting.test.ts` in 11, `deferred-apply.test.ts` in 12. If `typecheck` or `test` still names
+one, say in the commit body which task under-delivered, so the next planning pass knows.
 
 `pnpm run ci` and `pnpm build` at the repo root are **still red**, and that is expected: the react
 package and both kits are untouched and still call `getState()`, `subscribe`, `getSnapshot` and
 `syncControlledState`. Do not attempt to fix them here — that is PR 2, and touching it would
 merge two reviews into one.
 
-- [ ] **Step 4: Re-measure the two size budgets**
+- [ ] **Step 4: Verify the declaration merges survive the bundle**
+
+This is the question Task 8 Step 1 deferred, and this is the first task where the command exists:
+
+```bash
+grep -c "TableState_FeatureMap\|interface Plugins" packages/data-grid/core/dist/features/index.d.ts
+```
+
+Expected: non-zero — every ported feature's merges appear in the emitted `.d.ts`. If they do not,
+the re-export trick the old `// Re-exported so index.ts can source …` comments described is still
+needed; restore it with a comment corrected for v9, and record in the commit body that it was.
+
+- [ ] **Step 5: Re-measure the two size budgets**
 
 ```bash
 pnpm --filter @ez-kit/data-grid-core size
 ```
 
-Set each limit to the measured value plus roughly 15% headroom, per AGENTS.md, and keep both
-`ignore` lists at `["@tanstack/table-core", "@tanstack/store"]`. The `dist/index.js` number
-should have **fallen** — `src/store/**`, the funnel and seven `_features` registrations left it.
-If it rose, something on the main entry is still reaching the features; find it before setting
-the number.
+Set each limit to the measured value plus roughly 15% headroom, per AGENTS.md, keeping both
+`ignore` lists at `["@tanstack/table-core", "@tanstack/store"]`.
 
-- [ ] **Step 5: Commit**
+`dist/index.js` should have **fallen**: `src/store/**`, the funnel and the seven `_features`
+registrations left it. It will not have fallen by the whole of that, because Task 12 makes
+`create-table.ts` import `createDraftAtoms` from `features/deferred-apply`, which pulls that one
+module — `draftFeature` and its types included — into the main entry's graph. That is the price
+of keeping the atom lifetime with the caller, it is one feature rather than seven, and it is
+expected. If `dist/index.js` reaches anything under `features/` **other than**
+`deferred-apply`, something is still wrong; find it before setting the number.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add packages/data-grid/core/
@@ -1834,26 +2522,29 @@ changeset naming `@ez-kit/data-grid-shadcn` would fail the `version` job after t
 ## Planning boundary
 
 This pass stops at the end of PR 1. The next pass covers **PR 2 (React)**, and it waits on two
-things Task 10 produces rather than predicts:
+things Task 13 produces rather than predicts:
 
 1. **The real shape of `createTableOptions`' return value and of `DataTable`.** PR 2's central
    question — whether `useDataGrid` adopts `useTable` wholesale or keeps its own
    `useSyncExternalStore` — turns on how much of `use-data-grid.ts` still has a job once
-   `table.Subscribe` and `table.atoms` exist. Tasks 5 and 9 make that concrete: the answer is
+   `table.Subscribe` and `table.atoms` exist. Tasks 6 and 12 make that concrete: the answer is
    readable from the code, and guessing it now would produce signatures for a hook nobody has
-   run. Both branches are already unblocked from core's side — decision 5 above records that
-   neither needs an API core does not ship.
-2. **Which prototype-bound reads the React package actually performs.** Task 7's characterization
+   run. Both branches are already unblocked from core's side — decision 5 records that neither
+   needs an API core does not ship.
+2. **Which prototype-bound reads the React package actually performs.** Task 9's characterization
    test fixes the rule; PR 2's audit applies it to ~13.6k lines. That audit is cheap once
    `editingFeature` exists and expensive to do against a feature that is still v8-shaped.
 
-Beyond PR 2, design §7 rows 3 (pinning, `start`/`end` through core, react and both kits),
-4 (62 docs pages and 54 examples, the `docs-option-names` map, new `tree-shaking` cases),
-5 (browser suite including the new RTL pinning cases, and the temporary `e2e` trigger on the
-integration branch) and 6 (AGENTS.md, READMEs, the `minor` changesets, recomputed budgets,
-removing the temporary trigger) are planned in later passes, each after the one before it has
-landed — for the same reason this pass waited for Task 2: the plan is worth more when it is
-written against a tree than against a document.
+Two carry-forwards for that pass: the react package has **17** `getState()` call sites, not the
+20 design §3 records; and Task 7's accessor is for feature hooks only — in the React adapter
+`TFeatures` is resolved, so `table.atoms.<slice>.get()` compiles there and is what PR 2 should
+write.
+
+Beyond PR 2, design §7 rows 3, 4, 5 and 6 are planned in later passes, each after the one before
+it has landed — for the same reason this pass waited for Task 2: the plan is worth more when it
+is written against a tree than against a document. **Row 3 is now smaller than the design states**
+— Task 4 took the core-side renames, so PR 3 is the React adapter, both kits, the CSS variables,
+the registry payload and the RTL e2e cases.
 
 The branch stays local throughout. Pushing `integration/tanstack-v9` and opening any PR against
 it is the human's call, and no task above contains a step that does either.
@@ -1861,23 +2552,36 @@ it is the human's call, and no task above contains a step that does either.
 ## Self-review notes
 
 - **Spec coverage:** this plan implements design §7 rows "0. Preparation" (Task 1) and
-  "1. Core engine" in full (Tasks 2–10). Rows 2 through 6 are explicitly deferred in the planning
-  boundary above, not omitted.
-- **Counted against the tree, not the design:** 26 `getState()` call sites in core source (design
-  says 26 — agrees), 113 in core tests across 7 files, 17 stock features rather than 16
-  (api-notes §2), and 21 core types needing `TFeatures` rather than "~23" — out of 39 exported
-  declarations generic over the row, the other 18 name no table-core type and keep their
-  parameters. `row-actions.ts` carries an eighth global `declare module` with no feature behind
-  it; Task 4 deletes it rather than porting it.
+  "1. Core engine" in full (Tasks 2–13), plus the core-side half of §5, which is re-scoped out of
+  the PR 3 row and into Task 4 because PR 1's own criterion cannot be met without it. Rows 2
+  through 6 are explicitly deferred in the planning boundary above, not omitted.
+- **Counted against the tree, not the design:** 26 `getState()` call-site lines (27 occurrences)
+  in core source, in 7 files — one of them, `row-ordering.ts:98`, a whole-snapshot read; 113 lines
+  (115 occurrences) in core tests across 7 files, the seventh being
+  `system-columns/system-column-def.test.ts`; 17 stock features rather than 16 (api-notes §2); 21
+  core types needing `TFeatures` rather than "~23", out of 39 exported declarations generic over
+  the row. `row-actions.ts` carries an eighth global `declare module` with no feature behind it,
+  and its merge target `TableOptionsResolved` does not exist in v9, so Task 5 deletes it rather
+  than porting it. Design §3's figure of 20 `getState()` sites in the react package measures
+  **17**; recorded for the PR 2 pass.
 - **Decided here, having been left open by the design:** `draft` gets one atom set (api-notes §4
   settles it); the draft atoms are created by the caller because `useTable` replaces `atoms` on
   every render; `ColumnMeta` stays a global merge at v9's three parameters instead of moving to
   the `columnMeta` slot; `rowActions` / row `pinning` / `virtualization` / `direction` leave
   TanStack options for a `grid` bag; `getInitialSnapshot` is deleted rather than wrapped, since
-  neither PR-2 branch needs a core API for it; `getState()` gets no shim.
-- **Type consistency:** `createTableOptions`, `ResolvedTableOptions`, `FeatureOnChangeHandlers`,
-  `columnInvariants`, `deferred` and `onChange.<feature>` are used with the same spelling in
-  Task 1's interface block, Steps 3–4, and the design doc's §4.
+  neither PR-2 branch needs a core API for it; `getState()` gets no shim; and feature state is
+  reached through one accessor module rather than through `table.atoms` / `table.baseAtoms`,
+  which do not type-check inside a feature hook.
+- **Type consistency:** `createTableOptions` is declared once in Task 5's Interfaces block and
+  called with that signature in Tasks 6 and 12. `GridOptions`, `DraftAtoms`, `DraftSeed`,
+  `createDraftAtoms`, `readOwnSlice` / `readForeignSlice` / `writeOwnSlice` / `writeForeignSlice`
+  and every `*Feature` name are spelled identically in the task that produces them and in each
+  task that consumes them. Task 1's `FeatureOnChangeHandlers` and `ResolvedTableOptions` are v8
+  artefacts that Task 5 retires, which is why they are absent from Tasks 5–13.
+- **Task ownership is total:** every core file holding a `getState()` call site, a
+  `declare module '@tanstack/table-core'` block, or a `left` / `right` pinning spelling appears in
+  exactly one task's Files list. Task 13 Step 3 names which task owned each of the seven test
+  files, so an escapee is attributable rather than anonymous.
 - **Dropped from PR 0 after verification:** removing destructured prototype methods (none exist)
   and rewriting indeterminate selection (already v9-correct at `header-cell.tsx:145`, covered by
   `data-grid.test.tsx:92-103`). Recorded in the design doc's §7 note.
