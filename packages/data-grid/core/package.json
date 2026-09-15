@@ -43,8 +43,7 @@
 			"path": "dist/index.js",
 			"limit": "14 KB",
 			"ignore": [
-				"@tanstack/table-core",
-				"@tanstack/store"
+				"@tanstack/table-core"
 			]
 		},
 		{
@@ -52,13 +51,11 @@
 			"path": "dist/features/index.js",
 			"limit": "6 KB",
 			"ignore": [
-				"@tanstack/table-core",
-				"@tanstack/store"
+				"@tanstack/table-core"
 			]
 		}
 	],
 	"dependencies": {
-		"@tanstack/store": "0.11.1",
 		"@tanstack/table-core": "^9.2.4"
 	},
 	"devDependencies": {
