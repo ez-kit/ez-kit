@@ -1,6 +1,15 @@
 import { extendServiceRegistry } from '@ez-kit/store-core'
 import { ServicesProvider, useServices } from '@ez-kit/store-core/react'
-import { createContext, type ReactElement, type ReactNode, useContext, useEffect, useMemo, useRef } from 'react'
+import {
+	createContext,
+	type ReactElement,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+} from 'react'
 
 import { createPersistEngine, type CreateEngineOptions, type PersistEngine } from './engine'
 import { PACKAGE_TAG } from './package-tag'
@@ -84,6 +93,17 @@ export type PersistProviderProps = {
 	 * length and order across renders (declare it at module scope or memoize it).
 	 */
 	adapters: PersistAdapter[]
+	/**
+	 * Receives an I/O failure from an **async** source — a rejected `get()` or `set()` on its
+	 * {@link SourcePort} — together with the `source` id that produced it, so an app can surface it
+	 * (a toast, a retry, telemetry). Synchronous sources (URL, Web Storage) never reach here: their
+	 * ports cannot reject, and the built-in storage adapter degrades with its own one-time warning.
+	 *
+	 * Left unset, an async rejection is swallowed exactly as before — the substrate is best-effort and
+	 * the store stays the source of truth. The handler is read at call time, so passing a fresh closure
+	 * each render is fine; it does not re-create the engines.
+	 */
+	onError?: (error: unknown, context: { source: string }) => void
 	children: ReactNode
 }
 
@@ -97,8 +117,8 @@ type ResolvedAdapter = {
 	defaultMeta: unknown
 }
 
-function engineOptionsOf(resolved: ResolvedAdapter): CreateEngineOptions {
-	const options: CreateEngineOptions = {}
+function engineOptionsOf(resolved: ResolvedAdapter, onError: (error: unknown) => void): CreateEngineOptions {
+	const options: CreateEngineOptions = { onError }
 	if (resolved.mergeMeta !== undefined) {
 		options.mergeMeta = resolved.mergeMeta
 	}
@@ -114,7 +134,7 @@ function engineOptionsOf(resolved: ResolvedAdapter): CreateEngineOptions {
  * (navigation), and wires ambient `subscribe → pull` (cross-tab). Engines are created once per provider
  * instance so they survive re-renders.
  */
-export function PersistProvider({ adapters, children }: PersistProviderProps): ReactElement {
+export function PersistProvider({ adapters, onError, children }: PersistProviderProps): ReactElement {
 	// Dev-only guard: render-scoped adapters call hooks inside the map below, so a change in `adapters`
 	// length or source order between renders is a rules-of-hooks violation that would otherwise surface as
 	// a cryptic React error far from its cause. Catch it here with a named, actionable message instead.
@@ -143,6 +163,20 @@ export function PersistProvider({ adapters, children }: PersistProviderProps): R
 		return { ...shared, port, changeKey, ambient: false }
 	})
 
+	// Engines are created once, so they must not close over this render's `onError`. Keep the latest
+	// handler in a ref and hand every engine a stable reporter that reads it at call time.
+	const onErrorRef = useRef(onError)
+	useEffect(() => {
+		onErrorRef.current = onError
+	}, [onError])
+	const report = useCallback(
+		(source: string) =>
+			(error: unknown): void => {
+				onErrorRef.current?.(error, { source })
+			},
+		[],
+	)
+
 	// Create engines + remember ports once. Ports are stable (each adapter owns its own ref handling).
 	const enginesRef = useRef<Map<string, PersistMount> | null>(null)
 	const portsRef = useRef<Map<string, SourcePort>>(new Map())
@@ -150,7 +184,7 @@ export function PersistProvider({ adapters, children }: PersistProviderProps): R
 		const engines = new Map<string, PersistMount>()
 		for (const entry of resolved) {
 			engines.set(entry.source, {
-				engine: createPersistEngine(entry.port, engineOptionsOf(entry)),
+				engine: createPersistEngine(entry.port, engineOptionsOf(entry, report(entry.source))),
 				seedSync: !entry.ambient,
 			})
 			portsRef.current.set(entry.source, entry.port)
@@ -191,9 +225,7 @@ export function PersistProvider({ adapters, children }: PersistProviderProps): R
 							.then((keyed) => {
 								mount.engine.pull(keyed)
 							})
-							.catch(() => {
-								// External pull failed (async source); the proxy stays the source of truth.
-							})
+							.catch(report(source))
 					} else {
 						mount.engine.pull(snapshot)
 					}
@@ -205,7 +237,7 @@ export function PersistProvider({ adapters, children }: PersistProviderProps): R
 				cleanup()
 			}
 		}
-	}, [engines])
+	}, [engines, report])
 
 	useEffect(
 		() => () => {
