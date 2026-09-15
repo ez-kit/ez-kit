@@ -28,10 +28,44 @@ axis.
 - **`Alt+ArrowLeft` / `Alt+ArrowRight`** move the focused column one step, without reopening the
   menu each time. The menu closes on select in both kits, so this is the path for a column that
   has to travel several places. Not yet wired in the HeroUI kit — see the note below.
+- **The Columns toggle**, once `visibilityMenu` asks for it — see below.
 
 A step swaps the column with its **visible** neighbour. Hidden columns keep their own places: a
 column that is hidden and shown again comes back where it was, which is exactly why the order and
 the visibility are two separate pieces of state rather than one list of visible columns.
+
+## In the column panel
+
+<DataGridDocsExample exampleId='column-panel-ordering' />
+
+```tsx
+<DataGrid
+	data={data}
+	columns={columns}
+	visibility
+	ordering={{ column: { visibilityMenu: true } }}
+/>
+```
+
+The toolbar's [Columns toggle](/docs/data-grid/columns/visibility) becomes a column panel: each row
+carries the same two moves beside its visibility checkbox. It is opt-in, and off by default —
+that control is a visibility control in every grid written so far, and a second job is not
+something those grids asked for.
+
+Turning it on changes the list as well as the row. The panel then lists **every** non-system
+column rather than only the hideable ones, because a list that left some of them out could not be
+read as the column order. A column locked with `visibility: false` is therefore listed, with its
+checkbox disabled — it can never be hidden, and that is unchanged, but it does hold a place in the
+order and it can still be moved.
+
+For the same reason a step here lands on the row **next to it**, hidden rows included, rather than
+passing over hidden columns the way the header does. Both are the same rule from two places: a
+step moves a column past what the user can see, and each surface shows something different.
+
+The panel's arrows point up and down. The two moves are logical — `start` and `end`, since the
+column order flips under RTL — but this list runs from the start of the order at the top in either
+writing direction, so up and down are what the arrows honestly point at. Their wording comes from
+`messages.visibility.moveStart` / `moveEnd` (`Move up` / `Move down`).
 
 ## What cannot move
 
@@ -71,9 +105,10 @@ was handed, so the handler the grid puts there is overwritten. Tracked in
 
 ## Options
 
-| Option     | Type                        | Description                                                                                             |
-| ---------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `ordering` | `boolean \| { column?: … }` | Reordering, per axis. `true` enables the column axis; `{ column: { onChange } }` reports the new order. |
+| Option                           | Type                        | Description                                                                                                   |
+| -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `ordering`                       | `boolean \| { column?: … }` | Reordering, per axis. `true` enables the column axis; `{ column: { onChange } }` reports the new order.       |
+| `ordering.column.visibilityMenu` | `boolean`                   | Offer the two moves in the Columns toggle as well, which then lists every non-system column. Default `false`. |
 
 ## Column options
 

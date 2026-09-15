@@ -1263,6 +1263,10 @@ export function useDataGrid<TRow extends object>(
 	// The row axis turns on only by being named — a bare `true` stays columns-only, so an
 	// upgrade cannot hand an existing grid an affordance nobody asked for.
 	const rowOrderingEnabled = isFeatureEnabled(orderingCfg?.row)
+	// Read off the column axis's own config, and only while that axis is on: a grid that turned
+	// column reordering off cannot be left offering it from the Columns toggle.
+	const columnOrderingCfg = featureConfig(orderingCfg?.column)
+	const orderingInVisibilityMenu = columnOrderingEnabled && columnOrderingCfg?.visibilityMenu === true
 
 	table.grid = {
 		cellTypes,
@@ -1279,7 +1283,7 @@ export function useDataGrid<TRow extends object>(
 			...(layout?.classNames !== undefined ? { classNames: layout.classNames } : {}),
 		},
 		pinning: { column: colPinEnabled, row: rowPinEnabled },
-		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled },
+		ordering: { column: columnOrderingEnabled, row: rowOrderingEnabled, visibilityMenu: orderingInVisibilityMenu },
 		visibility: normalizedVisibility,
 		sorting: normalizedSorting,
 		filtering: {

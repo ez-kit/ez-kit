@@ -28,3 +28,25 @@ export function ColumnOrderingExample() {
 		/>
 	)
 }
+
+const panelColumns = createColumns<Employee>([
+	// Never hideable, so the panel lists it with its checkbox disabled — it still holds a place
+	// in the order, and it can still be moved.
+	{ accessorKey: 'name', header: 'Name', visibility: false },
+	{ accessorKey: 'department', header: 'Department' },
+	{ accessorKey: 'joinedAt', header: 'Joined', cell: { type: 'date' } },
+	// Locked the other way round: hideable, but fixed where it was declared.
+	{ accessorKey: 'salary', header: 'Salary', align: 'end', cell: { type: 'number' }, ordering: false },
+])
+
+export function ColumnPanelOrderingExample() {
+	return (
+		<DataGrid
+			data={EMPLOYEE_DATA}
+			columns={panelColumns}
+			ordering={{ column: { visibilityMenu: true } }}
+			sorting
+			visibility
+		/>
+	)
+}
