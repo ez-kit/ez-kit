@@ -1,5 +1,5 @@
 import { formatFieldErrors } from '@ez-kit/form-core'
-import { useCallback, useRef } from 'react'
+import { createContext, useCallback, useContext, useRef } from 'react'
 
 import { fieldValidators } from '../field-validate'
 
@@ -12,12 +12,25 @@ import type { ReactNode } from 'react'
 const ARRAY_FIELD_TYPE = 'array'
 
 /**
+ * Changes whenever the entries' key order changes — the join is arbitrary, only its identity as
+ * a *value* matters. `Scoped` reads this through `useContext` purely to subscribe: React re-runs
+ * a context consumer even behind a `React.memo` bail-out, which a plain closure read during
+ * render does not get. Without this, a memoized row wrapped around a scoped field keeps stale
+ * props across a reorder and silently writes into the wrong entry — the field itself still
+ * resolves its *current* path correctly (that part comes from `getPath`, read fresh every call),
+ * but nothing forces the memoized parent to call it again.
+ */
+const ArrayKeyOrderContext = createContext<string>('')
+
+/**
  * Wraps one field component so its `name` prop is read as **item-relative** and handed on
  * resolved.
  *
  * `getPath` is read during render rather than closed over as a plain string, so a single
  * `Scoped` instance stays valid across a reorder that renumbers its entry — the entry's own
- * key never changes, only the path the key currently resolves to.
+ * key never changes, only the path the key currently resolves to. Subscribing to
+ * `ArrayKeyOrderContext` is what makes that value actually get re-read when it changes; see the
+ * context's own doc comment.
  *
  * Resolving here rather than inside `form.AppField` is what keeps the rest of the package
  * untouched: the wrapped component receives a fully absolute name, so its `AppField`, its
@@ -29,6 +42,7 @@ function scopeComponent<TProps extends { name: string }>(
 	getPath: () => string | undefined,
 ): (props: TProps) => ReactNode {
 	return function Scoped(props: TProps): ReactNode {
+		useContext(ArrayKeyOrderContext)
 		const prefix = getPath()
 		const name = prefix === undefined ? props.name : `${prefix}.${props.name}`
 		return (
@@ -223,9 +237,9 @@ function ArrayBody({
 		field.handleChange(next)
 	}
 
-	const add = (value?: unknown): void => {
+	const add = (): void => {
 		keys.onAdd()
-		write([...list, value === undefined ? newItem : value])
+		write([...list, newItem])
 	}
 
 	const insert = (index: number, value?: unknown): void => {
@@ -356,15 +370,20 @@ function ArrayBody({
 	})
 
 	// Entries that are gone take their cached component with them, or the maps would grow for
-	// the form's whole life.
-	for (const key of itemComponentsRef.current.keys()) {
-		if (keys.keys.includes(key)) continue
+	// the form's whole life. Driven from `keys.keys` — the authoritative live set — rather than
+	// from any one cache's own key set: `componentFor` and `scopedFieldsFor` are only guaranteed
+	// to run for a key that the current render actually asked for, and a future caller that skips
+	// one of them for a live entry must not leave the other cache growing unbounded.
+	const liveKeys = new Set(keys.keys)
+	for (const key of itemDataRef.current.keys()) {
+		if (liveKeys.has(key)) continue
 		itemComponentsRef.current.delete(key)
 		itemDataRef.current.delete(key)
 		scopedFieldsRef.current.delete(key)
 	}
 
 	const errors = field.state.meta.isTouched ? formatFieldErrors(field.state.meta.errors) : []
+	const invalid = errors.length > 0
 	const { maxLength } = validate ?? {}
 	const canAdd = maxLength === undefined || list.length < maxLength
 
@@ -375,29 +394,31 @@ function ArrayBody({
 		label,
 		description,
 		errors,
-		invalid: errors.length > 0,
+		invalid,
 		disabled,
 		required,
 		addLabel: addLabel ?? DEFAULT_ADD_LABEL,
-		onAdd: () => {
-			add()
-		},
+		onAdd: add,
 		canAdd,
 	}
 
-	return render(
-		{
-			items,
-			add,
-			insert,
-			remove,
-			move,
-			canAdd,
-			errors,
-			invalid: errors.length > 0,
-			Button: components.Button,
-			field,
-		},
-		frame,
+	return (
+		<ArrayKeyOrderContext.Provider value={keys.keys.join(',')}>
+			{render(
+				{
+					items,
+					add,
+					insert,
+					remove,
+					move,
+					canAdd,
+					errors,
+					invalid,
+					Button: components.Button,
+					field,
+				},
+				frame,
+			)}
+		</ArrayKeyOrderContext.Provider>
 	)
 }

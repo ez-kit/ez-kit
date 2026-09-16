@@ -744,11 +744,12 @@ export const testComponents: FormComponents = {
 	// Two native inputs rather than a calendar: this kit exists so the adapter's own tests
 	// never depend on a real picker.
 	DateRangeField: (props) => <TestDateRangeField {...props} />,
-	Button: ({ type, disabled, children }) => (
+	Button: ({ type, disabled, onClick, children }) => (
 		<button
 			data-testkit='button'
 			type={type === 'submit' ? 'submit' : 'button'}
 			disabled={disabled}
+			onClick={onClick}
 		>
 			{children}
 		</button>

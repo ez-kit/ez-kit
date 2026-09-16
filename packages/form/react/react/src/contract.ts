@@ -356,6 +356,13 @@ export type WizardRenderProps = {
 export type ButtonProps = {
 	type?: 'submit' | 'button'
 	disabled?: boolean
+	/**
+	 * Optional so the submit button (which fires through the surrounding `<form>`'s submit
+	 * event, not a click handler) can keep passing none. Typed `() => void` rather than a DOM
+	 * `MouseEventHandler` so a scope callback — `add`, say — can be handed straight through
+	 * without an event parameter to ignore.
+	 */
+	onClick?: () => void
 	children: ReactNode
 }
 

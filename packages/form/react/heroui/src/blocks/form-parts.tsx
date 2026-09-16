@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 
 /** The form-level primitives for the HeroUI kit: the submit button and the `<form>` shell. */
 
-export function Button({ type, disabled, children }: ButtonProps): ReactNode {
+export function Button({ type, disabled, onClick, children }: ButtonProps): ReactNode {
 	return (
 		<HeroButton
 			// Not `data-slot`: HeroUI stamps its own before spreading props, so ours would win
@@ -14,6 +14,7 @@ export function Button({ type, disabled, children }: ButtonProps): ReactNode {
 			type={type ?? 'button'}
 			variant='primary'
 			{...(disabled !== undefined ? { isDisabled: disabled } : {})}
+			{...(onClick !== undefined ? { onPress: onClick } : {})}
 		>
 			{children}
 		</HeroButton>

@@ -1,10 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createForm } from './create-form'
 import { testComponents } from './test-kit'
+
+import type { ReactNode } from 'react'
 
 type Person = { firstName: string }
 type Values = { title: string; people: Person[] }
@@ -166,6 +168,27 @@ describe('form.ArrayField', () => {
 		await user.click(screen.getByRole('button', { name: 'Remove 1' }))
 		// Two entries remain and neither was rebuilt, so no further mount happened.
 		expect(mounts).toHaveBeenCalledTimes(3)
+	})
+
+	it('keeps a field component’s own identity — not just its Item wrapper’s — across a removal from the middle', async () => {
+		// The mount-counter test above instruments `Item`'s identity, a cache that predates this
+		// task. This one instruments the *scoped field* itself — `item.TextField` here — whose
+		// own per-key cache is what lets it resolve its path without `<item.Item>` around it. A
+		// DOM node survives a re-render only if the component that rendered it kept its identity;
+		// rebuilding the scoped field per render (a plausible simplification of the cache) would
+		// still leave every value and every mount-counter-inside-`Item` assertion in this file
+		// passing, since neither witnesses the field's own identity.
+		const user = userEvent.setup()
+		render(
+			<PeopleForm defaults={{ title: '', people: [{ firstName: 'A' }, { firstName: 'B' }, { firstName: 'C' }] }} />,
+		)
+
+		const survivor = nameBox(2)
+		await user.click(screen.getByRole('button', { name: 'Remove 0' }))
+
+		// The survivor renumbers from index 2 to index 1; a fresh DOM node here means the scoped
+		// field was rebuilt for its new position instead of reused by key.
+		expect(nameBox(1)).toBe(survivor)
 	})
 
 	it('offers no reorder controls unless asked, and disables the impossible move', async () => {
@@ -441,5 +464,80 @@ describe('the array scope', () => {
 		// changed is which entry sits at each position.
 		expect(screen.getByLabelText('Name 0')).toHaveValue('Grace')
 		expect(screen.getByLabelText('Name 1')).toHaveValue('Ada')
+	})
+
+	it('writes into the entry that actually moved, even behind a memoized row', async () => {
+		// A scoped field resolves its *current* path by reading `itemDataRef` fresh on every
+		// render — but a `React.memo` boundary can bail out of that render entirely, in which
+		// case nothing re-reads the path at all. `Scoped` must therefore also *subscribe* to
+		// something that changes on reorder, or the memoized row below keeps rendering against
+		// its stale position and the edit lands on the wrong entry — silently: no error, no
+		// warning, just a wrong submitted value.
+		//
+		// `Row`'s props must not change across the swap for its `memo` to actually bail — so the
+		// label is tied to the entry's own stable `key`, never to its (now-swapped) `index`. If
+		// the label tracked the index instead, the prop change alone would force a re-render and
+		// the test would pass regardless of whether `Scoped` subscribes to anything.
+		const Row = memo(function Row({
+			Field,
+			label,
+		}: {
+			Field: (props: { name: 'firstName'; label: ReactNode }) => ReactNode
+			label: ReactNode
+		}): ReactNode {
+			return (
+				<Field
+					name='firstName'
+					label={label}
+				/>
+			)
+		})
+
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		render(
+			<Form
+				defaultValues={{ title: '', people: [{ firstName: 'A' }, { firstName: 'B' }] }}
+				onSubmit={({ value }) => {
+					onSubmit(value)
+				}}
+			>
+				{(form) => (
+					<>
+						<form.ArrayField
+							name='people'
+							newItem={NEW_PERSON}
+							reorderable
+						>
+							{({ items }) => (
+								<>
+									{items.map((item) => (
+										<item.Item key={item.key}>
+											<Row
+												Field={item.TextField}
+												label={item.key}
+											/>
+										</item.Item>
+									))}
+								</>
+							)}
+						</form.ArrayField>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		// The entry that starts first is keyed `item-0` and holds "A"; swapping moves it to
+		// index 1. Retype it there, addressed by its stable key-label rather than its new index.
+		await user.click(screen.getByRole('button', { name: 'down 0' }))
+		const movedBox = screen.getByLabelText('item-0')
+		await user.clear(movedBox)
+		await user.type(movedBox, 'X')
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({ title: '', people: [{ firstName: 'B' }, { firstName: 'X' }] })
+		})
 	})
 })

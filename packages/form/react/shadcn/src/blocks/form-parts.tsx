@@ -6,12 +6,13 @@ import type { ReactNode } from 'react'
 
 /** The form-level primitives for the shadcn kit: the submit button and the `<form>` shell. */
 
-export function Button({ type, disabled, children }: ButtonProps): ReactNode {
+export function Button({ type, disabled, onClick, children }: ButtonProps): ReactNode {
 	return (
 		<ButtonPrimitive
 			data-slot='form-submit'
 			type={type ?? 'button'}
 			disabled={disabled}
+			onClick={onClick}
 		>
 			{children}
 		</ButtonPrimitive>

@@ -240,7 +240,16 @@ export type ArrayItemScope<TItem> = FormFieldComponents<TItem> & {
 
 export type ArrayScope<TItem> = {
 	items: readonly ArrayItemScope<TItem>[]
-	add: (value?: TItem) => void
+	/**
+	 * Append a fresh entry, built from the field's own `newItem`. Deliberately no parameter: an
+	 * `insert`/`remove`/`move` all take a mandatory index first, so a synthetic click event can
+	 * never satisfy their signature — `add` would be the only member an author could write as
+	 * `onClick={add}` verbatim, and whether that compiled would turn on whether the item type
+	 * happened to be structurally satisfied by a `MouseEvent` (an item shaped `{ type: string }`
+	 * compiles clean and appends the event as the entry). To append a specific value, use
+	 * `insert(items.length, value)` — the same operation, spelled once.
+	 */
+	add: () => void
 	insert: (index: number, value?: TItem) => void
 	remove: (index: number) => void
 	move: (from: number, to: number) => void

@@ -49,6 +49,7 @@ export type {
 	ArrayFieldProps,
 	ArrayFieldScope,
 	ArrayItemScope,
+	ArrayScope,
 	BaseFieldProps,
 	CheckboxFieldProps,
 	CheckboxGroupFieldProps,
