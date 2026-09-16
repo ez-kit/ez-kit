@@ -18,13 +18,14 @@ No changeset was written (PR 6 writes one for the whole migration). AGENTS.md is
 
 ---
 
-## 0. The gates, as measured after `d58d0aea`
+## 0. The gates, as measured after `0d36bc03`
 
-Run individually with `pnpm --filter <pkg> <gate>`. **Nothing red below is column pinning.**
+Run individually with `pnpm --filter <pkg> <gate>`. **Nothing red below is column pinning.** The
+react package's count is 99 -> 55: all 17 pinning errors cleared, plus the 27 of §0.2's first half.
 
 | Package                    | typecheck                | lint                | test                                       | build     |
 | -------------------------- | ------------------------ | ------------------- | ------------------------------------------ | --------- |
-| `@ez-kit/data-grid-react`  | **82 errors** (was 99)   | **green**           | **726/726** (was 721/4)                    | **fails** |
+| `@ez-kit/data-grid-react`  | **55 errors** (was 99)   | **green**           | **726/726** (was 721/4)                    | **fails** |
 | `@ez-kit/data-grid-shadcn` | **1 error** (was 3)      | 1 error (cascade)   | **40/40**                                  | **green** |
 | `@ez-kit/data-grid-heroui` | **2 errors** (unchanged) | 16 errors (cascade) | 45/50                                      | **green** |
 | `@ez-kit/docs`             | 150 errors (PR 4's)      | —                   | vitest green on the pinning-relevant files | —         |
@@ -56,6 +57,78 @@ was flagged to the team lead before any code was written rather than discovered 
   exists. PR 3 did not take it: doing so would have been a second migration inside a rename.
   shadcn went 3 → 1 because two of its three were the vendored `'left' | 'right'` prop type, which
   is PR 3's.
+
+---
+
+## 0.2 Ruling L — PR 3 also took the 82 non-pinning errors, and they split 27 / 55
+
+Ruling L (and the lead's amendment to it) put the 82-error class in PR 3's scope, as separate
+commits after the pinning work. They are not one class. They split cleanly at a root cause, and the
+two halves want completely different treatment.
+
+### The 27 — test harnesses on the v8 config shape. Done, `0d36bc03`.
+
+No suppression, no `any`, no widened type. typecheck **82 -> 55**, tests still 726/726, lint green.
+
+The bulk was one line. `pagination.test.tsx`'s two render helpers typed their parameter
+`Omit<UseDataGridConfig<GridFeatures, User>, 'data' | 'columns'>`. In v9 `features` is a required
+member of that config, so the `Omit` left it required of all 20 call sites — and because the helper
+supplies `features: TEST_FEATURES` itself and then spreads `...config` over it, a caller who
+obliged would have _overwritten_ the feature set rather than adding to it. That is what the lone
+`TS2783` ("'features' is specified more than once") was reporting, and it is why the fix is to omit
+`features` rather than to pass it: both helpers now share a named `PaginationCase`, so they cannot
+drift apart again. The rest: `features: TEST_FEATURES` on four config literals across
+`closed-sets.test.ts`, `data-grid-options-context.test.tsx` and `defaults.test.tsx`; one
+`useDataGrid` call given explicit type arguments (inference from the first argument alone pins
+`TFeatures` to the _literal_ type of `TEST_FEATURES`, so a `DataGridDefaultOptions<GridFeatures,
+User>` second argument no longer fits); and `SelectionConfig` / `ExpandingConfig`'s leading
+`TFeatures` — pr2-outcomes §1.1f — reaching `public-api.test.ts`'s assertion list.
+
+### The 55 — v9's row types are invariant in `TRow`, and `any` no longer erases
+
+**This is the finding worth keeping, whatever is eventually done about it.** It was isolated with a
+probe file, not inferred from the error text. Every one of these assignments **fails**:
+
+| From                 | To                     |
+| -------------------- | ---------------------- |
+| `Row<F, User>`       | `Row<F, any>`          |
+| `Row<F, User>`       | `Row<F, object>`       |
+| `Row<F, User>`       | `Row<F, RowData>`      |
+| `DataTable<F, User>` | `DataTable<F, any>`    |
+| `DataTable<F, User>` | `DataTable<F, object>` |
+| `Table<F, User>`     | `Table<F, object>`     |
+
+For the `object` / `RowData` cases the chain bottoms out at
+
+> `Type 'AccessorFn<User, unknown>' is not assignable to type 'AccessorFn<object, unknown>'.`
+> `Property 'id' is missing in type '{}' but required in type 'User'.`
+
+— a **contravariant function parameter**, which is sound typing and not an
+`exactOptionalPropertyTypes` quirk, whatever the error's "Consider adding 'undefined'" preamble
+suggests. For the `any` case it bottoms out at `Property 'accessorFn' is missing`, because
+`ColumnDef<F, any, TValue>` is a union of identifier shapes and at `TRow = any` it resolves to the
+branch that requires `accessorFn`.
+
+`Row<F, TRow>` holds `original: TRow` covariantly and reaches `column.accessorFn: (row: TRow) => …`
+contravariantly, so it is **invariant**. The consequence is blunt: **there is no supertype to erase
+to.** `any` in particular does not erase inside a generic instantiation — it only erases at the top
+level. The React layer's whole erasure strategy was `any` (`DataTable<any, any>` in `TableContext`,
+`DataGridCellProps` defaulting `TRow = any`), and v9 took it away silently. All 55 errors are that
+one fact reported at 55 sites.
+
+**The obvious fix does not terminate on its own.** Making `cell.tsx`'s three private sub-components
+generic in `TRow` — the correct typing, no cast — moved the count 55 -> 54: the errors relocate one
+level inward, because each layer fixed pushes the `any` boundary down to the next helper. It is a
+cascade through ~8 source files (`data-grid.tsx` 12, `cell.tsx` 11, `header-cell.tsx` 5, `body.tsx`
+3, `table.tsx` 2, `row.tsx`, `actions-cell.tsx`, `selection-bar.tsx`) that can only terminate where
+genericity is impossible: `TableContext`, which React gives no type parameter, and the kit
+component contract. That probe was reverted; the tree is clean at 55.
+
+So the 55 need a decision, not a fix — thread `TRow` and take one documented cast at the context
+boundary (where the read side, `useDataGridTable`, already casts and already explains why), or
+erase deliberately at a named `ErasedTable` / `ErasedRow` alias with the reason stated once. It is
+recorded here rather than acted on because the lead asked to be told if the class split further,
+and it did.
 
 ---
 
