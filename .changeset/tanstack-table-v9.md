@@ -41,12 +41,12 @@ register (`editingFeature`, `creatingFeature`, `deletingFeature`, `draftFeature`
 becoming your peer. `allDataGridFeatures` is the all-in set, for prototypes and examples, and it
 lives on **`@ez-kit/data-grid-core/features/all`** — see below.
 
-**Three features are mandatory today, whatever else you register:** `columnVisibilityFeature`,
-`columnPinningFeature` and `columnSizingFeature`. The React adapter calls into all three on every
-render — `header.getSize()`, `column.getIsPinned()`, `table.getVisibleLeafColumns()` and the visual
-column-order helpers — so leaving any of them out is a **render-time `TypeError`**, not a silent
-no-op, and the development-mode warning below says nothing about it. Open every set with those
-three.
+**Three features are structural, whatever else you register:** `columnVisibilityFeature`,
+`columnPinningFeature` and `columnSizingFeature`. The shell lays out a column grid, so it needs
+visibility, pin groups and widths to lay one out with; omitting any of them is a **render-time
+`TypeError`**, not a silent no-op, and the development-mode warning below says nothing about it.
+Open every set with those three. Every other feature is genuinely optional — leave out
+`rowSortingFeature` and you get a grid that does not sort.
 
 **Composing a set governs two things: behaviour, and your bundle.** An unregistered feature
 contributes no state slice, no API and no work at runtime — and it is not in what you ship.

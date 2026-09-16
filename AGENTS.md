@@ -57,15 +57,24 @@ measures an entry point whole rather than what a partial import drags along. The
 guarantee here, not the budget — which is exactly why `tree-shaking.test.ts` exists beside
 `size-limit` rather than being folded into it.
 
-One more thing about a composed set is easy to mis-read as a bug:
-**`columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are mandatory for the
-React adapter**, whatever else a grid registers: `utils/column-size-vars.ts` calls `header.getSize()`,
-`column.getIsPinned()` and `table.getVisibleLeafColumns()`, and `utils/visual-column-order.ts` calls
-`table.getStartVisibleLeafColumns()` and its siblings — unconditionally, on every render. Omitting
-one is a **render-time `TypeError`**, not a disabled feature, and core's `REQUIRED_FEATURE` guard
-says nothing about it because the need is not expressed by any config key. Every docs example opens
-its set with those three. The real fix is a core guard or an exported `baseGridFeatures`, and it is
-an open follow-up rather than a settled decision.
+**Exactly three features are structural, and the line between "structural" and "defect" is
+executable.** `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are
+mandatory for the React adapter whatever else a grid registers — the shell lays out a column grid,
+so it needs visibility, pin groups and widths to lay one out with, and omitting any of them is a
+**render-time `TypeError`**. That is not a limitation waiting to be lifted; it is what a grid is
+made of, and every docs example opens its set with the three.
+
+Eleven features were once mandatory this way. The other eight — `columnResizingFeature`,
+`rowSortingFeature`, `loadingFeature`, `creatingFeature`, `infiniteFeature`, `rowSelectionFeature`,
+`editingFeature`, `deletingFeature` — were **defects**, unconditional reads on the default render
+path, and they are fixed: a grid without `rowSortingFeature` renders and does not sort. Do not
+"tidy up" the scoped `no-unnecessary-condition` disables on the guards that made that true. They
+read as unnecessary only because the widest instantiation says the check cannot fail; it can, and
+did — `getCanSort`, `state.creating.isOpen` and `state.infinite.isFetchingNextPage` each threw.
+`feature-optionality.test.tsx` renders a grid missing each optional feature and asserts the three
+structural ones still throw, so deleting a guard turns a lint error into a test failure rather than
+into silence — and the structural boundary is checked rather than asserted. Neither a core guard
+nor an exported `baseGridFeatures` is pending: this is the settled answer.
 
 **Registering a feature does not switch it on, and configuring one does not register it.** The two
 are orthogonal axes. `features` is compile time — what is in the bundle and which APIs exist at
