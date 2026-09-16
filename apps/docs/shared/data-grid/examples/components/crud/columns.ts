@@ -28,6 +28,9 @@ export const crudColumns = createColumns<Employee>([
 		},
 		filtering: {
 			operators: { items: ['contains', 'equals', 'isEmpty', 'isNotEmpty'] },
+			// A `select` column resolves `in` as its default operator, and this list does not offer
+			// it — leaving the filter on an operator it cannot run, which matches every row.
+			defaultOperator: 'equals',
 		},
 	},
 	{

@@ -193,14 +193,14 @@ const columns = createColumns<Task>([
 		width: 120,
 		align: 'end',
 		cell: { type: 'number' },
-		filtering: { operators: { items: ['between'] } },
+		filtering: { operators: { items: ['between'] }, defaultOperator: 'between' },
 	},
 	{
 		accessorKey: 'createdAt',
 		header: 'Created At',
 		width: 180,
 		cell: { type: 'date', config: { format: { dateStyle: 'long' } } },
-		filtering: { operators: { items: ['between'] } },
+		filtering: { operators: { items: ['between'] }, defaultOperator: 'between' },
 	},
 ])
 

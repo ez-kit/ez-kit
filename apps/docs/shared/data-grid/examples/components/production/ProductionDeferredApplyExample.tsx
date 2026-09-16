@@ -84,6 +84,7 @@ export function ProductionDeferredApplyExample() {
 			}}
 			globalFiltering={{ placeholder: 'Search orders…' }}
 			layout={{ stickyHeader: true }}
+			pinning={{ column: true }}
 			visibility
 			deleting={{
 				onDelete: ({ row }) => orders.remove([row.original.id]),

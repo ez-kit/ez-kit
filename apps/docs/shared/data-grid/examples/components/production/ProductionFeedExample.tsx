@@ -94,6 +94,7 @@ export function ProductionFeedExample() {
 			state={state}
 			layout={{ stickyHeader: true }}
 			pinning={{ column: true }}
+			visibility
 			virtualization={{ row: { estimateSize: ESTIMATED_ROW_HEIGHT_PX, overscan: 10 } }}
 			pagination={{ mode: 'infinite', hasNextPage, onLoadMore, threshold: { rows: 8 } }}
 		/>
