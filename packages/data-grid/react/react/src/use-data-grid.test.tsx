@@ -1034,3 +1034,88 @@ describe('useDataGrid — draft with a mirrored controlled state prop', () => {
 		expect(result.current.table.store.state.applied.sorting).toEqual([{ id: 'name', desc: false }])
 	})
 })
+
+// ── controlled × deferred — the two filters on the `onStateChange` subscription ──
+//
+// The migration's one real public behaviour change, and the one place where "the state is
+// controlled" and "the query is deferred" meet. Both filters live on the same subscriber in
+// `use-data-grid.ts`, in an order that is not the obvious one:
+//
+//     const projected = projectApplied === undefined ? next : projectApplied(next)
+//     if (isControlledEcho(previous, next, controlledStateRef.current)) return
+//     if (projected === undefined) return
+//
+// Under v8 the echo skip lived inside `syncControlledState`, which wrote the prop without firing
+// the callback; that method is gone, the controlled publish now moves the store like any other
+// write, and the skip had to move onto this side of the subscription. `isControlledEcho` is that
+// skip. The projection is `draft`'s: a draft edit moves a live axis the projection replaces, so
+// it compares equal and stays silent.
+//
+// The order is the part nothing else states. `projectApplied` is stateful — it compares against
+// its own **last projection** — so it has to be fed every store value, including the ones the
+// echo filter is about to swallow. Writing the two checks the natural way round (echo first,
+// project second) leaves the emitter's baseline stuck at whatever it saw before the consumer's
+// write, and the next grid-initiated change that happens to land back on that stale value is
+// compared equal and **never reaches the consumer at all**.
+//
+// The two cases below are exactly those two claims, in the configuration where they interact.
+describe('useDataGrid — controlled state under deferred apply', () => {
+	const HIDDEN = { name: false }
+
+	/** A deferring grid whose `columnVisibility` — a NON-deferred slice — is parent-owned. */
+	function renderDeferredControlled(onStateChange: (state: TableState<GridFeatures>) => void) {
+		return renderHook(
+			({ visibility }: { visibility: Record<string, boolean> }) =>
+				useDataGrid({
+					features: TEST_FEATURES,
+					data: USERS,
+					columns: COLUMNS,
+					draft: true,
+					sorting: { manual: true },
+					state: { columnVisibility: visibility },
+					onStateChange,
+				}),
+			{ initialProps: { visibility: {} } },
+		)
+	}
+
+	it('does not report the controlled prop back to the consumer while deferring', () => {
+		const onStateChange = vi.fn()
+		const { rerender } = renderDeferredControlled(onStateChange)
+		onStateChange.mockClear()
+
+		// The consumer's own write, on a slice `draft` does not defer. The publish moves the store,
+		// so the subscriber runs; every changed key is the one the consumer owns at exactly this
+		// value, so `isControlledEcho` swallows it. Without that filter a consumer mirroring the
+		// callback into React state loops.
+		rerender({ visibility: HIDDEN })
+		expect(onStateChange).not.toHaveBeenCalled()
+	})
+
+	it('keeps the applied-emitter baseline current across a suppressed echo', () => {
+		const onStateChange = vi.fn<(state: TableState<GridFeatures>) => void>()
+		const { result, rerender } = renderDeferredControlled(onStateChange)
+
+		const initialVisibility = result.current.store.state.columnVisibility
+
+		// 1. The consumer hides a column. Suppressed as an echo (the case above) — but the
+		//    projection must still have consumed it.
+		rerender({ visibility: HIDDEN })
+		expect(result.current.store.state.columnVisibility).toBe(HIDDEN)
+		onStateChange.mockClear()
+
+		// 2. The grid itself moves that slice back to the value the emitter last saw *before* the
+		//    consumer's write. Not an echo — the prop holds `HIDDEN` and the store now holds the
+		//    original — so it must reach the consumer.
+		act(() => {
+			result.current.setColumnVisibility(initialVisibility)
+		})
+
+		// With the projection fed on every store value this compares against `HIDDEN` and emits.
+		// With it fed only on the calls the echo filter lets through, the emitter's baseline is
+		// still the original object, the comparison is `unchanged`, and the consumer is told
+		// nothing about a change the grid made on its own initiative.
+		expect(onStateChange).toHaveBeenCalled()
+		expect(onStateChange.mock.calls[0]?.[0].columnVisibility).toBe(initialVisibility)
+	})
+})
