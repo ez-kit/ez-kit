@@ -115,7 +115,12 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 			: undefined
 		const display = renderValueDisplay(cf.value, operators)
 		if (display == null || display === '') continue
-		const appliedFilter = applied.columnFilters.find((a) => a.id === cf.id)
+		// Optional-chained. `s.applied` is `draftFeature`'s slice, and the two *uses* below are
+		// guarded by `isDrafting` — but this dereference runs before either, so a chips strip on a
+		// grid without `draft` threw here rather than reaching the guard that was meant to cover it.
+		// Under v8 the slice existed regardless; under v9 it is absent.
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+		const appliedFilter = applied?.columnFilters.find((a) => a.id === cf.id)
 		chips.push({
 			key: `column:${cf.id}`,
 			label: columnLabel(column),
@@ -137,7 +142,8 @@ export function ActiveFiltersBar({ position: positionProp }: DataGridActiveFilte
 				table.setGlobalFilter(undefined)
 			},
 			kind: FilterChipKind.Global,
-			isDraft: isDrafting && !sameFilterValue(applied.globalFilter, globalFilter),
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime-optional feature slice; see the FEATURE GUARDS note in types.ts
+			isDraft: isDrafting && !sameFilterValue(applied?.globalFilter, globalFilter),
 		})
 	}
 

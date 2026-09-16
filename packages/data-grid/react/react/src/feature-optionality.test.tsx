@@ -1,11 +1,14 @@
 import {
+	columnFilteringFeature,
 	columnPinningFeature,
 	columnResizingFeature,
 	columnSizingFeature,
 	columnVisibilityFeature,
+	createFilteredRowModel,
 	createSortedRowModel,
 	creatingFeature,
 	deletingFeature,
+	draftFeature,
 	editingFeature,
 	infiniteFeature,
 	loadingFeature,
@@ -16,6 +19,7 @@ import {
 import { describe, expect, it, vi } from 'vitest'
 
 import { renderGrid } from './test-utils'
+import { FilterChipsPosition } from './types'
 
 import type { GridFeatures } from './types'
 
@@ -143,5 +147,50 @@ describe('the row-actions column does not require the editing feature', () => {
 				deleting: { onDelete: vi.fn() },
 			}),
 		).not.toThrow()
+	})
+})
+
+describe('the active-filters chips strip does not require the draft feature', () => {
+	/**
+	 * The chips strip mounts only when filtering is configured **and** a filter is active, which is
+	 * why neither the `withoutFeature` cases nor the row-actions case above can reach it — the same
+	 * structural reason, a third time.
+	 *
+	 * `s.applied` is `draftFeature`'s slice. `active-filters-bar.tsx` guarded its *use* with
+	 * `isDrafting` but dereferenced it unconditionally one line earlier, so under v9 — where the
+	 * slice is absent rather than merely empty — a chips strip on a grid without `draft` threw
+	 * before `isDrafting` was ever consulted.
+	 */
+	const FILTERING = {
+		...BASE,
+		columnFilteringFeature,
+		filteredRowModel: createFilteredRowModel(),
+		sortedRowModel: createSortedRowModel(),
+	}
+
+	function renderChips(features: GridFeatures) {
+		return renderGrid({
+			features,
+			// `chips.position` is what mounts the strip — `filtering: true` alone does not — and an
+			// active filter is what gives it a chip to render. Both are needed or this case renders
+			// a grid with no strip on it and proves nothing.
+			filtering: { chips: { position: FilterChipsPosition.Above } },
+			initialState: { columnFilters: [{ id: 'name', value: 'Al' }] },
+		})
+	}
+
+	it('renders a filtered grid built without draftFeature', () => {
+		const { container } = renderChips(tableFeatures(FILTERING))
+
+		// Asserted, not assumed: a case that renders no strip would pass a bare `not.toThrow()`
+		// while reaching none of the code it exists for.
+		expect(container.querySelector("[data-slot='active-filters-bar']")).not.toBeNull()
+	})
+
+	// The control: with `draftFeature` registered the same grid still renders its chips.
+	it('renders the same grid with draftFeature registered', () => {
+		const { container } = renderChips(tableFeatures({ ...FILTERING, draftFeature }))
+
+		expect(container.querySelector("[data-slot='active-filters-bar']")).not.toBeNull()
 	})
 })
