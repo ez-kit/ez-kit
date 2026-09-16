@@ -49,6 +49,7 @@ export type {
 export type {
 	ArrayFieldProps,
 	ArrayFieldScope,
+	ArrayItemProps,
 	ArrayItemScope,
 	ArrayProps,
 	ArrayScope,

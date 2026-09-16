@@ -211,3 +211,93 @@ describe('form.Array', () => {
 		})
 	})
 })
+
+describe('the kit row inside form.Array', () => {
+	it('renders the kit row with the captions the author gave', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		render(
+			<Form
+				defaultValues={{ people: [{ firstName: 'Ada' }, { firstName: 'Grace' }] }}
+				onSubmit={({ value }) => {
+					onSubmit(value)
+				}}
+			>
+				{(form) => (
+					<>
+						<form.Array
+							name='people'
+							newItem={NEW_PERSON}
+						>
+							{({ items }) => (
+								<section>
+									{items.map((item) => (
+										<item.Item
+											key={item.key}
+											label={`Person ${String(item.index + 1)}`}
+											removeLabel='Drop'
+											reorderable
+										>
+											<item.TextField
+												name='firstName'
+												label={`Name ${String(item.index)}`}
+											/>
+										</item.Item>
+									))}
+								</section>
+							)}
+						</form.Array>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		expect(screen.getByText('Person 1')).toBeInTheDocument()
+		// The row asked for `reorderable` itself — the array-level setting was never given — so
+		// the move controls must appear from the row's own prop, not from a fallback that only
+		// reads the array's.
+		expect(screen.getByRole('button', { name: 'down 0' })).toBeInTheDocument()
+		expect(screen.getByRole('button', { name: 'up 1' })).toBeInTheDocument()
+		await user.click(screen.getByRole('button', { name: 'Drop 0' }))
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({ people: [{ firstName: 'Grace' }] })
+		})
+	})
+
+	it('offers no move control on a row that did not ask for one', () => {
+		render(
+			<Form defaultValues={{ people: [{ firstName: 'Ada' }, { firstName: 'Grace' }] }}>
+				{(form) => (
+					<form.Array
+						name='people'
+						newItem={NEW_PERSON}
+					>
+						{({ items }) => (
+							<section>
+								{items.map((item) => (
+									<item.Item
+										key={item.key}
+										removeLabel='Drop'
+									>
+										<item.TextField
+											name='firstName'
+											label={`Name ${String(item.index)}`}
+										/>
+									</item.Item>
+								))}
+							</section>
+						)}
+					</form.Array>
+				)}
+			</Form>,
+		)
+
+		expect(screen.queryByRole('button', { name: 'up 0' })).toBeNull()
+		expect(screen.queryByRole('button', { name: 'down 0' })).toBeNull()
+		expect(screen.getByRole('button', { name: 'Drop 0' })).toBeInTheDocument()
+		expect(screen.getByRole('button', { name: 'Drop 1' })).toBeInTheDocument()
+	})
+})

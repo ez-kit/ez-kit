@@ -5,7 +5,7 @@ import { fieldValidators } from '../field-validate'
 
 import type { BindableForm, BoundFieldApi } from '../bindable-form'
 import type { ArrayFieldRenderProps, FormComponents } from '../contract'
-import type { ArrayFieldProps, ArrayProps, ArrayScope, FormFieldComponents } from '../field-props'
+import type { ArrayFieldProps, ArrayItemProps, ArrayProps, ArrayScope, FormFieldComponents } from '../field-props'
 import type { FieldValidateProps } from '../field-validate'
 import type { ReactNode } from 'react'
 
@@ -236,7 +236,14 @@ type ItemData = {
 	moveUpLabel: ReactNode
 	moveDownLabel: ReactNode
 	disabled: boolean | undefined
+	/** The array-level `reorderable` setting — `Item`'s own fallback when no prop overrides it. */
+	reorderable: ArrayFieldProps<unknown, unknown>['reorderable']
 	onRemove: () => void
+	/**
+	 * Stored unconditionally — `undefined` only where the move is actually impossible (the
+	 * entry's own end), never because the array itself declined `reorderable`. That is what lets
+	 * a single row opt in via `<item.Item reorderable>` without the array having asked for it.
+	 */
 	onMoveUp: (() => void) | undefined
 	onMoveDown: (() => void) | undefined
 }
@@ -292,7 +299,7 @@ function ArrayBody({
 	// their parent does and their `children` change, so a ref is enough to hand them fresh data
 	// without giving them a new identity.
 	const itemDataRef = useRef(new Map<string, ItemData>())
-	const itemComponentsRef = useRef(new Map<string, (props: { children: ReactNode }) => ReactNode>())
+	const itemComponentsRef = useRef(new Map<string, (props: ArrayItemProps) => ReactNode>())
 	const scopedFieldsRef = useRef(new Map<string, FormFieldComponents<unknown>>())
 
 	const write = (next: readonly unknown[]): void => {
@@ -333,25 +340,34 @@ function ArrayBody({
 	 * one alive for as long as the entry is, including across the renumbering a removal from the
 	 * middle causes.
 	 */
-	const componentFor = (key: string): ((props: { children: ReactNode }) => ReactNode) => {
+	const componentFor = (key: string): ((props: ArrayItemProps) => ReactNode) => {
 		const existing = itemComponentsRef.current.get(key)
 		if (existing !== undefined) return existing
 
-		const Item = ({ children: itemChildren }: { children: ReactNode }): ReactNode => {
+		const Item = ({
+			children: itemChildren,
+			label,
+			removeLabel,
+			reorderable: rowReorderable,
+		}: ArrayItemProps): ReactNode => {
 			const data = itemDataRef.current.get(key)
 			if (data === undefined) return null
+			// prop → the array's own setting → the kit's default, at every caption — see `ArrayItemProps`.
+			const rowReorder = rowReorderable ?? data.reorderable
+			const rowLabels = typeof rowReorder === 'object' ? rowReorder : undefined
+			const offerMoves = rowReorder !== undefined && rowReorder !== false
 			return (
 				<KitArrayItem
 					data-index={data.index}
 					index={data.index}
-					label={data.label}
-					removeLabel={data.removeLabel}
-					moveUpLabel={data.moveUpLabel}
-					moveDownLabel={data.moveDownLabel}
+					label={label ?? data.label}
+					removeLabel={removeLabel ?? data.removeLabel}
+					moveUpLabel={rowLabels?.up?.label ?? data.moveUpLabel}
+					moveDownLabel={rowLabels?.down?.label ?? data.moveDownLabel}
 					disabled={data.disabled}
 					onRemove={data.onRemove}
-					onMoveUp={data.onMoveUp}
-					onMoveDown={data.onMoveDown}
+					onMoveUp={offerMoves ? data.onMoveUp : undefined}
+					onMoveDown={offerMoves ? data.onMoveDown : undefined}
 				>
 					{itemChildren}
 				</KitArrayItem>
@@ -383,7 +399,6 @@ function ArrayBody({
 	}
 
 	// `true` and the object form both mean "offer reordering"; the object only adds captions.
-	const canReorder = reorderable !== undefined && reorderable !== false
 	const reorderLabels = typeof reorderable === 'object' ? reorderable : undefined
 
 	const items = list.map((_, index) => {
@@ -396,17 +411,20 @@ function ArrayBody({
 			moveUpLabel: reorderLabels?.up?.label ?? DEFAULT_MOVE_UP_LABEL,
 			moveDownLabel: reorderLabels?.down?.label ?? DEFAULT_MOVE_DOWN_LABEL,
 			disabled,
+			reorderable,
 			onRemove: () => {
 				remove(index)
 			},
+			// Stored unconditionally — `Item` is the one that decides whether to offer them, so a
+			// row can opt in with its own `reorderable` even when the array itself did not.
 			onMoveUp:
-				canReorder && index > 0
+				index > 0
 					? () => {
 							move(index, index - 1)
 						}
 					: undefined,
 			onMoveDown:
-				canReorder && index < list.length - 1
+				index < list.length - 1
 					? () => {
 							move(index, index + 1)
 						}

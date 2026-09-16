@@ -235,7 +235,23 @@ export type ArrayItemScope<TItem> = FormFieldComponents<TItem> & {
 	moveUp: () => void
 	moveDown: () => void
 	/** This entry's chrome — heading, remove control, reorder controls. Wrap the entry's fields. */
-	Item: (props: { children: ReactNode }) => ReactNode
+	Item: (props: ArrayItemProps) => ReactNode
+}
+
+/**
+ * Props for one entry's chrome, `<item.Item>`.
+ *
+ * Inside `form.ArrayField` these are usually left to the array's own `itemLabel` / `removeLabel`
+ * / `reorderable`; inside the bare `form.Array` primitive there is no outer component to hold
+ * them, so `Item` takes its own — resolved **prop → the array's own setting → the kit's
+ * default**, in that order.
+ */
+export type ArrayItemProps = {
+	children: ReactNode
+	label?: ReactNode
+	removeLabel?: ReactNode
+	/** Offer the kit's move controls on this row. Off by default, as on `ArrayField`. */
+	reorderable?: boolean | { up?: { label?: ReactNode }; down?: { label?: ReactNode } }
 }
 
 export type ArrayScope<TItem> = {
