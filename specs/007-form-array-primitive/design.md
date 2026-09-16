@@ -182,3 +182,19 @@ Red first, per the repo's TDD rule.
 
 Drag-and-drop in the package. `move(from, to)` makes it expressible; pulling a dnd library into
 dependencies to demonstrate it is the application's business, not ours.
+
+## Checked while agreeing the design: there is no form-instance context
+
+A reusable list built on the primitive — a kit's `ArrayTable`, an application's `MembersTable` —
+needs to reach `form` in order to render `form.Array`. The package has **no context carrying the
+form instance**: the three contexts that exist are `ArrayItemPathContext` (an entry's path prefix),
+`OptionSourceContext` and `SchemaTranslateContext`.
+
+So such a component takes the form as a prop, the way anything outside the `<Form>` render prop
+already does. That works today and stays type-safe; `name` is still checked against `TFormData`
+through `DeepKeysOfType`.
+
+Adding a form-instance context so the call reads better is a **separate decision and out of scope
+here.** It would touch every field component, not just arrays, and it trades a prop for an implicit
+dependency that makes a component's requirements invisible at the call site. Worth its own
+discussion if prop-drilling the form turns out to hurt in practice.
