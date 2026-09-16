@@ -25,6 +25,14 @@ export type DataGridRowRenderArgs<TRow extends object = ErasedRow> = {
 	row: Row<GridFeatures, TRow>
 	/** The row's visible cells, in column order — already filtered by column visibility and pinning. */
 	cells: ReturnType<Row<GridFeatures, TRow>['getVisibleCells']>
+	/**
+	 * The row's default cells — one `<DataGrid.Cell>` per entry of `cells`, keyed.
+	 *
+	 * So a custom row can add to the row rather than rebuild it: prepend a drag handle, append a
+	 * spacer, wrap the lot. Mapping `cells` yourself stays the way to change what a *particular*
+	 * cell renders; this is for the rows that only wanted something beside the defaults.
+	 */
+	content: ReactNode
 }
 
 export type DataGridRowProps<TRow extends object = ErasedRow> = {
@@ -47,6 +55,13 @@ export type DataGridRowProps<TRow extends object = ErasedRow> = {
 	 *   {({ cells }) => cells.map((cell) => <DataGrid.Cell key={cell.id} cell={cell} row={row} />)}
 	 * </DataGrid.Row>
 	 * ```
+	 *
+	 * @example — keep the default cells and add to them
+	 * ```tsx
+	 * <DataGrid.Row row={row}>
+	 *   {({ content }) => <>{content}<td data-slot='td' /></>}
+	 * </DataGrid.Row>
+	 * ```
 	 */
 	children?: ReactNode | ((args: DataGridRowRenderArgs<TRow>) => ReactNode)
 }
@@ -66,6 +81,31 @@ export type DataGridRowProps<TRow extends object = ErasedRow> = {
  * Consumer props from `rowProps` are applied first, so those structural attributes always win;
  * `className` is the exception and is merged rather than overwritten.
  */
+/**
+ * The row's default cells, and the caller's `children` laid over them — the row-level twin of
+ * `renderCellContent`.
+ *
+ * The default is built even when `children` is a function, because that function may place it:
+ * these are React elements, not rendered output, so building the ones a caller then drops costs
+ * an array of objects and no DOM.
+ */
+function renderRowContent<TRow extends object>(
+	children: DataGridRowProps<TRow>['children'],
+	row: Row<GridFeatures, TRow>,
+	cells: DataGridRowRenderArgs<TRow>['cells'],
+): ReactNode {
+	const content = cells.map((cell) => (
+		<DataGridCell
+			key={cell.id}
+			cell={cell}
+			row={row}
+		/>
+	))
+	if (children === undefined) return content
+	if (typeof children !== 'function') return children
+	return children({ row, cells, content })
+}
+
 // `forwardRef`, not a `ref` prop: React 19 passes `ref` through props, React 18 strips it before
 // the component sees it, and this package supports both. The generic is restored by the cast
 // below — `forwardRef` erases type parameters, and `<DataGrid.Row<Order>>` has to keep working.
@@ -147,17 +187,7 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 			{...(onRowKeyDown ? { onKeyDown: onRowKeyDown } : {})}
 			{...(canMove ? { 'data-movable': 'true' } : {})}
 		>
-			{children === undefined
-				? cells.map((cell) => (
-						<DataGridCell
-							key={cell.id}
-							cell={cell}
-							row={row}
-						/>
-					))
-				: typeof children === 'function'
-					? children({ row, cells })
-					: children}
+			{renderRowContent(children, row, cells)}
 		</Tr>
 	)
 }
