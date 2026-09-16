@@ -540,4 +540,110 @@ describe('the array scope', () => {
 			expect(onSubmit).toHaveBeenCalledWith({ title: '', people: [{ firstName: 'B' }, { firstName: 'X' }] })
 		})
 	})
+
+	it('writes into the entry that actually moved one level down, even behind a memoized row nested inside another array', async () => {
+		// The flat case above is fixed by republishing the array's own key order. That alone is
+		// not enough here: a single-member team's own key order never changes when the *outer*
+		// teams array reorders, so a provider keyed only to `keys.keys` would still leave a
+		// memoized row inside the inner `members` array reading a stale path once the team it
+		// belongs to moves. The provider must also change when the fieldName it is scoped under
+		// changes — and a nested array's fieldName is exactly the path the outer array resolved
+		// for it, so it does change whenever an ancestor moves.
+		type Member = { firstName: string }
+		type Team = { name: string; members: Member[] }
+		type TeamValues = { teams: Team[] }
+
+		const defaultValues: TeamValues = {
+			teams: [
+				{ name: 'Red', members: [{ firstName: 'A' }] },
+				{ name: 'Blue', members: [{ firstName: 'B' }] },
+			],
+		}
+		const newTeam: Team = { name: '', members: [] }
+		const newMember: Member = { firstName: '' }
+
+		const Row = memo(function Row({
+			Field,
+			label,
+		}: {
+			Field: (props: { name: 'firstName'; label: ReactNode }) => ReactNode
+			label: ReactNode
+		}): ReactNode {
+			return (
+				<Field
+					name='firstName'
+					label={label}
+				/>
+			)
+		})
+
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+		render(
+			<Form
+				defaultValues={defaultValues}
+				onSubmit={({ value }) => {
+					onSubmit(value)
+				}}
+			>
+				{(form) => (
+					<>
+						<form.ArrayField
+							name='teams'
+							newItem={newTeam}
+							reorderable
+						>
+							{({ items: teamItems }) => (
+								<>
+									{teamItems.map((team) => (
+										<team.Item key={team.key}>
+											<team.ArrayField
+												name='members'
+												newItem={newMember}
+											>
+												{({ items: memberItems }) => (
+													<>
+														{memberItems.map((member) => (
+															<member.Item key={member.key}>
+																{/* Keyed to both entries' stable keys, never to either's index, so
+																the memoized row's props stay identical across the outer swap and
+																`memo` genuinely bails instead of re-rendering because a prop
+																changed. */}
+																<Row
+																	Field={member.TextField}
+																	label={`${team.key}:${member.key}`}
+																/>
+															</member.Item>
+														))}
+													</>
+												)}
+											</team.ArrayField>
+										</team.Item>
+									))}
+								</>
+							)}
+						</form.ArrayField>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		// "Red" (team key `item-0`) starts at index 0 and moves to index 1; its member never
+		// reorders within its own team, so only the ancestor's move can be what forces a re-read.
+		await user.click(screen.getByRole('button', { name: 'down 0' }))
+		const movedBox = screen.getByLabelText('item-0:item-0')
+		await user.clear(movedBox)
+		await user.type(movedBox, 'X')
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({
+				teams: [
+					{ name: 'Blue', members: [{ firstName: 'B' }] },
+					{ name: 'Red', members: [{ firstName: 'X' }] },
+				],
+			})
+		})
+	})
 })

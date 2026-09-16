@@ -12,13 +12,21 @@ import type { ReactNode } from 'react'
 const ARRAY_FIELD_TYPE = 'array'
 
 /**
- * Changes whenever the entries' key order changes — the join is arbitrary, only its identity as
- * a *value* matters. `Scoped` reads this through `useContext` purely to subscribe: React re-runs
- * a context consumer even behind a `React.memo` bail-out, which a plain closure read during
- * render does not get. Without this, a memoized row wrapped around a scoped field keeps stale
- * props across a reorder and silently writes into the wrong entry — the field itself still
- * resolves its *current* path correctly (that part comes from `getPath`, read fresh every call),
- * but nothing forces the memoized parent to call it again.
+ * Changes whenever the entries' key order changes — the exact string is arbitrary, only its
+ * identity as a *value* matters. `Scoped` reads this through `useContext` purely to subscribe:
+ * React re-runs a context consumer even behind a `React.memo` bail-out, which a plain closure
+ * read during render does not get. Without this, a memoized row wrapped around a scoped field
+ * keeps stale props across a reorder and silently writes into the wrong entry — the field itself
+ * still resolves its *current* path correctly (that part comes from `getPath`, read fresh every
+ * call), but nothing forces the memoized parent to call it again.
+ *
+ * Each `ArrayBody` provides its own value, which **shadows** the outer one for everything nested
+ * below it — so a nested array's provider only changes when *its own* key order changes, never
+ * when an ancestor array's does. That is why the value is prefixed with the array's own
+ * `fieldName`: a nested array's `fieldName` is itself the path the outer array resolved for that
+ * entry (e.g. `teams[0].members`), so it changes whenever an ancestor reorders even though the
+ * nested array's own `keys.keys` does not — which is exactly the case a memoized row one level
+ * down needs to be forced to re-render for.
  */
 const ArrayKeyOrderContext = createContext<string>('')
 
@@ -370,10 +378,12 @@ function ArrayBody({
 	})
 
 	// Entries that are gone take their cached component with them, or the maps would grow for
-	// the form's whole life. Driven from `keys.keys` — the authoritative live set — rather than
-	// from any one cache's own key set: `componentFor` and `scopedFieldsFor` are only guaranteed
-	// to run for a key that the current render actually asked for, and a future caller that skips
-	// one of them for a live entry must not leave the other cache growing unbounded.
+	// the form's whole life. The live set is `keys.keys`; the iteration is over `itemDataRef`,
+	// which is written unconditionally for every rendered key above — before either
+	// `scopedFieldsFor` or `componentFor` runs — so its keys are a superset of both other
+	// caches' by construction. Iterating `itemComponentsRef` instead would only be correct
+	// while `componentFor` is called for every live key, which a future caller that builds
+	// `Item` lazily would break, leaving `scopedFieldsRef` growing unbounded.
 	const liveKeys = new Set(keys.keys)
 	for (const key of itemDataRef.current.keys()) {
 		if (liveKeys.has(key)) continue
@@ -403,7 +413,7 @@ function ArrayBody({
 	}
 
 	return (
-		<ArrayKeyOrderContext.Provider value={keys.keys.join(',')}>
+		<ArrayKeyOrderContext.Provider value={`${fieldName}:${keys.keys.join(',')}`}>
 			{render(
 				{
 					items,
