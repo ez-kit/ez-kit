@@ -1628,15 +1628,47 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 	const orderedData = useOrderedData(table, baseDataRef.current)
 	if (orderedData !== projectedDataRef.current) {
 		// A row move rewrites `data` without the dataset having changed at all, and TanStack's
-		// `autoResetPageIndex` cannot tell the two apart: it fires on any new `data` identity, so
-		// moving a row on page three would drop the user back on page one. Suppressed for exactly
-		// that render, and left to its default (`!manualPagination`) whenever the `data` prop
-		// itself is what changed — a genuinely new dataset should still reset the page.
+		// auto-resets cannot tell the two apart: `createCoreRowModel`'s memo is keyed on
+		// `options.data`, and its `onAfterUpdate` fires `table_autoResetPageIndex`,
+		// `table_autoResetExpanded`, `table_autoResetSorting` and `table_autoResetCellSelection`
+		// on any new identity. Two of those default to on and undo work the user just did:
+		//
+		// - `autoResetPageIndex` (`!manualPagination`) — moving a row on page three would drop
+		//   the user back on page one.
+		// - `autoResetExpanded` (`!manualExpanding`) — moving an expanded parent would collapse
+		//   it, so its children stop rendering the moment it lands. That is exactly what
+		//   `ordering/rows.spec.ts` "an expanded parent steps over its own children" caught:
+		//   `["2","1"]` where `["2","1","11","12"]` was expected.
+		//
+		// `autoResetSorting` defaults to `false` upstream and needs nothing;
+		// `autoResetCellSelection` defaults to `true` and is suppressed for the same reason as
+		// the other two.
+		//
+		// All three are suppressed for exactly this render and left to their defaults whenever
+		// the `data` prop itself is what changed — a genuinely new dataset should still reset.
+		//
+		// Note `table_autoResetExpanded` and `table_autoResetCellSelection` reach
+		// `_reactivity.schedule`, i.e. `queueMicrotask`, so the reset lands *after* the render
+		// that moved the row. A synchronous assertion straight after the move therefore reads
+		// the pre-reset state and sees nothing wrong — see `tree-row-ordering.test.tsx`.
 		projectedDataRef.current = orderedData
 		const setOptions = table.setOptions as unknown as (updater: (prev: Record<string, unknown>) => unknown) => void
 		setOptions((prev) => {
-			const { autoResetPageIndex: _default, ...rest } = prev
-			return isNewDataProp ? { ...rest, data: orderedData } : { ...rest, data: orderedData, autoResetPageIndex: false }
+			const {
+				autoResetPageIndex: _pageIndex,
+				autoResetExpanded: _expanded,
+				autoResetCellSelection: _cellSelection,
+				...rest
+			} = prev
+			return isNewDataProp
+				? { ...rest, data: orderedData }
+				: {
+						...rest,
+						data: orderedData,
+						autoResetPageIndex: false,
+						autoResetExpanded: false,
+						autoResetCellSelection: false,
+					}
 		})
 	}
 

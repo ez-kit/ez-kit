@@ -2,11 +2,26 @@
  * An expanded parent keeps its children when it moves — at the model **and** in the DOM.
  *
  * Written while diagnosing a browser failure on `ordering/rows.spec.ts`, where the same gesture
- * left `["2","1"]` rendered instead of `["2","1","11","12"]`. It does **not** reproduce here: the
- * row order, the expanded row model and the rendered rows are all correct, under the failing
- * example's exact feature set — pagination included. Kept anyway, because it pins the half of the
- * behaviour this package owns, and because the next person to read that spec failure should be
- * able to see at a glance that the model is not the suspect.
+ * left `["2","1"]` rendered instead of `["2","1","11","12"]`.
+ *
+ * **The first version of this file asserted synchronously after the move and passed, which is
+ * why the defect looked browser-only.** It was not. `createCoreRowModel`'s memo is keyed on
+ * `options.data`, and an uncontrolled row move rewrites that array; its `onAfterUpdate` then
+ * calls `table_autoResetExpanded`, which reaches `table._reactivity.schedule` — a
+ * `queueMicrotask`. A synchronous `expect` after a synchronous `act` runs *before* that
+ * microtask drains, so it reads the state between the move and the reset and sees nothing
+ * wrong. `await act(async () => {})` past the microtask is what makes this test agree with the
+ * browser, and is why both cases below are `async`.
+ *
+ * `useDataGrid` suppresses `autoResetExpanded` (with `autoResetPageIndex` and
+ * `autoResetCellSelection`) for exactly the render that projects a row move, so the reorder no
+ * longer reads as a new dataset.
+ *
+ * **The DOM case is the one with teeth.** The model case passes with the suppression removed as
+ * well: nothing recomputes the core row model until `ids()` asks for it, so the reset is
+ * scheduled *by* the very read being asserted and lands after it. Only a rendered grid
+ * recomputes on its own and then repaints from the reset state — which is why the browser saw
+ * this and a hook-only test could not.
  *
  * `findNeighbour` is what makes this non-trivial: rows deeper than the mover are stepped over
  * rather than treated as a boundary, so an expanded parent reaches the sibling *below its own
@@ -66,7 +81,7 @@ const features = tableFeatures({
 }) as unknown as GridFeatures
 
 describe('tree + row ordering', () => {
-	it('keeps the children rendered after the parent moves', () => {
+	it('keeps the children rendered after the parent moves', async () => {
 		const { result } = renderHook(() =>
 			useDataGrid<GridFeatures, Team>({
 				features,
@@ -87,12 +102,17 @@ describe('tree + row ordering', () => {
 		act(() => {
 			result.current.ordering.moveRow('1', 'down')
 		})
+		// The auto-reset this guards against is a queued microtask, so a synchronous assertion
+		// here would pass whether or not it is suppressed. Drain the queue first.
+		await act(async () => {
+			await Promise.resolve()
+		})
 		expect(ids()).toEqual(['2', '1', '11', '12'])
 	})
 })
 
 describe('tree + row ordering, through the DOM', () => {
-	it('keeps the children rendered after the parent moves', () => {
+	it('keeps the children rendered after the parent moves', async () => {
 		// Wrapper object, not a bare `let`: the same shape `renderGrid` uses, so the table can be
 		// read after render without a non-null assertion at every call site.
 		const ref: { table: DataTable<GridFeatures, Team> | null } = { table: null }
@@ -125,6 +145,9 @@ describe('tree + row ordering, through the DOM', () => {
 
 		act(() => {
 			live().ordering.moveRow('1', 'down')
+		})
+		await act(async () => {
+			await Promise.resolve()
 		})
 		expect(domIds()).toEqual(['2', '1', '11', '12'])
 	})
