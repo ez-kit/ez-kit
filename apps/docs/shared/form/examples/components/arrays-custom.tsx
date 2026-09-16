@@ -59,7 +59,17 @@ export function ArraysCustomExample() {
 										</Button>
 									</header>
 
-									<table className='w-full'>
+									{/*
+									 * `role='presentation'` because this table lays out the row's fields rather than
+									 * presenting tabular data — no `<th>` header names a column of data, so none is
+									 * claimed. Each cell stays a cell: the actions column wraps its buttons in an
+									 * inner `<div>` instead of putting `flex` on the `<td>` itself, which would take
+									 * the cell out of table layout.
+									 */}
+									<table
+										role='presentation'
+										className='w-full'
+									>
 										<tbody>
 											{items.map((item) => (
 												<tr key={item.key}>
@@ -75,21 +85,23 @@ export function ArraysCustomExample() {
 															label={`Qty ${String(item.index + 1)}`}
 														/>
 													</td>
-													<td className='flex gap-1'>
-														<Button
-															onClick={() => {
-																insert(item.index + 1, { ...NEW_LINE })
-															}}
-														>
-															{`Duplicate ${String(item.index + 1)}`}
-														</Button>
-														<Button onClick={item.remove}>{`Remove ${String(item.index + 1)}`}</Button>
-														<Button
-															onClick={item.moveUp}
-															disabled={item.isFirst}
-														>
-															{`Up ${String(item.index + 1)}`}
-														</Button>
+													<td>
+														<div className='flex gap-1'>
+															<Button
+																onClick={() => {
+																	insert(item.index + 1, { ...NEW_LINE })
+																}}
+															>
+																{`Duplicate ${String(item.index + 1)}`}
+															</Button>
+															<Button onClick={item.remove}>{`Remove ${String(item.index + 1)}`}</Button>
+															<Button
+																onClick={item.moveUp}
+																disabled={item.isFirst}
+															>
+																{`Up ${String(item.index + 1)}`}
+															</Button>
+														</div>
 													</td>
 												</tr>
 											))}
