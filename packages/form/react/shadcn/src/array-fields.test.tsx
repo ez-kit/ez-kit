@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCallback, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -142,6 +142,13 @@ function input(row: HTMLElement): HTMLInputElement {
 
 function values(): string[] {
 	return rows().map((row) => input(row).value)
+}
+
+/** First match, or a failure that names the problem — `[0]` alone is possibly-undefined here. */
+function first<T>(items: readonly T[]): T {
+	const [head] = items
+	if (head === undefined) throw new Error('expected at least one match')
+	return head
 }
 
 describe('@ez-kit/form-shadcn ArrayField', () => {
@@ -389,5 +396,93 @@ describe('@ez-kit/form-shadcn array slots, bound to the form', () => {
 		render(<BoundCase maxLength={3} />)
 
 		expect(screen.getByRole('button', { name: ADD_LABEL })).toBeDisabled()
+	})
+})
+
+/**
+ * `within(screen.getByRole('banner'))` — the brief's original query — assumes `<header>` maps
+ * to the `banner` landmark role. It does not once the `<header>` is nested inside a `<section>`:
+ * per the ARIA spec `banner` is scoped to a page-level header, so the query comes back empty.
+ * `aria-label='People'` on the header sidesteps that rather than weakening the assertion to a
+ * bare `getAllByRole('button')[0]` — the point of this case is that the add control sits in the
+ * section heading, a placement the composition (`form.ArrayField`) cannot reach.
+ */
+const CUSTOM_LAYOUT_HEADER_LABEL = 'People'
+
+/**
+ * The section heading, found by its `aria-label` rather than a role — a `<header>` nested
+ * inside a `<section>` carries no exposed ARIA role of its own (`banner` is reserved for a
+ * page-level header), so `getByRole` cannot reach it. `noUncheckedIndexedAccess` makes the
+ * null check on `querySelector` real, same as `row()` above.
+ */
+function customLayoutHeader(): HTMLElement {
+	const found = document.querySelector<HTMLElement>(`header[aria-label="${CUSTOM_LAYOUT_HEADER_LABEL}"]`)
+	if (found === null) throw new Error('expected the custom layout header')
+	return found
+}
+
+describe('the bare primitive through this kit', () => {
+	it('renders the kit row inside a form.Array with a custom layout', async () => {
+		const user = userEvent.setup()
+		const onSubmit = vi.fn()
+
+		render(
+			<Form
+				defaultValues={{ people: [{ name: 'Ada' }, { name: 'Grace' }] }}
+				onSubmit={({ value }) => {
+					onSubmit(value)
+				}}
+			>
+				{(form) => (
+					<>
+						<form.Array
+							name='people'
+							newItem={{ name: '' }}
+						>
+							{({ items, add, canAdd, Button }) => (
+								<section>
+									<header aria-label={CUSTOM_LAYOUT_HEADER_LABEL}>
+										<h3>{CUSTOM_LAYOUT_HEADER_LABEL}</h3>
+										<Button
+											onClick={() => {
+												add()
+											}}
+											disabled={!canAdd}
+										>
+											{ADD_LABEL}
+										</Button>
+									</header>
+									{items.map((item) => (
+										<item.Item
+											key={item.key}
+											removeLabel={REMOVE_LABEL}
+										>
+											<item.TextField
+												name='name'
+												label={`Name ${String(item.index)}`}
+											/>
+										</item.Item>
+									))}
+								</section>
+							)}
+						</form.Array>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		expect(document.querySelectorAll('[data-slot="form-array-item"]')).toHaveLength(2)
+
+		// The add control sits in the section heading — a placement the composition cannot reach.
+		await user.click(within(customLayoutHeader()).getByRole('button', { name: ADD_LABEL }))
+		expect(document.querySelectorAll('[data-slot="form-array-item"]')).toHaveLength(3)
+
+		await user.click(first(screen.getAllByRole('button', { name: REMOVE_LABEL })))
+		await user.click(screen.getByRole('button', { name: 'Save' }))
+
+		await waitFor(() => {
+			expect(onSubmit).toHaveBeenCalledWith({ people: [{ name: 'Grace' }, { name: '' }] })
+		})
 	})
 })
