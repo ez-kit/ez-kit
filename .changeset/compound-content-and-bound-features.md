@@ -17,7 +17,18 @@ cells; a body's receives `content` plus the six parts it composes (`creatingRow`
 `centerRows`, `pinnedBottomRows`, `loadMoreFooter`, `refetchOverlay`). Wrapping the default no
 longer means reimplementing it.
 
-One behaviour follows from this and is worth stating: a cell whose `children` are a **static** node
+**Breaking for a custom `<DataGrid.Body>`.** The loading skeleton, the empty and no-results
+fallbacks and the virtualized body are now checked **before** `children`, where they used to be
+checked after. Each renders a `<tbody>` of its own, so none can be handed over as content — and
+while `children` came first, supplying one silently switched all four off. That was survivable
+when a custom body was a rare, deliberate act; it is not, now that `content` makes "keep the
+built-in body and add a row" the recommended shape. A grid that does want its own body in one of
+those states turns that state off where it is configured (`fallbacks={{ loading: false }}`) and
+reads the state inside `children`. Virtualization is the exception and has no opt-out: it
+positions rows itself, so it owns the body, and `children` on a virtualized grid are ignored with
+a development warning.
+
+One more behaviour worth stating: a cell whose `children` are a **static** node
 now opts out of cell-editing entirely — no double-click-to-edit, no editor. It could not show one
 anyway, and letting it into the edit path made it take the edit state invisibly. The
 render-function form is unaffected: it receives the editor as `content` and decides where to put

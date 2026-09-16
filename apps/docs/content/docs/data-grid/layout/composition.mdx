@@ -129,12 +129,29 @@ or drop one:
 | `loadMoreFooter`   | The infinite-scroll sentinel or trigger.                             |
 | `refetchOverlay`   | The overlay shown during a background refetch, or `null`.            |
 
+Four branches are checked **before** your body, because each renders a `<tbody>` of its own rather
+than something that goes inside one: the **virtualized** body, and the **loading**, **empty** and
+**no-results** fallbacks. So a custom body does not replace the skeleton, and adding a summary row
+does not cost you the empty state.
+
+To own the body in one of those states, turn that state off where it is configured and read the
+state inside `children`:
+
+```tsx
+<DataGrid
+	fallbacks={{ loading: false }}
+	…
+>
+	<DataGrid.Table>
+		<DataGrid.Body>{({ content }) => (isPending ? <MySkeleton /> : content)}</DataGrid.Body>
+	</DataGrid.Table>
+</DataGrid>
+```
+
 <Callout type='warn'>
-	Four branches stay out of reach, because each replaces the whole `<tbody>` rather than filling one: the
-	**virtualized** body, and the **loading**, **empty** and **no-results** fallbacks. `children` is checked before all
-	four, so a custom body renders instead of them — including while the grid is loading or has nothing to show. A grid
-	that wants both gates its own `children` on `useDataGridState`, or keeps the built-in body and customises further
-	down at `<DataGrid.Row>`.
+	Virtualization is the exception, and it has no opt-out: it renders and positions the rows itself, so it owns the
+	body outright. `children` on a virtualized grid are **ignored**, with a development warning. Compose one level
+	further down, at `<DataGrid.Row>`, or drop virtualization for that grid.
 </Callout>
 
 ## Rows and cells: wrap the default instead of rebuilding it

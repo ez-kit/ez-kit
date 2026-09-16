@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useRef } from 'react'
 
 import { useGridComponents } from '../components-context'
 
@@ -20,6 +20,8 @@ import type { ExpandedRowProps } from '../use-data-grid'
 import type { DataGridRowProps } from './row'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ComponentType, ReactNode } from 'react'
+
+const IS_DEV = process.env.NODE_ENV !== 'production'
 
 /**
  * What a `<DataGrid.Body>` render function receives.
@@ -74,12 +76,16 @@ export type DataGridBodyProps<TRow extends object = ErasedRow> = {
 	 * ({@link DataGridBodyRenderArgs}) — so adding to the body no longer costs you the pinned
 	 * rows, the creating row, the expanded panels, the infinite footer and the refetch overlay.
 	 *
-	 * Four branches stay out of reach, because each replaces the whole `<tbody>` rather than
-	 * filling one: the **virtualized** body, and the **loading**, **empty** and **no-results**
-	 * fallbacks. `children` is checked before all four, so a custom body renders instead of
-	 * them — including while the grid is loading or has nothing to show. A grid that wants both
-	 * gates its own `children` on `useDataGridState`, or keeps the built-in body and customises
-	 * further down at `<DataGrid.Row>`.
+	 * Four branches are checked **first**, because each replaces the whole `<tbody>` rather than
+	 * filling one and so cannot be handed over as content: the **virtualized** body, and the
+	 * **loading**, **empty** and **no-results** fallbacks. A custom body therefore does not
+	 * render while one of those is showing, and does not switch it off.
+	 *
+	 * To own the body in one of those states, turn that state off where it is configured —
+	 * `fallbacks={{ loading: false }}` — and read the state inside `children` with
+	 * `useDataGridState`. Virtualization is the exception: it positions rows itself, so it owns
+	 * the body outright, and `children` on a virtualized grid are ignored with a development
+	 * warning.
 	 *
 	 * @example — replace the rows
 	 * ```tsx
@@ -115,6 +121,9 @@ export type DataGridBodyProps<TRow extends object = ErasedRow> = {
 
 export function Body<TRow extends object = ErasedRow>({ children }: DataGridBodyProps<TRow> = {}) {
 	const { rowVirtualizer } = useVirtualContext()
+	// Fired at most once per mounted body: the conflict it reports is a property of the grid's
+	// configuration, not of a render, so repeating it every frame would be noise.
+	const warnedVirtualRef = useRef(false)
 	const table = useDataGridTable<TRow>()
 	const { Tbody } = useGridComponents().core
 
@@ -254,16 +263,37 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		}
 	}
 
-	// Custom body: the consumer owns the whole `<tbody>`. Checked before every built-in
-	// branch (virtualization, fallbacks), because those replace the body rather than fill it
-	// — see the note on `children`. The parts are handed over, so owning the `<tbody>` no
-	// longer means giving up what goes in it.
-	if (children !== undefined) {
-		if (typeof children !== 'function') return <Tbody data-slot='tbody'>{children}</Tbody>
-		return <Tbody data-slot='tbody'>{children(buildArgs())}</Tbody>
+	/*
+	 * The four whole-`<tbody>` branches run **before** a custom body, not after.
+	 *
+	 * Each of them *is* a `<tbody>` rather than something that goes inside one, so none can be
+	 * handed to `children` as content — nesting a second one is invalid markup. Checking
+	 * `children` first, as this used to, therefore meant that supplying one silently switched
+	 * off the loading skeleton, both empty states and row virtualization. That was survivable
+	 * while a custom body was a rare, deliberate act; it stopped being survivable once
+	 * `content` made "keep the built-in body and add a row to it" the recommended shape, where
+	 * giving up four unrelated behaviours is nobody's intent.
+	 *
+	 * A grid that genuinely wants its own body in one of those states says so with the switch
+	 * that already exists — `fallbacks: { loading: false }` — and then reaches `children` with
+	 * the state to read off `useDataGridState`. So this order removes no capability; it moves
+	 * the opt-out from implicit to written down.
+	 *
+	 * Virtualization is the one that cannot be expressed either way: it positions rows itself,
+	 * so it has to own the body, and a custom one is dropped rather than merged. That is the
+	 * only silent loss left here, which is why it is the only one that warns.
+	 */
+	if (rowVirtualizer) {
+		if (IS_DEV && children !== undefined && !warnedVirtualRef.current) {
+			warnedVirtualRef.current = true
+			console.error(
+				'<DataGrid.Body> was given children on a virtualized grid. Row virtualization renders and ' +
+					'positions the rows itself, so it owns the body and the children are ignored. Drop the ' +
+					'virtualization option for this grid, or compose further down at <DataGrid.Row>.',
+			)
+		}
+		return <VirtualBody />
 	}
-
-	if (rowVirtualizer) return <VirtualBody />
 
 	const fallbacks = table.grid.fallbacks
 
@@ -281,6 +311,13 @@ export function Body<TRow extends object = ErasedRow>({ children }: DataGridBody
 		if (rawDataLength > 0 && fallbacks.noResults.enabled) {
 			return <NoResultsRow />
 		}
+	}
+
+	// Custom body: the consumer owns what goes inside the `<tbody>`, and is handed everything
+	// the built-in one would have put there.
+	if (children !== undefined) {
+		if (typeof children !== 'function') return <Tbody data-slot='tbody'>{children}</Tbody>
+		return <Tbody data-slot='tbody'>{children(buildArgs())}</Tbody>
 	}
 
 	return <Tbody data-slot='tbody'>{composeParts(buildParts())}</Tbody>
