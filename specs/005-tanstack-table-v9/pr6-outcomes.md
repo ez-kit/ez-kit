@@ -11,6 +11,7 @@ its territory was `AGENTS.md`, the packages' `README.md` files, `.changeset/` an
 | `e6c8ca51` | `docs(agents): record the v9 feature model and make the pinning rule logical`  |
 | `94e480aa` | `docs(data-grid): correct the v8-era API claims in the package READMEs`        |
 | `32ded1bc` | `chore(changeset): describe the TanStack Table v9 migration's consumer breaks` |
+| `36858126` | `docs(data-grid): stop claiming a bundle win the entry point does not deliver` |
 
 `.github/workflows/ci.yml` is **untouched** — see §5, where design §6's premise turns out to be
 false. The `size-limit` budgets are **deliberately left alone** — see §4.
@@ -215,6 +216,60 @@ selector forms (`:187-210`), and the three option layers are unchanged. The only
 there was nothing to correct, and per `pr2-outcomes.md` §1.1c it must not be added: `GridContext`
 has never shipped, so no released version names either spelling and there is nothing for a consumer
 to migrate.
+
+---
+
+## 3.5 Corrected after PR 4 reported: the bundle claim, and the mandatory three
+
+PR 4 measured the thing this migration is for and found it does not work yet, which falsified a
+claim the first draft of the changeset carried. Both the changeset and the four READMEs were
+rewritten before anything shipped; `36858126` is the correction.
+
+**The defect.** `features/entry.ts` declares `allDataGridFeatures` as a top-level
+`tableFeatures({ …stockFeatures, …, editingFeature, … })` call. A bundler cannot prove that call
+pure, so it retains every operand — every feature and every row model the package ships. Measured
+by PR 4 with esbuild against the built `core/dist/features/index.js`: importing `tableFeatures`
+alone bundles **46 360** bytes, `allDataGridFeatures` **46 365**, the whole surface **49 696**.
+Whichever single name you import, you get ~93% of everything. It is the same defect the store
+packages had with a bare `createStoreCache()`, one package over. `apps/docs/test/tree-shaking.test.ts`
+carries it as two `it.fails` cases so it cannot rot.
+
+**What changed here.** The changeset had written composition's purpose in bundle terms
+("a table pays for what it registers", `allDataGridFeatures` "documented as defeating the point").
+That is the design's intent, not today's behaviour, and shipping it would have meant a release note
+falsified by a test in the same commit. Both now separate the two halves explicitly: composition
+**governs behaviour** (an unregistered feature contributes no state slice, no API, no work), and it
+**does not yet make a bundle smaller**, with the numbers and the cause stated. AGENTS.md records the
+same, plus the instruction not to "clean up" the failing cases and not to write a bundle claim
+anywhere until they flip.
+
+**Still to do when core's fix lands:** re-measure, flip the two `it.fails` cases, and rewrite that
+paragraph in `.changeset/tanstack-table-v9.md` — it is written to be replaced. If the fix moves
+`allDataGridFeatures` to its own subpath, that is a **breaking import-path change** and needs its
+own line in the changeset; the team lead is routing the consumer list.
+
+**The mandatory base three.** PR 4 also found that the React adapter has an undocumented mandatory
+feature set: `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature`. Confirmed
+here against the source rather than taken on report — `utils/column-size-vars.ts:27,28,31,52` calls
+`header.getSize()`, `column.getSize()`, `table.getVisibleLeafColumns()` and `col.getIsPinned()`, and
+`utils/visual-column-order.ts:30-32` calls `getStartVisibleLeafColumns()` and its two siblings, all
+unconditionally on every render. Omitting one is a **render-time `TypeError`**, and core's
+`REQUIRED_FEATURE` guard cannot see it because the need is expressed by no config key. It is now in
+the changeset (a consumer composing their own set hits it immediately), in all three React-side
+READMEs, and in AGENTS.md as an open follow-up whose real fix is a core guard or an exported
+`baseGridFeatures`. Every example in those files opens its set with the three.
+
+**`extractState` cannot be called with a narrow feature set.** Reported by PR 4 and recorded here as
+a follow-up: it infers `TFeatures = TableFeatures` from `ExtractableTable`'s `store` property, so a
+`DataTable` built from a narrow set is a type error and the docs pass explicit type arguments to work
+around it. The signature wants looking at. Not fixable from PR 6's territory — it is
+`react/react/src/state/`.
+
+**One record correction.** PR 4 reported `core/README.md:38` still telling readers to drive state
+via `table.setState(...)`. That read predates `94e480aa`, which fixed exactly that line; the only
+occurrence of `setState` left in any data-grid README is the sentence saying it does not exist. The
+replacement names the per-slice setters and `table.store.state`, with no generic setter claimed,
+which is what v9 actually offers.
 
 ---
 
