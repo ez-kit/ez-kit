@@ -136,7 +136,7 @@ describe('every feature onChange survives useDataGrid', () => {
 		const onChange = vi.fn()
 		const table = grid({ pinning: { column: { onChange } } })
 		act(() => {
-			table.setColumnPinning({ left: ['name'], right: [] })
+			table.setColumnPinning({ start: ['name'], end: [] })
 		})
 		expect(onChange).toHaveBeenCalled()
 	})

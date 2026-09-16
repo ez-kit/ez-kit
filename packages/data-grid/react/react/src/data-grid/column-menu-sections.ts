@@ -13,8 +13,8 @@ export const ColumnActionId = {
 	SortAsc: 'sort-asc',
 	SortDesc: 'sort-desc',
 	ClearSort: 'clear-sort',
-	PinLeft: 'pin-left',
-	PinRight: 'pin-right',
+	PinStart: 'pin-start',
+	PinEnd: 'pin-end',
 	Unpin: 'unpin',
 	Hide: 'hide',
 	MoveStart: 'move-start',
@@ -114,45 +114,29 @@ export function buildColumnMenuSections(
 
 	const pin: GridMenuSection = { id: PIN_SECTION, label: messages.pin, items: [] }
 	/*
-	 * The one place in this package still on the **pre-rename** column-pinning vocabulary, and
-	 * the reason it is suppressed rather than fixed.
-	 *
-	 * PR 1 renamed core's side vocabulary to `start` / `end` — `ColumnPinSide.Left` / `.Right`,
-	 * `GridMenuIcon.PinLeft` / `.PinRight` and `messages.columnMenu.pinLeft` / `pinRight` no
-	 * longer exist, so the reads below are `TS2339` and these two rules then fire on the
-	 * error-typed values that result. They are one symptom, not six defects.
-	 *
-	 * Doing the rename here is deliberately **out of scope**: the ids and icon keys these entries
-	 * carry are what both UI kits' `blocks/icons.tsx` map and what the RTL e2e cases address, and
-	 * neither kit may be touched by this PR. Renaming one half would leave the kits broken in a
-	 * *new* way on top of the way they are already broken, so the React adapter's pinning half
-	 * lands with the kits, the CSS variables, the registry payload and the e2e specs in one pass.
-	 *
-	 * The suppression is scoped to this block and to exactly the two rules the type error
-	 * produces, and it expires by itself: ESLint reports an unused disable directive, `lint` runs
-	 * with `--max-warnings=0`, so the moment the rename lands this comment fails the build until
-	 * it is deleted. The `TS2339`s underneath are **not** suppressed — `typecheck` still names
-	 * all eight.
+	 * The side vocabulary is logical (`start` / `end`), not physical: a pinned column sticks to
+	 * the inline-start or inline-end edge, and which physical edge that is flips under RTL. The
+	 * English default labels stay "Pin Left" / "Pin Right" — same convention as
+	 * `moveStart: 'Move left'`: the key names the axis, the wording names what an LTR reader sees.
 	 */
-	/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
 	if (canPin) {
-		if (isPinned !== ColumnPinSide.Left) {
+		if (isPinned !== ColumnPinSide.Start) {
 			pin.items.push({
-				id: ColumnActionId.PinLeft,
-				label: messages.pinLeft,
-				icon: GridMenuIcon.PinLeft,
+				id: ColumnActionId.PinStart,
+				label: messages.pinStart,
+				icon: GridMenuIcon.PinStart,
 				onAction: () => {
-					column.pin(ColumnPinSide.Left)
+					column.pin(ColumnPinSide.Start)
 				},
 			})
 		}
-		if (isPinned !== ColumnPinSide.Right) {
+		if (isPinned !== ColumnPinSide.End) {
 			pin.items.push({
-				id: ColumnActionId.PinRight,
-				label: messages.pinRight,
-				icon: GridMenuIcon.PinRight,
+				id: ColumnActionId.PinEnd,
+				label: messages.pinEnd,
+				icon: GridMenuIcon.PinEnd,
 				onAction: () => {
-					column.pin(ColumnPinSide.Right)
+					column.pin(ColumnPinSide.End)
 				},
 			})
 		}
@@ -167,8 +151,6 @@ export function buildColumnMenuSections(
 			})
 		}
 	}
-
-	/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
 
 	const visibility: GridMenuSection = { id: VISIBILITY_SECTION, items: [] }
 	if (canHide) {
