@@ -791,12 +791,28 @@ export type TableConfig<TFeatures extends TableFeatures, TRow extends object> = 
 	 *
 	 * Required, and deliberately without a default. The default could only be the all-in set,
 	 * which is what every consumer who never thought about it would then ship — and the point
-	 * of composing a set is that a table pays for what it registers. Requiring it is also what
-	 * turns `sorting: {…}` without `rowSortingFeature` from a silent no-op into a compile
-	 * error: a config field exists on this type only when its feature is in the set.
+	 * of composing a set is that a table pays for what it registers.
 	 *
 	 * Registering a feature does not switch it on. That stays the config's job, so a shared
 	 * grid with a wide set can turn half of it off per use site.
+	 *
+	 * **Configuring a feature the set omits is not a compile error.** Every field below is
+	 * declared unconditionally — `sorting?: boolean | SortingConfig` and its siblings — so
+	 * `TFeatures` parameterises this type without gating any key on it, and
+	 * `{ features: tableFeatures({}), sorting: { multi: { max: 3 } } }` type-checks clean. What
+	 * such a config produces is a grid with no `sorting` state slice and no sorting API: the
+	 * option is a no-op. The **only** thing that catches it is the development-mode
+	 * `REQUIRED_FEATURE` guard in `create-table/create-table-options.ts`, which warns at
+	 * construction; there is no backstop behind it.
+	 *
+	 * An earlier revision of this comment claimed the opposite, and the claim was load-bearing
+	 * enough to be worth naming: it described the guard as a safety net under a type-level check
+	 * that does not exist. Making the gate real is possible — `tableFeatures()` returns what it
+	 * was given, so `typeof features` carries the registered keys, and this type could intersect
+	 * a conditional block per feature — but it costs the named `TS2561` diagnostic the guard
+	 * catalogue is built around, and `apps/docs/test/docs-option-names.test.ts` cannot resolve
+	 * properties through a conditional intersection, so its 430-name coverage would go with it.
+	 * It is deliberately a separate piece of work, sized against that docs test.
 	 */
 	features: TFeatures
 	data: TRow[]

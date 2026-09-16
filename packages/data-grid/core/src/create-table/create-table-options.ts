@@ -71,10 +71,19 @@ type EmptyOption = Record<string, never>
 /**
  * Config fields that only do anything when their feature is in the table's feature set.
  *
- * `sorting: {…}` without `rowSortingFeature` is already a compile error — a config field exists
- * on {@link TableConfig} only when its feature is registered — but only where the call site is
- * typed. A config assembled through a cast or read from JSON reaches here intact and would
- * otherwise be a silent no-op, so it is worth one development check.
+ * **This map is the only thing that catches such a field, and nothing stands behind it.**
+ * {@link TableConfig} declares `sorting?: boolean | SortingConfig` and every sibling
+ * unconditionally: `TFeatures` parameterises the type but gates no key on it, so
+ * `{ features: tableFeatures({}), sorting: { multi: { max: 3 } } }` type-checks clean and produces
+ * a grid with no `sorting` slice and no sorting API. Under v9 that is a silent no-op — the feature
+ * contributes nothing at all — which is precisely why the check below is worth running on every
+ * development construction rather than only on configs that arrived past the type system.
+ *
+ * An earlier revision of this comment said the opposite: that the field was "already a compile
+ * error … but only where the call site is typed", which cast this guard as a backstop for a
+ * type-level gate that has never existed. Worth recording rather than quietly fixing, because the
+ * comment reads as authoritative and is the kind PR 4 documents the public API from. See the note
+ * on {@link TableConfig.features} for why building the real gate is a separate piece of work.
  *
  * `resizing` needs two features, `columnResizingFeature` and `columnSizingFeature`, but upstream
  * already turns the missing prerequisite into a string literal type at the key

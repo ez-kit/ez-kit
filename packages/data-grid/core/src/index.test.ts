@@ -1,9 +1,10 @@
 import { tableFeatures } from '@tanstack/table-core'
 import { describe, expect, it } from 'vitest'
 
-import { creatingFeature } from './features/entry'
+import { creatingFeature, deletingFeature } from './features/entry'
+import { ACTIONS_COLUMN_ID } from './system-columns'
 
-import { createTable, createColumns } from './index'
+import { createTable, createColumns, createTableOptions } from './index'
 
 type User = {
 	id: number
@@ -104,6 +105,53 @@ describe('@ez-kit/data-grid-core', () => {
 		table.creating.start()
 		expect(fired).toBe(true)
 		expect(table.store.state).not.toBe(before)
+	})
+})
+
+// D3's hybrid packaging: core ships both a constructor and a pure options resolver, and the
+// second is what a framework adapter needs — `useDataGrid` hands the options to `useTable` rather
+// than calling `createTable` from inside a hook. It was internal until the whole-branch review
+// found it on neither entry point.
+describe('createTableOptions is part of the public surface', () => {
+	it('is exported from the main entry and resolves a config without constructing a table', () => {
+		const { options, grid, deferred, bindStateHandlers } = createTableOptions({
+			features: NONE,
+			data: USERS,
+			columns: createColumns<User>([{ accessorKey: 'name' }]),
+		})
+
+		// The four members PR 2 needs, and the property that makes it worth exporting at all:
+		// it resolved the config and built no table.
+		expect(options.data).toBe(USERS)
+		expect(grid.direction).toBeDefined()
+		expect(deferred).toBe(false)
+		expect(typeof bindStateHandlers).toBe('function')
+		expect(options).not.toHaveProperty('getRowModel')
+	})
+
+	it('resolves the same table `createTable` would have built — the premise of handing them on', () => {
+		// The drift this guards is `createTable` ceasing to route through `createTableOptions`, or
+		// resolving something differently on the way. So the config exercises *resolution* rather
+		// than pass-through: `deleting` mounts the `__actions__` system column, which the resolver
+		// synthesises, and `getRowId` is left out so the derived default is compared by behaviour
+		// rather than by reference.
+		const config = {
+			features: tableFeatures({ deletingFeature }),
+			data: USERS,
+			columns: createColumns<User>([{ accessorKey: 'name' }]),
+			deleting: { onDelete: () => undefined },
+		}
+		const { options } = createTableOptions(config)
+		const direct = createTable(config)
+
+		expect(options.columns.map((c) => c.id)).toEqual(direct.options.columns.map((c) => c.id))
+		expect(options.columns.some((c) => c.id === ACTIONS_COLUMN_ID)).toBe(true)
+		// Against the ids the constructed table actually uses, rather than against the other
+		// `getRowId` reference: this is the observable the adapter depends on, and it holds for
+		// every row rather than for one sample that could agree by coincidence.
+		expect(direct.getRowModel().rows.map((row) => row.id)).toEqual(
+			USERS.map((row, index) => options.getRowId(row, index)),
+		)
 	})
 })
 
