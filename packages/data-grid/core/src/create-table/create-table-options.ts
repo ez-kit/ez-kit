@@ -117,7 +117,7 @@ type EmptyOption = Record<string, never>
  * member does not exist and the bar throws on first click, so the guard fires on exactly the
  * configurations that are broken.
  *
- * **The four catalogues were considered for consolidation into one `{ option, member, askedBy }`
+ * **The five catalogues were considered for consolidation into one `{ option, member, askedBy }`
  * list, and deliberately kept apart.** The proposal was to move every predicate to the guard site
  * under `satisfies Record<Key, boolean>` — the mechanism {@link CONDITIONAL_REQUIRED_FEATURES}
  * already uses, which makes a missing predicate a `TS1360`. What it would cost is this map's own,
@@ -133,8 +133,8 @@ type EmptyOption = Record<string, never>
  * Two smaller losses on the other side: {@link REQUIRED_FACETED_FEATURES} emits **one** sentence
  * naming every missing member, which three sibling entries would turn into three warnings for one
  * mistake; and {@link FILTER_FNS_SLOT}'s message names *which axis* asked, assembled from two
- * independent conditions, which a static `option` string cannot say. The three guards also run at
- * three different points in this function, each after the locals its predicate needs.
+ * independent conditions, which a static `option` string cannot say. The four guards also run at
+ * four different points in this function, each after the locals its predicate needs.
  *
  * So the shapes differ because the checks differ. Re-proposing the merge needs a way to keep the
  * key-is-the-field property, not a new argument for uniformity.
@@ -230,6 +230,37 @@ const REQUIRED_FACETED_FEATURES = ['columnFacetingFeature', 'facetedRowModel', '
  * same defect `sortFns` had — a registry sitting where v9 never reads it — one axis over.
  */
 const FILTER_FNS_SLOT = 'filterFns'
+
+/**
+ * The feature-set slot v9 resolves a **named** comparator through.
+ *
+ * The sorting mirror of {@link FILTER_FNS_SLOT}, and the guard that would have caught a real
+ * defect: 43 docs examples sorted **lexicographically instead of alphanumerically** because their
+ * feature sets omitted `sortFns`, and it took a 10 000-row example to make it visible — below ~10
+ * rows the two orders agree.
+ *
+ * One condition rather than two, but the condition is wider than "a column named a comparator".
+ * `column_getSortFn` takes an inline `sortFn` as-is and resolves **everything else** through
+ * `table._rowModelFns.sortFns`, `'auto'` included — and a column with no `sorting.fn` *is* `'auto'`,
+ * which picks a built-in name (`alphanumeric` / `datetime` / `text`) and looks that up in the same
+ * slot. So a **plain accessor column needs the registry exactly as much as one that names a
+ * comparator**, which is why the condition is "sorting is on and some sortable column did not
+ * supply a function", not "some column named a sort function". With the slot missing every one of
+ * those falls back to `sortFn_basic` — a plain string compare — silently.
+ *
+ * `sorting.fns` is folded into the feature set further down, so a name **that registry answers**
+ * resolves whether or not the consumer registered `sortFns` themselves. Such a column is not
+ * counted, or a table whose every column names one of its own comparators would be warned at for
+ * nothing.
+ *
+ * **There is deliberately no `aggregationFns` sibling.** `TableConfig` has no `grouping` option and
+ * `ColumnDef` no `aggregationFn` — `columnGroupingFeature` and `rowAggregationFeature` are
+ * reachable only through upstream's `constructTable`, never through this function — so nothing in
+ * a config can ask for an aggregation, and a guard here would have no condition to test.
+ * `src/features/entry.test.ts` records the same boundary from the other side. If grouping ever
+ * gains a config key, this is the shape its guard takes.
+ */
+const SORT_FNS_SLOT = 'sortFns'
 
 /**
  * Warn about a column seeded into a state the user can never leave.
@@ -691,6 +722,39 @@ export function createTableOptions<TFeatures extends TableFeatures, TRow extends
 				`[data-grid] ${axes.join(' and ')} resolve${axes.length === 1 ? 's' : ''} a filter function by ` +
 					'name, but `filterFns` is not in `features` — the name resolves to nothing and no row is ever ' +
 					'filtered out. Add `filterFns` to your `tableFeatures({ … })` call.',
+			)
+		}
+	}
+
+	// ── named comparators vs. the `sortFns` slot ─────────────────────────────
+	// `manual: true` is the one excluded configuration: the server sorts, TanStack's sorted row
+	// model passes its input straight through, and `column_getSortFn` is never reached — so a
+	// manual-sorting table resolves no comparator and needs no registry. Warning at it would be
+	// telling the consumer to register something their table cannot read.
+	if (IS_DEV && hasSorting && sortingCfg?.manual !== true) {
+		// Names `sorting.fns` answers resolve without the consumer registering the slot, because
+		// the merge further down puts that registry *into* the feature set. Asked before the
+		// merge, so this reads the consumer's own registry rather than the merged result.
+		const ownSortFns = sortingCfg?.fns
+
+		// Group columns hold no values and are never sorted, so only leaves are asked — and a
+		// leaf that opted out with `sorting: false` resolves no comparator at all.
+		const needsBySort = mappedUserColumns.some(function check(col): boolean {
+			const children = (col as { columns?: unknown[] }).columns
+			if (children !== undefined) return children.some(check as (c: unknown) => boolean)
+			if ((col as { enableSorting?: boolean }).enableSorting === false) return false
+			const fn = (col as { sortFn?: unknown }).sortFn
+			if (typeof fn === 'function') return false
+			// `undefined` is TanStack's `'auto'`, which is a name too — see SORT_FNS_SLOT.
+			return typeof fn === 'string' ? ownSortFns?.[fn] === undefined : true
+		})
+
+		if (needsBySort && !(SORT_FNS_SLOT in registeredFeatures)) {
+			console.warn(
+				'[data-grid] `sorting` is configured, but `sortFns` is not in `features` — every comparator ' +
+					'is resolved by name (a column with no `sorting.fn` resolves `auto`, which is one too), so ' +
+					'the name resolves to nothing and every column falls back to a plain string compare: ' +
+					'`item10` sorts before `item2`. Add `sortFns` to your `tableFeatures({ … })` call.',
 			)
 		}
 	}

@@ -53,8 +53,14 @@ export {
  * Re-exported because a consumer composing a set has no other way to reach them through this
  * entry point, and leaving one out is silent in the worst way — the name resolves to nothing, the
  * stage runs, and the grid looks like a filter that matches everything or a sort that ignores the
- * comparator it was given. `createTable` warns about the `filterFns` case; the other two it
- * cannot see.
+ * comparator it was given. `createTable` warns about the `filterFns` and `sortFns` cases.
+ *
+ * `aggregationFns` it cannot see, and this is a property of the config rather than an omission:
+ * `TableConfig` has no `grouping` option and `ColumnDef` no `aggregationFn`, so nothing a consumer
+ * writes reaches `createTable` asking for an aggregation. `columnGroupingFeature` and
+ * `rowAggregationFeature` arrive with the all-in set and are exercisable only through upstream's
+ * own `constructTable` — see the last case in `entry.test.ts`. A guard would have no condition to
+ * test until grouping gains a config key.
  *
  * All three are marked `@deprecated` upstream in favour of registering the individual
  * `filterFn_*` / `sortFn_*` / `aggregationFn_*` members a table actually uses, for a smaller

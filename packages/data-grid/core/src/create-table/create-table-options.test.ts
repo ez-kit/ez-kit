@@ -10,6 +10,7 @@ import {
 	globalFilteringFeature,
 	rowPaginationFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@tanstack/table-core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -42,11 +43,16 @@ const columns = createColumns<Row>([{ accessorKey: 'name' }, { accessorKey: 'age
 
 // Carries pagination as well as sorting so the cases below that configure `pagination` do not
 // trip the registered-vs-configured guard and spray warnings through the run.
+//
+// `sortFns` rides along for the reason `filterFns` does below: a sorting table genuinely needs it
+// — without it every column's `'auto'` falls back to a plain string compare — so leaving it out
+// would make these cases assert two warnings where they mean to assert one.
 const features = tableFeatures({
 	rowSortingFeature,
 	rowPaginationFeature,
 	sortedRowModel: createSortedRowModel(),
 	paginatedRowModel: createPaginatedRowModel(),
+	sortFns,
 })
 
 /**
@@ -147,9 +153,13 @@ describe('createTableOptions', () => {
 	})
 
 	it('puts the named comparator registry in the feature set, not in the options bag', () => {
+		// A set of its own, without `sortFns`, so the merged result is exactly what `sorting.fns`
+		// contributed and the last assertion has something to be about. The shared `features`
+		// fixture carries the stock bag.
+		const noSortFns = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
 		const byLength = vi.fn()
 		const { options } = createTableOptions({
-			features,
+			features: noSortFns,
 			data: rows,
 			columns,
 			sorting: { fns: { byLength } },
@@ -158,7 +168,7 @@ describe('createTableOptions', () => {
 		expect(options).not.toHaveProperty('sortFns')
 		expect((options.features as { sortFns?: Record<string, unknown> }).sortFns).toEqual({ byLength })
 		// the consumer's own set is left untouched
-		expect(features).not.toHaveProperty('sortFns')
+		expect(noSortFns).not.toHaveProperty('sortFns')
 	})
 
 	it('seeds pagination with the default page size, in `options.initialState`', () => {
@@ -391,13 +401,113 @@ describe('createTableOptions', () => {
 			expect(warnings()).toHaveLength(0)
 		})
 
+		// `sortFns` is the fourth guarded slot, and the sorting mirror of `filterFns`. Its
+		// condition is wider than "a column named a comparator": `'auto'` — what a column with no
+		// `sorting.fn` carries — is a name too, and resolves through the same slot. A 10 000-row
+		// example is what made the missing registry visible; below ~10 rows a plain string compare
+		// and `alphanumeric` agree.
+		it('warns when a plain accessor column sorts and `sortFns` is missing', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+			createTableOptions({ features: noFns, data: rows, columns, sorting: true })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`sorting` is configured')
+			expect(warnings()[0]).toContain('`sortFns` is not in `features`')
+			expect(warnings()[0]).toContain('plain string compare')
+		})
+
+		it('warns when a column names a comparator and `sortFns` is missing', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+			const named = createColumns<Row>([{ accessorKey: 'name', sorting: { fn: 'alphanumeric' } }])
+			createTableOptions({ features: noFns, data: rows, columns: named, sorting: true })
+
+			expect(warnings()).toHaveLength(1)
+			expect(warnings()[0]).toContain('`sortFns` is not in `features`')
+		})
+
+		it('stays quiet when every sortable column was given an inline comparator', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			// An inline function is taken as-is by `column_getSortFn`, so no name is resolved and
+			// the slot is genuinely not needed.
+			const noFns = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+			const inline = createColumns<Row>([
+				{ accessorKey: 'name', sorting: { fn: () => 0 } },
+				{ accessorKey: 'age', sorting: { fn: () => 0 } },
+			])
+			createTableOptions({ features: noFns, data: rows, columns: inline, sorting: true })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('stays quiet when `sorting.fns` answers every name the columns use', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			// `sorting.fns` is merged into the feature set, so these names resolve without the
+			// consumer registering `sortFns` themselves.
+			const noFns = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+			const named = createColumns<Row>([
+				{ accessorKey: 'name', sorting: { fn: 'byLength' } },
+				{ accessorKey: 'age', sorting: { fn: 'byLength' } },
+			])
+			createTableOptions({
+				features: noFns,
+				data: rows,
+				columns: named,
+				sorting: { fns: { byLength: vi.fn() } },
+			})
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('stays quiet when every column opted out of sorting', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+			const unsortable = createColumns<Row>([
+				{ accessorKey: 'name', sorting: false },
+				{ accessorKey: 'age', sorting: false },
+			])
+			createTableOptions({ features: noFns, data: rows, columns: unsortable, sorting: true })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('stays quiet under manual sorting, which resolves no comparator at all', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			const noFns = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+			createTableOptions({ features: noFns, data: rows, columns, sorting: { manual: true } })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		it('stays quiet when `sortFns` is registered', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+			createTableOptions({ features, data: rows, columns, sorting: true })
+
+			expect(warnings()).toHaveLength(0)
+		})
+
+		// The deliberate gap: `aggregationFns` gets no guard because nothing in `TableConfig` can
+		// ask for an aggregation — see the `SORT_FNS_SLOT` docblock and `features/entry.test.ts`.
+
 		it('still warns for a top-level option whose feature is absent', () => {
 			vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
 			createTableOptions({ features: filteringOnly, data: rows, columns, sorting: true })
 
-			expect(warnings()).toHaveLength(1)
+			// Two independent gaps, two sentences: the feature that would sort is absent, and so
+			// is the registry the comparators resolve through. Neither implies the other — a set
+			// can carry `rowSortingFeature` without `sortFns`, which is the commoner mistake.
+			expect(warnings()).toHaveLength(2)
 			expect(warnings()[0]).toContain('`sorting` is configured, but `rowSortingFeature` is not in `features`')
+			expect(warnings()[1]).toContain('`sortFns` is not in `features`')
 		})
 
 		// ── the grid's own features ──────────────────────────────────────────
@@ -464,6 +574,7 @@ describe('createTableOptions', () => {
 				rowSortingFeature,
 				rowPaginationFeature,
 				sortedRowModel: createSortedRowModel(),
+				sortFns,
 				// No `paginatedRowModel`: infinite mode shows every accumulated row, and
 				// registering the slice-to-one-page model beside it trips a different,
 				// pre-existing warning. Leaving it out is both correct for the mode and what lets

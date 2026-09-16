@@ -18,6 +18,7 @@ import {
 	rowPinningFeature,
 	rowSelectionFeature,
 	rowSortingFeature,
+	sortFns,
 	tableFeatures,
 } from '@tanstack/table-core'
 import { describe, expect, it, vi } from 'vitest'
@@ -56,7 +57,10 @@ const COLUMNS = createColumns<Row>([
 /** Nothing registered. The baseline every "feature off" case is written against. */
 const NONE = tableFeatures({})
 
-const SORTING = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() })
+// `sortFns` is the same story one axis over: v9 resolves every comparator by name, the `'auto'`
+// a column with no `sorting.fn` carries included, so a sorting set without it leaves every column
+// falling back to a plain string compare.
+const SORTING = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel(), sortFns })
 
 // `filterFns` is the registry v9 resolves a named filter function through — the `'auto'` default
 // a mapped column carries, `'includesString'`, and every operator's `filterFn` id. Registering the
