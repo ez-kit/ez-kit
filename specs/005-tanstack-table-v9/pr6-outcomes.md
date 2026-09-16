@@ -259,7 +259,32 @@ with it. Re-measured against the built entry, unminified, workspace-only resolut
 
 `editingFeature` at 17 163 is quoted beside the others deliberately: it is a feature with a real
 implementation behind it, and a note that cited only the four-figure rows would be selecting for
-the flattering ones.
+the flattering ones. The all-in set still costs what it costs — 45 288 through `./features/all` —
+which is inherent, and the point of the split is that reaching it is now a choice.
+
+**These numbers were re-measured here rather than transcribed**, with the same esbuild harness
+`tree-shaking.test.ts` uses (built entry, `format: 'esm'`, workspace-only resolution, unminified),
+and they reproduce the fix agent's table exactly: 994 / 998 / 1 035 / 17 163. **One discrepancy to
+resolve, in core's own file:** `packages/data-grid/core/src/features/all.ts`'s header docblock
+claims `tableFeatures` bundles **1 742** bytes and a sorting-only set **1 784**. Measured on this
+tree they are 994 and 1 035. The docblock's argument is unaffected — both figures make the same
+point against ~46 kB — but the numbers are wrong and that file is core's, not PR 6's. Routed to the
+team lead.
+
+Two findings from the fix worth not re-arguing, both now in AGENTS.md: **`/* @__PURE__ */` was not
+a weaker fix, it was not a fix** (annotating the call moved 46 360 → 46 376 bytes, annotating it and
+every `create*RowModel()` inside → 46 504; esbuild drops an annotated call with a plain object
+argument and keeps it when the object spreads, because a spread may run getters), and **`size-limit`
+cannot see this class of defect at all** — it read the `features` entry at 4.5 kB before and after,
+because it measures an entry point whole. The byte table is the guarantee, not the budget, which is
+why `tree-shaking.test.ts` sits beside `size-limit` instead of inside it.
+
+**On "still a major for core either way":** that phrase in the fix agent's report means a
+major-severity **break**, not a `major` changeset bump. The bump is and stays `minor` — core is
+`0.x`, where `major` publishes `1.0.0` and would declare a separately planned milestone by
+accident. `changeset status` was re-run after every edit in this PR and reports the data-grid
+packages at `minor` throughout; the only pending majors are the store packages' own deliberate 1.0
+cut.
 
 The restored wording keeps the two halves distinct, because both are now true and they are
 different guarantees: composition governs **behaviour** (no state slice, no API, no work) **and**

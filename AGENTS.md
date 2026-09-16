@@ -40,8 +40,22 @@ bytes against 49 696 for the whole surface — which cancelled the thing the mig
 the same defect the store packages had with a bare `createStoreCache()`, one package over. Split
 out, the same imports cost 994 bytes for `tableFeatures`, 998 for `rowSortingFeature`, 1 035 for a
 sorting-only set, and 17 163 for `editingFeature`, which is what a feature with a real
-implementation behind it weighs. `apps/docs/test/tree-shaking.test.ts` holds the measurement, so a
+implementation behind it weighs. The all-in set still costs what it costs — 45 288 through its own
+path — but that is now a choice a consumer makes by writing the import, which is what design §1
+always said it should be. `apps/docs/test/tree-shaking.test.ts` holds the measurement, so a
 regression fails there rather than in someone's bundle.
+
+Two things were established while fixing it, both by measurement, and neither should be re-argued.
+**`/* @__PURE__ */` is not a weaker fix here — it is not a fix.** Annotating the call moved the
+bundle from 46 360 to 46 376 bytes, and annotating it plus every `create*RowModel()` inside it to
+46 504: both cost the comment bytes and saved nothing. A one-module probe showed why — esbuild
+drops an annotated call with a plain object argument and keeps the identical call when the object
+**spreads**, because a spread may run getters. So the annotation is the right tool for a bare
+`createStoreCache()` and the wrong one for this. **And `size-limit` cannot see this class of defect
+at all**: it read the `features` entry at 4.5 kB before the fix and 4.5 kB after, because it
+measures an entry point whole rather than what a partial import drags along. The byte table is the
+guarantee here, not the budget — which is exactly why `tree-shaking.test.ts` exists beside
+`size-limit` rather than being folded into it.
 
 One more thing about a composed set is easy to mis-read as a bug:
 **`columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are mandatory for the
