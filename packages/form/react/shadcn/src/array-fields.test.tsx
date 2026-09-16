@@ -485,4 +485,37 @@ describe('the bare primitive through this kit', () => {
 			expect(onSubmit).toHaveBeenCalledWith({ people: [{ name: 'Grace' }, { name: '' }] })
 		})
 	})
+
+	it('marks a scope button as a plain form button, leaving the submit marker to the submit', () => {
+		render(
+			<Form defaultValues={{ people: [{ name: 'Ada' }] }}>
+				{(form) => (
+					<>
+						<form.Array
+							name='people'
+							newItem={{ name: '' }}
+						>
+							{({ add, Button }) => (
+								<Button
+									onClick={() => {
+										add()
+									}}
+								>
+									{ADD_LABEL}
+								</Button>
+							)}
+						</form.Array>
+						<form.SubmitButton>Save</form.SubmitButton>
+					</>
+				)}
+			</Form>,
+		)
+
+		// These files are the shadcn registry payload — `npx shadcn add` copies them verbatim,
+		// so a consumer styling `[data-slot='form-submit']` must not be handed every add,
+		// remove, duplicate and reorder control the array scope draws.
+		expect(screen.getByRole('button', { name: ADD_LABEL })).toHaveAttribute('data-slot', 'form-button')
+		expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('data-slot', 'form-submit')
+		expect(document.querySelectorAll('[data-slot="form-submit"]')).toHaveLength(1)
+	})
 })

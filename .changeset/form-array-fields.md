@@ -75,8 +75,7 @@ in a table, a remove control folded into a card heading, and so on):
 `ArrayField`) as plain data, since a bare primitive has no frame of its own to render them on;
 likewise `errors` and `invalid` carry the list's own validation failures, but **nothing renders
 them for you** — a `minLength` failure still blocks submit even when the render prop doesn't read
-`errors`. The docs call this out at length; this note is here so it isn't missed by anyone reading
-only the changelog.
+`errors`. https://ez-kit-docs.vercel.app/docs/form/arrays calls this out at length.
 
 **`ButtonProps` gained an optional `onClick`.** The kit's generic button used to be only the
 submit button, which fires through the surrounding `<form>`'s submit event and takes no handler —
@@ -85,6 +84,15 @@ type level and adds no `FormComponents` key, but it is a real behavioural gap fo
 this repo: **implement `Button` without honouring `onClick` and it silently becomes a dead
 control**, something the type system cannot catch. The shadcn and HeroUI kits already wire it
 through.
+
+**The submit marker moved off the non-submit buttons.** Both kits stamped every `Button` as the
+form's submit — `data-slot='form-submit'` in shadcn, `data-form-submit` in HeroUI — which was
+accurate while the only `Button` was the submit button. Now that the array scope hands the same
+component out for add, remove, duplicate and reorder controls, the marker is stamped only when the
+button's `type` is `'submit'`; anything else gets `data-slot='form-button'` / `data-form-button`.
+CSS or a test keying on the submit marker to reach a scope button needs to switch to the new one.
+This matters beyond this repo for shadcn: those files ship as the registry payload `npx shadcn add`
+copies into a project, so a consumer who already ran it has the old spelling in their own tree.
 
 **Breaking for a kit outside this repo.** `FormComponents` gains two required slots,
 `ArrayField` and `ArrayItem`, so a kit that wrote `satisfies FormComponents` must implement
