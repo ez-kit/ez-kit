@@ -1,4 +1,4 @@
-import { createArrayField } from './fields/array-field'
+import { createArray, createArrayField } from './fields/array-field'
 import { createCheckboxField } from './fields/checkbox-field'
 import { createCheckboxGroupField } from './fields/checkbox-group-field'
 import { createDateField } from './fields/date-field'
@@ -67,9 +67,11 @@ export function buildFieldComponents<TFormData>(
 		// Replaced below: an array's entries render the *same* field set, scoped to the entry, so
 		// the component needs the finished record — including, for a nested array, itself.
 		ArrayField: () => null,
+		Array: () => null,
 	}
 
 	fieldComponents.ArrayField = createArrayField<TFormData>(form, components, fieldComponents)
+	fieldComponents.Array = createArray<TFormData>(form, components, fieldComponents)
 
 	return fieldComponents
 }

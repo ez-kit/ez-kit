@@ -5,7 +5,7 @@ import { fieldValidators } from '../field-validate'
 
 import type { BindableForm, BoundFieldApi } from '../bindable-form'
 import type { ArrayFieldRenderProps, FormComponents } from '../contract'
-import type { ArrayFieldProps, ArrayScope, FormFieldComponents } from '../field-props'
+import type { ArrayFieldProps, ArrayProps, ArrayScope, FormFieldComponents } from '../field-props'
 import type { FieldValidateProps } from '../field-validate'
 import type { ReactNode } from 'react'
 
@@ -166,6 +166,60 @@ export function createArrayField<TFormData>(
 			</form.AppField>
 		)
 	} as FormFieldComponents<TFormData>['ArrayField']
+}
+
+/**
+ * Build the `Array` component bound to one form instance — the headless counterpart of
+ * `ArrayField`.
+ *
+ * It shares `ArrayBody` with `ArrayField` but supplies no presentational props (`label`,
+ * `addLabel`, …) and renders no kit chrome around the entries: `render` hands the scope
+ * straight to the author's `children`, so the only DOM `form.Array` produces is whatever the
+ * children themselves render. Scoping the entries' fields is `ArrayBody`'s job, not this one's —
+ * see the module doc comment on `scopeComponent`.
+ */
+export function createArray<TFormData>(
+	form: BindableForm,
+	components: FormComponents,
+	fieldComponents: FormFieldComponents<TFormData>,
+): FormFieldComponents<TFormData>['Array'] {
+	const unscoped = fieldComponents as unknown as FormFieldComponents<unknown>
+
+	return function ArrayPrimitive<TItem>({
+		name,
+		disabled,
+		required,
+		validate,
+		newItem,
+		children,
+	}: ArrayProps<TFormData, TItem>): ReactNode {
+		return (
+			<form.AppField
+				name={name}
+				validators={fieldValidators(name, validate)}
+			>
+				{(field) => (
+					<ArrayBody
+						field={field}
+						fieldName={name}
+						components={components}
+						fieldComponents={unscoped}
+						label={null}
+						description={null}
+						disabled={disabled}
+						required={required}
+						reorderable={undefined}
+						newItem={newItem}
+						addLabel={undefined}
+						removeLabel={undefined}
+						itemLabel={undefined}
+						validate={validate}
+						render={(scope) => (children as unknown as (s: typeof scope) => ReactNode)(scope)}
+					/>
+				)}
+			</form.AppField>
+		)
+	} as FormFieldComponents<TFormData>['Array']
 }
 
 const DEFAULT_ADD_LABEL = 'Add'

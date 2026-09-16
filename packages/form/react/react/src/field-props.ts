@@ -301,6 +301,24 @@ export type ArrayFieldProps<TFormData, TItem> = {
 	children: (scope: ArrayFieldScope<TItem>) => ReactNode
 }
 
+/**
+ * A repeatable group with no chrome of its own — the headless counterpart of `ArrayField`.
+ *
+ * `ArrayField` draws its own label, add/remove controls and item frames; `form.Array` renders
+ * only what `children` return, handing them the same {@link ArrayScope} so every control and the
+ * surrounding layout are the author's. Use it when the kit's own chrome does not fit — a remove
+ * control in a card heading, entries laid out as table rows, and so on.
+ */
+export type ArrayProps<TFormData, TItem> = {
+	name: DeepKeysOfType<TFormData, readonly TItem[]>
+	disabled?: boolean
+	required?: boolean
+	validate?: FieldValidateProps
+	/** The value a newly appended entry starts from. */
+	newItem: TItem
+	children: (scope: ArrayScope<TItem>) => ReactNode
+}
+
 export type SubmitButtonProps = {
 	children: ReactNode
 	/** Forced-disabled regardless of form state; the form's own state can only add to this. */
@@ -334,6 +352,10 @@ export type FormFieldComponents<TFormData> = {
 	 * entry work with no extra machinery.
 	 */
 	ArrayField: <TItem>(props: ArrayFieldProps<TFormData, TItem>) => ReactNode
+	/**
+	 * Generic per call, for the same reason `ArrayField` is — see its doc comment.
+	 */
+	Array: <TItem>(props: ArrayProps<TFormData, TItem>) => ReactNode
 	SubmitButton: (props: SubmitButtonProps) => ReactNode
 	Section: (props: SectionProps) => ReactNode
 	GridItem: (props: GridItemProps) => ReactNode

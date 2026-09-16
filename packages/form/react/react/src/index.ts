@@ -2,6 +2,7 @@ export { createForm } from './create-form'
 export { FormOptionSources } from './options/source-context'
 
 export type { CreateFormOptions, FormBundle } from './create-form'
+export type { BoundFieldApi } from './bindable-form'
 export type { KitFormBlock, KitWithFormProps } from './composition'
 export type { FieldValidateProps } from './field-validate'
 export type { BoundForm, KitFormApi } from './kit-form'
@@ -49,6 +50,7 @@ export type {
 	ArrayFieldProps,
 	ArrayFieldScope,
 	ArrayItemScope,
+	ArrayProps,
 	ArrayScope,
 	BaseFieldProps,
 	CheckboxFieldProps,
