@@ -2,6 +2,7 @@ import { createColumns, createTable, defaultMessages } from '@ez-kit/data-grid-c
 import { describe, expect, it } from 'vitest'
 
 import { isGridMenuItemSlot } from '../menu'
+import { prepareDataGridTable } from '../prepare-table'
 import { TEST_FEATURES } from '../test-utils'
 import { RowActionId } from '../types'
 
@@ -22,13 +23,17 @@ const DATA: User[] = [
 const COLUMNS = createColumns<User>([{ accessorKey: 'name', header: 'Name' }])
 
 function makeTable(ordering: OrderingConfig = { row: true }): DataTable<GridFeatures, User> {
-	return createTable<GridFeatures, User>({
-		features: TEST_FEATURES,
-		data: DATA,
-		columns: COLUMNS,
-		getRowId: (row) => row.id,
-		ordering,
-	})
+	// Through `prepareDataGridTable`, as every rendered grid is: core's `createTable` returns a
+	// table without `grid` or `gridContext`, and this layer's `DataTable` requires both.
+	return prepareDataGridTable(
+		createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: DATA,
+			columns: COLUMNS,
+			getRowId: (row) => row.id,
+			ordering,
+		}),
+	)
 }
 
 /** The entries for one row, narrowed to the half that carries a label and a disabled state. */
@@ -61,14 +66,16 @@ describe('buildRowOrderItems', () => {
 	})
 
 	it('disables both while a sort is applied', () => {
-		const table = createTable<GridFeatures, User>({
-			features: TEST_FEATURES,
-			data: DATA,
-			columns: COLUMNS,
-			getRowId: (row) => row.id,
-			ordering: { row: true },
-			sorting: true,
-		})
+		const table = prepareDataGridTable(
+			createTable<GridFeatures, User>({
+				features: TEST_FEATURES,
+				data: DATA,
+				columns: COLUMNS,
+				getRowId: (row) => row.id,
+				ordering: { row: true },
+				sorting: true,
+			}),
+		)
 		table.setSorting([{ id: 'name', desc: false }])
 
 		expect(items(table, 'b').every((entry) => entry.disabled)).toBe(true)

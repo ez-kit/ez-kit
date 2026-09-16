@@ -815,8 +815,7 @@ export type SelectionBarProps = {
 	open: boolean
 	/** Number of currently selected rows. */
 	count: number
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	selectedRows: Row<GridFeatures, any>[]
+	selectedRows: Row<GridFeatures, ErasedRow>[]
 	/**
 	 * Render mode the consumer requested.
 	 * - `'floating'` (default) — sticky/positioned bar, may overlay content.

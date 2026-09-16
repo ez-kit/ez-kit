@@ -179,7 +179,10 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	if (!filtersRows(table)) return undefined
 
 	const filterableColumns = table.getAllLeafColumns().filter((column) => {
-		const meta = column.columnDef.meta
+		// `ColumnMeta` is declared `in out` upstream, so no concrete instantiation is assignable to
+		// any other and this cast is forced by the variance annotation rather than chosen. Same
+		// cast, same name, same reason as `header-cell.tsx` and core's own `creating.ts`.
+		const meta = column.columnDef.meta as FormColumnMeta | undefined
 		if (meta?.isSystemColumn) return false
 		if (meta?.filtering === false) return false
 		return column.getCanFilter()
@@ -190,7 +193,8 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 	const hasActiveFilter = filterableColumns.some((c) => c.getFilterValue() !== undefined)
 
 	const resolvedColumns: DataGridFilterPanelColumn[] = filterableColumns.map((column) => {
-		const meta = column.columnDef.meta
+		// Same cast, same reason as the one in the filter above.
+		const meta = column.columnDef.meta as FormColumnMeta | undefined
 		const headerDef = column.columnDef.header
 		const label = typeof headerDef === 'string' ? headerDef : column.id
 		const filterValue = column.getFilterValue()
@@ -201,8 +205,7 @@ export function useFilterPanelColumns(): DataGridFilterPanelRenderArgs | undefin
 			table.grid.messages.operators,
 		)
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const headerLike = { id: column.id, column } as unknown as Header<GridFeatures, any>
+		const headerLike = { id: column.id, column } as unknown as Header<GridFeatures, ErasedRow>
 
 		const input = renderFilterInput({
 			header: headerLike,

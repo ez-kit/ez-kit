@@ -20,7 +20,7 @@ import { useDataGridTable, useDataGridState } from './table-context'
 import type { CellTypeRegistry, CellViewProps } from '../cell-types-context'
 import type { ErasedRow, GridFeatures } from '../types'
 import type { FormColumnMeta, ColumnAlign, ColumnPinSide, FieldState } from '@ez-kit/data-grid-core'
-import type { Cell, Row } from '@tanstack/table-core'
+import type { ColumnMeta, Cell, Row } from '@tanstack/table-core'
 import type { ComponentType, CSSProperties, ReactNode } from 'react'
 
 /**
@@ -179,7 +179,15 @@ function SystemCell<TRow extends object>({ cell, row }: DataGridCellProps<TRow>)
 				{...chrome.alignAttrs}
 				data-system-column='actions'
 			>
-				<ActionsCell row={row} />
+				{/*
+				 * A crossing into the erased world. `ActionsCell` lives entirely below the boundary
+				 * — it reads the table from context and renders the kit's `rowActions` component,
+				 * both of which are row-erased (see `ErasedRow`) — so its row prop is erased too,
+				 * and v9's invariance makes handing it a `Row<F, TRow>` a cast rather than an
+				 * assignment. Erasing here costs one assertion; typing `ActionsCell` at `TRow`
+				 * instead moved the same crossing onto its four kit-contract render sites.
+				 */}
+				<ActionsCell row={row as unknown as Row<GridFeatures, ErasedRow>} />
 			</Td>
 		)
 	}
@@ -479,8 +487,8 @@ function getCellChrome<TRow extends object>(cell: Cell<GridFeatures, TRow>): Cel
 	}
 }
 
-function resolveEditComponent(
-	meta: FormColumnMeta | undefined,
+function resolveEditComponent<TRow extends object>(
+	meta: ColumnMeta<GridFeatures, TRow> | undefined,
 	registry: CellTypeRegistry,
 ): ComponentType<FieldState> | undefined {
 	// 1. column-level editing.component
@@ -509,8 +517,8 @@ function resolveEditComponent(
  * The headless package ships **no** built-in cell types. Consumers/UI kits
  * register them via `CellTypesProvider` or `createDataGrid({ cellTypes })`.
  */
-function resolveViewComponent(
-	meta: FormColumnMeta | undefined,
+function resolveViewComponent<TRow extends object>(
+	meta: ColumnMeta<GridFeatures, TRow> | undefined,
 	registry: CellTypeRegistry,
 ): ComponentType<CellViewProps> | undefined {
 	// Returned as-is, never wrapped: `flexRender` mounts by component identity, so a wrapper

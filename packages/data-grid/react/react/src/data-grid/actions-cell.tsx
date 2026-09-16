@@ -243,9 +243,11 @@ export function ActionsCell({ row }: ActionsCellProps) {
 	// where the assertion form would only fail if the two types stopped overlapping. Each cast
 	// goes through the
 	// context's own member type, which is why neither one names an arity.
-	const actionsCtx: RowActionsContext = {
-		row: row as RowActionsContext['row'],
-		table: table as RowActionsContext['table'],
+	// Erased on both sides: `table.grid.rowActions.actions` was stored row-erased, so the
+	// context handed to it is too. See `ErasedRow`.
+	const actionsCtx: RowActionsContext<ErasedRow> = {
+		row: row,
+		table: table,
 	}
 	const placement = table.grid.rowActions.placement
 	const {

@@ -90,7 +90,7 @@ export type ReactExpandingConfig<TFeatures extends TableFeatures, TRow extends o
  */
 export type ReactRowActionsConfig<TRow extends object = object> = RowActionsConfig<TRow, ReactElement, ReactNode>
 
-export type SelectionBarCallbackArgs<TRow extends object = object> = {
+export type SelectionBarCallbackArgs<TRow extends object = ErasedRow> = {
 	table: Table<GridFeatures, TRow>
 	clearSelection: () => void
 	selectedRows: Row<GridFeatures, TRow>[]
@@ -1597,7 +1597,10 @@ export function useDataGrid<TFeatures extends TableFeatures, TRow extends object
 			pageSizer: normalizedPageSizer,
 			infinite: normalizedInfinite,
 		},
-		selection: { bar: normalizedSelectionBar },
+		// A crossing into the erased world, and the same one `rowProps` makes above: the
+		// consumer's callbacks are typed in their row, `ResolvedGridOptions` is row-erased,
+		// and v9's row types are invariant so the two do not overlap. See `ErasedRow`.
+		selection: { bar: normalizedSelectionBar as unknown as ResolvedGridOptions['selection']['bar'] },
 		expanding: {
 			component: expandingCfg?.component as ResolvedGridOptions['expanding']['component'],
 		},

@@ -161,6 +161,11 @@ function ConfirmDialogRenderer() {
 	// abort the delete request the confirm just started.
 	const hasConfirmed = useRef(false)
 
+	// The gate lives here rather than at the call site: both halves then read the *same*
+	// row-erased table from context, instead of the caller's table deciding whether a
+	// component that reads the erased one should mount.
+	if (!hasConfirmDialog(table)) return null
+
 	// A staged bulk delete takes precedence: it is the gesture the user just made. Core owns
 	// both the staging and the run, so this only renders the prompt and reports the answer.
 	const bulkOptions = bulkConfirmationOptions(table)
@@ -345,7 +350,7 @@ function DataGridControlled<TFeatures extends TableFeatures, TRow extends object
 						{children ?? <DefaultLayout />}
 						{writeOptions.creating?.mode === CreatingMode.Modal && <CreatingModal />}
 						{writeOptions.editing?.mode === EditingMode.Modal && <EditingModal />}
-						{hasConfirmDialog(table) && <ConfirmDialogRenderer />}
+						<ConfirmDialogRenderer />
 					</TableProvider>
 				</GridComponentsProvider>
 			</CellTypesProvider>
@@ -409,22 +414,35 @@ function DataGridRoot<TFeatures extends TableFeatures, TRow extends object>(prop
 	}
 	wasControlledRef.current = isControlled
 
-	if (props.table != null) {
-		const { table, components, cellTypes, children } = props
-		return (
-			<DataGridControlled
-				table={table}
-				{...(components !== undefined ? { components } : {})}
-				{...(cellTypes !== undefined ? { cellTypes } : {})}
-			>
-				{children}
-			</DataGridControlled>
-		)
+	if (props.table == null) {
+		/*
+		 * The one place this component asserts what its own runtime check just established.
+		 *
+		 * `DataGridProps` is a union of two **intersections**, and `table` is `never` on one side
+		 * rather than a literal, so TypeScript will not use it as a discriminant: `props` stays a
+		 * union past the check above, and the rest-spread below then fails on `data`, `columns`
+		 * and `features` at once — the three members the controlled half does not have. Tried and
+		 * rejected before writing this: narrowing on `!= null` instead, and spelling the marker
+		 * `table?: undefined` rather than `table?: never`. Neither narrows an intersection.
+		 *
+		 * The assertion is safe for the reason the check is: the controlled member declares
+		 * `table` **required and non-nullable**, so `props.table == null` is reachable only for
+		 * the uncontrolled one.
+		 */
+		const { table: _table, ...rest } = props as DataGridUncontrolledProps<TFeatures, TRow>
+		return <DataGridUncontrolled<TFeatures, TRow> {...rest} />
 	}
 
-	// Strip a possibly-present `table: undefined` before handing config to the hook.
-	const { table: _table, ...rest } = props
-	return <DataGridUncontrolled<TFeatures, TRow> {...rest} />
+	const { table, components, cellTypes, children } = props
+	return (
+		<DataGridControlled
+			table={table}
+			{...(components !== undefined ? { components } : {})}
+			{...(cellTypes !== undefined ? { cellTypes } : {})}
+		>
+			{children}
+		</DataGridControlled>
+	)
 }
 
 // ── Attach sub-components as static properties ────────────────────────────

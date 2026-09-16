@@ -10,7 +10,7 @@ import { ActionBarVariant, PageSizerPlacement } from '../types'
 
 import { DataGrid } from './data-grid'
 
-import type { GridFeatures, ResizerProps } from '../types'
+import type { DataTable, GridFeatures, ResizerProps } from '../types'
 import type { DeletingConfig } from '@ez-kit/data-grid-core'
 
 type User = {
@@ -431,7 +431,6 @@ describe('<DataGrid>', () => {
 		)
 		const { rerender } = renderWithComponents(
 			<DataGrid
-				features={TEST_FEATURES}
 				table={table}
 				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
@@ -441,7 +440,6 @@ describe('<DataGrid>', () => {
 		})
 		rerender(
 			<DataGrid
-				features={TEST_FEATURES}
 				table={table}
 				cellTypes={{ 'custom-type': { editing: editFn } }}
 			/>,
@@ -640,7 +638,14 @@ describe('<DataGrid> unprepared table', () => {
 	it('names the problem instead of crashing on a missing resolved-options object', () => {
 		// `prepareDataGridTable` is what seeds `table.grid`; skipping it used to be impossible
 		// because the prop demanded a wrapper type only `useDataGrid` could build.
-		const raw = createTable<GridFeatures, User>({ features: TEST_FEATURES, data: USERS, columns: COLUMNS })
+		// The assertion form is the point of the test: an unprepared table is precisely what the
+		// prop's type now rejects, and the runtime guard is what has to catch a consumer who gets
+		// past it — through a cast of their own, or from untyped JavaScript.
+		const raw = createTable<GridFeatures, User>({
+			features: TEST_FEATURES,
+			data: USERS,
+			columns: COLUMNS,
+		}) as unknown as DataTable<GridFeatures, User>
 		const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
 		expect(() => renderWithComponents(<DataGrid table={raw} />)).toThrow(/has not been prepared/)

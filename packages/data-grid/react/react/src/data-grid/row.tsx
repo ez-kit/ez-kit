@@ -76,10 +76,11 @@ function DataGridRowImpl<TRow extends object = ErasedRow>(
 ) {
 	const { Tr } = useGridComponents().core
 	const table = useDataGridTable<TRow>()
-	// `table.grid` is row-erased, so the stored resolver is typed `Row<never>`; the row we hold
-	// is the very one it was written against.
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const resolveRowProps = table.grid.rowProps as RowPropsResolver<any> | undefined
+	// A crossing back out of the erased world, and the mirror of the one `useDataGrid` makes
+	// when it stores this resolver. `table.grid` is row-erased (see `ErasedRow`), so the stored
+	// resolver is typed against `never`; the row we hold here is the very one the consumer wrote
+	// it against, so re-instantiating it at `TRow` restores the type it had before erasure.
+	const resolveRowProps = table.grid.rowProps as RowPropsResolver<TRow> | undefined
 	// Selection state is derived, not read: a parent row counts as selected through its
 	// children, which only TanStack knows. The selector therefore ignores its argument and
 	// re-derives on every store change — it returns a boolean, so `useSyncExternalStore` bails

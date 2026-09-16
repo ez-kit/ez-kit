@@ -8,7 +8,7 @@ import { buildActionItems } from './build-action-items'
 import { useDataGridState, useDataGridTable } from './table-context'
 
 import type { GridMenuItem } from '../menu'
-import type { GridFeatures } from '../types'
+import type { ErasedRow, GridFeatures } from '../types'
 import type { Table } from '@tanstack/table-core'
 import type { ReactNode } from 'react'
 
@@ -37,7 +37,7 @@ export function buildSelectionBarArgs<TRow extends object>(
  * shared `ConfirmDialog` runs the handler on confirm; without it the delete runs immediately.
  * A hand-rolled bar that reached for the handler directly would silently skip the prompt.
  */
-export type DataGridSelectionBarRenderArgs<TRow extends object = object> = SelectionBarCallbackArgs<TRow> & {
+export type DataGridSelectionBarRenderArgs<TRow extends object = ErasedRow> = SelectionBarCallbackArgs<TRow> & {
 	/** Number of selected rows. */
 	count: number
 	/** Whether the bar would normally be shown — i.e. at least one row is selected. */
