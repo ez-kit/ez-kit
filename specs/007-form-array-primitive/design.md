@@ -208,8 +208,16 @@ dependencies to demonstrate it is the application's business, not ours.
 
 A reusable list built on the primitive — a kit's `ArrayTable`, an application's `MembersTable` —
 needs to reach `form` in order to render `form.Array`. The package has **no context carrying the
-form instance**: the three contexts that exist are `ArrayItemPathContext` (an entry's path prefix),
-`OptionSourceContext` and `SchemaTranslateContext`.
+form instance**: the contexts that exist are `ArrayKeyOrderContext` (an array's current key order,
+which is what re-renders a scoped field through a `memo` bail-out), `OptionSourceContext` and
+`SchemaTranslateContext`.
+
+When this was first written the array context was `ArrayItemPathContext`, carrying an entry's path
+prefix. Implementation replaced it: that provider wrapped only `<item.Item>`'s children, so a field
+the author drew outside the row resolved no path at all — which the headless primitive makes the
+normal case, not the exception. A field now reads its path from the per-entry-key record the array
+body builds, and the remaining context exists solely to make that read happen again when the order
+changes. The conclusion above is unaffected; only the enumeration changed.
 
 So such a component takes the form as a prop, the way anything outside the `<Form>` render prop
 already does. That works today and stays type-safe; `name` is still checked against `TFormData`

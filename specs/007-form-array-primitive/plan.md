@@ -658,33 +658,19 @@ Expected: FAIL — `form.Array is not a function`.
 
 - [ ] **Step 3: Add `createArray` beside `createArrayField`**
 
-First lift the `scoped` record out of `createArrayField` into a helper, so both factories build it
-the same way. The body is the expression that already sits inside `createArrayField` — move it,
-do not retype it:
+**This step was rewritten after Task 2 changed the mechanism. Ignore any memory of a
+`buildScopedComponents` helper — there is nothing to lift.**
 
-```tsx
-/**
- * The form's field components, re-read as addressing an entry's paths. One record per form, so
- * component identities are stable for every array and every entry — see the note on
- * `ArrayItemPathContext`.
- */
-function buildScopedComponents<TFormData>(
-	fieldComponents: FormFieldComponents<TFormData>,
-): FormFieldComponents<unknown> {
-	return Object.fromEntries(
-		Object.entries(fieldComponents).map(([key, Component]) => [
-			key,
-			scopeComponent(Component as (props: { name: string }) => ReactNode),
-		]),
-	) as unknown as FormFieldComponents<unknown>
-}
-```
+Task 2 moved scoping down into `ArrayBody`. `scopeComponent` now takes **two** arguments —
+`(Inner, getPath)` — and the scoped field record is built **per entry key** by `scopedFieldsFor`
+inside `ArrayBody`, cached in `scopedFieldsRef`, reading the entry's path off `itemDataRef`. A
+field therefore resolves its path whether or not the author wraps it in `<item.Item>`, which is
+exactly what the headless primitive needs. `ArrayBody` receives the **unscoped** `fieldComponents`
+record and does the rest itself.
 
-`createArrayField` now opens with `const scoped = buildScopedComponents(fieldComponents)`.
-
-Note both factories are called once each per form, so each builds its **own** record. That is
-correct — identities only need to be stable for the lifetime of one array field, and the two
-components never render the same one.
+So `createArray` builds nothing. It mirrors `createArrayField`'s call, passing the same
+`fieldComponents` and supplying `null` / `undefined` for every presentational prop the primitive
+does not have:
 
 ```tsx
 export function createArray<TFormData>(
@@ -692,8 +678,6 @@ export function createArray<TFormData>(
 	components: FormComponents,
 	fieldComponents: FormFieldComponents<TFormData>,
 ): FormFieldComponents<TFormData>['Array'] {
-	const scoped = buildScopedComponents(fieldComponents)
-
 	return function ArrayPrimitive<TItem>({
 		name,
 		disabled,
@@ -712,7 +696,7 @@ export function createArray<TFormData>(
 						field={field}
 						fieldName={name}
 						components={components}
-						scoped={scoped}
+						fieldComponents={fieldComponents}
 						label={null}
 						description={null}
 						disabled={disabled}
@@ -907,25 +891,29 @@ const Item = ({ children: itemChildren, label, removeLabel, reorderable }: Array
 	const rowLabels = typeof rowReorder === 'object' ? rowReorder : undefined
 	const offerMoves = rowReorder !== undefined && rowReorder !== false
 	return (
-		<ArrayItemPathContext.Provider value={data.path}>
-			<KitArrayItem
-				data-index={data.index}
-				index={data.index}
-				label={label ?? data.label}
-				removeLabel={removeLabel ?? data.removeLabel}
-				moveUpLabel={rowLabels?.up?.label ?? data.moveUpLabel}
-				moveDownLabel={rowLabels?.down?.label ?? data.moveDownLabel}
-				disabled={data.disabled}
-				onRemove={data.onRemove}
-				onMoveUp={offerMoves ? data.onMoveUp : undefined}
-				onMoveDown={offerMoves ? data.onMoveDown : undefined}
-			>
-				{itemChildren}
-			</KitArrayItem>
-		</ArrayItemPathContext.Provider>
+		<KitArrayItem
+			data-index={data.index}
+			index={data.index}
+			label={label ?? data.label}
+			removeLabel={removeLabel ?? data.removeLabel}
+			moveUpLabel={rowLabels?.up?.label ?? data.moveUpLabel}
+			moveDownLabel={rowLabels?.down?.label ?? data.moveDownLabel}
+			disabled={data.disabled}
+			onRemove={data.onRemove}
+			onMoveUp={offerMoves ? data.onMoveUp : undefined}
+			onMoveDown={offerMoves ? data.onMoveDown : undefined}
+		>
+			{itemChildren}
+		</KitArrayItem>
 	)
 }
 ```
+
+**There is no `ArrayItemPathContext` any more — do not add one back.** Task 2 removed it: a field's
+path now comes from the per-key scoped record `scopedFieldsFor` builds, read off `itemDataRef`, so
+a field resolves correctly whether or not it sits inside `<item.Item>`. Restoring a provider around
+`Item`'s children would re-break exactly the case the primitive exists for, where the author draws
+the row and there is no `Item` at all. `Item` renders the kit's row and nothing else.
 
 `ItemData` gains a `reorderable` member carrying the array-level setting, and `onMoveUp` /
 `onMoveDown` are stored **unconditionally** (still `undefined` at the ends, where the move is
