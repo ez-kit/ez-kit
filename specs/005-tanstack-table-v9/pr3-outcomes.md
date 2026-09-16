@@ -18,14 +18,16 @@ No changeset was written (PR 6 writes one for the whole migration). AGENTS.md is
 
 ---
 
-## 0. The gates, as measured after `0d36bc03`
+## 0. The gates, as measured after `97b5036e`
 
-Run individually with `pnpm --filter <pkg> <gate>`. **Nothing red below is column pinning.** The
-react package's count is 99 -> 55: all 17 pinning errors cleared, plus the 27 of §0.2's first half.
+Run individually with `pnpm --filter <pkg> <gate>`. **Nothing red below is column pinning.**
+`@ez-kit/data-grid-react` passes all five — typecheck, lint, test, build and size — for the first
+time since the migration started; its typecheck went 99 -> 0. `size` needs core built first, since
+the count is measured against `dist`.
 
 | Package                    | typecheck                | lint                | test                                       | build     |
 | -------------------------- | ------------------------ | ------------------- | ------------------------------------------ | --------- |
-| `@ez-kit/data-grid-react`  | **55 errors** (was 99)   | **green**           | **726/726** (was 721/4)                    | **fails** |
+| `@ez-kit/data-grid-react`  | **green** (was 99)       | **green**           | **726/726** (was 721/4)                    | **green** |
 | `@ez-kit/data-grid-shadcn` | **1 error** (was 3)      | 1 error (cascade)   | **40/40**                                  | **green** |
 | `@ez-kit/data-grid-heroui` | **2 errors** (unchanged) | 16 errors (cascade) | 45/50                                      | **green** |
 | `@ez-kit/docs`             | 150 errors (PR 4's)      | —                   | vitest green on the pinning-relevant files | —         |
@@ -129,6 +131,75 @@ boundary (where the read side, `useDataGridTable`, already casts and already exp
 erase deliberately at a named `ErasedTable` / `ErasedRow` alias with the reason stated once. It is
 recorded here rather than acted on because the lead asked to be told if the class split further,
 and it did.
+
+---
+
+## 0.3 Ruling M — how the 55 were closed, and what it cost
+
+**Option 2, the named erasure boundary.** `ErasedRow = never` in `types.ts`, beside `GridFeatures`
+and cross-referencing it, because they are one decision: a component reads the table from a React
+context, and a context takes no type parameter, so neither the caller's `TFeatures` nor its `TRow`
+reaches it. `never` because it is already this package's spelling for the same idea —
+`RowPropsResolver<never>`, `GridOptions<never>`, `ExpandedRowProps<never>`.
+
+**The rejected option, recorded so it is not re-proposed as an obvious improvement.** Threading
+`TRow` through the component tree is better type hygiene and was the implementer's first
+recommendation. It was rejected because (a) design D1 already pins the component layer at the widest
+instantiation for `TFeatures`, and making it generic in one parameter and pinned in the other has no
+principle behind it; (b) the package already erased `TRow` in three places under three spellings,
+so naming the erasure is an improvement on the status quo where threading it would be a different
+architecture; and (c) it is unbounded — measured, not argued: making `cell.tsx`'s three private
+sub-components generic moved the error count 55 -> 54, because each layer fixed pushes the boundary
+inward.
+
+**Most of the work turned out not to be casts.** 19 internal helpers that took `<GridFeatures, any>`
+are simply generic now — a plain function has no context limitation — which is why
+`no-explicit-any` disables in non-test source went from **25 to 1**. Contract types that spelled the
+erased row `object` or `any` now spell it `ErasedRow`.
+
+**The crossings, counted, as Ruling M asked.** Four new assertions, each at a boundary with its
+reason in place:
+
+| Site                                     | What crosses                                                                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `table-context.tsx` — `TableProvider`    | the caller's table into the context. One component, replacing the same cast written implicitly at all eight `TableContext.Provider` sites                           |
+| `table-context.tsx` — `useDataGridTable` | the mirror, back out to the row type the caller names. Existed; gained the `as unknown as` hop                                                                      |
+| `use-data-grid.ts` — `selection.bar`     | the consumer's callbacks into the row-erased `ResolvedGridOptions`, beside the `rowProps` write that already did exactly this                                       |
+| `cell.tsx` — `<ActionsCell row>`         | one row into a component that is erased on every other edge. Typing `ActionsCell` at `TRow` instead moved the same crossing onto its four kit-contract render sites |
+
+A fifth assertion in `DataGridRoot` is **not** about rows: `DataGridProps` is a union of two
+intersections, so TypeScript will not treat `table` as a discriminant. Narrowing on `!= null` and
+spelling the marker `table?: undefined` instead of `table?: never` were both tried; neither narrows
+an intersection.
+
+**The one place the boundary is not this package's to draw.** `ColumnMeta` is declared `in out`
+upstream — explicitly invariant — and core already erases it under its own name, `FormColumnMeta`,
+which spells the erased row `object` rather than `never`. Rather than invent a second spelling one
+package over, `filter-panel.tsx` now makes the same cast `header-cell.tsx` and core's `creating.ts`
+already make. **If anyone later unifies the erasure spelling, `FormColumnMeta` is where the seam
+is**, and it is a core change.
+
+## 0.4 A finding for PR 5 / PR 6: a kit consumer cannot supply `features`
+
+Found while trying to bring the kits' own tests onto the v9 arity, and **not fixed**, because
+fixing it is a packaging decision rather than a test edit.
+
+In v9 `features` is a **required** option on `createTable` / `useDataGrid`. Both kits depend on
+`@ez-kit/data-grid-react` and nothing else from this repo, and that package re-exports neither
+`tableFeatures` nor `allDataGridFeatures`. So a kit's own test — and, more to the point, **a kit's
+consumer** — has no way to construct a feature set without adding `@ez-kit/data-grid-core` as a
+direct dependency, which none of the kit documentation mentions.
+
+That is why both kits still carry typecheck errors (shadcn 2, heroui 10), all in their own
+`index.test.ts(x)` and `blocks/infinite/infinite.test.tsx`, with the lint and test failures
+following from them. Every one is `createTable<User>` / `DataGridProps<User>` /
+`UseDataGridConfig<User>` / `TableState` missing the `TFeatures` parameter and the `features`
+option. **The kits' source is green — all four kit `build`s pass and shadcn's 40 unit tests pass.**
+
+The decision is whether `@ez-kit/data-grid-react` re-exports the feature helpers (making the kits'
+dependency surface self-sufficient) or whether each kit takes a direct dependency on core. That is
+PR 5's or PR 6's, and it should be settled before the kits' tests are edited, because the answer
+determines what those tests import.
 
 ---
 
