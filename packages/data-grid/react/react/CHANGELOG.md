@@ -1,5 +1,245 @@
 # @ez-kit/data-grid-react
 
+## 0.8.0
+
+### Minor Changes
+
+- c5dcdc5: Column pinning speaks `start` / `end` instead of `left` / `right`, everywhere.
+
+  TanStack Table v9 removed physical `left` / `right` from `Column.getStart` / `getAfter` / `pin()`
+  entirely, so this is not a preference: a pinned column is now named by the edge it sticks to in the
+  reading direction, and it flips under RTL the way `align` and `Toolbar.start` / `Toolbar.end`
+  already do. **Row pinning is unchanged and stays `top` / `bottom`** — a vertical axis has no
+  logical names and nothing about it flips.
+
+  It is one idea and **eight separate things to change in your code**. Each is listed because the
+  first five fail differently from the last three, and two of them fail silently.
+  1. **The column option value.** `pinning: 'left'`, `pinning: { side: 'left' }`,
+     `pinning: { initialSide: 'right' }` are `'start'` / `'end'`, and `ColumnPinSide.Left` / `.Right`
+     are `.Start` / `.End`. This is the one most consumers hit, because it is in the column
+     definitions.
+  2. **`initialState.columnPinning` and `state.columnPinning` are `{ start, end }`**, upstream's
+     shape, not `{ left, right }`. **This one fails silently**: a stale key is accepted and ignored,
+     so `initialState={{ columnPinning: { right: ['name'] } }}` merges to "nothing pinned" rather
+     than throwing.
+  3. **`GridMenuIcon.PinLeft` / `.PinRight` are `.PinStart` / `.PinEnd`.** These are required keys of
+     the icon map, so supplying your own is a compile error rather than a silent one — the only part
+     of this rename that cannot fail open.
+  4. **`messages.columnMenu.pinLeft` / `.pinRight` are `.pinStart` / `.pinEnd`.** A translation
+     override keyed on the old name reverts to English; whether your compiler catches it depends on
+     how exactly your `messages` object is typed, so treat it as silent. The English defaults are
+     deliberately unchanged — they still read "Pin Left" / "Pin Right", because the key names the
+     axis and the wording names what an LTR reader sees, exactly as `moveStart` reads "Move left".
+  5. **`ColumnActionId.PinLeft` / `.PinRight` are `.PinStart` / `.PinEnd`, and so are the ids they
+     carry** — `'pin-left'` / `'pin-right'` are now `'pin-start'` / `'pin-end'`. Those values reach
+     the DOM as menu-item ids, so a menu customisation or a test selector keyed on one stops
+     matching. Renamed rather than left alone because `PinStart: 'pin-left'` would have been the only
+     member on that object whose value contradicts its key, two lines from `MoveStart: 'move-start'`.
+
+  If you style the grid yourself — or you ran `npx shadcn add` and copied the kit into your project —
+  three more:
+  6. **`data-pinned` and `data-pin-shadow` carry `start` / `end`** on a column. (On a row,
+     `data-pinned` is still `top` / `bottom`.)
+  7. **`--dg-pin-left` / `--dg-pin-right` are `--dg-pin-start` / `--dg-pin-end`, and
+     `--dg-pin-{left,right}-shadow` are `--dg-pin-{start,end}-shadow`.** A copied `styles.css` keeps
+     your old rules against the new variable names, and your own overrides stop applying — with no
+     error, because a CSS custom property that no longer matches just falls back.
+  8. **Pinned cells are positioned with `inset-inline-start` / `inset-inline-end`**, not `left` /
+     `right`, so an override written against the physical properties no longer wins the way you
+     expect.
+
+  Under the hood the measurement went logical with the names, which is what makes RTL actually work
+  rather than merely read correctly: the pin-shadow offsets are measured from the overlay's own
+  inline edges and applied as inline insets, and the scroll-shadow booleans are computed from
+  `Math.abs(scrollLeft)`, because `scrollLeft` is signed under RTL. `box-shadow` has no logical form,
+  so each kit restates the offset's sign under `[dir='rtl']`.
+
+  Note that the grid's `direction: 'rtl'` option tells the grid which way it is laid out; it does not
+  lay the page out. Set `dir='rtl'` on a wrapping element as well, as you would for any RTL content.
+
+- c5dcdc5: Compound composition no longer costs you the default, and a bundle can bind its feature set.
+
+  `createDataGrid({ features })` states the set once for a bundle, making `features` optional on the
+  returned `useDataGrid` and `DataGrid` while the return type still carries it out. A call site that
+  names a set anyway replaces the bound one rather than merging with it, so a single grid can still
+  run narrower than the bundle it came from. The unbound bundle is unchanged — `features` stays
+  required, which is what every grid built from a kit package still writes.
+
+  `<DataGrid.Cell>`, `<DataGrid.Row>` and `<DataGrid.Body>` now hand back what they would have
+  rendered, the way `<DataGrid.HeaderCell>` always has. A cell's render function receives `content`
+  — its system control, open editor or cell-type view, already resolved; a row's receives its default
+  cells; a body's receives `content` plus the six parts it composes (`creatingRow`, `pinnedTopRows`,
+  `centerRows`, `pinnedBottomRows`, `loadMoreFooter`, `refetchOverlay`). Wrapping the default no
+  longer means reimplementing it.
+
+  **Breaking for a custom `<DataGrid.Body>`.** The loading skeleton, the empty and no-results
+  fallbacks and the virtualized body are now checked **before** `children`, where they used to be
+  checked after. Each renders a `<tbody>` of its own, so none can be handed over as content — and
+  while `children` came first, supplying one silently switched all four off. That was survivable
+  when a custom body was a rare, deliberate act; it is not, now that `content` makes "keep the
+  built-in body and add a row" the recommended shape. A grid that does want its own body in one of
+  those states turns that state off where it is configured (`fallbacks={{ loading: false }}`) and
+  reads the state inside `children`. Virtualization is the exception and has no opt-out: it
+  positions rows itself, so it owns the body, and `children` on a virtualized grid are ignored with
+  a development warning.
+
+  One more behaviour worth stating: a cell whose `children` are a **static** node
+  now opts out of cell-editing entirely — no double-click-to-edit, no editor. It could not show one
+  anyway, and letting it into the edit path made it take the edit state invisibly. The
+  render-function form is unaffected: it receives the editor as `content` and decides where to put
+  it.
+
+  Fixes `cellClassName` while there: it was resolved in two of the four places a `<td>` is rendered,
+  so a column's class never reached a system column and vanished from a cell for as long as it stayed
+  open for editing.
+
+- c5dcdc5: The data-grid moves to TanStack Table v9, and **you now compose the feature set**.
+
+  This is a breaking release across the whole grid. It is `minor` because the packages are `0.x`;
+  `major` is reserved for the deliberate 1.0 cut and is not what this is.
+
+  ## `features` is required
+
+  ```ts
+  import {
+  	columnPinningFeature,
+  	columnSizingFeature,
+  	columnVisibilityFeature,
+  	createSortedRowModel,
+  	rowSortingFeature,
+  	tableFeatures,
+  } from '@ez-kit/data-grid-core/features'
+
+  // The first three are mandatory — see below. Add what this grid actually does after them.
+  const features = tableFeatures({
+  	columnVisibilityFeature,
+  	columnPinningFeature,
+  	columnSizingFeature,
+  	rowSortingFeature,
+  	sortedRowModel: createSortedRowModel(),
+  })
+
+  const table = useDataGrid({ features, data, columns, sorting: true })
+  ```
+
+  `@ez-kit/data-grid-core/features` is a new entry point and the single import path for the stock
+  TanStack features, the row-model factories, the `filterFns` / `sortFns` / `aggregationFns`
+  registries and the grid's own seven features, which are now real v9 plugins under upstream's naming
+  register (`editingFeature`, `creatingFeature`, `deletingFeature`, `draftFeature`, `loadingFeature`,
+  `infiniteFeature`, `rowOrderingFeature`). `@tanstack/table-core` stays our dependency rather than
+  becoming your peer. `allDataGridFeatures` is the all-in set, for prototypes and examples, and it
+  lives on **`@ez-kit/data-grid-core/features/all`** — see below.
+
+  **Three features are structural, whatever else you register:** `columnVisibilityFeature`,
+  `columnPinningFeature` and `columnSizingFeature`. The shell lays out a column grid, so it needs
+  visibility, pin groups and widths to lay one out with; omitting any of them is a **render-time
+  `TypeError`**, not a silent no-op, and the development-mode warning below says nothing about it.
+  Open every set with those three. Every other feature is genuinely optional — leave out
+  `rowSortingFeature` and you get a grid that does not sort.
+
+  **Composing a set governs two things: behaviour, and your bundle.** An unregistered feature
+  contributes no state slice, no API and no work at runtime — and it is not in what you ship.
+  Measured against the built entry, unminified: importing `tableFeatures` alone costs **994** bytes,
+  `rowSortingFeature` **998**, a sorting-only set **1 035**, and `editingFeature` **17 163**, which is
+  what a feature with a real implementation behind it weighs. A grid pays for what it registers.
+
+  **`allDataGridFeatures` moved to `@ez-kit/data-grid-core/features/all`.** A breaking import-path
+  change, and the reason the numbers above are what they are: as a top-level
+  `tableFeatures({ …stockFeatures, … })` call on the main entry it was not something a bundler could
+  drop — an object spread may run getters — so it retained every operand and each of those imports
+  cost ~46 kB instead. On its own subpath, reaching the all-in set is a choice. `tableFeatures` and
+  every individual feature stay exactly where they were; only this one name moved.
+
+  `features` has **no default**, deliberately: the only possible default is the all-in set, which is
+  what everyone who never thought about it would then ship. A `defaults` layer — `createDataGrid`'s
+  `defaults`, or a `DataGridOptionsProvider` — may state a set for everything below it, where it is
+  optional; the instance config still names one.
+
+  **Registering a feature does not switch it on, and configuring one does not register it.**
+  `features` is compile time (what exists), the config is runtime (whether this grid uses it), so a
+  wide shared grid definition still works at a dozen call sites with half of it off. `sorting: false`
+  beside a registered `rowSortingFeature` is correct and intended.
+
+  **Configuring a feature you did not register is _not_ a compile error.** It type-checks clean and
+  produces a grid with no state slice, no API and no behaviour for that option — a silent no-op. The
+  only thing that reports it is a development-mode warning naming the missing feature. An earlier
+  plan for this release promised a compile-time gate here; it is **not delivered**, and that is
+  stated rather than quietly dropped, because the gate costs the named `TS2561` diagnostic the
+  warning catalogue is built around. It is a separate piece of work.
+
+  ## The table's state API
+
+  `table.getState()` and `table.setState(...)` are **gone**, along with `subscribe`, `getSnapshot`,
+  `getInitialSnapshot`, `notifyStateSubscribers` and `syncControlledState`. The hand-written store
+  behind them is gone with them. State lives in v9's atoms:
+  - `table.store.state` — the current whole state; `table.store.subscribe(fn)` to follow it;
+  - `table.atoms.<slice>.get()` — one slice;
+  - `table.initialState` — the state as of construction, resolved once and never reassigned;
+  - the setters a registered feature installs (`table.setSorting(...)`, …) for writes.
+
+  `onStateChange` is unchanged and is still how you mirror state into your own store.
+
+  `columnSizingInfo` — v8's transient mid-drag slice — is `columnResizing` in `TableState`, so a
+  `state` / `initialState` / `onStateChange` reader keyed on the old name no longer matches. The
+  persisted slice you would deep-link is still `columnSizing`.
+
+  ## Renamed and re-shaped exports
+  - **`VisibilityState` is `ColumnVisibilityState`** on `@ez-kit/data-grid-react`'s entry point.
+    v9's own name for the type. No alias is re-exported for the old one — that would be our
+    invention rather than a name TanStack still has. One word at your import.
+  - **`ReactSelectionConfig` and `ReactExpandingConfig` gained a leading `TFeatures` type
+    parameter**, following `SelectionConfig` / `ExpandingConfig`. A break for anyone who named
+    either. `ReactRowActionsConfig` is unaffected.
+  - **`DataTable` from `@ez-kit/data-grid-react` is the React table**, not core's: its `grid` is
+    `ResolvedGridOptions` and it declares `gridContext`. The explicit re-export shadows the core
+    name, so an annotation written against this entry point now describes the table you actually
+    hold.
+  - **`ResolvedGridOptions` gained `pagination.enabled`, plus `rowActions`, `direction` and
+    `pinning.rowConfig`** — the members that left the TanStack options bag when v9 removed
+    `TableOptionsResolved`. Reading any of those off `table.options` now yields `undefined`,
+    silently; read them from the resolved grid options instead.
+
+  ## New on `@ez-kit/data-grid-core`'s public entry
+
+  `createTableOptions(config)` resolves a config into v9 options **without constructing anything**,
+  so a framework adapter can hand them to its own constructor — this is what `useDataGrid` does, and
+  why a React table is not built by calling `createTable` inside a hook. `createAppliedEmitter` and
+  `createDraftAtoms` come with it: an adapter using `useTable` has to redo what `createTable` does
+  after construction, and projecting `onStateChange` through the applied snapshot is one of those
+  jobs — without it an adapter would either re-implement the projection or drop deferral from
+  `onStateChange` in React only. `GridOptions`, `StateHandlerTable`, `FormColumnMeta` and
+  `TableFeatures` are exported as the types those signatures name.
+
+  ## Behaviour changes
+  - **A controlled write to a deferred axis no longer lands.** With `draft` on, passing
+    `state.sorting` (or `columnFilters`, or `globalFilter`) used to overwrite the draft while it was
+    clean. It no longer does, clean or dirty. This is forced by v9's atom precedence — an externally
+    owned atom beats `options.state` outright — and it is what stops a controlled consumer mirroring
+    the last applied query back over what the user is composing.
+  - **`deleting: true` now says what it does.** Written as a bare `true` with no `onDelete`, it did
+    nothing at all: no actions column, no button, no error. A write feature has no defaults — the
+    grid cannot invent a deletion — so the handler still decides whether the feature is on, but a
+    development-mode warning now names the option and the handler it wants. Generic over `creating`,
+    `editing` and `deleting`; every other handler-less spelling stays silent on purpose, because an
+    object in a defaults layer is a description of how a write should look, not a request for one.
+  - **Column reordering by keyboard works under RTL.** The header cell resolved the grid's direction
+    from `columnResizeDirection`, an option only written when resizing is on, so on a default grid
+    both shortcuts moved columns the wrong way. It reads the grid's own `direction` now. Pre-existing
+    under v8, found by the port.
+  - **A plain TanStack table in the same project is no longer polluted.** The grid declared its state
+    slices by augmenting `TableState` globally, so any `@tanstack/table-core` table in your codebase
+    had `state.editing` declared and lying. Each feature now declares itself under its own key, and
+    the declarations reach you only through `@ez-kit/data-grid-core/features`.
+
+  `@tanstack/table-core` is `^9.2.4`, and `@ez-kit/data-grid-react` now depends on
+  `@tanstack/react-table` for `useTable`.
+
+### Patch Changes
+
+- Updated dependencies [c5dcdc5]
+- Updated dependencies [c5dcdc5]
+  - @ez-kit/data-grid-core@0.7.0
+
 ## 0.7.0
 
 ### Minor Changes
