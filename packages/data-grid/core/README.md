@@ -54,9 +54,9 @@ const table = createTable({
 })
 ```
 
-`features` is required and has no default: the only default possible is the all-in set, which would be what everyone who never thought about it shipped. `allDataGridFeatures` is that set, exported for prototypes and documentation examples.
+`features` is required and has no default: the only default possible is the all-in set, which would be what everyone who never thought about it shipped. `allDataGridFeatures` is that set, exported from `@ez-kit/data-grid-core/features/all` — its own subpath, so that reaching the all-in set is a choice rather than something every import of this entry pays for.
 
-Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime. It does **not** yet make your bundle smaller: importing any single name from `@ez-kit/data-grid-core/features` currently pulls ~93% of that entry, because `allDataGridFeatures` is a top-level `tableFeatures({ … })` call a bundler cannot prove pure and therefore cannot drop. A fix is in progress; the measurement lives in `apps/docs/test/tree-shaking.test.ts` as a deliberately failing case.
+Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime — **and it governs your bundle**. Measured against the built entry: `tableFeatures` alone costs 994 bytes, `rowSortingFeature` 998, a sorting-only set 1 035, and `editingFeature` 17 163, which is what a feature with a real implementation behind it weighs. The all-in set lives on its own subpath, `@ez-kit/data-grid-core/features/all`, precisely so that reaching it is a choice: while it sat on the main entry, each of those imports cost ~46 kB, because a top-level `tableFeatures({ …stockFeatures, … })` call is not something a bundler can drop.
 
 If you are feeding these options to the React adapter, note that `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are **mandatory** there — it calls into all three on every render, so omitting one is a render-time `TypeError` rather than a disabled feature.
 

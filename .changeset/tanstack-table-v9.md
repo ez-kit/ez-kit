@@ -38,7 +38,8 @@ TanStack features, the row-model factories, the `filterFns` / `sortFns` / `aggre
 registries and the grid's own seven features, which are now real v9 plugins under upstream's naming
 register (`editingFeature`, `creatingFeature`, `deletingFeature`, `draftFeature`, `loadingFeature`,
 `infiniteFeature`, `rowOrderingFeature`). `@tanstack/table-core` stays our dependency rather than
-becoming your peer. `allDataGridFeatures` is the all-in set, for prototypes and examples.
+becoming your peer. `allDataGridFeatures` is the all-in set, for prototypes and examples, and it
+lives on **`@ez-kit/data-grid-core/features/all`** — see below.
 
 **Three features are mandatory today, whatever else you register:** `columnVisibilityFeature`,
 `columnPinningFeature` and `columnSizingFeature`. The React adapter calls into all three on every
@@ -47,16 +48,18 @@ column-order helpers — so leaving any of them out is a **render-time `TypeErro
 no-op, and the development-mode warning below says nothing about it. Open every set with those
 three.
 
-**What composing a set does not buy you yet: a smaller bundle.** It fully governs _behaviour_ — an
-unregistered feature contributes no state slice, no API and no work at runtime — but the intended
-bundle consequence does not currently materialise. Importing any single name from
-`@ez-kit/data-grid-core/features` pulls ~93% of the entry: measured against the built entry,
-`tableFeatures` alone costs 46 360 bytes, `allDataGridFeatures` 46 365, and the whole surface
-49 696. The cause is that `allDataGridFeatures` is a top-level `tableFeatures({ … })` call, which a
-bundler cannot prove pure, so it retains every operand. A fix in core is in progress; until it
-lands, register what you use for correctness and clarity rather than for size.
-`apps/docs/test/tree-shaking.test.ts` carries the measurement as a deliberately failing case, so it
-cannot rot.
+**Composing a set governs two things: behaviour, and your bundle.** An unregistered feature
+contributes no state slice, no API and no work at runtime — and it is not in what you ship.
+Measured against the built entry, unminified: importing `tableFeatures` alone costs **994** bytes,
+`rowSortingFeature` **998**, a sorting-only set **1 035**, and `editingFeature` **17 163**, which is
+what a feature with a real implementation behind it weighs. A grid pays for what it registers.
+
+**`allDataGridFeatures` moved to `@ez-kit/data-grid-core/features/all`.** A breaking import-path
+change, and the reason the numbers above are what they are: as a top-level
+`tableFeatures({ …stockFeatures, … })` call on the main entry it was not something a bundler could
+drop — an object spread may run getters — so it retained every operand and each of those imports
+cost ~46 kB instead. On its own subpath, reaching the all-in set is a choice. `tableFeatures` and
+every individual feature stay exactly where they were; only this one name moved.
 
 `features` has **no default**, deliberately: the only possible default is the all-in set, which is
 what everyone who never thought about it would then ship. A `defaults` layer — `createDataGrid`'s

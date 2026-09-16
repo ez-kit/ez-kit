@@ -60,7 +60,7 @@ Registering a feature does not switch it on: `features` decides what exists, the
 
 `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are **mandatory**, whatever else you register: the adapter calls into all three on every render (`header.getSize()`, `column.getIsPinned()`, `table.getVisibleLeafColumns()` and the visual column-order helpers), so leaving one out is a render-time `TypeError` rather than a disabled feature. Open every set with those three.
 
-Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime. It does **not** yet make your bundle smaller: importing any single name from `@ez-kit/data-grid-core/features` currently pulls ~93% of that entry, because `allDataGridFeatures` is a top-level `tableFeatures({ … })` call a bundler cannot prove pure. A fix in core is in progress.
+Composing a set governs **behaviour** — an unregistered feature contributes no state slice, no API and no work at runtime — **and it governs your bundle**. Measured against the built entry: `tableFeatures` alone costs 994 bytes, `rowSortingFeature` 998, a sorting-only set 1 035, and `editingFeature` 17 163, which is what a feature with a real implementation behind it weighs. The all-in set lives on its own subpath, `@ez-kit/data-grid-core/features/all`, precisely so that reaching it is a choice: while it sat on the main entry, each of those imports cost ~46 kB, because a top-level `tableFeatures({ …stockFeatures, … })` call is not something a bundler can drop.
 
 ## State persistence
 
