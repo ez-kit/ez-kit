@@ -1,10 +1,40 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createPaginatedRowModel,
+	createSortedRowModel,
+	filterFns,
+	loadingFeature,
+	rowPaginationFeature,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { columns, INITIAL_DATA } from './_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	loadingFeature,
+	columnFilteringFeature,
+	filterFns,
+	rowPaginationFeature,
+	filteredRowModel: createFilteredRowModel(),
+	paginatedRowModel: createPaginatedRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 const EMPTY_DATA: typeof INITIAL_DATA = []
 
@@ -65,6 +95,7 @@ export function FallbacksExample() {
 			)}
 
 			<DataGrid
+				features={features}
 				data={mode === 'empty' ? EMPTY_DATA : INITIAL_DATA}
 				columns={columns}
 				sorting

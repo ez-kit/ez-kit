@@ -1,9 +1,33 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createSortedRowModel,
+	filterFns,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns, extractState, parseState, useExtractedState } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid, useDataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnFilteringFeature,
+	filterFns,
+	rowSortingFeature,
+	filteredRowModel: createFilteredRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 type Person = { id: number; name: string; role: string }
 
@@ -23,14 +47,14 @@ const SAVED = { sorting: [{ id: 'name', desc: false }] }
 
 export function StatePersistenceExample() {
 	const [initialState] = useState(() => parseState(SAVED))
-	const table = useDataGrid({ data: PEOPLE, columns, sorting: true, filtering: true, initialState })
+	const table = useDataGrid({ features, data: PEOPLE, columns, sorting: true, filtering: true, initialState })
 	const persisted = useExtractedState(table, { keys: ['sorting', 'columnFilters', 'pagination'] })
 
 	return (
 		<div>
 			<DataGrid table={table} />
 			<pre>{JSON.stringify(persisted, null, 2)}</pre>
-			<p>Snapshot for storage: {JSON.stringify(extractState(table))}</p>
+			<p>Snapshot for storage: {JSON.stringify(extractState<typeof features, Person>(table))}</p>
 		</div>
 	)
 }

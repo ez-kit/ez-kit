@@ -1,11 +1,31 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnResizingFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { DataGrid } from 'shared/DataGrid'
 
 import { INITIAL_DATA, type User } from '../_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnResizingFeature,
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+})
 
 const combinedColumns = createColumns<User>([
 	{
@@ -39,6 +59,7 @@ export function ColumnsCombinedExample() {
 
 	return (
 		<DataGrid
+			features={features}
 			data={data}
 			columns={combinedColumns}
 			sorting

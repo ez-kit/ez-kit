@@ -1,11 +1,31 @@
 'use client'
 
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	editingFeature,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 import { useState } from 'react'
 
 import { CustomDataGrid } from 'shared/data-grid/CustomGrid'
 
 import type { CustomCellTypes } from 'shared/data-grid/custom-cell-types'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	editingFeature,
+	sortedRowModel: createSortedRowModel(),
+})
 
 type LineItem = {
 	id: number
@@ -33,6 +53,7 @@ export function CustomCellCurrencyExample() {
 
 	return (
 		<CustomDataGrid
+			features={features}
 			data={data}
 			columns={lineItemColumns}
 			sorting

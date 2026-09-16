@@ -1,5 +1,14 @@
 'use client'
 
+import {
+	columnOrderingFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
@@ -7,6 +16,17 @@ import { DataGrid } from 'shared/DataGrid'
 import { EMPLOYEE_DATA } from './_data'
 
 import type { Employee } from './_data'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	columnOrderingFeature,
+	sortedRowModel: createSortedRowModel(),
+})
 
 const columns = createColumns<Employee>([
 	// Locked where it was declared: the column menu offers it no move entries, and its
@@ -20,6 +40,7 @@ const columns = createColumns<Employee>([
 export function ColumnOrderingExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={EMPLOYEE_DATA}
 			columns={columns}
 			ordering
@@ -42,6 +63,7 @@ const panelColumns = createColumns<Employee>([
 export function ColumnPanelOrderingExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={EMPLOYEE_DATA}
 			columns={panelColumns}
 			ordering={{ column: { visibilityMenu: true } }}

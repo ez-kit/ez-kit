@@ -1,8 +1,32 @@
 'use client'
 
+import {
+	columnFilteringFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createFilteredRowModel,
+	createSortedRowModel,
+	filterFns,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
 import { createColumns } from '@ez-kit/data-grid-react'
 
 import { DataGrid } from 'shared/DataGrid'
+
+const features = tableFeatures({
+	// Structural: the grid shell reads column widths, visibility and pin groups to lay out
+	// the column grid. Everything below is this example's own.
+	columnVisibilityFeature,
+	columnPinningFeature,
+	columnSizingFeature,
+	rowSortingFeature,
+	columnFilteringFeature,
+	filterFns,
+	filteredRowModel: createFilteredRowModel(),
+	sortedRowModel: createSortedRowModel(),
+})
 
 type Employee = {
 	id: number
@@ -63,6 +87,7 @@ const withOperatorsColumns = createColumns<Employee>([
 export function FilterPopoverBasicExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={DATA}
 			columns={basicColumns}
 			filtering={{ variant: 'popover' }}
@@ -74,6 +99,7 @@ export function FilterPopoverBasicExample() {
 export function FilterPopoverOperatorsExample() {
 	return (
 		<DataGrid
+			features={features}
 			data={DATA}
 			columns={withOperatorsColumns}
 			filtering={{ variant: 'popover' }}
