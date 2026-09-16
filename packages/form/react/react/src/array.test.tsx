@@ -300,4 +300,40 @@ describe('the kit row inside form.Array', () => {
 		expect(screen.getByRole('button', { name: 'Drop 0' })).toBeInTheDocument()
 		expect(screen.getByRole('button', { name: 'Drop 1' })).toBeInTheDocument()
 	})
+
+	it('renders the object form of a row-level reorderable, captions and all', () => {
+		render(
+			<Form defaultValues={{ people: [{ firstName: 'Ada' }, { firstName: 'Grace' }] }}>
+				{(form) => (
+					<form.Array
+						name='people'
+						newItem={NEW_PERSON}
+					>
+						{({ items }) => (
+							<section>
+								{items.map((item) => (
+									<item.Item
+										key={item.key}
+										reorderable={{ up: { label: 'Hoist' }, down: { label: 'Sink' } }}
+									>
+										<item.TextField
+											name='firstName'
+											label={`Name ${String(item.index)}`}
+										/>
+									</item.Item>
+								))}
+							</section>
+						)}
+					</form.Array>
+				)}
+			</Form>,
+		)
+
+		// The test kit puts the caption in the button's text content, not its `aria-label`
+		// (which is `up ${index}` / `down ${index}` regardless of caption) — so this is the only
+		// assertion in the file that can tell the object form's captions apart from the default
+		// ones, `up 1`/`down 0` name-only checks elsewhere cannot.
+		expect(screen.getByRole('button', { name: 'down 0' })).toHaveTextContent('Sink')
+		expect(screen.getByRole('button', { name: 'up 1' })).toHaveTextContent('Hoist')
+	})
 })

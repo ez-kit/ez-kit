@@ -243,8 +243,12 @@ export type ArrayItemScope<TItem> = FormFieldComponents<TItem> & {
  *
  * Inside `form.ArrayField` these are usually left to the array's own `itemLabel` / `removeLabel`
  * / `reorderable`; inside the bare `form.Array` primitive there is no outer component to hold
- * them, so `Item` takes its own — resolved **prop → the array's own setting → the kit's
- * default**, in that order.
+ * them, so `Item` takes its own — resolved **prop → the array's own setting**, falling through
+ * to whatever the array did not set either: `removeLabel` falls all the way to the package
+ * default (`Remove`), the reorder captions fall to the package defaults (`Move up` / `Move
+ * down`) but only once something — the prop or the array — has already turned reordering on,
+ * and `label` has no package default at all, so a row that gets one from neither renders no
+ * heading.
  */
 export type ArrayItemProps = {
 	children: ReactNode
