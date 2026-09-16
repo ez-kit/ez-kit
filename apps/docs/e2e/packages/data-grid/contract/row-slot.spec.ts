@@ -37,16 +37,28 @@ const ROW_SLOTS = ['tr', 'load-more-row'] as const
 const CELL_SLOTS = ['td', 'empty-state-cell', 'no-results-cell', 'loading-body-cell'] as const
 
 type Offender = { tag: string; slot: string | null; html: string }
+/**
+ * The sweep's result *and* its denominator.
+ *
+ * `offenders.length === 0` is the whole assertion, and a sweep that visited nothing satisfies it
+ * — a renamed `tbody` slot, an example that stopped rendering rows, an `open` step that silently
+ * drove the grid into the wrong state all produce the same empty list as a clean grid. `swept` is
+ * how many rows and cells were actually examined, so the test can insist it looked at something
+ * before believing what it did not find.
+ */
+type Sweep = { offenders: Offender[]; swept: number }
 
-/** Rows and cells in the body carrying no slot this layer owns. */
-async function bodySlotOffenders(page: Page): Promise<Offender[]> {
+/** Rows and cells in the body carrying no slot this layer owns, and how many were examined. */
+async function sweepBodySlots(page: Page): Promise<Sweep> {
 	return page.evaluate(
 		([rowSlots, cellSlots]) => {
 			const bodies = [...document.querySelectorAll('[data-slot="tbody"]')]
 			const bad: { tag: string; slot: string | null; html: string }[] = []
+			let swept = 0
 
 			for (const body of bodies) {
 				for (const row of body.querySelectorAll('tr')) {
+					swept += 1
 					const rowSlot = row.getAttribute('data-slot')
 					if (rowSlot === null || !rowSlots.includes(rowSlot)) {
 						bad.push({ tag: 'tr', slot: rowSlot, html: row.outerHTML.slice(0, 160) })
@@ -55,6 +67,7 @@ async function bodySlotOffenders(page: Page): Promise<Offender[]> {
 						continue
 					}
 					for (const cell of row.querySelectorAll(':scope > td')) {
+						swept += 1
 						const cellSlot = cell.getAttribute('data-slot')
 						if (cellSlot === null || !cellSlots.includes(cellSlot)) {
 							bad.push({ tag: 'td', slot: cellSlot, html: cell.outerHTML.slice(0, 160) })
@@ -62,7 +75,7 @@ async function bodySlotOffenders(page: Page): Promise<Offender[]> {
 					}
 				}
 			}
-			return bad
+			return { offenders: bad, swept }
 		},
 		[ROW_SLOTS as readonly string[], CELL_SLOTS as readonly string[]] as const,
 	)
@@ -126,7 +139,9 @@ for (const { id, what, open } of CASES) {
 		await grid.open(id)
 		if (open) await open(page)
 
-		const offenders = await bodySlotOffenders(page)
+		const { offenders, swept } = await sweepBodySlots(page)
+		// Looked at something first: an empty offender list means nothing on its own.
+		expect(swept, 'the sweep examined no rows or cells — the body never rendered').toBeGreaterThan(0)
 		expect(offenders.length, `\n${describeOffenders(offenders)}\n`).toBe(0)
 	})
 }

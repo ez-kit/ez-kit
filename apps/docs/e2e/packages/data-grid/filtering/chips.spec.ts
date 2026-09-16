@@ -78,8 +78,15 @@ test.describe('the chips strip', () => {
 		await grid.open(ABOVE)
 	})
 
-	test('stays unmounted while nothing is filtered', async ({ page }) => {
+	test('stays unmounted while nothing is filtered', async ({ grid, page }) => {
 		await expect(page.locator(STRIP)).toHaveCount(0)
+
+		// …and the selector that said so is live. On its own the assertion above passes on a
+		// renamed `active-filters-bar` slot and on a grid whose filtering never mounted, which is
+		// indistinguishable from `chips: 'auto'` doing its job. Filtering here forces the strip to
+		// appear, so the absence is an absence of a thing that can be present.
+		await filterColumn(page, grid.header('name'), NEEDLE)
+		await expect(page.locator(STRIP)).toHaveCount(1)
 	})
 
 	test('a column filter narrows the rows and raises a chip naming it', async ({ grid, page }) => {

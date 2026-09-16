@@ -86,7 +86,10 @@ test.describe('where the panel goes', () => {
 		await grid.open(ABOVE)
 
 		// Containment is the claim for `toolbar`, so its absence is the claim here — an `above`
-		// panel that happened to render inside the toolbar would pass a bare y-measurement.
+		// panel that happened to render inside the toolbar would pass a bare y-measurement. The
+		// toolbar is asserted to exist first: a compound selector whose *left* half stopped
+		// matching is empty for a reason that has nothing to do with where the panel went.
+		await expect(page.locator('[data-slot="toolbar"]')).toHaveCount(1)
 		await expect(page.locator(`[data-slot="toolbar"] ${PANEL}`)).toHaveCount(0)
 
 		const panel = await boxOf(page.locator(PANEL))

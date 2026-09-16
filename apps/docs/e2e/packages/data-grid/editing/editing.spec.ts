@@ -139,7 +139,10 @@ test.describe("editing.mode: 'cell'", () => {
 	})
 
 	test('offers no save or cancel pair — the keyboard ends the edit', async ({ grid, page }) => {
-		await (await grid.cell(0, 'name')).dblclick()
+		const cell = await grid.cell(0, 'name')
+		await cell.dblclick()
+		// The edit is open. Three absences about an edit that never started are three passes.
+		await expect(editorIn(cell)).toHaveValue(ALICE)
 
 		// Cell mode raises no row-level controls at all: `hasEditing` is false for it in
 		// `actions-cell.tsx`, so a grid whose only row feature is cell editing grows no actions
