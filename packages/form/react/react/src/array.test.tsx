@@ -58,14 +58,128 @@ function BareList({ onSubmit }: { onSubmit?: (values: Values) => void }) {
 	)
 }
 
+function scopeFlags(scope: { disabled: boolean; required: boolean }) {
+	return (
+		<div>
+			<span data-testid='scope-disabled'>{String(scope.disabled)}</span>
+			<span data-testid='scope-required'>{String(scope.required)}</span>
+		</div>
+	)
+}
+
+/** `disabled` / `required` omitted entirely — never passed, not even as `undefined`. */
+function ScopeFlagsOmittedList() {
+	return (
+		<Form
+			defaultValues={{ people: [{ firstName: 'Ada' }] }}
+			onSubmit={() => {
+				// unused in this assertion
+			}}
+		>
+			{(form) => (
+				<form.Array
+					name='people'
+					newItem={NEW_PERSON}
+				>
+					{scopeFlags}
+				</form.Array>
+			)}
+		</Form>
+	)
+}
+
+function ScopeFlagsGivenList() {
+	return (
+		<Form
+			defaultValues={{ people: [{ firstName: 'Ada' }] }}
+			onSubmit={() => {
+				// unused in this assertion
+			}}
+		>
+			{(form) => (
+				<form.Array
+					name='people'
+					newItem={NEW_PERSON}
+					disabled
+					required
+				>
+					{scopeFlags}
+				</form.Array>
+			)}
+		</Form>
+	)
+}
+
+function MaxLengthList() {
+	return (
+		<Form
+			defaultValues={{ people: [{ firstName: 'Ada' }] }}
+			onSubmit={() => {
+				// unused in this assertion
+			}}
+		>
+			{(form) => (
+				<form.Array
+					name='people'
+					newItem={NEW_PERSON}
+					validate={{ maxLength: 1 }}
+				>
+					{({ items, add, canAdd }) => (
+						<ul>
+							{items.map((item) => (
+								<li key={item.key}>
+									<item.TextField
+										name='firstName'
+										label={`Name ${String(item.index)}`}
+									/>
+								</li>
+							))}
+							<button
+								type='button'
+								onClick={() => {
+									add()
+								}}
+								disabled={!canAdd}
+							>
+								add
+							</button>
+						</ul>
+					)}
+				</form.Array>
+			)}
+		</Form>
+	)
+}
+
 describe('form.Array', () => {
 	it('renders no chrome of its own', () => {
 		render(<BareList />)
-		// test-kit's ArrayField / ArrayItem stamp no `data-slot` (they use `data-testkit`), so a
-		// null-data-slot assertion here would never fail regardless of what renders. Assert
-		// instead that the chrome ArrayField would add — its default "Add" control — is absent.
-		expect(screen.queryByRole('button', { name: 'Add' })).toBeNull()
+		// test-kit's ArrayField / ArrayItem stamp `data-testkit`, not `data-slot`; assert against
+		// the literals the kit actually writes (verified against test-kit.tsx), not a slot the kit
+		// never stamps — a query for a slot that is stamped nowhere can never fail and proves
+		// nothing.
+		expect(document.querySelector('[data-testkit="array"]')).toBeNull()
+		expect(document.querySelector('[data-testkit="array-items"]')).toBeNull()
+		expect(document.querySelector('[data-testkit="array-item"]')).toBeNull()
+		expect(document.querySelector('[data-field-type="array"]')).toBeNull()
 		expect(screen.getByRole('list')).toBeInTheDocument()
+	})
+
+	it('surfaces disabled and required on the scope, normalised to false when omitted', () => {
+		render(<ScopeFlagsOmittedList />)
+		expect(screen.getByTestId('scope-disabled')).toHaveTextContent('false')
+		expect(screen.getByTestId('scope-required')).toHaveTextContent('false')
+	})
+
+	it('surfaces disabled and required on the scope as data when given, since the primitive draws no frame to put them on', () => {
+		render(<ScopeFlagsGivenList />)
+		expect(screen.getByTestId('scope-disabled')).toHaveTextContent('true')
+		expect(screen.getByTestId('scope-required')).toHaveTextContent('true')
+	})
+
+	it('forwards validate to the engine, so canAdd reflects maxLength', () => {
+		render(<MaxLengthList />)
+		expect(screen.getByRole('button', { name: 'add' })).toBeDisabled()
 	})
 
 	it('removes the entry the author asked for', async () => {

@@ -262,6 +262,16 @@ export type ArrayScope<TItem> = {
 	/** The list's own errors — `validate.maxLength`, say — formatted the same way a flat field's are. */
 	errors: string[]
 	invalid: boolean
+	/**
+	 * The `disabled` / `required` given to `ArrayField` or `Array`, reaching the scope as **data**
+	 * — the same principle `errors` / `invalid` already follow. `ArrayField` renders `required` on
+	 * its own frame and `disabled` on `item.Item`'s chrome; `form.Array` renders no frame and
+	 * `item.Item` is optional, so reading these off the scope is the only way either fact reaches
+	 * a bare primitive's own fields. Always a `boolean`, never `undefined` — the scope hands out
+	 * facts, not the tri-state the prop itself allows.
+	 */
+	disabled: boolean
+	required: boolean
 	/** The kit's generic button, for a control an author draws themselves outside `Item`. */
 	Button: FormComponents['Button']
 	/** The array field's own bound field — for a `Subscribe`-style read the scope does not cover. */

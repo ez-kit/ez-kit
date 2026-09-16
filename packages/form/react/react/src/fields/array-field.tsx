@@ -478,6 +478,10 @@ function ArrayBody({
 					canAdd,
 					errors,
 					invalid,
+					// The scope hands out facts, never the tri-state `disabled` / `required` allow as
+					// props — see the doc comment on `ArrayScope`.
+					disabled: disabled ?? false,
+					required: required ?? false,
 					Button: components.Button,
 					field,
 				},

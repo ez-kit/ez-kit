@@ -77,6 +77,8 @@ type ArrayScope<TItem> = {
 	canAdd: boolean
 	errors: string[]
 	invalid: boolean
+	disabled: boolean // the `disabled` prop, normalised — see the note below
+	required: boolean // the `required` prop, normalised
 	Button: FormComponents['Button']
 	field: AnyFieldApi
 }
@@ -125,6 +127,20 @@ _Rejected — exposing only the raw TanStack field._ It cannot carry `newItem`, 
 `canAdd`, and above all cannot carry **entry identity**: TanStack indexes, and `specs/005`
 established that identity must key on the entry. The keys are ours to mint, so the vocabulary that
 hands them out has to be ours too.
+
+_Revised during implementation — `disabled` and `required` reach the scope as data._ Neither prop
+was on `ArrayScope` as first specified: `ArrayField` renders both onto its own frame and onto
+`item.Item`'s chrome, and the original scope assumed that was enough. It is not, for `form.Array`
+— the primitive discards the frame entirely, so before this revision `disabled required` on a bare
+`form.Array` reached neither the author's own fields nor anything on screen: `disabled` only ever
+reached `item.Item`'s chrome (useless to an author who renders fields without it) and `required`
+reached only the discarded frame — nothing rendered either fact, and neither was readable off the
+scope to render by hand. That is exactly the gap Decision 5 already names for `errors` /
+`invalid`: the fact reaches the scope, nothing renders it, and the same argument against a
+rendering component applies rather than motivating one. `ArrayScope` therefore gains
+`disabled: boolean` and `required: boolean`, always a plain `boolean` — the scope hands out
+facts, not the tri-state the prop itself allows, so `undefined` is normalised to `false` at the
+one place the scope is built.
 
 ### 3. Buttons are callbacks, plus the kit's generic `Button`
 
