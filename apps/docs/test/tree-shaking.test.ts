@@ -249,6 +249,36 @@ describe('@ez-kit/data-grid-core/features', () => {
 	})
 })
 
+/**
+ * The kit root, where the prebuilt `DataGrid` binds `allDataGridFeatures` and `createDataGrid`
+ * must not.
+ *
+ * Binding the set is what makes the prebuilt honest — it already pulls all fourteen component
+ * groups, which read the features' APIs and drag their implementations in whatever set a call
+ * site names, so demanding `features` there bought 3.9 kB gzipped out of 58.5. Composing a grid
+ * through `createDataGrid` is the path where the set still decides what ships (44.6 kB against
+ * 58.5 for the shadcn kit), and both names live behind the same package root: `DataGrid` in
+ * `./data-grid`, `createDataGrid` through `index.ts`'s star re-export of the adapter.
+ *
+ * So the binding is one import away from cancelling the thing it is measured against. Move it up
+ * into a module the star re-export reaches — or let a future `index.ts` name `allDataGridFeatures`
+ * for any reason — and every composed grid silently carries every feature. Asked with
+ * {@link bundledCodeOf} rather than {@link entryPointsPulledBy} because `features/all.js` and
+ * `features/index.js` fold onto the same entry point name, which cannot tell them apart.
+ */
+describe('@ez-kit/data-grid-heroui', () => {
+	const KIT_ENTRY = entryOf('data-grid/react/heroui')
+
+	// The control: the prebuilt grid is the all-in one, and that is deliberate.
+	it('reaches every feature through the prebuilt DataGrid', async () => {
+		expect(await bundledCodeOf(KIT_ENTRY, ['DataGrid'])).toContain(EDITING_MARKER)
+	})
+
+	it('does not reach them through createDataGrid', async () => {
+		expect(await bundledCodeOf(KIT_ENTRY, ['createDataGrid'])).not.toContain(EDITING_MARKER)
+	})
+})
+
 describe.each(PACKAGES)('$name', ({ entry, shakeable, cases }) => {
 	it.each(cases)('importing $imports pulls in $pulls', async ({ imports, pulls }) => {
 		expect(await entryPointsPulledBy(entry, imports)).toEqual([...pulls].sort())

@@ -43,15 +43,40 @@ import {
 const DOCS_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SETS = collectExampleSets(DOCS_ROOT)
 
+/** The `base/` examples, which render the kit's prebuilt `DataGrid` and so declare no set. */
+const BOUND_SET_EXAMPLES = [
+	'shared/data-grid/examples/components/base/column-visibility.tsx',
+	'shared/data-grid/examples/components/base/editing.tsx',
+	'shared/data-grid/examples/components/base/filtering.tsx',
+	'shared/data-grid/examples/components/base/full.tsx',
+	'shared/data-grid/examples/components/base/inline.tsx',
+	'shared/data-grid/examples/components/base/plain.tsx',
+	'shared/data-grid/examples/components/base/selection-bar-basics.tsx',
+	'shared/data-grid/examples/components/base/selection.tsx',
+	'shared/data-grid/examples/components/base/sorting.tsx',
+	'shared/data-grid/examples/components/base/sticky.tsx',
+]
+
 describe('data-grid example feature sets', () => {
 	it('finds the example components', () => {
 		expect(SETS.filter((set) => set.buildsAGrid).length).toBeGreaterThan(60)
 	})
 
-	it('gives every grid a feature set', () => {
+	/**
+	 * Every grid states its set — except the introductory ones, which render the prebuilt grid.
+	 *
+	 * `DataGrid` imported from a kit root binds `allDataGridFeatures`, so the `base/` examples on
+	 * the Getting started page name none on purpose: the page's point is that the quick-start import needs
+	 * no composition, and a set written there would contradict the prose beside it.
+	 *
+	 * Stated as an equality rather than an exemption filter, so the licence cannot spread quietly.
+	 * A new example that forgets its set fails here with its own path, and a `base/` example that
+	 * grows one fails here too — which is the moment to ask whether it still belongs on that page.
+	 */
+	it('gives every grid a feature set, or renders the prebuilt grid that binds one', () => {
 		const without = SETS.filter((set) => set.buildsAGrid && set.members.length === 0)
 
-		expect(without.map((set) => set.file)).toEqual([])
+		expect(without.map((set) => set.file).sort()).toEqual(BOUND_SET_EXAMPLES)
 	})
 
 	it.each(BASE_FEATURES)('registers %s in every set', (feature) => {

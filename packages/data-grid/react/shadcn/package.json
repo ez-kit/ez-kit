@@ -161,6 +161,7 @@
 			"path": "dist/index.js",
 			"limit": "19 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -177,6 +178,7 @@
 			"path": "dist/cell-types/index.js",
 			"limit": "7.7 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -193,6 +195,7 @@
 			"path": "dist/cell-types/text.js",
 			"limit": "1.8 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -209,6 +212,7 @@
 			"path": "dist/cell-types/number.js",
 			"limit": "1.8 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -225,6 +229,7 @@
 			"path": "dist/cell-types/boolean.js",
 			"limit": "3.2 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -241,6 +246,7 @@
 			"path": "dist/cell-types/date.js",
 			"limit": "4.7 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -257,6 +263,7 @@
 			"path": "dist/cell-types/select.js",
 			"limit": "2.9 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -273,6 +280,7 @@
 			"path": "dist/cell-types/badge.js",
 			"limit": "3.3 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -289,6 +297,7 @@
 			"path": "dist/cell-types/image.js",
 			"limit": "1.9 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -305,6 +314,7 @@
 			"path": "dist/cell-types/link.js",
 			"limit": "2.9 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -321,6 +331,7 @@
 			"path": "dist/cell-types/progress.js",
 			"limit": "1.9 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -337,6 +348,7 @@
 			"path": "dist/core/index.js",
 			"limit": "4.9 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -353,6 +365,7 @@
 			"path": "dist/pagination/index.js",
 			"limit": "3.5 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -369,6 +382,7 @@
 			"path": "dist/sorting/index.js",
 			"limit": "3.5 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -385,6 +399,7 @@
 			"path": "dist/filtering/index.js",
 			"limit": "7.5 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -401,6 +416,7 @@
 			"path": "dist/editing/index.js",
 			"limit": "2.4 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -417,6 +433,7 @@
 			"path": "dist/deleting/index.js",
 			"limit": "2.5 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -433,6 +450,7 @@
 			"path": "dist/selection/index.js",
 			"limit": "2.7 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -449,6 +467,7 @@
 			"path": "dist/draft/index.js",
 			"limit": "2.4 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -465,6 +484,7 @@
 			"path": "dist/row-actions/index.js",
 			"limit": "2.4 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -481,6 +501,7 @@
 			"path": "dist/resizing/index.js",
 			"limit": "500 B",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -497,6 +518,7 @@
 			"path": "dist/visibility/index.js",
 			"limit": "2.3 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -513,6 +535,7 @@
 			"path": "dist/fallbacks/index.js",
 			"limit": "1.9 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -529,6 +552,7 @@
 			"path": "dist/infinite/index.js",
 			"limit": "1.9 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",
@@ -545,6 +569,7 @@
 			"path": "dist/expanding/index.js",
 			"limit": "1.6 KB",
 			"ignore": [
+				"@ez-kit/data-grid-core",
 				"@ez-kit/data-grid-react",
 				"class-variance-authority",
 				"clsx",

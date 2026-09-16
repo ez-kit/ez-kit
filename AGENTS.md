@@ -57,6 +57,29 @@ measures an entry point whole rather than what a partial import drags along. The
 guarantee here, not the budget — which is exactly why `tree-shaking.test.ts` exists beside
 `size-limit` rather than being folded into it.
 
+**The kits' prebuilt `DataGrid` binds `allDataGridFeatures`, and that is not the rejected default.**
+`features` stays required on `@ez-kit/data-grid-react` and on any bundle built without a set. What
+changed is the one export that already means "everything": `DataGrid` from a kit root ships all
+fourteen component groups, and those components read the features' APIs, so they drag the
+implementations in whatever set a call site names. Measured with esbuild (minified, gzipped, React
+and the kit's own peer external), shadcn / heroui: the prebuilt grid with a sorting-only set is
+54.6 / 51.7 kB against 58.5 / 55.7 kB with every feature — **3.9 kB for eight imports at every call
+site** — while the same grid composed through `createDataGrid` with four component groups is
+44.6 / 41.1 kB. So the set earns its keep where a grid is composed and nowhere else, and demanding
+it on the prebuilt bought a rounding error at the cost of every quick start. The 45 288-byte figure
+above is the all-in set imported **alone**; it is not what the set adds on top of `allComponents`.
+
+Three things hold this together and none of them are optional. The binding lives in each kit's
+`data-grid.tsx` and must stay there: `createDataGrid` reaches a consumer through `index.ts`'s star
+re-export of the adapter, so moving the `features/all` import up one module would make every
+composed grid carry every feature, silently. `apps/docs/test/tree-shaking.test.ts` pins that —
+`DataGrid` reaches the editing implementation, `createDataGrid` does not. And every one of the four
+`DataGridBundle<KitCellTypes, KitFeatures>` annotations in that file has to carry the set: the
+second parameter defaults to `undefined`, so `createDataGrid<KitCellTypes>` alone erases the
+binding and hands back a bundle that still demands `features` at every call site. A set named at a
+call site **replaces** the bound one, which narrows behaviour and returns none of the bytes — the
+docs say so rather than implying a saving that is not there.
+
 **Exactly three features are structural, and the line between "structural" and "defect" is
 executable.** `columnVisibilityFeature`, `columnPinningFeature` and `columnSizingFeature` are
 mandatory for the React adapter whatever else a grid registers — the shell lays out a column grid,

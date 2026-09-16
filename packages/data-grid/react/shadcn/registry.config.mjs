@@ -27,12 +27,13 @@ const outPath = generateRegistryManifest({
 	homepage,
 	// Only packages the copied files import directly (verify with:
 	// grep -rho "from '[a-z][a-z0-9@/-]*'" src/{blocks,hooks,lib} src/data-grid.tsx | sort -u).
-	// @ez-kit/data-grid-core is listed even though no copied file imports it, which is the one
-	// exception to the rule above. Since v9 `features` is a **required** option, so the consumer's
-	// own code has to write `tableFeatures({ … })` — and the helpers live on core. Relying on it
-	// being transitive through @ez-kit/data-grid-react was already only true for hoisting package
-	// managers and false under pnpm's strict layout; now it is false in spirit too, because the
-	// consumer must *name* the import rather than merely have the code resolve.
+	// @ez-kit/data-grid-core is imported by a copied file: `data-grid.tsx` names
+	// `allDataGridFeatures` from @ez-kit/data-grid-core/features/all, so the grid registers every
+	// feature the moment it lands and the consumer writes no `features` to render one. Narrowing
+	// that set — replacing the import with their own `tableFeatures({ … })` — is an edit to a file
+	// they now own, and the helpers for it live on core too. It was listed here even before that
+	// import existed, because relying on it being transitive through @ez-kit/data-grid-react was
+	// only ever true for hoisting package managers and false under pnpm's strict layout.
 	// @tanstack/react-table isn't imported at all (data-grid-react
 	// depends on @tanstack/table-core + @tanstack/react-virtual instead), so it's correctly absent too.
 	//

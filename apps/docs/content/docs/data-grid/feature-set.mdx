@@ -3,7 +3,7 @@ title: Feature Set
 description: Every grid declares the features it runs on. What `features` is, how it differs from config, and how to compose a set that ships only the code you use.
 ---
 
-Every grid takes a `features` option, and it is **required**:
+Every grid runs on a feature set, and the grid you compose yourself states it:
 
 ```tsx
 import {
@@ -31,9 +31,9 @@ const features = tableFeatures({
 />
 ```
 
-| Option     | Type            | Description                                                                                                                                |
-| ---------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `features` | `TableFeatures` | The features this grid is assembled from, built once with `tableFeatures()`. **Required**, and deliberately without a default — see below. |
+| Option     | Type            | Description                                                                                                                                                                                                                                            |
+| ---------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `features` | `TableFeatures` | The features this grid is assembled from, built once with `tableFeatures()`. **Required**, unless the bundle the grid came from binds a set — see [Binding the set to your factory](#binding-the-set-to-your-factory). Deliberately without a default. |
 
 A feature the set does not name contributes nothing: no state slice, no table methods, no row
 methods — and no bytes. That is the point. The grid is assembled from the features you register
@@ -172,7 +172,15 @@ import { allDataGridFeatures } from '@ez-kit/data-grid-core/features/all'
 It registers every feature this package ships, stock and custom, plus every row model and all three
 function registries — so it always works, and it **defeats the entire point**. Nothing tree-shakes,
 and every registered feature mints its state slice and its APIs whether or not the config enables
-it. Do not ship it.
+it. Do not name it in a grid you compose yourself.
+
+There is one place it is shipped on purpose: the `DataGrid` exported from a kit root binds this set,
+which is why that grid asks for no `features`. It is not a default leaking through — it is the one
+export where the set buys nothing. That grid already carries all fourteen component groups, and
+those components read the features' APIs, so they drag the implementations in whatever set a call
+site names: measured against the shadcn kit, the prebuilt grid with a sorting-only set is 54.6 kB
+gzipped against 58.5 kB with everything. Composing your own bundle is what moves that number
+(44.6 kB), and there the set is yours to state.
 
 The separate subpath is not tidiness. `allDataGridFeatures` is a top-level
 `tableFeatures({ ...stockFeatures, … })` call whose argument object spreads, and an object spread
@@ -187,8 +195,9 @@ For scale, from the same measurement: adding `editingFeature` to that sorting-on
 1 035 bytes to 17 219, and the whole `/features` surface is 48 086. A feature with a real
 implementation is not free — the point is that you pay for it when you register it and not before.
 
-Every example on this site composes its own narrow set instead, for the same reason: what you copy
-out of a docs page is what ends up in your bundle.
+Every example on this site that is about a feature composes its own narrow set, for the same
+reason: what you copy out of a docs page is what ends up in your bundle. The introductory ones on
+[Getting started](/docs/data-grid/getting-started) name none, because they render the prebuilt grid.
 
 ## Where the set lives
 
@@ -209,12 +218,20 @@ deliberately narrows below an app-wide set gets the narrow set, not the union.
 ### Binding the set to your factory
 
 A provider supplies the set at runtime, but every call still has to name one, because `features` is
-required on the config type. Write shape B — the `createDataGrid` file in your own project — and
-you can state it once for good:
+required on the config type. Write your own `createDataGrid` file — the shape
+[Getting started](/docs/data-grid/getting-started#the-two-shapes) recommends — and you can state it
+once for good:
 
 ```tsx title="src/lib/data-grid.ts"
-import { createDataGrid } from '@ez-kit/data-grid-heroui'
-import { allComponents, cellTypes } from '@ez-kit/data-grid-heroui'
+import {
+	columnPinningFeature,
+	columnSizingFeature,
+	columnVisibilityFeature,
+	createSortedRowModel,
+	rowSortingFeature,
+	tableFeatures,
+} from '@ez-kit/data-grid-core/features'
+import { allComponents, cellTypes, createDataGrid } from '@ez-kit/data-grid-heroui'
 
 export const features = tableFeatures({
 	columnVisibilityFeature,
