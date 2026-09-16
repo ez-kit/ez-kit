@@ -45,6 +45,37 @@ export const REQUIRED_BY_OPTION: Readonly<Record<string, readonly string[]>> = {
 	draft: ['draftFeature'],
 }
 
+/**
+ * State-snapshot slice → the feature that mints it.
+ *
+ * A second axis, and the one that cost a browser failure. `extractState` returns the slices the
+ * table *has*, and for most of them a slice exists only when its feature is registered — so
+ * persisting one means registering its feature, **even when the grid never writes the corresponding
+ * config option**. `state-persistence.tsx` lost `columnOrderingFeature` during the base-set
+ * reduction and its snapshot silently dropped `columnOrder`: no type error, no runtime warning,
+ * nothing to see until `state/persistence.spec.ts` asserted the key was there.
+ *
+ * {@link REQUIRED_BY_OPTION} cannot reach this, because there is no config key to compare against —
+ * `columnOrder` is never written as an option here, only persisted.
+ *
+ * **The seven below were measured, not derived from the slice names.** Building a table without
+ * each feature in turn and reading `extractState` back shows that `pagination` and `columnPinning`
+ * are present *regardless* — they are seeded during option resolution rather than minted by
+ * `rowPaginationFeature` / `columnPinningFeature` — so requiring those two would fail a correct
+ * example. The first draft of this map listed all nine and immediately reported
+ * `state-persistence.tsx` for a `pagination` it did in fact carry. If a slice is added here, drop
+ * its feature from a set and check whether the key really disappears.
+ */
+export const REQUIRED_BY_PERSISTED_SLICE: Readonly<Record<string, string>> = {
+	sorting: 'rowSortingFeature',
+	columnFilters: 'columnFilteringFeature',
+	globalFilter: 'globalFilteringFeature',
+	columnVisibility: 'columnVisibilityFeature',
+	columnOrder: 'columnOrderingFeature',
+	rowPinning: 'rowPinningFeature',
+	columnSizing: 'columnSizingFeature',
+}
+
 /** One example file, with the set it declares and the config keys it writes. */
 export type ExampleSet = {
 	/** Path relative to `apps/docs`, for a failure message someone can click. */
@@ -57,6 +88,8 @@ export type ExampleSet = {
 	readonly buildsAGrid: boolean
 	/** Whether it writes `pagination.mode: 'infinite'`, which forbids `paginatedRowModel`. */
 	readonly isInfinite: boolean
+	/** Slice names the file names in a `keys: [...]` allowlist for `extractState` / `useExtractedState`. */
+	readonly persistedSlices: readonly string[]
 }
 
 const EXAMPLES_DIR = 'shared/data-grid/examples/components'
@@ -66,6 +99,23 @@ const SET_PATTERN = /const features = tableFeatures\(\{([\s\S]*?)\n\}\)/
 const MEMBER_PATTERN = /^\t([A-Za-z]\w*)/gm
 /** `<DataGrid …` / `<CustomDataGrid …`, but not `<DataGrid.Toolbar>`. */
 const GRID_PATTERN = /<(?:Custom)?DataGrid(?=[\s>])|useDataGrid[<(]/
+
+/**
+ * The slices a file names in a `keys: [...]` allowlist.
+ *
+ * Only the explicit form is read. A bare `extractState(table)` asks for *everything the table has*,
+ * which is defined by the set it was built from — so checking it against the set would be circular
+ * and would pass whatever the set happened to be. **That is this checker's blind spot**, and it is
+ * the one `state-persistence.tsx` fell into: its snapshot comes from a bare `extractState` call,
+ * and only the browser suite could say which keys it was supposed to contain. A spec that asserts
+ * specific keys is the check for that case; there is no static substitute.
+ */
+function persistedSlicesOf(source: string): string[] {
+	const allowlist = /keys:\s*\[([^\]]*)\]/.exec(source)?.[1]
+	if (allowlist === undefined) return []
+
+	return [...allowlist.matchAll(/'([A-Za-z]+)'/g)].map((match) => match[1] ?? '')
+}
 
 function sourceFiles(root: string): string[] {
 	const found: string[] = []
@@ -132,6 +182,7 @@ export function collectExampleSets(docsRoot: string): ExampleSet[] {
 			options: Object.keys(REQUIRED_BY_OPTION).filter((key) => writesOption(source, key)),
 			buildsAGrid: GRID_PATTERN.test(source),
 			isInfinite: /mode:\s*'infinite'/.test(source),
+			persistedSlices: persistedSlicesOf(source),
 		}
 	})
 }

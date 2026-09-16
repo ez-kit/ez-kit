@@ -2,6 +2,7 @@
 
 import {
 	columnFilteringFeature,
+	columnOrderingFeature,
 	columnPinningFeature,
 	columnSizingFeature,
 	columnVisibilityFeature,
@@ -25,6 +26,10 @@ const features = tableFeatures({
 	columnFilteringFeature,
 	filterFns,
 	rowSortingFeature,
+	// `columnOrder` is in the snapshot `extractState` returns, and a slice only exists when its
+	// feature is registered — so persisting column order means registering the feature, even
+	// though this grid never writes an `ordering` option.
+	columnOrderingFeature,
 	filteredRowModel: createFilteredRowModel(),
 	sortedRowModel: createSortedRowModel(),
 })

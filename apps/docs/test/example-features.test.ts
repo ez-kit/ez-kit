@@ -3,7 +3,12 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { BASE_FEATURES, REQUIRED_BY_OPTION, collectExampleSets } from './example-features/sets'
+import {
+	BASE_FEATURES,
+	REQUIRED_BY_OPTION,
+	REQUIRED_BY_PERSISTED_SLICE,
+	collectExampleSets,
+} from './example-features/sets'
 
 /**
  * Checks that every data-grid example registers the features its own configuration needs.
@@ -69,6 +74,29 @@ describe('data-grid example feature sets', () => {
 			const absent = required.filter((member) => !set.members.includes(member))
 
 			return absent.length === 0 ? [] : [`${set.file} — ${option} needs ${absent.join(', ')}`]
+		})
+
+		expect(missing).toEqual([])
+	})
+
+	/**
+	 * Persisting a slice means registering its feature, even with no config option to ask for it.
+	 *
+	 * `extractState` returns the slices the table *has*; a slice exists only when its feature is
+	 * registered. So a `keys` allowlist naming `columnOrder` on a grid without
+	 * `columnOrderingFeature` silently returns a snapshot one key short — no type error, no warning.
+	 */
+	it('registers the feature behind every slice an example asks to persist', () => {
+		const missing = SETS.flatMap((set) => {
+			if (set.members.length === 0) return []
+
+			return set.persistedSlices.flatMap((slice) => {
+				const feature = REQUIRED_BY_PERSISTED_SLICE[slice]
+
+				return feature === undefined || set.members.includes(feature)
+					? []
+					: [`${set.file} — persisting \`${slice}\` needs ${feature}`]
+			})
 		})
 
 		expect(missing).toEqual([])
